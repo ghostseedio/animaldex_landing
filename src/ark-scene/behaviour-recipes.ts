@@ -558,7 +558,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                     if (sampler.heightAt(x, z) < -0.25) return {x, y: step.to === "prey" ? Math.min(school.centre.y, -0.2) : -Math.max(length * 0.3, 0.06), z};
                 }
             }
-            const depth = step.to === "prey" ? Math.max(length * 1.2, 0.5) : 0.25;
+            // A dive goes into open water (not the edge's few centimetres); a chase deeper still.
+            const depth = step.to === "prey" ? Math.max(length * 1.2, 0.5) : block.id === "dive_air" || block.id === "dive_feet" ? 0.45 : 0.25;
             const reach = Math.max(step.r ?? Math.min(Math.max(length * 40, 4), 14), 1.5);
             const water = waterNear(world, origin.x, origin.z, reach, depth, hashString(`${ctx.seed}#${Math.floor(random() * 1e6)}`));
             if (!water) return null;
@@ -1020,6 +1021,22 @@ export function wireRecipes(animals: WireInput[]) {
 
 export function pairLinksOf(animal: ScheduleAnimal): ReadonlyArray<Pick<PairLink, "template" | "role" | "key"> & {other: string}> {
     return (links.get(animal) ?? []).map((l) => ({template: l.template, role: l.role, key: l.key, other: l.other.id}));
+}
+
+/** A pair's meeting windows (world seconds) between two times: in season every period, out of it one in four (pure). */
+export function pairWindows(animal: ScheduleAnimal, slug: string, from: number, to: number): Array<{template: string; start: number; end: number; other: string}> {
+    const out: Array<{template: string; start: number; end: number; other: string}> = [];
+    const species = speciesRecipes(slug);
+    for (const l of links.get(animal) ?? []) {
+        const template = TEMPLATES[l.template];
+        for (let period = Math.floor(from / PAIR_PERIOD); period * PAIR_PERIOD < to; period++) {
+            const factor = seasonFactor(species, template.season, period * PAIR_PERIOD);
+            if (!factor || (factor < 1 && hashString(`${l.key}#on#${period}`) % 4 !== 0)) continue;
+            const start = period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - PAIR_MAX));
+            if (start + PAIR_MAX >= from && start < to) out.push({template: l.template, start, end: start + PAIR_MAX, other: l.other.id});
+        }
+    }
+    return out.sort((a, b) => a.start - b.start);
 }
 
 /** A pair's episode for one side at a time (null: none now). Both sides work out the same window from the pair's key. */

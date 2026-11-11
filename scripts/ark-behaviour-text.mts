@@ -191,7 +191,7 @@ export const RULES: Rule[] = [
     {id: "worm_pull", label: "pulling worms from the ground", group: "foraging", plans: BIRD, pattern: /\b(earthworms?|worms? (from|out of) (the )?(ground|soil|lawn|turf))\b/i, fields: ["diet", "facts", "traits", "look", "basis", "evidence", "spotlight"]},
     {id: "drumming", label: "drumming or hammering on wood", group: "voice", plans: [...BIRD, "insect", "quadruped"], pattern: /\b(drum\w*|hammer\w* (on|at|into) (wood|bark|trees|trunks)|excavat\w* (nest )?(holes|cavities|hollows) in (trees|wood|trunks)|chisel\w*|bores? into (wood|bark))\b/i},
     {id: "tool_use", label: "tool use", group: "foraging", pattern: /\b(tool[- ]?(use|using|users?|making|maker)|uses? tools|makes? tools|(uses?|using|wields?|holds?|picks? up) (a |an )?(sticks?|stones?|rocks?|twigs?|leaves|leaf|thorns?|cactus spines?|sponges?|shells?|pebbles?|grass stems?|bark)\b[^.]{0,30}\b(to|as)\b|as (a )?tools?\b|anvils?|cracks? (open )?(shells|nuts|snails|clams|eggs|mussels|urchins) (on|with|against) (a |an |its |their )?(stone|rock|anvil|chest|belly)|drops? (shells|snails|nuts|bones|eggs|tortoises) (on|onto) (rocks|stones))\b/i, unless: /\b(digging|body|odd|surprising|anatomical) tools?\b|tool-user until|serves as a tool|tool-based/i},
-    {id: "caching", label: "food caching and hoarding", group: "foraging", pattern: /\b(cach(e|es|ed|ing)|hoard\w*|larder\w*|stor(e|es|ed|ing) (food|nuts|seeds|acorns|insects|prey|fat)|bur(y|ies|ied|ying) (nuts|seeds|acorns|food|bones|prey|caches)|impal(e|es|ed|ing)\b|stash\w*)\b/i, unless: /\bstores? (fat|water|energy)|stored (fat|water)|cheek pouch/i},
+    {id: "caching", label: "food caching and hoarding", group: "foraging", pattern: /\b(cach(e|es|ed|ing)|hoard\w*|larder\w*|stor(e|es|ed|ing) (food|nuts|seeds|acorns|insects|prey|fat)|bur(y|ies|ied|ying) (nuts|seeds|acorns|food|bones|prey|caches)|impal(e|es|ed|ing) (\w+ )?(prey |insects |lizards |mice |them |it |food )?on (thorns|spines|barbed|branches|twigs|sharp)|stash\w*)\b/i, unless: /\bstores? (fat|water|energy)|stored (fat|water)|cheek pouch/i},
     {id: "graze_rumination", label: "chewing the cud", group: "foraging", plans: ["quadruped"], pattern: /\b(chews? (the |its )?cud|ruminat\w*|regurgitat\w* (and|to) re-?chew)\b/i},
 
     // Comfort
@@ -327,7 +327,6 @@ const FEATURES: Array<[RegExp, string]> = [
     [/\bmandibles?\b/i, "mandibles"],
     [/\b(bright|brilliant|vivid|colou?rful|glossy|iridescent|showy|bold(ly)? (marked|patterned))\b/i, "bright"],
     [/\b(duller|drab|dull|cryptic|brownish|mottled brown|plainer|paler|less colou?rful)\b/i, "dull"],
-    [/\b(darker|black(er)?)\b/i, "darker"],
     [/\bhumps?\b|\bnuchal\b/i, "hump"],
     [/\b(saddle|silver(back|ed back))\b/i, "silverback"],
     [/\bpr(o|oboscis)\b|\b(inflatable )?(nose|snout|proboscis)\b/i, "snout"]

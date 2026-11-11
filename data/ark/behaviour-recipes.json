@@ -707,18 +707,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "in females a black band separates the white forehead from a smaller red patch",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -1536,8 +1528,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [
      "horns"
@@ -1553,11 +1544,6 @@
       "field": "sexdiff",
       "phrase": "Adult males are larger and heavier, often darker, with thicker horn bases",
       "match": "horn"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males are larger and heavier, often darker, with thicker horn bases",
-      "match": "darker"
      },
      {
       "field": "sexdiff",
@@ -8436,9 +8422,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -8446,11 +8430,6 @@
       "field": "sexdiff",
       "phrase": "Males are usually smaller, call during breeding, and may have darker throats; females are larger for egg production",
       "match": "females are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are usually smaller, call during breeding, and may have darker throats",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -9471,18 +9450,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "females can show darker or more patterned plumage",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -10531,19 +10502,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are often darker with more striking plumage",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -13432,12 +13395,9 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": "female",
     "src": [
      {
@@ -13447,18 +13407,8 @@
      },
      {
       "field": "sexdiff",
-      "phrase": "Males are brilliant blue above and velvety black below",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
       "phrase": "females are dull turquoise-blue all over with darker wings and tail",
       "match": "dull"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females are dull turquoise-blue all over with darker wings and tail",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -13680,8 +13630,7 @@
     "sizeRatio": 1,
     "male": [],
     "female": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "duller": "male",
     "src": [
@@ -13689,11 +13638,6 @@
       "field": "sexdiff",
       "phrase": "females look alike, both glossy green-black with red eyes, and cannot be told apart in the field",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females look alike, both glossy green-black with red eyes, and cannot be told apart in the field",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -15107,15 +15051,7 @@
    "plan": "arachnid",
    "zone": "woodland",
    "excluded": null,
-   "behaviours": {
-    "caching": [
-     {
-      "field": "diet",
-      "phrase": "swings its long jaws outwards and impales the spider on the fangs",
-      "match": "impales"
-     }
-    ]
-   },
+   "behaviours": {},
    "sex": {
     "system": "separate",
     "maleShare": 0.5,
@@ -15793,19 +15729,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Spawning males develop a hooked lower jaw and darker, coppery-red colouring",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -17812,8 +17740,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "mane",
-     "darker"
+     "mane"
     ],
     "female": [],
     "duller": "female",
@@ -17822,11 +17749,6 @@
       "field": "sexdiff",
       "phrase": "Males have a dark brown head with a short black mane, a speckled breast and a grey body",
       "match": "mane"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a dark brown head with a short black mane, a speckled breast and a grey body",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -20965,7 +20887,6 @@
     "sizeRatio": 1,
     "male": [
      "horns",
-     "darker",
      "hump"
     ],
     "female": [
@@ -20978,11 +20899,6 @@
       "field": "sexdiff",
       "phrase": "In most populations adult bulls turn dark chestnut to blue-black, with a shoulder hump and heavy horns rising from a bare, horny patch on the forehead",
       "match": "horns"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "In most populations adult bulls turn dark chestnut to blue-black, with a shoulder hump and heavy horns rising from a bare, horny patch on the forehead",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -21774,8 +21690,7 @@
     "male": [
      "crest",
      "wattle",
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -21802,13 +21717,13 @@
      },
      {
       "field": "sexdiff",
-      "phrase": "Males are glossy black with a tall crest and a bare scarlet throat patch and wattle that swell during display",
-      "match": "black"
+      "phrase": "Females are smaller and duller, with a shorter crest and no red skin",
+      "match": "crest"
      },
      {
       "field": "sexdiff",
       "phrase": "Females are smaller and duller, with a shorter crest and no red skin",
-      "match": "crest"
+      "match": "duller"
      }
     ],
     "defaulted": false
@@ -23465,26 +23380,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "show as a pale panel on the closed wing and leave only a narrow black trailing edge in flight",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "In males the secondaries are black and the trailing band is broad",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -24137,19 +24037,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a blue-grey head, a drooping black moustache from the eye down each side of the throat, and black feathers under the tail",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -28114,8 +28006,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "crest",
-     "darker"
+     "crest"
     ],
     "female": [],
     "duller": "female",
@@ -28124,11 +28015,6 @@
       "field": "sexdiff",
       "phrase": "Males have the black crest and green throat",
       "match": "crest"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have the black crest and green throat",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -28410,18 +28296,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females grow to about 40 cm, black, with a chin barbel and fangs",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -29568,9 +29446,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -29578,11 +29454,6 @@
       "field": "sexdiff",
       "phrase": "Black Howler Monkey males are usually black, while females are often lighter or golden-brown",
       "match": "females are often lighter"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Sexes are strongly different in color in this species, with males typically black",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -29694,8 +29565,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [],
     "duller": null,
@@ -29709,11 +29579,6 @@
       "field": "sexdiff",
       "phrase": "Males are darker and carry heavier horns",
       "match": "horns"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are darker and carry heavier horns",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -30118,9 +29983,7 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
@@ -30128,11 +29991,6 @@
       "field": "sexdiff",
       "phrase": "females are duller and more olive-toned on the back with slightly less clean black in the wing, and juveniles are streaked below",
       "match": "duller"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females are duller and more olive-toned on the back with slightly less clean black in the wing, and juveniles are streaked below",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -30556,8 +30414,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -30566,11 +30423,6 @@
       "field": "sexdiff",
       "phrase": "Males have a glossy black back, sometimes with a greenish sheen",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a glossy black back, sometimes with a greenish sheen",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -31191,8 +31043,7 @@
      "crest"
     ],
     "female": [
-     "crest",
-     "darker"
+     "crest"
     ],
     "duller": null,
     "src": [
@@ -31205,11 +31056,6 @@
       "field": "sexdiff",
       "phrase": "Females have a black forecrown spotted with white, with red only on the rear of the crest",
       "match": "crest"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females have a black forecrown spotted with white, with red only on the rear of the crest",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -31636,19 +31482,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are velvety black with blue-green and purple sheens and reach about a metre including the long tail",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -31675,14 +31513,6 @@
     {
      "id": "strut_display",
      "weight": 5,
-     "src": {
-      "field": "facts",
-      "phrase": "In display the male raises broad fans of breast feathers so that they frame his head"
-     }
-    },
-    {
-     "id": "court_display",
-     "weight": 4,
      "src": {
       "field": "facts",
       "phrase": "In display the male raises broad fans of breast feathers so that they frame his head"
@@ -32805,8 +32635,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -32815,11 +32644,6 @@
       "field": "sexdiff",
       "phrase": "Males have a glossy, greenish-black back",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a glossy, greenish-black back",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -33102,9 +32926,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -33112,11 +32934,6 @@
       "field": "sexdiff",
       "phrase": "Females are often larger and males have claspers, but both share black-tipped movement shaped by reef patrol and current",
       "match": "females are often larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "males have claspers, but both share black-tipped movement shaped by reef patrol and current",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -33803,26 +33620,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Males have a rosy pink head and black collar",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
       "phrase": "females have a dull grey-blue head and lack the black collar",
       "match": "dull"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females have a dull grey-blue head and lack the black collar",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -34177,19 +33982,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have black underparts, violet-blue flank plumes and two long ribbon-like central tail feathers",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -35955,8 +35752,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "mandibles",
-     "darker"
+     "mandibles"
     ],
     "female": [],
     "duller": null,
@@ -35965,11 +35761,6 @@
       "field": "sexdiff",
       "phrase": "Males show a blue head and rump, black mantle and red upper mandible",
       "match": "mandible"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males show a blue head and rump, black mantle and red upper mandible",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -38237,9 +38028,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -38247,11 +38036,6 @@
       "field": "sexdiff",
       "phrase": "Females are larger, about 8 to 15 millimetres long against 6 to 13 in males",
       "match": "females are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are blacker with sharper white markings, swollen pedipalps and fringed front legs, which they raise and wave in courtship",
-      "match": "blacker"
      }
     ],
     "defaulted": false
@@ -41073,9 +40857,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -41083,11 +40865,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger with broader heads and black patches under the thighs and on the flap in front of the vent; females usually lack these patches",
       "match": "males are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger with broader heads and black patches under the thighs and on the flap in front of the vent",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -43391,7 +43168,7 @@
      {
       "field": "facts",
       "phrase": "Like other shrikes it has been recorded impaling prey on thorns or barbed wire to hold it while feeding",
-      "match": "impaling"
+      "match": "impaling prey on thorns"
      },
      {
       "field": "sd",
@@ -44580,19 +44357,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "turning darker brown when they breed",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -44630,14 +44399,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "evidence",
-      "phrase": "This vocal adaptation facilitates pair bonding"
-     }
-    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -45275,8 +45036,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -45285,11 +45045,6 @@
       "field": "sexdiff",
       "phrase": "Males are bright white below with a black back and a dark iridescent head bearing a broad white patch",
       "match": "bright"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are bright white below with a black back and a dark iridescent head bearing a broad white patch",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -46085,15 +45840,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Sexes are similar, though females may appear darker during nesting wear",
-      "match": "darker"
+      "phrase": "Sexes are similar, though females may appear darker during nesting wear; both share the same grounded sentry design",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -51147,18 +50900,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "females black",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -52383,16 +52128,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Males tend to have a darker, more extensive black chin patch, but the difference is slight and unreliable in the field",
-      "match": "darker"
+      "phrase": "The sexes look almost identical",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -57172,20 +56915,13 @@
     "bigger": "male",
     "sizeRatio": 1.05,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Males are a little larger on average, with slightly longer bills, but a lone bird cannot be sexed by sight",
       "match": "males are a little larger on average, with slightly longer"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females wear identical grey, black and white plumage",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -58209,16 +57945,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Males have a slightly glossier black cap and bib, a difference seen only in the hand",
-      "match": "black"
+      "phrase": "The sexes look the same in the field",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -59771,16 +59505,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "In breeding plumage the male's black line around the throat and dark area in front of the eye are usually a little stronger than the female's",
-      "match": "black"
+      "phrase": "The sexes look alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -60043,9 +59775,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.05,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -60053,11 +59783,6 @@
       "field": "sexdiff",
       "phrase": "Females tend to be slightly larger",
       "match": "females tend to be slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "The black patch around the genital area is teardrop-shaped in males and more rounded in females",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -60483,19 +60208,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are black with yellow bills",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -60614,8 +60331,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -60624,11 +60340,6 @@
       "field": "sexdiff",
       "phrase": "Males have a black thorax with green stripes and a bright blue band near the tail tip",
       "match": "bright"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a black thorax with green stripes and a bright blue band near the tail tip",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -61480,9 +61191,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -61490,11 +61199,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger with black heads",
       "match": "males are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger with black heads, limbs and forebody, and a pale, reddish, yellowish or grey rear body and tail depending on population",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -62669,20 +62373,13 @@
     "male": [
      "crest"
     ],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Males have a red crown and crest",
       "match": "crest"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females have a black crown streaked with white",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -62780,18 +62477,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "females share the same black-and-yellow pattern",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -64710,9 +64399,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.05,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -64720,11 +64407,6 @@
       "field": "sexdiff",
       "phrase": "Females are slightly larger",
       "match": "females are slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a blue-grey head and a blue-grey tail with a single black band",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -64838,19 +64520,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "the male's bill is all black",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -67188,18 +66862,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females have a plain buff throat and a breast spotted with black, and are slightly heavier",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -69905,26 +69571,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are pale bluish-white with black veins and a broad black border on the forewing",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females are far darker, so the two sexes look like different species",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -71723,8 +71374,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -71733,11 +71383,6 @@
       "field": "sexdiff",
       "phrase": "Clear in the breeding season: the male has a glossy green-black cap, a dark neck collar and a bold white wing bar",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Clear in the breeding season: the male has a glossy green-black cap, a dark neck collar and a bold white wing bar",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -73795,7 +73440,6 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "darker",
      "crest"
     ],
     "female": [],
@@ -73805,11 +73449,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger and mostly blue-black with a long arched tail; females are rich brown with a shorter crest and tail",
       "match": "males are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger and mostly blue-black with a long arched tail",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -77315,17 +76954,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are usually darker and cleaner grey or black on the hood",
-      "match": "darker"
-     },
      {
       "field": "sexdiff",
       "phrase": "females are paler and browner",
@@ -93241,8 +92873,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -93251,11 +92882,6 @@
       "field": "sexdiff",
       "phrase": "Males have a glossy black cap",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a glossy black cap",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -99380,17 +99006,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "male",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Breeding males have a black head, a white half-collar and an orange-red breast",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "Females are browner and streaked above, with a brown head, pale throat and paler orange wash",
@@ -99400,11 +99019,6 @@
       "field": "sexdiff",
       "phrase": "Fresh autumn males look duller because brown feather tips cover the black until they wear off",
       "match": "duller"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Fresh autumn males look duller because brown feather tips cover the black until they wear off",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -99831,19 +99445,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adults differ completely: the male is a small moth with a black, furry body and largely clear wings",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -101547,16 +101153,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Males tend to have a cleaner grey crown with blacker streaking and slightly richer colours, but most birds cannot be sexed reliably in the field",
-      "match": "blacker"
+      "phrase": "The sexes look very similar",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -102214,8 +101818,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "mane",
-     "darker"
+     "mane"
     ],
     "female": [],
     "duller": null,
@@ -102224,11 +101827,6 @@
       "field": "sexdiff",
       "phrase": "Adult males are mostly black with a flame-orange crown and long mane-like nape feathers",
       "match": "mane"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males are mostly black with a flame-orange crown and long mane-like nape feathers",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -104423,9 +104021,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.2,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -104433,11 +104029,6 @@
       "field": "sexdiff",
       "phrase": "Males are far smaller, about 3 to 5 millimetres against the female's 6 to 11, and much darker, with a reddish-brown front body and dark front legs",
       "match": "males are far smaller"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are far smaller, about 3 to 5 millimetres against the female's 6 to 11, and much darker, with a reddish-brown front body and dark front legs",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -105214,8 +104805,7 @@
     "sizeRatio": 1,
     "male": [],
     "female": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "duller": "male",
     "src": [
@@ -105223,11 +104813,6 @@
       "field": "sexdiff",
       "phrase": "females look alike in the field, both glossy black with a red eye",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females look alike in the field, both glossy black with a red eye",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -107167,8 +106752,7 @@
     "bigger": "female",
     "sizeRatio": 1.05,
     "male": [
-     "wattle",
-     "darker"
+     "wattle"
     ],
     "female": [],
     "duller": "female",
@@ -107187,11 +106771,6 @@
       "field": "sexdiff",
       "phrase": "Males have a rounded dark abdomen tip and sex combs — small black bristle tufts — on the forelegs",
       "match": "combs"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a rounded dark abdomen tip and sex combs — small black bristle tufts — on the forelegs",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -108451,9 +108030,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.2,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -108461,11 +108038,6 @@
       "field": "sexdiff",
       "phrase": "Males are much larger, darker, and more heavily built, while females are smaller and usually lighter",
       "match": "males are much larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are much larger, darker, and more heavily built",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -110652,8 +110224,7 @@
     "bigger": "male",
     "sizeRatio": 1.2,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [
      "dewlap"
@@ -110674,11 +110245,6 @@
       "field": "sexdiff",
       "phrase": "Mature bulls develop a black neck and a large hanging dewlap, and their coats darken with age",
       "match": "dewlap"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Mature bulls develop a black neck and a large hanging dewlap, and their coats darken with age",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -114954,9 +114520,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.05,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -114964,11 +114528,6 @@
       "field": "sexdiff",
       "phrase": "Adult males typically have dark brown to black irises and females reddish-brown ones, and males average slightly heavier",
       "match": "males average slightly heavier"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males typically have dark brown to black irises",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -119548,29 +119107,16 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [
-     "crest",
-     "darker"
+     "crest"
     ],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Adult males are usually black with a yellow bill knob",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
       "phrase": "Females lack the knob, occur in barred, rufous and dark forms, and have a crest banded black and white",
       "match": "crest"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females lack the knob, occur in barred, rufous and dark forms, and have a crest banded black and white",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -119605,14 +119151,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "evidence",
-      "phrase": "Visual display, species recognition, and potentially attracting mates"
-     }
-    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -121296,8 +120834,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -121306,11 +120843,6 @@
       "field": "sexdiff",
       "phrase": "Males are glossy black with a violet-blue sheen, about 43 centimetres long including the very long tail",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are glossy black with a violet-blue sheen, about 43 centimetres long including the very long tail",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -121593,17 +121125,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a broad black stripe down the belly that widens between the legs",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "in females it is narrower and the cap is slightly duller",
@@ -123480,19 +123005,12 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [
      "bright"
     ],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males have a black throat, a white cheek patch and a pale pink bill",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "Females are plainer grey-brown with a dark bill and no black throat, and juveniles are olive-brown with a bright yellow throat and breast",
@@ -123502,11 +123020,6 @@
       "field": "sexdiff",
       "phrase": "Females are plainer grey-brown with a dark bill and no black throat, and juveniles are olive-brown with a bright yellow throat and breast",
       "match": "plainer"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are plainer grey-brown with a dark bill and no black throat, and juveniles are olive-brown with a bright yellow throat and breast",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -124531,8 +124044,7 @@
     "bigger": "male",
     "sizeRatio": 1.45,
     "male": [
-     "wattle",
-     "darker"
+     "wattle"
     ],
     "female": [],
     "duller": null,
@@ -124546,11 +124058,6 @@
       "field": "sexdiff",
       "phrase": "Males weigh about twice as much as females and have a black throat and yellow combs above the eyes",
       "match": "combs"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males weigh about twice as much as females and have a black throat and yellow combs above the eyes",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -127949,13 +127456,6 @@
       "phrase": "Even when slowly wading, the heron's gaze remains fixed on the water directly in front of it",
       "match": "wading"
      }
-    ],
-    "caching": [
-     {
-      "field": "evidence",
-      "phrase": "the heron extends its neck with lightning speed and impales or grasps the prey with its sharp bill",
-      "match": "impales"
-     }
     ]
    },
    "sex": {
@@ -127987,14 +127487,6 @@
      "src": {
       "field": "evidence",
       "phrase": "Grey Herons often stand motionless in shallow water or at the water's edge for extended periods"
-     }
-    },
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "evidence",
-      "phrase": "the heron extends its neck with lightning speed and impales or grasps the prey with its sharp bill"
      }
     },
     {
@@ -128201,24 +127693,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "In breeding plumage the male has a black throat bordered by white stripes",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "the female's throat is whitish or only partly black",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "the female is a duller yellow",
@@ -133911,8 +133389,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [
      "crest"
@@ -133928,11 +133405,6 @@
       "field": "sexdiff",
       "phrase": "Males are iridescent green, purple and copper above and black below, with a plain cinnamon tail",
       "match": "iridescent"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are iridescent green, purple and copper above and black below, with a plain cinnamon tail",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -135844,9 +135316,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -135854,11 +135324,6 @@
       "field": "sexdiff",
       "phrase": "Males are clearly larger and heavier than females",
       "match": "males are clearly larger and heavier"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Only adult males have the inflatable black hood and the red nasal balloon",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -136836,19 +136301,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Only males carry the fiery head tufts, glittering blue crown and black throat",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -136874,22 +136331,6 @@
     ]
    },
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "facts",
-      "phrase": "Males can raise and spread their coloured crown tufts, which are thought to be used in display to females"
-     }
-    },
-    {
-     "id": "court_display",
-     "weight": 4,
-     "src": {
-      "field": "facts",
-      "phrase": "Males can raise and spread their coloured crown tufts, which are thought to be used in display to females"
-     }
-    },
     {
      "id": "nest_build",
      "weight": 6,
@@ -137155,21 +136596,19 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Males are slightly brighter, with a blacker cap and cleaner cheeks",
-      "match": "blacker"
+      "phrase": "females are browner and duller with a fainter face pattern",
+      "match": "duller"
      },
      {
       "field": "sexdiff",
-      "phrase": "females are browner and duller with a fainter face pattern",
-      "match": "duller"
+      "phrase": "The sexes look much alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -137876,19 +137315,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have stronger black bibs and head markings",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -147838,15 +147269,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Females tend to show more brown in the black face mask and breast bands, but the difference is slight and unreliable in the field",
-      "match": "black"
+      "phrase": "The sexes look alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -148472,19 +147901,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are black and yellow-buff with the two long flagged head plumes",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -150853,20 +150274,13 @@
     "bigger": "male",
     "sizeRatio": 1.2,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Males are much longer, mostly because of the very long tail, and brilliantly patterned in green, white, yellow and red",
       "match": "males are much longer"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are rufous-brown barred with black all over and have a much shorter tail",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -151103,20 +150517,13 @@
     "bigger": "female",
     "sizeRatio": 1.2,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Adult males are much smaller than females and brightly marked, while females are velvety black for their whole lives",
       "match": "males are much smaller"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females are velvety black for their whole lives",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -154667,20 +154074,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": "female",
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females have none of the male's yellow, green or plume ornament and are plain maroon-brown with a darker head and paler underparts",
       "match": "paler"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females have none of the male's yellow, green or plume ornament and are plain maroon-brown with a darker head and paler underparts",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -157730,14 +157130,9 @@
     ],
     "caching": [
      {
-      "field": "facts",
-      "phrase": "Shrikes have been found to leave toxic lubber grasshoppers impaled for a day or two before eating them, once the toxins have broken down",
-      "match": "impaled"
-     },
-     {
       "field": "spotlight",
       "phrase": "They hunt from posts and often impale prey on thorns or barbed wire, turning open edges into a visible pantry",
-      "match": "impale"
+      "match": "impale prey on thorns"
      },
      {
       "field": "sd",
@@ -159384,9 +158779,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -159394,11 +158787,6 @@
       "field": "sexdiff",
       "phrase": "In breeding plumage the male is black with a red shoulder and a tail around half a metre long; the female is smaller, streaky brown and short-tailed",
       "match": "female is smaller"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "In breeding plumage the male is black with a red shoulder and a tail around half a metre long",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -159427,14 +158815,6 @@
     ]
    },
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "sleep",
-      "phrase": "Active by day, with males displaying in slow, low flights over the grass"
-     }
-    },
     {
      "id": "court_display",
      "weight": 4,
@@ -161782,8 +161162,7 @@
     "bigger": "female",
     "sizeRatio": 1.12,
     "male": [
-     "dewlap",
-     "darker"
+     "dewlap"
     ],
     "female": [],
     "duller": null,
@@ -161797,11 +161176,6 @@
       "field": "sexdiff",
       "phrase": "Males are entirely black with a purple sheen and a red throat pouch that is blown up like a balloon in courtship",
       "match": "throat pouch"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are entirely black with a purple sheen and a red throat pouch that is blown up like a balloon in courtship",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -161938,8 +161312,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -161953,11 +161326,6 @@
       "field": "sexdiff",
       "phrase": "Males are velvety black with iridescent blue-green on the crown, throat and breast",
       "match": "iridescent"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are velvety black with iridescent blue-green on the crown, throat and breast",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -164373,8 +163741,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "mane",
-     "darker"
+     "mane"
     ],
     "female": [],
     "duller": null,
@@ -164383,11 +163750,6 @@
       "field": "sexdiff",
       "phrase": "Males may show a darker mane or marking",
       "match": "mane"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males may show a darker mane or marking",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -165013,15 +164375,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "females share the same black body and narrow yellow bands",
-      "match": "black"
+      "phrase": "Males have a relatively longer tail that is thicker at its base; otherwise the sexes are hard to tell apart",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -165185,9 +164545,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -165195,11 +164553,6 @@
       "field": "sexdiff",
       "phrase": "Males are often somewhat larger, but both sexes wear the black-and-white design",
       "match": "males are often somewhat larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are often somewhat larger, but both sexes wear the black-and-white design",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -167526,9 +166879,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.05,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -167536,11 +166887,6 @@
       "field": "sexdiff",
       "phrase": "The sexes look alike, though the male's black cap and bib may be slightly larger",
       "match": "male's black cap and bib may be slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "The sexes look alike, though the male's black cap and bib may be slightly larger",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -168288,20 +167634,13 @@
     "bigger": "female",
     "sizeRatio": 1.12,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females are often larger and darker",
       "match": "females are often larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are often larger and darker",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -168741,20 +168080,13 @@
     "bigger": "female",
     "sizeRatio": 1.05,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females are slightly larger than males",
       "match": "females are slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Wing patterns vary widely in both sexes, but some of the darker colour forms occur mainly or only in females",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -169444,24 +168776,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males are sooty black with a black beak when breeding",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Young males pass through partly black, blotchy stages before gaining full black plumage",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -171872,9 +171191,7 @@
     "bigger": "female",
     "sizeRatio": 1.05,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": "male",
     "src": [
      {
@@ -171886,11 +171203,6 @@
       "field": "sexdiff",
       "phrase": "Adult males have a paler, almost whitish grey head",
       "match": "paler"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females have a darker grey head and often show faint pale bars under the tail",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -179097,8 +178409,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [],
     "duller": null,
@@ -179112,11 +178423,6 @@
       "field": "sexdiff",
       "phrase": "Males are darker, larger, and carry horns",
       "match": "horns"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are darker, larger, and carry horns",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -179451,9 +178757,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -179461,11 +178765,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger, darker, and stronger-horned, while females are smaller; both rely on hooves suited to steep Western Ghats ground",
       "match": "males are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger, darker, and stronger-horned",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -180170,8 +179469,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -180180,11 +179478,6 @@
       "field": "sexdiff",
       "phrase": "Males have a bright white throat and eyebrow stripe bordered in black",
       "match": "bright"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a bright white throat and eyebrow stripe bordered in black",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -184973,8 +184266,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -184983,11 +184275,6 @@
       "field": "sexdiff",
       "phrase": "Males have a glossy metallic blue-black throat and upper breast",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a glossy metallic blue-black throat and upper breast",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -187036,19 +186323,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males have a grey face, dark red-brown eyes and a tail with two broad black bands",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -188587,20 +187866,13 @@
     "bigger": "female",
     "sizeRatio": 1.12,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females are usually larger and may show a darker chest band, while males are often slimmer",
       "match": "females are usually larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are usually larger and may show a darker chest band",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -188932,17 +188204,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are usually black-and-white",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "females are brownish-gray",
@@ -192746,8 +192011,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -192756,11 +192020,6 @@
       "field": "sexdiff",
       "phrase": "Males are velvety black with an iridescent green-blue crown and throat",
       "match": "iridescent"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are velvety black with an iridescent green-blue crown and throat",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -195792,19 +195051,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are generally described as darker, with sharper pale markings on the carapace and abdomen",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -196921,20 +196172,13 @@
     "bigger": "male",
     "sizeRatio": 1.05,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Adult males and females have very similar black-and-white plumage, with males tending to be slightly larger",
       "match": "males tending to be slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "females have very similar black-and-white plumage, with males tending to be slightly larger",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -198033,8 +197277,7 @@
      "crest"
     ],
     "female": [
-     "crest",
-     "darker"
+     "crest"
     ],
     "duller": null,
     "src": [
@@ -198047,11 +197290,6 @@
       "field": "sexdiff",
       "phrase": "Females have a black cheek stripe and a grey-brown forehead, with red only on the rear of the crest",
       "match": "crest"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females have a black cheek stripe and a grey-brown forehead, with red only on the rear of the crest",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -198324,8 +197562,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "long_tail",
-     "darker"
+     "long_tail"
     ],
     "female": [],
     "duller": null,
@@ -198334,11 +197571,6 @@
       "field": "sexdiff",
       "phrase": "In breeding plumage the male is black and white with tail streamers far longer than his body",
       "match": "tail streamers"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "In breeding plumage the male is black and white with tail streamers far longer than his body",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -199164,16 +198396,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Breeding males usually show a bold, complete black breast band and a black bar across the forehead",
-      "match": "black"
+      "phrase": "In winter both sexes lose the black and look alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -199212,14 +198442,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "sd",
-      "phrase": "The display is calibrated — the bird stays close enough to remain worth following and far enough to be safe"
-     }
-    },
     {
      "id": "preen_stretch",
      "weight": 2,
@@ -199391,9 +198613,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.45,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -199401,11 +198621,6 @@
       "field": "sexdiff",
       "phrase": "Males weigh up to about twice as much as females and have a broader head, heavier black facial stripes and stiffer whiskers",
       "match": "males weigh up to about twice"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males weigh up to about twice as much as females and have a broader head, heavier black facial stripes and stiffer whiskers",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -203091,8 +202306,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [],
     "duller": null,
@@ -203101,11 +202315,6 @@
       "field": "sexdiff",
       "phrase": "Bucks have black horns 25 to 40 centimetres long, with a forward prong and hooked tips, and a black patch on the side of the neck below the ear",
       "match": "horns"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Bucks have black horns 25 to 40 centimetres long, with a forward prong and hooked tips, and a black patch on the side of the neck below the ear",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -203647,19 +202856,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Breeding males have a violet crown with a black centre and a black band through the eye",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -207696,26 +206897,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females are plain brown above and pale below and never show red or black",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Only breeding males carry the black-and-red plumage",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -207764,27 +206950,11 @@
    },
    "recipes": [
     {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "story",
-      "phrase": "The red-display fairywren"
-     }
-    },
-    {
      "id": "call_bout",
      "weight": 3,
      "src": {
       "field": "sd",
       "phrase": "flare their contrasting plumage or sing"
-     }
-    },
-    {
-     "id": "court_display",
-     "weight": 4,
-     "src": {
-      "field": "story",
-      "phrase": "The red-display fairywren"
      }
     },
     {
@@ -208818,18 +207988,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult females lack the male's plumes and tail wires and are mostly brown with a darker face",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -209186,17 +208348,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a black crown and brighter rust underparts",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "females have a grey crown and paler, washed-out underparts",
@@ -209324,26 +208479,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "The male has a red upper bill and a black lower bill",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "the female's bill is entirely black",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -209805,19 +208945,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males are brick red to orange-red with darker wings",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -211402,9 +210534,7 @@
     "maleShare": 0.02,
     "bigger": "female",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -211417,11 +210547,6 @@
       "field": "sexdiff",
       "phrase": "Workers and queens are female; queens are larger with a bulkier thorax and bear wings until mating",
       "match": "female; queens are larger with a bulkier"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are winged, slimmer and darker, and appear only around mating flights",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -215476,8 +214601,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -215491,11 +214615,6 @@
       "field": "sexdiff",
       "phrase": "Males are glossy black with red and yellow shoulder patches",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are glossy black with red and yellow shoulder patches",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -216461,9 +215580,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.2,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -216471,11 +215588,6 @@
       "field": "sexdiff",
       "phrase": "Females grow considerably larger than males",
       "match": "females grow considerably larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Older males often turn almost entirely black, losing the head markings and shell pattern",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -216769,9 +215881,7 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "male",
     "src": [
@@ -216779,11 +215889,6 @@
       "field": "sexdiff",
       "phrase": "As adults, males are black and gold, females are mottled brownish",
       "match": "brownish"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "As adults, males are black and gold, females are mottled brownish",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -216844,14 +215949,6 @@
     ]
    },
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "sleep",
-      "phrase": "Regent Bowerbird is diurnal, feeding and displaying during daylight"
-     }
-    },
     {
      "id": "court_display",
      "weight": 4,
@@ -217603,9 +216700,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -217613,16 +216708,6 @@
       "field": "sexdiff",
       "phrase": "Males are also larger, and their casque carries black markings that the female's lacks",
       "match": "males are also larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "The male has a red eye ringed with black skin",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are also larger, and their casque carries black markings that the female's lacks",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -219310,19 +218395,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a purple crown, a green throat and a dark body that can look black in shade",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -219358,14 +218435,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "sd",
-      "phrase": "Between these intense feeding and display bouts"
-     }
-    },
     {
      "id": "preen_stretch",
      "weight": 2,
@@ -219913,7 +218982,6 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "darker",
      "wattle"
     ],
     "female": [],
@@ -219921,18 +218989,8 @@
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "Winter males have a black stripe from the bill through the eye, which females lack",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
       "phrase": "In spring males show a larger red comb, and summer females are more finely barred in gold and black",
       "match": "comb"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "In spring males show a larger red comb, and summer females are more finely barred in gold and black",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -220738,17 +219796,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males have a black chin stripe that runs into a narrow black and rose-pink collar",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "Females and young birds lack the collar or show only a faint paler green one",
@@ -222971,16 +222022,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "The sexes look much alike, though males usually have an unbroken dark tail band, a longer tail and a larger black neck ruff",
-      "match": "black"
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -224353,8 +223402,7 @@
     "bigger": "male",
     "sizeRatio": 1.12,
     "male": [
-     "horns",
-     "darker"
+     "horns"
     ],
     "female": [
      "horns"
@@ -224370,11 +223418,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger and darker with heavier horns",
       "match": "horns"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger and darker with heavier horns",
-      "match": "darker"
      },
      {
       "field": "sexdiff",
@@ -224710,16 +223753,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "males often have darker eyes",
-      "match": "darker"
+      "phrase": "Sexes are similar but not identical; males often have darker eyes while females may show yellow irises",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -227452,8 +226493,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -227462,11 +226502,6 @@
       "field": "sexdiff",
       "phrase": "Adult males become glossy blue-black",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males become glossy blue-black",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -227667,8 +226702,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -227677,11 +226711,6 @@
       "field": "sexdiff",
       "phrase": "Males are glossy blue-black on the head, back and breast, sharply divided from a white belly",
       "match": "glossy"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are glossy blue-black on the head, back and breast, sharply divided from a white belly",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -232440,20 +231469,13 @@
     "bigger": "female",
     "sizeRatio": 1.05,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": "male",
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females are slightly larger and usually darker and more richly buff, with heavier streaking",
       "match": "females are slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are slightly larger and usually darker and more richly buff, with heavier streaking",
-      "match": "darker"
      },
      {
       "field": "sexdiff",
@@ -234232,20 +233254,13 @@
     "bigger": "female",
     "sizeRatio": 1.2,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Yellow-and-black Argiope, female much larger than the male",
       "match": "female much larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are the large yellow-and-black spider at the hub",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -235191,7 +234206,6 @@
     "bigger": "male",
     "sizeRatio": 1.2,
     "male": [
-     "darker",
      "crest"
     ],
     "female": [],
@@ -235201,11 +234215,6 @@
       "field": "sexdiff",
       "phrase": "Males are mainly white and black and considerably larger",
       "match": "males are mainly white and black and considerably larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are mainly white and black and considerably larger",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -236696,18 +235705,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females have two black spots on the upper forewing and a dark dash on the inner edge",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -236987,19 +235988,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Sex differences are strong: males are crisp black and white",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -237800,19 +236793,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Breeding males are white with a black back, black wing tips and a black bill",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -238886,17 +237871,10 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "In breeding plumage males have a black bar on the forehead, black ear patches and black breast patches",
-      "match": "black"
-     },
      {
       "field": "sexdiff",
       "phrase": "on females these marks are brown or dull",
@@ -241541,9 +240519,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -241551,11 +240527,6 @@
       "field": "sexdiff",
       "phrase": "Males are larger, darker, and horned, while females are smaller and hornless",
       "match": "males are larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are larger, darker, and horned",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -241572,14 +240543,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "court_display",
-     "weight": 4,
-     "src": {
-      "field": "facts",
-      "phrase": "Males hold territories during breeding displays in open wetland areas"
-     }
-    },
     {
      "id": "groom_self",
      "weight": 2,
@@ -244956,13 +243919,6 @@
    "zone": "coral_reef",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "facts",
-      "phrase": "It is a spearer rather than a smasher: instead of clubbing hard shells, it impales soft-bodied prey on its spined claws",
-      "match": "impales"
-     }
-    ],
     "dig": [
      {
       "field": "sd",
@@ -246744,19 +245700,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "males often have darker faces and different eye or tail features",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -249771,26 +248719,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
-    "female": [
-     "darker"
-    ],
+    "male": [],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males are white above with narrow black borders and tips to the forewings",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are much darker, with the forewing veins broadly edged in black, giving the striped look behind the common name",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -252530,9 +251463,7 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": "female",
     "src": [
@@ -252540,11 +251471,6 @@
       "field": "sexdiff",
       "phrase": "females are plainer brown",
       "match": "plainer"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Young males resemble females before moulting into black",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -252678,8 +251604,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -252688,11 +251613,6 @@
       "field": "sexdiff",
       "phrase": "Breeding males have a bright sky-blue crown, ear patches and upper back, with a black throat and black eye-stripe",
       "match": "bright"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Breeding males have a bright sky-blue crown, ear patches and upper back, with a black throat and black eye-stripe",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -252833,19 +251753,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Males have a purple crown, orange-rufous nape, grey breast and a broad blue-black breast band",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -253789,20 +252701,13 @@
     "bigger": "female",
     "sizeRatio": 1.12,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
       "phrase": "Females are generally larger and often darker, while males may be lighter or more agile-looking depending on age and region",
       "match": "females are generally larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are generally larger and often darker",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -260036,9 +258941,7 @@
     "maleShare": 0.5,
     "bigger": "female",
     "sizeRatio": 1.12,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -260046,11 +258949,6 @@
       "field": "sexdiff",
       "phrase": "Females are usually larger than males",
       "match": "females are usually larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "darker or yellowish throat skin",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -262311,15 +261209,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "females look alike, with the same brown-black plumage and bare red head",
-      "match": "black"
+      "phrase": "Males and females look alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -262450,15 +261346,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "black throat patch edged in blue",
-      "match": "black"
+      "phrase": "Males and females look alike",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -262781,19 +261675,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Only the male has black and yellow plumage, a green-edged breast shield and the wires",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -263117,9 +262003,7 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [
      "bright"
     ],
@@ -263129,11 +262013,6 @@
       "field": "sexdiff",
       "phrase": "Females are pale with two bright red stripes running along the body",
       "match": "bright"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are slimmer and differently coloured, with a darker body",
-      "match": "darker"
      }
     ],
     "defaulted": false
@@ -263725,9 +262604,7 @@
     "maleShare": 0.5,
     "bigger": "male",
     "sizeRatio": 1.05,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
@@ -263735,11 +262612,6 @@
       "field": "sexdiff",
       "phrase": "Adult males usually have a dark brown to black iris, while females have a reddish-brown one, and males tend to have a slightly larger head and bill",
       "match": "males tend to have a slightly larger"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Adult males usually have a dark brown to black iris",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -263762,14 +262634,6 @@
      "src": {
       "field": "story",
       "phrase": "Paired birds perch side by side and take turns preening each other's heads and napes, the places a bird cannot reach with its own bill"
-     }
-    },
-    {
-     "id": "strut_display",
-     "weight": 5,
-     "src": {
-      "field": "spotlight",
-      "phrase": "In alarm or display, the broad, rounded crest of this large white cockatoo lifts from lying"
      }
     },
     {
@@ -264954,18 +263818,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "females and young adults stay yellow-brown with darker side stripes",
-      "match": "darker"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -266181,8 +265037,7 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "female": [],
     "duller": "female",
@@ -266191,11 +265046,6 @@
       "field": "sexdiff",
       "phrase": "Males are velvet black with an iridescent blue-green crown and throat",
       "match": "iridescent"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Males are velvet black with an iridescent blue-green crown and throat",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -266539,18 +265389,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females are black all over, antennae included",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -267394,19 +266236,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Only adult males have the black plumage and ornaments",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -267919,15 +266753,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "females are similar, though males can show darker throat coloration in breeding plumage",
-      "match": "darker"
+      "phrase": "Males and females are similar, though males can show darker throat coloration in breeding plumage",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -274701,12 +273533,9 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [
-     "bright",
-     "darker"
+     "bright"
     ],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": "female",
     "src": [
      {
@@ -274716,18 +273545,8 @@
      },
      {
       "field": "sexdiff",
-      "phrase": "Males are glossy blue-black above with a deep orange-chestnut belly and a longer tail",
-      "match": "black"
-     },
-     {
-      "field": "sexdiff",
       "phrase": "Females are grey-brown where males are black, with a paler buff-orange belly and shorter tail",
       "match": "paler"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are grey-brown where males are black, with a paler buff-orange belly and shorter tail",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -277742,8 +276561,7 @@
     "sizeRatio": 1.12,
     "male": [],
     "female": [
-     "bright",
-     "darker"
+     "bright"
     ],
     "duller": "male",
     "src": [
@@ -277756,11 +276574,6 @@
       "field": "sexdiff",
       "phrase": "Breeding females are larger and more boldly marked",
       "match": "boldly marked"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "a black stripe running from the eye down the neck into chestnut",
-      "match": "black"
      },
      {
       "field": "sexdiff",
@@ -278426,18 +277239,10 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "Females are olive-green above and pale yellow below, with shorter tail filaments and none of the male's red or black",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [],
@@ -279597,16 +278402,14 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "males do not develop the black feathering seen in some Darwin's finches, so the sexes are hard to tell apart in the field",
-      "match": "black"
+      "phrase": "Both sexes wear the same plain olive-brown plumage",
+      "match": "alike"
      }
     ],
     "defaulted": false
@@ -279920,8 +278723,7 @@
      "dewlap"
     ],
     "female": [
-     "dewlap",
-     "darker"
+     "dewlap"
     ],
     "duller": null,
     "src": [
@@ -279934,11 +278736,6 @@
       "field": "sexdiff",
       "phrase": "Females are all black on the head and neck, with a blue throat pouch",
       "match": "throat pouch"
-     },
-     {
-      "field": "sexdiff",
-      "phrase": "Females are all black on the head and neck, with a blue throat pouch",
-      "match": "black"
      }
     ],
     "defaulted": false
@@ -280024,19 +278821,11 @@
     "maleShare": 0.5,
     "bigger": null,
     "sizeRatio": 1,
-    "male": [
-     "darker"
-    ],
+    "male": [],
     "female": [],
     "duller": null,
-    "src": [
-     {
-      "field": "sexdiff",
-      "phrase": "In breeding plumage the male has a thin black bar across the forehead, which the female lacks, and a bolder black breast band",
-      "match": "black"
-     }
-    ],
-    "defaulted": false
+    "src": [],
+    "defaulted": true
    },
    "mating": {
     "months": [
@@ -284523,15 +283312,13 @@
     "bigger": null,
     "sizeRatio": 1,
     "male": [],
-    "female": [
-     "darker"
-    ],
+    "female": [],
     "duller": null,
     "src": [
      {
       "field": "sexdiff",
-      "phrase": "females are similar, though females may be larger or darker in some broods",
-      "match": "darker"
+      "phrase": "Males and females are similar, though females may be larger or darker in some broods",
+      "match": "alike"
      }
     ],
     "defaulted": false
