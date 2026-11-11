@@ -454,5 +454,9 @@ export function packSleep(eyes: number, curl: number, flick: number, breath: num
 const INTO = ["burrow", "burrow_entrance", "cave_mouth"];
 /** Whether its roost spot is a way in (the attach point's id: `<tag>:<host>:<n>`). */
 export function goesIntoRoost(point: string | null | undefined, roost: string | null | undefined): boolean {
-    return Boolean(point && roost && ["den", "burrow", "cave"].includes(roost) && INTO.some((tag) => point.startsWith(`${tag}:`)));
+    if (!point || !roost || !["den", "burrow", "cave"].includes(roost)) return false;
+    // The map lane's roosts carry `map:` before the point's id; its own dug burrow is `map:burrow`, a cave dweller's
+    // den at a drawn rock's foot `map:rock_foot` (the props draw the way in at both: `props/burrows.ts` entranceStyle).
+    const id = point.startsWith("map:") ? point.slice(4) : point;
+    return id === "burrow" || (roost === "cave" && id === "rock_foot") || INTO.some((tag) => id.startsWith(`${tag}:`));
 }

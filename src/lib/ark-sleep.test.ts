@@ -191,6 +191,8 @@ test("huddles, piles, rows and clusters sleep close; a young mammal sleeps again
     assert.ok(Math.abs(a.dx) > 0.08 && Math.abs(a.dx) < 0.2 && Math.abs(a.dz) < 1e-9);
     assert.equal(roostOffset("plains-zebra", 1, 2, 0), null);
     assert.ok(goesIntoRoost("burrow:ground:96", "den") && goesIntoRoost("cave_mouth:12", "cave") && !goesIntoRoost("limb:oak-a:3", "den") && !goesIntoRoost("burrow:ground:96", "tree"));
+    // The map lane's roosts carry `map:` before the point's id; its dug burrow and a cave dweller's rock foot go in too.
+    assert.ok(goesIntoRoost("map:burrow_entrance:b1:0", "burrow") && goesIntoRoost("map:burrow", "den") && goesIntoRoost("map:rock_foot", "cave") && !goesIntoRoost("map:rock_foot", "den") && !goesIntoRoost("map:canopy", "den"));
     const c = roostOffset("egyptian-fruit-bat", 3, 0.16, 0)!;
     assert.ok(Math.hypot(c.dx, c.dz) < 0.2);
 });

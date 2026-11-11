@@ -692,6 +692,18 @@ test("props den entrances: a burrow mouth or a rock den at the sleep lane's ways
     assert.equal(entranceStyle("rock_face:decor3:1", "den"), null);
     assert.equal(entranceStyle("branch:decor1:0", "burrow"), null);
     assert.equal(entranceStyle(null, "burrow"), null);
+    // The map lane's roosts (`map/place.ts` scheduleRoost): `map:` before the point's id, or its own spots.
+    assert.equal(entranceStyle("map:burrow_entrance:burrow12,-40:0", "burrow"), "burrow");
+    assert.equal(entranceStyle("map:burrow", "den"), "burrow");
+    assert.equal(entranceStyle("map:rock_face:decor3:1", "crevice"), "rock");
+    assert.equal(entranceStyle("map:rock_foot", "crevice"), "rock");
+    assert.equal(entranceStyle("map:canopy", "den"), null);
+    // Two dens at two rocks' feet are two entrances, though both are `map:rock_foot`.
+    const feet = entranceInstances([
+        {point: "map:rock_foot", x: 10, y: 1, z: 10, nx: 0, ny: 1, nz: 0, length: 0.5, kind: "crevice", slug: "rock-hyrax"},
+        {point: "map:rock_foot", x: 30, y: 1, z: -4, nx: 0, ny: 1, nz: 0, length: 0.3, kind: "crevice", slug: "gundi"}
+    ]);
+    assert.equal(feet.rocks.length, 2);
     // Sized to the body: a meerkat's hole is small, an aardvark's big, both bounded.
     assert.ok(mouthRadius(0.4) < mouthRadius(1.6));
     assert.ok(mouthRadius(0.05) >= 0.07 && mouthRadius(9) <= 0.85);

@@ -22,11 +22,27 @@ export type DenEntrance = {point: string; x: number; y: number; z: number; nx: n
 /** Which roosts get an entrance drawn, and how (the sleep lane's ways in). */
 export function entranceStyle(point: string | null, kind: string): "burrow" | "rock" | null {
     if (!point) return null;
-    if (point.startsWith("cave_mouth:")) return "rock";
-    if (point.startsWith("burrow:") || point.startsWith("burrow_entrance:")) return kind === "crevice" ? "rock" : "burrow";
-    // A crevice sleeper on a rock's face: the crevice it tucks into, in that face.
-    if (kind === "crevice" && point.startsWith("rock_face:")) return "rock";
+    const id = roostPointId(point);
+    // (The map lane's dug burrow, `map:burrow`, and its rock den at a drawn rock's foot, `map:rock_foot`.)
+    if (id.startsWith("cave_mouth:") || id === "rock_foot") return "rock";
+    if (id === "burrow" || id.startsWith("burrow:") || id.startsWith("burrow_entrance:")) return kind === "crevice" ? "rock" : "burrow";
+    // A crevice or cave sleeper on a rock's face or ledge: the crevice it tucks into, in that rock.
+    if ((kind === "crevice" || kind === "cave") && (id.startsWith("rock_face:") || id.startsWith("ledge:") || id.startsWith("cliff_ledge:"))) return "rock";
     return null;
+}
+
+/**
+ * A roost point's own id. The map lane's roosts (`map/place.ts` scheduleRoost, the schedule's roost for every placed
+ * animal) carry `map:` before it (`map:burrow_entrance:…`, `map:rock_face:…`), or are one of its own spots with no
+ * point of their own (`map:burrow`, `map:rock_foot`).
+ */
+export function roostPointId(point: string): string {
+    return point.startsWith("map:") ? point.slice(4) : point;
+}
+
+/** One entrance per roost point; the map's spots with no point of their own (no `:` in the id) are one per place. */
+function entranceKey(entrance: DenEntrance): string {
+    return roostPointId(entrance.point).includes(":") ? entrance.point : `${entrance.point}@${entrance.x.toFixed(2)},${entrance.z.toFixed(2)}`;
 }
 
 /** The mouth's radius for an animal drawn `length` metres long: it fits through, the hole a little wider than its body. */
@@ -112,18 +128,19 @@ export function rockDen(seed = 37): BufferGeometry {
 export function entranceInstances(entrances: DenEntrance[]): {burrows: PropInstance[]; rocks: PropInstance[]; marks: Record<string, {x: number; y: number; z: number; facing: number}>} {
     const byPoint = new Map<string, DenEntrance>();
     for (const entrance of entrances) {
-        const before = byPoint.get(entrance.point);
-        if (!before || entrance.length > before.length || (entrance.length === before.length && entrance.slug < before.slug)) byPoint.set(entrance.point, entrance);
+        const key = entranceKey(entrance);
+        const before = byPoint.get(key);
+        if (!before || entrance.length > before.length || (entrance.length === before.length && entrance.slug < before.slug)) byPoint.set(key, entrance);
     }
     const burrows: PropInstance[] = [];
     const rocks: PropInstance[] = [];
     const marks: Record<string, {x: number; y: number; z: number; facing: number}> = {};
-    for (const entrance of Array.from(byPoint.values()).sort((a, b) => a.point.localeCompare(b.point))) {
+    for (const entrance of Array.from(byPoint.values()).sort((a, b) => entranceKey(a).localeCompare(entranceKey(b)))) {
         const style = entranceStyle(entrance.point, entrance.kind);
         if (!style) continue;
         // Facing downhill (the ground's normal leans that way) or out of a rock's face; on level ground, a turn from its id.
         const flat = Math.hypot(entrance.nx, entrance.nz);
-        const facing = flat > 0.05 ? Math.atan2(entrance.nx, entrance.nz) : ((hashString(entrance.point) % 628) / 100);
+        const facing = flat > 0.05 ? Math.atan2(entrance.nx, entrance.nz) : ((hashString(entranceKey(entrance)) % 628) / 100);
         // A burrow seated on the slope (its up most of the way to the ground's normal); a rock den stands upright.
         const up = style === "rock" ? new Vector3(0, 1, 0) : new Vector3(entrance.nx * 0.8, 0.2 + entrance.ny * 0.8, entrance.nz * 0.8).normalize();
         const item: PropInstance = {x: entrance.x, y: entrance.y - 0.02, z: entrance.z, turn: facing, scale: mouthRadius(entrance.length), up};
