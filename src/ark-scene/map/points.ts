@@ -349,6 +349,19 @@ export class MapPoints {
     }
 
     /** The map tags an attach point stands for (its own and its ground's). */
+    /** The one tag a point's list is (of the tags it stands for, by a hash of its id: the same for every viewer). */
+    ownerOf(point: AttachPoint): MapTag | null {
+        const tags = this.tagsOf(point);
+        if (!tags.length) return null;
+        if (tags.length === 1) return tags[0];
+        let h = 0x811c9dc5;
+        for (let i = 0; i < point.id.length; i++) {
+            h ^= point.id.charCodeAt(i);
+            h = Math.imul(h, 0x01000193);
+        }
+        return tags[(h >>> 0) % tags.length];
+    }
+
     tagsOf(point: AttachPoint): MapTag[] {
         let tags = this.attachTags.get(point);
         if (!tags) {
@@ -426,7 +439,13 @@ export class MapPoints {
         if (!found) {
             // (The ground's own points, a hole or a pool, never on a launch point: a small one is never under a big one's feet.)
             const low = (point: AttachPoint) => point.tag === "worm_hole" || point.tag === "burrow_entrance" || point.tag === "tide_pool";
-            const candidates = this.sampler.attachPoints().filter((point) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)));
+            // (Each point is one tag's, as each ground cell is: a point that stands for two tags, a desert shrub's top for
+            // the sand and the scrub, is in one of their lists only, so two kinds' clusters never pick the same point.)
+            // (A tag that owns no point its body fits takes the points that stand for it, shared: a toad by the lake.)
+            const usable = (point: AttachPoint) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5));
+            const shared = this.sampler.attachPoints().filter(usable);
+            const owned = shared.filter((point) => this.ownerOf(point) === tag);
+            const candidates = owned.some((point) => point.zone === zone) || (owned.length && !shared.some((point) => point.zone === zone)) ? owned : shared;
             // Points a body's length and a little apart (a small rock's four faces are one place for a puffin), in a fixed order.
             const gap = Math.max(length * 1.2, 0.03);
             const fitting: AttachPoint[] = [];

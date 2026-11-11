@@ -20,13 +20,40 @@
  *    knot of it.
  */
 
-import type {ArkAnimal} from "@/ark-scene/types";
+import {bodyOf, MICRO_MAX_LENGTH, mapSpecies, trueMicro} from "@/ark-scene/map/species";
+import {arkBody} from "@/ark-scene/stats";
+import type {ArkAnimal, ArkZone} from "@/ark-scene/types";
 
 /** A species with more than this many aboard is drawn as a herd. */
 export const ARK_HERD_FROM = 24;
 /** Representatives drawn one by one per herd (half in the lighter view). */
 export const ARK_HERD_LIVE = 24;
 export const ARK_HERD_LIVE_LITE = 12;
+
+const microCache = new Map<string, boolean>();
+
+/**
+ * A tiny animal (the map's micro animals: insects, spiders, small invertebrates under 12 cm, `map/species.ts`
+ * trueMicro). Never a herd: a herd's badge and figures over a swarm of flies read as a mistake. They live on their
+ * attach points like any micro animal (seen up close, as their swarm or cluster), not from afar; their count stays
+ * in the population panel's bars.
+ */
+export function herdMicro(animal: Pick<ArkAnimal, "model_slug" | "zone">): boolean {
+    const key = `${animal.model_slug}|${animal.zone}`;
+    let micro = microCache.get(key);
+    if (micro === undefined) {
+        const species = mapSpecies(animal.model_slug, animal.zone as ArkZone);
+        const length = arkBody(animal as ArkAnimal).metres;
+        micro = species ? trueMicro(species, animal.model_slug, length) : bodyOf(animal.model_slug) === "i" && length <= MICRO_MAX_LENGTH;
+        microCache.set(key, micro);
+    }
+    return micro;
+}
+
+/** Who is never massed into a herd: a hamlet resident (its plot and the hamlet's rotation decide who is out), and a tiny animal. */
+export function herdless(animal: Pick<ArkAnimal, "area" | "model_slug" | "zone">): boolean {
+    return animal.area === "house" || animal.area === "farm" || herdMicro(animal);
+}
 
 /** The same key as the population panel's (`arkSpeciesKey`). */
 export function herdKey(animal: Pick<ArkAnimal, "species_profile_id" | "model_slug">): string {
@@ -55,7 +82,7 @@ export type ArkRepresentatives = {
 /** Which species are herds (more than `from` aboard). */
 export function arkHerdKeys(animals: ArkAnimal[], from = ARK_HERD_FROM): Set<string> {
     const counts = new Map<string, number>();
-    for (const animal of animals) if (animal.area !== "house" && animal.area !== "farm") counts.set(herdKey(animal), (counts.get(herdKey(animal)) ?? 0) + 1);
+    for (const animal of animals) if (!herdless(animal)) counts.set(herdKey(animal), (counts.get(herdKey(animal)) ?? 0) + 1);
     return new Set(Array.from(counts.entries()).filter(([, n]) => n > from).map(([key]) => key));
 }
 
@@ -67,8 +94,8 @@ export function arkRepresentatives(animals: ArkAnimal[], options: {pinned?: Read
     const live = new Set<string>();
     for (const animal of animals) {
         // A hamlet resident (a captured pet or farm animal, `map/hamlet.ts`) is never massed into a herd: it lives on its
-        // plot, and the hamlet's rotation decides who of them is out of doors.
-        if (animal.area === "house" || animal.area === "farm") {
+        // plot, and the hamlet's rotation decides who of them is out of doors. Nor is a tiny animal (`herdMicro`).
+        if (herdless(animal)) {
             live.add(animal.id);
             continue;
         }
