@@ -11,6 +11,8 @@
 
 import {primeDecor} from "@/ark-scene/decor";
 import {placeAnimals, primePlaces, type Placement} from "@/ark-scene/placement";
+import {primeZoneCapacities} from "@/ark-scene/map/capacity";
+import type {ArkZone} from "@/ark-scene/types";
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";
 import {computeScenery, packGrass, primeGroundIfAble, unpackGrass, type ArkSceneryPrebuild} from "@/ark-scene/runtime/prebuild-scenery";
@@ -21,7 +23,7 @@ export {packGrass, unpackGrass};
 /** From this many animals the places are worth a worker (below, ~0.1 s on the main thread). */
 export const PLACES_IN_WORKER_FROM = 1000;
 
-export type ArkPrebuild = ArkSceneryPrebuild & {places: Array<[string, Placement]> | null};
+export type ArkPrebuild = ArkSceneryPrebuild & {places: Array<[string, Placement]> | null; capacities?: Array<[ArkZone, number]> | null};
 export type ArkPrebuildInput = {grass: number; animals: ArkAnimal[] | null; tier?: QualityTier};
 
 /** The tier the scene will pick (the same rule as `mountArk`: a pinned `__arkQuality`, else the device's). */
@@ -41,6 +43,7 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.decor && data.fill && data.grass) primeDecor({decor: data.decor, fill: data.fill, grass: {count: data.grass.count, tufts: unpackGrass(data.grass)}});
     primeGroundIfAble(data.ground);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
+    if (data.capacities) primeZoneCapacities(data.capacities);
 }
 
 export type ArkPrepared = {where: "worker" | "skipped"; ms: number; workerMs?: number; places?: "worker" | "main"; error?: string};
@@ -85,11 +88,11 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
     const scenery = ask<ArkSceneryPrebuild>(() => new Worker(options.workerUrl ?? "/ark/ark-prebuild-worker.js"), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier()}, timeout);
     const big = Boolean(animals && animals.length >= PLACES_IN_WORKER_FROM);
     const places = big
-        ? ask<{places: Array<[string, Placement]>}>(() => new Worker(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js"), {animals}, timeout)
-        : Promise.resolve({data: null as {places: Array<[string, Placement]>} | null, error: undefined});
+        ? ask<{places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>}>(() => new Worker(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js"), {animals}, timeout)
+        : Promise.resolve({data: null as {places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>} | null, error: undefined});
     const [a, b] = await Promise.all([scenery, places]);
     try {
-        applyArkPrebuild({...(a.data ?? {}), places: b.data?.places ?? null}, animals);
+        applyArkPrebuild({...(a.data ?? {}), places: b.data?.places ?? null, capacities: b.data?.capacities ?? null}, animals);
     } catch (error) {
         return {where: "skipped", ms: Math.round(performance.now() - started), error: String(error)};
     }

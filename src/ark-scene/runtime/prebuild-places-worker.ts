@@ -6,11 +6,14 @@
 
 import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
+import {zoneCapacities} from "@/ark-scene/map/capacity";
 
 const scope = self as unknown as {onmessage: ((event: MessageEvent<{animals: ArkAnimal[]}>) => void) | null; postMessage: (data: unknown) => void};
 
 scope.onmessage = (event) => {
     const started = Date.now();
     const places = Array.from(placeAnimals(event.data.animals).entries());
-    scope.postMessage({places, ms: Date.now() - started});
+    // Rule E's per-zone capacities (map/capacity.ts): a pure table, 1.3 s of the phone profile's mount at the backfill.
+    const capacities = Array.from(zoneCapacities().entries());
+    scope.postMessage({places, capacities, ms: Date.now() - started});
 };

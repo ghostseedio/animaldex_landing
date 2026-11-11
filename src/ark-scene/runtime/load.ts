@@ -48,6 +48,22 @@ export class LoadPlanner {
         this.frame++;
     }
 
+    /** The kinds seen in view this frame, nearest first, at most `limit` (the ones drawn as models). */
+    nearestVisible(limit: number): string[] {
+        const list: Array<[string, number]> = [];
+        this.seen.forEach((known, slug) => {
+            if (known.visible && known.frame === this.frame) list.push([slug, known.distance]);
+        });
+        list.sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1));
+        return list.slice(0, limit).map(([slug]) => slug);
+    }
+
+    /** Seen at all lately (in view or not): still wanted by the scene. */
+    recent(slug: string, frames = 120): boolean {
+        const known = this.seen.get(slug);
+        return Boolean(known && this.frame - known.frame <= frames);
+    }
+
     /** The species' nearest animal in view lately (m), or Infinity. */
     nearestInView(slug: string): number {
         const known = this.seen.get(slug);

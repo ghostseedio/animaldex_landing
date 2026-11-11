@@ -75,6 +75,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const debug = (window as unknown as {__arkDebug?: {scene: Scene}}).__arkDebug;
         const samples: Sample[] = [];
         let inView = 0;
+        let quiet = 0;
         // Every frame's interval, with when it ended (from the script's first line), for the steady rate once in view.
         const frames: Array<[number, number]> = [];
         let frameLast = 0;
@@ -105,7 +106,11 @@ const round = (value: number) => Math.round(value * 10) / 10;
             const run = (handle as unknown as {runtime?: () => {modelTextureMB: number; evicted: number; mode: string}}).runtime?.();
             samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode});
             // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
-            if (!inView && firstFrame && !loading && t > 5000) inView = t;
+            // In view: past the opening flight (4.6 s), the first moment every model the view draws is in (the runtime's
+            // own test); the old test (nothing at all loading) as `quietMs`.
+            const complete = (handle as unknown as {runtime?: () => {viewComplete?: boolean}}).runtime?.().viewComplete;
+            if (!inView && firstFrame && t > 5000 && (complete ?? !loading)) inView = t;
+            if (!quiet && firstFrame && !loading && t > 5000) quiet = t;
         }
         framing = false;
         // In view (else past the opening's 8 s): the intervals from then on.
@@ -124,6 +129,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 firstFrameMs: firstFrame ? round(firstFrame - t0) : null,
                 firstFrameFromNavigation: firstFrame ? round(firstFrame) : null,
                 inViewMs: inView ? round(inView) : null,
+                quietMs: quiet ? round(quiet) : null,
                 frameRate,
                 stats,
                 memory: memory ? {geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), geometries: memory.geometries, textures: memory.textures, instances: memory.instances} : null,
