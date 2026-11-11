@@ -72,19 +72,20 @@ function ask<T>(make: () => Worker, message: unknown, timeoutMs: number): Promis
 }
 
 /**
- * Do the mount's heavy work in workers, then prime the modules. `workerUrl` / `placesWorkerUrl`: the built workers
- * (`public/ark/ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, scripts/build-ark-bundle.mjs); absent, the
- * site's bundler's own (`new URL(..., import.meta.url)`). Resolves (never rejects) once primed, or with `skipped`.
+ * Do the mount's heavy work in workers, then prime the modules. `workerUrl` / `placesWorkerUrl`: the built workers,
+ * by default the site's `/ark/ark-prebuild-worker.js` and `/ark/ark-prebuild-places-worker.js` (scripts/build-ark-bundle.mjs,
+ * run by `npm run build`'s prebuild; the same files the apps' embed loads). Missing (`next dev` without
+ * `npm run build:ark`): the worker fails and the mount computes as before. Resolves (never rejects).
  */
 export async function prepareArk(options: {snapshot?: ArkSnapshot | null; workerUrl?: string; placesWorkerUrl?: string; timeoutMs?: number} = {}): Promise<ArkPrepared> {
     const started = performance.now();
     if (typeof Worker === "undefined") return {where: "skipped", ms: 0, error: "no workers"};
     const animals = options.snapshot?.animals ?? null;
     const timeout = options.timeoutMs ?? 60_000;
-    const scenery = ask<ArkSceneryPrebuild>(() => (options.workerUrl ? new Worker(options.workerUrl) : new Worker(new URL("./prebuild-worker.ts", import.meta.url))), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier()}, timeout);
+    const scenery = ask<ArkSceneryPrebuild>(() => new Worker(options.workerUrl ?? "/ark/ark-prebuild-worker.js"), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier()}, timeout);
     const big = Boolean(animals && animals.length >= PLACES_IN_WORKER_FROM);
     const places = big
-        ? ask<{places: Array<[string, Placement]>}>(() => (options.placesWorkerUrl ? new Worker(options.placesWorkerUrl) : new Worker(new URL("./prebuild-places-worker.ts", import.meta.url))), {animals}, timeout)
+        ? ask<{places: Array<[string, Placement]>}>(() => new Worker(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js"), {animals}, timeout)
         : Promise.resolve({data: null as {places: Array<[string, Placement]>} | null, error: undefined});
     const [a, b] = await Promise.all([scenery, places]);
     try {

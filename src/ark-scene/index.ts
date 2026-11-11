@@ -157,6 +157,7 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
+import {arkOutside} from "@/ark-scene/live-budget";
 
 export * from "@/ark-scene/types";
 export {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -233,6 +234,8 @@ const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelR
     low: {shadows: 0, grass: 0, pixelRatio: 1, fill: 0.3}
 };
 const MAX_GRASS = TIER_SETTINGS.high.grass;
+/** Runtime (live budget): behaviour's resting-at-home test, looked up by name until it is in the release. */
+const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
 
 type Level = "near" | "far" | "token";
 
@@ -900,7 +903,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * `arkOutside` to sit those out first; undefined until the world is built or where behaviour lacks it.
      */
     const restingFor = (snapshot: ArkSnapshot, places: Map<string, Placement>): ((id: string) => boolean) | undefined => {
-        const resting = (behaviourSchedule as unknown as {restingAtRoost?: (world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean}}).restingAtRoost;
+        // (A computed name: the bundlers would warn about an export the release does not have yet.)
+        const resting = (behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST] as undefined | ((world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean});
         if (!resting || !world || !scheduleOn) return undefined;
         const byId = new Map(snapshot.animals.map((animal) => [animal.id, animal]));
         const epoch = worldMs() / 1000;
@@ -931,7 +935,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         worldBuild = null;
         // Runtime: who is resting at home is known now; the live budget sits them out first. (Only where behaviour has
         // restingAtRoost: otherwise laying the snapshot out again re-wires every schedule for nothing, a long task.)
-        if ((behaviourSchedule as unknown as {restingAtRoost?: unknown}).restingAtRoost) runtime.restingReady();
+        if ((behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST]) runtime.restingReady();
         // The schedules that waited start now, each where it is at this moment (wired, then posed, as at load).
         if (pendingWire) {
             const {list, arkDay} = pendingWire;
@@ -1299,13 +1303,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
     };
 
-    // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second).
+    // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second), on the
+    // runtime's own rotation (`live-budget.ts` arkOutside), so a resident indoors is one the live budget rests.
     let hamletPlotsKey = "";
     let hamletResidents: HamletResident[] = [];
     let hamletNow: {at: number; state: ReturnType<typeof hamletState>} | null = null;
     const hamletAt = () => {
         const epoch = worldMs() / 1000;
-        if (!hamletNow || Math.abs(epoch - hamletNow.at) >= 0.5) hamletNow = {at: epoch, state: hamletState(hamletResidents, epoch, scheduleHours)};
+        if (!hamletNow || Math.abs(epoch - hamletNow.at) >= 0.5) hamletNow = {at: epoch, state: hamletState(hamletResidents, epoch, scheduleHours, arkOutside)};
         return hamletNow.state;
     };
     /** A resident out of doors now, or walking a door beat (else it is indoors: not drawn). */
@@ -1313,6 +1318,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const state = hamletAt();
         return state.out.has(entry.animal.id) || state.beats.has(entry.animal.id);
     };
+    let modulesFor: ArkSnapshot | null = null;
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
@@ -1381,7 +1387,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: entry.place.x + Math.cos(entry.place.yaw) * side, z: entry.place.z - Math.sin(entry.place.yaw) * side, size: Math.min(Math.max(entry.length * 0.35, 0.18), 0.6)};
         });
         layersScene.setBurrows(burrows, molehills, mouths);
-        for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
+        // Runtime: the scenery modules (the props' homes and nests) depend on the snapshot only: not rebuilt when the same
+        // one is laid out again (a tier change, the resting rotation), which cost seconds at the captures scale.
+        if (modulesFor !== snapshot && modules.length) {
+            modulesFor = snapshot;
+            for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
+        }
         // A school or a flock keeps to its first one.
         for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
         wireSchedules(next, snapshot.ark_day ?? null);
