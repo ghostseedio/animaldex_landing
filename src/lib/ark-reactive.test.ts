@@ -604,6 +604,51 @@ test("nothing moves backwards: whenever its reactive offset moves faster than 0.
     }
 });
 
+/** Body turns a minute: each start of body rotation faster than 0.25 rad/s after half a second below it. */
+function bodyTurnsPerMinute(yaws: number[]): number {
+    let events = 0;
+    let quiet = 30;
+    for (let k = 1; k < yaws.length; k++) {
+        let d = yaws[k] - yaws[k - 1];
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        if (Math.abs(d) * 30 > 0.25) {
+            if (quiet >= 15) events++;
+            quiet = 0;
+        } else quiet++;
+    }
+    return events / (yaws.length / 30 / 60);
+}
+
+test("a watcher turns its head first and its body less than once a minute while a predator paces round it; calm looks never turn the body", () => {
+    // A lion pacing a slow circle 25 m round a zebra the shared layer has watching it, for three minutes.
+    const watcher = animal("tw", "plains-zebra", 0, 0, {shared: {doing: "watch", yaw: 0}});
+    const lion = animal("tl", "african-lion", 0, 25, {shared: {doing: "wander", moving: true}});
+    const frames = run(new ReactiveLayer({tier: "high"}), [watcher, lion], 180, {move: (list, t) => {
+        const a = ((t - 1000) * 0.3) / 25 - 1.2;
+        const l = list.find((i) => i.id === "tl")!;
+        l.shared.x = Math.sin(a) * 25;
+        l.shared.z = Math.cos(a) * 25;
+        l.shared.yaw = a + Math.PI / 2;
+    }});
+    const yaws = frames.slice(150).map((f) => f.out.get("tw")!.bodyYaw);
+    const watching = frames.filter((f) => f.out.get("tw")!.looking === "tl").length / frames.length;
+    assert.ok(watching > 0.8, `it watches the lion (${(watching * 100).toFixed(0)}% of the time)`);
+    assert.ok(bodyTurnsPerMinute(yaws) < 1, `body turns a minute: ${bodyTurnsPerMinute(yaws).toFixed(2)}`);
+    // And it keeps it in view: the head never sits pinned at its limit for long while the lion is out of its reach.
+    const pinned = frames.slice(150).filter((f) => Math.abs(f.out.get("tw")!.headYaw) > 0.99).length / (frames.length - 150);
+    assert.ok(pinned < 0.1, `head pinned at its limit ${(pinned * 100).toFixed(0)}% of the time`);
+    // Grooming zebras and resting goats look round, at their flanks and at each other: their bodies do not turn.
+    for (const [slug, doing] of [["plains-zebra", "groom"], ["domestic-goat", "rest"], ["plains-zebra", "graze"]] as const) {
+        const group = Array.from({length: 4}, (_, i) => animal(`tc-${slug}-${i}`, slug, i * 2, (i % 2) * 2, {shared: {doing, yaw: i * 1.4}}));
+        const calm = run(new ReactiveLayer({tier: "high"}), group, 120);
+        for (const g of group) {
+            const turns = bodyTurnsPerMinute(calm.slice(150).map((f) => f.out.get(g.id)!.bodyYaw));
+            assert.ok(turns < 0.5, `${slug} ${doing}: ${g.id} turns its body ${turns.toFixed(2)} times a minute`);
+        }
+    }
+});
+
 // MARK: Variety
 
 test("variety: individuals of one herd choose differently and change at different moments", () => {
