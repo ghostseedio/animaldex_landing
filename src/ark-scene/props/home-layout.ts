@@ -17,7 +17,7 @@
  */
 
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {cropAt} from "@/ark-scene/fields";
+import {fieldCropAt} from "@/ark-scene/fields";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import {hashString, riverDistance, sampleGround, seeded} from "@/ark-scene/world";
 import type {CottageStyle} from "@/ark-scene/micro-scene";
@@ -218,7 +218,7 @@ export function paddockRect(plot: HomePlot): PaddockRect {
                 for (let gx = 0; gx < 4; gx++) {
                     for (let gz = 0; gz < 3; gz++) {
                         const p = frame.toWorld(rect.x0 + ((gx + 0.5) / 4) * width, rect.z0 + ((gz + 0.5) / 3) * depth);
-                        if (cropAt(p.x, p.z)) score += 4;
+                        if (fieldCropAt(p.x, p.z)) score += 4;
                     }
                 }
                 for (const o of near) {

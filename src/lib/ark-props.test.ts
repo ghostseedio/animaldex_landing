@@ -503,3 +503,39 @@ test("props hamlet: today's cottage and barn byte-identical from the shared buil
     // Deterministic.
     assert.equal(geometryHash(hamletGeometry(plots).buildings!), geometryHash(built.buildings!));
 });
+
+// MARK: - The decor thinned on the hamlet's reserved plots
+
+import {hamletLandAt, hamletLotAt, hamletLotsGlsl} from "@/ark-scene/props/hamlet-land";
+import footprintTable from "@/ark-scene/props/hamlet-footprints.json";
+import {plotFootprint, reservedPlots} from "@/ark-scene/map/hamlet";
+import {cropAt, fieldsGlsl} from "@/ark-scene/fields";
+import {grassTufts} from "@/ark-scene/decor";
+
+test("props hamlet land: the baked footprints are still the map's; no crops on a reserved plot, no grass under its buildings, the decor's ids untouched", () => {
+    const baked = (footprintTable as unknown as {footprints: Record<string, Array<[number, number]>>}).footprints;
+    const slots = reservedPlots().slice(2);
+    assert.equal(Object.keys(baked).length, slots.length);
+    for (const plot of slots) {
+        const live = plotFootprint(plot);
+        baked[plot.id].forEach(([x, z], i) => assert.ok(Math.abs(x - live[i].x) < 0.002 && Math.abs(z - live[i].z) < 0.002, `${plot.id} corner ${i}`));
+        assert.equal(hamletLandAt(plot.x, plot.z), "core", plot.id);
+        assert.ok(hamletLotAt(plot.x, plot.z));
+    }
+    let lots = 0;
+    for (let x = -100; x <= 100; x += 1.5) {
+        for (let z = -100; z <= 100; z += 1.5) {
+            if (!hamletLotAt(x, z)) continue;
+            lots++;
+            assert.equal(cropAt(x, z), null, `no crop at ${x}, ${z}`);
+        }
+    }
+    assert.ok(lots > 300, `${lots} samples on the lots`);
+    // The shader's twin is there (a test per footprint), and the field shader calls it.
+    assert.equal((hamletLotsGlsl().match(/return true/g) ?? []).length, slots.length);
+    assert.ok(fieldsGlsl().includes("arkHamletLot(p)"));
+    const tufts = grassTufts(30000);
+    assert.equal(tufts.filter((tuft) => hamletLandAt(tuft.x, tuft.z) === "core").length, 0);
+    // The decor's own items are not moved or removed (their ids, `decor<n>`, stay).
+    assert.equal(worldDecor().filter((item) => item.kind === "flower" && hamletLandAt(item.x, item.z)).length, 0);
+});
