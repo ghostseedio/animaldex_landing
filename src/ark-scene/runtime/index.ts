@@ -107,6 +107,9 @@ export {arkCaps};
 
 export type ArkRuntime = ReturnType<typeof createArkRuntime>;
 
+/** A let-go near level comes back when an animal of its species is in view this close (the scene's near distance and its hysteresis). */
+const NEAR_AGAIN_WITHIN = 27.5;
+
 export function createArkRuntime(ctx: ArkRuntimeContext) {
     const started = performance.now();
     const governor = new RenderGovernor(started / 1000);
@@ -137,6 +140,15 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
 
     // The models: nearest in view first, skins fitted to the tier, handed over a few per frame.
     ctx.library.priority = (slug, level) => planner.priority(slug, level);
+    // A near level let go over the budget is not asked for again (by the 48 m preload) until an animal of the
+    // species is in view within the near distance: no load, evict, load loop.
+    const evictedAt = new Map<string, number>();
+    ctx.library.gate = (slug, level) => {
+        if (level !== "near" || !evictedAt.has(slug)) return true;
+        if (planner.nearestInView(slug) > NEAR_AGAIN_WITHIN) return false;
+        evictedAt.delete(slug);
+        return true;
+    };
     const fitFor = (tier: QualityTier) => ({near: arkBudget(tier).nearTexture, far: arkBudget(tier).farTexture});
     ctx.library.fit = fitFor(ctx.tier());
     ctx.library.paced = true;
@@ -179,7 +191,10 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         ]);
         for (const drop of overBudget(levels, budget, now)) {
             ctx.dropNear(drop.slug);
-            if (ctx.library.evict(drop.slug, "near")) evicted++;
+            if (ctx.library.evict(drop.slug, "near")) {
+                evicted++;
+                evictedAt.set(drop.slug, now);
+            }
         }
     };
 

@@ -48,6 +48,12 @@ export class LoadPlanner {
         this.frame++;
     }
 
+    /** The species' nearest animal in view lately (m), or Infinity. */
+    nearestInView(slug: string): number {
+        const known = this.seen.get(slug);
+        return known && known.visible && this.frame - known.frame <= FRESH_FRAMES ? known.distance : Infinity;
+    }
+
     /** Lower first. Near and far of one species rank together (the far one is asked for first). */
     priority(slug: string, level: "near" | "far"): number {
         const known = this.seen.get(slug);

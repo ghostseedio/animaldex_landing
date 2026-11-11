@@ -215,8 +215,9 @@ for (const deviceName of devices) {
     page.on("console", (message) => {
         if (message.type() === "error" && !/Failed to load resource/.test(message.text())) errors.push(`${deviceName}: ${message.text()}`);
     });
-    await page.goto(`${base}/golden.html?quality=${device.quality}`);
-    await page.waitForFunction(() => (window as unknown as GoldenWindow).__arkGolden || (window as unknown as GoldenWindow).__arkGoldenError, null, {timeout: 180_000});
+    // (Not "load": the scene's mount holds the page's load event for seconds on SwiftShader.)
+    await page.goto(`${base}/golden.html?quality=${device.quality}`, {waitUntil: "commit", timeout: 120_000});
+    await page.waitForFunction(() => (window as unknown as GoldenWindow).__arkGolden || (window as unknown as GoldenWindow).__arkGoldenError, null, {timeout: 300_000, polling: 1000});
     const failed = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGoldenError);
     if (failed) throw new Error(failed);
     const prepared = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.prepare());

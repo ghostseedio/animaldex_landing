@@ -19,9 +19,14 @@ test("runtime load order: in view and close first, then far, then out of view, t
     // A species' near level ranks just behind its far level, ahead of the next species.
     assert.ok(planner.priority("fox", "far") < planner.priority("fox", "near"));
     assert.ok(planner.priority("fox", "near") < planner.priority("deer", "far"));
+    // The nearest in view (the gate for a let-go near level): out-of-view sightings do not count.
+    assert.equal(planner.nearestInView("fox"), 12);
+    assert.equal(planner.nearestInView("seal"), Infinity);
+    assert.equal(planner.nearestInView("mole"), Infinity);
     // Not seen for a while: back with the never-seen.
     for (let i = 0; i < 40; i++) planner.endFrame();
     assert.equal(planner.priority("fox", "far"), planner.priority("mole", "far"));
+    assert.equal(planner.nearestInView("fox"), Infinity);
 });
 
 test("runtime frame budget: at least one piece of work a frame, then only while the budget lasts", () => {

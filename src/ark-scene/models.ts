@@ -134,6 +134,8 @@ export class ModelLibrary {
      * `paced`: finished levels wait in `staged` until `drain` hands them to the scene a few per frame.
      */
     priority: ((slug: string, level: Wanted) => number) | null = null;
+    /** Runtime: whether a level may be asked for now (a near level let go over the budget waits until it is wanted close). */
+    gate: ((slug: string, level: Wanted) => boolean) | null = null;
     fit: {near: number; far: number} | null = null;
     paced = false;
     private readonly staged: Array<() => void> = [];
@@ -241,6 +243,7 @@ export class ModelLibrary {
         if (level === "near") this.request(slug, "far");
         const asked = this.requested.get(slug) ?? new Set<Wanted>();
         if (asked.has(level)) return;
+        if (this.gate && !this.gate(slug, level)) return;
         asked.add(level);
         this.requested.set(slug, asked);
         this.queue.push({slug, level});
