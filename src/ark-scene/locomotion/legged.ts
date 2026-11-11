@@ -19,7 +19,7 @@
  */
 
 import {Matrix4, Quaternion, Vector3} from "three";
-import {G, GAITS, gaitFor, gaitLadder, headBobs, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
+import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
 import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChain} from "@/ark-scene/locomotion/secondary";
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
@@ -486,8 +486,11 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
         }
     }
     // (Legs locked straight at rest, as some rigs were fitted: a living animal stands with a little give in them.)
-    const give = rig.legs.some((l) => Math.hypot(l.hip[0] - l.ankle[0], l.hip[1] - l.ankle[1], l.hip[2] - l.ankle[2]) > 0.95 * (l.upperLength + l.lowerLength)) ? 0.07 * legH : 0;
-    const crouch = stepSpring(s.crouch, Math.min(Math.max(spec.crouch * legH, needed, give), 0.3 * legH), dt, 3, 1);
+    // (An elephant's columns stay straight: no give, a third of the gait's crouch.)
+    const columnar = columnarLegs(rig.slug);
+    const give = !columnar && rig.legs.some((l) => Math.hypot(l.hip[0] - l.ankle[0], l.hip[1] - l.ankle[1], l.hip[2] - l.ankle[2]) > 0.95 * (l.upperLength + l.lowerLength)) ? 0.07 * legH : 0;
+    // (Never a crawl: at most 15% of the leg lower. A foot past its reach misses the ground by a little instead.)
+    const crouch = stepSpring(s.crouch, Math.min(Math.max(spec.crouch * legH * (columnar ? 0.35 : 1), needed, give), 0.15 * legH), dt, 3, 1);
     let bobRaw = 0;
     let planted = 0;
     let sinSum = 0;
@@ -539,7 +542,10 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
     // The front body: spine flex (gallops, bounds) and the S-bend, the front leading into a turn.
     if (rig.chest >= 0) {
         pivot.setFromMatrixPosition(world[rig.chest]);
-        tmpQ.setFromAxisAngle(X, flex);
+        // (Breathing: the chest rises and settles, slower for big animals; strongest standing.)
+        const breathHz = clamp(0.32 / Math.sqrt(Math.max(lengthM, 0.05)), 0.2, 1.6);
+        const breath = (0.6 + 0.4 * motion) * 0.012 * Math.sin(Math.PI * 2 * (input.clock * breathHz + input.seed * 3));
+        tmpQ.setFromAxisAngle(X, flex - breath);
         tmpQ2.setFromAxisAngle(Y, chestYaw);
         tmpQ.premultiply(tmpQ2);
         rotateSubtree(rig, world, rig.chest, tmpQ, pivot);
@@ -563,11 +569,15 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
             thrust = clamp(Math.asin(clamp(offset / Math.max(neckLen, 1e-4), -0.6, 0.6)), -0.6, 0.6) * motion;
         }
         // (The neck carries the body's pitch: slope + rock + lean at the hips, flex at the chest. The head keeps the slope.)
-        const neckPitch = -steady * (rock + flex + 0.5 * accLean) + nod + lag * (1 - steady) + thrust;
+        // Standing, the head never quite still: small slow looks (the reactive layer's looks go on top, in the shader).
+        const idle = 1 - motion;
+        const glanceYaw = idle * 0.06 * (Math.sin(input.clock * 0.37 + input.seed * 11) + 0.6 * Math.sin(input.clock * 0.91 + input.seed * 5));
+        const glancePitch = idle * 0.035 * Math.sin(input.clock * 0.53 + input.seed * 7);
+        const neckPitch = -steady * (rock + flex + 0.5 * accLean) + nod + lag * (1 - steady) + thrust + glancePitch;
         tmpQ.setFromAxisAngle(X, neckPitch);
         tmpQ2.setFromAxisAngle(Z, -steady * (roll + lean) * 0.8);
         tmpQ.premultiply(tmpQ2);
-        tmpQ2.setFromAxisAngle(Y, clamp(0.1 * s.turn, -0.3, 0.3) - steady * hipsYaw - steady * 0.5 * chestYaw);
+        tmpQ2.setFromAxisAngle(Y, clamp(0.1 * s.turn, -0.3, 0.3) - steady * hipsYaw - steady * 0.5 * chestYaw + glanceYaw);
         tmpQ.premultiply(tmpQ2);
         rotateSubtree(rig, world, neck, tmpQ, pivot);
         if (rig.head >= 0 && rig.neck >= 0 && thrust !== 0) {
@@ -580,7 +590,9 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
     // The tail on springs: swings out of a turn, sways against the hips, rides up at speed.
     if (rig.tail.length) {
         const tailHz = clamp(1.6 / Math.sqrt(Math.max(lengthM, 0.15)), 0.8, 4);
-        const yawDrive = clamp(0.3 * s.turn, -0.7, 0.7) - 2.2 * hipsYaw - 1.5 * sway / Math.max(legH, 1e-4) * 0.1;
+        // Standing, a slow sway now and then (a swish comes and goes, the same for every viewer).
+        const swish = (1 - motion) * 0.22 * Math.sin(input.clock * 1.7 + input.seed * 9) * Math.max(Math.sin(input.clock * 0.21 + input.seed * 13), 0);
+        const yawDrive = clamp(0.3 * s.turn, -0.7, 0.7) - 2.2 * hipsYaw - 1.5 * sway / Math.max(legH, 1e-4) * 0.1 + swish;
         const pitchDrive = clamp(0.25 * Math.min(s.froude, 2), 0, 0.5) * motion - (bob / Math.max(legH, 1e-4)) * 2;
         const out = {yaw: [] as number[], pitch: [] as number[]};
         stepChain(s.tail, yawDrive, pitchDrive, dt, tailHz, 0.3, out);
@@ -608,7 +620,7 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
         const d = hip.distanceTo(ankleT);
         if (d > reach) deficit = Math.max(deficit, Math.sqrt(Math.max(d * d - (hip.x - ankleT.x) ** 2 - (hip.z - ankleT.z) ** 2, 0)) - Math.sqrt(Math.max(reach * reach - (hip.x - ankleT.x) ** 2 - (hip.z - ankleT.z) ** 2, 0)));
     });
-    const drop = stepSpring(s.drop, Math.min(deficit, 0.3 * legH), dt, 10, 1);
+    const drop = stepSpring(s.drop, Math.min(deficit, 0.25 * legH), dt, 10, 1);
     if (drop > 1e-6) translateSubtree(rig, world, hips, 0, -drop, 0);
     const bodyTurn = tmpQ.setFromRotationMatrix(tmpM.extractRotation(world[hips])).multiply(tmpQ2.setFromRotationMatrix(tmpM.extractRotation(rig.bones[hips].restWorld)).invert());
     for (let i = 0; i < rig.legs.length; i++) {

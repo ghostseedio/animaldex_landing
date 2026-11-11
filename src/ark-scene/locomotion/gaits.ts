@@ -111,14 +111,14 @@ export const GAITS: Record<string, GaitSpec> = {
     stand: SPEC("stand", {duty: [1, 1], bob: 0, crouch: 0.02, sway: 0, roll: 0}),
     walk: SPEC("walk", {duty: [0.72, 0.58], swing: 0.1, bob: 0.018, crouch: 0.035, sway: 0.012, roll: 0.02, bend: 0.03}),
     ds_walk: SPEC("ds_walk", {duty: [0.74, 0.6], swing: 0.1, bob: 0.02, crouch: 0.05, sway: 0.015, roll: 0.025, bend: 0.03}),
-    amble: SPEC("amble", {duty: [0.6, 0.5], swing: 0.09, bob: 0.012, crouch: 0.04, sway: 0.01, roll: 0.02}),
+    amble: SPEC("amble", {duty: [0.6, 0.5], swing: 0.09, bob: 0.012, crouch: 0.015, sway: 0.01, roll: 0.02, stride: 0.85}),
     trot: SPEC("trot", {duty: [0.5, 0.38], swing: 0.15, bob: -0.03, crouch: 0.055, sway: 0.006, roll: 0.012, stride: 1}),
     pace: SPEC("pace", {duty: [0.55, 0.4], swing: 0.13, bob: -0.025, crouch: 0.05, sway: 0.03, roll: 0.06}),
-    canter: SPEC("canter", {duty: [0.42, 0.35], swing: 0.17, bob: -0.04, crouch: 0.06, pitch: 0.07, flex: 0.05, sway: 0.004, roll: 0.01, stride: 1.05}),
-    gallop: SPEC("gallop", {duty: [0.34, 0.24], swing: 0.2, bob: -0.045, crouch: 0.07, pitch: 0.06, flex: 0.08, sway: 0.003, roll: 0.008, stride: 1.1}),
-    rotary: SPEC("rotary", {duty: [0.32, 0.22], swing: 0.22, bob: -0.05, crouch: 0.08, pitch: 0.05, flex: 0.2, sway: 0.003, roll: 0.008, stride: 1.15}),
-    half_bound: SPEC("half_bound", {duty: [0.36, 0.26], swing: 0.22, bob: -0.06, crouch: 0.08, pitch: 0.1, flex: 0.22, sway: 0.002, roll: 0.006, stride: 1.05}),
-    bound: SPEC("bound", {duty: [0.34, 0.24], swing: 0.25, bob: -0.07, crouch: 0.09, pitch: 0.12, flex: 0.25, sway: 0, roll: 0, stride: 1.05}),
+    canter: SPEC("canter", {duty: [0.42, 0.35], swing: 0.17, bob: -0.035, crouch: 0.05, pitch: 0.05, flex: 0.04, sway: 0.004, roll: 0.01, stride: 1.05}),
+    gallop: SPEC("gallop", {duty: [0.34, 0.24], swing: 0.2, bob: -0.04, crouch: 0.05, pitch: 0.04, flex: 0.05, sway: 0.003, roll: 0.008, stride: 1.1}),
+    rotary: SPEC("rotary", {duty: [0.32, 0.22], swing: 0.22, bob: -0.04, crouch: 0.05, pitch: 0.04, flex: 0.08, sway: 0.003, roll: 0.008, stride: 1.15}),
+    half_bound: SPEC("half_bound", {duty: [0.36, 0.26], swing: 0.22, bob: -0.05, crouch: 0.06, pitch: 0.07, flex: 0.1, sway: 0.002, roll: 0.006, stride: 1.05}),
+    bound: SPEC("bound", {duty: [0.34, 0.24], swing: 0.25, bob: -0.06, crouch: 0.07, pitch: 0.08, flex: 0.12, sway: 0, roll: 0, stride: 1.05}),
     hop: SPEC("hop", {duty: [0.4, 0.3], swing: 0.35, bob: -0.18, crouch: 0.12, pitch: 0.08, flex: 0, sway: 0, roll: 0, stride: 0.7}),
     biped_walk: SPEC("biped_walk", {duty: [0.66, 0.58], swing: 0.12, bob: 0.03, crouch: 0.05, sway: 0.03, roll: 0.03, bend: 0.03}),
     biped_run: SPEC("biped_run", {duty: [0.42, 0.3], swing: 0.22, bob: -0.05, crouch: 0.1, pitch: 0.03, sway: 0.02, roll: 0.02, stride: 1.1}),
@@ -145,6 +145,11 @@ const HOP_FROGS = /(frog|bullfrog)/;
 const HEAD_BOB = /(pigeon|dove|chicken|hen\b|rooster|junglefowl|pheasant|quail|partridge|grouse|turkey|peafowl|peacock|guineafowl|moorhen|coot|rail|gallinule|crake|heron|egret|bittern|ibis|stork|crane|hoopoe|starling|myna|crow|raven|rook|jackdaw|magpie|jay|wagtail|plover|lapwing)/;
 const WADDLERS = /(penguin|duck|goose|swan|mallard|teal|wigeon|eider|scoter|merganser|shelduck|pochard|puffin|auk|guillemot|murre)/;
 const HOPPERS = /(sparrow|finch|robin|tit\b|tit$|-tit|chickadee|wren|thrush|blackbird|warbler|bunting|canary|budgerigar|lovebird|weaver|munia|waxbill|siskin|goldfinch|chaffinch|bullfinch|redstart|chat\b|flycatcher|nuthatch|kinglet|goldcrest|dunnock|accentor|sunbird|white-eye|bulbul|tanager|cardinal|grosbeak|junco|towhee)/;
+
+/** Columnar legs (elephants): nearly straight at every gait, no give, shorter strides. */
+export function columnarLegs(slug: string): boolean {
+    return AMBLERS.test(slug);
+}
 
 export function headBobs(slug: string, plan: BodyPlan): boolean {
     return (plan === "walking_bird" || plan === "flying_bird" || plan === "flightless_bird") && HEAD_BOB.test(slug);

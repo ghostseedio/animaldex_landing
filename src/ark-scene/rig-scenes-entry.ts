@@ -261,7 +261,7 @@ async function mountScenes(el: HTMLElement) {
      * trot 0.9, run 2.5), so every size moves at its own natural pace. The camera follows from its side.
      */
     const course = (id: string, plan: string, start: number) => {
-        const centre = site("grassland", 8, -10);
+        const centre = site("grassland", 8, -12);
         const radius = 9;
         const len = () => Math.max(handle.locate(id)?.length ?? 1, 0.02);
         const hip = () => len() * hipShare(plan);
@@ -317,7 +317,8 @@ async function mountScenes(el: HTMLElement) {
         const step = () => {
             if (token !== tracking) return;
             const a = handle.locate(id);
-            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * 3.2, 0.6), polar, azimuth: a.yaw + Math.PI / 2});
+            // (A small animal from higher up: from its side the grass hides it.)
+            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * 3.2, 0.6), polar: a.length < 0.4 ? Math.min(polar, 0.9) : polar, azimuth: a.yaw + Math.PI / 2});
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);

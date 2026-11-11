@@ -55,7 +55,7 @@ export const GOLDEN: Record<string, number> = {
     "american-bullfrog": 0.18,
     "black-ant": 0.009,
     "carolina-wolf-spider": 0.035,
-    "brown-crab": 0.22
+    "coconut-crab": 0.4
 };
 const slugs = (arg("slugs") ?? Object.keys(GOLDEN).join(",")).split(",").filter(Boolean);
 

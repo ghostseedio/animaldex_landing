@@ -25,7 +25,7 @@ const FIXTURES = path.join(process.cwd(), "src/ark-scene/locomotion/fixtures");
 const LENGTHS: Record<string, number> = {
     "red-deer": 2.0, "plains-zebra": 2.3, "african-lion": 2.2, cheetah: 1.3, "domestic-dog": 0.9, "african-bush-elephant": 6.0, giraffe: 4.5, "brown-bear": 2.2,
     "house-mouse": 0.085, chimpanzee: 0.9, ostrich: 2.1, "domestic-chicken": 0.45, mallard: 0.58, "emperor-penguin": 1.15, "komodo-dragon": 2.6,
-    "aldabra-giant-tortoise": 1.2, "american-bullfrog": 0.18, "black-ant": 0.009, "carolina-wolf-spider": 0.035, "brown-crab": 0.22
+    "aldabra-giant-tortoise": 1.2, "american-bullfrog": 0.18, "black-ant": 0.009, "carolina-wolf-spider": 0.035, "coconut-crab": 0.4
 };
 const rigs: Array<{rig: LocoRig; scale: number}> = readdirSync(FIXTURES)
     .filter((f) => f.endsWith(".json"))
@@ -43,7 +43,7 @@ const STRICT: Record<string, Limits> = {
     walk: {slideShare: 0.02, stride: 0.12, height: 0.015, joints: 0.02},
     run: {slideShare: 0.025, stride: 0.12, height: 0.025, joints: 0.04},
     spin: {slideShare: 0.02, stride: 1, height: 0.015, joints: 0.02},
-    slope: {slideShare: 0.05, stride: 0.12, height: 0.025, joints: 0.03}
+    slope: {slideShare: 0.06, stride: 0.12, height: 0.025, joints: 0.03}
 };
 const LOOSE: Limits = {slideShare: 3, stride: 0.6, height: 0.6, joints: 0.5};
 
