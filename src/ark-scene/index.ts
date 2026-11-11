@@ -60,6 +60,7 @@ import {
     Spherical,
     Vector3,
     WebGLRenderer,
+    type WebGLRenderTarget,
     Euler,
     BoxGeometry,
     CylinderGeometry,
@@ -150,6 +151,7 @@ import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type R
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 
 export * from "@/ark-scene/types";
 export {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -456,7 +458,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let liteChoice: boolean | null = typeof options.lite === "boolean" ? options.lite : null;
     const autoTier = tier;
     const liteOn = () => liteChoice ?? tier === "low";
-    const caps = () => (liteOn() ? LITE_CAPS : {near: NEAR_INSTANCE_CAP, nearSpecies: NEAR_SPECIES_CAP, models: MODEL_CAP});
+    // Runtime: the instance caps per tier (runtime/budgets.ts; high and the lighter view as LITE_CAPS / *_CAP).
+    const caps = () => runtime.caps(tier, liteOn());
     const scene = new Scene();
     // The hour: pinned by the page (development's `?hour=`), or the viewer's own clock.
     let pinnedHours = typeof options.hours === "number" && Number.isFinite(options.hours) ? options.hours : null;
@@ -549,7 +552,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     scene.add(landscape.ground, landscape.water);
-    const vegetation = buildVegetation(MAX_GRASS);
+    // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
+    const vegetation = buildVegetation(arkGrassBuild(tier));
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     scene.add(nearDetail.group);
@@ -615,6 +619,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
         tier = next;
+        runtime.tierChanged(tier);
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
@@ -648,6 +653,50 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const library = new ModelLibrary(options.modelBase, 4);
     const species = new Map<string, SpeciesMeshes>();
+    // Runtime (src/ark-scene/runtime): when to draw, power, the load order and budgets, the camera's body, the bar and reset.
+    const runtime: ArkRuntime = createArkRuntime({
+        el,
+        canvas,
+        renderer,
+        scene,
+        camera,
+        controls,
+        library,
+        options,
+        tier: () => tier,
+        // (A tier pinned for measuring, `__arkQuality`, stays pinned.)
+        applyTier: (next) => {
+            if (!forced) applyTier(next);
+        },
+        dropNear: (slug) => {
+            const meshes = species.get(slug);
+            if (!meshes) return;
+            if (meshes.near) {
+                scene.remove(meshes.near);
+                meshes.near.dispose();
+                meshes.near = null;
+            }
+            meshes.nearMaterial?.dispose();
+            meshes.nearMaterial = null;
+        },
+        awayFromHome: () => {
+            if (opening || replay || selectedId || followId || flight) return false;
+            const home = homeView();
+            // (Its own numbers: the shared spherical and offset belong to the flights.)
+            const distance = camera.position.distanceTo(controls.target);
+            const polar = Math.acos(Math.min(Math.max((camera.position.y - controls.target.y) / Math.max(distance, 1e-6), -1), 1));
+            return controls.target.distanceTo(home.target) > 12 || Math.abs(distance / home.distance - 1) > 0.25 || Math.abs(polar - home.polar) > 0.22;
+        },
+        goHome: () => {
+            endFollow();
+            controls.autoRotate = false;
+            lastTouch = performance.now() / 1000;
+            const view = homeView();
+            fly(view.target, view.distance, 1.4, view.polar, view.azimuth);
+        },
+        fillShare: (at) => TIER_SETTINGS[at].fill,
+        renderTarget: () => (post as unknown as {composer?: {readBuffer?: WebGLRenderTarget} | null}).composer?.readBuffer ?? null
+    });
     // The rigs: the release's set beside the model set (or the page's own folder), then the v1 fallback set, each
     // manifest read once; a species plays from the first set that lists it. Nothing while motion is reduced.
     const rigs = new RigLibrary(rigBasesFrom(options.modelBase, options.rigBase), RIG_CAPS);
@@ -1220,10 +1269,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
         const representatives = arkRepresentatives(snapshot.animals, {pinned: pins, live: liteOn() ? ARK_HERD_LIVE_LITE : ARK_HERD_LIVE, from: herdOff ? Number.POSITIVE_INFINITY : undefined});
         buildHerds(snapshot, representatives.herds, places);
+        // Runtime: a big Ark draws at most the tier's live budget one by one, the rest resting out of sight by the
+        // shared rotation (live-budget.ts); the counts and herds are untouched.
+        const outside = runtime.outside(snapshot.animals, representatives.live, pins, liteOn());
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
-            if (!representatives.live.has(animal.id)) continue;
+            if (!representatives.live.has(animal.id) || !outside.has(animal.id)) continue;
             const place = places.get(animal.id)!;
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
@@ -1264,8 +1316,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Every species' far model, nearest first, so the whole Ark fills in from where the camera is.
         // (Small animals' models wait until the camera comes close: they are not drawn from afar. Herds' far models are.)
         const byDistance = Array.from(new Set([...next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug), ...herds.map((herd) => herd.slug)]));
+        // Runtime: a big Ark asks up front only for the kinds nearest the view; the rest as they come into view.
+        const firstFar = runtime.upfrontFar(byDistance, next.map((entry) => ({slug: entry.animal.model_slug, x: entry.place.x, z: entry.place.z})), herds.map((herd) => herd.slug));
         library.ready().then(() => {
-            for (const slug of byDistance) if (library.has(slug)) library.request(slug, "far");
+            for (const slug of firstFar) if (library.has(slug)) library.request(slug, "far");
         });
     };
 
@@ -1328,6 +1382,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mesh.receiveShadow = true;
         mesh.count = 0;
         scene.add(mesh);
+        runtime.prepare(mesh);
         if (level === "near") meshes.near = mesh;
         else meshes.far = mesh;
         return mesh;
@@ -2495,6 +2550,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mesh.receiveShadow = true;
         mesh.count = 0;
         scene.add(mesh);
+        runtime.prepare(mesh);
         meshes.rig = mesh;
         return mesh;
     };
@@ -2646,6 +2702,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sphere.center.copy(position);
             sphere.radius = entry.length * 2 + 3;
             candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip, rig: null});
+            runtime.see(slug, distance, candidates[candidates.length - 1].visible);
         }
 
         // The page's tap card says what the selected animal is doing now, from the same state.
@@ -2685,6 +2742,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearSpecies.add(slug);
             nearIds.add(candidate.entry.animal.id);
         }
+        runtime.usedNear(nearSpecies);
         // Models for the nearest MODEL_CAP in view; past that, icons.
         const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, cap.models).map((c) => c.entry.animal.id));
 
@@ -3709,6 +3767,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     document.addEventListener("visibilitychange", syncSound);
     const visibility = new IntersectionObserver(([seen]) => {
         onScreen = seen?.isIntersecting ?? true;
+        runtime.onScreen(onScreen);
         syncSound();
     });
     visibility.observe(el);
@@ -3975,6 +4034,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const endFollow = () => {
         if (!followId) return;
         followId = null;
+        runtime.endFollow();
         options.onFollowEnd?.();
     };
 
@@ -4398,22 +4458,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let ready = false;
     let raf = 0;
     let lastTracked: Vector3 | null = null;
+    const followAim = new Vector3();
     /** The tier check: frames over two seconds once the models are in; a tier lower if they run long. */
     let measureFrom = 0;
     const measured: number[] = [];
 
     const frame = () => {
+        if (disposed) return;
+        // Runtime: hidden, the loop stops until visible again (onWake); idle-capped or warming shaders, this display frame is skipped.
+        const step = runtime.frame(performance.now());
+        if (step === "sleep") {
+            raf = 0;
+            return;
+        }
         raf = requestAnimationFrame(frame);
-        if (!onScreen || disposed || document.hidden) return;
+        if (step === "skip" || !onScreen || document.hidden) return;
         const startedAt = performance.now();
+        const frameDt = lastDrawn ? Math.min((startedAt - lastDrawn) / 1000, 0.1) : 1 / 60;
+        runtime.activity(Boolean(flight || followId || replay || opening || talking.target?.active || lastTracked), reducedMotion);
         const now = startedAt / 1000;
         const elapsed = (startedAt - started) / 1000;
         // The behaviour schedule's world, a slice a frame until it is built.
         stepWorldBuild(BUILD_SLICE_MS);
         // Reduced motion: the water, the grass and the animals hold still (A18).
         if (!reducedMotion) {
-            ARK_TIME.value = elapsed;
-            ARK_CLOCK.value = elapsed % 3600;
+            // The shared clock (shared-clock.ts): every viewer's water, wind, sway and idles in the same phase.
+            ARK_TIME.value = runtime.shaderTime();
+            ARK_CLOCK.value = runtime.animalClock();
         }
         applyEnvironment();
         landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
@@ -4421,9 +4492,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
+        runtime.controls(frameDt);
         controls.update();
         keepInWorld();
         fitCloseUp();
+        if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
         stepLayers(elapsed);
         foldTrees(elapsed);
         micro.step(camera.position);
@@ -4435,6 +4508,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             setLight();
         }
         stepReplay(now);
+        // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
+        if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
         updateInstances(elapsed);
         dust.step(now);
         liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
@@ -4443,10 +4518,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
         const followed = followId ? findEntry(followId) : null;
         if (followed?.middle && !flight && pointers === 0) {
-            const k = reducedMotion ? 1 : 0.12;
-            const dx = (followed.middle.x - controls.target.x) * k;
-            const dy = (followed.middle.y - followed.drawnHeight * 0.1 - controls.target.y) * k;
-            const dz = (followed.middle.z - controls.target.z) * k;
+            // Runtime: per second, a little ahead by its speed (no lag), the same at 30, 60 or 120 fps.
+            const {x: dx, y: dy, z: dz} = runtime.follow(controls.target, followAim.set(followed.middle.x, followed.middle.y - followed.drawnHeight * 0.1, followed.middle.z), reducedMotion ? 0 : frameDt);
             controls.target.x += dx;
             controls.target.y += dy;
             controls.target.z += dz;
@@ -4499,6 +4572,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         placeLabels();
         placeVisitorLabel();
         placeBadges();
+        runtime.drawnFrame(startedAt, inset);
 
         const spent = performance.now() - startedAt;
         frameTimes.push(spent);
@@ -4512,7 +4586,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (frameIntervals.length > 60) frameIntervals.shift();
             }
             if (interval < 2000) {
-                if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom) {
+                if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom && runtime.uncapped()) {
                     measured.push(interval);
                     if (startedAt - measureFrom > 2000) {
                         const sorted = [...measured].sort((a, b) => a - b);
@@ -4534,6 +4608,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             measureFrom = performance.now() + 1500;
             options.onReady?.();
         }
+    };
+    runtime.onWake = () => {
+        if (!raf && !disposed) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
 
@@ -4564,7 +4641,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     }};
 
     return {
-        update: (snapshot) => setSnapshot(snapshot, true),
+        ...runtime.handle,
+        update: (snapshot) => {
+            // Runtime: the entrances play at the full frame rate.
+            runtime.busyFor(ENTRANCE_SECONDS + 1);
+            setSnapshot(snapshot, true);
+        },
         setMineOnly: (value) => {
             mineOnly = value;
         },
@@ -4747,6 +4829,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dispose: () => {
             disposed = true;
             cancelAnimationFrame(raf);
+            runtime.dispose();
             resizeObserver.disconnect();
             visibility.disconnect();
             canvas.removeEventListener("pointerdown", onPointerDown);

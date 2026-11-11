@@ -3,6 +3,7 @@ import type {ArkAct} from "@/lib/ark-life";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -175,7 +176,7 @@ export type ArkSceneStats = {
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
 export type ArkHerdInfo = {key: string; slug: string; name: string; count: number; mine: number};
 
-export type ArkSceneOptions = {
+export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
@@ -273,7 +274,7 @@ export type ArkVisitor = {slug: string; name: string; /** Its label in the scene
 /** Who is talking: the animal's id (an aboard animal's, or the visitor's), its model slug, and whether it is talking now. */
 export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
-export type ArkSceneHandle = {
+export type ArkSceneHandle = ArkRuntimeHandle & {
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;

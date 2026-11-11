@@ -403,10 +403,17 @@ async function mountGolden(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const decoded = decodeArkSnapshot(fixture);
+    // Scale runs (scripts/ark-scale-run.mjs): ?population=<file> loads a synthetic snapshot instead of the fixture.
+    const population = params.get("population");
+    const fetchStarted = performance.now();
+    const raw = population ? await (await fetch(population)).json() : fixture;
+    const decodeStarted = performance.now();
+    const decoded = decodeArkSnapshot(raw);
     if (!decoded) throw new Error("fixture did not decode");
     // The props lane's close-ups (`?props=1`): the props' species aboard, in the breeding season, clutches in.
     const snapshot = params.get("props") ? propsFixture(decoded) : decoded;
+    const timing: Record<string, number> = {fetchMs: decodeStarted - fetchStarted, decodeMs: performance.now() - decodeStarted};
+    const mountStarted = performance.now();
     let ready = false;
     const handle = mountArk(el, {
         snapshot,
@@ -419,8 +426,10 @@ async function mountGolden(el: HTMLElement) {
         closeUpBase: params.get("closeup") || undefined,
         onReady: () => {
             ready = true;
+            timing.readyMs = performance.now() - mountStarted;
         }
     });
+    timing.mountMs = performance.now() - mountStarted;
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
     handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
@@ -617,6 +626,14 @@ async function mountGolden(el: HTMLElement) {
             chaserBody.position.set(chaser.x, chaser.y, chaser.z);
             chaserBody.rotation.set(0, chaser.yaw, 0);
             if (debug && !chaserBody.parent) debug.scene.add(chaserBody);
+        },
+        /** Scale runs: the load timings, the animals given, and the JS heap. */
+        timing: () => ({...timing, animals: snapshot.animals.length, heapMb: Math.round(((performance as unknown as {memory?: {usedJSHeapSize: number}}).memory?.usedJSHeapSize ?? 0) / 1048576)}),
+        /** Scale runs: resolves once nothing is loading for quietMs (or after maxMs), with the time it took. */
+        settle: async (quietMs = 1500, maxMs = 120_000) => {
+            const started = performance.now();
+            const settled = await settle(quietMs, maxMs);
+            return {settled, ms: Math.round(performance.now() - started)};
         },
         /**
          * The animal-look pass's close-ups (docs/ark/animal-look.md): one animal of the species, face to face from

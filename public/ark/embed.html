@@ -40,6 +40,11 @@
  *   {type: "ark:talk-pulse", level}                              the reply heard aloud: its loudness now, 0…1
  *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
  *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
+ *   {type: "ark:visible", visible}                               the panel shown (true) or covered / the app in the background (false):
+ *                                                                nothing is drawn while false (docs/ark/runtime-bridge.md)
+ *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
+ *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
+ *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:sound", on} when the viewer turns sound on or off,
@@ -99,6 +104,7 @@
       reducedMotion: motion.matches,
       lite: lite,
       canvasLabel: params.get("label") || (words && words.a11y && words.a11y.scene) || undefined,
+      resetLabel: (words && words.a11y && words.a11y.resetView) || undefined,
       regionLabels: params.get("regions") === "1" && words ? words.regions : undefined,
       herdBadge: function (count) {
         var number = count.toLocaleString(lang);
@@ -109,6 +115,8 @@
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
     });
+    for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
+    runtimeHeld = {};
     var button = document.getElementById("ark-sound");
     var label = words && words.sound ? words.sound.label : "Sound";
     button.setAttribute("aria-label", label);
@@ -133,8 +141,16 @@
       .catch(function () {});
   }
 
+  // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
+  var runtimeHeld = {};
   function receive(message) {
     if (!message || typeof message !== "object") return;
+    if (message.type === "ark:visible" || message.type === "ark:power") {
+      if (scene && scene.receive) scene.receive(message);
+      else runtimeHeld[message.type] = message;
+      return;
+    }
+    if (scene && message.type === "ark:reset") { scene.resetView(); return; }
     if (message.type === "ark:snapshot") { var snapshot = Ark.decodeArkSnapshot(message.snapshot); wordsRead.then(function () { show(snapshot); }); }
     else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
     else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
