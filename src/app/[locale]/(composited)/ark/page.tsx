@@ -17,6 +17,7 @@ import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
+import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 /**
  * /ark: the shared Ark (Ark v1 contract, section 5). Every animal in it came
@@ -69,7 +70,7 @@ import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founde
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; founders?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -409,7 +410,15 @@ function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
     return {...base, animals, counts: {...base.counts, animals: animals.length, species: base.counts.species + extra.length}};
 }
 
-function modelBase(): string {
+/**
+ * The Ark model set. Development's `?models=local` reads the local build
+ * through the dev route (the 14 birds turned to face the right way, before
+ * that upload), `?models=live` the bucket's, whatever the environment says.
+ */
+function modelBase(searchParams?: Props["searchParams"]): string {
+    const asked = process.env.NODE_ENV === "development" ? searchParams?.models : undefined;
+    if (asked === "local") return "/api/dev/ark-models/v1/ark";
+    if (asked === "live") return `${TALKING_MODELS_BASE_URL}/ark`;
     const configured = process.env.NEXT_PUBLIC_ARK_MODELS_URL?.trim();
     if (configured) return configured.replace(/\/+$/, "");
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
@@ -422,7 +431,10 @@ function modelBase(): string {
  * model set.
  */
 function rigOverride(searchParams: Props["searchParams"]): string | null | undefined {
-    if (process.env.NODE_ENV !== "development" || typeof searchParams.rig !== "string") return undefined;
+    if (process.env.NODE_ENV !== "development") return undefined;
+    // `?rigv=v2`: another rig set beside the model set (a re-made one, before the release moves ARK_RIG_VERSION).
+    if (typeof searchParams.rigv === "string" && typeof searchParams.rig !== "string") return rigBaseFrom(modelBase(searchParams), searchParams.rigv) ?? undefined;
+    if (typeof searchParams.rig !== "string") return undefined;
     if (searchParams.rig === "0") return null;
     return /^(\/|https?:\/\/)/.test(searchParams.rig) ? searchParams.rig.replace(/\/+$/, "") : undefined;
 }
@@ -454,7 +466,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
     const founders = data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
-    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
+    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
     const wordsLocale = otherLanguage ? language : locale;
     // The words under the world: the snapshot the page drew (the same Ark for everyone; `mine` is never said there).
@@ -474,7 +486,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             signedIn={data.read?.signedIn ?? false}
             words={words}
             talkTitles={talk}
-            modelBase={modelBase()}
+            modelBase={modelBase(searchParams)}
             rigBase={rigOverride(searchParams)}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
             fixtureLife={fixtureLife}

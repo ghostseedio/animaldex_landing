@@ -31,10 +31,10 @@ export type ArkBehaviourState = {
     asleep: boolean;
     /** Up in the air, on its circle (a bird of the air, awake). */
     airborne: boolean;
-    /** Up at the surface for air (an air-breather in the water), awake or asleep. */
-    breathing: boolean;
     /** What it is doing (`behaviour-schedule.ts`), for an animal on the behaviour schedule. */
     doing?: ArkDoing;
+    /** Up at the surface for air (an air-breather in the water), awake or asleep. */
+    breathing: boolean;
 };
 
 export type ArkBehaviourInput = {
@@ -73,20 +73,18 @@ const SCHEDULED = new Map<string, ArkBehaviourState>();
 
 export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
     const plan = input.scheduled;
-    if (plan && !input.acting && !input.visitor) {
-        // ark-audit merge: a scheduled air-breather still comes up on its breath cycle (sea-depth).
-        const asleepNow = plan.doing === "sleep";
-        const breathingNow = input.breather && !input.reducedMotion ? breathAt(input.breather.seed, input.breather.clock, asleepNow) > 0 : false;
-        const kind: ArkBehaviourKind = asleepNow ? "asleep" : breathingNow ? "breathing" : plan.aloft && !input.reducedMotion ? "flying" : "awake";
-        const key = `${kind}:${plan.doing}:${breathingNow ? 1 : 0}`;
-        let state = SCHEDULED.get(key);
-        if (!state) SCHEDULED.set(key, (state = Object.freeze({kind, asleep: kind === "asleep", airborne: kind === "flying", breathing: breathingNow, doing: plan.doing})));
-        return state;
-    }
-    const awake = Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
+    const awake = plan ? plan.doing !== "sleep" : Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
     // Up for air on its breath cycle (not in an act, nor the visitor, nor with motion reduced).
     const breather = input.breather && !input.acting && !input.visitor && !input.reducedMotion ? input.breather : null;
     const breathing = breather ? breathAt(breather.seed, breather.clock, !awake) > 0 : false;
+    if (plan && !input.acting && !input.visitor) {
+        // On the behaviour schedule: asleep is its sleep, flying its pose in the air, breathing its breath cycle.
+        const kind: ArkBehaviourKind = plan.doing === "sleep" ? "asleep" : plan.aloft && !input.reducedMotion ? "flying" : breathing ? "breathing" : "awake";
+        const key = `${kind}:${plan.doing}:${breathing ? 1 : 0}`;
+        let state = SCHEDULED.get(key);
+        if (!state) SCHEDULED.set(key, (state = Object.freeze({kind, asleep: kind === "asleep", airborne: kind === "flying", breathing, doing: plan.doing})));
+        return state;
+    }
     if (input.aloftAlways && !input.acting && !input.visitor) return awake ? FLYING : ASLEEP_ALOFT;
     if (!awake) return breathing ? ASLEEP_BREATHING : ASLEEP;
     if (breathing) return BREATHING;

@@ -16,7 +16,7 @@
  */
 
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {allAttachPoints, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import type {ArkZone} from "@/ark-scene/types";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -236,6 +236,14 @@ export function sceneSampler(): ArkWorldSampler {
     for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2;
         edge(GARDEN_POND.x + Math.cos(a) * GARDEN_POND.radius * 0.6, GARDEN_POND.z + Math.sin(a) * GARDEN_POND.radius * 0.6, a, "farm_garden");
+    }
+    // The sea's shore: just dry ground at the waterline all round the island (where seals, penguins and turtles go in and out).
+    for (let k = 0; k < 120; k++) {
+        const theta = (k / 120) * Math.PI * 2;
+        const r = shoreRadius(theta);
+        const s0 = surface(Math.cos(theta) * (r + 1.5), Math.sin(theta) * (r + 1.5));
+        if (s0.cliff > 0.45) continue;
+        edge(Math.cos(theta) * (r + 2), Math.sin(theta) * (r + 2), theta + Math.PI);
     }
 
     // A lattice over the land: grazing grass where the ground is grass, ledges where the coast is a cliff.
