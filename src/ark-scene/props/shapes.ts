@@ -387,10 +387,17 @@ export function turtlePit(r: number, seed = 12, turn = 0, ground: (x: number, z:
     const rings = 12;
     const segments = 28;
     const reach = 1.6;
-    const bumps = Array.from({length: 7}, () => ({a: random() * Math.PI * 2, d: 0.3 + random() * 1.1, s: 0.15 + random() * 0.2, h: (random() - 0.4) * 0.05}));
-    const height = (rho: number, theta: number) => {
-        let h = 0.07 * Math.exp(-(((rho - 0.95) / 0.2) ** 2)) - 0.06 * Math.exp(-(((rho - 0.5) / 0.22) ** 2)) + 0.035 * Math.exp(-((rho / 0.22) ** 2));
-        h += 0.06 * Math.exp(-(((rho - 1.25) / 0.22) ** 2)) * Math.max(0, Math.cos(theta)) ** 2;
+    const bumps = Array.from({length: 14}, () => ({a: random() * Math.PI * 2, d: 0.2 + random() * 1.2, s: 0.12 + random() * 0.22, h: (random() - 0.45) * 0.08}));
+    const phase = [random() * 6, random() * 6];
+    const height = (rho0: number, theta: number) => {
+        // Long along the crawl (z), the rim heaped unevenly where the flippers threw the sand, the chamber's hump off-centre.
+        const rho = rho0 * Math.hypot(Math.sin(theta), Math.cos(theta) / 1.3);
+        const rim = 0.55 + 0.45 * Math.sin(3 * theta + phase[0]) * Math.cos(2 * theta + phase[1]);
+        let h = 0.07 * rim * Math.exp(-(((rho - 0.9) / 0.24) ** 2)) - 0.05 * Math.exp(-(((rho - 0.45) / 0.3) ** 2));
+        const hx = Math.sin(theta) * rho0 - 0.12;
+        const hz = Math.cos(theta) * rho0 + 0.08;
+        h += 0.02 * Math.exp(-(hx * hx + hz * hz) / 0.05);
+        h += 0.05 * Math.exp(-(((rho0 - 1.25) / 0.25) ** 2)) * Math.max(0, Math.cos(theta)) ** 2;
         for (const bump of bumps) {
             const dx = Math.cos(theta) * rho - Math.cos(bump.a) * bump.d;
             const dz = Math.sin(theta) * rho - Math.sin(bump.a) * bump.d;

@@ -24,6 +24,7 @@
 
 import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
+import {cropAt} from "@/ark-scene/fields";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
@@ -371,7 +372,7 @@ function clearPaddock(b: {x: number; z: number}, c: number, s: number): {x0: num
     let best = {x0: -4.5, x1: 5, z0: 3.4, z1: 10.8};
     let bestScore = Infinity;
     for (const side of [1, -1]) {
-        for (const shift of [0, -3, 3, -6, 6]) {
+        for (const shift of [0, -3, 3, -6, 6, -9, 9]) {
             for (const gap of [3.4, 5]) {
                 const z0 = side > 0 ? gap : -gap - depth;
                 const rect = {x0: shift - width / 2, x1: shift + width / 2, z0, z1: z0 + depth};
@@ -380,6 +381,13 @@ function clearPaddock(b: {x: number; z: number}, c: number, s: number): {x0: num
                     const p = world(lx, lz);
                     const ground = sampleGround(p.x, p.z);
                     if (ground.land < 0.9 || ground.height < 0.4 || riverDistance(p.x, p.z) < 3) score += 100;
+                }
+                // Grazing land: the graphics lane's fields (`fields.ts`) keep their crops; a paddock goes on pasture.
+                for (let gx = 0; gx < 4; gx++) {
+                    for (let gz = 0; gz < 3; gz++) {
+                        const p = world(rect.x0 + ((gx + 0.5) / 4) * width, rect.z0 + ((gz + 0.5) / 3) * depth);
+                        if (cropAt(p.x, p.z)) score += 4;
+                    }
                 }
                 for (const o of near) {
                     const p = local(o);
