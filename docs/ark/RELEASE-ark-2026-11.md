@@ -1,15 +1,66 @@
-# Ark release, November 2026 (DRAFT, kept up to date as rounds land)
+# Ark release, November 2026 (final, for the owner's approval)
 
 Handover §6.3. **Nothing in this document is deployed.** Every server, bucket, web and app step below waits for the
-owner's approval of this release as a whole. Exception already approved: the rig `v2` upload, once its checks pass.
+owner's approval of this release as a whole. The one step already done (owner-approved): the rig `v2` upload to the bucket.
 
-- **Web release branch:** landing `ark-release`. Its head is in §1; it is merged round by round (m1–m5 so far).
+- **Web release branch:** landing `ark-release`, its final head in §0 (merged round by round, m1–m5, then the final pass).
 - **Live today:** web landing main `76a4f5d1` (rollback sha `b0e6c20c463911969725fa001170e6add313483b`); server
   migrations up to `20261113160000` plus `20261111140000/160000/170000` and `20261110130000_web_ark_events`; functions
   voyage-world v1, dispatch-ark-digest-push v1, delete-account v64, generate-applied-insight v143; bucket
   `talking-models`: the model set `v1/ark/` (2,630 species, manifest of 2026-11-10 07:09 GMT), the rig sets `ark-rig/v1/`
   (1,971 species, 2026-11-10 23:38 GMT) and `ark-rig/v2/` (2,028 species, flight on, 2026-11-11 12:50 GMT); the rigs are
   inert until a web build reads them (this release reads v2 first, v1 as the fallback).
+
+## 0. The release at a glance (final pass, for the owner's approval)
+
+**Every repo's head** (nothing here is deployed or merged to any `main`):
+
+| Repo | Branch | Head | What |
+|---|---|---|---|
+| landing (web) | `ark-release` | **the head this document is committed at** (code checked at 00314d25) | The web release: every lane in §1, and the release's own fixes |
+| AnimalDex (server) | `ark-founders-server` | 861b2b07 | Founders: migration `20261114100000`, `voyage-founder-story`; names on in the backfill window |
+| AnimalDex (server) | `ark-captures-thrive` | 0ab8f4fb | Captures + thrive, migrations `20261115100000`–`160000`, the Part A launch ecology (§7d) |
+| AnimalDex (server) | `ark-diet-audit` | db9159c1 | Migration `20261116100000_voyage_diet_audit` (§3 row 11) |
+| AnimalDex (tooling) | `ark-rigging-v6` | 6b1b40a9 | `recache_ark.py` (the optional §5a step) |
+| iOS (AnimalDex repo) | `ark-founders-ios` | 05004008 | Founders, the 18+ confirmation, `ark:open-profile` |
+| iOS | `ark-runtime-ios` | 82eeee05 | The runtime bridge (`ark:visible`, `ark:power`), the embed's `insetTop` |
+| iOS | `ark-thrive-ios` | 316354cc | Captures + thrive lines in the web's words |
+| Android (AnimalDex-android) | `ark-founders-android` | 2ce6ee9 | Founders: the selected animal's founders from the scene, one way to a profile |
+| Android | `ark-runtime-android` | 5239d59 | The runtime bridge; the panel shows the live HUD (`hud=1`) |
+| Android | `ark-thrive-android` | c0c6f3d | Captures + thrive in the web's words |
+| Bucket `talking-models` | `v1/ark/` | manifest 2026-11-10 07:09 GMT | The model set, 2,630 species (already live) |
+| Bucket | `ark-rig/v2/` | manifest 2026-11-11 12:50 GMT | The rig set this release reads first: 2,028 species, flight on (already uploaded, inert until this web build) |
+| Bucket | `ark-rig/v1/` | manifest 2026-11-10 23:38 GMT | The fallback rig set, 1,971 species |
+
+**Checks on 00314d25 (the final code):**
+- Unit and integration tests: **2,260/2,260**; tsc clean; lint clean.
+- The map's spawn validator: **0 failures** over 2,615 species; `tree-attach.json` up to date; the attach baseline holds.
+- Visual CI: **19 of 19**, with **no noise overrides**, and two renders of the same code identical within 0.04% on every shot.
+- The default view (two runs): walk pace ratio median 0.99, backwards 0.1–0.2%, ground turns 0.2–0.4 a minute; feeding
+  steps 0–0.5 turns a minute of movement.
+- The real scale (3,137 animals, runtime round 8): desktop first frame 3.0 s, view complete 6.8–8.7 s, 60 fps, no long task
+  after the first frame; phone profile first frame 5.2 s, mount 0.51 s, view complete 9.3–11.9 s, 58–59 fps (§7a).
+- The 60-second flythrough: 57.6–59.9 fps on every tier, desktop and phone (§11).
+
+**The owner's steps, in order** (§7 has every command):
+1. Server: the founders migration (switch off) and `voyage-founder-story`; then `voyage-world` from `ark-captures-thrive` 0ab8f4fb and its migrations 3–7.
+2. Web: merge `ark-release` into landing `main`, build the image, deploy on the VM (§4); with it or after it, the 14 turned birds. Optional, recommended skip: `immutable` on the model files (§5a).
+3. Server, part of the release: the captures backfill to completion, then `voyage_backfill_verify_v1`; `founder_names` on (with the privacy text published); `thrive` on; the capture triggers.
+4. Server, the launch ecology (§7d): grace, ramp and `launch_ecology` checked (seeded), the diet-audit migration, then `tick_enabled` on and `voyages.clock_started_ark_day` checked; days 0–14 no arrived animal eaten; `ark_digest` off until after day 21.
+5. The post-deploy check (§7a): production's counts against about 3,135 animals, 951 species and 645 players (plus the 2 aboard and captures since 2026-11-11), named bringers on the cards, `/u/{handle}` loads.
+6. Apps: merge the founders, thrive and runtime branches into each app's `main`, build and submit.
+
+**Open owner items:**
+- **The privacy and terms text** (`docs/ark/founders-privacy.md`) published **before** names go on (`founder_names`).
+- **Key rotations:** `CLAUDE_API_KEY_2` and the Zernio key.
+- **A real mid-range Android phone test** (the measurements here are headless Chromium with a 4× CPU throttle on the Mac's GPU).
+- **Translations:** the Indonesian and Filipino strings to check.
+- **The sound licence:** keep the Public Domain Mark surf and waterfall beds?; the live chat's "shore" bank credits an uploader whose Commons files were nominated for deletion (keep it out of the Ark).
+- **Close-up skins:** approve the upload (2,630 species, about 710 MB built locally; read only near the camera, 404s until uploaded).
+- Held, not in this release: Ark-aware chat (`ark-aware-chat`, owner decisions open). Next, right after it: encounter hunting (§7c).
+
+**Open lane items: none.** Every lane fix asked for in the final pass is merged (behaviour ef2f5259, recipes d446fda7,
+reef f20bdd12, runtime 62f7a743). The remaining notes are in §8 (none blocks the release).
 
 ## 1. What is included
 
@@ -38,7 +89,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Home growth | `ark-home-growth` | 7588a2e8 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
 | Sleep | `ark-sleep` | f23db564 | Sleep postures from data for 2,555 species, lying down and getting up, closed eyes (`arkInstance.w`), breathing and stirs, social sleep with a night watch, waking in the reactive layer, den sleepers in burrows, the rest status in 45 languages |
 | Live HUD | `ark-hud-live` | a83dd61e | Species and region bars (log scale, changes), the Live log of real events and seen behaviour (tap to fly there), `mated` events, arrival notices for real arrivals only, the embed's `?hud=` and `?insetTop`/`?insetBottom` safe areas |
-| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring, den entrances and going-in at the map's `map:` roosts |
+| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring, den entrances and going-in at the map's `map:` roosts; the final pass: the local real snapshot (`?snapshot=`, development only) and no production fixture path, the embed's founders, the walk mask regenerated on release, the lazy roost over the runtime's memo, the motion check's turning by source, the visual CI without noise overrides |
 
 Not yet in the release: `ark-scale-test`, newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
 
@@ -278,9 +329,11 @@ and 15.3% at 3×.
 own short step at a quiet time. In the chained rehearsal both deadlocked with live writes; Postgres aborted them
 harmlessly.
 
-## 8. Known issues (at m5)
-- **Tests on `ark-release` 68a4b7b9: the full suite green** (2,254/2,254; behaviour 55e98019 fixed the lions in a row and the heron's watch minute). The polar bear's "at the shore nothing jumps" passes on release (the map lane sees it fail only on its own base).
-- **Default view** (corrected check, after behaviour 55e98019 and map 18aec3dd, three runs; turning split by source): walk pace ratio median 0.99–1.02; backwards 0.1–1.8% (one plains zebra 1.6 s backwards in one run); ground turns 0–0.1 a minute (median). **Grazers over 2 way-turns a minute of movement:** plains zebras 2.4 (graze, 11 s moving), 3.3 (watch, graze), 9.6 (graze, groom, play) and 13.1 (graze, 1.3 s only), and an alpine ibex 8.0 (graze, watch): all **the schedule's own steps** (no recipe act). The African forest buffalo's 11.6 (groom) is mostly **the wallow recipe** (walk 29.6, shake_off 39.7 a minute over 1.4 s) on top of 3.2 from the schedule. Others: puffins 3–4 (surface_dive), an emperor penguin 2.5 (chase_fish), a cheetah 5.1 (wander), a dog 6.5 (groom, forage), a harbour seal 6.7 (breathe, swim).
+## 8. Known issues (final)
+- **Tests on the final head (9a9554a2 and on): the full suite green, 2,260/2,260.** tsc clean, lint clean, the map validator 0 failures (2,615 species), `tree-attach.json` up to date. The last lane fixes are in: behaviour ef2f5259 (no chance rows), recipes d446fda7 (forage drift), reef f20bdd12 (determinism), runtime 62f7a743 (round 9).
+- **Default view on the final head** (corrected check, two runs; turning split by source): walk pace ratio median 0.99; backwards 0.1–0.2%, nothing backwards over 1 s; ground turns 0.2–0.4 a minute (median). Feeding steps (`schedule:step`) turn 0–0.5 a minute for grazers and browsers. What still turns, by source: walk legs between feeding spots (goats 3–12, roe deer 3–22, capybara 3.6, ibex 2.2), young zebras' play beat (4–28), recipe episodes (an ibex's horn_clash 58 while clashing, an arctic fox's pounce walk 23, a red fox's cache_food 4.6, harbour seals' chase_fish 2.5–7), and the first 0.25 s of a stay ("settle"). Roe deer at 2.7× and a bullfrog at 2.2× the walk pace in one run.
+- **The zebra's rest-beat turning** (18.9 a minute in one earlier run): its drawn path and its schedule path turn the same (0.33 rad a metre over the same 27 m), with no reactive offset and no reactive action, and no recipe act. So it is the herd plans: a follower keeping formation with its leader carries the leader's beat (`rest`) while it moves. Not the reactive layer, not a recipe.
+- **Golden props framing:** the `nest_eyrie`, `nest_heronry` and `nest_weavers` shots now look through leaves (the emergents' broader crowns, assets 874a8d84, put foliage between the shot's camera and the nest). The scene is right; the props lane's camera for those three shots wants moving.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
@@ -298,12 +351,14 @@ harmlessly.
     bd63e552 and were red on release itself (graphics batches 4–6, props, map and look had changed every shot), so they
     were re-accepted at the release's picture then. The worst-tile limit is looser (90%) on the five shots where an animal
     that loops on its own moves between renders of the same code (one tile per shot, the whole picture under 1.1%).
-  - **On 51d4cd58 (runtime round 8): 16 of 19 pass, no page errors.** `desktop-house_fields-day` (changed 1.92%, mean
-    2.60), `desktop-house_fields-dusk` (a 46% tile over 35%) and, since behaviour 55e98019, `desktop-river_pond-day`
-    (changed 2.21%: the elephant drinks on the other side of the lake, the macaw sits elsewhere). Looked at, not
-    accepted, and not added to the noise overrides. House_fields: the map lane showed the schedule poses are identical;
-    the differences are reactive offsets and rig clips carried from real-time frames before the harness freezes the
-    clock. The runtime lane fixes the harness in round 9 and re-accepts those baselines then.
+  - **Runtime round 9** (62f7a743): the harness's freeze resets the reactive layer, rig blends and glances and re-pins the
+    sea clock, so a shot is a function of its frozen time; all 19 baselines were re-accepted at e8ab716b's picture
+    (river_pond's new elephant and macaw looked at: the elephant stands on the shore at the water's edge).
+  - **The five noise overrides are gone** (`tests/ark-visual/config.json`: every shot at the default limits).
+  - **Final head 00314d25: 19 of 19 pass, no page errors.** Two renders of the same code were identical within 0.04%
+    (worst tile 1.1%) on every shot. Re-accepted after two identical runs, and looked at: `desktop-reef_underwater-day`
+    (the light shafts at their shared-clock place, reef f20bdd12) and `desktophigh-house_fields-dusk` (the dogs' forage
+    drift, recipes d446fda7).
 - `ark-behaviour-audit.yml`: the behaviour audit's key checks (problems 1–7) at today's merged values, the reactive encounter scenario and the map validator; thresholds in `tests/ark-audit/thresholds.json`.
 
 ## 10. Owner questions still open (from the lanes)
@@ -321,6 +376,12 @@ harmlessly.
 - **Recipes:** the pair rule (any two / male+female everywhere / male+female for the 2,103 dimorphic); 1,400 decorative murmuration birds OK?; eggs only from server events OK?
 - **Standing:** Ark-aware chat decisions; the privacy and terms text; Indonesian and Filipino strings; which flags after release; a real mid-range Android phone test; rotate `CLAUDE_API_KEY_2` and the Zernio key.
 
-## 11. Media (to fill)
-- **2-minute flythrough:** _placeholder_ (`node scripts/ark-flythrough.mjs` on the final head).
-- **Golden-shot pack:** _placeholder_ (`node scripts/ark-golden-shots.mjs --label release --devices desktop,phone` on the final head; plus props and animal close-ups).
+## 11. Media (final head)
+In the handover folder, `~/animaldex-ark-handover-2026-11-11/ark/release-final/` (made on 00314d25, the shared Mac):
+- **The 60-second flythrough:** `ark-flythrough-60s.mp4` (the golden route from morning to night, desktop high tier), with
+  `flythrough.json`: desktop high 59.8 fps, medium 59.9, low 57.6; phone medium 59.2, low 59.9 (p95 16.8 ms on every tier).
+  Six frames: `final-sheet-fly.jpg`.
+- **The golden-shot pack:** `golden/` (102 shots: 17 places × day, dusk, night × desktop and phone, with `numbers.md`; every
+  shot at 16.7 ms p50) and `golden-props/` (15 props shots: nests, the beehive, the house at night, the farm, scree, the
+  cave roost, the turtle nest, the hamlet by day and night and close, the dens). Sheets: `final-sheet-desktop-day.jpg`,
+  `final-sheet-props.jpg`. Page errors: only the known 400/404 resource answers.
