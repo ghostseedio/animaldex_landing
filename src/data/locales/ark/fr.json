@@ -217,7 +217,8 @@
             "herdSelected": "{animal} : {count} à bord",
             "closed": "Fiche fermée",
             "motionReduced": "Animations réduites : ce qui s'est passé est raconté ici au lieu d'être joué.",
-            "skipToList": "Aller à la liste de qui est à bord"
+            "skipToList": "Aller à la liste de qui est à bord",
+            "resetView": "Revenir à toute l'Ark"
         },
         "person": {
             "metaTitle": "Les animaux de {name} dans l'Ark",

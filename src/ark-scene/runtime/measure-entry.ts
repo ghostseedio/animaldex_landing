@@ -15,6 +15,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
+import {prepareArk, type ArkPrepared} from "@/ark-scene/runtime/prebuild";
 import type {Scene} from "three";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -44,8 +45,13 @@ const round = (value: number) => Math.round(value * 10) / 10;
     // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
     const walk = params.get("walk") === "1";
     try {
-        const snapshot = decodeArkSnapshot(fixture);
+        // `?population=<file>`: a scale snapshot (scripts/ark-scale-fixture.mts) instead of the fixture.
+        const population = params.get("population");
+        const snapshot = decodeArkSnapshot(population ? await (await fetch(population)).json() : fixture);
         if (!snapshot) throw new Error("fixture did not decode");
+        // `?prebuild=1`: the mount's heavy work in the prebuild worker first (runtime/prebuild.ts).
+        let prepared: ArkPrepared | null = null;
+        if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot, workerUrl: "./ark-prebuild-worker.js"});
         const el = document.getElementById("ark") as HTMLElement;
         let firstFrame = 0;
         const mountStart = performance.now();
@@ -106,6 +112,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 memory: memory ? {geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), geometries: memory.geometries, textures: memory.textures, instances: memory.instances} : null,
                 heapMB: heap === null ? null : round(heap / 2 ** 20),
                 runtime,
+                prepared,
+                animals: snapshot.animals.length,
                 samples
             }
         };

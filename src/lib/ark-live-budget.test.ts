@@ -78,3 +78,26 @@ test("live budget: more kinds than the budget, the kinds take turns; quotas grow
         before = q;
     }
 });
+
+test("live budget: a kind's resting members sit out first; still shared and nested across tiers", () => {
+    const all = population();
+    // Every third animal is settled at its roost (as behaviour's restingAtRoost would say, the same for everyone).
+    const flagged = all.map((c, i) => ({...c, resting: i % 3 === 0}));
+    const out = arkOutside(flagged, 400, T);
+    const big = flagged.filter((c) => c.group === "big0");
+    const outBig = big.filter((c) => out.has(c.id));
+    // big0 has 24 members, 16 awake: a quota under 16 is all awake ones.
+    assert.ok(outBig.length <= 16 && outBig.every((c) => !c.resting), JSON.stringify(outBig.map((c) => c.resting)));
+    // The lazy question gives the same answer as the field.
+    const lazy = arkOutside(all, 400, T, new Set(), (c) => Number(c.id.slice(1)) % 3 === 0);
+    assert.deepEqual(Array.from(lazy).sort(), Array.from(out).sort());
+    // Nested across tiers, any order.
+    const low = arkOutside(flagged, ARK_LIVE_BUDGET.low, T);
+    const high = arkOutside([...flagged].reverse(), ARK_LIVE_BUDGET.high, T);
+    const medium = arkOutside(flagged, ARK_LIVE_BUDGET.medium, T + 1);
+    low.forEach((id) => assert.ok(medium.has(id), `low ⊂ medium: ${id}`));
+    medium.forEach((id) => assert.ok(high.has(id), `medium ⊂ high: ${id}`));
+    // A crowded kind with everyone resting still has its quota out.
+    const allResting = flagged.map((c) => ({...c, resting: true}));
+    assert.ok(arkOutside(allResting, 400, T).size >= 380);
+});

@@ -174,6 +174,8 @@ export type ArkA11yWords = {
     closed: string;
     motionReduced: string;
     skipToList: string;
+    /** The world's reset button (runtime lane): fly back to the whole island. */
+    resetView: string;
 };
 
 /** Share buttons and the share cards (Part 4c). */

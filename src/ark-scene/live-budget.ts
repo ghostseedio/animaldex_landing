@@ -17,6 +17,9 @@
  * - Nested across tiers: what is out on a smaller budget is out on a larger one too (the window starts at the same
  *   place; a larger quota only extends it), so a phone and a desktop agree on everyone the phone shows.
  * - Pinned animals (the reader's own, a selected or followed one, a replay's) are always out, on top of the budget.
+ * - Resting first: a kind's quota is filled from its members not resting at their roost (ring order from the step's
+ *   start), then from the resting ones; still shared (the resting flag is) and nested (one ordered list, cut longer
+ *   for a larger budget).
  */
 
 import type {QualityTier} from "@/ark-scene/post";
@@ -27,7 +30,16 @@ export const ARK_LIVE_BUDGET: Record<QualityTier, number> = {high: 1200, medium:
 /** How often the rotation moves on (s): the same instant for every viewer. */
 export const ARK_REST_STEP_SECONDS = 300;
 
-export type ArkLiveCandidate = {id: string; /** The kind (a herd's key, else the species): quotas are per kind. */ group: string};
+export type ArkLiveCandidate = {
+    id: string;
+    /** The kind (a herd's key, else the species): quotas are per kind. */
+    group: string;
+    /**
+     * Settled at its roost now (behaviour's `restingAtRoost(...).resting`, shared: time and ids only). A kind's
+     * resting members are the first to sit out, so an animal out of sight is plausibly at home.
+     */
+    resting?: boolean;
+};
 
 /** A stable 32-bit hash of a string (FNV-1a), for the ring order. */
 export function arkHash(text: string): number {
@@ -81,7 +93,7 @@ export function arkRestStep(epochSeconds: number): number {
  * Who is outside at `epochSeconds` within `budget` (plus `pinned`). Candidates are the animals that would be drawn
  * one by one (the herds' representatives included); anyone not returned rests out of sight.
  */
-export function arkOutside(candidates: readonly ArkLiveCandidate[], budget: number, epochSeconds: number, pinned: ReadonlySet<string> = new Set()): Set<string> {
+export function arkOutside(candidates: readonly ArkLiveCandidate[], budget: number, epochSeconds: number, pinned: ReadonlySet<string> = new Set(), isResting?: (candidate: ArkLiveCandidate) => boolean): Set<string> {
     const out = new Set<string>();
     if (candidates.length <= budget) {
         for (const candidate of candidates) out.add(candidate.id);
@@ -113,10 +125,19 @@ export function arkOutside(candidates: readonly ArkLiveCandidate[], budget: numb
             for (const member of members) out.add(member.id);
             continue;
         }
-        const ring = members.map((member) => ({id: member.id, h: arkHash(member.id)})).sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : 1));
+        const ring = members.map((member) => ({member, h: arkHash(member.id)})).sort((a, b) => a.h - b.h || (a.member.id < b.member.id ? -1 : 1));
         // The window's start: the step, offset per kind so kinds don't share a phase.
         const start = (step + (arkHash(`phase:${key}`) % ring.length)) % ring.length;
-        for (let i = 0; i < quota; i++) out.add(ring[(start + i) % ring.length].id);
+        // From the start round the ring: those not resting at their roost first, then the resting ones (asked lazily:
+        // only a crowded kind's members are looked at).
+        const awake: string[] = [];
+        const settled: string[] = [];
+        for (let i = 0; i < ring.length; i++) {
+            const member = ring[(start + i) % ring.length].member;
+            const resting = member.resting ?? (isResting ? isResting(member) : false);
+            (resting ? settled : awake).push(member.id);
+        }
+        for (let i = 0; i < quota; i++) out.add(i < awake.length ? awake[i] : settled[i - awake.length]);
     }
     pinned.forEach((id) => out.add(id));
     return out;

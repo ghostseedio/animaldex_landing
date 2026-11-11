@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} aan boord",
             "closed": "Kaart gesloten",
             "motionReduced": "Beweging is beperkt: wat er gebeurde, wordt hier verteld in plaats van afgespeeld.",
-            "skipToList": "Ga naar wie er aan boord is"
+            "skipToList": "Ga naar wie er aan boord is",
+            "resetView": "Terug naar de hele Ark"
         },
         "person": {
             "metaTitle": "De dieren van {name} in de Ark",

@@ -143,6 +143,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
@@ -881,6 +882,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let attachReady = !worldBuild;
     if (worldBuild) void prepareAttachPoints().then(() => (attachReady = true));
     const scheduleWorldNow = (): ScheduleWorld => world!;
+    /**
+     * Runtime (live budget): whether an animal is settled at its roost now (behaviour's `restingAtRoost`), for
+     * `arkOutside` to sit those out first; undefined until the world is built or where behaviour lacks it.
+     */
+    const restingFor = (snapshot: ArkSnapshot, places: Map<string, Placement>): ((id: string) => boolean) | undefined => {
+        const resting = (behaviourSchedule as unknown as {restingAtRoost?: (world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean}}).restingAtRoost;
+        if (!resting || !world || !scheduleOn) return undefined;
+        const byId = new Map(snapshot.animals.map((animal) => [animal.id, animal]));
+        const epoch = worldMs() / 1000;
+        return (id) => {
+            const animal = byId.get(id);
+            const place = places.get(id);
+            if (!animal || !place) return false;
+            const sched = makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
+            return sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, epoch, scheduleHours, animal.activity).resting : false;
+        };
+    };
     const stepWorldBuild = (budgetMs: number) => {
         if (world || !worldBuild || !attachReady) return;
         const built = worldBuild.step(budgetMs);
@@ -890,6 +908,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!built) return;
         world = built;
         worldBuild = null;
+        // Runtime: who is resting at home is known now; the live budget sits them out first.
+        runtime.restingReady();
         // The schedules that waited start now, each where it is at this moment (wired, then posed, as at load).
         if (pendingWire) {
             const {list, arkDay} = pendingWire;
@@ -1305,7 +1325,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         buildHerds(snapshot, representatives.herds, places);
         // Runtime: a big Ark draws at most the tier's live budget one by one, the rest resting out of sight by the
         // shared rotation (live-budget.ts); the counts and herds are untouched.
-        const outside = runtime.outside(snapshot.animals, representatives.live, pins, liteOn());
+        const outside = runtime.outside(snapshot.animals, representatives.live, pins, liteOn(), restingFor(snapshot, places));
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {

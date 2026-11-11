@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: na pokładzie {count}",
             "closed": "Karta zamknięta",
             "motionReduced": "Ruch jest ograniczony: to, co się wydarzyło, jest tu opisane, a nie odtwarzane.",
-            "skipToList": "Przejdź do listy zwierząt na pokładzie"
+            "skipToList": "Przejdź do listy zwierząt na pokładzie",
+            "resetView": "Wróć do całej Ark"
         },
         "person": {
             "metaTitle": "{name}: zwierzęta w Ark",

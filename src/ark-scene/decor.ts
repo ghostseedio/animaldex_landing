@@ -113,6 +113,17 @@ function tone(zone: ArkZone, kind: DecorKind, r: number): string {
 
 let cached: DecorItem[] | null = null;
 
+/**
+ * Runtime prebuild hook (runtime/prebuild.ts): the same seeded lists, computed in a worker before the mount, handed
+ * in so the mount does not compute them on the main thread. Identical output (deep-equal tests in ark-prebuild.test.ts).
+ */
+let primedGrass: {count: number; tufts: GrassTuft[]} | null = null;
+export function primeDecor(primed: {decor?: DecorItem[]; fill?: FillItem[]; grass?: {count: number; tufts: GrassTuft[]}}): void {
+    if (primed.decor) cached = primed.decor;
+    if (primed.fill) fillCache = primed.fill;
+    if (primed.grass) primedGrass = primed.grass;
+}
+
 export function worldDecor(): DecorItem[] {
     if (cached) return cached;
     const random = seeded(20261110);
@@ -275,6 +286,11 @@ export function worldDecor(): DecorItem[] {
 export type GrassTuft = {x: number; y: number; z: number; scale: number; rotation: number; zone: ArkZone; dry: number};
 
 export function grassTufts(count: number): GrassTuft[] {
+    if (primedGrass && primedGrass.count === count) {
+        const tufts = primedGrass.tufts;
+        primedGrass = null;
+        return tufts;
+    }
     const random = seeded(77001);
     const tufts: GrassTuft[] = [];
     const meadow: Partial<Record<ArkZone, number>> = {grassland: 1, woodland: 0.75, farm_garden: 0.55, river_lake: 0.85, wetland: 0.6, rainforest: 0.45, mountains: 0.35, seashore: 0.12};

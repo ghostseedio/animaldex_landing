@@ -338,7 +338,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          * tier's budget (the lighter view's: the low tier's), the same for every viewer, the reader's own and `pins`
          * always. Everyone else rests out of sight; the counts are untouched.
          */
-        outside(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean): Set<string> {
+        outside(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean, restingOf?: (id: string) => boolean): Set<string> {
             const budget = ARK_LIVE_BUDGET[lite ? "low" : ctx.tier()];
             const epoch = arkEpochSeconds();
             restAt = {step: arkRestStep(epoch), budget};
@@ -349,7 +349,12 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                 candidates.push({id: animal.id, group: animal.species_profile_id || `slug:${animal.model_slug}`});
                 if (animal.mine) pinned.add(animal.id);
             }
-            return arkOutside(candidates, budget, epoch, pinned);
+            return arkOutside(candidates, budget, epoch, pinned, restingOf ? (candidate) => restingOf(candidate.id) : undefined);
+        },
+
+        /** Behaviour's world is built (who is resting at home is known now): lay the snapshot out again next frame. */
+        restingReady() {
+            if (restAt) restAt = {...restAt, step: -1};
         },
 
         /** The rotation moved on (a new step on the shared clock) or the budget changed: the snapshot is to be laid out again. */

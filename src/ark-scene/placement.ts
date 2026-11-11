@@ -346,7 +346,18 @@ function clusterSpot(zoneKey: string, site: ZoneSite, centreIndex: number, centr
  * stats alone (see above), so the same animal stands in the same spot
  * whoever else is in the list. `animals` in any order.
  */
+/** Runtime prebuild hook (runtime/prebuild.ts): these animals' places, computed in a worker before the mount (identical output). */
+let primedPlaces: {animals: ArkAnimal[]; places: Map<string, Placement>} | null = null;
+export function primePlaces(animals: ArkAnimal[], places: Map<string, Placement>): void {
+    primedPlaces = {animals, places};
+}
+
 export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
+    if (primedPlaces && primedPlaces.animals === animals) {
+        const places = primedPlaces.places;
+        primedPlaces = null;
+        return places;
+    }
     obstacles ??= new DecorObstacles(worldDecor());
     const places = allocateArkPlaces(animals);
     const placed = new Map<string, Placement>();

@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} سوار",
             "closed": "کارڈ بند ہو گیا",
             "motionReduced": "حرکت کم ہے: جو ہوا وہ یہاں چلانے کے بجائے بتایا گیا ہے۔",
-            "skipToList": "سواروں کی فہرست پر جائیں"
+            "skipToList": "سواروں کی فہرست پر جائیں",
+            "resetView": "پورے Ark پر واپس جائیں"
         },
         "person": {
             "metaTitle": "Ark میں {name} کے جانور",
