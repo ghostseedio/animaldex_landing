@@ -832,7 +832,8 @@ test("a grazer drifts forward: its steps while grazing, browsing or foraging tur
             const p = poseOf(i, t);
             // (Its steps there: from a quarter second after it arrives, so the walk in is not one of them; the turn it
             // makes where it stands on arriving is the stay's one bigger turn, after a pause.)
-            const feeding = trip === lastTrip && t - 0.25 >= trip.arrive && !trip.shadow && ["graze", "browse", "forage"].includes(trip.doing) && p.y >= -0.01;
+            // (The schedule's own steps: a recipe's episode laid over them, where there is one, is the recipes' to judge.)
+            const feeding = trip === lastTrip && t - 0.25 >= trip.arrive && !trip.shadow && ["graze", "browse", "forage"].includes(trip.doing) && p.y >= -0.01 && !(p as {act?: unknown}).act;
             if (!feeding) way = null;
             else {
                 const d = Math.hypot(p.x - last.x, p.z - last.z);
