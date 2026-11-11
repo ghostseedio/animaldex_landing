@@ -229,6 +229,9 @@ def main():
     ap.add_argument("--no-pack", action="store_true")
     ap.add_argument("--shots", default="", help="only render these tiles (e.g. card); keeps the others")
     ap.add_argument("--variants", default="", help="only these variant letters (e.g. a)")
+    ap.add_argument("--attach-only", action="store_true",
+                    help="rebuild the geometry but write only attach.json and the manifest's attach counts "
+                         "(no GLBs, no renders): for attach-point fixes")
     ap.add_argument("--review", action="store_true",
                     help="write outputs under <work>/review-public, leaving public/ and the manifest alone")
     ap.add_argument("--work", default=os.environ.get("ARK_ASSETS_WORK", "/tmp/ark-assets-work"))
@@ -255,7 +258,7 @@ def main():
         os.makedirs(d, exist_ok=True)
 
     factories = list(load_set(args.set)(only or None))
-    env = None if args.no_render else blender_scene()
+    env = None if (args.no_render or args.attach_only) else blender_scene()
     attach_path = os.path.join(out_dir, "attach.json")
     attach_all = json.load(open(attach_path)) if os.path.exists(attach_path) else {}
     frag_path = os.path.join(work, f"manifest-{args.set}.json")
@@ -273,6 +276,13 @@ def main():
         if args.variants and asset.variant not in args.variants:
             continue
         aid = asset.id
+        if args.attach_only:
+            if aid not in frag:
+                raise SystemExit(f"--attach-only: {aid} is not built yet (no manifest entry)")
+            attach_all[aid] = asset.attach
+            frag[aid]["attach"] = len(asset.attach)
+            print(f"[ark-assets] {aid}: {len(asset.attach)} attach (attach only)", flush=True)
+            continue
         files = []
         levels = [(f"lod{i}", m) for i, m in enumerate(asset.lods)]
         if asset.card is not None and asset.card.parts:

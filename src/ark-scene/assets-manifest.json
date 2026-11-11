@@ -125,13 +125,19 @@
   "plants": {
    "attach": "plants/attach.json",
    "assets": 76,
-   "bytes": 2132749,
+   "bytes": 2132774,
    "lod0_tris_max": 4774
+  },
+  "rocks": {
+   "attach": "rocks/attach.json",
+   "assets": 21,
+   "bytes": 1758195,
+   "lod0_tris_max": 6440
   },
   "trees": {
    "attach": "trees/attach.json",
    "assets": 33,
-   "bytes": 4966711,
+   "bytes": 4980374,
    "lod0_tris_max": 9500
   }
  },
@@ -4377,6 +4383,1180 @@
     50.0
    ]
   },
+  "boulder-a": {
+   "set": "rocks",
+   "kind": "boulder",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.432,
+     -0.212,
+     -1.368
+    ],
+    "max": [
+     1.533,
+     1.498,
+     1.204
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-a.lod0.glb",
+     "tris": 1280,
+     "verts": 3840,
+     "bytes": 29832,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-a.lod1.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 11368,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-a.lod2.glb",
+     "tris": 80,
+     "verts": 240,
+     "bytes": 5036,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 6,
+   "height": 1.5,
+   "group": "rock",
+   "lod_distances": [
+    14.4,
+    31.0,
+    76.0
+   ]
+  },
+  "boulder-b": {
+   "set": "rocks",
+   "kind": "boulder",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.259,
+     -0.194,
+     -1.212
+    ],
+    "max": [
+     1.191,
+     1.344,
+     1.324
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-b.lod0.glb",
+     "tris": 1280,
+     "verts": 3840,
+     "bytes": 28252,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-b.lod1.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 10688,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-b.lod2.glb",
+     "tris": 80,
+     "verts": 240,
+     "bytes": 4812,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 6,
+   "height": 1.34,
+   "group": "rock",
+   "lod_distances": [
+    12.6,
+    26.5,
+    64.0
+   ]
+  },
+  "boulder-cluster-a": {
+   "set": "rocks",
+   "kind": "boulder-cluster",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.612,
+     -0.269,
+     -1.502
+    ],
+    "max": [
+     2.339,
+     1.887,
+     1.889
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-cluster-a.lod0.glb",
+     "tris": 2240,
+     "verts": 6720,
+     "bytes": 51064,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-cluster-a.lod1.glb",
+     "tris": 1280,
+     "verts": 3840,
+     "bytes": 34560,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-cluster-a.lod2.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 12316,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 24,
+   "height": 1.89,
+   "group": "rock",
+   "lod_distances": [
+    14.4,
+    31.0,
+    76.0
+   ]
+  },
+  "boulder-cluster-b": {
+   "set": "rocks",
+   "kind": "boulder-cluster",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.413,
+     -0.229,
+     -1.148
+    ],
+    "max": [
+     1.321,
+     1.637,
+     1.864
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-cluster-b.lod0.glb",
+     "tris": 2880,
+     "verts": 8640,
+     "bytes": 63892,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-cluster-b.lod1.glb",
+     "tris": 1920,
+     "verts": 5760,
+     "bytes": 49024,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-cluster-b.lod2.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 11904,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 24,
+   "height": 1.64,
+   "group": "rock",
+   "lod_distances": [
+    12.6,
+    26.5,
+    64.0
+   ]
+  },
+  "boulder-cluster-barnacle-a": {
+   "set": "rocks",
+   "kind": "boulder-cluster-barnacle",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.605,
+     -0.271,
+     -2.215
+    ],
+    "max": [
+     1.526,
+     1.88,
+     2.466
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-cluster-barnacle-a.lod0.glb",
+     "tris": 3860,
+     "verts": 7890,
+     "bytes": 61712,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-cluster-barnacle-a.lod1.glb",
+     "tris": 1280,
+     "verts": 3840,
+     "bytes": 33004,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-cluster-barnacle-a.lod2.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 11732,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 24,
+   "height": 1.88,
+   "group": "rock",
+   "lod_distances": [
+    14.4,
+    31.0,
+    76.0
+   ],
+   "note": "intertidal: barnacles and wet rock below y=0.77"
+  },
+  "boulder-cluster-barnacle-b": {
+   "set": "rocks",
+   "kind": "boulder-cluster-barnacle",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.118,
+     -0.196,
+     -1.6
+    ],
+    "max": [
+     1.557,
+     1.343,
+     1.373
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-cluster-barnacle-b.lod0.glb",
+     "tris": 5040,
+     "verts": 10200,
+     "bytes": 79204,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-cluster-barnacle-b.lod1.glb",
+     "tris": 1920,
+     "verts": 5760,
+     "bytes": 45776,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-cluster-barnacle-b.lod2.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 11744,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 24,
+   "height": 1.34,
+   "group": "rock",
+   "lod_distances": [
+    12.0,
+    25.0,
+    60.0
+   ],
+   "note": "intertidal: barnacles and wet rock below y=0.55"
+  },
+  "boulder-cluster-mossy-a": {
+   "set": "rocks",
+   "kind": "boulder-cluster-mossy",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.314,
+     -0.218,
+     -2.767
+    ],
+    "max": [
+     1.804,
+     1.557,
+     2.614
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-cluster-mossy-a.lod0.glb",
+     "tris": 2560,
+     "verts": 7680,
+     "bytes": 60840,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-cluster-mossy-a.lod1.glb",
+     "tris": 1600,
+     "verts": 4800,
+     "bytes": 42700,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-cluster-mossy-a.lod2.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 12112,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 24,
+   "height": 1.56,
+   "group": "rock",
+   "lod_distances": [
+    14.4,
+    31.0,
+    76.0
+   ]
+  },
+  "boulder-mossy-a": {
+   "set": "rocks",
+   "kind": "boulder-mossy",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.572,
+     -0.237,
+     -1.464
+    ],
+    "max": [
+     1.006,
+     1.754,
+     1.043
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/boulder-mossy-a.lod0.glb",
+     "tris": 1280,
+     "verts": 3840,
+     "bytes": 26888,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/boulder-mossy-a.lod1.glb",
+     "tris": 320,
+     "verts": 960,
+     "bytes": 10512,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/boulder-mossy-a.lod2.glb",
+     "tris": 80,
+     "verts": 240,
+     "bytes": 4696,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 6,
+   "height": 1.75,
+   "group": "rock",
+   "lod_distances": [
+    14.4,
+    31.0,
+    76.0
+   ]
+  },
+  "cave-mouth-a": {
+   "set": "rocks",
+   "kind": "cave-mouth",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -4.372,
+     0.0,
+     -6.2
+    ],
+    "max": [
+     4.447,
+     4.702,
+     0.3
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/cave-mouth-a.lod0.glb",
+     "tris": 2992,
+     "verts": 8804,
+     "bytes": 75348,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/cave-mouth-a.lod1.glb",
+     "tris": 504,
+     "verts": 1444,
+     "bytes": 15076,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/cave-mouth-a.lod2.glb",
+     "tris": 128,
+     "verts": 356,
+     "bytes": 5776,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 15,
+   "height": 4.7,
+   "group": "cliff",
+   "face": "+Z",
+   "note": "the mouth faces +Z at z=0; the floor is open: sit it on (or into) the terrain",
+   "lod_distances": [
+    30.0,
+    70.0,
+    160.0
+   ]
+  },
+  "cave-mouth-b": {
+   "set": "rocks",
+   "kind": "cave-mouth",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -4.375,
+     0.0,
+     -6.2
+    ],
+    "max": [
+     4.39,
+     4.643,
+     0.3
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/cave-mouth-b.lod0.glb",
+     "tris": 2992,
+     "verts": 8804,
+     "bytes": 71936,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/cave-mouth-b.lod1.glb",
+     "tris": 504,
+     "verts": 1444,
+     "bytes": 14864,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/cave-mouth-b.lod2.glb",
+     "tris": 128,
+     "verts": 356,
+     "bytes": 5676,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 14,
+   "height": 4.64,
+   "group": "cliff",
+   "face": "+Z",
+   "note": "the mouth faces +Z at z=0; the floor is open: sit it on (or into) the terrain",
+   "lod_distances": [
+    30.0,
+    70.0,
+    160.0
+   ]
+  },
+  "cliff-face-a": {
+   "set": "rocks",
+   "kind": "cliff-face",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -3.68,
+     -0.038,
+     -6.1
+    ],
+    "max": [
+     3.68,
+     6.345,
+     0.362
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/cliff-face-a.lod0.glb",
+     "tris": 4928,
+     "verts": 14784,
+     "bytes": 116248,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/cliff-face-a.lod1.glb",
+     "tris": 1120,
+     "verts": 3360,
+     "bytes": 29364,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/cliff-face-a.lod2.glb",
+     "tris": 216,
+     "verts": 648,
+     "bytes": 8256,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 29,
+   "height": 6.34,
+   "group": "cliff",
+   "face": "+Z",
+   "note": "open at the back and below the top edge: set it into the terrain",
+   "lod_distances": [
+    40.0,
+    90.0,
+    220.0
+   ]
+  },
+  "cliff-face-b": {
+   "set": "rocks",
+   "kind": "cliff-face",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -3.68,
+     -0.138,
+     -6.1
+    ],
+    "max": [
+     3.68,
+     6.411,
+     0.212
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/cliff-face-b.lod0.glb",
+     "tris": 4928,
+     "verts": 14784,
+     "bytes": 119680,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/cliff-face-b.lod1.glb",
+     "tris": 1120,
+     "verts": 3360,
+     "bytes": 30060,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/cliff-face-b.lod2.glb",
+     "tris": 216,
+     "verts": 648,
+     "bytes": 8132,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 29,
+   "height": 6.41,
+   "group": "cliff",
+   "face": "+Z",
+   "note": "open at the back and below the top edge: set it into the terrain",
+   "lod_distances": [
+    40.0,
+    90.0,
+    220.0
+   ]
+  },
+  "cliff-face-c": {
+   "set": "rocks",
+   "kind": "cliff-face",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -3.68,
+     -0.031,
+     -6.1
+    ],
+    "max": [
+     3.711,
+     6.3,
+     0.409
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/cliff-face-c.lod0.glb",
+     "tris": 6368,
+     "verts": 15824,
+     "bytes": 122824,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/cliff-face-c.lod1.glb",
+     "tris": 1120,
+     "verts": 3360,
+     "bytes": 28224,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/cliff-face-c.lod2.glb",
+     "tris": 216,
+     "verts": 648,
+     "bytes": 7780,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 29,
+   "height": 6.3,
+   "group": "cliff",
+   "face": "+Z",
+   "note": "open at the back and below the top edge: set it into the terrain",
+   "lod_distances": [
+    40.0,
+    90.0,
+    220.0
+   ]
+  },
+  "pebbles-a": {
+   "set": "rocks",
+   "kind": "pebbles",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.032,
+     -0.002,
+     -0.97
+    ],
+    "max": [
+     1.002,
+     0.072,
+     0.977
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/pebbles-a.lod0.glb",
+     "tris": 3360,
+     "verts": 1820,
+     "bytes": 21124,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/pebbles-a.lod1.glb",
+     "tris": 840,
+     "verts": 490,
+     "bytes": 8084,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/pebbles-a.lod2.glb",
+     "tris": 112,
+     "verts": 84,
+     "bytes": 3228,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 11,
+   "height": 0.1,
+   "group": "shore",
+   "lod_distances": [
+    5.0,
+    12.0,
+    30.0
+   ]
+  },
+  "scree-a": {
+   "set": "rocks",
+   "kind": "scree",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.2,
+     -0.089,
+     -1.7
+    ],
+    "max": [
+     2.2,
+     0.663,
+     1.7
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/scree-a.lod0.glb",
+     "tris": 3900,
+     "verts": 2064,
+     "bytes": 25420,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/scree-a.lod1.glb",
+     "tris": 680,
+     "verts": 402,
+     "bytes": 7152,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/scree-a.lod2.glb",
+     "tris": 280,
+     "verts": 162,
+     "bytes": 4264,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 14,
+   "height": 0.6,
+   "group": "rock",
+   "lod_distances": [
+    12.0,
+    30.0,
+    70.0
+   ]
+  },
+  "scree-b": {
+   "set": "rocks",
+   "kind": "scree",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.2,
+     -0.089,
+     -1.7
+    ],
+    "max": [
+     2.2,
+     0.693,
+     1.7
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/scree-b.lod0.glb",
+     "tris": 4140,
+     "verts": 2184,
+     "bytes": 28224,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/scree-b.lod1.glb",
+     "tris": 680,
+     "verts": 402,
+     "bytes": 7312,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/scree-b.lod2.glb",
+     "tris": 280,
+     "verts": 162,
+     "bytes": 4340,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 14,
+   "height": 0.6,
+   "group": "rock",
+   "lod_distances": [
+    12.0,
+    30.0,
+    70.0
+   ]
+  },
+  "shells-a": {
+   "set": "rocks",
+   "kind": "shells",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.955,
+     -0.001,
+     -0.918
+    ],
+    "max": [
+     1.024,
+     0.066,
+     1.028
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/shells-a.lod0.glb",
+     "tris": 4275,
+     "verts": 2430,
+     "bytes": 27616,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/shells-a.lod1.glb",
+     "tris": 773,
+     "verts": 491,
+     "bytes": 7988,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/shells-a.lod2.glb",
+     "tris": 108,
+     "verts": 91,
+     "bytes": 3304,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 12,
+   "height": 0.1,
+   "group": "shore",
+   "lod_distances": [
+    5.0,
+    12.0,
+    30.0
+   ]
+  },
+  "stalactites-a": {
+   "set": "rocks",
+   "kind": "stalactites",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.67,
+     -1.579,
+     -1.562
+    ],
+    "max": [
+     1.451,
+     0.007,
+     1.6
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/stalactites-a.lod0.glb",
+     "tris": 3584,
+     "verts": 1938,
+     "bytes": 23672,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/stalactites-a.lod1.glb",
+     "tris": 1088,
+     "verts": 642,
+     "bytes": 9916,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/stalactites-a.lod2.glb",
+     "tris": 192,
+     "verts": 126,
+     "bytes": 3816,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 9,
+   "height": 1.59,
+   "group": "cave",
+   "note": "origin at the ceiling, pointing down",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "stalagmites-a": {
+   "set": "rocks",
+   "kind": "stalagmites",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.642,
+     -0.058,
+     -1.463
+    ],
+    "max": [
+     1.697,
+     2.4,
+     1.681
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/stalagmites-a.lod0.glb",
+     "tris": 3184,
+     "verts": 1713,
+     "bytes": 20280,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/stalagmites-a.lod1.glb",
+     "tris": 1024,
+     "verts": 594,
+     "bytes": 9020,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/stalagmites-a.lod2.glb",
+     "tris": 192,
+     "verts": 126,
+     "bytes": 3788,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 8,
+   "height": 2.46,
+   "group": "cave",
+   "note": "origin on the cave floor",
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "tide-pool-rock-a": {
+   "set": "rocks",
+   "kind": "tide-pool-rock",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.86,
+     -0.138,
+     -1.349
+    ],
+    "max": [
+     1.44,
+     0.755,
+     1.28
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/tide-pool-rock-a.lod0.glb",
+     "tris": 6440,
+     "verts": 3652,
+     "bytes": 39512,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/tide-pool-rock-a.lod1.glb",
+     "tris": 1280,
+     "verts": 642,
+     "bytes": 9356,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/tide-pool-rock-a.lod2.glb",
+     "tris": 320,
+     "verts": 162,
+     "bytes": 4312,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 15,
+   "height": 0.76,
+   "group": "shore",
+   "pool": {
+    "centre": [
+     0.15,
+     0.637,
+     -0.05
+    ],
+    "radius": [
+     0.807,
+     0.637
+    ],
+    "water_y": 0.637,
+    "note": "draw a water disc here (the scene's water shader)"
+   },
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
+  "tide-pool-rock-b": {
+   "set": "rocks",
+   "kind": "tide-pool-rock",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.758,
+     -0.179,
+     -1.614
+    ],
+    "max": [
+     2.421,
+     0.99,
+     1.737
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "rocks/tide-pool-rock-b.lod0.glb",
+     "tris": 6440,
+     "verts": 3652,
+     "bytes": 39696,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "rocks/tide-pool-rock-b.lod1.glb",
+     "tris": 1280,
+     "verts": 642,
+     "bytes": 9388,
+     "doubleSided": false,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "rocks/tide-pool-rock-b.lod2.glb",
+     "tris": 320,
+     "verts": 162,
+     "bytes": 4320,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 15,
+   "height": 0.99,
+   "group": "shore",
+   "pool": {
+    "centre": [
+     0.15,
+     0.877,
+     -0.05
+    ],
+    "radius": [
+     1.009,
+     0.797
+    ],
+    "water_y": 0.877,
+    "note": "draw a water disc here (the scene's water shader)"
+   },
+   "lod_distances": [
+    10.0,
+    25.0,
+    60.0
+   ]
+  },
   "acacia-a": {
    "set": "trees",
    "kind": "acacia",
@@ -5971,7 +7151,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     1907,
     378,
@@ -6041,7 +7221,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     1781,
     370,
@@ -6111,7 +7291,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     1849,
     414,
@@ -6391,7 +7571,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     1957,
     557,
@@ -6461,7 +7641,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     2077,
     637,
@@ -6531,7 +7711,7 @@
      "morph": false
     }
    ],
-   "attach": 26,
+   "attach": 38,
    "wood_tris": [
     1453,
     637,
@@ -6688,5 +7868,5 @@
    ]
   }
  },
- "totalBytes": 7099460
+ "totalBytes": 8871343
 }

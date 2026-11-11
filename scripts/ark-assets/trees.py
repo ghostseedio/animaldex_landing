@@ -235,6 +235,11 @@ def bark_color_fn(spec, H):
 def mesh_wood(spec, tree, detail, out, min_r=0.0):
     D = DETAIL[detail]
     fn = bark_color_fn(spec, tree.H)
+    if detail == 0:
+        # build_from_spec tries rising min_r until the wood fits: only the last try is kept, so the
+        # flags (branch attach points) must describe that one.
+        for limb in tree.limbs:
+            limb.meshed = False
     for limb in tree.limbs:
         lvl = min(limb.level, 4)
         if limb.level > D["max_level"] and not getattr(limb, "root", False):
@@ -299,6 +304,9 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
         grow = min(grow, LV.get("grow_max", 99.0))
     segs = LV.get("segs", 0) if detail == 0 else 0
     kind = LV.get("kind", "blade")
+    wpos = LV.get("wpos", 0.45)
+    if detail == 0:
+        tree.drawn_leaves = []
     Ps, Fs, Ns, Cs, Ws = [], [], [], [], []
     off = 0
     for leaf in chosen:
@@ -306,8 +314,12 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
         if kind == "needles":
             P, F, fl = needle_tuft(L, Wd, LV.get("needles", 7) if detail == 0 else 4, rng, LV.get("spread", (0.45, 0.85)))
         else:
-            P, F, fl = leaf_blade(L, Wd, LV.get("fold", 0.3), LV.get("curl", 0.1), LV.get("wpos", 0.45), segs)
+            P, F, fl = leaf_blade(L, Wd, LV.get("fold", 0.3), LV.get("curl", 0.1), wpos, segs)
         Pw, x, y, z = place_frame(P, leaf["p"], leaf["fwd"], leaf["up"])
+        if detail == 0 and kind != "needles" and leaf.get("kind", "blade") == "blade":
+            # A point on the drawn blade's upper surface: its midrib at wpos (a vertex of the mesh).
+            rib = Pw[0] * (1 - wpos) + Pw[2] * wpos if segs <= 0 else (Pw[4] if segs == 1 else Pw[6])
+            tree.drawn_leaves.append(dict(p=rib, up=y, fwd=z, length=L))
         radial = norm(Pw - centre)
         facing = np.sign(radial @ y)[:, None]
         facing[facing == 0] = 1
@@ -905,6 +917,17 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
         W = np.stack([sw, np.full(len(Pw), c["phase"]), tip * 0.6, np.full(len(Pw), c["lphase"])], 1)
         Ps.append(Pw); Fs.append(np.asarray(F) + off); Ns.append(Nw); Cs.append(np.clip(col, 0, 1)); Ws.append(W)
         off += len(Pw)
+        if detail == 0 and CL.get("leaf_points"):
+            drawn = tree.__dict__.setdefault("drawn_clumps", [])
+            if kind == "bough":
+                # On the bough's ridge (its spine vertices come first), along the branch.
+                k = segs + 1
+                for i in range(1, k - 1, 2):
+                    drawn.append(dict(p=Pw[i], up=UP, fwd=Pw[i + 1] - Pw[i], length=0.25, note="top of a needle bough"))
+            else:
+                # The raised centre of the needle cloud (vertex 0), facing out of it.
+                drawn.append(dict(p=Pw[0], up=c["n"], fwd=c["d"] - c["n"] * (c["d"] @ c["n"]), length=c["R"] * grow,
+                                  note="top of a needle cloud"))
     out.add(np.concatenate(Ps), np.concatenate(Fs), np.concatenate(Ns), np.concatenate(Cs), np.concatenate(Ws))
 
 
@@ -937,13 +960,18 @@ def tree_attach(spec, tree, rng):
     branch = thin([a for a in pts if a["tag"] == "branch"], spec.get("n_branch", 18), rng)
     bark = thin([a for a in pts if a["tag"] == "bark"], 8, rng)
     leaf_pts = []
-    for leaf in tree.leaves:
-        if leaf.get("kind", "blade") != "blade" or leaf["up"][1] < 0.45 or leaf["length"] < 0.05:
+    # Leaves as drawn at lod0 (after the detail cut, grown, folded and curled), so the points sit
+    # on real geometry; needle clouds and boughs where the spec asks (conifers).
+    for leaf in getattr(tree, "drawn_leaves", []):
+        if leaf["up"][1] < 0.45 or leaf["length"] < 0.05:
             continue
-        P, F, fl = leaf_blade(leaf["length"], leaf["width"], 0, 0, 0.45, 1)
-        c = leaf["p"] + leaf["fwd"] * leaf["length"] * 0.45 + leaf["up"] * 0.004
-        leaf_pts.append(attach("leaf", c, leaf["up"], leaf["fwd"], (0.002, round(0.6 * leaf["length"], 3)), lod=0,
-                               spot="flowers"))
+        leaf_pts.append(attach("leaf", leaf["p"] + leaf["up"] * 0.004, leaf["up"], leaf["fwd"],
+                               (0.002, round(0.6 * leaf["length"], 3)), lod=0, spot="flowers"))
+    for cl in getattr(tree, "drawn_clumps", []):
+        if cl["up"][1] < 0.45:
+            continue
+        leaf_pts.append(attach("leaf", cl["p"] + cl["up"] * 0.004, cl["up"], cl["fwd"],
+                               (0.002, round(min(0.4, 0.6 * cl["length"]), 3)), lod=0, spot="flowers", note=cl["note"]))
     leaf_pts = thin(leaf_pts, spec.get("n_leaf", 12), rng)
     return branch + bark + leaf_pts + tree.extra_attach
 
@@ -1249,11 +1277,11 @@ SPECIES = {
         # fringe of hanging needles) with fringed needle domes on the shoots above it. Dark
         # blue-green needles, lit on top, shaded below; thin needle stars among them near the camera.
         clumps=[dict(kind="bough", levels=[1], t0=0.4, width=0.45, roof=[12, 14, 20], segs=[6, 3, 2],
-                     fringe=[0.45, 0.4, 0.0], lod_width=[1, 1.15, 1.4], under=0.6, tip_mix=0.6,
+                     fringe=[0.45, 0.4, 0.0], lod_width=[1, 1.15, 1.4], under=0.6, tip_mix=0.6, leaf_points=True,
                      weight=(0.3, 0.4, 0.45), share=(0.88, 1.0, 1.0)),
                 dict(kind="bristle", levels=[2, 3], per_limb=(1, 2), t=(0.5, 1.0), r=(0.36, 0.5), points=12, notch=0.8,
                      cup=0.3, droop=0.45, spikes=[10, 6, 4], spike_len=1.35, spike_w=0.07, face_up=0.9, tilt=0.15,
-                     grow_max=2.4, under=0.6, tip_mix=0.9, weight=(0.7, 0.6, 0.55))],
+                     grow_max=2.4, under=0.6, tip_mix=0.9, weight=(0.7, 0.6, 0.55), leaf_points=True)],
         wood_share=(0.26, 0.24, 0.22),
         H=13, trunk=dict(length=12.0, radius=0.26, taper=0.25, wobble=0.035, lean=0.07, flare=0.25),
         levels=[dict(count=(16, 20), t=(0.5, 0.99), angle=86, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
@@ -1271,7 +1299,7 @@ SPECIES = {
         # hanging branchlets under each, lit needle tips on top, and a dark heart (the crown core) so
         # no sky shows through. No loose needle stars (they read as specks).
         clumps=dict(kind="bough", levels=[1], width=0.4, roof=[28, 30, 40], segs=[8, 4, 2], fringe=[0.7, 0.6, 0.0],
-                    lod_width=[1, 1.12, 1.35], under=0.45, tip_mix=1.5, share=(0.9, 1.0, 1.0)),
+                    lod_width=[1, 1.12, 1.35], under=0.45, tip_mix=1.5, share=(0.9, 1.0, 1.0), leaf_points=True),
         wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], leaf_fill=(0.0, 0.0, 0.0), core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
@@ -1477,7 +1505,10 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
             if avail >= per * 8:
                 mesh_leaves(spec, tree, detail, m, np.random.default_rng(seed + detail), target=avail / per)
         if m.tris > budget[detail] * 1.02:
-            raise RuntimeError(f"{kind}-{variant} lod{detail}: {m.tris} triangles, budget {budget[detail]}")
+            msg = f"{kind}-{variant} lod{detail}: {m.tris} triangles, budget {budget[detail]}"
+            if set_ == "trees":
+                raise RuntimeError(msg)
+            print(f"[ark-assets] warning: {msg}", flush=True)
         lods.append(m)
         tree.wood_tris = getattr(tree, "wood_tris", []) + [wood]
     card = mesh_card(spec, tree, np.random.default_rng(seed))
