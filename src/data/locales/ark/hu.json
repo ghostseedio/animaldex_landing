@@ -203,6 +203,12 @@
             "auto": "bekapcsolva ezen az eszközön",
             "hint": "Kevesebb részlet, hogy az Ark simábban fusson ezen az eszközön"
         },
+        "sound": {
+            "label": "Hang",
+            "hint": "Az állatok hangjai és a sziget zajai. Kikapcsolva, amíg be nem kapcsolod.",
+            "credits": "Hangok forrása",
+            "empty": "Még nem szólt hang."
+        },
         "a11y": {
             "scene": "Az Ark 3D-ben. A nyílbillentyűk mozgatják a nézetet, a plusz és a mínusz nagyít és kicsinyít, az Escape bezárja a kártyát. Ezután következik, ki van a fedélzeten.",
             "list": "Minden faj a fedélzeten, régiónként",

@@ -4256,6 +4256,12 @@
       "auto": "aktif untuk perangkat ini",
       "hint": "Lebih sedikit detail, agar Ark lebih lancar di perangkat ini"
     },
+    "sound": {
+      "label": "Suara",
+      "hint": "Suara hewan dan suara pulau. Mati sampai kamu menyalakannya.",
+      "credits": "Kredit suara",
+      "empty": "Belum ada suara yang terdengar."
+    },
     "a11y": {
       "scene": "Ark dalam 3D. Tombol panah menggeser tampilan, plus dan minus memperbesar dan memperkecil, Escape menutup kartu. Daftar siapa saja di Ark ada sesudahnya.",
       "list": "Setiap spesies di Ark, menurut wilayah",

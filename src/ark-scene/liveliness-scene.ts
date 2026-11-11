@@ -126,6 +126,7 @@ export class ArkLiveliness {
     private readonly horizon = new Color();
     /** Per-frame numbers for the scene's stats. */
     readonly counts = {sheltering: 0, young: 0, tideMoved: 0};
+    private last = {sheltering: 0, young: 0, tideMoved: 0};
 
     constructor(options: LiveOptions) {
         this.options = options;
@@ -404,7 +405,7 @@ export class ArkLiveliness {
     // MARK: Once a frame
 
     /** After the animals: the weather drawn, the traces' clocks, the sound, the worn paths. */
-    step(elapsed: number, camera: PerspectiveCamera, target: Vector3, fog: Fog | null, horizon: Color, width: number, height: number, hours: number, scheduled: LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
+    step(elapsed: number, camera: PerspectiveCamera, target: Vector3, fog: Fog | null, horizon: Color, width: number, height: number, hours: number, scheduled: () => LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
         const underwater = camera.position.y < this.seaLevel - 0.02;
         const lightning = lightningAt(this.nowMs, this.environment.storm);
         this.horizon.copy(horizon);
@@ -431,6 +432,17 @@ export class ArkLiveliness {
         this.audioAnimals = [];
         this.alarms = [];
         this.stepWorn(target, scheduled, routeOf);
+        this.last = {...this.counts};
+        this.counts.sheltering = 0;
+        this.counts.young = 0;
+        this.counts.tideMoved = 0;
+    }
+
+    /** Last frame's numbers (the scene's stats). */
+    stats() {
+        const traces = this.traces.stats();
+        const sound = this.audio.activity();
+        return {...this.last, drops: this.weatherFx.now.drops, haze: Math.round(this.weatherFx.now.haze * 100) / 100, ...traces, voices: sound.voices, beds: sound.beds, soundOn: sound.on};
     }
 
     /**
@@ -438,7 +450,7 @@ export class ArkLiveliness {
      * route over the last half hour (its shared schedule), one animal a
      * frame, laid again once they are all in. Not at the low tier.
      */
-    private stepWorn(target: Vector3, scheduled: LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
+    private stepWorn(target: Vector3, scheduled: () => LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
         if (this.tier === "low" || this.lite || this.reducedMotion) return;
         const now = this.nowMs / 1000;
         const moved = Math.hypot(target.x - this.wornCentre.x, target.z - this.wornCentre.z) > 18;
@@ -446,7 +458,7 @@ export class ArkLiveliness {
             this.wornAt = now;
             this.wornCentre.copy(target);
             this.wornRoutes = new Map();
-            this.wornQueue = scheduled.filter((e) => !e.depth && !e.place.water && Math.hypot(e.place.x - target.x, e.place.z - target.z) < 40).slice(0, 24);
+            this.wornQueue = scheduled().filter((e) => !e.depth && !e.place.water && Math.hypot(e.place.x - target.x, e.place.z - target.z) < 40).slice(0, 24);
             if (!this.wornQueue.length) this.traces.setWorn([]);
             return;
         }

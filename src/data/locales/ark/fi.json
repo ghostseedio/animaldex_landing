@@ -203,6 +203,12 @@
             "auto": "käytössä tällä laitteella",
             "hint": "Vähemmän yksityiskohtia, jotta Ark toimii sujuvammin tällä laitteella"
         },
+        "sound": {
+            "label": "Ääni",
+            "hint": "Eläinten huudot ja saaren äänet. Pois päältä, kunnes kytket sen päälle.",
+            "credits": "Äänien tekijät",
+            "empty": "Ääniä ei ole vielä kuulunut."
+        },
         "a11y": {
             "scene": "Ark 3D:nä. Nuolinäppäimet liikuttavat näkymää, plus ja miinus zoomaavat, Escape sulkee kortin. Seuraavaksi tulee luettelo kyydissä olevista.",
             "list": "Kaikki kyydissä olevat lajit alueittain",

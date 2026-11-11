@@ -156,6 +156,14 @@ export type ArkLiteWords = {
     hint: string;
 };
 
+/** Sound (liveliness): the toggle, and the Sounds panel's credits for every recording heard. */
+export type ArkSoundWords = {
+    label: string;
+    hint: string;
+    credits: string;
+    empty: string;
+};
+
 /** What a screen reader hears (A18). */
 export type ArkA11yWords = {
     scene: string;
@@ -311,6 +319,7 @@ export type ArkWords = {
     capture: ArkCaptureWords;
     herd: ArkHerdWords;
     lite: ArkLiteWords;
+    sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;
     share: ArkShareWords;

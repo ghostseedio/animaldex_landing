@@ -203,6 +203,12 @@
             "auto": "attiva su questo dispositivo",
             "hint": "Meno dettagli, per un'Ark più fluida su questo dispositivo"
         },
+        "sound": {
+            "label": "Audio",
+            "hint": "I richiami degli animali e i suoni dell'isola. Spento finché non lo attivi.",
+            "credits": "Crediti audio",
+            "empty": "Nessun suono ascoltato finora."
+        },
         "a11y": {
             "scene": "L'Ark in 3D. I tasti freccia spostano la vista, più e meno fanno lo zoom, Esc chiude una scheda. Segue l'elenco di chi è a bordo.",
             "list": "Tutte le specie a bordo, per regione",
