@@ -3,7 +3,8 @@ import test from "node:test";
 import {BoxGeometry, BufferGeometry, Float32BufferAttribute, InstancedBufferAttribute, InstancedMesh, MeshStandardMaterial, Scene} from "three";
 import lookTable from "@/ark-scene/animal-look.json";
 import {aquatic, chooseLook, dusty, LOOK_CLASSES, LOOK_FLAG, semiAquatic} from "@/ark-scene/animal-look-rules";
-import {groundDryness, speciesLook, swimWetness} from "@/ark-scene/animal-look";
+import {coatWetness, groundDryness, shellLevel, speciesLook, swimWetness, weatherDust} from "@/ark-scene/animal-look";
+import {LOOK_PARAMS} from "@/ark-scene/animal-look-shader";
 import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 
@@ -125,4 +126,65 @@ test("fur shells: at most the cap's animals, each in its layers, copying every p
     assert.equal(shell.visible, false);
     shells.dispose();
     assert.ok(geometry.getAttribute("position"), "the source keeps its buffers when the shells go");
+});
+
+test("animal look: coats soak in the rain and dry before the ground; dust only when the ground is dry", () => {
+    // Raining: a shower half wets a coat at once, heavy rain soaks it, before the ground has caught up.
+    assert.ok(coatWetness({rain: 0.35, wetness: 0.1}) > 0.6);
+    assert.equal(coatWetness({rain: 0.85, wetness: 0.2}), 1);
+    // After the rain: the ground still wet, the coat much drier; dry weather, dry coat.
+    assert.ok(coatWetness({rain: 0, wetness: 0.8}) < 0.8 * 0.6);
+    assert.equal(coatWetness({rain: 0, wetness: 0}), 0);
+    assert.equal(weatherDust({rain: 0, wetness: 0.8}), 0);
+    assert.ok(weatherDust({rain: 0, wetness: 0, wind: 0.9}) > weatherDust({rain: 0, wetness: 0, wind: 0.1}));
+    // Feathers shed water: a duck on the pond takes a third of the wet look; slime and fur all of it.
+    assert.ok(LOOK_PARAMS.feathers.wetTake < 0.4);
+    assert.equal(LOOK_PARAMS.fur.wetTake, 1);
+    assert.equal(LOOK_PARAMS.slimy.wetTake, 1);
+});
+
+test("fur shells: all the layers close, fewer further, the coat shrinking to nothing at the range's edge", () => {
+    const close = shellLevel(1, 9);
+    assert.deepEqual(close, {layers: SHELL_LAYERS, reach: 1});
+    const middle = shellLevel(5, 9);
+    assert.ok(middle.layers < SHELL_LAYERS && middle.layers > 1 && middle.reach === 1);
+    const edge = shellLevel(8.5, 9);
+    assert.ok(edge.layers <= 2 && edge.reach > 0 && edge.reach < 0.2);
+    assert.deepEqual(shellLevel(9, 9), {layers: 0, reach: 0});
+    // It never grows as the animal goes away (no pop).
+    let last = Infinity;
+    for (let d = 0; d < 9; d += 0.25) {
+        const level = shellLevel(d, 9);
+        const amount = level.layers * level.reach;
+        assert.ok(amount <= last + 1e-9, `at ${d} m`);
+        last = amount;
+    }
+});
+
+test("fur shells: each animal its own layers and reach; the drawn count is what was drawn", () => {
+    const scene = new Scene();
+    const geometry = new BoxGeometry(1, 1, 1);
+    const source = new InstancedMesh(geometry, new MeshStandardMaterial(), 4);
+    geometry.setAttribute("arkInstance", new InstancedBufferAttribute(new Float32Array(4 * 3), 3));
+    scene.add(source);
+    const shells = new FurShells(scene);
+    shells.begin();
+    shells.offer(source, 0, 2, 6, 1);
+    shells.offer(source, 1, 8, 2, 0.3);
+    shells.end(() => new MeshStandardMaterial(), 4);
+    assert.equal(shells.drawn, 2);
+    assert.equal(shells.layersDrawn, 8);
+    const shell = scene.children.find((child) => child !== source) as InstancedMesh;
+    const layer = shell.geometry.getAttribute("arkShellLayer") as InstancedBufferAttribute;
+    assert.equal(layer.itemSize, 2);
+    assert.deepEqual([layer.getX(5), layer.getY(5)], [1, 1]);
+    assert.ok(Math.abs(layer.getX(6) - 0.5) < 1e-6 && Math.abs(layer.getY(6) - 0.3) < 1e-6);
+    // No material (nothing to draw it with): nothing counted as drawn.
+    const other = new InstancedMesh(new BoxGeometry(1, 1, 1), new MeshStandardMaterial(), 2);
+    scene.add(other);
+    shells.begin();
+    shells.offer(other, 0, 1);
+    shells.end(() => null, 4);
+    assert.equal(shells.drawn, 0);
+    shells.dispose();
 });
