@@ -18,6 +18,8 @@ import {Color, MeshStandardMaterial, type Texture} from "three";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
+import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
+import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -179,6 +181,13 @@ export type AnimalMaterialOptions = {
     animated: boolean;
     /** A rigged mesh: its bone texture (`rig-player.ts`). */
     rig?: Texture | null;
+    /** The animal-look pass (`animal-look.ts`): the species' surface and eyes; null draws it as before. */
+    look?: SpeciesLook | null;
+    /** Which level this draws: the far level keeps the pass's cheapest form. */
+    level?: "near" | "far";
+    /** A fur-shell pass of the near (or rigged) mesh (`fur-shells.ts`), and how far its outer layer stands off (model units). */
+    shell?: boolean;
+    shellLength?: number;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -208,9 +217,14 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
     };
     if (options.rig) uniforms.arkBones = {value: options.rig};
-    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {})};
+    const level = options.level ?? (options.animated ? "near" : "far");
+    Object.assign(uniforms, lookUniforms(options.look ?? null, level, options.shellLength ?? 0.01));
+    material.userData.arkLook = {look: options.look ?? null, level, shell: Boolean(options.shell)};
+    material.userData.arkOptions = options;
+    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...lookDefines(material)};
     const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? "-rig" : ""}`;
-    material.customProgramCacheKey = () => key;
+    material.customProgramCacheKey = () => key + lookCacheKey(material);
+    if (options.look) registerLookMaterial(material);
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -218,19 +232,30 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
 attribute vec3 arkInstance;
 varying float vArkDim;
 ${MOTION_DECLARATIONS}
-${options.rig ? RIG_DECLARATIONS : ""}`)
+${options.rig ? RIG_DECLARATIONS : ""}
+${LOOK_VERTEX_DECLARATIONS}`)
             .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
 ${options.rig ? RIG_SKIN : ""}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 vArkDim = arkInstance.y;
-${IDLE}`);
+${LOOK_VERTEX}
+${IDLE}
+${SHELL_VERTEX}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
 uniform vec3 arkDimTint;
-uniform vec3 arkRim;`)
-            .replace("#include <opaque_fragment>", `// A warm rim where the surface turns away: the low sun catching fur and feathers at the edge.
-outgoingLight += arkRim * pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0) * (1.0 - vArkDim);
+uniform vec3 arkRim;
+${LOOK_FRAGMENT_DECLARATIONS}`)
+            .replace("#include <map_fragment>", `#include <map_fragment>
+${LOOK_ALBEDO}`)
+            .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+${LOOK_ROUGHNESS}`)
+            .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+${LOOK_NORMAL}`)
+            .replace("#include <lights_fragment_begin>", `#include <lights_fragment_begin>
+${LOOK_LIGHT}`)
+            .replace("#include <opaque_fragment>", `${LOOK_FINISH}
 #include <opaque_fragment>
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));

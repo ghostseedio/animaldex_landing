@@ -70,6 +70,7 @@ import {
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
+import {AnimalLook, attachLook, speciesLook} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
@@ -465,6 +466,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.autoRotateSpeed = 0.18;
 
     const shadows = new ContactShadows();
+    // The animal-look pass (`animal-look.ts`): surfaces, wet and dust, eyes, fur shells, close-up skins, contact shadows.
+    const look = new AnimalLook({
+        scene,
+        renderer,
+        closeUpBase: options.closeUpBase === undefined ? options.modelBase.replace(/\/ark\/?$/, "/ark-closeup") : options.closeUpBase,
+        basisBase: options.basisBase ?? "/ark/basis/",
+        enabled: options.animalLook !== false
+    });
+    shadows.setContact(look.on);
     const rings = new GroundRings();
     // A placeholder species (A13) has no icon art: the generic figure's.
     const tokens = new IconTokens((slug) => (isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : options.iconUrl(slug)));
@@ -480,7 +490,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
         micro.setShadows(settings.shadows > 0);
-        shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
+        shadows.setStrength(look.contactStrength(settings.shadows > 0));
+        look.setTier(tier, liteOn());
         vegetation.setGrassCount(settings.grass);
         vegetation.setFill(settings.fill);
         species.forEach((meshes) => {
@@ -888,7 +899,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let material = level === "near" ? meshes.nearMaterial : meshes.farMaterial;
         if (!material) {
             const box = source.geometry.boundingBox!;
-            material = animalMaterial({map: source.map, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: level === "near" && !reducedMotion && !model.placeholder});
+            material = animalMaterial({
+                map: source.map,
+                behaviour: model.behaviour,
+                minY: box.min.y,
+                maxY: box.max.y,
+                animated: level === "near" && !reducedMotion && !model.placeholder,
+                level,
+                look: model.placeholder ? null : speciesLook(model.slug, model.behaviour?.plan, model.facing, source.geometry)
+            });
+            if (level === "near" && !model.placeholder) look.track(model.slug, material);
             // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
             if (model.placeholder) {
                 material.vertexColors = true;
@@ -906,6 +926,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const instance = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
         instance.setUsage(DynamicDrawUsage);
         source.geometry.setAttribute("arkInstance", instance);
+        attachLook(source.geometry, capacity);
         mesh.frustumCulled = false;
         mesh.castShadow = TIER_SETTINGS[tier].shadows > 0;
         mesh.receiveShadow = true;
@@ -1561,7 +1582,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let material = meshes.rigMaterial ?? null;
         if (!material) {
             const box = (model.near ?? model.far)?.geometry.boundingBox ?? rig.geometry.boundingBox!;
-            material = animalMaterial({map: model.near?.map ?? model.far?.map ?? null, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: true, rig: rig.texture});
+            material = animalMaterial({
+                map: model.near?.map ?? model.far?.map ?? null,
+                behaviour: model.behaviour,
+                minY: box.min.y,
+                maxY: box.max.y,
+                animated: true,
+                rig: rig.texture,
+                level: "near",
+                look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry)
+            });
+            look.track(model.slug, material);
             meshes.rigMaterial = material;
         }
         if (mesh) {
@@ -1575,6 +1606,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             attribute.setUsage(DynamicDrawUsage);
             rig.geometry.setAttribute(name, attribute);
         }
+        attachLook(rig.geometry, capacity);
         mesh.frustumCulled = false;
         mesh.castShadow = TIER_SETTINGS[tier].shadows > 0;
         mesh.receiveShadow = true;
@@ -1582,6 +1614,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         scene.add(mesh);
         meshes.rig = mesh;
         return mesh;
+    };
+    /** A species' fur-shell material (`fur-shells.ts`): its near or rigged material's, pushed out in layers. */
+    const shellMaterial = (source: InstancedMesh): MeshStandardMaterial | null => {
+        const base = source.material as MeshStandardMaterial;
+        const made = (base.userData as {arkOptions?: Parameters<typeof animalMaterial>[0]; arkSlug?: string});
+        if (!made.arkOptions || !made.arkSlug) return null;
+        const material = animalMaterial({...made.arkOptions, shell: true, shellLength: 0.012});
+        look.track(made.arkSlug, material);
+        return material;
     };
     rigs.onLoad = (slug) => {
         const rig = rigs.get(slug);
@@ -1720,6 +1761,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const dotList: FindDot[] = [];
         counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
 
+        look.begin(ARK_ENVIRONMENT.wetness.value);
         const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
@@ -1880,18 +1922,41 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
             (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, act ? act.dim : dim, entry.rest);
+            // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
+            const sea = ARK_ENVIRONMENT.seaLevel.value;
+            look.instance(mesh, index, {
+                id: animal.id,
+                slug: animal.model_slug,
+                x: where.x,
+                y: where.base,
+                z: where.z,
+                distance: candidate.distance,
+                pixels: (entry.length * sizeUp * height) / (2 * Math.tan((FOV * Math.PI) / 360) * Math.max(candidate.distance, 0.01)),
+                inWater: where.afloat && !surface && where.base < sea + 0.1 && entry.place.ground < sea,
+                onSurface: Boolean(surface)
+            }, level === "near");
 
-            if (!where.afloat) {
+            if (!where.afloat || (look.on && surface && !entry.toLight)) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
-                shadowList.push({
-                    x: where.x,
-                    y: rest,
-                    z: where.z,
-                    width: Math.max((box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15, 0.4),
-                    length: model.length * candidate.modelScale * sizeUp * 1.0,
-                    yaw: where.yaw,
-                    strength: grow * (1 - entry.lift * 0.3)
-                });
+                const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
+                const length = model.length * candidate.modelScale * sizeUp * 1.0;
+                if (surface) {
+                    // On a wall, a leaf, a flower or a stone: its own size, on that surface where it touches it.
+                    shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 1.1, length: length * 1.05, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz});
+                } else {
+                    // On the ground: on its slope (near ones, with the pass on), a little under the body's middle.
+                    const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;
+                    shadowList.push({
+                        x: where.x,
+                        y: rest,
+                        z: where.z,
+                        width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
+                        length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
+                        yaw: where.yaw,
+                        strength: grow * (1 - entry.lift * 0.3),
+                        ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
+                    });
+                }
             }
             if (marked && !entry.micro) {
                 ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
@@ -1918,6 +1983,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const at = index * 16;
                     for (let j = 0; j < 16; j++) target[at + j] = herd.figureMatrices[i * 16 + j];
                     instance.setXYZ(index, member.phase, dim, member.awake ? 0 : 1);
+                    look.figure(mesh, index);
                     index++;
                     counts.herdFigures++;
                     if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: Math.max(herd.width, 0.3), length: herd.depth, yaw: member.yaw, strength: 1});
@@ -1942,6 +2008,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (count) {
                     mesh.instanceMatrix.needsUpdate = true;
                     (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).needsUpdate = true;
+                    AnimalLook.touch(mesh);
                     if (mesh === meshes.rig) {
                         (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).needsUpdate = true;
                         (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).needsUpdate = true;
@@ -1950,6 +2017,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         });
         counts.rigged = rigged;
+        look.end(now, shellMaterial);
         if (now - lastEvict > 5) {
             lastEvict = now;
             rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP);
@@ -3416,6 +3484,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             pinnedEnvironment = environment;
             applyEnvironment(true);
         },
+        setAnimalLook: (on, pin) => {
+            look.setEnabled(on);
+            if (pin && "islandMs" in pin) look.pinIsland(pin.islandMs ?? null);
+            shadows.setContact(on);
+            shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
+        },
         play,
         setVisitor,
         setTalking,
@@ -3521,7 +3595,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             lite: liteOn(),
             rigged: counts.rigged,
             rigsLoaded: rigs.loadedCount,
-            rigBytes: rigs.bytes
+            rigBytes: rigs.bytes,
+            animalLook: look.on,
+            furShells: look.on ? look.shells.drawn : 0,
+            closeUpSkins: look.closeUps.loaded
         }),
         dispose: () => {
             disposed = true;
@@ -3547,6 +3624,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 meshes.rigMaterial?.dispose();
             });
             rigs.dispose();
+            look.dispose();
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
