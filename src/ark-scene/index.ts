@@ -73,6 +73,11 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chase
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
 import {AnimalLook, attachLook, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
+import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
+import {hasNestSource, microMurmuration, nestSourceFromProps, nestStageAt, setFishSource, setNestSource, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
+import {fishSchoolsNear} from "@/ark-scene/fish-schools";
+import {arkDayNow} from "@/ark-scene/props";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -133,7 +138,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, roostOf, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
@@ -312,6 +317,8 @@ type Entry = {
     reactive?: ReactiveOut | null;
     /** A young one's parent for the reactive layer (its group's adult leader, `ark-age.ts` for whether it is young), and when that was worked out. */
     youngOf?: {parent: string | null; play: number; at: number};
+    /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
+    recipeAct?: RecipeAct | null;
     /** A rigged animal on the ground walks about its spot now and then (`stepWander`). */
     wander?: Wander | null;
     /** A leaper in the air: how far across (0…1), else 0. */
@@ -525,6 +532,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(liveliness.root);
     const dust = new DustPuffs();
     scene.add(dust.points);
+    // The behaviour recipes' near detail: catches and nest material carried, splashes, dirt, holes and mounds, nests,
+    // ambient fish and flockmates (`recipe-scene.ts`); the poses are the schedule's.
+    const recipeScene = new RecipeScene();
+    scene.add(recipeScene.root);
+    /** Its seeded sex's size (`behaviour-recipes.ts` sexLook: a stag bigger than a hind; the species' mean stays). */
+    const sexScale = (animal: ArkAnimal) => sexLook(animal.id, animal.model_slug).scale;
     // Clutches laid and hatching, in a replay (A9).
     const nests = new ArkNests();
     scene.add(nests.root);
@@ -933,6 +946,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         wireThreats(onIt.map((e) => ({slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})), eats);
         // Homes, groups and ranges changed: nothing remembered from before holds.
         forgetSchedules();
+        // Who meets whom in the behaviour recipes: rival males, a male and a female, two of a group (`behaviour-recipes.ts`).
+        wireRecipes(onIt.map((e) => ({animal: e.sched!.animal, profile: e.sched!.profile, slug: e.animal.model_slug, activity: e.animal.activity})));
         const epoch = worldMs() / 1000;
         for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
     };
@@ -1022,8 +1037,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sched,
             animal,
             place,
-            length: body.display,
-            full: body.display,
+            length: body.display * sexScale(animal),
+            full: body.display * sexScale(animal),
             trueLength: body.metres,
             micro: place.micro ? microSpecies(animal.model_slug) : null,
             layer: speciesLayer(animal.model_slug),
@@ -1206,7 +1221,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
-                ? ownSize(Object.assign(before, {animal, place, length: body.display, full: body.display, trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
+                ? ownSize(Object.assign(before, {animal, place, length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
@@ -1317,8 +1332,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             for (const entry of entries) {
                 if (entry.animal.model_slug !== slug) continue;
                 const body = arkBody(entry.animal, model.behaviour.plan);
-                entry.length = body.display;
-                entry.full = body.display;
+                // (Its sex's size, as when it arrived: `sexLook`.)
+                entry.length = body.display * sexScale(entry.animal);
+                entry.full = body.display * sexScale(entry.animal);
                 entry.trueLength = body.metres;
                 entry.floor = body.floor;
                 ownSize(entry);
@@ -1866,8 +1882,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const ground = own.ground;
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
-        // (`schedule-water.ts`: in the water, the band wins over the schedule's own height.)
-        if (inDepthBand(entry.depth, at, ground)) {
+        const act = (at as RecipePose).act;
+        // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
+        if (inDepthBand(entry.depth, at, ground) && !act?.own) {
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
@@ -1885,8 +1902,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             z: at.z,
             base: at.y,
             yaw: at.yaw + glance,
-            pitch: at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch,
-            roll: circling ? -0.35 * entry.air : 0,
+            // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
+            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch : 0),
+            roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll : 0),
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
         };
     };
@@ -1988,7 +2006,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         }
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
-        if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
+        if (place.micro && !entry.visitor) {
+            // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
+            const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
+            entry.recipeAct = flock?.act ?? null;
+            if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
+            return microPose(entry, reducedMotion ? 0 : time);
+        }
         // (A bird of the air flies from its perch, and comes back to it to rest.)
         if (place.canopy && !entry.visitor && entry.air <= 0.001) return canopyPose(entry, reducedMotion ? 0 : time);
         if (place.burrow && !entry.visitor) return undergroundPose(entry, modelHeight, reducedMotion ? 0 : time);
@@ -2446,6 +2470,44 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** This frame's step (s), for the poses that keep their own state (`crawlStep`). */
     let frameDt = 0;
 
+    /** Marks (holes, mounds) and nests near the camera, worked out again every second (pure: the same for every viewer). */
+    const recipeNear = new Map<string, {at: number; marks: RecipeMark[]; nest: RecipeNest | null}>();
+    const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce"]);
+    const stepRecipeScene = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose; modelHeight: number}>, now: number, epoch: number) => {
+        if (!world) return;
+        const actors: RecipeActor[] = [];
+        const marks: RecipeMark[] = [];
+        const nests: RecipeNest[] = [];
+        for (const c of list) {
+            const own = c.entry.sched;
+            // A house starling's murmuration (its flockmates are drawn round it, far as it may be).
+            if (c.entry.recipeAct) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act: c.entry.recipeAct});
+            if (!own?.pose || c.distance > 90) continue;
+            const act = (own.pose as RecipePose).act;
+            if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
+            if (c.distance > 45) continue;
+            const recipes = speciesRecipes(c.entry.animal.model_slug).recipes;
+            let near = recipeNear.get(c.entry.animal.id);
+            if (!near || epoch - near.at > 1 || epoch < near.at) {
+                const digs = recipes.some((r) => MARKING.has(r.id));
+                const builds = recipes.some((r) => r.id === "nest_build") && !hasNestSource();
+                const site = builds ? recipeNest(world, own.profile, own.animal, epoch) : null;
+                const stage = site ? nestStageAt(c.entry.animal.model_slug, epoch) : 0;
+                const species = speciesRecipes(c.entry.animal.model_slug);
+                near = {
+                    at: epoch,
+                    marks: digs ? recipeMarks(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : [],
+                    nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.9, 0.12), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null
+                };
+                recipeNear.set(c.entry.animal.id, near);
+            }
+            marks.push(...near.marks);
+            if (near.nest) nests.push(near.nest);
+        }
+        if (recipeNear.size > 300) recipeNear.clear();
+        recipeScene.update(actors, marks, nests, now, epoch, camera.position);
+    };
+
     let lastUpdate = 0;
     const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
     const updateInstances = (now: number) => {
@@ -2515,7 +2577,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const near = cameraPosition.distanceTo(position.set(entry.place.x, entry.place.ground, entry.place.z));
                 entry.length = microDrawnLength(entry.trueLength, entry.full, near, height, FOV, MICRO_MIN_PIXELS);
                 const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
-                skip = near > MICRO_DRAW_WITHIN && !own;
+                skip = near > MICRO_DRAW_WITHIN && !own && !entry.recipeAct;
                 if (!skip && library.has(slug) && !model) library.request(slug, "far");
             }
             const modelScale = model ? entry.length / model.bodyLength : 1;
@@ -2560,6 +2622,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                             : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * 0.35, 0.1)}
                     )
             );
+            stepRecipeScene(candidates, now, epochNow);
             behaviourFrameMs += performance.now() - started;
         }
         behaviourTimes.push(behaviourFrameMs);
@@ -3613,6 +3676,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         reducedMotion
     }));
     if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
+    // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
+    // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
+    setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
+    setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     applyTier(tier);
 
     // MARK: First view
@@ -4138,6 +4205,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         ghosts = [];
         dust.clear();
+        recipeScene.clear();
         nests.clear();
         flight = null;
         if (replayPins.size) {
@@ -4321,6 +4389,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         updateInstances(elapsed);
         dust.step(now);
         liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
+        recipeScene.step(now);
         nests.step(now);
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
         const followed = followId ? findEntry(followId) : null;
@@ -4649,6 +4718,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
+            recipeScene.dispose();
+            setNestSource(null);
+            setFishSource(null);
             nests.dispose();
             document.removeEventListener("visibilitychange", syncSound);
             liveliness.dispose();

@@ -34,6 +34,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
+import {episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
 
@@ -127,6 +128,9 @@ export type Trip = {
     running: boolean;
     /** A flock member flying with its leader: the leader's trips over this slot, and its place beside it. */
     shadow?: {trips: Trip[]; dx: number; dy: number; dz: number} | null;
+    /** A recipe this slot's goal was chosen for (`behaviour-recipes.ts`), and who the trip is (for its episodes). */
+    recipe?: string | null;
+    owner?: TripOwner | null;
 };
 
 /** Its group, when it keeps to one: its leader (its schedule animal, profile and activity), its rank (1…), the group's size. */
@@ -480,7 +484,7 @@ export function groupSpread(length: number, size: number): number {
 
 /** Where its group's leader is at a moment (pure: the leader's own schedule). */
 function leaderAt(world: ScheduleWorld, group: ScheduleGroup, epoch: number, hoursAt: HoursAt): TripPose {
-    return poseOnTrip(world, tripAt(world, group.profile, group.leader, epoch, hoursAt, group.activity), epoch);
+    return basePoseOnTrip(world, tripAt(world, group.profile, group.leader, epoch, hoursAt, group.activity), epoch);
 }
 
 /** What its group's leader is set on at a moment (its intent: no route worked out). */
@@ -499,7 +503,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 
@@ -679,6 +683,9 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     let doing: ArkDoing = behaviour as ArkDoing;
     if ((behaviour === "graze" || behaviour === "forage") && (profile.diet === "browser" || profile.diet === "fruit") && walks(profile) && !flyer) doing = "browse";
     else if (behaviour === "graze" || (behaviour === "forage" && profile.diet === "grazer")) doing = "graze";
+    // A recipe from its stored behaviours may take this slot (a perch by the water to fish from, its nest, bare ground).
+    const planned = recipeIntent({world, profile, animal, slug: profile.slug, slot, start, hours, behaviour, doing, centre, radius, kit: KIT});
+    if (planned) return {doing: planned.doing as ArkDoing, to: planned.to, mode: planned.mode, stay: [], recipe: planned.recipe};
     if (behaviour === "stalk" && !animal.prey) behaviour = "wander";
     if (behaviour === "stalk") {
         // Towards the edge of its own range on its prey's side, slowly, with pauses; never past its range.
@@ -801,7 +808,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     const dx = Math.cos(a) * d;
     const dz = Math.sin(a) * d;
     const dy = (random() - 0.5) * Math.max(animal.length, 0.3) * (aquatic(group.profile) ? 2.4 : 1.6);
-    const at = poseOnTrip(world, trips[trips.length - 1], end);
+    const at = basePoseOnTrip(world, trips[trips.length - 1], end);
     const fx = at.x + dx;
     const fz = at.z + dz;
     let finish: Spot;
@@ -875,6 +882,7 @@ function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
 }
 export function forgetSchedules() {
     memos = new WeakMap();
+    forgetRecipes();
 }
 
 function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, now: Intent, knownFrom: Spot | null): Trip {
@@ -883,14 +891,14 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const from = knownFrom ?? finishOf(world, profile, animal, activity, slot - 1, hoursAt);
     const random = rng(hashString(`${animal.id}#route#${slot}`));
     const cruise = profile.altitude ? CRUISE[profile.altitude] : 0;
-    const base = {slot, doing: now.doing, start, end, from, cruise, shadow: null as Trip["shadow"]};
+    const base = {slot, doing: now.doing, start, end, from, cruise, shadow: null as Trip["shadow"], recipe: now.recipe ?? null, owner: {animal, profile, slug: profile.slug, activity, hoursAt} as TripOwner};
 
     // A flock member with its leader in the air: catch up, then fly at its side (its own place in the flock, new each slot).
     if (now.follow && animal.group) {
         const shadow = shadowOf(world, animal, slot, hoursAt);
         const finish = shadow.finish;
         const catchUp = 6;
-        const joinAt = poseOnTrip(world, shadow.trips[0], start + catchUp);
+        const joinAt = basePoseOnTrip(world, shadow.trips[0], start + catchUp);
         const joined = shadowPoint(world, joinAt, shadow, start + catchUp, 0);
         const join: Spot = {x: joined.x, y: joined.y, z: joined.z, nx: 0, ny: 1, nz: 0, point: null};
         const legs: Leg[] = [
@@ -1176,7 +1184,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
         case "shadow": {
             const shadow = trip.shadow!;
             const lead = shadow.trips.find((t) => epochSeconds >= t.start && epochSeconds < t.end) ?? shadow.trips[shadow.trips.length - 1];
-            const at = poseOnTrip(world, lead, Math.min(epochSeconds, lead.end - 0.001));
+            const at = basePoseOnTrip(world, lead, Math.min(epochSeconds, lead.end - 0.001));
             if (u >= 1) return {x: to.x, y: to.y, z: to.z, yaw: at.yaw, moving: false, aloft: at.aloft, ...up, beat: at.beat};
             const p = shadowPoint(world, at, shadow, epochSeconds, Math.min(u / 0.08, 1));
             // Blend into its own finish over the last seconds, so the next slot starts where this one ends.
@@ -1189,8 +1197,33 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
     }
 }
 
-/** Where an animal on a trip is at a world time (its foot point), which way it faces, and its beat. */
-export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: number): TripPose {
+/**
+ * Where an animal on a trip is at a world time (its foot point), which way it faces, and its beat, with its recipe's
+ * episode laid over (`behaviour-recipes.ts`: a fishing dive, a contest, a dust bath; `act` says which).
+ */
+export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: number): RecipePose {
+    return episodePose(world, trip, basePoseOnTrip(world, trip, epochSeconds), epochSeconds, KIT);
+}
+
+/** The marks (holes, mounds, hollows) an animal's recent recipe episodes left, still there now (pure: its last slots' trips). */
+export function recipeMarks(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): RecipeMark[] {
+    const trips: Trip[] = [];
+    for (let back = 0; back < Math.ceil(MARK_SECONDS / SLOT_SECONDS) + 1; back++) trips.push(tripAt(world, profile, animal, epochSeconds - back * SLOT_SECONDS, hoursAt, activity));
+    return marksOf(world, trips, epochSeconds, KIT);
+}
+
+/** An animal's nest site this season (for a builder, until the props lane's nests are wired), or null. */
+export function recipeNest(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number): Spot | null {
+    return nestSiteOf(world, profile, animal, profile.slug, KIT, epochSeconds);
+}
+
+/** A trip's recipe episode at its destination, if it has one (for the tests and the review sample). */
+export function tripEpisode(world: ScheduleWorld, trip: Trip): Episode | null {
+    return episodeOfTrip(world, trip, KIT);
+}
+
+/** Where an animal on a trip is at a world time without its recipe's episode (the schedule's own pose). */
+export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: number): TripPose {
     const into = epochSeconds - trip.start;
     if (into < trip.arrive - trip.start) {
         let t = Math.max(into, 0);
@@ -1339,3 +1372,18 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
     }
     return out;
 }
+
+/** What the recipe engine may use of the schedule (passed in, so it imports no schedule code). */
+const KIT: ScheduleKit = {
+    placeNear,
+    spotOf,
+    groundSpot,
+    rangeSpot,
+    waterSpot,
+    roostOf,
+    tripAt: (world, profile, animal, epochSeconds, hoursAt, activity) => tripAt(world, profile, animal, epochSeconds, hoursAt, activity),
+    basePose: basePoseOnTrip,
+    flies,
+    aquatic,
+    floats
+};
