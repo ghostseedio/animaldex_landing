@@ -447,7 +447,7 @@ async function mountIsland(el: HTMLElement) {
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
     // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
     const view = params.get("view")?.split(",").map(Number);
-    type E = {animal: {id: string; model_slug: string}; level?: string; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
     const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
     const settle = async (maxMs = 180_000) => {
         const until = performance.now() + maxMs;
@@ -482,6 +482,18 @@ async function mountIsland(el: HTMLElement) {
                 const dt = (now - last) / 1000;
                 last = now;
                 for (const e of entries()) {
+                    // Not drawn this frame (hidden, down in the water seen from above, still waiting for its schedule):
+                    // `locate` then gives its home, which read as a 10 m jump and a turn (a turtle's "16.9 turns a
+                    // minute"). The frame is skipped, and its way starts afresh when it shows again.
+                    if (!e.middle) {
+                        const gone = tracks.get(e.animal.id) as (Track & {way?: number}) | undefined;
+                        if (gone) {
+                            gone.last = null;
+                            gone.way = undefined;
+                            gone.backRun = 0;
+                        }
+                        continue;
+                    }
                     const at = handle.locate(e.animal.id);
                     if (!at) continue;
                     const tr = tracks.get(e.animal.id) ?? {slug: e.animal.model_slug, last: null, moving: 0, backwards: 0, backRun: 0, backRunMax: 0, glide: 0, glideNear: 0, rigged: 0, turn: 0, dist: 0, ratios: [], clips: new Set(), levels: new Set(), doing: new Set()};
