@@ -3,7 +3,7 @@ import test from "node:test";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
 import {HEAD_LIMITS, clampLook, headLimits, lookAngles, stepHead} from "@/ark-scene/head-look";
-import {ReactiveLayer, minGap, perceive, reactiveEnvelope, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
+import {ReactiveLayer, fleeSpeed, minGap, perceive, reactiveEnvelope, threatScale, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
 
 // MARK: Helpers
 
@@ -17,6 +17,7 @@ function animal(id: string, slug: string, x: number, z: number, extra: Omit<Part
         plan: extra.plan ?? intelProfile(slug).plan,
         length,
         size: b.size,
+        speed: b.speed,
         dominance: b.dominance,
         social: b.social,
         diet: b.diet,
@@ -99,6 +100,41 @@ test("perception: sight in the open, not through a hill; hearing a moving animal
     const far = animal("wolf", "eurasian-wolf", 0, 30, {shared: {moving: false}});
     assert.equal(perceive(chimp, far, world(0)), "sight");
     assert.equal(perceive(chimp, far, world(0, {night: 1})), null, "at night a day animal does not see as far");
+});
+
+// MARK: How alarming a threat is, how fast it runs, and armour
+
+test("a bigger predator, and one coming at it, sets it off sooner; a still one later; a tortoise runs slower than a deer", () => {
+    const deer = animal("deer", "red-deer", 0, 0);
+    const coming = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: true, yaw: Math.PI}});
+    const passing = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: true, yaw: Math.PI / 2}});
+    const still = animal("wolf", "eurasian-wolf", 0, 12, {shared: {moving: false}});
+    assert.ok(threatScale(deer, coming) > threatScale(deer, passing), "coming at it");
+    assert.ok(threatScale(deer, passing) > threatScale(deer, still), "moving rather than still");
+    const big = animal("lion", "african-lion", 0, 12, {length: 4, shared: {moving: true, yaw: Math.PI / 2}});
+    assert.ok(threatScale(deer, big) > threatScale(deer, passing), "bigger");
+    for (const t of [coming, passing, still, big]) assert.ok(threatScale(deer, t) >= 0.6 && threatScale(deer, t) <= 1.95);
+    const tortoise = animal("t", "leopard-tortoise", 0, 0, {length: 1.2});
+    const deer12 = animal("d", "red-deer", 0, 0, {length: 1.2});
+    assert.ok(fleeSpeed(tortoise) < fleeSpeed(deer12) * 0.6, `tortoise ${fleeSpeed(tortoise).toFixed(1)} vs deer ${fleeSpeed(deer12).toFixed(1)} m/s`);
+    assert.ok(fleeSpeed(animal("e", "african-bush-elephant", 0, 0, {length: 3.5})) <= 8);
+});
+
+test("an armoured animal pulls in and stays put; a sessile one is never moved", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const tortoise = animal("t", "leopard-tortoise", 0, 0, {shared: {doing: "graze"}});
+    const croc = animal("croc", "american-alligator", -12, 1.2, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    const frames = run(layer, [tortoise, croc], 10, {move: (list, t) => {
+        list.find((i) => i.id === "croc")!.shared.x = -12 + (t - 1000) * 1.5;
+    }});
+    const actions = new Set(frames.map((f) => f.out.get("t")!.action));
+    assert.ok(actions.has("withdraw"), `it withdraws (${[...actions].join(", ")})`);
+    assert.ok(!actions.has("flee"), "it does not run");
+    const pulled = frames.filter((f) => f.out.get("t")!.action === "withdraw");
+    assert.ok(pulled.every((f) => Math.hypot(f.out.get("t")!.dx, f.out.get("t")!.dz) < 0.3), "it stays where it is");
+    assert.ok(pulled[pulled.length - 1].out.get("t")!.crouch > 0.6, "pulled in low");
+    const barnacle = {...animal("b", "acorn-barnacle", 0, 0), sessile: true};
+    assert.equal(reactiveEnvelope(barnacle, true), 0, "a sessile animal has no envelope");
 });
 
 // MARK: Scenario 1: a predator passes a herd

@@ -68,6 +68,7 @@ function input(id: string, slug: string, x: number, z: number, shared: Partial<R
         plan: p.plan,
         length: displayLength(slug, p.plan),
         size: b.size,
+        speed: b.speed,
         dominance: b.dominance,
         social: b.social,
         diet: b.diet,

@@ -1467,6 +1467,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 plan: intel.plan,
                 length: e.length,
                 size: e.sched.profile.size,
+                speed: e.sched.profile.speed,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
@@ -1476,6 +1477,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 parentId: young.parent,
                 youngPlay: young.play,
                 headHeight: c.modelHeight * 0.8,
+                sessile: e.sched.profile.move === "sessile",
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }

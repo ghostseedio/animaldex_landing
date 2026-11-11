@@ -67,6 +67,8 @@ export type ReactiveInput = {
     /** The size and dominance stats (0–100). */
     size: number | null;
     dominance: number | null;
+    /** The speed stat (0–100): how fast it runs from a threat (`fleeSpeed`). Missing: the middle of the scale. */
+    speed?: number | null;
     social: string;
     diet: string;
     intel: ArkIntelProfile;
@@ -81,6 +83,8 @@ export type ReactiveInput = {
     youngPlay?: number;
     /** Its head's height above its feet (m). */
     headHeight?: number;
+    /** Fixed to its spot (a barnacle, a sponge, a limpet: the behaviour profile's move "sessile"): never moved. */
+    sessile?: boolean;
 };
 
 export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
@@ -137,7 +141,8 @@ export type ReactiveAction =
     | "stalk"
     | "watch_prey"
     | "recover"
-    | "startle";
+    | "startle"
+    | "withdraw";
 
 export type ReactiveOut = {
     /** The offset from the shared position (m, world x and z). */
@@ -193,11 +198,36 @@ export const REACTIVE_BUDGET: Record<ReactiveTier, ReactiveBudget> = {
  */
 export type EnvelopeFn = (input: ReactiveInput, fleeing: boolean) => number;
 export const reactiveEnvelope: EnvelopeFn = (input, fleeing) => {
-    if (input.acting || input.shared.aloft) return 0;
+    if (input.acting || input.shared.aloft || input.sessile) return 0;
     const base = Math.min(Math.max(0.8 * input.length + 0.4, 0.5), 2.5);
     if (!fleeing) return base;
     return Math.min(Math.max(3.5 * input.length + 1.5, 2), 9);
 };
+
+/**
+ * How fast it runs from a threat (m/s): its speed stat in body lengths a second (1.5 for the slowest … 5.5 for the
+ * fastest), so a tortoise doesn't dash like a deer. Never more than 8 m/s.
+ */
+export function fleeSpeed(input: ReactiveInput): number {
+    const stat = Math.min(Math.max(input.speed ?? 50, 0), 100);
+    return Math.min(Math.max(input.length, 0.3) * (1.5 + 4 * (stat / 100)), 8);
+}
+
+/**
+ * How alarming this threat is, as a factor on the flight distance: a predator bigger than it, and one coming at it,
+ * makes it move off sooner; a still one later. (Flight initiation distance grows with the predator's size and the
+ * directness and speed of its approach: Stankowich & Blumstein 2005, Proc. R. Soc. B 272.)
+ */
+export function threatScale(me: ReactiveInput, threat: ReactiveInput | null | undefined): number {
+    if (!threat) return 1;
+    const ratio = Math.max(threat.length, 0.05) / Math.max(me.length, 0.05);
+    // Its own size: 1; twice its length 1.25; four times or more 1.5; half its length or less 0.75.
+    const size = Math.min(Math.max(1 + 0.25 * Math.log2(ratio), 0.75), 1.5);
+    if (!threat.shared.moving) return size * 0.85;
+    const toMe = Math.atan2(me.shared.x - threat.shared.x, me.shared.z - threat.shared.z);
+    const coming = Math.abs(wrapAngle(toMe - threat.shared.yaw)) < 0.7;
+    return size * (coming ? 1.3 : 1);
+}
 
 /** How close a stalking predator ever gets to its prey (m): never close enough to catch it. */
 export function minGap(predator: ReactiveInput, prey: ReactiveInput): number {
@@ -338,6 +368,8 @@ export type ReactiveOptions = {tier?: ReactiveTier; envelope?: EnvelopeFn; budge
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
 const FEEDING = new Set(["forage", "graze", "visit_flowers", "drink"]);
 const RESTING = new Set(["rest", "idle", "groom", "bask", "perch", "hide"]);
+/** The actions of an animal reacting to a threat (it counts its alarm from the first of them). */
+const REACTING = new Set<ReactiveAction>(["alert", "freeze", "flee", "shield_young", "threat_display", "hide_behind_parent", "play_dead", "withdraw"]);
 
 export class ReactiveLayer {
     private agents = new Map<string, Agent>();
@@ -622,8 +654,8 @@ export class ReactiveLayer {
             const dx = me.shared.x - from.x;
             const dz = me.shared.z - from.z;
             const d = Math.hypot(dx, dz) || 1e-3;
-            const flightDistance = p.flight * person.fleeDistance * (1 + 0.25 * Math.min(agent.memory.predators.length, 2));
-            if (agent.mode !== "alert" && agent.mode !== "freeze" && agent.mode !== "flee" && agent.mode !== "shield_young" && agent.mode !== "threat_display" && agent.mode !== "hide_behind_parent" && agent.mode !== "play_dead") agent.reactedAt = world.now;
+            const flightDistance = p.flight * person.fleeDistance * (1 + 0.25 * Math.min(agent.memory.predators.length, 2)) * threatScale(me, danger ? byId.get(danger.id) : null);
+            if (!REACTING.has(agent.mode)) agent.reactedAt = world.now;
             // It calls the alarm once at the start (a sentinel, an alarm-caller, a group animal), never more than every 8 s.
             if ((p.alarm || p.sentinel) && world.now - agent.calledAt > 8 && danger) {
                 called = true;
@@ -664,6 +696,11 @@ export class ReactiveLayer {
                 action = "play_dead";
                 target = {...agent.offset};
                 crouchWant = 1;
+            } else if (danger && (me.sessile || (p.defence.includes("armour") && close && (p.defence[0] === "armour" || (me.speed ?? 50) < 25)))) {
+                // Its armour is its defence (a tortoise, a pangolin, a snail, a barnacle): it pulls in and stays put.
+                action = "withdraw";
+                target = {...agent.offset};
+                crouchWant = 1;
             } else if (p.defence.includes("freeze") && !me.shared.moving && !veryClose && sinceReact < 2.5 + 2 * unit(me.id, "freeze")) {
                 // Cryptic and still: it holds still a while before it runs (or instead, if the threat goes by).
                 action = "freeze";
@@ -675,7 +712,7 @@ export class ReactiveLayer {
                 const dir = this.fleeDirection(me, agent, away, world, kin);
                 const reach = this.envelope(me, true);
                 target = {x: dir.x * reach, z: dir.z * reach};
-                speed = Math.min(Math.max(me.length, 0.3) * 4.5, 8);
+                speed = fleeSpeed(me);
                 faceYaw = Math.atan2(dir.x, dir.z);
                 crouchWant = p.defence.includes("flee_cover") ? 0.2 : 0;
             } else if (p.defence.includes("threat") && veryClose) {
@@ -687,7 +724,7 @@ export class ReactiveLayer {
                 action = "alert";
                 target = {...agent.offset};
             }
-        } else if (agent.mode === "flee" || agent.mode === "alert" || agent.mode === "freeze" || agent.mode === "shield_young" || agent.mode === "hide_behind_parent" || agent.mode === "threat_display" || agent.mode === "play_dead" || agent.mode === "recover") {
+        } else if (REACTING.has(agent.mode) || agent.mode === "recover") {
             // It calms down: still watchful a while (the alarm level), then back to its business at a walk.
             const level = alarmLevel((world.now - agent.reactedAt) * 1000, 12000 * (1.4 - p.learning * 0.6));
             if (level > 0.05) {
@@ -706,7 +743,7 @@ export class ReactiveLayer {
         }
 
         // MARK: Hunting (visual only, never a catch)
-        const dangerous = action === "flee" || action === "alert" || action === "freeze" || action === "shield_young" || action === "hide_behind_parent" || action === "threat_display" || action === "play_dead" || action === "recover";
+        const dangerous = REACTING.has(action) || action === "recover";
         if (!dangerous && prey && agent.needs.hunger > 0.25) {
             const other = prey.input;
             const style = p.hunt;
@@ -759,7 +796,8 @@ export class ReactiveLayer {
         }
         // Away from a remembered predator spot (it avoids where it saw one), within the envelope.
         const fresh = agent.memory.predators.find((m) => world.now - m.t < 20 + 40 * p.learning && Math.hypot(m.x - me.shared.x, m.z - me.shared.z) < 12);
-        if (fresh && action !== "flee") {
+        // (Not while it reacts: an alert, freezing or withdrawn animal holds still; a fleeing one has its own way.)
+        if (fresh && !REACTING.has(action)) {
             const ux = me.shared.x - fresh.x;
             const uz = me.shared.z - fresh.z;
             const ul = Math.hypot(ux, uz) || 1;
