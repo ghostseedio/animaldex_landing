@@ -393,6 +393,19 @@ export function reefGrowth(): ReefItem[] {
     return items;
 }
 
+/** A look into a kelp forest for the golden shots: the middle of the densest stand, and its bed. */
+export function kelpStandSpot(): {x: number; y: number; z: number; azimuth: number} | null {
+    const kelp = reefGrowth().filter((item) => item.kind === "kelp");
+    let best: {x: number; y: number; z: number; score: number} | null = null;
+    for (const item of kelp) {
+        if (item.depth < 4 || item.depth > 7.5) continue;
+        const around = kelp.filter((other) => Math.hypot(other.x - item.x, other.z - item.z) < 6).length;
+        if (!best || around > best.score) best = {x: item.x, y: item.y, z: item.z, score: around};
+    }
+    // Looking along the coast (across the stand), not straight at the cliff.
+    return best ? {x: best.x, y: best.y, z: best.z, azimuth: Math.atan2(best.x, best.z) + Math.PI / 2} : null;
+}
+
 /** The kelp shapes' own heights (m) by variant: reef-render.ts builds them this tall. */
 export const KELP_HEIGHTS = [3, 5, 7.5];
 

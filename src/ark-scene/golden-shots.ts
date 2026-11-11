@@ -16,7 +16,7 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "reef_closeup", "kelp_forest", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"] as const;
 
 /** Shots in their own weather (everything else is calm, mean tide). */
 export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
@@ -55,6 +55,8 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     river_pond: "River and pond",
     mountain: "Mountain",
     reef_underwater: "Underwater reef",
+    reef_closeup: "Reef close-up (corals, sponges, anemones, fish)",
+    kelp_forest: "Kelp forest off a cliff coast",
     caterpillar_leaf: "Small animal on a leaf (no caterpillar model yet: a small butterfly)",
     bee_flower: "Bee on a flower",
     limpet_tidepool: "Limpet in a tide pool",
@@ -91,6 +93,10 @@ export type GoldenWorld = {
     mountainArea: () => (XZ & {radius: number}) | null;
     /** The coral reef's middle, under the sea. */
     reef: () => XZ | null;
+    /** A dense knot of corals on the reef (its bed height), and the bearing to look at it from. */
+    reefCloseup?: () => (XZ & {y: number; azimuth: number}) | null;
+    /** The middle of a kelp stand (its bed height), and the bearing to look across it from. */
+    kelpStand?: () => (XZ & {y: number; azimuth: number}) | null;
     /** An open clearing inside the forest (a site's own ground), to look out at the trees from. */
     forestClearing?: () => XZ | null;
 };
@@ -208,6 +214,20 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             const from = clearing ?? {x: floor.x, z: floor.z + 10};
             const away = bearing(floor, from);
             return {place, anchor: "forest edge from the clearing", view: {target: {x: floor.x, y: ground + 3.5, z: floor.z}, distance: 10, polar: 1.42, azimuth: away}};
+        }
+
+        case "reef_closeup": {
+            const spot = world.reefCloseup?.() ?? null;
+            if (!spot) return fallback("no reef close-up spot");
+            // Down among the corals, a little above them, from the open water side.
+            return {place, anchor: `coral knot, bed ${spot.y.toFixed(1)} m`, view: {target: {x: spot.x, y: spot.y + 0.45, z: spot.z}, distance: 4.2, polar: 1.3, azimuth: spot.azimuth}};
+        }
+
+        case "kelp_forest": {
+            const stand = world.kelpStand?.() ?? null;
+            if (!stand) return fallback("no kelp stand");
+            // Mid-water in the stand, looking across it, a little up toward the light.
+            return {place, anchor: `kelp stand, bed ${stand.y.toFixed(1)} m`, view: {target: {x: stand.x, y: Math.min(stand.y + 2.4, -1.2), z: stand.z}, distance: 5.5, polar: 1.5, azimuth: stand.azimuth}};
         }
 
         case "reef_underwater": {

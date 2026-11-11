@@ -203,6 +203,8 @@ function kelpSpots(count: number): Array<{x: number; z: number}> {
 type Loop = {
     /** Points every STEP metres round the loop (closed): x, y (the school's middle), z. */
     points: Float64Array;
+    /** The sea bed under each point. */
+    beds: Float64Array;
     length: number;
     /** The milling pattern and its running total of milled seconds (closed form; see `milled`). */
     pattern: boolean[];
@@ -300,9 +302,36 @@ function loopOf(school: FishSchool): Loop {
         points[i * 3] = a.x + (b.x - a.x) * k;
         points[i * 3 + 2] = a.z + (b.z - a.z) * k;
     }
+    // Rounded off (three passes of a ±1.5 m average): no kinks where a waypoint was pulled in, so the school swings
+    // round its turns instead of snapping.
+    {
+        const span = Math.max(Math.round(1.5 / STEP), 1);
+        const tmp = new Float64Array(n * 2);
+        for (let pass = 0; pass < 3; pass++) {
+            for (let i = 0; i < n; i++) {
+                let sx = 0;
+                let sz = 0;
+                for (let k = -span; k <= span; k++) {
+                    const j = (i + k + n) % n;
+                    sx += points[j * 3];
+                    sz += points[j * 3 + 2];
+                }
+                tmp[i * 2] = sx / (2 * span + 1);
+                tmp[i * 2 + 1] = sz / (2 * span + 1);
+            }
+            for (let i = 0; i < n; i++) {
+                points[i * 3] = tmp[i * 2];
+                points[i * 3 + 2] = tmp[i * 2 + 1];
+            }
+        }
+    }
     // Heights: the school's middle over the bed, smoothed along the loop so it glides over the reef's knolls.
     const raw = new Float64Array(n);
-    for (let i = 0; i < n; i++) raw[i] = middleY(school, bedAt(points[i * 3], points[i * 3 + 2]));
+    const beds = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+        beds[i] = bedAt(points[i * 3], points[i * 3 + 2]);
+        raw[i] = middleY(school, beds[i]);
+    }
     const window = Math.max(Math.round(3 / STEP), 1);
     for (let i = 0; i < n; i++) {
         let sum = 0;
@@ -322,7 +351,7 @@ function loopOf(school: FishSchool): Loop {
     if (school.mill > 0 && !pattern.some(Boolean)) pattern[Math.floor(millRandom() * PATTERN)] = true;
     const cumulative = [0];
     for (let i = 0; i < PATTERN; i++) cumulative.push(cumulative[i] + slotMilled(pattern, i, SLOT));
-    loop = {points, length: Math.max(total, 1e-3), pattern, cumulative};
+    loop = {points, beds, length: Math.max(total, 1e-3), pattern, cumulative};
     loops.set(school.id, loop);
     return loop;
 }
@@ -491,7 +520,7 @@ export function surgeDirection(point: {x: number; z: number}): {x: number; z: nu
 // MARK: - The fish
 
 /** Each fish's seeded slot in its school: evenly spread in a unit ball (Fibonacci shells), plus its own phases. */
-type Slot = {u: number; v: number; w: number; phase: number; wander: number; rate: number; ring: number; ringUp: number; ringAngle: number};
+type Slot = {u: number; v: number; w: number; phase: number; wander: number; rate: number; ring: number; ringUp: number; ringAngle: number; /** cos and sin of the phase (its dart's direction). */ cos: number; sin: number};
 const slotsCache = new Map<string, Slot[]>();
 
 export function schoolSlots(school: FishSchool): Slot[] {
@@ -505,11 +534,14 @@ export function schoolSlots(school: FishSchool): Slot[] {
         const y = 1 - (2 * ((i * 0.618034) % 1));
         const ring = Math.sqrt(Math.max(1 - y * y, 0));
         const angle = i * golden;
+        const phase = random() * Math.PI * 2;
         slots.push({
+            cos: Math.cos(phase),
+            sin: Math.sin(phase),
             u: Math.cos(angle) * ring * r,
             v: Math.sin(angle) * ring * r,
             w: y * r,
-            phase: random() * Math.PI * 2,
+            phase,
             wander: 0.6 + 0.8 * random(),
             rate: 0.7 + 0.6 * random(),
             ring: 0.45 + 0.55 * Math.sqrt(random()),
@@ -521,72 +553,187 @@ export function schoolSlots(school: FishSchool): Slot[] {
     return slots;
 }
 
-/**
- * Where fish `i` of a school is at `t` (local seconds), into `out`. Pure. The renderer calls it twice a frame (now and
- * a moment ago) for each fish it draws, and points the fish along the difference.
- */
-export function fishPosition(school: FishSchool, i: number, t: number, out: Vec3): Vec3 {
-    const slot = schoolSlots(school)[i];
+/** A school's per-frame state at `t` (local seconds): computed once, then every fish is placed from it. */
+export type SchoolFrame = {
+    school: FishSchool;
+    t: number;
+    slots: Slot[];
+    spacing: number;
+    /** Moving schools: the loop, the leader's distance along it, its pace (m/s), how much it mills. */
+    loop: Loop | null;
+    s: number;
+    pace: number;
+    milling: number;
+    /** How fast the milling is easing in or out (per second, of the eased share). */
+    millingRate: number;
+    /** The middle now (the leader's point, or the hover spot), and how fast that moves. */
+    centre: Vec3;
+    centreVelocity: Vec3;
+    omegaScale: number;
+};
+
+export function schoolFrame(school: FishSchool, t: number, into?: SchoolFrame): SchoolFrame {
+    const frame = into ?? {school, t, slots: [], spacing: 0, loop: null, s: 0, pace: 0, milling: 0, millingRate: 0, centre: {x: 0, y: 0, z: 0}, centreVelocity: {x: 0, y: 0, z: 0}, omegaScale: 0};
+    frame.school = school;
+    frame.t = t;
+    frame.slots = schoolSlots(school);
+    frame.spacing = Math.cbrt((8 * school.size.along * school.size.across * school.size.up) / Math.max(school.count, 1));
     const look = FISH_LOOKS[school.kind];
-    const spacing = Math.cbrt((8 * school.size.along * school.size.across * school.size.up) / Math.max(school.count, 1));
-    const wiggle = spacing * 0.28 * slot.wander;
-    const wx = Math.sin(t * 0.9 * slot.rate + slot.phase) * wiggle;
-    const wy = Math.sin(t * 0.7 * slot.rate + slot.phase * 1.7) * wiggle * 0.6;
-    const wz = Math.sin(t * 1.1 * slot.rate + slot.phase * 2.3) * wiggle;
+    frame.omegaScale = look.length * look.beat * 1.6;
     if (school.style === "hover") {
-        const centre = hoverCentre(school, t, scratch.b);
-        // Darting round its own spot over the head: a quick little run now and then.
-        const dart = Math.max(Math.sin(t * 0.23 * slot.rate + slot.phase * 3.1), 0) ** 6 * 0.35 * school.size.along;
-        out.x = centre.x + slot.u * school.size.along + wx * 1.6 + Math.cos(slot.phase) * dart;
-        out.y = centre.y + Math.abs(slot.w) * school.size.up * 1.4 - school.size.up * 0.4 + wy;
-        out.z = centre.z + slot.v * school.size.across + wz * 1.6 + Math.sin(slot.phase) * dart;
-        return out;
+        frame.loop = null;
+        hoverCentre(school, t, frame.centre);
+        const a = t * 0.05;
+        frame.centreVelocity.x = Math.cos(a) * 0.05 * school.range * 0.5;
+        frame.centreVelocity.y = 0;
+        frame.centreVelocity.z = Math.cos(a * 1.37 + 1.1) * 0.05 * 1.37 * school.range * 0.5;
+        return frame;
     }
     const loop = loopOf(school);
-    const s = distanceAlong(school, loop, t);
-    const slotIndex = Math.floor(t / SLOT);
-    const milling = school.mill > 0 ? millAt(loop.pattern, slotIndex, t - slotIndex * SLOT) : 0;
+    frame.loop = loop;
+    frame.s = distanceAlong(school, loop, t);
+    const slot = Math.floor(t / SLOT);
+    frame.milling = school.mill > 0 ? millAt(loop.pattern, slot, t - slot * SLOT) : 0;
+    frame.millingRate = 0;
+    if (school.mill > 0) {
+        const at = (u: number) => {
+            const k = Math.floor(u / SLOT);
+            return ease(millAt(loop.pattern, k, u - k * SLOT));
+        };
+        frame.millingRate = (at(t + 0.05) - at(t - 0.05)) / 0.1;
+    }
+    frame.pace = school.speed * (1 + 0.22 * Math.cos((Math.PI * 2 / 37) * t)) * (1 - (1 - MILL_PACE) * frame.milling);
+    loopPoint(loop, frame.s, frame.centre);
+    const ahead = loopPoint(loop, frame.s + 0.4, place.b);
+    frame.centreVelocity.x = ((ahead.x - frame.centre.x) / 0.4) * frame.pace;
+    frame.centreVelocity.y = ((ahead.y - frame.centre.y) / 0.4) * frame.pace;
+    frame.centreVelocity.z = ((ahead.z - frame.centre.z) / 0.4) * frame.pace;
+    return frame;
+}
+
+/** The bed under a point of the loop (from the loop's own samples). */
+function loopBed(loop: Loop, s: number): number {
+    const n = loop.beds.length;
+    const f = (((s / loop.length) * n) % n + n) % n;
+    const i = Math.floor(f);
+    const k = f - i;
+    return loop.beds[i] + (loop.beds[(i + 1) % n] - loop.beds[i]) * k;
+}
+
+const place = {a: {x: 0, y: 0, z: 0}, b: {x: 0, y: 0, z: 0}};
+
+/**
+ * Where fish `i` is in a prepared frame, into `out`; and (when `velocity` is given) how it is moving (m/s), worked
+ * out in the same pass from the same closed forms (the renderer points each fish along it).
+ */
+export function placeFish(frame: SchoolFrame, i: number, out: Vec3, velocity?: Vec3): Vec3 {
+    const school = frame.school;
+    const t = frame.t;
+    const slot = frame.slots[i];
+    const wiggle = frame.spacing * 0.28 * slot.wander;
+    const ax = t * 0.9 * slot.rate + slot.phase;
+    const ay = t * 0.7 * slot.rate + slot.phase * 1.7;
+    const az = t * 1.1 * slot.rate + slot.phase * 2.3;
+    const wx = Math.sin(ax) * wiggle;
+    const wy = Math.sin(ay) * wiggle * 0.6;
+    const wz = Math.sin(az) * wiggle;
+    const size = school.size;
+    if (!frame.loop) {
+        const centre = frame.centre;
+        // Darting round its own spot over the head: a quick little run now and then.
+        const da = t * 0.23 * slot.rate + slot.phase * 3.1;
+        const sd = Math.sin(da);
+        const s2 = sd > 0 ? sd * sd : 0;
+        const dart = s2 * s2 * s2 * 0.35 * size.along;
+        out.x = centre.x + slot.u * size.along + wx * 1.6 + slot.cos * dart;
+        out.y = centre.y + Math.abs(slot.w) * size.up * 1.4 - size.up * 0.4 + wy;
+        out.z = centre.z + slot.v * size.across + wz * 1.6 + slot.sin * dart;
+        if (velocity) {
+            // d/dt of sin⁶: 6 sin⁵ cos · the rate.
+            const dartRate = sd > 0 ? 6 * s2 * s2 * sd * Math.cos(da) * 0.23 * slot.rate * 0.35 * size.along : 0;
+            velocity.x = frame.centreVelocity.x + Math.cos(ax) * wiggle * 0.9 * slot.rate * 1.6 + slot.cos * dartRate;
+            velocity.y = Math.cos(ay) * wiggle * 0.6 * 0.7 * slot.rate;
+            velocity.z = frame.centreVelocity.z + Math.cos(az) * wiggle * 1.1 * slot.rate * 1.6 + slot.sin * dartRate;
+        }
+        return out;
+    }
+    const loop = frame.loop;
     // Streaming: its own place on the loop (ahead or behind the leader's point), out to the side, up or down.
-    const along = slot.u * school.size.along;
-    const here = loopPoint(loop, s + along, scratch.a);
-    const ahead = loopPoint(loop, s + along + 0.4, scratch.b);
+    const along = slot.u * size.along;
+    const here = loopPoint(loop, frame.s + along, place.a);
+    const ahead = loopPoint(loop, frame.s + along + 0.4, place.b);
     let hx = ahead.x - here.x;
     let hz = ahead.z - here.z;
+    const rise = (ahead.y - here.y) / 0.4;
     const hl = Math.hypot(hx, hz) || 1;
     hx /= hl;
     hz /= hl;
-    let x = here.x - hz * slot.v * school.size.across + wx;
-    let y = here.y + slot.w * school.size.up + wy;
-    let z = here.z + hx * slot.v * school.size.across + wz;
+    let x = here.x - hz * slot.v * size.across + wx;
+    let y = here.y + slot.w * size.up + wy;
+    let z = here.z + hx * slot.v * size.across + wz;
     // Roaming grazers dip to the bed now and then, each on its own beat.
+    let dipRate = 0;
     if (school.style === "roam") {
-        const dip = Math.max(Math.sin(t * 0.13 * slot.rate + slot.phase), 0) ** 4;
-        y -= dip * Math.max(here.y - school.clearance - bedAt(here.x, here.z) - 0.25, 0) * 0.8;
+        const dipAngle = t * 0.13 * slot.rate + slot.phase;
+        const sd = Math.sin(dipAngle);
+        const room = Math.max(here.y - school.clearance - loopBed(loop, frame.s + along) - 0.25, 0) * 0.8;
+        if (sd > 0) {
+            y -= sd * sd * sd * sd * room;
+            dipRate = 4 * sd * sd * sd * Math.cos(dipAngle) * 0.13 * slot.rate * room;
+        }
     }
-    if (milling > 0) {
+    let vx = 0;
+    let vy = 0;
+    let vz = 0;
+    if (velocity) {
+        vx = hx * frame.pace + Math.cos(ax) * wiggle * 0.9 * slot.rate;
+        vy = rise * frame.pace + Math.cos(ay) * wiggle * 0.42 * slot.rate - dipRate;
+        vz = hz * frame.pace + Math.cos(az) * wiggle * 1.1 * slot.rate;
+    }
+    if (frame.milling > 0) {
         // Balled up: round the leader's point on a torus, all one way, faster on the inside.
-        const centre = loopPoint(loop, s, scratch.a);
-        const radius = Math.max(school.size.across, school.size.up * 1.4) * 1.05 * slot.ring;
-        const omega = (look.length * look.beat * 1.6) / Math.max(radius, 0.2);
+        const centre = frame.centre;
+        const radius = Math.max(size.across, size.up * 1.4) * 1.05 * slot.ring;
+        const omega = frame.omegaScale / Math.max(radius, 0.2);
         const angle = slot.ringAngle + omega * t;
-        const mx = centre.x + Math.cos(angle) * radius + wx * 0.5;
-        const my = centre.y + slot.ringUp * school.size.up * 1.3 + wy * 0.5;
-        const mz = centre.z + Math.sin(angle) * radius + wz * 0.5;
-        const k = ease(milling);
+        const ca = Math.cos(angle);
+        const sa = Math.sin(angle);
+        const mx = centre.x + ca * radius + wx * 0.5;
+        const my = centre.y + slot.ringUp * size.up * 1.3 + wy * 0.5;
+        const mz = centre.z + sa * radius + wz * 0.5;
+        const k = ease(frame.milling);
+        if (velocity) {
+            const tx = frame.centreVelocity.x - sa * omega * radius;
+            const tz = frame.centreVelocity.z + ca * omega * radius;
+            // Plus the drift between the two formations while it eases in or out.
+            vx += (tx - vx) * k + (mx - x) * frame.millingRate;
+            vy += (frame.centreVelocity.y - vy) * k + (my - y) * frame.millingRate;
+            vz += (tz - vz) * k + (mz - z) * frame.millingRate;
+        }
         x += (mx - x) * k;
         y += (my - y) * k;
         z += (mz - z) * k;
     }
     out.x = x;
-    out.y = Math.min(y, -0.25);
+    out.y = y < -0.25 ? y : -0.25;
     out.z = z;
+    if (velocity) {
+        velocity.x = vx;
+        velocity.y = vy;
+        velocity.z = vz;
+    }
     return out;
+}
+
+/** Where fish `i` of a school is at `t` (local seconds), into `out`. Pure. */
+export function fishPosition(school: FishSchool, i: number, t: number, out: Vec3): Vec3 {
+    return placeFish(schoolFrame(school, t), i, out);
 }
 
 /** Every fish of a school at `epochSeconds`, positions only (for later lanes: a predator picking a fish to lunge at). */
 export function schoolFish(school: FishSchool, epochSeconds: number = seaEpochSeconds()): Vec3[] {
-    const t = localTime(school, epochSeconds);
-    return schoolSlots(school).map((_, i) => fishPosition(school, i, t, {x: 0, y: 0, z: 0}));
+    const frame = schoolFrame(school, localTime(school, epochSeconds));
+    return frame.slots.map((_, i) => placeFish(frame, i, {x: 0, y: 0, z: 0}));
 }
 
 /** The school's local time (for the renderer, which calls `fishPosition` directly). */
