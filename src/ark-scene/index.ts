@@ -87,7 +87,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -104,7 +104,7 @@ import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
 import {AssetTrees} from "@/ark-scene/asset-trees";
-import {AssetRocks} from "@/ark-scene/asset-rocks";
+import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
@@ -489,6 +489,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const assetRocks = new AssetRocks(options.assetBase);
     scene.add(assetRocks.group);
     let assetRocksShown = false;
+    // Graphics batch 6: the asset lane's forest floor (litter, twigs, cones, logs).
+    const assetFloor = new AssetFloor(options.assetBase);
+    scene.add(assetFloor.group);
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -545,6 +548,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
         assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
         assetRocks.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
+        assetFloor.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -819,7 +823,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         const spaced = spaceHomes(
-            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
+            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && mapHabitatAt(e.animal, x, z, 5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z, 5))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -1602,7 +1606,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const spec = waterSpec(entry.depth, ground, entry.seed, clock, breath);
-            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: 0, roll: 0, afloat: true, water: spec};
+            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0, roll: 0, afloat: true, water: spec};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -1668,7 +1672,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // The school swims at its first one's depth in the band (its own breath apart).
         const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
-        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along);
+        // (A penguin lies down to swim: `swimBodyPitch`.)
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
         return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined};
     };
 
@@ -1713,7 +1718,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const plan = model?.behaviour?.plan ?? "";
         // A water species (`sea-depth.ts`): in its depth band, its whole body under the surface (a floater on it, a
         // bottom-dweller on the floor, an octopus in its hole), an air-breather up for air when its state says so.
-        if (entry.depth && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
+        // (Only where it is placed in the water: a penguin or a seal standing on its shore has a band for its swims, not for its rest.)
+        if (entry.depth && entry.place.water && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
         // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
         if (!entry.depth && atSeaOf(entry) && entry.layer.mode === "floor") {
             const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);
@@ -3844,6 +3850,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         nearDetail.update(controls.target, viewDistance);
         assetTrees.update(camera.position);
         assetRocks.update(camera.position);
+        assetFloor.update(camera.position);
         if (assetRocks.ready && !assetRocksShown) {
             assetRocksShown = true;
             vegetation.hideKinds(new Set(["rock"]));
@@ -4105,6 +4112,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearDetail.dispose();
             assetTrees.dispose();
             assetRocks.dispose();
+            assetFloor.dispose();
             vegetation.dispose();
             micro.dispose();
             for (const sceneModule of modules) sceneModule.dispose();

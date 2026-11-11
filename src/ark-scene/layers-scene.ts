@@ -314,7 +314,8 @@ export function buildLayersScene(): LayersScene {
     const shafts = new Group();
     const random = seeded(4410);
     for (let i = 0; i < 9; i++) {
-        const shaft = new Mesh(new PlaneGeometry(1.6 + random() * 1.4, 9), shaftMaterial);
+        // Each shaft its own copy of the material (graphics batch 6), so one beside the camera can fade on its own.
+        const shaft = new Mesh(new PlaneGeometry(1.6 + random() * 1.4, 9), shaftMaterial.clone());
         shaft.userData.offset = new Vector3((random() - 0.5) * 22, -4.3, (random() - 0.5) * 22);
         shaft.userData.phase = random() * 10;
         shaft.rotation.z = 0.18;
@@ -397,6 +398,11 @@ export function buildLayersScene(): LayersScene {
                     shaft.position.set(cameraAt.x + offset.x + Math.sin(time * 0.1 + phase) * 1.5, offset.y, cameraAt.z + offset.z);
                     shaft.lookAt(cameraAt.x, offset.y, cameraAt.z);
                     shaft.rotateZ(0.16);
+                    // A shaft right at the lens read as a hard-edged slab across the view (graphics batch 6): it fades out
+                    // as the camera comes within about 6 m.
+                    const near = Math.hypot(shaft.position.x - cameraAt.x, shaft.position.z - cameraAt.z);
+                    const fade = Math.min(Math.max((near - 2.5) / 3.5, 0), 1);
+                    ((shaft as Mesh).material as MeshBasicMaterial).opacity = shaftMaterial.opacity * fade * fade * (3 - 2 * fade);
                 });
             }
         },
@@ -404,7 +410,10 @@ export function buildLayersScene(): LayersScene {
             disposables.forEach((item) => item.dispose());
             pit.geometry.dispose();
             tunnels?.geometry.dispose();
-            shafts.children.forEach((shaft) => (shaft as Mesh).geometry.dispose());
+            shafts.children.forEach((shaft) => {
+                (shaft as Mesh).geometry.dispose();
+                ((shaft as Mesh).material as MeshBasicMaterial).dispose();
+            });
         }
     };
 }

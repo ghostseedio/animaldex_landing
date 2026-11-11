@@ -125,7 +125,7 @@
   "floor": {
    "attach": "floor/attach.json",
    "assets": 13,
-   "bytes": 350705,
+   "bytes": 385113,
    "lod0_tris_max": 3602
   },
   "plants": {
@@ -154,41 +154,41 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -1.018,
-     -0.042,
-     -1.0
+     -0.9,
+     -0.028,
+     -0.934
     ],
     "max": [
-     1.0,
-     0.091,
-     1.0
+     0.963,
+     0.067,
+     0.883
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "floor/litter-autumn-a.lod0.glb",
-     "tris": 1790,
-     "verts": 1831,
-     "bytes": 19044,
+     "tris": 2657,
+     "verts": 3050,
+     "bytes": 28844,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "floor/litter-autumn-a.lod1.glb",
-     "tris": 216,
-     "verts": 250,
-     "bytes": 4724,
+     "tris": 292,
+     "verts": 365,
+     "bytes": 5980,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "floor/litter-autumn-a.lod2.glb",
-     "tris": 8,
-     "verts": 9,
-     "bytes": 2268,
+     "tris": 92,
+     "verts": 115,
+     "bytes": 3484,
      "doubleSided": true,
      "morph": false
     }
@@ -197,7 +197,7 @@
    "height": 0.03,
    "group": "litter",
    "decal": true,
-   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "note": "loose leaves, needles or fronds (no base plate), about 1 m across, thinning to a ragged edge: lay it on the terrain's soil, scale and rotate freely",
    "lod_distances": [
     6.0,
     15.0,
@@ -210,41 +210,41 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -1.0,
-     -0.034,
-     -1.0
+     -0.988,
+     -0.024,
+     -1.004
     ],
     "max": [
-     1.0,
-     0.062,
-     1.0
+     0.956,
+     0.063,
+     1.024
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "floor/litter-conifer-a.lod0.glb",
-     "tris": 2240,
-     "verts": 3141,
-     "bytes": 35276,
+     "tris": 2540,
+     "verts": 4380,
+     "bytes": 46904,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "floor/litter-conifer-a.lod1.glb",
-     "tris": 632,
-     "verts": 738,
-     "bytes": 9576,
+     "tris": 728,
+     "verts": 1109,
+     "bytes": 13700,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "floor/litter-conifer-a.lod2.glb",
-     "tris": 8,
-     "verts": 9,
-     "bytes": 2272,
+     "tris": 90,
+     "verts": 270,
+     "bytes": 5224,
      "doubleSided": true,
      "morph": false
     }
@@ -253,7 +253,7 @@
    "height": 0.03,
    "group": "litter",
    "decal": true,
-   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "note": "loose leaves, needles or fronds (no base plate), about 1 m across, thinning to a ragged edge: lay it on the terrain's soil, scale and rotate freely",
    "lod_distances": [
     6.0,
     15.0,
@@ -266,50 +266,50 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -1.0,
-     -0.062,
-     -1.002
+     -0.887,
+     -0.049,
+     -1.006
     ],
     "max": [
-     1.018,
-     0.113,
-     1.032
+     1.009,
+     0.233,
+     0.868
     ]
    },
    "lods": [
     {
      "level": "lod0",
      "file": "floor/litter-tropical-a.lod0.glb",
-     "tris": 380,
-     "verts": 381,
-     "bytes": 5984,
+     "tris": 460,
+     "verts": 715,
+     "bytes": 8320,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "floor/litter-tropical-a.lod1.glb",
-     "tris": 108,
-     "verts": 115,
-     "bytes": 3376,
+     "tris": 120,
+     "verts": 150,
+     "bytes": 3860,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "floor/litter-tropical-a.lod2.glb",
-     "tris": 8,
-     "verts": 9,
-     "bytes": 2268,
+     "tris": 36,
+     "verts": 45,
+     "bytes": 2728,
      "doubleSided": true,
      "morph": false
     }
    ],
-   "attach": 10,
+   "attach": 11,
    "height": 0.03,
    "group": "litter",
    "decal": true,
-   "note": "a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+   "note": "loose leaves, needles or fronds (no base plate), about 1 m across, thinning to a ragged edge: lay it on the terrain's soil, scale and rotate freely",
    "lod_distances": [
     6.0,
     15.0,
@@ -8594,5 +8594,5 @@
    ]
   }
  },
- "totalBytes": 8617710
+ "totalBytes": 8652118
 }

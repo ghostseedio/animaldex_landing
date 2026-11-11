@@ -38,11 +38,13 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, CANOPY_TAGS, mapPoints, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, CANOPY_TAGS, mapPoints, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
+import {SHORE_REACH} from "@/ark-scene/map/points";
+import {inRock} from "@/ark-scene/map/rocks";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
@@ -50,7 +52,7 @@ import {arkBody, arkStats, massFromSize} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {sunElevation} from "@/lib/ark-daylight";
 
-export const VALIDATOR_CHECKS = ["floats_or_sinks", "inside_scenery", "wrong_medium", "wrong_depth_band", "wrong_water", "invalid_surface", "wrong_facing", "small_not_on_attach_point", "roost_invalid", "off_walk_grid"] as const;
+export const VALIDATOR_CHECKS = ["floats_or_sinks", "inside_scenery", "wrong_medium", "wrong_depth_band", "wrong_water", "invalid_surface", "wrong_facing", "small_not_on_attach_point", "roost_invalid", "off_walk_grid", "inside_rock"] as const;
 export type ValidatorCheck = typeof VALIDATOR_CHECKS[number];
 export type ValidatorFailure = {slug: string; check: ValidatorCheck; detail: string; rank: number};
 
@@ -94,6 +96,18 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         const place = placed.get(animal.id);
         const rank = animal.slot_rank ?? 0;
         const fail = (check: ValidatorCheck, detail: string) => failures.push({slug: animal.model_slug, check, detail, rank});
+        // A body standing in a drawn rock (the asset rocks' own boxes): every place on the ground, the shore or the sea floor, and
+        // every roost on the ground; on the rock itself (a ledge, a rock face, a tide pool at its foot) is the rock's surface.
+        if (place && !place.canopy && !place.hamlet) {
+            const length = arkBody(animal).metres;
+            const onRock = place.micro || place.perch;
+            const floorAnimal = place.map?.water && speciesDepth(animal.model_slug, animal.zone) && onFloor(speciesDepth(animal.model_slug, animal.zone)!);
+            if (!onRock && (!place.water || floorAnimal) && inRock(place.x, place.z, Math.min(Math.max(length * 0.2, 0.05), 0.6), place.ground, Math.max(length * 0.5, 0.05))) {
+                failures.push({slug: animal.model_slug, check: "inside_rock", detail: `in a drawn rock at ${place.x.toFixed(1)},${place.z.toFixed(1)}`, rank});
+            }
+            const roost = place.map?.roost;
+            if (rank === 0 && roost && (roost.kind === "ground") && inRock(roost.x, roost.z, Math.min(Math.max(length * 0.2, 0.05), 0.6), roost.y, Math.max(length * 0.5, 0.05))) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `its roost in a drawn rock at ${roost.x.toFixed(1)},${roost.z.toFixed(1)}`, rank});
+        }
         const species = mapSpecies(animal.model_slug, animal.zone);
         if (!place || !species) continue;
         const map = place.map;
@@ -169,6 +183,19 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
                     break;
                 }
             }
+            continue;
+        }
+        if (map.shore) {
+            // A diver that hauls out (a penguin, a seal): standing on dry ground by the sea, never floating on it.
+            const g = sampler.ground(place.x, place.z);
+            if (g.water || place.water) fail("wrong_medium", `a ${map.shore} diver in the water at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            if (Math.abs(place.ground - g.height) > 0.05) fail("floats_or_sinks", `at ${place.ground.toFixed(2)}, the ground at ${g.height.toFixed(2)}`);
+            if (sampler.blocked(place.x, place.z, Math.min(Math.max(length * 0.2, 0.1), 0.5))) fail("inside_scenery", `in a rock or building at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            let sea = false;
+            for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= SHORE_REACH + 2 && !sea; r += 1) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
+            if (!sea) fail("invalid_surface", `not by the sea at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            // On its own shore: the cove's ice for the polar ones, its warm coast for the others (a Galápagos penguin never on the ice).
+            if ((shoreOf(animal.model_slug, animal.zone) === "cove") !== (map.shore === "cove")) fail("invalid_surface", `a ${map.shore} diver whose shore is ${shoreOf(animal.model_slug, animal.zone)}`);
             continue;
         }
         // A small flyer with no perch that fits it in reach lands on its ground or its water (section 2: "only at valid perches, the ground or the water").
