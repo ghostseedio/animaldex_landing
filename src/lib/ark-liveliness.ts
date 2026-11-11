@@ -368,3 +368,34 @@ export function callLift(sinceMs: number, durationMs: number): number {
     if (sinceMs < up + hold) return 1;
     return 1 - ease((sinceMs - up - hold) / 500);
 }
+
+// ---------------------------------------------------------------------------
+// Worn paths
+
+/**
+ * Where animals keep walking the same way: every animal's recent route
+ * (points sampled from its shared schedule), binned into `cell`-metre cells;
+ * a cell crossed at least `min` times (one animal over and over, or several)
+ * is worn. Strength 0…1 by how often. Pure: the same routes, the same paths.
+ */
+export function wornPatches(routes: Array<Array<{x: number; z: number}>>, cell = 1.1, min = 4): Array<{x: number; z: number; count: number; strength: number}> {
+    const cells = new Map<string, {x: number; z: number; count: number}>();
+    for (const route of routes) {
+        // A cell counts once per visit (not once per sample while it stands there).
+        let last = "";
+        for (const p of route) {
+            const ix = Math.floor(p.x / cell);
+            const iz = Math.floor(p.z / cell);
+            const key = `${ix},${iz}`;
+            if (key === last) continue;
+            last = key;
+            const at = cells.get(key) ?? {x: (ix + 0.5) * cell, z: (iz + 0.5) * cell, count: 0};
+            at.count++;
+            cells.set(key, at);
+        }
+    }
+    return Array.from(cells.values())
+        .filter((c) => c.count >= min)
+        .sort((a, b) => b.count - a.count || a.x - b.x || a.z - b.z)
+        .map((c) => ({...c, strength: Math.min(0.12 + 0.05 * (c.count - min), 0.38)}));
+}

@@ -13,6 +13,7 @@ import {
     shelterKind,
     tideFit,
     WeatherFlips,
+    wornPatches,
     yawToward
 } from "@/lib/ark-liveliness";
 
@@ -164,4 +165,16 @@ test("a call's lift: up fast, held, down", () => {
     assert.equal(callLift(300, 500), 1);
     assert.ok(callLift(90, 500) > 0 && callLift(90, 500) < 1);
     assert.equal(callLift(5000, 500), 0);
+});
+
+test("worn paths: cells walked again and again, once per visit", () => {
+    // Back and forth between two spots, five times.
+    const route: Array<{x: number; z: number}> = [];
+    for (let k = 0; k < 5; k++) for (let i = 0; i <= 10; i++) route.push({x: k % 2 ? 10 - i : i, z: 0.3});
+    const standing = Array.from({length: 40}, () => ({x: 30.2, z: 30.2}));
+    const worn = wornPatches([route, standing], 1.1, 4);
+    assert.ok(worn.length >= 6, `${worn.length} cells`);
+    assert.ok(worn.every((c) => Math.abs(c.z - 0.55) < 1e-9), "along the route only");
+    assert.ok(!worn.some((c) => c.x > 25), "standing still is not a path");
+    assert.deepEqual(wornPatches([[...route].reverse(), standing], 1.1, 4).map((c) => c.x).sort(), worn.map((c) => c.x).sort());
 });
