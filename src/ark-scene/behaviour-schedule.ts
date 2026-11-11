@@ -234,7 +234,7 @@ function pick(profile: ArkBehaviourProfile, hours: number, roll: number, bold: n
 
 const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
     tree: ["branch"],
-    tree_hole: ["bark", "branch"],
+    tree_hole: ["tree_hollow", "bark", "branch"],
     cliff: ["cliff_ledge", "rock_top"],
     cave: ["cave_mouth", "rock_face"],
     crevice: ["rock_face", "rock_top"],
@@ -261,7 +261,7 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     bask_rock: ["rock_top"],
     graze_grass: ["grass"],
     perch_branch: ["branch"],
-    perch_rock: ["rock_top"],
+    perch_rock: ["rock_top", "post"],
     dig_soil: ["worm_hole", "burrow_entrance"],
     leaf_litter: ["leaf_litter"],
     flower: ["flower"],
@@ -348,6 +348,15 @@ export class ScheduleWorldBuild {
 }
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
+
+/** Where a flyer lands to perch: its own kinds first (a seabird's rocks, ledges and posts, never a branch). */
+function perchTags(profile: ArkBehaviourProfile): AttachTag[] {
+    const tags: AttachTag[] = [];
+    if (profile.interactions.includes("perch_branch")) tags.push("branch");
+    if (profile.interactions.includes("perch_rock")) tags.push("rock_top", "post");
+    if (profile.interactions.includes("cliff_ledge")) tags.push("cliff_ledge");
+    return tags.length ? tags : ["branch", "post", "rock_top", "cliff_ledge"];
+}
 const flies = (profile: ArkBehaviourProfile) => profile.move === "fly" || profile.moves.includes("fly");
 const swims = (profile: ArkBehaviourProfile) => profile.move === "swim" || profile.moves.includes("swim");
 const walks = (profile: ArkBehaviourProfile) => profile.move === "walk" || profile.moves.includes("walk") || profile.moves.includes("hop");
@@ -727,7 +736,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         case "soar": {
             // A goal: a perch, a feeding spot on the ground, or (a floater) the water.
             const roll = random();
-            const perch = roll < 0.5 ? placeNear(world, centre, animal.length, ["branch", "rock_top", "cliff_ledge"], radius, random()) : null;
+            const perch = roll < 0.5 ? placeNear(world, centre, animal.length, perchTags(profile), radius, random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
             return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, centre, radius, random), mode: "air", stay: stayBeats("forage", random, null)};
@@ -983,21 +992,24 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const flat = Math.hypot(to.x - from.x, to.z - from.z);
             const air = speed * 4;
             if (now.doing === "soar") {
-                // Wide, irregular arcs: through three seeded points high over its range, then down to its perch or the ground.
-                const route: NavPoint[] = [from];
-                const centre = {x: (from.x + to.x) / 2, z: (from.z + to.z) / 2};
+                // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
+                // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
+                // where it began runs out along a seeded heading and back.
                 const r = Math.max(homeRadius(profile, animal) * 0.8, 6);
-                let a = random() * Math.PI * 2;
-                for (let k = 0; k < 3; k++) {
-                    a += (0.8 + random() * 1.4) * (random() < 0.5 ? -1 : 1);
-                    route.push({x: centre.x + Math.cos(a) * r * (0.5 + random() * 0.6), z: centre.z + Math.sin(a) * r * (0.5 + random() * 0.6)});
-                }
-                route.push(to);
+                const span = Math.max(flat, r);
+                const dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) : random() * Math.PI * 2;
+                const bow = (random() < 0.5 ? -1 : 1) * (0.18 + random() * 0.14) * span;
+                const ux = Math.sin(dir);
+                const uz = Math.cos(dir);
+                const first = flat > 0.5 ? flat / 3 : span * 0.5;
+                const second = flat > 0.5 ? (2 * flat) / 3 : span * 0.5;
+                const route: NavPoint[] = [from, {x: from.x + ux * first + uz * bow, z: from.z + uz * first - ux * bow}, {x: from.x + ux * second + uz * bow * 0.9, z: from.z + uz * second - ux * bow * 0.9}, to];
                 const length = pathLength(route) + Math.abs(to.y - from.y);
                 legs.push({mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2});
             } else {
-                // Its own line: bowed to one side by a seeded amount.
-                const side = (random() - 0.5) * 0.7 * flat;
+                // Its own line: bowed a little to one side by a seeded amount (a straight flight to where it is going, not
+                // a weaving one: problem 2's turns).
+                const side = (random() - 0.5) * 0.25 * flat;
                 const mid = {x: (from.x + to.x) / 2 + ((to.z - from.z) / (flat || 1)) * side, z: (from.z + to.z) / 2 - ((to.x - from.x) / (flat || 1)) * side};
                 const route = [from, mid, to];
                 const length = pathLength(route) + Math.abs(to.y - from.y);

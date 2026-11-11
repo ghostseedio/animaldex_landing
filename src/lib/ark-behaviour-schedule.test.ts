@@ -385,3 +385,46 @@ test("a zebra sees a lion walk the grassland 40-odd metres off, and watches it; 
     }
     assert.ok(watched > 0, "the zebra never noticed the lion");
 });
+
+test("flyers fly to places, not round in circles: under half a full turn a minute in the air (the audit's measure)", () => {
+    // ark-audit metrics.ts: second by second while aloft, the heading change of where it goes, summed; circling is a full
+    // turn or more inside 20 m in the last minute. (Problem 2: 1.04 turns a minute, from bowed hops and looping soars.)
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let air = 0;
+    let turn = 0;
+    let circling = 0;
+    for (const i of animals.filter((x) => x.profile.move === "fly" || x.profile.moves.includes("fly"))) {
+        let last: {x: number; z: number} | null = null;
+        let heading: number | null = null;
+        const window: Array<{x: number; z: number; turn: number}> = [];
+        for (let s = 0; s < 6 * 3600; s += 1) {
+            const p = poseOf(i, DAY + 6 * 3600 + s);
+            if (!p.aloft) {
+                last = null;
+                heading = null;
+                window.length = 0;
+                continue;
+            }
+            air++;
+            if (last && Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
+                const h = Math.atan2(p.x - last.x, p.z - last.z);
+                const tn = heading === null ? 0 : Math.abs(wrap(h - heading));
+                turn += tn;
+                heading = h;
+                window.push({x: p.x, z: p.z, turn: tn});
+                if (window.length > 60) window.shift();
+                if (window.length >= 30) {
+                    const cx = window.reduce((a, w) => a + w.x, 0) / window.length;
+                    const cz = window.reduce((a, w) => a + w.z, 0) / window.length;
+                    if (window.reduce((a, w) => a + w.turn, 0) >= TAU && Math.max(...window.map((w) => Math.hypot(w.x - cx, w.z - cz))) <= 20) circling++;
+                }
+            }
+            last = {x: p.x, z: p.z};
+        }
+    }
+    assert.ok(air > 3600, `air seconds ${air}`);
+    const perMinute = turn / TAU / (air / 60);
+    assert.ok(perMinute < 0.5, `${perMinute.toFixed(2)} full turns a minute in the air`);
+    assert.ok(circling / air < 0.1, `circling ${((circling / air) * 100).toFixed(1)}% of air time`);
+});
