@@ -509,12 +509,39 @@ def clump_geo(R, n_pts, notch, aspect, cup, rng):
     return np.array(P), np.array(F), np.array(tip)
 
 
+def spray_geo(L, W, segs, droop, rng):
+    """A conifer spray: a twig with short needles along both sides (a saw-tooth strip, teeth
+    swept forward), drooping toward its tip. Local frame: +Z along the spray, +Y up."""
+    P, F, tip = [], [], []
+    for i in range(segs + 1):
+        t = i / segs
+        P.append([0, -droop * L * t * t, L * t])
+        tip.append(t * 0.5)
+    for i in range(segs):
+        t = (i + 0.5) / segs
+        w = W * (0.55 + 0.45 * math.sin(math.pi * min(1.0, 0.2 + 0.85 * t))) * rng.uniform(0.85, 1.1)
+        zc = L * (i + 0.9) / segs
+        yc = -droop * L * ((i + 0.9) / segs) ** 2
+        for side in (-1, 1):
+            P.append([side * w, yc - w * 0.35, zc + L / segs * 0.35])
+            tip.append(1.0)
+            e = len(P) - 1
+            F.append([i, e, i + 1] if side < 0 else [i, i + 1, e])
+    return np.array(P, float), np.array(F), np.array(tip)
+
+
 def mesh_clumps(spec, tree, detail, out, rng, target_tris):
     CL = spec.get("clumps")
     clumps = getattr(tree, "clumps", [])
     if not CL or not clumps or target_tris <= 0:
         return
-    pts_n = [CL.get("points", 10), max(6, CL.get("points", 10) - 2), 6][detail]
+    kind = CL.get("kind", "fan")
+    if kind == "brush":
+        pts_n = [CL.get("points", 16), max(6, CL.get("points", 16) // 2), 5][detail]
+    elif kind == "spray":
+        pts_n = [CL.get("points", 7), 4, 2][detail] * 2
+    else:
+        pts_n = [CL.get("points", 10), max(6, CL.get("points", 10) - 2), 6][detail]
     keep = max(6, min(len(clumps), int(target_tris / pts_n)))
     order = np.random.default_rng(11).permutation(len(clumps))
     chosen = [clumps[i] for i in order[:keep]]
@@ -527,8 +554,18 @@ def mesh_clumps(spec, tree, detail, out, rng, target_tris):
     Ps, Fs, Ns, Cs, Ws = [], [], [], [], []
     off = 0
     for c in chosen:
-        P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng)
-        Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
+        if kind == "brush":
+            P, F, tip = needle_tuft(c["R"] * min(grow, 1.6), CL.get("width", 0.02) * grow, pts_n, rng,
+                                    CL.get("spread", (0.3, 1.4)))
+            fwd = norm(c["d"] + c["n"] * 0.6)
+            Pw, x, y, z = place_frame(P, c["p"], fwd, c["n"] if abs(c["n"] @ fwd) < 0.95 else perp(fwd))
+        elif kind == "spray":
+            P, F, tip = spray_geo(c["R"] * grow, CL.get("width", 0.14) * grow, pts_n // 2, CL.get("droop", 0.3), rng)
+            fwd = norm(c["d"] - UP * (c["d"] @ UP) * 0.5)
+            Pw, x, y, z = place_frame(P, c["p"], fwd, c["n"])
+        else:
+            P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng)
+            Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
         radial = norm(Pw - centre)
         Nw = norm(radial * 0.6 + y * 0.4)
         depth = np.clip(np.linalg.norm(Pw - centre, axis=1) / spread, 0, 1.15)
@@ -881,26 +918,31 @@ SPECIES = {
                     tip=hexc("#a6c656"), fold=0.25, curl=0.08, angle=70, tilt=0.3),
         bark=dict(color=hexc("#9a9a8e"), dark=hexc("#6c6c62"), fx=2, fy=0.6, contrast=0.6), n_branch=20),
     "pine": dict(
-        clumps=dict(levels=[1, 2, 3], per_limb=(2, 3), r=(0.5, 0.75), points=14, notch=0.45, cup=0.3, face_up=0.7, aspect=1.2,
-                    share=(0.8, 0.95, 1.0)), wood_share=(0.32, 0.3, 0.28),
+        # Needle foliage only: long-needle brushes at the branch tips (no leaf-shaped fans).
+        clumps=dict(kind="brush", levels=[2, 3], per_limb=(1, 2), t=(0.8, 1.0), r=(0.3, 0.42), points=16, width=0.022,
+                    spread=(0.25, 1.45), face_up=0.55, share=(0.82, 0.95, 1.0)), wood_share=(0.32, 0.3, 0.28),
         H=13, trunk=dict(length=12.0, radius=0.26, taper=0.25, wobble=0.035, lean=0.07, flare=0.25),
         levels=[dict(count=(12, 16), t=(0.55, 0.99), angle=78, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
                      bend=0.5, wobble=0.12, abs_length=3.4),
                 dict(per_m=3.2, t=(0.2, 1.0), angle=45, ratio=0.42, rratio=0.5, bend=0.4, wobble=0.15),
                 dict(per_m=2.0, t=(0.3, 1.0), angle=40, ratio=0.4, rratio=0.5, bend=0.5, wobble=0.15)],
-        leaves=dict(kind="needles", per_m=16, length=0.42, width=0.05, needles=8, levels=[2, 3], t0=0.3, angle=12, spread=(0.35, 1.3),
-                    colors=G("#3d5e34", "#466a3a", "#35532e"), tip=hexc("#6a8a4a"), keep_scale=[1, 1.3, 1.6]),
-        bark=dict(color=hexc("#a8603a"), dark=hexc("#4a3428"), fx=3, fy=1.5, contrast=1.0,
+        leaves=dict(kind="needles", per_m=16, length=0.3, width=0.02, needles=9, levels=[2, 3], t0=0.45, angle=12,
+                    spread=(0.35, 1.3), colors=G("#36583a", "#3f6440", "#2f5034", "#48703f"), tip=hexc("#7a9a5a"),
+                    keep_scale=[1, 1.3, 1.6]),
+        bark=dict(color=hexc("#b8683a"), dark=hexc("#4a3428"), fx=3, fy=1.5, contrast=1.0,
                   marks=dict(color=hexc("#4f4038"), lo=-0.2, hi=0.3, foot=hexc("#3b2f28"))),
         bark_top=0.55, card_lobes=8),
     "spruce": dict(
-        clumps=dict(levels=[1, 2], per_limb=(1, 1), per_m=1.6, t=(0.15, 1.0), r=(0.3, 0.45), points=12, notch=0.5, cup=0.15, face_up=0.85, aspect=1.7),
+        # Needle foliage only: short-needle sprays hanging from every branch, tier on tier.
+        clumps=dict(kind="spray", levels=[1, 2], per_limb=(1, 1), per_m=2.6, t=(0.12, 1.0), r=(0.38, 0.6), points=7,
+                    width=0.15, droop=0.35, face_up=0.9, tilt=0.1, share=(0.85, 0.95, 1.0)), wood_share=(0.34, 0.32, 0.3),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
                      rratio=0.35, bend=0.25, wobble=0.06, abs_length=3.3),
                 dict(per_m=4.0, t=(0.15, 1.0), angle=60, ratio=0.4, rratio=0.5, bend=-0.4, wobble=0.1, planar=0.3)],
-        leaves=dict(per_m=34, length=0.32, width=0.05, levels=[1, 2], t0=0.15, angle=35, fold=0.6, curl=0.1, face_up=0.6,
-                    droop=0.2, colors=G("#2c4a34", "#33553a", "#284430"), tip=hexc("#4d6e4a"), keep_scale=[1, 1.3, 1.6]),
+        leaves=dict(kind="needles", per_m=10, length=0.12, width=0.014, needles=7, levels=[1, 2], t0=0.15, angle=35,
+                    spread=(0.5, 1.2), droop=0.2, colors=G("#244238", "#2a4a40", "#203a32", "#30524a"),
+                    tip=hexc("#4a6e60"), keep_scale=[1, 1.3, 1.6]),
         bark=dict(color=hexc("#6b5040"), dark=hexc("#3c2c24"), fx=3, fy=1.2, contrast=1.0), bark_top=0.3, card_style="cone",
         card_ribbons=1),
     "palm": dict(

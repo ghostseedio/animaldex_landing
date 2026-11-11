@@ -43,6 +43,7 @@ TAGS = {
     "flower_head": dict(spot="flowers", about="the centre of an open flower, normal out of the flower"),
     "bromeliad": dict(spot="pond_surface", about="the water cup of a bromeliad rosette"),
     "fungus_shelf": dict(spot="bark", about="the top of a bracket fungus"),
+    "fungus_cap": dict(spot="leaf_litter", about="the top of a mushroom cap"),
     "stem": dict(spot="flowers", about="a plant stem or grass blade; forward runs up it"),
     "pad": dict(spot="pond_surface", about="the top of a floating leaf (lily pad)"),
     "rock_face": dict(spot="rocks", about="a rock surface, up-facing or steep"),
