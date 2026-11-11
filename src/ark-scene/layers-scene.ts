@@ -402,7 +402,7 @@ export function buildLayersScene(): LayersScene {
                     // as the camera comes within about 6 m.
                     const near = Math.hypot(shaft.position.x - cameraAt.x, shaft.position.z - cameraAt.z);
                     const fade = Math.min(Math.max((near - 2.5) / 3.5, 0), 1);
-                    (shaft.material as MeshBasicMaterial).opacity = shaftMaterial.opacity * fade * fade * (3 - 2 * fade);
+                    ((shaft as Mesh).material as MeshBasicMaterial).opacity = shaftMaterial.opacity * fade * fade * (3 - 2 * fade);
                 });
             }
         },
