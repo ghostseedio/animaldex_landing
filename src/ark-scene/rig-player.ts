@@ -59,6 +59,7 @@ import {
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
 import {gripBones} from "@/ark-scene/map/grip";
+import {POSTURE_SPECS, sleepStages, type SleepPosture} from "@/ark-scene/sleep";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -826,6 +827,30 @@ export function reactiveClip(action: string | null | undefined, has: (name: stri
         default:
             return null;
     }
+}
+
+/** What `sleepClip` needs of a rig: its playable clip of a name (its loop, and its v6 base and posture), or null. */
+export type SleepClipRig = {clip: (name: string) => {loop: boolean; base?: string; posture?: string} | null};
+
+/**
+ * Asleep, lying down or getting up on its rig (`sleep.ts`; the rigging lane's v6 clips, contract section 8). A lying
+ * posture (on its chest, its side, curled, flat; a bird sitting down to sleep) plays `lie_down` in step with its
+ * body going down (`sleepStages(t).body`), then its lying sleep loop (`sleep` with base "lying", else `lie`), and
+ * `get_up` in step with the body coming up; only when the rig has all three (a lying clip needs its way in and out).
+ * A standing sleeper (on one leg, a primate hunched) plays a `sleep` that is not lying. Null: it is procedural
+ * (`sleep.ts` POSTURE_SPECS on the near model and the rig's idle). `down`: going to sleep (else waking up).
+ */
+export function sleepClip(rig: SleepClipRig, posture: SleepPosture, t: number, down: boolean): {name: string; play: "sync" | "loop"; phase: number; lying: boolean} | null {
+    const sleep = rig.clip("sleep");
+    if (POSTURE_SPECS[posture].lying || posture === "tuck") {
+        const loop = sleep && sleep.base === "lying" ? "sleep" : rig.clip("lie") ? "lie" : null;
+        if (!rig.clip("lie_down") || !rig.clip("get_up") || !loop) return null;
+        if (t >= 1) return {name: loop, play: "loop", phase: 0, lying: true};
+        const body = sleepStages(t).body;
+        return down ? {name: "lie_down", play: "sync", phase: body, lying: true} : {name: "get_up", play: "sync", phase: 1 - body, lying: true};
+    }
+    if (!sleep || sleep.base === "lying" || (posture === "one_leg") !== (sleep.posture === "one_leg")) return null;
+    return {name: "sleep", play: "loop", phase: 0, lying: false};
 }
 
 /**

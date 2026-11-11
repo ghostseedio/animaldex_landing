@@ -3,6 +3,15 @@
  * instanced. Each instance carries `arkInstance` = (phase, dim, rest): rest
  * is 1 asleep (still, the head lowered, breathing slow).
  *
+ * Asleep (`sleep.ts`, docs/ark/sleep.md), `arkInstance.w` carries its sleep,
+ * packed (`packSleep`: no new attribute, a rig's fur shells already use every
+ * slot a GPU has): eyes shut 0–1, the spine's curl in radians each half (+
+ * toward its left), a tail flick 0–1, its breaths a second (`arkSleep` once
+ * unpacked). The eyes shut (`animal-look-shader`),
+ * and near the camera the body curls round, the chest rises and falls at its
+ * species' pace and the tail flicks when it stirs. A rig gets the same breath
+ * and curl on its skinned pose.
+ *
  * The near level moves on its own: the call's idle motion
  * (`talking-model-renderer.ts`: breathing, the slow sway and look round, and
  * the body's own motion from `behaviour` — swim, flap, pulse, sway, a tail
@@ -76,6 +85,19 @@ const MOTION_BODY = `
 
 const MOTION_DECLARATIONS = `
 attribute vec3 arkLook;
+// The sleep packed in arkInstance.w (sleep.ts packSleep): four 6-bit fields; every divisor a power of two, so exact.
+vec4 arkSleepOf(float packed) {
+    // (0: an instance never written, or a mesh drawn without its sleep: awake.)
+    if (packed < 0.5) return vec4(0.0);
+    float p = floor(packed + 0.5);
+    float eyes = floor(p / 262144.0);
+    p -= eyes * 262144.0;
+    float curl = floor(p / 4096.0);
+    p -= curl * 4096.0;
+    float flick = floor(p / 64.0);
+    float breath = p - flick * 64.0;
+    return vec4(eyes / 63.0, (curl - 31.0) / 25.0, flick / 63.0, breath / 50.0);
+}
 uniform float arkClock;
 uniform float arkDroop;
 uniform float motionKind;
@@ -216,14 +238,15 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
     if (motionGain > 0.0) {
         float awake = motionGain * (1.0 - 0.9 * arkRest);
         float motionClock = arkClock + arkInstance.x * 61.0;
-        // A tail wags now and then, not all the time.
+        // A tail wags now and then, not all the time; asleep it flicks once as the animal stirs (sleep.ts sleepStir).
         float tailAngle = awake * 0.28 * sin(motionClock * 2.6) * smoothstep(0.4, 0.8, sin(motionClock * 0.23 + arkInstance.x * 9.0));
+        tailAngle += motionGain * arkSleep.z * 0.5 * sin(motionClock * 8.0);
         {
             float motionGain = awake;
             ${MOTION_BODY}
         }
-        // Breathing (slower and deeper asleep), and the call's slow sway and look round (its root motion).
-        float breathe = 1.0 + motionGain * mix(0.012 * sin(motionClock * 1.7), 0.018 * sin(motionClock * 0.9), arkRest);
+        // Breathing (slower and deeper asleep: the sleep breath below when it has one), and the call's slow sway and look round (its root motion).
+        float breathe = 1.0 + motionGain * mix(0.012 * sin(motionClock * 1.7), arkSleep.w > 0.0 ? 0.0 : 0.018 * sin(motionClock * 0.9), arkRest);
         transformed.y = motionBottom + (transformed.y - motionBottom) * breathe;
         float yaw = 0.07 * awake * sin(motionClock * 0.29);
         float pitch = 0.02 * awake * sin(motionClock * 0.61);
@@ -234,11 +257,39 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         float sp = sin(pitch);
         transformed.yz = vec2(cp * transformed.y - sp * transformed.z, sp * transformed.y + cp * transformed.z);
     }
+    // Asleep (sleep.ts): near the camera only, on a rig too. The chest rises and falls at its species' pace (on the
+    // shared clock), and a curled sleeper's spine bends round toward its side, the head and tail coming together.
+    float arkSleepNear = 1.0 - smoothstep(18.0, 25.0, distance(arkOrigin, cameraPosition));
+    if (arkSleepNear > 0.0 && (arkSleep.w > 0.0 || abs(arkSleep.y) > 0.001)) {
+        float run = max(motionStill - motionRear, 0.001);
+        float mid = (motionStill + motionRear) * 0.5;
+        if (arkSleep.w > 0.0) {
+            float inhale = 0.5 + 0.5 * sin(arkClock * 6.28318 * arkSleep.w + arkInstance.x * 37.0);
+            float along = (transformed.z - mid) / (run * 0.5);
+            float chest = exp(-along * along * 2.2) * arkRest * arkSleepNear;
+            float centre = mix(motionBottom, motionTop, 0.45);
+            transformed.y = centre + (transformed.y - centre) * (1.0 + 0.045 * inhale * chest);
+            transformed.x *= 1.0 + 0.03 * inhale * chest;
+        }
+        float phi = arkSleep.y * arkSleepNear;
+        if (abs(phi) > 0.001) {
+            float bendR = run * 0.5 / phi;
+            float th = (transformed.z - mid) / bendR;
+            float r = bendR - transformed.x;
+            transformed.x = bendR - r * cos(th);
+            transformed.z = mid + r * sin(th);
+        }
+    }
 }
 #endif
 `;
 
 const DROOPING_PLANS = new Set(["mammal", "bird", "reptile", "frog", "turtle"]);
+/** How far the material lowers the head asleep (radians at rest 1), by the model's plan: a sleep posture's head allows for it. */
+export const ARK_DROOP = 0.32;
+export function droopOf(plan: string | null | undefined): number {
+    return DROOPING_PLANS.has(plan ?? "") ? ARK_DROOP : 0;
+}
 
 export type AnimalMaterialOptions = {
     map: Texture | null;
@@ -286,7 +337,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         arkDimTint: {value: new Color(SKY.horizon)},
         arkRim: ARK_RIM,
         // How far the head goes down asleep: animals with a head and neck to lower.
-        arkDroop: {value: DROOPING_PLANS.has(options.behaviour?.plan ?? "") ? 0.32 : 0},
+        arkDroop: {value: droopOf(options.behaviour?.plan)},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
     };
     if (options.rig) {
@@ -309,7 +360,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
-attribute vec3 arkInstance;
+attribute vec4 arkInstance;
 varying float vArkDim;
 ${MOTION_DECLARATIONS}
 ${options.rig ? RIG_DECLARATIONS : ""}
@@ -318,6 +369,7 @@ ${LOOK_VERTEX_DECLARATIONS}`)
 ${options.rig ? RIG_SKIN : ""}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 vArkDim = arkInstance.y;
+vec4 arkSleep = arkSleepOf(arkInstance.w);
 ${LOOK_VERTEX}
 ${IDLE}
 ${SHELL_VERTEX}`);

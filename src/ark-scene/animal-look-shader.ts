@@ -14,7 +14,10 @@
  *   pale, dry film on the legs and belly;
  * - the eyes (the talking model's two glossy eyes, from its build): a dome
  *   for the light and the sky to catch, and a small catchlight up and to the
- *   left, softer at night;
+ *   left, softer at night; asleep (`arkSleep.x`, `sleep.ts`) the lids close over
+ *   them: the eye takes the colour of the skin round it (the skin texture read
+ *   blurred, from a coarse mip), with a darker line where the lids meet, and
+ *   loses its gloss, dome and catchlight;
  * - fur shells (`ARK_SHELL`, `fur-shells.ts`): the same body pushed out along
  *   its normal in layers, cut to strands.
  *
@@ -60,6 +63,7 @@ varying float vArkHeight;
 varying vec3 vArkEyeL;
 varying vec3 vArkEyeR;
 varying float vArkScale;
+varying float vArkEyesShut;
 #endif
 #ifdef ARK_SHELL
 attribute vec2 arkShellLayer;
@@ -75,6 +79,7 @@ export const LOOK_VERTEX = `
 {
     vArkRest = position;
     vArkRestNormal = normal;
+    vArkEyesShut = arkSleep.x;
     vArkLookV = arkCoat;
     vArkHeight = clamp((position.y - motionBottom) / max(motionTop - motionBottom, 0.001), 0.0, 1.0);
     mat4 arkModelView = modelViewMatrix;
@@ -116,6 +121,7 @@ export const LOOK_FRAGMENT_DECLARATIONS = `
 uniform vec4 arkLookA;
 uniform vec4 arkLookB;
 uniform vec4 arkEye;
+uniform vec3 arkEye2;
 uniform float arkWetDark;
 uniform float arkWetTake;
 uniform vec3 arkDustColour;
@@ -127,6 +133,7 @@ varying float vArkHeight;
 varying vec3 vArkEyeL;
 varying vec3 vArkEyeR;
 varying float vArkScale;
+varying float vArkEyesShut;
 #ifdef ARK_SHELL
 varying float vArkShell;
 varying float vArkShellHere;
@@ -214,6 +221,10 @@ export const LOOK_ALBEDO = `
 float arkWet = clamp(vArkLookV.x, 0.0, 1.0) * arkWetTake;
 float arkDust = clamp(vArkLookV.y, 0.0, 1.0);
 float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
+// Asleep: the lids shut over the eye (the skin round it, read blurred from a coarse mip of its texture), a darker line
+// where they meet; the eye's gloss, dome and catchlight go with it.
+float arkLidAmount = arkEyeAmount * clamp(vArkEyesShut, 0.0, 1.0);
+arkEyeAmount *= 1.0 - clamp(vArkEyesShut, 0.0, 1.0);
 #ifdef ARK_SHELL
 {
     // Strands: a jittered point in each small cell of the rest pose; a layer keeps the round patch round it, thinner outward.
@@ -238,6 +249,17 @@ arkDustAmount *= 0.65 + 0.7 * arkLookNoise(vArkRest * 38.0);
 #endif
 diffuseColor.rgb = mix(diffuseColor.rgb, arkDustColour * (0.75 + 0.35 * dot(diffuseColor.rgb, vec3(0.333))), clamp(arkDustAmount * 0.42, 0.0, 0.42));
 diffuseColor.rgb *= 1.0 - 0.35 * arkEyeAmount;
+if (arkLidAmount > 0.001) {
+    vec3 arkLid = diffuseColor.rgb;
+#ifdef USE_MAP
+    arkLid = texture2D(map, vMapUv, 5.0).rgb * 0.9;
+#endif
+    // Where the lids meet: across the eye, level in the model (its rest pose), at the nearer eye's middle.
+    vec3 arkEyeAt = length(vArkRest - arkEye.xyz) < length(vArkRest - arkEye2) ? arkEye.xyz : arkEye2;
+    float arkSeam = 1.0 - smoothstep(0.08, 0.2, abs(vArkRest.y - arkEyeAt.y) / max(arkEye.w, 1e-5));
+    arkLid *= 1.0 - 0.45 * arkSeam;
+    diffuseColor.rgb = mix(diffuseColor.rgb, arkLid, arkLidAmount);
+}
 #endif
 `;
 

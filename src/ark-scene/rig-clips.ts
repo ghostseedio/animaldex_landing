@@ -57,6 +57,17 @@ export type RigClip = {
     mode?: string;
     /** enter_water, exit_water: the body ends (enter) or starts (exit) this many mesh heights below the bank. */
     depth_h?: number;
+    /**
+     * Rig v6 (the rigging lane's lying clips, contract section 8): `lie_down` ends "lying", `get_up` starts "lying",
+     * and the lying loops (`lie`, `sleep`, `wallow`, `roll`, `dust_bathe`, `bask`) have base "lying"; `sleep`'s
+     * posture ("lying", "sitting" for a bird, "one_leg" for a wader; a primate's hunched sleep has none); how far the
+     * body drops lying (mesh heights).
+     */
+    base?: string;
+    starts?: string;
+    ends?: string;
+    posture?: string;
+    drop_h?: number;
 };
 
 /** One bone of the look chain, in the rig's rest pose (glTF space: +y up, the animal faces +z, its left is +x). */
