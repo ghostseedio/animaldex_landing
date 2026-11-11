@@ -135,6 +135,8 @@ export class ArkLiveliness {
     private readonly young = new Map<string, Young>();
     /** Each walker's ground, sampled again only after it has moved a little (a full height sample is not free on a phone). */
     private readonly grounds = new Map<string, {x: number; z: number; y: number}>();
+    /** Parents' past positions (a young one's play reads where its parent was when its dash ended). */
+    private readonly pastPoses = new Map<string, {x: number; z: number} | null>();
     private parents = new Map<string, string>();
     private arkDayNow = 0;
     private reducedMotion = false;
@@ -311,6 +313,19 @@ export class ArkLiveliness {
         return shelter;
     }
 
+    /** Where a parent was at a past moment (trailed as the young trail it, sheltering included), for its young's play. */
+    private parentAt(parent: LiveAnimal, ms: number): {x: number; z: number} | null {
+        const key = `${parent.animal.id}@${ms}`;
+        const known = this.pastPoses.get(key);
+        if (known !== undefined) return known;
+        const raw = this.options.hooks.poseAt(parent, ms / 1000 - HEEL_LAG_SECONDS);
+        const at = raw ? this.sheltered(parent, raw, ms - HEEL_LAG_SECONDS * 1000) : null;
+        const out = at ? {x: at.x, z: at.z} : null;
+        this.pastPoses.set(key, out);
+        if (this.pastPoses.size > 128) this.pastPoses.delete(this.pastPoses.keys().next().value as string);
+        return out;
+    }
+
     /** The ground under a walker (at or above the sea's mean), sampled again once it is 25 cm from the last sample. */
     private groundOf(id: string, x: number, z: number): number {
         const known = this.grounds.get(id);
@@ -415,7 +430,7 @@ export class ArkLiveliness {
             const raw = this.options.hooks.poseAt(parent, epochSeconds - HEEL_LAG_SECONDS);
             if (raw) {
                 const lead = this.sheltered(parent, raw, nowMs - HEEL_LAG_SECONDS * 1000);
-                const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs);
+                const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs, (ms) => this.parentAt(parent, ms));
                 const ground = this.groundOf(entry.animal.id, heel.x, heel.z);
                 this.counts.young++;
                 out = Object.assign({}, pose, {
@@ -423,7 +438,7 @@ export class ArkLiveliness {
                     z: heel.z,
                     y: (age.carried ? Math.max(lead.y, ground) : ground) + heel.lift,
                     yaw: heel.yaw,
-                    moving: lead.moving || heel.playing,
+                    moving: lead.moving || heel.moving,
                     aloft: false,
                     doing: heel.playing ? "play" : lead.doing
                 });
