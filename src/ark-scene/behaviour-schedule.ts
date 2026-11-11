@@ -27,8 +27,9 @@
  */
 
 import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
-import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
-import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
+import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
+import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import type {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
@@ -287,6 +288,55 @@ const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
 export type ScheduleWorld = {sampler: ArkWorldSampler; nav: NavGrid};
 export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
     return {sampler, nav: navGrid(sampler)};
+}
+
+/**
+ * The shared schedule world (`worldSampler`'s places, then the walk grid) built a few milliseconds at a time between
+ * frames (`behaviour-build.ts`): the same world, to the bit, as `scheduleWorld(worldSampler())` all at once. `step`
+ * works for about its budget and returns the world once it is built; `spentMs` is the main-thread time it took.
+ */
+export class ScheduleWorldBuild {
+    private sampler: SlicedBuild<ArkWorldSampler> | null = worldSamplerBuild();
+    private nav: SlicedBuild<NavGrid> | null = null;
+    private world: ScheduleWorld | null = null;
+    spentMs = 0;
+    slices = 0;
+    /** The longest single slice (ms): the graphics lane's `allAttachPoints`, one task, sets it unless it was built already. */
+    longestMs = 0;
+
+    get done(): boolean {
+        return this.world !== null;
+    }
+
+    step(budgetMs: number): ScheduleWorld | null {
+        if (this.world) return this.world;
+        const started = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const left = () => budgetMs - ((typeof performance !== "undefined" ? performance.now() : Date.now()) - started);
+        this.slices++;
+        if (this.sampler) {
+            const sampler = this.sampler.step(budgetMs);
+            if (sampler) {
+                this.sampler = null;
+                this.nav = navGridBuild(sampler);
+            }
+        }
+        if (this.nav && (left() > 0 || this.nav.done)) {
+            const nav = this.nav.step(Math.max(left(), 0));
+            if (nav) this.world = {sampler: worldSampler(), nav};
+        }
+        const took = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
+        this.spentMs += took;
+        this.longestMs = Math.max(this.longestMs, took);
+        return this.world;
+    }
+
+    /** Everything left, now. */
+    run(): ScheduleWorld {
+        for (;;) {
+            const world = this.step(Infinity);
+            if (world) return world;
+        }
+    }
 }
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
@@ -771,7 +821,7 @@ function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
     map.set(slot, value);
     if (map.size > 32) {
         // Drop the slots furthest from this one.
-        const far = [...map.keys()].sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
+        const far = Array.from(map.keys()).sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
         for (const key of far) map.delete(key);
     }
     return value;

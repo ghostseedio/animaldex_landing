@@ -124,7 +124,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, scheduleWorld, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -693,15 +693,40 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
     const scheduleOn = options.behaviour !== false;
     let world: ScheduleWorld | null = null;
-    /** The places and the walk grid, from the graphics lane's scenery interface (built once, on the first animal). */
+    /**
+     * The places and the walk grid, from the graphics lane's scenery interface: built a few milliseconds a frame
+     * (`ScheduleWorldBuild`, the same world to the bit as all at once), not in one half-second stall at load. Until it
+     * is done the animals on the schedule wait unseen, and their wiring waits too; a recording builds it at once.
+     */
+    let worldBuild: ScheduleWorldBuild | null = scheduleOn ? new ScheduleWorldBuild() : null;
     let behaviourBuildMs = 0;
-    const scheduleWorldNow = () => {
-        if (!world) {
-            const started = performance.now();
-            world = scheduleWorld(worldSampler());
-            behaviourBuildMs = performance.now() - started;
+    let behaviourBuildSlices = 0;
+    let behaviourBuildLongestMs = 0;
+    let pendingWire: {list: Entry[]; arkDay: number | null} | null = null;
+    const BUILD_SLICE_MS = 6;
+    // A recording (the marketing recorder, the golden shots) builds it at once, so its first frames are as they were.
+    if (options.recording && worldBuild) {
+        world = worldBuild.run();
+        behaviourBuildMs = worldBuild.spentMs;
+        behaviourBuildLongestMs = worldBuild.longestMs;
+        worldBuild = null;
+    }
+    const scheduleWorldNow = (): ScheduleWorld => world!;
+    const stepWorldBuild = (budgetMs: number) => {
+        if (world || !worldBuild) return;
+        const built = worldBuild.step(budgetMs);
+        behaviourBuildMs = worldBuild.spentMs;
+        behaviourBuildSlices = worldBuild.slices;
+        behaviourBuildLongestMs = worldBuild.longestMs;
+        if (!built) return;
+        world = built;
+        worldBuild = null;
+        // The schedules that waited start now, each where it is at this moment (wired, then posed, as at load).
+        if (pendingWire) {
+            const {list, arkDay} = pendingWire;
+            pendingWire = null;
+            wireSchedules(list, arkDay);
         }
-        return world;
     };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
@@ -745,6 +770,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const wireSchedules = (list: Entry[], arkDay: number | null) => {
         if (!scheduleOn) return;
+        if (!world) {
+            pendingWire = {list, arkDay};
+            return;
+        }
         const onIt = list.filter((e) => e.sched && !e.visitor);
         const sizes = new Map<Entry, number>();
         for (const e of onIt) if (e.leader?.sched) sizes.set(e.leader, (sizes.get(e.leader) ?? 1) + 1);
@@ -790,6 +819,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
+        if (!world) return;
         const own = entry.sched!;
         const watched = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
         // Every frame close by (its near model, or the one looked at); twice a second as a far model; once a second as an icon.
@@ -837,7 +867,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const body = arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan);
         // It starts as it is now: a sleeping hawk on its roost, an awake one in the air (no drop from the sky on load).
         const sched = makeSched(animal, place, body.display);
-        if (sched && !reducedMotion) {
+        if (sched && !reducedMotion && world) {
             const trip = (sched.trip = tripAt(scheduleWorldNow(), sched.profile, sched.animal, worldMs() / 1000, scheduleHours, animal.activity));
             sched.pose = {...poseOnTrip(scheduleWorldNow(), trip, worldMs() / 1000), doing: trip.doing};
             sched.at = worldMs() / 1000;
@@ -1923,6 +1953,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
             if (entry.held || entry.act?.hidden) {
+                entry.middle = null;
+                continue;
+            }
+            // On the schedule, its world still building (the first moments): unseen until it can be where its schedule says.
+            if (!world && scheduled(entry)) {
                 entry.middle = null;
                 continue;
             }
@@ -3620,6 +3655,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const startedAt = performance.now();
         const now = startedAt / 1000;
         const elapsed = (startedAt - started) / 1000;
+        // The behaviour schedule's world, a slice a frame until it is built.
+        stepWorldBuild(BUILD_SLICE_MS);
         // Reduced motion: the water, the grass and the animals hold still (A18).
         if (!reducedMotion) {
             ARK_TIME.value = elapsed;
@@ -3836,7 +3873,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 tokens.ensure(slug);
             }
         },
-        loading: () => library.busy,
+        loading: () => library.busy || Boolean(worldBuild),
         hold: (id) => {
             const entry = findEntry(id);
             if (entry) entry.held = true;
@@ -3892,6 +3929,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             scheduled: scheduledCount,
             behaviourMs: Math.round(mean(behaviourTimes) * 1000) / 1000,
             behaviourBuildMs: Math.round(behaviourBuildMs),
+            behaviourBuildSlices,
+            behaviourBuildLongestMs: Math.round(behaviourBuildLongestMs),
             rigsLoaded: rigs.loadedCount,
             rigBytes: rigs.bytes
         }),
