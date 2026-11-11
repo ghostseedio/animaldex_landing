@@ -227,7 +227,7 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             const stand = world.kelpStand?.() ?? null;
             if (!stand) return fallback("no kelp stand");
             // Mid-water in the stand, looking across it, a little up toward the light.
-            return {place, anchor: `kelp stand, bed ${stand.y.toFixed(1)} m`, view: {target: {x: stand.x, y: Math.min(stand.y + 2.4, -1.2), z: stand.z}, distance: 5.5, polar: 1.5, azimuth: stand.azimuth}};
+            return {place, anchor: `kelp stand, bed ${stand.y.toFixed(1)} m`, view: {target: {x: stand.x, y: Math.min(stand.y + 2.4, -1.2), z: stand.z}, distance: 5.5, polar: 1.6, azimuth: stand.azimuth}};
         }
 
         case "reef_underwater": {

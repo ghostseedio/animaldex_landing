@@ -71,18 +71,18 @@ export const REEF_VARIANTS: Record<ReefKind, number> = {
 /** Real reef colours (albedo before the water takes the red out). */
 const COLOURS: Record<ReefKind, string[]> = {
     // Staghorn and bushy Acropora/Pocillopora: tan and brown, olive; the tips are baked paler (or blue) in the shape.
-    branching: ["#9c7a4f", "#8a6a45", "#7d7a4a", "#a5845a", "#86704f"],
-    table: ["#a08a5c", "#8f8a62", "#7f8f6a", "#977a58"],
-    brain: ["#a8914f", "#8f9a5a", "#b0835a", "#9a8a4e", "#7f8a55"],
-    massive: ["#b39a6a", "#9a8556", "#a58a64", "#8b6f6f"],
+    branching: ["#b39060", "#a5845a", "#a08c5c", "#bb9a6c", "#94785a"],
+    table: ["#a8845a", "#9c875c", "#919066", "#a57e5e"],
+    brain: ["#b8994f", "#9fa35a", "#c48e58", "#a8925a", "#86a06a"],
+    massive: ["#c6a874", "#b49466", "#bc946a", "#a07f86"],
     // Gorgonians and sea whips: deep purple, red, orange-yellow.
     fan: ["#7e2f56", "#a63d2c", "#c08f2f", "#8a3a6e", "#b4532e"],
     anemone: ["#c9b48a", "#9fb05a", "#c98a8a", "#b8c08a"],
     barrel_sponge: ["#8a4f3a", "#9a6b4a", "#7d4a3d"],
-    tube_sponge: ["#6f4a96", "#c99a3a", "#c06a3a", "#8a5aa0"],
+    tube_sponge: ["#6c5288", "#c99a3a", "#c06a3a", "#86609a"],
     ball_sponge: ["#c98a3a", "#b0a040", "#c46a30"],
-    kelp: ["#7a6a2a", "#6b5d24", "#6a6428", "#80702e"],
-    seagrass: ["#4f7a3a", "#5a8240", "#668a42", "#577236"]
+    kelp: ["#8f7632", "#83692c", "#977d38", "#7c6c2e"],
+    seagrass: ["#46683a", "#4e6f3c", "#57763e", "#4a6236"]
 };
 
 type Mix = Array<[ReefKind, number]>;
@@ -111,8 +111,8 @@ function pick(mix: Mix, roll: number): ReefKind {
 const SIZE: Record<ReefKind, [number, number]> = {
     branching: [0.6, 1.35],
     table: [0.55, 1.3],
-    brain: [0.45, 1.25],
-    massive: [0.6, 1.6],
+    brain: [0.4, 1.05],
+    massive: [0.45, 1.15],
     fan: [0.6, 1.25],
     anemone: [0.6, 1.1],
     barrel_sponge: [0.55, 1.15],
@@ -307,7 +307,7 @@ export function reefGrowth(): ReefItem[] {
                 } else if (bed.substrate === "sand") {
                     // The lagoon's seagrass: on sand between the reef and the shore, 1.2–3.5 m, in meadows with sand between.
                     if (bed.depth < 1.2 || bed.depth > 3.5 || bed.inland < -18 || bed.reef < 0.1 || bed.reef > 0.6) continue;
-                    if (meadow(x, z) < 0.5 || roll > 0.82) continue;
+                    if (meadow(x, z, true) < 0.46 || roll > 0.85) continue;
                     put("seagrass", x, z, bed, local);
                 }
             }
@@ -328,7 +328,7 @@ export function reefGrowth(): ReefItem[] {
             put("anemone", x, z, bed, random, 0.75 + random() * 0.45);
         }
         const bed = seaBedAt(marks.cleaning.x, marks.cleaning.z);
-        if (bed.depth >= CORAL_MIN_DEPTH) put("massive", marks.cleaning.x, marks.cleaning.z, bed, random, 2.3);
+        if (bed.depth >= CORAL_MIN_DEPTH) put("massive", marks.cleaning.x, marks.cleaning.z, bed, random, 1.6);
     }
 
     // 3. Seagrass off the beach: patchy meadows on its sand, 1.4–3.5 m, never in the swash.
@@ -338,7 +338,7 @@ export function reefGrowth(): ReefItem[] {
         const theta0 = Math.atan2(beach.z, beach.x);
         for (let theta = theta0 - 0.42; theta < theta0 + 0.42; theta += 0.0075) {
             const coast = coastRadius(theta);
-            for (let out = 2; out < 22; out += 0.62) {
+            for (let out = 2.5; out < 12; out += 0.62) {
                 const jitterT = (random() - 0.5) * 0.0075;
                 const jitterR = (random() - 0.5) * 0.62;
                 const roll = random();
@@ -347,7 +347,7 @@ export function reefGrowth(): ReefItem[] {
                 const z = Math.sin(theta + jitterT) * r;
                 if (roll > 0.78 || meadow(x, z) < 0.56) continue;
                 const ground = sampleGround(x, z);
-                if (ground.height > -1.4 || ground.height < -3.5 || (ground.weights.seashore ?? 0) < 0.4) continue;
+                if (ground.height > -1.8 || ground.height < -3.5 || (ground.weights.seashore ?? 0) < 0.4) continue;
                 const bed = bedFrom(x, z, ground, bedSlope(x, z));
                 if (bed.substrate !== "sand") continue;
                 put("seagrass", x, z, bed, seeded(Math.floor(roll * 1e9)));
@@ -358,12 +358,12 @@ export function reefGrowth(): ReefItem[] {
     // 4. Kelp forests off the cliff coasts: on rock, 2.2–9 m, in stands with gaps; a few anemones and sponges at their feet.
     {
         const random = seeded(31_2026);
-        for (let theta = -Math.PI; theta < Math.PI; theta += 0.012) {
+        for (let theta = -Math.PI; theta < Math.PI; theta += 0.022) {
             if (coastCliff(theta) < 0.3) continue;
             const coast = coastRadius(theta);
-            for (let out = 3; out < 24; out += 1.25) {
-                const jitterT = (random() - 0.5) * 0.012;
-                const jitterR = (random() - 0.5) * 1.25;
+            for (let out = 3; out < 24; out += 2) {
+                const jitterT = (random() - 0.5) * 0.022;
+                const jitterR = (random() - 0.5) * 2;
                 const roll = random();
                 const r = coast + out + jitterR;
                 const x = Math.cos(theta + jitterT) * r;
@@ -376,12 +376,14 @@ export function reefGrowth(): ReefItem[] {
                 const bed = bedFrom(x, z, ground, 0);
                 if (bed.substrate !== "rock") continue;
                 const local = seeded(Math.floor(roll * 1e9) + 17);
-                if (roll < 0.7 * smoothstep(0.38, 0.6, stand)) {
+                if (roll < 0.62 * smoothstep(0.38, 0.6, stand)) {
                     // Tall enough to reach about 0.4–1.2 m under the surface: the variant by depth, then a small stretch.
                     const reach = bed.depth - 0.4 - local() * 0.8;
                     const variant = reach < 3.6 ? 0 : reach < 6 ? 1 : 2;
                     const own = KELP_HEIGHTS[variant];
-                    items.push({kind: "kelp", variant, x, y: bed.height, z, scale: Math.min(Math.max(reach / own, 0.7), 1.12), rotation: local() * Math.PI * 2, tilt: 0, color: colour("kelp", local()), depth: bed.depth, substrate: bed.substrate});
+                    // Turned so its blades trail along the coast (the current runs along it): every plant the same way.
+                    const along = -(Math.atan2(z, x) + Math.PI / 2) + (local() - 0.5) * 0.5;
+                    items.push({kind: "kelp", variant, x, y: bed.height, z, scale: Math.min(Math.max(reach / own, 0.7), 1.12), rotation: along, tilt: 0, color: colour("kelp", local()), depth: bed.depth, substrate: bed.substrate});
                 } else if (roll > 0.94) {
                     put(roll > 0.975 ? "anemone" : "ball_sponge", x, z, bed, local);
                 }
@@ -409,32 +411,32 @@ export function kelpStandSpot(): {x: number; y: number; z: number; azimuth: numb
 /** The kelp shapes' own heights (m) by variant: reef-render.ts builds them this tall. */
 export const KELP_HEIGHTS = [3, 5, 7.5];
 
-/** Seagrass meadows: patches with sand between (0…1). */
-function meadow(x: number, z: number): number {
-    return fbm(x * 0.09 - 11, z * 0.09 + 5);
+/** Seagrass meadows: patches with sand between (0…1); the lagoon's field is its own. */
+function meadow(x: number, z: number, lagoon = false): number {
+    return lagoon ? fbm(x * 0.11 + 23, z * 0.11 - 41) : fbm(x * 0.09 - 11, z * 0.09 + 5);
 }
 
 /**
- * A close look at the reef for the golden shots: the densest knot of corals in 2.2–4.5 m of water near the reef's
- * middle, and a bearing to look at it from (from the open water side, so the reef rises in front).
+ * A close look at the reef for the golden shots: of the coral heads reef fish hover over (`fish-schools.ts` takes the
+ * first five landmark heads deeper than 1.7 m), the one with the most corals round it, and a bearing from the open
+ * water side, so the reef rises in front and its fish are in the picture.
  */
 export function reefCloseupSpot(): {x: number; y: number; z: number; azimuth: number} {
     const reef = ZONE_SITES.coral_reef;
-    const corals = reefGrowth().filter((item) => item.kind !== "seagrass" && item.kind !== "kelp" && Math.hypot(item.x - reef.x, item.z - reef.z) < 16);
+    const corals = reefGrowth().filter((item) => item.kind !== "seagrass" && item.kind !== "kelp");
+    const heads = reefLandmarks().heads.filter((head) => head.top < -1.7).slice(0, 5);
     let best = {x: reef.x, z: reef.z, y: sampleGround(reef.x, reef.z).height, score: -Infinity};
-    for (const item of corals) {
-        if (item.depth < 2.2 || item.depth > 4.5) continue;
+    for (const head of heads) {
         const kinds = new Set<ReefKind>();
         let around = 0;
         for (const other of corals) {
-            const d = Math.hypot(other.x - item.x, other.z - item.z);
-            if (d < 2.2) {
+            if (Math.hypot(other.x - head.x, other.z - head.z) < 3) {
                 around += other.scale;
                 kinds.add(other.kind);
             }
         }
-        const score = around + kinds.size * 1.5 - Math.hypot(item.x - reef.x, item.z - reef.z) * 0.05;
-        if (score > best.score) best = {x: item.x, z: item.z, y: item.y, score};
+        const score = around + kinds.size * 1.5;
+        if (score > best.score) best = {x: head.x, z: head.z, y: head.y, score};
     }
     return {x: best.x, y: best.y, z: best.z, azimuth: Math.atan2(best.x, best.z)};
 }

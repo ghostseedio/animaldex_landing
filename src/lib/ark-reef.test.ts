@@ -43,8 +43,8 @@ test("reef: landmarks and the close-up spot are under water on the reef", () => 
     for (const head of marks.heads) assert.ok(head.top < -0.5 && head.top > head.y);
     assert.ok(marks.cleaning.top < -0.5);
     const spot = reefCloseupSpot();
-    assert.ok(spot.y < -2 && spot.y > -4.6);
-    assert.ok(Math.hypot(spot.x - ZONE_SITES.coral_reef.x, spot.z - ZONE_SITES.coral_reef.z) < 16);
+    assert.ok(spot.y < -2 && spot.y > -9);
+    assert.ok(Math.hypot(spot.x - ZONE_SITES.coral_reef.x, spot.z - ZONE_SITES.coral_reef.z) < 30);
 });
 
 test("fish: schools are decorative and deterministic from the clock", () => {

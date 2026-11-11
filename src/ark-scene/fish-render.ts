@@ -161,7 +161,7 @@ uniform float envSeaLevel;`)
 {
     // The light reaching it under water: absorbed with depth, red first (as on the reef and the sea floor).
     float depthBelow = max(envSeaLevel - vFishWorld.y, 0.0);
-    diffuseColor.rgb *= exp(-depthBelow * vec3(0.36, 0.1, 0.075)) * mix(1.0, 0.86, smoothstep(0.0, 2.0, depthBelow));
+    diffuseColor.rgb *= exp(-depthBelow * vec3(0.2, 0.065, 0.05)) * mix(1.0, 0.9, smoothstep(0.0, 2.0, depthBelow));
 }`);
     };
     return material;

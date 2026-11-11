@@ -147,7 +147,7 @@ function standTo(g: BufferGeometry, height: number): BufferGeometry {
 function branching(variant: number, near: boolean): BufferGeometry {
     const random = seeded(9101 + variant);
     const parts: BufferGeometry[] = [];
-    const tip = variant === 0 ? rgb("#e6dcc0") : rgb("#8d8fd0");
+    const tip = variant === 0 ? rgb("#efe4c8") : rgb("#a6a2d2");
     const sides = near ? 4 : 3;
     const depthMax = variant === 0 ? (near ? 3 : 1) : near ? 2 : 1;
     const grow = (from: Vector3, dir: Vector3, length: number, radius: number, depth: number) => {
@@ -156,7 +156,7 @@ function branching(variant: number, near: boolean): BufferGeometry {
         const r1 = end ? radius * 0.55 : radius * 0.72;
         parts.push(part(tube(from, to, radius, r1, sides), {
             shade: (p) => 0.62 + 0.5 * Math.min(p.y / 0.8, 1),
-            own: (p) => (end && p.distanceTo(to) < length * 0.45 ? [...tip, 0.85 * (1 - p.distanceTo(to) / (length * 0.45))] as [number, number, number, number] : null),
+            own: (p) => (end && p.distanceTo(to) < length * 0.45 ? [...tip, (variant === 0 ? 0.85 : 0.7) * (1 - p.distanceTo(to) / (length * 0.45))] as [number, number, number, number] : null),
             sway: () => 0,
             pattern: 2
         }));
@@ -165,7 +165,7 @@ function branching(variant: number, near: boolean): BufferGeometry {
             cap.translate(0, r1 * 0.8, 0);
             cap.applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir));
             cap.translate(to.x, to.y, to.z);
-            parts.push(part(cap, {shade: () => 1.05, own: () => [...tip, 0.9], sway: () => 0, pattern: 0}));
+            parts.push(part(cap, {shade: () => 1.05, own: () => [...tip, variant === 0 ? 0.9 : 0.75], sway: () => 0, pattern: 0}));
             return;
         }
         const kids = variant === 0 ? (random() < 0.8 ? 2 : 3) : 2 + Math.floor(random() * 2);
@@ -185,7 +185,7 @@ function branching(variant: number, near: boolean): BufferGeometry {
         const lean = variant === 0 ? 0.25 + random() * 0.35 : 0.35 + random() * 0.4;
         const dir = new Vector3(Math.cos(angle) * Math.sin(lean), Math.cos(lean), Math.sin(angle) * Math.sin(lean)).normalize();
         const start = new Vector3(Math.cos(angle) * 0.05, 0, Math.sin(angle) * 0.05);
-        grow(start, dir, variant === 0 ? 0.26 : 0.2, variant === 0 ? 0.035 : 0.045, 0);
+        grow(start, dir, variant === 0 ? 0.26 : 0.2, variant === 0 ? 0.05 : 0.05, 0);
     }
     return standTo(merge(parts), REEF_HEIGHT.branching);
 }
@@ -234,10 +234,10 @@ function table(variant: number, near: boolean): BufferGeometry {
             g.computeVertexNormals();
             return g;
         };
-        const edge = rgb("#d8cfae");
-        parts.push(part(make(top), {shade: (p) => 0.9 + 0.15 * Math.min(Math.hypot(p.x, p.z) / radius, 1), own: (p) => {
+        const edge = rgb("#cdbf98");
+        parts.push(part(make(top), {shade: (p) => 0.72 + 0.12 * Math.min(Math.hypot(p.x, p.z) / radius, 1), own: (p) => {
             const k = Math.hypot(p.x, p.z) / radius;
-            return k > 0.82 ? [...edge, (k - 0.82) * 2.6] : null;
+            return k > 0.9 ? [...edge, (k - 0.9) * 4] : null;
         }, sway: () => 0, pattern: 6}));
         parts.push(part(make(bottom), {shade: () => 0.5, sway: () => 0, pattern: 2}));
         parts.push(part(make(rim), {shade: () => 0.95, own: () => [...edge, 0.45], sway: () => 0, pattern: 0}));
@@ -485,9 +485,9 @@ function kelp(variant: number, near: boolean): BufferGeometry {
     for (let s = 0; s < stipes; s++) {
         const angle = (s / stipes) * Math.PI * 2 + random() * 0.7;
         const reach = height * (0.82 + 0.18 * random());
-        const drift = 0.25 + random() * 0.4;
-        // The stipe's line: up, leaning out a little, with a gentle S.
-        const line = (t: number) => new Vector3(Math.cos(angle) * (0.06 + drift * t + 0.12 * Math.sin(t * 5 + s)), reach * t, Math.sin(angle) * (0.06 + drift * t + 0.12 * Math.cos(t * 4 + s)));
+        const drift = 0.5 + random() * 0.6;
+        // The stipe's line: up, bowed down the current (+x) the higher it is, with a gentle S.
+        const line = (t: number) => new Vector3(Math.cos(angle) * 0.08 + drift * t * t + 0.1 * Math.sin(t * 5 + s), reach * t, Math.sin(angle) * 0.08 + 0.12 * Math.cos(t * 4 + s) * t);
         const sway = (p: Vector3) => 0.55 * Math.min(p.y / height, 1) ** 1.4;
         if (!near) {
             const points: number[] = [];
@@ -513,17 +513,19 @@ function kelp(variant: number, near: boolean): BufferGeometry {
             parts.push(part(tube(line(k / segs), line((k + 1) / segs), 0.014, 0.012, 3), {shade: () => 0.6, own: () => [...stipeColour, 1], sway, pattern: 8}));
         }
         // Blades every ~0.3 m, alternating sides, each wavy and reaching up and out.
-        const blades = Math.floor(reach / 0.4);
+        const blades = Math.floor(reach / 0.45);
         for (let b = 1; b < blades; b++) {
             const t = b / blades;
             const at = line(t);
-            const turn = angle + (b % 2 ? 1 : -1) * (0.9 + random() * 0.6) + random() * 0.3;
-            const out = new Vector3(Math.cos(turn), 0.9 + random() * 0.5, Math.sin(turn)).normalize();
+            // Trailing down the current (the shape's +x; reef.ts turns every plant the same way along the coast), a
+            // little up or down, fanned out to either side.
+            const turn = (random() - 0.5) * 1.1 + (b % 2 ? 0.25 : -0.25);
+            const out = new Vector3(Math.cos(turn), -0.15 + random() * 0.45, Math.sin(turn)).normalize();
             const side = new Vector3(-Math.sin(turn), 0, Math.cos(turn));
-            const length = (0.32 + random() * 0.2) * (t > 0.85 ? 0.75 : 1);
-            const width = 0.055 + random() * 0.025;
+            const length = (0.55 + random() * 0.35) * (t > 0.85 ? 0.7 : 1);
+            const width = 0.045 + random() * 0.025;
             const points: number[] = [];
-            const steps = 3;
+            const steps = 4;
             for (let k = 0; k < steps; k++) {
                 const u0 = k / steps;
                 const u1 = (k + 1) / steps;
@@ -540,7 +542,8 @@ function kelp(variant: number, near: boolean): BufferGeometry {
             const blade = new BufferGeometry();
             blade.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
             blade.computeVertexNormals();
-            parts.push(part(blade, {shade: () => 0.85 + 0.25 * random(), sway: (p) => sway(p) + 0.03, pattern: 7}));
+            const tone = 0.9 + 0.25 * random();
+            parts.push(part(blade, {shade: () => tone, sway: (p) => sway(p) + 0.04, pattern: 7}));
             // The float (pneumatocyst) at its foot.
             const float = new SphereGeometry(0.022, 4, 2);
             float.translate(at.x + out.x * 0.02, at.y + 0.01, at.z + out.z * 0.02);
@@ -554,15 +557,16 @@ function kelp(variant: number, near: boolean): BufferGeometry {
 function seagrass(variant: number, near: boolean): BufferGeometry {
     const random = seeded(9901 + variant);
     const points: number[] = [];
-    const blades = near ? (variant === 0 ? 18 : 26) : variant === 0 ? 6 : 8;
+    const blades = near ? (variant === 0 ? 20 : 28) : 10;
     const steps = near ? 3 : 1;
     for (let b = 0; b < blades; b++) {
         const x = (random() - 0.5) * 0.8;
         const z = (random() - 0.5) * 0.8;
-        const height = (variant === 0 ? 0.24 + random() * 0.22 : 0.12 + random() * 0.12) * (near ? 1 : 1.15);
-        const width = (variant === 0 ? 0.011 : 0.006) * (near ? 1 : 2.4);
+        // Far: a low mat (wide blades laid over), so from above a meadow reads as a dark patch, not sticks.
+        const height = near ? (variant === 0 ? 0.24 + random() * 0.22 : 0.12 + random() * 0.12) : 0.12 + random() * 0.08;
+        const width = near ? (variant === 0 ? 0.011 : 0.006) : 0.06;
         const turn = random() * Math.PI;
-        const lean = (random() - 0.5) * 0.5;
+        const lean = near ? (random() - 0.5) * 0.6 + 0.25 : 1.4 + random() * 0.8;
         const sx = Math.cos(turn) * width;
         const sz = Math.sin(turn) * width;
         const lx = Math.cos(turn + Math.PI / 2) * lean;
@@ -591,8 +595,8 @@ function seagrass(variant: number, near: boolean): BufferGeometry {
         n.normalize();
         normal.setXYZ(i, n.x, n.y, n.z);
     }
-    const tipColour = rgb("#9a9a5a");
-    return merge([part(g, {shade: (p) => 0.55 + 0.75 * Math.min(p.y / 0.4, 1), own: (p) => (p.y > 0.3 ? [...tipColour, Math.min((p.y - 0.3) * 4, 0.5)] : null), sway: (p) => 0.09 * Math.min(p.y / 0.4, 1) ** 1.6, pattern: 0})]);
+    const tipColour = rgb("#8a8650");
+    return merge([part(g, {shade: (p) => 0.5 + 0.5 * Math.min(p.y / 0.4, 1), own: (p) => (p.y > 0.32 ? [...tipColour, Math.min((p.y - 0.32) * 4, 0.4)] : null), sway: (p) => 0.09 * Math.min(p.y / 0.4, 1) ** 1.6, pattern: 0})]);
 }
 
 const BUILDERS: Record<ReefKind, (variant: number, near: boolean) => BufferGeometry> = {
@@ -694,17 +698,22 @@ float reefCaustic(vec2 p, float t) {
 {
     vec3 c = vReefColour;
     vec3 p = vReefLocal;
+    // Surface detail is a real size (polyps, meanders), so it is laid on in world space, three ways by the normal.
+    vec3 w = vReefWorld;
+    vec3 nk = pow(abs(normalize(vReefNormal)), vec3(4.0));
+    nk /= (nk.x + nk.y + nk.z);
     float near = 1.0 - smoothstep(6.0, 22.0, distance(cameraPosition, vReefWorld));
     int kind = int(vReefPattern + 0.5);
     if (kind == 1) {
-        // Brain coral: meandering ridges (the contours of a noise field), dark valleys between.
-        float v = arkFbm(p.xz * 3.2 + vec2(p.y * 2.1, -p.y * 1.7)) * 7.0;
+        // Brain coral: meandering ridges about 4 cm apart (the contours of a noise field), dark valleys between.
+        float v = (arkFbm(w.zy * 3.0) * nk.x + arkFbm(w.xz * 3.0) * nk.y + arkFbm(w.xy * 3.0) * nk.z) * 9.0;
         float ridge = abs(fract(v) - 0.5) * 2.0;
-        c *= mix(1.0, mix(0.5, 1.12, smoothstep(0.15, 0.55, ridge)), 0.35 + 0.65 * near);
+        c *= mix(1.0, mix(0.55, 1.1, smoothstep(0.2, 0.6, ridge)), 0.3 + 0.7 * near);
     } else if (kind == 2) {
-        // Polyps: fine pits, and broad patches of a second tone.
-        float pits = smoothstep(0.55, 0.8, arkNoise(p.xz * 46.0 + p.y * 31.0));
-        c *= (1.0 - 0.28 * pits * near) * (0.88 + 0.24 * arkNoise(p.xz * 4.0 + p.y * 3.0));
+        // Polyps: fine pits (about 1 cm), and broad patches of a second tone.
+        float pits = smoothstep(0.55, 0.8, arkNoise(w.zy * 60.0) * nk.x + arkNoise(w.xz * 60.0) * nk.y + arkNoise(w.xy * 60.0) * nk.z);
+        float patch = arkNoise(w.zy * 3.0) * nk.x + arkNoise(w.xz * 3.0) * nk.y + arkNoise(w.xy * 3.0) * nk.z;
+        c *= (1.0 - 0.25 * pits * near) * (0.88 + 0.24 * patch);
     } else if (kind == 3) {
         // Sea fan: an open lattice of branching veins.
         vec2 q = p.xy * 34.0 + vec2(arkNoise(p.xy * 9.0), arkNoise(p.xy * 9.0 + 5.0)) * 3.0;
@@ -713,25 +722,27 @@ float reefCaustic(vec2 p, float t) {
         c *= 0.82 + 0.25 * veins;
     } else if (kind == 5) {
         // Sponges: dark pores.
-        float pore = smoothstep(0.78, 0.9, arkNoise(p.xz * 24.0 + p.y * 19.0));
-        c *= (1.0 - 0.45 * pore * near) * (0.9 + 0.2 * arkNoise(p.xz * 6.0 + p.y * 5.0));
+        float pore = smoothstep(0.76, 0.9, arkNoise(w.zy * 32.0) * nk.x + arkNoise(w.xz * 32.0) * nk.y + arkNoise(w.xy * 32.0) * nk.z);
+        c *= (1.0 - 0.45 * pore * near) * (0.9 + 0.2 * arkNoise(w.xz * 6.0 + w.y * 5.0));
     } else if (kind == 6) {
         // Table plate: fine radial branchlets on top.
         float a = atan(p.z, p.x);
         float r = length(p.xz);
         c *= 0.86 + 0.22 * smoothstep(0.3, 0.8, arkNoise(vec2(a * 30.0, r * 26.0))) * near;
     } else if (kind == 7) {
-        // Kelp blades: a darker midrib and a lighter margin.
+        // Kelp blades: mottled, and lit through when the light is behind them (they are thin and golden).
         c *= 0.9 + 0.2 * arkNoise(p.xz * 30.0 + p.y * 8.0);
+        c *= 1.25;
     }
     // Under water the light that reaches it is absorbed with depth, red first (as on the sea floor).
     float depthBelow = envSeaLevel - vReefWorld.y;
     if (depthBelow > 0.0) {
-        c *= exp(-depthBelow * vec3(0.36, 0.1, 0.075)) * mix(1.0, 0.86, smoothstep(0.0, 2.0, depthBelow));
+        // Gentler than the sand's (the camera is close to what it looks at; the haze does the rest).
+        c *= exp(-depthBelow * vec3(0.2, 0.065, 0.05)) * mix(1.0, 0.9, smoothstep(0.0, 2.0, depthBelow));
         // The sun's caustics on what faces up.
         float up = smoothstep(0.1, 0.8, normalize(vReefNormal).y);
         float under = smoothstep(0.05, 0.6, depthBelow) * (1.0 - smoothstep(4.0, 11.0, depthBelow));
-        c += vec3(0.6, 0.9, 0.85) * min(reefCaustic(vReefWorld.xz, arkTime), 1.5) * under * up * arkCaustics * 0.1 * exp(-depthBelow * 0.15);
+        c += vec3(0.6, 0.9, 0.85) * min(reefCaustic(vReefWorld.xz, arkTime), 1.5) * under * up * arkCaustics * 0.06 * exp(-depthBelow * 0.15);
     }
     diffuseColor.rgb = c;
 }`);
