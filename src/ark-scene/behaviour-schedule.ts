@@ -26,7 +26,7 @@
  * slot. Nothing here decides anything in the Ark (the server does that).
  */
 
-import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -397,7 +397,8 @@ export function floats(profile: ArkBehaviourProfile): boolean {
 /** How far it can go in one slot at its own pace (ground, water; flyers go four times as fast). */
 export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
     const flyer = profile.move === "fly";
-    return bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
+    // (On foot at its walk's pace; in the air and the water at its own: the walk clip governs only walking.)
+    return (flyer || profile.move === "swim" ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * Math.max(animal.length, 0.05) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
 }
 
 /**
@@ -565,7 +566,8 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
                 add("bite", 3 + random() * 5);
                 add("chew", 1.5 + random() * 2.5);
                 if (random() < 0.28) add("scan", 2 + random() * 2.5, {turn: (random() - 0.5) * 1.6});
-                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.35 + random() * 0.45, dz: (random() - 0.5) * 0.2, turn: (random() - 0.5) * 0.45});
+                // Small steps, mostly forward (a grazer moves on along the grass, it doesn't wheel about).
+                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.2 + random() * 0.25, dz: (random() - 0.5) * 0.08, turn: (random() - 0.5) * 0.2});
             }
             break;
         case "forage":
@@ -573,7 +575,7 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             for (let n = 0; n < 16; n++) {
                 add("peck", 1.5 + random() * 3);
                 if (random() < 0.3) add("scan", 1.5 + random() * 2, {turn: (random() - 0.5) * 1.4});
-                if (random() < 0.6) add("step", 1, {dx: 0.4 + random() * 0.8, dz: (random() - 0.5) * 0.3, turn: (random() - 0.5) * 0.6});
+                if (random() < 0.6) add("step", 1, {dx: 0.3 + random() * 0.4, dz: (random() - 0.5) * 0.12, turn: (random() - 0.5) * 0.35});
             }
             break;
         case "drink":
@@ -597,7 +599,8 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             break;
         case "play":
             // Dashes and dodges, not spins (its turns were up to 70 degrees a second: young went round in circles).
-            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.9, dz: (random() - 0.5) * 0.7, turn: (random() - 0.5) * 1.2});
+            // Dashes, and now and then a dodge (not a spin).
+            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.6, dz: (random() - 0.5) * 0.2, turn: n % 3 === 2 ? (random() - 0.5) * 1 : (random() - 0.5) * 0.25});
             break;
         case "stalk":
             for (let n = 0; n < 6; n++) {
@@ -824,8 +827,13 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         if (beat.beat !== "scan") yaw += beat.turn ?? 0;
         if ((beat.dx || beat.dz) && onGround) {
             const l = Math.max(animal.length, 0.05);
-            const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l;
-            const nz = z + (Math.cos(yaw) * (beat.dx ?? 0) - Math.sin(yaw) * (beat.dz ?? 0)) * l;
+            // Never further than its walk's pace (PACE_CAP over the clip's own) covers in the step's time: a slow walker
+            // takes small steps rather than sliding its feet.
+            const stepTime = beat.beat === "play" ? 0.8 : beat.beat === "stalk" ? 2.5 : 1.2;
+            const most = (bodyLengthsPerSecond(profile) * stepTime) / Math.max(Math.hypot(beat.dx ?? 0, beat.dz ?? 0), 1e-6);
+            const k = Math.min(most, 1);
+            const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l * k;
+            const nz = z + (Math.cos(yaw) * (beat.dx ?? 0) - Math.sin(yaw) * (beat.dz ?? 0)) * l * k;
             // Only onto ground it can walk, and never out of its range (a stalker stops at the edge).
             const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2);
             if (world.nav.walkable(nx, nz, maxSlopeOf(animal)) && within) {
@@ -982,6 +990,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
 
     const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
     const speed = pace * (0.8 + 0.4 * random());
+    // In the air and the water at its own pace (the walk clip's cap is for its feet).
+    const freeSpeed = freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * (speed / pace);
     const legs: Leg[] = [];
     const ground = (a: Spot, b: Spot, beat: ArkBeat = "walk") => {
         const path = world.nav.path(a, b, "walk", 0.5, 900, maxSlopeOf(animal));
@@ -1010,7 +1020,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         const last = path[path.length - 1];
         if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01) path.push({x: b.x, z: b.z});
         const length = pathLength(path) + Math.abs(b.y - a.y);
-        legs.push({mode: "water", from: a, to: b, path, length, seconds: length / (speed * 1.4), beat: "swim"});
+        legs.push({mode: "water", from: a, to: b, path, length, seconds: length / (freeSpeed * 1.4), beat: "swim"});
     };
     /** The water's edge to cross at: the drinking and shore points nearest a spot. */
     const edgeNear = (p: Spot): Spot | null => {
@@ -1033,11 +1043,13 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                     const offshore = waterSpot(world, profile, animal, out.x, out.z, () => 0.3);
                     if (toWet) {
                         ground(from, edge);
-                        legs.push({mode: "enter", from: edge, to: offshore, path: [edge, offshore], length: Math.hypot(offshore.x - edge.x, offshore.z - edge.z), seconds: 2.2, beat: "enter_water"});
+                        const slide = Math.hypot(offshore.x - edge.x, offshore.z - edge.z);
+                        legs.push({mode: "enter", from: edge, to: offshore, path: [edge, offshore], length: slide, seconds: Math.max(2.2, slide / pace), beat: "enter_water"});
                         water(offshore, to);
                     } else {
                         water(from, offshore);
-                        legs.push({mode: "exit", from: offshore, to: edge, path: [offshore, edge], length: Math.hypot(offshore.x - edge.x, offshore.z - edge.z), seconds: 2.4, beat: "exit_water"});
+                        const climb = Math.hypot(offshore.x - edge.x, offshore.z - edge.z);
+                        legs.push({mode: "exit", from: offshore, to: edge, path: [offshore, edge], length: climb, seconds: Math.max(2.4, climb / pace), beat: "exit_water"});
                         ground(edge, to);
                         after = "shake";
                     }
@@ -1051,7 +1063,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         }
         case "air": {
             const flat = Math.hypot(to.x - from.x, to.z - from.z);
-            const air = speed * 4;
+            const air = freeSpeed * 4;
             if (now.doing === "soar") {
                 // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
                 // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
@@ -1088,9 +1100,11 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     }
     // Fitted into the slot: a long way is a run; never more than four fifths of the slot on the way.
     let travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
-    const running = mode === "ground" && travel > SLOT_SECONDS * 0.45;
+    // A long way is a run, at its run's own pace at most (one with no run clip walks it: slowed, never sped up).
+    const runs = runFactor(profile);
+    const running = mode === "ground" && travel > SLOT_SECONDS * 0.45 && runs > 1.3;
     if (running) for (const leg of legs) if (leg.mode === "ground") {
-        leg.seconds /= 2.2;
+        leg.seconds /= runs;
         leg.beat = "run";
     }
     travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
@@ -1314,11 +1328,26 @@ export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: numbe
     const z = before.z + (beat.z - before.z) * u;
     const onGround = Math.abs(to.y - Math.max(world.sampler.heightAt(to.x, to.z), 0)) < 0.05 && !(to.y < 0);
     const y = onGround && (x !== to.x || z !== to.z) ? Math.max(world.sampler.heightAt(x, z), 0) : to.y;
-    let dyaw = beat.yaw - before.yaw;
-    while (dyaw > Math.PI) dyaw -= Math.PI * 2;
-    while (dyaw < -Math.PI) dyaw += Math.PI * 2;
-    const moving = u < 1 && (beat.x !== before.x || beat.z !== before.z);
-    return {x, y: i === stay.length - 1 && u >= 1 ? trip.finish.y : y, z, yaw: before.yaw + dyaw * Math.min(u * 1.5, 1), moving, aloft: false, ...up, beat: beat.beat};
+    const wrapTurn = (a: number) => {
+        let v = a;
+        while (v > Math.PI) v -= Math.PI * 2;
+        while (v < -Math.PI) v += Math.PI * 2;
+        return v;
+    };
+    const stepped = beat.x !== before.x || beat.z !== before.z;
+    const moving = u < 1 && stepped;
+    let yaw: number;
+    if (stepped) {
+        // A step faces where it goes (it turned into it over its first quarter), and only once it has stopped does it
+        // turn to the heading it settles to (over 0.6 s): never walking sideways or backwards.
+        const way = Math.atan2(beat.x - before.x, beat.z - before.z);
+        const into = before.yaw + wrapTurn(way - before.yaw) * Math.min(u * 4, 1);
+        // (Done before the next beat begins, so nothing snaps there.)
+        const room = (stay[i + 1]?.at ?? Infinity) - beat.at - stepSeconds;
+        const after = Math.min(Math.max((since - beat.at - stepSeconds) / Math.min(Math.max(room, 0.15), 0.6), 0), 1);
+        yaw = u < 1 ? into : way + wrapTurn(beat.yaw - way) * after;
+    } else yaw = before.yaw + wrapTurn(beat.yaw - before.yaw) * Math.min(u * 1.5, 1);
+    return {x, y: i === stay.length - 1 && u >= 1 ? trip.finish.y : y, z, yaw, moving, aloft: false, ...up, beat: beat.beat};
 }
 
 /** In the air for the whole of a behaviour, not just its trip (none now: flights are goals, they land). */

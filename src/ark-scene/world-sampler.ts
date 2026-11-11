@@ -20,6 +20,7 @@ import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoin
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {floorObstacles} from "@/ark-scene/floor-assets";
+import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -226,9 +227,12 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             obstacles.push([item.x, item.z, 0.35 * item.scale]);
         } else if (item.kind === "rock") {
             const s = surface(item.x, item.z);
-            add({tag: "rock_top", x: item.x, y: item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
+            // The drawn rock (graphics batch 5: the asset lane's rocks, `rock-assets.ts`): its top is where a small
+            // animal basks or perches, and its footprint, with 0.9 m to spare as for a log, keeps walkers out of it.
+            const solid = drawnRock(item);
+            add({tag: "rock_top", x: item.x, y: solid ? solid.top : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
             if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
-            obstacles.push([item.x, item.z, 0.85 * item.scale]);
+            obstacles.push([item.x, item.z, solid ? solid.radius + 0.9 : 0.85 * item.scale]);
         } else if (item.kind === "reed") {
             add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
         } else if (item.kind === "shrub" || item.kind === "cactus") {
@@ -377,6 +381,15 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         };
     };
     return {tasks, finish};
+}
+
+/** A decor rock as drawn (its asset's top and the radius round its footprint), or null without the rock set. */
+export function drawnRock(item: Pick<DecorItem, "kind" | "x" | "y" | "z" | "scale" | "rotation">): {top: number; radius: number} | null {
+    const placed = rockAssetFor(item);
+    if (!placed) return null;
+    const b = rockAssetInfo(placed.id).bounds;
+    const half = Math.max(b.max[0] - b.min[0], b.max[2] - b.min[2]) / 2;
+    return {top: placed.y + b.max[1] * placed.scale, radius: half * placed.scale};
 }
 
 /** A building's footprint in its plot's frame (local x0..x1, z0..z1); a fence run (world). */

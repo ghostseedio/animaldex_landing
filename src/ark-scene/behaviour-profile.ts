@@ -50,6 +50,9 @@ export type ArkBehaviourProfile = {
     dominance: number | null;
     /** Its rig's fastest passing ground clip at the clip's own pace (body lengths a second); null without a rig. */
     gait: number | null;
+    /** Its walk's and its run's own pace (body lengths a second: the clip's ground_speed over its duty); null without. */
+    walkPace: number | null;
+    runPace: number | null;
     /** Some field is a body-plan default (data missing). */
     defaulted: boolean;
     /** Not in the table: the body plan's defaults. */
@@ -61,7 +64,7 @@ const ROWS = (table as {species: Record<string, string>}).species;
 const cache = new Map<string, ArkBehaviourProfile>();
 
 export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfile {
-    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait] = row.split("|");
+    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait, walkPace, runPace] = row.split("|");
     const weights: Partial<Record<ArkBehaviour, number>> = {};
     for (let i = 0; i + 1 < behaviours.length; i += 2) {
         const name = ARK_BEHAVIOURS[parseInt(behaviours[i], 36)];
@@ -88,6 +91,8 @@ export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfi
         speed: number(speed),
         dominance: number(dominance),
         gait: number(gait),
+        walkPace: number(walkPace),
+        runPace: number(runPace),
         defaulted: flags.includes("d"),
         fallback: false
     };
@@ -114,7 +119,7 @@ export function behaviourProfile(slug: string, plan?: string | null): ArkBehavio
     const row = ROWS[slug];
     const profile: ArkBehaviourProfile = row
         ? decodeBehaviourRow(slug, row)
-        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, size: null, speed: null, dominance: null, gait: null, defaulted: true, fallback: true};
+        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, size: null, speed: null, dominance: null, gait: null, walkPace: null, runPace: null, defaulted: true, fallback: true};
     cache.set(slug, profile);
     return profile;
 }
@@ -125,6 +130,8 @@ export function hasBehaviourProfile(slug: string): boolean {
 
 /** How much faster than its clip's own pace its feet may be played (the rig player's cap) before they slide. */
 export const GAIT_CADENCE = 2.5;
+/** How much faster than its walk's own pace (`walkPace`, ground_speed over duty) the schedule ever moves it. */
+export const PACE_CAP = 1.5;
 
 /**
  * Ground speed in body lengths a second (visual only): the speed stat's gentle curve (docs/ark-next.md stats §2),
@@ -134,5 +141,22 @@ export const GAIT_CADENCE = 2.5;
 export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
+    // Its walk's own pace (corrected for v1's understated ground_speed) times PACE_CAP: a slow walker goes slowly,
+    // its legs are never sped up (the rig lane measured 2.1 times the clip's pace, the ibex 5.4).
+    if (profile.walkPace) return Math.max(Math.min(stat, profile.walkPace * PACE_CAP), 0.04);
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
+}
+
+/** Its pace in the air or the water (body lengths a second): the walk clip governs only walking. */
+export function freeBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
+    const speed = profile.speed ?? 40;
+    const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
+    return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
+}
+
+/** How many times its walking pace it may run (its run's own pace times PACE_CAP over its walking pace; 1: it never runs). */
+export function runFactor(profile: ArkBehaviourProfile): number {
+    if (!profile.walkPace) return 2.2;
+    if (!profile.runPace) return 1;
+    return Math.min(Math.max((profile.runPace * PACE_CAP) / bodyLengthsPerSecond(profile), 1), 2.2);
 }

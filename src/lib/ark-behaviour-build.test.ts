@@ -4,7 +4,7 @@ import test from "node:test";
 import {NavGrid, navGridBuild, type NavCells} from "@/ark-scene/behaviour-nav";
 import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
-import {ATTACH_TAGS, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {ATTACH_TAGS, drawnRock, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {homePlots} from "@/ark-scene/map/hamlet";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {paddockRect, paddockSegments, picketRuns, plotFrame} from "@/ark-scene/props/home-layout";
@@ -84,7 +84,9 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
             if (s.waterDepth <= 0 && i % 2 === 0) add({tag: "shade", x: sx, y: s.height, z: sz, ...UP, yaw: item.rotation, size: [0.05, 4], zone: s.zone});
         } else if (item.kind === "rock") {
             const s = surface(item.x, item.z);
-            add({tag: "rock_top", x: item.x, y: item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
+            // (The drawn asset rock's top since graphics batch 5, here as there.)
+            const solid = drawnRock(item);
+            add({tag: "rock_top", x: item.x, y: solid ? solid.top : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
             if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
         } else if (item.kind === "reed") {
             add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
@@ -305,4 +307,26 @@ test("fallen logs: walkers go round them, and their tops are a place for small a
     const middles = logs.filter((_, k) => k % 3 === 1);
     const blockedCells = middles.filter((log) => !grid.walkable(log.x, log.z)).length;
     assert.equal(blockedCells, middles.length, `only ${blockedCells} of ${middles.length} log middles off the grid`);
+});
+
+test("the drawn rocks: walkers go round them, a small animal stands on top, never inside", () => {
+    const rocks = [...worldDecor(), ...forestFill()].filter((item) => item.kind === "rock");
+    const grid = new NavGrid(allAtOnce);
+    let checked = 0;
+    for (const rock of rocks) {
+        const solid = drawnRock(rock);
+        if (!solid) continue;
+        checked++;
+        // Its middle and a point halfway out are blocked; the grid's cell under its middle is never walked through.
+        assert.ok(allAtOnce.blocked(rock.x, rock.z, 0.2), `a rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)} is not an obstacle`);
+        assert.ok(allAtOnce.blocked(rock.x + solid.radius * 0.5, rock.z, 0.2));
+        if (allAtOnce.heightAt(rock.x, rock.z) > 0.05) assert.ok(!grid.walkable(rock.x, rock.z, 9), `the walk grid crosses a rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)}`);
+    }
+    assert.ok(checked > 10, `rocks ${checked}`);
+    // Its top: on the drawn rock, never below its surface.
+    for (const top of allAtOnce.attachPoints("rock_top")) {
+        const rock = rocks.find((r) => Math.abs(r.x - top.x) < 1e-9 && Math.abs(r.z - top.z) < 1e-9);
+        const solid = rock ? drawnRock(rock) : null;
+        if (solid) assert.ok(Math.abs(top.y - solid.top) < 1e-9, "a rock's top is its drawn top");
+    }
 });
