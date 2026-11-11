@@ -37,6 +37,7 @@ import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_S
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
+import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
 
 /** How rough the sea is: 1 in the usual breeze, more in wind and storms (set with the environment). */
 export const WATER_WIND = {value: 1};
@@ -349,11 +350,17 @@ vec3 arkGroundDetailN = vec3(0.0, 0.0, 1.0);
 // Batch 4: a world-space nudge to the shading normal (the ledges of the rock beds), and how snowy the point is.
 vec3 arkBend = vec3(0.0);
 float arkSnowy = 0.0;
+// How much bare soil a field shows between its plants (the soil texture's share there).
+float arkFieldSoil = 0.0;
+${fieldsGlsl()}
 float arkWet = 0.0;`)
             .replace("#include <color_fragment>", `#include <color_fragment>
 {
     vec3 world = vArkWorld;
     vec2 p = world.xz;
+    // Screen derivatives of the ground position, taken here in uniform control flow (the fields' rows use them).
+    vec2 arkDpdx = dFdx(p);
+    vec2 arkDpdy = dFdy(p);
     float near = 1.0 - smoothstep(40.0, 160.0, distance(cameraPosition, world));
     float sandW = vArkLayers.x;
     float mudW = vArkLayers.y;
@@ -417,19 +424,73 @@ float arkWet = 0.0;`)
     ground = mix(ground, mudTone * (0.85 + 0.25 * arkNoise(p * 1.7)), mudW * wetPatch * 0.7);
     arkWet = max(arkWet, mudW * wetPatch);
 
-    // Home: fields a few metres across, turned off the grid, tilled rows, hedgerows between.
+    // Home: fields a few metres across, turned off the grid, hedgerows between. Batch 4: each grows its crop
+    // (fields.ts: pasture, bare tilled soil, sprouts, cabbages, cereal or maize) in rows that run one way or the
+    // other, with a headland at the edge; the close-up plants (near-detail.ts) stand on the same rows.
     if (farmW > 0.01) {
         vec2 f = vec2(dot(p, vec2(0.94, 0.34)) / 9.0, dot(p, vec2(-0.34, 0.94)) / 6.5);
         f.x += floor(f.y) * 0.37;
-        vec2 cell = floor(f);
+        float rowAt;
+        float alongAt;
+        float edgeAt;
+        vec2 cell;
+        vec2 rowAxis;
+        float spacing;
+        int crop = arkField(p, rowAt, alongAt, edgeAt, cell, rowAxis, spacing);
         int pick = int(floor(arkHash(cell * 1.31 + 7.0) * ${FIELD_TONES.length}.0));
         vec3 field = fieldTones[0];
         for (int k = 1; k < ${FIELD_TONES.length}; k++) { if (k == pick) field = fieldTones[k]; }
-        bool tilled = arkHash(cell + 3.7) > 0.72;
-        if (tilled) field = soilTone * (0.85 + 0.25 * (0.5 + 0.5 * sin(f.x * 6.2831 * 9.0)));
-        // Crop rows across each field, and the patchiness of real growth.
-        field *= 1.0 + 0.1 * sin(f.x * 6.2831 * 11.0) * near;
-        field *= 0.88 + 0.2 * arkFbm(p * 0.7) + 0.08 * (arkNoise(p * 5.0) - 0.5) * near;
+        if (crop > 0) {
+            // 1 on a row's middle, 0 between; its contrast fades where rows are under a few pixels apart.
+            float inRow = 0.5 + 0.5 * cos(6.2831853 * rowAt);
+            float rowWidth = (abs(dot(arkDpdx, rowAxis)) + abs(dot(arkDpdy, rowAxis))) / spacing;
+            float rowsClear = 1.0 - smoothstep(0.22, 0.55, rowWidth);
+            float growth = 0.85 + 0.3 * arkFbm(p * 0.45 + cell);
+            vec3 soil = soilTone * (0.86 + 0.14 * arkNoise(p * 1.7));
+            vec3 plant = vec3(0.0);
+            float cover = 0.0;
+            float coverMean = 0.0;
+            if (crop == 1) {
+                // Ploughed: ridges and furrows.
+                plant = soil;
+                soil *= 0.72;
+                cover = inRow;
+                coverMean = 0.5;
+            } else if (crop == 2) {
+                plant = vec3(0.36, 0.55, 0.2) * growth;
+                cover = smoothstep(0.72, 0.95, inRow) * smoothstep(0.25, 0.6, arkNoise(vec2(alongAt * 4.0, rowAt)));
+                coverMean = 0.18;
+            } else if (crop == 3) {
+                // Cabbages: blue-green heads along each row.
+                plant = vec3(0.36, 0.5, 0.36) * growth;
+                float heads = smoothstep(0.25, 0.75, 0.5 + 0.5 * cos(6.2831853 * alongAt / 0.45));
+                cover = smoothstep(0.45, 0.85, inRow) * heads;
+                coverMean = 0.4;
+            } else if (crop == 4) {
+                // Cereal, ripe or still green by field, rippling as the wind runs over it.
+                plant = mix(vec3(0.62, 0.6, 0.3), vec3(0.8, 0.68, 0.36), step(0.5, arkHash(cell + 11.0))) * growth;
+                soil = plant * 0.62;
+                cover = 0.55 + 0.45 * inRow;
+                coverMean = 0.8;
+                plant *= 1.0 + 0.1 * envWind * sin(dot(p, vec2(0.55, 0.83)) * 0.7 - arkTime * 1.7 + 2.0 * arkNoise(p * 0.15));
+            } else {
+                // Maize: dark green rows over the soil.
+                plant = vec3(0.26, 0.44, 0.16) * growth;
+                cover = smoothstep(0.35, 0.8, inRow);
+                coverMean = 0.55;
+            }
+            vec3 rows = mix(soil, plant, cover);
+            vec3 blended = mix(soil, plant, coverMean);
+            vec3 cropped = mix(blended, rows, rowsClear);
+            // The headland: a grassy strip round the edge.
+            float headland = smoothstep(${(HEADLAND - 0.25).toFixed(2)}, ${(HEADLAND + 0.05).toFixed(2)}, edgeAt);
+            field = mix(field * 0.9, cropped, headland);
+            arkFieldSoil = headland * (1.0 - mix(coverMean, cover, rowsClear));
+            // Ridges and furrows as shape: the normal tips across the rows.
+            arkBend += vec3(rowAxis.x, 0.0, rowAxis.y) * (-sin(6.2831853 * rowAt)) * 0.22 * rowsClear * headland * (crop == 4 ? 0.3 : 1.0);
+        }
+        // The patchiness of real growth.
+        field *= 0.9 + 0.16 * arkFbm(p * 0.7) + 0.08 * (arkNoise(p * 5.0) - 0.5) * near;
         float farm = smoothstep(0.3, 0.98, farmW + (arkNoise(p * 0.11 + 3.0) - 0.5) * 0.4);
         vec2 edge = abs(fract(f) - 0.5);
         float hedge = smoothstep(0.468, 0.492, max(edge.x, edge.y)) * smoothstep(0.45, 0.95, farm);
@@ -457,7 +518,7 @@ float arkWet = 0.0;`)
         // And across the face: the ribs stand out, the gullies sink.
         vec3 acrossFace = normalize(cross(vec3(0.0, 1.0, 0.0), nw0) + vec3(1e-4));
         float ribSlope = arkFbm(vec2((faceAt.x + 0.6) * 0.16, faceAt.y * 0.035 + 5.0)) - arkFbm(vec2((faceAt.x - 0.6) * 0.16, faceAt.y * 0.035 + 5.0));
-        arkBend = upOnFace * (0.6 * ledge - 0.35 * underhang) * steep * beds + acrossFace * ribSlope * 6.0 * steep * massif;
+        arkBend += upOnFace * (0.6 * ledge - 0.35 * underhang) * steep * beds + acrossFace * ribSlope * 6.0 * steep * massif;
     }
 
     // Scree (batch 4): grey stone gathered at the foot of the faces, lighter than the rock it fell from.
@@ -515,7 +576,8 @@ float arkWet = 0.0;`)
         ARK_LAYER(3.0, wSand, 0.25)
         ARK_LAYER(4.0, wWet, 0.25)
         if (wFarm > 0.01) {
-            col = mix(col, arkGroundTex(8.0, p, 0.3) / groundMeans[8], wFarm * 0.55);
+            // The tilled-soil texture where soil shows between the plants; little of it under pasture and cereal.
+            col = mix(col, arkGroundTex(8.0, p, 0.3) / groundMeans[8], wFarm * mix(0.2, 0.8, arkFieldSoil));
         }
         if (wRock > 0.01) {
             // Two scales (batch 4): the 5 m detail only up close (from afar its repeats read as a fingerprint), and
