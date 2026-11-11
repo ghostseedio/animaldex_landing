@@ -459,12 +459,12 @@ function* mountain(): Generator<void, {outcrops: PropInstance[]; dusted: PropIns
         const x = item.x + Math.cos(lee - Math.PI) * item.scale * 1.2;
         const z = item.z + Math.sin(lee - Math.PI) * item.scale * 1.2;
         if (zone === "polar" && Math.hypot(x - cave.x, z - cave.z) < 9) continue;
+        // On the mountain only where the terrain draws snow (snow.ts, at a snowy day's cover): never a white lump on bare rock.
+        if (zone !== "polar") {
+            const at = surfaceAt(x, z);
+            if (snowCover(at.height, 1 - at.normal.y, 0, 0.6).mean < 0.5) continue;
+        }
         (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.4 + item.scale * 0.35});
-    }
-    for (const outcrop of outcrops) {
-        const ground = sampleGround(outcrop.x, outcrop.z);
-        if (ground.height < 16) continue;
-        drifts.push({x: outcrop.x + 1.2, y: ground.height - 0.12, z: outcrop.z + 1.0, turn: 0.4, scale: outcrop.scale * 0.8});
     }
     const polar = ZONE_SITES.polar;
     for (let k = 0; k < 26; k++) {
@@ -545,7 +545,10 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     group.name = "props:areas";
     const warm = propMaterial();
     const cold = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5});
-    const dustedRock = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5, dust: 0.55});
+    // The outcrops below the snow keep the ground's look whatever the weather's snow (the terrain draws no snow there):
+    // no lying snow on them; those above OUTCROP_DUST a light dusting, as the terrain's patchy snow round them.
+    const bareRock = propMaterial({flatShading: true, texture: 5, textureScale: 0.5});
+    const dustedRock = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5, dust: 0.3});
     const snow = propMaterial({roughness: 0.75, texture: 7, textureScale: 0.35, textureStrength: 0.6});
     const foliage = propMaterial({doubleSide: true});
     const water = new MeshStandardMaterial({color: new Color("#4d5f66"), roughness: 0.04, metalness: 0.85, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -2});
@@ -609,7 +612,7 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     const m = mountainStep.value;
     // The outcrops near only: from afar the terrain shader draws the mountain's rock beds itself (a far box here was the
     // owner's "dark blocks"); those above OUTCROP_DUST with snow on their tops.
-    addBatch(new LodBatch("strata", m.outcrops, shapes.strataOutcrop(2.5, 2.2), null, cold, {cap: 40, reach: 2.2, shadow: true}));
+    addBatch(new LodBatch("strata", m.outcrops, shapes.strataOutcrop(2.5, 2.2), null, bareRock, {cap: 40, reach: 2.2, shadow: true}));
     addBatch(new LodBatch("strata-dusted", m.dusted, shapes.strataOutcrop(2.5, 2.2), null, dustedRock, {cap: 20, reach: 2.2, shadow: true}));
     addBatch(new LodBatch("scree", m.scree, shapes.screeStone(0.22), null, cold, {cap: 2600, reach: 0.9}));
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
@@ -654,7 +657,7 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
             for (const batch of batches) batch.dispose();
             for (const piece of pieces) piece.dispose();
             buildings.dispose();
-            for (const material of [warm, cold, dustedRock, snow, foliage, water, puddleMaterial, mudMaterial]) material.dispose();
+            for (const material of [warm, cold, bareRock, dustedRock, snow, foliage, water, puddleMaterial, mudMaterial]) material.dispose();
             void GARDEN_POND;
         }
     };
