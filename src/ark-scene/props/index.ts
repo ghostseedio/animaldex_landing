@@ -29,7 +29,8 @@ import {ARK_ENV, ARK_SUN} from "@/ark-scene/glsl";
 import type {ArkSceneModule, ArkSceneModuleContext} from "@/ark-scene/scene-modules";
 import type {QualityTier} from "@/ark-scene/post";
 import type {ArkSnapshot} from "@/ark-scene/types";
-import {weatherAt} from "@/lib/ark-clock";
+import {ARK_DAY_MS, arkDayAt, weatherAt} from "@/lib/ark-clock";
+import {nestStage, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
 import {buildAreas} from "@/ark-scene/props/areas";
 import {buildCave} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
@@ -53,7 +54,31 @@ export type PropsStats = {enabled: boolean; tier: QualityTier; drawn: Record<str
 /** Where the props' things are: the homes' and the areas' marks, the cave's mouth and its way out. */
 export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number}};
 
-export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModule & {stats: () => PropsStats; conditions: () => PropsConditions; marks: () => PropsMarks} {
+/**
+ * The Ark day now (fractional, as the server counts it): the snapshot's
+ * `ark_day` carried forward from its `as_of` at the Ark's pace, else from
+ * the voyage's start; pinned in development (`__arkPropsArkDay`, the golden
+ * shots) or by `setArkDay`. The same for every viewer.
+ */
+export function arkDayNow(snapshot: Pick<ArkSnapshot, "ark_day" | "as_of" | "voyage">, nowMs: number, pinned: number | null = null): number | null {
+    if (pinned !== null) return pinned;
+    const dev = (globalThis as {__arkPropsArkDay?: number}).__arkPropsArkDay;
+    if (typeof dev === "number" && Number.isFinite(dev)) return dev;
+    const asOf = Date.parse(snapshot.as_of ?? "");
+    if (typeof snapshot.ark_day === "number" && Number.isFinite(snapshot.ark_day) && Number.isFinite(asOf)) return snapshot.ark_day + (nowMs - asOf) / ARK_DAY_MS;
+    const start = Date.parse(snapshot.voyage.started_at ?? "");
+    return Number.isFinite(start) ? arkDayAt(nowMs, start) : null;
+}
+
+export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModule & {
+    stats: () => PropsStats;
+    conditions: () => PropsConditions;
+    marks: () => PropsMarks;
+    /** The nests drawn now (for the recipes lane: where to carry twigs to, and each one's stage). */
+    nestSites: () => Array<NestSiteInfo & {stage: number}>;
+    /** Pin the Ark day the nests are built to (null follows the clock). */
+    setArkDay: (day: number | null) => void;
+} {
     const root = new Group();
     root.name = "props";
     context.scene.add(root);
@@ -79,6 +104,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     let homesKey = "";
     let snapshot = context.snapshot;
     let moved = true;
+    let arkDayPin: number | null = null;
     const rebuildHomes = () => {
         const presence = propsPresence(snapshot, context.planOf);
         // The sitters' and the den-keepers' places too: the scene places everyone after the module is built.
@@ -103,6 +129,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         if (webs) root.add(webs.lines);
         effects.setGlints(webs?.beads ?? new Float32Array(0), homes.slimeGlints);
         cave.setRoost(homes.roost);
+        homes.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin));
         moved = true;
     };
     rebuildHomes();
@@ -180,6 +207,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 cave.setIcicles(conditions.cold > 0.55 ? conditions.cold : 0);
                 // A slime trail glints when wet and in a low, raking light.
                 homes?.setGlint(Math.min(1, 0.25 + conditions.wetness * 0.8 + conditions.dawn * 0.4));
+                // The nests grow with the Ark's days (nest-growth.ts): refill when one has visibly grown.
+                if (homes?.setNestStages(arkDayNow(snapshot, nowMs, arkDayPin))) moved = true;
             }
             effects.setPixelRatio(context.renderer.getPixelRatio());
             sun.copy(ARK_SUN.value as Vector3);
@@ -211,6 +240,14 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             return null;
         },
         conditions: () => conditions,
+        nestSites: () => {
+            const t = arkDayNow(snapshot, Date.now(), arkDayPin);
+            return (homes?.nestSites ?? []).map((site) => ({...site, stage: t === null ? 1 : nestStage(site.speciesId, site.siteId, t)}));
+        },
+        setArkDay: (day: number | null) => {
+            arkDayPin = day;
+            if (homes?.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin))) moved = true;
+        },
         marks: (): PropsMarks => ({spots: {...areas.marks, ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing}}),
         dispose: () => {
             context.scene.remove(root);

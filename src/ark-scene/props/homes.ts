@@ -22,7 +22,12 @@ import {COTTAGE} from "@/ark-scene/micro-decor";
 import type {Placement} from "@/ark-scene/placement";
 import {worldDecor} from "@/ark-scene/decor";
 import {LodBatch, merge, paint, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
-import type {NestPlan, NestStyle, Presence} from "@/ark-scene/props/presence";
+import type {Presence} from "@/ark-scene/props/presence";
+import {eggLength, eggLook, nestRadius, type NestForm, type NestProfile, type NestSite} from "@/ark-scene/props/nest-kinds";
+import {buildOf, nestStage, registerNestSites, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
+import {nestFarGeometry, nestGeometry} from "@/ark-scene/props/nest-shapes";
+import {nestSpots} from "@/ark-scene/props/nest-sites";
+import {displayLength} from "@/ark-scene/sizes";
 import {groundAt, namedPlace, propRandom, propsPoints, type PropsPoint} from "@/ark-scene/props/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {microCorner} from "@/ark-scene/micro-decor";
@@ -40,8 +45,12 @@ export type Homes = {
     slimeGlints: Float32Array;
     /** Whether the cave's bats' roost shows. */
     roost: boolean;
-    /** Where the nests are (for the golden shots and the map lane): style, position. */
-    nests: Array<{key: string; style: NestStyle; x: number; y: number; z: number; sitter: string | null}>;
+    /** Where the nests are (for the golden shots and the other lanes): form, site, position, size. */
+    nests: Array<{key: string; speciesId: string; siteId: string; form: NestForm; site: NestSite; x: number; y: number; z: number; radius: number; sitter: string | null}>;
+    /** Every nest site drawn, as the recipes lane reads them (`nest-growth.ts` nestSites). */
+    nestSites: NestSiteInfo[];
+    /** Set every nest's build stage for Ark day `t` (`nest-growth.ts` nestStage); true when one changed. */
+    setNestStages: (t: number | null) => boolean;
     /** The materials that answer the weather, to dispose. */
     dispose: () => void;
     /** Where things are (for the golden shots and the other lanes): an ant mound, the bees' hollow, a web… */
@@ -50,24 +59,11 @@ export type Homes = {
     setGlint: (glint: number) => void;
 };
 
-const NEST_RADIUS: Record<NestStyle, number> = {tree: 0.2, cliff: 0.34, ground: 0.3, eaves: 0.17, hole: 0.15, barn: 0.24, none: 0};
-
 const zoneCorner = (zone: ArkZone) => {
     const site = ZONE_SITES[zone];
     if (site.kind === "sea") return {x: ZONE_SITES.seashore.x, z: ZONE_SITES.seashore.z};
     return microCorner(zone);
 };
-
-/** The barn's gable opening (the barn owl's): the barn decor item turned into the world. */
-function barnGable(): {x: number; y: number; z: number; turn: number} | null {
-    const barn = worldDecor().find((item) => item.kind === "barn");
-    if (!barn) return null;
-    const c = Math.cos(barn.rotation);
-    const s = Math.sin(barn.rotation);
-    // Local (x 2.6 along the long side, z 0): the gable end at +x, under the ridge.
-    const lx = 3.24;
-    return {x: barn.x + lx * c, y: barn.y + 3.9, z: barn.z - lx * s, turn: barn.rotation + Math.PI / 2};
-}
 
 /** A point on the ground near (x, z), out of the water: walks toward `toward` until dry. */
 function dryGround(x: number, z: number, toward: {x: number; z: number}): {x: number; y: number; z: number} {
@@ -79,56 +75,6 @@ function dryGround(x: number, z: number, toward: {x: number; z: number}): {x: nu
         if (y > 0.12) return {x: px, y, z: pz};
     }
     return {x: toward.x, y: groundAt(toward.x, toward.z), z: toward.z};
-}
-
-/** Where a nest goes: under its sitter when the sitter is where the style nests, else the nearest attach point of its kind. */
-function nestSpot(plan: NestPlan, placeOf: (id: string) => Placement | null, used: Set<string>): {x: number; y: number; z: number; turn: number; up?: Vector3} | null {
-    const sitter = plan.sitter ? placeOf(plan.sitter) : null;
-    const corner = zoneCorner(plan.zone);
-    const take = (points: PropsPoint[]) => {
-        const point = points.find((p) => !used.has(p.host) && !used.has(p.id));
-        if (!point) return null;
-        used.add(point.host === "ground" ? point.id : point.host);
-        return point;
-    };
-    switch (plan.style) {
-        case "ground": {
-            if (sitter && !sitter.water && !sitter.micro && !sitter.canopy) return {x: sitter.x, y: sitter.ground, z: sitter.z, turn: sitter.yaw};
-            const from = sitter ?? {x: corner.x, z: corner.z};
-            const site = ZONE_SITES[plan.zone];
-            const dry = dryGround(from.x, from.z, {x: site.x + (corner.x - site.x) * 1.4, z: site.z + (corner.z - site.z) * 1.4});
-            return {...dry, turn: 0};
-        }
-        case "tree": {
-            if (sitter?.canopy) return {x: sitter.x, y: sitter.ground - 0.12, z: sitter.z, turn: sitter.yaw};
-            const point = take(propsPoints("fork", {x: sitter?.x ?? corner.x, z: sitter?.z ?? corner.z, radius: 60}, plan.zone)) ?? take(propsPoints("fork", {x: corner.x, z: corner.z, radius: 120}));
-            return point ? {x: point.x, y: point.y, z: point.z, turn: point.yaw} : null;
-        }
-        case "hole": {
-            const point = take(propsPoints("hollow", {x: sitter?.x ?? corner.x, z: sitter?.z ?? corner.z, radius: 70}, plan.zone)) ?? take(propsPoints("hollow", {x: corner.x, z: corner.z, radius: 140}));
-            return point ? {x: point.x, y: point.y, z: point.z, turn: Math.atan2(point.normal.x, point.normal.z)} : null;
-        }
-        case "cliff": {
-            const zone = plan.zone === "farm_garden" ? "seashore" : plan.zone;
-            const point = take(propsPoints("ledge", {x: sitter?.x ?? corner.x, z: sitter?.z ?? corner.z, radius: 80}, zone)) ?? take(propsPoints("ledge", {x: corner.x, z: corner.z, radius: 160}));
-            return point ? {x: point.x, y: point.y, z: point.z, turn: point.yaw} : null;
-        }
-        case "eaves": {
-            const point = take(propsPoints("house_eave", {x: COTTAGE.x, z: COTTAGE.z, radius: 10}));
-            if (!point) return null;
-            // Tucked in at the top of the wall, its back to it.
-            const out = Math.atan2(point.normal.x, point.normal.z);
-            const wallOut = Math.hypot(point.x - COTTAGE.x, 0) > COTTAGE.width / 2 - 0.1 ? Math.sign(point.x - COTTAGE.x) * Math.PI / 2 : point.z > COTTAGE.z ? 0 : Math.PI;
-            void out;
-            return {x: point.x, y: point.y - 0.22, z: point.z, turn: wallOut};
-        }
-        case "barn": {
-            const gable = barnGable();
-            return gable ? {x: gable.x, y: gable.y, z: gable.z, turn: gable.turn} : null;
-        }
-        default:
-            return null;
-    }
 }
 
 /** A trail drawn on a surface: a strip `width` wide along `points` (each with its out-normal), a hair above it. */
@@ -192,7 +138,12 @@ function specks(points: Array<{p: Vector3; n: Vector3}>, every: number, random: 
     return out;
 }
 
-export function buildHomes(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier): Homes {
+/** Where eggs lie in each form's cup (its floor, at radius 1), and how far apart. Forms not listed hide theirs. */
+const EGG_FLOOR: Partial<Record<NestForm, number>> = {cup: 0.31, platform: 0.34, eyrie: 0.65, scrape: 0.03, down_bowl: 0.17, floating: 0.13, mound: 0.44, pebbles: 0.05};
+/** How far a nest's detail is drawn, against the tier's near radius. */
+const NEST_REACH: Partial<Record<NestForm, number>> = {eyrie: 1.8, megapode: 1.6, mound: 1.3, platform: 1.3, pendant: 1.0, cup: 0.8, mud_cup: 0.8, ball: 0.9, dome: 1.0, scrape: 0.7, pebbles: 0.8, floating: 1.0, down_bowl: 0.9};
+
+export function buildHomes(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier, drawnLength: (slug: string) => number = (slug) => displayLength(slug, "bird")): Homes {
     const group = new Group();
     group.name = "props:homes";
     const batches: LodBatch[] = [];
@@ -217,48 +168,104 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     const marks: Homes["marks"] = {};
     const webs: WebSpot[] = [];
 
-    // MARK: Birds' nests, eggs and chicks
+    // MARK: Birds' nests, eggs and chicks: by species (nest-kinds.ts), on the scenery's sites (nest-sites.ts), built to their stage (nest-growth.ts)
     const used = new Set<string>();
-    const byStyle = new Map<NestStyle, PropInstance[]>();
     const eggs: PropInstance[] = [];
     const hollows: PropInstance[] = [];
+    const burrowMouths: PropInstance[] = [];
+    const nestGroups = new Map<string, {form: NestForm; lining: NestProfile["lining"]; closed: boolean; items: PropInstance[]; sites: NestSiteInfo[]}>();
+    const nestSites: NestSiteInfo[] = [];
     for (const plan of presence.nests) {
-        const spot = nestSpot(plan, placeOf, used);
-        if (!spot) continue;
-        const r = NEST_RADIUS[plan.style];
-        nestsOut.push({key: plan.key, style: plan.style, x: spot.x, y: spot.y, z: spot.z, sitter: plan.sitter});
+        const profile = plan.profile;
+        const drawn = drawnLength(plan.slug);
+        const radius = nestRadius(profile, drawn);
+        const spots = nestSpots(plan, radius, placeOf, used);
         const random = propRandom(plan.key);
-        if (plan.style === "hole" || plan.style === "barn") {
-            // A hole in the trunk (or the barn's gable): the nest is inside, out of sight.
-            hollows.push({x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, scale: r / 0.15});
-            continue;
-        }
-        const list = byStyle.get(plan.style) ?? [];
-        list.push({x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, scale: 1});
-        byStyle.set(plan.style, list);
-        // The cup's floor: where eggs and chicks sit, in the nest's own frame.
-        const floor = plan.style === "ground" ? 0.06 : plan.style === "cliff" ? r * 0.36 : plan.style === "eaves" ? -0.05 : r * 0.42;
-        const inward = plan.style === "eaves" ? 0.1 : 0;
-        const c = Math.cos(spot.turn);
-        const s = Math.sin(spot.turn);
-        const at = (lx: number, lz: number) => ({x: spot.x + lx * c + (lz + inward) * s, z: spot.z - lx * s + (lz + inward) * c});
-        const eggSize = Math.max(0.045, r * 0.3);
-        for (let k = 0; k < plan.eggs; k++) {
-            const a = k * 2.39996 + random();
-            const d = plan.eggs === 1 ? 0 : r * 0.28 * Math.sqrt((k + 0.5) / plan.eggs);
-            const p = at(Math.cos(a) * d, Math.sin(a) * d);
-            eggs.push({x: p.x, y: spot.y + floor, z: p.z, turn: random() * Math.PI, scale: eggSize / 0.06, tint: new Color().setHSL(0.1 + random() * 0.4, 0.25, 0.82 + random() * 0.1)});
-        }
+        spots.forEach((spot, n) => {
+            const up = spot.up ?? {x: 0, y: 1, z: 0};
+            const info: NestSiteInfo = {
+                speciesId: plan.speciesId,
+                siteId: spot.siteId,
+                slug: plan.slug,
+                zone: plan.zone,
+                position: {x: spot.x, y: spot.y, z: spot.z},
+                up,
+                radius,
+                sitter: spot.own ? plan.sitter : null,
+                eggs: spot.own ? plan.eggs : 0,
+                chicks: spot.own ? plan.chicks : 0,
+                ...buildOf(profile)
+            };
+            nestSites.push(info);
+            nestsOut.push({key: plan.key, speciesId: plan.speciesId, siteId: spot.siteId, form: profile.form, site: profile.site, x: spot.x, y: spot.y, z: spot.z, radius, sitter: info.sitter});
+            if (profile.form === "hole" || profile.form === "barn") {
+                // A hole in the trunk (or the barn's gable): the nest is inside, out of sight; its mouth about a fifth of the bird.
+                const mouth = Math.max(0.05, 0.12 * drawn) * (profile.form === "barn" ? 1.6 : 1);
+                hollows.push({x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, scale: mouth / 0.15});
+                return;
+            }
+            if (profile.form === "burrow") {
+                burrowMouths.push({x: spot.x, y: spot.y - 0.02, z: spot.z, turn: spot.turn, scale: Math.max(radius, 0.12) / 0.28, up: new Vector3(up.x, up.y, up.z)});
+                return;
+            }
+            const key = `${profile.form}:${profile.lining}:${profile.closed ? 1 : 0}`;
+            const group = nestGroups.get(key) ?? {form: profile.form, lining: profile.lining, closed: Boolean(profile.closed), items: [], sites: []};
+            group.items.push({x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, scale: radius, up: spot.up ? new Vector3(up.x, up.y, up.z) : undefined, stage: 1});
+            group.sites.push(info);
+            nestGroups.set(key, group);
+            // The clutch in the sitter's own nest, on the cup's floor.
+            const floor = EGG_FLOOR[profile.form];
+            if (!spot.own || !plan.eggs || floor === undefined) return;
+            const length = eggLength(drawn);
+            const look = eggLook(plan.slug, profile);
+            const c = Math.cos(spot.turn);
+            const s = Math.sin(spot.turn);
+            for (let k = 0; k < plan.eggs; k++) {
+                const a = k * 2.39996 + random();
+                const d = plan.eggs === 1 ? 0 : Math.min(radius * 0.32, length * 0.62 * Math.sqrt(plan.eggs)) * Math.sqrt((k + 0.5) / plan.eggs);
+                const lx = Math.cos(a) * d;
+                const lz = Math.sin(a) * d;
+                eggs.push({
+                    x: spot.x + lx * c + lz * s,
+                    y: spot.y + floor * radius - length * 0.18,
+                    z: spot.z - lx * s + lz * c,
+                    turn: random() * Math.PI,
+                    scale: length / 0.06,
+                    tint: new Color().setHSL(look.hue + (random() - 0.5) * 0.03, look.saturation, look.lightness + (random() - 0.5) * 0.05)
+                });
+            }
+            void n;
+        });
     }
-    const nestShapes: Record<string, () => BufferGeometry> = {
-        tree: () => shapes.cupNest(NEST_RADIUS.tree),
-        cliff: () => shapes.platformNest(NEST_RADIUS.cliff),
-        ground: () => shapes.groundNest(NEST_RADIUS.ground),
-        eaves: () => shapes.eavesNest(NEST_RADIUS.eaves)
-    };
-    byStyle.forEach((items, style) => add(new LodBatch(`nest-${style}`, items, nestShapes[style](), null, straw, {cap: 24, reach: 1.1})));
+    registerNestSites(nestSites);
+    const nestMaterial = propMaterial({texture: 1, textureScale: 5, textureStrength: 0.3, roughness: 0.95, growth: true});
+    extraMaterials.push(nestMaterial);
+    const nestBatches: Array<{batch: LodBatch; sites: NestSiteInfo[]}> = [];
+    let seed = 0;
+    nestGroups.forEach((group) => {
+        const batch = new LodBatch(`nest-${group.form}-${group.lining}`, group.items, nestGeometry(group.form, group.lining, {closed: group.closed, seed: seed++}), nestFarGeometry(group.form), nestMaterial, {cap: 24, reach: NEST_REACH[group.form] ?? 1});
+        add(batch);
+        nestBatches.push({batch, sites: group.sites});
+    });
     if (hollows.length) add(new LodBatch("nest-hole", hollows, shapes.hollow(0.15), null, warm, {cap: 16, reach: 0.9}));
+    if (burrowMouths.length) add(new LodBatch("nest-burrow", burrowMouths, shapes.warrenMouth(0.28), null, decal, {cap: 16, reach: 0.9}));
     if (eggs.length) add(new LodBatch("eggs", eggs, shapes.egg(0.06), null, warm, {cap: 60, reach: 0.6, fine: false}));
+    const stageCache = new Map<NestSiteInfo, number>();
+    const setNestStages = (t: number | null): boolean => {
+        let changed = false;
+        for (const {batch, sites: list} of nestBatches) {
+            const values = list.map((site) => {
+                const stage = t === null ? 1 : nestStage(site.speciesId, site.siteId, t);
+                // Steps of a hundredth: a refill only when the nest has visibly grown.
+                const rounded = Math.round(stage * 100) / 100;
+                if (stageCache.get(site) !== rounded) changed = true;
+                stageCache.set(site, rounded);
+                return rounded;
+            });
+            batch.setStages(values);
+        }
+        return changed;
+    };
 
     // MARK: Ants: a mound by the zone's corner, its trail to a tree and up the trunk (and up the cottage's wall at Home)
     if (has("ants")) {
@@ -568,6 +575,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         slimeGlints: new Float32Array(slimeGlints),
         marks: {...marks, ...(webs[0] ? {web: webs[0]} : {}), ...(webs[1] ? {webBranch: webs[1]} : {})},
         nests: nestsOut,
+        nestSites,
+        setNestStages,
         setGlint,
         dispose: () => {
             for (const batch of batches) batch.dispose();
@@ -622,7 +631,4 @@ export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32
     lines.name = "props:webs";
     return {lines, beads: new Float32Array(beads)};
 }
-
-/** The nest styles' far-away look is nothing: nests are only drawn near. */
-export const NEST_STYLES: NestStyle[] = ["tree", "cliff", "ground", "eaves", "hole", "barn"];
 

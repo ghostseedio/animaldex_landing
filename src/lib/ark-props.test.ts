@@ -5,7 +5,8 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {placeAnimals} from "@/ark-scene/placement";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {sampleGround} from "@/ark-scene/world";
-import {breedingSeason, headNoun, nestStyle, presenceKey, propsPresence, speciesGroups} from "@/ark-scene/props/presence";
+import {breedingSeason, headNoun, presenceKey, propsPresence, speciesGroups} from "@/ark-scene/props/presence";
+import {nestProfile} from "@/ark-scene/props/nest-kinds";
 import {conditionsFromArkWeather, dawnBell, dewOf, stubConditions, withOverride} from "@/ark-scene/props/conditions";
 import {CAVE_SITE, caveSite, propsPoints} from "@/ark-scene/props/sampler";
 import {buildAreas} from "@/ark-scene/props/areas";
@@ -35,12 +36,12 @@ test("props presence: a home only for a species of its kind, read from the head 
     // A bird the noun list misses is a bird once its rig's plan is in.
     assert.deepEqual(speciesGroups(animal("common-tailorbird", "rainforest")), []);
     assert.deepEqual(speciesGroups(animal("common-tailorbird", "rainforest"), "bird"), ["birds"]);
-    assert.equal(nestStyle(animal("house-sparrow", "farm_garden")), "eaves");
-    assert.equal(nestStyle(animal("mallard", "river_lake")), "ground");
-    assert.equal(nestStyle(animal("scarlet-macaw", "rainforest")), "hole");
-    assert.equal(nestStyle(animal("golden-eagle", "mountains")), "cliff");
-    assert.equal(nestStyle(animal("barn-owl", "farm_garden")), "barn");
-    assert.equal(nestStyle(animal("emperor-penguin", "polar")), "none");
+    assert.equal(nestProfile(animal("house-sparrow", "farm_garden")).site, "eaves");
+    assert.equal(nestProfile(animal("mallard", "river_lake")).site, "ground");
+    assert.equal(nestProfile(animal("scarlet-macaw", "rainforest")).form, "hole");
+    assert.equal(nestProfile(animal("golden-eagle", "mountains")).site, "cliff_ledge");
+    assert.equal(nestProfile(animal("barn-owl", "farm_garden")).form, "barn");
+    assert.equal(nestProfile(animal("emperor-penguin", "polar")).form, "none");
 });
 
 test("props presence: nests in the breeding season or with a clutch; eggs only from the server's clutch", () => {
@@ -56,7 +57,7 @@ test("props presence: nests in the breeding season or with a clutch; eggs only f
     assert.ok(presence.nests.length >= 6, `${presence.nests.length} nests`);
     const mallard = presence.nests.find((nest) => nest.slug === "mallard")!;
     assert.equal(mallard.eggs, 6);
-    assert.equal(mallard.style, "ground");
+    assert.equal(mallard.profile.form, "down_bowl");
     assert.ok(mallard.sitter);
     assert.equal(presence.nests.find((nest) => nest.slug === "house-sparrow")?.eggs, 0);
     assert.ok(!presence.nests.some((nest) => nest.slug === "emperor-penguin"));
@@ -106,7 +107,7 @@ test("props build: the areas and every gated home build, the same for every view
     for (const mark of ["ants", "beesHollow", "hiveBox", "turtleNest", "beaverLodge", "slimeWall", "warren", "web"]) assert.ok(homes.marks[mark], mark);
     assert.ok(homes.nests.length >= 5);
     // The mallard's nest is under the mallard that sits it.
-    const mallard = homes.nests.find((nest) => nest.style === "ground" && nest.sitter?.includes("") && places.get(nest.sitter!)?.x === nest.x);
+    const mallard = homes.nests.find((nest) => nest.form === "down_bowl" && nest.sitter && places.get(nest.sitter)?.x === nest.x);
     assert.ok(mallard, "a ground nest under its sitter");
     const again = buildHomes(presence, (id) => places.get(id) ?? null, PROPS_TIERS.high);
     assert.deepEqual(again.nests, homes.nests);

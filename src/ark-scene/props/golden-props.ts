@@ -14,6 +14,7 @@
 import type {ArkAnimal, ArkCameraView, ArkNestRow, ArkSnapshot, ArkZone} from "@/ark-scene/types";
 import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
+import {nestStage} from "@/ark-scene/props/nest-growth";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -25,7 +26,10 @@ const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["common-earthworm", "Common Earthworm", "farm_garden"],
     ["kuhls-pipistrelle-bat", "Kuhl's Pipistrelle", "mountains"],
     ["north-american-beaver", "North American Beaver", "river_lake"],
-    ["giant-african-land-snail", "Giant African Land Snail", "farm_garden"]
+    ["giant-african-land-snail", "Giant African Land Snail", "farm_garden"],
+    ["village-weaver", "Village Weaver", "grassland"],
+    ["great-crested-grebe", "Great Crested Grebe", "river_lake"],
+    ["common-house-martin", "Common House Martin", "farm_garden"]
 ];
 
 /** The fixture with the props' species aboard, in the breeding season (Ark day of the year 120), and two clutches in. */
@@ -53,10 +57,11 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
         return animal ? {species_profile_id: animal.species_profile_id, name: animal.name, model_slug: slug, zone, status: "egg", eggs, laid_ark_day: arkDay - 3, hatch_ark_day: arkDay + 25, mine: false} : null;
     };
     const nests = [clutch("mallard", "river_lake", 6), clutch("grey-heron", "wetland", 4), clutch("green-sea-turtle", "coral_reef", 9)].filter((row): row is ArkNestRow => row !== null);
-    return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, nests};
+    // As of now, so the nests' Ark day (props/index.ts arkDayNow) is the fixture's.
+    return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -67,7 +72,11 @@ const look = (at: {x: number; y: number; z: number}, distance: number, polar: nu
 
 /** The view, the hour and the weather of a props shot, from where the props are. */
 export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: Locate): PropsShotPlan | null {
+    const module = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
+    // Every shot but the growing nest's sees the nests as the fixture's day has them.
+    module?.setArkDay(null);
     const plan = framed(shot, marks, stats, locate);
+    if (shot === "nest_growing" && plan) module?.setArkDay(growingDay(stats));
     // Every shot in its own weather: dry and still unless it says otherwise (whatever the island clock says today).
     return plan ? {...plan, weather: {rain: 0, puddles: 0, mist: 0, ...(plan.weather ?? {})}} : null;
 }
@@ -77,12 +86,41 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
     const calm = {wetness: 0, snow: 0.2, wind: 0.25};
     switch (shot) {
         case "bird_nest": {
-            // The mallard's ground nest, under the mallard that sits it.
-            const nest = stats.nests.find((n) => n.style === "ground" && n.sitter && /mallard/.test(n.key + (n.sitter ?? ""))) ?? stats.nests.find((n) => n.style === "ground" && n.sitter) ?? stats.nests[0];
+            // The mallard's down-lined bowl, under the mallard that sits it.
+            const nest = stats.nests.find((n) => n.form === "down_bowl" && n.sitter && /mallard/.test(n.key)) ?? stats.nests.find((n) => n.form === "down_bowl" && n.sitter) ?? stats.nests[0];
             if (!nest) return null;
-            const bird = nest.sitter ? locate(nest.sitter) : null;
-            const at = bird ? {x: bird.x, y: nest.y, z: bird.z} : nest;
-            return {view: look(at, 1.5, 1.1, 0.5, 0.12), hours: 9.5, weather: null, environment: calm, anchor: `nest ${nest.style} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, Math.max(1.8, nest.radius * 4.2), 1.0, 0.5, 0.05), hours: 9.5, weather: null, environment: calm, anchor: `nest ${nest.form} ${nest.key}`, minDistance: 0.3};
+        }
+        case "nest_eyrie": {
+            const nest = stats.nests.find((n) => n.form === "eyrie");
+            if (!nest) return null;
+            const turn = nestTurn(nest);
+            return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+        }
+        case "nest_heronry": {
+            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
+            if (!nest) return null;
+            return {view: look(nest, nest.radius * 5 + 2.5, 1.05, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+        }
+        case "nest_weavers": {
+            const nest = stats.nests.find((n) => n.form === "pendant");
+            if (!nest) return null;
+            return {view: look(nest, nest.radius * 9 + 1.2, 1.5, 0.4, -nest.radius * 1.2), hours: 9, weather: null, environment: calm, anchor: `pendant ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+        }
+        case "nest_growing": {
+            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top") ?? stats.nests.find((n) => n.form === "pendant");
+            if (!nest) return null;
+            return {view: look(nest, nest.radius * 4 + 1.6, 0.95, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
+        }
+        case "nest_eaves": {
+            const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
+            if (!nest) return null;
+            return {view: look(nest, 2.6, 1.62, nestTurn(nest), -0.1), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
+        }
+        case "nest_grebe": {
+            const nest = stats.nests.find((n) => n.form === "floating");
+            if (!nest) return null;
+            return {view: look(nest, nest.radius * 5 + 1.4, 1.15, 0.6, 0.05), hours: 8.5, weather: null, environment: calm, anchor: `raft ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "ants_trunk": {
             const mound = spots.ants;
@@ -134,4 +172,32 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(wall, 2.4, 1.32, 0.35), hours: 7, weather: {wetness: 0.85, puddles: 0.5}, environment: {...calm, wetness: 0.85}, anchor: "slime trail on the wall", minDistance: 0.3};
         }
     }
+}
+
+type ShotNest = PropsStats["nests"][number];
+
+/** A nest's heading out (its site's turn, from the registered sites). */
+function nestTurn(nest: ShotNest): number {
+    const module = (globalThis as {__arkPropsModule?: {nestSites: () => Array<{siteId: string; position: {x: number; z: number}; up: {x: number; z: number}}>}}).__arkPropsModule;
+    const site = module?.nestSites().find((s) => s.siteId === nest.siteId);
+    if (site && Math.hypot(site.up.x, site.up.z) > 0.05) return Math.atan2(site.up.x, site.up.z);
+    // A wall nest faces out from the wall; else from the island's middle outward.
+    return Math.atan2(nest.x, nest.z);
+}
+
+/** The Ark day the growing-nest shot is pinned to: when its nest is a little over half built. */
+function growingDay(stats: PropsStats): number | null {
+    const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top") ?? stats.nests.find((n) => n.form === "pendant");
+    if (!nest) return null;
+    let lo = 0;
+    let hi = 365;
+    // The stage rises through the season's first weeks: find where it crosses 0.55 (from day 0 of the year).
+    for (let day = 0; day < 365; day += 0.25) {
+        if (nestStage(nest.speciesId, nest.siteId, day) >= 0.55 && nestStage(nest.speciesId, nest.siteId, day - 0.25) < 0.55) {
+            lo = day - 0.25;
+            hi = day;
+            break;
+        }
+    }
+    return (lo + hi) / 2;
 }
