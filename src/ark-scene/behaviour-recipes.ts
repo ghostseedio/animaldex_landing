@@ -658,6 +658,9 @@ const TURN_SPOT = 1.6;
 /** The most a solo episode's steps turn it in any 20 s before it heads home (rad: about half a circle, so its way home still fits). */
 const TURN_BUDGET = 3.2;
 
+/** The most it turns in any minute of a solo episode, with its way home (rad: under a full turn; a dabbling duck pivots, never spins). */
+const MINUTE_BUDGET = 5.4;
+
 /** A solo leg further than this off its heading (rad) turns on the spot first, then sets off. */
 const TURN_FIRST = 1.2;
 
@@ -1151,9 +1154,14 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             pos = target;
             if (step.eat || step.drop) carry = null;
             if (budgeted && !ctx.pair) {
-                const turn = Math.abs(yaw - before.yaw);
+                // (The turning it is drawn with along the step's keys, not just where it ends up facing: a curve swings.)
+                let turn = 0;
+                for (let k = before.n; k < keys.length; k++) turn += keyTurning(world, keys[k], length, k > 0 ? keys[k - 1] : null);
                 const recent = turns.reduce((sum, e) => (e.t > t - 20 ? sum + e.turn : sum), 0);
-                if (turn > 0.05 && recent + turn > TURN_BUDGET) {
+                // (And over any minute, with the turn it still needs to head home: never a full turn in a minute.)
+                const minute = turns.reduce((sum, e) => (e.t > t - 60 ? sum + e.turn : sum), 0);
+                const homeward = Math.hypot(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) > 0.3 ? Math.abs(wrapAngle(Math.atan2(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) - yaw)) : 0;
+                if (turn > 0.05 && (recent + turn > TURN_BUDGET || minute + turn + homeward > MINUTE_BUDGET)) {
                     keys.length = before.n;
                     t = before.t;
                     pos = before.pos;
@@ -1763,6 +1771,19 @@ function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: Trip
         if (hovering) return hovering;
     }
     return crossingPose(world, owner, trip, base, epoch) ?? base;
+}
+
+/** How much a key turns it as it is drawn (rad, its heading sampled along it). */
+function keyTurning(world: ScheduleWorld, key: Key, length: number, previous: Key | null): number {
+    const n = Math.min(Math.max(Math.ceil((key.t1 - key.t0) / 0.4), 3), 40);
+    let last = keyPose(world, key, key.t0, length, previous).yaw;
+    let sum = 0;
+    for (let j = 1; j <= n; j++) {
+        const yaw = keyPose(world, key, key.t0 + ((key.t1 - key.t0) * j) / n, length, previous).yaw;
+        sum += Math.abs(wrapAngle(yaw - last));
+        last = yaw;
+    }
+    return sum;
 }
 
 /** The way a slot sets off: its turn on the spot's heading if it starts with one, else its heading once it is on its way. */
