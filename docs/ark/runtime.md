@@ -16,7 +16,8 @@ The runtime lane (branch `ark-runtime-web`). Visual only: nothing here changes t
 
 - **The first frame waits for the shaders, not on them.** Every material in the scene is compiled with `renderer.compileAsync` (KHR_parallel_shader_compile where the driver has it) into the post chain's render target, so the programs match the ones drawn; the first frame is drawn when they are ready (at most 5 s). Before, the first frame's first use of each program blocked the main thread while it compiled (`onFirstUse`, 3.4 s in the desktop profile).
 - **Order by distance.** The model queue (`ModelLibrary.priority`) takes, each time a load ends, the queued level of the species that is in view and nearest; then in view and far; then out of view (×3 its distance); then the ones not seen at all (micro species not yet drawn, the deep, the underground). A species' near level ranks just behind its far one.
-- **Paced hand-over.** A finished level waits in the library until the frame loop hands it to the scene, a few a frame inside a 4 ms budget (at least one a frame), so a burst of loads never lands in one frame.
+- **Paced hand-over.** A finished level waits in the library until the frame loop hands it to the scene, its skin uploaded to the GPU then (`renderer.initTexture`), a few a frame inside a 4 ms budget (at least one a frame), so a burst of loads never lands in one frame. While models are coming in the frame rate stays full.
+- **New shaders never stall a frame.** A mesh the scene adds whose material's shader is new (a species' first instances, the first rig) waits undrawn on another layer while its shader compiles in parallel, then appears; after a tier change the scene's new shader variants compile the same way before the next draw (the last picture stays up). On the desktop walk (the camera flown animal to animal) the worst frame went from 5.5 s to 0.4–1.8 s.
 - **A quiet loading state.** A 2 px bar at the foot of the world (above a tap band) shows the share of what was asked for that is in. It appears only if loading lasts more than 0.6 s and fades when everything asked for is in. No words. Hidden in recordings.
 - **The grass is built for the tier.** `buildVegetation` used to build 56,000 tufts on every device and draw a tier's share; now it builds the tier's count (`GRASS_BUILD`: high 56,000, medium and low 22,000 so the lighter view can be turned off). The tufts are generated in order, so the first 22,000 of the big list are exactly the small list: the picture is the same.
 
@@ -34,7 +35,7 @@ The animals are what grows with the Ark: per species a near and a far model, eac
 | medium | 128 | 48 | 512 | 256 | 90 | 32 | 120 |
 | low (and the lighter view) | 64 | 24 | 256 | 128 | 40 | 24 | 80 |
 
-- **Skins are fitted on load**, before they reach the GPU (`createImageBitmap` with a resize, off the main thread where the browser can; a canvas otherwise). A far model is a few dozen pixels tall on screen; a 256² skin is 4× smaller than 512² and looks the same there.
+- **Skins are fitted on load**, before they reach the GPU (`createImageBitmap` with a resize, a canvas where that fails; Chrome does the resize on the main thread, about 2 ms a skin on the desktop and 8 ms at 4× throttle, between frames). A far model is a few dozen pixels tall on screen; a 256² skin is 4× smaller than 512² and looks the same there.
 - **Ceilings.** Twice a second the library's bytes are summed (`memory.ts` estimates); over the tier's ceiling, the near level of the species drawn near least recently goes (`ModelLibrary.evict`), never one drawn near in the last 3 s, never a far level. Its far model stands in, and the near one is loaded again when the camera comes back.
 - **Instance caps** per tier (were: high and medium the same; now medium has its own).
 - The scenery's own cost is fixed per tier (ground, trees, grass, post-processing targets).
@@ -58,9 +59,25 @@ The animals are what grows with the Ark: per species a near and a far model, eac
 
 ## 5. Numbers
 
-`node scripts/ark-runtime-measure.mjs --label <name> [--devices desktop,phone] [--runs 3] [--network 4g]` (the golden harness's devices; the phone is 360×800 at DPR 2, 4× CPU throttle, 8 cores / 4 GB reported, so the medium tier). Per run: time to the first frame, how long `mountArk` held the main thread, the long tasks, when the models in view were in, the JS heap and the scene's GPU estimate. `--profile` writes a CPU profile per run.
+`node scripts/ark-runtime-measure.mjs --label <name> [--devices desktop,phone] [--runs 3] [--network 4g] [--walk] [--budget <MB>] [--profile]` (the golden harness's devices; the phone is 360×800 at DPR 2, 4× CPU throttle, 8 cores / 4 GB reported, so the medium tier). Per run: time to the first frame, how long `mountArk` held the main thread, the long tasks, when the models in view were in, the JS heap and the scene's GPU estimate. `--walk` flies the camera animal to animal; `--budget` sets a small skin ceiling; `--profile` writes a CPU profile per run.
 
-(Filled in below from the A/B runs.)
+**Caveat:** measured on the shared Mac while 15+ other agents ran (load average 45–60 on 16 cores), so wall times swing ±30 % run to run. Before and after were interleaved (before, after, before, after…) on the same fixture (130 animals, 46 species) to share the noise; medians of 3. Before = `ark-release` a92a19b9, after = this branch.
+
+| | first frame (ms) | mountArk (ms) | in view (ms) | longest task (ms) | worst after the 1st frame (ms) | JS heap (MB) | GPU: meshes + textures (MB) |
+|---|---|---|---|---|---|---|---|
+| desktop, before | 4,713 | 4,003 | 6,554 | 4,033 | 97 | 74 | 16 + 81 |
+| desktop, after | 5,030 | 4,408 | 8,332 | 4,437 | 97 | 74 | 16 + **41** |
+| phone, before | 19,445 | 18,504 | 24,298 | 18,606 | 525 | 70 | 16 + 71 |
+| phone, after | 15,844 | 14,803 | 20,458 | 14,936 | 482 | 66 | 13 + **38** |
+
+What they show:
+- **GPU memory: halved** for the same Ark (the skins fitted per tier); it grows with species at about a quarter of the old rate on the medium tier, and the budgets bound it.
+- **The long task is the mount itself**, before any frame: 4 s on the desktop, 15–18 s on the throttled phone profile, on a machine this loaded (2.5 s and 10.9 s on a quieter run earlier the same day). The runtime cannot split it from outside; it is the scenery and behaviour builds (profile, phone, ms of 12,200 in `mountArk`): `buildVegetation` 6,400 (the forest fill 4,000: 220,000 ground samples for 640 trees; the grass 1,700), `buildLandscape` 2,100, `setSnapshot` 2,000 (the behaviour schedule's places and walk grid 1,000). The runtime's part: the grass built for the tier (the phone builds 22,000 tufts, not 56,000: the phone median mount 18.5 → 14.8 s). A same-result speed-up of the forest fill is handed to the graphics lane (§7).
+- **The first frame after the mount**: before, its first use of every shader compiled them on the main thread (`onFirstUse`, 3.4 s in a desktop profile); now the scene's shaders compile in parallel before it, in a 263 ms task plus a ~500 ms first draw on the phone profile (the post chain's and the shadow pass's own shaders still compile at first use).
+- **In view** (every model asked for by then in) is within the noise; the desktop's later time comes from the load order now starting with what the camera sees after the opening (the old order was the snapshot's).
+- The walk with a 6 MB skin ceiling (an impossible one: the far levels alone are 16 MB) let 74 near levels go in 30 s, never one drawn near, and loaded them again only when the camera came back within the near distance; no errors.
+
+A quiet machine and a real phone will give cleaner numbers: rerun the same command (§6).
 
 ## 6. WebView testing (later lane)
 
@@ -70,3 +87,12 @@ Desktop Chrome with the phone profile is a proxy: it throttles the CPU but not t
 2. **Android** (WebView, a mid-range phone with 4 GB, e.g. Galaxy A35, and a 3 GB one): `chrome://inspect` → Performance panel for a cold open; `adb shell dumpsys meminfo <package>` (Graphics and GL lines) as the Ark fills; `adb shell dumpsys gfxinfo <package> framestats` for frame times idle (expect 30 fps after 5 s) and covered (expect none with `ark:visible` false).
 3. **Both**: the bridge's states (`docs/ark/runtime-bridge.md` §Testing): covered, background, Low Power Mode / battery saver, a heat override; the reset button and the loading bar at the panel's size; a WebGL context loss (Safari's "Lose context" in the inspector's Canvas tab) to see the page's fallback.
 4. If a device loses the context or jetsams at its tier: lower that tier's `textureMB` in `budgets.ts`, or move the device class down a tier in `post.ts` `tierFor`.
+
+## 7. For other lanes
+
+- **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (11.8 s → 6.4 s in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `forestfill-prefilter.patch` in the runtime lane's scratchpad, verified identical with a deep-equal test.
+- **Graphics / props / scene**: round the shader frequencies in graphics-interface.md's "shared clock" table.
+- **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned.
+- **i18n**: `ark.a11y.resetView` in every language ("Back to the whole Ark"); the web page and the embed already pass it when present.
+- **Apps**: post `ark:visible` and `ark:power` (docs/ark/runtime-bridge.md).
+
