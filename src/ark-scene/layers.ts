@@ -67,8 +67,6 @@ export type CanopyPlace = {
     mode: LayerMode;
     /** Its rank's offset along the limb (m). */
     offset: number;
-    /** Whose trees (the map: the zone of the tree it was given); else the animal's own zone's. */
-    zone?: ArkZone;
 };
 
 export type CanopyHost = {item: DecorItem; zone: ArkZone};
@@ -155,7 +153,7 @@ function turn(item: DecorItem, x: number, y: number, z: number): [number, number
  * for a hanger (its back down), on the crown's top, or on the trunk's bark.
  */
 export function canopyPoint(zone: ArkZone, place: CanopyPlace, along = 0): CanopyPoint {
-    const trees = canopyTrees(place.zone ?? zone);
+    const trees = canopyTrees(zone);
     const host = trees[place.tree % trees.length];
     const tree = canopyTree(host.item.variant % 2);
     if (place.limb === -1) {

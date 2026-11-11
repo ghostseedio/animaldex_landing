@@ -19,7 +19,6 @@ import table from "@/ark-scene/microhabitats.json";
 import {worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LAMP, LEAF_LIFT, microCorner, microDecor, zoneLamp, type MicroDecorItem} from "@/ark-scene/micro-decor";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import type {AttachPoint} from "@/ark-scene/map/sampler";
 import {rock, trunkOf} from "@/ark-scene/vegetation";
 import {hashString, heightAt, LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 
@@ -63,7 +62,7 @@ function flags(slug: string): string {
 
 // MARK: Surfaces
 
-export type MicroSurface = "wall" | "roof" | "around" | "bark" | "flower" | "rock" | "litter" | "water" | "post" | "attach";
+export type MicroSurface = "wall" | "roof" | "around" | "bark" | "flower" | "rock" | "litter" | "water" | "post";
 
 /**
  * A small animal's place: which surface, which host on it (a wall, a tree,
@@ -80,8 +79,6 @@ export type MicroPlace = {
     heading: number;
     offAlong: number;
     offAcross: number;
-    /** On a scenery attach point (the map, `map/place.ts`): surface "attach", the point itself. */
-    attach?: AttachPoint;
 };
 
 /** A point on a surface: where, the surface's normal (the way the animal's back faces) and the way it heads. */
@@ -123,8 +120,6 @@ export function porchLight(): {x: number; y: number; z: number} {
 
 /** The light a small animal's moths circle at night: the porch light at Home, its zone's lamp elsewhere. */
 export function nightLight(place: MicroPlace, zone: ArkZone): {x: number; y: number; z: number; out: {x: number; z: number}} {
-    // On a lamp's attach point (the map): that lamp.
-    if (place.attach?.tag === "porch_light") return {x: place.attach.x, y: place.attach.y, z: place.attach.z, out: {x: 0, z: 0}};
     if (place.spot === "lamp") {
         const lamp = zoneLamp(hostZone(zone));
         return {x: lamp.x, y: lamp.y + LAMP.height + 0.05, z: lamp.z, out: {x: 0, z: 0}};
@@ -421,34 +416,8 @@ export function microPlace(slug: string, zone: ArkZone, slot: number, rank: numb
     return {spot: kind.spot, surface, host, a, b, heading, offAlong, offAcross};
 }
 
-/**
- * A point on a scenery attach point (the map): the point, `offAlong` and
- * `along` along its heading and `offAcross` across it, kept small on the
- * small hosts (a flower head, a leaf, a lamp) so nobody walks off them.
- */
-function attachSurfacePoint(place: MicroPlace, point: AttachPoint, along: number): SurfacePoint {
-    const [nx, ny, nz] = point.normal;
-    let [tx, ty, tz] = point.tangent;
-    const c = Math.cos(place.heading);
-    const sn = Math.sin(place.heading);
-    // The heading turns the tangent about the normal.
-    const bx = ny * tz - nz * ty;
-    const by = nz * tx - nx * tz;
-    const bz = nx * ty - ny * tx;
-    [tx, ty, tz] = [tx * c + bx * sn, ty * c + by * sn, tz * c + bz * sn];
-    const reach = point.tag === "flower_head" || point.tag === "leaf" || point.tag === "porch_light" ? 0.025 : point.tag === "tide_pool" ? 0.4 : point.tag === "worm_hole" || point.tag === "burrow_entrance" ? 0.6 : 0.3;
-    const u = clamp(place.offAlong + along, -reach, reach);
-    const v = clamp(place.offAcross, -reach, reach);
-    const cx = ny * tz - nz * ty;
-    const cy = nz * tx - nx * tz;
-    const cz = nx * ty - ny * tx;
-    return {x: point.x + tx * u + cx * v, y: point.y + ty * u + cy * v, z: point.z + tz * u + cz * v, nx, ny, nz, tx, ty, tz};
-}
-
 function hostCount(surface: MicroSurface, zone: ArkZone): number {
     switch (surface) {
-        case "attach":
-            return 1;
         case "wall":
             return 5;
         case "roof":
@@ -482,7 +451,6 @@ function zoneFor(place: MicroPlace, zone: ArkZone): ArkZone {
  * its heading.
  */
 export function surfacePoint(place: MicroPlace, zone: ArkZone, along = 0): SurfacePoint {
-    if (place.attach) return attachSurfacePoint(place, place.attach, along);
     const hostZoneKey = zoneFor(place, zone);
     switch (place.surface) {
         case "wall":
@@ -590,8 +558,6 @@ export function surfacePoint(place: MicroPlace, zone: ArkZone, along = 0): Surfa
             const z = point.z + Math.sin(place.a * 40) * spread + hz * (place.offAlong + along) + hx * place.offAcross;
             return {x, y: water.y, z, nx: 0, ny: 1, nz: 0, tx: hx, ty: 0, tz: hz};
         }
-        case "attach":
-            return place.attach ? attachSurfacePoint(place, place.attach, along) : aroundPoint(place, along);
     }
 }
 

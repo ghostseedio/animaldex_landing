@@ -36,14 +36,10 @@ test("layers: canopy animals stand on their trees' limbs, crowns and trunks, abo
     const places = placeAnimals(animals);
     for (const a of animals.slice(0, 7)) {
         const place = places.get(a.id)!;
-        // In the canopy: a limb of a canopy tree, or (a small one, the map's rule) a branch, a leaf or the bark of one.
-        const attach = place.micro?.attach;
-        assert.ok(place.canopy || (attach && ["branch", "leaf", "bark"].includes(attach.tag)), `${a.model_slug} in the canopy`);
+        assert.ok(place.canopy, `${a.model_slug} in the canopy`);
         assert.ok(place.ground > heightAt(place.x, place.z) + 0.5, `${a.model_slug} up its tree`);
-        if (place.canopy) {
-            const point = canopyPoint(a.zone, place.canopy);
-            assert.deepEqual([point.x, point.y, point.z], [place.x, place.ground, place.z]);
-        }
+        const point = canopyPoint(a.zone, place.canopy!);
+        assert.deepEqual([point.x, point.y, point.z], [place.x, place.ground, place.z]);
     }
     // A troop spreads over the tree's limbs: no two in one spot.
     const troop = animals.slice(0, 3).map((a) => places.get(a.id)!);
