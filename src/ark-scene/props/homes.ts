@@ -21,7 +21,7 @@ import {BoxGeometry, BufferAttribute, BufferGeometry, Color, Group, LineBasicMat
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import type {Placement} from "@/ark-scene/placement";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {LodBatch, merge, paint, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
+import {LodBatch, merge, paint, propMaterial, runSteps, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
 import type {Presence} from "@/ark-scene/props/presence";
 import {eggLength, eggLook, nestRadius, type NestForm, type NestProfile, type NestSite} from "@/ark-scene/props/nest-kinds";
 import {buildOf, nestStage, registerNestSites, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
@@ -179,7 +179,17 @@ const birdBody = (slug: string): BirdBody => {
     return {drawn: body.display, metres: body.metres};
 };
 
+/** All the homes at once (the tests, a small Ark): `buildHomesSteps` run to its end. */
 export function buildHomes(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier, bodyOf: (slug: string) => BirdBody = birdBody): Homes {
+    return runSteps(buildHomesSteps(presence, placeOf, tier, bodyOf));
+}
+
+/**
+ * The homes, a step at a time (each nest plan, each kind of home): the scene runs it in slices of a few milliseconds
+ * a frame after its first frame (`kit.ts` runSliced), so a big Ark's mount has no long task. The steps only pause the
+ * same work, so the homes are the same however it is run (`ark-props.test`).
+ */
+export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Placement | null, tier: PropsTier, bodyOf: (slug: string) => BirdBody = birdBody): Generator<void, Homes, void> {
     const group = new Group();
     group.name = "props:homes";
     const batches: LodBatch[] = [];
@@ -277,6 +287,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             }
             void n;
         });
+        yield;
     }
     registerNestSites(nestSites);
     const nestMaterial = propMaterial({texture: 1, textureScale: 5, textureStrength: 0.3, roughness: 0.95, growth: true, doubleSide: true});
@@ -286,11 +297,12 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     extraMaterials.push(nestMaterial);
     const nestBatches: Array<{batch: LodBatch; sites: NestSiteInfo[]}> = [];
     let seed = 0;
-    nestGroups.forEach((group) => {
+    for (const group of Array.from(nestGroups.values())) {
+        yield;
         const batch = new LodBatch(`nest-${group.form}-${group.lining}`, group.items, nestGeometry(group.form, group.lining, {closed: group.closed, seed: seed++}), nestFarGeometry(group.form), nestMaterial, {cap: 24, reach: NEST_REACH[group.form] ?? 1});
         add(batch);
         nestBatches.push({batch, sites: group.sites});
-    });
+    }
     if (hollows.length) add(new LodBatch("nest-hole", hollows, shapes.hollow(0.15), null, warm, {cap: 16, reach: 0.9}));
     if (burrowMouths.length) add(new LodBatch("nest-burrow", burrowMouths, shapes.warrenMouth(0.28), null, decal, {cap: 16, reach: 0.9}));
     if (eggs.length) add(new LodBatch("eggs", eggs, eggGeometry(0.06), null, eggMaterial, {cap: 60, reach: 0.6, fine: false}));
@@ -311,6 +323,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         return changed;
     };
 
+    yield;
     // MARK: Ants: a mound by the zone's corner, its trail to a tree and up the trunk (and up the cottage's wall at Home)
     if (has("ants")) {
         const ants = first("ants")!;
@@ -369,6 +382,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("ants", dots, merge([paint(new BoxGeometry(0.016, 0.012, 0.03), "#120c08"), paint(new BoxGeometry(0.012, 0.01, 0.012).translate(0, 0, 0.022), "#120c08")]), null, warm, {cap: 900, reach: 0.4, fine: true}));
     }
 
+    yield;
     // MARK: Bees: comb in a tree hollow, and a hive in the garden
     if (has("bees")) {
         const bees = first("bees")!;
@@ -396,12 +410,14 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("hive-box", [{x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ, turn: 0.3, scale: 1}], shapes.hiveBox(), null, warm, {cap: 2, reach: 1.2, shadow: true}));
     }
 
+    yield;
     // MARK: Wasps: a paper nest under the back eave
     if (has("wasps")) {
         const halfD = COTTAGE.depth / 2;
         add(new LodBatch("wasp-nest", [{x: COTTAGE.x + 1.6, y: COTTAGE.floor + COTTAGE.wall - 0.02, z: COTTAGE.z - halfD - COTTAGE.overhang * 0.5, turn: 0, scale: 1}], shapes.waspNest(0.3), null, warm, {cap: 2, reach: 1}));
     }
 
+    yield;
     // MARK: Termites: more mounds on the savanna and the desert's edge
     if (has("termites")) {
         const random = propRandom("termites");
@@ -420,6 +436,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("termite-mounds-active", items, shapes.termiteMound(2.2, 3), shapes.termiteMoundFar(2.2), warm, {cap: 16, reach: 1.6, shadow: true}));
     }
 
+    yield;
     // MARK: Spiders: webs on the porch, between branches by the zone's corner and at the garden's fence
     if (has("spiders")) {
         const halfD = COTTAGE.depth / 2;
@@ -450,6 +467,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         webs.push({x: COTTAGE.x + 1.15, y: groundAt(COTTAGE.x + 1.15, COTTAGE.z + 8.6) + 0.55, z: COTTAGE.z + 8.6, facing: 0, radius: 0.22});
     }
 
+    yield;
     // MARK: Moths and butterflies: chrysalises and cocoons under leaves
     if (has("moths")) {
         const moths = first("moths")!;
@@ -466,6 +484,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("cocoon", cocoons, shapes.chrysalis(0.08, true), null, warm, {cap: 12, reach: 0.4, fine: true}));
     }
 
+    yield;
     // MARK: Rabbits: a warren round the rabbits' ground (their own mouth is the layers'), runs between the holes
     if (has("rabbits")) {
         const rabbit = first("rabbits")!;
@@ -490,6 +509,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         batches[batches.length - 1].setCentre(new Vector3(at.x, at.ground, at.z));
     }
 
+    yield;
     // MARK: Earthworms: casts by the worm holes of the garden, the fields, the meadows and the woods
     if (has("worms")) {
         const random = propRandom("casts");
@@ -505,6 +525,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("worm-casts", casts, shapes.wormCast(0.07), null, warm, {cap: 260, reach: 0.35, fine: true}));
     }
 
+    yield;
     // MARK: Dens and lairs: behind the leader of each species that keeps one
     for (const [group, build, size] of [["den", shapes.den, 1.1], ["lair", shapes.lair, 1.5]] as const) {
         const members = presence.groups.get(group) ?? [];
@@ -525,6 +546,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         if (items.length) add(new LodBatch(group, items, build(size), null, warm, {cap: 12, reach: 1.3, shadow: true}));
     }
 
+    yield;
     // MARK: Sea turtles: a body pit on dry sand above the tide line (the eggs buried, never seen), its crawl tracks to the water
     if (presence.turtleNests.length) {
         const beach = namedPlace("beach");
@@ -592,6 +614,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         }
     }
 
+    yield;
     // MARK: Beavers: a lodge on the lake by the outflow, a dam across the river below it
     if (has("beavers")) {
         const [ax, az] = RIVER[1];
@@ -609,6 +632,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("beaver-dam", [{x: dx, y: 0, z: dz, turn: across + Math.PI / 2, scale: 1}], shapes.beaverDam(6.5), null, warm, {cap: 2, reach: 1.6}));
     }
 
+    yield;
     // MARK: Snails and slugs: slime trails on the rocks near their ground, the cottage's wall and the garden path's stones
     let setGlint = (_glint: number) => {};
     const slimeGlints: number[] = [];

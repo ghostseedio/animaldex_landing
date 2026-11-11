@@ -59,8 +59,9 @@ export function goldenCropField(): {x: number; z: number} | null {
     const farm = ZONE_SITES.farm_garden;
     let best: {x: number; z: number} | null = null;
     let bestScore = 0;
-    for (let x = farm.x - 36; x <= farm.x + 36; x += 3) {
-        for (let z = farm.z - 30; z <= farm.z + 30; z += 3) {
+    // (Home growth: the whole district; the village's own fields along its lanes are grass, the crops beyond them.)
+    for (let x = farm.x - 36; x <= farm.x + 90; x += 3) {
+        for (let z = farm.z - 50; z <= farm.z + 66; z += 3) {
             let grown = 0;
             for (let dx = -4; dx <= 4; dx += 1) {
                 for (let dz = -4; dz <= 4; dz += 1) {

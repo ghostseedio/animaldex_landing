@@ -89,7 +89,26 @@ export function coastRadius(theta: number): number {
     return 78
         + 5.5 * Math.sin(3 * theta + 1.1)
         + 3.5 * Math.sin(5 * theta - 0.4)
-        + 2 * Math.sin(9 * theta + 2.3);
+        + 2 * Math.sin(9 * theta + 2.3)
+        + homeLobe(theta);
+}
+
+/**
+ * The home district's land (home growth, 2026-11-11; owner decision: grow the home area now, before launch, so the
+ * hamlet's full cap of 16 houses and 6 smallholdings has land: `map/hamlet.ts`). Metres added to the coast at a
+ * bearing: the south lobe fills the old bay in front of Home and reaches 32 m further south (the hamlet's streets
+ * and the beach before them), and the east shoulder takes the east coast 30 m out (the hamlet's east end and the
+ * desert, which moved onto it). Zero west of the river's mouth (the reef, the rainforest) and north of the
+ * grassland's shore (the ice, the mountain).
+ */
+const HOME_LOBE = {south: 32, southFrom: [16, 46], southTo: [97, 119], east: 30, eastFrom: [-44, -8], eastTo: [40, 60]} as const;
+export function homeLobe(theta: number): number {
+    const turned = ((((theta * 180) / Math.PI) % 360) + 360) % 360;
+    const degrees = turned > 180 ? turned - 360 : turned;
+    const L = HOME_LOBE;
+    const south = L.south * smoothstep(L.southFrom[0], L.southFrom[1], degrees) * (1 - smoothstep(L.southTo[0], L.southTo[1], degrees));
+    const east = L.east * smoothstep(L.eastFrom[0], L.eastFrom[1], degrees) * (1 - smoothstep(L.eastTo[0], L.eastTo[1], degrees));
+    return Math.max(south, east);
 }
 
 /** A point at this bearing, `offset` metres outside the coast (negative: inland). */
@@ -127,13 +146,16 @@ export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
     // On the beach itself, just above the waterline (about 4.5 m inside the coast line), facing the sea.
     seashore: {...coastPoint(SHORE_THETA, -6), spacing: 2.4, kind: "shore", clearing: 8, theta: SHORE_THETA},
     coral_reef: {...coastPoint(SOUTH + 0.62, 15), spacing: 4.2, kind: "sea", clearing: 0},
-    open_ocean: {...coastPoint(SOUTH - 0.5, 30), spacing: 7, kind: "sea", clearing: 0},
+    // Home growth: the south lobe took the old bay, so the open water stands nearer its new coast (18 m out, not 30).
+    open_ocean: {...coastPoint(SOUTH - 0.5, 18), spacing: 7, kind: "sea", clearing: 0},
     river_lake: {x: LAKE.x, z: LAKE.z, spacing: 2.6, kind: "ring", clearing: LAKE.r + 6},
     wetland: {x: 20, z: 10, spacing: 2.6, kind: "land", clearing: 9},
     rainforest: {x: -46, z: 18, spacing: 2.8, kind: "land", clearing: 11},
     woodland: {x: -40, z: -26, spacing: 2.8, kind: "land", clearing: 11},
-    grassland: {x: 38, z: -10, spacing: 3, kind: "land", clearing: 14},
-    desert: {x: 48, z: 34, spacing: 2.8, kind: "land", clearing: 12},
+    // Home growth: the grassland's animals gather further north and west (the hamlet's farms are where they stood),
+    // and the desert moved onto the new east shore (Home took its old ground).
+    grassland: {x: 25, z: -27, spacing: 3, kind: "land", clearing: 14},
+    desert: {x: 102, z: -7, spacing: 2.8, kind: "land", clearing: 12},
     mountains: {x: -8, z: -46, spacing: 2.8, kind: "land", clearing: 11},
     polar: {...coastPoint(-Math.PI / 2 + 0.55, -13), spacing: 2.8, kind: "land", clearing: 11}
 };
@@ -150,9 +172,17 @@ const ZONE_CENTRES: Record<LandZone, {x: number; z: number}> = {
     rainforest: {x: -48, z: 20},
     woodland: {x: -42, z: -26},
     grassland: {x: 40, z: -12},
-    desert: {x: 50, z: 36},
+    desert: {x: 105, z: -4},
     mountains: {x: -10, z: -50},
     polar: {x: ZONE_SITES.polar.x + 4, z: ZONE_SITES.polar.z - 4}
+};
+
+/**
+ * Zones whose area reaches round more than one centre (the nearest counts). Home growth: Home's district spreads over
+ * the new south lobe and east along the coast to the desert, round the hamlet's streets.
+ */
+const MORE_CENTRES: Partial<Record<LandZone, Array<{x: number; z: number}>>> = {
+    farm_garden: [{x: 30, z: 72}, {x: 8, z: 86}, {x: 48, z: 56}, {x: 52, z: 34}, {x: 56, z: 20}, {x: 34, z: 26}, {x: 60, z: 4}]
 };
 
 /**
@@ -242,6 +272,50 @@ export function riverDistance(x: number, z: number): number {
     return best;
 }
 
+/**
+ * The hamlet's lanes (home growth, 2026-11-11): earth lanes the plots front onto. `map/hamlet.ts` plans the reserved
+ * plots along them, `terrain.ts` paints them, and the fields keep their crops off the village round them (`fields.ts`).
+ * Polylines of (x, z); the first is the village street past today's cottage.
+ */
+export type HamletLane = {
+    /** A street (cottages front onto it) or a farm track (the smallholdings' yards and paddocks open onto it). */
+    kind: "street" | "track";
+    points: Array<[number, number]>;
+    /** A street with smallholdings on one side (1: right of its way, -1: left) and cottages on the other. */
+    farmSide?: 1 | -1;
+};
+export const HAMLET_LANES: HamletLane[] = [
+    // The village street: past the cottage's gate, then east between the two rows of the east end.
+    {kind: "street", points: [[-21, 63], [-8, 63.5], [4, 62.8], [16, 62.5], [30, 62], [59, 47.5], [88, 33], [100, 27]]},
+    // Shore lane: down past the old orchard's ground to the beach, then west along it to the river's mouth.
+    {kind: "street", points: [[26, 61.9], [25, 80], [24, 95], [8, 98], [-6, 98.5], [-20, 97.5]]},
+    // The upper street, 38 m behind the village street (back gardens meet between them), the farms on its north side.
+    {kind: "street", points: [[24, 22.5], [71, -1], [83, -7], [95, -13]]},
+    // A farm track north to the grassland's edge.
+    {kind: "track", points: [[71, -1], [73, -14], [76, -30]]}
+];
+/** A lane's width (m), its verges not counted. */
+export const LANE_WIDTH = 3.2;
+/** How far from a lane the village's plots reach (a lane, a house's depth and a margin): Home's own trees keep out. */
+export const VILLAGE_REACH = 26;
+
+/** The lanes' bounding box, grown by the village's reach and its blend (a quick test before `laneDistance`). */
+const VILLAGE_BOX = (() => {
+    const xs = HAMLET_LANES.flatMap((lane) => lane.points.map((p) => p[0]));
+    const zs = HAMLET_LANES.flatMap((lane) => lane.points.map((p) => p[1]));
+    const pad = VILLAGE_REACH + 8;
+    return xs.length ? {x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, z0: Math.min(...zs) - pad, z1: Math.max(...zs) + pad} : {x0: 0, x1: 0, z0: 0, z1: 0};
+})();
+
+/** Metres to the nearest lane's middle line. */
+export function laneDistance(x: number, z: number): number {
+    let best = Infinity;
+    for (const {points} of HAMLET_LANES) {
+        for (let i = 1; i < points.length; i++) best = Math.min(best, distanceToSegment(x, z, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]));
+    }
+    return best;
+}
+
 /** Rolling hills (graphics pass, batch 2): broad rises 0…1, for the forests and the grassland. */
 function hills(x: number, z: number): number {
     return smoothstep(0.32, 0.82, fbm(x * 0.017 + 40, z * 0.017 - 12));
@@ -317,7 +391,11 @@ export function sampleGround(x: number, z: number): GroundSample {
     // Zone weights: nearest centre wins, blended over a few metres, the edges warped so they never run straight.
     const wx = x + 14 * (fbm(x * 0.02 + 5, z * 0.02) - 0.5);
     const wz = z + 14 * (fbm(x * 0.02, z * 0.02 + 5) - 0.5);
-    const distances = LAND_ZONES.map((zone) => Math.hypot(wx - ZONE_CENTRES[zone].x, wz - ZONE_CENTRES[zone].z));
+    const distances = LAND_ZONES.map((zone) => {
+        const d = Math.hypot(wx - ZONE_CENTRES[zone].x, wz - ZONE_CENTRES[zone].z);
+        const more = MORE_CENTRES[zone];
+        return more ? Math.min(d, ...more.map((c) => Math.hypot(wx - c.x, wz - c.z))) : d;
+    });
     const nearest = Math.min(...distances);
     const raw = distances.map((d) => Math.exp(-(d - nearest) / SOFTNESS));
     const total = raw.reduce((sum, w) => sum + w, 0);
@@ -363,6 +441,18 @@ export function sampleGround(x: number, z: number): GroundSample {
         if (d > site.clearing + 8) continue;
         const flat = 0.85 * smoothstep(site.clearing + 8, site.clearing * 0.45, d);
         height += (siteBase(zone) + 0.4 * (fbm(x * 0.1, z * 0.1) - 0.5) - height) * flat;
+    }
+
+    // The hamlet's village (home growth) lies on gentle ground: within reach of its lanes the land eases toward a
+    // low, softly rolling base (the farm's own), so its cottages and smallholdings stand level.
+    if (x > VILLAGE_BOX.x0 && x < VILLAGE_BOX.x1 && z > VILLAGE_BOX.z0 && z < VILLAGE_BOX.z1) {
+        const lane = laneDistance(x, z);
+        if (lane < VILLAGE_REACH + 8) {
+            // (Only the open ground the hamlet stands on: the ice, the mountain and the forests keep their shape.)
+            const wild = (weights.polar ?? 0) + (weights.mountains ?? 0) + (weights.rainforest ?? 0) + (weights.woodland ?? 0);
+            const flat = 0.9 * smoothstep(VILLAGE_REACH + 8, VILLAGE_REACH - 2, lane) * Math.max(0, 1 - 2 * wild);
+            height += (1.1 + 0.5 * fbm(x * 0.045, z * 0.045) - height) * flat;
+        }
     }
 
     // The coast: land eases down to the beach, then the sea floor falls away.
