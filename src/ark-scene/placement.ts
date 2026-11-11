@@ -28,7 +28,7 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
-import {mapPlace, mapPoints, type MapPlace} from "@/ark-scene/map/place";
+import {mapPlace, mapPoints, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
 import {isHost} from "@/ark-scene/map/species";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
@@ -65,6 +65,8 @@ export type Placement = {
     sea?: boolean;
     /** Its place on the Ark map (`map/place.ts`): the tag it stands for, its roost, its partner role; absent when placed by its zone. */
     map?: MapPlace;
+    /** A small bird, bat or other vertebrate on its attach point (`map/place.ts` MapPerch): its home and roost on the behaviour schedule. */
+    perch?: MapPerch;
     /**
      * A partner with its host aboard (section 6): a rider on its back (the
      * oxpecker on a buffalo, the remora under a shark), one at its feet (the
@@ -378,6 +380,7 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
                 Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), canopy: mapped.canopy});
             }
             if (mapped.burrow) chosen.burrow = mapped.burrow;
+            if (mapped.perch) chosen.perch = mapped.perch;
             const cluster = clusters.get(key)!;
             if (cluster.count > 1) {
                 chosen.leader = cluster.leader;
@@ -504,5 +507,6 @@ function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
         place.sea = best.place.sea;
         delete place.micro;
         delete place.canopy;
+        delete place.perch;
     }
 }

@@ -16,7 +16,8 @@ import {mapPoints} from "@/ark-scene/map/place";
  * of anyone's (centres further apart than their half-lengths), in 3D.
  */
 function apart(p: Placement, q: Placement, lengthP: number, lengthQ: number): boolean {
-    if (!p.micro && !q.micro) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
+    // (A perched bird or lizard is on its attach point like a micro animal: its body clear of the others in 3D.)
+    if (!p.micro && !q.micro && !p.perch && !q.perch) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
     // A small one on its attach point: their bodies do not overlap (centres further apart than their half-lengths).
     return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max((lengthP + lengthQ) / 2, 0.02);
 }

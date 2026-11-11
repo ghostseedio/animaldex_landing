@@ -148,6 +148,8 @@ export type ScheduleAnimal = {
     /** For a predator: its nearest prey's home, which it may stalk towards (never past its own range). */
     prey?: {x: number; z: number} | null;
     group?: ScheduleGroup | null;
+    /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
+    roost?: Spot | null;
 };
 
 /** The hour (0–24) at a world time: the island clock, or a pinned hour. */
@@ -432,6 +434,7 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 
 /** Its roost: the same place every night (seeded by its id), from its profile's roost kind; a group's members by their leader's. */
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    if (animal.roost) return animal.roost;
     const group = animal.group;
     if (group && !FLOCKING.has(profile.social)) {
         // The group sleeps together: round its leader's roost, each a little apart.

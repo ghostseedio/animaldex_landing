@@ -45,7 +45,7 @@ export async function validateGrips(placed: Map<string, Placement>, slugOf: (id:
     let checked = 0;
     for (const [id, place] of Array.from(placed.entries())) {
         const slug = slugOf(id);
-        const gripping = place.canopy || (place.micro?.attach && GRIPPING.has(place.micro.attach.tag));
+        const gripping = place.canopy || (place.micro?.attach && GRIPPING.has(place.micro.attach.tag)) || (place.perch && GRIPPING.has(place.perch.tag));
         if (!gripping || seen.has(slug) || !manifest[slug]) continue;
         seen.add(slug);
         const file = join(rigDir, slug, `${manifest[slug]}.rig.glb`);

@@ -21,12 +21,13 @@
  *   the landing (the jetty), never on a habitat.
  */
 
-import {canopyPlace, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
-import type {MicroPlace, MicroSpot} from "@/ark-scene/micro";
+import {canopyPlace, canopyPoint, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {surfacePoint, type MicroPlace, type MicroSpot} from "@/ark-scene/micro";
 import {borrowedKey, clusterKey, MapPoints, pointIndex, type SlotKind, type SlotPick} from "@/ark-scene/map/points";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {attachFits, type ArkMapSampler, type AttachPoint, type AttachTag} from "@/ark-scene/map/sampler";
-import {isHeldOnMap, mapSpecies, type MapSpecies} from "@/ark-scene/map/species";
+import {isHeldOnMap, mapSpecies, trueMicro, type MapSpecies} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-scene/map/tags";
 import {waterSpot, waterTagAt, type WaterClass} from "@/ark-scene/map/water";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
@@ -65,8 +66,13 @@ export type MapPlace = {
     level: number;
 };
 
+/** A perch: a bird's, a bat's or a small vertebrate's attach point, as the surface it stands on (its back to `n`, heading `t`). */
+export type MapPerch = {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number; tag: AttachTag; id: string};
+
 /** What `placement.ts` gets back: a placement's fields. */
 export type MapPlacement = {
+    /** A small vertebrate on its attach point (`trueMicro` says it is not a micro animal): its perch, home and roost. */
+    perch?: MapPerch;
     x: number;
     z: number;
     ground: number;
@@ -273,6 +279,15 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
                 };
             }
             const micro = attachPlace(point, key, level, memberRank, trueLength);
+            if (!trueMicro(species, animal.model_slug, trueLength)) {
+                // A bird, a bat, a small mammal, a lizard or a frog: its attach point is its perch (its home and its roost on the
+                // behaviour schedule, which flies, walks or hops it from there and back), not a micro animal's spot.
+                const at = surfacePoint(micro, zone);
+                return {
+                    x: at.x, z: at.z, ground: at.y, yaw: Math.atan2(at.tx, at.tz), water: false, perch: {...at, tag: point.tag, id: point.id},
+                    map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost, key, level}
+                };
+            }
             return {
                 x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tangent[0], point.tangent[2]), water: point.tag === "tide_pool", micro,
                 map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost, key, level}
@@ -429,6 +444,43 @@ export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: 
     const species = mapSpecies(animal.model_slug, animal.zone);
     if (!species) return true;
     return mapPoints().sampler.ground(x, z).tags.some((tag) => species.allowed.has(tag));
+}
+
+/**
+ * On the behaviour lane's schedule (`index.ts` makeSched): everyone but a
+ * true micro animal (`trueMicro`) and an underground one that never comes up
+ * to graze (a mole, a naked mole-rat). A bird, a bat or a small mammal on an
+ * attach point is scheduled from its perch; a wombat or a badger from its
+ * burrow's entrance.
+ */
+export function onSchedule(place: {micro?: unknown; burrow?: unknown}, slug: string): boolean {
+    if (place.micro) return false;
+    if (place.burrow) return speciesLayer(slug).layer !== "underground" || (behaviourProfile(slug).weights.graze ?? 0) > 0;
+    return true;
+}
+
+/** A spot on the schedule's terms (`behaviour-schedule.ts` Spot). */
+export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: number; nz: number; point: string | null};
+
+/**
+ * Where the schedule takes it to sleep: the roost its text names
+ * (`sleep_pattern`: a tree, an attach point, a burrow, ground of a tag), else
+ * its perch; null leaves the choice to the schedule (its profile's roost).
+ * So the scene's sleepers are where the validator checks them.
+ */
+export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
+    const roost = place.map?.roost;
+    if (roost) {
+        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`};
+        if (roost.kind === "canopy" && roost.canopy) {
+            const at = canopyPoint(roost.canopy.zone ?? zone, roost.canopy);
+            return {x: at.x, y: at.y, z: at.z, nx: at.nx, ny: at.ny, nz: at.nz, point: `map:canopy`};
+        }
+        if (roost.kind === "burrow" && roost.burrow) return {x: roost.burrow.x, y: roost.burrow.ground, z: roost.burrow.z, nx: 0, ny: 1, nz: 0, point: "map:burrow"};
+        return {x: roost.x, y: roost.y, z: roost.z, nx: 0, ny: 1, nz: 0, point: `map:${roost.tag}`};
+    }
+    const perch = place.perch;
+    return perch ? {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`} : null;
 }
 
 /** How far it goes to sleep, by how it moves (m). */

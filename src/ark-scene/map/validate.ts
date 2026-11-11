@@ -40,7 +40,7 @@ import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {arborealOf, mapPoints, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
-import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
+import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
@@ -124,12 +124,15 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             if (tunnelPoint(place.burrow, 1).y > place.burrow.ground - 0.4) fail("floats_or_sinks", "its burrow's chamber is not underground");
             continue;
         }
-        if (place.micro?.attach) {
-            const point = place.micro.attach;
+        if ((place.micro || place.perch) && map.attach) {
+            // A micro animal at its attach point, or a bird, bat or small vertebrate perched on it (its home and roost on the schedule).
+            const point = map.attach;
             const tags = all.tagsOf(point);
             if (!tags.some((tag) => allowed.has(tag))) fail("invalid_surface", `${point.tag} at ${point.x.toFixed(1)},${point.z.toFixed(1)} stands for ${tags.join(" ")}`);
             if (!attachFits(point, length)) fail("small_not_on_attach_point", `${length.toFixed(3)} m does not fit ${point.tag} (${point.size.min}–${point.size.max})`);
-            const at = surfacePoint(place.micro, animal.zone);
+            const at = place.perch ?? surfacePoint(place.micro!, animal.zone);
+            if (place.micro && !trueMicro(species, animal.model_slug, length)) fail("invalid_surface", `a ${bodyOf(animal.model_slug) ?? "?"} drawn as a micro animal, off the behaviour schedule`);
+            if (place.perch && trueMicro(species, animal.model_slug, length)) fail("invalid_surface", "a micro animal perched like a bird");
             if ((species.move === "fly" || species.move === "perch") && (point.tag === "worm_hole" || point.tag === "burrow_entrance")) fail("invalid_surface", `a flyer on a ${point.tag}`);
             // On it: never further off it than its surface allows a crawl (a hole's ground the most).
             if (Math.hypot(at.x - point.x, at.y - point.y, at.z - point.z) > 0.9) fail("floats_or_sinks", `${Math.hypot(at.x - point.x, at.y - point.y, at.z - point.z).toFixed(2)} m off its ${point.tag}`);
