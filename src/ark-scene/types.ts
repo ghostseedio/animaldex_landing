@@ -136,6 +136,10 @@ export type ArkSceneStats = {
     lite: boolean;
     /** Animals drawn with their rig this frame, rigs loaded, and the rig bytes downloaded this session. */
     rigged: number;
+    /** The behaviour schedule: animals on it, its main-thread time per frame (ms, mean), and the time its places and walk grid took to build (ms, once). */
+    scheduled?: number;
+    behaviourMs?: number;
+    behaviourBuildMs?: number;
     rigsLoaded: number;
     rigBytes: number;
 };
@@ -257,7 +261,7 @@ export type ArkSceneHandle = {
     setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
-    setClockScale: (scale: number) => void;
+    setClockScale: (scale: number, atMs?: number) => void;
     setHours: (hours: number | null) => void;
     /**
      * Act out what the server says happened ("while you were away"): each act

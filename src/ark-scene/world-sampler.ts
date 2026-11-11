@@ -19,7 +19,7 @@ import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import type {ArkZone} from "@/ark-scene/types";
-import {hashString, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
 
 /** The behaviour system's place tags. */
 export const ATTACH_TAGS = [
@@ -123,6 +123,39 @@ class GridIndex {
 const TREE_KINDS = new Set<DecorItem["kind"]>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy"]);
 const UP = {nx: 0, ny: 1, nz: 0};
 
+/**
+ * The ground's height on a 0.5 m lattice, each corner worked out the first time it is needed (`world.ts`
+ * `heightAt`), and read between corners bilinearly: animals are posed every frame, and the analytic ground costs
+ * tens of microseconds a point. Within a centimetre or two of the analytic ground on the island's slopes (finer
+ * than the drawn terrain mesh).
+ */
+class HeightLattice {
+    private static readonly STEP = 0.5;
+    private readonly n = Math.ceil((TERRAIN_HALF * 2) / HeightLattice.STEP) + 2;
+    // Doubles: a value read back must be the value first worked out (float32 would round only after the first read).
+    private readonly cache = new Float64Array(this.n * this.n).fill(Number.NaN);
+    private corner(i: number, j: number): number {
+        const k = j * this.n + i;
+        let h = this.cache[k];
+        if (Number.isNaN(h)) h = this.cache[k] = groundHeight(-TERRAIN_HALF + i * HeightLattice.STEP, -TERRAIN_HALF + j * HeightLattice.STEP);
+        return h;
+    }
+    readonly at = (x: number, z: number): number => {
+        const fx = (x + TERRAIN_HALF) / HeightLattice.STEP;
+        const fz = (z + TERRAIN_HALF) / HeightLattice.STEP;
+        const i = Math.floor(fx);
+        const j = Math.floor(fz);
+        if (i < 0 || j < 0 || i >= this.n - 1 || j >= this.n - 1) return groundHeight(x, z);
+        const u = fx - i;
+        const v = fz - j;
+        const a = this.corner(i, j);
+        const b = this.corner(i + 1, j);
+        const c = this.corner(i, j + 1);
+        const d = this.corner(i + 1, j + 1);
+        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+    };
+}
+
 /** The sampler over the graphics lane's scenery interface. */
 export function sceneSampler(): ArkWorldSampler {
     const points = new Map<AttachTag, AttachPoint[]>();
@@ -137,7 +170,7 @@ export function sceneSampler(): ArkWorldSampler {
         index.add(full);
     };
     const surface = (x: number, z: number) => surfaceAt(x, z);
-    const height = (x: number, z: number) => surface(x, z).height;
+    const lattice = new HeightLattice();
 
     // The scenery's own points (trees, flowers, rocks, the house, lamps, ponds, the ground's holes and litter).
     const scenery: SceneryPoint[] = allAttachPoints();
@@ -229,7 +262,8 @@ export function sceneSampler(): ArkWorldSampler {
     const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
     return {
         version: `scene:${items.length}:${scenery.length}:${counts}`,
-        heightAt: height,
+        // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
+        heightAt: lattice.at,
         isWater: (x, z) => surface(x, z).waterDepth > 0,
         slope: (x, z) => {
             const n = surface(x, z).normal;
