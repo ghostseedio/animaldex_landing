@@ -564,3 +564,41 @@ test("predator spacing, cut into tasks and sliced a predator at a time, is the o
         assert.deepEqual(result, reference);
     }
 });
+
+test("nobody goes round in circles: in any 20 s, under 1% of moving animals turn a full circle (facing or travel)", () => {
+    // (The owner: "some animals move randomly in circles". 2.0% facing and 3.6% travel before: a pause faced north and
+    // back, scans turned the body for good, a stay snapped to a seeded heading, a school's members swam in and out
+    // round a resting leader, corners were snapped.)
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let moving = 0;
+    let facing = 0;
+    let travel = 0;
+    for (const i of animals.filter((_, k) => k % 2 === 0)) {
+        for (let w = 0; w < 24 * 3600; w += 60) {
+            let last = poseOf(i, DAY + w);
+            let heading: number | null = null;
+            let f = 0;
+            let tr = 0;
+            let moved = false;
+            for (let s = 1; s <= 20; s++) {
+                const p = poseOf(i, DAY + w + s);
+                f += Math.abs(wrap(p.yaw - last.yaw));
+                if (Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
+                    moved = true;
+                    const h = Math.atan2(p.x - last.x, p.z - last.z);
+                    if (heading !== null) tr += Math.abs(wrap(h - heading));
+                    heading = h;
+                }
+                last = p;
+            }
+            if (!moved) continue;
+            moving++;
+            if (f > TAU) facing++;
+            if (tr > TAU) travel++;
+        }
+    }
+    assert.ok(moving > 5000, `moving windows ${moving}`);
+    assert.ok(facing / moving < 0.01, `${((facing / moving) * 100).toFixed(1)}% turn their facing a full circle in 20 s`);
+    assert.ok(travel / moving < 0.01, `${((travel / moving) * 100).toFixed(1)}% go round a full circle in 20 s`);
+});

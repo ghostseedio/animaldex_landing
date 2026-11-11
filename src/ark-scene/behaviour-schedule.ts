@@ -85,9 +85,11 @@ export type ArkBeat = "walk" | "run" | "fly" | "glide" | "swim" | "enter_water" 
 export type TripMode = "ground" | "air" | "water" | "surface" | "stay";
 type LegMode = TripMode | "enter" | "exit" | "pause" | "shadow";
 
-export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null};
+export type Spot = {x: number; y: number; z: number; /** The surface's normal there (up on the ground). */ nx: number; ny: number; nz: number; point: string | null; /** The way it faces when it is left there (a slot's finish), when known. */ yaw?: number};
 
 export type Leg = {
+    /** A pause: the way it faces (the way it came; a pause from a point to itself has no direction of its own). */
+    yaw?: number;
     mode: LegMode;
     from: Spot;
     to: Spot;
@@ -563,7 +565,7 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
                 add("bite", 3 + random() * 5);
                 add("chew", 1.5 + random() * 2.5);
                 if (random() < 0.28) add("scan", 2 + random() * 2.5, {turn: (random() - 0.5) * 1.6});
-                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.35 + random() * 0.45, dz: (random() - 0.5) * 0.4, turn: (random() - 0.5) * 0.9});
+                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.35 + random() * 0.45, dz: (random() - 0.5) * 0.2, turn: (random() - 0.5) * 0.45});
             }
             break;
         case "forage":
@@ -571,7 +573,7 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             for (let n = 0; n < 16; n++) {
                 add("peck", 1.5 + random() * 3);
                 if (random() < 0.3) add("scan", 1.5 + random() * 2, {turn: (random() - 0.5) * 1.4});
-                if (random() < 0.6) add("step", 1, {dx: 0.4 + random() * 0.8, dz: (random() - 0.5) * 0.8, turn: (random() - 0.5) * 1.4});
+                if (random() < 0.6) add("step", 1, {dx: 0.4 + random() * 0.8, dz: (random() - 0.5) * 0.3, turn: (random() - 0.5) * 0.6});
             }
             break;
         case "drink":
@@ -816,7 +818,9 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const onGround = !raised(world, at) && !wet(world, at);
     for (const beat of beats) {
         if (beat.at > seconds) break;
-        yaw += beat.turn ?? 0;
+        // A scan is a look round (the head and its clip): its body shifts a little and comes back, never turns it round.
+        const glance = beat.beat === "scan" ? (beat.turn ?? 0) * 0.3 : 0;
+        if (beat.beat !== "scan") yaw += beat.turn ?? 0;
         if ((beat.dx || beat.dz) && onGround) {
             const l = Math.max(animal.length, 0.05);
             const nx = x + (Math.sin(yaw) * (beat.dx ?? 0) + Math.cos(yaw) * (beat.dz ?? 0)) * l;
@@ -828,10 +832,10 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
                 z = nz;
             }
         }
-        out.push({at: beat.at, beat: beat.beat, x, z, yaw});
+        out.push({at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance});
     }
     const y = onGround ? Math.max(world.sampler.heightAt(x, z), 0) + (at.y - Math.max(world.sampler.heightAt(at.x, at.z), 0)) : at.y;
-    return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z}};
+    return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z, yaw}};
 }
 
 /** A flock member's place beside its leader this slot, and its leader's trips over the slot. */
@@ -868,7 +872,11 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
  */
 function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent): {beats: StayBeat[]; finish: Spot} | null {
     if (!now.to) return null;
-    const yaw = now.face ?? rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
+    // Facing roughly its way out from home (seeded, within about 35 degrees), not any way at all: arriving it turns a
+    // little, not round (a heading from where it came from would chain back through every slot).
+    const roll = rng(hashString(`${animal.id}#yaw#${slot}`))();
+    const out = Math.hypot(now.to.x - animal.home.x, now.to.z - animal.home.z);
+    const yaw = now.face ?? (out > 0.5 ? Math.atan2(now.to.x - animal.home.x, now.to.z - animal.home.z) + (roll - 0.5) * 1.2 : roll * Math.PI * 2);
     return placeStay(world, profile, animal, now.to, yaw, now.stay, Infinity);
 }
 
@@ -979,7 +987,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const l1 = pathLength(firstPath);
             const l2 = Math.max(pathLength(secondPath), 0.01);
             legs.push({mode: "ground", from: a, to: midSpot, path: firstPath, length: l1, seconds: l1 / speed, beat});
-            legs.push({mode: "pause", from: midSpot, to: midSpot, path: null, length: 0, seconds: 2 + random() * 4, beat: random() < 0.6 ? "scan" : "pause"});
+            legs.push({mode: "pause", from: midSpot, to: midSpot, path: null, length: 0, seconds: 2 + random() * 4, beat: random() < 0.6 ? "scan" : "pause", yaw: alongPath(firstPath, 1).yaw});
             legs.push({mode: "ground", from: midSpot, to: b, path: secondPath, length: l2, seconds: l2 / speed, beat});
         } else legs.push({mode: "ground", from: a, to: b, path, length, seconds: length / speed, beat});
     };
@@ -1163,15 +1171,16 @@ function alongRoute(route: NavPoint[], u: number): {x: number; z: number; yaw: n
  */
 function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Trip["shadow"]>, epochSeconds: number, ease: number): {x: number; y: number; z: number; yaw: number} {
     const phase = (shadow.dx * 7.3 + shadow.dz * 3.1) % (Math.PI * 2);
-    const breathe = 1 + ease * (0.18 * Math.sin(epochSeconds * 0.35 + phase) + 0.08 * Math.sin(epochSeconds * 0.9 + phase * 2));
+    // (Slowly and a little: a quick in-and-out round a resting leader read as swimming in circles.)
+    const breathe = 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
     const inWater = at.y < -0.01;
-    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.25 * Math.sin(epochSeconds * 0.5 + phase)) : at.y;
+    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.15 * Math.sin(epochSeconds * 0.15 + phase)) : at.y;
     const x = at.x + shadow.dx * breathe;
     const z = at.z + shadow.dz * breathe;
     const floor = world.sampler.heightAt(x, z);
     const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, 0);
     const ceiling = inWater ? -0.1 : Infinity;
-    return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.12 * Math.sin(epochSeconds * 0.4 + phase)};
+    return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
 }
 
 function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSeconds: number): TripPose {
@@ -1181,7 +1190,14 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
     switch (leg.mode) {
         case "ground":
         case "water": {
-            const at = alongPath(leg.path ?? [from, to], u);
+            const route = leg.path ?? [from, to];
+            const at = alongPath(route, u);
+            // It faces a point a metre and a half on along its way: a corner is turned through, not snapped.
+            const total = pathLength(route);
+            if (total > 0.01 && u < 1) {
+                const ahead = alongPath(route, Math.min(u + 1.5 / total, 1), total);
+                if (Math.hypot(ahead.x - at.x, ahead.z - at.z) > 0.05) at.yaw = Math.atan2(ahead.x - at.x, ahead.z - at.z);
+            }
             const ground = world.sampler.heightAt(at.x, at.z);
             const level = (p: Spot) => {
                 const h = world.sampler.heightAt(p.x, p.z);
@@ -1236,7 +1252,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
         }
         case "pause":
         default:
-            return {x: from.x, y: from.y, z: from.z, yaw: Math.atan2(to.x - from.x, to.z - from.z) || 0, moving: false, aloft: false, ...up, beat: leg.beat};
+            return {x: from.x, y: from.y, z: from.z, yaw: leg.yaw ?? (Math.atan2(to.x - from.x, to.z - from.z) || 0), moving: false, aloft: false, ...up, beat: leg.beat};
     }
 }
 
@@ -1246,7 +1262,18 @@ export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: numbe
     if (into < trip.arrive - trip.start) {
         let t = Math.max(into, 0);
         for (const leg of trip.legs) {
-            if (t < leg.seconds || leg === trip.legs[trip.legs.length - 1]) return legPose(world, leg, leg.seconds > 0 ? Math.min(t / leg.seconds, 1) : 1, trip, epochSeconds);
+            if (t < leg.seconds || leg === trip.legs[trip.legs.length - 1]) {
+                const pose = legPose(world, leg, leg.seconds > 0 ? Math.min(t / leg.seconds, 1) : 1, trip, epochSeconds);
+                // Setting off it turns from the way it was facing to its way over 0.8 s, not in an instant.
+                const since = Math.max(into, 0);
+                if (since < 0.8 && trip.from.yaw !== undefined && !trip.shadow) {
+                    let turn = pose.yaw - trip.from.yaw;
+                    while (turn > Math.PI) turn -= Math.PI * 2;
+                    while (turn < -Math.PI) turn += Math.PI * 2;
+                    return {...pose, yaw: trip.from.yaw + turn * (since / 0.8)};
+                }
+                return pose;
+            }
             t -= leg.seconds;
         }
     }
@@ -1260,7 +1287,7 @@ export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: numbe
     const stay = trip.stay;
     const last = trip.legs[trip.legs.length - 1];
     const lastPose = last ? legPose(world, last, 1, trip, epochSeconds) : null;
-    const startYaw = lastPose ? lastPose.yaw : stay[0]?.yaw ?? 0;
+    const startYaw = lastPose ? lastPose.yaw : trip.from.yaw ?? stay[0]?.yaw ?? 0;
     const up = {nx: to.nx, ny: to.ny, nz: to.nz};
     if (!stay.length) return {x: to.x, y: to.y, z: to.z, yaw: startYaw, moving: false, aloft: false, ...up, beat: trip.doing === "sleep" || trip.doing === "to_roost" ? "sleep" : "rest"};
     let i = 0;
