@@ -447,7 +447,7 @@ async function mountIsland(el: HTMLElement) {
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
     // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
     const view = params.get("view")?.split(",").map(Number);
-    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null; trip?: {recipe?: string | null} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
     const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
     const settle = async (maxMs = 180_000) => {
         const until = performance.now() + maxMs;
@@ -560,13 +560,15 @@ async function mountIsland(el: HTMLElement) {
                                 while (turn < -Math.PI) turn += Math.PI * 2;
                                 tr.turn += Math.abs(turn);
                                 // Whose turning: a recipe episode laid over the schedule (its pose acts), or the schedule's own steps.
-                                const source = e.sched?.pose?.act ? `recipe:${e.sched.trip?.recipe ?? "?"}` : "schedule";
+                                const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
+                                const source = act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.turn += Math.abs(turn);
                                 tr.byRecipe.set(source, by);
                             }
                             {
-                                const source = e.sched?.pose?.act ? `recipe:${e.sched.trip?.recipe ?? "?"}` : "schedule";
+                                const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
+                                const source = act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.moving += span;
                                 tr.byRecipe.set(source, by);
