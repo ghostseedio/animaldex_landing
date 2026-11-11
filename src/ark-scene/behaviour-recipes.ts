@@ -23,7 +23,7 @@
 import table from "@/ark-scene/recipes.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
-import {bodyLengthsPerSecond, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMode, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
@@ -259,6 +259,44 @@ function waterNear(world: ScheduleWorld, x: number, z: number, reach: number, de
     return null;
 }
 
+/** How high above the water a plunge-diver dives from (m): a kingfisher from a metre or so to a few, never off a cliff. */
+function plungeDrops(length: number): [number, number] {
+    return [Math.max(length * 4, 0.6), Math.min(Math.max(length * 40, 4), 12)];
+}
+
+/**
+ * Whether a plunge from `from` to `to` stays in the air until it reaches the water: the dive's own path (most of the
+ * way out early, the drop gathering at the end) never goes below the ground under it (a dive off a high bank into the
+ * lake below goes through the bank).
+ */
+function clearPlunge(world: ScheduleWorld, from: P, to: P): boolean {
+    for (let u = 0.1; u <= 0.85; u += 0.05) {
+        const along = Math.min(u * 1.25, 1);
+        const x = from.x + (to.x - from.x) * along;
+        const z = from.z + (to.z - from.z) * along;
+        const y = from.y + (to.y - from.y) * Math.pow(u, 1.6);
+        if (y < Math.max(world.sampler.heightAt(x, z), 0) + 0.1) return false;
+    }
+    return true;
+}
+
+/** Open water a plunge-diver at `from` can dive into: within reach, deep enough, a drop it dives from and a clear way down. */
+function plungeWater(world: ScheduleWorld, from: P, reach: number, length: number): P | null {
+    const [low, high] = plungeDrops(length);
+    if (from.y < low || from.y > high) return null;
+    for (const f of [0.3, 0.5, 0.75, 1]) {
+        for (let k = 0; k < 16; k++) {
+            const a = (k / 16) * Math.PI * 2;
+            const x = from.x + Math.sin(a) * reach * f;
+            const z = from.z + Math.cos(a) * reach * f;
+            if (world.sampler.heightAt(x, z) >= -0.45) continue;
+            const to = {x, y: -Math.max(length * 0.3, 0.06), z};
+            if (clearPlunge(world, from, to)) return to;
+        }
+    }
+    return null;
+}
+
 function goalSpot(input: RecipeIntentInput, template: Template, random: () => number): Spot | null {
     const {world, profile, animal, kit, centre} = input;
     const length = Math.max(animal.length, 0.05);
@@ -273,7 +311,8 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
                 for (const tag of ["branch", "reeds", "rock_top", "cliff_ledge"] as AttachTag[]) {
                     const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius * 1.6}).filter((p) => !low || p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) < lowest);
                     const sorted = [...near].sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z) || a.id.localeCompare(b.id));
-                    for (const point of sorted.slice(0, 24)) if (waterNear(world, point.x, point.z, reach, 0.3, hashString(point.id))) return kit.spotOf(point);
+                    // (Open water below it and a clear drop: a perch on a high bank over the lake is no plunge perch.)
+                    for (const point of sorted.slice(0, 24)) if (plungeWater(world, {x: point.x, y: point.y, z: point.z}, reach, length)) return kit.spotOf(point);
                 }
             }
             const edge = kit.placeNear(world, centre, length, ["water_edge"], radius * 1.6, random());
@@ -531,14 +570,21 @@ function pace(profile: ArkBehaviourProfile, length: number): number {
     return Math.max(bodyLengthsPerSecond(profile) * Math.max(length, 0.05), 0.08);
 }
 
-/** A travel block's speed (m/s) for this animal. */
-function speedOf(block: BlockDef, walk: number, height: number): number {
+/**
+ * A travel block's speed (m/s) for this animal, never faster than its clips carry it (behaviour's corrected clip
+ * paces, so its feet never slide): walking at its walk's pace (`walk`, from `bodyLengthsPerSecond`), running at its
+ * run's (`runFactor`: one with no run clip walks it), in the water at its schedule's own swimming pace (its free pace
+ * times 1.4: a harbour seal chasing fish swam at a fixed 0.3 m/s, 2.1 times its clip's).
+ */
+function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number): number {
+    const runs = Math.min(runFactor(profile), 2.3);
+    const swim = freeBodyLengthsPerSecond(profile) * Math.max(length, 0.05) * 1.4;
     switch (block.id) {
         case "run":
         case "flee":
-            return walk * 2.3;
+            return walk * runs;
         case "clash":
-            return walk * 2.1;
+            return walk * Math.min(runs, 2.1);
         case "stalk":
             return walk * 0.35;
         case "wade":
@@ -551,17 +597,15 @@ function speedOf(block: BlockDef, walk: number, height: number): number {
         case "climb":
             return walk * 0.5;
         case "swim":
-            return Math.max(walk * 1.4, 0.3);
+        case "dive":
+        case "surface":
+            return Math.max(swim, 0.02);
         case "fly":
             return Math.min(Math.max(walk * 4, 2.5), 14);
         case "dive_air":
         case "dive_feet":
             // Faster from higher up: a kingfisher's few metres at 6-8 m/s, a gannet's twenty-odd at 20.
             return Math.min(Math.max(4 + height * 0.9, 4), 20);
-        case "dive":
-            return Math.max(walk * 1.2, 0.6);
-        case "surface":
-            return Math.max(walk * 1.2, 0.8);
         default:
             return walk;
     }
@@ -596,13 +640,28 @@ type BuildContext = {
     hours: number;
     /** Its heading as the episode starts (its schedule pose's then): the first key turns from it, never from north. */
     yaw0: number;
-    /** The heading its legs bend towards at a time (set by `buildEpisode`): one slow loop over the episode, so it comes
-     *  back round to where it began instead of turning back on itself (an out-and-back is two U-turns close together). */
+    /** The heading its legs bend towards at a time (set by `buildEpisode`): one slow half loop over the episode, so it
+     *  comes back round towards where it began instead of turning back on itself (an out-and-back is two U-turns). */
     plan?: (t: number) => number;
 };
 
 /** The animal's height (m), roughly, for wading depth and heights over water. */
 const heightOf = (length: number) => Math.max(length * 0.6, 0.05);
+
+/** About how long a leg of a recipe lasts at most (s): its reach is scaled to its pace. */
+const LEG_SECONDS = 8;
+
+/** A leg's length along its curve (m, flat; with the climb or drop). */
+function legLength(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P): number {
+    let flat = 0;
+    let previous = {x: from.x, z: from.z};
+    for (let j = 1; j <= 10; j++) {
+        const at = legAt(from, c, c2, to, j / 10);
+        flat += Math.hypot(at.x - previous.x, at.z - previous.z);
+        previous = at;
+    }
+    return Math.hypot(flat, to.y - from.y);
+}
 
 const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 
@@ -740,6 +799,8 @@ function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading
 function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, pos: P, random: () => number, heading: number, t: number): P | null {
     const {world, owner, anchor} = ctx;
     const length = Math.max(owner.animal.length, 0.05);
+    // A leg reaches no further than it goes in about eight seconds at its own pace (a seal's slow clip chases close by).
+    const within = (reach: number) => Math.min(reach, Math.max(speedOf(block, pace(owner.profile, length), 0, owner.profile, length) * LEG_SECONDS, length * 2, 0.6));
     const origin = step.near === "here" ? pos : anchor;
     const scaleUp = Math.min(Math.max(length / 0.4, 0.4), 2.2);
     const sampler = world.sampler;
@@ -759,7 +820,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             if (fishSource && (step.to === "prey" || block.id === "dive_air" || block.id === "dive_feet")) {
                 const school = fishSource(origin, Math.max(step.r ?? 12, 8), ctx.t0)[0];
                 if (school) {
-                    const lead = Math.min(Math.hypot(school.centre.x - pos.x, school.centre.z - pos.z) / Math.max(speedOf(block, pace(owner.profile, length), 0), 0.5), 6);
+                    const lead = Math.min(Math.hypot(school.centre.x - pos.x, school.centre.z - pos.z) / Math.max(speedOf(block, pace(owner.profile, length), 0, owner.profile, length), 0.5), 6);
                     const x = school.centre.x + school.heading.x * school.speed * lead;
                     const z = school.centre.z + school.heading.z * school.speed * lead;
                     if (sampler.heightAt(x, z) < -0.25) return {x, y: step.to === "prey" ? Math.min(school.centre.y, -0.2) : -Math.max(length * 0.3, 0.06), z};
@@ -767,23 +828,28 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             }
             // A dive goes into open water (not the edge's few centimetres); a chase deeper still.
             const depth = step.to === "prey" ? Math.max(length * 1.2, 0.5) : block.id === "dive_air" || block.id === "dive_feet" ? 0.45 : 0.25;
-            const reach = Math.max(step.r ?? Math.min(Math.max(length * 40, 4), 14), 1.5);
+            const reach = within(Math.max(step.r ?? Math.min(Math.max(length * 40, 4), 14), 1.5));
             const under = block.id === "dive_air" || block.id === "dive_feet" ? -Math.max(length * 0.3, 0.06) : 0;
             const inWater = (x: number, z: number, floor: number): P =>
                 step.to === "over_water" ? {x, y: (step.h ?? 4) * scaleUp, z} : step.to === "prey" ? {x, y: Math.max(floor + length * 0.6, -Math.max(length * 2.5, 1.2)) * (0.5 + 0.4 * random()), z} : {x, y: under, z};
+            // (A plunge goes only where its way down is clear of the ground: else null, and it hovers out over the water first.)
+            const plunge = block.id === "dive_air" || block.id === "dive_feet";
             const ahead = aheadSpot(ctx, step, pos, heading, reach, step.to === "prey" ? 0.2 : 0.3, random, (x, z) => {
                 const floor = sampler.heightAt(x, z);
-                return floor < -depth ? inWater(x, z, floor) : null;
+                if (floor >= -depth) return null;
+                const at = inWater(x, z, floor);
+                return !plunge || clearPlunge(world, pos, at) ? at : null;
             }, t);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
+            if (plunge) return plungeWater(world, pos, reach, length);
             const water = waterNear(world, origin.x, origin.z, reach, depth, hashString(`${ctx.seed}#${Math.floor(random() * 1e6)}`));
             if (!water) return null;
             return inWater(water.x, water.z, water.floor);
         }
         case "shallows": {
             const deepest = Math.min(Math.max(heightOf(length) * 0.45, 0.04), 0.7);
-            const reach = step.r ?? Math.max(length * 6, 2.5);
+            const reach = within(step.r ?? Math.max(length * 6, 2.5));
             const ahead = aheadSpot(ctx, step, pos, heading, reach, 0.35, random, (x, z) => {
                 const h = sampler.heightAt(x, z);
                 return h < -0.02 && h > -deepest ? {x, y: h, z} : null;
@@ -811,7 +877,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
         case "ground":
         case "material": {
             const centre = step.to === "material" ? nestOrigin(ctx) ?? origin : origin;
-            const reach = step.r ?? 3;
+            const reach = within(step.r ?? 3);
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
             const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (sampler.heightAt(x, z) > 0.03 && world.nav.walkable(x, z) ? {x, y: ground(x, z), z} : null), t);
             if (ahead) return ahead;
@@ -826,7 +892,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             return null;
         }
         case "air": {
-            const ahead = aheadSpot(ctx, step, pos, heading, step.r ?? 3, 0.35, random, (x, z) => ({x, y: origin.y + (random() - 0.3) * 1.2, z}), t);
+            const ahead = aheadSpot(ctx, step, pos, heading, within(step.r ?? 3), 0.35, random, (x, z) => ({x, y: origin.y + (random() - 0.3) * 1.2, z}), t);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
             const a = random() * Math.PI * 2;
@@ -911,9 +977,10 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     let pos: P = ctx.anchor;
     // Its heading as each key starts: from its schedule pose's, turned only by its legs' curves and its holds' eased turns.
     let yaw = ctx.yaw0;
-    // Its legs bend round one slow loop (a side for the episode), back to where it began.
+    // Its legs bend round one slow half loop (a side for the episode): out, round and back towards where it began, so
+    // its way home at the end lies ahead of it, not behind.
     const loopSide = hashString(`${ctx.seed}#loop`) % 2 ? 1 : -1;
-    const loopCtx: BuildContext = {...ctx, plan: (at: number) => ctx.yaw0 + loopSide * Math.PI * 2 * Math.min(Math.max((at - ctx.t0) / Math.max(ctx.t1 - ctx.t0, 1), 0), 1)};
+    const loopCtx: BuildContext = {...ctx, plan: (at: number) => ctx.yaw0 + loopSide * Math.PI * Math.min(Math.max((at - ctx.t0) / Math.max(ctx.t1 - ctx.t0, 1), 0), 1)};
     const rate = turnRate(length);
     let carry: Key["carry"] = null;
     let caught = false;
@@ -938,8 +1005,16 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             let block = BLOCKS[step.b];
             if (!block) continue;
             // (A strike lunges forward its own reach, a third of a body or so: it goes on from there.)
-            const lunge = block.id === "strike" ? Math.min((block.surge ?? 0.3) * length, 0.8) : 0;
-            const target = block.motion === "travel" ? resolveTarget(loopCtx, step, block, pos, random, yaw, t) : lunge ? {x: pos.x + Math.sin(yaw) * lunge, y: pos.y, z: pos.z + Math.cos(yaw) * lunge} : pos;
+            // (No quicker than it runs: a slow-clipped animal strikes with its head, the body barely moving.)
+            const lunge = block.id === "strike" ? Math.min((block.surge ?? 0.3) * length, 0.8, walk * Math.min(runFactor(owner.profile), 2.3) * (step.s ? step.s[0] : 0.4)) : 0;
+            let target = block.motion === "travel" ? resolveTarget(loopCtx, step, block, pos, random, yaw, t) : lunge ? {x: pos.x + Math.sin(yaw) * lunge, y: pos.y, z: pos.z + Math.cos(yaw) * lunge} : pos;
+            // A plunge from too low, too high or with ground in the way: it flies out over the water, hovers, and plunges
+            // from there (as a kingfisher does where there is no perch over the water).
+            if ((block.id === "dive_air" || block.id === "dive_feet") && (!target || pos.y < plungeDrops(length)[0] || pos.y > plungeDrops(length)[1])) {
+                const hoverAt = Math.min(Math.max(length * 15, 1.5), 6) / Math.min(Math.max(length / 0.4, 0.4), 2.2);
+                if (!sequence([{b: "fly", to: "over_water", h: hoverAt, r: step.r}, {b: "hover", s: [1, 2.5]}])) return false;
+                target = resolveTarget(loopCtx, step, block, pos, random, yaw, t);
+            }
             if (!target) return false;
             if (block.id === "go") block = goBlock(owner.profile, kit, world, pos, target);
             const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
@@ -952,7 +1027,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                       : block.id === "leap" || block.id === "dive_in" || block.id === "hop_out"
                         ? 0.5 + 0.25 * timing()
                         : // A pair's travel times come from the pair's geometry (the same for both sides) at the slower one's pace.
-                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / speedOf(block, walk, height);
+                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / speedOf(block, walk, height, owner.profile, length);
             const flat = Math.hypot(target.x - pos.x, target.z - pos.z);
             const face: P | null = step.face === "other" && ctx.pair ? ctx.pair.other : step.face === "water" ? waterFace(world, pos, length, yaw) : null;
             // Its heading (behaviour's no-spin rule): a leg curves on from the way it was going and it faces along the
@@ -964,8 +1039,8 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             if (block.motion === "travel") {
                 if (block.id === "clash" && face) want = Math.atan2(face.x - pos.x, face.z - pos.z);
                 else if (flat > 0.03) {
-                    // (A walk to meet its rival comes in facing it.)
-                    curve = legCurve(world, block, pos, target, yawIn, face ? Math.atan2(face.x - target.x, face.z - target.z) : null);
+                    // (A walk to meet its rival comes in facing it; a plunge goes straight down its line.)
+                    curve = block.curve === "plunge" ? null : legCurve(world, block, pos, target, yawIn, face ? Math.atan2(face.x - target.x, face.z - target.z) : null);
                     const end = legAt(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1);
                     want = Math.atan2(end.dx, end.dz);
                 }
@@ -973,9 +1048,13 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             else if (face) want = Math.atan2(face.x - pos.x, face.z - pos.z);
             // (On its own, a leg takes at least as long as its turn needs at its turn rate: a short hop round is not a spin.)
             const turning = block.motion === "travel" && !ctx.pair && flat > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1, yawIn)) * 1.2) / rate : 0;
-            const seconds = block.motion === "travel" ? Math.max(step.s ? Math.min(Math.max(travelSeconds, step.s[0]), step.s[1]) : travelSeconds, 0.2, turning) : Math.max(draw, 0.3);
+            // (On its own it goes the curve's length at its pace, however long that takes: a leg is never sped up past its
+            // clip. A pair keeps the template's bounds, the same on both sides.)
+            const curved = ctx.pair || !TIMED_BY_LENGTH.has(block.id) || flat <= 0.03 ? travelSeconds : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target) / speedOf(block, walk, height, owner.profile, length);
+            const bounded = step.s ? (ctx.pair ? Math.min(Math.max(curved, step.s[0]), step.s[1]) : Math.max(curved, step.s[0])) : curved;
+            const seconds = block.motion === "travel" ? Math.max(bounded, 0.2, turning) : Math.max(draw, 0.3);
             // It stops while it still has time to get back at its own pace (a pair keeps the shared reserve: both sides stop together).
-            const homeward = ctx.pair ? 0 : Math.hypot(ctx.anchor.x - target.x, ctx.anchor.y - target.y, ctx.anchor.z - target.z) / speedOf(goBlock(owner.profile, kit, world, target, ctx.anchor), pace(owner.profile, length), 0);
+            const homeward = ctx.pair ? 0 : Math.hypot(ctx.anchor.x - target.x, ctx.anchor.y - target.y, ctx.anchor.z - target.z) / speedOf(goBlock(owner.profile, kit, world, target, ctx.anchor), pace(owner.profile, length), 0, owner.profile, length);
             if (t + seconds > ctx.t1 - Math.max(reserve, Math.min(homeward, 40))) return false;
             let thisCatch: Key["catch"] = null;
             if (step.catch) {
@@ -1018,12 +1097,13 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     const away = Math.hypot(home.x - pos.x, home.y - pos.y, home.z - pos.z);
     let back = goBlock(owner.profile, kit, world, pos, home);
     // (A swimmer that flies flies back if it could not swim it in time.)
-    if (back.id === "swim" && kit.flies(owner.profile) && away / speedOf(back, pace(owner.profile, length), 0) > room) back = BLOCKS.fly;
+    if (back.id === "swim" && kit.flies(owner.profile) && away / speedOf(back, pace(owner.profile, length), 0, owner.profile, length) > room) back = BLOCKS.fly;
     // It curves on from its heading and comes in along its schedule pose's (checked here against where it began; the
     // live pose's heading lines it up as it goes), so neither end turns on the spot; no quicker than it can turn.
     const curve = legCurve(world, back, pos, home, yaw, ctx.yaw0);
     const turning = Math.hypot(home.x - pos.x, home.z - pos.z) > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, home, 1, yaw)) * 1.2) / turnRate(length) : 0;
-    const wanted = Math.max(away / speedOf(back, pace(owner.profile, length), 0), 0.6, ctx.pair ? 0 : turning);
+    const along = ctx.pair || Math.hypot(home.x - pos.x, home.z - pos.z) <= 0.03 ? away : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, home);
+    const wanted = Math.max(along / speedOf(back, pace(owner.profile, length), 0, owner.profile, length), 0.6, ctx.pair ? 0 : turning);
     const seconds = Math.min(wanted, room);
     keys.push({t0: t, t1: t + seconds, block: back, from: pos, to: home, yawIn: yaw, yaw: ctx.yaw0, c: curve?.c ?? null, c2: null, endLen: curve?.len ?? 0, face: null, carry, catch: null, prey: null, wade: false, toBase: true});
     t += seconds;
@@ -1048,6 +1128,9 @@ function defaultCarry(profile: ArkBehaviourProfile): CarryAt {
 }
 
 const WATCHING = new Set(["ambush", "scan", "freeze", "hover", "perch", "stalk"]);
+
+/** Legs timed by their own length at their pace (not the fixed hops: a take-off, a landing, a leap, a slide in). */
+const TIMED_BY_LENGTH = new Set(["walk", "run", "flee", "stalk", "wade", "crawl", "carry", "push", "climb", "swim", "dive", "surface", "fly"]);
 
 // MARK: The pose
 

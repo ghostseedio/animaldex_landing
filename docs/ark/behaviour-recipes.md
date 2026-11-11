@@ -442,3 +442,24 @@ On `origin/ark-release` 49345ee4 with this branch merged (local only, not pushed
 Tests: `no spinning` (six recipe species, every 20 s of their episodes under a full turn, no 0.2 s step over 0.9 rad) and `only real cachers cache`.
 
 For behaviour: the landing at the end of a schedule flight can snap round (149° in a second, a fish eagle onto its perch). `settle` faces from home when none of the last four slots had a goal, not from where it flew in from. Behaviour's file; not changed here.
+
+## Plunge dives and clip pace (after the home growth, 2026-11-11)
+
+- **A kingfisher's dive went through a bank.** The home area grew, and its plunge perch ended up on a bank 11 m over the lake and 5 m back from it, so a third of its dives' midpoints were under the ground.
+  - A plunge perch (`perch_water`) now needs open water within reach, a drop the diver dives from, and a clear way down (`plungeDrops`: about 4 body lengths up to 40, between 0.6 m and 12 m). The way down is the dive's own path, checked against the ground under it (`clearPlunge`).
+  - A dive's target needs the same clear way down.
+  - From too low, too high, or with nothing clear, it flies out over the water, hovers 1–2.5 s and plunges from there.
+  - Plunges go straight down their line, with no leg curve.
+  - Across four homes and three species (4,711 dives), none went through the ground, and 1,353 came after a hover. The kingfisher now fishes from a rock top in the lake.
+- **Clip pace** (the release's rig check: a harbour seal swam its chase at 2.1× its clip's pace, at a fixed 0.3 m/s). A recipe's legs now go no faster than behaviour's corrected clip paces:
+  - walking at `bodyLengthsPerSecond` (its walk's pace × 1.5);
+  - running at that times `runFactor`;
+  - swimming, diving and surfacing at its schedule's own swimming pace (`freeBodyLengthsPerSecond` × length × 1.4), with no floors;
+  - a strike lunges no further than it runs in the strike's shortest time.
+- **How the legs are timed:**
+  - A solo leg is timed by its curve's length, not the straight distance. A template's upper time bound no longer speeds it up; pairs keep their bounds, the same on both sides.
+  - Each leg's reach is scaled to about 8 s of its own pace (`LEG_SECONDS`).
+- **The seal's chase:** median 0.165 m/s, its swimming pace (it was 0.3). Its chases are short and close: it covers little ground at that pace. Other swimmers sit at their caps: penguin 0.28, puffin about 1.1, mallard 1.8 m/s.
+- **The loop plan is a half loop now:** out, round and back towards where it began, so the way home lies ahead.
+
+Circling on this branch (with home growth b95b0026): every animal 0.18% facing, 0.06% travel; the test's half 0.10% / 0.04%. Flyers 0.446 turns a minute. New tests: `a plunge dive never goes through the ground`, `a recipe's legs go no faster than its clips carry it`.
