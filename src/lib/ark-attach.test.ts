@@ -248,7 +248,7 @@ test("attach: every hollow point is the mouth of a hole drawn in its tree's trun
     const hollows = treePoints().filter((point) => point.tag === "tree_hollow");
     assert.ok(hollows.length >= 20, `${hollows.length} hollows`);
     const trees = new Map<string, Tree>();
-    for (const id of new Set(hollows.map((point) => point.asset!))) trees.set(id, await loadTree(id));
+    for (const id of Array.from(new Set(hollows.map((point) => point.asset!)))) trees.set(id, await loadTree(id));
     for (const point of hollows) {
         const tree = trees.get(point.asset!)!;
         const w = point.wind!;
