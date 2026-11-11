@@ -1,0 +1,689 @@
+{
+ "label": "release-trial",
+ "commit": "e99a6bf4",
+ "features": {
+  "schedule": true,
+  "rigs": true,
+  "flightClips": false,
+  "wingShaderSpecies": 0,
+  "preyLook": {
+   "within": 6,
+   "predatorMoving": true,
+   "nearCameraOnly": 45
+  },
+  "preyFlee": false,
+  "headLook": false,
+  "grazePose": false,
+  "spawnSeparation": false,
+  "individualVariation": false
+ },
+ "period": {
+  "days": 1,
+  "stepSecondsA": 20,
+  "flightSecondsB": 3600,
+  "animals": 323,
+  "species": 150
+ },
+ "flight": {
+  "flyingSpeciesInCatalogue": 43,
+  "speciesThatFly": 37,
+  "airborneAnimalSamples": 60992,
+  "airborneWingsClosedPct": 100,
+  "wingShaderBirdSpecies": 0,
+  "flightClipsPlayable": false
+ },
+ "roaming": {
+  "airborneSeconds": 89656,
+  "circlingPct": 43.9,
+  "fullTurnsPerAirMinute": 1.48,
+  "flyersTracked": 95,
+  "followers": 72,
+  "followersNotFlockingSpecies": 20,
+  "followersOfAnotherSpecies": 0,
+  "followerExamples": [
+   "abyssinian-ground-hornbill (herd) with abyssinian-ground-hornbill 75%",
+   "abyssinian-ground-hornbill (herd) with abyssinian-ground-hornbill 87%",
+   "abyssinian-ground-hornbill (herd) with abyssinian-ground-hornbill 90%",
+   "abyssinian-ground-hornbill (herd) with abyssinian-ground-hornbill 86%",
+   "african-grey-parrot (group) with african-grey-parrot 81%",
+   "african-grey-parrot (group) with african-grey-parrot 93%",
+   "african-grey-parrot (group) with african-grey-parrot 92%",
+   "african-grey-parrot (group) with african-grey-parrot 90%",
+   "american-crow (group) with american-crow 83%",
+   "american-crow (group) with american-crow 92%",
+   "american-crow (group) with american-crow 92%",
+   "american-crow (group) with american-crow 92%"
+  ],
+  "airHeightAboveGroundM": {
+   "p10": 3,
+   "median": 6.5,
+   "p90": 14.9,
+   "sd": 5
+  },
+  "distinctSpeciesCruiseHeights": 3,
+  "landingSpotsPerFlyerDay": 28,
+  "distanceMPerAnimalDay": {
+   "median": 6974.5,
+   "p90": 15112.2,
+   "animalsThatNeverMove": 41
+  },
+  "restSpotsPerAnimalDay": 104,
+  "flyersWithPathSamples": 95
+ },
+ "grazing": {
+  "grazerAnimals": 55,
+  "awakeSamples": 106602,
+  "grazeLabelAtGrassPct": 24.8,
+  "headDownGrazingPct": 0,
+  "standingPct": 53.2,
+  "walkingPct": 22,
+  "grazersThatNeverGrazed": 1,
+  "grazePoseExists": false
+ },
+ "landWater": {
+  "amphibiousAnimals": 44,
+  "amphibiousWithATransition": 42,
+  "transitions": {
+   "walked": 4302,
+   "flew": 2239,
+   "snapped": 1600
+  },
+  "transitionsPerAmphibiousDay": 185,
+  "ducksAndKin": 6,
+  "duckTransitions": 1380,
+  "duckWalkedTransitions": 928,
+  "entryExitClip": false
+ },
+ "predatorPrey": {
+  "predatorsWithPreyAboard": 44,
+  "spawnNearestPreyM": {
+   "min": 1.2,
+   "p10": 3.2,
+   "median": 20.9
+  },
+  "predatorsWithPreyWithinM": {
+   "5": 7,
+   "10": 16,
+   "20": 20
+  },
+  "closeExamples": [
+   "andean-condor 8.5 m from alpine-marmot",
+   "african-rock-python 4.9 m from abyssinian-ground-hornbill",
+   "alligator-snapping-turtle 7.3 m from african-clawed-frog",
+   "african-sharptooth-catfish 7.8 m from african-clawed-frog",
+   "asian-small-clawed-otter 4.6 m from african-clawed-frog",
+   "asian-small-clawed-otter 5.8 m from african-clawed-frog",
+   "asian-small-clawed-otter 3.2 m from african-clawed-frog",
+   "asian-small-clawed-otter 5.5 m from african-clawed-frog",
+   "american-marten 2.5 m from american-woodcock",
+   "african-harrier-hawk 7.9 m from american-woodcock",
+   "arctic-fox 5.4 m from arctic-tern",
+   "amur-leopard 6.1 m from american-red-squirrel",
+   "american-crocodile 1.9 m from african-openbill",
+   "asian-water-monitor 1.9 m from australasian-swamphen",
+   "american-alligator 1.2 m from african-sacred-ibis"
+  ],
+  "sightRadiusM": 25,
+  "encounters": 39562,
+  "encountersWithALook": 1396,
+  "encountersWithFlight": 0,
+  "preyReactPct": 3.5,
+  "medianSecondsToLook": 60,
+  "rule": {
+   "within": 6,
+   "predatorMoving": true,
+   "nearCameraOnly": 45
+  },
+  "flee": false
+ },
+ "variety": {
+  "speciesWith3Plus": 56,
+  "allSameStatePct": 99.1,
+  "meanDistinctStates": 1.01,
+  "speciesAlwaysInStep": 51,
+  "stateChangesInStepPct": 65.9,
+  "individualVariationWired": false
+ },
+ "environment": {
+  "invalidSurface": {
+   "animals": 63,
+   "sharePct": 2.2
+  },
+  "floating": {
+   "animals": 78,
+   "sharePct": 5.8
+  },
+  "sinking": {
+   "animals": 0,
+   "sharePct": 0
+  },
+  "overlapping": {
+   "animals": 319,
+   "sharePct": 40.8
+  },
+  "interactions": {
+   "grazersAtGrass": {
+    "animals": 55,
+    "never": 1
+   },
+   "drinkersAtWaterEdge": {
+    "animals": 219,
+    "never": 90
+   },
+   "perchersOnAPerch": {
+    "animals": 99,
+    "never": 6
+   }
+  }
+ },
+ "stateMix": {
+  "sleep": 40.9,
+  "forage": 11.3,
+  "rest": 7.4,
+  "swim": 6.8,
+  "awake": 6.6,
+  "asleep": 5.8,
+  "wander": 4.5,
+  "graze": 4.2,
+  "fly": 3.3,
+  "perch": 2.7,
+  "groom": 1.6,
+  "drink": 1.1,
+  "breathe": 0.9,
+  "burrow": 0.8,
+  "soar": 0.7,
+  "idle": 0.3,
+  "crawl": 0.3,
+  "hide": 0.3,
+  "bask": 0.2,
+  "visit_flowers": 0.2,
+  "to_roost": 0.1,
+  "climb": 0,
+  "dive": 0
+ },
+ "static": {
+  "flightRigs": {
+   "byPlan": {},
+   "total": {},
+   "perSpecies": [
+    {
+     "slug": "abyssinian-ground-hornbill",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "acorn-woodpecker",
+     "plan": "flying_bird",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-fish-eagle",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-grey-hornbill",
+     "plan": "flying_bird",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-grey-parrot",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-harrier-hawk",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-jacana",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-openbill",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-pygmy-kingfisher",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "african-sacred-ibis",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "alderfly",
+     "plan": "flying_insect",
+     "rig": "fallback",
+     "published": false,
+     "flap": "fallback rig",
+     "working": false
+    },
+    {
+     "slug": "alpine-chough",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "alpine-swift",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-avocet",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-crow",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-dipper",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-kestrel",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-robin",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-white-pelican",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "american-woodcock",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "ancona-duck",
+     "plan": "flying_bird",
+     "rig": "none",
+     "published": false,
+     "flap": "no rig",
+     "working": false
+    },
+    {
+     "slug": "andean-cock-of-the-rock",
+     "plan": "flying_bird",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "andean-condor",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "andean-goose",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "andean-lapwing",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "andean-sparrow",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "angoumois-grain-moth",
+     "plan": "flying_insect",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "anhinga",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "antarctic-petrel",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "apostlebird",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "araucana-chicken",
+     "plan": "flying_bird",
+     "rig": "none",
+     "published": false,
+     "flap": "no rig",
+     "working": false
+    },
+    {
+     "slug": "arctic-tern",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "artichoke-plume-moth",
+     "plan": "flying_insect",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "asian-fairy-bluebird",
+     "plan": "flying_bird",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "asian-glossy-starling",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "asian-honey-bee",
+     "plan": "flying_insect",
+     "rig": "partial",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "asian-hornet",
+     "plan": "flying_insect",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "asian-woolly-necked-stork",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "atlantic-puffin",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "atlantic-yellow-nosed-albatross",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "atlas-moth",
+     "plan": "flying_insect",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    },
+    {
+     "slug": "australasian-pipit",
+     "plan": "flying_bird",
+     "rig": "passed",
+     "published": true,
+     "flap": "held (wing cards await owner review)",
+     "working": false
+    }
+   ]
+  },
+  "headBones": {
+   "byPlan": {
+    "quadruped": {
+     "species": 40,
+     "rigged": 34,
+     "neck": 34,
+     "head": 34,
+     "published": 34,
+     "publishedWithHead": 34
+    },
+    "flying_bird": {
+     "species": 36,
+     "rigged": 34,
+     "neck": 34,
+     "head": 34,
+     "published": 34,
+     "publishedWithHead": 34
+    },
+    "lizard": {
+     "species": 9,
+     "rigged": 9,
+     "neck": 9,
+     "head": 9,
+     "published": 9,
+     "publishedWithHead": 9
+    },
+    "other": {
+     "species": 2,
+     "rigged": 0,
+     "neck": 0,
+     "head": 0,
+     "published": 0,
+     "publishedWithHead": 0
+    },
+    "insect": {
+     "species": 6,
+     "rigged": 6,
+     "neck": 6,
+     "head": 6,
+     "published": 6,
+     "publishedWithHead": 6
+    },
+    "flightless_bird": {
+     "species": 2,
+     "rigged": 2,
+     "neck": 2,
+     "head": 2,
+     "published": 2,
+     "publishedWithHead": 2
+    },
+    "amphibian": {
+     "species": 9,
+     "rigged": 9,
+     "neck": 9,
+     "head": 9,
+     "published": 7,
+     "publishedWithHead": 7
+    },
+    "legless": {
+     "species": 8,
+     "rigged": 8,
+     "neck": 0,
+     "head": 0,
+     "published": 8,
+     "publishedWithHead": 0
+    },
+    "fish": {
+     "species": 18,
+     "rigged": 2,
+     "neck": 0,
+     "head": 0,
+     "published": 2,
+     "publishedWithHead": 0
+    },
+    "arachnid": {
+     "species": 3,
+     "rigged": 3,
+     "neck": 3,
+     "head": 3,
+     "published": 3,
+     "publishedWithHead": 3
+    },
+    "turtle": {
+     "species": 6,
+     "rigged": 6,
+     "neck": 6,
+     "head": 6,
+     "published": 6,
+     "publishedWithHead": 6
+    },
+    "flying_insect": {
+     "species": 6,
+     "rigged": 6,
+     "neck": 6,
+     "head": 6,
+     "published": 5,
+     "publishedWithHead": 5
+    },
+    "crustacean": {
+     "species": 2,
+     "rigged": 2,
+     "neck": 2,
+     "head": 2,
+     "published": 2,
+     "publishedWithHead": 2
+    },
+    "walking_bird": {
+     "species": 2,
+     "rigged": 2,
+     "neck": 2,
+     "head": 2,
+     "published": 2,
+     "publishedWithHead": 2
+    },
+    "cephalopod_jelly": {
+     "species": 1,
+     "rigged": 0,
+     "neck": 0,
+     "head": 0,
+     "published": 0,
+     "publishedWithHead": 0
+    }
+   },
+   "total": {
+    "species": 150,
+    "rigged": 123,
+    "neck": 113,
+    "head": 113,
+    "published": 120,
+    "publishedWithHead": 110
+   },
+   "usedForLooking": false
+  }
+ },
+ "fixture": {
+  "order": "adjacent",
+  "profiles": "behaviour-profiles.json",
+  "animals": 323,
+  "species": 150,
+  "modelsDir": "local model + rig set"
+ },
+ "seconds": 43
+}
