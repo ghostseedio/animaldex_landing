@@ -38,7 +38,7 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, atRock, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, denKindOf, mapPoints, onSchedule, rockHomes, scheduleRoost, shoreOf, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, atRock, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, denKindOf, inTheTrees, mapPoints, onSchedule, rockHomes, scheduleRoost, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
@@ -102,7 +102,7 @@ export function denProblems(animal: ArkAnimal, place: Placement): Array<{check: 
     const den = scheduleRoost(place, animal.zone);
     if (den && den.y - all.sampler.ground(den.x, den.z).height < 1 && all.inSurf(den.x, den.z)) out.push({check: "roost_invalid", detail: `its ${kind} in the sea's tide or surf at ${den.x.toFixed(1)},${den.z.toFixed(1)}`});
     const species = mapSpecies(animal.model_slug, animal.zone);
-    if ((kind === "crevice" || kind === "cave") && species && !place.micro && !place.host && !place.map?.shore && !place.map?.held && onSchedule(place, animal.model_slug)) {
+    if ((kind === "crevice" || kind === "cave") && species && !place.micro && !place.host && !place.map?.shore && !place.map?.held && !inTheTrees(place, animal.model_slug) && onSchedule(place, animal.model_slug)) {
         if ((!den || !atRock(den.x, den.z, den.point)) && rockHomes(species, animal.zone, arkBody(animal).metres).length) out.push({check: "roost_invalid", detail: `its ${kind} den away from any rock${den ? ` at ${den.x.toFixed(1)},${den.z.toFixed(1)}` : ""}`});
     }
     return out;

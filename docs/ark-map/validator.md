@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 8407 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 8698 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -15,7 +15,7 @@
   - `roost_invalid`: 0
   - `off_walk_grid`: 0
   - `inside_rock`: 0
-- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1016 rigs checked, 8 with too few feet down in some frame (reviewed: 8).
+- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1018 rigs checked, 8 with too few feet down in some frame (reviewed: 8).
 
 | Area | Animals placed there |
 |---|---:|
@@ -40,34 +40,34 @@
 | Where | Animals |
 |---|---:|
 | on the ground | 3262 |
-| attach point: leaf | 308 |
+| attach point: leaf | 316 |
 | in the water by its depth band (lake) | 250 |
 | in the water by its depth band (reef) | 196 |
-| attach point: branch | 171 |
+| attach point: branch | 167 |
 | in the water by its depth band (seabed) | 132 |
 | in fresh water (no band) | 118 |
 | in the water by its depth band (mid) | 90 |
 | in the water by its depth band (upper) | 88 |
-| attach point: flower_head | 61 |
 | attach point: rock_face | 59 |
+| attach point: flower_head | 59 |
 | in the sea (no band) | 58 |
 | in the water by its depth band (coast) | 56 |
 | in the water by its depth band (deep) | 48 |
-| attach point: worm_hole | 42 |
+| attach point: worm_hole | 44 |
 | attach point: house_wall | 39 |
-| attach point: burrow_entrance | 35 |
-| attach point: bark | 34 |
+| attach point: bark | 36 |
+| attach point: burrow_entrance | 32 |
 | in the water by its depth band (surface) | 26 |
 | burrow at an attach point | 24 |
 | attach point: tide_pool | 24 |
 | attach point: roof_edge | 23 |
-| attach point: fence_post | 17 |
+| attach point: fence_post | 15 |
 | burrow | 14 |
 | attach point: porch_light | 13 |
 | on its host (beside) | 12 |
 | on its host (parasite) | 12 |
-| attach point: tree_hollow | 5 |
 | on its host (rider) | 4 |
+| attach point: tree_hollow | 4 |
 | attach point: house_eave | 3 |
 
 Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 338.
