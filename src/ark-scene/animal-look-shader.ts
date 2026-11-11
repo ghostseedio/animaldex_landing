@@ -59,7 +59,7 @@ varying vec3 vArkEyeR;
 varying float vArkScale;
 #endif
 #ifdef ARK_SHELL
-attribute float arkShellLayer;
+attribute vec2 arkShellLayer;
 uniform float arkShellLength;
 varying float vArkShell;
 #endif
@@ -84,11 +84,11 @@ export const LOOK_VERTEX = `
 #endif
 `;
 
-/** After every motion: a shell is the body pushed out along its normal (shorter and sleeker wet). */
+/** After every motion: a shell is the body pushed out along its normal (shorter and sleeker wet; shorter at the range's edge). */
 export const SHELL_VERTEX = `
 #ifdef ARK_SHELL
-vArkShell = arkShellLayer;
-transformed += normalize(objectNormal) * arkShellLength * arkShellLayer * (1.0 - 0.7 * arkLook.x);
+vArkShell = arkShellLayer.x;
+transformed += normalize(objectNormal) * arkShellLength * arkShellLayer.x * arkShellLayer.y * (1.0 - 0.7 * arkLook.x);
 #endif
 `;
 

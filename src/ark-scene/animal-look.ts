@@ -25,7 +25,7 @@ import table from "@/ark-scene/animal-look.json";
 import {LOOK_CLASSES, LOOK_FLAG, type LookClass} from "@/ark-scene/animal-look-rules";
 import {lookVectors} from "@/ark-scene/animal-look-shader";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
-import {FurShells} from "@/ark-scene/fur-shells";
+import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import {CloseUpTextures} from "@/ark-scene/closeup-textures";
 import {surfaceAt, groundNormal, type Vec3} from "@/ark-scene/sampler";
 import {unit} from "@/lib/ark-clock";
@@ -190,18 +190,64 @@ export type LookInstance = {
     onSurface: boolean;
 };
 
-type TierSettings = {shells: boolean; closeUp: {within: number; cap: number} | null};
+/**
+ * Per tier: fur shells (how far, how many animals; null: none, the shader's
+ * fur sheen alone) and the close-up skins (how near, how many at once).
+ * Shells are the expensive part (each layer draws the body again, with a
+ * discard), so they are desktop-only: phones (medium and low) keep the cheap
+ * version, which costs no extra draw.
+ */
+type TierSettings = {shells: {within: number; animals: number} | null; closeUp: {within: number; cap: number} | null};
 const TIERS: Record<QualityTier, TierSettings> = {
-    high: {shells: true, closeUp: {within: 9, cap: 8}},
-    medium: {shells: false, closeUp: {within: 5.5, cap: 3}},
-    low: {shells: false, closeUp: null}
+    high: {shells: {within: 9, animals: SHELL_ANIMALS}, closeUp: {within: 9, cap: 8}},
+    medium: {shells: null, closeUp: {within: 5.5, cap: 3}},
+    low: {shells: null, closeUp: null}
 };
+
+/** The island's weather now (`weatherAt` in `src/lib/ark-clock.ts`, or a pinned environment). */
+export type LookWeather = {
+    /** 0–1 the ground's wetness: lags the rain and dries after it. */
+    wetness: number;
+    /** 0–1 rain falling now. */
+    rain: number;
+    /** 0–1 wind. */
+    wind?: number;
+};
+
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+/**
+ * How wet an animal out in the weather is (0–1): soaked within the rain's
+ * first minutes (a light shower half wet, heavy rain through), and dry well
+ * before the ground is (fur and feathers shed water; the ground holds it).
+ */
+export function coatWetness(weather: LookWeather): number {
+    return clamp01(Math.max(Math.min(1, weather.rain * 1.8), 0.6 * weather.wetness * weather.wetness));
+}
+
+/** How much dust the weather leaves on a dry-ground animal (0–1): none on wet ground, a little more in a dry wind. */
+export function weatherDust(weather: LookWeather): number {
+    return clamp01((1 - Math.min(1, weather.wetness * 1.4)) * (0.85 + 0.3 * (weather.wind ?? 0.3)));
+}
+
+/**
+ * Fur shells by distance (the cheap far version): all the layers right up
+ * close, fewer further out, and the coat's reach shrinks to nothing at the
+ * edge of the range, where the shader's fur sheen alone carries the fuzz.
+ */
+export function shellLevel(distance: number, within: number): {layers: number; reach: number} {
+    if (distance >= within) return {layers: 0, reach: 0};
+    const layers = distance < within * 0.4 ? SHELL_LAYERS : distance < within * 0.7 ? Math.ceil(SHELL_LAYERS * 0.67) : Math.ceil(SHELL_LAYERS / 3);
+    const fade = (distance - within * 0.7) / (within * 0.3);
+    return {layers, reach: fade <= 0 ? 1 : Math.max(0, 1 - fade * fade * (3 - 2 * fade))};
+}
 
 export class AnimalLook {
     private tier: QualityTier = "high";
     private lite = false;
     private enabled: boolean;
     private wetness = 0;
+    private dust = 1;
     private islandPin: number | null = null;
     private islandNow = 0;
     private readonly dryness = new Map<number, number>();
@@ -209,6 +255,8 @@ export class AnimalLook {
     readonly shells: FurShells;
     readonly closeUps: CloseUpTextures;
     private readonly bySlug = new Map<string, Set<MeshStandardMaterial>>();
+    /** Species whose coat gets fur shells close up (a furred mammal: `SpeciesLook.shells`). */
+    private readonly shelled = new Set<string>();
 
     constructor(options: {scene: Scene; renderer: WebGLRenderer; closeUpBase: string | null; basisBase: string; enabled: boolean; layers?: number}) {
         this.enabled = options.enabled;
@@ -251,11 +299,14 @@ export class AnimalLook {
 
     private settings(): TierSettings {
         const base = TIERS[this.tier];
-        return this.lite ? {shells: false, closeUp: base.closeUp ? {within: base.closeUp.within * 0.6, cap: Math.min(base.closeUp.cap, 2)} : null} : base;
+        return this.lite ? {shells: null, closeUp: base.closeUp ? {within: base.closeUp.within * 0.6, cap: Math.min(base.closeUp.cap, 2)} : null} : base;
     }
 
-    /** A near-level material of this species (its skin may be swapped for the close-up one). */
+    /** A near-level material of this species (its skin may be swapped for the close-up one, its coat shelled). */
     track(slug: string, material: MeshStandardMaterial) {
+        const data = material.userData as {arkSlug?: string; arkLook?: {look: SpeciesLook | null}};
+        data.arkSlug = slug;
+        if (data.arkLook?.look?.shells) this.shelled.add(slug);
         const set = this.bySlug.get(slug) ?? new Set<MeshStandardMaterial>();
         set.add(material);
         this.bySlug.set(slug, set);
@@ -272,10 +323,11 @@ export class AnimalLook {
         });
     }
 
-    /** Each frame, before the animals: the weather's wetness and the island's time. */
-    begin(wetness: number) {
-        this.wetness = Math.max(0, Math.min(1, wetness));
-        this.islandNow = this.islandPin ?? Date.now();
+    /** Each frame, before the animals: the island's weather and its time (the scene's world clock). */
+    begin(weather: LookWeather, islandMs: number) {
+        this.wetness = coatWetness(weather);
+        this.dust = weatherDust(weather);
+        this.islandNow = this.islandPin ?? islandMs;
         this.shells.begin();
         this.closeUps.begin();
     }
@@ -290,12 +342,15 @@ export class AnimalLook {
         if (animal.inWater || flags & LOOK_FLAG.aquatic) wet = 1;
         else if (flags & LOOK_FLAG.semiAquatic && near) wet = Math.max(wet, swimWetness(animal.id, this.islandNow));
         let dust = 0;
-        if (flags & LOOK_FLAG.dusty && !animal.onSurface && wet < 0.6 && near) dust = this.dustAt(animal.x, animal.z) * (1 - wet);
+        if (flags & LOOK_FLAG.dusty && !animal.onSurface && wet < 0.6 && near && this.dust > 0) dust = this.dustAt(animal.x, animal.z) * this.dust * (1 - wet);
         attribute?.setXY(index, wet, dust);
         if (!near) return;
         const settings = this.settings();
         if (settings.closeUp && animal.distance < settings.closeUp.within * 1.6) this.closeUps.want(animal.slug, animal.distance);
-        if (settings.shells && row && LOOK_CLASSES[row[0]] === "fur" && animal.distance < 9 && animal.pixels > 120) this.shells.offer(mesh, index, animal.distance);
+        if (settings.shells && animal.pixels > 120 && this.shelled.has(animal.slug)) {
+            const level = shellLevel(animal.distance, settings.shells.within);
+            if (level.layers > 0 && level.reach > 0.02) this.shells.offer(mesh, index, animal.distance, level.layers, level.reach);
+        }
     }
 
     /** A herd's far figure: the weather's wetness only. */
@@ -308,7 +363,7 @@ export class AnimalLook {
     end(now: number, shellMaterial: (source: InstancedMesh) => MeshStandardMaterial | null) {
         if (!this.enabled) return;
         const settings = this.settings();
-        if (settings.shells) this.shells.end(shellMaterial);
+        if (settings.shells) this.shells.end(shellMaterial, settings.shells.animals);
         this.closeUps.update(now, settings.closeUp);
     }
 
@@ -348,5 +403,6 @@ export class AnimalLook {
         this.shells.dispose();
         this.closeUps.dispose();
         this.bySlug.clear();
+        this.shelled.clear();
     }
 }

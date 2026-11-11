@@ -14,18 +14,21 @@
 
 import {BufferGeometry, DynamicDrawUsage, InstancedBufferAttribute, InstancedMesh, type MeshStandardMaterial, type Scene} from "three";
 
-/** Layers per animal, and how many animals at once. */
+/** Layers per animal (right up close; fewer further out, `shellLevel` in animal-look.ts), and how many animals at once. */
 export const SHELL_LAYERS = 6;
 export const SHELL_ANIMALS = 4;
+
+type Offer = {source: InstancedMesh; index: number; distance: number; layers: number; reach: number};
 
 type Shell = {mesh: InstancedMesh; geometry: BufferGeometry; capacity: number; source: InstancedMesh; usedAt: number};
 
 export class FurShells {
     private readonly shells = new Map<InstancedMesh, Shell>();
-    private offers: Array<{source: InstancedMesh; index: number; distance: number}> = [];
+    private offers: Offer[] = [];
     private frame = 0;
-    /** Animals in shells this frame (stats). */
+    /** Animals in shells this frame, and their layers (stats). */
     drawn = 0;
+    layersDrawn = 0;
 
     constructor(private readonly scene: Scene, private readonly layers = SHELL_LAYERS, private readonly animals = SHELL_ANIMALS) {}
 
@@ -34,21 +37,27 @@ export class FurShells {
         this.frame++;
     }
 
-    offer(source: InstancedMesh, index: number, distance: number) {
-        this.offers.push({source, index, distance});
+    /** An animal that may be shelled this frame: `layers` (1–SHELL_LAYERS) and `reach` (0–1 of the coat's length). */
+    offer(source: InstancedMesh, index: number, distance: number, layers = this.layers, reach = 1) {
+        this.offers.push({source, index, distance, layers: Math.max(1, Math.min(this.layers, Math.round(layers))), reach});
     }
 
-    end(materialFor: (source: InstancedMesh) => MeshStandardMaterial | null) {
+    /** The nearest `animals` offers are drawn in shells; `drawn` counts the animals really drawn. */
+    end(materialFor: (source: InstancedMesh) => MeshStandardMaterial | null, animals = this.animals) {
         this.offers.sort((a, b) => a.distance - b.distance);
-        const chosen = this.offers.slice(0, this.animals);
-        const bySource = new Map<InstancedMesh, number[]>();
-        for (const offer of chosen) bySource.set(offer.source, [...(bySource.get(offer.source) ?? []), offer.index]);
-        this.drawn = chosen.length;
-        bySource.forEach((indices, source) => {
-            const shell = this.shellFor(source, indices.length * this.layers, materialFor);
+        const chosen = this.offers.slice(0, animals);
+        const bySource = new Map<InstancedMesh, Offer[]>();
+        for (const offer of chosen) bySource.set(offer.source, [...(bySource.get(offer.source) ?? []), offer]);
+        this.drawn = 0;
+        this.layersDrawn = 0;
+        bySource.forEach((offers, source) => {
+            const needed = offers.reduce((sum, offer) => sum + offer.layers, 0);
+            const shell = this.shellFor(source, needed, materialFor);
             if (!shell) return;
-            this.fill(shell, indices);
+            this.fill(shell, offers);
             shell.usedAt = this.frame;
+            this.drawn += offers.length;
+            this.layersDrawn += needed;
         });
         this.shells.forEach((shell, source) => {
             if (shell.usedAt !== this.frame) shell.mesh.visible = false;
@@ -59,6 +68,7 @@ export class FurShells {
 
     hide() {
         this.drawn = 0;
+        this.layersDrawn = 0;
         this.shells.forEach((shell) => (shell.mesh.visible = false));
     }
 
@@ -77,7 +87,8 @@ export class FurShells {
         geometry.setIndex(source.geometry.getIndex());
         geometry.boundingSphere = source.geometry.boundingSphere;
         geometry.boundingBox = source.geometry.boundingBox;
-        const layer = new InstancedBufferAttribute(new Float32Array(capacity), 1);
+        // Per layer: (its height, 0–1 out from the skin; the coat's reach for that animal, 0–1).
+        const layer = new InstancedBufferAttribute(new Float32Array(capacity * 2), 2);
         layer.setUsage(DynamicDrawUsage);
         geometry.setAttribute("arkShellLayer", layer);
         const mesh = new InstancedMesh(geometry, material, capacity);
@@ -92,7 +103,7 @@ export class FurShells {
         return shell;
     }
 
-    private fill(shell: Shell, indices: number[]) {
+    private fill(shell: Shell, offers: Offer[]) {
         const {mesh, geometry, source} = shell;
         const from = source.instanceMatrix.array as Float32Array;
         const to = mesh.instanceMatrix.array as Float32Array;
@@ -108,10 +119,10 @@ export class FurShells {
             }
         }
         let n = 0;
-        for (const index of indices) {
-            for (let k = 0; k < this.layers; k++) {
+        for (const {index, layers, reach} of offers) {
+            for (let k = 0; k < layers; k++) {
                 to.set(from.subarray(index * 16, index * 16 + 16), n * 16);
-                layer.setX(n, (k + 1) / this.layers);
+                layer.setXY(n, (k + 1) / layers, reach);
                 for (const [name, attribute] of instanced) {
                     const own = geometry.getAttribute(name) as InstancedBufferAttribute;
                     const size = attribute.itemSize;

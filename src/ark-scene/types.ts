@@ -298,9 +298,10 @@ export type ArkSceneHandle = {
     follow: (id: string | null) => void;
     /**
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
-     * island clock with null. Any field left out keeps following the clock.
+     * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now) is read only by
+     * the animal-look pass (coats soak in it); a pinned `wetness` without it means no rain.
      */
-    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; rain: number}> | null) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
     setClockScale: (scale: number, atMs?: number) => void;
