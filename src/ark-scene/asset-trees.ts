@@ -32,9 +32,9 @@ type Level = typeof LEVELS[number];
 type Instance = {x: number; y: number; z: number; scale: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number};
 
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). */
-function windMaterial(doubleSided: boolean, near = false): MeshStandardMaterial {
+function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
-    material.customProgramCacheKey = () => `ark-asset-tree-b4-${doubleSided ? 2 : 1}${near ? "-near" : ""}`;
+    material.customProgramCacheKey = () => `ark-asset-tree-b6-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
@@ -58,8 +58,8 @@ uniform vec2 arkWind;`)
     transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     float leaf = color_1.w * 6.2831853;
     transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.3 + leaf * 1.3), cos(arkTime * 6.7 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
-    // Leaves flutter (weight 0.36 and up); wood does not (0).
-    vArkLeafy = smoothstep(0.05, 0.3, color_1.z);
+    // Leaves flutter (broadleaf 0.36 and up, the conifers' boughs from about 0.05); wood does not (0).
+    vArkLeafy = smoothstep(0.02, 0.1, color_1.z);
     vArkLocal = position;
 }`);
         // Leaves are single sheets: lit from the side the light comes, never black on the back.
@@ -80,6 +80,12 @@ ${NOISE_GLSL}`)
     // Moss on the roots and the trunk's foot (batch 5), in patches.
     float arkMoss = arkWood * (1.0 - smoothstep(0.25, 1.1, vArkLocal.y)) * smoothstep(0.4, 0.68, arkNoise(vArkLocal.xz * 7.0 + vArkLocal.y * 4.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.115, 0.03) * (0.8 + 0.4 * arkGrain), arkMoss * 0.75);
+${conifer ? `    // Conifer needles (batch 6): the assets' deep teal read as heavy dark shapes near the camera. A natural, warmer,
+    // less saturated green.
+    vec3 arkNeedle = diffuseColor.rgb;
+    float arkGrey = dot(arkNeedle, vec3(0.3, 0.59, 0.11));
+    arkNeedle = mix(vec3(arkGrey), arkNeedle, 0.55) * vec3(1.22, 1.1, 0.68);
+    diffuseColor.rgb = mix(diffuseColor.rgb, arkNeedle * 1.35, vArkLeafy);` : ""}
 }`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
@@ -108,6 +114,10 @@ nonPerturbedNormal *= faceDirection;
     arkThrough = directionalLights[0].color * clamp(dot(-arkSeen, directionalLights[0].direction), 0.0, 1.0) * 0.25;
     #endif
     reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * vArkLeafy + 0.18 * (1.0 - vArkLeafy)) + arkThrough * vArkLeafy);
+    ${conifer ? `// Needles are many and fine: more of the sky comes through a conifer's mass, most near the camera, where it read
+    // as one dark shape (batch 6).
+    float arkNear = 1.0 - smoothstep(6.0, 22.0, length(vViewPosition));
+    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * arkSky * vec3(0.95, 1.0, 0.78) * vArkLeafy * (0.3 + 0.6 * arkDown) * (0.55 + 0.45 * arkNear);` : ""}
 }`);
         if (near) {
             shader.fragmentShader = shader.fragmentShader
@@ -122,8 +132,10 @@ export class AssetTrees {
     readonly group = new Group();
     /** Ready once every needed tree is loaded (the procedural trees stand in until then). */
     ready = false;
-    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number}>();
+    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean}>();
     private readonly materials = {double: windMaterial(true), front: windMaterial(false), nearDouble: windMaterial(true, true), nearFront: windMaterial(false, true)};
+    /** Pines and spruces (batch 6): their own shading of the needles. */
+    private readonly coniferMaterials = {double: windMaterial(true, false, true), front: windMaterial(false, false, true), nearDouble: windMaterial(true, true, true), nearFront: windMaterial(false, true, true)};
     private reach = 1;
     private fill = 1;
     private lastAt = new Vector3(Infinity, 0, 0);
@@ -146,7 +158,7 @@ export class AssetTrees {
             let entry = this.byAsset.get(asset.id);
             if (!entry) {
                 const info = ASSETS[asset.id];
-                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height};
+                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce"};
                 this.byAsset.set(asset.id, entry);
             }
             const matrix = new Matrix4().compose(position.set(item.x, item.y - DECOR_SINK, item.z), rotation.setFromAxisAngle(up, item.rotation), scale.setScalar(asset.scale));
@@ -172,7 +184,8 @@ export class AssetTrees {
                         if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
                     });
                     if (!geometry) return;
-                    const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
+                    const set = entry.conifer ? this.coniferMaterials : this.materials;
+                    const mesh = new InstancedMesh(geometry, lod.doubleSided ? set.double : set.front, entry.instances.length);
                     mesh.count = 0;
                     mesh.frustumCulled = false;
                     mesh.castShadow = lod.level !== "card" && this.shadows;
@@ -182,7 +195,7 @@ export class AssetTrees {
                     this.group.add(mesh);
                     if (lod.level === "lod0") {
                         // The same full tree for the few round the camera, with the near fade.
-                        const near = new InstancedMesh(geometry, lod.doubleSided ? this.materials.nearDouble : this.materials.nearFront, entry.instances.length);
+                        const near = new InstancedMesh(geometry, lod.doubleSided ? set.nearDouble : set.nearFront, entry.instances.length);
                         near.count = 0;
                         near.visible = false;
                         near.frustumCulled = false;
@@ -282,5 +295,6 @@ export class AssetTrees {
             entry.near?.dispose();
         });
         Object.values(this.materials).forEach((material) => material.dispose());
+        Object.values(this.coniferMaterials).forEach((material) => material.dispose());
     }
 }
