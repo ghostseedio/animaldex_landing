@@ -780,6 +780,13 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const stayDoing: ArkDoing = STAY_DOINGS.has(doing) ? doing : "rest";
             // A group member that rests keeps near its group (it walks to it first if it has drifted away).
             if (group) return {doing: stayDoing, to: rangeSpot(world, profile, groupAnimal, centre, radius * 0.6, random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats(stayDoing, random, null)};
+            // A den, burrow, cave, hole or crevice animal mostly rests in it, out of sight (`restingAtRoost`: the runtime's
+            // rotation hides the ones resting at home, so one out of sight is plausibly there). Its own seeded stream.
+            if (stayDoing === "rest" && ENCLOSED_ROOSTS.has(profile.roost) && rng(hashString(`${animal.id}#den#${slot}`))() < 0.6) {
+                const roost = roostOf(world, profile, animal);
+                const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
+                return {doing: "rest", to: roost, mode: travel, stay: stayBeats("rest", random, null)};
+            }
             return {doing: stayDoing, to: null, mode: "stay", stay: stayBeats(stayDoing, random, null)};
         }
     }
@@ -1266,6 +1273,26 @@ export function airborneDoing(doing: ArkDoing): boolean {
 }
 
 // MARK: Predators and prey
+
+/** Roosts an animal resting in is out of sight: a den, a burrow, a cave, a tree hole, a crevice. */
+const ENCLOSED_ROOSTS: ReadonlySet<ArkRoost> = new Set<ArkRoost>(["den", "burrow", "cave", "tree_hole", "crevice"]);
+
+/**
+ * Whether its schedule has it settled at its roost now (asleep there, or resting there), and whether that roost hides
+ * it (`enclosed`: a den, a burrow, a cave, a tree hole, a crevice). Pure and shared: the runtime lane's `arkOutside`
+ * rotation (live-budget.ts) can hide these first, so an animal out of sight is plausibly at home, the same for every
+ * viewer (it never depends on a viewer's budget).
+ */
+export function restingAtRoost(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): {resting: boolean; enclosed: boolean} {
+    const trip = tripAt(world, profile, animal, epochSeconds, hoursAt, activity);
+    if (epochSeconds < trip.arrive) return {resting: false, enclosed: false};
+    const settled = trip.doing === "sleep" || trip.doing === "to_roost" || trip.doing === "rest";
+    if (!settled) return {resting: false, enclosed: false};
+    const roost = roostOf(world, profile, animal);
+    const at = poseOnTrip(world, trip, epochSeconds);
+    const home = Math.hypot(at.x - roost.x, at.z - roost.z) < Math.max(animal.length * 2, 1.5) && !at.moving;
+    return {resting: home, enclosed: home && ENCLOSED_ROOSTS.has(profile.roost)};
+}
 
 /** The farthest any prey animal notices a predator in the shared layer (open ground, a big prey, a big hunter on the move). */
 export const WARY_METRES = 55;

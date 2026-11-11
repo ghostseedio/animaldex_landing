@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -447,4 +447,31 @@ test("a kind is not all doing one thing: every species of 3+ awake together shar
     }
     assert.ok(awake > 10000, `awake moments ${awake}`);
     assert.ok(same / awake < 0.08, `${((same / awake) * 100).toFixed(1)}% of awake moments a whole species in one state`);
+});
+
+test("resting at home: asleep at its roost by night, and a den animal often in its den by day (for the runtime's rotation)", () => {
+    let night = 0;
+    let nightAtRoost = 0;
+    let dayDen = 0;
+    let dens = 0;
+    for (const i of animals.filter((x) => x.profile.move !== "sessile")) {
+        for (let k = 0; k < 24 * 45; k += 7) {
+            const t = DAY + k * SLOT_SECONDS + 70;
+            const trip = tripOf(i, t);
+            const at = restingAtRoost(world, i.profile, i.animal, t, hoursAt, i.a.activity);
+            if (trip.doing === "sleep" && !i.animal.group) {
+                night++;
+                if (at.resting) nightAtRoost++;
+            }
+            if (["den", "burrow", "cave", "tree_hole", "crevice"].includes(i.profile.roost) && awakeAt(i.profile, i.a.activity, hoursAt(t))) {
+                dens++;
+                if (at.enclosed) dayDen++;
+            }
+            // Never "at home" while it is out and about.
+            if (at.resting) assert.ok(["sleep", "to_roost", "rest"].includes(trip.doing), `${i.a.model_slug} resting while ${trip.doing}`);
+        }
+    }
+    assert.ok(night > 200 && nightAtRoost / night > 0.9, `asleep at its roost ${nightAtRoost} of ${night}`);
+    assert.ok(dens > 100 && dayDen / dens > 0.05, `den animals in the den while awake ${dayDen} of ${dens}`);
+    console.log(`asleep at roost ${nightAtRoost}/${night}; den animals in the den while awake ${dayDen}/${dens}`);
 });
