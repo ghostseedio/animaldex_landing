@@ -28,6 +28,9 @@ import type {ArkMapSampler} from "@/ark-scene/map/sampler";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 import {drawnRocks, inRock, ROCK_CELL, touchesRock} from "@/ark-scene/map/rocks";
+import {maskWalkable, setWalkMaskEnabled, WALK_MASK_VERSION} from "@/ark-scene/map/walk-mask";
+import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
+import {worldSampler as behaviourWorldSampler} from "@/ark-scene/world-sampler";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
 const REVIEWED = holds as unknown as {species: Record<string, string>; grips: Record<string, string>};
@@ -398,7 +401,55 @@ test("a crevice or cave dweller's den is rock's: a dry rock face, ledge or a dra
         }
     }
     assert.ok(open, "open ground far from any rock");
-    const onGrass = {...place, x: open!.x, z: open!.z, ground: sampler.ground(open!.x, open!.z).height, perch: undefined, map: {...place.map!, roost: null, attach: undefined}};
+    const onGrass = {...place, x: open!.x, z: open!.z, ground: sampler.ground(open!.x, open!.z).height, perch: undefined, map: {...place.map!, roost: null, attach: undefined, den: undefined}};
     const problems = denProblems(hyrax, onGrass);
     assert.ok(problems.some((p) => p.check === "roost_invalid" && /away from any rock/.test(p.detail)), JSON.stringify(problems));
+});
+
+test("placement never builds the behaviour world: its walk grid's prebuilt mask is the grid's own answer, cell for cell, and the places are the same", () => {
+    // (Phone start-up, 2026-11-11: asking the grid itself built the behaviour lane's sampler and grid inside the mount,
+    // 1.25 s on the phone proxy.) Every cell at both slopes placement asks: the mask says what the live grid says.
+    const sampler = behaviourWorldSampler();
+    const grid = navGrid(sampler);
+    const {size} = grid.cells;
+    const wrong: string[] = [];
+    for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) {
+        for (let j = 0; j < size; j++) {
+            for (let i = 0; i < size; i++) {
+                const x = -132 + (i + 0.5) * 2;
+                const z = -132 + (j + 0.5) * 2;
+                const masked = maskWalkable(x, z, slope);
+                if (masked === null || masked !== grid.walkable(x, z, slope)) wrong.push(`${slope} ${x},${z}`);
+            }
+        }
+    }
+    assert.deepEqual(wrong.slice(0, 5), [], `${wrong.length} cells differ from the live grid (${sampler.version}; the mask is from ${WALK_MASK_VERSION}): run npx tsx scripts/ark-map-walk-mask.mts`);
+    // Points anywhere in a cell, and off the grid's edge (clamped as the grid clamps).
+    for (let k = 0; k < 2000; k++) {
+        const x = ((k * 7919) % 2800) / 10 - 140;
+        const z = ((k * 104729) % 2800) / 10 - 140;
+        assert.equal(maskWalkable(x, z, MAX_SLOPE), grid.walkable(x, z, MAX_SLOPE), `${x},${z}`);
+    }
+    // The places, with the mask and asking the grid itself: the same (both fixtures).
+    for (const animals of [decodeArkSnapshot(fixture)!.animals, decodeArkSnapshot(fixtureV2)!.animals]) {
+        setWalkMaskEnabled(false);
+        const asked = placeAnimals(animals);
+        setWalkMaskEnabled(true);
+        const masked = placeAnimals(animals);
+        for (const a of animals) assert.deepEqual(masked.get(a.id), asked.get(a.id), a.model_slug);
+    }
+});
+
+test("each roost on the schedule is worked out with its place (in the places worker for a big Ark): the same as asking at the mount", () => {
+    for (const animals of [decodeArkSnapshot(fixture)!.animals, decodeArkSnapshot(fixtureV2)!.animals, validatorAnimals()]) {
+        const places = placeAnimals(animals);
+        for (const a of animals) {
+            const place = places.get(a.id)!;
+            if (!place.map || place.hamlet) continue;
+            assert.ok(place.map.den !== undefined, `${a.model_slug}: its roost kept with its place`);
+            // Asked again from scratch (no kept roost): the same spot.
+            const fresh = {...place, map: {...place.map, den: undefined}};
+            assert.deepEqual(scheduleRoost(fresh, a.zone), place.map.den, a.model_slug);
+        }
+    }
 });

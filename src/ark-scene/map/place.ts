@@ -71,6 +71,8 @@ export type MapPlace = {
     level: number;
     /** Whose place it is (its species and drawn length), for its den on the schedule (`scheduleRoost`). */
     who?: {slug: string; length: number};
+    /** Where it sleeps on the schedule, worked out with its place (`settleRoosts`); null: the schedule's own choice. */
+    den?: ScheduleSpot | null;
 };
 
 /** A perch: a bird's, a bat's or a small vertebrate's attach point, as the surface it stands on (its back to `n`, heading `t`). */
@@ -591,6 +593,25 @@ export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: num
  * So the scene's sleepers are where the validator checks them.
  */
 export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
+    // (Worked out with its place already: `settleRoosts`, in the places worker for a big Ark. The same answer.)
+    if (place.map && place.map.den !== undefined) return place.map.den;
+    return workRoost(place, zone);
+}
+
+/**
+ * Every placed animal's roost on the schedule (`scheduleRoost`), worked out now and kept on its place, so the mount
+ * reads it rather than building the map's sampler to ask. Run last in `placeAnimals` (after the hosts' partners are
+ * attached: a place as the mount will see it).
+ */
+export function settleRoosts(animals: ArkAnimal[], places: Map<string, {perch?: MapPerch; map?: MapPlace; hamlet?: unknown}>): void {
+    for (const animal of animals) {
+        const place = places.get(animal.id);
+        if (!place?.map || place.hamlet) continue;
+        place.map = {...place.map, den: workRoost(place, animal.zone)};
+    }
+}
+
+function workRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
     // A crevice or cave dweller (a rock hyrax, a gundi, a pika, a rock wallaby): a dry rock face, ledge or the foot of a
     // drawn rock, never a hole on open grass (the props' rock-den slot reads as one: golden den_rock, 2026-11-11).
     const home = place as {x?: number; z?: number};
@@ -644,6 +665,36 @@ export function denKindOf(slug: string): string | null {
 export function denIsDry(x: number, z: number): boolean {
     const all = mapPoints();
     return all.sampler.ground(x, z).water === null && !all.inSurf(x, z);
+}
+
+/** The sampler's attach points by 16 m cell (each cell's in the sampler's own order), for the den and roost searches. */
+const NEAR_CELL = 16;
+let nearIndex: {sampler: ArkMapSampler; cells: Map<string, number[]>} | null = null;
+/**
+ * The sampler's attach points within `reach` of a spot (a superset: whole cells), in the sampler's own order, so a
+ * search over them finds what one over every point finds, first-found ties and all.
+ */
+function pointsNear(x: number, z: number, reach: number): AttachPoint[] {
+    const sampler = mapPoints().sampler;
+    const all = sampler.attachPoints();
+    if (!nearIndex || nearIndex.sampler !== sampler) {
+        const cells = new Map<string, number[]>();
+        all.forEach((point, i) => {
+            const key = `${Math.floor(point.x / NEAR_CELL)},${Math.floor(point.z / NEAR_CELL)}`;
+            const list = cells.get(key);
+            if (list) list.push(i);
+            else cells.set(key, [i]);
+        });
+        nearIndex = {sampler, cells};
+    }
+    const found: number[] = [];
+    for (let i = Math.floor((x - reach) / NEAR_CELL); i <= Math.floor((x + reach) / NEAR_CELL); i++) {
+        for (let j = Math.floor((z - reach) / NEAR_CELL); j <= Math.floor((z + reach) / NEAR_CELL); j++) {
+            const list = nearIndex.cells.get(`${i},${j}`);
+            if (list) for (const k of list) found.push(k);
+        }
+    }
+    return found.sort((a, b) => a - b).map((k) => all[k]);
 }
 
 /** The dens that are rock's: a crevice, a cave. */
@@ -701,8 +752,7 @@ function rockDen(map: MapPlace, perch: MapPerch | null, x: number, z: number): S
     if (perch && (perch.tag === "rock_face" || perch.tag === "ledge") && denIsDry(perch.x, perch.z)) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
     const who = map.who!;
     const roll = (hashString(`${who.slug}#rockden#${map.key}`) % 1000) / 1000;
-    const points = mapPoints()
-        .sampler.attachPoints()
+    const points = pointsNear(x, z, ROCK_DEN_REACH)
         .filter((point) => (point.tag === "rock_face" || point.tag === "ledge") && Math.hypot(point.x - x, point.z - z) <= ROCK_DEN_REACH && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
         .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (points.length) {
@@ -757,8 +807,7 @@ function coastalDen(map: MapPlace, x: number, z: number, ground: number): Schedu
     const kinds = DEN_POINTS[profile.roost];
     if (!kinds || map.water || !mapPoints().seaWithin(x, z, COAST_REACH)) return null;
     const sampler = mapPoints().sampler;
-    const near = sampler
-        .attachPoints()
+    const near = pointsNear(x, z, 15)
         .filter((point) => kinds.includes(point.tag) && Math.hypot(point.x - x, point.z - z) <= 15 && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
         .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (near.length) {
@@ -971,7 +1020,7 @@ function roostOf(species: MapSpecies, all: MapPoints, x: number, z: number, leng
     if (species.small) {
         let best: AttachPoint | null = null;
         let distance = reach;
-        for (const point of sampler.attachPoints()) {
+        for (const point of pointsNear(x, z, reach)) {
             const d = Math.hypot(point.x - x, point.z - z);
             if (d < distance && attachFits(point, length) && all.tagsOf(point).includes(tag)) {
                 best = point;
