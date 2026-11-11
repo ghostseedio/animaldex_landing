@@ -18,6 +18,7 @@
 
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {fieldCropAt} from "@/ark-scene/fields";
+import {inRock} from "@/ark-scene/map/rocks";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import {hashString, riverDistance, sampleGround, seeded} from "@/ark-scene/world";
 import type {CottageStyle} from "@/ark-scene/micro-scene";
@@ -158,6 +159,15 @@ export function picketRuns(): Array<[number, number, number, number]> {
 }
 
 /** A picket fence's posts: one every 1.2 m or so along each run, its ends included (local), with their run's direction. */
+/** A house plot's picket posts (local): `picketPosts()` but none where a rock as drawn stands (the fence meets the rock there). */
+export function picketPostsFor(plot: HomePlot): Array<{x: number; z: number; along: {x: number; z: number}}> {
+    const frame = plotFrame(plot);
+    return picketPosts().filter((post) => {
+        const w = frame.toWorld(post.x, post.z);
+        return !inRock(w.x, w.z, 0.06);
+    });
+}
+
 export function picketPosts(): Array<{x: number; z: number; along: {x: number; z: number}}> {
     const posts: Array<{x: number; z: number; along: {x: number; z: number}}> = [];
     for (const [ax, az, bx, bz] of picketRuns()) {
@@ -172,9 +182,44 @@ export function picketPosts(): Array<{x: number; z: number; along: {x: number; z
 /** The picket fence's post height (its top over the ground). */
 export const PICKET_POST_TOP = 0.95;
 
+/** The vegetable patch west of the house (local): ridged beds `pitch` apart from `x0`, `width` wide, running z0…z1; the bean wigwam at the last row's end. */
+export const GARDEN_BEDS = {x0: -7.6, rows: 4, pitch: 0.95, width: 0.6, z0: -1.6, z1: 2.4, wigwam: {z: 0.4, r: 0.5}} as const;
+
+/**
+ * Where a house plot's vegetable patch starts (local): `GARDEN_BEDS.x0`/`z0`, or the first of a few nudges that
+ * keeps every bed (and the wigwam) clear of the rocks as drawn (`map/rocks.ts`; today's cottage had a boulder in its
+ * beds). Deterministic per plot.
+ */
+export function bedsOrigin(plot: HomePlot): {x0: number; z0: number} {
+    const frame = plotFrame(plot);
+    const width = (GARDEN_BEDS.rows - 1) * GARDEN_BEDS.pitch + GARDEN_BEDS.width / 2 + GARDEN_BEDS.wigwam.r;
+    const length = GARDEN_BEDS.z1 - GARDEN_BEDS.z0;
+    const clear = (x0: number, z0: number) => {
+        for (let dx = -GARDEN_BEDS.width / 2; dx <= width; dx += 0.4) {
+            for (let dz = 0; dz <= length; dz += 0.4) {
+                const w = frame.toWorld(x0 + dx, z0 + dz);
+                if (inRock(w.x, w.z, 0.15)) return false;
+            }
+        }
+        return true;
+    };
+    for (const [nx, nz] of [[0, 0], [0, -2.2], [0, 2.2], [-1.2, 0], [-1.2, -2.2], [-1.2, 2.2], [0, -4.4], [-2.4, 0]]) {
+        if (clear(GARDEN_BEDS.x0 + nx, GARDEN_BEDS.z0 + nz)) return {x0: GARDEN_BEDS.x0 + nx, z0: GARDEN_BEDS.z0 + nz};
+    }
+    return {x0: GARDEN_BEDS.x0, z0: GARDEN_BEDS.z0};
+}
+
+/** The compost bin behind the house (local): its middle and half its size. */
+export const COMPOST = {x: 3.4, z: -COTTAGE.depth / 2 - 2.2, half: 0.75} as const;
+
 // MARK: - The smallholding's paddock
 
-/** Trees, rocks and buildings a fence or a coop must not run through (the decor's and the forest fill's). */
+/**
+ * Trees, rocks and buildings a fence or a coop must not run through (the decor's and the forest fill's), as circles:
+ * what the paddocks are placed by and what the map's hamlet slots were planned with (`map/hamlet.ts` fitness), so it
+ * stays as it was (a change here moves the paddocks and so the reserved slots). The rocks as drawn (the asset lane's,
+ * boxes: `map/rocks.ts` inRock) are kept out at the drawing: no fence post, rail or picket, bed, coop or trough in one.
+ */
 let obstacleCache: Array<{x: number; z: number; r: number}> | null = null;
 export function homeObstacles(): Array<{x: number; z: number; r: number}> {
     if (obstacleCache) return obstacleCache;
@@ -259,6 +304,23 @@ export function paddockSegments(rect: PaddockRect): Array<{a: {x: number; z: num
     return out;
 }
 
+/**
+ * A smallholding's paddock fence as drawn (local): its segments with whether the post at the segment's start and
+ * the rails along it are drawn; none where a rock as drawn stands (the fence meets the rock).
+ */
+export function paddockFence(plot: HomePlot): Array<{a: {x: number; z: number}; b: {x: number; z: number}; post: boolean; rails: boolean}> {
+    const frame = plotFrame(plot);
+    const rocky = (x: number, z: number, r: number) => {
+        const w = frame.toWorld(x, z);
+        return inRock(w.x, w.z, r);
+    };
+    return paddockSegments(paddockRect(plot)).filter((segment) => !segment.gate).map((segment) => {
+        let rails = true;
+        for (let k = 0; k <= 6 && rails; k++) if (rocky(segment.a.x + ((segment.b.x - segment.a.x) * k) / 6, segment.a.z + ((segment.b.z - segment.a.z) * k) / 6, 0.05)) rails = false;
+        return {a: segment.a, b: segment.b, post: !rocky(segment.a.x, segment.a.z, 0.08), rails};
+    });
+}
+
 /** The paddock's post height (its top over the ground). */
 export const PADDOCK_POST_TOP = 1.075;
 
@@ -282,6 +344,9 @@ export function coopSpot(plot: HomePlot): {x: number; z: number; turn: number} {
         const g = sampleGround(w.x, w.z);
         if (g.land < 0.9 || g.height < 0.4) continue;
         if (near.some((o) => Math.hypot(o.x - w.x, o.z - w.z) < o.r + 1.2)) continue;
+        // The coop's house and its run (about 1.3 m round its middle and 1.9 m behind) clear of every drawn rock.
+        const behind = frame.toWorld(spot.x, spot.z - 1.2);
+        if (inRock(w.x, w.z, 1.0) || inRock(behind.x, behind.z, 0.9)) continue;
         return {x: spot.x, z: spot.z, turn};
     }
     return {x: rect.x0 + 1.4, z: (rect.z0 + rect.z1) / 2, turn};
@@ -319,13 +384,13 @@ export function fencePostTops(plots: HomePlot[] = defaultHomePlots()): FencePost
     for (const plot of plots) {
         const frame = plotFrame(plot);
         if (plot.kind === "house") {
-            for (const post of picketPosts()) {
+            for (const post of picketPostsFor(plot)) {
                 const w = frame.toWorld(post.x, post.z);
                 out.push({fence: "picket", n: picket++, plot: plot.id, position: {x: w.x, y: sampleGround(w.x, w.z).height + PICKET_POST_TOP, z: w.z}, forward: turn(frame, post.along)});
             }
         } else {
-            for (const segment of paddockSegments(paddockRect(plot))) {
-                if (segment.gate) continue;
+            for (const segment of paddockFence(plot)) {
+                if (!segment.post) continue;
                 const w = frame.toWorld(segment.a.x, segment.a.z);
                 const length = Math.hypot(segment.b.x - segment.a.x, segment.b.z - segment.a.z) || 1;
                 out.push({fence: "paddock", n: paddock++, plot: plot.id, position: {x: w.x, y: sampleGround(w.x, w.z).height + PADDOCK_POST_TOP, z: w.z}, forward: turn(frame, {x: (segment.b.x - segment.a.x) / length, z: (segment.b.z - segment.a.z) / length})});
@@ -333,4 +398,55 @@ export function fencePostTops(plots: HomePlot[] = defaultHomePlots()): FencePost
         }
     }
     return out;
+}
+
+// MARK: - Where no animal stands
+
+/** Something the props lay on a plot that an animal should not stand on: a rectangle in the plot's frame. */
+export type PlotKeepOut = {what: "beds" | "compost" | "water_butt" | "hay_shelter" | "hay" | "trough" | "coop"; x0: number; x1: number; z0: number; z1: number};
+
+/**
+ * What the props lay on a plot that no animal should stand on (in the plot's frame, `plotFrame`): a house plot's
+ * vegetable beds and bean wigwam, compost bin and water butt; a smallholding's hay shelter, loose hay, troughs and the
+ * coop's house (its run is the hens' and stays open). Lawns, paths, the paddock's grass, mud and puddles are walked on.
+ * The same numbers `props/areas.ts` draws from.
+ */
+export function plotKeepOuts(plot: HomePlot): PlotKeepOut[] {
+    if (plot.kind === "house") {
+        const k = cottageStyle(plot).scale;
+        const beds = bedsOrigin(plot);
+        const bedsX1 = beds.x0 + (GARDEN_BEDS.rows - 1) * GARDEN_BEDS.pitch + GARDEN_BEDS.wigwam.r;
+        return [
+            {what: "beds", x0: beds.x0 - GARDEN_BEDS.width / 2, x1: bedsX1, z0: beds.z0, z1: beds.z0 + (GARDEN_BEDS.z1 - GARDEN_BEDS.z0)},
+            {what: "compost", x0: COMPOST.x - COMPOST.half, x1: COMPOST.x + COMPOST.half, z0: COMPOST.z - COMPOST.half, z1: COMPOST.z + COMPOST.half},
+            {what: "water_butt", x0: (COTTAGE.width / 2 + 0.3) * k - 0.4, x1: (COTTAGE.width / 2 + 0.3) * k + 0.4, z0: (COTTAGE.depth / 2 + 0.25) * k - 0.4, z1: (COTTAGE.depth / 2 + 0.25) * k + 0.4}
+        ];
+    }
+    const out: PlotKeepOut[] = [
+        {what: "hay_shelter", x0: -6.7, x1: -3.5, z0: -1.9, z1: 1.9},
+        {what: "hay", x0: -4.3, x1: -2.5, z0: -0.3, z1: 1.5}
+    ];
+    for (const trough of troughSpots(plot)) out.push({what: "trough", x0: trough.x - trough.length / 2 - 0.1, x1: trough.x + trough.length / 2 + 0.1, z0: trough.z - 0.35, z1: trough.z + 0.35});
+    const coop = coopSpot(plot);
+    out.push({what: "coop", x0: coop.x - 0.8, x1: coop.x + 0.8, z0: coop.z - 0.55, z1: coop.z + 1.1});
+    return out;
+}
+
+/** A smallholding's troughs (local): one in the paddock, one by the barn's door; `length` along the plot's x. */
+export function troughSpots(plot: HomePlot): Array<{x: number; z: number; length: number}> {
+    const paddock = paddockRect(plot);
+    return [
+        {x: paddock.x0 + (paddock.x1 - paddock.x0) * 0.75, z: paddock.z0 + (paddock.z1 - paddock.z0) * 0.38, length: 2.2},
+        {x: 1.2, z: 3.0, length: 1.6}
+    ];
+}
+
+/** Is a world point on something an animal should not stand on, on any of these plots (with `margin` m round it)? */
+export function onHomeKeepOut(x: number, z: number, plots: HomePlot[] = defaultHomePlots(), margin = 0.3): PlotKeepOut | null {
+    for (const plot of plots) {
+        if (Math.abs(x - plot.x) > 30 || Math.abs(z - plot.z) > 30) continue;
+        const local = plotFrame(plot).toLocal(x, z);
+        for (const out of plotKeepOuts(plot)) if (local.x > out.x0 - margin && local.x < out.x1 + margin && local.z > out.z0 - margin && local.z < out.z1 + margin) return out;
+    }
+    return null;
 }

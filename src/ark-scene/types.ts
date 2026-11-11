@@ -4,6 +4,9 @@ import type {ArkSeenNow} from "@/lib/ark-live-log";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import type {ArkRestStatus} from "@/ark-scene/sleep";
+
+export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
 
 /**
@@ -48,6 +51,20 @@ export const ZONE_REGION: Record<ArkZone, ArkRegion> = Object.fromEntries(
 
 /** How an animal is doing, as the server says (`voyage_public_v2`). */
 export type ArkCondition = "well_fed" | "hungry" | "old";
+/**
+ * How well kept it is (captures + thrive, 2026-11-11; the frozen read
+ * contract, `docs/ark/captures-thrive-design.md` section 0): its bringer's
+ * condition for its kind, raised by their steps that worked, drifting back
+ * to ordinary without them. The band only, never the 0–100 value. Separate
+ * from `condition` (hunger and age). For looks and behaviour, realistic
+ * only: never a glow, a badge, an aura or a turn to the camera.
+ */
+export type ArkThrive = "ordinary" | "good" | "prime";
+export const ARK_THRIVE_BANDS: readonly ArkThrive[] = ["ordinary", "good", "prime"];
+/** Where in the home region a pet or a farm animal lives (placement only; its zone is unchanged). Null: its own zone. */
+export type ArkArea = "house" | "farm";
+/** How an arrived animal came aboard: a capture (since 2026-11-11) or, before that, a step that worked. */
+export type ArkArrivalSource = "capture" | "step";
 /** The species' stored social life: `group` gathers in a cluster, `pair` stays close. */
 export type ArkSociality = "solitary" | "pair" | "group";
 
@@ -77,8 +94,18 @@ export type ArkAnimal = {
     brought_by: {label: string; named: boolean};
     mine: boolean;
     // Ark life v2 (`voyage_public_v2`): absent from a v1 snapshot.
-    /** Came aboard after a step, or was born on the Ark. */
+    /** Came aboard (with a capture, or earlier after a step), or was born on the Ark. */
     origin?: "arrived" | "born";
+    /** How an arrived one came aboard (`source`); null for the born, absent from an older server. */
+    source?: ArkArrivalSource | null;
+    /** How well kept it is now (`thrive`); absent from an older server, which the scene reads as ordinary. */
+    thrive?: ArkThrive | null;
+    /**
+     * The house or the farm, for a pet or a farm animal (`area`, the server's `voyage_animals.area` from the capture's
+     * setting; placement only): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`). Null or
+     * absent: its zone, placed by the map.
+     */
+    area?: ArkArea | null;
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
     condition?: ArkCondition | null;
@@ -86,8 +113,6 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
-    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
-    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**
@@ -166,6 +191,8 @@ export type ArkSceneStats = {
     /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
     behaviourBuildSlices?: number;
     behaviourBuildLongestMs?: number;
+    /** The main-thread time the last predator-prey spacing took, sliced (ms). */
+    behaviourSpacingMs?: number;
     rigsLoaded: number;
     rigBytes: number;
     /** The animal-look pass: on, animals in fur shells this frame, close-up skins on the GPU. */
@@ -197,6 +224,11 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * the tap card's state line reads this, the same state the scene animates, never a clock of its own.
      */
     onBehaviour?: (id: string, state: ArkBehaviourState) => void;
+    /**
+     * How the selected animal is resting now, in the tap card's plain words (`sleep.ts` restStatus: asleep in its den,
+     * on one leg, keeping watch, dozing in the sun…; null up and about), when it is selected and whenever that changes.
+     */
+    onRest?: (id: string, rest: ArkRestStatus | null) => void;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
@@ -359,6 +391,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     locate: (id: string) => ArkLocated | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
+    /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */
+    rest: (id: string) => ArkRestStatus | null;
     /** What the local reactive layer has an animal doing this frame (its action, head look, offset, alarm); null outside its budget. */
     reactive: (id: string) => ArkReactiveSnapshot | null;
     /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */

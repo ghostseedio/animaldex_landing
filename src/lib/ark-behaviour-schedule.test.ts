@@ -3,7 +3,9 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
+import {SlicedBuild} from "@/ark-scene/behaviour-build";
+import {hashString} from "@/ark-scene/world";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -146,8 +148,14 @@ test("birds fly between places and land: no circles, most of the day perched or 
             if (trip.doing === "sleep") continue;
             for (const leg of trip.legs.filter((l) => l.mode === "air")) {
                 flights++;
-                // A flight goes somewhere: never back to where it took off.
+                // A flight goes somewhere: never back to where it took off. (A soar may come home to its own perch, as an
+                // eagle does, but by a sweep out over its range and back, never by turning on the spot.)
                 if (trip.shadow) continue;
+                if (trip.doing === "soar" && leg.path) {
+                    const out = Math.max(...leg.path.map((p) => Math.hypot(p.x - leg.from.x, p.z - leg.from.z)));
+                    assert.ok(out > 3, `${i.a.model_slug} soars on the spot`);
+                    continue;
+                }
                 assert.ok(Math.hypot(leg.to.x - leg.from.x, leg.to.z - leg.from.z) + Math.abs(leg.to.y - leg.from.y) > 0.3 || leg.seconds < 1, `${i.a.model_slug} flies a loop`);
             }
             for (let s = 5; s < SLOT_SECONDS; s += 10) {
@@ -248,6 +256,8 @@ test("predators keep a safe distance from the animals they eat", () => {
             if (at.aloft) continue;
             for (const q of prey) {
                 const qa = poseOf(q, t);
+                // (A bird soaring wide over its range passes over others: the spacing is for where they stand.)
+                if (qa.aloft) continue;
                 const d = Math.hypot(at.x - qa.x, at.z - qa.z);
                 assert.ok(d >= safe * 0.9, `${p.a.model_slug} within ${d.toFixed(1)} m of a ${q.a.model_slug} (safe ${safe.toFixed(0)})`);
                 samples++;
@@ -474,4 +484,129 @@ test("resting at home: asleep at its roost by night, and a den animal often in i
     assert.ok(night > 200 && nightAtRoost / night > 0.9, `asleep at its roost ${nightAtRoost} of ${night}`);
     assert.ok(dens > 100 && dayDen / dens > 0.05, `den animals in the den while awake ${dayDen} of ${dens}`);
     console.log(`asleep at roost ${nightAtRoost}/${night}; den animals in the den while awake ${dayDen}/${dens}`);
+});
+
+/** The spacing as it was before it was cut into tasks (2026-11-11, ark-behaviour 5f985348), verbatim: the reference. */
+function referenceSpaceHomes(animals: HomeInput[], eatsOf: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): Map<string, SpacedHome> {
+    const out = new Map<string, SpacedHome>();
+    const home = new Map(animals.map((a) => [a.id, {...a.home}]));
+    const reach = new Map(animals.map((a) => [a.id, reachOf(a.id)]));
+    const sorted = [...animals].sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
+    for (const predator of sorted) {
+        const prey = animals.filter((other) => other.id !== predator.id && eatsOf(predator.slug, other.slug));
+        if (!prey.length) continue;
+        const enemies = animals.filter((other) => other.id !== predator.id && (eatsOf(predator.slug, other.slug) || eatsOf(other.slug, predator.slug)));
+        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
+        const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
+        const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
+        const start = home.get(predator.id)!;
+        let best = {x: start.x, z: start.z, c: clearance(start.x, start.z)};
+        if (best.c < 0) {
+            const mx = prey.reduce((s, p) => s + home.get(p.id)!.x, 0) / prey.length;
+            const mz = prey.reduce((s, p) => s + home.get(p.id)!.z, 0) / prey.length;
+            const away = Math.atan2(start.x - mx, start.z - mz);
+            let found = false;
+            for (let d = 3; d <= 120 && !found; d += 3) {
+                for (let k = 0; k < 24 && !found; k++) {
+                    const a = away + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.27;
+                    const x = start.x + Math.sin(a) * d;
+                    const z = start.z + Math.cos(a) * d;
+                    if (!predator.walkable(x, z)) continue;
+                    const c = clearance(x, z);
+                    if (c > best.c) best = {x, z, c};
+                    if (c >= 0) found = true;
+                }
+            }
+            home.set(predator.id, {x: best.x, z: best.z});
+            if (!found) {
+                for (const other of enemies) {
+                    const at = home.get(other.id)!;
+                    const d = Math.hypot(at.x - best.x, at.z - best.z);
+                    const free = d - safeTo(other);
+                    const total = reach.get(predator.id)! + reach.get(other.id)!;
+                    if (free >= total) continue;
+                    const k = Math.max(free, 1) / total;
+                    reach.set(predator.id, Math.max(reach.get(predator.id)! * k, 0.5));
+                    reach.set(other.id, Math.max(reach.get(other.id)! * k, 0.5));
+                    const prior = out.get(other.id);
+                    out.set(other.id, {home: prior?.home ?? {...at}, range: reach.get(other.id)!, prey: prior?.prey ?? null});
+                }
+            }
+        }
+        const at = home.get(predator.id)!;
+        const nearest = [...prey].sort((a, b) => Math.hypot(home.get(a.id)!.x - at.x, home.get(a.id)!.z - at.z) - Math.hypot(home.get(b.id)!.x - at.x, home.get(b.id)!.z - at.z))[0];
+        const shrunk = reach.get(predator.id)! < reachOf(predator.id) - 1e-9;
+        out.set(predator.id, {home: {...at}, range: shrunk ? reach.get(predator.id)! : out.get(predator.id)?.range ?? null, prey: {...home.get(nearest.id)!}});
+    }
+    return out;
+}
+
+test("predator spacing, cut into tasks and sliced a predator at a time, is the old loop's to the last digit", () => {
+    const inputsOf = (copies: number) => {
+        const list: HomeInput[] = [];
+        for (let c = 0; c < copies; c++) {
+            for (const i of animals) {
+                if (i.animal.group) continue;
+                const dx = c ? ((hashString(`${i.a.id}#${c}x`) % 2000) / 100 - 10) : 0;
+                const dz = c ? ((hashString(`${i.a.id}#${c}z`) % 2000) / 100 - 10) : 0;
+                list.push({id: `${i.a.id}#${c}`, slug: i.a.model_slug, home: {x: i.animal.home.x + dx, z: i.animal.home.z + dz}, length: i.animal.length, walkable: (x, z) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : world.nav.walkable(x, z))});
+            }
+        }
+        return list;
+    };
+    for (const copies of [1, 6]) {
+        const inputs = inputsOf(copies);
+        const reachOf = (id: string) => 3 + (hashString(id) % 900) / 100;
+        const reference = referenceSpaceHomes(inputs, eats, reachOf);
+        assert.ok(reference.size > (copies > 1 ? 50 : 5), `only ${reference.size} spaced`);
+        assert.deepEqual(spaceHomes(inputs, eats, reachOf), reference);
+        const job = spaceHomesTasks(inputs, eats, reachOf);
+        const build = new SlicedBuild(job.tasks, job.finish);
+        let slices = 0;
+        let result = null;
+        while (!result) {
+            result = build.step(0);
+            slices++;
+        }
+        assert.ok(slices >= Math.min(inputs.length, 50), `only ${slices} slices`);
+        assert.deepEqual(result, reference);
+    }
+});
+
+test("nobody goes round in circles: in any 20 s, under 1% of moving animals turn a full circle (facing or travel)", () => {
+    // (The owner: "some animals move randomly in circles". 2.0% facing and 3.6% travel before: a pause faced north and
+    // back, scans turned the body for good, a stay snapped to a seeded heading, a school's members swam in and out
+    // round a resting leader, corners were snapped.)
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let moving = 0;
+    let facing = 0;
+    let travel = 0;
+    for (const i of animals.filter((_, k) => k % 2 === 0)) {
+        for (let w = 0; w < 24 * 3600; w += 60) {
+            let last = poseOf(i, DAY + w);
+            let heading: number | null = null;
+            let f = 0;
+            let tr = 0;
+            let moved = false;
+            for (let s = 1; s <= 20; s++) {
+                const p = poseOf(i, DAY + w + s);
+                f += Math.abs(wrap(p.yaw - last.yaw));
+                if (Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
+                    moved = true;
+                    const h = Math.atan2(p.x - last.x, p.z - last.z);
+                    if (heading !== null) tr += Math.abs(wrap(h - heading));
+                    heading = h;
+                }
+                last = p;
+            }
+            if (!moved) continue;
+            moving++;
+            if (f > TAU) facing++;
+            if (tr > TAU) travel++;
+        }
+    }
+    assert.ok(moving > 5000, `moving windows ${moving}`);
+    assert.ok(facing / moving < 0.01, `${((facing / moving) * 100).toFixed(1)}% turn their facing a full circle in 20 s`);
+    assert.ok(travel / moving < 0.01, `${((travel / moving) * 100).toFixed(1)}% go round a full circle in 20 s`);
 });

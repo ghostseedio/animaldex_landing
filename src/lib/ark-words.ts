@@ -37,7 +37,26 @@ export type ArkHudWords = {
     countStatus: string;
 };
 
-export type ArkStoryWords = {generic: string; debate: string; openDebate: string};
+/** `generic`: an animal a step brought (before captures did); `capture`: one a capture brought (captures + thrive). */
+export type ArkStoryWords = {generic: string; capture: string; debate: string; openDebate: string};
+
+/** How an animal rests now (`sleep.ts` restStatus), in plain words: "Asleep in its den", "Keeping watch". */
+export type ArkRestWords = {
+    asleep: string;
+    asleepDen: string;
+    asleepBurrow: string;
+    asleepPerch: string;
+    asleepHanging: string;
+    asleepStanding: string;
+    asleepOneLeg: string;
+    asleepWater: string;
+    asleepHuddle: string;
+    resting: string;
+    restingDen: string;
+    dozingSun: string;
+    basking: string;
+    onWatch: string;
+};
 
 /** The tap card's life story (life v2). */
 export type ArkLifeWords = {
@@ -66,6 +85,8 @@ export type ArkLifeWords = {
     hungry: string;
     old: string;
     asleep: string;
+    /** How it rests now (the sleep lane's `restStatus`), in plain words: the card's state chip. */
+    rest: ArkRestWords;
     ended: string;
     endedEaten: string;
     endedOld: string;
@@ -80,7 +101,6 @@ export type ArkLifeWords = {
     hideStory: string;
     follow: string;
     followHint: string;
-    anonymous: string;
     /** Hatched from an egg (A9). */
     hatchedAboard: string;
     hatched: string;
@@ -90,6 +110,21 @@ export type ArkLifeWords = {
     revised: string;
     revisedWorked: string;
     revisedNot: string;
+    /** The label of its hunger and age now (`condition`: Well-fed, Hungry, Old); "Condition" is its thrive band's. */
+    now: string;
+    /** Captures + thrive: how well kept it is (`thrive`), in plain words. */
+    thrivePrime: string;
+    thriveGood: string;
+    thriveOrdinary: string;
+    /** Its family line (`lineage`): "2 young, 1 grandchild · 2 alive now". */
+    lineage: string;
+    lineageYoungOne: string;
+    lineageYoungOther: string;
+    lineageGrandOne: string;
+    lineageGrandOther: string;
+    lineageLaterOne: string;
+    lineageLaterOther: string;
+    lineageLiving: string;
 };
 
 /** "While you were away": the replay's captions and its summary line. */
@@ -233,6 +268,10 @@ export type ArkSpeciesWords = {
     seeArk: string;
 };
 
+/**
+ * The capture page's band. The species' band (from the public snapshot): `aboardOne` … `seeArk`.
+ * Captures + thrive (`voyage_capture_state_v1`): what this capture did, `aboardTitle` … `thrive`.
+ */
 export type ArkCaptureWords = {
     aboardOne: string;
     aboardOther: string;
@@ -246,6 +285,21 @@ export type ArkCaptureWords = {
     notAboardBody: string;
     start: string;
     seeArk: string;
+    aboardTitle: string;
+    aboardBody: string;
+    aboardPair: string;
+    alreadyBody: string;
+    comingTitle: string;
+    comingBody: string;
+    waitingBody: string;
+    pairFullTitle: string;
+    pairFullBody: string;
+    wasAboardTitle: string;
+    wasAboardBody: string;
+    notOnArkTitle: string;
+    notOnArkBody: string;
+    /** "Steps with it keep your {animal} thriving." */
+    thrive: string;
 };
 
 /**
@@ -254,7 +308,8 @@ export type ArkCaptureWords = {
  * under an arrival in the chat, and the "Show my name on my Ark animals" setting.
  */
 export type ArkFoundersWords = {
-    settings: {title: string; note: string; under18: string; private: string; noHandle: string; earlier: string; nameEarlier: string; confirmAdult: string; confirmYes: string};
+    /** "Show my name on my Ark animals": an opt-out, on by default, no 18+ step (owner, 2026-11-11). */
+    settings: {title: string; note: string; under18: string; noHandle: string};
     share: {
         ask: string;
         stepLabel: string;
@@ -268,17 +323,17 @@ export type ArkFoundersWords = {
         couldNotCheck: string;
         remove: string;
         removed: string;
-        /** After the name question: the shorter "Share how this worked?". */
-        askShort: string;
         /** The Share button when the one-tap 18+ confirmation is still needed. */
         confirmShare: string;
     };
-    card: {howAboard: string; broughtBy: string};
+    /** `howThriving` (D6): the story on an animal a capture brought, of a step that keeps it thriving. */
+    card: {howAboard: string; howThriving: string; broughtBy: string};
     founder: {storiesTitle: string; noStories: string};
-    /** The name question under an arrival (owner, 2026-11-11: "one-tap 18+ confirm"). */
-    name: {ask: string; adult: string; yes: string; shown: string};
     error: {needsAdult: string};
 };
+
+/** "Name now, ask age after": the age check's own words, asked once on the Ark or the profile (`ArkAgeAsk`). */
+export type ArkAgeAskWords = {title: string; body: string; yearLabel: string; continue: string; notNow: string; note: string; failed: string};
 
 export type ArkWords = {
     metaTitle: string;
@@ -310,7 +365,6 @@ export type ArkWords = {
     howTitle: string;
     howBody: string;
     howCta: string;
-    founderNote: string;
     /** A deleted account's animals (A5): the server's "Former voyager", in the reader's language. */
     formerVoyager: string;
     zones: Record<ArkZone, string>;
@@ -331,6 +385,7 @@ export type ArkWords = {
     seo: ArkSeoWords;
     species: ArkSpeciesWords;
     founders: ArkFoundersWords;
+    age: ArkAgeAskWords;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

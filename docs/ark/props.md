@@ -109,6 +109,49 @@ The hamlet grows by plots. Each house plot gets its own garden: a picket fence w
   - No decor item is moved or removed, so the decor's ids do not shift. `fieldCropAt` is the raw field; the props' paddocks and the map's slot planning keep reading it.
 - **Golden shots:** `hamlet_day`, `hamlet_night`, `hamlet_close_day` and `hamlet_close_night`, with the hamlet at 1× (7 houses, 3 smallholdings).
 
+### Where no animal stands
+`home-layout.ts` `plotKeepOuts(plot)` lists the rectangles in a plot's frame that animals should keep off:
+- a house plot's vegetable beds and bean wigwam, compost bin and water butt;
+- a smallholding's hay shelter, loose hay, troughs, and the coop's house (its run stays open to the hens).
+
+`onHomeKeepOut(x, z, plots, margin = 0.3)` checks a world point against every plot. `props/areas.ts` draws from the same constants (`GARDEN_BEDS`, `COMPOST`, `troughSpots`, `coopSpot`), so the map lane's yard and lawn spots can avoid them. Today two of the map's coop-run spots fall on a hay shelter (smallholding-1 and smallholding-2; the test logs them).
+
+## Burrows and dens (`props/burrows.ts`)
+
+The sleep lane walks a den, burrow or cave animal into its roost's entrance and sinks it in (`sleep.ts` `goesIntoRoost`). The props draw that entrance:
+- **A burrow mouth** at a `burrow:` or `burrow_entrance:` roost: a dark hole with its throat running down into the slope, a lip of turned earth, and paler spoil thrown out downhill.
+- **A rock den** at a `cave_mouth:` roost, or at a crevice sleeper's `rock_face:` point: a dark slot between two leaning slabs and a capstone, with fallen stones in front.
+
+How they are placed:
+- **Size:** each is sized to the animal's drawn body (`mouthRadius`: 0.26 × length, between 0.07 and 0.85 m). Several animals sharing one roost get one entrance, sized to the biggest.
+- **Seating:** a burrow faces downhill and tilts to the ground; a rock den stands upright, facing out of the rock.
+- **Who:** only animals aboard get one.
+- **Where:** from the scene's schedule. `scene-modules.ts` `roostOf(id)` is a one-line hook in `index.ts` onto `behaviour-schedule.ts` `roostOf`, for the den, burrow, cave and crevice roost kinds. The props ask it every 3 s for a minute after each snapshot, because the schedule's world comes in behind the mount.
+- **Cost:** two draw calls near and none far; each entrance is a few hundred triangles.
+
+Golden shots: `den_dawn` (the bat-eared fox's burrow at dawn) and `den_rock` (the rock hyrax's crevice).
+
+## Mount cost (the runtime lane's measure, docs/ark/runtime.md)
+
+The scenery is built after the first frame, a few milliseconds a frame, so the props add no long task to a big Ark's mount:
+- The sampler prepares its attach points (`prepareAttachPoints`).
+- Then the areas and the homes are built by `buildAreasSteps` and `buildHomesSteps`, run by `kit.ts` `runSliced` at 6 ms a slice. Built all at once (`buildAreas`, `buildHomes`), they are the same; the test checks every step its own frame against all at once.
+- A newer build supersedes an older one, and the old stays drawn until the new is in.
+
+`nestSpots` keeps the ground height under each trunk and branch point it has asked about, and checks height only for the points it looks at, nearest first. Before, at the captures' scale, hundreds of nests sampled the same thousands of points.
+
+Phone profile (4× CPU), the 1× population (3,140 animals), the golden page, one run each on the loaded Mac:
+
+| | before (5774c2b1) | after (cd717508) |
+|---|---:|---:|
+| `nestSpots` | 5,300 ms | 232 ms |
+| homes, in all | 5,617 ms, one task | 421 ms, in 6 ms slices |
+| areas | 374 ms, one task | 441 ms, in 6 ms slices |
+| `createPropsModule` inside `mountArk` | 451 ms | 177 ms (the mist drapes with one ground sample a vertex) |
+| the props in the long tasks after the mount | 7.0 s task (homes 5.6 s) | none |
+
+What remains after the mount is not the props: behaviour's `spaceHomes` (3.4 s) and the first shader compiles (0.3 s).
+
 ## Other lanes
 
 - **Graphics / attach lane (`ark-graphics-attach`, merged here at 4873e79d):** the props use only the sampler's own tags.

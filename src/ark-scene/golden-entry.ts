@@ -597,6 +597,29 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /**
+         * The contact-shadow audit (development): the scene running, every drawn animal whose home spot's ground (where
+         * its shadow used to lie) is off the ground under it now by more than 25 cm, worst first. The schedule walks
+         * them off their spot; a shadow left at the home's height floated over one that had walked downhill.
+         */
+        shadowAudit: async (seconds: number) => {
+            handle.setReducedMotion(false);
+            handle.setClockScale(1, GOLDEN_WORLD_MS);
+            const until = performance.now() + seconds * 1000;
+            while (performance.now() < until) await nextFrame();
+            const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string; model_slug: string}; place: {ground: number}; middle?: {x: number; y: number; z: number} | null; drawnHeight: number; air: number}>}}).__arkDebug;
+            const rows: Array<{id: string; slug: string; home: number; ground: number; feet: number; off: number}> = [];
+            for (const entry of debug?.entries() ?? []) {
+                if (!entry.middle) continue;
+                const ground = Math.max(heightAt(entry.middle.x, entry.middle.z), 0);
+                const home = Math.max(entry.place.ground, 0);
+                const feet = entry.middle.y - entry.drawnHeight / 2;
+                if (Math.abs(home - ground) > 0.25 && Math.abs(feet - ground) < 0.3 && entry.air < 0.5) {
+                    rows.push({id: entry.animal.id, slug: entry.animal.model_slug, home, ground, feet, off: home - ground});
+                }
+            }
+            return rows.sort((a, b) => Math.abs(b.off) - Math.abs(a.off));
+        },
         /** Clips (development): hold the camera on this view. */
         setView: (view: ArkCameraView) => handle.setView(view),
         /** Clips (development): run the sea's clock from this epoch second. */
@@ -647,8 +670,9 @@ async function mountGolden(el: HTMLElement) {
          * restarts from one fixed moment for every shot, so before and after catch the animal in the same place.
          * Resolves once its close-up skin is in and the frame is quiet.
          */
-        animal: async (slug: string, time: GoldenTime, options: {look: boolean; wetness?: number; still?: boolean; distance?: number; turn?: number; detail?: boolean}) => {
-            const kin = snapshot.animals.filter((row) => row.model_slug === slug);
+        animal: async (slug: string, time: GoldenTime, options: {look: boolean; wetness?: number; still?: boolean; distance?: number; turn?: number; detail?: boolean; id?: string}) => {
+            // One animal by id (the shadow audit's), else every one of the species to choose from.
+            const kin = snapshot.animals.filter((row) => row.model_slug === slug && (!options.id || row.id === options.id));
             if (!kin.length) return {found: false as const};
             const moving = options.still === false;
             const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;

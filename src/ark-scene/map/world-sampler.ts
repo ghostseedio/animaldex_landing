@@ -21,6 +21,7 @@ import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} fr
 import {navGrid} from "@/ark-scene/behaviour-nav";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {reservedAt} from "@/ark-scene/map/hamlet";
+import {inRock} from "@/ark-scene/map/rocks";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
@@ -98,7 +99,8 @@ class WorldSampler implements ArkMapSampler {
 
     blocked(x: number, z: number, radius: number): boolean {
         this.obstacles ??= new DecorObstacles(worldDecor());
-        return this.obstacles.blocked(x, z, radius);
+        // The trees, buildings and props as before; the rocks as they are drawn now (asset rocks: `rocks.ts`).
+        return this.obstacles.blocked(x, z, radius) || inRock(x, z, radius);
     }
 
     covered(x: number, z: number): boolean {

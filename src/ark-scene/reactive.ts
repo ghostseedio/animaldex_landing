@@ -15,8 +15,16 @@
  * for every viewer and the livestream. This layer only adds to it, for the
  * animals close to the camera, and may differ a little between viewers. It
  * never contradicts the shared layer:
- *   - an animal the shared layer has asleep stays asleep (no reaction, no
- *     look, no call; any offset only eases back);
+ *   - an animal the shared layer has asleep stays asleep (no look, no call;
+ *     any offset only eases back) unless something wakes it: asleep it
+ *     perceives less (its eyes shut: sight to a few body lengths; hearing
+ *     dulled; smell as awake), and a threat inside its flight distance, an
+ *     alarm call it hears, its group running, or the camera coming at it
+ *     close (by its species' flight distance; a still camera never) wake it
+ *     with a start (`woke`, `startled`: the scene's quick get-up). Awake
+ *     here, it reacts as any awake animal; calm again a while later, it goes
+ *     back to sleep. The ones keeping watch (the shared layer's night watch)
+ *     are awake, with all their senses;
  *   - an animal acting out a server event (an act, a moment, the visitor) is
  *     left entirely to it;
  *   - an animal in the air is left to its flight;
@@ -88,6 +96,8 @@ export type ReactiveInput = {
     headHeight?: number;
     /** Fixed to its spot (a barnacle, a sponge, a limpet: the behaviour profile's move "sessile"): never moved. */
     sessile?: boolean;
+    /** The one the viewer has selected or follows: the camera coming to it never wakes it. */
+    watched?: boolean;
 };
 
 export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
@@ -166,7 +176,17 @@ export type ReactiveOut = {
     alarmed: number;
     /** What it is looking at: an animal's id, "camera", "sound", "spot", or null (scanning). */
     looking: string | null;
+    /** The shared layer has it asleep, and something woke it here (it gets up and reacts; later it lies down again). */
+    woke?: boolean;
+    /** Woken this last moment: a startled get-up (the scene's quick one). */
+    startled?: boolean;
 };
+
+/** Asleep, how much of its sight it keeps (its eyes are shut: movement close by), and of its hearing. Smell is as awake. */
+export const SLEEP_SIGHT = 0.12;
+export const SLEEP_HEARING = 0.4;
+/** How long it stays up once woken (s, plus its own seeded share), while nothing else keeps it up. */
+const WOKE_SECONDS = 18;
 
 /** Head limits per plan and species, worked out once (they never change). */
 const LIMITS = new Map<string, HeadLimits>();
@@ -379,6 +399,10 @@ type Agent = {
     camApproach: boolean;
     /** The camera is within its notice range now (for the moment it first notices it). */
     camNear: boolean;
+    /** Asleep in the shared layer and woken here: when, until when (while it stays calm), and by what. */
+    woke: {at: number; until: number; why: "threat" | "alarm" | "kin" | "camera"} | null;
+    /** Its senses asleep (its profile with sight and hearing cut), made once. */
+    dozing: ReactiveInput | null;
 };
 
 function newAgent(id: string, now: number): Agent {
@@ -411,7 +435,9 @@ function newAgent(id: string, now: number): Agent {
         onWatch: false,
         camHab: 0,
         camApproach: false,
-        camNear: false
+        camNear: false,
+        woke: null,
+        dozing: null
     };
 }
 
@@ -426,6 +452,12 @@ export type ReactiveOptions = {tier?: ReactiveTier; envelope?: EnvelopeFn; budge
 
 /** An alarm call about a ground threat sends a listener running when the threat is within this many of its flight distances (a zebra lets a lion walk past 30 m off, watching). */
 const ALARM_FLIGHT = 1.3;
+/**
+ * The deliberate back-steps: backing off from the camera, giving way at the water. They go backwards (facing what they
+ * back away from), and never faster than `BACK_STEP_SPEED`. Every other move faces the way it goes.
+ */
+const BACK_STEPS = new Set<ReactiveAction>(["back_off_camera", "wait_turn"]);
+const BACK_STEP_SPEED = 0.28;
 /** How much further the one on sentinel watch sees: it is looking for exactly this. */
 const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -446,6 +478,8 @@ export class ReactiveLayer {
     /** The camera's last place and its velocity (m/s), for "is it coming at me". */
     private camPrev: Vec3 | null = null;
     private camVel = {x: 0, z: 0};
+    /** The world time of the frame being stepped. */
+    private now = 0;
     budget: ReactiveBudget;
     private envelope: EnvelopeFn;
     stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
@@ -477,14 +511,21 @@ export class ReactiveLayer {
     step(inputs: ReactiveInput[], world: ReactiveWorld): Map<string, ReactiveOut> {
         const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
         this.frame++;
+        this.now = world.now;
         const out = new Map<string, ReactiveOut>();
         const stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
         const cam = world.camera;
         if (cam && this.camPrev && world.dt > 0) {
-            // Smoothed a little: a jittery orbit is not an approach.
-            const k = Math.min(world.dt * 4, 1);
-            this.camVel.x += ((cam.x - this.camPrev.x) / world.dt - this.camVel.x) * k;
-            this.camVel.z += ((cam.z - this.camPrev.z) / world.dt - this.camVel.z) * k;
+            // Smoothed a little: a jittery orbit is not an approach. A jump faster than 25 m/s is a cut (a shot change,
+            // the camera flying to a tapped animal), not a walk at anything: the velocity starts again from rest.
+            const vx = (cam.x - this.camPrev.x) / world.dt;
+            const vz = (cam.z - this.camPrev.z) / world.dt;
+            if (Math.hypot(vx, vz) > 25) this.camVel = {x: 0, z: 0};
+            else {
+                const k = Math.min(world.dt * 4, 1);
+                this.camVel.x += (vx - this.camVel.x) * k;
+                this.camVel.z += (vz - this.camVel.z) * k;
+            }
         }
         this.camPrev = cam ? {...cam} : null;
         const byId = new Map(inputs.map((i) => [i.id, i]));
@@ -604,12 +645,13 @@ export class ReactiveLayer {
             this.reset(agent);
             return ZERO_OUT;
         }
-        if (me.asleep || me.shared.aloft) {
+        if (me.shared.aloft || (me.asleep && !this.awakeHere(me, agent, world, around, byId, stats))) {
             agent.threat = null;
             agent.heard = null;
             agent.prey = null;
+            agent.woke = null;
             this.relax(agent, me, dt, limits);
-            return this.output(agent, me, me.asleep ? "asleep" : "aloft", false, 0, null, false);
+            return this.output(agent, me, me.shared.aloft ? "aloft" : "asleep", false, 0, null, false);
         }
         const p = me.intel;
         const person = agent.personality;
@@ -629,7 +671,7 @@ export class ReactiveLayer {
             for (const other of around(me.shared.x, me.shared.z, reach)) {
                 if (other.id === me.id) continue;
                 // Only what matters to it is looked for: what could eat it, and (a hunter) what it could eat.
-                const threat = !other.asleep && this.eats(other, me) && !(other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"));
+                const threat = !this.sleeping(other) && this.eats(other, me) && !(other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"));
                 const prey = hunts && !other.shared.aloft && this.eats(me, other);
                 if (!threat && !prey) continue;
                 const pair = `${me.id}|${other.id}`;
@@ -655,14 +697,14 @@ export class ReactiveLayer {
         for (const seen of agent.perceived) {
             const other = byId.get(seen.id);
             if (!other) continue;
-            if (seen.threat && !other.asleep) {
+            if (seen.threat && !this.sleeping(other)) {
                 if (!threat || seen.distance < threat.seen.distance) threat = {input: other, seen};
             }
             if (seen.prey && !other.shared.aloft) {
                 if (!prey || seen.distance < prey.seen.distance) prey = {input: other, seen};
             }
         }
-        kin = around(me.shared.x, me.shared.z, Math.max(12, me.length * 8)).filter((o) => o.id !== me.id && o.slug === me.slug && !o.asleep);
+        kin = around(me.shared.x, me.shared.z, Math.max(12, me.length * 8)).filter((o) => o.id !== me.id && o.slug === me.slug && !this.sleeping(o));
 
         // Memory: a predator seen is remembered there; the more it learns, the stronger and longer.
         if (threat) {
@@ -918,8 +960,26 @@ export class ReactiveLayer {
             const l2 = Math.hypot(target.x, target.z);
             if (l2 > reach) target = {x: (target.x / l2) * reach, z: (target.z / l2) * reach};
         }
+        // It faces the way it goes (a full turn if need be), and turns on the spot before it sets off; only a deliberate
+        // back-step goes backwards, slowly. (Before, a play hop or a flee whose way lay behind it ran it backwards.)
+        const backStep = BACK_STEPS.has(action);
+        if (backStep) speed = Math.min(speed, BACK_STEP_SPEED);
+        const wx = target.x - agent.offset.x;
+        const wz = target.z - agent.offset.z;
+        const wl = Math.hypot(wx, wz);
+        let moveFace: number | null = null;
+        if (!backStep && wl > 1e-4 && dt > 0 && Math.min(wl / dt, speed) > BACK_STEP_SPEED) {
+            const dir = Math.atan2(wx, wz);
+            moveFace = dir;
+            if (Math.abs(wrapAngle(dir - (me.shared.yaw + agent.bodyYaw))) > 1.2) speed = Math.min(speed, BACK_STEP_SPEED);
+        }
+        const before = {x: agent.offset.x, z: agent.offset.z};
         this.moveOffset(agent, target, speed, dt, reach);
         if (action === "stalk" && prey) this.keepShort(me, agent, prey.input);
+        // Its actual step this frame (the envelope pulling it in, keeping short of prey) decides the facing when it is a move.
+        const sx = agent.offset.x - before.x;
+        const sz = agent.offset.z - before.z;
+        if (!backStep && dt > 0 && Math.hypot(sx, sz) / dt > BACK_STEP_SPEED) moveFace = Math.atan2(sx, sz);
 
         agent.mode = action;
         if (look) {
@@ -927,10 +987,83 @@ export class ReactiveLayer {
             agent.lookLabel = lookLabel;
         }
         const scan = !look && (action === "scan" || action === "sentinel" || action === "alert");
-        this.stepLook(me, agent, look, scan, world, dt, limits, faceYaw, action);
+        this.stepLook(me, agent, look, scan, world, dt, limits, moveFace ?? faceYaw, action, moveFace !== null);
         agent.crouch += (crouchWant - agent.crouch) * Math.min(dt * 4, 1);
         const alarmed = agent.threat || heardNow ? 1 : action === "recover" ? alarmLevel((world.now - agent.reactedAt) * 1000) : 0;
+        // Woken here: kept up while it reacts or recovers; calm, it goes back to sleep when its time is up.
+        if (agent.woke && (REACTING.has(action) || action === "recover" || agent.threat || heardNow)) agent.woke.until = Math.max(agent.woke.until, world.now + 6);
         return this.output(agent, me, action, called, alarmed, look ? lookLabel : null, true);
+    }
+
+    /** Asleep in the shared layer and not woken here (a woken one counts as awake: a woken lion is a threat again). */
+    private sleeping(other: ReactiveInput): boolean {
+        return other.asleep && !this.agents.get(other.id)?.woke;
+    }
+
+    /**
+     * Whether an animal the shared layer has asleep is awake here: woken before and still up, or woken now. Asleep, it
+     * perceives with its eyes shut and its hearing dulled (`SLEEP_SIGHT`, `SLEEP_HEARING`; smell as awake), on its
+     * own perception frames. It wakes at a threat it perceives inside its flight distance, an alarm call it hears
+     * (its own kind's, or another's about something that eats it too), its group running close by, or the camera
+     * coming at it (closing at 0.6–6 m/s: a walk, not a cut) inside half its flight distance (a quarter for a hunter,
+     * which sleeps deeper). A still camera never
+     * wakes it, nor the camera coming to the animal the viewer selected or follows (`watched`).
+     */
+    private awakeHere(me: ReactiveInput, agent: Agent, world: ReactiveWorld, around: (x: number, z: number, r: number) => ReactiveInput[], byId: Map<string, ReactiveInput>, stats: ReactiveStats): boolean {
+        if (agent.woke && world.now < agent.woke.until) return true;
+        const p = me.intel;
+        const stagger = Math.floor(unit(me.id, "perceive") * this.budget.perceiveEvery);
+        if ((this.frame + stagger) % this.budget.perceiveEvery !== 0) return false;
+        stats.perceptions++;
+        const flight = p.flight * agent.personality.fleeDistance;
+        const wake = (why: "threat" | "alarm" | "kin" | "camera") => {
+            agent.woke = {at: world.now, until: world.now + WOKE_SECONDS + 14 * unit(me.id, "woke", Math.floor(world.now)), why};
+            // Woken by a threat: it already knows where it is (no second wait to notice it).
+            agent.choice = "scan";
+            agent.choiceUntil = world.now;
+            return true;
+        };
+        // Its senses asleep.
+        const dozing = (agent.dozing ??= {...me, intel: {...p, sight: Math.min(p.sight * SLEEP_SIGHT, Math.max(me.length * 4, 2)), hearing: p.hearing * SLEEP_HEARING}});
+        dozing.shared = me.shared;
+        const reach = Math.min(this.budget.reach, Math.max(flight * 1.5, p.smell * 1.5, 4));
+        for (const other of around(me.shared.x, me.shared.z, reach)) {
+            if (other.id === me.id || this.sleeping(other) || !this.eats(other, me) || (other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"))) continue;
+            const d = Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z);
+            if (d > flight * 1.2) continue;
+            const how = perceive(dozing, other, world, 1, this.budget.sightSamples, world.sight);
+            if (how) {
+                const seen = {x: other.shared.x, z: other.shared.z};
+                agent.threat = {id: other.id, slug: other.slug, x: seen.x, z: seen.z, seen: world.now, noticed: world.now};
+                return wake("threat");
+            }
+        }
+        // An alarm call it hears through its sleep (a call is loud: its dulled hearing, a call's carry).
+        for (const call of this.alarms) {
+            if (call.caller === me.id || call.threat === me.id) continue;
+            const d = Math.hypot(call.x - me.shared.x, call.z - me.shared.z);
+            if (d > p.hearing * SLEEP_HEARING * 1.6 * (1 - 0.4 * world.weather.rain)) continue;
+            const own = call.slug === me.slug;
+            const caused = byId.get(call.threat);
+            if (!own && (!caused || !this.eats(caused, me) || (!GROUPED.has(me.social) && !p.mixed && p.alarm === false))) continue;
+            return wake("alarm");
+        }
+        // Its group running past it.
+        for (const k of around(me.shared.x, me.shared.z, Math.max(me.length * 6, 6))) {
+            if (k.id === me.id || k.slug !== me.slug) continue;
+            if (this.agents.get(k.id)?.mode === "flee") return wake("kin");
+        }
+        // The camera coming at it, close, at a walk or a run (a still or passing camera never wakes it, nor a cut or the
+        // camera flying to an animal the viewer tapped, nor the one the viewer is looking at or following).
+        const cam = world.camera;
+        if (cam && !me.watched) {
+            const d = Math.hypot(cam.x - me.shared.x, cam.z - me.shared.z);
+            const closing = d > 1e-3 ? ((me.shared.x - cam.x) * this.camVel.x + (me.shared.z - cam.z) * this.camVel.z) / d : 0;
+            // (A hunter sleeps deeper than its prey: a lion wakes for the camera only at a quarter of its flight distance.)
+            const hunter = p.hunt.some((h) => h !== "filter" && h !== "scavenge");
+            if (closing > 0.6 && closing < 6 && d < Math.min(flight * (hunter ? 0.25 : 0.5), 14)) return wake("camera");
+        }
+        return false;
     }
 
     /** How far a curious animal comes to look at the camera: two and a half times its calm reach, within its flee reach. */
@@ -1200,11 +1333,21 @@ export class ReactiveLayer {
                 break;
             }
             case "play": {
-                // Little hops and turns round its spot, its own rhythm.
-                const phase = world.now * (1.6 + unit(me.id, "play-rate")) + unit(me.id, "play") * 6.28;
-                res.target = {x: Math.sin(phase) * reach * 0.6, z: Math.cos(phase * 1.3) * reach * 0.6};
-                res.speed = walk * 2.5;
+                // Play in bursts, its own rhythm (seeded beats of 0.9–1.4 s): a short dash to a new spot near its own,
+                // a pause, a play-bow (down at the front: drawn as a crouch) facing its playmate. It faces the way it dashes.
+                const beat = 0.9 + 0.5 * unit(me.id, "play-beat");
+                const n = Math.floor((world.now + 10 * unit(me.id, "play-phase")) / beat);
+                const kind = unit(me.id, "play-kind", n);
                 const k = kin[0];
+                if (kind < 0.45) {
+                    const a = unit(me.id, "play-dir", n) * Math.PI * 2;
+                    const r = reach * (0.25 + 0.35 * unit(me.id, "play-r", n));
+                    res.target = {x: Math.sin(a) * r, z: Math.cos(a) * r};
+                    res.speed = walk * 2.5;
+                } else if (kind > 0.8 && k) {
+                    res.crouch = 0.7;
+                    res.face = Math.atan2(k.shared.x - me.shared.x - agent.offset.x, k.shared.z - me.shared.z - agent.offset.z);
+                }
                 if (k) {
                     res.look = {x: k.shared.x, y: k.shared.y + k.length * 0.4, z: k.shared.z};
                     res.label = k.id;
@@ -1302,7 +1445,7 @@ export class ReactiveLayer {
         const l = Math.hypot(agent.offset.x, agent.offset.z);
         if (l > reach && l > 0) {
             // Over the edge (the envelope narrowed as the flight ended): back in at the animal's walk, never a jump.
-            const back = Math.max(l - Math.max(speed, 0.6) * dt, reach);
+            const back = Math.max(l - Math.max(speed, 0.25) * dt, reach);
             agent.offset.x *= back / l;
             agent.offset.z *= back / l;
         }
@@ -1328,7 +1471,7 @@ export class ReactiveLayer {
         agent.offset.z = pz + uz * want - me.shared.z;
     }
 
-    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction) {
+    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction, moving = false) {
         const head = {x: me.shared.x + agent.offset.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z + agent.offset.z};
         const bodyNow = me.shared.yaw + agent.bodyYaw;
         let want: {yaw: number; pitch: number};
@@ -1346,9 +1489,10 @@ export class ReactiveLayer {
         // The body turns when it must (a threat behind it, fleeing, facing the camera to investigate), at its own pace.
         let bodyWant = clamped.body;
         if (faceYaw !== null) bodyWant = wrapAngle(faceYaw - me.shared.yaw);
-        const maxBody = action === "flee" ? 1.2 : 0.9;
+        // Moving, it turns right round if it must (the way it goes may lie behind the shared heading); standing, a little.
+        const maxBody = moving ? Math.PI : action === "flee" ? 1.2 : 0.9;
         bodyWant = Math.min(Math.max(bodyWant, -maxBody), maxBody);
-        agent.bodyYaw += wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (action === "flee" ? 6 : 2.5), 1);
+        agent.bodyYaw = wrapAngle(agent.bodyYaw + wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (moving || action === "flee" ? 6 : 2.5), 1));
         const relative = look ? lookAngles(head, me.shared.yaw + agent.bodyYaw, look) : want;
         agent.head = stepHead(agent.head, relative, dt, limits);
     }
@@ -1388,7 +1532,9 @@ export class ReactiveLayer {
             action,
             called,
             alarmed,
-            looking
+            looking,
+            woke: Boolean(me.asleep && agent.woke),
+            startled: Boolean(me.asleep && agent.woke && this.now - agent.woke.at < 0.6)
         };
     }
 }

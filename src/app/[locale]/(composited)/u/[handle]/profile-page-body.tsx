@@ -26,6 +26,8 @@ import {loadAppFeatureFlags} from "@/data/app-feature-flags";
 import {isAppFeatureOn} from "@/lib/app-feature-flags";
 import {decodeArkStats, type ArkStats} from "@/lib/ark";
 import {decodeProblemDiary} from "@/lib/problem-diary";
+import ArkAgeAsk from "@/components/ark/ark-age-ask";
+import {getArkWords} from "@/loaders/ark-words";
 
 /**
  * Life Sim (docs/life-sim/CONTRACT.md, sections 7 to 9): `ark_stats_v1` as
@@ -111,6 +113,8 @@ export async function ProfilePageBody({
     const t = await getScopedTranslator(locale, "profile");
     // "My Companions" is on the owner's own profile only.
     const companionWords = viewer.isOwner ? await getCompanionWords(locale) : undefined;
+    // "Name now, ask age after" (2026-11-11): on their own profile, the age question once, inline, when the Ark asks it.
+    const arkAgeWords = viewer.isOwner ? (await getArkWords(locale)).words.age : null;
     const pageUrl = getAbsoluteUrl(locale, profilePath(profile.username));
     const joinedAtLabel = profile.joinedAt
         ? new Date(profile.joinedAt).toLocaleDateString(locale, {month: "short", year: "numeric"})
@@ -212,6 +216,7 @@ export async function ProfilePageBody({
     return (
         <article className={articleClass}>
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schema)}} />
+            {arkAgeWords ? <ArkAgeAsk words={arkAgeWords} className={surface === "app" ? "mx-4 mt-4" : ""} /> : null}
 
             <ProfileContent
                 profile={{

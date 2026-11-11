@@ -180,12 +180,6 @@ void main() {
     gl_FragColor = vec4(tint, a * 0.55);
 }`;
 
-/** The mist's height over the ground (or the water) at a point: the highest ground within a metre, never below the water. */
-function mistFloor(x: number, z: number): number {
-    let high = -Infinity;
-    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) high = Math.max(high, sampleGround(x + dx, z + dz).height);
-    return Math.max(high, 0);
-}
 
 export type Effects = {
     setTier: (particles: number) => void;
@@ -271,14 +265,38 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
         {x: ZONE_SITES.farm_garden.x, z: ZONE_SITES.farm_garden.z + 8, r: 24, y: 0}
     ];
     for (const at of mistAt) {
+        // The ground under the patch, sampled once per vertex for both layers (the mount's cost), each vertex then
+        // raised to the highest of it and its grid neighbours, so a sheet clears the bumps between its vertices.
+        const segments = Math.min(Math.max(Math.round((at.r * 2) / 2.2), 8), 36);
+        const side = segments + 1;
+        const floor = new Float32Array(side * side);
+        for (let row = 0; row < side; row++) {
+            for (let col = 0; col < side; col++) {
+                const x = at.x + (col / segments - 0.5) * at.r * 2;
+                const z = at.z + (row / segments - 0.5) * at.r * 2;
+                floor[row * side + col] = Math.max(sampleGround(x, z).height, 0);
+            }
+        }
+        const highest = (row: number, col: number) => {
+            let high = floor[row * side + col];
+            if (row > 0) high = Math.max(high, floor[(row - 1) * side + col]);
+            if (row < segments) high = Math.max(high, floor[(row + 1) * side + col]);
+            if (col > 0) high = Math.max(high, floor[row * side + col - 1]);
+            if (col < segments) high = Math.max(high, floor[row * side + col + 1]);
+            return high;
+        };
         for (const layer of [0, 1]) {
             // Draped over the ground and the water (every couple of metres), lying low: it never slices through a slope.
-            const segments = Math.min(Math.max(Math.round((at.r * 2) / 2.2), 8), 36);
             const plane = new PlaneGeometry(at.r * 2, at.r * 2, segments, segments);
             plane.rotateX(-Math.PI / 2);
             const lift = 0.25 + layer * 0.75 + Math.min(at.y, 0.7) * 0.3;
             const position = plane.getAttribute("position");
-            for (let i = 0; i < position.count; i++) position.setY(i, mistFloor(at.x + position.getX(i), at.z + position.getZ(i)) + lift);
+            // PlaneGeometry's vertices run row by row from its far edge (−z after the turn) to its near, columns −x to +x.
+            for (let i = 0; i < position.count; i++) {
+                const col = Math.round((position.getX(i) / (at.r * 2) + 0.5) * segments);
+                const row = Math.round((position.getZ(i) / (at.r * 2) + 0.5) * segments);
+                position.setY(i, highest(Math.min(Math.max(row, 0), segments), Math.min(Math.max(col, 0), segments)) + lift);
+            }
             position.needsUpdate = true;
             const material = new ShaderMaterial({
                 vertexShader: MIST_VERTEX,

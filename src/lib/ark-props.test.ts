@@ -401,7 +401,7 @@ test("props budget: draw calls and triangles at each tier, at the busiest places
 // MARK: - Home plots and fence posts
 
 import {readFileSync} from "node:fs";
-import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketPostsFor, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 
 test("props home layout: fence post tops for the sampler, from a pure module, the same posts the areas draw", () => {
     // Pure: no sampler (the sampler imports it), no three.js.
@@ -413,7 +413,8 @@ test("props home layout: fence post tops for the sampler, from a pure module, th
     const paddock = posts.filter((post) => post.fence === "paddock");
     const picket = posts.filter((post) => post.fence === "picket");
     assert.equal(paddock.length, paddockSegments(paddockRect(plots[1])).filter((segment) => !segment.gate).length);
-    assert.equal(picket.length, picketPosts().length);
+    assert.equal(picket.length, picketPostsFor(plots[0]).length);
+    assert.ok(picketPostsFor(plots[0]).length >= picketPosts().length - 2);
     assert.deepEqual(paddock.map((post) => post.n), paddock.map((_, i) => i));
     for (const post of posts) {
         const top = post.fence === "paddock" ? PADDOCK_POST_TOP : PICKET_POST_TOP;
@@ -538,4 +539,176 @@ test("props hamlet land: the baked footprints are still the map's; no crops on a
     assert.equal(tufts.filter((tuft) => hamletLandAt(tuft.x, tuft.z) === "core").length, 0);
     // The decor's own items are not moved or removed (their ids, `decor<n>`, stay).
     assert.equal(worldDecor().filter((item) => item.kind === "flower" && hamletLandAt(item.x, item.z)).length, 0);
+});
+
+// MARK: - Built in slices, the same as all at once
+
+import {buildAreasSteps} from "@/ark-scene/props/areas";
+import {buildHomesSteps} from "@/ark-scene/props/homes";
+import {runSliced} from "@/ark-scene/props/kit";
+
+test("props slices: the homes and the areas built a slice at a time are the same as built at once (and they do pause)", async () => {
+    const snapshot = propsFixture(decodeArkSnapshot(fixture)!);
+    const places = placeAnimals(snapshot.animals);
+    const presence = propsPresence(snapshot);
+    const placeOf = (id: string) => places.get(id) ?? null;
+    let steps = 0;
+    const counted = function* <T>(inner: Generator<void, T, void>): Generator<void, T, void> {
+        let next = inner.next();
+        while (!next.done) {
+            steps++;
+            yield;
+            next = inner.next();
+        }
+        return next.value;
+    };
+    // The smallest slices there are: every step its own frame.
+    const sliced = (await runSliced(counted(buildHomesSteps(presence, placeOf, PROPS_TIERS.medium)), 0))!;
+    assert.ok(steps > 20, `${steps} steps`);
+    const whole = buildHomes(presence, placeOf, PROPS_TIERS.medium);
+    const view = (homes: typeof whole) => ({
+        nests: homes.nests,
+        marks: homes.marks,
+        webs: homes.webs,
+        sites: homes.nestSites,
+        batches: homes.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry), batch.far ? geometryHash(batch.far.geometry) : null])
+    });
+    assert.deepEqual(view(sliced), view(whole));
+    const plots = homePlots(7 * 130, 3 * 50);
+    steps = 0;
+    const areasSliced = (await runSliced(counted(buildAreasSteps(PROPS_TIERS.medium, plots)), 0))!;
+    assert.ok(steps > 20, `${steps} area steps`);
+    const areasWhole = buildAreas(PROPS_TIERS.medium, plots);
+    const areaView = (areas: typeof areasWhole) => ({
+        marks: areas.marks,
+        pieces: areas.pieces.map((piece) => [piece.name, geometryHash(piece.near.geometry), piece.far ? geometryHash(piece.far.geometry) : null]),
+        batches: areas.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry)]),
+        buildings: areas.buildings.triangles
+    });
+    assert.deepEqual(areaView(areasSliced), areaView(areasWhole));
+    for (const built of [sliced, whole]) built.dispose();
+    for (const built of [areasSliced, areasWhole]) built.dispose();
+});
+
+// MARK: - Where no animal stands
+
+import {bedsOrigin, COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
+import {plotSpots} from "@/ark-scene/map/hamlet";
+
+test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props draw are listed for the map's spots to avoid", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        const at = (lx: number, lz: number) => frame.toWorld(lx, lz);
+        if (plot.kind === "house") {
+            // Every cabbage row and the wigwam, the compost bin: on a keep-out of this plot.
+            const beds = bedsOrigin(plot);
+            const shift = beds.z0 - GARDEN_BEDS.z0;
+            for (let row = 0; row < GARDEN_BEDS.rows; row++) for (const lz of [GARDEN_BEDS.z0 + 0.35, 0.4, GARDEN_BEDS.z1 - 0.35]) {
+                const w = at(beds.x0 + row * GARDEN_BEDS.pitch, lz + shift);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "beds", `${plot.id} bed ${row}`);
+            }
+            const bin = at(COMPOST.x, COMPOST.z);
+            assert.equal(onHomeKeepOut(bin.x, bin.z, [plot], 0)?.what, "compost");
+        } else {
+            for (const trough of troughSpots(plot)) {
+                const w = at(trough.x, trough.z);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "trough");
+            }
+            const coop = coopAt(plot);
+            const w = at(coop.x, coop.z);
+            assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "coop");
+        }
+        assert.ok(plotKeepOuts(plot).length >= 3);
+    }
+    // The map's spots today (a report for the map lane, which places on them): how many fall on a keep-out.
+    const clashes = plots.flatMap((plot) => plotSpots(plot).spots.filter((spot) => onHomeKeepOut(spot.x, spot.z, plots)).map((spot) => `${plot.id} ${spot.where} → ${onHomeKeepOut(spot.x, spot.z, plots)!.what}`));
+    console.log(`map spots on a props keep-out: ${clashes.length}${clashes.length ? `: ${clashes.join("; ")}` : ""}`);
+});
+
+// MARK: - Clear of the rocks as drawn
+
+import {inRock} from "@/ark-scene/map/rocks";
+
+test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of any plot stands in a rock as drawn (map/rocks.ts)", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    const hits: string[] = [];
+    for (const post of fencePostTops(plots)) if (inRock(post.position.x, post.position.z, 0.06)) hits.push(`${post.plot} ${post.fence} post ${post.n}`);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        for (const out of plotKeepOuts(plot)) {
+            // The keep-out's middle and corners.
+            for (const [lx, lz] of [[(out.x0 + out.x1) / 2, (out.z0 + out.z1) / 2], [out.x0, out.z0], [out.x1, out.z0], [out.x1, out.z1], [out.x0, out.z1]]) {
+                const w = frame.toWorld(lx, lz);
+                if (inRock(w.x, w.z, 0)) hits.push(`${plot.id} ${out.what}`);
+            }
+        }
+    }
+    assert.deepEqual(Array.from(new Set(hits)), []);
+});
+
+// MARK: - The mountain's outcrops
+
+import {OUTCROP_CEILING, OUTCROP_DUST, OUTCROP_SLOPE} from "@/ark-scene/props/areas";
+import {snowCover} from "@/ark-scene/snow";
+
+test("props outcrops: below the snow, on slopes a slab can sit on, sunk and tilted, near only (no far box)", () => {
+    const areas = buildAreas(PROPS_TIERS.high);
+    const plain = areas.batches.find((batch) => batch.name === "strata")!;
+    const dusted = areas.batches.find((batch) => batch.name === "strata-dusted")!;
+    assert.ok(plain.count + dusted.count >= 3, `${plain.count + dusted.count} outcrops`);
+    for (const batch of [plain, dusted]) {
+        assert.equal(batch.far, null, "no far proxy");
+        const matrices = (batch as unknown as {matrices: Float32Array}).matrices;
+        for (let i = 0; i < batch.count; i++) {
+            const x = matrices[i * 16 + 12];
+            const y = matrices[i * 16 + 13];
+            const z = matrices[i * 16 + 14];
+            const surface = surfaceAt(x, z);
+            assert.ok(surface.height < OUTCROP_CEILING, `${surface.height.toFixed(1)} m`);
+            assert.ok(surface.normal.y >= OUTCROP_SLOPE.maxNormalY - 0.02, "a slab can sit there");
+            assert.ok(snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).sure < 0.02, "never on sure snow");
+            // Its up is tilted toward the slope (the matrix's y axis).
+            const upY = matrices[i * 16 + 5] / Math.hypot(matrices[i * 16 + 4], matrices[i * 16 + 5], matrices[i * 16 + 6]);
+            assert.ok(upY < 0.999, "tilted to the slope");
+            // Sunk: its base well under the ground (60% of its 0.88 × size height; scale = size / 2.5).
+            const scale = Math.hypot(matrices[i * 16], matrices[i * 16 + 1], matrices[i * 16 + 2]);
+            assert.ok(surface.height - y > 0.5 * 0.88 * scale * 2.5, "sunk");
+            if (batch === dusted) assert.ok(surface.height > OUTCROP_DUST && snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).mean > 0.1);
+        }
+    }
+    areas.dispose();
+});
+
+// MARK: - Burrows and dens
+
+import {burrowMouth, entranceInstances, entranceStyle, mouthRadius, rockDen, type DenEntrance} from "@/ark-scene/props/burrows";
+
+test("props den entrances: a burrow mouth or a rock den at the sleep lane's ways in, sized to the animal, seated on the slope, one per roost", () => {
+    assert.equal(entranceStyle("burrow_entrance:burrow12,-40:0", "burrow"), "burrow");
+    assert.equal(entranceStyle("burrow:ground:42", "den"), "burrow");
+    assert.equal(entranceStyle("cave_mouth:decor12:0", "den"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "crevice"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "den"), null);
+    assert.equal(entranceStyle("branch:decor1:0", "burrow"), null);
+    assert.equal(entranceStyle(null, "burrow"), null);
+    // Sized to the body: a meerkat's hole is small, an aardvark's big, both bounded.
+    assert.ok(mouthRadius(0.4) < mouthRadius(1.6));
+    assert.ok(mouthRadius(0.05) >= 0.07 && mouthRadius(9) <= 0.85);
+    const base = {nx: 0.2, ny: 0.97, nz: 0.1, kind: "den"};
+    const list: DenEntrance[] = [
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.8, slug: "bat-eared-fox"},
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.9, slug: "bat-eared-fox"},
+        {...base, point: "cave_mouth:decor7:0", x: 5, y: 1, z: 5, length: 0.5, slug: "rock-hyrax", kind: "den"},
+        {...base, point: "leaf:decor1:0", x: 0, y: 0, z: 0, length: 0.5, slug: "x"}
+    ];
+    const built = entranceInstances(list);
+    assert.equal(built.burrows.length, 1, "one entrance a roost");
+    assert.equal(built.burrows[0].scale, mouthRadius(0.9), "sized to the biggest that uses it");
+    assert.ok(built.burrows[0].up!.y < 0.999 && built.burrows[0].up!.x > 0, "tilted to the slope");
+    assert.equal(built.rocks.length, 1);
+    assert.ok(built.marks["den:bat-eared-fox"] && built.marks["den:rock-hyrax"]);
+    assert.deepEqual(entranceInstances([...list].reverse()).burrows.map((b) => [b.x, b.z, b.scale]), built.burrows.map((b) => [b.x, b.z, b.scale]), "the same whatever the order");
+    // Small: a few hundred triangles each.
+    for (const geometry of [burrowMouth(), rockDen()]) assert.ok(geometry.getAttribute("position").count / 3 < 1500);
 });

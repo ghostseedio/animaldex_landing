@@ -4,7 +4,11 @@
  * The site's own locale files hold the Ark's words for en and id; every other
  * app language (the iOS catalog's codes) has an Ark-only bundle,
  * `src/data/locales/ark/<code>.json`, holding just the Ark's namespaces:
- * `ark.*` and the Talk pages' Ark keys (`talkPage.ark*`, `talkPage.animalTitleA/An`).
+ * `ark.*`, the Talk pages' Ark keys (`talkPage.ark*`, `talkPage.animalTitleA/An`),
+ * and, since captures + thrive (2026-11-11), the chat's and the profile's Ark
+ * words (`companions.ark.*`: the step's line, the Ark Score and its
+ * explanation) and the home page's Ark band (`home.ark.*`), so every Ark
+ * word exists in every app language.
  * The apps' Ark panel (`/ark/embed.html?lang=<code>`) and `/ark?lang=<code>`
  * read them, English key by key where one is missing.
  */
@@ -81,9 +85,13 @@ export function isArkTalkKey(key: string): boolean {
 /** Just the Ark's namespaces of a full locale file (en.json, id.json), in a bundle's shape. */
 export function arkMessagesOf(messages: Messages): Messages {
     const talk = (messages.talkPage ?? {}) as Messages;
+    const companions = (messages.companions ?? {}) as Messages;
+    const home = (messages.home ?? {}) as Messages;
     return {
         ark: messages.ark ?? {},
-        talkPage: Object.fromEntries(Object.entries(talk).filter(([key]) => isArkTalkKey(key)))
+        talkPage: Object.fromEntries(Object.entries(talk).filter(([key]) => isArkTalkKey(key))),
+        companions: {ark: companions.ark ?? {}},
+        home: {ark: home.ark ?? {}}
     };
 }
 

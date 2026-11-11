@@ -484,7 +484,7 @@ test("dominance: the more dominant drinks first, the other waits its turn", () =
 
 // MARK: The shared layer is a hard constraint
 
-test("the reactive layer never moves an animal outside its envelope, never wakes a sleeper, and leaves acts alone", () => {
+test("the reactive layer never moves an animal outside its envelope, wakes a sleeper only when something wakes it, and leaves acts alone", () => {
     const layer = new ReactiveLayer({tier: "high"});
     const animals: ReactiveInput[] = [];
     for (let i = 0; i < 30; i++) animals.push(animal(`d${i}`, i % 3 === 0 ? "plains-zebra" : "red-deer", (i % 6) * 3, Math.floor(i / 6) * 3, {shared: {doing: ["graze", "rest", "drink", "wander"][i % 4], moving: i % 4 === 3}}));
@@ -493,6 +493,7 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
     animals[7].acting = true;
     const sleepers = animals.filter((a) => a.asleep);
     let previous = new Map<string, number>();
+    const woken = new Set<string>();
     const frames = run(layer, animals, 25, {
         move: (list, t) => {
             const k = t - 1000;
@@ -511,12 +512,14 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
             const off = Math.hypot(o.dx, o.dz);
             assert.ok(off <= reactiveEnvelope(a, true) + 1e-6, `${a.id} inside its envelope`);
             if (a.acting) assert.deepEqual([o.dx, o.dz, o.headYaw, o.headPitch, o.bodyYaw], [0, 0, 0, 0, 0]);
-            if (a.asleep) {
+            // (Asleep it stays asleep until something wakes it: the wolves running through, its herd fleeing, an alarm; `ark-sleep.test.ts`.)
+            if (a.asleep && !o.woke) {
                 assert.equal(o.action, "asleep", "asleep stays asleep");
                 assert.equal(o.called, false);
-                assert.ok(off <= (previous.get(a.id) ?? Infinity) + 1e-9, "a sleeper's offset only eases back");
+                if (!woken.has(a.id)) assert.ok(off <= (previous.get(a.id) ?? Infinity) + 1e-9, "a sleeper's offset only eases back");
                 previous.set(a.id, off);
             }
+            if (a.asleep && o.woke) woken.add(a.id);
         }
     }
     assert.ok(sleepers.length === 6);
@@ -548,6 +551,57 @@ test("an offset never takes a land animal into the water, nor a water animal ont
     assert.equal(offsetShare(deer, -5, 0, "free", isWater, ground), 1);
     // Right at the edge with nowhere to go: none of it.
     assert.equal(offsetShare({x: -0.05, z: 0, base: -0.02}, 4, 0, "water", isWater, ground), 0);
+});
+
+test("nothing moves backwards: whenever its reactive offset moves faster than 0.3 m/s, it faces within 90 degrees of the way it goes (back-steps excepted), and play comes in short dashes", () => {
+    const BACK = new Set(["back_off_camera", "wait_turn"]);
+    const scenes: Array<{name: string; list: ReactiveInput[]; camera: (t: number) => {x: number; y: number; z: number}; move?: (l: ReactiveInput[], t: number) => void}> = [
+        {name: "dogs at play", list: Array.from({length: 4}, (_, i) => animal(`pd${i}`, "domestic-dog", (i % 2) * 2.5, Math.floor(i / 2) * 2.5, {youngPlay: 0.9, shared: {doing: "rest", yaw: i * 1.6}})), camera: () => ({x: 0, y: 2, z: -14})},
+        {
+            name: "zebras running from a lion",
+            list: [...Array.from({length: 6}, (_, i) => animal(`pz${i}`, "plains-zebra", (i % 3) * 2.5, Math.floor(i / 3) * 2.5, {shared: {doing: "graze", yaw: i * 1.1}})), animal("pl", "african-lion", -25, 1, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}})],
+            camera: () => ({x: 0, y: 2, z: -20}),
+            move: (l, t) => {
+                const lion = l.find((i) => i.id === "pl")!;
+                lion.shared.x = -25 + Math.min(t - 1000, 6) * 3.5;
+                lion.shared.moving = t - 1000 < 6;
+            }
+        },
+        {name: "chimps and an arriving camera", list: Array.from({length: 5}, (_, i) => animal(`pc${i}`, "chimpanzee", -3 + i * 1.5, 0, {shared: {doing: "rest", yaw: i * 2}})), camera: (t) => ({x: 0, y: 1.6, z: -(20 - 13 * Math.min((t - 1000) / 4, 1))})}
+    ];
+    for (const scene of scenes) {
+        const frames = run(new ReactiveLayer({tier: "high"}), scene.list, 14, {move: scene.move, world: (t) => ({camera: scene.camera(t)})});
+        let moving = 0;
+        for (let k = 1; k < frames.length; k++) {
+            for (const a of frames[k].inputs) {
+                if (a.id === "pl") continue;
+                const o = frames[k].out.get(a.id);
+                const p = frames[k - 1].out.get(a.id);
+                if (!o || !p || BACK.has(o.action)) continue;
+                const vx = (o.dx - p.dx) * 30;
+                const vz = (o.dz - p.dz) * 30;
+                const v = Math.hypot(vx, vz);
+                if (v <= 0.3) continue;
+                moving++;
+                const yaw = a.shared.yaw + o.bodyYaw;
+                const cos = (Math.sin(yaw) * vx + Math.cos(yaw) * vz) / v;
+                assert.ok(cos >= -1e-6, `${scene.name}: ${a.id} ${o.action} at ${v.toFixed(2)} m/s faces ${((Math.acos(Math.min(Math.max(cos, -1), 1)) * 180) / Math.PI).toFixed(0)} degrees off its way`);
+            }
+        }
+        assert.ok(moving > 20, `${scene.name}: something moved (${moving} frames)`);
+        if (scene.name === "dogs at play") {
+            // Short dashes and pauses, not a dog racing round its spot: under 8 m of offset travel each in 14 s.
+            for (const a of scene.list) {
+                let path = 0;
+                for (let k = 1; k < frames.length; k++) {
+                    const o = frames[k].out.get(a.id)!;
+                    const p = frames[k - 1].out.get(a.id)!;
+                    path += Math.hypot(o.dx - p.dx, o.dz - p.dz);
+                }
+                assert.ok(path < 8, `${a.id} plays in bursts (${path.toFixed(1)} m in 14 s)`);
+            }
+        }
+    }
 });
 
 // MARK: Variety

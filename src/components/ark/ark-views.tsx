@@ -20,11 +20,12 @@
  *   - the profile's Ark Score card, its five bars with their latest change,
  *     and the Steps / Powers tiles.
  *
- * Ark 3.3 (docs/ark-spec.md sections 2 and 7.6): the Ark Score is the world
- * score, your part in the shared Ark, 0–100 (50 with no arrivals), moved only
- * by your own arrivals. The reveal and the Diary no longer show a score line;
- * the five bars are their own "Life" card, with no total; a one-time band
- * over the score says what changed (dismissed for good, per browser).
+ * Captures + thrive (2026-11-11; docs/ark-spec.md and the Ark Score v3
+ * proposal): the Ark Score is the points your steps that worked locked in,
+ * more for animals the Ark needs, with no top; captures never lower it,
+ * nobody else can, and it never goes down. The reveal and the Diary no longer
+ * show a score line; the five bars are their own "Life" card, with no total;
+ * a one-time band over your own score explains it (dismissed for good, per browser).
  *
  * Every word an animal says here is the model's (`story`, `reaction`); the
  * labels are UI. Under Reduce Motion everything is drawn at once, at its
@@ -435,45 +436,47 @@ export function ArkScoreExplainer({words}: {words: ArkWords}) {
 }
 
 /**
- * 1. The headline: Ark Score, your part in the shared Ark (0–100; an older
- * server's 0–500 until it switches), this week's change, the way to your
- * animals aboard, and, the first time, what changed.
+ * 1. The headline: the Ark Score, this week's points, a plain line on how it
+ * is earned, the way to your animals aboard, and, the first time, the longer
+ * explanation. v3 (`ark_points`) has no top, so no "of 100" and no bar; an
+ * older server's 0–100 (or 0–500) keeps both until it switches.
  */
 export function ArkScoreCard({score, weekChange = null, words, locale, animalsHref, isSelf = false, explain = true}: {
-    score: Pick<ArkScoreRead, "value" | "outOf" | "world">;
-    /** This week's change to the world score (`ark_world_week_change`). */
+    score: Pick<ArkScoreRead, "value" | "outOf" | "world"> & Partial<Pick<ArkScoreRead, "points">>;
+    /** This week's points (`ark_points_week`), or v2's change (`ark_world_week_change`). */
     weekChange?: number | null;
     words: ArkWords;
     locale: string;
     /** `/u/{handle}/ark`: their animals in the Ark. */
     animalsHref?: string;
     isSelf?: boolean;
-    /** The one-time band (the world score only). */
+    /** The one-time band (the shared Ark's score only, the reader's own). */
     explain?: boolean;
 }) {
+    const share = arkScoreShare(score);
     return (
-        <section className="border-b border-white/[0.06] px-[18px] py-5" data-testid="profile-ark-score" data-ark-world={score.world ? "true" : "false"}>
+        <section className="border-b border-white/[0.06] px-[18px] py-5" data-testid="profile-ark-score" data-ark-world={score.world ? "true" : "false"} data-ark-points={score.points ? "true" : "false"}>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{words.score}</p>
             <p className="mt-1 flex items-baseline gap-2">
                 <span className="font-display text-[44px] font-black leading-none tabular-nums" style={{color: NEON}} data-testid="profile-ark-score-value">
                     {new Intl.NumberFormat(locale).format(score.value)}
                 </span>
-                <span className="text-sm font-semibold text-white/40">{fillWords(words.outOf, {max: score.outOf})}</span>
+                {score.outOf ? <span className="text-sm font-semibold text-white/40">{fillWords(words.outOf, {max: score.outOf})}</span> : null}
                 {score.world && weekChange !== null && weekChange !== 0 ? (
                     <span className="ml-auto text-[12px] font-bold tabular-nums" style={{color: weekChange < 0 ? LESSON : NEON}} data-testid="profile-ark-score-week">
                         {fillWords(words.scoreWeek, {delta: arkSignedChange(weekChange)})}
                     </span>
                 ) : null}
             </p>
-            <span className="mt-3 block"><Bar value={arkScoreShare(score)} tint={NEON} /></span>
-            {score.world ? <p className="mt-2 text-[12px] leading-4 text-white/50">{words.scoreAbout}</p> : null}
+            {share !== null ? <span className="mt-3 block"><Bar value={share} tint={NEON} /></span> : null}
+            {score.world ? <p className="mt-2 text-[12px] leading-4 text-white/50" data-testid="profile-ark-score-about">{isSelf ? words.scoreAbout : words.scoreAboutTheirs}</p> : null}
             {animalsHref ? (
                 <Link href={animalsHref} className="mt-3 inline-flex items-center gap-1.5 text-[12px] font-semibold text-primary-200 hover:text-primary-100" data-testid="profile-ark-animals">
                     {isSelf ? words.myAnimals : words.theirAnimals}
                     <span aria-hidden="true">→</span>
                 </Link>
             ) : null}
-            {score.world && explain ? <ArkScoreExplainer words={words} /> : null}
+            {score.world && explain && isSelf ? <ArkScoreExplainer words={words} /> : null}
         </section>
     );
 }

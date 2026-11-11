@@ -23,6 +23,7 @@
  */
 
 import {reefLandmarks} from "@/ark-scene/reef";
+import {inRock} from "@/ark-scene/map/rocks";
 import {inHomeWater, waterHomeSpot, waterMotion, type DepthBand, type SpeciesDepth} from "@/ark-scene/sea-depth";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
@@ -206,7 +207,8 @@ export function waterSpot(cells: WaterCells, depth: SpeciesDepth, zone: ArkZone,
     const [ox, oz] = LAPS[(own ? lap : lap + 4) % LAPS.length];
     // A floor animal clear of the reef lane's coral heads (half its body round them).
     const floor = onFloor(depth);
-    const suits = (x: number, z: number) => waterSuits(sampler, cls, x, z) && !(floor && inCoral(x, z, length / 2));
+    // (And clear of the drawn rocks at the shore: a crab or a star is never inside one.)
+    const suits = (x: number, z: number) => waterSuits(sampler, cls, x, z) && !(floor && (inCoral(x, z, length / 2) || inRock(x, z, Math.max(length / 2, 0.05))));
     let cx = cell.x + ox;
     let cz = cell.z + oz;
     if (!suits(cx, cz)) {

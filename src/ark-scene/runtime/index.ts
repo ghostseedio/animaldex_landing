@@ -264,6 +264,16 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             };
         },
 
+        /** The scene is seen: the page shown, the world on screen, and the app's panel uncovered (`ark:visible`). */
+        visible(): boolean {
+            return governor.visible();
+        },
+
+        /** Called whenever that flips (the ambient sound sleeps with the drawing). */
+        set onVisibleChange(callback: () => void) {
+            governor.onVisibility = () => callback();
+        },
+
         /** `ARK_TIME.value`: epoch seconds from a whole-window origin, the same phase for every viewer. */
         shaderTime(): number {
             return shaderClock.seconds(arkEpochSeconds());

@@ -268,3 +268,65 @@ Same-conditions A/B, batch 5 (79f22ee6 scene source) against batch 6 (f8a2ad0c),
 The phone profile held 60 fps in every run, with about 4 more draw calls (the floor set) and the same triangles. Its scene CPU looks about 1.5 ms higher at 4× throttle, but under this load that is within the noise. Worth re-measuring on a quiet machine or a real phone.
 
 Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg`, `batch6-bark-closeup.png` and `batch6-buttress-before-after.png` in the handover folder's `ark/graphics/`.
+
+## Batch 6: the forest thinned, the snowy faces (owner: "the trees are too dense"; "dark rectangular slabs on the snowy faces")
+
+- **Forest (`decor.ts`):**
+  - one rule, `woodsCover(x, z)`, for the rainforest and the woodland:
+    - 0 in a glade (broad open patches a few tens of metres across), 1 in the deep woods;
+    - a ragged edge where the forest fades into its neighbour;
+    - the map's clearings stay as they were.
+  - The forest fill:
+    - about half of what it was in the woods, with a lower canopy of broadleaves under fewer emergents in the rainforest;
+    - none in the glades, thinning towards the edge;
+    - 508 → 407 trees and shrubs.
+  - The decor trees:
+    - a tree in a glade, or past the edge by a per-tree roll, now stands as an understorey shrub (48: 29 in the rainforest, 19 in the woodland);
+    - the change is made after every skip test and with no extra random draw, so no decor id or spot moves.
+  - The canopy trees (the large climbers' limbs) are untouched.
+  - From the island view the woods read leafy but broken up: ground, shrubs and trunks show between the crown groups.
+- **Attach hosts:**
+  - `docs/ark/forest-thinning-hosts.json` lists them:
+    - decor trees now shrubs;
+    - fill hosts removed, re-kinded or added;
+    - every kept fill id's renumbering (`forestFill()` is rank-ordered).
+  - `scripts/ark-tree-attach.mjs` and the attach baseline are not on this branch.
+  - `tree-attach.json` is per tree asset and does not change.
+  - The baseline needs `ARK_ATTACH_BASELINE=update` on the release.
+- **Snow formula (`terrain.ts`), for `snow.ts` to mirror:**
+  - The ribs are drawn on both side planes and blended across the 45° turn: `faceTurn = smoothstep(0.3, 0.7, |n.x| / (|n.x| + |n.z|))`, `rib = 1 - |2·mix(fbm(x-plane), fbm(z-plane), faceTurn) - 1|`. Before, they were drawn on whichever plane the face turned to most and jumped at the turn. The across-face streaks and the rib bend fade out over the turn.
+  - `high`: was `smoothstep(snowLine + 2, snowLine + 11, world.y)`, now `smoothstep(snowLine + 2, snowLine + 11, snowAt + 6·(0.5 - rib))`. The upper reach runs down the gullies and back up the ribs; a level line capped the steep peaks like a lid.
+  - `holdTo`: was `mix(0.48, 0.7, high) - 0.12·hard·smoothstep(0.4, 0.6, slope)`, now `mix(0.48, 0.7, high) + 0.16·(noise(p·0.11 + 3.7) - 0.5)`. The hard beds' level edges no longer box the bare rock in; it shows through in irregular windows.
+  - The rib cut takes a wobble: `smoothstep(0.6, 0.88, rib + 0.2·(noise(p·0.35 - 2.1) - 0.5))`.
+  - The rock beds' tone fades by 70 % up in the snow (`beds *= 1 - 0.7·high`), so rock showing through reads as one stone.
+  - The alpine snow line, the ledge snow and the ice are unchanged.
+- **Dark blocks on every tier (follow-up; the integrator saw them at the island view on the low tier):**
+  - Two causes, both in the rock's tone, not the snow:
+    - the beds' fade used `fwidth(bedAt)`, which is constant per triangle and jumps from one to the next, so the ground's 1.1 m grid showed through the faces as squares;
+    - the water runs on the hard beds took a fresh noise row per bed, so they were cut off square at the bed lines: dark blocks from afar.
+  - The low tier shows these plainly because it has no tilt-shift blur; medium and high had them too, softened.
+  - Now the fade uses the pixel's size on the ground, `distance × length(fwidth(view ray))`, which is the same on every triangle. The bedding planes fade once they are under a few pixels tall. The runs run continuously through the beds, fade towards each bed's top and foot, and show only near the camera.
+  - The snow formula is unchanged (the ledge snow's fade now uses this pixel size, but `snow.ts` does not count ledges).
+  - Checked at the island view and the mountain camera on low, medium and high (desktop), and on low and medium (phone): no grid and no blocks. The sheet is `batch6-mountain-tiers.jpg`.
+- **Low tier woods (follow-up; the integrator saw the thinned forest as tall bare trunks with small tufts from the island view on low):**
+  - On low, trees reach 0.3 of their level distances, so from the island view nearly every tree was a crossed card. The emergents' cards are a tall trunk with a few tufts, and only 0.3 of the fill (the lower canopy) was drawn.
+  - `asset-trees.ts` now uses at least the medium tier's distance for the lod2 → card change (`CARD_REACH_MIN` 0.45); the full levels keep the tier's distance.
+  - It draws at least 0.6 of the fill in the rainforest and the woodland (`WOODS_FILL`); other zones keep the tier's share.
+  - The medium and high tiers are unchanged (identical numbers).
+  - Low, before → after: desktop island_far 357 → 369 k triangles (106 → 107 calls), forest_floor 576 → 627 k, storm_trees 502 → 540 k. Phone island_far 356 → 366 k, forest_floor 538 → 588 k, storm_trees 495 → 533 k. Still under a third of medium.
+  - From the island view the low tier now reads like medium: the giants' full crowns and a lower canopy. The sheets are `batch6-low-woods-desktop.jpg` and `batch6-low-woods-phone.jpg`.
+- **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
+
+  | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
+  |---|---|---|---|
+  | island_far | 3.53 → 3.11 M | 386 → 386 | 0.93 → 0.91 M |
+  | forest_floor | 11.37 → 8.19 M | 568 → 562 | 2.27 → 1.79 M |
+  | storm_trees | 11.14 → 7.87 M | 444 → 438 | 1.94 → 1.55 M |
+  | mountain | 5.01 → 3.87 M | 339 → 333 | 0.99 → 0.88 M |
+
+  - Every shot held 60 fps.
+  - The terrain shader runs the same number of noise stacks: one more for the second rib plane, one fewer for the rib bend.
+- **Golden sheets** (in the handover folder's `ark/graphics/`):
+  - `batch6-forest-desktop-day.jpg` and `batch6-forest-desktop-night.jpg`;
+  - `batch6-forest-phone.jpg`;
+  - `batch6-forest-overview-crop.jpg` and `batch6-mountain-slabs.jpg`.

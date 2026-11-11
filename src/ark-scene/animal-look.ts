@@ -29,6 +29,8 @@ import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import {CloseUpTextures} from "@/ark-scene/closeup-textures";
 import {surfaceAt, groundNormal, type Vec3} from "@/ark-scene/sampler";
 import {unit} from "@/lib/ark-clock";
+import {sampleGround} from "@/ark-scene/world";
+import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import type {QualityTier} from "@/ark-scene/post";
 
 const ROWS = (table as {species: Record<string, number[]>}).species;
@@ -82,6 +84,31 @@ export function speciesLook(slug: string, plan: string | null | undefined, facin
 
 /** The pass's switch and tier, read by every animal material when it compiles. */
 export const LOOK_STATE = {on: true, tier: 2 as 0 | 1 | 2};
+
+// MARK: - Contact shadows
+
+/**
+ * Attach-point tags broad enough for a contact shadow to lie on (a wall, a rock face, a log's top, a trunk a climber
+ * clings to). A thin limb, a fence post, a lamp or a hanging spot is not: a quad there would stick out into the air.
+ */
+export const SHADOW_SURFACE_TAGS: ReadonlySet<string> = new Set(["leaf", "bark", "rock_face", "tide_pool", "house_wall", "ledge", "log", "leaf_litter", "canopy_climb"]);
+
+/**
+ * An animal's ground contact shadow, projected straight down onto the ground under it now (not its home spot's
+ * height): full when its feet are on the ground, fading as they rise (a hop, a low perch) and gone once it is clearly
+ * off the ground (flying, a high perch, climbing). None where water covers the ground (swimming, floating, a bird
+ * over the lake: there is no ground to touch) or for one under the ground (a burrow). `size` is its drawn height.
+ */
+export function groundContact(feet: number, ground: number, water: number | null, size: number): {y: number; strength: number} | null {
+    if (water !== null && water > ground + 0.02) return null;
+    const gap = feet - ground;
+    if (gap < -0.25 * size - 0.05) return null;
+    const near = 0.04 + 0.08 * size;
+    const far = 0.25 + 0.6 * size;
+    if (gap >= far) return null;
+    const t = gap <= near ? 0 : (gap - near) / (far - near);
+    return {y: ground, strength: 1 - t * t * (3 - 2 * t)};
+}
 
 /** A dry, pale film of earth for dusty legs (linear). */
 export const ARK_DUST = {value: new Color(0.52, 0.42, 0.29)};
@@ -256,6 +283,7 @@ export class AnimalLook {
     private islandNow = 0;
     private readonly dryness = new Map<number, number>();
     private readonly normals = new Map<number, Vec3>();
+    private readonly grounds = new Map<number, {height: number; fresh: boolean}>();
     readonly shells: FurShells;
     readonly closeUps: CloseUpTextures;
     private readonly bySlug = new Map<string, Set<MeshStandardMaterial>>();
@@ -387,6 +415,31 @@ export class AnimalLook {
             this.dryness.set(key, dry);
         }
         return dry;
+    }
+
+    /**
+     * The ground's height under an animal and the water's surface over it (null on dry land): exact for a near one,
+     * cached on a 25 cm grid for the rest (the terrain never moves; the sea's level is applied after).
+     */
+    groundUnder(x: number, z: number, seaLevel: number, exact: boolean): {height: number; water: number | null} {
+        let cell: {height: number; fresh: boolean} | undefined;
+        if (exact) {
+            const sample = sampleGround(x, z);
+            cell = {height: sample.height, fresh: freshFrom(sample, x, z) >= 0.5};
+        } else {
+            const key = (Math.round(x * 4) + 32768) * 65536 + Math.round(z * 4) + 32768;
+            cell = this.grounds.get(key);
+            if (!cell) {
+                const sx = Math.round(x * 4) / 4;
+                const sz = Math.round(z * 4) / 4;
+                const sample = sampleGround(sx, sz);
+                cell = {height: sample.height, fresh: freshFrom(sample, sx, sz) >= 0.5};
+                if (this.grounds.size > 60000) this.grounds.clear();
+                this.grounds.set(key, cell);
+            }
+        }
+        const level = cell.fresh ? FRESH_LEVEL : seaLevel;
+        return {height: cell.height, water: level > cell.height ? level : null};
     }
 
     /** The ground's normal under an animal (cached on a 1 m grid): its contact shadow lies on the slope. */

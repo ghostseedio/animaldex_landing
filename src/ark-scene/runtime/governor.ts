@@ -83,6 +83,8 @@ export class RenderGovernor {
     private powerFromBrowser: Partial<ArkPower> = {};
     /** Called when the scene becomes visible again after a pause (the frame loop asks for frames again). */
     onWake: () => void = () => undefined;
+    /** Called whenever the scene's visibility flips (either way): the ambient sound follows it. */
+    onVisibility: (visible: boolean) => void = () => undefined;
     /** Called when the power cap's low-tier wish changes. */
     onPower: (power: ArkPower) => void = () => undefined;
 
@@ -180,6 +182,7 @@ export class RenderGovernor {
     private change(apply: () => void) {
         const was = this.visible();
         apply();
+        if (was !== this.visible()) this.onVisibility(this.visible());
         if (!was && this.visible()) this.onWake();
     }
 

@@ -572,7 +572,8 @@ export function screeStone(size: number, seed = 16): BufferGeometry {
  */
 export function strataOutcrop(w: number, h: number, seed = 17): BufferGeometry {
     const random = seeded(5700 + seed);
-    const tones = ["#6a6158", "#7b7064", "#5a534b", "#857a6a", "#706458"];
+    // The terrain's own rock (terrain.ts): a little lighter and darker bed by bed.
+    const tones = ["#8f877a", "#7b7468", "#857d70", "#948c7f", "#837b6e"];
     const parts: BufferGeometry[] = [];
     const beds = 5;
     let y = 0;

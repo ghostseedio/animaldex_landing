@@ -253,3 +253,107 @@ test("rig beat clips: grazing beats head down, a browser's head up, scan, shake_
     assert.equal(beatClip("walk", "wander", has), null);
     assert.equal(beatClip(null, null, has), null);
 });
+
+test("rig pace and direction: v1 clips cycle at sweep / duty, the ground clip fits the pace, a step back plays the walk backwards", async () => {
+    const {withCycleSpeed, paceClip, stepReverses, cyclesFor} = await import("@/ark-scene/rig-player");
+    // The red deer's v1 walk: stride (the sweep) 0.1915 in 0.809 s, duty 0.62. The body covers sweep / duty per cycle.
+    const v1walk = {name: "walk", frames: 24, loop: true, seconds: 0.809, ground_speed: 0.2367, stride: 0.1915, duty: 0.62, pass: true, row: 0, rows: 25};
+    const walk = withCycleSpeed(v1walk, 1);
+    assert.ok(Math.abs(walk.ground_speed! - 0.2367 / 0.62) < 1e-9);
+    assert.ok(Math.abs(cyclesFor(walk, 0.1915 / 0.62) - 1) < 1e-3, "one cycle per sweep / duty: the feet stay planted (the v1 numbers are rounded)");
+    assert.equal(withCycleSpeed({...v1walk, duty: undefined}, 1).ground_speed, 0.2367 / 0.62, "no duty stated: the contract's 0.62");
+    assert.equal(withCycleSpeed(v1walk, 2).ground_speed, 0.2367, "a v2 file is already per cycle");
+    assert.equal(withCycleSpeed({...v1walk, name: "idle", ground_speed: undefined}, 1).ground_speed, undefined);
+    // The ground clip by pace.
+    const slow = {...walk, ground_speed: 0.4};
+    const run = {...walk, name: "run", ground_speed: 1.2};
+    const hop = {...walk, name: "hop", ground_speed: 2};
+    assert.equal(paceClip(0.5, [slow, run])?.name, "walk", "within 1.5x of the walk");
+    // A duck: its hop (0.595) is slower than its walk (0.698): walking pace keeps the walk.
+    const duckWalk = {...walk, ground_speed: 0.698};
+    const duckHop = {...walk, name: "hop", ground_speed: 0.595};
+    assert.equal(paceClip(0.3, [duckWalk, duckHop])?.name, "walk");
+    assert.equal(paceClip(3, [duckWalk, duckHop])?.name, "walk", "nothing faster: its walk");
+    assert.equal(paceClip(0.7, [slow, run])?.name, "run");
+    assert.equal(paceClip(0.65, [slow, run], "walk")?.name, "walk", "the one playing keeps a margin");
+    assert.equal(paceClip(5, [slow, run, hop])?.name, "hop", "faster than all: the fastest");
+    assert.equal(paceClip(1, [slow])?.name, "walk", "only a walk: the walk");
+    assert.equal(paceClip(1, []), null);
+    // Facing +z (yaw 0): a step to -z is a step back, a step to +x sideways.
+    assert.equal(stepReverses(false, 0, -1, 0), true);
+    assert.equal(stepReverses(false, 1, 0, 0), false, "sideways: forwards");
+    assert.equal(stepReverses(true, 0.3, -0.2, 0), true, "still more back than forward: keeps reversing");
+    assert.equal(stepReverses(true, 0, 1, 0), false);
+    assert.equal(stepReverses(true, 0, 0, 0), true, "no step: no change");
+});
+
+test("rig gait of movers with no rig: a pace by the distance covered, a bob with every step, none standing still", async () => {
+    const {stepGait, gaitMoving, gaitPose} = await import("@/ark-scene/rig-player");
+    let g = stepGait(null, 0, 0, 0, 2);
+    assert.equal(g.speed, 0);
+    for (let i = 1; i <= 60; i++) g = stepGait(g, 0, i * (1.6 / 60), 1 / 60, 2);
+    assert.ok(g.speed > 1 && g.speed <= 1.6, `pace ${g.speed}`);
+    assert.ok(gaitMoving(g, 2));
+    assert.ok(Math.abs(g.phase - 1.6 / 1.2) < 1e-9, "a cycle every 0.6 body lengths");
+    let bobbed = 0;
+    for (let i = 0; i < 30; i++) {
+        g = stepGait(g, 0, g.z + 0.03, 1 / 60, 2);
+        bobbed = Math.max(bobbed, gaitPose(g, 2, 1.4).bob);
+    }
+    assert.ok(bobbed > 0.02 && bobbed <= 0.035 * 1.4 + 1e-9, `bob ${bobbed}`);
+    let still = g;
+    for (let i = 0; i < 120; i++) still = stepGait(still, still.x, still.z, 1 / 60, 2);
+    assert.equal(gaitMoving(still, 2), false);
+    assert.equal(gaitPose(still, 2, 1.4).weight, 0, "standing: no bob");
+    const jump = stepGait({x: 0, z: 0, phase: 0, speed: 0}, 50, 0, 1 / 60, 2);
+    assert.equal(jump.phase, 0, "a jump to a new spot is no step");
+});
+
+test("rig look on a sitting rig: none at all (its chain is at mid-body), and the shader's turn off too", async () => {
+    const {sittingLook} = await import("@/ark-scene/rig-player");
+    const chain = {neck: 2, head: 3, neckPivot: [0, 0.3, 0.1] as [number, number, number], headPivot: [0, 0.8, 0.12] as [number, number, number], yaw: 1.5, up: 0.6, down: 0.8, neckShare: 0.5};
+    assert.deepEqual(sittingLook(chain, "sitting (rest pose reviewed from renders)", 0, 1), {look: null, off: true});
+    assert.deepEqual(sittingLook(null, "sitting", 0, 1), {look: null, off: true});
+    assert.deepEqual(sittingLook(chain, null, 0, 1), {look: chain, off: false}, "a standing rig keeps its chain");
+});
+
+test("rig v6 base poses: lying, side and leaning only through their transitions", async () => {
+    const {baseStep, clipBase, recipeClip} = await import("@/ark-scene/rig-player");
+    const dog = new Set(["idle", "walk", "lie_down", "get_up", "get_up_fast", "lie", "sleep_curl", "side_down", "sleep_side", "side_up", "groom", "dig", "roll"]);
+    const has = (name: string) => dog.has(name);
+    assert.equal(clipBase({base: "lying"}), "lying");
+    assert.equal(clipBase({}), "stand");
+    assert.equal(clipBase(null), "stand");
+    assert.deepEqual(baseStep("stand", "lying", has), {clip: "lie_down", ends: "lying"});
+    assert.deepEqual(baseStep("lying", "stand", has), {clip: "get_up", ends: "stand"});
+    assert.deepEqual(baseStep("lying", "stand", has, true), {clip: "get_up_fast", ends: "stand"}, "startled: the fast get-up");
+    assert.deepEqual(baseStep("lying", "side", has), {clip: "side_down", ends: "side"});
+    assert.deepEqual(baseStep("side", "stand", has), {clip: "side_up", ends: "lying"}, "side to standing: up to lying first");
+    assert.deepEqual(baseStep("stand", "side", has), {clip: "lie_down", ends: "lying"}, "standing to side: lie down first");
+    assert.equal(baseStep("lying", "lying", has), null);
+    const meerkat = new Set(["idle", "drop", "bound", "rise"]);
+    assert.deepEqual(baseStep("stand", "leaning", (n) => meerkat.has(n)), {clip: "drop", ends: "leaning"});
+    assert.deepEqual(baseStep("leaning", "stand", (n) => meerkat.has(n)), {clip: "rise", ends: "stand"});
+    assert.equal(baseStep("stand", "lying", (n) => meerkat.has(n)), null, "no way down: none");
+    // The v6 recipe states (contract 8.5).
+    assert.equal(recipeClip("sleep", has)?.name, "sleep_curl");
+    assert.equal(recipeClip("rest", has)?.name, "lie");
+    assert.equal(recipeClip("groom_other", has)?.name, "groom");
+    assert.equal(recipeClip("bury", has)?.name, "dig");
+    assert.deepEqual(recipeClip("clash", (n) => n === "run" || n === "clash"), {name: "run", play: "distance", still: "clash"});
+    assert.deepEqual(recipeClip("swim", (n) => n === "paddle"), {name: "paddle", play: "distance"}, "a duck swims with its paddle, by distance");
+    assert.equal(recipeClip("stretch", has), null, "no clip: its block's beat");
+});
+
+test("rig direction reads the drawn yaw: an animal turned round by the reactive layer to flee runs forwards", async () => {
+    const {stepReverses} = await import("@/ark-scene/rig-player");
+    const shared = 0; // its schedule faces +z
+    const bodyYaw = Math.PI; // the reactive layer turns it round to flee
+    const drawn = shared + bodyYaw;
+    // It flees toward -z, the way its drawn body faces: its run plays forwards.
+    assert.equal(stepReverses(false, 0, -1, drawn), false);
+    // Read against the shared heading it would wrongly play in reverse.
+    assert.equal(stepReverses(false, 0, -1, shared), true);
+    // Backing off still facing the threat (the drawn body faces +z, moving -z): in reverse.
+    assert.equal(stepReverses(false, 0, -1, shared + 0.1), true);
+});

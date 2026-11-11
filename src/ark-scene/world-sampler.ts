@@ -20,6 +20,7 @@ import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoin
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {floorObstacles} from "@/ark-scene/floor-assets";
+import {drawnRocks, type DrawnRock} from "@/ark-scene/map/rocks";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -115,8 +116,27 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     tree_hollow: "tree_hollow",
     fence_post: "post",
     roof_edge: "post",
-    canopy_hang: "canopy_hang"
+    canopy_hang: "canopy_hang",
+    // (Graphics batch 6: the tops of the fallen logs, on the drawn bark.)
+    log: "log_top"
 };
+
+/**
+ * How far past a drawn rock's box (the map lane's `map/rocks.ts` drawnRocks, the shape its `inRock` tests, so the
+ * walk and the map's placing agree on what is rock) a walker keeps: the walk grid tests its 2 m cells' centres, so
+ * with 0.2 m of clearance a cell whose centre is outside the box widened by this much (1.45 m, over half a cell's
+ * diagonal however the rock is turned) holds no point of the rock.
+ */
+export const ROCK_MARGIN = 1.25;
+
+/** Is (x, z) within `widen` of a drawn rock's box (the test `inRock` makes, in the rock's own frame)? */
+function nearDrawnRock(rock: DrawnRock, x: number, z: number, widen: number): boolean {
+    const dx = x - rock.x;
+    const dz = z - rock.z;
+    const lx = dx * rock.cos - dz * rock.sin;
+    const lz = dx * rock.sin + dz * rock.cos;
+    return lx >= rock.hx0 - widen && lx <= rock.hx1 + widen && lz >= rock.hz0 - widen && lz <= rock.hz1 + widen;
+}
 
 class GridIndex {
     private readonly cells = new Map<string, AttachPoint[]>();
@@ -219,8 +239,12 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
     const obstacles: Array<[number, number, number]> = [];
     let items: DecorItem[] = [];
+    let rocks: DrawnRock[] = [];
+    const rockOf = new Map<string, DrawnRock>();
     tasks.push(once(() => {
         items = [...worldDecor(), ...forestFill()];
+        rocks = drawnRocks();
+        for (const rock of rocks) rockOf.set(`${rock.x},${rock.z}`, rock);
     }));
     tasks.push(chunked(() => items.length, 60, (i) => {
         const item = items[i];
@@ -232,9 +256,11 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             obstacles.push([item.x, item.z, 0.35 * item.scale]);
         } else if (item.kind === "rock") {
             const s = surface(item.x, item.z);
-            add({tag: "rock_top", x: item.x, y: item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
+            // The rock as drawn (the map lane's drawnRocks: graphics batch 5's asset rock, turned and scaled as the
+            // renderer places it): its top is where a small animal basks or perches; its box keeps walkers out (blocked).
+            const solid = rockOf.get(`${item.x},${item.z}`);
+            add({tag: "rock_top", x: item.x, y: solid ? solid.y1 : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
             if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
-            obstacles.push([item.x, item.z, 0.85 * item.scale]);
         } else if (item.kind === "reed") {
             add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
         } else if (item.kind === "shrub" || item.kind === "cactus") {
@@ -248,8 +274,8 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     tasks.push(once(() => {
         obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
     }));
-    // The fallen logs (graphics batch 6, `floor-assets.ts` floorObstacles: circles along each log): walkers go round them;
-    // a small animal (up to 0.8 m) may climb onto one, its top a place to bask, perch or run along.
+    // The fallen logs (graphics batch 6, `floor-assets.ts` floorObstacles: circles along each log): walkers go round them.
+    // A small animal (up to 0.8 m) may climb onto one: its top is the scenery's `log` points on the drawn bark (log_top).
     let logs: Array<{x: number; z: number; radius: number}> = [];
     tasks.push(once(() => {
         logs = floorObstacles();
@@ -258,9 +284,6 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const log = logs[k];
         // (0.9 m more than the log, as for a fence: the walk grid's 2 m cells, whose centres are tested, never step through it.)
         obstacles.push([log.x, log.z, log.radius + 0.9]);
-        const s = surface(log.x, log.z);
-        if (s.waterDepth > 0) return;
-        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
     }));
     // The hamlet's plots (`setBehaviourHomePlots`, the map lane's homePlots): their houses, barns and coops, and the
     // props' picket and paddock fences, so a wild walker's path goes round them. Doors are outside the walls and the
@@ -349,6 +372,29 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             list.push(o);
             obstacleIndex.set(key, list);
         }
+        // The drawn rocks, each in every 6 m cell its box reaches.
+        const rockIndex = new Map<string, DrawnRock[]>();
+        for (const rock of rocks) {
+            for (let i = Math.floor((rock.x - rock.reach) / 6); i <= Math.floor((rock.x + rock.reach) / 6); i++) {
+                for (let j = Math.floor((rock.z - rock.reach) / 6); j <= Math.floor((rock.z + rock.reach) / 6); j++) {
+                    const key = `${i},${j}`;
+                    const list = rockIndex.get(key) ?? [];
+                    list.push(rock);
+                    rockIndex.set(key, list);
+                }
+            }
+        }
+        const rockAt = (x: number, z: number, clearance: number) => {
+            const widen = clearance + ROCK_MARGIN;
+            // (A point within `widen` of a box, in the rock's frame, is within widen·√2 of it on the world's axes.)
+            const reach = widen * Math.SQRT2;
+            for (let i = Math.floor((x - reach) / 6); i <= Math.floor((x + reach) / 6); i++) {
+                for (let j = Math.floor((z - reach) / 6); j <= Math.floor((z + reach) / 6); j++) {
+                    for (const rock of rockIndex.get(`${i},${j}`) ?? []) if (nearDrawnRock(rock, x, z, widen)) return true;
+                }
+            }
+            return false;
+        };
         const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
         // (The plots are in the version: a new plot rebuilds the walk grid.)
         const plotKey = plots ? `:${plots.map((p) => `${p.id}@${p.x.toFixed(2)},${p.z.toFixed(2)},${p.rotation.toFixed(3)}`).join(";")}` : "";
@@ -364,7 +410,8 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             return false;
         };
         return {
-            version: `scene:${items.length}:${scenery.length}:${counts}${plotKey}`,
+            // (The drawn rocks are in it too: a new rock set rebuilds the walk grid.)
+            version: `scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}`,
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
             isWater: (x, z) => surface(x, z).waterDepth > 0,
@@ -378,6 +425,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 const cx = Math.floor(x / 6);
                 const cz = Math.floor(z / 6);
                 for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
+                if (rockAt(x, z, clearance)) return true;
                 return solids.length || fences.length ? solidAt(x, z, clearance) : false;
             }
         };

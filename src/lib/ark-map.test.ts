@@ -14,7 +14,9 @@ import {displayLength} from "@/ark-scene/sizes";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {reefLandmarks} from "@/ark-scene/reef";
 import {inCoral, onFloor} from "@/ark-scene/map/water";
-import {speciesDepth} from "@/ark-scene/sea-depth";
+import {depthSeed, fitInWater, speciesDepth, SURFACE_CLEAR, waterSpec} from "@/ark-scene/sea-depth";
+import {shoreOf} from "@/ark-scene/map/place";
+import {place as scenePlace} from "@/ark-scene/sampler";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
 import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
@@ -23,6 +25,7 @@ import {arkBody} from "@/ark-scene/stats";
 import {validateGrips} from "@/ark-scene/map/validate-grips";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
+import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
@@ -168,7 +171,7 @@ test("map: a hanger hangs under its limb and a percher sits on top, on the drawn
     assert.ok(hangers >= 2, `${hangers} hangers checked`);
 });
 
-test("map + behaviour spawn spacing: every predator at least 20 m from its prey at spawn, its moved home still on its own ground", () => {
+test("map + behaviour spawn spacing: every predator at least 20 m from its prey at spawn, its moved home on (or within 5 m of) its own ground", () => {
     const world = scheduleWorld(sceneSampler());
     for (const raw of [fixture, fixtureV2]) {
         const snapshot = decodeArkSnapshot(raw)!;
@@ -183,7 +186,8 @@ test("map + behaviour spawn spacing: every predator at least 20 m from its prey 
         const items = leaders.map((a) => ({a, place: places.get(a.id)!, profile: behaviourProfile(a.model_slug)}));
         const reach = new Map(items.map((i) => [i.a.id, rangeReach(i.profile, {id: i.a.id, zone: i.a.zone, home: {x: i.place.x, y: i.place.ground, z: i.place.z}, length: displayLength(i.a), sea: false}) + (sizes.has(i.a.id) ? groupSpread(displayLength(i.a), sizes.get(i.a.id)!) : 0)]));
         const spaced = spaceHomes(
-            items.map((i) => ({id: i.a.id, slug: i.a.model_slug, home: {x: i.place.x, z: i.place.z}, length: displayLength(i.a), walkable: (x: number, z: number) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : world.nav.walkable(x, z) && mapHabitatAt(i.a, x, z))})),
+            // (As index.ts wireSchedules: a flyer's home any dry ground on its own, a walker's on the walk grid; either within 5 m of its ground.)
+            items.map((i) => ({id: i.a.id, slug: i.a.model_slug, home: {x: i.place.x, z: i.place.z}, length: displayLength(i.a), walkable: (x: number, z: number) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : i.profile.move === "fly" ? world.sampler.heightAt(x, z) > 0.05 && mapHabitatAt(i.a, x, z, 5) : world.nav.walkable(x, z) && mapHabitatAt(i.a, x, z, 5))})),
             eats,
             (id) => reach.get(id) ?? 3
         );
@@ -195,7 +199,7 @@ test("map + behaviour spawn spacing: every predator at least 20 m from its prey 
             predators++;
             const nearest = Math.min(...prey.map((j) => Math.hypot(home(i).x - home(j).x, home(i).z - home(j).z)));
             assert.ok(nearest >= 20, `${i.a.model_slug} ${nearest.toFixed(1)} m from its prey`);
-            assert.ok(mapHabitatAt(i.a, home(i).x, home(i).z) || (home(i).x === i.place.x && home(i).z === i.place.z), `${i.a.model_slug} moved off its own ground`);
+            assert.ok(mapHabitatAt(i.a, home(i).x, home(i).z, 5) || (home(i).x === i.place.x && home(i).z === i.place.z), `${i.a.model_slug} moved off its own ground`);
         }
         assert.ok(predators >= 15, `${predators} predators`);
     }
@@ -245,4 +249,42 @@ test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (
     }
     assert.deepEqual(off, [], `${off.length} off the schedule: ${off.slice(0, 12).join(", ")}`);
     assert.ok(birds > 1200 && grazers > 400 && perched > 800, `${birds} birds and bats, ${grazers} grazers, ${perched} perched`);
+});
+
+test("map: penguins and seals stand on their shore (the polar penguins on the cold cove's ice, the warm-water ones on their warm rocks and beach), held Antarctic ones too; in the water they swim under it", () => {
+    const sampler = mapPoints().sampler;
+    const cove = scenePlace("cold_cove");
+    const penguins = ["african-penguin", "humboldt-penguin", "magellanic-penguin", "galapagos-penguin", "emperor-penguin", "adelie-penguin", "king-penguin", "gentoo-penguin", "macaroni-penguin", "southern-rockhopper-penguin"];
+    const seals = ["harbor-seal", "grey-seal", "ringed-seal", "bearded-seal", "hooded-seal", "walrus", "california-sea-lion", "weddell-seal", "leopard-seal"];
+    const animals: ArkAnimal[] = [...penguins, ...seals].flatMap((slug, i) => [0, 1, 2].map((rank) => ({id: `dive-${slug}-${rank}`, species_profile_id: `dive-${slug}`, name: slug, scientific_name: null, model_slug: slug, zone: (/emperor|adelie|king|gentoo|macaroni|rockhopper|ringed|bearded|hooded|walrus|weddell|leopard/.test(slug) ? "polar" : "seashore") as ArkAnimal["zone"], arrived_at: "2026-11-01T00:00:00Z", brought_by: {label: "Voyager 1", named: false}, mine: false, slot: 40 + i, slot_rank: rank} as ArkAnimal)));
+    const placed = placeAnimals(animals);
+    for (const animal of animals) {
+        const place = placed.get(animal.id)!;
+        const g = sampler.ground(place.x, place.z);
+        assert.ok(!place.water && g.water === null, `${animal.model_slug} in the water`);
+        assert.ok(place.map?.shore, `${animal.model_slug} on a shore`);
+        let sea = false;
+        for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= 9 && !sea; r++) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
+        assert.ok(sea, `${animal.model_slug} by the sea`);
+        // The Antarctic and sub-Antarctic penguins on the cold cove; the warm-water ones on their own warm shore, far from the ice.
+        const warm = ["african-penguin", "humboldt-penguin", "magellanic-penguin", "galapagos-penguin"].includes(animal.model_slug);
+        if (penguins.includes(animal.model_slug)) {
+            if (warm) assert.ok(place.map!.shore === "coast" && Math.hypot(place.x - cove.x, place.z - cove.z) > 40 && g.tags.some((t) => ["rocky_shore", "sandy_beach", "sea_cliffs", "rocks_boulders"].includes(t)), `${animal.model_slug} on its warm shore`);
+            else assert.ok(place.map!.shore === "cove" && Math.hypot(place.x - cove.x, place.z - cove.z) < 36, `${animal.model_slug} on the cold cove`);
+        }
+        assert.equal(shoreOf(animal.model_slug, animal.zone) === "cove", place.map!.shore === "cove");
+        // In the water (when its schedule takes it swimming): under the surface in the upper water, up only to breathe.
+        const depth = speciesDepth(animal.model_slug, animal.zone)!;
+        assert.ok(depth && depth.breathes && depth.band === "upper", `${animal.model_slug} swims`);
+        const {base} = fitInWater(waterSpec(depth, -6, depthSeed(animal.id), 1000, 0), 0.6);
+        assert.ok(base + 0.6 <= -SURFACE_CLEAR + 1e-9, `${animal.model_slug} floats`);
+    }
+    // A colony stands close, one spot each.
+    for (const slug of penguins) {
+        const spots = [0, 1, 2].map((rank) => placed.get(`dive-${slug}-${rank}`)!);
+        for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+            const d = Math.hypot(spots[i].x - spots[j].x, spots[i].z - spots[j].z);
+            assert.ok(d > 0.9 && d < 4, `${slug} ${i} and ${j} ${d.toFixed(2)} m apart`);
+        }
+    }
 });

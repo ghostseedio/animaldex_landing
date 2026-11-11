@@ -14,6 +14,7 @@ import {
     tideFit,
     WeatherFlips,
     wornPatches,
+    youngTurnRate,
     yawToward
 } from "@/lib/ark-liveliness";
 
@@ -126,7 +127,7 @@ test("parent: an adult in its own cluster, the same for everyone", () => {
     assert.equal(pickParent({id: "foal", slot: 1, zone: "desert"}, adults), null);
 });
 
-test("heel: behind its parent's shoulder, on its back when carried, playing now and then", () => {
+test("heel: behind its parent's shoulder, on its back when carried", () => {
     const parent = {x: 10, z: 10, yaw: 0, length: 2, height: 1.4};
     const at = heelPose("foal", parent, {distance: 0.8, carried: false}, 0, 1_000_000);
     const d = Math.hypot(at.x - 10, at.z - 10);
@@ -134,10 +135,110 @@ test("heel: behind its parent's shoulder, on its back when carried, playing now 
     assert.ok(at.z < 10, "behind (the parent faces +z)");
     const ride = heelPose("joey", parent, {distance: 0, carried: true}, 0, 0);
     assert.ok(ride.lift > 1);
-    let played = 0;
-    for (let t = 0; t < 400_000; t += 500) if (heelPose("foal", parent, {distance: 0.8, carried: false}, 1, t).playing) played++;
-    assert.ok(played > 20 && played < 600, `plays some of the time (${played})`);
     assert.deepEqual(heelPose("foal", parent, {distance: 0.8, carried: false}, 1, 123_456), heelPose("foal", parent, {distance: 0.8, carried: false}, 1, 123_456));
+});
+
+/** A mother that grazes on the spot and now and then walks on (straight legs, turning at her own pace), as her schedule does. */
+function grazingMother(seed: number) {
+    const legs: Array<{from: number; to: number; x0: number; z0: number; yaw: number; speed: number}> = [];
+    let t = 0;
+    let x = 0;
+    let z = 0;
+    let yaw = 0;
+    for (let k = 0; t < 3 * 3_600_000; k++) {
+        const graze = 20_000 + ((seed * 7919 + k * 104729) % 70_000);
+        legs.push({from: t, to: t + graze, x0: x, z0: z, yaw, speed: 0});
+        t += graze;
+        yaw += (((seed * 31 + k * 17) % 9) - 4) * 0.2;
+        const walk = 4_000 + ((seed * 13 + k * 7) % 9_000);
+        legs.push({from: t, to: t + walk, x0: x, z0: z, yaw, speed: 0.9});
+        x += Math.sin(yaw) * 0.9 * (walk / 1000);
+        z += Math.cos(yaw) * 0.9 * (walk / 1000);
+        t += walk;
+    }
+    return (ms: number) => {
+        const leg = legs.find((l) => ms >= l.from && ms < l.to) ?? legs[legs.length - 1];
+        const s = (Math.min(ms, leg.to) - leg.from) / 1000;
+        return {x: leg.x0 + Math.sin(leg.yaw) * leg.speed * s, z: leg.z0 + Math.cos(leg.yaw) * leg.speed * s, yaw: leg.yaw};
+    };
+}
+
+test("young at play: dashes, kicks and waits; no orbiting, under 1% of moving 20 s windows turning a full circle", () => {
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let moving = 0;
+    let facing = 0;
+    let travel = 0;
+    let dashes = 0;
+    let kicks = 0;
+    let maxRate = 0;
+    for (let n = 0; n < 24; n++) {
+        const id = `foal-${n}`;
+        const mother = grazingMother(n + 1);
+        const pose = (ms: number) => {
+            const m = mother(ms);
+            return heelPose(id, {...m, length: 2, height: 1.4}, {distance: 0.8, carried: false}, 0.9, ms, (t) => mother(t));
+        };
+        for (let w = 0; w < 3 * 3_600_000 - 25_000; w += 20_000) {
+            let last = pose(w);
+            let heading: number | null = null;
+            let f = 0;
+            let tr = 0;
+            let moved = false;
+            for (let s = 1; s <= 20; s++) {
+                const p = pose(w + s * 1000);
+                f += Math.abs(wrap(p.yaw - last.yaw));
+                if (Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
+                    moved = true;
+                    const h = Math.atan2(p.x - last.x, p.z - last.z);
+                    if (heading !== null) tr += Math.abs(wrap(h - heading));
+                    heading = h;
+                }
+                if (p.moving) dashes++;
+                if (p.lift > 0.01) kicks++;
+                last = p;
+            }
+            // Its fastest turn, at a fine step.
+            for (let s = 0; s < 20_000; s += 100) {
+                const a = pose(w + s);
+                const b = pose(w + s + 100);
+                maxRate = Math.max(maxRate, Math.abs(wrap(b.yaw - a.yaw)) / 0.1);
+            }
+            if (!moved) continue;
+            moving++;
+            if (f > TAU) facing++;
+            if (tr > TAU) travel++;
+        }
+    }
+    assert.ok(moving > 1000, `moving windows ${moving}`);
+    assert.ok(dashes > 50 && kicks > 50, `it plays (dash samples ${dashes}, kick samples ${kicks})`);
+    assert.ok(facing / moving < 0.01, `${((facing / moving) * 100).toFixed(2)}% turn their facing a full circle in 20 s`);
+    assert.ok(travel / moving < 0.01, `${((travel / moving) * 100).toFixed(2)}% go round a full circle in 20 s`);
+    // A foal (1.2 m) turns at most about 2 rad/s of its own (its mother's turns on top, here 0.8 rad at the start of a leg).
+    assert.ok(maxRate < youngTurnRate(1.2) * 1.05 + 0.8 / 0.1, `max turn ${maxRate.toFixed(2)} rad/s`);
+});
+
+test("young at play: a dash faces the way it goes, then it waits ahead until its mother walks up", () => {
+    const id = "foal-7";
+    const still = () => ({x: 0, z: 0, yaw: 0});
+    // Find a dash.
+    let dashAt = -1;
+    for (let t = 0; t < 2_000_000 && dashAt < 0; t += 100) if (heelPose(id, {...still(), length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, t, still).moving) dashAt = t;
+    assert.ok(dashAt >= 0, "a dash within half an hour");
+    const a = heelPose(id, {...still(), length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, dashAt + 200, still);
+    const b = heelPose(id, {...still(), length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, dashAt + 400, still);
+    const way = Math.atan2(b.x - a.x, b.z - a.z);
+    assert.ok(Math.abs(Math.atan2(Math.sin(way - b.yaw), Math.cos(way - b.yaw))) < 0.7, "facing roughly the way it runs");
+    assert.ok(Math.abs(way) < 0.7, "ahead, not round her");
+    // Her standing still: it waits ahead (facing her way) well after the dash.
+    const wait = heelPose(id, {...still(), length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, dashAt + 20_000, still);
+    assert.ok(wait.z > 0.5 && Math.abs(wait.yaw) < 1e-9, `ahead of her (${wait.z.toFixed(2)})`);
+    // Back at heel once she has walked on 3 m, or after 80 s anyway.
+    const walkedOn = (t: number) => (t > dashAt + 10_000 ? {x: 0, z: 3, yaw: 0} : still());
+    const caught = heelPose(id, {x: 0, z: 3, yaw: 0, length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, dashAt + 20_000, (t) => walkedOn(t));
+    assert.ok(caught.z < 3, "behind her again once she walked past");
+    const later = heelPose(id, {...still(), length: 2, height: 1.4}, {distance: 0.8, carried: false}, 1, dashAt + 95_000, still);
+    assert.ok(later.z < 0, "crept back to heel by itself");
 });
 
 test("tide: the column moves with the surface; the floor does not", () => {

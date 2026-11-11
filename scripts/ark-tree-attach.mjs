@@ -413,7 +413,12 @@ for (const id of Object.keys(attach).sort()) {
         .sort((a, b) => b.below - a.below || b.radius - a.radius);
     for (const hang of spread(hangs, 8)) {
         const position = new Vector3(...hang.bottom.clone().add(new Vector3(0, -0.002, 0)).toArray().map(r3));
-        rows.push(["canopy_hang", ...position.toArray().map(r3), 0, -1, 0, ...along(axisAt(hang.c, hang.n).toArray(), new Vector3(0, -1, 0)).toArray().map(r3), 0.02, r3(Math.min(0.6, 12 * hang.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(hang.radius), 0, r3(hang.below)]);
+        // (Measured again from the point the row records, as the test does: rounding it can move the ray a fraction of a
+        // millimetre onto a triangle edge the first ray missed, as under one of emergent-b's umbrella-crown limbs. Only a
+        // drop more than the test's 1 cm shorter replaces the first measurement, so no other tree's rows change.)
+        const recheck = rayHit(tris, position.clone().add(new Vector3(0, -0.003, 0)), new Vector3(0, -1, 0), 6);
+        const below = recheck && recheck.d + 0.003 < Math.min(hang.below, 6) - 0.01 ? recheck.d + 0.003 : hang.below;
+        rows.push(["canopy_hang", ...position.toArray().map(r3), 0, -1, 0, ...along(axisAt(hang.c, hang.n).toArray(), new Vector3(0, -1, 0)).toArray().map(r3), 0.02, r3(Math.min(0.6, 12 * hang.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(hang.radius), 0, r3(below)]);
         hangCount++;
     }
     assets[id] = rows;
