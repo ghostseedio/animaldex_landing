@@ -6,7 +6,7 @@
 
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {readFileSync} from "node:fs";
+import {readFileSync, writeFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {Matrix4, Quaternion, Ray, Triangle, Vector3, type BufferAttribute, type BufferGeometry, type Mesh} from "three";
@@ -15,12 +15,13 @@ import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import manifest from "@/ark-scene/assets-manifest.json";
 import attachData from "@/ark-scene/tree-attach.json";
 import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
+import {COTTAGE, DECOR_SINK, GARDEN_POND, zoneLamp} from "@/ark-scene/micro-decor";
+import {rockAssetFor, rockAttachPoints} from "@/ark-scene/rock-assets";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
 import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
-import {sampleGround, ZONE_SITES} from "@/ark-scene/world";
+import {LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import {snowCover, snowLine} from "@/ark-scene/snow";
 import {TREE_CLOSE, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 
@@ -370,17 +371,96 @@ test("attach: drawnRockPoint lies on the rock vegetation.ts draws (its flat face
     assert.ok(worst > 0.0015, "points sit just off the face (2 mm)");
 });
 
-test("attach: every other point on the island is where it was before the asset trees (ids and positions)", () => {
-    const at = (id: string) => allAttachPoints().find((point) => point.id === id) as AttachPoint;
-    const close = (point: AttachPoint, x: number, y: number, z: number) => Math.hypot(point.position.x - x, point.position.y - y, point.position.z - z) < 1e-9;
-    assert.ok(close(at("house_wall:house:22"), 13.61, 2.682718591185397, 52.698830182105304));
-    // (Rock points now sit on the asset rocks' own faces, graphics batch 5; their ids stay.)
-    assert.ok(at("rock_face:decor261:3"));
-    assert.ok(close(at("leaf_litter:ground:0"), -45.331413857638836, 9.989909153851938, 4.594026831910014));
-    // (The canopy trees' points moved down onto the limbs as drawn, sunk DECOR_SINK; their ids stay.)
-    assert.ok(close(at("canopy_perch:decor682:0"), -34.58297404572754, 10.424341250286663, 29.229413565007295));
+/**
+ * What each host's points are made from (the scenery generation): its decor or fill item, its asset (tree or rock,
+ * with that asset's data), and the ground round it; the cottage's measures; a lamp's place; the pond and the lake;
+ * for the ground's own points, the terrain itself. Each host draws from its own seeded stream (sampler.ts), so its
+ * points depend on nothing else.
+ */
+function hostFingerprints(hosts: string[]): Map<string, string> {
+    const sha = (value: unknown) => createHash("sha1").update(JSON.stringify(value)).digest("hex").slice(0, 16);
+    const mm = (value: number) => Math.round(value * 1000);
+    const patch = (x: number, z: number, reach: number) => {
+        const heights: number[] = [];
+        for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) heights.push(mm(sampleGround(x + (i * reach) / 2, z + (j * reach) / 2).height));
+        return heights;
+    };
+    const decor = worldDecor();
+    const fill = forestFill();
+    const out = new Map<string, string>();
+    let terrain: string | null = null;
+    for (const host of hosts) {
+        let key: unknown;
+        const item = host.startsWith("decor") ? decor[Number(host.slice(5))] : host.startsWith("fill") ? fill[Number(host.slice(4))] : null;
+        if (item) {
+            const tree = assetTreePlacement(item);
+            const rockAt = rockAssetFor(item);
+            key = {item, tree, trees: tree ? data.source : null, rock: rockAt, rockRows: rockAt ? rockAttachPoints(rockAt) : null, ground: patch(item.x, item.z, Math.max(3 * item.scale, 2))};
+        } else if (host === "house") key = COTTAGE;
+        else if (host.startsWith("lamp-")) key = zoneLamp(host.slice(5) as never);
+        else if (host === "garden-pond") key = GARDEN_POND;
+        else if (host === "lake") key = LAKE;
+        else if (host === "ground") {
+            if (!terrain) {
+                const grid: unknown[] = [];
+                for (let x = -110; x <= 110; x += 4) for (let z = -110; z <= 110; z += 4) {
+                    const g = sampleGround(x, z);
+                    grid.push([mm(g.height), Object.entries(g.weights).map(([k, v]) => [k, mm(v ?? 0)]), mm(g.cliff), mm(g.land), mm(g.river), mm(g.inland)]);
+                }
+                terrain = sha(grid);
+            }
+            key = terrain;
+        } else key = host;
+        out.set(host, sha(key));
+    }
+    return out;
+}
+
+/** Each host's points, as a hash of their ids, positions, normals and headings (to 0.1 mm). */
+function hostPoints(): Map<string, string> {
+    const by = new Map<string, string[]>();
+    const r = (value: number) => (Math.round(value * 1e4) / 1e4).toFixed(4);
+    for (const p of allAttachPoints()) {
+        const list = by.get(p.host) ?? [];
+        list.push(`${p.id} ${r(p.position.x)} ${r(p.position.y)} ${r(p.position.z)} ${r(p.normal.x)} ${r(p.normal.y)} ${r(p.normal.z)} ${r(p.yaw)}`);
+        by.set(p.host, list);
+    }
+    const out = new Map<string, string>();
+    by.forEach((list, host) => out.set(host, createHash("sha1").update(list.sort().join("\n")).digest("hex").slice(0, 16)));
+    return out;
+}
+
+const BASELINE = path.join(root, "src/lib/ark-attach-baseline.json");
+
+test("attach: no point moves unless the scenery it stands on changed (a baseline keyed to each host's scenery)", (t) => {
     const ids = allAttachPoints().map((point) => point.id);
     assert.equal(new Set(ids).size, ids.length, "ids are unique");
+    const points = hostPoints();
+    const prints = hostFingerprints(Array.from(points.keys()));
+    // Re-record after a deliberate change to the points themselves: ARK_ATTACH_BASELINE=write npx tsx --test src/lib/ark-attach.test.ts
+    if (process.env.ARK_ATTACH_BASELINE === "write") {
+        const hosts: Record<string, [string, string]> = {};
+        Array.from(points.keys()).sort().forEach((host) => (hosts[host] = [prints.get(host)!, points.get(host)!]));
+        writeFileSync(BASELINE, JSON.stringify({about: "src/lib/ark-attach.test.ts: per host, [what its points are made from, its points]. Re-record with ARK_ATTACH_BASELINE=write only after a deliberate change to the points.", hosts}, null, 0).replace(/\],"/g, '],\n"') + "\n");
+        return;
+    }
+    const baseline = JSON.parse(readFileSync(BASELINE, "utf8")) as {hosts: Record<string, [string, string]>};
+    let checked = 0;
+    let rebuilt = 0;
+    const moved: string[] = [];
+    for (const [host, [print, hash]] of Object.entries(baseline.hosts)) {
+        if (!points.has(host)) continue;
+        // Its scenery changed (a rock reshaped, the ground under it raised): its points may move, by design.
+        if (prints.get(host) !== print) {
+            rebuilt++;
+            continue;
+        }
+        checked++;
+        if (points.get(host) !== hash) moved.push(host);
+    }
+    t.diagnostic(`${checked} hosts checked, ${rebuilt} with changed scenery skipped, ${points.size - checked - rebuilt} new`);
+    assert.deepEqual(moved.slice(0, 12), [], `${moved.length} hosts' points moved though their scenery did not: a change to the sampler (re-record the baseline only if that was meant)`);
+    assert.ok(checked > 100, "the baseline guards almost nothing: re-record it");
 });
 
 test("attach: limbs for large climbers lie on thick drawn wood, with the radius a chord through it gives, room, and load", async () => {
@@ -510,10 +590,11 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
         "float holdTo = mix(0.48, 0.7, high) - 0.12 * hard * smoothstep(0.4, 0.6, slopeHere);",
         "alpine *= 1.0 - smoothstep(holdTo, holdTo + 0.28, slopeHere + 0.14 * (arkNoise(p * 0.4) - 0.5));",
         "alpine *= mix(0.8, 1.0, streak) * smoothstep(0.0, 0.25, alpine);",
-        "alpine *= 1.0 - smoothstep(0.55, 0.85, rib) * smoothstep(0.32, 0.55, slopeHere) * (1.0 - 0.5 * high);",
+        "alpine *= 1.0 - smoothstep(0.6, 0.88, rib) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);",
         "float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);",
         "float snow = snowW * (1.0 - steep * 0.5 * (1.0 - high));",
-        "smoothstep(0.12, 0.8, snow)"
+        "float snowCover = smoothstep(0.22, 0.6, snow);",
+        "float rib = 1.0 - abs(2.0 * arkFbm(vec2(faceAt.x * 0.16, faceAt.y * 0.035 + 5.0)) - 1.0);"
     ]) assert.ok(terrain.includes(line), `terrain.ts snow changed: ${line}`);
     assert.equal(snowLine(0), 27);
     assert.equal(snowLine(1), 15);

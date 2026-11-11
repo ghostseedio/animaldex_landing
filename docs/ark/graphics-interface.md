@@ -9,7 +9,7 @@ The graphics pass owns the terrain and scenery (branch `ark-graphics`). Other la
 - `surface` and `weights` use the ground shader's own layers: `grass, forest_floor, soil, sand, wet_sand, rock, mud, snow, tilled, seabed, lakebed`.
 - `wetness` (0–1) covers the waterline, mud and banks, plus the weather's wetness. Footprints and sheen read it.
 - `waterDepth` is measured at the given sea level, so the tide is included.
-- **Snow** (2026-11-11, `snow.ts`): follows the terrain shader's rule: the ice's own layer, and the mountain's snow above a line at 27 m that the weather's snow cover (`environment.snow`) brings down 12 m, held on all but the steepest faces. `surface` is `snow` only where the shader draws snow whatever its per-pixel noise does, and never where it may not; `weights.snow` is the expected drawn cover. (Before, a band from 19 to 25.5 m, and snow cover painted everything.) The patches of snow on the ledges below the line are not counted. `ark-attach.test` holds snow.ts to terrain.ts's lines.
+- **Snow** (2026-11-11, `snow.ts`, re-derived for graphics batch 5's ribs and crisper edge): follows the terrain shader's rule: the ice's own layer, and the mountain's snow above a line at 27 m that the weather's snow cover (`environment.snow`) brings down 12 m, held on all but the steepest faces. `surface` is `snow` only where the shader draws snow whatever its per-pixel noise does, and never where it may not; `weights.snow` is the expected drawn cover. (Before, a band from 19 to 25.5 m, and snow cover painted everything.) The patches of snow on the ledges below the line are not counted. `ark-attach.test` holds snow.ts to terrain.ts's lines.
 - `groundNormal(x, z)` and `shoreRadius(theta)` are helpers.
 
 ## Named places
@@ -50,7 +50,7 @@ Tree points (`leaf`, `bark`, `branch`, `tree_hollow`) also carry, all optional (
 - `clearBelow`: the clear drop below a `limb` or `canopy_hang`, to anything of its tree or the ground (m);
 - `wind`: how the tree's wind moves the point (see below).
 
-Points are seeded, so every viewer gets the same ones.
+Points are seeded, so every viewer gets the same ones. Since 2026-11-11 each host (a tree, a rock, the house, the pond, the ground's own search) draws from its own seeded stream, so a change to one part of the scenery moves only the points on it. `src/lib/ark-attach.test.ts` keeps a baseline (`src/lib/ark-attach-baseline.json`) of each host's points keyed to what they are made from (its item, its asset and that asset's data, the ground round it; the terrain for the ground's points): a host whose scenery changed may move, any other may not. Re-record it (`ARK_ATTACH_BASELINE=write npx tsx --test src/lib/ark-attach.test.ts`) only after a deliberate change to the points.
 
 | tag | spot | where |
 |---|---|---|

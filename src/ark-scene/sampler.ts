@@ -23,6 +23,7 @@ import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type Fil
 import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-assets";
 import {snowCover} from "@/ark-scene/snow";
 import {treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -80,13 +81,15 @@ function surfaceFrom(sample: GroundSample, x: number, z: number, environment: Ar
     const zone = zoneAt(sample) as ArkZone;
     const slope = 1 - normal.y;
     const height = sample.height;
-    const waterDepth = Math.max(environment.seaLevel - height, 0);
+    // The lake and the river keep their own level; the sea rises and falls with the tide (batch 5: water-level.ts).
+    const level = freshFrom(sample, x, z) >= 0.5 ? FRESH_LEVEL : environment.seaLevel;
+    const waterDepth = Math.max(level - height, 0);
     const weights: Partial<Record<SurfaceKind, number>> = {};
     let cover = {mean: 0, sure: 0};
     const put = (kind: SurfaceKind, value: number) => {
         if (value > 0.001) weights[kind] = (weights[kind] ?? 0) + value;
     };
-    if (height < environment.seaLevel - 0.05) {
+    if (height < level - 0.05) {
         const fresh = Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
         put(fresh ? "lakebed" : "seabed", 1);
     } else {
@@ -512,10 +515,14 @@ export function attachBuildSlices(): number[] {
 
 /** Every attach point on the island, built step by step (`yield` between steps, so it can be sliced). */
 function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
-    const random = seeded(20261112);
+    // Each host draws from its own seeded stream (2026-11-11): a change to one part of the scenery (a rock added, the
+    // fields redrawn) moves only the points on it, never those on the house or the next rock along.
+    const streamOf = (host: string, salt: number) => seeded((hashString(host) + salt * 7919 + 20261112) >>> 0);
+    // A point's own heading where it has none to keep: from its id, the same every build.
+    const headingOf = (id: string) => (hashString(`${id}#yaw`) / 4294967296) * Math.PI * 2;
     const points: AttachPoint[] = [];
     const kinds = new Map<string, string>();
-    const add = (tag: AttachTag, host: string, n: number, position: Vec3, normal: Vec3, zone: ArkZone | null, yaw = random() * Math.PI * 2) => {
+    const add = (tag: AttachTag, host: string, n: number, position: Vec3, normal: Vec3, zone: ArkZone | null, yaw = headingOf(`${tag}:${host}:${n}`)) => {
         const hostKind = kinds.get(host) ?? (host.startsWith("lamp") ? "lamp" : host === "garden-pond" ? "pond" : host);
         points.push({id: `${tag}:${host}:${n}`, tag, spot: TAG_SPOT[tag], position, normal: normalise(normal), yaw, size: SIZE[tag], zone, host, hostKind});
     };
@@ -535,9 +542,6 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     const drawnTrees: Array<{item: DecorItem & Partial<FillItem>; host: string; real: TreeAttach[]}> = [];
     for (const {item, host} of trees) {
         yield;
-        // The rest of the island's points keep the seeded positions they had before the asset trees: the stream
-        // advances as the procedural tree points did (3 bark × 2, 6 leaves × 3, 2 branches × 2 draws a tree).
-        if (TREES.has(item.kind)) for (let k = 0; k < 28; k++) random();
         if (item.rank !== undefined && item.rank > EVERY_TIER_FILL) continue;
         const real = treeAttachPoints(item);
         if (!real.length) continue;
@@ -600,8 +604,9 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
             points[points.length - 1].radius = radius;
             points[points.length - 1].clearBelow = under - sampleGround(position.x, position.z).height;
         });
+        const climb = streamOf(`decor${i}`, 1);
         for (let k = 0; k < 2; k++) {
-            const a = random() * Math.PI * 2;
+            const a = climb() * Math.PI * 2;
             const h = 1.5 * item.scale;
             const r = (tree.base + (tree.top - tree.base) * 1.5 / tree.height) * item.scale + 0.002;
             add("canopy_climb", `decor${i}`, k, {x: item.x + Math.sin(a) * r, y: foot + h, z: item.z + Math.cos(a) * r}, {x: Math.sin(a), y: 0, z: Math.cos(a)}, zone, 0);
@@ -630,6 +635,7 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         // Same ids and the same random draws either way.
         const asset = rockAssetFor(item);
         const used = new Set<number>();
+        const random = streamOf(`decor${i}`, 2);
         for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.1 + random() * 0.75;
@@ -661,6 +667,7 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         {n: {x: 1, y: 0, z: 0}, along: {x: 0, y: 0, z: 1}, half: c.depth / 2, cx: c.width / 2, cz: 0},
         {n: {x: -1, y: 0, z: 0}, along: {x: 0, y: 0, z: 1}, half: c.depth / 2, cx: -c.width / 2, cz: 0}
     ];
+    const random = streamOf("house", 3);
     walls.forEach((wall, w) => {
         for (let k = 0; k < 6; k++) {
             const t = (random() * 2 - 1) * wall.half * 0.85;
@@ -685,14 +692,16 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     }
 
     // Ponds: lily-pad points round the garden pond and the lake's margin.
+    const pond = streamOf("garden-pond", 4);
     for (let k = 0; k < 8; k++) {
-        const a = random() * Math.PI * 2;
-        const r = GARDEN_POND.radius * Math.sqrt(random()) * 0.8;
+        const a = pond() * Math.PI * 2;
+        const r = GARDEN_POND.radius * Math.sqrt(pond()) * 0.8;
         add("pond_surface", "garden-pond", k, {x: GARDEN_POND.x + Math.cos(a) * r, y: GARDEN_POND.y, z: GARDEN_POND.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "farm_garden");
     }
+    const lake = streamOf("lake", 5);
     for (let k = 0; k < 24; k++) {
-        const a = random() * Math.PI * 2;
-        const r = LAKE.r * (0.7 + random() * 0.22);
+        const a = lake() * Math.PI * 2;
+        const r = LAKE.r * (0.7 + lake() * 0.22);
         add("pond_surface", "lake", k, {x: LAKE.x + Math.cos(a) * r, y: 0.02, z: LAKE.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "river_lake");
     }
 
@@ -701,14 +710,17 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     let litter = 0;
     let holes = 0;
     let burrows = 0;
+    const search = streamOf("ground", 6);
     while (tries++ < 40000 && (litter < 300 || holes < 200 || burrows < 120)) {
         if (tries % 16 === 0) yield;
-        const x = (random() * 2 - 1) * 100;
-        const z = (random() * 2 - 1) * 100;
+        const x = (search() * 2 - 1) * 100;
+        const z = (search() * 2 - 1) * 100;
         // The height first (it is surfaceAt's; at calm sea level, water only lies under 0): no normal for the sea.
         const sample = sampleGround(x, z);
         if (sample.height < 0.4) continue;
         const surface = surfaceFrom(sample, x, z, CALM);
+        // (The lake and the river keep their own level: water can lie over ground above 0.4 m there.)
+        if (surface.waterDepth > 0) continue;
         const ground = {x, y: surface.height, z};
         if (litter < 300 && (surface.weights.forest_floor ?? 0) > 0.4) add("leaf_litter", "ground", litter++, ground, surface.normal, surface.zone);
         else if (holes < 200 && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) add("worm_hole", "ground", holes++, ground, surface.normal, surface.zone);

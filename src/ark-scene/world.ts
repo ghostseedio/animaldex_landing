@@ -334,10 +334,18 @@ export function sampleGround(x: number, z: number): GroundSample {
         const inlandHere = coastRadius(Math.atan2(z, x)) - Math.hypot(x, z);
         const reach = Math.pow(smoothstep(46, 0, spine), 1.6) * smoothstep(0, 14, inlandHere);
         if (reach > 0) {
-            const bump = (cx: number, cz: number, r: number, h: number) => h * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
-            // Flanking summits nearly as high as the main one: a range, many-peaked against the sky.
-            const peaks = bump(-34, -68, 13, 11) + bump(2, -64, 12, 10) + bump(-21, -73, 10, 7);
             const rough = 1 - Math.abs(2 * fbm(x * 0.05 + 21, z * 0.05 - 8) - 1);
+            // Flanking summits nearly as high as the main one: a range, many-peaked against the sky. Graphics batch 5:
+            // sharp horns (a cusp at the top, roughened) rather than domes, with deep cols between them, so the skyline
+            // breaks into separate peaks seen from the valley.
+            // Each horn has three arêtes (it reaches further along them) between steeper faces, turned its own way.
+            const horn = (cx: number, cz: number, r: number, h: number) => {
+                const facing = 0.5 + 0.5 * Math.cos(3 * Math.atan2(z - cz, x - cx) + cx * 0.37);
+                const d = Math.hypot(x - cx, z - cz) / (r * (0.74 + 0.4 * facing));
+                return d < 1 ? h * (1 - d) ** 1.7 * (0.82 + 0.36 * rough) : 0;
+            };
+            const notch = (cx: number, cz: number, r: number, h: number) => h * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
+            const peaks = horn(-19, -68, 12, 11) + horn(-36, -67, 14, 15) + horn(3, -63, 13, 12) + horn(-25, -76, 9, 6) - notch(-8, -65, 6, 9) - notch(-28, -66, 5, 7);
             height += (1 - (weights.mountains ?? 0) * 0.7) * reach * (5 + 4 * rough) + peaks * smoothstep(0, 18, inlandHere);
         }
     }

@@ -98,20 +98,44 @@ export function rockAttachPoints(placement: RockPlacement): RockAttach[] {
 export function rockFaceToward(placement: RockPlacement, angle: number, up: number, used: Set<number>): {point: RockAttach; index: number} | null {
     const points = rockAttachPoints(placement);
     const want = {x: Math.sin(angle) * (1 - up), y: up, z: Math.cos(angle) * (1 - up)};
-    let best = -1;
-    let bestDot = -Infinity;
-    points.forEach((point, index) => {
-        if ((point.tag !== "rock_face" && point.tag !== "ledge") || used.has(index)) return;
+    // The rock's half-width in the world: a face this near its middle is inside a cluster, among its own stones.
+    const b = ASSETS[placement.id].bounds;
+    const half = (((b.max[0] - b.min[0]) + (b.max[2] - b.min[2])) / 4) * placement.scale;
+    const facts = points.map((point) => {
         const d = {x: point.position.x - placement.x, y: point.position.y - placement.y, z: point.position.z - placement.z};
         const l = Math.hypot(d.x, d.y, d.z) || 1;
-        // Outward: the face's normal along its offset from the rock's middle (a face inside a cluster looks inward).
-        const outward = (d.x * point.normal.x + d.y * point.normal.y + d.z * point.normal.z) / l;
-        if (outward < 0.15) return;
-        const dot = (d.x * want.x + d.y * want.y + d.z * want.z) / l + 0.8 * outward;
-        if (dot > bestDot) {
-            bestDot = dot;
-            best = index;
-        }
+        return {
+            usable: (point.tag === "rock_face" || point.tag === "ledge"),
+            // Outward: the face's normal along its offset from the rock's middle (a face inside a cluster looks inward).
+            outward: (d.x * point.normal.x + d.y * point.normal.y + d.z * point.normal.z) / l,
+            // On the outside of the rock (or a ledge on top, open to the sky).
+            outside: Math.hypot(d.x, d.z) >= half * 0.45 || point.normal.y >= 0.7,
+            // Not buried: a real rock sinks into a sloping beach, and its lower faces lie under the sand.
+            clear: point.position.y >= sampleGround(point.position.x, point.position.z).height + 0.03,
+            toward: (d.x * want.x + d.y * want.y + d.z * want.z) / l
+        };
     });
-    return best < 0 ? null : {point: points[best], index: best};
+    // Strictest first, easing off only when a rock has nothing better: the point always stays on the drawn rock. A rock
+    // sunk deep in a slope may have few faces in the open: then a clear face is given again before a buried one.
+    const passes: Array<{fits: (f: (typeof facts)[number]) => boolean; again: boolean}> = [
+        {fits: (f) => f.outward >= 0.15 && f.outside && f.clear, again: false},
+        {fits: (f) => f.outward >= 0.15 && f.clear, again: false},
+        {fits: (f) => f.clear, again: false},
+        {fits: (f) => f.clear, again: true},
+        {fits: () => true, again: true}
+    ];
+    for (const pass of passes) {
+        let best = -1;
+        let bestScore = -Infinity;
+        facts.forEach((f, index) => {
+            if (!f.usable || (!pass.again && used.has(index)) || !pass.fits(f)) return;
+            const score = f.toward + 0.8 * Math.max(f.outward, 0);
+            if (score > bestScore) {
+                bestScore = score;
+                best = index;
+            }
+        });
+        if (best >= 0) return {point: points[best], index: best};
+    }
+    return null;
 }
