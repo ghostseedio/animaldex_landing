@@ -1154,7 +1154,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** An animal's route over a stretch of its shared schedule (for worn paths): its own trips, worked out aside. */
     const routeOf = (e: LiveAnimal, from: number, to: number, step: number): Array<{x: number; z: number}> => {
         const own = (e as Entry).sched;
-        if (!own) return [];
+        // (Not before the schedule's world is built: it is built a slice a frame, and tripAt keys its memo by it.)
+        if (!own || !world) return [];
         const holder = {trip: null, lead: null} as unknown as Sched;
         const points: Array<{x: number; z: number}> = [];
         for (let t = from; t <= to; t += step) {
@@ -4922,7 +4923,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
         updateInstances(elapsed);
         dust.step(now);
-        liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
+        liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => (world ? entries.filter((e) => Boolean(e.sched)) : []), routeOf);
         recipeScene.step(now);
         nests.step(now);
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
