@@ -269,7 +269,9 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                 // everything on a throttled phone), then the frame waits for the parallel compiles to finish.
                 if (!warming) {
                     warming = true;
-                    warmQueue = [...ctx.scene.children];
+                    // (The whole scene in one call: compiled part by part, one part's promise could wait out the limit,
+                    // which held the first frame back 5 s on the real backfill. The call's own task is ~160 ms on a phone.)
+                    warmQueue = [ctx.scene];
                     warmPending = [];
                     warmLimit = firstFrameMs === null ? 5000 : 1500;
                 }
@@ -357,7 +359,11 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             const now = performance.now() / 1000;
             // A recording (clips, golden shots) is the director's: every frame, never idle-capped.
             // Models coming in count as moving: their hand-over runs at the full rate, then the page settles.
-            governor.setActivity({busy: busy || recording || now < busyUntil || wheel.active || ctx.library.pending > 0, reducedMotion});
+            // (On the high tier models coming in count as moving: full rate. On a phone's tiers the reverse: the frames
+            // take most of a throttled main thread, so while the view's models come in it may drop to 30 fps and leave
+            // the loads the rest; measured on the real backfill, the loads were starved at 60 fps.)
+            const loading = ctx.library.pending > 0;
+            governor.setActivity({busy: busy || recording || now < busyUntil || wheel.active || (loading && ctx.tier() === "high"), reducedMotion});
         },
 
         /** Something will move for a while (an arrival's entrance): full rate until then. */
