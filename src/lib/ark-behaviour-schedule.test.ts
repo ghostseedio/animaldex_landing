@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, tripAt, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -58,6 +58,7 @@ function wire(): Item[] {
         i.animal.home = {...lead.home};
         i.animal.range = lead.range;
     }
+    wireThreats(items.map((i) => ({slug: i.a.model_slug, animal: i.animal, profile: i.profile, activity: i.a.activity})), eats);
     return items;
 }
 const animals = wire();
@@ -330,4 +331,34 @@ test("at the shore nothing jumps: amphibious animals go in and out of the water 
         }
     }
     assert.ok(steps > 50000, `steps ${steps}`);
+});
+
+test("prey watch a predator they can see: off to the far side of their range, facing it", () => {
+    let seen = 0;
+    let moments = 0;
+    // (Animals on their own: a group member looks from its group's middle, its leader's place.)
+    for (const i of animals.filter((x) => x.animal.threats?.length && !x.animal.group)) {
+        for (let k = 0; k < 24 * 45; k += 1) {
+            const trip = tripOf(i, DAY + k * SLOT_SECONDS);
+            const start = slotStart(i.animal, trip.slot);
+            if (!awakeAt(i.profile, i.a.activity, hoursAt(start)) || i.profile.move === "sessile") continue;
+            moments++;
+            const centre = i.animal.home;
+            const threat = threatAt(world, i.animal, start, hoursAt, centre);
+            if (!threat || trip.shadow || trip.doing === "breathe") continue;
+            seen++;
+            assert.equal(trip.doing, "watch", `${i.a.model_slug} ignores a predator ${threat.d.toFixed(0)} m off (${trip.doing})`);
+            const settled = trip.stay[0];
+            if (settled) {
+                let turn = Math.atan2(threat.x - settled.x, threat.z - settled.z) - settled.yaw;
+                while (turn > Math.PI) turn -= Math.PI * 2;
+                while (turn < -Math.PI) turn += Math.PI * 2;
+                assert.ok(Math.abs(turn) < 1.3, `${i.a.model_slug} watches ${turn.toFixed(2)} rad away from the predator`);
+            }
+        }
+    }
+    assert.ok(moments > 100, `moments ${moments}`);
+    assert.ok(seen > 0, "no prey ever saw a predator");
+    assert.ok(WARY_METRES > SAFE_METRES);
+    console.log(`prey awake slots ${moments}, with a predator in sight ${seen}`);
 });

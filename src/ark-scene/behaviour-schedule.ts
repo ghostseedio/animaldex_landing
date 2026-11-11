@@ -148,7 +148,12 @@ export type ScheduleAnimal = {
     /** For a predator: its nearest prey's home, which it may stalk towards (never past its own range). */
     prey?: {x: number; z: number} | null;
     group?: ScheduleGroup | null;
+    /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
+    threats?: ScheduleThreat[] | null;
 };
+
+/** A predator as its prey sees it: its own schedule animal, profile and activity. */
+export type ScheduleThreat = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null | undefined};
 
 /** The hour (0–24) at a world time: the island clock, or a pinned hour. */
 export type HoursAt = (epochSeconds: number) => number;
@@ -493,7 +498,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 
@@ -618,6 +623,17 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
     const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), (group.leader.range ?? Infinity) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;
+    // Shared wariness (visual only; flee-envelope.md §6.3.3): a predator it can see at its slot's start, awake, from the
+    // predator's own schedule (the same for every viewer), sends it to the far side of its range to watch it. Near the
+    // camera the local layer (`reactive.ts`) adds the look, the alarm and any dash on top. (Its own seeded stream: an
+    // animal with no predator in sight chooses exactly as before.)
+    const threat = threatAt(world, animal, start, hoursAt, centre);
+    if (threat) {
+        const wary = rng(hashString(`${animal.id}#wary#${slot}`));
+        const away = {x: centre.x + ((centre.x - threat.x) / threat.d) * radius * 0.7, z: centre.z + ((centre.z - threat.z) / threat.d) * radius * 0.7};
+        const spot = rangeSpot(world, profile, groupAnimal, away, Math.max(radius * 0.25, 0.5), wary);
+        return {doing: "watch", to: spot, mode: aquatic(profile) ? "water" : profile.move === "fly" ? "air" : "ground", stay: stayBeats("watch", wary, null), face: Math.atan2(threat.x - spot.x, threat.z - spot.z)};
+    }
     if (watchTurn) {
         // At the group's edge, facing out.
         const spot = rangeSpot(world, profile, groupAnimal, centre, radius * 0.9, random);
@@ -781,7 +797,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
  */
 function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent): {beats: StayBeat[]; finish: Spot} | null {
     if (!now.to) return null;
-    const yaw = rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
+    const yaw = now.face ?? rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
     return placeStay(world, profile, animal, now.to, yaw, now.stay, Infinity);
 }
 
@@ -1196,6 +1212,41 @@ export function airborneDoing(doing: ArkDoing): boolean {
 }
 
 // MARK: Predators and prey
+
+/** How far a prey animal notices a predator in the shared layer (about the reactive layer's sight for a walking hunter by day). */
+export const WARY_METRES = 35;
+
+/**
+ * The nearest of its predators it can see at a moment (awake, within `WARY_METRES` of where it is about), or null.
+ * Pure: the predator's own schedule, which never depends on its prey's.
+ */
+export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home): {x: number; z: number; d: number} | null {
+    if (!animal.threats?.length) return null;
+    let best: {x: number; z: number; d: number} | null = null;
+    for (const threat of animal.threats) {
+        const trip = tripAt(world, threat.profile, threat.animal, epochSeconds, hoursAt, threat.activity);
+        if (trip.doing === "sleep" || trip.doing === "to_roost") continue;
+        const at = poseOnTrip(world, trip, epochSeconds);
+        const d = Math.hypot(at.x - near.x, at.z - near.z);
+        if (d < WARY_METRES && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
+    }
+    return best;
+}
+
+/**
+ * Each animal's predators (`ScheduleAnimal.threats`), from the food links: only top predators (ones nothing aboard
+ * eats), so no schedule ever waits on one that waits on it. Call after the homes are spaced; then `forgetSchedules`.
+ */
+export function wireThreats(list: Array<{slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null | undefined}>, eats: (predator: string, prey: string) => boolean) {
+    const slugs = Array.from(new Set(list.map((i) => i.slug)));
+    const hunters = slugs.filter((p) => slugs.some((q) => q !== p && eats(p, q)));
+    const top = new Set(hunters.filter((p) => !slugs.some((q) => q !== p && eats(q, p))));
+    const tops = list.filter((i) => top.has(i.slug));
+    for (const i of list) {
+        const threats = tops.filter((p) => p !== i && p.slug !== i.slug && eats(p.slug, i.slug)).map((p) => ({animal: p.animal, profile: p.profile, activity: p.activity}));
+        i.animal.threats = threats.length ? threats : null;
+    }
+}
 
 /** The least a predator is kept from an animal it eats (or that eats it), beyond both their reaches: 20 m (owner's problem 6). */
 export const SAFE_METRES = 20;
