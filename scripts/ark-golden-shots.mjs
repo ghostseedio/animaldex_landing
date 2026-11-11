@@ -91,14 +91,14 @@ writeFileSync(path.join(site, "golden.html"), `<!doctype html>
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     // The scene's own art is served from public/ (as the site serves it); the page and its script from .ark-golden/site.
-    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
     if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));

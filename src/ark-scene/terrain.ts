@@ -424,7 +424,8 @@ float arkWet = 0.0;`)
             float run = 0.5 + 0.5 * sin(phase);
             float reach = (0.12 + 0.3 * run * run) * (0.8 + 0.8 * envWind);
             float film = smoothstep(reach + 0.02, reach - 0.06, h);
-            float lace = smoothstep(0.035, 0.0, abs(h - reach)) * smoothstep(0.35, 0.75, arkNoise(p * 3.2 + vec2(arkTime * 0.3, 0.0)));
+            // A soft, broken lace (not a dashed line): wider and fading where the noise is low.
+            float lace = smoothstep(0.06, 0.0, abs(h - reach)) * smoothstep(0.3, 0.8, arkFbm(p * 1.4 + vec2(arkTime * 0.2, 0.0))) * 0.65;
             // The sand a wave just left: wet for a while above the film.
             float left = smoothstep(reach + 0.25, reach, h) * (1.0 - film);
             ground = mix(ground, ground * vec3(0.62, 0.66, 0.68), film * beachy * 0.85);

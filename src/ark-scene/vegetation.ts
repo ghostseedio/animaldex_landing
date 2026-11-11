@@ -818,6 +818,8 @@ export type Vegetation = {
     setShadows: (on: boolean) => void;
     /** The forest fill (graphics pass): the share of the extra trees drawn, 0…1, by tier. */
     setFill: (fraction: number) => void;
+    /** Hide these decor kinds' own shapes (the asset library's trees stand in for them once loaded). */
+    hideKinds: (kinds: Set<string>) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -909,6 +911,9 @@ export function buildVegetation(maxGrass: number): Vegetation {
         },
         setShadows: (on) => {
             for (const mesh of shadowCasters) mesh.castShadow = on;
+        },
+        hideKinds: (kinds) => {
+            for (const mesh of meshes) if (kinds.has(mesh.userData.kind)) mesh.visible = false;
         },
         setFill: (fraction) => {
             for (const entry of fillMeshes) entry.mesh.count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));

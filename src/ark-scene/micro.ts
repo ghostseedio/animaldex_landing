@@ -16,7 +16,8 @@
  */
 
 import table from "@/ark-scene/microhabitats.json";
-import {worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {assetTrunk} from "@/ark-scene/tree-assets";
 import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LAMP, LEAF_LIFT, microCorner, microDecor, zoneLamp, type MicroDecorItem} from "@/ark-scene/micro-decor";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {rock, trunkOf} from "@/ark-scene/vegetation";
@@ -263,7 +264,8 @@ function trees(zone: ArkZone): Tree[] {
             .filter(({d}) => d < 30)
             .sort((p, q) => p.d - q.d)
             .slice(0, 5)
-            .map(({item}) => ({item, trunk: trunkOf(item.kind, item.variant % (item.kind === "broadleaf" || item.kind === "orchard" ? 3 : item.kind === "rainforest" ? 2 : 1))!}))
+            // The trunk as drawn: the asset library's tree where one stands in (graphics pass), else the decor shape's.
+            .map(({item}) => ({item, trunk: assetTrunk(item) ?? trunkOf(item.kind, item.variant % (item.kind === "broadleaf" || item.kind === "orchard" ? 3 : item.kind === "rainforest" ? 2 : 1))!}))
             .filter((tree) => tree.trunk);
         return list.length || zone === "farm_garden" ? list : trees("farm_garden");
     });
@@ -282,8 +284,7 @@ function stones(zone: ArkZone): Stone[] {
             const item = all.find((d) => d.kind === "rock" && d.x === m.x && d.z === m.z)!;
             // As `vegetation.ts` draws it: its shape, scaled (y a little more or less by its place in the shape's list), turned, sunk.
             const variant = item.variant % 3;
-            const index = all.filter((d) => d.kind === "rock" && d.variant % 3 === variant).indexOf(item);
-            const yScale = item.scale * (0.8 + 0.4 * ((index * 7) % 5) / 5);
+            const yScale = item.scale * rockSquash(item);
             const geometry = rock(variant);
             const position = geometry.getAttribute("position");
             const triangles = new Float32Array(position.count * 3);

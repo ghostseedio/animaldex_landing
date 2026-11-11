@@ -176,6 +176,8 @@ export type ArkSceneOptions = {
     lite?: boolean | null;
     /** The scene's own art (ground textures, sky light): `<graphicsBase>/ground-albedo-512.webp`… Default "/ark/graphics". */
     graphicsBase?: string;
+    /** The asset library (trees, plants, rocks): `<assetBase>/trees/oak-a.lod0.glb`… Default its manifest's base, "/ark/assets/v1". */
+    assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
 };

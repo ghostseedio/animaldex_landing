@@ -256,14 +256,18 @@ export class ArkLighting {
         this.scene.environmentIntensity = day.environment;
 
         // The photographed sky by day: the image-based light from real clouds and sky, turned so its sun is ours.
+        // Where it hands over to the generated sky (the sun 12° up) the sky light dips softly either side, so the
+        // swap never pops (batch 3: smooth day, dusk, night and dawn).
+        const handover = 0.4 + 0.6 * MathUtils.smoothstep(Math.abs(day.elevation - 12), 0, 5);
         if (this.dayEnvironment && day.elevation > 12) {
             this.builtFor = null;
             this.scene.environment = this.dayEnvironment;
             this.scene.environmentRotation.set(0, Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING, 0);
-            this.scene.environmentIntensity = day.environment * 1.15;
+            this.scene.environmentIntensity = day.environment * 1.15 * handover;
             return;
         }
         this.scene.environmentRotation.set(0, 0, 0);
+        this.scene.environmentIntensity = day.environment * handover;
         const key = Math.round(day.elevation / 3);
         if (this.builtFor !== key) {
             this.builtFor = key;

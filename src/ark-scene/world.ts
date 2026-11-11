@@ -288,7 +288,7 @@ function zoneHeight(zone: LandZone, x: number, z: number): number {
             const massif = Math.pow(smoothstep(48, 0, spine), 1.3);
             const peaks = 1 - Math.abs(2 * fbm(x * 0.021 + 1.3, z * 0.021 + 2.1) - 1);
             const gully = 1 - Math.abs(2 * fbm(x * 0.075 + 9, z * 0.075 - 4) - 1);
-            const base = 2.5 + (22 * massif + 26 * ridge * (0.35 + 0.65 * massif) + 9 * peaks * massif) * (0.45 + 0.75 * back) + 2 * n;
+            const base = 2.5 + (13 * massif + 17 * ridge * (0.35 + 0.65 * massif) + 6 * peaks * massif) * (0.45 + 0.75 * back) + 2 * n;
             return base - 3.4 * gully * gully * smoothstep(6, 24, base);
         }
         case "polar":
@@ -326,6 +326,20 @@ export function sampleGround(x: number, z: number): GroundSample {
     let height = 0;
     for (const zone of LAND_ZONES) {
         if (weights[zone] > 0.002) height += weights[zone] * zoneHeight(zone, x, z);
+    }
+    // The mountain's foothills and second peaks (graphics pass, batch 3): the massif reaches past the mountain zone into
+    // its neighbours, so from far it reads as a broad, many-peaked range, not a lone spike.
+    {
+        const spine = distanceToSegment(x, z, -46, -66, 6, -62);
+        const inlandHere = coastRadius(Math.atan2(z, x)) - Math.hypot(x, z);
+        const reach = Math.pow(smoothstep(46, 0, spine), 1.6) * smoothstep(0, 14, inlandHere);
+        if (reach > 0) {
+            const bump = (cx: number, cz: number, r: number, h: number) => h * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
+            // Flanking summits nearly as high as the main one: a range, many-peaked against the sky.
+            const peaks = bump(-34, -68, 13, 11) + bump(2, -64, 12, 10) + bump(-21, -73, 10, 7);
+            const rough = 1 - Math.abs(2 * fbm(x * 0.05 + 21, z * 0.05 - 8) - 1);
+            height += (1 - (weights.mountains ?? 0) * 0.7) * reach * (5 + 4 * rough) + peaks * smoothstep(0, 18, inlandHere);
+        }
     }
     // The river runs in a valley (graphics pass): the land falls toward it over 16 m either side.
     {
