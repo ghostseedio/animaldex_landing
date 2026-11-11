@@ -317,7 +317,8 @@ test("inRock finds a rock just over a cell edge: a body at the edge of a cell ne
             {x: rock.x, z: (Math.floor((rock.z + rock.reach) / ROCK_CELL) + 1) * ROCK_CELL + 0.01, edge: north},
             {x: rock.x, z: Math.floor((rock.z - rock.reach) / ROCK_CELL) * ROCK_CELL - 0.01, edge: south}
         ];
-        for (const [k, at] of along.entries()) {
+        for (let k = 0; k < along.length; k++) {
+            const at = along[k];
             // The body's radius: from the footprint's edge to just past the cell edge, plus a little (at least 0.4 m).
             const gap = k === 0 ? at.x - at.edge : k === 1 ? at.edge - at.x : k === 2 ? at.z - at.edge : at.edge - at.z;
             const radius = Math.max(gap + 0.1 + 0.2 * ((k + rocks.indexOf(rock)) % 2), 0.4);
