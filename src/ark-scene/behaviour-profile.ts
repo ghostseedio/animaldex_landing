@@ -130,20 +130,25 @@ export function hasBehaviourProfile(slug: string): boolean {
 
 /** How much faster than its clip's own pace its feet may be played (the rig player's cap) before they slide. */
 export const GAIT_CADENCE = 2.5;
-/** How much faster than its walk's own pace (`walkPace`, ground_speed over duty) the schedule ever moves it. */
-export const PACE_CAP = 1.5;
+/**
+ * How far off its walk clip's own pace (`walkPace`) its walking may be, either way: within this its feet keep planted
+ * without the clip playing in slow motion or racing (the integrator's default-view check: a pace ratio of 0.8-1.3).
+ */
+export const PACE_CAP = 1.3;
+export const PACE_FLOOR = 0.8;
 
 /**
- * Ground speed in body lengths a second (visual only): the speed stat's gentle curve (docs/ark-next.md stats §2),
- * but never faster than its rig's fastest ground clip can carry it without sliding (the rigs' strides are short, so
- * this is what holds most animals back; the same for every viewer, rig drawn or not).
+ * Ground speed in body lengths a second (visual only). With a walk clip: its clip's own pace (the rig set the scene
+ * reads, v2 where it lists the species: `walkPace`), so the walk plays at its own rate (each trip then goes 0.85-1.2
+ * of it). Without one: the speed stat's gentle curve (docs/ark-next.md stats §2), held to what its fastest ground clip
+ * carries. The same for every viewer, rig drawn or not.
  */
 export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
-    // Its walk's own pace (corrected for v1's understated ground_speed) times PACE_CAP: a slow walker goes slowly,
-    // its legs are never sped up (the rig lane measured 2.1 times the clip's pace, the ibex 5.4).
-    if (profile.walkPace) return Math.max(Math.min(stat, profile.walkPace * PACE_CAP), 0.04);
+    // (2026-11-11: held under 1.5 times a v1 walk's pace, then the v2 set's walks went up 4-15 times as fast: walkers
+    // walked at 0.4 of their clips, in slow motion. The clip's pace is now the walk.)
+    if (profile.walkPace) return Math.max(profile.walkPace, 0.04);
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
 }
 
@@ -154,9 +159,9 @@ export function freeBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
 }
 
-/** How many times its walking pace it may run (its run's own pace times PACE_CAP over its walking pace; 1: it never runs). */
+/** How many times its walking pace it runs (its run clip's pace over its walk's, so the run plays at its own rate; 1: it never runs). */
 export function runFactor(profile: ArkBehaviourProfile): number {
     if (!profile.walkPace) return 2.2;
     if (!profile.runPace) return 1;
-    return Math.min(Math.max((profile.runPace * PACE_CAP) / bodyLengthsPerSecond(profile), 1), 2.2);
+    return Math.min(Math.max(profile.runPace / bodyLengthsPerSecond(profile), 1), 4);
 }

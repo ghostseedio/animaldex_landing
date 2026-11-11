@@ -104,10 +104,12 @@ export type Leg = {
     turn?: boolean;
     /** Ground and water legs: how far along its way it looks to face (m; 1.5 if not set). */
     look?: number;
+    /** A follower's leg: its walking pace (m/s), for the walk to its own finish at the slot's end. */
+    pace?: number;
 };
 
 /** One beat of its time at its destination: from `at` seconds after it arrives, it does `beat` at (x, z) facing yaw (a step walks there). */
-export type StayBeat = {at: number; beat: ArkBeat; x: number; z: number; yaw: number};
+export type StayBeat = {at: number; beat: ArkBeat; x: number; z: number; yaw: number; /** A step's time (s): its length at its walk's own pace. */ dur?: number};
 
 export type Trip = {
     slot: number;
@@ -635,7 +637,8 @@ function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // lead is where two chains, a block apart, come to agree where it is.)
     const start = (Math.floor(slot / WALK_BLOCK) - WALK_LEAD) * WALK_BLOCK;
     const to = walkChain(world, profile, animal, activity, start, hoursAt)[slot - start];
-    return to === placed.to ? placed : {...placed, to, mode: "ground", face: undefined};
+    // (A prey animal watching a predator it cannot walk off from by a plain way watches it from where it is: still facing it.)
+    return to === placed.to ? placed : {...placed, to, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
 }
 
 /** Slots in a block of the walk chain (`walkChain`), and the blocks it runs before the block it decides. */
@@ -706,10 +709,10 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
  */
 function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent, before: Spot | null): boolean {
     const to = placed.to;
-    // (Off from a predator it has seen, it goes: the shared wariness, never undone here.)
+    // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
     // (A flyer flies there; a swimmer that never leaves the water swims.)
     const walker = profile.move !== "fly" && !profile.seabed && (profile.move !== "swim" || amphibious(profile));
-    if (!to || placed.follow || placed.face !== undefined || !walker || (placed.mode !== "ground" && placed.mode !== "water")) return true;
+    if (!to || placed.follow || !walker || (placed.mode !== "ground" && placed.mode !== "water")) return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
     let from = before ?? groundSpot(world, animal.home.x, animal.home.z);
@@ -728,26 +731,33 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
         if (toWet) goal = edge;
         else from = edge;
     }
+    // A prey animal going off from a predator it watches (the shared wariness) goes, unless its way there would turn it
+    // a full circle (the default view's zebra, 47 turns a minute on 3 m): then it watches from where it is.
+    const retreat = placed.face !== undefined;
     // Never off its own stretch of ground (pure in the goal: so wherever it is, it can walk to any goal it takes).
-    if (!onItsGround(world, profile, animal, placed)) return false;
+    if (!retreat && !onItsGround(world, profile, animal, placed)) return false;
     const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
     if (straight < 0.5 || straight > 25 || home) return true;
     // (The search its trip makes: `tripFor`'s ground.)
     const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal));
     const end = path[path.length - 1];
     const reached = Math.hypot(end.x - goal.x, end.z - goal.z) < 0.01;
-    if (!reached) return false;
+    if (!reached) return retreat;
     // Its turns on the way (the corners' headings, summed): a slalom through a rock field turns it round as surely as a
     // loop does.
-    let turning = 0;
-    let heading: number | null = null;
-    for (let k = 1; k < path.length; k++) {
-        if (Math.hypot(path[k].x - path[k - 1].x, path[k].z - path[k - 1].z) < 0.3) continue;
-        const h = Math.atan2(path[k].x - path[k - 1].x, path[k].z - path[k - 1].z);
-        if (heading !== null) turning += Math.abs(Math.atan2(Math.sin(h - heading), Math.cos(h - heading)));
-        heading = h;
-    }
-    return pathLength(path) <= straight * 1.3 + 2 && turning <= 2.2;
+    const turnsOn = (least: number) => {
+        let turning = 0;
+        let heading: number | null = null;
+        for (let k = 1; k < path.length; k++) {
+            if (Math.hypot(path[k].x - path[k - 1].x, path[k].z - path[k - 1].z) < least) continue;
+            const h = Math.atan2(path[k].x - path[k - 1].x, path[k].z - path[k - 1].z);
+            if (heading !== null) turning += Math.abs(Math.atan2(Math.sin(h - heading), Math.cos(h - heading)));
+            heading = h;
+        }
+        return turning;
+    };
+    if (retreat) return turnsOn(0.05) < Math.PI * 2;
+    return pathLength(path) <= straight * 1.3 + 2 && turnsOn(0.3) <= 2.2;
 }
 
 /**
@@ -980,10 +990,10 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         // A scan is a look round (the head and its clip): its body shifts a little and comes back, never turns it round.
         const glance = beat.beat === "scan" ? (beat.turn ?? 0) * 0.3 : 0;
         if (beat.beat !== "scan") yaw += beat.turn ?? 0;
+        let dur: number | undefined;
         if ((beat.dx || beat.dz) && onGround) {
             const l = Math.max(animal.length, 0.05);
-            // Never further than its walk's pace (PACE_CAP over the clip's own) covers in the step's time: a slow walker
-            // takes small steps rather than sliding its feet.
+            // Never further than its walk's pace covers in the step's time: a slow walker takes small steps.
             const stepTime = beat.beat === "play" ? 0.8 : beat.beat === "stalk" ? 2.5 : 1.2;
             const most = (bodyLengthsPerSecond(profile) * stepTime) / Math.max(Math.hypot(beat.dx ?? 0, beat.dz ?? 0), 1e-6);
             const k = Math.min(most, 1);
@@ -992,11 +1002,14 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             // Only onto ground it can walk, and never out of its range (a stalker stops at the edge).
             const within = Math.hypot(nx - animal.home.x, nz - animal.home.z) <= Math.max(homeRadius(profile, animal) * 1.6, 2);
             if (world.nav.walkable(nx, nz, maxSlopeOf(animal)) && within) {
+                // A step (a stalk is a creep, slow by intent) takes as long as its walk's own pace says, not a fixed
+                // 1.2 s: a grazer's step at a fifth of its clip's pace played the walk in slow motion.
+                if (beat.beat !== "stalk" && beat.beat !== "play") dur = Math.min(Math.max(Math.hypot(nx - x, nz - z) / (bodyLengthsPerSecond(profile) * l), 0.1), stepTime);
                 x = nx;
                 z = nz;
             }
         }
-        out.push({at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance});
+        out.push(dur === undefined ? {at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance} : {at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance, dur});
     }
     const y = onGround ? Math.max(world.sampler.heightAt(x, z), 0) + (at.y - Math.max(world.sampler.heightAt(at.x, at.z), 0)) : at.y;
     return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z, yaw}};
@@ -1143,7 +1156,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             now.mode === "water"
                 ? {mode: "water", from, to: join, path: [from, join], length: Math.hypot(join.x - from.x, join.z - from.z), seconds: catchUp, beat: "swim"}
                 : {mode: "air", from, to: join, path: [from, join], length: Math.hypot(join.x - from.x, join.z - from.z), seconds: catchUp, beat: "fly", cruise: Math.max(cruise * 0.5, 1)},
-            {mode: "shadow", from: join, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - catchUp, beat: "fly"}
+            {mode: "shadow", from: join, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - catchUp, beat: "fly", pace: bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05)}
         ];
         return {...base, mode: now.mode === "water" ? "water" : "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: {trips: shadow.trips, dx: shadow.dx, dy: shadow.dy, dz: shadow.dz}};
     }
@@ -1157,7 +1170,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (mode === "ground" && flies(profile) && Math.hypot(to.x - from.x, to.z - from.z) > Math.max(3, animal.length * 6)) mode = "air";
 
     const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
-    const speed = pace * (0.8 + 0.4 * random());
+    // (0.85-1.2 of its walk's own pace: its clip plays at 0.85-1.2 its rate.)
+    const speed = pace * (0.85 + 0.35 * random());
     // In the air and the water at its own pace (the walk clip's cap is for its feet).
     const freeSpeed = freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * (speed / pace);
     const legs: Leg[] = [];
@@ -1492,14 +1506,21 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             // Blend into its own finish over the last seconds, so the next slot starts where this one ends. On the ground
             // a blend that goes anywhere is a walk there, facing its way (turned into it over its first quarter): never
             // sliding sideways or backwards (the default view's sparrow).
-            const settleAt = 0.92;
-            const startAt = trip.start + (epochSeconds - trip.start) - (u - settleAt) * leg.seconds;
-            const walkYaw = (() => {
-                if (at.aloft || u < settleAt) return null;
-                const lead0 = shadow.trips.find((t) => startAt >= t.start && startAt < t.end) ?? lead;
-                const p0 = shadowPoint(world, poseOnTrip(world, lead0, Math.min(startAt, lead0.end - 0.001)), shadow, startAt, 1);
-                return Math.hypot(to.x - p0.x, to.z - p0.z) > 0.3 ? Math.atan2(to.x - p0.x, to.z - p0.z) : null;
-            })();
+            // (The walk takes as long as its walking pace says, within the last 8% of the leg: at a slower blend its
+            // walk clip played in slow motion.)
+            const lastPart = 1 - 0.08;
+            let settleAt = lastPart;
+            let walkYaw: number | null = null;
+            if (u >= lastPart) {
+                const blendStart = epochSeconds - (u - lastPart) * leg.seconds;
+                const lead0 = shadow.trips.find((t) => blendStart >= t.start && blendStart < t.end) ?? lead;
+                const p0 = shadowPoint(world, poseOnTrip(world, lead0, Math.min(blendStart, lead0.end - 0.001)), shadow, blendStart, 1);
+                const walkDist = Math.hypot(to.x - p0.x, to.z - p0.z);
+                if (!at.aloft && walkDist > 0.3) {
+                    if (leg.pace) settleAt = Math.max(1 - walkDist / leg.pace / leg.seconds, lastPart);
+                    if (u >= settleAt) walkYaw = Math.atan2(to.x - p0.x, to.z - p0.z);
+                }
+            }
             if (u >= 1) return {x: to.x, y: to.y, z: to.z, yaw: walkYaw ?? at.yaw, moving: false, aloft: at.aloft, ...up, beat: at.beat};
             const p = shadowPoint(world, at, shadow, epochSeconds, Math.min(u / 0.08, 1));
             const blend = Math.max((u - settleAt) / (1 - settleAt), 0);
@@ -1559,7 +1580,7 @@ export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: numbe
     while (i + 1 < stay.length && stay[i + 1].at <= since) i++;
     const beat = stay[i];
     const before = i > 0 ? stay[i - 1] : {x: to.x, z: to.z, yaw: startYaw};
-    const stepSeconds = beat.beat === "play" ? 0.8 : beat.beat === "stalk" ? 2.5 : 1.2;
+    const stepSeconds = beat.dur ?? (beat.beat === "play" ? 0.8 : beat.beat === "stalk" ? 2.5 : 1.2);
     const u = Math.min(Math.max((since - beat.at) / stepSeconds, 0), 1);
     const x = before.x + (beat.x - before.x) * u;
     const z = before.z + (beat.z - before.z) * u;

@@ -351,3 +351,20 @@ The scenario script is `scenario.ts` in the lane folder. Each animal is posed ev
    - Flight turns a minute: 0.44, still under 0.5. Circling: 0%.
    - The spacing test now skips prey in the air as well as predators: a bird soaring wide passes over others, and the spacing is for where they stand.
 6. **The map's hook line** in `wireSchedules` stays as the map wrote it: a flyer's home may be any dry ground, with a 5 m `mapHabitatAt` margin.
+
+## Part 7: walking at the clip's own pace (2026-11-11, the v2 rig set)
+
+The integrator's default-view check read a median walk pace ratio of 0.41–0.59 against the clips, where earlier runs read 1.22–1.49. The schedule had not changed; the rigs had.
+
+- **Cause:** the scene now reads the v2 rig set (`rig-clips.ts` ARK_RIG_VERSION). Its walks are 4–15 times as fast as v1's (zebra 0.32 → 1.30 body lengths a second). Walkers were still held under 1.5 times v1's pace. The before build (fc3d2045) read 0.41 in the same minute as the after build (3a6afbc5) read 0.59.
+- **Fix:**
+  - The generator reads the v2 rig manifest and the published v2 set's list. A species the set lists walks and runs at its v2 clips' `bls`; any other at its v1 clips' ground_speed / duty.
+  - Walking is the clip's own pace, 0.85–1.2 of it per trip, and a run is its run clip's pace.
+  - A stay's step takes its length at that pace, not a fixed 1.2 s.
+  - A flock member's end-of-slot walk goes at its walking pace.
+- **Measured** with the island motion tool on release 3a6afbc5 plus this: median pace ratio 0.41 (before) / 0.59 (after) → 1.00. Ground turns a minute, median: 0.
+- **In-place turning:** the schedule's own in-place activities turn at most 0.34 times a minute on average, worst minute 0.95. The buffalo's 16–30 turns a minute grooming was the recipes' wallow episode.
+- A retreat from a predator whose way would turn a full circle now watches from where it is (the zebra's 47 turns a minute on 3 m).
+- Tests:
+  - Walking samples' median pace ratio is within 0.8–1.3 for every walker, and 85% of samples are within it.
+  - In-place activities stay under one turn in any minute.

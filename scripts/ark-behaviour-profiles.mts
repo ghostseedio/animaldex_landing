@@ -27,7 +27,7 @@
  *   3. the map lane's microhabitat inventory (B1, `microhabitats.json`): spawn tags with their phrases;
  *   4. the scene's `src/ark-scene/layers.json` and `microhabitats.json` (already generated from the same data).
  *
- *   npx tsx scripts/ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json [food.json]
+ *   npx tsx scripts/ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json [food.json] [rig-v2-manifest.json rig-v2-set-manifest.json]
  *
  *   food.json (optional, for `src/ark-scene/food-links.json`), read-only from the same repo:
  *        supabase db query --linked -o json "select pv.model_slug predator, string_agg(distinct yv.model_slug, ',' order by yv.model_slug) prey
@@ -77,10 +77,10 @@ type Row = {
     family_name: string | null;
 };
 
-type Rig = {plan: string; state: string; clips_pass: string[]; flight_fallback?: boolean; pose?: unknown; clips?: Record<string, {pass?: boolean; ground_speed?: number; duty?: number}>};
+type Rig = {plan: string; state: string; clips_pass: string[]; flight_fallback?: boolean; pose?: unknown; clips?: Record<string, {pass?: boolean; ground_speed?: number; duty?: number; bls?: number}>};
 type B1 = {id: string; slug: string; plan: string | null; spawn: string[]; microhabitats: Array<{type: string; field: string; phrase: string}>};
 
-const [exportPath, manifestPath, b1Path, foodPath] = process.argv.slice(2);
+const [exportPath, manifestPath, b1Path, foodPath, rigV2Path, rigV2SetPath] = process.argv.slice(2);
 if (!exportPath || !manifestPath || !b1Path) {
     console.error("usage: ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json");
     process.exit(1);
@@ -89,6 +89,14 @@ const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..")
 const exported = JSON.parse(fs.readFileSync(exportPath, "utf8"));
 const rows: Row[] = (Array.isArray(exported) ? exported : exported.rows).filter((r: Row) => r.slug);
 const manifest: Record<string, Rig> = JSON.parse(fs.readFileSync(manifestPath, "utf8")).species;
+/**
+ * The re-made rig set the scene reads first (`rig-clips.ts` ARK_RIG_VERSION v2): the rig manifest it was published from
+ * and the published set's own list. A species the set lists walks at its v2 clips' pace; any other at its v1 clips'
+ * (the scene falls back to v1 for it). (2026-11-11: with v2 up, walkers kept to v1's pace walked at 0.4 of their clip.)
+ */
+const rigV2: Record<string, Rig> = rigV2Path ? JSON.parse(fs.readFileSync(rigV2Path, "utf8")).species : {};
+const rigV2Set: Record<string, unknown> = rigV2SetPath ? JSON.parse(fs.readFileSync(rigV2SetPath, "utf8")).species : {};
+const paceRig = (slug: string): {rig: Rig | undefined; v2: boolean} => (rigV2Set[slug] && rigV2[slug] ? {rig: rigV2[slug], v2: true} : {rig: manifest[slug], v2: false});
 const b1 = new Map<string, B1>((JSON.parse(fs.readFileSync(b1Path, "utf8")).species as B1[]).map((s) => [s.id, s]));
 const layers: Record<string, [string, string, string, string?]> = JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/layers.json"), "utf8")).species;
 const micro: Record<string, [string, string, string?]> = JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/microhabitats.json"), "utf8")).species;
@@ -919,8 +927,8 @@ function profile(row: Row): Profile {
             const speeds = ["walk", "run", "slither", "hop", "swim"].filter((c) => ok.has(c)).map((c) => rig?.clips?.[c]?.ground_speed ?? 0).filter((v) => v > 0);
             return speeds.length ? Math.round(Math.max(...speeds) * 1000) / 1000 : null;
         })(),
-        walkPace: clipPace(rig, ["walk", "slither", "hop"]),
-        runPace: clipPace(rig, ["run"]),
+        walkPace: clipPace(paceRig(slug), ["walk", "slither", "hop"]),
+        runPace: clipPace(paceRig(slug), ["run"]),
         move: moves.primary,
         moves: moves.also,
         activity: activity.value,
@@ -943,13 +951,18 @@ function profile(row: Row): Profile {
     };
 }
 
-/** The first passing clip's own pace of these (ground_speed over its duty), or null. */
-function clipPace(rig: Rig | undefined, names: string[]): number | null {
+/**
+ * The first passing clip's own pace of these (body lengths a second, the speed its feet stay planted at, as the
+ * scene's rig player plays it), or null. A v2 clip says so (`bls`, else its `ground_speed`, which is sweep / duty
+ * already); a v1 clip's `ground_speed` is the stance sweep, so over its duty.
+ */
+function clipPace({rig, v2}: {rig: Rig | undefined; v2: boolean}, names: string[]): number | null {
     const ok = new Set(rig?.clips_pass ?? []);
     for (const name of names) {
         const clip = rig?.clips?.[name];
         if (!ok.has(name) || !clip?.ground_speed || clip.ground_speed <= 0) continue;
-        return Math.round((clip.ground_speed / (clip.duty && clip.duty > 0 ? clip.duty : 0.72)) * 1000) / 1000;
+        const pace = v2 ? (clip.bls && clip.bls > 0 ? clip.bls : clip.ground_speed) : clip.ground_speed / (clip.duty && clip.duty > 0 ? clip.duty : 0.72);
+        return Math.round(pace * 1000) / 1000;
     }
     return null;
 }
