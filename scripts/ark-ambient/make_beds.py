@@ -126,7 +126,7 @@ def choose_length(x: np.ndarray, lo: float, hi: float, fade: float) -> float:
     head = x[:X]
     head_env = np.log(envelope(head))
     head_spec = band_spectrum(head)
-    best = None
+    scored = []
     step = int(0.01 * SR)
     for L in range(int(lo * SR), int(hi * SR) + 1, step):
         tail = x[L:L + X]
@@ -136,11 +136,19 @@ def choose_length(x: np.ndarray, lo: float, hi: float, fade: float) -> float:
         level = abs(np.mean(env) - np.mean(head_env))
         shape = np.mean(np.abs((env - env.mean()) - (head_env - head_env.mean())))
         spec = np.mean(np.abs(band_spectrum(tail) - head_spec))
-        score = level * 4 + shape + spec * 0.15
-        if best is None or score < best[0]:
-            best = (score, L)
-    assert best is not None, "source too short for the loop range"
-    return best[1] / SR
+        scored.append((level * 4 + shape + spec * 0.15, L))
+    assert scored, "source too short for the loop range"
+    # Among the near-best, put the loop point at a calm moment of the recording: the least change over the half
+    # second either side and the smallest 10 ms step (a wave breaking or a drip right at the loop point is
+    # natural, but a calm one leaves nothing for the ear to catch on the second time round).
+    best = min(s for s, _ in scored)
+    w = SR // 2
+    def calm(L: int) -> float:
+        change = float(np.mean(np.abs(band_spectrum(x[L - w:L]) - band_spectrum(x[L:L + w]))))
+        env = 20 * np.log10(envelope(x[L - 2400:L + 2400]))
+        return change + 0.5 * float(np.max(np.abs(np.diff(env))))
+    near = [L for s, L in scored if s <= best * 1.15 + 0.02]
+    return min(near, key=calm) / SR
 
 
 def make_loop(x: np.ndarray, L: float, fade: float) -> np.ndarray:
@@ -300,16 +308,15 @@ def make_bed(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
         path = os.path.join(out_dir, f"{bed}.{fmt}")
         # Low bitrates shift the loudness a little (Opus quieter, AAC louder): encode, measure, and encode again matched.
         gain_db = 0.0
-        for _ in range(3):
+        for _ in range(4):
             encode_one(loop, work, path, fmt, kbps[fmt], gain_db)
             y = decode(path)
             heard = loudness(y[p:p + n])
             miss = final["lufs"] - heard["lufs"]
-            if abs(miss) < 0.3:
+            over = heard["true_peak"] + 1.0  # the encode's own peaks may pass -1 dBTP: bring it under
+            if abs(miss) < 0.3 and over <= 0:
                 break
-            gain_db += miss
-            if heard["true_peak"] + miss > -1.0:
-                gain_db -= heard["true_peak"] + miss + 1.0
+            gain_db += min(miss, -over) if over > 0 else miss
         off = offset_of(np.concatenate([loop[-p:], loop]), y)
         decoded[fmt] = y[p:p + n]
         report["files"][fmt] = {

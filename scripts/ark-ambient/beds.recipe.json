@@ -23,11 +23,11 @@
         {"id": "night_insects", "layers": [{"file": "commons/Country_night_noise.ogg", "start": 8, "filters": "highpass=f=900"}, {"file": "nps/nri-Cricket.mp3", "start": 2, "filters": "highpass=f=2500", "gain_db": 14}], "loop": [20, 22], "crossfade": 2.5},
         {"id": "night_frogs", "layers": [{"file": "nps/romo-MoraineParkWesternchorusfrogsROMO51916Final.mp3", "start": 200, "filters": "highpass=f=300"}], "loop": [30, 34], "crossfade": 3},
         {"id": "dawn_chorus", "layers": [{"file": "nps/yell-YELLDawnChorus.mp3", "start": 1, "filters": "highpass=f=250"}], "loop": [30, 34], "crossfade": 3},
-        {"id": "forest_day", "layers": [{"file": "nps/romo-FinchLakeAmbientROMO62016Final1.mp3", "start": 245, "filters": "highpass=f=250"}], "loop": [30, 34], "crossfade": 3},
+        {"id": "forest_day", "layers": [{"file": "nps/romo-FinchLakeAmbientROMO62016Final1.mp3", "start": 640, "filters": "highpass=f=250"}, {"file": "nps/romo-FinchLakeAmbientROMO62016Final1.mp3", "start": 505, "filters": "highpass=f=250", "gain_db": -3}], "loop": [30, 34], "crossfade": 3, "notes": "two calm stretches of the same morning, laid together, so no single close bird carries the loop"},
         {"id": "wind_trees", "layers": [{"file": "nps/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3", "start": 100, "filters": "highpass=f=150"}], "loop": [30, 34], "crossfade": 4},
         {"id": "mountain_wind", "layers": [{"file": "nps/romo-WindAmbientGemLakeROMO52516Final1.mp3", "start": 18, "filters": "highpass=f=70"}], "loop": [30, 34], "crossfade": 4},
         {"id": "surf", "layers": [{"file": "aporee/StrandNov2712.ogg", "start": 8, "filters": "highpass=f=35"}], "loop": [30, 34], "crossfade": 3},
-        {"id": "shore", "layers": [{"file": "commons/Waves.ogg", "start": 30, "filters": "highpass=f=60"}], "loop": [30, 34], "crossfade": 3},
+        {"id": "shore", "layers": [{"file": "commons/Waves.ogg", "start": 21.5, "filters": "highpass=f=60"}], "loop": [24, 26], "crossfade": 3, "notes": "21.0-51.5 s: between two of the compilation's edit points"},
         {"id": "rapids", "layers": [{"file": "nps/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3", "start": 36, "filters": "highpass=f=60"}], "loop": [30, 34], "crossfade": 3},
         {"id": "waterfall", "layers": [{"file": "aporee/wodospadsiklavica11041630.mp3", "start": 20, "filters": "highpass=f=30"}], "loop": [30, 34], "crossfade": 3},
         {"id": "pond", "layers": [{"file": "nps/romo-MoraineWetlandAmbientROMO51816Final1.mp3", "start": 518, "filters": "highpass=f=250"}], "loop": [30, 34], "crossfade": 3}

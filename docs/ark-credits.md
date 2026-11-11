@@ -65,7 +65,7 @@ Rain, the night beds (crickets, frogs), the dawn chorus, thunder (inside the sto
 
 ### Ambient beds (the Ark's own files)
 
-Looping beds (and two thunder one-shots, `thunderClaps`) in `public/ark/sound/ambient/<id>.webm` (Opus) and `<id>.m4a` (AAC), chosen by `selectAmbientBeds` in `src/ark-scene/ambient-beds.ts` from the table in `ambient-beds.json`. Each is a cut of one real recording (night insects mixes two), made by `scripts/ark-ambient/make_beds.py` from `scripts/ark-ambient/beds.recipe.json`: crossfaded loop, loudness-normalised, mono. Every licence was checked on its source page on 2026-11-11, before download. Downloads went to their own folder and nothing in them was run.
+Looping beds (and two thunder one-shots, `thunderClaps`) in `public/ark/sound/ambient/<id>.webm` (Opus) and `<id>.m4a` (AAC), chosen by `selectAmbientBeds` in `src/ark-scene/ambient-beds.ts` from the table in `ambient-beds.json`. Each is a cut of one real recording (night insects mixes two recordings; forest by day lays two calm stretches of one morning together), made by `scripts/ark-ambient/make_beds.py` from `scripts/ark-ambient/beds.recipe.json`: crossfaded loop, loudness-normalised, mono. Every licence was checked on its source page on 2026-11-11, before download. Downloads went to their own folder and nothing in them was run.
 
 Only public domain (US National Park Service; pdsounds.org authors' public domain releases; a recordist's own Public Domain Mark) and CC0. Nothing needs attribution, and we credit everyone anyway: `ambientCredits()` gives the Sounds panel one line per recordist, from the same table.
 
