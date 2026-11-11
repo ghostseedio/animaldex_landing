@@ -26,7 +26,7 @@ import {
     stepSleep
 } from "@/ark-scene/sleep";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
-import {NIGHT_WATCH_SLOTS, SLOT_SECONDS, roostOf, scheduleWorld, slotStart, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {roostOf, scheduleWorld, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -422,29 +422,31 @@ function herd(slug: string, n: number, length: number, young: number[] = []): Sc
     return list;
 }
 
-test("a herd keeps one of its members on watch all night, a few slots each, the guard changing now and then", () => {
+test("a herd keeps one of its members on watch all night, a few minutes each, the guard changing now and then", () => {
     const profile = behaviourProfile("grevys-zebra");
     const zebras = herd("grevys-zebra", 6, 2.4);
     const night = Date.UTC(2026, 10, 12, 0, 0) / 1000;
     const hoursAt = () => 1.5;
+    // The same moments for the whole herd (each member's slots are offset), every 10 s for an hour.
+    const counts: number[] = [];
     let changes = 0;
     let last: string | null = null;
-    const runs: number[] = [];
-    let run = 0;
-    for (let k = 1; k < 40; k++) {
-        const watching = zebras.filter((z) => tripAt(schedWorld, profile, z, slotStart(z, Math.floor(night / SLOT_SECONDS) + k) + 1, hoursAt, "diurnal").doing === "watch");
-        assert.equal(watching.length, 1, `slot ${k}: ${watching.length} on watch`);
-        assert.ok(watching[0].group, "never the leader's turn with nobody up");
-        if (last !== null && watching[0].id !== last) {
-            changes++;
-            runs.push(run);
-            run = 0;
+    for (let t = night + 200; t < night + 3800; t += 10) {
+        const watching = zebras.filter((z) => tripAt(schedWorld, profile, z, t, hoursAt, "diurnal").doing === "watch");
+        counts.push(watching.length);
+        for (const w of watching) assert.ok(w.group, "never the leader");
+        if (watching.length === 1) {
+            if (last !== null && watching[0].id !== last) changes++;
+            last = watching[0].id;
         }
-        run++;
-        last = watching[0].id;
     }
-    assert.ok(changes >= 4, `${changes} changes of the guard`);
-    assert.ok(runs.every((r) => r <= NIGHT_WATCH_SLOTS + 1), `watches ${runs.join(",")} slots`);
+    const one = counts.filter((c) => c === 1).length / counts.length;
+    const none = counts.filter((c) => c === 0).length / counts.length;
+    // One on watch nearly all the time; at a change of the guard, briefly two (or, for a moment, none).
+    assert.ok(one > 0.75, `one on watch ${(one * 100).toFixed(0)}% of the time (${counts.join("")})`);
+    assert.ok(none < 0.12, `nobody on watch ${(none * 100).toFixed(0)}% of the time`);
+    assert.ok(changes >= 6, `${changes} changes of the guard in an hour`);
+    assert.ok(Math.max(...counts) <= 2);
 });
 
 test("piled pigs and a young mammal sleep touching; a zebra herd sleeps a little apart", () => {

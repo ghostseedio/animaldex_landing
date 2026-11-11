@@ -27,6 +27,7 @@ const SPECIES: Record<string, {id: string; name: string; zone: string; activity:
     "blue-wildebeest": {id: "dcddd54a-4b25-4762-aa18-468236f6f901", name: "Blue Wildebeest", zone: "grassland", activity: "diurnal", sociality: "group"},
     "african-lion": {id: "7e7080ec-9c17-4a75-9d85-5a4f6a38e430", name: "African Lion", zone: "grassland", activity: null, sociality: "group"},
     "superb-starling": {id: "53678f18-8bb2-45d6-9024-7f7ee6ad8de2", name: "Superb Starling", zone: "grassland", activity: "diurnal", sociality: "group"},
+    "lilac-breasted-roller": {id: "9a06d043-9758-4322-ad07-28625a6d568d", name: "Lilac-breasted Roller", zone: "grassland", activity: "diurnal", sociality: null},
     "bat-eared-fox": {id: "6a332339-5b72-4af5-832b-4fefde7df320", name: "Bat-eared Fox", zone: "grassland", activity: null, sociality: null}
 };
 
@@ -46,7 +47,7 @@ const centroid = (list: Array<{x: number; y: number; z: number}>) => ({x: list.r
 
 const CLIPS: Record<string, Clip> = {
     night: {
-        cast: [["grevys-zebra", 7], ["blue-wildebeest", 6], ["african-lion", 4], ["superb-starling", 5]],
+        cast: [["grevys-zebra", 7], ["blue-wildebeest", 6], ["african-lion", 4], ["superb-starling", 5], ["lilac-breasted-roller", 3]],
         // (`?hours=18`: the same animals awake, for the cost.)
         hours: Number(new URLSearchParams(location.search).get("hours") ?? 1.5),
         date: Date.UTC(2026, 10, 12, 1, 30) / 1000,
@@ -56,18 +57,19 @@ const CLIPS: Record<string, Clip> = {
             const zebras = at("grevys-zebra");
             const gnus = at("blue-wildebeest");
             const lions = at("african-lion");
-            const birds = at("superb-starling");
+            const birds = [...at("superb-starling"), ...at("lilac-breasted-roller")];
             if (!zebras.length || !lions.length) return null;
             const zc = centroid(zebras.map((z) => z.p));
             const lc = centroid(lions.map((l) => l.p));
-            const bird = birds.find((b) => b.doing === "sleep") ?? birds[0];
+            // A bird asleep up on a perch (a limb, a post), else any asleep.
+            const bird = birds.find((b) => b.doing === "sleep" && b.p.y > Math.max(ctx.world.sampler.heightAt(b.p.x, b.p.z), 0) + 0.5) ?? birds.find((b) => b.doing === "sleep") ?? birds[0];
             const gnu = gnus.find((g) => g.doing === "sleep") ?? gnus[0];
             const all = centroid([...zebras, ...gnus, ...lions].map((x) => x.p));
             const shots: Shot[] = [
-                {at: 0, label: "the grassland at 01:30: a zebra herd, wildebeest and lions asleep", view: (u) => view(all.x, all.y + 0.8, all.z, 46 - 6 * u, 0.98, 0.5 + 0.15 * u)},
+                {at: 0, label: "the grassland at 01:30: a Grevy's zebra herd asleep, one keeping watch", view: (u) => view(zc.x, zc.y + 0.8, zc.z, 30 - 8 * u, 0.95, 0.3 + 0.5 * u)},
                 {at: 8, label: "Grevy's zebras: asleep on their feet, one keeping watch", view: (u) => view(zc.x, zc.y + 1.1, zc.z, 16, 1.12, 1.0 + 0.4 * u)},
                 {at: 20, label: "lions sprawled: on their sides, chests, curled; breathing, a stir", view: (u) => view(lc.x, lc.y + 0.4, lc.z, 9, 1.0, 2.2 + 0.35 * u)},
-                ...(bird ? [{at: 32, label: "superb starlings tucked on a branch", view: (u: number) => view(bird.p.x, bird.p.y + 0.1, bird.p.z, 2.6, 1.3, 0.3 + 0.3 * u)}] : []),
+                ...(bird ? [{at: 32, label: `a ${bird.a.slug.replace(/-/g, " ")} asleep, head tucked`, view: (u: number) => view(bird.p.x, bird.p.y + 0.05, bird.p.z, 4.5, 1.5, 0.3 + 0.3 * u)}] : []),
                 ...(gnu ? [{at: 40, label: "the camera walks at a sleeping wildebeest: it wakes with a start", view: (u: number) => view(gnu.p.x, gnu.p.y + 0.8, gnu.p.z, Math.max(16 - 13 * Math.min(u * 1.6, 1), 3), 1.12, 0.9)}] : [])
             ];
             const doings = [...zebras, ...gnus, ...lions, ...birds].map((x) => `${x.a.slug.split("-")[0]}:${x.doing}:${x.a.animal.group ? `${x.a.animal.group.rank}/${x.a.animal.group.size}` : "-"}`).join(" ");

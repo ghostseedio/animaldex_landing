@@ -694,9 +694,11 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const watchTurn = size >= 3 ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
     if (!awake) {
         const roost = roostOf(world, profile, animal);
-        // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing a
-        // few slots at a time (about five minutes), so the herd is never all asleep and the guard changes now and then.
-        const nightWatch = size >= 3 ? ((Math.floor(slot / NIGHT_WATCH_SLOTS) + hashString(group!.leader.id)) % (size - 1)) + 1 === group!.rank : false;
+        // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing about
+        // five minutes at a time on the shared clock (each member's slots are offset, so the turn is read at the middle of
+        // its slot from one window for the whole group), so the herd is never all asleep and the guard changes now and then.
+        const watchWindow = Math.floor((start + SLOT_SECONDS / 2) / (SLOT_SECONDS * NIGHT_WATCH_SLOTS));
+        const nightWatch = size >= 3 ? ((watchWindow + hashString(group!.leader.id)) % (size - 1)) + 1 === group!.rank : false;
         if (nightWatch && !FLOCKING.has(profile.social) && !wasAwake) return {doing: "watch", to: roost, mode: "stay", stay: stayBeats("watch", random, null)};
         const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
         return {doing: wasAwake ? "to_roost" : "sleep", to: roost, mode: wasAwake ? travel : "stay", stay: []};
