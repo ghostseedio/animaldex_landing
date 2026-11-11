@@ -508,6 +508,8 @@ export type Key = {
     wade: boolean;
     /** The last key: to its schedule's live pose. */
     toBase: boolean;
+    /** That last key goes to a fixed point: where its schedule will have it as the key ends (a pair's: its schedule walks on). */
+    fixed?: boolean;
 };
 
 export type Episode = {
@@ -614,15 +616,17 @@ function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBeha
 }
 
 /** The block a "go" step resolves to: its own way of getting there. */
-function goBlock(profile: ArkBehaviourProfile, kit: ScheduleKit, world: ScheduleWorld, from: P, to: P): BlockDef {
+function goBlock(profile: ArkBehaviourProfile, kit: ScheduleKit, world: ScheduleWorld, from: P, to: P, length = 0): BlockDef {
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
     const raisedTo = to.y > Math.max(world.sampler.heightAt(to.x, to.z), 0) + 0.4;
     const raisedFrom = from.y > Math.max(world.sampler.heightAt(from.x, from.z), 0) + 0.4;
     // (A swimmer that flies swims from water to water: a puffin or a duck does not take off to go a few metres.)
     const wet = world.sampler.heightAt(to.x, to.z) < -0.1 && world.sampler.heightAt(from.x, from.z) < -0.1;
-    if (wet && !raisedTo && !raisedFrom && (kit.aquatic(profile) || kit.floats(profile) || profile.moves.includes("swim"))) return BLOCKS.swim;
-    if (kit.flies(profile) && (flat > 2 || raisedTo || raisedFrom)) return BLOCKS.fly;
-    if (kit.aquatic(profile) || (world.sampler.heightAt(to.x, to.z) < -0.1 && world.sampler.heightAt(from.x, from.z) < -0.1)) return BLOCKS.swim;
+    const swims = kit.aquatic(profile) || kit.floats(profile) || profile.moves.includes("swim");
+    if (wet && !raisedTo && !raisedFrom && swims) return BLOCKS.swim;
+    // (A bird walks or wades a few steps, as behaviour's own: further than that, or up or down, it flies.)
+    if (kit.flies(profile) && (flat > Math.max(3, length * 6) || raisedTo || raisedFrom)) return BLOCKS.fly;
+    if (kit.aquatic(profile) || wet) return swims ? BLOCKS.swim : BLOCKS.wade;
     if (raisedTo || raisedFrom) return BLOCKS.climb;
     return BLOCKS.walk;
 }
@@ -647,6 +651,8 @@ type BuildContext = {
     /** Such a stay's last turn: on the spot at its slot's end (`slotEnd`), to the way its next slot sets off. */
     nextYaw?: number | null;
     slotEnd?: number;
+    /** A pair: where its own schedule has it at a time (its way back joins it there, not a moving point). */
+    homeAt?: (t: number) => P & {yaw: number};
     /** The heading its legs bend towards at a time (set by `buildEpisode`): one slow half loop over the episode, so it
      *  comes back round towards where it began instead of turning back on itself (an out-and-back is two U-turns). */
     plan?: (t: number) => number;
@@ -664,11 +670,30 @@ const TURN_BUDGET = 3.2;
 /** The most it turns in any minute of a solo episode, with its way home (rad: under a full turn; a dabbling duck pivots, never spins). */
 const MINUTE_BUDGET = 5.4;
 
+/**
+ * Legs on foot that drift forward as behaviour's grazers do (a forager's steps): each within a few degrees of its
+ * heading (`DRIFT_SPREAD`), and anything over `DRIFT_TURN` off it turned on the spot first, standing, then straight on.
+ */
+const DRIFTS = new Set(["walk", "stalk", "crawl", "carry", "wade", "leap"]);
+const DRIFT_SPREAD = 0.05;
+const DRIFT_TURN = 0.2;
+
+/** Whether a step drifts on so: a forager's legs on foot, and a short paddle or surfacing on from where it is (a dabbling duck). */
+function driftsOn(step: TemplateStep, block: BlockDef, template?: Template): boolean {
+    return DRIFTS.has(block.id) || ((step.near === "here" || Boolean(template?.drift)) && (block.id === "swim" || block.id === "surface"));
+}
+
+/** How far its body turns to face the water as it settles to watch it (rad): a heron's head does the rest. */
+const WATCH_TURN = 0.35;
+
 /** A solo leg further than this off its heading (rad) turns on the spot first, then sets off. */
 const TURN_FIRST = 1.2;
 
 /** Legs that turn on the spot first when they set off well away from the way it faces (not a flight, a take-off or a plunge). */
 const TURNS_FIRST = new Set(["walk", "run", "flee", "stalk", "wade", "crawl", "carry", "push", "swim", "dive", "surface", "leap"]);
+
+/** A last step home shorter than this (m) is a shuffle into place, keeping its heading. */
+const SHUFFLE = 0.3;
 
 /** About how long a leg of a recipe lasts at most (s): its reach is scaled to its pace. */
 const LEG_SECONDS = 8;
@@ -710,12 +735,13 @@ function turnedBy(from: number, d: number, elapsed: number, rate: number): numbe
  * turns back across the patch (through the middle, never round the edge); where the water or ground ends ahead it
  * widens its turn. Null: nothing suitable ahead (the leg falls back to the old pick round its centre).
  */
-function aheadSpot(ctx: BuildContext, step: TemplateStep, pos: P, heading: number, reach: number, spread: number, random: () => number, accept: (x: number, z: number) => P | null, t: number): P | null {
+function aheadSpot(ctx: BuildContext, step: TemplateStep, pos: P, heading: number, reach: number, spread: number, random: () => number, accept: (x: number, z: number) => P | null, t: number, drift = false): P | null {
     const here = step.near === "here";
     const len = reach * (here ? 0.6 + 0.4 * random() : 0.55 + 0.45 * random());
     const leash = here ? Math.max(reach * 6, 6) : Math.max(reach * 3, 12);
     // Ahead, bending a little towards the episode's slow loop.
-    const bend = Math.max(spread * 1.5, 0.6);
+    // (A forager on the ground drifts on: its loop bends it only a few degrees a step; bigger re-aims are on the spot.)
+    const bend = drift ? spread * 1.5 : Math.max(spread * 1.5, 0.6);
     const aim = ctx.plan ? heading + Math.max(Math.min(wrapAngle(ctx.plan(t) - heading), bend), -bend) : heading;
     const anchor = ctx.anchor;
     const side = random() < 0.5 ? -1 : 1;
@@ -734,7 +760,7 @@ function aheadSpot(ctx: BuildContext, step: TemplateStep, pos: P, heading: numbe
     // At the edge of its patch it bends back on the anchor's side, a wide turn (then straight across if it must).
     const homeward = Math.atan2(anchor.x - pos.x, anchor.z - pos.z);
     const toward = wrapAngle(homeward - heading) >= 0 ? 1 : -1;
-    for (const off of [spread * 1.8, spread * 2.8, 0.9, 1.3]) {
+    for (const off of drift && here ? [spread * 1.8, spread * 2.8] : [spread * 1.8, spread * 2.8, 0.9, 1.3]) {
         for (const f of [1, 0.7]) {
             const p = at(heading + off * toward, f);
             if (p) return p;
@@ -818,7 +844,7 @@ function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading
     }
     // Something in the way (the garden pond, a rock, a building): round it on one side or the other, a gentle arc.
     if (medium && !clear(null, null)) {
-        for (const bow of [0.6, -0.6, 1, -1]) {
+        for (const bow of [0.25, -0.25, 0.45, -0.45, 0.7, -0.7, 1, -1]) {
             const c = {x: (from.x + to.x) / 2 + Math.cos(chord) * flat * bow, z: (from.z + to.z) / 2 - Math.sin(chord) * flat * bow};
             if (clear(c, null)) return {c, c2: null, len: 0};
         }
@@ -898,12 +924,13 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                 step.to === "over_water" ? {x, y: (step.h ?? 4) * scaleUp, z} : step.to === "prey" ? {x, y: Math.max(floor + length * 0.6, -Math.max(length * 2.5, 1.2)) * (0.5 + 0.4 * random()), z} : {x, y: under, z};
             // (A plunge goes only where its way down is clear of the ground: else null, and it hovers out over the water first.)
             const plunge = block.id === "dive_air" || block.id === "dive_feet";
-            const ahead = aheadSpot(ctx, step, pos, heading, reach, step.to === "prey" ? 0.2 : 0.3, random, (x, z) => {
+            const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
+            const ahead = aheadSpot(ctx, step, pos, heading, reach, drifts ? DRIFT_SPREAD : step.to === "prey" ? 0.2 : 0.3, random, (x, z) => {
                 const floor = sampler.heightAt(x, z);
                 if (floor >= -depth) return null;
                 const at = inWater(x, z, floor);
                 return !plunge || clearPlunge(world, pos, at) ? at : null;
-            }, t);
+            }, t, drifts);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
             if (plunge) return plungeWater(world, pos, reach, length);
@@ -914,10 +941,11 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
         case "shallows": {
             const deepest = Math.min(Math.max(heightOf(length) * 0.45, 0.04), 0.7);
             const reach = within(step.r ?? Math.max(length * 6, 2.5));
-            const ahead = aheadSpot(ctx, step, pos, heading, reach, 0.35, random, (x, z) => {
+            const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
+            const ahead = aheadSpot(ctx, step, pos, heading, reach, drifts ? DRIFT_SPREAD : 0.35, random, (x, z) => {
                 const h = sampler.heightAt(x, z);
                 return h < -0.02 && h > -deepest ? {x, y: h, z} : null;
-            }, t);
+            }, t, drifts);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
             const turn = random() * Math.PI * 2;
@@ -945,7 +973,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
             // (Only where its way there is clear ground: never across the garden pond, a rock or a building.)
             const reachable = (x: number, z: number) => sampler.heightAt(x, z) > 0.03 && walkableAt(world, x, z) && (block.aloft || wayClear(pos, null, null, {x, y: 0, z}, (px, pz) => walkableAt(world, px, pz)));
-            const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t);
+            const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
+            const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, drifts ? DRIFT_SPREAD : block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t, drifts);
             if (ahead) return ahead;
             if (step.near === "here" && step.to === "ground") return pos;
             for (let k = 0; k < 10; k++) {
@@ -1000,8 +1029,10 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             // Each keeps to its own side of the middle (u points from it to the other), so the two meet head-on; the
             // parallel walk goes the same way for both (role "b" turns its own perpendicular round), a body width apart.
             if (step.to === "away") {
-                const x = pos.x - ux * both * 5;
-                const z = pos.z - uz * both * 5;
+                // (Back the way it came, no further than where it started: its way home after is short, not a turn back.)
+                const back = Math.min(both * 5, Math.max((pos.x - own.x) * ux + (pos.z - own.z) * uz, both));
+                const x = pos.x - ux * back;
+                const z = pos.z - uz * back;
                 return {x, y: ground(x, z), z};
             }
             if (step.to === "meet_side") {
@@ -1010,7 +1041,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                 const z = midZ - ux * along * both * 4 - uz * both * 0.6;
                 return {x, y: ground(x, z), z};
             }
-            const gap = step.to === "meet" ? both * 0.42 : both * 2.4;
+            // (The stand-off no further back than where it started: rivals already close do not back away to come again.)
+            const gap = step.to === "meet" ? both * 0.42 : Math.min(both * 2.4, d / 2);
             const x = midX - ux * gap;
             const z = midZ - uz * gap;
             return {x, y: ground(x, z), z};
@@ -1052,9 +1084,14 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     let caught = false;
     const material = species.nest?.materials[0] ?? "twigs";
     const reserve = 4;
+    // (Its way home is its tail's own, when the tail goes back to where it began: a heron wades out, not walks.)
+    const tailStep = template.tail?.find((step) => step.to === "anchor");
+    const tailHome = tailStep && BLOCKS[tailStep.b] && tailStep.b !== "go" ? BLOCKS[tailStep.b] : null;
     // Its turning over the last 20 s (behaviour's circling measure): a step that would take it past the budget ends the
     // loop instead, and it heads home with one turn (a puffin in the shallows turned round to dive back, then again for home).
     const turns: Array<{t: number; turn: number}> = [];
+    // (A pair: whether it has just squared up to its rival, so its next walk, to it, already faces its way.)
+    let facingRival = false;
     const sequence = (steps: TemplateStep[], budgeted = true): boolean => {
         for (const step of steps) {
             const before = {n: keys.length, t, pos, yaw, carry, caught};
@@ -1086,7 +1123,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                 target = resolveTarget(loopCtx, step, block, pos, random, yaw, t);
             }
             if (!target) return false;
-            if (block.id === "go") block = goBlock(owner.profile, kit, world, pos, target);
+            if (block.id === "go") block = goBlock(owner.profile, kit, world, pos, target, length);
             // A ground leg whose way is blocked (the garden pond, a rock, a building) and that no arc gets round stops at the edge.
             if (block.motion === "travel" && onGround(block) && Math.hypot(target.x - pos.x, target.z - pos.z) > 0.05 && walkableAt(world, pos.x, pos.z)) {
                 const from = pos;
@@ -1101,8 +1138,9 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                       ? 0.6
                       : block.id === "leap" || block.id === "dive_in" || block.id === "hop_out"
                         ? 0.5 + 0.25 * timing()
-                        : // A pair's travel times come from the pair's geometry (the same for both sides) at the slower one's pace.
-                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / speedOf(block, walk, height, owner.profile, length);
+                        : // A pair's travel times come from the pair's geometry (the same for both sides) at the slower one's pace;
+                          // rivals walk up to each other slowly and stiffly (half their walk).
+                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / (speedOf(block, walk, height, owner.profile, length) * (ctx.pair && !step.role && block.id === "walk" ? 0.5 : 1));
             const flat = Math.hypot(target.x - pos.x, target.z - pos.z);
             const face: P | null = step.face === "other" && ctx.pair ? ctx.pair.other : step.face === "water" ? waterFace(world, pos, length, yaw) : null;
             // Its heading (behaviour's no-spin rule): a leg curves on from the way it was going and it faces along the
@@ -1110,20 +1148,33 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             // sun, its rival); a charge turns to its rival as it goes. Nothing snaps.
             // Well away from the way it faces, it turns on the spot first at its turn rate, then sets off nearly straight (a
             // stalk round behind it was a slow loop).
-            const swing = block.motion === "travel" && !ctx.pair && flat > 0.03 && TURNS_FIRST.has(block.id) ? wrapAngle(Math.atan2(target.x - pos.x, target.z - pos.z) - yaw) : 0;
-            const turnFirst = Math.abs(swing) > TURN_FIRST ? (Math.abs(swing) * 1.5) / Math.min(rate, TURN_SPOT) : 0;
-            const yawIn = turnFirst ? yaw + swing : yaw;
+            // A pair's walk that does not follow squaring up turns on the spot first for the same time on both sides (one
+            // timeline); its loser's run off, its own step, turns as a solo leg does.
+            const swing = block.motion === "travel" && (!ctx.pair || step.role) && flat > 0.03 && TURNS_FIRST.has(block.id) ? wrapAngle(Math.atan2(target.x - pos.x, target.z - pos.z) - yaw) : 0;
+            const pairTurn = ctx.pair && !step.role && block.motion === "travel" && block.id !== "clash" && flat > 0.03 && !facingRival;
+            const turnFirst = pairTurn
+                ? (Math.PI * 1.5) / Math.min(turnRate(Math.max(length, ctx.pair!.otherLength)), TURN_SPOT)
+                : Math.abs(swing) > (driftsOn(step, block, ctx.template) ? DRIFT_TURN : TURN_FIRST)
+                  ? (Math.abs(swing) * 1.5) / Math.min(rate, TURN_SPOT)
+                  : 0;
+            const toward = pairTurn ? wrapAngle(Math.atan2(target.x - pos.x, target.z - pos.z) - yaw) : swing;
+            const yawIn = turnFirst ? yaw + toward : yaw;
             let want = yawIn;
             let curve: ReturnType<typeof legCurve> = null;
             if (block.motion === "travel") {
                 if (block.id === "clash" && face) want = Math.atan2(face.x - pos.x, face.z - pos.z);
                 else if (flat > 0.03) {
                     // (A walk to meet its rival comes in facing it; a plunge goes straight down its line.)
-                    curve = block.curve === "plunge" ? null : legCurve(world, block, pos, target, yawIn, face ? Math.atan2(face.x - target.x, face.z - target.z) : null, Math.PI / 2);
+                    // (A pair squares up on the spot at the end instead: its walk itself goes straight. A stay that keeps its
+                    // homecoming heading comes home lined up with the way its next slot sets off, when that is roughly its
+                    // way in: its last turn then is small.)
+                    const homing = ctx.holds && step.to === "anchor" && ctx.nextYaw !== undefined && ctx.nextYaw !== null ? ctx.nextYaw : null;
+                    curve = block.curve === "plunge" ? null : legCurve(world, block, pos, target, yawIn, face && !ctx.pair ? Math.atan2(face.x - target.x, face.z - target.z) : homing, face && !ctx.pair ? Math.PI / 2 : Math.PI / 3);
                     const end = legAt(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1);
                     want = Math.atan2(end.dx, end.dz);
                 }
             } else if (step.face === "sun") want = sunYaw(ctx.hours) + Math.PI / 2;
+            else if (face && step.face === "water") want = yawIn + Math.max(Math.min(wrapAngle(Math.atan2(face.x - pos.x, face.z - pos.z) - yawIn), WATCH_TURN), -WATCH_TURN);
             else if (face) want = Math.atan2(face.x - pos.x, face.z - pos.z);
             // (On its own, a leg takes at least as long as its turn needs at its turn rate: a short hop round is not a spin.)
             const turning = block.motion === "travel" && !ctx.pair && flat > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1, yawIn)) * 1.2) / rate : 0;
@@ -1133,7 +1184,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             const bounded = step.s ? (ctx.pair ? Math.min(Math.max(curved, step.s[0]), step.s[1]) : Math.max(curved, step.s[0])) : curved;
             const seconds = block.motion === "travel" ? Math.max(bounded, 0.2, turning) : Math.max(draw, 0.3);
             // It stops while it still has time to get back at its own pace (a pair keeps the shared reserve: both sides stop together).
-            const homeward = ctx.pair ? 0 : Math.hypot(ctx.anchor.x - target.x, ctx.anchor.y - target.y, ctx.anchor.z - target.z) / speedOf(goBlock(owner.profile, kit, world, target, ctx.anchor), pace(owner.profile, length), 0, owner.profile, length);
+            const homeward = ctx.pair ? 0 : Math.hypot(ctx.anchor.x - target.x, ctx.anchor.y - target.y, ctx.anchor.z - target.z) / speedOf(goBlock(owner.profile, kit, world, target, ctx.anchor, length), pace(owner.profile, length), 0, owner.profile, length);
             if (t + turnFirst + seconds > ctx.t1 - Math.max(reserve, Math.min(homeward, 40))) return false;
             if (turnFirst) {
                 keys.push({t0: t, t1: t + turnFirst, block: BLOCKS.turn, from: pos, to: pos, yawIn: yaw, yaw: yawIn, c: null, c2: null, endLen: 0, face: null, carry, catch: null, prey: null, wade: false, toBase: false});
@@ -1155,6 +1206,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             yaw = keyPose(world, key, key.t1, length, keys.length > 1 ? keys[keys.length - 2] : null).yaw;
             t += seconds;
             pos = target;
+            if (block.motion === "travel") facingRival = false;
             // A pair's walk up to its rival ends squaring up on the spot, face to face, before what comes next (both sides
             // the same time, from the larger one's turn rate: one timeline).
             if (ctx.pair && face && block.motion === "travel" && block.id !== "clash") {
@@ -1164,6 +1216,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                     keys.push({t0: t, t1: t + square, block: BLOCKS.turn, from: pos, to: pos, yawIn: yaw, yaw: toward, c: null, c2: null, endLen: 0, face, carry, catch: null, prey: null, wade: false, toBase: false});
                     yaw = keyPose(world, keys[keys.length - 1], t + square, length, key).yaw;
                     t += square;
+                    facingRival = true;
                 }
             }
             if (step.eat || step.drop) carry = null;
@@ -1178,10 +1231,11 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                 const homeYaw = away ? Math.atan2(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) : yaw;
                 // (Its way home as it would go from here: a turn on the spot and the curve's own turning, a detour round
                 // the shore or a rock included.)
-                const homeward = away ? homeTurning(world, owner.profile, kit, pos, yaw, ctx.anchor) : 0;
+                const homeward = away ? homeTurning(world, owner.profile, kit, pos, yaw, ctx.anchor, length, ctx.holds ? ctx.nextYaw ?? null : null, tailHome) : 0;
                 // (Within its slot's last minute, its last turn on the spot to the way it sets off counts too.)
-                const last = ctx.nextYaw !== undefined && ctx.nextYaw !== null && ctx.slotEnd !== undefined && t > ctx.slotEnd - 60 ? Math.abs(wrapAngle(ctx.nextYaw - homeYaw)) : 0;
-                if (turn > 0.05 && (recent + turn > TURN_BUDGET || minute + turn + homeward + last > MINUTE_BUDGET)) {
+                const last = ctx.nextYaw !== undefined && ctx.nextYaw !== null && ctx.slotEnd !== undefined && t > ctx.slotEnd - 63 ? Math.abs(wrapAngle(ctx.nextYaw - homeYaw)) : 0;
+                // (Every step: one that turns nothing still carries its turn home into its slot's last minute.)
+                if (recent + turn > TURN_BUDGET || minute + turn + homeward + last > MINUTE_BUDGET) {
                     keys.length = before.n;
                     t = before.t;
                     pos = before.pos;
@@ -1211,31 +1265,37 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     }
     // Back to its schedule's pose (where it began, for a stay; where its schedule has it by then, for a pair), its own way:
     // this last key goes to the live pose, so it never snaps. It ends inside the window (sped up if it must).
-    const home = ctx.anchor;
+    // (A pair's schedule walks on while it fights: its way back goes straight to where that will have it by the end.)
+    const estimate = ctx.homeAt ? Math.hypot(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) / Math.max(speedOf(BLOCKS.walk, pace(owner.profile, length), 0, owner.profile, length), 0.1) : 0;
+    const home = ctx.homeAt ? ctx.homeAt(Math.min(t + Math.max(estimate, 0.6), ctx.t1 + 2)) : ctx.anchor;
     const away = Math.hypot(home.x - pos.x, home.y - pos.y, home.z - pos.z);
-    let back = goBlock(owner.profile, kit, world, pos, home);
+    // (Its template's own way home when it has one: a heron wades out of the shallows, it does not walk round them.)
+    let back = tailHome && !ctx.homeAt ? tailHome : goBlock(owner.profile, kit, world, pos, home, length);
     // (A swimmer that flies flies back if it could not swim it in time.)
     if (back.id === "swim" && kit.flies(owner.profile) && away / speedOf(back, pace(owner.profile, length), 0, owner.profile, length) > Math.max(ctx.t1 + 2 - t, 0.6)) back = BLOCKS.fly;
     // Home well away from the way it faces: it turns on the spot first (when there is time), then a gentle arc home. A
     // stay that keeps its homecoming heading comes in along its way; anything else lines up with its schedule pose's
     // heading when that is roughly its way in (never a loop to line up).
     const homeFlat = Math.hypot(home.x - pos.x, home.z - pos.z);
-    const homeSwing = !ctx.pair && homeFlat > 0.03 && TURNS_FIRST.has(back.id) ? wrapAngle(Math.atan2(home.x - pos.x, home.z - pos.z) - yaw) : 0;
-    const homeTurn = Math.abs(homeSwing) > TURN_FIRST ? (Math.abs(homeSwing) * 1.5) / Math.min(turnRate(length), TURN_SPOT) : 0;
+    // (A pair's too: this is its last key, after both sides' shared timeline.)
+    // (A shuffle home of a few centimetres, under SHUFFLE, keeps its heading: no turning round for a step.)
+    const homeSwing = homeFlat > SHUFFLE && TURNS_FIRST.has(back.id) ? wrapAngle(Math.atan2(home.x - pos.x, home.z - pos.z) - yaw) : 0;
+    const homeTurn = Math.abs(homeSwing) > (DRIFTS.has(back.id) ? DRIFT_TURN : TURN_FIRST) ? (Math.abs(homeSwing) * 1.5) / Math.min(turnRate(length), TURN_SPOT) : 0;
     if (homeTurn && t + homeTurn + 0.6 <= ctx.t1 + 2) {
         keys.push({t0: t, t1: t + homeTurn, block: BLOCKS.turn, from: pos, to: pos, yawIn: yaw, yaw: yaw + homeSwing, c: null, c2: null, endLen: 0, face: null, carry, catch: null, prey: null, wade: false, toBase: false});
         t += homeTurn;
         yaw += homeSwing;
     }
-    const curve = legCurve(world, back, pos, home, yaw, ctx.holds ? null : ctx.yaw0);
+    const curve = legCurve(world, back, pos, home, yaw, ctx.holds ? ctx.nextYaw ?? null : ctx.homeAt ? (home as P & {yaw: number}).yaw : ctx.yaw0);
     const room = Math.max(ctx.t1 + 2 - t, 0.6);
     const turning = Math.hypot(home.x - pos.x, home.z - pos.z) > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, home, 1, yaw)) * 1.2) / turnRate(length) : 0;
     const along = ctx.pair || Math.hypot(home.x - pos.x, home.z - pos.z) <= 0.03 ? away : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, home);
-    const wanted = Math.max(along / speedOf(back, pace(owner.profile, length), 0, owner.profile, length), 0.6, ctx.pair ? 0 : turning);
+    // (A rival walks off home at the same stiff half walk it came up at.)
+    const wanted = Math.max(along / (speedOf(back, pace(owner.profile, length), 0, owner.profile, length) * (ctx.pair && back.id === "walk" ? 0.5 : 1)), 0.6, ctx.pair ? 0 : turning);
     const seconds = Math.min(wanted, room);
     // (Its heading on the way: a stay that keeps its homecoming heading keeps the one it has, even with nowhere left to
     // go; anything else turns to its schedule pose's.)
-    keys.push({t0: t, t1: t + seconds, block: back, from: pos, to: home, yawIn: yaw, yaw: ctx.holds ? yaw : ctx.yaw0, c: curve?.c ?? null, c2: null, endLen: curve?.len ?? 0, face: null, carry, catch: null, prey: null, wade: false, toBase: true});
+    keys.push({t0: t, t1: t + seconds, block: back, from: pos, to: home, yawIn: yaw, yaw: ctx.holds ? (curve?.c2 && ctx.nextYaw !== undefined && ctx.nextYaw !== null ? ctx.nextYaw : yaw) : ctx.homeAt ? (home as P & {yaw: number}).yaw : ctx.yaw0, c: curve?.c ?? null, c2: null, endLen: curve?.len ?? 0, face: null, carry, catch: null, prey: null, wade: false, toBase: true, fixed: Boolean(ctx.homeAt)});
     t += seconds;
     return {id: ctx.seed, recipe: template.id, t0: ctx.t0, t1: t, keys, anchor: ctx.anchor, length, other: null, role: ctx.pair?.role ?? null};
 }
@@ -1323,7 +1383,7 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
             y = key.wade ? Math.min(h, 0.02) : b.wet && h < 0 ? h : Math.max(h, 0);
         }
         // It faces the way it goes (turning into it from its heading at its turn rate); a charge turns to its rival.
-        if (!(b.id === "clash" && key.face) && flat > 0.03) yaw = turnedBy(key.yawIn, legTurn(from, key.c, c2, to, along, key.yawIn), elapsed, rate);
+        if (!(b.id === "clash" && key.face) && flat > (key.toBase ? SHUFFLE : 0.03)) yaw = turnedBy(key.yawIn, legTurn(from, key.c, c2, to, along, key.yawIn), elapsed, rate);
     }
     // Its own small motion while it holds.
     // On the spot the body holds still: a dig, a peck, a sweep or a scrape is the head's and the clip's (`dig`), a dust
@@ -1379,9 +1439,9 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
     let i = 0;
     while (i + 1 < keys.length && keys[i].t1 <= epoch) i++;
     const key = keys[i];
-    const live = key.toBase ? {...key, to: {x: base.x, y: base.y, z: base.z}} : key;
+    const live = key.toBase && !key.fixed ? {...key, to: {x: base.x, y: base.y, z: base.z}} : key;
     const holds = episode.endYaw !== undefined && episode.endYaw !== null;
-    const drawn = keyPose(world, live, epoch, episode.length, i > 0 ? keys[i - 1] : null, key.toBase ? (holds ? keys[keys.length - 1].yaw : base.yaw) : null);
+    const drawn = keyPose(world, live, epoch, episode.length, i > 0 ? keys[i - 1] : null, key.toBase ? (holds || key.fixed ? keys[keys.length - 1].yaw : base.yaw) : null);
     // (A stay that keeps its heading heads for its fixed place, where its homecoming heading was worked out: its
     // schedule pose bobbing on the water only moves it, never swings it round.)
     const at = key.toBase && holds ? {...drawn, yaw: keyPose(world, key, epoch, episode.length, i > 0 ? keys[i - 1] : null, keys[keys.length - 1].yaw).yaw} : drawn;
@@ -1393,8 +1453,10 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
     const z = at.p.z + (base.z - at.p.z) * k;
     // Its heading into its schedule pose's at its turn rate (its last leg mostly arrives along it already).
     const dyaw = wrapAngle(base.yaw - at.yaw);
+    // (Only on its way back to it: never while it still runs its own way, a rival's run off or a chase.)
     const turnSeconds = Math.min(Math.max((Math.abs(dyaw) * 1.5) / turnRate(episode.length), 0.6), 3);
-    const kYaw = holds ? 0 : ease(Math.min(Math.max((epoch - (episode.t1 - turnSeconds)) / turnSeconds, 0), 1));
+    const blendFrom = Math.min(Math.max(episode.t1 - turnSeconds, keys[keys.length - 1].t0), episode.t1 - 0.3);
+    const kYaw = holds ? 0 : ease(Math.min(Math.max((epoch - blendFrom) / Math.max(episode.t1 - blendFrom, 1e-3), 0), 1));
     const act = actOf(episode, key, i, at);
     const moving = key.block.motion === "travel" && at.u < 1;
     return {...base, x, y, z, yaw: at.yaw + dyaw * kYaw, moving, aloft: at.aloft && k < 0.5, beat: key.block.beat, act: {...act, pitch: act.pitch * (1 - k), roll: act.roll * (1 - k)}};
@@ -1425,7 +1487,7 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
             const built = buildEpisode({world, kit, owner, species, template: TEMPLATES[recipe], anchor, t0, t1, seed: `${owner.animal.id}#ep#${trip.slot}#${recipe}`, hours, yaw0, holds, nextYaw, slotEnd: trip.end});
             if (built && holds) {
                 const last = built.keys[built.keys.length - 1];
-                const end = keyPose(world, last, last.t1, built.length, built.keys[built.keys.length - 2] ?? null, yaw0);
+                const end = keyPose(world, last, last.t1, built.length, built.keys[built.keys.length - 2] ?? null, last.yaw);
                 episode = {...built, endYaw: end.yaw, nextYaw};
             } else episode = built;
         }
@@ -1582,7 +1644,11 @@ function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, e
                     seed: `${l.key}#${period}`,
                     pair: {other: {x: other.x, y: other.y, z: other.z}, role: l.role, otherLength: l.other.length, pace: Math.min(pace(owner.profile, owner.animal.length), pace(l.otherProfile, l.other.length))},
                     hours,
-                    yaw0: own.yaw
+                    yaw0: own.yaw,
+                    homeAt: (at: number) => {
+                        const p = kit.basePose(world, kit.tripAt(world, owner.profile, owner.animal, at, owner.hoursAt, owner.activity), at);
+                        return {x: p.x, y: p.y, z: p.z, yaw: p.yaw};
+                    }
                 });
                 if (episode) episode = {...episode, other: l.other.id, role: l.role};
             }
@@ -1800,17 +1866,17 @@ function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: Trip
 }
 
 /** How much its way home from here turns it (rad): a turn on the spot if it must, then the leg's curve, summed along it. */
-function homeTurning(world: ScheduleWorld, profile: ArkBehaviourProfile, kit: ScheduleKit, from: P, yaw: number, home: P): number {
-    const block = goBlock(profile, kit, world, from, home);
+function homeTurning(world: ScheduleWorld, profile: ArkBehaviourProfile, kit: ScheduleKit, from: P, yaw: number, home: P, length: number, endYaw: number | null = null, way: BlockDef | null = null): number {
+    const block = way ?? goBlock(profile, kit, world, from, home, length);
     const chord = Math.atan2(home.x - from.x, home.z - from.z);
     const swing = wrapAngle(chord - yaw);
     const first = Math.abs(swing) > TURN_FIRST && TURNS_FIRST.has(block.id) ? Math.abs(swing) : 0;
     const start = first ? chord : yaw;
-    const curve = legCurve(world, block, from, home, start, null);
+    const curve = legCurve(world, block, from, home, start, endYaw);
     let sum = first;
     let previous = start;
     for (let j = 1; j <= 12; j++) {
-        const at = legAt(from, curve?.c ?? null, null, home, j / 12);
+        const at = legAt(from, curve?.c ?? null, curve?.c2 ?? null, home, j / 12);
         if (Math.hypot(at.dx, at.dz) < 1e-6) continue;
         const a = Math.atan2(at.dx, at.dz);
         sum += Math.abs(wrapAngle(a - previous));
