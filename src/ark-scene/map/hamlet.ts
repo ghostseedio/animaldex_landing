@@ -33,8 +33,8 @@
  */
 
 import {COTTAGE} from "@/ark-scene/micro-decor";
-import {coopSpot, defaultHomePlots, GARDEN, homeObstacles, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
-import {fieldCropAt} from "@/ark-scene/fields";
+import {barnStyle, coopSpot, cottageStyle, defaultHomePlots, GARDEN, homeObstacles, onHomeKeepOut, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {cropAt, fieldCropAt} from "@/ark-scene/fields";
 import {bodyOf} from "@/ark-scene/map/species";
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -68,8 +68,6 @@ const CORE = {
     house: {x0: -3.6, x1: 3.6, z0: -2.9, z1: 3.2},
     smallholding: {x0: -4.8, x1: 4.8, z0: -3.8, z1: 3.8}
 } as const;
-/** The plots' fixed order: a smallholding first, then three houses to every smallholding. */
-const SLOT_ORDER: Array<HomePlot["kind"]> = ["smallholding", "house", "house", "house", "smallholding", "house", "house", "house", "smallholding", "house", "house", "house", "smallholding", "house", "house", "house", "smallholding", "house", "house", "house"];
 
 type Rect = {x0: number; x1: number; z0: number; z1: number};
 
@@ -157,13 +155,11 @@ const OTHER_SITES = Object.entries(ZONE_SITES).filter(([zone, site]) => zone !==
 const YARD_FRONT = 6.4;
 /** Or its paddock's far fence this far in front of the barn's middle (a paddock 3.4 m off the barn, 7.4 m deep, and the margin). */
 const PADDOCK_FRONT = 11.5;
-/** How far a plot may stand back from its lane, past the verge (m): where the lane bends, a plot steps back from it. */
-const SETBACKS = [0, 1.5, 3];
 /** Metres kept between neighbouring plots' land (a hedge's or a fence's width). */
 const PLOT_GAP = 0.7;
 
 /** How well a candidate plot fits (lower is better), or null: off dry, gentle land, on a lane, in a forest, or with something in its core. */
-export function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null {
+function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null {
     const frame = plotFrame(plot);
     const zone = zoneAt(sampleGround(plot.x, plot.z)) as string;
     if (!GOOD_ZONES.has(zone) && zone !== "desert") return null;
@@ -211,93 +207,14 @@ export function fitness(plot: HomePlot, middle: {x: number; z: number}): number 
     return Math.hypot(plot.x - middle.x, plot.z - middle.z) * 0.5 + Math.abs(along.along - nearestOnLanes(middle.x, middle.z).along) * (along.lane === nearestOnLanes(middle.x, middle.z).lane ? 0.5 : 0.8) + along.distance * 0.4 + crops * 2 + inside * 1.5 + (hi - lo) * 2 + (GOOD_ZONES.has(zone) ? 0 : 25);
 }
 
-type Candidate = {plot: HomePlot; lane: number; side: 1 | -1; along: number; setback: number};
-
-/**
- * Candidate plots along the lanes, both sides, every half metre: a cottage along a street, its garden's gate on the
- * verge, facing the street; a smallholding along a farm track, its barn's long side along it, either its yard toward
- * the track and the paddock behind or the paddock along the track (its gate on it) and the barn behind. Each may
- * stand back a little where the lane bends (`SETBACKS`), and is turned a hair by a hash of its place, so the street
- * is not a ruled line.
- */
-export function laneCandidates(kind: HomePlot["kind"]): Candidate[] {
-    const out: Candidate[] = [];
-    HAMLET_LANES.forEach(({kind: laneKind, points: lane}, li) => {
-        // Cottages along the streets, smallholdings along the farm tracks; a street with a farm side has them on that side.
-        const farmSide = HAMLET_LANES[li].farmSide;
-        if (!farmSide && (laneKind === "street") !== (kind === "house")) return;
-        let run = 0;
-        for (let i = 1; i < lane.length; i++) {
-            const [ax, az] = lane[i - 1];
-            const [bx, bz] = lane[i];
-            const length = Math.hypot(bx - ax, bz - az);
-            const tx = (bx - ax) / length;
-            const tz = (bz - az) / length;
-            for (let s = 0; s < length; s += 0.5) {
-                const px = ax + tx * s;
-                const pz = az + tz * s;
-                for (const side of [1, -1] as const) {
-                    if (farmSide && (side === farmSide) !== (kind === "smallholding")) continue;
-                    const nx = -tz * side;
-                    const nz = tx * side;
-                    const h = hamletHash(`lane:${li}:${i}:${s}:${side}:${kind}`);
-                    const jitter = ((h & 0xff) / 255) * 0.8;
-                    const turn = (((h >>> 8) & 0xff) / 255 - 0.5) * 0.1;
-                    for (const setback of SETBACKS) {
-                        const forms: Array<[string, number, number]> = kind === "house"
-                            // The plot's front (a metre of verge past the garden's gate) on the lane's verge; local +z toward the lane.
-                            ? [["", LANE_WIDTH / 2 + 0.3 + FOOTPRINT.house.z1, -1]]
-                            : [["yard", LANE_WIDTH / 2 + YARD_FRONT, 1], ["paddock", LANE_WIDTH / 2 + PADDOCK_FRONT, -1]];
-                        for (const [form, back, facing] of forms) {
-                            const d = back + jitter + setback;
-                            const rotation = Math.round((Math.atan2(nx * facing, nz * facing) + turn) * 1000) / 1000;
-                            const x = Math.round((px + nx * d) * 1000) / 1000;
-                            const z = Math.round((pz + nz * d) * 1000) / 1000;
-                            const plot: HomePlot = {id: `candidate:${kind}:${li}:${i}:${s}:${side}:${setback}${form ? `:${form}` : ""}`, kind, x, z, rotation, ...(kind === "smallholding" ? {barn: true} : {})};
-                            out.push({plot, lane: li, side, along: run + s, setback});
-                        }
-                    }
-                }
-            }
-            run += length;
-        }
-    });
-    return out;
-}
-
-/** Packs each lane's sides in turn from the lane's start (the first candidate that fits at each place, then on along the lane), the plots ordered by distance from the village's middle. For planning. */
-export function packHamletSlots(): HomePlot[] {
-    const middle = villageMiddle();
-    const taken = defaultHomePlots().map(plotFootprint);
-    const packed = {house: [] as Array<{plot: HomePlot; score: number}>, smallholding: [] as Array<{plot: HomePlot; score: number}>};
-    for (const kind of ["smallholding", "house"] as const) {
-        const byLaneSide = new Map<string, Candidate[]>();
-        for (const c of laneCandidates(kind)) {
-            const key = `${c.lane}:${c.side}`;
-            const list = byLaneSide.get(key);
-            if (list) list.push(c);
-            else byLaneSide.set(key, [c]);
-        }
-        byLaneSide.forEach((list) => {
-            list.sort((a, b) => a.along - b.along || a.setback - b.setback);
-            for (const c of list) {
-                const score = fitness(c.plot, middle);
-                if (score === null) continue;
-                const footprint = plotFootprint(c.plot);
-                if (taken.some((other) => overlap(footprint, other, PLOT_GAP))) continue;
-                taken.push(footprint);
-                packed[kind].push({plot: c.plot, score});
-            }
-        });
-        packed[kind].sort((a, b) => a.score - b.score || a.plot.x - b.plot.x || a.plot.z - b.plot.z);
-    }
-    return [...packed.house.map((p) => p.plot), ...packed.smallholding.map((p) => p.plot)];
-}
-
 /** One plot of the hamlet's plan: on lane `lane`, `at` metres along it, on its `side` (1: to the right of the lane's way, -1: the left), stood `back` metres further back than its verge; a smallholding's `form` (its yard or its paddock toward the lane). */
 export type HamletPlanEntry = {kind: HomePlot["kind"]; lane: number; at: number; side: 1 | -1; back?: number; form?: "yard" | "paddock"; turn?: number};
 
-/** Where a plan entry's plot stands, in the lane's frame at that point (as `laneCandidates` places them). */
+/**
+ * Where a plan entry's plot stands, in the lane's frame at that point: a cottage with its garden's gate on the verge,
+ * facing the lane; a smallholding with its barn's long side along the lane, its yard toward it and the paddock behind
+ * ("yard"), or the paddock along the lane and the barn behind ("paddock").
+ */
 export function poseOnLane(entry: HamletPlanEntry, id: string): HomePlot {
     const lane = HAMLET_LANES[entry.lane].points;
     let left = entry.at;
@@ -433,6 +350,20 @@ export function reservedPlots(): HomePlot[] {
 
 let reserved: Array<{plot: HomePlot; corners: Array<{x: number; z: number}>; box: Rect}> | null = null;
 
+/** Inside a convex quadrilateral, whichever way its corners wind (a footprint's corners turn with its plot's frame). */
+function insideQuad(corners: ReadonlyArray<{x: number; z: number}>, x: number, z: number): boolean {
+    let sign = 0;
+    for (let i = 0; i < corners.length; i++) {
+        const p = corners[i];
+        const q = corners[(i + 1) % corners.length];
+        const cross = (q.x - p.x) * (z - p.z) - (q.z - p.z) * (x - p.x);
+        if (cross === 0) continue;
+        if (sign === 0) sign = Math.sign(cross);
+        else if (Math.sign(cross) !== sign) return false;
+    }
+    return true;
+}
+
 /** Is this point on a reserved plot's land (past today's two: their ground was the map's before)? */
 export function reservedAt(x: number, z: number): boolean {
     reserved ??= SLOTS.map((plot) => {
@@ -441,13 +372,17 @@ export function reservedAt(x: number, z: number): boolean {
     });
     for (const r of reserved) {
         if (x < r.box.x0 || x > r.box.x1 || z < r.box.z0 || z > r.box.z1) continue;
-        let inside = true;
-        for (let i = 0; i < 4 && inside; i++) {
-            const p = r.corners[i];
-            const q = r.corners[(i + 1) % 4];
-            inside = (q.x - p.x) * (z - p.z) - (q.z - p.z) * (x - p.x) <= 0;
-        }
-        if (inside) return true;
+        if (insideQuad(r.corners, x, z)) return true;
+    }
+    return false;
+}
+
+/** On or within `r` metres of reserved land (a point whose animals spread a little round it: a cluster's members). */
+export function reservedNear(x: number, z: number, r: number): boolean {
+    if (reservedAt(x, z)) return true;
+    for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        if (reservedAt(x + Math.cos(a) * r, z + Math.sin(a) * r)) return true;
     }
     return false;
 }
@@ -460,7 +395,34 @@ export type PlotSpots = {plot: HomePlot; door: {x: number; y: number; z: number}
 
 const spotCache = new Map<string, PlotSpots>();
 
-/** A plot's doors and outdoor spots (world). */
+/**
+ * A house plot's outdoor spots (local, the cottage facing +z), in order of preference, more than it needs: the
+ * front lawn either side of the path inside the picket fence (12), the passages beside the house (4) and the back
+ * garden (4), then spares. Each with the bodies it takes.
+ */
+const HOUSE_SPOTS: Array<{x: number; z: number; sizes: readonly SpotSize[]; where: PlotSpot["where"]}> = [
+    ...[3.9, 5.5, 7.1].flatMap((z) => [-3.6, -2, 1.8, 3.4].map((x) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const}))),
+    ...[[3.9, -0.9], [3.9, 0.9], [-3.6, -1], [-3.6, 1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const})),
+    ...[[-2.6, -3.6], [-0.8, -3.6], [1, -3.6], [-1.8, -4.7]].map(([x, z]) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const})),
+    ...[[0.2, -4.7], [-3.6, 3], [3.9, -2.4], [-3.4, -2.6]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const}))
+];
+/** How many outdoor spots each plot keeps (its capacity out of doors). */
+export const HOUSE_SPOT_COUNT = 20;
+export const SMALLHOLDING_SPOT_COUNT = {paddock: 12, yard: 6, run: 6} as const;
+
+/**
+ * A spot no resident may take: on something the props lay on a plot (beds, compost, a water butt, hay, a trough, the
+ * coop's house: `onHomeKeepOut`, any plot's), on a growing crop, or on a lane.
+ */
+function spotBlocked(x: number, z: number): boolean {
+    return onHomeKeepOut(x, z, reservedPlots(), 0.3) !== null || cropAt(x, z) !== null || laneDistance(x, z) < LANE_WIDTH / 2 + 0.3;
+}
+
+/**
+ * A plot's doors and outdoor spots (world). The door and the window follow the cottage's size (`cottageStyle`), a
+ * barn's door its size (`barnStyle`). Spots on the props' beds, compost, hay, troughs or the coop's house, on crops
+ * or on a lane are left out for the next of their kind.
+ */
 export function plotSpots(plot: HomePlot): PlotSpots {
     const key = `${plot.id}|${plot.x}|${plot.z}|${plot.rotation}`;
     const cached = spotCache.get(key);
@@ -470,32 +432,51 @@ export function plotSpots(plot: HomePlot): PlotSpots {
         const w = frame.toWorld(lx, lz);
         return {x: w.x, y: y ?? sampleGround(w.x, w.z).height, z: w.z};
     };
+    /** The first `count` of these that are free, and clear of the spots already taken (no two within 1.3 m). */
+    const taken: PlotSpot[] = [];
+    const take = (list: Array<{x: number; z: number; sizes: readonly SpotSize[]; where: PlotSpot["where"]}>, count: number): PlotSpot[] => {
+        const out: PlotSpot[] = [];
+        for (const spot of list) {
+            if (out.length >= count) break;
+            const w = at(spot.x, spot.z);
+            if (spotBlocked(w.x, w.z) || taken.some((other) => Math.hypot(other.x - w.x, other.z - w.z) < 1.3)) continue;
+            const placed: PlotSpot = {...w, sizes: spot.sizes, where: spot.where};
+            out.push(placed);
+            taken.push(placed);
+        }
+        return out;
+    };
     let out: PlotSpots;
     if (plot.kind === "house") {
-        const halfD = COTTAGE.depth / 2;
-        // The lawn either side of the path (the gate's gap is near x = 0), inside the picket fence.
-        const lawn: Array<[number, number]> = [[-3, halfD + 2], [3, halfD + 2], [-3, halfD + 4], [3, halfD + 4], [-2.2, GARDEN.gateZ - 1.2], [2.2, GARDEN.gateZ - 1.2]];
+        const k = cottageStyle(plot).scale;
+        const halfD = (COTTAGE.depth / 2) * k;
         out = {
             plot,
             door: at(0, halfD + 0.3, frame.floor),
-            window: at(1.6, halfD + 0.05, frame.floor + 1.2),
-            spots: lawn.map(([lx, lz]) => ({...at(lx, lz), sizes: ["small", "medium", "large"] as const, where: "lawn" as const}))
+            window: at(1.6 * k, halfD + 0.05, frame.floor + 1.2 * k),
+            spots: take(HOUSE_SPOTS, HOUSE_SPOT_COUNT)
         };
     } else {
         const rect = paddockRect(plot);
         const spots: PlotSpot[] = [];
-        // The paddock: four by three inside its fence.
-        for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) spots.push({...at(rect.x0 + 1.2 + (i + 0.5) * (rect.x1 - rect.x0 - 2.4) / 4, rect.z0 + 1.1 + (j + 0.5) * (rect.z1 - rect.z0 - 2.2) / 3), sizes: ["medium", "large"], where: "paddock"});
+        // The paddock: four by three inside its fence (then a five by four grid's for spares).
+        const grid = (nx: number, nz: number) => Array.from({length: nx * nz}, (_, n) => ({
+            x: rect.x0 + 1.2 + ((n % nx) + 0.5) * (rect.x1 - rect.x0 - 2.4) / nx,
+            z: rect.z0 + 1.1 + (Math.floor(n / nx) + 0.5) * (rect.z1 - rect.z0 - 2.2) / nz,
+            sizes: ["medium", "large"] as const,
+            where: "paddock" as const
+        }));
+        spots.push(...take([...grid(4, 3), ...grid(5, 4)], SMALLHOLDING_SPOT_COUNT.paddock));
         // The yard: in front of the barn, on the side away from the paddock.
         const yardZ = rect.z0 > 0 ? -5 : 5;
-        for (const lx of [-5, -3, -1, 1, 3, 5]) spots.push({...at(lx, yardZ), sizes: ["small", "medium"], where: "yard"});
-        // The coop's run: round the coop.
+        spots.push(...take([...[-5, -3, -1, 1, 3, 5].map((x) => ({x, z: yardZ})), ...[-4, -2, 0, 2, 4].map((x) => ({x, z: yardZ * 0.84})), ...[-6, 6].map((x) => ({x, z: yardZ * 0.6})), ...[-6, 6].map((x) => ({x, z: 0}))].map((p) => ({...p, sizes: ["small", "medium"] as const, where: "yard" as const})), SMALLHOLDING_SPOT_COUNT.yard));
+        // The coop's run: round the coop (its house is a keep-out, its run open).
         const coop = coopSpot(plot);
-        for (let k = 0; k < 6; k++) {
-            const a = (k / 6) * Math.PI * 2 + 0.3;
-            spots.push({...at(coop.x + Math.cos(a) * 1.5, coop.z + Math.sin(a) * 1.5), sizes: ["small"], where: "run"});
-        }
-        out = {plot, door: at(0, yardZ > 0 ? 3.4 : -3.4), coopDoor: at(coop.x, coop.z), spots};
+        const ring = (r: number, phase: number) => Array.from({length: 6}, (_, n) => ({x: coop.x + Math.cos((n / 6) * Math.PI * 2 + phase) * r, z: coop.z + Math.sin((n / 6) * Math.PI * 2 + phase) * r, sizes: ["small"] as const, where: "run" as const}));
+        spots.push(...take([...ring(1.5, 0.3), ...ring(2, 0.82), ...ring(2.5, 0.3), ...ring(3, 0.82)], SMALLHOLDING_SPOT_COUNT.run));
+        // The barn's door, at the front of the barn as drawn (its size: a smaller farm shed's is nearer).
+        const door = 2.2 * barnStyle(plot).size[2] + 1.2;
+        out = {plot, door: at(0, yardZ > 0 ? door : -door), coopDoor: at(coop.x, coop.z), spots};
     }
     spotCache.set(key, out);
     return out;

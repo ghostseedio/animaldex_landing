@@ -20,7 +20,7 @@ import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
-import {reservedAt} from "@/ark-scene/map/hamlet";
+import {reservedAt, reservedNear} from "@/ark-scene/map/hamlet";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
@@ -283,7 +283,8 @@ class WorldSampler implements ArkMapSampler {
                 const x = (random() * 2 - 1) * this.half;
                 const z = (random() * 2 - 1) * this.half;
                 const s = sampleGround(x, z);
-                if (!ok(s, x, z)) continue;
+                // (Never on the hamlet's reserved plots: hamlet.ts.)
+                if (!ok(s, x, z) || reservedAt(x, z)) continue;
                 if (list.some((anchor) => anchor.name === name && Math.hypot(anchor.x - x, anchor.z - z) < radius * 6)) continue;
                 at(name, x, z, radius, tags);
                 found++;
@@ -307,6 +308,8 @@ class WorldSampler implements ArkMapSampler {
         if (this.pointList) return this.pointList;
         const points: AttachPoint[] = [];
         const push = (tag: AttachTag, key: string, x: number, y: number, z: number, normal: [number, number, number], tangent: [number, number, number], zone?: ArkZone) => {
+            // Nothing on or by the hamlet's reserved plots (hamlet.ts): its residents' alone (a cluster spreads round its point).
+            if (reservedNear(x, z, 1.2)) return;
             points.push({id: `${tag}:${key}`, tag, x, y, z, normal, tangent, size: SIZES[tag], zone: zone ?? landZone(sampleGround(x, z))});
         };
         // The graphics lane's attach points (`sampler.ts`, docs/ark/graphics-interface.md): leaves round every tree's crown,
@@ -317,8 +320,8 @@ class WorldSampler implements ArkMapSampler {
         for (const point of allAttachPoints()) {
             const tag = SCENERY_TAG[point.tag];
             if (!tag) continue;
-            // Nothing on the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
-            if (reservedAt(point.position.x, point.position.z)) continue;
+            // Nothing on or by the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
+            if (reservedNear(point.position.x, point.position.z, 1.2)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
             // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
             const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.001);

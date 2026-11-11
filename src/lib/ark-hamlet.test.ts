@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import population from "@/ark-scene/fixtures/hamlet-population.json";
 import slots from "@/ark-scene/map/hamlet-slots.json";
-import {DOOR_SECONDS, HAMLET_STEP_SECONDS, hamletState, homePlots, houseCount, outKind, outShare, planHamletSlots, plotOf, plotSpots, reservedAt, reservedPlots, smallholdingCount, spotSize, type HamletResident} from "@/ark-scene/map/hamlet";
+import {DOOR_SECONDS, HAMLET_STEP_SECONDS, HOUSE_SPOT_COUNT, MAX_HOUSES, MAX_SMALLHOLDINGS, SMALLHOLDING_SPOT_COUNT, hamletState, homePlots, houseCount, outKind, outShare, planHamletSlots, planWithReport, plotFootprint, plotOf, plotSpots, reservedAt, reservedPlots, smallholdingCount, spotSize, type HamletResident} from "@/ark-scene/map/hamlet";
+import {cottageStyle, onHomeKeepOut, plotFrame} from "@/ark-scene/props/home-layout";
+import {cropAt} from "@/ark-scene/fields";
+import {COTTAGE} from "@/ark-scene/micro-decor";
+import {laneDistance, LANE_WIDTH} from "@/ark-scene/world";
 import {validateCapacity, validatePlots, validatePopulation, CROWD_MAX} from "@/ark-scene/map/validate-hamlet";
 import {validateMap} from "@/ark-scene/map/validate";
 import {defaultHomePlots} from "@/ark-scene/props/home-layout";
@@ -46,8 +50,12 @@ test("hamlet: plots by the dry run's rule, today's cottage and barn first, appen
         const more = homePlots(h + 130, 160);
         for (const plot of now) assert.deepEqual(more.find((p) => p.id === plot.id), plot, plot.id);
     }
+    // Home growth (2026-11-11): the reserved land holds the full cap, 16 houses and 6 smallholdings.
     const all = reservedPlots();
-    assert.ok(all.filter((p) => p.kind === "house").length >= 7 && all.filter((p) => p.kind === "smallholding").length >= 4, `${all.length} plots`);
+    assert.equal(all.filter((p) => p.kind === "house").length, MAX_HOUSES);
+    assert.equal(all.filter((p) => p.kind === "smallholding").length, MAX_SMALLHOLDINGS);
+    assert.deepEqual(homePlots(3159, 435), all.slice(0, 2).concat(all.slice(2).filter((p) => p.kind === "house"), all.slice(2).filter((p) => p.kind === "smallholding")));
+    assert.deepEqual(planWithReport().misses, [], "every entry of the hamlet's plan has its plot");
 });
 
 test("hamlet: the reserved slots are fresh for this terrain, apart, their houses and barns clear, on dry land", () => {
@@ -129,4 +137,47 @@ test(`hamlet + map: no more than ${CROWD_MAX} cat-sized animals in a 1 m cube at
     const report = validatePopulation(residents(1), hours, DAY);
     assert.deepEqual(report.failures.map((f) => `${f.check}: ${f.detail}`), []);
     assert.ok(report.mostPerCell <= CROWD_MAX && report.residents === 1198, `${report.mostPerCell} in a cell, ${report.residents} residents`);
+});
+
+test("hamlet: reservedAt holds on every slot (its origin, its footprint's middle; either winding of its corners), nowhere else", () => {
+    for (const plot of reservedPlots().slice(2)) {
+        const c = plotFootprint(plot);
+        const mid = {x: c.reduce((sum, p) => sum + p.x, 0) / 4, z: c.reduce((sum, p) => sum + p.z, 0) / 4};
+        assert.ok(reservedAt(plot.x, plot.z), `${plot.id} origin`);
+        assert.ok(reservedAt(mid.x, mid.z), `${plot.id} middle`);
+        // Just outside each corner, away from the middle: not reserved by this plot (the gap between plots).
+        for (const corner of c) {
+            const ox = corner.x + (corner.x - mid.x) * 0.08;
+            const oz = corner.z + (corner.z - mid.z) * 0.08;
+            assert.ok(!reservedAt(ox, oz) || reservedPlots().slice(2).some((other) => other.id !== plot.id && Math.hypot(other.x - ox, other.z - oz) < 20), `${plot.id} outside a corner`);
+        }
+    }
+    assert.ok(!reservedAt(-4, -4) && !reservedAt(-40, -26), "the lake, the woodland");
+});
+
+test("hamlet: every resident spot is free (off the props' beds, compost, butts, hay, troughs and coop houses, off crops and lanes), and the plots have their spots", () => {
+    const plots = reservedPlots();
+    for (const plot of plots) {
+        const spots = plotSpots(plot);
+        if (plot.kind === "house") assert.equal(spots.spots.length, HOUSE_SPOT_COUNT, plot.id);
+        else assert.equal(spots.spots.length, SMALLHOLDING_SPOT_COUNT.paddock + SMALLHOLDING_SPOT_COUNT.yard + SMALLHOLDING_SPOT_COUNT.run, plot.id);
+        for (const spot of spots.spots) {
+            const out = onHomeKeepOut(spot.x, spot.z, plots, 0.25);
+            assert.equal(out, null, `${plot.id} ${spot.where} spot on ${out?.what}`);
+            assert.equal(cropAt(spot.x, spot.z), null, `${plot.id} ${spot.where} spot on a crop`);
+            assert.ok(laneDistance(spot.x, spot.z) > LANE_WIDTH / 2, `${plot.id} ${spot.where} spot on a lane`);
+        }
+        // Spots at least a body apart: no two in one place.
+        for (let i = 0; i < spots.spots.length; i++) for (let j = i + 1; j < spots.spots.length; j++) assert.ok(Math.hypot(spots.spots[i].x - spots.spots[j].x, spots.spots[i].z - spots.spots[j].z) > 1.2, `${plot.id} spots ${i} and ${j}`);
+    }
+});
+
+test("hamlet: a house's door and window follow its cottage's size", () => {
+    for (const plot of reservedPlots().filter((p) => p.kind === "house")) {
+        const k = cottageStyle(plot).scale;
+        const local = plotFrame(plot).toLocal(plotSpots(plot).door.x, plotSpots(plot).door.z);
+        assert.ok(Math.abs(local.z - ((COTTAGE.depth / 2) * k + 0.3)) < 1e-6 && Math.abs(local.x) < 1e-6, plot.id);
+        const window = plotFrame(plot).toLocal(plotSpots(plot).window!.x, plotSpots(plot).window!.z);
+        assert.ok(Math.abs(window.x - 1.6 * k) < 1e-6, plot.id);
+    }
 });

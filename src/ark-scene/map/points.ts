@@ -53,6 +53,8 @@ export type SlotKind = "core" | "edge" | "cover" | "plain";
 export type SlotPick = {point: SpawnPoint; level: number; x: number; z: number};
 
 const GRID = 2.5;
+/** A borrowed list's least size: a zone borrowing a tag takes the nearest zone's with at least this many cells. */
+const BORROW_ROOM = 12;
 /** No two tags' launch points nearer than this (m), where the ground allows. */
 const CLEAR = 3;
 /** The laps round a cell (under a cell, so never another cell's middle): an own zone's, and a borrowing zone's. */
@@ -232,11 +234,17 @@ export class MapPoints {
     /** The list a zone's animal of this tag uses: its own zone's (`own`), else the nearest zone's that has some. */
     partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean; borrowers?: ArkZone[]} {
         const partitions = this.partitions(tag, wet);
+        // A zone with only a stray few of a tag's cells (its edge, where another zone's ground bleeds in) borrows too: its
+        // clusters would lap those few cells hundreds deep.
+        const biggest = Math.max(...Array.from(partitions.values()).map((list) => list.length), 0);
+        const borrows = (other: ArkZone) => (partitions.get(other)?.length ?? 0) < Math.min(BORROW_ROOM, biggest);
         const own = partitions.get(zone);
-        if (own?.length) return {list: own, own: true};
+        if (own?.length && !borrows(zone)) return {list: own, own: true};
         const best = this.nearestPartition(partitions, zone);
-        // The zones that borrow the same list (each zone with none of the tag's cells borrows the nearest zone's), in a fixed order.
-        const borrowers = ARK_ZONES.filter((other) => !partitions.get(other)?.length && this.nearestPartition(partitions, other) === best);
+        if (best === own) return {list: own!, own: true};
+        // The zones that borrow the same list (each zone with none or a stray few of the tag's cells borrows the nearest
+        // roomy zone's), in a fixed order.
+        const borrowers = ARK_ZONES.filter((other) => borrows(other) && this.nearestPartition(partitions, other) === best);
         return {list: best, own: false, borrowers};
     }
 
@@ -244,10 +252,13 @@ export class MapPoints {
         const site = ZONE_SITES[zone] ?? ZONE_SITES.farm_garden;
         let best: SpawnPoint[] = [];
         let distance = Infinity;
+        // The nearest zone's with room to share (a zone's stray few cells of a tag at its edge, a farm's tag bleeding into
+        // the lake's meadow, would pile every borrower onto one cell); with none that big, the biggest.
+        const roomy = Math.min(BORROW_ROOM, Math.max(...Array.from(partitions.values()).map((list) => list.length), 0));
         for (const [other, list] of Array.from(partitions.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
             const s = ZONE_SITES[other];
             const d = Math.hypot(s.x - site.x, s.z - site.z);
-            if (list.length && d < distance) {
+            if (list.length >= roomy && list.length && d < distance) {
                 distance = d;
                 best = list;
             }
@@ -304,6 +315,15 @@ export class MapPoints {
         }
         const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap];
         return {point, level: own ? lap : lap + 1, x: point.x + ox, z: point.z + oz};
+    }
+
+    /** How many cells each zone owns (every tag's own list; each cell belongs to one tag): rule E's visible capacity (`capacity.ts`). */
+    cellsPerZone(): Map<ArkZone, number> {
+        const out = new Map<ArkZone, number>();
+        this.owned().forEach((cells) => {
+            for (const cell of cells) out.set(cell.zone, (out.get(cell.zone) ?? 0) + 1);
+        });
+        return out;
     }
 
     /** Every launch point (for the report, the contact sheets and the tests). */

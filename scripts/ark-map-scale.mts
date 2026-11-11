@@ -14,6 +14,7 @@ import {readFileSync, writeFileSync} from "node:fs";
 import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {validatePopulation} from "../src/ark-scene/map/validate-hamlet.ts";
+import {zoneCapacities} from "../src/ark-scene/map/capacity.ts";
 import {islandHours} from "../src/lib/ark-clock.ts";
 import type {ArkAnimal, ArkZone} from "../src/ark-scene/types.ts";
 
@@ -56,6 +57,9 @@ for (const scale of ["1", "3"] as const) {
     const report = validatePopulation(animals, hours, DAY);
     const by = new Map<string, number>();
     for (const f of report.failures) by.set(f.check, (by.get(f.check) ?? 0) + 1);
-    console.log(`${scale}x: ${animals.length} animals, ${report.residents} residents on ${report.plots} plots; out at most ${report.outMost} (${(report.outShare * 100).toFixed(1)}% of residents on average); most per 1 m cell ${report.mostPerCell}, cells over the limit ${report.cellsOver}; failures ${report.failures.length} ${JSON.stringify(Object.fromEntries(by))}; ${Math.round(performance.now() - started)} ms`);
+    console.log(`${scale}x: ${animals.length} animals, ${report.residents} residents on ${report.plots} plots; out at most ${report.outMost} (${(report.outShare * 100).toFixed(1)}% of residents on average); wild resting past their zone's capacity ${report.resting}; most per 1 m cell ${report.mostPerCell}, cells over the limit ${report.cellsOver}; failures ${report.failures.length} ${JSON.stringify(Object.fromEntries(by))}; ${Math.round(performance.now() - started)} ms`);
+    const perZone = new Map<string, number>();
+    for (const animal of animals) perZone.set(animal.zone, (perZone.get(animal.zone) ?? 0) + 1);
+    console.log(`   zone: animals / visible capacity: ${Array.from(zoneCapacities().entries()).map(([zone, cap]) => `${zone} ${perZone.get(zone) ?? 0}/${cap}`).join(", ")}`);
     for (const f of report.failures.slice(0, 8)) console.log(`  ${f.check}: ${f.detail}`);
 }

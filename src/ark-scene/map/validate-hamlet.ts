@@ -19,6 +19,7 @@
 import {homeObstacles, type HomePlot} from "@/ark-scene/props/home-layout";
 import {hamletState, plotFootprint, plotSpots, reservedAt, reservedPlots, spotSize, type HamletResident} from "@/ark-scene/map/hamlet";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
+import {withinCapacity, zoneCapacity} from "@/ark-scene/map/capacity";
 import {arkBody} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {sampleGround} from "@/ark-scene/world";
@@ -49,7 +50,8 @@ export function validatePlots(plots: readonly HomePlot[] = reservedPlots()): Ham
     const failures: HamletFailure[] = [];
     const prints = plots.map((plot) => plotFootprint(plot));
     for (let i = 0; i < plots.length; i++) {
-        for (let j = i + 1; j < plots.length; j++) if (overlaps(prints[i], prints[j])) failures.push({check: "plot_overlap", detail: `${plots[i].id} overlaps ${plots[j].id}`});
+        // (Today's cottage and barn are the scenery's own, drawn as they always were: their gardens and yards meet.)
+        for (let j = Math.max(i + 1, 2); j < plots.length; j++) if (overlaps(prints[i], prints[j])) failures.push({check: "plot_overlap", detail: `${plots[i].id} overlaps ${plots[j].id}`});
         if (i < 2) continue; // (today's cottage and barn are the scenery's own)
         const plot = plots[i];
         for (const corner of prints[i]) {
@@ -89,11 +91,13 @@ export function validateCapacity(residents: readonly HamletResident[], hours: (e
 }
 
 /** Where each animal stands now on the ground (or a perch): the map's place, and a resident out of doors at its spot. */
-function standing(animals: readonly ArkAnimal[], placed: Map<string, Placement>, out: Map<string, {at: {x: number; y: number; z: number}}>): Array<{id: string; x: number; y: number; z: number}> {
+function standing(animals: readonly ArkAnimal[], placed: Map<string, Placement>, out: Map<string, {at: {x: number; y: number; z: number}}>, visible: ReadonlySet<string>): Array<{id: string; x: number; y: number; z: number}> {
     const list: Array<{id: string; x: number; y: number; z: number}> = [];
     for (const animal of animals) {
         const place = placed.get(animal.id);
         if (!place) continue;
+        // (Past its zone's visible capacity, a wild animal rests out of sight: rule E, `capacity.ts`.)
+        if (!place.hamlet && !visible.has(animal.id)) continue;
         if (place.hamlet) {
             const o = out.get(animal.id);
             if (o && arkBody(animal).metres >= CROWD_LENGTH) list.push({id: animal.id, x: o.at.x, y: o.at.y, z: o.at.z});
@@ -107,7 +111,7 @@ function standing(animals: readonly ArkAnimal[], placed: Map<string, Placement>,
 }
 
 /** A population's crowding and reserved land at one moment, and its hamlet's capacity through a day. */
-export function validatePopulation(animals: readonly ArkAnimal[], hours: (epochSeconds: number) => number, day: number): {failures: HamletFailure[]; residents: number; plots: number; mostPerCell: number; cellsOver: number; outMost: number; outShare: number} {
+export function validatePopulation(animals: readonly ArkAnimal[], hours: (epochSeconds: number) => number, day: number): {failures: HamletFailure[]; residents: number; plots: number; mostPerCell: number; cellsOver: number; outMost: number; outShare: number; resting: number} {
     const placed = placeAnimals([...animals]);
     const residents: HamletResident[] = animals.flatMap((animal) => {
         const plot = placed.get(animal.id)?.hamlet?.plot;
@@ -115,6 +119,14 @@ export function validatePopulation(animals: readonly ArkAnimal[], hours: (epochS
     });
     const failures = validatePlots();
     const capacity = validateCapacity(residents, hours, day);
+    // Rule E for the wild animals: each zone shows its visible capacity (Home's less the hamlet's spots, which its
+    // residents' own rotation keeps to), the rest rest out of sight.
+    const hamletSpots = reservedPlots().reduce((sum, plot) => sum + plotSpots(plot).spots.length, 0);
+    const wild = animals.filter((animal) => !placed.get(animal.id)?.hamlet);
+    const visible = withinCapacity(wild, (zone) => {
+        const cap = zoneCapacity(zone);
+        return cap === null ? null : zone === "farm_garden" ? Math.max(cap - hamletSpots, 0) : cap;
+    });
     failures.push(...capacity.failures);
     // Crowding at midday and at midnight.
     let mostPerCell = 0;
@@ -122,7 +134,7 @@ export function validatePopulation(animals: readonly ArkAnimal[], hours: (epochS
     for (const t of [12 * 3600, 0]) {
         const {out} = hamletState(residents, day + t, hours);
         const cells = new Map<string, number>();
-        for (const s of standing(animals, placed, out)) {
+        for (const s of standing(animals, placed, out, visible)) {
             // A 1 m cell in 3D: a gecko on the wall is not in the cell of a cat on the lawn below it.
             const key = `${Math.floor(s.x)},${Math.floor(s.y)},${Math.floor(s.z)}`;
             cells.set(key, (cells.get(key) ?? 0) + 1);
@@ -138,8 +150,10 @@ export function validatePopulation(animals: readonly ArkAnimal[], hours: (epochS
     for (const animal of animals) {
         const place = placed.get(animal.id);
         if (!place || place.hamlet || place.micro || place.canopy || place.water) continue;
-        if (reservedAt(place.x, place.z)) failures.push({check: "reserved_land", detail: `${animal.model_slug} on a reserved plot at ${place.x.toFixed(1)},${place.z.toFixed(1)}`});
+        // (A partner by its host stands where its host does, a step aside: the host is what must keep off.)
+        const host = place.host ? placed.get(place.host.id) : null;
+        if (host ? reservedAt(host.x, host.z) : reservedAt(place.x, place.z)) failures.push({check: "reserved_land", detail: `${animal.model_slug} on a reserved plot at ${place.x.toFixed(1)},${place.z.toFixed(1)}`});
     }
     const plots = new Set(residents.map((r) => r.plot.id)).size;
-    return {failures, residents: residents.length, plots, mostPerCell, cellsOver, outMost: capacity.most, outShare: capacity.share};
+    return {failures, residents: residents.length, plots, mostPerCell, cellsOver, outMost: capacity.most, outShare: capacity.share, resting: wild.length - visible.size};
 }

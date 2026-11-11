@@ -340,6 +340,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         if (!holds(g.tags) || (g.water !== null) !== wet) return false;
         if (wet) return g.depth >= (species.attach === "water" ? 0.5 : 0.05);
         if (sampler.blocked(x, z, radius)) return false;
+        // Never on the hamlet's reserved plots (a lap's offset or a member's lattice step from a cell beside one).
+        if (sampler.reserved?.(x, z)) return false;
         return !walker || !sampler.walkable || sampler.walkable(x, z, maxSlope);
     };
     const okFor = (tag: MapTag, wet: boolean) => okOn(wet, (tags) => tags.includes(tag));
@@ -380,7 +382,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
             chosen = {...choice, at};
             break;
         }
-        if (at) fallback ??= {...choice, at};
+        // Past every tag's first lap, the tag whose cell is least lapped (a scarce borrowed list is not piled four deep).
+        if (at && (!fallback || pick.level < fallback.pick.level)) fallback = {...choice, at};
     }
     chosen ??= fallback;
     if (!chosen && !first) return null;
