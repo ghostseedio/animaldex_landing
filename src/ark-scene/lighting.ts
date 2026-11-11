@@ -34,7 +34,7 @@ const HDRI_SUN_BEARING = 0.59;
 import {ARK_DAYLIGHT, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME} from "@/ark-scene/glsl";
 import {daylightAt, type ArkDaylight} from "@/lib/ark-daylight";
 
-const SKY_SETTINGS = {turbidity: 5.5, rayleigh: 1.35, mieCoefficient: 0.0045, mieDirectionalG: 0.82};
+const SKY_SETTINGS = {turbidity: 3.2, rayleigh: 1.8, mieCoefficient: 0.003, mieDirectionalG: 0.82};
 
 /** The night: a deep blue dome, lighter at the horizon, with stars that twinkle a little. Faded in with `night`. */
 const NIGHT_VERTEX = `

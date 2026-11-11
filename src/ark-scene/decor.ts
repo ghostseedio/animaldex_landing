@@ -411,3 +411,64 @@ export function forestFill(): FillItem[] {
     fillCache = items;
     return items;
 }
+
+// MARK: - Rock shape (shared by vegetation.ts, which draws it, and sampler.ts, which puts attach points on it)
+
+const rockBumps = new Map<number, Array<[number, number, number]>>();
+
+/** The rock shape's radius along a unit direction (before its 1.1 × 0.62 × 0.95 squash and 0.18 lift), per variant. */
+export function rockRadius(variant: number, dx: number, dy: number, dz: number): number {
+    let bumps = rockBumps.get(variant);
+    if (!bumps) {
+        const random = seeded(551 + variant);
+        bumps = Array.from({length: 6}, () => {
+            const x = random() * 2 - 1;
+            const y = random() * 2 - 1;
+            const z = random() * 2 - 1;
+            const l = Math.hypot(x, y, z) || 1;
+            return [x / l, y / l, z / l] as [number, number, number];
+        });
+        rockBumps.set(variant, bumps);
+    }
+    let push = 0;
+    for (const [bx, by, bz] of bumps) push += Math.max(dx * bx + dy * by + dz * bz, 0) ** 3 * 0.22;
+    const facet = Math.floor((dx * 2.3 + dz * 1.7 + 4) % 3) * 0.015;
+    const grain = Math.sin(dx * 13.1 + variant) * Math.sin(dz * 11.7 + dy * 9.3) * 0.035;
+    return 0.85 * (0.85 + push - 0.08 * Math.abs(dy) + facet + grain);
+}
+
+/** A rock's own height squash (0.8–1.2), from where it lies, so every viewer and the attach points agree. */
+export function rockSquash(item: {x: number; z: number}): number {
+    const h = Math.sin(item.x * 12.9898 + item.z * 78.233) * 43758.5453;
+    return 0.8 + 0.4 * (h - Math.floor(h));
+}
+
+/** A point on a rock's surface in the world, along a direction in its own frame (y up), and the surface's rough normal. */
+export function rockSurfacePoint(item: DecorItem, variants: number, dx: number, dy: number, dz: number): {x: number; y: number; z: number; nx: number; ny: number; nz: number} {
+    const l = Math.hypot(dx, dy, dz) || 1;
+    const ux = dx / l;
+    const uy = dy / l;
+    const uz = dz / l;
+    const r = rockRadius(item.variant % variants, ux, uy, uz);
+    const squash = rockSquash(item);
+    const lx = ux * r * 1.1 * item.scale;
+    const ly = (uy * r * 0.62 + 0.18) * item.scale * squash;
+    const lz = uz * r * 0.95 * item.scale;
+    const c = Math.cos(item.rotation);
+    const sn = Math.sin(item.rotation);
+    // three's rotation about y: x' = x cos + z sin, z' = -x sin + z cos.
+    const x = item.x + lx * c + lz * sn;
+    const z = item.z - lx * sn + lz * c;
+    // The ellipsoid's normal: the direction divided by the squash, turned the same way.
+    let nx = ux / 1.1;
+    let ny = uy / (0.62 * squash);
+    let nz = uz / 0.95;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl;
+    ny /= nl;
+    nz /= nl;
+    return {x, y: item.y - DECOR_SINK_ROCK + ly, z, nx: nx * c + nz * sn, ny, nz: -nx * sn + nz * c};
+}
+
+/** How far the instanced decor is sunk (micro-decor.ts DECOR_SINK), repeated here to keep this module free of cycles. */
+const DECOR_SINK_ROCK = 0.08;

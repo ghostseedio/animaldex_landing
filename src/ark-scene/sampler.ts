@@ -15,7 +15,7 @@
  */
 
 import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
-import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {forestFill, rockSurfacePoint, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -263,6 +263,8 @@ export type AttachPoint = {
     zone: ArkZone | null;
     /** What it is on: a decor item's kind and index, the house, the ground. */
     host: string;
+    /** The host's kind: a decor kind ("broadleaf", "rock", "flower"…), "house", "lamp", "pond", "lake" or "ground". */
+    hostKind: string;
 };
 
 const SIZE: Record<AttachTag, [number, number]> = {
@@ -292,12 +294,16 @@ export function allAttachPoints(): AttachPoint[] {
     if (attachCache) return attachCache;
     const random = seeded(20261112);
     const points: AttachPoint[] = [];
+    const kinds = new Map<string, string>();
     const add = (tag: AttachTag, host: string, n: number, position: Vec3, normal: Vec3, zone: ArkZone | null, yaw = random() * Math.PI * 2) => {
-        points.push({id: `${tag}:${host}:${n}`, tag, spot: TAG_SPOT[tag], position, normal: normalise(normal), yaw, size: SIZE[tag], zone, host});
+        const hostKind = kinds.get(host) ?? (host.startsWith("lamp") ? "lamp" : host === "garden-pond" ? "pond" : host);
+        points.push({id: `${tag}:${host}:${n}`, tag, spot: TAG_SPOT[tag], position, normal: normalise(normal), yaw, size: SIZE[tag], zone, host, hostKind});
     };
     const zoneOf = (x: number, z: number) => zoneAt(sampleGround(x, z)) as ArkZone;
     const decor: DecorItem[] = worldDecor();
     const fill = forestFill();
+    decor.forEach((item, i) => kinds.set(`decor${i}`, item.kind));
+    fill.forEach((item, i) => kinds.set(`fill${i}`, item.kind));
 
     // Trees: bark on the trunk (outward), leaves round the crown (facing out and up), branches under it.
     const trees = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...fill.map((item, i) => ({item, host: `fill${i}`}))].filter(({item}) => TREES.has(item.kind));
@@ -313,12 +319,13 @@ export function allAttachPoints(): AttachPoint[] {
             add("bark", host, k, {x: item.x + Math.sin(a) * r, y: item.y + h, z: item.z + Math.cos(a) * r}, {x: Math.sin(a), y: 0, z: Math.cos(a)}, zone, 0);
         }
         const crownY = item.y + trunkHeight + (item.kind === "conifer" ? 1.2 * s : 1.0 * s);
-        const crownR = (item.kind === "rainforest" ? 2.4 : item.kind === "conifer" ? 1.1 : 1.6) * s;
+        const crownR = (item.kind === "rainforest" ? 3.0 : item.kind === "conifer" ? 1.3 : item.kind === "orchard" ? 1.3 : 2.1) * s;
         for (let k = 0; k < 6; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.15 + random() * 0.7;
             const out = {x: Math.sin(a) * Math.sqrt(1 - up * up), y: up, z: Math.cos(a) * Math.sqrt(1 - up * up)};
-            add("leaf", host, k, {x: item.x + out.x * crownR, y: crownY + out.y * crownR * 0.7, z: item.z + out.z * crownR}, {x: out.x * 0.4, y: 1, z: out.z * 0.4}, zone);
+            // Just outside the leaf cards, where a near leaf (a real leaf mesh) is put when the camera comes close.
+            add("leaf", host, k, {x: item.x + out.x * crownR * 1.12, y: crownY + out.y * crownR * 0.78, z: item.z + out.z * crownR * 1.12}, {x: out.x * 0.6, y: 1, z: out.z * 0.6}, zone);
         }
         for (let k = 0; k < 2; k++) {
             const a = random() * Math.PI * 2;
@@ -360,11 +367,12 @@ export function allAttachPoints(): AttachPoint[] {
         if (item.kind !== "rock") return;
         const zone = zoneOf(item.x, item.z);
         const s = item.scale;
-        for (let k = 0; k < 3; k++) {
+        // On the drawn surface itself (decor.ts rockSurfacePoint is the shape vegetation.ts draws).
+        for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
-            const up = random() * 0.8;
-            const n = normalise({x: Math.sin(a) * (1 - up), y: up, z: Math.cos(a) * (1 - up)});
-            add("rock_face", `decor${i}`, k, {x: item.x + n.x * 0.94 * s * 0.85, y: item.y + 0.18 * s + n.y * 0.53 * s * 0.85, z: item.z + n.z * 0.81 * s * 0.85}, n, zone);
+            const up = 0.1 + random() * 0.75;
+            const point = rockSurfacePoint(item, 3, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
+            add("rock_face", `decor${i}`, k, {x: point.x, y: point.y + 0.004, z: point.z}, {x: point.nx, y: point.ny, z: point.nz}, zone);
         }
         if (item.y < 0.4 && item.y > -0.7) {
             const a = random() * Math.PI * 2;

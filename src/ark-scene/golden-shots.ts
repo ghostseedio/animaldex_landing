@@ -22,11 +22,11 @@ export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "hous
  * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
  * (`sampler.ts`), framed close. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly.
  */
-export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "tide_pool" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
-    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 1.3},
+export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.9},
     bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house", distance: 1.1},
-    limpet_tidepool: {slug: "common-limpet", tag: "tide_pool", near: "tide_pools", distance: 1.2},
-    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.4}
+    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools", distance: 0.8},
+    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.2}
 };
 export type GoldenPlace = typeof GOLDEN_PLACES[number];
 
