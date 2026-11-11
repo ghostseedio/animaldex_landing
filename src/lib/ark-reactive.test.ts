@@ -174,6 +174,31 @@ test("a predator passes a herd: the first to notice calls, the alarm runs throug
     assert.ok(alert.length > 0, "they look at the wolf");
 });
 
+test("after running, it holds its ground while the predator is still in view (it never walks back toward it), and looks where it runs", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const deer = animal("deer", "red-deer", 0, 0, {shared: {doing: "graze"}});
+    const wolf = animal("wolf", "eurasian-wolf", -6, 0, {shared: {doing: "wander", moving: true, yaw: Math.PI / 2}});
+    // The wolf comes close, then backs off to 16 m and stands there, watching.
+    const frames = run(layer, [deer, wolf], 16, {move: (list, t) => {
+        const w = list.find((i) => i.id === "wolf")!;
+        const k = t - 1000;
+        w.shared.x = k < 3 ? -6 : -6 - Math.min((k - 3) * 2, 10);
+        w.shared.moving = k >= 3 && k < 8;
+    }});
+    const fled = frames.findIndex((f) => f.out.get("deer")!.action === "flee");
+    assert.ok(fled >= 0, "it runs");
+    const runningAhead = frames.slice(fled).filter((f) => f.out.get("deer")!.action === "flee" && f.out.get("deer")!.looking === "ahead").length;
+    assert.ok(runningAhead > 0, "running, it looks where it runs");
+    let peak = 0;
+    for (const f of frames.slice(fled)) {
+        const o = f.out.get("deer")!;
+        const off = Math.hypot(o.dx, o.dz);
+        peak = Math.max(peak, off);
+        // Toward the wolf (at -x) is a smaller dx; while it is still reacting it never gives back more than a step.
+        if (o.action === "alert" || o.action === "flee") assert.ok(off >= peak - 0.5, `holds its ground (${off.toFixed(2)} of ${peak.toFixed(2)} m, ${o.action})`);
+    }
+});
+
 // MARK: Scenario 2: a pack acts out a hunt (the pack mates not in the act stalk and stop short)
 
 test("a pack not acting out a meal stalks, fans out and never closes on the prey", () => {

@@ -715,6 +715,12 @@ export class ReactiveLayer {
                 speed = fleeSpeed(me);
                 faceYaw = Math.atan2(dir.x, dir.z);
                 crouchWant = p.defence.includes("flee_cover") ? 0.2 : 0;
+                // Running, it looks where it runs, with a glance back at the threat now and then (its own rhythm).
+                const glance = (world.now - agent.reactedAt + 2.2 * unit(me.id, "glance-back")) % 2.2 < 0.55;
+                if (!glance) {
+                    look = {x: me.shared.x + agent.offset.x + dir.x * 4, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z + agent.offset.z + dir.z * 4};
+                    lookLabel = "ahead";
+                }
             } else if (p.defence.includes("threat") && veryClose) {
                 action = "threat_display";
                 target = {...agent.offset};
@@ -789,7 +795,9 @@ export class ReactiveLayer {
         }
 
         // MARK: Keep to the shared layer: inside the envelope, and never onto prey.
-        const reach = this.envelope(me, action === "flee" || action === "shield_young" || action === "hide_behind_parent");
+        // Reacting or recovering, it keeps the room it fled into (it does not walk back toward a threat still in view);
+        // it eases back while it recovers, and is pulled in to its calm reach only once calm.
+        const reach = this.envelope(me, REACTING.has(action) || action === "recover");
         const tl = Math.hypot(target.x, target.z);
         if (tl > reach) {
             target = {x: (target.x / tl) * reach, z: (target.z / tl) * reach};
