@@ -203,6 +203,12 @@
             "auto": "włączony na tym urządzeniu",
             "hint": "Mniej szczegółów, by Ark działał płynniej na tym urządzeniu"
         },
+        "sound": {
+            "label": "Dźwięk",
+            "hint": "Głosy zwierząt i odgłosy wyspy. Wyłączony, dopóki go nie włączysz.",
+            "credits": "Autorzy dźwięków",
+            "empty": "Nie słychać jeszcze żadnych dźwięków."
+        },
         "a11y": {
             "scene": "Ark w 3D. Strzałki przesuwają widok, plus i minus przybliżają i oddalają, Escape zamyka kartę. Dalej jest lista tego, kto jest na pokładzie.",
             "list": "Wszystkie gatunki na pokładzie, według regionów",

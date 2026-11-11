@@ -12,6 +12,12 @@
  *   node scripts/ark-golden-shots.mjs --label before
  *   node scripts/ark-golden-shots.mjs --label before-gpu-proxy --devices phone --gpu swiftshader
  *   node scripts/ark-golden-shots.mjs --study natural,toon,real --label studies
+ *   node scripts/ark-golden-shots.mjs --animals red-fox,mallard --label animal-look     (the animal-look pass:
+ *            each species close up, the pass off ("before") then on ("after"); --wet adds a rain shot;
+ *            --rigged red-fox,... adds a moving shot of those (the rig playing: the look on a skinned mesh);
+ *            --detail adds a shot closer than a viewer can come, to judge the surface (the wet one is then close too);
+ *            --measure-animals measures each; the close-up skins come from the local build,
+ *            ~/animaldex-talking-models/ark-closeup, or --closeup-dir)
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
  *            --quality auto|high|medium|low  --gpu metal|swiftshader  --measure <ms>  --headed
  *
@@ -37,7 +43,7 @@ const arg = (name, fallback) => {
 };
 const flag = (name) => process.argv.includes(`--${name}`);
 
-const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"];
+const PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "reef_closeup", "kelp_forest", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "ant_bark", "waves_beach", "storm_trees", "fields_close"];
 const TIMES = ["day", "dusk", "night"];
 const DEVICES = {
     desktop: {viewport: {width: 1440, height: 900}, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpuThrottle: 1},
@@ -60,6 +66,12 @@ const quality = arg("quality", "auto");
 const gpu = arg("gpu", "metal");
 const measureMs = Number(arg("measure", "3000"));
 const studies = arg("study", "") ? arg("study", "").split(",") : [];
+const animals = arg("animals", "") ? arg("animals", "").split(",") : [];
+const rigged = new Set(arg("rigged", "") ? arg("rigged", "").split(",") : []);
+const closeUpDir = path.resolve(arg("closeup-dir", path.join(os.homedir(), "animaldex-talking-models", "ark-closeup")));
+// The props lane's close-ups (src/ark-scene/props/golden-props.ts): --props all, or --props bird_nest,cave_roost
+const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"];
+const propsShots = arg("props", "") ? (arg("props", "") === "all" ? PROPS_SHOTS : arg("props", "").split(",").filter((name) => PROPS_SHOTS.includes(name))) : [];
 
 // MARK: build + serve
 
@@ -91,14 +103,21 @@ writeFileSync(path.join(site, "golden.html"), `<!doctype html>
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     // The scene's own art is served from public/ (as the site serves it); the page and its script from .ark-golden/site.
-    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    // The animal-look pass's close-up skins from the local build (`/ark-closeup/<slug>/<version>.near.ktx2` → `<slug>/near.ktx2`).
+    const closeUp = /^\/ark-closeup\/(?:(manifest\.json)|([a-z0-9-]+)\/[0-9a-f]{12}\.near\.ktx2)$/.exec(url.pathname);
+    if (closeUp) {
+        const file = closeUp[1] ? path.join(closeUpDir, "manifest.json") : path.join(closeUpDir, closeUp[2], "near.ktx2");
+        if (!existsSync(file)) return response.writeHead(404).end();
+        return response.writeHead(200, {"Content-Type": closeUp[1] ? "application/json" : "image/ktx2", "Cache-Control": "no-store"}).end(readFileSync(file));
+    }
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
     if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".wasm") ? "application/wasm" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -166,7 +185,69 @@ async function renderer(page) {
     });
 }
 
-if (!studies.length) {
+if (animals.length) {
+    for (const deviceName of devices) {
+        const query = [quality === "auto" ? "" : `quality=${quality}`, `closeup=${encodeURIComponent(`${base}/ark-closeup`)}`].filter(Boolean).join("&");
+        const {context, page, errors} = await openPage(deviceName, query);
+        await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+        const failed = await page.evaluate(() => window.__arkGoldenError);
+        if (failed) throw new Error(failed);
+        const gpuName = await renderer(page);
+        const prepared = await page.evaluate(() => window.__arkGolden.prepare());
+        log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        const variants = [
+            {wetness: 0, suffix: "", moving: false, detail: false},
+            ...(flag("detail") ? [{wetness: 0, suffix: "-detail", moving: false, detail: true}] : []),
+            ...(flag("wet") ? [{wetness: 1, suffix: "-wet", moving: false, detail: flag("detail")}] : [])
+        ];
+        for (const time of times) {
+            for (const slug of animals) {
+                for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true, detail: false}] : [])]) {
+                    for (const look of [false, true]) {
+                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving")), detail: variant.detail}]);
+                        if (!shot.found) {
+                            log(deviceName, slug, "not in the fixture");
+                            break;
+                        }
+                        const file = `${deviceName}-${slug}-${time}${variant.suffix}-${look ? "after" : "before"}.png`;
+                        await page.screenshot({path: path.join(out, file)});
+                        const numbers = flag("measure-animals") ? await page.evaluate((ms) => window.__arkGolden.measure(ms), measureMs) : {};
+                        results.push({device: deviceName, gpu, gpuName, place: slug, time: `${time}${variant.suffix} ${look ? "after" : "before"}`, file, clear: shot.clear, closeUpSkins: shot.closeUpSkins, furShells: shot.furShells, rigged: shot.rigged, ...numbers});
+                        log(deviceName, slug, time + variant.suffix, look ? "after" : "before", JSON.stringify({clear: shot.clear, closeUp: shot.closeUpSkins, shells: shot.furShells, rigged: shot.rigged, ...numbers}));
+                    }
+                }
+            }
+        }
+        if (errors.length) {
+            writeFileSync(path.join(out, `errors-${deviceName}.txt`), errors.join("\n\n"));
+            log(deviceName, errors.length, "page errors (errors-" + deviceName + ".txt)");
+        }
+        await context.close();
+    }
+} else if (propsShots.length) {
+    for (const deviceName of devices) {
+        const {context, page, errors} = await openPage(deviceName, `props=1${quality === "auto" ? "" : `&quality=${quality}`}`);
+        await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+        const failed = await page.evaluate(() => window.__arkGoldenError);
+        if (failed) throw new Error(failed);
+        const gpuName = await renderer(page);
+        const prepared = await page.evaluate(() => window.__arkGolden.prepare());
+        log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        for (const shotName of propsShots) {
+            const shot = await page.evaluate((name) => window.__arkGolden.shootProps(name), shotName);
+            const file = `${deviceName}-props-${shotName}.png`;
+            await page.screenshot({path: path.join(out, file)});
+            const numbers = await page.evaluate((ms) => window.__arkGolden.measure(ms), measureMs);
+            results.push({device: deviceName, gpu, gpuName, place: `props:${shotName}`, time: "-", file, anchor: shot.anchor, view: shot.actual, props: shot.props, ...numbers});
+            log(deviceName, shotName, shot.anchor, `${numbers.intervalP50}ms p50 / ${numbers.intervalP95} p95, cpu ${numbers.cpuMs}, drain ${numbers.gpuDrainMs}, ${numbers.drawCalls} calls, ${numbers.triangles} tris, ${numbers.tier}`);
+        }
+        if (errors.length) {
+            writeFileSync(path.join(out, `errors-${deviceName}.txt`), errors.join("\n\n"));
+            log(deviceName, errors.length, "page errors (errors-" + deviceName + ".txt)");
+        }
+        await context.close();
+    }
+} else if (!studies.length) {
     for (const deviceName of devices) {
         const {context, page, errors} = await openPage(deviceName, quality === "auto" ? "" : `quality=${quality}`);
         await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});

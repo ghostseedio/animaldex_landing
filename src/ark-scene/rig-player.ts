@@ -58,6 +58,7 @@ import {
     type RigIndex,
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
+import {gripBones} from "@/ark-scene/map/grip";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -84,6 +85,8 @@ export type RigModel = {
     flightOpen: boolean;
     /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
     look: RigLookChain | null;
+    /** The bones that grip (feet, hands, claws: `map/grip.ts`), each with its rest position (model units). */
+    grips: Array<{bone: number; rest: {x: number; y: number; z: number}}>;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
 };
@@ -379,6 +382,7 @@ export class RigLibrary {
         });
         const mesh = skinned as SkinnedMesh | null;
         if (!mesh) throw new Error("no skinned mesh");
+        const grips = gripBones(mesh, extras.bones);
         const geometry = restGeometry(mesh, extras.bones);
         const restPivot = (name: string): [number, number, number] | null => {
             const bone = (mesh.skeleton.bones as Bone[]).find((b) => b.name === name);
@@ -434,6 +438,7 @@ export class RigLibrary {
             flight,
             flightOpen: entry.flight_fallback_open === true,
             look,
+            grips,
             usedAt: 0
         });
         this.onLoad(slug);

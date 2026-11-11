@@ -203,6 +203,12 @@
             "auto": "aktif untuk peranti ini",
             "hint": "Kurang perincian, supaya Ark lebih lancar pada peranti ini"
         },
+        "sound": {
+            "label": "Bunyi",
+            "hint": "Panggilan haiwan dan bunyi pulau. Dimatikan sehingga anda menghidupkannya.",
+            "credits": "Kredit bunyi",
+            "empty": "Belum ada bunyi didengar."
+        },
         "a11y": {
             "scene": "Ark dalam 3D. Kekunci anak panah menggerakkan paparan, tambah dan tolak untuk zum, Escape menutup kad. Senarai siapa di atas kapal menyusul.",
             "list": "Setiap spesies di atas kapal, mengikut wilayah",

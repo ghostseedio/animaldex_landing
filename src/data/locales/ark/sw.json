@@ -203,6 +203,12 @@
             "auto": "imewashwa kwa kifaa hiki",
             "hint": "Maelezo machache, ili Ark iende laini kwenye kifaa hiki"
         },
+        "sound": {
+            "label": "Sauti",
+            "hint": "Milio ya wanyama na sauti za kisiwa. Imezimwa hadi uiwashe.",
+            "credits": "Shukrani za sauti",
+            "empty": "Bado hakuna sauti iliyosikika."
+        },
         "a11y": {
             "scene": "Ark kwa 3D. Vitufe vya mishale vinasogeza mwonekano, kujumlisha na kutoa vinakuza, Escape hufunga kadi. Orodha ya walio ndani inafuata.",
             "list": "Kila spishi iliyo ndani, kwa eneo",

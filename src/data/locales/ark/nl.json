@@ -203,6 +203,12 @@
             "auto": "aan voor dit apparaat",
             "hint": "Minder details, voor een soepelere Ark op dit apparaat"
         },
+        "sound": {
+            "label": "Geluid",
+            "hint": "Dierengeluiden en de geluiden van het eiland. Uit tot je het aanzet.",
+            "credits": "Geluidsbronnen",
+            "empty": "Nog geen geluiden gehoord."
+        },
         "a11y": {
             "scene": "De Ark in 3D. Pijltjestoetsen verplaatsen het beeld, plus en min zoomen, Escape sluit een kaart. Daarna volgt de lijst van wie er aan boord is.",
             "list": "Elke soort aan boord, per regio",

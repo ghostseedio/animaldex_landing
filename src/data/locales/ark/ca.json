@@ -203,6 +203,12 @@
             "auto": "activada en aquest dispositiu",
             "hint": "Menys detalls, perquè l'Ark funcioni amb més fluïdesa en aquest dispositiu"
         },
+        "sound": {
+            "label": "So",
+            "hint": "Les crides dels animals i els sons de l'illa. Apagat fins que l'activis.",
+            "credits": "Crèdits del so",
+            "empty": "Encara no s'ha sentit cap so."
+        },
         "a11y": {
             "scene": "L'Ark en 3D. Les fletxes mouen la vista, més i menys fan zoom, Escape tanca una targeta. A continuació hi ha la llista de qui hi ha a bord.",
             "list": "Totes les espècies a bord, per regió",

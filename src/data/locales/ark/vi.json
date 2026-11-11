@@ -203,6 +203,12 @@
             "auto": "đang bật cho thiết bị này",
             "hint": "Ít chi tiết hơn, để Ark mượt hơn trên thiết bị này"
         },
+        "sound": {
+            "label": "Âm thanh",
+            "hint": "Tiếng kêu của động vật và âm thanh của hòn đảo. Tắt cho đến khi bạn bật.",
+            "credits": "Ghi công âm thanh",
+            "empty": "Chưa nghe thấy âm thanh nào."
+        },
         "a11y": {
             "scene": "Ark ở dạng 3D. Phím mũi tên di chuyển góc nhìn, phím cộng và trừ để thu phóng, Escape đóng thẻ. Danh sách những con vật trên tàu ở ngay sau.",
             "list": "Mọi loài trên tàu, theo khu vực",

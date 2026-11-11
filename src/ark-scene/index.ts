@@ -71,9 +71,13 @@ import {
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
+import {AnimalLook, attachLook, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {hasNestSource, microMurmuration, nestStageAt, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {hasNestSource, microMurmuration, nestSourceFromProps, nestStageAt, setFishSource, setNestSource, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
+import {fishSchoolsNear} from "@/ark-scene/fish-schools";
+import {arkDayNow} from "@/ark-scene/props";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -95,19 +99,26 @@ import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
+import {gripPoint} from "@/ark-scene/map/grip";
+import {mapHabitatAt} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {AssetTrees} from "@/ark-scene/asset-trees";
+import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
-import {arkDayAt, islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
+import {islandHours} from "@/lib/ark-clock";
+import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
+import {attachVary, setVary} from "@/ark-scene/ark-variation";
+import {tideFit} from "@/lib/ark-liveliness";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {groundNormal, type ArkEnvironment} from "@/ark-scene/sampler";
+import {attachSway, groundNormal} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -127,7 +138,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
@@ -136,7 +147,6 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
-import {ageOf, speciesCare} from "@/lib/ark-age";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
@@ -457,21 +467,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const worldMs = () => clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
     const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
-    let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number; cloud: number}> | null = null;
-    /** The weather as the reactive layer reads it (comfort, hearing, smell on the wind). */
+    let pinnedEnvironment: LivePin | null = null;
+    /** The weather as the reactive layer reads it (comfort, hearing, smell on the wind): the liveliness controller's, pins and all. */
     let reactiveWeather = {rain: 0, wind: 0.3, windDirection: 0, fog: 0, storm: 0};
+    let lookWeather: LookWeather = {wetness: 0, rain: 0, wind: 0.35};
     let environmentAt = 0;
     const voyageStart = Date.parse(options.snapshot.voyage.started_at ?? "") || null;
     const applyEnvironment = (force = false) => {
-        const nowMs = Date.now();
-        if (!force && nowMs - environmentAt < 2000) return;
-        environmentAt = nowMs;
-        const weather = weatherAt(nowMs, {voyageStartMs: voyageStart, offsetHours: ISLAND_OFFSET_HOURS});
-        const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection, cloud: weather.cloud};
-        const env = {...live, ...(pinnedEnvironment ?? {})};
-        // Fog 0: the scene draws no weather fog yet, and animals must not see less in a fog the viewer can't see (they
-        // would seem to ignore a predator in plain view). When the graphics lane draws it, pass the drawn amount here.
-        reactiveWeather = {rain: pinnedEnvironment ? Math.min(env.wetness, 1) * (env.storm > 0.3 ? 1 : 0.6) : weather.rain, wind: env.wind, windDirection: env.windDirection, fog: 0, storm: env.storm};
+        const realMs = Date.now();
+        // Every 2 s (a fast clock for a recording: every frame, so a tide's turn is smooth).
+        if (!force && realMs - environmentAt < (clockScale > 1 ? 0 : 2000)) return;
+        environmentAt = realMs;
+        // The world's time (the island clock, run faster for a recording): weather, tide, young, shelter (`liveliness-scene.ts`).
+        const env = liveliness.environmentAt(worldMs(), pinnedEnvironment);
+        reactiveWeather = {rain: env.rain, wind: env.wind, windDirection: env.windDirection, fog: env.fog, storm: env.storm};
+        // The animal-look pass: coats soak in the rain and dry before the ground; dust only on dry ground (a pinned wetness with no rain: none).
+        lookWeather = {wetness: env.wetness, rain: pinnedEnvironment?.rain ?? (pinnedEnvironment?.wetness !== undefined ? 0 : env.rain), wind: env.wind};
         ARK_ENVIRONMENT.seaLevel.value = env.seaLevel;
         ARK_ENVIRONMENT.wetness.value = env.wetness;
         ARK_ENVIRONMENT.snow.value = env.snow;
@@ -485,6 +496,40 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const lighting = new ArkLighting(renderer, scene, hoursNow());
     const fog = new Fog(lighting.horizon, 420, 1700);
     scene.fog = fog;
+    // Liveliness (`liveliness-scene.ts`): the clock's weather, tide and ages through the animals, the rain and fog,
+    // the traces they leave, and the sound (off until a tap). Its hooks read the scene below, when they are called.
+    const soundBase = options.soundBase !== undefined ? options.soundBase : (/^(https?:\/\/[^/]+)\/storage\/v1\//.exec(options.modelBase)?.[1] ?? null);
+    const liveliness = new ArkLiveliness({
+        tier,
+        fog,
+        renderer,
+        voyageStartMs: voyageStart,
+        offsetHours: ISLAND_OFFSET_HOURS,
+        soundBase,
+        onSoundCredits: options.onSoundCredits,
+        hooks: {
+            planOf: (slug) => library.get(slug)?.behaviour?.plan,
+            profileOf: (e) => (e as Entry).sched?.profile ?? null,
+            poseAt: (e, epoch) => {
+                const own = (e as Entry).sched;
+                if (!own || reducedMotion) return null;
+                // Its schedule at another moment, its own trips left as they were (no cache of this frame's disturbed).
+                const kept = {trip: own.trip, lead: own.lead};
+                const at = schedulePose(e as Entry, epoch);
+                own.trip = kept.trip;
+                own.lead = kept.lead;
+                return at;
+            },
+            roostOf: (e) => {
+                const own = (e as Entry).sched;
+                return own ? roostOf(scheduleWorldNow(), own.profile, own.animal) : null;
+            },
+            entryOf: (id) => findEntry(id),
+            heightAt
+        }
+    });
+    liveliness.setReducedMotion(reducedMotion);
+    scene.add(liveliness.root);
     const dust = new DustPuffs();
     scene.add(dust.points);
     // The behaviour recipes' near detail: catches and nest material carried, splashes, dirt, holes and mounds, nests,
@@ -506,6 +551,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     scene.add(nearDetail.group);
+    // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
+    const assetTrees = new AssetTrees(options.assetBase);
+    scene.add(assetTrees.group);
+    let assetTreesShown = false;
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -540,6 +589,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.autoRotateSpeed = 0.18;
 
     const shadows = new ContactShadows();
+    // The animal-look pass (`animal-look.ts`): surfaces, wet and dust, eyes, fur shells, close-up skins, contact shadows.
+    const look = new AnimalLook({
+        scene,
+        renderer,
+        closeUpBase: options.closeUpBase === undefined ? options.modelBase.replace(/\/ark\/?$/, "/ark-closeup") : options.closeUpBase,
+        basisBase: options.basisBase ?? "/ark/basis/",
+        enabled: options.animalLook !== false
+    });
+    shadows.setContact(look.on);
     const rings = new GroundRings();
     // A placeholder species (A13) has no icon art: the generic figure's.
     const tokens = new IconTokens((slug) => (isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : options.iconUrl(slug)));
@@ -555,14 +613,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
         micro.setShadows(settings.shadows > 0);
-        shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
+        shadows.setStrength(look.contactStrength(settings.shadows > 0));
+        look.setTier(tier, liteOn());
         vegetation.setGrassCount(settings.grass);
         vegetation.setFill(settings.fill);
         nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
+        assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
         post.setTier(tier);
+        liveliness.setTier(tier, liteOn());
         ARK_GROUND_LITE.value = tier === "low" ? 1 : 0;
         for (const sceneModule of modules) {
             sceneModule.setTier(tier, liteOn());
@@ -724,6 +786,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The hour's sun, which says who is asleep (from the species' activity only; none known: awake by day). */
     let sunElevation = lighting.daylight.elevation;
+    /**
+     * At sea: the map's place says (`map/place.ts`: a sea tag, in the sea's water), else its zone's kind (the map off).
+     * The sea's swimmers loop about their spot; a crab of a reef zone the map put on a rocky shore stays on its rocks.
+     */
+    const atSeaOf = (entry: {place: Placement; animal: ArkAnimal}) => entry.place.sea ?? ZONE_SITES[entry.animal.zone]?.kind === "sea";
     /** A bird of the air over land: it flies while awake. */
     const fliesOver = (animal: ArkAnimal) => (FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea") || Boolean(heldOffWater(animal.model_slug));
 
@@ -836,7 +903,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         const spaced = spaceHomes(
-            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z))})),
+            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -900,7 +967,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Every frame close by (its near model, the one looked at, or a pinned one); twice a second as a far model; once a second as an icon.
         const every = entry.level === "near" || watched || pin ? 0 : entry.level === "far" ? 0.5 : 1;
         if (!own.pose || epoch - own.at >= every || epoch < own.at) {
-            const fromTrip = schedulePose(entry, epoch);
+            // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared).
+            const fromTrip = liveliness.sharedPose(entry, schedulePose(entry, epoch), epoch);
             const at = (own.pose = pin ? {...fromTrip, ...pin(epoch)} : fromTrip);
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
@@ -911,6 +979,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const target = own.pose.aloft ? 1 : 0;
         entry.air += (target - entry.air) * Math.min(dt * 6, 1);
         if (Math.abs(target - entry.air) < 0.002) entry.air = target;
+    };
+
+    /** An animal's route over a stretch of its shared schedule (for worn paths): its own trips, worked out aside. */
+    const routeOf = (e: LiveAnimal, from: number, to: number, step: number): Array<{x: number; z: number}> => {
+        const own = (e as Entry).sched;
+        if (!own) return [];
+        const holder = {trip: null, lead: null} as unknown as Sched;
+        const points: Array<{x: number; z: number}> = [];
+        for (let t = from; t <= to; t += step) {
+            const trip = tripFor(holder, "trip", own.profile, own.animal, (e as Entry).animal.activity, t);
+            const at = poseOnTrip(scheduleWorldNow(), trip, t);
+            if (!at.aloft) points.push({x: at.x, z: at.z});
+        }
+        return points;
     };
 
     /**
@@ -951,7 +1033,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const state = stateOf({animal, visitor: false, act: null, sched});
         const targets = sched?.pose ? {...animationTargets(state), air: sched.pose.aloft ? 1 : 0} : animationTargets(state);
-        return {
+        return ownSize({
             sched,
             animal,
             place,
@@ -976,7 +1058,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             awake: !state.asleep,
             rest: targets.rest,
             loop: phase * Math.PI * 2
-        };
+        });
+    };
+    /** Its own size (seeded) and, while young, its growth (`liveliness-scene.ts`), on its species' drawn length. */
+    const ownSize = (entry: Entry): Entry => {
+        const k = liveliness.lengthScale(entry, entry.floor);
+        entry.length *= k;
+        entry.full *= k;
+        entry.trueLength *= k;
+        return entry;
     };
 
     /** The selected animal's state as last told to the page (its tap card). */
@@ -1120,6 +1210,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (followId) pins.add(followId);
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
+        liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
         const representatives = arkRepresentatives(snapshot.animals, {pinned: pins, live: liteOn() ? ARK_HERD_LIVE_LITE : ARK_HERD_LIVE, from: herdOff ? Number.POSITIVE_INFINITY : undefined});
         buildHerds(snapshot, representatives.herds, places);
         const next: Entry[] = [];
@@ -1130,7 +1221,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
-                ? Object.assign(before, {animal, place, length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)})
+                ? ownSize(Object.assign(before, {animal, place, length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
@@ -1192,7 +1283,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let material = level === "near" ? meshes.nearMaterial : meshes.farMaterial;
         if (!material) {
             const box = source.geometry.boundingBox!;
-            material = animalMaterial({map: source.map, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: level === "near" && !reducedMotion && !model.placeholder});
+            material = animalMaterial({
+                map: source.map,
+                behaviour: model.behaviour,
+                minY: box.min.y,
+                maxY: box.max.y,
+                animated: level === "near" && !reducedMotion && !model.placeholder,
+                level,
+                look: model.placeholder ? null : speciesLook(model.slug, model.behaviour?.plan, model.facing, source.geometry)
+            });
+            if (level === "near" && !model.placeholder) look.track(model.slug, material);
             // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
             if (model.placeholder) {
                 material.vertexColors = true;
@@ -1210,9 +1310,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const instance = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
         instance.setUsage(DynamicDrawUsage);
         source.geometry.setAttribute("arkInstance", instance);
-        const look = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
-        look.setUsage(DynamicDrawUsage);
-        source.geometry.setAttribute("arkLook", look);
+        // The head look (`arkLook`, the reactive layer) and the coat's wet and dust (`arkCoat`, the animal-look pass).
+        const headLook = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
+        headLook.setUsage(DynamicDrawUsage);
+        source.geometry.setAttribute("arkLook", headLook);
+        attachLook(source.geometry, capacity);
+        attachVary(source.geometry, capacity);
         mesh.frustumCulled = false;
         mesh.castShadow = TIER_SETTINGS[tier].shadows > 0;
         mesh.receiveShadow = true;
@@ -1229,10 +1332,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             for (const entry of entries) {
                 if (entry.animal.model_slug !== slug) continue;
                 const body = arkBody(entry.animal, model.behaviour.plan);
-                entry.length = body.display;
-                entry.full = body.display;
+                // (Its sex's size, as when it arrived: `sexLook`.)
+                entry.length = body.display * sexScale(entry.animal);
+                entry.full = body.display * sexScale(entry.animal);
                 entry.trueLength = body.metres;
                 entry.floor = body.floor;
+                ownSize(entry);
             }
         }
     };
@@ -1423,6 +1528,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             turn = crawled.turn;
         }
         const point = surfacePoint(micro, entry.animal.zone, along);
+        // On a leaf, bark or a branch of a tree in the wind: moved with it as the tree's shader moves it (graphics' `attachSway`).
+        const swaying = micro.attach?.source;
+        if (swaying && !reducedMotion) {
+            const sway = attachSway(swaying, ARK_TIME.value, ARK_WIND_VECTOR.value);
+            point.x += sway.x;
+            point.y += sway.y;
+            point.z += sway.z;
+        }
         if (turn) {
             // Turn the heading about the normal: t cos + (n × t) sin.
             const c = Math.cos(turn);
@@ -1652,13 +1765,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (e.youngOf && nowS - e.youngOf.at < 30) return e.youngOf;
         let parent: string | null = null;
         let play = 0;
-        if (e.animal.origin === "born" && e.animal.born_ark_day != null && voyageStart) {
-            const plan = library.get(e.animal.model_slug)?.behaviour?.plan ?? null;
-            const age = ageOf({id: e.animal.id, origin: e.animal.origin, born_ark_day: e.animal.born_ark_day, condition: e.animal.condition ?? null}, arkDayAt(worldMs(), voyageStart), plan, speciesCare(e.animal.model_slug, plan));
-            if (age.stage === "young") {
+        if (e.animal.origin === "born") {
+            const age = liveliness.ageOf(e);
+            if (age && age.stage === "young") {
                 play = age.play;
+                // The parent it keeps to in the shared layer (`liveliness-scene.ts`), else its group's adult leader.
                 const lead = e.leader;
-                if (age.follow || age.carried || age.care !== "none") parent = lead && lead !== e && lead.animal.origin !== "born" ? lead.animal.id : null;
+                if (age.follow || age.carried || age.care !== "none") parent = liveliness.parentOf(e.animal.id) ?? (lead && lead !== e && lead.animal.origin !== "born" ? lead.animal.id : null);
             }
         }
         e.youngOf = {parent, play, at: nowS};
@@ -1769,13 +1882,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const ground = own.ground;
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
-        // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act with its own pose,
-        // a dive under the surface, keeps its own.)
         const act = (at as RecipePose).act;
+        // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         if (inDepthBand(entry.depth, at, ground) && !act?.own) {
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
-            const {spec, base} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
+            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
+            // (Under the surface where the tide has it now: `tideFit`.)
+            const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             const yaw = at.yaw + (entry.glance ?? 0);
             // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
             const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
@@ -1826,7 +1940,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // In its hole: still, its head turning slowly.
             const spec = waterSpec(depth, place.ground, entry.seed, clock, breath);
             const yaw = place.yaw + (reducedMotion ? 0 : Math.sin(time * 0.2 + entry.phase * 9) * 0.5 * (1 - entry.rest));
-            return {x: place.x, z: place.z, base: fitInWater(spec, modelHeight).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
+            return {x: place.x, z: place.z, base: tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
         }
         const lead = entry.leader && entry.leader !== entry && !entry.leader.act && entry.leader.depth ? entry.leader : null;
         const follower = lead ? Math.max(entry.place.rank ?? 1, 1) : 0;
@@ -1864,7 +1978,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
         const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along);
-        const base = fitInWater(spec, modelHeight).base;
+        const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
         // A walker on the floor stands on its slope (its rig walks it there). (A walker's swim pitch is 0.)
         const surface = motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(x, base, z, yaw) : undefined;
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
@@ -1881,6 +1995,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = momentAt(entry, model, modelHeight, time);
             if (at) return at;
         }
+        if (place.host && !entry.visitor) {
+            // A partner on its host (map section 6): on its back, under a shark, at a grazer's feet, beside it, as the host moves now.
+            const host = findEntry(place.host.id);
+            if (host?.middle && !host.held) {
+                const rider = place.host.role === "rider";
+                const yaw = host.yawNow ?? place.yaw;
+                const base = rider ? (host.place.water ? host.middle.y - host.drawnHeight * 0.55 : host.middle.y + host.drawnHeight * 0.45) : heightAt(host.middle.x + place.host.dx, host.middle.z + place.host.dz);
+                return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
+            }
+        }
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
         if (place.micro && !entry.visitor) {
             // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
@@ -1896,6 +2020,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A water species (`sea-depth.ts`): in its depth band, its whole body under the surface (a floater on it, a
         // bottom-dweller on the floor, an octopus in its hole), an air-breather up for air when its state says so.
         if (entry.depth && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
+        // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
+        if (!entry.depth && atSeaOf(entry) && entry.layer.mode === "floor") {
+            const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);
+            return {x: place.x + Math.cos(place.yaw) * sway, z: place.z - Math.sin(place.yaw) * sway, base: place.ground, yaw: place.yaw, pitch: 0, roll: 0, afloat: true};
+        }
         const t = reducedMotion ? 0 : time;
         const site = ZONE_SITES[entry.animal.zone];
         // The visitor: at the jetty's foot, or a swimmer floating off its end.
@@ -1952,7 +2081,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** On its own feet on land: where a rigged animal may walk about its spot. */
     const onFoot = (entry: Entry) =>
         !scheduled(entry) &&
-        !entry.visitor && !entry.place.micro && !entry.place.canopy && !entry.place.burrow && !entry.place.water && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && entry.air <= 0.001 && !entry.act && !entry.moment;
+        !entry.visitor && !entry.place.micro && !entry.place.canopy && !entry.place.burrow && !entry.place.water && !atSeaOf(entry) && entry.air <= 0.001 && !entry.act && !entry.moment;
     /** A number in [0, 1) for this animal and this count (the same every visit). */
     const wanderRandom = (entry: Entry, n: number) => {
         const x = Math.sin(entry.phase * 12.9898 * 1000 + n * 78.233) * 43758.5453;
@@ -2035,6 +2164,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const rigLift = new Vector3();
     /** The reactive layer's actions that have an animal watching something: it stops feeding and lifts its head to look. */
     const WATCHING_ACTIONS: ReadonlySet<string> = new Set(["scan", "watch_camera", "investigate_camera", "back_off_camera", "sentinel", "alert", "freeze", "threat_display", "watch_prey", "startle", "look_kin", "shield_young"]);
+    const rigGrip = new Vector3();
     /**
      * An animal's rig this frame, when it has one ready and is close enough:
      * fades it in or out (never in the middle of a peek out of its burrow),
@@ -2230,7 +2360,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Standing water with no band (an anaconda in the wetland's pool): it swims where it lies.
             want = clip("swim") ? "swim" : "slither";
             rate = 0.6;
-        } else if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
+        } else if (atSeaOf(entry) && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
             const swim = clip("swim");
             if (swim) {
                 want = "swim";
@@ -2326,7 +2456,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let material = meshes.rigMaterial ?? null;
         if (!material) {
             const box = (model.near ?? model.far)?.geometry.boundingBox ?? rig.geometry.boundingBox!;
-            material = animalMaterial({map: model.near?.map ?? model.far?.map ?? null, behaviour: model.behaviour, minY: box.min.y, maxY: box.max.y, animated: true, rig: rig.texture, look: rig.look});
+            material = animalMaterial({
+                map: model.near?.map ?? model.far?.map ?? null,
+                behaviour: model.behaviour,
+                minY: box.min.y,
+                maxY: box.max.y,
+                animated: true,
+                rig: rig.texture,
+                lookChain: rig.look,
+                level: "near",
+                look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry)
+            });
+            look.track(model.slug, material);
             meshes.rigMaterial = material;
         }
         if (mesh) {
@@ -2340,6 +2481,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             attribute.setUsage(DynamicDrawUsage);
             rig.geometry.setAttribute(name, attribute);
         }
+        attachLook(rig.geometry, capacity);
+        attachVary(rig.geometry, capacity);
         mesh.frustumCulled = false;
         mesh.castShadow = TIER_SETTINGS[tier].shadows > 0;
         mesh.receiveShadow = true;
@@ -2347,6 +2490,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         scene.add(mesh);
         meshes.rig = mesh;
         return mesh;
+    };
+    /** A species' fur-shell material (`fur-shells.ts`): its near or rigged material's, pushed out in layers. */
+    const shellMaterial = (source: InstancedMesh): MeshStandardMaterial | null => {
+        const base = source.material as MeshStandardMaterial;
+        const made = (base.userData as {arkOptions?: Parameters<typeof animalMaterial>[0]; arkSlug?: string});
+        if (!made.arkOptions || !made.arkSlug) return null;
+        const material = animalMaterial({...made.arkOptions, shell: true, shellLength: 0.012});
+        look.track(made.arkSlug, material);
+        return material;
     };
     rigs.onLoad = (slug) => {
         const rig = rigs.get(slug);
@@ -2409,6 +2561,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean; rig: RigModel | null};
         const epochNow = worldMs() / 1000;
+        const hoursFrame = hoursNow();
         behaviourFrameMs = 0;
         scheduledCount = 0;
         const night = lighting.daylight.night;
@@ -2446,6 +2599,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const pace = 1 - 0.85 * entry.rest;
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
             if (entry.depth) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace * waterPace(waterMotion(entry.depth));
+            else if (atSeaOf(entry) && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace;
             else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace * entry.pace;
             // A flyer comes down to its roost to sleep and takes to the air again awake (an act flies its own path).
             if (fliesOver(entry.animal) && !entry.act && !scheduled(entry)) entry.air += (targets.air - entry.air) * 0.02;
@@ -2471,7 +2625,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
             // the underground only in the cutaway (or peeking out of its burrow).
             const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
-            const atSea = ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.depth?.water === "salt";
+            const atSea = atSeaOf(entry) || entry.depth?.water === "salt";
             // The deep's are hidden from above while they are down there (an air-breather of the deep shows when it comes up).
             const down = entry.depth ? entry.depth.band === "deep" && where.base < -2.5 : entry.layer.layer === "deep";
             if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen))) {
@@ -2570,6 +2724,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const dotList: FindDot[] = [];
         counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
 
+        look.begin(lookWeather, worldMs());
         const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
@@ -2623,7 +2778,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.z = where.school.z + (where.z - where.school.z) * sizeUp;
                     where.water = {...where.water, floorY: heightAt(where.x, where.z)};
                 }
-                where.base = fitInWater(where.water, modelHeight).base;
+                // (At the sea's level now: the column rises and falls with the tide, `tideFit`.)
+                where.base = tideFit(where.water, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             }
             if (!candidate.visible) {
                 entry.middle = null;
@@ -2643,6 +2799,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.roll += idle.roll;
                     where.base += idle.lift * candidate.modelScale;
                 }
+                // Calling (sound on): its head comes up for the call it is heard making (`liveliness-scene.ts`).
+                if (!where.water) where.pitch -= 0.16 * liveliness.callLiftOf(animal.id);
                 // A camera close by: now and then it glances at it, more often the sharper it is.
                 // (With the reactive layer the head looks at the camera instead: `watch_camera`, `investigate_camera`.)
                 const looking = candidate.distance < GLANCE_WITHIN && !where.afloat && !entry.reactive ? glance(entry.stats.intelligence, now, entry.phase) : 0;
@@ -2657,6 +2815,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const surface = where.surface;
             if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);
             else entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
+            // What it leaves behind, and (sound on) its calls (`liveliness-scene.ts`); the reactive layer's alarm when it has one.
+            if (!candidate.skip && level !== "token") {
+                const reaction = (entry as {reactive?: {called?: boolean; alarmed?: number} | null}).reactive ?? null;
+                liveliness.drawn(
+                    entry,
+                    {x: where.x, base: where.base, z: where.z, yaw: where.yaw, afloat: where.afloat || Boolean(surface), inWater: Boolean(where.water) || Boolean(entry.place.water)},
+                    {distance: candidate.distance, asleep: entry.state.asleep, aloft: entry.air > 0.5, resting: entry.sched?.pose?.doing === "rest", alarmed: reaction?.alarmed ?? 0, called: Boolean(reaction?.called), hours: hoursFrame},
+                    now
+                );
+            }
             const rest = Math.max(entry.place.ground, 0);
             const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
             // Too small to find on its own (at the size floor, or a few pixels across from far): a soft dot over it, and its icon once tapped.
@@ -2722,6 +2890,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
             }
             const state = rig ? entry.rig : null;
+            if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, clipRows(rig.clips[state.now.name], state.now.phase), rigGrip)) {
+                // On a branch, a trunk, a ledge or a wall: its grip (the rig's feet, hands, claws) on the surface, not its underside (`map/grip.ts`).
+                rigGrip.multiplyScalar(s).applyQuaternion(rotation);
+                position.set(where.x - rigGrip.x, where.base - rigGrip.y, where.z - rigGrip.z);
+            }
             if (rig && state) {
                 // A leap's clip carries the body forward itself: take that off the path's own motion.
                 const leap = state.now.name === "leap" ? rig.clips.leap : undefined;
@@ -2753,6 +2926,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
             (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, act ? act.dim : dim, entry.rest);
+            setVary(mesh.geometry, index, animal.id);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
@@ -2761,18 +2935,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
             if (lookAttr && !forcedLook && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
+            // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
+            const sea = ARK_ENVIRONMENT.seaLevel.value;
+            look.instance(mesh, index, {
+                id: animal.id,
+                slug: animal.model_slug,
+                x: where.x,
+                y: where.base,
+                z: where.z,
+                distance: candidate.distance,
+                pixels: (entry.length * sizeUp * height) / (2 * Math.tan((FOV * Math.PI) / 360) * Math.max(candidate.distance, 0.01)),
+                inWater: where.afloat && !surface && where.base < sea + 0.1 && entry.place.ground < sea,
+                onSurface: Boolean(surface)
+            }, level === "near");
 
-            if (!where.afloat) {
+            if (!where.afloat || (look.on && surface && !entry.toLight)) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
-                shadowList.push({
-                    x: where.x,
-                    y: rest,
-                    z: where.z,
-                    width: Math.max((box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15, 0.4),
-                    length: model.length * candidate.modelScale * sizeUp * 1.0,
-                    yaw: where.yaw,
-                    strength: grow * (1 - entry.lift * 0.3)
-                });
+                const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
+                const length = model.length * candidate.modelScale * sizeUp * 1.0;
+                if (surface) {
+                    // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
+                    // touches it, long the way it crawls.
+                    shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
+                } else {
+                    // On the ground: on its slope (near ones, with the pass on), under the body's middle (a model's origin
+                    // is not always there: a seal's is at its chest), turned with it.
+                    const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;
+                    const midX = look.on ? ((box.min.x + box.max.x) / 2) * s : 0;
+                    const midZ = look.on ? ((box.min.z + box.max.z) / 2) * s : 0;
+                    shadowList.push({
+                        x: where.x + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
+                        y: rest,
+                        z: where.z - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
+                        width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
+                        length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
+                        yaw: where.yaw,
+                        strength: grow * (1 - entry.lift * 0.3),
+                        ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
+                    });
+                }
             }
             if (marked && !entry.micro) {
                 ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
@@ -2799,6 +3000,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const at = index * 16;
                     for (let j = 0; j < 16; j++) target[at + j] = herd.figureMatrices[i * 16 + j];
                     instance.setXYZ(index, member.phase, dim, member.awake ? 0 : 1);
+                    look.figure(mesh, index);
+                    setVary(mesh.geometry, index, member.id);
                     index++;
                     counts.herdFigures++;
                     if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: Math.max(herd.width, 0.3), length: herd.depth, yaw: member.yaw, strength: 1});
@@ -2825,6 +3028,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).needsUpdate = true;
                     const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
                     if (lookAttr) lookAttr.needsUpdate = true;
+                    AnimalLook.touch(mesh);
                     if (mesh === meshes.rig) {
                         (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).needsUpdate = true;
                         (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).needsUpdate = true;
@@ -2833,6 +3037,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         });
         counts.rigged = rigged;
+        look.end(now, shellMaterial);
         if (now - lastEvict > 5) {
             lastEvict = now;
             rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP);
@@ -3034,7 +3239,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
         }
-        const want = close ? MICRO_MIN_DISTANCE : 4;
+        // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
+        let moduleWant = 4;
+        if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
+        const want = close ? MICRO_MIN_DISTANCE : moduleWant;
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);
@@ -3307,7 +3515,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             // A swimmer under the surface: the camera dives to it, level with it (underwater).
-            const swimming = ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.depth?.home === "coast" ? middleNow(entry) : null;
+            const swimming = atSeaOf(entry) || entry.depth?.home === "coast" ? middleNow(entry) : null;
             if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
@@ -3379,6 +3587,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let pointers = 0;
     const onPointerDown = (event: PointerEvent) => {
         pointers++;
+        // A tap wakes a sound context the system put to sleep (sound only ever starts from the page's toggle).
+        liveliness.audio.touch();
         lastTouch = performance.now() / 1000;
         if (opening) {
             // The first touch skips the opening.
@@ -3480,12 +3690,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         post.setSize(width, height, pixelRatio);
         motes.setPixelRatio(pixelRatio);
         dust.setPixelRatio(pixelRatio);
+        liveliness.setPixelRatio(pixelRatio);
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(el);
     resize();
+    // Out of sight (scrolled away, another tab, the app's panel closed): the sound sleeps.
+    const syncSound = () => liveliness.audio.setHidden(!onScreen || document.hidden);
+    document.addEventListener("visibilitychange", syncSound);
     const visibility = new IntersectionObserver(([seen]) => {
         onScreen = seen?.isIntersecting ?? true;
+        syncSound();
     });
     visibility.observe(el);
     modules = ARK_SCENE_MODULES.map((create) => create({
@@ -3499,6 +3714,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         reducedMotion
     }));
     if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
+    // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
+    // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
+    setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
+    setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     applyTier(tier);
 
     // MARK: First view
@@ -3791,7 +4010,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let replay: Running | null = null;
 
     const elapsedNow = () => (performance.now() - started) / 1000;
-    const inWater = (entry: Entry) => ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.place.water;
+    const inWater = (entry: Entry) => atSeaOf(entry) || entry.place.water;
 
     /** Where an entry is now and how big, as the acts take it. */
     const bodyOf = (entry: Entry): ActBody => {
@@ -4207,6 +4426,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepReplay(now);
         updateInstances(elapsed);
         dust.step(now);
+        liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
         recipeScene.step(now);
         nests.step(now);
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
@@ -4249,6 +4469,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail.update(controls.target, viewDistance);
+        assetTrees.update(camera.position);
+        vegetation.update(camera);
+        if (assetTrees.ready && !assetTreesShown) {
+            assetTreesShown = true;
+            vegetation.hideKinds(ASSET_TREE_KINDS);
+        }
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
@@ -4297,7 +4523,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
         rigState: (id: string) => {
@@ -4333,6 +4559,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const want: QualityTier = lite === true ? "low" : lite === false && tier === "low" ? (forced ?? (autoTier === "low" ? "medium" : autoTier)) : lite === null ? (forced ?? autoTier) : tier;
             if (want !== tier) applyTier(want);
             else options.onTier?.(tier, liteOn());
+            liveliness.setTier(tier, liteOn());
             motes.points.visible = !reducedMotion && !liteOn();
             // Fewer (or more) of each herd drawn one by one.
             if (herds.length) setSnapshot(current, false);
@@ -4343,6 +4570,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setReducedMotion: (reduced) => {
             if (reduced === reducedMotion) return;
             reducedMotion = reduced;
+            liveliness.setReducedMotion(reduced);
             for (const sceneModule of modules) sceneModule.setReducedMotion(reduced);
             motes.points.visible = !reducedMotion && !liteOn();
             if (reduced) {
@@ -4366,9 +4594,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
             setLight();
         },
+        setSound: (on) => liveliness.setSound(on),
+        sound: () => ({on: liveliness.audio.playing, unlocked: liveliness.audio.unlocked, credits: liveliness.audio.credits()}),
+        setSoundVolume: (volume) => liveliness.audio.setVolume(volume),
         setEnvironment: (environment) => {
             pinnedEnvironment = environment;
             applyEnvironment(true);
+        },
+        setAnimalLook: (on, pin) => {
+            look.setEnabled(on);
+            if (pin && "islandMs" in pin) look.pinIsland(pin.islandMs ?? null);
+            shadows.setContact(on);
+            shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
         setVisitor,
@@ -4485,7 +4722,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             behaviourBuildSlices,
             behaviourBuildLongestMs: Math.round(behaviourBuildLongestMs),
             rigsLoaded: rigs.loadedCount,
-            rigBytes: rigs.bytes
+            rigBytes: rigs.bytes,
+            animalLook: look.on,
+            furShells: look.on ? look.shells.drawn : 0,
+            closeUpSkins: look.closeUps.loaded,
+            liveliness: liveliness.stats()
         }),
         dispose: () => {
             disposed = true;
@@ -4511,11 +4752,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 meshes.rigMaterial?.dispose();
             });
             rigs.dispose();
+            look.dispose();
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
             recipeScene.dispose();
+            setNestSource(null);
+            setFishSource(null);
             nests.dispose();
+            document.removeEventListener("visibilitychange", syncSound);
+            liveliness.dispose();
             if (jetty) (jetty.userData.dispose as () => void)();
             library.dispose();
             tokens.dispose();
@@ -4524,6 +4770,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rings.dispose();
             landscape.dispose();
             nearDetail.dispose();
+            assetTrees.dispose();
             vegetation.dispose();
             micro.dispose();
             for (const sceneModule of modules) sceneModule.dispose();

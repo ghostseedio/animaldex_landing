@@ -203,6 +203,12 @@
             "auto": "uključeno za ovaj uređaj",
             "hint": "Manje detalja, za glađi Ark na ovom uređaju"
         },
+        "sound": {
+            "label": "Zvuk",
+            "hint": "Glasanje životinja i zvukovi otoka. Isključeno dok ga ne uključiš.",
+            "credits": "Zasluge za zvukove",
+            "empty": "Još nema čujnih zvukova."
+        },
         "a11y": {
             "scene": "Ark u 3D-u. Strelice pomiču pogled, plus i minus zumiraju, Escape zatvara karticu. Slijedi popis onih koji su na brodu.",
             "list": "Sve vrste na brodu, po područjima",
