@@ -31,7 +31,7 @@ import {RGBELoader} from "three/examples/jsm/loaders/RGBELoader.js";
 
 /** The CC0 sky (docs/ark-credits.md): where its sun is, as a bearing round y (atan2(z, x)), to turn it onto the scene's sun. */
 const HDRI_SUN_BEARING = 0.59;
-import {ARK_DAYLIGHT, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {daylightAt, type ArkDaylight} from "@/lib/ark-daylight";
 
 const SKY_SETTINGS = {turbidity: 3.2, rayleigh: 1.8, mieCoefficient: 0.003, mieDirectionalG: 0.82};
@@ -49,6 +49,7 @@ uniform vec3 horizon;
 uniform vec3 zenith;
 uniform float night;
 uniform float arkTime;
+uniform vec3 moonDirection;
 varying vec3 vDirection;
 float starHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
 void main() {
@@ -61,7 +62,47 @@ void main() {
     float star = smoothstep(0.9965, 1.0, h) * smoothstep(0.04, 0.3, d.y);
     star *= 0.65 + 0.35 * sin(arkTime * (1.5 + h * 3.0) + h * 40.0);
     colour += vec3(0.85, 0.9, 1.0) * star * 1.6;
+    // The moon (graphics pass): a disc with soft maria, and a glow round it.
+    float m = dot(d, normalize(moonDirection));
+    float disc = smoothstep(0.99935, 0.99952, m);
+    float maria = 0.82 + 0.18 * sin(d.x * 900.0) * sin(d.z * 760.0 + d.y * 500.0);
+    colour = mix(colour, vec3(0.93, 0.95, 1.0) * 2.2 * maria, disc);
+    colour += vec3(0.55, 0.65, 0.9) * pow(max(m, 0.0), 220.0) * 0.35 + vec3(0.3, 0.38, 0.6) * pow(max(m, 0.0), 12.0) * 0.08;
     gl_FragColor = vec4(colour, night);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+}`;
+
+/**
+ * Clouds (graphics pass, batch 2): a dome of drifting fbm clouds over the sky, lit from the sun (or moon) with a
+ * silver edge toward it, thicker with the weather's cloud cover, dim and blue at night. Drawn after the sky.
+ */
+const CLOUD_FRAGMENT = `
+uniform float arkTime;
+uniform vec2 arkWind;
+uniform vec3 sunDirection;
+uniform vec3 sunColour;
+uniform vec3 skyTint;
+uniform float cover;
+uniform float daylight;
+varying vec3 vDirection;
+${NOISE_GLSL}
+void main() {
+    vec3 d = normalize(vDirection);
+    if (d.y < 0.0) discard;
+    // Onto a flat cloud deck: far clouds bunch toward the horizon.
+    vec2 p = d.xz / (d.y + 0.12) * 1.6 + arkWind * arkTime * 0.004;
+    float base = arkFbm(p * 0.55) * 0.65 + arkFbm(p * 1.7 + 3.0) * 0.35;
+    float thresh = mix(0.68, 0.36, cover);
+    float density = smoothstep(thresh, thresh + 0.22, base);
+    // Lit side: brighter where the sun is behind the cloud's edge.
+    float toward = max(dot(d, normalize(sunDirection)), 0.0);
+    float edge = density * (1.0 - smoothstep(thresh + 0.05, thresh + 0.3, base));
+    vec3 lit = mix(skyTint * 0.75, sunColour, 0.55 + 0.45 * smoothstep(thresh, thresh + 0.4, arkFbm(p * 0.55 + vec2(0.06, 0.04))));
+    vec3 colour = lit * mix(0.82, 1.0, 1.0 - density * cover) + sunColour * edge * pow(toward, 6.0) * 0.8;
+    colour *= mix(0.16, 1.0, daylight);
+    float fade = smoothstep(0.0, 0.12, d.y);
+    gl_FragColor = vec4(colour, density * fade * mix(0.55, 0.95, cover));
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
 }`;
@@ -85,6 +126,10 @@ export class ArkLighting {
     private current: ArkDaylight;
     /** The photographed sky's light (batch 1), used while the sun is well up; the generated sky's at dusk, dawn and night. */
     private dayEnvironment: Texture | null = null;
+    /** Under the sea: much less light reaches the bed (graphics pass). */
+    private underwater = false;
+    private readonly clouds: Mesh;
+    private readonly cloudMaterial: ShaderMaterial;
 
     constructor(private readonly renderer: WebGLRenderer, private readonly scene: Scene, hours = 17) {
         this.current = daylightAt(hours);
@@ -100,13 +145,25 @@ export class ArkLighting {
         this.nightMaterial = new ShaderMaterial({
             vertexShader: NIGHT_VERTEX,
             fragmentShader: NIGHT_FRAGMENT,
-            uniforms: {horizon: {value: new Color()}, zenith: {value: new Color()}, night: {value: 0}, arkTime: ARK_TIME},
+            uniforms: {horizon: {value: new Color()}, zenith: {value: new Color()}, night: {value: 0}, arkTime: ARK_TIME, moonDirection: ARK_SUN},
             side: BackSide,
             transparent: true,
             depthWrite: false,
             fog: false
         });
         this.nightDome = new Mesh(new SphereGeometry(4000, 32, 16), this.nightMaterial);
+        this.cloudMaterial = new ShaderMaterial({
+            vertexShader: NIGHT_VERTEX,
+            fragmentShader: CLOUD_FRAGMENT,
+            uniforms: {arkTime: ARK_TIME, arkWind: ARK_WIND, sunDirection: ARK_SUN, sunColour: {value: new Color("#fff4e0")}, skyTint: {value: new Color("#9fb6cc")}, cover: ARK_ENV.cloud, daylight: ARK_DAYLIGHT},
+            side: BackSide,
+            transparent: true,
+            depthWrite: false,
+            fog: false
+        });
+        this.clouds = new Mesh(new SphereGeometry(3800, 32, 16), this.cloudMaterial);
+        this.clouds.frustumCulled = false;
+        this.clouds.renderOrder = -8;
         this.nightDome.frustumCulled = false;
         this.nightDome.renderOrder = -9;
 
@@ -129,7 +186,7 @@ export class ArkLighting {
         this.fill = new HemisphereLight(new Color("#c9dbe8"), new Color("#6f6248"), 0.55);
 
         this.environment = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
-        scene.add(this.sky, this.nightDome, this.sun, this.sun.target, this.fill);
+        scene.add(this.sky, this.nightDome, this.clouds, this.sun, this.sun.target, this.fill);
         scene.environment = this.environment;
         scene.environmentIntensity = 0.75;
         this.apply(this.current, null);
@@ -156,8 +213,11 @@ export class ArkLighting {
 
     /** Under the sea: the sky and the night dome are hidden (the water is all round). */
     setUnderwater(under: boolean) {
+        this.underwater = under;
         this.sky.visible = !under;
         this.nightDome.visible = !under;
+        this.clouds.visible = !under;
+        this.apply(this.current, null);
     }
 
     private apply(day: ArkDaylight, fog: Fog | null) {
@@ -183,7 +243,9 @@ export class ArkLighting {
         this.skyCopy.visible = this.sky.visible;
 
         this.sun.color.set(day.light.color);
-        this.sun.intensity = day.light.intensity;
+        this.sun.intensity = day.light.intensity * (1 - 0.35 * ARK_ENV.cloud.value) * (this.underwater ? 0.5 : 1);
+        (this.cloudMaterial.uniforms.sunColour.value as Color).set(day.light.color).lerp(new Color("#ffffff"), 0.35);
+        (this.cloudMaterial.uniforms.skyTint.value as Color).set(day.zenith).lerp(new Color(day.horizon), 0.5);
         // Moonlight casts softer, lighter shadows than the sun (batch 1: the night stays readable in the shade).
         this.sun.shadow.intensity = 1 - 0.5 * day.night;
         this.fill.color.set(day.fill.sky);
@@ -194,14 +256,18 @@ export class ArkLighting {
         this.scene.environmentIntensity = day.environment;
 
         // The photographed sky by day: the image-based light from real clouds and sky, turned so its sun is ours.
+        // Where it hands over to the generated sky (the sun 12° up) the sky light dips softly either side, so the
+        // swap never pops (batch 3: smooth day, dusk, night and dawn).
+        const handover = 0.4 + 0.6 * MathUtils.smoothstep(Math.abs(day.elevation - 12), 0, 5);
         if (this.dayEnvironment && day.elevation > 12) {
             this.builtFor = null;
             this.scene.environment = this.dayEnvironment;
             this.scene.environmentRotation.set(0, Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING, 0);
-            this.scene.environmentIntensity = day.environment * 1.15;
+            this.scene.environmentIntensity = day.environment * 1.15 * handover;
             return;
         }
         this.scene.environmentRotation.set(0, 0, 0);
+        this.scene.environmentIntensity = day.environment * handover;
         const key = Math.round(day.elevation / 3);
         if (this.builtFor !== key) {
             this.builtFor = key;
@@ -246,6 +312,8 @@ export class ArkLighting {
 
     dispose() {
         this.environment.dispose();
+        this.clouds.geometry.dispose();
+        this.cloudMaterial.dispose();
         this.sky.geometry.dispose();
         this.sky.material.dispose();
         this.skyCopy.geometry.dispose();

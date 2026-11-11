@@ -89,11 +89,11 @@ function trunk(height: number, radius: number, lean = 0, colour = BARK): BufferG
 type Blob = {x: number; y: number; z: number; r: number; squash?: number};
 
 /** Soft canopy: blobs whose normals lean out from the canopy's middle, darker inside and below. */
-function canopy(blobs: Blob[], detail = 1): BufferGeometry {
+function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
     const centre = new Vector3();
     for (const blob of blobs) centre.add(new Vector3(blob.x, blob.y, blob.z));
     centre.divideScalar(blobs.length);
-    const parts = blobs.map((blob, index) => {
+    const parts = (solid ? blobs : []).map((blob, index) => {
         const sphere = new IcosahedronGeometry(blob.r * 0.82, detail);
         sphere.scale(1, blob.squash ?? 0.82, 1);
         sphere.translate(blob.x, blob.y, blob.z);
@@ -230,9 +230,10 @@ function canopyShape(variant: number): BufferGeometry {
         parts.push(finish(piece, () => 0.85, 0, BARK));
         // A pad of leaves over its tip.
         const pad = randomBlobs(random, 4, 0, 0.55, tree.pad.radius, tree.pad.squash).map((blob) => ({...blob, x: blob.x + end.x, y: blob.y + end.y + tree.pad.lift, z: blob.z + end.z}));
-        parts.push(canopy(pad, 0));
+        // Leaf cards only (graphics pass): the solid low-poly pads read as big dark kites close up.
+        parts.push(canopy(pad, 0, false));
     }
-    parts.push(canopy(randomBlobs(random, 7, tree.crown.y, 1.2, tree.crown.radius, tree.crown.squash), 1));
+    parts.push(canopy(randomBlobs(random, 7, tree.crown.y, 1.2, tree.crown.radius, tree.crown.squash), 1, false));
     return mergeGeometries(parts)!;
 }
 
@@ -539,11 +540,35 @@ function flower(variant: number): BufferGeometry {
         eye.scale(1, 0.5, 1);
         eye.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.6, 0);
         parts.push(finish(eye, () => 1, 0, new Color("#e8b62c")));
+    } else if (variant === 1) {
+        // Graphics pass: a wild rose / cosmos: five broad, rounded petals, slightly cupped, round a golden boss.
+        for (let p = 0; p < 5; p++) {
+            const petal = new IcosahedronGeometry(head * 0.62, 1);
+            petal.scale(1, 0.14, 0.82);
+            petal.translate(head * 0.58, head * 0.08, 0);
+            petal.rotateZ(0.18);
+            petal.rotateY(p / 5 * Math.PI * 2 + 0.3);
+            petal.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.35, 0);
+            parts.push(finish(petal, (_, t) => 0.85 + 0.2 * t, 1));
+        }
+        const boss = new IcosahedronGeometry(head * 0.3, 1);
+        boss.scale(1, 0.55, 1);
+        boss.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.55, 0);
+        parts.push(finish(boss, () => 1, 0, new Color("#d9a82a")));
     } else {
-        const bloom = new IcosahedronGeometry(head, 1);
-        bloom.scale(1, FLOWER_SHAPE.squash * (variant === 2 ? 1.5 : 1), 1);
-        bloom.translate(0, stemHeight + (variant === 2 ? head * 0.2 : 0), 0);
-        parts.push(finish(bloom, (_, t) => 0.82 + 0.25 * t, 1));
+        // A cup (a tulip or poppy bud opening): six petals standing up round the middle.
+        for (let p = 0; p < 6; p++) {
+            const petal = new IcosahedronGeometry(head * 0.55, 1);
+            petal.scale(0.16, 1, 0.75);
+            petal.translate(head * 0.42, head * 0.55, 0);
+            petal.rotateZ(-0.32);
+            petal.rotateY(p / 6 * Math.PI * 2);
+            petal.translate(0, stemHeight, 0);
+            parts.push(finish(petal, (_, t) => 0.7 + 0.4 * t, 1));
+        }
+        const heart = new IcosahedronGeometry(head * 0.22, 1);
+        heart.translate(0, stemHeight + head * 0.35, 0);
+        parts.push(finish(heart, () => 1, 0, new Color("#3a2a1a")));
     }
     return mergeGeometries(parts)!;
 }
@@ -668,6 +693,12 @@ function foliageMaterial(windAmount: number, windHeight: number, doubleSide = fa
         Object.assign(shader.uniforms, uniforms);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", "#include <common>\nvarying float vArkCard;")
+            // Foliage is lit from its own (soft) normals on both sides: never flipped dark on a back face.
+            .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
+#ifdef DOUBLE_SIDED
+normal *= faceDirection;
+nonPerturbedNormal *= faceDirection;
+#endif`)
             .replace("#include <map_fragment>", `#ifdef USE_MAP
 diffuseColor *= mix(vec4(1.0), texture2D(map, vMapUv), vArkCard);
 #endif`);
@@ -690,6 +721,9 @@ vArkCard = arkCard;`)
     float sway = sin(arkTime * 1.5 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.9 + root.x * 0.53 - root.z * 0.31);
     float bend = pow(max(transformed.y, 0.0) / windHeight, 2.0) * windAmount * arkLeaf;
     transformed.xz += arkWind * sway * bend;
+    // Leaves flutter on their own, faster and stronger in wind (graphics pass): trunk a little, crown more, leaves most.
+    float gust = length(arkWind);
+    transformed += vec3(sin(arkTime * 6.3 + transformed.y * 3.1 + root.x), sin(arkTime * 5.1 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.7 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
 }`);
     };
     return material;
@@ -785,6 +819,8 @@ export type Vegetation = {
     setShadows: (on: boolean) => void;
     /** The forest fill (graphics pass): the share of the extra trees drawn, 0…1, by tier. */
     setFill: (fraction: number) => void;
+    /** Hide these decor kinds' own shapes (the asset library's trees stand in for them once loaded). */
+    hideKinds: (kinds: Set<string>) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -876,6 +912,9 @@ export function buildVegetation(maxGrass: number): Vegetation {
         },
         setShadows: (on) => {
             for (const mesh of shadowCasters) mesh.castShadow = on;
+        },
+        hideKinds: (kinds) => {
+            for (const mesh of meshes) if (kinds.has(mesh.userData.kind)) mesh.visible = false;
         },
         setFill: (fraction) => {
             for (const entry of fillMeshes) entry.mesh.count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));

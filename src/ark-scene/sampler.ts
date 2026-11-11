@@ -74,7 +74,7 @@ export function surfaceAt(x: number, z: number, environment: ArkEnvironment = CA
         const fresh = Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
         put(fresh ? "lakebed" : "seabed", 1);
     } else {
-        const snow = Math.max((w.polar ?? 0) * smoothstep(0.3, 1, sample.land), smoothstep(16, 25, height), environment.snow);
+        const snow = Math.max((w.polar ?? 0) * smoothstep(0.3, 1, sample.land), smoothstep(19, 25.5, height) * (1 - smoothstep(0.3, 0.55, slope)), environment.snow);
         const rock = smoothstep(0.22, 0.42, slope) * (1 - snow);
         const beach = (1 - smoothstep(0.45, 1, sample.land)) * (1 - (w.polar ?? 0)) * (1 - sample.cliff);
         const sand = Math.min(1, beach + (w.desert ?? 0) * 0.9 + (w.seashore ?? 0) * 0.7) * (1 - rock) * (1 - snow);
@@ -225,7 +225,9 @@ export function place(name: PlaceName): Place {
 }
 
 function shoreRocks(): Array<{x: number; y: number; z: number; scale: number}> {
-    return worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25);
+    const beach = ZONE_SITES.seashore;
+    return worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25
+        && Math.hypot(item.x - beach.x, item.z - beach.z) < 75 && zoneAt(sampleGround(item.x, item.z)) !== "polar");
 }
 
 // MARK: - Attach points

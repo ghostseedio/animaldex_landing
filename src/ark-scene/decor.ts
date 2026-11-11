@@ -75,6 +75,13 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 
 const MAX_DENSITY = 5;
 
+/**
+ * Trees at a believable size beside the cottage (graphics pass, batch 2): its ridge is 4.3 m, so a broadleaf now
+ * stands 5–9 m and a rainforest tree 9–15 m. Everything that reads a tree's size (bark animals, obstacles, attach
+ * points) takes it from the item's scale, so they follow.
+ */
+const TREE_SIZE: Partial<Record<DecorKind, number>> = {broadleaf: 1.5, rainforest: 1.45, conifer: 1.6, acacia: 1.35, palm: 1.3, orchard: 1.15};
+
 function tone(zone: ArkZone, kind: DecorKind, r: number): string {
     const palette = ZONE_PALETTES[zone];
     switch (kind) {
@@ -137,11 +144,11 @@ export function worldDecor(): DecorItem[] {
         if (!kind) continue;
         // Reeds keep to the water's edge; trees thin out up the mountain; palms keep to the sand.
         if (kind === "reed" && sample.height > 1.3) continue;
-        if (kind === "conifer" && sample.height > 24) continue;
+        if (kind === "conifer" && sample.height > 36) continue;
         if (kind === "broadleaf" && zone === "mountains") continue;
         if (kind === "palm" && sample.land > 0.97) continue;
         if (sample.cliff > 0.4 && kind !== "rock" && sample.land < 0.8) continue;
-        const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : 0.75 + 0.55 * sizeRoll;
+        const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : (0.75 + 0.55 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
         const variant = Math.floor(variantRoll * 3);
         push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll)});
         // Rocks come in clusters: a big one and a few smaller about it.
@@ -192,7 +199,8 @@ export function worldDecor(): DecorItem[] {
 
     // The reef: coral heads and fans on the shallow floor, kelp swaying a little deeper.
     const reef = ZONE_SITES.coral_reef;
-    const corals = ["#ef8a76", "#f0b25f", "#e0708f", "#c68fd6", "#f6c98d", "#ff9f6e"];
+    // Muted, believable coral colours (graphics pass), not candy.
+    const corals = ["#c8735d", "#c99a58", "#b06a78", "#8f7aa6", "#cfae86", "#c4805a"];
     for (let i = 0; i < 520; i++) {
         const angle = random() * Math.PI * 2;
         const radius = 3 + 30 * Math.sqrt(random());
@@ -206,7 +214,9 @@ export function worldDecor(): DecorItem[] {
             if (scale < 0.35) continue;
             push({kind: "kelp", variant: Math.floor(random() * 3), x, y: height, z, scale, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#6f7a2e" : "#8a8a35"});
         } else {
-            push({kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]});
+            const coral: DecorItem = {kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]};
+            // Out of the beach's clear shallows (the same random draws either way, so nothing after moves).
+            if (height < -1.9) push(coral);
         }
     }
 
@@ -396,6 +406,7 @@ export function forestFill(): FillItem[] {
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
         if (kind === "conifer" && sample.height > 22) continue;
+        if (sample.height > 8 && Math.hypot(sampleGround(x + 1.5, z).height - sampleGround(x - 1.5, z).height, sampleGround(x, z + 1.5).height - sampleGround(x, z - 1.5).height) / 3 > 0.75) continue;
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing + 2) continue;
         if (riverDistance(x, z) < 5) continue;
@@ -404,7 +415,7 @@ export function forestFill(): FillItem[] {
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
         if (taken.has(key)) continue;
         taken.add(key);
-        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : 0.7 + 0.65 * sizeRoll;
+        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
         items.push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank});
     }
     items.sort((a, b) => a.rank - b.rank);

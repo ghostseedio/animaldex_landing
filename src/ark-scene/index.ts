@@ -46,6 +46,7 @@ import {
     Color,
     DynamicDrawUsage,
     Fog,
+    FogExp2,
     Frustum,
     InstancedBufferAttribute,
     InstancedMesh,
@@ -95,6 +96,9 @@ import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
+import {NearDetail} from "@/ark-scene/near-detail";
+import {AssetTrees} from "@/ark-scene/asset-trees";
+import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
@@ -358,7 +362,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // (`src/lib/ark-clock.ts`), not the viewer's own clock. `hours` / `setHours` still pin it (golden shots, recordings).
     const hoursNow = () => pinnedHours ?? islandHours(Date.now(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
-    let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number}> | null = null;
+    let pinnedEnvironment: Partial<ArkEnvironment & {windDirection: number; cloud: number}> | null = null;
     let environmentAt = 0;
     const voyageStart = Date.parse(options.snapshot.voyage.started_at ?? "") || null;
     const applyEnvironment = (force = false) => {
@@ -366,13 +370,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!force && nowMs - environmentAt < 2000) return;
         environmentAt = nowMs;
         const weather = weatherAt(nowMs, {voyageStartMs: voyageStart, offsetHours: ISLAND_OFFSET_HOURS});
-        const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection};
+        const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection, cloud: weather.cloud};
         const env = {...live, ...(pinnedEnvironment ?? {})};
         ARK_ENVIRONMENT.seaLevel.value = env.seaLevel;
         ARK_ENVIRONMENT.wetness.value = env.wetness;
         ARK_ENVIRONMENT.snow.value = env.snow;
         ARK_ENVIRONMENT.wind.value = env.wind;
         ARK_ENVIRONMENT.storm.value = env.storm;
+        ARK_ENVIRONMENT.cloud.value = env.cloud;
         const strength = 0.45 + 1.4 * env.wind + 2 * env.storm;
         ARK_WIND_VECTOR.value.set(Math.cos(env.windDirection), Math.sin(env.windDirection)).multiplyScalar(strength * 0.95);
         WATER_WIND.value = 0.6 + 1.2 * env.wind + 1.6 * env.storm;
@@ -392,6 +397,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     scene.add(landscape.ground, landscape.water);
     const vegetation = buildVegetation(MAX_GRASS);
+    // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
+    const nearDetail = new NearDetail();
+    scene.add(nearDetail.group);
+    // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
+    const assetTrees = new AssetTrees(options.assetBase);
+    scene.add(assetTrees.group);
+    let assetTreesShown = false;
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -444,6 +456,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         shadows.setStrength(settings.shadows > 0 ? 0.14 : 0.3);
         vegetation.setGrassCount(settings.grass);
         vegetation.setFill(settings.fill);
+        nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
+        assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -520,11 +535,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             top: "0",
             transform: "translate(-50%, -50%)",
             whiteSpace: "nowrap",
-            font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+            font: "500 10px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
             letterSpacing: arkTracking(text, "0.16em"),
             textTransform: "uppercase",
-            color: "rgba(255, 252, 244, 0.95)",
-            textShadow: "0 1px 2px rgba(30, 24, 12, 0.5), 0 0 16px rgba(30, 24, 12, 0.4)",
+            color: "rgba(255, 252, 244, 0.82)",
+            textShadow: "0 1px 2px rgba(30, 24, 12, 0.45), 0 0 10px rgba(30, 24, 12, 0.25)",
             opacity: "0",
             transition: "opacity 400ms ease",
             willChange: "transform"
@@ -559,7 +574,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const anchor = regionLabelAnchor(region);
             labelPoint.set(anchor.x, Math.max(heightAt(anchor.x, anchor.z), 0) + (region === "high_cold" ? 14 : 0), anchor.z).project(camera);
             const visible = show && labelPoint.z < 1 && Math.abs(labelPoint.x) < 1.05 && Math.abs(labelPoint.y) < 1.05;
-            label.style.opacity = visible ? "1" : "0";
+            // Less dominant (graphics pass): fade in only as the camera pulls back past the island's own size.
+            label.style.opacity = visible ? Math.min(Math.max((distance - 95) / 70, 0), 1).toFixed(2) : "0";
             if (!visible) return;
             let size = labelSizes.get(region);
             if (!size || !size.w) {
@@ -1680,7 +1696,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The page's or the director's choice: open, closed, or (null) open when an underground animal is looked at. */
     let cutawayWanted: boolean | null = null;
     let cutawayAt: {target: Vector3; azimuth: number} | null = null;
-    const underFog = new Fog(new Color("#2b6f78"), 1, 46);
+    // Under water the view is absorbed exponentially (graphics pass): blue-green, half gone by about 12 m.
+    const underFog = new FogExp2(new Color("#2b6f78"), 0.058);
     const underDay = new Color("#2f7c85");
     const underNight = new Color("#0b2229");
     const stepLayers = (elapsed: number) => {
@@ -2324,7 +2341,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 left: "0",
                 top: "0",
                 whiteSpace: "nowrap",
-                font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+                font: "500 10px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
                 letterSpacing: "0.04em",
                 color: "rgba(255, 252, 244, 0.96)",
                 padding: "6px 9px",
@@ -2923,6 +2940,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             lastTracked = null;
         }
         const viewDistance = camera.position.distanceTo(controls.target);
+        nearDetail.update(controls.target, viewDistance);
+        assetTrees.update(camera.position);
+        if (assetTrees.ready && !assetTreesShown) {
+            assetTreesShown = true;
+            vegetation.hideKinds(ASSET_TREE_KINDS);
+        }
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
@@ -3151,6 +3174,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.dispose();
             rings.dispose();
             landscape.dispose();
+            nearDetail.dispose();
+            assetTrees.dispose();
             vegetation.dispose();
             micro.dispose();
             for (const sceneModule of modules) sceneModule.dispose();

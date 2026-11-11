@@ -13,13 +13,13 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
-import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
 import {attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround} from "@/ark-scene/world";
+import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -36,7 +36,7 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         groundAt: (x, z) => heightAt(x, z),
         beach: () => ZONE_SITES.seashore,
         // Rocks at the waterline on open shore, not under a sea cliff (the beach's kind of coast).
-        shoreRocks: () => worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25).map((item) => ({x: item.x, z: item.z, scale: item.scale})),
+        shoreRocks: () => worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25 && Math.hypot(item.x - ZONE_SITES.seashore.x, item.z - ZONE_SITES.seashore.z) < 75 && zoneAt(sampleGround(item.x, item.z)) !== "polar").map((item) => ({x: item.x, z: item.z, scale: item.scale})),
         forestFloor: () => microCorner("woodland"),
         house: () => ({x: COTTAGE.x, z: COTTAGE.z}),
         fields: () => ZONE_SITES.farm_garden,
@@ -47,9 +47,13 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
             const site = ZONE_SITES.mountains;
             return {x: site.x, z: site.z - 6, radius: Math.max(centre.radius * 0.5, 26)};
         },
-        reef: () => ZONE_SITES.coral_reef
+        reef: () => ZONE_SITES.coral_reef,
+        forestClearing: () => ZONE_SITES.woodland
     };
 }
+
+/** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
+const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
 
 type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}};
 
@@ -63,7 +67,8 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     // faces the sky a little (a limpet's); else the nearest.
     const score = (point: AttachPoint) => {
         const p = point.position;
-        if (shot.tag === "leaf") return p.y - Math.hypot(point.normal.x, point.normal.z) * 4 + (point.hostKind === "broadleaf" || point.hostKind === "orchard" ? 0 : 20);
+        // A leaf on top of an orchard tree's crown (its outside, in reach of a close camera).
+        if (shot.tag === "leaf") return (point.hostKind === "orchard" ? 0 : point.hostKind === "broadleaf" ? 30 : 60) - point.normal.y * 5 + p.y * 0.2;
         if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
@@ -108,7 +113,7 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     debug.controls.minDistance = 0.3;
     // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
     const out = n.clone();
-    if (shot.tag === "leaf") out.set(n.x * 3, 0.6, n.z * 3);
+    if (shot.tag === "leaf") out.set(n.x + 0.35, 1.6, n.z + 0.35);
     else out.y = Math.max(out.y, 0) * 0.55 + 0.35;
     if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
     out.normalize();
@@ -217,7 +222,7 @@ async function mountGolden(el: HTMLElement) {
         }
     });
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
-    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41});
+    handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: {current: Object3D | null} = {current: null};
@@ -232,6 +237,28 @@ async function mountGolden(el: HTMLElement) {
             else if (performance.now() - quietSince > quietMs) return true;
         }
         return false;
+    };
+
+    // The flythrough's route: the golden places in turn, eased, pulling back between them; morning to night.
+    const route: GoldenPlace[] = ["island_far", "coast_rocks", "waves_beach", "river_pond", "house_fields", "forest_floor", "mountain", "island_far"];
+    let routeViews: ArkCameraView[] | null = null;
+    const flyAt = (t: number) => {
+        const views = routeViews ?? (routeViews = route.map((where) => goldenView(where, world).view));
+        const ease = (k: number) => (k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2);
+        const angle = (a: number, b: number, k: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
+        t = Math.min(Math.max(t, 0), 1);
+        const leg = Math.min(Math.floor(t * (views.length - 1)), views.length - 2);
+        const k = ease(Math.min(t * (views.length - 1) - leg, 1));
+        const a = views[leg];
+        const b = views[leg + 1];
+        const lift = Math.sin(Math.PI * k) * 0.6;
+        handle.setView({
+            target: {x: a.target.x + (b.target.x - a.target.x) * k, y: a.target.y + (b.target.y - a.target.y) * k, z: a.target.z + (b.target.z - a.target.z) * k},
+            distance: (a.distance + (b.distance - a.distance) * k) * (1 + lift * 2.5),
+            polar: a.polar + (b.polar - a.polar) * k - lift * 0.25,
+            azimuth: angle(a.azimuth, b.azimuth, k)
+        });
+        handle.setHours(10.5 + 11.5 * t);
     };
 
     return {
@@ -253,6 +280,7 @@ async function mountGolden(el: HTMLElement) {
                 holder.current = null;
             }
             handle.setHours(GOLDEN_TIMES[time]);
+            handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             handle.setView(shot.view);
             // The view keeps itself over the ground for a few frames (setView, then the scene's own limits): hold it there.
             for (let i = 0; i < 20; i++) {
@@ -260,6 +288,15 @@ async function mountGolden(el: HTMLElement) {
                 if (i < 6) handle.setView(shot.view);
             }
             await settle(700, 30_000);
+            if (micro) {
+                // The scene eases its closest distance back out each frame when nothing is selected: hold the close-up.
+                const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+                for (let i = 0; i < 3; i++) {
+                    if (debug) debug.controls.minDistance = 0.3;
+                    handle.setView(shot.view);
+                    await nextFrame();
+                }
+            }
             return {anchor: shot.anchor, asked: shot.view, actual: handle.view() as ArkCameraView};
         },
         /** A props close-up (`props/golden-props.ts`): framed on where the props module says the thing is, in its light and weather. */
@@ -305,7 +342,28 @@ async function mountGolden(el: HTMLElement) {
                 modelsLoaded: stats.modelsLoaded
             };
         },
-        stats: () => handle.stats()
+        stats: () => handle.stats(),
+        /**
+         * The flythrough (graphics pass): `seconds` of flight through the golden places in turn, eased, the hour going
+         * from morning through dusk to night, in real time. Returns the frame intervals over the whole flight.
+         */
+        /** The flythrough's view and hour at `t` (0…1): for a frame-by-frame video. */
+        flyAt: (t: number) => flyAt(t),
+        flythrough: async (seconds = 60) => {
+            const intervals: number[] = [];
+            const start = performance.now();
+            let last = start;
+            for (;;) {
+                const now = await nextFrame();
+                intervals.push(now - last);
+                last = now;
+                const t = Math.min((now - start) / 1000 / seconds, 1);
+                flyAt(t);
+                if (t >= 1) break;
+            }
+            const sorted = [...intervals].sort((x, y) => x - y);
+            return {frames: intervals.length, p50: round(sorted[Math.floor(sorted.length * 0.5)]), p95: round(sorted[Math.floor(sorted.length * 0.95)]), p99: round(sorted[Math.floor(sorted.length * 0.99)]), fps: round(intervals.length / seconds), stats: handle.stats()};
+        }
     };
 }
 
