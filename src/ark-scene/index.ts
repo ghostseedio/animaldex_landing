@@ -91,7 +91,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -2233,7 +2233,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (moved > 3) moved = 0;
         state.last = (state.last ?? new Vector3()).copy(rigHere);
         if (state.weight <= 0) return null;
-        const speed = dt > 0 ? moved / dt : 0;
+        // Its pace for choosing the clip, eased over about a fifth of a second (the clip's phase still follows the real distance).
+        if (dt > 0) state.pace += (moved / dt - state.pace) * Math.min(dt * 5, 1);
+        const speed = state.pace;
         const clip = (name: string) => rigs.clip(slug, name);
         const moving = (move: RigClipData | null): move is RigClipData => Boolean(move?.ground_speed) && speed > move!.ground_speed! * (state.now.name === move!.name ? 0.12 : 0.3);
         let want: string | null = null;
@@ -2244,6 +2246,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const place = entry.place;
         const up = where.surface ? where.surface.ny : 1;
         const own = entry.sched && scheduled(entry) ? entry.sched : null;
+        // A behaviour recipe's act (`behaviour-recipes.ts`): on its schedule pose, or a house starling's own.
+        const recipeAct = ((own?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
         // In the air: on its schedule, from the moment an air leg starts (the pose counts as aloft only a little way up,
         // and the take-off plays from the ground); otherwise as its state's air eases in.
         const pose = own?.pose ?? null;
@@ -2297,8 +2301,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const w = state.weight;
                 const banking = want === "bank_l" || want === "bank_r";
                 const into = Math.max(-1, Math.min(1, state.turn / 0.2));
-                where.pitch = where.pitch * (1 - w) + -0.6 * state.climb * w;
-                where.roll = where.roll * (1 - w) + (banking ? 0 : -0.35 * into * (want === "soar" ? 1 : 0.4)) * w;
+                // (A recipe's attitude stays on top: a plunge nose down.)
+                where.pitch = where.pitch * (1 - w) + (-0.6 * state.climb + (recipeAct?.pitch ?? 0)) * w;
+                where.roll = where.roll * (1 - w) + ((banking ? 0 : -0.35 * into * (want === "soar" ? 1 : 0.4)) + (recipeAct?.roll ?? 0)) * w;
             }
         } else if (entry.state.asleep && !entry.act) {
             // Asleep: its idle, slow (and the head lowered by the material's droop); never a walk.
@@ -2382,13 +2387,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 mode = "distance";
             }
         }
-        // The schedule's beat picks its own clip where the rig has one (graze, browse, scan, shake_off, into and out of
-        // the water); a water animal in its depth band keeps the band's place (`PATH_CARRIED_CLIPS`). While the reactive
-        // layer has it watching something (the camera, a predator, its kin), it stops feeding and lifts its head: its idle,
-        // the look turning the head.
-        let beat = !state.flying && own?.pose ? beatClip(own.pose.beat, own.pose.doing, (name) => Boolean(clip(name))) : null;
+        // The reactive layer's action (`reactive.ts`, intelligence-review-30 section 6), on its own feet on land: a flee
+        // runs (or walks, without a run) by the distance it covers, so the feet keep up at any flee speed; a sentinel
+        // stands up and scans (its idle, upright, without a scan); withdrawn or frozen, it holds its idle, low (the
+        // reactive crouch lowers the body).
+        const action = !state.flying && !entry.visitor && !place.canopy && !place.micro && !place.burrow && !where.water ? entry.reactive?.action ?? null : null;
+        const walkNow = groundClip(slug);
+        const reacting = reactiveClip(action, (name) => Boolean(clip(name)), !walkNow?.ground_speed || speed > walkNow.ground_speed * 1.2);
+        if (reacting && (!reacting.byDistance || moving(clip(reacting.name)))) {
+            want = reacting.name;
+            mode = reacting.byDistance ? "distance" : "time";
+        }
+        // While the reactive layer has it watching something (the camera, a predator, its kin), it stops feeding and lifts
+        // its head: its idle, the look turning the head.
         const watching = Boolean(entry.reactive && entry.reactive.headWeight > 0.3 && WATCHING_ACTIONS.has(entry.reactive.action));
-        if (watching && (beat === "graze" || beat === "browse" || beat === "scan")) beat = null;
+        const headDown = (name: string | null) => name === "graze" || name === "browse" || name === "scan";
+        // A recipe's named state where a clip expresses it (`RECIPE_CLIPS`; docs/ark/rig-player.md): a travel state by the
+        // distance it covers while it moves, a one-shot (into or out of the water, a take-off, a shake) from its start, a
+        // hold when nothing else plays. Otherwise its block's beat (below) plays.
+        const reacted = Boolean(reacting && want === reacting.name);
+        const fromRecipe = !state.flying && !reacted && recipeAct ? recipeClip(recipeAct.state, (name) => Boolean(clip(name))) : null;
+        let byRecipe = false;
+        if (fromRecipe && !(watching && headDown(fromRecipe.name))) {
+            if (fromRecipe.play === "distance") {
+                const move = clip(fromRecipe.name);
+                if (moving(move)) {
+                    want = move.name;
+                    mode = "distance";
+                    byRecipe = true;
+                }
+            } else if (fromRecipe.play === "once" || !want || want === "idle") {
+                want = fromRecipe.name;
+                mode = "time";
+                byRecipe = true;
+            }
+        }
+        // The schedule's beat picks its own clip where the rig has one (graze, browse, scan, shake_off, into and out of
+        // the water); a water animal in its depth band keeps the band's place (`PATH_CARRIED_CLIPS`).
+        let beat = !state.flying && !byRecipe && !reacted && own?.pose ? beatClip(own.pose.beat, own.pose.doing, (name) => Boolean(clip(name))) : null;
+        if (watching && headDown(beat)) beat = null;
         if (beat && (!want || want === "idle")) want = beat;
         if (!want && clip("idle")) want = "idle";
         if (!want) {
@@ -2403,7 +2440,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!playing) return null;
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
         rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 2.5);
+        // By distance, up to 3.5 times the clip's own pace (a flee is capped at the gait's 2.5: the feet never slide).
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         if (state.from) {
@@ -2903,7 +2941,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2]);
             else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
-            if (lookAttr && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
+            if (lookAttr && !forcedLook && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
             // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
             const sea = ARK_ENVIRONMENT.seaLevel.value;
             look.instance(mesh, index, {
