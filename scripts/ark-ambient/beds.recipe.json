@@ -1,0 +1,34 @@
+{
+    "notes": "How each ambient bed is cut. file: under --downloads (the download URL is in sources); start: seconds into the recording; loop: the range searched for the loop length; crossfade: seconds; filters: ffmpeg audio filters per layer. Licences are checked on each source page and recorded in docs/ark-credits.md and src/ark-scene/ambient-beds.json.",
+    "sources": {
+        "commons/Light_Rain_Distant_Thunder_July_5th_2016.wav": "https://upload.wikimedia.org/wikipedia/commons/b/b6/Light_Rain_Distant_Thunder_July_5th_2016.wav",
+        "commons/Rain_and_thunder_(1).ogg": "https://upload.wikimedia.org/wikipedia/commons/b/bb/Rain_and_thunder_%281%29.ogg",
+        "commons/Country_night_noise.ogg": "https://upload.wikimedia.org/wikipedia/commons/f/fb/Country_night_noise.ogg",
+        "commons/Waves.ogg": "https://upload.wikimedia.org/wikipedia/commons/1/1f/Waves.ogg",
+        "nps/nri-Cricket.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/nri/avElement/nri-Cricket.mp3",
+        "nps/romo-MoraineParkWesternchorusfrogsROMO51916Final.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-MoraineParkWesternchorusfrogsROMO51916Final.mp3",
+        "nps/yell-YELLDawnChorus.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-YELLDawnChorus.mp3",
+        "nps/romo-FinchLakeAmbientROMO62016Final1.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-FinchLakeAmbientROMO62016Final1.mp3",
+        "nps/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3",
+        "nps/romo-WindAmbientGemLakeROMO52516Final1.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-WindAmbientGemLakeROMO52516Final1.mp3",
+        "nps/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3",
+        "nps/romo-MoraineWetlandAmbientROMO51816Final1.mp3": "https://www.nps.gov/nps-audiovideo/legacy/mp3/imr/avElement/romo-MoraineWetlandAmbientROMO51816Final1.mp3",
+        "aporee/StrandNov2712.ogg": "https://archive.org/download/aporee_15707_18266/StrandNov2712.ogg",
+        "aporee/wodospadsiklavica11041630.mp3": "https://archive.org/download/aporee_70170_81768/wodospadsiklavica11041630.mp3"
+    },
+    "beds": [
+        {"id": "rain", "layers": [{"file": "commons/Light_Rain_Distant_Thunder_July_5th_2016.wav", "start": 38, "filters": "highpass=f=70"}], "loop": [30, 34], "crossfade": 3, "lufs": -22},
+        {"id": "storm", "layers": [{"file": "commons/Rain_and_thunder_(1).ogg", "start": 14, "filters": "highpass=f=35"}], "loop": [32, 36], "crossfade": 3, "lufs": -22},
+        {"id": "night_insects", "layers": [{"file": "commons/Country_night_noise.ogg", "start": 8, "filters": "highpass=f=900"}, {"file": "nps/nri-Cricket.mp3", "start": 2, "filters": "highpass=f=2500", "gain_db": 14}], "loop": [20, 22], "crossfade": 2.5},
+        {"id": "night_frogs", "layers": [{"file": "nps/romo-MoraineParkWesternchorusfrogsROMO51916Final.mp3", "start": 200, "filters": "highpass=f=300"}], "loop": [32, 36], "crossfade": 3},
+        {"id": "dawn_chorus", "layers": [{"file": "nps/yell-YELLDawnChorus.mp3", "start": 1, "filters": "highpass=f=250"}], "loop": [32, 36], "crossfade": 3},
+        {"id": "forest_day", "layers": [{"file": "nps/romo-FinchLakeAmbientROMO62016Final1.mp3", "start": 300, "filters": "highpass=f=250"}], "loop": [32, 36], "crossfade": 3},
+        {"id": "wind_trees", "layers": [{"file": "nps/yell-040201LowerGeyserBasinWindInTreesBinaural01011.mp3", "start": 100, "filters": "highpass=f=150"}], "loop": [30, 34], "crossfade": 4},
+        {"id": "mountain_wind", "layers": [{"file": "nps/romo-WindAmbientGemLakeROMO52516Final1.mp3", "start": 18, "filters": "highpass=f=70"}], "loop": [30, 34], "crossfade": 4},
+        {"id": "surf", "layers": [{"file": "aporee/StrandNov2712.ogg", "start": 8, "filters": "highpass=f=35"}], "loop": [32, 36], "crossfade": 3},
+        {"id": "shore", "layers": [{"file": "commons/Waves.ogg", "start": 30, "filters": "highpass=f=60"}], "loop": [30, 34], "crossfade": 3},
+        {"id": "rapids", "layers": [{"file": "nps/romo-StreamAmbientROMO52516BlackCanyonTrailFinal1.mp3", "start": 36, "filters": "highpass=f=60"}], "loop": [30, 34], "crossfade": 3},
+        {"id": "waterfall", "layers": [{"file": "aporee/wodospadsiklavica11041630.mp3", "start": 20, "filters": "highpass=f=30"}], "loop": [30, 34], "crossfade": 3},
+        {"id": "pond", "layers": [{"file": "nps/romo-MoraineWetlandAmbientROMO51816Final1.mp3", "start": 490, "filters": "highpass=f=200"}], "loop": [32, 36], "crossfade": 3}
+    ]
+}

@@ -21,19 +21,21 @@
  *   target); far out, nearby water fades (a waterfall is not heard from the
  *   sky).
  * - input `format` ("webm" | "m4a"), `baseUrl`, `maxBeds`, `nowMs`.
- * - output `fallbackUrl` (the other format), `loopSeconds`, `ramp`,
- *   `offset` (when `nowMs` is given) and `lowpassHz` (underwater).
+ * - output `fallbackUrl` (the other format), `loopStart`, `loopSeconds`,
+ *   `ramp`, `offset` (when `nowMs` is given) and `lowpassHz` (underwater).
  *
  * How the engine uses the answer:
  * - Call it a few times a second (or when the inputs change) and move each
  *   bed's gain toward `gain` over about `ramp` seconds (`setTargetAtTime`
  *   with a time constant of ramp / 3, or `approachGain` below). A bed missing
  *   from the list fades to 0, then may be stopped.
- * - Loop each buffer with `loopStart = 0` and `loopEnd = loopSeconds`: the
- *   files are cut so the loop is seamless at exactly that length, which also
- *   hides any codec padding at the end of the decoded buffer.
- * - Start a bed at `offset` seconds (the same moment of the loop for every
- *   viewer at `nowMs`).
+ * - Loop each buffer from `loopStart` to `loopStart + loopSeconds`
+ *   (`source.loopStart`, `source.loopEnd`). Each file holds the loop with
+ *   half a second of its own end before it and of its own start after it, so
+ *   the encoders are settled at the loop point and a decoder that trims its
+ *   codec delay a few milliseconds differently still loops continuous sound.
+ * - Start a bed at `offset` seconds into the buffer (inside the loop: the
+ *   same moment of it for every viewer at `nowMs`), or at `loopStart`.
  * - Prefer `url` (Opus in WebM); use `fallbackUrl` (AAC in M4A) where
  *   `canPlayType('audio/webm; codecs="opus"')` is empty (older Safari).
  *
@@ -110,11 +112,13 @@ export type AmbientBedDef = {
     sources: AmbientSource[];
 };
 
-type AmbientTable = {version: number; path: string; formats: string[]; beds: AmbientBedDef[]};
+type AmbientTable = {version: number; path: string; formats: string[]; loopStart: number; beds: AmbientBedDef[]};
 
 export const AMBIENT_TABLE = table as unknown as AmbientTable;
 export const AMBIENT_BEDS: readonly AmbientBedDef[] = AMBIENT_TABLE.beds;
 export const AMBIENT_PATH = AMBIENT_TABLE.path;
+/** Seconds into every file where its loop starts (the wrap-around padding before it). */
+export const AMBIENT_LOOP_START = AMBIENT_TABLE.loopStart;
 
 /** At most this many beds at once by default (the sound tiers' "high"; pass `maxBeds` for medium 3, low 2). */
 export const AMBIENT_MAX_BEDS = 5;
@@ -155,6 +159,8 @@ export type AmbientBedPlay = {
     /** -1 left … 1 right. */
     pan?: number;
     fallbackUrl: string;
+    /** Loop from here (seconds into the decoded buffer) to `loopStart + loopSeconds`. */
+    loopStart: number;
     loopSeconds: number;
     ramp: number;
     offset?: number;
@@ -308,12 +314,12 @@ export function panToward(pos: {x: number; z: number; yaw?: number}, target: {x:
     return Math.round(Math.min(Math.max(side * spread * 0.8, -1), 1) * 1000) / 1000;
 }
 
-/** Seconds into a bed's loop at `nowMs`, the same for every viewer (a seeded phase per bed). */
-export function loopOffset(id: string, loopSeconds: number, nowMs: number): number {
-    if (!(loopSeconds > 0) || !Number.isFinite(nowMs)) return 0;
+/** Seconds into a bed's buffer at `nowMs` (inside its loop), the same for every viewer (a seeded phase per bed). */
+export function loopOffset(id: string, loopSeconds: number, nowMs: number, loopStart = AMBIENT_LOOP_START): number {
+    if (!(loopSeconds > 0) || !Number.isFinite(nowMs)) return loopStart;
     const phase = unit("ambient", id) * loopSeconds;
     const t = (nowMs / 1000 + phase) % loopSeconds;
-    return Math.round((t < 0 ? t + loopSeconds : t) * 1000) / 1000;
+    return Math.round((loopStart + (t < 0 ? t + loopSeconds : t)) * 1000) / 1000;
 }
 
 /** One step of a smooth approach to `target` (a one-pole filter with time constant ramp / 3). For engines without `setTargetAtTime`. */
@@ -386,6 +392,7 @@ export function selectAmbientBeds(input: AmbientInput, beds: readonly AmbientBed
                 url: bedUrl(bed.id, format, base),
                 gain,
                 fallbackUrl: bedUrl(bed.id, other, base),
+                loopStart: AMBIENT_LOOP_START,
                 loopSeconds,
                 ramp: bed.ramp
             };

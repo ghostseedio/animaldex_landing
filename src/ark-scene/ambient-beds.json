@@ -2,6 +2,7 @@
     "version": 1,
     "path": "/ark/sound/ambient",
     "formats": ["webm", "m4a"],
+    "loopStart": 0.5,
     "notes": "Each bed: where (zones, near water, altitude), when (time of day), what weather drives or quietens it, and its recordings. See src/ark-scene/ambient-beds.ts for how the fields combine. A bed with ready=false is never selected.",
     "beds": [
         {

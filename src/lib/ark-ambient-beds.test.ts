@@ -172,7 +172,8 @@ test("the cap keeps the loudest beds, loudest first, and the URLs and offsets ar
     for (const b of capped) {
         assert.equal(b.url, `/ark/sound/ambient/${b.id}.webm`);
         assert.equal(b.fallbackUrl, `/ark/sound/ambient/${b.id}.m4a`);
-        assert.ok(typeof b.offset === "number" && b.offset >= 0 && b.offset < b.loopSeconds);
+        assert.equal(b.loopStart, 0.5);
+        assert.ok(typeof b.offset === "number" && b.offset >= b.loopStart && b.offset < b.loopStart + b.loopSeconds);
         assert.ok(b.gain > 0 && b.gain <= 1);
     }
     const m4a = selectAmbientBeds({...busy, format: "m4a", baseUrl: "https://animaldex.app/"}, ALL)[0];
@@ -229,8 +230,10 @@ test("zone factor: weighted, partial and the default", () => {
 test("loop offsets are shared, inside the loop, and move with time", () => {
     const a = loopOffset("rain", 32, 1_800_000_000_000);
     assert.equal(a, loopOffset("rain", 32, 1_800_000_000_000));
-    assert.ok(a >= 0 && a < 32);
+    assert.ok(a >= 0.5 && a < 32.5);
     assert.ok(Math.abs(((loopOffset("rain", 32, 1_800_000_005_000) - a + 32) % 32) - 5) < 0.002);
+    assert.equal(loopOffset("rain", 32, Number.NaN), 0.5);
+    assert.ok(loopOffset("rain", 32, 1_800_000_000_000, 0) < 32);
     assert.notEqual(loopOffset("surf", 32, 1_800_000_000_000), a);
 });
 
