@@ -269,7 +269,12 @@ export const chainDriver: LocoDriver = {
         let phase = 0;
         let cadence = 0;
         let stride = 0;
-        if (input.clipNow === "swim" && style.swim) {
+        // In the water (below the surface over it): an eel or a sea snake playing its slither swims its eel's wave.
+        const e = input.instance.elements;
+        const under = input.ground(e[12], e[14]);
+        const surface = under.water ?? (under.height < 0 ? 0 : null);
+        const wet = surface !== null && e[13] < surface - 0.02;
+        if ((input.clipNow === "swim" || wet) && style.swim) {
             const swim = (state.swim ??= newSwimMemory(input.seed));
             swimCycles(swim, style.swim, moved, input.dt, length);
             const p = SWIM[style.swim];

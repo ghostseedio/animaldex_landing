@@ -140,7 +140,8 @@ async function record(cdp, name) {
         stamps.push(frame.metadata.timestamp);
         await cdp.send("Page.screencastFrameAck", {sessionId: frame.sessionId}).catch(() => undefined);
     });
-    await cdp.send("Page.startScreencast", {format: "jpeg", quality: 85, everyNthFrame: 1});
+    // (A smaller frame keeps the screencast near the page's own rate: a 10 Hz wing beat needs 30+ frames a second.)
+    await cdp.send("Page.startScreencast", {format: "jpeg", quality: 80, everyNthFrame: 1, maxWidth: Number(arg("cast-width", "960")), maxHeight: Number(arg("cast-height", "540"))});
     return async () => {
         stopped = true;
         await cdp.send("Page.stopScreencast").catch(() => undefined);
@@ -169,7 +170,7 @@ async function record(cdp, name) {
     };
 }
 
-const query = [set ? "rig=/ark-rig/v2" : "", arg("quality", "") ? `quality=${arg("quality", "")}` : "", flag("before") ? "before=1" : ""].filter(Boolean).join("&");
+const query = [set ? "rig=/ark-rig/v2" : "", arg("quality", "") ? `quality=${arg("quality", "")}` : "", flag("before") ? "before=1" : "", arg("hours", "") ? `hours=${arg("hours", "")}` : ""].filter(Boolean).join("&");
 const summary = [];
 const wanted = arg("scenes", "takeoff_land,bank_circle,soar,bound_hop,hover_walk,flutter,swim_orca,swim_humpback,swim_shark,swim_salmon,swim_manta,swim_stingray,swim_reef,swim_eel,snake_lateral,snake_sidewind,snake_python");
 for (const name of wanted.split(",").filter(Boolean)) {

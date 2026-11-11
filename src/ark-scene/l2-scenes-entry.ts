@@ -17,6 +17,7 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {flightPaces, stoopPose} from "@/ark-scene/locomotion/flight";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -30,6 +31,7 @@ const CAST: Array<[string, string, string]> = [
     ["pigeon", "domestic-pigeon", "farm_garden"],
     ["bee", "western-honey-bee", "farm_garden"],
     ["monarch", "monarch-butterfly", "grassland"],
+    ["moth", "cecropia-moth", "farm_garden"],
     ["kestrel", "common-kestrel", "grassland"],
     ["orca", "orca", "open_ocean"],
     ["humpback", "humpback-whale", "open_ocean"],
@@ -80,7 +82,7 @@ async function mountScenes(el: HTMLElement) {
     const snapshot = decodeArkSnapshot({...fixture, animals: cast});
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 11, onReady: () => (ready = true)});
+    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: Number(params.get("hours") ?? 11), onReady: () => (ready = true)});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4});
     const debug = () => (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const ids = Object.fromEntries(CAST.map(([prefix]) => [prefix, castId(prefix)]));
@@ -98,13 +100,15 @@ async function mountScenes(el: HTMLElement) {
     const pinPose = (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => debug().pinShared(id, fn ? (epoch: number) => ({act: null, ...fn(epoch)}) : null);
     const nowS = () => Date.now() / 1000;
     let tracking = 0;
-    const track = (id: string, distance: number, polar: number, azimuth: number | ((yaw: number) => number), lift = 0) => {
+    /** The camera on an animal: its drawn middle, or (`along`) its pinned path's x and z with the drawn height. */
+    const track = (id: string, distance: number, polar: number, azimuth: number | ((yaw: number) => number), lift = 0, along?: () => {x: number; z: number}) => {
         const token = ++tracking;
         debug().controls.minDistance = 0.3;
         const step = () => {
             if (token !== tracking) return;
             const at = handle.locate(id);
-            if (at) handle.setView({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth: typeof azimuth === "function" ? azimuth(at.yaw) : azimuth});
+            const on = along?.();
+            if (at) handle.setView({target: {x: on ? on.x : at.x, y: at.y + lift, z: on ? on.z : at.z}, distance, polar, azimuth: typeof azimuth === "function" ? azimuth(at.yaw) : azimuth});
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
@@ -143,6 +147,17 @@ async function mountScenes(el: HTMLElement) {
             const z = from.z + Math.cos(yaw) * d;
             return {x, z, y: doing === "swim" ? Math.min(y, -0.5) : ground(x, z), yaw, moving: t > 0, aloft: false, doing, beat};
         });
+    };
+
+    /** Where a straight swim started at `start` is now (for the camera). */
+    let lineStart = 0;
+    const lineAt = (from: {x: number; z: number}, yaw: number, speed: number) => () => {
+        const t = Math.max(nowS() - lineStart, 0);
+        return {x: from.x + Math.sin(yaw) * speed * t, z: from.z + Math.cos(yaw) * speed * t};
+    };
+    const goLine = (fn: () => void) => () => {
+        lineStart = nowS();
+        fn();
     };
 
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
@@ -189,22 +204,60 @@ async function mountScenes(el: HTMLElement) {
         },
         /** A golden eagle soars in wide circles (radius 12 m, 6 m/s), then glides straight and flaps a few times to climb. */
         soar: () => {
-            const c = site("grassland", 0, 0);
+            // Over the reef's water (no trees between the camera and the bird; the camera can't look up from below).
+            const c = site("coral_reef", 0, 0);
             const id = ids.eagle;
             const r = 12;
             const w = 6 / r;
             const path = (t: number) => {
-                if (t < 12) return {x: c.x + r * Math.cos(w * t), z: c.z + r * Math.sin(w * t), y: ground(c.x, c.z) + 24 + 0.15 * t, beat: "glide", doing: "soar"};
+                if (t < 12) return {x: c.x + r * Math.cos(w * t), z: c.z + r * Math.sin(w * t), y: 14 + 0.15 * t, beat: "glide", doing: "soar"};
                 const a = w * 12;
                 const s = t - 12;
                 const x = c.x + r * Math.cos(a) - Math.sin(a) * 6 * s;
                 const z = c.z + r * Math.sin(a) + Math.cos(a) * 6 * s;
-                return {x, z, y: ground(c.x, c.z) + 25.8 + (s > 2 && s < 4 ? (s - 2) * 0.9 : s >= 4 ? 1.8 : 0), beat: s > 2 && s < 4 ? "fly" : "glide", doing: s > 2 && s < 4 ? "fly" : "soar"};
+                return {x, z, y: 15.8 + (s > 2 && s < 4 ? (s - 2) * 0.9 : s >= 4 ? 1.8 : 0), beat: s > 2 && s < 4 ? "fly" : "glide", doing: s > 2 && s < 4 ? "fly" : "soar"};
             };
             fly(id, nowS() + 1e6, path, 1e6);
-            // From a little below, against the sky (the island's trees reach 15-20 m).
-            track(id, 7, 1.72, (yaw) => yaw + Math.PI + 0.7, 0);
+            // From behind and a little above, the sea under it.
+            track(id, 7, 1.2, (yaw) => yaw + Math.PI + 0.7, 0);
             return {note: "12 s of circling (r 12 m, 6 m/s), then a straight glide with a 2 s climb", watch: [id], go: () => fly(id, nowS(), path, 1e6)};
+        },
+        /**
+         * A golden eagle's stoop (lane L2's dive API for L7: `stoopPose`, `flightPaces`): it glides high, rolls in, dives
+         * wings closed, pulls out with braking beats near the ground and climbs away.
+         */
+        stoop: () => {
+            const c = site("grassland", 2, 2);
+            const id = ids.eagle;
+            const g = ground(c.x, c.z);
+            const paces = flightPaces("bird", "soar", 0.85, true);
+            const dive = 2.2;
+            const path = (t: number) => {
+                // (The scene's camera tracks only up to about 15 m: the stoop starts at 13 m.)
+                if (t < 3) return {x: c.x - 30 + 6 * t, z: c.z, y: g + 13, beat: "glide", doing: "soar"};
+                const u = Math.min((t - 3) / dive, 1);
+                // Down a steep line (about 50°), the pull-out curving to level a metre and a half over the grass.
+                const k = 1 - (1 - u) * (1 - u);
+                const x = c.x - 12 + 22 * u;
+                const y = g + 13 - 11.5 * Math.sin((Math.PI / 2) * Math.min(k * 1.05, 1));
+                if (t - 3 <= dive) return {x, z: c.z, y, beat: "fly", doing: "fly"};
+                const s = t - 3 - dive;
+                return {x: c.x + 10 + 7 * s, z: c.z, y: g + 1.5 + 1.2 * s, beat: "fly", doing: "fly"};
+            };
+            const pin = (start: number) =>
+                pinPose(id, (epoch: number) => {
+                    const t = Math.max(epoch - start, 0);
+                    const a = path(t);
+                    const b = path(t + 0.02);
+                    const u = (t - 3) / dive;
+                    const stoop = u > 0 && u < 1 ? stoopPose(u) : null;
+                    // The dive's act (as L7's chase would set it): the plunge clip and its pitch while the wings are closed.
+                    const act = stoop && stoop.clip === "plunge" ? {episode: "stoop", recipe: "l2", block: "stoop", state: "plunge", u, pitch: stoop.pitch - 0.6 * Math.atan2(a.y - b.y, Math.hypot(b.x - a.x, b.z - a.z)), roll: 0, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: "stoop"} : null;
+                    return {x: a.x, z: a.z, y: a.y, yaw: yawOf(b.x - a.x, b.z - a.z), moving: true, aloft: true, doing: a.doing, beat: a.beat, act};
+                });
+            pin(nowS() + 1e6);
+            track(id, 9, 1.3, 1.45, 0);
+            return {note: `glide 3 s, a ${dive} s stoop (the API's dive pace ${paces.dive.toFixed(0)} m/s at true scale), pull-out and climb`, watch: [id], go: () => pin(nowS())};
         },
         /** A house sparrow flies straight 2 m up (flap-bounding), comes down, and hops about. */
         bound_hop: () => {
@@ -258,6 +311,15 @@ async function mountScenes(el: HTMLElement) {
                 fly(b, nowS(), bee, 1e6);
             }};
         },
+        /**
+         * A cecropia moth round the porch light at night (its microhabitat's own flight: run with `--hours 21.5`): its rig
+         * holds an open glide, so its wings are beaten by the wing driver.
+         */
+        moth_light: () => {
+            const id = ids.moth;
+            track(id, 1.2, 1.2, 0.8, 0);
+            return {note: "the moth's own circling of the porch light (not pinned), the camera following it", watch: [id]};
+        },
         /** An orca swims by under water, then speeds up to a burst (2.2x): the flukes beat faster. */
         swim_orca: () => {
             const at = site("open_ocean", 0, 0);
@@ -278,22 +340,25 @@ async function mountScenes(el: HTMLElement) {
             const at = site("open_ocean", -6, -6);
             const id = ids.shark;
             swimLine(id, nowS() + 1e6, {x: at.x - 10, z: at.z}, Math.PI / 2, 1.6, -2);
-            track(id, 7, 1.5, 0.3, 0);
-            return {note: "a great white (thunniform: only the tail beats)", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 10, z: at.z}, Math.PI / 2, 1.6, -2)};
+            // From behind and a little below: the tail's side-to-side beat (a side view hides it).
+            track(id, 5.5, 1.75, (yaw) => yaw + Math.PI + 0.45, 0);
+            return {note: "a great white (thunniform: only the tail beats), from behind and below", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 10, z: at.z}, Math.PI / 2, 1.6, -2)};
         },
         swim_salmon: () => {
             const at = site("open_ocean", 4, -8);
             const id = ids.salmon;
             swimLine(id, nowS() + 1e6, {x: at.x - 6, z: at.z}, Math.PI / 2, 0.8, -1.5);
-            track(id, 3, 1.5, 0.3, 0);
+            track(id, 2.4, 1.75, (yaw) => yaw + Math.PI + 0.45, 0);
             return {note: "an Atlantic salmon (subcarangiform)", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 6, z: at.z}, Math.PI / 2, 0.8, -1.5)};
         },
         swim_manta: () => {
             const at = site("coral_reef", 0, 4);
             const id = ids.manta;
-            swimLine(id, nowS() + 1e6, {x: at.x - 8, z: at.z}, Math.PI / 2, 1, -1.5);
-            track(id, 7, 1.45, 0.3, 0);
-            return {note: "a reef manta flying with its wing fins", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 8, z: at.z}, Math.PI / 2, 1, -1.5)};
+            const from = {x: at.x - 8, z: at.z};
+            lineStart = nowS() + 1e6;
+            swimLine(id, lineStart, from, Math.PI / 2, 1, -1.5);
+            track(id, 5, 1.35, -0.5, 0, lineAt(from, Math.PI / 2, 1));
+            return {note: "a reef manta flying with its wing fins", watch: [id], go: goLine(() => swimLine(id, lineStart, from, Math.PI / 2, 1, -1.5))};
         },
         swim_stingray: () => {
             const at = site("coral_reef", -4, -2);
@@ -318,7 +383,7 @@ async function mountScenes(el: HTMLElement) {
             const id = ids.eel;
             const from = {x: LAKE.x - 4, z: LAKE.z};
             swimLine(id, nowS() + 1e6, from, Math.PI / 2, 0.35, -1);
-            track(id, 2.6, 1.5, 0.3, 0);
+            track(id, 2.2, 1.7, (yaw) => yaw + Math.PI + 0.6, 0);
             return {note: "a European eel in the lake (anguilliform: the whole body waves)", watch: [id], go: () => swimLine(id, nowS(), from, Math.PI / 2, 0.35, -1)};
         },
         /** A green mamba crawls across the grass (lateral undulation, no slip). */
