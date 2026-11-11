@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} על הסיפון",
             "closed": "הכרטיס נסגר",
             "motionReduced": "התנועה מופחתת: מה שקרה מסופר כאן במקום להיות מוצג.",
-            "skipToList": "דלג אל מי שעל הסיפון"
+            "skipToList": "דלג אל מי שעל הסיפון",
+            "resetView": "חזרה אל כל ה-Ark"
         },
         "person": {
             "metaTitle": "החיות של {name} ב-Ark",

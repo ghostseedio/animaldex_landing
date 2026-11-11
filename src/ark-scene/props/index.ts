@@ -31,8 +31,10 @@ import type {QualityTier} from "@/ark-scene/post";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {ARK_DAY_MS, arkDayAt, weatherAt} from "@/lib/ark-clock";
 import {nestStage, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
-import {buildAreas} from "@/ark-scene/props/areas";
-import {buildCave} from "@/ark-scene/props/cave";
+import {buildAreas, type Areas} from "@/ark-scene/props/areas";
+import {chimneyTop, defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
+import {prepareAttachPoints, setAttachHomePlots} from "@/ark-scene/sampler";
+import {buildCave, CAVE_ROOST} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
 import {buildEffects} from "@/ark-scene/props/effects";
 import {buildHomes, buildWebs, type Homes} from "@/ark-scene/props/homes";
@@ -52,7 +54,7 @@ function override(): Partial<PropsConditions> | null {
 export type PropsStats = {enabled: boolean; tier: QualityTier; drawn: Record<string, number>; presence: string; nests: Homes["nests"]};
 
 /** Where the props' things are: the homes' and the areas' marks, the cave's mouth and its way out. */
-export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number}};
+export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number; /** Where the bats hang, in the world. */ roost: {x: number; y: number; z: number}}};
 
 /**
  * The Ark day now (fractional, as the server counts it): the snapshot's
@@ -78,6 +80,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     nestSites: () => Array<NestSiteInfo & {stage: number}>;
     /** Pin the Ark day the nests are built to (null follows the clock). */
     setArkDay: (day: number | null) => void;
+    /** The home area's plots (the map lane's `homePlots()`; default: today's cottage and barn). */
+    setHomePlots: (plots: HomePlot[]) => void;
 } {
     const root = new Group();
     root.name = "props";
@@ -89,14 +93,20 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     let reducedMotion = context.reducedMotion;
     const voyageStart = Date.parse(context.snapshot.voyage.started_at ?? "") || null;
 
-    const areas = buildAreas(tier);
-    root.add(areas.group);
+    // The areas and the homes stand on the scenery's attach points (ledges, rocks, trees): they are built once
+    // the sampler has prepared them a slice a frame (`prepareAttachPoints`), so the mount has no long task.
+    let areas: Areas | null = null;
+    let disposed = false;
+    let shadows = true;
+    let homePlots: HomePlot[] = defaultHomePlots();
     const cave = buildCave(tier);
     root.add(cave.group);
     const effectsGroup = new Group();
     effectsGroup.name = "props:effects";
     root.add(effectsGroup);
-    const effects = buildEffects(effectsGroup, areas.chimney);
+    const firstHouse = homePlots.find((plot) => plot.kind === "house");
+    const chimney = firstHouse ? chimneyTop(firstHouse) : {x: 0, y: -100, z: 0};
+    const effects = buildEffects(effectsGroup, new Vector3(chimney.x, chimney.y, chimney.z));
     effects.setTier(tier.particles);
 
     let homes: Homes | null = null;
@@ -106,6 +116,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     let moved = true;
     let arkDayPin: number | null = null;
     const rebuildHomes = () => {
+        if (!areas) return;
         const presence = propsPresence(snapshot, context.planOf);
         // The sitters' and the den-keepers' places too: the scene places everyone after the module is built.
         const placed = [...presence.nests.map((nest) => nest.sitter), ...Array.from(presence.groups.values()).flat().map((animal) => animal.id)]
@@ -132,19 +143,28 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         homes.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin));
         moved = true;
     };
-    rebuildHomes();
+    const mountScenery = () => {
+        if (disposed || areas) return;
+        areas = buildAreas(tier, homePlots);
+        root.add(areas.group);
+        for (const batch of areas.batches) batch.setShadows(shadows);
+        for (const piece of areas.pieces) piece.setShadows(shadows);
+        rebuildHomes();
+        moved = true;
+    };
+    void prepareAttachPoints(6).then(mountScenery);
 
     /** The places worth a close look: the nests, the homes' marks, the webs, the cave's mouth. */
     let closeCache: {key: string; spots: Array<{x: number; y: number; z: number}>} = {key: "", spots: []};
     const closeSpots = () => {
         if (closeCache.key === homesKey) return closeCache.spots;
         const inside = cave.toWorld(new Vector3(0, 1.4, -2));
-        const spots = [...(homes?.nests ?? []), ...Object.values(homes?.marks ?? {}), ...Object.values(areas.marks), {x: cave.origin.x, y: cave.origin.y + 1.4, z: cave.origin.z}, inside];
+        const spots = [...(homes?.nests ?? []), ...Object.values(homes?.marks ?? {}), ...Object.values(areas?.marks ?? {}), {x: cave.origin.x, y: cave.origin.y + 1.4, z: cave.origin.z}, inside];
         closeCache = {key: homesKey, spots};
         return spots;
     };
-    const batches = (): LodBatch[] => [...areas.batches, ...(homes?.batches ?? [])];
-    const pieces = (): LodPiece[] => [...areas.pieces, ...cave.pieces];
+    const batches = (): LodBatch[] => [...(areas?.batches ?? []), ...(homes?.batches ?? [])];
+    const pieces = (): LodPiece[] => [...(areas?.pieces ?? []), ...cave.pieces];
 
     let conditions: PropsConditions = conditionsFromArkWeather({rain: 0, wind: 0.3, windDirection: 0.6, fog: 0, wetness: 0, puddles: 0, cold: 0.4, mountainSnowCover: 0.5}, hours);
     let conditionsAt = -Infinity;
@@ -158,7 +178,6 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     const last = new Vector3(Infinity, 0, 0);
     let lastUpdate = 0;
     const sun = new Vector3();
-    let shadows = true;
 
     const propsModule = {
         name: "props",
@@ -173,8 +192,23 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         },
         setShadows: (on: boolean) => {
             shadows = on;
+            areas?.buildings.setShadows(on);
             for (const batch of batches()) batch.setShadows(on);
             for (const piece of pieces()) piece.setShadows(on);
+        },
+        /** The home area's plots (the map lane's `homePlots()`): each gets its own garden or yard, paddock, coop and fences. */
+        setHomePlots: (plots: HomePlot[]) => {
+            const same = plots.length === homePlots.length && plots.every((plot, i) => plot.id === homePlots[i].id && plot.x === homePlots[i].x && plot.z === homePlots[i].z && plot.rotation === homePlots[i].rotation);
+            homePlots = plots;
+            setAttachHomePlots(plots); // the sampler's fence_post points follow the same plots (graphics attach)
+            if (!areas || same) return;
+            root.remove(areas.group);
+            areas.dispose();
+            areas = buildAreas(tier, homePlots);
+            root.add(areas.group);
+            for (const batch of areas.batches) batch.setShadows(shadows);
+            for (const piece of areas.pieces) piece.setShadows(shadows);
+            moved = true;
         },
         setSnapshot: (next: ArkSnapshot) => {
             snapshot = next;
@@ -203,7 +237,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 // Frost at a cold dawn (and in the cold's small hours), lying snow on the cold props.
                 PROPS_WEATHER.frost.value = Math.max(0, (conditions.cold - 0.45) * 2) * Math.max(conditions.dawn, conditions.night * 0.6, conditions.cold > 0.8 ? 0.5 : 0);
                 PROPS_WEATHER.snow.value = Math.max(0, conditions.snowCover - 0.3) * Math.min(1, conditions.cold * 1.4);
-                if (areas.setWeather({puddles: conditions.puddles, snowCover: conditions.snowCover, cold: conditions.cold})) moved = true;
+                areas?.buildings.setNight(conditions.night);
+                if (areas?.setWeather({puddles: conditions.puddles, snowCover: conditions.snowCover, cold: conditions.cold})) moved = true;
                 cave.setIcicles(conditions.cold > 0.55 ? conditions.cold : 0);
                 // A slime trail glints when wet and in a low, raking light.
                 homes?.setGlint(Math.min(1, 0.25 + conditions.wetness * 0.8 + conditions.dawn * 0.4));
@@ -221,7 +256,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 const {x, y, z} = camera.position;
                 for (const batch of batches()) batch.update(x, y, z);
                 for (const piece of pieces()) piece.update(x, y, z);
-                if (webs) webs.lines.visible = tier.fine && Math.hypot(x - areas.chimney.x, z - areas.chimney.z) < 400;
+                if (webs) webs.lines.visible = tier.fine && Math.hypot(x - chimney.x, z - chimney.z) < 400;
             }
         },
         stats: (): PropsStats => {
@@ -248,10 +283,11 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             arkDayPin = day;
             if (homes?.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin))) moved = true;
         },
-        marks: (): PropsMarks => ({spots: {...areas.marks, ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing}}),
+        marks: (): PropsMarks => ({spots: {...(areas?.marks ?? {}), ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing, roost: (({x, y, z}) => ({x, y, z}))(cave.toWorld(CAVE_ROOST))}}),
         dispose: () => {
+            disposed = true;
             context.scene.remove(root);
-            areas.dispose();
+            areas?.dispose();
             cave.dispose();
             effects.dispose();
             homes?.dispose();

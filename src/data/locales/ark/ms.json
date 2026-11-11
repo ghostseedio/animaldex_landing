@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} di atas kapal",
             "closed": "Kad ditutup",
             "motionReduced": "Gerakan dikurangkan: apa yang berlaku diceritakan di sini dan bukan dimainkan.",
-            "skipToList": "Langkau ke senarai di atas kapal"
+            "skipToList": "Langkau ke senarai di atas kapal",
+            "resetView": "Kembali ke seluruh Ark"
         },
         "person": {
             "metaTitle": "Haiwan {name} di Ark",

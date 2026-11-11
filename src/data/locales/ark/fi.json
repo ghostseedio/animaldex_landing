@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} kyydissä",
             "closed": "Kortti suljettu",
             "motionReduced": "Liikettä on vähennetty: tapahtumat kerrotaan tässä toistamisen sijaan.",
-            "skipToList": "Siirry kyydissä oleviin"
+            "skipToList": "Siirry kyydissä oleviin",
+            "resetView": "Takaisin koko Arkiin"
         },
         "person": {
             "metaTitle": "Käyttäjän {name} eläimet Arkissa",

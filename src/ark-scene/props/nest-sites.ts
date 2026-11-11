@@ -14,7 +14,6 @@
 import {allAttachPoints, surfaceAt, type AttachPoint} from "@/ark-scene/sampler";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
-import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import type {Placement} from "@/ark-scene/placement";
 import {ZONE_SITES, hashString, seeded} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -33,6 +32,8 @@ export type NestSpot = {
     up?: {x: number; y: number; z: number};
     /** The sitter's own nest (the first of a colony). */
     own: boolean;
+    /** The scenery draws it already (a `tree_hollow`'s hole): the props draw no hole over it. */
+    drawn?: boolean;
 };
 
 const TREE_KINDS = new Set(["broadleaf", "rainforest", "orchard", "acacia", "conifer", "palm", "canopy"]);
@@ -208,25 +209,41 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
             break;
         }
         case "trunk_hole": {
-            const hollows = pointsTagged("tree_hollow");
-            const bark = pointsTagged("bark").filter((point) => TREE_KINDS.has(point.hostKind) && Math.abs(point.normal.y) < 0.35 && point.position.y - surfaceAt(point.position.x, point.position.z).height > 1.0);
-            const pool = (hollows.length ? hollows : bark).slice().sort((a, b) => dist(a.position, from) - dist(b.position, from) || a.id.localeCompare(b.id));
+            // A drawn `tree_hollow` near the bird first (the attach lane's: the asset tree draws the hole), else a sideways
+            // `bark` point more than a metre up, where the props cut one.
+            const byDistance = (a: AttachPoint, b: AttachPoint) => dist(a.position, from) - dist(b.position, from) || a.id.localeCompare(b.id);
+            const hollows = pointsTagged("tree_hollow").filter((point) => dist(point.position, from) < 80).sort(byDistance);
+            const bark = pointsTagged("bark").filter((point) => TREE_KINDS.has(point.hostKind) && Math.abs(point.normal.y) < 0.35 && point.position.y - surfaceAt(point.position.x, point.position.z).height > 1.0).sort(byDistance);
+            const pool = [...hollows, ...bark];
             for (const point of pool) {
                 if (out.length >= count) break;
                 if (used.has(point.host)) continue;
-                if (take(point.id, {x: point.position.x, y: point.position.y, z: point.position.z, turn: Math.atan2(point.normal.x, point.normal.z)})) used.add(point.host);
+                // A `tree_hollow` is a hole the asset tree draws itself: the props add nothing over it.
+                if (take(point.id, {x: point.position.x, y: point.position.y, z: point.position.z, turn: Math.atan2(point.normal.x, point.normal.z), drawn: point.tag === "tree_hollow"})) used.add(point.host);
             }
             break;
         }
         case "cliff_ledge": {
             const zone = plan.zone === "farm_garden" || plan.zone === "river_lake" ? "seashore" : plan.zone;
+            // The sampler's ledges: a steep point of a cliff (`ledge:ground:N`, up is up, `forward` out of the cliff) or the
+            // level top of a big rock (`ledge:decorN:0`).
             const ledges = [...propsPoints("ledge", {x: from.x, z: from.z, radius: 90}, zone), ...propsPoints("ledge", {x: corner.x, z: corner.z, radius: 160})];
             for (const ledge of ledges) {
                 if (out.length >= count) break;
+                const out3 = ledge.forward ?? {x: Math.sin(ledge.yaw), y: 0, z: Math.cos(ledge.yaw)};
+                const flat = Math.hypot(out3.x, out3.z) || 1;
+                const outward = {x: out3.x / flat, z: out3.z / flat};
+                const turn = Math.atan2(outward.x, outward.z);
+                if (ledge.host !== "ground") {
+                    // A rock's shelf: the nest sits on it, if the rock is big enough to hold it.
+                    if (ledge.size[1] < radius * 0.8) continue;
+                    take(ledge.id, {x: ledge.x, y: ledge.y, z: ledge.z, turn, up: blendUp(ledge.normal, 0.5)});
+                    continue;
+                }
                 // The steep point is the cliff; the nest is on the level shelf at its top, the drop in front of it.
-                const shelf = cliffShelf(ledge, radius);
+                const shelf = cliffShelf(ledge, outward, radius);
                 if (!shelf) continue;
-                take(ledge.id, {x: shelf.x, y: shelf.y, z: shelf.z, turn: ledge.yaw, up: blendUp(shelf.normal, 0.5)});
+                take(ledge.id, {x: shelf.x, y: shelf.y, z: shelf.z, turn, up: blendUp(shelf.normal, 0.5)});
             }
             break;
         }
@@ -238,17 +255,18 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
                     // Tucked in at the top of the wall, its back to it; a colony spaced along the eave.
                     const wall = wallOut(point);
                     const along = (n - 1) * radius * 2.6;
-                    // The eave point is out under the overhang: back to the wall's face.
-                    const back = COTTAGE.overhang * 0.6 - 0.015;
+                    // The eave point is `out` from the wall under the overhang: the nest goes back against the wall's face.
+                    const out = COTTAGE.overhang * 0.6;
+                    const back = out - 0.004;
                     const x = point.x + Math.cos(wall) * along - Math.sin(wall) * back;
                     const z = point.z - Math.sin(wall) * along - Math.cos(wall) * back;
-                    // Under the roof: on the long walls the roof slopes down past the wall's top, so the nest's top
-                    // stays under the roof's underside at the nest's outer edge (micro.ts roofHeight, the drawn roof).
-                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.3 : 1.05);
-                    const reach = radius * (plan.profile.form === "ball" ? 1.3 : 0.95);
-                    const longWall = Math.abs(Math.cos(wall)) > 0.5;
-                    const top = longWall ? COTTAGE.floor + roofHeight(COTTAGE.depth / 2 + reach) - ROOF_THICKNESS - 0.02 : point.y;
-                    take(`${point.id}:${n}`, {x, y: Math.min(top, point.y) - tall, z, turn: wall});
+                    // Wholly under the drawn roof: the underside falls away from the wall (the eave point's normal gives
+                    // its slope; none under a gable's verge), so the nest's top is under the underside at its front edge.
+                    const slope = Math.hypot(point.normal.x, point.normal.z) / Math.max(Math.abs(point.normal.y), 1e-3);
+                    const reach = radius * (plan.profile.form === "ball" ? 1.4 : 1.02);
+                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.32 : 1.08);
+                    const underside = point.y + (out - reach) * slope;
+                    take(`${point.id}:${n}`, {x, y: Math.min(underside, point.y + out * slope) - 0.025 - tall, z, turn: wall});
                 }
                 if (out.length >= count) break;
             }
@@ -283,14 +301,14 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
  * outward normal) to the first spot level enough for a nest of `radius`
  * whose front still drops away (at least a metre within two radii of it).
  */
-function cliffShelf(ledge: PropsPoint, radius: number): {x: number; y: number; z: number; normal: {x: number; y: number; z: number}} | null {
+function cliffShelf(ledge: PropsPoint, outward: {x: number; z: number}, radius: number): {x: number; y: number; z: number; normal: {x: number; y: number; z: number}} | null {
     const step = Math.max(radius * 0.5, 0.35);
     for (let k = 1; k <= 16; k++) {
-        const x = ledge.x - ledge.normal.x * step * k;
-        const z = ledge.z - ledge.normal.z * step * k;
+        const x = ledge.x - outward.x * step * k;
+        const z = ledge.z - outward.z * step * k;
         const s = surfaceAt(x, z);
         if (s.waterDepth > 0 || s.normal.y < 0.82) continue;
-        const front = surfaceAt(x + ledge.normal.x * (radius * 2 + 0.6), z + ledge.normal.z * (radius * 2 + 0.6)).height;
+        const front = surfaceAt(x + outward.x * (radius * 2 + 0.6), z + outward.z * (radius * 2 + 0.6)).height;
         if (s.height - front < 1) continue;
         // Seated: no deeper into the slope than a fifth of the nest, never floating off its low side by more.
         const low = seatY(x, z, radius);

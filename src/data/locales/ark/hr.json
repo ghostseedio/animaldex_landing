@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: na brodu {count}",
             "closed": "Kartica zatvorena",
             "motionReduced": "Pokreti su smanjeni: ono što se dogodilo ovdje je opisano umjesto prikazano.",
-            "skipToList": "Preskoči na popis onih na brodu"
+            "skipToList": "Preskoči na popis onih na brodu",
+            "resetView": "Natrag na cijeli Ark"
         },
         "person": {
             "metaTitle": "{name}: životinje u Arku",

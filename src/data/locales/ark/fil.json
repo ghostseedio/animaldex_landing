@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} ang nakasakay",
             "closed": "Isinara ang card",
             "motionReduced": "Binawasan ang galaw: ikinukuwento rito ang nangyari sa halip na ipalabas.",
-            "skipToList": "Lumaktaw sa listahan ng nakasakay"
+            "skipToList": "Lumaktaw sa listahan ng nakasakay",
+            "resetView": "Bumalik sa buong Ark"
         },
         "person": {
             "metaTitle": "Ang mga hayop ni {name} sa Ark",

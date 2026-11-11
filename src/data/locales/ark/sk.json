@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: na palube {count}",
             "closed": "Karta zatvorená",
             "motionReduced": "Pohyb je obmedzený: čo sa stalo, je tu opísané namiesto prehrania.",
-            "skipToList": "Preskočiť na zoznam zvierat na palube"
+            "skipToList": "Preskočiť na zoznam zvierat na palube",
+            "resetView": "Späť na celú Ark"
         },
         "person": {
             "metaTitle": "{name}: zvieratá v Ark",

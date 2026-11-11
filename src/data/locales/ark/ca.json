@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} a bord",
             "closed": "Targeta tancada",
             "motionReduced": "El moviment està reduït: el que ha passat s'explica aquí en lloc de reproduir-se.",
-            "skipToList": "Salta a qui hi ha a bord"
+            "skipToList": "Salta a qui hi ha a bord",
+            "resetView": "Torna a tota l'Ark"
         },
         "person": {
             "metaTitle": "Els animals de {name} a l'Ark",

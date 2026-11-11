@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: जहाजावर {count}",
             "closed": "कार्ड बंद झाले",
             "motionReduced": "हालचाल कमी केली आहे: जे घडले ते चालवून दाखवण्याऐवजी इथे सांगितले आहे.",
-            "skipToList": "जहाजावर कोण आहे, तिथे जा"
+            "skipToList": "जहाजावर कोण आहे, तिथे जा",
+            "resetView": "संपूर्ण Ark वर परत जा"
         },
         "person": {
             "metaTitle": "Ark मधील {name} यांचे प्राणी",

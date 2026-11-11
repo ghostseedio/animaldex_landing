@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: Ark లో {count}",
             "closed": "కార్డు మూసివేయబడింది",
             "motionReduced": "చలనం తగ్గించబడింది: జరిగినది ప్లే చేయకుండా ఇక్కడ చెప్పబడుతుంది.",
-            "skipToList": "Ark లో ఎవరున్నారో దానికి వెళ్లండి"
+            "skipToList": "Ark లో ఎవరున్నారో దానికి వెళ్లండి",
+            "resetView": "మొత్తం Ark కి తిరిగి వెళ్లండి"
         },
         "person": {
             "metaTitle": "Ark లో {name} జంతువులు",

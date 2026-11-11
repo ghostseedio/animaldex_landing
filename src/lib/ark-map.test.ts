@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import holds from "@/ark-scene/map/validator-holds.json";
 import table from "@/ark-scene/map/species.json";
-import {mapHabitatAt, mapPlace, mapPoints, setArkMapSampler} from "@/ark-scene/map/place";
+import {mapHabitatAt, mapPlace, mapPoints, onSchedule, scheduleRoost, setArkMapSampler} from "@/ark-scene/map/place";
+import {bodyOf} from "@/ark-scene/map/species";
 import fixture from "@/ark-scene/fixtures/snapshot.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -146,6 +147,13 @@ test("map: a hanger hangs under its limb and a percher sits on top, on the drawn
     let hangers = 0;
     for (const animal of validatorAnimals()) {
         const place = placed.get(animal.id);
+        // A hanger under a limb of the real forest (the scenery's hang point, on the limb's drawn underside): its back down.
+        if (place?.perch?.tag === "canopy_hang") {
+            hangers++;
+            assert.ok(place.perch.ny < -0.5, `${animal.model_slug} hangs with its back down`);
+            assert.ok((place.map?.attach?.clearBelow ?? 0) >= arkBody(animal).metres, `${animal.model_slug} has the room to hang`);
+            continue;
+        }
         if (!place?.canopy || place.canopy.limb < 0) continue;
         const tree = canopyTrees(place.canopy.zone ?? animal.zone)[place.canopy.tree % canopyTrees(place.canopy.zone ?? animal.zone).length].item;
         const point = canopyPoint(animal.zone, place.canopy);
@@ -208,4 +216,33 @@ test("map + reef: no floor animal (a crab, a star, an octopus in its hole) stand
         assert.ok(!inCoral(place.x, place.z, 0), `${animal.model_slug} in a coral head`);
     }
     assert.ok(floor > 80, `${floor} floor animals`);
+});
+
+test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (only small invertebrates are micro); a perched one roosts on its perch", () => {
+    const {placed} = validated();
+    const off: string[] = [];
+    let birds = 0;
+    let grazers = 0;
+    let perched = 0;
+    for (const animal of validatorAnimals()) {
+        const place = placed.get(animal.id);
+        if (!place) continue;
+        const body = bodyOf(animal.model_slug);
+        // (A grazing grasshopper, termite or limpet is a small invertebrate: micro.)
+        const grazer = (behaviourProfile(animal.model_slug).weights.graze ?? 0) > 0 && body !== "i";
+        if (body === "b" || body === "t") birds++;
+        if (grazer) grazers++;
+        if ((body === "b" || body === "t" || grazer) && !onSchedule(place, animal.model_slug)) off.push(`${animal.model_slug} (${place.micro ? "micro" : "burrow"})`);
+        // Micro means a small invertebrate, nothing else.
+        if (place.micro) assert.equal(body ?? "i", "i", `${animal.model_slug} is micro`);
+        if (place.perch) {
+            perched++;
+            const roost = scheduleRoost(place, animal.zone);
+            assert.ok(roost, `${animal.model_slug} has a roost`);
+            // Its own perch, or the roost its text names (sleep_pattern).
+            if (!place.map?.roost) assert.deepEqual([roost.x, roost.y, roost.z], [place.perch.x, place.perch.y, place.perch.z], animal.model_slug);
+        }
+    }
+    assert.deepEqual(off, [], `${off.length} off the schedule: ${off.slice(0, 12).join(", ")}`);
+    assert.ok(birds > 1200 && grazers > 400 && perched > 800, `${birds} birds and bats, ${grazers} grazers, ${perched} perched`);
 });

@@ -147,6 +147,7 @@ Still to measure: a real mid-range phone (the handover's open item, owner).
 
 - **Product camera floor:** a viewer can't come closer than 4 m to a normal-sized animal (`controls.minDistance`, reset every frame), so on desktop most of the surface detail and the fur shells show only when the camera is close to a large animal. On a phone at 4 m a fox fills most of the width. The golden `--detail` shots come closer, for development only. Whether to allow closer is the runtime and camera lane's call.
 - **Fixed in this lane:** fur shells never drew before 2026-11-11 (the shell material found no species).
-- **Graphics lane:** grass is drawn under the lake's surface by the fox's lake shore, where it reads as a pale sheet. A translucent horizontal band crosses the barn owl's meadow in close shots.
+- **Mist (resolved):** the pale sheet on the fox's lake shore and the band across the barn owl's meadow were the props lane's flat mist sheet. With `ark-props` 54a82ee2 (draped mist) merged locally, both views are clean (re-checked 2026-11-11).
 - **Behaviour lane:** lions stand in among the zebras (the lion shots).
-- **Golden harness limits:** a sea animal on the seabed (the lobster) is not framed; canopy animals' detail shots go inside the tree (the macaw).
+- **Golden harness:** the bearing is checked clear of other animals, the ground and `golden-world.ts`'s trunks, lamps and buildings along the whole sight line. Limits: a sea animal on the seabed (the lobster) is not framed, and a canopy animal's detail shot goes inside the tree (the macaw).
+- **Fur shells' reach:** none on the front of the head (a muzzle is short-haired or bare; on a zebra the shells made a grey halo) or the hooves. The coat's length grows from behind the eyes, measured on the rest pose.

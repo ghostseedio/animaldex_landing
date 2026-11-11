@@ -141,8 +141,8 @@ function spiralSearch<T>(x: number, z: number, reach: number, step: number, ok: 
 
 /** The decor tree under a host id (`decor12`), for its trunk's axis. */
 function treeOf(host: string): {x: number; y: number; z: number} | null {
-    const match = /^decor(\d+)$/.exec(host);
-    const item = match ? worldDecor()[Number(match[1])] : null;
+    const match = /^(decor|fill)(\d+)$/.exec(host);
+    const item = match ? (match[1] === "decor" ? worldDecor() : forestFill())[Number(match[2])] : null;
     return item ? {x: item.x, y: item.y, z: item.z} : null;
 }
 
@@ -150,7 +150,7 @@ function treeOf(host: string): {x: number; y: number; z: number} | null {
  * A point on a decor tree's trunk (the sampler's `bark` points, on the drawn bark), `low`…`high` metres up, facing
  * sideways, nearest `near` (in `zone` first); its tree not already taken by another home.
  */
-function trunkPoint(near: {x: number; z: number}, zone: ArkZone, used: Set<string>, low = 0.6, high = 6): PropsPoint | null {
+function trunkPoint(near: {x: number; z: number}, zone: ArkZone, used: Set<string>, low = 0.6, high = 6, tag: "bark" | "tree_hollow" = "bark"): PropsPoint | null {
     const solid = (["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "rock", "shrub", "canopy"] as string[]);
     const around = [...worldDecor(), ...forestFill()].filter((item) => solid.includes(item.kind));
     // Open in front: no other tree or rock within a stride of the ground before it (it is seen, not hidden behind a neighbour).
@@ -160,8 +160,8 @@ function trunkPoint(near: {x: number; z: number}, zone: ArkZone, used: Set<strin
         const host = treeOf(point.host);
         return !around.some((item) => (!host || Math.hypot(item.x - host.x, item.z - host.z) > 0.05) && Math.hypot(item.x - fx, item.z - fz) < 1.5);
     };
-    const ok = (point: PropsPoint) => /^decor\d+$/.test(point.host) && !used.has(point.host) && Math.abs(point.normal.y) < 0.35 && point.y - groundAt(point.x, point.z) > low && point.y - groundAt(point.x, point.z) < high && open(point);
-    return propsPoints("bark", {x: near.x, z: near.z, radius: 60}, zone).find(ok) ?? propsPoints("bark", {x: near.x, z: near.z, radius: 160}).find(ok) ?? null;
+    const ok = (point: PropsPoint) => /^(decor|fill)\d+$/.test(point.host) && !used.has(point.host) && Math.abs(point.normal.y) < 0.35 && point.y - groundAt(point.x, point.z) > low && point.y - groundAt(point.x, point.z) < high && open(point);
+    return propsPoints(tag, {x: near.x, z: near.z, radius: 60}, zone).find(ok) ?? propsPoints(tag, {x: near.x, z: near.z, radius: 160}).find(ok) ?? null;
 }
 
 /** Where eggs lie in each form's cup (its floor, at radius 1), and how far apart. Forms not listed hide theirs. */
@@ -238,7 +238,9 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             nestSites.push(info);
             nestsOut.push({key: plan.key, speciesId: plan.speciesId, siteId: spot.siteId, form: profile.form, site: profile.site, x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, radius, sitter: info.sitter});
             if (profile.form === "hole" || profile.form === "barn") {
-                // A hole in the trunk (or the barn's gable): the nest is inside, out of sight; its mouth about a fifth of the bird.
+                // A hole in the trunk (or the barn's gable): the nest is inside, out of sight; its mouth about a fifth of the
+                // bird. A `tree_hollow` is drawn by the asset tree itself.
+                if (spot.drawn) return;
                 const mouth = Math.max(0.05, 0.12 * drawn) * (profile.form === "barn" ? 1.6 : 1);
                 hollows.push({x: spot.x, y: spot.y, z: spot.z, turn: spot.turn, scale: mouth / 0.15});
                 return;
@@ -371,13 +373,20 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     if (has("bees")) {
         const bees = first("bees")!;
         const corner = zoneCorner(bees.zone === "farm_garden" ? "woodland" : bees.zone);
-        // A hollow in a trunk (a sampler `bark` point on the drawn bark), two to four metres up, facing open ground.
-        const hollow = trunkPoint({x: corner.x, z: corner.z}, bees.zone === "farm_garden" ? "woodland" : bees.zone, used, 1.6, 4);
+        // A hollow in a trunk: a drawn `tree_hollow` (the comb hung inside its mouth), else a split cut at a `bark` point,
+        // one to five metres up, facing open ground.
+        const zone = bees.zone === "farm_garden" ? "woodland" : bees.zone;
+        const drawnHole = trunkPoint({x: corner.x, z: corner.z}, zone, used, 1, 5, "tree_hollow");
+        const hollow = drawnHole ?? trunkPoint({x: corner.x, z: corner.z}, zone, used, 1.6, 4);
         if (hollow) {
             used.add(hollow.host);
             const turn = Math.atan2(hollow.normal.x, hollow.normal.z);
-            const combNest = merge([shapes.hollow(0.2, true), shapes.comb(0.2)]);
-            add(new LodBatch("bee-hollow", [{x: hollow.x, y: hollow.y, z: hollow.z, turn, scale: 1}], combNest, null, warm, {cap: 2, reach: 1}));
+            // In a drawn hole: the comb a little way in, sized to the hole; else the props' own split with its comb.
+            // In a drawn hole the comb is smaller (the asset's mouth is a hand across), its sheets' edges at the mouth.
+            const scale = drawnHole ? 0.55 : 1;
+            const inset = 0;
+            const combNest = drawnHole ? shapes.comb(0.2) : merge([shapes.hollow(0.2, true), shapes.comb(0.2)]);
+            add(new LodBatch("bee-hollow", [{x: hollow.x - hollow.normal.x * inset, y: hollow.y, z: hollow.z - hollow.normal.z * inset, turn, scale}], combNest, null, warm, {cap: 2, reach: 1}));
             marks.beesHollow = {x: hollow.x, y: hollow.y, z: hollow.z};
             marks.beesFacing = {x: hollow.normal.x, y: 0, z: hollow.normal.z};
         }

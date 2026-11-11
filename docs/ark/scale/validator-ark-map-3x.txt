@@ -1,0 +1,14 @@
+{"file":".ark-golden/site/population-3x.json","animals":9420,"species":953,"ms":49163,"failures":3,"failingSpecies":1,"failingAnimals":6,"byCheck":{"floats_or_sinks":0,"inside_scenery":0,"wrong_medium":0,"wrong_depth_band":0,"wrong_water":0,"invalid_surface":3,"wrong_facing":0,"small_not_on_attach_point":0,"roost_invalid":0,"off_walk_grid":0},"maxPerM2Cell":175,"cellsWith3Plus":682}
+farm_garden: 5397 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 4733, max level 1201278, ground nearest-neighbour p10/p50 0.36/0.74 m
+rainforest: 972 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 278, max level 100094, ground nearest-neighbour p10/p50 0.57/1.25 m
+woodland: 876 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 462, max level 77849, ground nearest-neighbour p10/p50 0.22/1.23 m
+river_lake: 675 animals, held 0, unplaced 0, failing species 1, off the point (level>=1) 264, max level 200244, ground nearest-neighbour p10/p50 0.38/1.10 m
+grassland: 606 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 387, max level 18613, ground nearest-neighbour p10/p50 0.71/1.25 m
+wetland: 327 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 195, max level 55575, ground nearest-neighbour p10/p50 0.17/0.83 m
+seashore: 177 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 61, max level 3614, ground nearest-neighbour p10/p50 0.70/1.10 m
+coral_reef: 138 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 0, max level 0, ground nearest-neighbour p10/p50 NaN/NaN m
+desert: 129 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 46, max level 403, ground nearest-neighbour p10/p50 1.10/2.50 m
+mountains: 66 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 22, max level 4854, ground nearest-neighbour p10/p50 1.10/99.00 m
+open_ocean: 48 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 3, max level 865, ground nearest-neighbour p10/p50 NaN/NaN m
+polar: 9 animals, held 0, unplaced 0, failing species 0, off the point (level>=1) 0, max level 0, ground nearest-neighbour p10/p50 1.10/1.10 m
+nice -n 15 npx tsx scripts/ark-map-validate-scale.mts   11.21s user 0.73s system 21% cpu 55.144 total

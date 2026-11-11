@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} an Bord",
             "closed": "Karte geschlossen",
             "motionReduced": "Bewegung ist reduziert: Was passiert ist, wird hier erzählt statt abgespielt.",
-            "skipToList": "Zur Liste, wer an Bord ist"
+            "skipToList": "Zur Liste, wer an Bord ist",
+            "resetView": "Zurück zur ganzen Ark"
         },
         "person": {
             "metaTitle": "Die Tiere von {name} in der Ark",

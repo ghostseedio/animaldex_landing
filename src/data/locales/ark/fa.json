@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} در کشتی",
             "closed": "کارت بسته شد",
             "motionReduced": "حرکت کاهش یافته است: آنچه رخ داد اینجا گفته می‌شود، نه نمایش داده.",
-            "skipToList": "رفتن به فهرست سرنشینان"
+            "skipToList": "رفتن به فهرست سرنشینان",
+            "resetView": "بازگشت به کل Ark"
         },
         "person": {
             "metaTitle": "جانوران {name} در Ark",

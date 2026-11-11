@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count}마리 탑승 중",
             "closed": "카드 닫힘",
             "motionReduced": "동작 줄이기가 켜져 있어요. 일어난 일을 재생하는 대신 여기서 글로 알려 드려요.",
-            "skipToList": "탑승한 동물로 건너뛰기"
+            "skipToList": "탑승한 동물로 건너뛰기",
+            "resetView": "Ark 전체로 돌아가기"
         },
         "person": {
             "metaTitle": "Ark에 있는 {name}님의 동물",

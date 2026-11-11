@@ -15,7 +15,22 @@
 import {BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, InstancedMesh, MeshStandardMaterial, Vector3} from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {ARK_ENV} from "@/ark-scene/glsl";
-import {FISH_KINDS, FISH_LOOKS, fishSchoolAt, fishSchools, placeFish, schoolFrame, schoolTime, seaEpochSeconds, surgeDirection, type FishKind, type FishLook, type SchoolFrame, type Vec3} from "@/ark-scene/fish-schools";
+import {FISH_KINDS, FISH_LOOKS, fishSchoolAt, fishSchools, fleeFrom, placeFish, schoolFrame, schoolTime, seaEpochSeconds, surgeDirection, type FishChaser, type FishKind, type FishLook, type SchoolFrame, type Vec3} from "@/ark-scene/fish-schools";
+
+// MARK: - Chasers (optional input)
+
+let chaserSource: (() => readonly FishChaser[]) | null = null;
+const NO_CHASERS: readonly FishChaser[] = [];
+
+/**
+ * Optional: hunters the fish split round, flee and rejoin behind (e.g. `setFishChasers(() => recipeScene.chasers)`),
+ * read once a frame. Only the schools drawn near the camera react; the shared closed-form motion stays the base and
+ * the flight is an offset from it (`fleeFrom`), so with no chasers, or far off, every viewer sees the same fish.
+ * `null` clears it.
+ */
+export function setFishChasers(source: (() => readonly FishChaser[]) | null): void {
+    chaserSource = source;
+}
 
 // MARK: - Shapes (unit length along +z, head forward; the instance scales it to the look's length)
 
@@ -170,6 +185,9 @@ export class FishView {
     private readonly p: Vec3 = {x: 0, y: 0, z: 0};
     private frame: SchoolFrame | undefined = undefined;
     private readonly velocity: Vec3 = {x: 0, y: 0, z: 0};
+    private readonly fleeOffset: Vec3 = {x: 0, y: 0, z: 0};
+    private readonly fleeVelocity: Vec3 = {x: 0, y: 0, z: 0};
+    private readonly nearChasers: FishChaser[] = [];
 
     constructor() {
         const capacity = new Map<FishKind, number>();
@@ -223,6 +241,7 @@ export class FishView {
             entry.nearCount = 0;
             entry.farCount = 0;
         });
+        const chasers = chaserSource?.() ?? NO_CHASERS;
         for (const school of fishSchools()) {
             const hx = school.home.x - camera.x;
             const hz = school.home.z - camera.z;
@@ -255,6 +274,18 @@ export class FishView {
             const beats = (mesh.geometry.getAttribute("arkFish") as InstancedBufferAttribute).array as Float32Array;
             const surge = school.style === "hover" ? surgeDirection(now.centre) : null;
             const pitchScale = surge ? 0.3 : 1;
+            // Hunters in reach of this school (near the camera only): the fish there split round them.
+            const hunted = this.nearChasers;
+            hunted.length = 0;
+            if (near) {
+                for (const c of chasers) {
+                    const cx = c.x - now.centre.x;
+                    const cy = c.y - now.centre.y;
+                    const cz = c.z - now.centre.z;
+                    const reach = now.radius + c.r + 1.5;
+                    if (cx * cx + cy * cy + cz * cz < reach * reach) hunted.push(c);
+                }
+            }
             for (let i = 0; i < slots.length; i++) {
                 // A low-discrepancy share of the school (golden-ratio steps): thinned evenly, not from one side.
                 if (this.share < 1 && ((i * 0.618034) % 1) > this.share) continue;
@@ -263,6 +294,22 @@ export class FishView {
                 let vx = this.velocity.x;
                 let vy = this.velocity.y;
                 let vz = this.velocity.z;
+                let fright = 0;
+                if (hunted.length) {
+                    const o = this.fleeOffset;
+                    const f = this.fleeVelocity;
+                    o.x = o.y = o.z = 0;
+                    f.x = f.y = f.z = 0;
+                    fright = fleeFrom(p, hunted, o, f);
+                    if (fright > 0) {
+                        p.x += o.x;
+                        p.y = Math.min(p.y + o.y, -0.25);
+                        p.z += o.z;
+                        vx += f.x;
+                        vy += f.y;
+                        vz += f.z;
+                    }
+                }
                 const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
                 if (surge) {
                     // Hovering: mostly facing into the surge, turning a little on its own; a dart points it where it goes.

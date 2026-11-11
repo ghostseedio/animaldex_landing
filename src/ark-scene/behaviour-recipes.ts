@@ -229,6 +229,20 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
     return null;
 }
 
+/**
+ * A sitter with eggs (or chicks) in its nest sits on it: every slot goes to the nest (awake, it sits; asleep, it sleeps
+ * there), from the props lane's nests (`setNestSource`; the eggs are the server's). Null for everyone else.
+ */
+export function sitterIntent(input: {world: ScheduleWorld; profile: ArkBehaviourProfile; animal: ScheduleAnimal; start: number; awake: boolean; kit: ScheduleKit}): RecipeIntent | null {
+    if (!enabled || !nestSource) return null;
+    const site = nestSource(input.animal.id, input.start);
+    if (!site || !((site.eggs ?? 0) > 0 || (site.chicks ?? 0) > 0)) return null;
+    const to: Spot = {x: site.x, y: site.y, z: site.z, nx: 0, ny: 1, nz: 0, point: null};
+    const raisedTo = to.y > Math.max(input.world.sampler.heightAt(to.x, to.z), 0) + 0.4;
+    const mode: TripMode = input.kit.flies(input.profile) && raisedTo ? "air" : input.kit.aquatic(input.profile) ? "water" : "ground";
+    return {doing: input.awake ? "rest" : "sleep", to, mode, recipe: "incubate_sit"};
+}
+
 /** Open water near a point (deeper than `depth`), searched in seeded rings out to `reach`. */
 function waterNear(world: ScheduleWorld, x: number, z: number, reach: number, depth: number, seed: number): {x: number; z: number; floor: number} | null {
     const turn = (seed % 360) * (Math.PI / 180);
@@ -299,6 +313,14 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         }
         case "nest":
             return nestSiteOf(world, profile, animal, input.slug, kit, input.start);
+        case "air": {
+            // A place in the air over open ground or water near its range (a bat's beat): 3–6 m up.
+            const a = random() * Math.PI * 2;
+            const r = radius * (0.3 + 0.7 * random());
+            const x = centre.x + Math.sin(a) * r;
+            const z = centre.z + Math.cos(a) * r;
+            return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+        }
         default:
             return null;
     }
@@ -307,7 +329,7 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
 // MARK: Other lanes' sources (wired by the scene once those lanes are in: see docs/ark/behaviour-recipes.md)
 
 /** A nest the props lane draws for an animal (its site and how far built it is at a world time), or null. */
-export type NestSource = (animalId: string, epochSeconds: number) => {x: number; y: number; z: number; stage: number} | null;
+export type NestSource = (animalId: string, epochSeconds: number) => {x: number; y: number; z: number; stage: number; eggs?: number; chicks?: number} | null;
 /** Ambient fish schools near a point at a world time (the reef lane's `fishSchoolsNear`). */
 export type FishSource = (pos: {x: number; y?: number; z: number}, radius: number, epochSeconds: number) => Array<{centre: {x: number; y: number; z: number}; radius: number; heading: {x: number; y: number; z: number}; speed: number; mode: string}>;
 let nestSource: NestSource | null = null;
@@ -326,15 +348,29 @@ export function setFishSource(source: FishSource | null) {
 export function hasNestSource(): boolean {
     return Boolean(nestSource);
 }
+/** The wired nest source's site for an animal now (null without one). */
+export function nestSourceOf(animalId: string, epochSeconds: number) {
+    return nestSource ? nestSource(animalId, epochSeconds) : null;
+}
+
+let fallbackNestsOn: boolean | null = null;
+/** Development: draw this branch's own growing nests even with a nest source wired (the clip page's stand-in props). */
+export function setFallbackNests(on: boolean | null) {
+    fallbackNestsOn = on;
+}
+/** Whether the scene draws this branch's own nests: until the props lane's are wired. */
+export function fallbackNests(): boolean {
+    return fallbackNestsOn ?? !nestSource;
+}
 
 /**
  * The adapter for the props lane (`props/nest-growth.ts`): its sites (`nestSites()`, with `sitter`) and stages
  * (`nestStage(speciesId, siteId, arkDay)`), and the Ark day at a world time. Pure, as the props' own schedule is.
  */
-export function nestSourceFromProps(props: {sites: () => Array<{sitter: string | null; speciesId: string; siteId: string; position: {x: number; y: number; z: number}}>; stage: (speciesId: string, siteId: string, arkDay: number) => number; arkDayAt: (epochSeconds: number) => number}): NestSource {
+export function nestSourceFromProps(props: {sites: () => Array<{sitter: string | null; speciesId: string; siteId: string; position: {x: number; y: number; z: number}; eggs?: number; chicks?: number}>; stage: (speciesId: string, siteId: string, arkDay: number) => number; arkDayAt: (epochSeconds: number) => number}): NestSource {
     return (animalId, epochSeconds) => {
         const site = props.sites().find((s) => s.sitter === animalId);
-        return site ? {...site.position, stage: props.stage(site.speciesId, site.siteId, props.arkDayAt(epochSeconds))} : null;
+        return site ? {...site.position, stage: props.stage(site.speciesId, site.siteId, props.arkDayAt(epochSeconds)), eggs: site.eggs ?? 0, chicks: site.chicks ?? 0} : null;
     };
 }
 
@@ -460,10 +496,13 @@ export type RecipeAct = {
     mark: {kind: NonNullable<BlockDef["mark"]>; at: P; id: string; from: number} | null;
     label: string;
     /** A murmuration's centre and seed (the scene draws its ambient flockmates from the same function). */
-    flock?: {centre: P; seed: number; t0: number; t1: number} | null;
+    flock?: Flock | null;
 };
 
-export type RecipePose = TripPose & {act?: RecipeAct | null};
+/** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
+export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats"};
+
+export type RecipePose = TripPose & {act?: RecipeAct | null; /** Ambient flock-mates round it now (its act may be anything). */ flock?: Flock | null};
 
 /** The owner a trip was worked out for (set by the schedule: its animal, profile, clock). */
 export type TripOwner = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; slug: string; activity: ArkBehaviourProfile["activity"] | null | undefined; hoursAt: HoursAt};
@@ -1005,7 +1044,7 @@ export function wireRecipes(animals: WireInput[]) {
     };
     for (const [slug, list] of Array.from(bySpecies)) {
         const species = speciesRecipes(slug);
-        const pairs = species.recipes.map((r) => TEMPLATES[r.id]).filter((t): t is Template => Boolean(t && t.kind === "pair"));
+        const pairs = species.recipes.map((r) => TEMPLATES[r.id]).filter((t): t is Template => Boolean(t && t.kind === "pair" && t.id !== "mixed_follow"));
         if (!pairs.length || list.length < 2) continue;
         const sorted = [...list].sort((a, b) => a.animal.id.localeCompare(b.animal.id));
         const dist = (a: WireInput, b: WireInput) => Math.hypot(a.animal.home.x - b.animal.home.x, a.animal.home.z - b.animal.home.z);
@@ -1039,6 +1078,7 @@ export function wireRecipes(animals: WireInput[]) {
             }
         }
     }
+    wireMixed(animals);
 }
 
 export function pairLinksOf(animal: ScheduleAnimal): ReadonlyArray<Pick<PairLink, "template" | "role" | "key"> & {other: string}> {
@@ -1066,6 +1106,7 @@ function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, e
     const list = links.get(owner.animal);
     if (!list) return null;
     for (const l of list) {
+        if (l.template === "mixed_follow") continue;
         const template = TEMPLATES[l.template];
         const species = speciesRecipes(owner.slug);
         const factor = seasonFactor(species, template.season, epoch);
@@ -1283,17 +1324,42 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     if (!enabled) return base;
     const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
     if (!owner) return base;
+    const pose = overlaid(world, owner, trip, base, epoch, kit);
+    // Ambient flock-mates round it (a swarm at its spot, its roost-mates streaming out at dusk), whatever it is doing.
+    const flock = emergenceFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
+    return flock ? {...pose, flock} : pose;
+}
+
+function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose {
     const murmuring = murmurationPose(world, owner, kit, base, epoch);
     if (murmuring) return murmuring;
     if (trip.doing === "sleep") return postureOf(owner, base);
     const pair = pairEpisode(world, owner, kit, epoch);
     if (pair) return onEpisode(world, pair, base, epoch);
+    const mixed = mixedPose(world, owner, kit, base, epoch);
+    if (mixed) return mixed;
     if (trip.shadow) return formationPose(world, owner, trip, base, epoch, kit) ?? base;
     if (epoch >= trip.arrive) {
         const stay = stayEpisode(world, trip, owner, kit);
         if (stay && epoch >= stay.t0 && epoch < stay.t1) return onEpisode(world, stay, base, epoch);
+        const hovering = airStay(world, owner, trip, base, epoch, kit);
+        if (hovering) return hovering;
     }
     return crossingPose(world, owner, trip, base, epoch) ?? base;
+}
+
+/** A flyer whose stay is a place in the air (a bat's beat, between its sallies) keeps flying there: a slow circle. */
+function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose | null {
+    if (trip.to.point !== null || !kit.flies(owner.profile)) return null;
+    const ground = Math.max(world.sampler.heightAt(trip.to.x, trip.to.z), 0);
+    if (trip.to.y < ground + 1.2) return null;
+    const r = Math.max(owner.animal.length * 6, 1.2);
+    const a = (epoch - trip.arrive) * (0.9 / r) * 2 + (hashString(owner.animal.id) % 628) / 100;
+    // In from its arrival point over the first second.
+    const k = ease(Math.min((epoch - trip.arrive) / 1.2, 1));
+    const x = trip.to.x + (Math.cos(a) * r - Math.cos((hashString(owner.animal.id) % 628) / 100) * r) * k;
+    const z = trip.to.z + (Math.sin(a) * r - Math.sin((hashString(owner.animal.id) % 628) / 100) * r) * k;
+    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: a + Math.PI, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: -0.35, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
 }
 
 const postureActs = new Map<string, RecipeAct>();
@@ -1302,10 +1368,14 @@ const postureActs = new Map<string, RecipeAct>();
 function postureOf(owner: TripOwner, base: TripPose): RecipePose {
     const posture = speciesRecipes(owner.slug).posture;
     if (!posture) return base;
-    const roll = posture === "hang" || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
-    const key = `${posture}#${roll}`;
+    // A bat hangs head down from its feet (nose down a quarter turn about its feet on the limb); a sloth hangs level,
+    // upside down (a half roll); an otter floats on its back.
+    const flyer = owner.profile.move === "fly" || owner.profile.moves.includes("fly");
+    const roll = (posture === "hang" && !flyer) || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
+    const pitch = posture === "hang" && flyer ? Math.PI / 2 : posture === "curl" ? 0.15 : 0;
+    const key = `${posture}#${roll}#${pitch}`;
     let act = postureActs.get(key);
-    if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch: posture === "curl" ? 0.15 : 0, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
+    if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
     return {...base, act};
 }
 
@@ -1346,4 +1416,219 @@ export function episodeOfTrip(world: ScheduleWorld, trip: Trip, kit: ScheduleKit
 /** The beat an act reads as (for code that only knows beats). */
 export function beatOfAct(act: RecipeAct | null | undefined): ArkBeat | null {
     return act ? BLOCKS[act.block]?.beat ?? null : null;
+}
+
+// MARK: Round 2: swarms, bats, mixed flocks, molehills, coats, the duller sex, hangers
+
+/** Hangers (bats, sloths: their posture is "hang"): the roost tags under limbs first (`canopy_hang`), then their own. */
+export function recipeRoostTags(profile: ArkBehaviourProfile): AttachTag[] | null {
+    if (!enabled || speciesRecipes(profile.slug).posture !== "hang") return null;
+    return profile.move === "fly" || profile.moves.includes("fly") ? ["canopy_hang", "cave_mouth", "branch"] : ["canopy_hang", "branch"];
+}
+
+/** A swarm or a cluster round a spot now (pure in its spot and the time; its hours from its template), or null. */
+export function swarmFlock(id: string, slug: string, at: P, epoch: number, hours: number): Flock | null {
+    if (!enabled) return null;
+    const species = speciesRecipes(slug);
+    for (const kind of ["swarm", "swarm_dusk", "cluster"] as const) {
+        if (!species.has.has(kind)) continue;
+        const template = TEMPLATES[kind];
+        if (kind !== "cluster" && !hourOk(template, hours)) continue;
+        if (kind === "cluster" && !(hours > 8 && hours < 17)) continue;
+        // Everyone of its species at one spot (a 12 m cell) shares one swarm (drawn once, round whichever reports it).
+        const cx = (Math.floor(at.x / 12) + 0.5) * 12;
+        const cz = (Math.floor(at.z / 12) + 0.5) * 12;
+        return {centre: {x: at.x, y: at.y, z: at.z}, seed: hashString(`${slug}#${cx}#${cz}`), t0: epoch - 60, t1: epoch + 60, kind: kind === "cluster" ? "cluster" : "swarm"};
+    }
+    return null;
+}
+
+/** One ambient insect of a swarm (or a cluster): a cloud that dances up and down round its centre, each its own loops. */
+export function swarmPoint(centre: P, seed: number, index: number, epoch: number, cluster = false): P {
+    const r = rng(hashString(`s${seed}#${index}`));
+    const a = r() * Math.PI * 2;
+    const f1 = 0.6 + r() * 1.4;
+    const f2 = 0.9 + r() * 1.8;
+    const p1 = r() * 6.3;
+    const p2 = r() * 6.3;
+    if (cluster) {
+        // Bugs on a warm patch: a tight crawling clump, each shuffling a little.
+        const rad = 0.25 * Math.sqrt(r());
+        return {x: centre.x + Math.cos(a) * rad + 0.02 * Math.sin(epoch * f1 + p1), y: centre.y + 0.005, z: centre.z + Math.sin(a) * rad + 0.02 * Math.cos(epoch * f2 + p2)};
+    }
+    const rad = 0.35 + r() * 0.75;
+    const t = epoch;
+    // The swarm's middle drifts a little; each insect loops round it and bobs (a mayfly's dance).
+    const mx = centre.x + 0.4 * Math.sin(t * 0.13 + (seed % 7));
+    const mz = centre.z + 0.4 * Math.cos(t * 0.11 + (seed % 5));
+    const my = centre.y + 1.4 + 0.25 * Math.sin(t * 0.21 + (seed % 3));
+    return {x: mx + Math.cos(a + t * f1 * 0.6) * rad + 0.08 * Math.sin(t * 5.1 * f2 + p2), y: my + 0.55 * Math.sin(t * f2 + p1) * (0.4 + 0.6 * r()), z: mz + Math.sin(a + t * f1 * 0.6) * rad + 0.08 * Math.cos(t * 4.3 * f1 + p1)};
+}
+
+/** The dusk emergence (island hours): bats stream out of their roost. */
+export const EMERGENCE_HOURS: [number, number] = [17.35, 18.6];
+export const EMERGENCE_AMBIENT = 180;
+
+/** Its roost's emergence now (a bat, at dusk), or null: the scene draws its roost-mates streaming out. */
+function emergenceFlock(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Flock | null {
+    const species = speciesRecipes(owner.slug);
+    if (!species.has.has("bat_emergence")) return null;
+    const hours = owner.hoursAt(epoch);
+    if (hours < EMERGENCE_HOURS[0] || hours > EMERGENCE_HOURS[1]) return null;
+    const roost = kit.roostOf(world, owner.profile, owner.animal);
+    return {centre: {x: roost.x, y: roost.y, z: roost.z}, seed: hashString(`${owner.animal.id}#roost`), t0: epoch - 60, t1: epoch + 60, kind: "bats"};
+}
+
+/**
+ * One ambient bat of an emergence: a continuous stream out of the roost (pure in the time: each bat's phase runs round
+ * a 24 s cycle), up and away along its own heading with a flutter, gone by about 60 m. Null while it is "inside".
+ */
+export function emergencePoint(centre: P, seed: number, index: number, epoch: number): (P & {yaw: number}) | null {
+    const r = rng(hashString(`b${seed}#${index}`));
+    const cycle = 24;
+    const phase = (((epoch + (index / EMERGENCE_AMBIENT) * cycle * 7.3 + r() * cycle) % cycle) + cycle) % cycle;
+    if (phase > 9) return null;
+    const heading = (seed % 360) * (Math.PI / 180) + (r() - 0.5) * 1.6;
+    const speed = 4.5 + r() * 2.5;
+    const d = phase * speed;
+    const wob = 0.8 * Math.sin(phase * (5 + r() * 4) + r() * 6);
+    const x = centre.x + Math.sin(heading) * d + Math.cos(heading) * wob;
+    const z = centre.z + Math.cos(heading) * d - Math.sin(heading) * wob;
+    const y = centre.y - 0.3 + Math.min(phase * 1.6, 9) + 0.6 * Math.sin(phase * 3 + r() * 5);
+    return {x, y, z, yaw: heading};
+}
+
+/** Mixed flocks: a follower's place in another species' flock or troop now (a window a period, by day), or null. */
+const MIXED_SECONDS = 150;
+function mixedPose(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, base: TripPose, epoch: number): RecipePose | null {
+    const list = links.get(owner.animal);
+    if (!list) return null;
+    for (const l of list) {
+        if (l.template !== "mixed_follow" || l.role !== "a") continue;
+        const period = Math.floor(epoch / PAIR_PERIOD);
+        const start = period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - MIXED_SECONDS));
+        if (epoch < start || epoch >= start + MIXED_SECONDS) continue;
+        const hours = owner.hoursAt(start);
+        if (!hourOk(TEMPLATES.mixed_follow, hours)) continue;
+        const otherTrip = kit.tripAt(world, l.otherProfile, l.other, epoch, owner.hoursAt, l.otherActivity);
+        const ownTrip = kit.tripAt(world, owner.profile, owner.animal, epoch, owner.hoursAt, owner.activity);
+        if (otherTrip.doing === "sleep" || otherTrip.doing === "to_roost" || ownTrip.doing === "sleep" || ownTrip.doing === "to_roost") continue;
+        const other = kit.basePose(world, otherTrip, epoch);
+        // In the air only if it flies too; otherwise beside it on the ground, its own seeded place at the flock's side.
+        if (other.aloft && !kit.flies(owner.profile)) continue;
+        const random = rng(hashString(`${l.key}#mix`));
+        const side = (random() < 0.5 ? -1 : 1) * (1.2 + random() * 2.2);
+        const back = 0.8 + random() * 2.4;
+        const fx = Math.sin(other.yaw);
+        const fz = Math.cos(other.yaw);
+        const tx = other.x - fx * back + fz * side;
+        const tz = other.z - fz * back - fx * side;
+        const ty = other.aloft ? other.y + (random() - 0.5) : Math.max(world.sampler.heightAt(tx, tz), 0);
+        const k = ease(Math.min(Math.max(Math.min(epoch - start, start + MIXED_SECONDS - epoch) / 12, 0), 1));
+        const b = BLOCKS.follow;
+        return {
+            ...base,
+            x: base.x + (tx - base.x) * k,
+            y: base.y + (ty - base.y) * k,
+            z: base.z + (tz - base.z) * k,
+            yaw: k > 0.5 ? other.yaw : base.yaw,
+            moving: other.moving || k < 1,
+            aloft: other.aloft && k > 0.5,
+            beat: other.aloft && k > 0.5 ? "fly" : "walk",
+            act: {episode: `${l.key}#${period}`, recipe: "mixed_follow", block: b.id, state: other.aloft ? "fly" : "walk", u: (epoch - start) / MIXED_SECONDS, pitch: 0, roll: 0, own: k > 0.5, carry: null, prey: null, catch: null, fx: null, mark: null, label: TEMPLATES.mixed_follow.label}
+        };
+    }
+    return null;
+}
+
+/** Link the mixed-flock species to the nearest flock or troop of another species (within 40 m, birds with birds). */
+function wireMixed(animals: WireInput[]) {
+    const social = new Set(["flock", "group", "troop", "herd", "colony"]);
+    const taken = new Set<string>();
+    const sorted = [...animals].sort((a, b) => a.animal.id.localeCompare(b.animal.id));
+    for (const a of sorted) {
+        if (!speciesRecipes(a.slug).has.has("mixed_follow") || taken.has(a.animal.id)) continue;
+        const flies = (w: WireInput) => w.profile.move === "fly" || w.profile.moves.includes("fly");
+        const candidates = sorted.filter((b) => b.slug !== a.slug && social.has(b.profile.social) && flies(b) === flies(a) && Math.hypot(a.animal.home.x - b.animal.home.x, a.animal.home.z - b.animal.home.z) < 40);
+        if (!candidates.length) continue;
+        const b = candidates.sort((m, n) => Math.hypot(a.animal.home.x - m.animal.home.x, a.animal.home.z - m.animal.home.z) - Math.hypot(a.animal.home.x - n.animal.home.x, a.animal.home.z - n.animal.home.z) || m.animal.id.localeCompare(n.animal.id))[0];
+        const key = `mixed_follow#${a.animal.id}#${b.animal.id}`;
+        const list = links.get(a.animal) ?? [];
+        list.push({template: "mixed_follow", other: b.animal, otherProfile: b.profile, otherSlug: b.slug, otherActivity: b.activity, role: "a", key});
+        links.set(a.animal, list);
+        taken.add(a.animal.id);
+    }
+}
+
+/** Molehills round a burrow (pure in its id, spot and the time): a new mound every 5 minutes, each fading over 40. */
+export const MOLEHILL_EVERY = 300;
+export const MOLEHILL_SECONDS = 2400;
+export function molehillsOf(id: string, slug: string, at: P, epoch: number, heightAt: (x: number, z: number) => number): RecipeMark[] {
+    if (!enabled || !speciesRecipes(slug).has.has("molehills")) return [];
+    const out: RecipeMark[] = [];
+    for (let n = Math.floor((epoch - MOLEHILL_SECONDS) / MOLEHILL_EVERY); n <= Math.floor(epoch / MOLEHILL_EVERY); n++) {
+        const random = rng(hashString(`${id}#mole#${n}`));
+        const from = n * MOLEHILL_EVERY + random() * MOLEHILL_EVERY;
+        if (from > epoch || from + MOLEHILL_SECONDS < epoch) continue;
+        const a = random() * Math.PI * 2;
+        const r = 0.6 + random() * 2.4;
+        const x = at.x + Math.sin(a) * r;
+        const z = at.z + Math.cos(a) * r;
+        const h = heightAt(x, z);
+        if (h < 0.02) continue;
+        out.push({id: `mole#${id}#${n}`, kind: "mound", x, y: h, z, size: 0.18 + random() * 0.12, from, to: from + MOLEHILL_SECONDS});
+    }
+    return out;
+}
+
+/** Its coat now from its recent acts (pure in its trips): wet after a bathe or a dive, muddy after a wallow, dusty after a dust bath. */
+export type RecipeCoat = {wet: number; dust: number};
+const COAT_WET = new Set(["bathe", "upend", "dive", "surface", "dive_in", "slide_in", "slip_in", "launch", "scoop", "dive_air", "dive_feet"]);
+export function coatOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit: ScheduleKit): RecipeCoat {
+    let wet = 0;
+    let dust = 0;
+    let shookAt = -Infinity;
+    let wetAt = -Infinity;
+    for (const trip of trips) {
+        const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
+        if (!owner) continue;
+        const episode = stayEpisode(world, trip, owner, kit);
+        if (!episode) continue;
+        for (const key of episode.keys) {
+            if (key.t0 > epoch) continue;
+            const since = Math.max(epoch - key.t1, 0);
+            const id = key.block.id;
+            if (id === "wallow") {
+                wet = Math.max(wet, 0.55 * Math.max(1 - since / 1200, 0));
+                dust = Math.max(dust, 0.9 * Math.max(1 - since / 1200, 0));
+            } else if (id === "dust_bathe" || id === "roll") dust = Math.max(dust, Math.max(1 - since / 900, 0));
+            else if (COAT_WET.has(id)) {
+                wet = Math.max(wet, Math.max(1 - since / 360, 0));
+                wetAt = Math.max(wetAt, key.t1);
+            } else if (id === "shake_off") shookAt = Math.max(shookAt, key.t1);
+        }
+    }
+    // A shake after the soaking sheds half of it.
+    if (shookAt > wetAt) wet *= 0.5;
+    return {wet: Math.min(wet, 1), dust: Math.min(dust, 1)};
+}
+
+/** Writes a recipe's coat into the animal-look pass's `arkCoat` (wet, dust), over what that pass set (no-op without it). */
+export function applyRecipeCoat(geometry: {getAttribute(name: string): unknown}, index: number, coat: RecipeCoat | null | undefined) {
+    if (!coat || (!coat.wet && !coat.dust)) return;
+    const attribute = geometry.getAttribute("arkCoat") as {count: number; getX(i: number): number; getY(i: number): number; setXY(i: number, x: number, y: number): void; needsUpdate: boolean} | undefined;
+    if (!attribute || index >= attribute.count) return;
+    attribute.setXY(index, Math.max(attribute.getX(index), coat.wet), Math.max(attribute.getY(index), coat.dust));
+    attribute.needsUpdate = true;
+}
+
+/** The duller sex's dim (the material's grey-ward mix, `arkInstance.y`): its saturation drop, additive to `arkVary`. */
+export function sexDim(id: string, slug: string): number {
+    const look = sexLook(id, slug);
+    return look.saturation < 1 ? Math.min((1 - look.saturation) * 1.1, 0.4) : 0;
+}
+
+/** For the tests: mixed-flock links of an animal. */
+export function wireMixedForTest(animals: WireInput[]) {
+    wireMixed(animals);
 }

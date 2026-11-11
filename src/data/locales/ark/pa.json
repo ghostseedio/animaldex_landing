@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} ਸਵਾਰ",
             "closed": "ਕਾਰਡ ਬੰਦ ਹੋਇਆ",
             "motionReduced": "ਹਰਕਤ ਘਟਾਈ ਗਈ ਹੈ: ਜੋ ਹੋਇਆ ਉਹ ਚਲਾ ਕੇ ਦਿਖਾਉਣ ਦੀ ਥਾਂ ਇੱਥੇ ਦੱਸਿਆ ਗਿਆ ਹੈ।",
-            "skipToList": "ਸਵਾਰਾਂ ਦੀ ਸੂਚੀ 'ਤੇ ਜਾਓ"
+            "skipToList": "ਸਵਾਰਾਂ ਦੀ ਸੂਚੀ 'ਤੇ ਜਾਓ",
+            "resetView": "ਪੂਰੇ Ark 'ਤੇ ਵਾਪਸ ਜਾਓ"
         },
         "person": {
             "metaTitle": "Ark ਵਿੱਚ {name} ਦੇ ਜਾਨਵਰ",

@@ -96,6 +96,8 @@ export class MapPoints {
                 const wet = ground.water !== null;
                 if (!ground.tags.length) continue;
                 if (wet ? ground.depth < 0.5 : this.sampler.blocked(x, z, 0.5)) continue;
+                // The hamlet's reserved plots are the residents' alone (`hamlet.ts`): no wild animal is ever placed there.
+                if (!wet && this.sampler.reserved?.(x, z)) continue;
                 cells.push({x, z, zone: ground.zone, tags: ground.tags, wet, depth: ground.depth});
             }
         }
@@ -228,10 +230,17 @@ export class MapPoints {
     }
 
     /** The list a zone's animal of this tag uses: its own zone's (`own`), else the nearest zone's that has some. */
-    partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean} {
+    partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean; borrowers?: ArkZone[]} {
         const partitions = this.partitions(tag, wet);
         const own = partitions.get(zone);
         if (own?.length) return {list: own, own: true};
+        const best = this.nearestPartition(partitions, zone);
+        // The zones that borrow the same list (each zone with none of the tag's cells borrows the nearest zone's), in a fixed order.
+        const borrowers = ARK_ZONES.filter((other) => !partitions.get(other)?.length && this.nearestPartition(partitions, other) === best);
+        return {list: best, own: false, borrowers};
+    }
+
+    private nearestPartition(partitions: Map<ArkZone, SpawnPoint[]>, zone: ArkZone): SpawnPoint[] {
         const site = ZONE_SITES[zone] ?? ZONE_SITES.farm_garden;
         let best: SpawnPoint[] = [];
         let distance = Infinity;
@@ -243,7 +252,7 @@ export class MapPoints {
                 best = list;
             }
         }
-        return {list: best, own: false};
+        return best;
     }
 
     /**
@@ -279,13 +288,21 @@ export class MapPoints {
      * cell k mod n, lap k div n; a borrowing zone's from the list's end,
      * half a cell over. One-to-one: no two clusters share a spot.
      */
-    pick(list: SpawnPoint[], own: boolean, zone: ArkZone, slot: number): SlotPick {
+    pick(list: SpawnPoint[], own: boolean, zone: ArkZone, slot: number, borrowers: readonly ArkZone[] = ARK_ZONES): SlotPick {
         const n = list.length;
-        const key = own ? slot : slot * ARK_ZONES.length + Math.max(ARK_ZONES.indexOf(zone), 0);
+        // A borrowing zone's slots interleave only with the other zones that borrow this list (not all twelve: fewer laps).
+        const key = own ? slot : slot * Math.max(borrowers.length, 1) + Math.max(borrowers.indexOf(zone), 0);
         const lap = Math.floor(key / n);
         const point = own ? list[key % n] : list[n - 1 - (key % n)];
-        // (Past four laps, more clusters than four a cell, the laps come round again.)
-        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap % 4];
+        // Past four laps (more clusters than four a cell, a zone far over its ground): each further lap its own spot in the cell, on a
+        // low-discrepancy sequence (R2), so nothing ever stands on another's spot, however full.
+        if (lap >= 4) {
+            const k = lap - 4 + (own ? 0 : 1000);
+            const ox = ((0.5 + k * 0.7548776662) % 1) * GRID;
+            const oz = ((0.5 + k * 0.5698402910) % 1) * GRID;
+            return {point, level: own ? lap : lap + 1, x: point.x + ox - GRID / 2, z: point.z + oz - GRID / 2};
+        }
+        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap];
         return {point, level: own ? lap : lap + 1, x: point.x + ox, z: point.z + oz};
     }
 
@@ -321,6 +338,31 @@ export class MapPoints {
         return tags;
     }
 
+    private limbLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
+
+    /**
+     * The limb points (`limb`, or `canopy_hang` for a hanger) a large climber
+     * fits: its body within the point's size, a limb that holds its mass
+     * (with a margin) and has room above it, or a hang point with a drop
+     * below it; a body and a little apart; its zone's first.
+     */
+    limbsFor(tag: "limb" | "canopy_hang", length: number, mass: number, zone: ArkZone): {list: AttachPoint[]; own: boolean} {
+        const key = `${tag}|${length.toFixed(3)}|${mass.toFixed(1)}|${zone}`;
+        let found = this.limbLists.get(key);
+        if (!found) {
+            const fits = this.sampler.attachPoints().filter((point) => {
+                if (point.tag !== tag || !attachFits(point, length)) return false;
+                if (tag === "limb") return (point.load ?? 0) >= mass * LOAD_MARGIN && (point.clearAbove ?? 0) >= length * 0.6;
+                return (point.radius ?? 0) >= 0.03 && (point.clearBelow ?? 0) >= length;
+            });
+            const list = thin(fits, Math.max(length * 1.2, 0.3));
+            const own = list.filter((point) => point.zone === zone);
+            found = own.length ? {list: own, own: true} : {list, own: false};
+            this.limbLists.set(key, found);
+        }
+        return found;
+    }
+
     /**
      * The attach points a small animal can sit on: of its tag, fitting its
      * length, in its zone first (else any zone's), and whether the list is
@@ -354,6 +396,29 @@ export class MapPoints {
         }
         return found;
     }
+}
+
+/** A body's mass a limb must hold, as a share of the limb's load (a margin for a moving, landing body). */
+const LOAD_MARGIN = 1.5;
+
+/** Keep the points at least `gap` apart (greedy, in the list's order), with a 2 m spatial hash. */
+function thin(points: AttachPoint[], gap: number): AttachPoint[] {
+    const out: AttachPoint[] = [];
+    const near = new Map<string, AttachPoint[]>();
+    const size = Math.max(2, gap);
+    for (const point of points) {
+        const cx = Math.floor(point.x / size);
+        const cz = Math.floor(point.z / size);
+        let clear = true;
+        for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z) >= gap);
+        if (!clear) continue;
+        out.push(point);
+        const key = `${cx},${cz}`;
+        const list = near.get(key) ?? [];
+        list.push(point);
+        near.set(key, list);
+    }
+    return out;
 }
 
 /** A fixed number in [0, 1) for a cell (the same on every device). */

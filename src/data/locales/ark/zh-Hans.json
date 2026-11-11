@@ -244,7 +244,8 @@
             "herdSelected": "{animal}：船上有 {count} 只",
             "closed": "卡片已关闭",
             "motionReduced": "已减弱动态效果：发生的事会在这里讲述，而不是播放。",
-            "skipToList": "跳到船上名单"
+            "skipToList": "跳到船上名单",
+            "resetView": "回到整个 Ark"
         },
         "person": {
             "metaTitle": "{name}在 Ark 中的动物",

@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} om bord",
             "closed": "Kortet er lukket",
             "motionReduced": "Bevegelse er redusert: det som skjedde, fortelles her i stedet for å spilles av.",
-            "skipToList": "Hopp til hvem som er om bord"
+            "skipToList": "Hopp til hvem som er om bord",
+            "resetView": "Tilbake til hele Ark"
         },
         "person": {
             "metaTitle": "Dyrene til {name} i Ark",

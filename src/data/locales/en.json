@@ -4274,7 +4274,8 @@
       "herdSelected": "{animal}: {count} aboard",
       "closed": "Card closed",
       "motionReduced": "Motion is reduced: what happened is told here instead of played.",
-      "skipToList": "Skip to who is aboard"
+      "skipToList": "Skip to who is aboard",
+      "resetView": "Back to the whole Ark"
     },
     "person": {
       "metaTitle": "{name}'s animals in the Ark",

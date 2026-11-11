@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} la bord",
             "closed": "Card închis",
             "motionReduced": "Mișcare redusă: ce s-a întâmplat e povestit aici în loc să fie redat.",
-            "skipToList": "Sari la cine e la bord"
+            "skipToList": "Sari la cine e la bord",
+            "resetView": "Înapoi la întreaga Ark"
         },
         "person": {
             "metaTitle": "{name}: animalele din Ark",

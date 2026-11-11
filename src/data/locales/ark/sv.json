@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} ombord",
             "closed": "Kortet stängt",
             "motionReduced": "Rörelse är reducerad: det som hände berättas här i stället för att spelas upp.",
-            "skipToList": "Hoppa till vilka som är ombord"
+            "skipToList": "Hoppa till vilka som är ombord",
+            "resetView": "Tillbaka till hela Ark"
         },
         "person": {
             "metaTitle": "Djuren som {name} har i Ark",

@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: على المتن {count}",
             "closed": "أُغلقت البطاقة",
             "motionReduced": "الحركة مخفّفة: يُروى هنا ما حدث بدلًا من عرضه.",
-            "skipToList": "انتقل إلى من على المتن"
+            "skipToList": "انتقل إلى من على المتن",
+            "resetView": "العودة إلى Ark كاملة"
         },
         "person": {
             "metaTitle": "حيوانات {name} في Ark",

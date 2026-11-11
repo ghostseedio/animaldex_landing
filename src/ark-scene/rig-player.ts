@@ -558,12 +558,17 @@ export type RigState = {
     yaw: number | null;
     /** When (the scene's clock, seconds) its last landing ended: no take-off on the tail of the same flight. */
     landedAt: number;
+    /**
+     * Its pace (model units a second) for choosing a clip, eased: a path that moves in steps (the reactive layer's
+     * offset on alternate frames) never flips walk and graze, or walk and run, frame by frame.
+     */
+    pace: number;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */
@@ -703,6 +708,124 @@ export function flightClip(input: FlightClipInput): string | null {
     const gliding = input.beat === "glide" || input.climb < -0.1 || cycle < share;
     if (gliding && (has("glide") || (bank && has(bank)))) return bank && has(bank) ? bank : "glide";
     return "flap";
+}
+
+/**
+ * The behaviour recipes' named states (`behaviour-blocks.ts` ARK_RECIPE_STATES; docs/ark/behaviour-recipes.md) that
+ * a rig clip expresses: the clips to try in order, and how they play (by the distance covered, as a loop, or once
+ * from the start). The table of what is mapped and what falls back is in docs/ark/rig-player.md.
+ */
+export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop" | "once"};
+export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
+    walk: {clips: ["walk", "slither", "hop"], play: "distance"},
+    run: {clips: ["run", "walk"], play: "distance"},
+    stalk: {clips: ["walk"], play: "distance"},
+    crawl: {clips: ["walk", "slither"], play: "distance"},
+    wade: {clips: ["walk"], play: "distance"},
+    carry: {clips: ["walk"], play: "distance"},
+    push: {clips: ["walk"], play: "distance"},
+    charge: {clips: ["run", "walk"], play: "distance"},
+    clash: {clips: ["run", "walk"], play: "distance"},
+    climb: {clips: ["climb"], play: "distance"},
+    swim: {clips: ["swim", "slither"], play: "loop"},
+    leap: {clips: ["leap"], play: "once"},
+    fly: {clips: ["flap", "glide"], play: "loop"},
+    glide: {clips: ["glide", "soar"], play: "loop"},
+    hover: {clips: ["hover"], play: "loop"},
+    takeoff: {clips: ["takeoff"], play: "once"},
+    land: {clips: ["land"], play: "once"},
+    slide: {clips: ["enter_water"], play: "once"},
+    slip_in: {clips: ["enter_water"], play: "once"},
+    dive_in: {clips: ["enter_water"], play: "once"},
+    launch: {clips: ["enter_water"], play: "once"},
+    haul_out: {clips: ["exit_water"], play: "once"},
+    hop_out: {clips: ["exit_water"], play: "once"},
+    surface: {clips: ["surface"], play: "once"},
+    scan: {clips: ["scan"], play: "loop"},
+    peck: {clips: ["graze"], play: "loop"},
+    eat: {clips: ["graze"], play: "loop"},
+    pick_up: {clips: ["graze"], play: "loop"},
+    place: {clips: ["graze"], play: "loop"},
+    perch: {clips: ["perch"], play: "loop"},
+    shake: {clips: ["shake_off"], play: "once"},
+    bathe: {clips: ["shake_off"], play: "once"}
+};
+
+/**
+ * The states no clip expresses yet, and the block's fallback beat each plays meanwhile (`beatClip`: bite, chew, peck
+ * and drink graze; scan scans; the rest keep the idle or the scene's own motion). The rigging lane's list of clips
+ * that would add the most.
+ */
+export const RECIPE_FALLBACK: Readonly<Record<string, string>> = {
+    crouch: "pause",
+    strike: "bite",
+    swipe: "bite",
+    scoop: "bite",
+    sweep: "peck",
+    upend: "bite",
+    probe: "peck",
+    pull: "bite",
+    drum: "peck",
+    beat_prey: "bite",
+    dig: "peck",
+    tool: "bite",
+    display: "scan",
+    pushup: "scan",
+    dance: "play",
+    call: "scan",
+    fight: "play",
+    rear: "play",
+    box: "play",
+    mark: "peck",
+    groom: "preen",
+    groom_other: "preen",
+    bury: "rest",
+    roll: "rest",
+    dust_bathe: "rest",
+    wallow: "rest",
+    bask: "rest",
+    wing_dry: "preen",
+    stretch: "rest",
+    yawn: "rest",
+    float_back: "rest",
+    sleep: "sleep",
+    freeze: "pause",
+    rest: "rest",
+    incubate: "rest",
+    plunge: "glide",
+    strike_feet: "glide",
+    dive: "swim"
+};
+
+/** A recipe state's clip on this rig (the first of its rule's clips it has), or null: the block's beat plays (`beatClip`). */
+export function recipeClip(state: string | null | undefined, has: (name: string) => boolean): {name: string; play: RecipeClipRule["play"]} | null {
+    const rule = state ? RECIPE_CLIPS[state] : undefined;
+    if (!rule) return null;
+    const name = rule.clips.find((clip) => has(clip));
+    return name ? {name, play: rule.play} : null;
+}
+
+/**
+ * The clip for the reactive layer's action (`reactive.ts`; intelligence-review-30 section 6), on its own feet on
+ * land: a flee runs (a walk without a run; a walk too while it is still slow), played by the distance it covers;
+ * a sentinel stands up and scans (its idle, upright, without a scan); withdrawn or frozen, its idle (the reactive
+ * crouch lowers the body). Null: the action has no clip of its own.
+ */
+export function reactiveClip(action: string | null | undefined, has: (name: string) => boolean, fast: boolean): {name: string; byDistance: boolean} | null {
+    switch (action) {
+        case "flee": {
+            const walk = has("walk") ? "walk" : has("slither") ? "slither" : has("hop") ? "hop" : null;
+            const name = has("run") && (fast || !walk) ? "run" : walk;
+            return name ? {name, byDistance: true} : null;
+        }
+        case "sentinel":
+            return has("scan") ? {name: "scan", byDistance: false} : has("idle") ? {name: "idle", byDistance: false} : null;
+        case "withdraw":
+        case "freeze":
+            return has("idle") ? {name: "idle", byDistance: false} : null;
+        default:
+            return null;
+    }
 }
 
 /**

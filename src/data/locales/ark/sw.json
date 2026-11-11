@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} ndani",
             "closed": "Kadi imefungwa",
             "motionReduced": "Mwendo umepunguzwa: kilichotokea kinasimuliwa hapa badala ya kuchezwa.",
-            "skipToList": "Ruka hadi walio ndani"
+            "skipToList": "Ruka hadi walio ndani",
+            "resetView": "Rudi kwenye Ark nzima"
         },
         "person": {
             "metaTitle": "Wanyama wa {name} ndani ya Ark",

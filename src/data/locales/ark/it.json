@@ -244,7 +244,8 @@
             "herdSelected": "{animal}: {count} a bordo",
             "closed": "Scheda chiusa",
             "motionReduced": "Movimento ridotto: quello che è successo viene raccontato qui invece di essere animato.",
-            "skipToList": "Vai a chi è a bordo"
+            "skipToList": "Vai a chi è a bordo",
+            "resetView": "Torna a tutta l'Ark"
         },
         "person": {
             "metaTitle": "Gli animali di {name} nell'Ark",
