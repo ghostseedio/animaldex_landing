@@ -165,7 +165,8 @@ const CLIPS: Record<string, Clip> = {
             if (!a) return null;
             const roost = roostOf(ctx.world, a.profile, a.animal);
             // From the east, low, against the sunset glow in the west (bats are seen against the sky), 80 m off.
-            return {start: ctx.date + 600, seconds: 16, step: 1 / 10, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 45, 1.36, Math.PI / 2), note: `${a.slug} roost ${roost.point}, ${roost.y.toFixed(1)} m up`};
+            // The scene's own selection camera on the bat (it finds a clear view into a crown), from just before it leaves.
+            return {start: ctx.date + 600, seconds: 16, step: 1 / 10, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 50, 1.36, Math.PI / 2 + 0.5), note: `${a.slug} roost ${roost.point}, ${roost.y.toFixed(1)} m up`};
         }
     },
     bats_day: {
@@ -177,7 +178,7 @@ const CLIPS: Record<string, Clip> = {
             const a = ctx.animals.find((x) => x.slug === "large-flying-fox") ?? ctx.animals[0];
             if (!a) return null;
             const roost = roostOf(ctx.world, a.profile, a.animal);
-            return {start: ctx.date + 600, seconds: 2, step: 1, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 9, 1.2, Math.PI / 2), note: `${a.slug} hanging at ${roost.point}, ${roost.y.toFixed(1)} m up`};
+            return {start: ctx.date + 600, seconds: 2, step: 1, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 15, 1.36, Math.PI / 2 + 0.5), note: `${a.slug} hanging at ${roost.point}, ${roost.y.toFixed(1)} m up`};
         }
     },
     sitter: {
@@ -295,6 +296,10 @@ async function main() {
     if (moment) {
         handle.setView(moment.view);
         await api.at(moment.start - 4);
+        if (moment.follow) {
+            handle.select(moment.follow, true);
+            await wait(4000);
+        }
         // Near models in, at the first frame's place.
         const wait2 = realPerfNow() + 30_000;
         while (realPerfNow() < wait2 && handle.loading()) await wait(200);

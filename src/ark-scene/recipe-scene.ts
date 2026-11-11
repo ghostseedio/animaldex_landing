@@ -129,7 +129,8 @@ export class RecipeScene {
         // Pale, a little lit: a swarm is seen by its wings catching the light (dark specks vanish against dusk ground).
         this.insects = make(new SphereGeometry(0.5, 5, 3), "#e8e2cf", MAX_INSECTS, 0.6);
         (this.insects.material as MeshStandardMaterial).emissive.set("#5a564b");
-        this.bats = make(chevronGeometry(), "#191513", MAX_BATS, 0.85);
+        // Dark brown (a little lighter than black, so the stream reads over grass as well as against the sky).
+        this.bats = make(chevronGeometry(), "#3a2e27", MAX_BATS, 0.85);
         (this.bats.material as MeshStandardMaterial).side = 2;
         const geometry = new BufferGeometry();
         geometry.setAttribute("position", new BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(DynamicDrawUsage));
@@ -291,7 +292,7 @@ export class RecipeScene {
                     const p = emergencePoint(flock.centre, flock.seed, i, epoch);
                     if (!p) continue;
                     const flap = Math.sin(now * 22 + i * 1.7);
-                    const size = Math.max(0.28, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.004);
+                    const size = Math.max(0.32, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.0045);
                     this.put(this.bats, p.x, p.y, p.z, p.yaw, 0, flap * 0.25, size * 1.2, size * (1 + 0.8 * flap), size * 0.8);
                 }
                 continue;

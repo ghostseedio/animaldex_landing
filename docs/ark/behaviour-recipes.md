@@ -390,3 +390,11 @@ This is a server change (ecology tick), so it needs its own migration and harnes
 - **Sex colour.** The dim sits beside release's `arkVary` (saturation and brightness multipliers); the two compose. If the owner prefers it there, fold it into `varyOf`'s saturation and brightness instead (×0.72 and ×0.94 for the duller sex, from `sexLook`).
 - **Props' nests.** Wire them with `setNestSource(nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt}))`, with `sites` including each site's `eggs` and `chicks` (the props' `NestSiteInfo` has both). Then this branch's own nest drawing switches itself off (`fallbackNests()`).
 - **Build test.** `ark-behaviour-build.test.ts`'s reference build maps `canopy_hang` too, as `world-sampler.ts` now does.
+
+### Round-2 clips (looked at)
+- **Swarm** (`giant-burrowing-mayfly`, 17:48): a cloud of pale mayflies dancing about 1.4 m over the ground in front of a dark trunk, shifting frame to frame. The insects are pale and lit, so the swarm reads at dusk; dark specks vanished against the ground.
+- **Sitter on its nest** (`mallard`): the female, with 8 eggs in a stand-in props source, sits on her nest at the water's edge for the whole clip, settling now and then. Without eggs it went back to its day. She is drawn a little greyer than a drake: the duller-sex dim.
+- **Bats:**
+  - By day, the flying fox and the pipistrelles hang head down under the acacias' limbs, as dark folded bodies (`bats-day-crop.jpg`). A half-roll hang read as a bat lying on the limb, so bats now pitch nose down a quarter turn and sloths keep the half roll.
+  - At dusk the roost's bats stream out against the sunset sky, wings beating, up and away (`bats-sky.jpg`).
+  - Inside rainforest and woodland crowns the camera sees only leaves, so the clip is staged on the grassland's acacias.
