@@ -2,7 +2,9 @@
 # catalogue species on the map's terrain and fails on any animal floating,
 # sinking, inside scenery, in the wrong medium, depth band or water, on a
 # surface its tags do not allow, facing the wrong way, or small and off an
-# attach point. The grip check needs the local rig files: CI skips it.
+# attach point, a tree climber off its limb, a water species out of its
+# depth band, a predator within 20 m of its prey at spawn. The grip check
+# needs the local rig files: CI skips it.
 name: Ark map validator
 
 on:
@@ -40,4 +42,4 @@ jobs:
       - name: Spawn validator
         run: npx tsx --test src/lib/ark-map.test.ts
       - name: The Ark scene's placement tests
-        run: npx tsx --test src/lib/ark-scene.test.ts src/lib/ark-micro.test.ts src/lib/ark-layers.test.ts src/lib/ark-stats.test.ts src/lib/ark-edge.test.ts
+        run: npx tsx --test src/lib/ark-scene.test.ts src/lib/ark-micro.test.ts src/lib/ark-layers.test.ts src/lib/ark-stats.test.ts src/lib/ark-edge.test.ts src/lib/ark-sea-depth.test.ts src/lib/ark-behaviour-schedule.test.ts
