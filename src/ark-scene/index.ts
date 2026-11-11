@@ -3971,8 +3971,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const elapsed = (startedAt - started) / 1000;
         // Reduced motion: the water, the grass and the animals hold still (A18).
         if (!reducedMotion) {
-            ARK_TIME.value = elapsed;
-            ARK_CLOCK.value = elapsed % 3600;
+            // The shared clock (shared-clock.ts): every viewer's water, wind, sway and idles in the same phase.
+            ARK_TIME.value = runtime.shaderTime();
+            ARK_CLOCK.value = runtime.animalClock();
         }
         applyEnvironment();
         landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;

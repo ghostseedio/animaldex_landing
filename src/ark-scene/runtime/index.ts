@@ -23,6 +23,7 @@ import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
 import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-scene/runtime/power";
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
+import {arkAnimalClock, arkEpochSeconds, ArkShaderClock} from "@/ark-scene/shared-clock";
 
 export type {ArkPower, ArkRenderMode} from "@/ark-scene/runtime/governor";
 
@@ -137,6 +138,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
+    /** The shaders' time on the shared clock (shared-clock.ts), brought back down only while nobody sees the scene. */
+    const shaderClock = new ArkShaderClock();
 
     // (Meshopt decoding stays on the main thread: three's decoder builds its worker from its own function's source,
     // which a minifier renames, so `useWorkers` breaks in the site's and the bundle's builds. It is WASM and fast.)
@@ -247,7 +250,21 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
 
         /** Asked by the frame loop when it stops (hidden); called back when visible again. */
         set onWake(callback: () => void) {
-            governor.onWake = callback;
+            governor.onWake = () => {
+                // Unseen until now: the moment to bring the shader time's numbers back down, if they grew.
+                shaderClock.rebase();
+                callback();
+            };
+        },
+
+        /** `ARK_TIME.value`: epoch seconds from a whole-window origin, the same phase for every viewer. */
+        shaderTime(): number {
+            return shaderClock.seconds(arkEpochSeconds());
+        },
+
+        /** `ARK_CLOCK.value`: the animals' idle clock, epoch seconds mod an hour. */
+        animalClock(): number {
+            return arkAnimalClock();
         },
 
         /** What moves on its own this frame (flights, follow, replay, talking, the opening): full rate while it does. */
