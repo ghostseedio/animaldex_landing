@@ -1,0 +1,28 @@
+{
+  "about": "The Ark's visual-regression set (docs/ark/visual-ci.md): golden shots rendered with WebGL on SwiftShader (the same software renderer locally and in CI), the island clock frozen per shot, compared with tests/ark-visual/baselines/<id>.webp.",
+  "devices": {
+    "desktop": {"width": 960, "height": 600, "deviceScaleFactor": 1, "mobile": false, "quality": "high"},
+    "phone": {"width": 360, "height": 800, "deviceScaleFactor": 1, "mobile": true, "quality": "medium"}
+  },
+  "shots": [
+    {"device": "desktop", "place": "island_far", "time": "day"},
+    {"device": "desktop", "place": "coast_rocks", "time": "day"},
+    {"device": "desktop", "place": "forest_floor", "time": "day"},
+    {"device": "desktop", "place": "house_fields", "time": "day"},
+    {"device": "desktop", "place": "river_pond", "time": "day"},
+    {"device": "desktop", "place": "mountain", "time": "day"},
+    {"device": "desktop", "place": "reef_underwater", "time": "day"},
+    {"device": "desktop", "place": "house_fields", "time": "dusk"},
+    {"device": "desktop", "place": "island_far", "time": "night"},
+    {"device": "desktop", "place": "caterpillar_leaf", "time": "day"},
+    {"device": "desktop", "place": "bee_flower", "time": "day"},
+    {"device": "desktop", "place": "limpet_tidepool", "time": "day"},
+    {"device": "desktop", "place": "gecko_wall", "time": "day"},
+    {"device": "phone", "place": "island_far", "time": "day"},
+    {"device": "phone", "place": "coast_rocks", "time": "day"},
+    {"device": "phone", "place": "house_fields", "time": "day"},
+    {"device": "phone", "place": "forest_floor", "time": "night"}
+  ],
+  "tolerance": {"pixel": 24, "changed": 0.012, "mean": 2.5, "block": 0.35},
+  "overrides": {}
+}
