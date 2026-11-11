@@ -11,7 +11,8 @@
  *           its top surface over its middle, up = the leaf's
  *           own up, forward = along its midrib (base → tip), size from its length;
  *   bark    the nearest point of the trunk's wood, up = the wood's normal there, forward = up the trunk;
- *   branch  the top of the nearest branch's wood, up = its normal (kept only where it faces the sky).
+ *   branch  the top of the nearest branch's wood, up = its normal (kept only where it faces the sky);
+ *   tree_hollow  the middle of the drawn hole's mouth (its dark ring), facing out of the hole, with its depth.
  *
  * Each point also gets the drawn surface's wind weights there (COLOR_1, interpolated), so the scene can move an
  * animal with its leaf exactly as the tree shader moves the leaf (`tree-assets.ts` treeSway), and `open`: the share
@@ -37,7 +38,7 @@ const {MeshoptDecoder} = await import(pathToFileURL(path.join(nm, "three/example
 const {Vector3, Triangle, Ray} = THREE;
 
 /** Bump when the method changes (it is part of the source hash). */
-const GENERATOR = 2;
+const GENERATOR = 3;
 const OUT = path.join(root, "src/ark-scene/tree-attach.json");
 const manifest = JSON.parse(readFileSync(path.join(root, "src/ark-scene/assets-manifest.json"), "utf8"));
 const base = path.join(root, "public", manifest.base);
@@ -135,7 +136,7 @@ function build(geometry) {
         for (const i of verts) reach = Math.max(reach, vertex(i).distanceTo(vertex(baseV)));
         leaves.push({list, verts, area, up, centroid, base: vertex(baseV), tip: vertex(tipV), blade, length: blade ? length : reach * 2});
     }
-    return {tris, leaves, W, N, wood: tris.filter((t) => !t.leafy)};
+    return {tris, leaves, W, N, C: geometry.getAttribute("color"), P, wood: tris.filter((t) => !t.leafy)};
 }
 
 /** The barycentric mix of a per-vertex attribute at a point on a triangle. */
@@ -206,7 +207,7 @@ for (const id of Object.keys(attach).sort()) {
     if (!manifest.assets[id]) continue;
     const geometry = await lod0(id);
     if (!geometry) continue;
-    const {tris, leaves, W, N, wood} = build(geometry);
+    const {tris, leaves, W, N, C, P, wood} = build(geometry);
     const leafy = tris.filter((t) => t.leafy);
     // The wind weights of the drawn surface nearest the (rounded) point: where two pieces meet, the one it is on.
     const windAt = (list, point) => {
@@ -215,8 +216,8 @@ for (const id of Object.keys(attach).sort()) {
     };
     const rows = [];
     const used = new Set();
-    const counts = {leaf: [0, 0], bark: [0, 0], branch: [0, 0]};
-    const snapped = {leaf: [], bark: [], branch: []};
+    const counts = {leaf: [0, 0], bark: [0, 0], branch: [0, 0], tree_hollow: [0, 0]};
+    const snapped = {leaf: [], bark: [], branch: [], tree_hollow: []};
     attach[id].forEach((row, source) => {
         if (!counts[row.tag]) return;
         counts[row.tag][0]++;
@@ -250,9 +251,44 @@ for (const id of Object.keys(attach).sort()) {
             const weights = windAt(leafy, position);
             const open = openness(tris, position, leaf.up, new Set(leaf.list));
             const maxSize = leaf.blade ? 0.6 * leaf.length : 0.45 * leaf.length;
-            rows.push(["leaf", ...position.toArray().map(r3), ...leaf.up.toArray().map(r3), ...forward.toArray().map(r3), 0.002, r3(maxSize), ...weights.map(r4), r3(open), source, leaf.blade ? 1 : 0]);
+            rows.push(["leaf", ...position.toArray().map(r3), ...leaf.up.toArray().map(r3), ...forward.toArray().map(r3), 0.002, r3(maxSize), ...weights.map(r4), r3(open), source, leaf.blade ? 1 : 0, 0]);
             snapped.leaf.push(best.d);
             counts.leaf[1]++;
+            return;
+        }
+        if (row.tag === "tree_hollow") {
+            // The hollow's mouth as drawn: the ring of dark wood round the hole (trees.py mesh_holes: an inner
+            // point, a dark ring, a paler lip), its middle, facing out of the hole.
+            // The hole is its own piece of mesh: from the darkest vertex near the point, everything joined to it.
+            let start = -1;
+            for (let i = 0; i < P.count; i++) {
+                if (Math.max(C.getX(i), C.getY(i), C.getZ(i)) >= 0.015) continue;
+                if (start < 0 || new Vector3(P.getX(i), P.getY(i), P.getZ(i)).distanceTo(p) < new Vector3(P.getX(start), P.getY(start), P.getZ(start)).distanceTo(p)) start = i;
+            }
+            if (start < 0 || new Vector3(P.getX(start), P.getY(start), P.getZ(start)).distanceTo(p) > 0.4) return;
+            const piece = new Set([start]);
+            for (let grew = true; grew;) {
+                grew = false;
+                for (const t of wood) {
+                    if (!t.ids.some((i) => piece.has(i)) || t.ids.every((i) => piece.has(i))) continue;
+                    for (const i of t.ids) piece.add(i);
+                    grew = true;
+                }
+            }
+            const near = Array.from(piece).map((i) => ({v: new Vector3(P.getX(i), P.getY(i), P.getZ(i)), darkest: Math.max(C.getX(i), C.getY(i), C.getZ(i))}));
+            const ring = near.filter((entry) => entry.darkest >= 0.015 && entry.darkest < 0.045).map((entry) => entry.v);
+            const inner = near.filter((entry) => entry.darkest < 0.015).map((entry) => entry.v);
+            if (ring.length < 5 || !inner.length) return;
+            const mouth = ring.reduce((sum, v) => sum.add(v), new Vector3()).multiplyScalar(1 / ring.length);
+            const deepest = inner.reduce((best, v) => (v.distanceTo(mouth) < best.distanceTo(mouth) ? v : best), inner[0]);
+            const normal = mouth.clone().sub(deepest).normalize();
+            const widest = ring.reduce((m, v) => Math.max(m, v.distanceTo(mouth)), 0);
+            const weights = windAt(wood, mouth);
+            const forward = along(row.f, normal);
+            const depth = r3(mouth.distanceTo(deepest) + (row.depth ?? 0));
+            rows.push(["tree_hollow", ...mouth.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), r3(row.size[0]), r3(Math.min(row.size[1], widest * 2.2)), ...weights.map(r4), 0, source, 0, depth]);
+            snapped.tree_hollow.push(p.distanceTo(mouth));
+            counts.tree_hollow[1]++;
             return;
         }
         // Bark and branches: the wood itself.
@@ -275,7 +311,7 @@ for (const id of Object.keys(attach).sort()) {
         const weights = windAt(wood, position);
         const forward = along(row.f, normal);
         const open = row.tag === "bark" ? openness(tris, position, normal, new Set([hit.t])) : 0;
-        rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source, 0]);
+        rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source, 0, 0]);
         snapped[row.tag].push(p.distanceTo(hit.point));
         counts[row.tag][1]++;
     });
@@ -285,7 +321,7 @@ for (const id of Object.keys(attach).sort()) {
 }
 
 const out = {
-    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index, 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood]. Do not edit by hand.",
+    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index, 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood, a hollow's depth (m) / 0]. Do not edit by hand.",
     generator: GENERATOR,
     source: sourceHash(),
     assets

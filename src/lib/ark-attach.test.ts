@@ -9,15 +9,17 @@ import {createHash} from "node:crypto";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {Matrix4, Quaternion, Triangle, Vector3, type BufferAttribute, type BufferGeometry, type Mesh} from "three";
+import {Matrix4, Quaternion, Ray, Triangle, Vector3, type BufferAttribute, type BufferGeometry, type Mesh} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import manifest from "@/ark-scene/assets-manifest.json";
 import attachData from "@/ark-scene/tree-attach.json";
 import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {DECOR_SINK} from "@/ark-scene/micro-decor";
+import {COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
+import {roofHeight} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
-import {EVERY_TIER_FILL, allAttachPoints, attachPointAt, attachSway, yawFor, type AttachPoint} from "@/ark-scene/sampler";
+import {CAVE_SITE, EVERY_TIER_FILL, allAttachPoints, attachPointAt, attachSway, place, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
+import {sampleGround} from "@/ark-scene/world";
 import {TREE_CLOSE, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 
 const root = process.cwd();
@@ -142,6 +144,8 @@ test("attach: every leaf point lies on a drawn leaf, every bark and branch point
         const tree = await loadTree(id);
         for (const row of rows) {
             const [tag, px, py, pz, nx, ny, nz] = row;
+            // Hollows are the mouth of a hole, not a surface: their own test below.
+            if (tag === "tree_hollow") continue;
             const p = new Vector3(px, py, pz);
             const on = nearest(tree, p, tag === "leaf");
             assert.ok(on.d < 0.004, `${id} ${tag} ${on.d.toFixed(4)} m off its ${tag === "leaf" ? "leaf" : "wood"}`);
@@ -237,6 +241,87 @@ test("attach: a camera close on a leaf draws that tree at full detail, the level
         const placed = assetTreePlacement(hostItem(point.host))!;
         const camera = {x: point.position.x + point.normal.x * 0.9, y: point.position.y + point.normal.y * 0.9, z: point.position.z + point.normal.z * 0.9};
         assert.ok(treeLodDistance(placed, camera) < TREE_CLOSE, `${point.id}: lod distance ${treeLodDistance(placed, camera).toFixed(2)}`);
+    }
+});
+
+test("attach: every hollow point is the mouth of a hole drawn in its tree's trunk, opening outward", async () => {
+    const hollows = treePoints().filter((point) => point.tag === "tree_hollow");
+    assert.ok(hollows.length >= 20, `${hollows.length} hollows`);
+    const trees = new Map<string, Tree>();
+    for (const id of new Set(hollows.map((point) => point.asset!))) trees.set(id, await loadTree(id));
+    for (const point of hollows) {
+        const tree = trees.get(point.asset!)!;
+        const w = point.wind!;
+        // In the asset's own frame: the normal turned back.
+        const c = Math.cos(-w.rotation);
+        const s = Math.sin(-w.rotation);
+        const n = new Vector3(point.normal.x * c + point.normal.z * s, point.normal.y, -point.normal.x * s + point.normal.z * c);
+        const mouth = new Vector3(w.local.x, w.local.y, w.local.z);
+        // Into the hole: its dark inside (drawn wood) within its depth; out of it: nothing of the tree for 0.5 m.
+        const inward = new Ray(mouth, n.clone().negate());
+        const outward = new Ray(mouth.clone().addScaledVector(n, 0.01), n);
+        const hit = new Vector3();
+        let inside = Infinity;
+        let blocked = false;
+        for (const t of tree.tris) {
+            if (!t.leafy && inward.intersectTriangle(t.tri.a, t.tri.b, t.tri.c, false, hit)) inside = Math.min(inside, hit.distanceTo(mouth));
+            if (outward.intersectTriangle(t.tri.a, t.tri.b, t.tri.c, false, hit) && hit.distanceTo(mouth) < 0.5) blocked = true;
+        }
+        assert.ok(inside <= point.depth! / point.wind!.scale + 0.01, `${point.id}: no hole behind its mouth (${inside})`);
+        assert.ok(!blocked, `${point.id}: its mouth opens into the tree`);
+        assert.ok(point.depth! > 0.05 && point.size[1] > 0.05, point.id);
+    }
+});
+
+test("attach: ledges are steep cliff, mountain and ice ground or the flat tops of big rocks, facing out; the cave's place", () => {
+    const ledges = allAttachPoints().filter((point) => point.tag === "ledge");
+    const ground = ledges.filter((point) => point.host === "ground");
+    const rocks = ledges.filter((point) => point.host !== "ground");
+    assert.equal(ground.length, 90);
+    assert.ok(rocks.length >= 10, `${rocks.length} rock shelves`);
+    for (const point of ledges) {
+        assert.equal(point.spot, "rocks");
+        assert.ok(point.zone === "seashore" || point.zone === "mountains" || point.zone === "polar", `${point.id} in ${point.zone}`);
+        assert.ok(point.normal.y > 0.8, `${point.id} stands on a shelf`);
+        const f = point.forward!;
+        assert.ok(Math.abs(f.x * point.normal.x + f.y * point.normal.y + f.z * point.normal.z) < 1e-6, point.id);
+        assert.ok(Math.abs(yawFor(point.normal, f) - point.yaw) < 1e-6 || Math.abs(Math.abs(yawFor(point.normal, f) - point.yaw) - 2 * Math.PI) < 1e-6, `${point.id} yaw`);
+    }
+    for (const point of ground) {
+        // A sea cliff, or steep ground on the mountain or the ice, facing out of the slope (downhill).
+        const surface = surfaceAt(point.position.x, point.position.z);
+        const sample = sampleGround(point.position.x, point.position.z);
+        assert.ok(Math.abs(point.position.y - sample.height) < 1e-9);
+        assert.ok(sample.cliff > 0.45 || 1 - surface.normal.y > 0.1, `${point.id} neither cliff nor steep`);
+        assert.ok(point.forward!.x * surface.normal.x + point.forward!.z * surface.normal.z > 0, `${point.id} faces out`);
+    }
+    // The cave: flat open ground (within 0.3 m over 4.5 m round it), nothing of the decor or the fill within 6.5 m.
+    const cave = place("cave");
+    assert.equal(cave.x, CAVE_SITE.x);
+    assert.ok(cave.facing !== undefined && Math.abs(cave.facing - Math.atan2(-cave.x, -cave.z)) < 1e-9);
+    const heights: number[] = [];
+    for (let a = 0; a < 12; a++) for (const r of [0, 2.5, 4.5]) heights.push(sampleGround(cave.x + Math.cos(a * 0.5236) * r, cave.z + Math.sin(a * 0.5236) * r).height);
+    assert.ok(Math.max(...heights) - Math.min(...heights) <= 0.3, `cave ground spans ${(Math.max(...heights) - Math.min(...heights)).toFixed(2)} m`);
+    assert.ok(Math.abs(cave.y - Math.max(...heights) - 0.04) < 1e-9);
+    const crowded = [...worldDecor(), ...forestFill()].filter((item) => Math.hypot(item.x - cave.x, item.z - cave.z) < 6.5);
+    assert.equal(crowded.length, 0, `decor at the cave: ${crowded.map((item) => item.kind).join(", ")}`);
+});
+
+test("attach: the eave points hang just under the roof the cottage draws (micro-scene.ts), on all four sides", () => {
+    const c = COTTAGE;
+    const eaves = allAttachPoints().filter((point) => point.tag === "house_eave");
+    assert.equal(eaves.length, 4);
+    for (const point of eaves) {
+        const lx = point.position.x - c.x;
+        const lz = point.position.z - c.z;
+        // Under the roof: inside its overhang.
+        assert.ok(Math.abs(lx) <= c.width / 2 + c.overhang && Math.abs(lz) <= c.depth / 2 + c.overhang, point.id);
+        // Out past the walls.
+        assert.ok(Math.abs(lx) > c.width / 2 || Math.abs(lz) > c.depth / 2, `${point.id} is inside the house`);
+        // The roof's underside right above it (the slabs fall from the ridge: micro.ts roofHeight), 4 mm up.
+        const underside = c.floor + roofHeight(Math.abs(lz));
+        assert.ok(underside - point.position.y > 0.001 && underside - point.position.y < 0.01, `${point.id}: ${(underside - point.position.y).toFixed(3)} m under the roof`);
+        assert.ok(point.normal.y < -0.7, `${point.id} hangs`);
     }
 });
 

@@ -158,7 +158,7 @@ export const TREE_CLOSE = 2.5;
 
 type Vec3 = {x: number; y: number; z: number};
 
-export type TreeAttachTag = "leaf" | "bark" | "branch";
+export type TreeAttachTag = "leaf" | "bark" | "branch" | "tree_hollow";
 
 /** The weights the tree shader sways a point by (the asset's COLOR_1 there), and where it sits on its tree. */
 export type TreeWind = {
@@ -188,10 +188,12 @@ export type TreeAttach = {
     open: number;
     /** Leaves: a single leaf (blade) or the crown's leaf mass (clump). */
     leaf?: "blade" | "clump";
+    /** Hollows: how deep the hole runs into the trunk (m). */
+    depth?: number;
     wind: TreeWind;
 };
 
-type Row = [TreeAttachTag, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+type Row = [TreeAttachTag, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
 const ATTACH = (attachData as unknown as {assets: Record<string, Row[]>}).assets;
 
 /** The asset's own attach points (asset space), by tag. */
@@ -209,7 +211,7 @@ export function treeAttachPoints(item: Placeable): TreeAttach[] {
     const root = {x: placed.x, y: placed.y, z: placed.z};
     const seen: Record<string, number> = {};
     return assetAttachRows(placed.id).map((row) => {
-        const [tag, px, py, pz, nx, ny, nz, fx, fy, fz, s0, s1, w0, w1, w2, w3, open, , blade] = row;
+        const [tag, px, py, pz, nx, ny, nz, fx, fy, fz, s0, s1, w0, w1, w2, w3, open, , blade, depth] = row;
         const p = turn(px * placed.scale, py * placed.scale, pz * placed.scale);
         const n = seen[tag] ?? 0;
         seen[tag] = n + 1;
@@ -223,6 +225,7 @@ export function treeAttachPoints(item: Placeable): TreeAttach[] {
             size: [s0 * placed.scale, s1 * placed.scale],
             open,
             ...(tag === "leaf" ? {leaf: blade ? ("blade" as const) : ("clump" as const)} : {}),
+            ...(tag === "tree_hollow" ? {depth: depth * placed.scale} : {}),
             wind: {weights: [w0, w1, w2, w3], local: {x: px, y: py, z: pz}, root, rotation: placed.rotation, scale: placed.scale}
         };
     });
