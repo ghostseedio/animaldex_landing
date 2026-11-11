@@ -121,19 +121,24 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_eyrie": {
             const nest = stats.nests.find((n) => n.form === "eyrie");
             if (!nest) return null;
-            const turn = nestTurn(nest);
-            return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            // Close in from due south (+z): from its own bearing at 6 m the crowns round the ledge stand in front of it.
+            // The bearings of these three shots were found by casting rays from a ring of cameras to the nest through the
+            // drawn trees (release 1323a70d, the broader crowns of assets 874a8d84), and are fixed to where the trees stand.
+            return {view: look(nest, nest.radius * 1.5 + 1.3, 1.12, 0, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_heronry": {
-            // The lowest crown-top platform (the heronry's, on the wetland's trees), from above its crown.
+            // The lowest crown-top platform (the heronry's, on the wetland's trees), from above its crown, from the south-west:
+            // the one side its tree and its neighbours leave open.
             const nest = stats.nests.filter((n) => n.form === "platform" && n.site === "tree_top").sort((a, b) => a.y - b.y)[0];
             if (!nest) return null;
-            return {view: lookThrough(nest, 0.9, nest.radius * 6 + 3, nest.radius * 3 + 1.5), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: lookThrough(nest, 3.8, nest.radius * 6 + 3, nest.radius * 3 + 1.5), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 9 + 1.2, 1.5, 0.4, -nest.radius * 1.2), hours: 9, weather: null, environment: calm, anchor: `pendant ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            // From inside its tree, on the trunk's side, out toward the open grass: the purse hangs among the leaves, and
+            // only this close, level with it, does nothing come between.
+            return {view: look(nest, nest.radius * 2 + 0.5, 1.36, Math.PI * 1.5, -nest.radius * 1.2), hours: 9, weather: null, environment: calm, anchor: `pendant ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_growing": {
             const nest = growingNest(stats);
