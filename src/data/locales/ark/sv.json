@@ -203,6 +203,12 @@
             "auto": "på för den här enheten",
             "hint": "Färre detaljer för en smidigare Ark på den här enheten"
         },
+        "sound": {
+            "label": "Ljud",
+            "hint": "Djurens läten och öns ljud. Av tills du slår på det.",
+            "credits": "Ljudkrediter",
+            "empty": "Inga ljud hörda än."
+        },
         "a11y": {
             "scene": "Ark i 3D. Piltangenterna flyttar vyn, plus och minus zoomar, Escape stänger ett kort. Därefter följer listan över vilka som är ombord.",
             "list": "Varje art ombord, efter region",

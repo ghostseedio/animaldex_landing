@@ -32,6 +32,7 @@ import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
 import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
+import {varyShader} from "@/ark-scene/ark-variation";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -340,6 +341,8 @@ ${LOOK_LIGHT}`)
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
     gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);
 }`);
+        // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
+        varyShader(shader, options.maxY - options.minY);
     };
     return material;
 }

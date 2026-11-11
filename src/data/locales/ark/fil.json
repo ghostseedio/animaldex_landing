@@ -203,6 +203,12 @@
             "auto": "naka-on sa device na ito",
             "hint": "Mas kaunting detalye, para mas maayos ang takbo ng Ark sa device na ito"
         },
+        "sound": {
+            "label": "Tunog",
+            "hint": "Mga huni ng hayop at mga tunog ng isla. Naka-off hanggang buksan mo.",
+            "credits": "Kredito ng mga tunog",
+            "empty": "Wala pang narinig na tunog."
+        },
         "a11y": {
             "scene": "Ang Ark sa 3D. Iginagalaw ng arrow keys ang view, nag-zo-zoom ang plus at minus, isinasara ng Escape ang card. Kasunod ang listahan ng nakasakay.",
             "list": "Bawat species na nakasakay, ayon sa rehiyon",

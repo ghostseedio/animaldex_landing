@@ -203,6 +203,12 @@
             "auto": "slået til på denne enhed",
             "hint": "Færre detaljer for en mere glidende Ark på denne enhed"
         },
+        "sound": {
+            "label": "Lyd",
+            "hint": "Dyrenes kald og øens lyde. Slukket, indtil du tænder den.",
+            "credits": "Lydkreditering",
+            "empty": "Ingen lyde hørt endnu."
+        },
         "a11y": {
             "scene": "Ark i 3D. Piletasterne flytter visningen, plus og minus zoomer, Escape lukker et kort. Derefter følger listen over, hvem der er om bord.",
             "list": "Hver art om bord, efter region",

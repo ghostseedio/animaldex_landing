@@ -453,6 +453,8 @@ async function mountGolden(el: HTMLElement) {
     };
 
     return {
+        /** The scene itself (the liveliness clips pin the weather, the tide and the camera through it). */
+        handle,
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
         /** Every species' models in, before the first shot (so nothing pops in). */

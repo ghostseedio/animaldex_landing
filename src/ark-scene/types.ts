@@ -168,6 +168,8 @@ export type ArkSceneStats = {
     animalLook?: boolean;
     furShells?: number;
     closeUpSkins?: number;
+    /** The liveliness wiring this frame: sheltering, young at heel, moved off the tide, rain drops, traces, sound. */
+    liveliness?: {/** Main-thread ms a frame in the wiring (mean of the last 60). */ ms: number; /** Last frame's split (ms). */ split?: {pose: number; drawn: number; step: number}; sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
@@ -247,6 +249,13 @@ export type ArkSceneOptions = {
      * dew, mist, smoke: `src/ark-scene/props`): true on (default), false off.
      */
     props?: boolean;
+    /**
+     * The storage host the animals' sounds come from (`https://<project>.supabase.co`): the chat's
+     * `animal-chat-sounds` bucket. Default: the model set's host; null: no calls.
+     */
+    soundBase?: string | null;
+    /** The list of recordings heard changed (the Sounds panel's credits). */
+    onSoundCredits?: () => void;
 };
 
 /** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
@@ -305,10 +314,19 @@ export type ArkSceneHandle = {
     follow: (id: string | null) => void;
     /**
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
-     * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now) is read only by
-     * the animal-look pass (coats soak in it); a pinned `wetness` without it means no rain.
+     * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now): coats soak in it
+     * (the animal-look pass) and animals shelter from it (liveliness); a pinned `wetness` without it means no rain.
      */
-    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; rain: number}> | null) => void;
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; /** Rain falling, 0–1 (animals shelter above 0.45). */ rain: number; fog: number}> | null) => void;
+    /**
+     * Sound on or off (liveliness wiring, `ark-audio.ts`). Call it only from the viewer's tap (the handler itself):
+     * the audio is made there and nowhere else, so nothing sounds before a tap, on the web or in the apps.
+     * False when the device has no WebAudio.
+     */
+    setSound: (on: boolean) => boolean;
+    /** Whether sound is on now, whether it has been unlocked by a tap, and every recording heard in this visit (the Sounds panel). */
+    sound: () => {on: boolean; unlocked: boolean; credits: Array<{text: string; page: string | null; license: string}>};
+    setSoundVolume: (volume: number) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
     setClockScale: (scale: number, atMs?: number) => void;

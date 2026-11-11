@@ -203,6 +203,12 @@
             "auto": "activada en este dispositivo",
             "hint": "Menos detalles, para un Ark más fluido en este dispositivo"
         },
+        "sound": {
+            "label": "Sonido",
+            "hint": "Las llamadas de los animales y los sonidos de la isla. Apagado hasta que lo actives.",
+            "credits": "Créditos de sonido",
+            "empty": "Todavía no se ha oído ningún sonido."
+        },
         "a11y": {
             "scene": "El Ark en 3D. Las flechas mueven la vista, más y menos hacen zoom, Escape cierra una tarjeta. Después viene la lista de quién va a bordo.",
             "list": "Todas las especies a bordo, por región",

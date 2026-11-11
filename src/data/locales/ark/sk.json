@@ -203,6 +203,12 @@
             "auto": "zapnuté pre toto zariadenie",
             "hint": "Menej detailov, aby Ark na tomto zariadení bežal plynulejšie"
         },
+        "sound": {
+            "label": "Zvuk",
+            "hint": "Hlasy zvierat a zvuky ostrova. Vypnutý, kým ho nezapnete.",
+            "credits": "Autori zvukov",
+            "empty": "Zatiaľ nezazneli žiadne zvuky."
+        },
         "a11y": {
             "scene": "Ark v 3D. Šípky posúvajú pohľad, plus a mínus približujú a vzďaľujú, Escape zatvorí kartu. Nasleduje zoznam toho, kto je na palube.",
             "list": "Všetky druhy na palube podľa oblastí",
