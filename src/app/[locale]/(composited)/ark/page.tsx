@@ -65,7 +65,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -384,6 +384,18 @@ function modelBase(): string {
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
 }
 
+/**
+ * Development only: `?rig=0` draws every animal procedural, `?rig=<folder>`
+ * reads the rigs from another folder (the local publish build is served at
+ * the default, `/api/dev/ark-models/ark-rig/v1`). Production: beside the
+ * model set.
+ */
+function rigOverride(searchParams: Props["searchParams"]): string | null | undefined {
+    if (process.env.NODE_ENV !== "development" || typeof searchParams.rig !== "string") return undefined;
+    if (searchParams.rig === "0") return null;
+    return /^(\/|https?:\/\/)/.test(searchParams.rig) ? searchParams.rig.replace(/\/+$/, "") : undefined;
+}
+
 /** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
 async function loadFixtureLife(mode: FixtureMode): Promise<ArkFixtureLife> {
     const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
@@ -428,6 +440,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             words={words}
             talkTitles={talk}
             modelBase={modelBase()}
+            rigBase={rigOverride(searchParams)}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
             fixtureLife={fixtureLife}
             hours={Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 24) : null}
