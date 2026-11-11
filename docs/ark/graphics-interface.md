@@ -49,7 +49,7 @@ Points are seeded, so every viewer gets the same ones.
 | `bark` | bark | on the drawn trunk's wood, facing out, forward up the trunk |
 | `canopy_perch`, `canopy_hang`, `canopy_climb` | canopy | the canopy trees' limbs (on top, under) and trunk |
 | `flower_head` | flowers | the top of each flower |
-| `rock_face` | rocks | round every rock |
+| `rock_face` | rocks | round every rock, 2 mm off the flat faces vegetation.ts draws (`drawnRockPoint`), facing out |
 | `tide_pool` | rocks | at the foot of the shore's low rocks |
 | `house_wall`, `house_eave` | house | the cottage's four walls and its eaves |
 | `porch_light`, `lamp` | lamp | the porch light and each zone's lamp post |
@@ -64,7 +64,7 @@ Points are seeded, so every viewer gets the same ones.
 - **Which trees.** Every decor tree, and the forest fill up to rank `EVERY_TIER_FILL` (0.3, the share the low tier draws), so an animal on a tree never floats where a lighter tier leaves its tree out. Per tree: up to 12 leaves, 6 bark and 8 branch points (pines and snags have no leaf points: needles and bare wood).
 - **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds (`treeLodDistance`, `TREE_CLOSE`), so the leaf under a close-up is always the one the point is on.
 - **Leaf size.** A leaf point takes animals up to 12 cm, whatever the leaf.
-- **Every other point** (rocks, the house, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before.
+- **Every other point** (the house, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before. Rock points keep their ids but moved by millimetres to a few centimetres, from the smooth rock shape onto the flat faces actually drawn (they had floated about 8 mm off the rock, or sat up to 5 cm inside it).
 
 ### Wind: an animal on a leaf moves with the leaf
 
