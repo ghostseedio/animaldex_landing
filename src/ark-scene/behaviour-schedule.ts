@@ -650,7 +650,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // predator's own schedule (the same for every viewer), sends it to the far side of its range to watch it. Near the
     // camera the local layer (`reactive.ts`) adds the look, the alarm and any dash on top. (Its own seeded stream: an
     // animal with no predator in sight chooses exactly as before.)
-    const threat = threatAt(world, animal, start, hoursAt, centre);
+    const threat = threatAt(world, profile, animal, start, hoursAt, centre, radius);
     if (threat) {
         const wary = rng(hashString(`${animal.id}#wary#${slot}`));
         const away = {x: centre.x + ((centre.x - threat.x) / threat.d) * radius * 0.7, z: centre.z + ((centre.z - threat.z) / threat.d) * radius * 0.7};
@@ -1236,14 +1236,32 @@ export function airborneDoing(doing: ArkDoing): boolean {
 
 // MARK: Predators and prey
 
-/** How far a prey animal notices a predator in the shared layer (about the reactive layer's sight for a walking hunter by day). */
-export const WARY_METRES = 35;
+/** The farthest any prey animal notices a predator in the shared layer (open ground, a big prey, a big hunter on the move). */
+export const WARY_METRES = 55;
+
+/** How far one can see across each zone, against open grassland (trees, reeds and undergrowth hide a hunter). */
+const OPENNESS: Partial<Record<ArkZone, number>> = {grassland: 1.15, desert: 1.15, polar: 1.15, mountains: 1, seashore: 1, open_ocean: 1, coral_reef: 0.9, river_lake: 0.9, farm_garden: 0.9, wetland: 0.8, woodland: 0.65, rainforest: 0.5};
 
 /**
- * The nearest of its predators it can see at a moment (awake, within `WARY_METRES` of where it is about), or null.
- * Pure: the predator's own schedule, which never depends on its prey's.
+ * How far a prey animal notices a predator (scene metres), on the reactive layer's sight model
+ * (flee-envelope.md §2): its own sight by how it moves (a bird's best, a fish's short) and its size, how easy the
+ * hunter is to see (bigger, and moving, more), and how open its zone is. A zebra sees a lion walking across the
+ * grassland about 43 m off, one lying still about 24 m; a forest hides both at half that.
  */
-export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home): {x: number; z: number; d: number} | null {
+export function waryRange(prey: ArkBehaviourProfile, zone: ArkZone, hunterLength: number, hunterMoving: boolean): number {
+    const sight = prey.move === "fly" || prey.moves.includes("fly") ? 40 : aquatic(prey) ? 12 : 30;
+    const size = 0.7 + (prey.size ?? 40) / 160;
+    const seen = (hunterMoving ? 1.25 : 0.7) * (0.7 + 0.15 * Math.min(Math.max(hunterLength, 0.2), 3));
+    return Math.min(Math.max(sight * size * seen * (OPENNESS[zone] ?? 0.8), 4), WARY_METRES);
+}
+
+/**
+ * The nearest of its predators it can see at a moment (awake, within its `waryRange` of anywhere in its range: `near`
+ * and `radius`, where it is about), or null. Pure: the predator's own schedule, which never depends on its prey's
+ * (and never the prey's own earlier slots: measuring from where the last slot left it would chain back through every
+ * slot before it). `d` is the distance from `near`.
+ */
+export function threatAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home, radius = 0): {x: number; z: number; d: number} | null {
     if (!animal.threats?.length) return null;
     let best: {x: number; z: number; d: number} | null = null;
     for (const threat of animal.threats) {
@@ -1251,7 +1269,7 @@ export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeco
         if (trip.doing === "sleep" || trip.doing === "to_roost") continue;
         const at = poseOnTrip(world, trip, epochSeconds);
         const d = Math.hypot(at.x - near.x, at.z - near.z);
-        if (d < WARY_METRES && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
+        if (d - radius < waryRange(profile, animal.zone, threat.animal.length, at.moving) && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
     }
     return best;
 }

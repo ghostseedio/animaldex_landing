@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -344,7 +344,7 @@ test("prey watch a predator they can see: off to the far side of their range, fa
             if (!awakeAt(i.profile, i.a.activity, hoursAt(start)) || i.profile.move === "sessile") continue;
             moments++;
             const centre = i.animal.home;
-            const threat = threatAt(world, i.animal, start, hoursAt, centre);
+            const threat = threatAt(world, i.profile, i.animal, start, hoursAt, centre, homeRadius(i.profile, i.animal));
             if (!threat || trip.shadow || trip.doing === "breathe") continue;
             seen++;
             assert.equal(trip.doing, "watch", `${i.a.model_slug} ignores a predator ${threat.d.toFixed(0)} m off (${trip.doing})`);
@@ -358,7 +358,30 @@ test("prey watch a predator they can see: off to the far side of their range, fa
         }
     }
     assert.ok(moments > 100, `moments ${moments}`);
-    assert.ok(seen > 0, "no prey ever saw a predator");
     assert.ok(WARY_METRES > SAFE_METRES);
     console.log(`prey awake slots ${moments}, with a predator in sight ${seen}`);
+});
+
+test("a zebra sees a lion walk the grassland 40-odd metres off, and watches it; still, or in a forest, it sees it nearer", () => {
+    const zebra = behaviourProfile("plains-zebra");
+    assert.ok(waryRange(zebra, "grassland", 1.8, true) > 38 && waryRange(zebra, "grassland", 1.8, true) <= WARY_METRES);
+    assert.ok(waryRange(zebra, "grassland", 1.8, false) < waryRange(zebra, "grassland", 1.8, true) * 0.65);
+    assert.ok(waryRange(zebra, "rainforest", 1.8, true) < waryRange(zebra, "grassland", 1.8, true) * 0.5);
+    // A lion and a zebra, homes a spaced 50 m apart on the grassland (as the release fixture has them): the zebra notices
+    // the lion now and then from its range, and then watches it from the far side, facing it.
+    const ground = world.nav.nearest(-40, 40, "walk", 0.5, 30)!;
+    const lionHome = world.nav.nearest(ground.x + 50, ground.z, "walk", 0.5, 30)!;
+    const lion = {id: "test-lion", zone: "grassland" as const, home: {x: lionHome.x, y: Math.max(world.sampler.heightAt(lionHome.x, lionHome.z), 0), z: lionHome.z}, length: 1.8, sea: false};
+    const z: ScheduleAnimal = {id: "test-zebra", zone: "grassland", home: {x: ground.x, y: Math.max(world.sampler.heightAt(ground.x, ground.z), 0), z: ground.z}, length: 1.7, sea: false, threats: [{animal: lion, profile: behaviourProfile("african-lion"), activity: "diurnal"}]};
+    let watched = 0;
+    for (let k = 0; k < 24 * 45; k++) {
+        const trip = tripAt(world, zebra, z, DAY + k * SLOT_SECONDS, hoursAt, "diurnal");
+        const start = slotStart(z, trip.slot);
+        const threat = threatAt(world, zebra, z, start, hoursAt, z.home, homeRadius(zebra, z));
+        if (!threat || !awakeAt(zebra, "diurnal", hoursAt(start))) continue;
+        assert.equal(trip.doing, "watch");
+        assert.ok(Math.hypot(trip.to.x - threat.x, trip.to.z - threat.z) >= threat.d - 0.5, "it watches from further off, not nearer");
+        watched++;
+    }
+    assert.ok(watched > 0, "the zebra never noticed the lion");
 });
