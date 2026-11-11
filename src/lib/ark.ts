@@ -14,10 +14,11 @@
  * client only shows what the ledger says, and works out the Money bar and
  * Ark Score only to draw a count-up between two values the server sent.
  *
- * Ark 3.3 (docs/ark-spec.md section 7.6): the Ark Score is now the world
- * score, 0–100 (`ark_world_score`, lib/ark-world); the old `ark_score` is read
- * only from a server that has not switched. The reveal and the Diary no
- * longer show a score line, though a change still decodes its `ark_score`.
+ * Captures + thrive (2026-11-11): the Ark Score is v3, `ark_points` (lib/ark-world):
+ * the points steps that worked locked in, no top, never lower. v2's world
+ * score (`ark_world_score`, 0–100) and the old `ark_score` (0–500) are read
+ * only from a server without it. The reveal and the Diary no longer show a
+ * score line, though a change still decodes its `ark_score`.
  */
 
 import {decodeArkLife, readArkScore, readArkWorldWeekChange} from "@/lib/ark-world";
@@ -86,15 +87,18 @@ export type ArkSteps = {total: number; worked: number; partly: number; didntWork
 /** `ark_stats_v1`: the viewer's own, or someone else's within section 7. */
 export type ArkStats = {
     /**
-     * The Ark Score shown: the world score (`ark_world_score`, 0–100) once the
-     * server sends it, else the old Life Sim sum (`ark_score`, 0–500).
+     * The Ark Score shown: v3's points (`ark_points`) once the server sends
+     * them, else v2's world score (`ark_world_score`, 0–100), else the old
+     * Life Sim sum (`ark_score`, 0–500).
      */
     arkScore: number;
-    /** 100 for the world score, 500 for the old key (lib/ark-world `readArkScore`). */
-    arkScoreOutOf: 100 | 500;
-    /** True when `arkScore` is the world score. */
+    /** null for v3 (no top), 100 for v2, 500 for the old key (lib/ark-world `readArkScore`). */
+    arkScoreOutOf: 100 | 500 | null;
+    /** True when `arkScore` is v3 or v2 (the shared Ark's), not the old sum. */
     arkWorld: boolean;
-    /** This week's change to the world score (`ark_world_week_change`); null when not sent. */
+    /** True when `arkScore` is v3's points. */
+    arkPoints: boolean;
+    /** This week's change: v3's points this week (`ark_points_week`, never below 0), else v2's `ark_world_week_change`; null when not sent. */
     weekChange: number | null;
     /** The old Life Sim sum (`ark_score`) while a server still sends it: only the old mission thresholds read it. */
     legacyArkScore: number | null;
@@ -339,6 +343,7 @@ export function decodeArkStats(raw: unknown): ArkStats | null {
         arkScore: score.value,
         arkScoreOutOf: score.outOf,
         arkWorld: score.world,
+        arkPoints: score.points,
         weekChange: readArkWorldWeekChange(row),
         legacyArkScore: integer(row.ark_score),
         isSelf: row.is_self === true,

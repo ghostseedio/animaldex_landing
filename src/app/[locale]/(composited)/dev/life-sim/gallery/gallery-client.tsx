@@ -12,8 +12,9 @@ import {
     ArkStepsPowersTiles
 } from "@/components/ark/ark-views";
 import {arkMoneyFormatter} from "@/components/ark/use-ark";
-import {ArkArrivalLine, ArkStepOfferNote} from "@/components/ark/ark-chat-lines";
-import type {ArkStepOfferState} from "@/lib/ark-world";
+import {ArkStepOfferNote, ArkStepResultLine} from "@/components/ark/ark-chat-lines";
+import type {ArkStepOffer} from "@/lib/ark-world";
+import type {ArkStepResult} from "@/lib/ark-thrive";
 import ProfileWeeklyStatsCard from "@/app/[locale]/(composited)/u/[handle]/profile-weekly-stats-card";
 import {ProfileDiaryTab} from "@/app/[locale]/(composited)/u/[handle]/profile-diary";
 import {decodeArkChange, decodeArkStats, type ArkChange, type ArkStats} from "@/lib/ark";
@@ -107,7 +108,9 @@ const WORSE_ROW = {
 };
 
 const SELF_STATS = {
-    // Ark 3.3 (contract A.3): the world score and its week, beside the old key the live web still reads.
+    // Captures + thrive: v3's points and this week's (no top, never lower), beside v2's and the old key, as the server sends them.
+    ark_points: 140,
+    ark_points_week: 30,
     ark_world_score: 62,
     ark_world_week_change: 5,
     ark_score: 142,
@@ -210,10 +213,10 @@ function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arriv
     locale: string;
     reveal: ArkChange;
     earnsPower: boolean;
-    /** Part 2: the Ark line under the live card, by the reader's living count. */
-    offer?: ArkStepOfferState | null;
-    /** Part 2: the step worked and a Komodo came aboard (the line plays in under the reveal). */
-    arrives?: boolean;
+    /** Captures + thrive: the Ark line under the live card (`voyage_step_offer_state_v1`), by state and band. */
+    offer?: ArkStepOffer | null;
+    /** Captures + thrive: what the step did (`voyage_step_result_v1`), played in under the reveal. */
+    arrives?: ArkStepResult | false;
 }) {
     const offered = decodeAnimalStep({id: STEP, step: "Buy the materials today, before the price goes up."}) as AnimalStep;
     const [state, setState] = useState<"live" | "done" | "closed">("live");
@@ -251,7 +254,7 @@ function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arriv
                         onOther={() => setState("closed")}
                         onStartDebate={() => undefined}
                         onAskAnother={{label: "Ask another animal", onClick: () => undefined}}
-                        arkOffer={offer ? <ArkStepOfferNote offer={{state: offer, species: "Komodo Dragon"}} words={words.ark} locale={locale} /> : null}
+                        arkOffer={offer ? <ArkStepOfferNote offer={offer} words={words.ark} locale={locale} /> : null}
                     />
                 )}
             />
@@ -287,7 +290,18 @@ function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arriv
                         money={money}
                         locale={locale}
                     />
-                    {arrives ? <ArkArrivalLine key={`arrival-${run}`} species="Komodo Dragon" slug="komodo-dragon" animalId="f29d1d93-e6b2-45f4-a6fa-2ce36215ba03" fresh words={words.ark} locale={locale} onSee={() => undefined} /> : null}
+                    {/* D6: the founders' story moment under the step's thrive line, prefilled with this step; add ?arkfounder=1|name|adult|shared to see it (nothing is sent). */}
+                    {arrives ? (
+                        <ArkStepResultLine
+                            key={`result-${run}`}
+                            result={arrives}
+                            slug="komodo-dragon"
+                            fresh
+                            words={words.ark}
+                            locale={locale}
+                            share={arrives.livingBrought > 0 ? {animalId: "f29d1d93-e6b2-45f4-a6fa-2ce36215ba03", stepId: null, stepText: offered.step, words: words.ark.founders} : null}
+                        />
+                    ) : null}
                 </>
             ) : null}
             {state !== "live" ? (
@@ -341,13 +355,13 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
 
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Step, one button (I've done it: Power earned)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower offer="new" arrives />
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower offer={{state: "thrive", species: "Komodo Dragon", livingBrought: 1, bandNow: "ordinary", bandIfWorked: "good"}} arrives={{status: "done", species: "Komodo Dragon", livingBrought: 1, thriveBefore: "ordinary", thriveAfter: "good", points: 10}} />
                 </Frame>
                 <Frame title="Step, one button (I've done it: a later step)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower={false} offer="pair_complete" arrives />
+                    <LiveStep words={words} money={money} locale={locale} reveal={earned} earnsPower={false} offer={{state: "thrive", species: "Komodo Dragon", livingBrought: 2, bandNow: "good", bandIfWorked: "prime"}} arrives={{status: "done", species: "Komodo Dragon", livingBrought: 2, thriveBefore: "good", thriveAfter: "prime", points: 30}} />
                 </Frame>
                 <Frame title="Step, one button (I've done it: a Lesson)" width={416}>
-                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} earnsPower={false} offer="milestone" />
+                    <LiveStep words={words} money={money} locale={locale} reveal={lesson} earnsPower={false} offer={{state: "thrive_later", species: "Komodo Dragon", livingBrought: 0, bandNow: "ordinary", bandIfWorked: "good"}} />
                 </Frame>
                 <Frame title="Report sheet" width={416}>
                     <ReportSheetButton words={words} />
@@ -388,7 +402,7 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
             <div className="flex flex-wrap items-start gap-8">
                 <Frame title="Profile Stats, your own" width={416}>
                     <div className="-mx-4 -my-4">
-                        <ArkScoreCard score={{value: self.arkScore, outOf: self.arkScoreOutOf, world: self.arkWorld}} weekChange={self.weekChange} isSelf animalsHref="/u/lendawg/ark" words={words.ark} locale={locale} />
+                        <ArkScoreCard score={{value: self.arkScore, outOf: self.arkScoreOutOf, world: self.arkWorld, points: self.arkPoints}} weekChange={self.weekChange} isSelf animalsHref="/u/lendawg/ark" words={words.ark} locale={locale} />
                         <ArkBarsPanel stats={self} words={words.ark} money={money} locale={locale} />
                         <ArkStepsPowersTiles steps={self.steps} powersEarned={self.powersEarned} words={words.ark} locale={locale} onOpenDiary={() => undefined} />
                         <ProfileWeeklyStatsCard
@@ -402,16 +416,21 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
                                 previousCaptures: 2,
                                 previousNewSpecies: 0,
                                 daily: [],
-                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, worldChange: 5, powers: 1, previousPowers: null}
+                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, worldChange: 30, powers: 1, previousPowers: null}
                             }}
                         />
                     </div>
                 </Frame>
                 <Frame title="Profile Stats, someone else, private diary" width={416}>
                     <div className="-mx-4 -my-4">
-                        <ArkScoreCard score={{value: other.arkScore, outOf: other.arkScoreOutOf, world: other.arkWorld}} weekChange={other.weekChange} animalsHref="/u/someone/ark" words={words.ark} locale={locale} explain={false} />
+                        <ArkScoreCard score={{value: other.arkScore, outOf: other.arkScoreOutOf, world: other.arkWorld, points: other.arkPoints}} weekChange={other.weekChange} animalsHref="/u/someone/ark" words={words.ark} locale={locale} explain={false} />
                         <ArkBarsPanel stats={other} words={words.ark} money={money} locale={locale} />
                         <ArkStepsPowersTiles steps={other.steps} powersEarned={other.powersEarned} words={words.ark} locale={locale} />
+                    </div>
+                </Frame>
+                <Frame title="Profile Stats, a server before v3 (the 0–100 world score)" width={416}>
+                    <div className="-mx-4 -my-4">
+                        <ArkScoreCard score={{value: 62, outOf: 100, world: true, points: false}} weekChange={-2} isSelf words={words.ark} locale={locale} explain={false} />
                     </div>
                 </Frame>
                 <Frame title="Profile Stats, a server before 3.3 (old key, of 500)" width={416}>

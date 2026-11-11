@@ -14,18 +14,20 @@ async function readArkMessages(language: ArkLanguage): Promise<Messages | null> 
     return bundle ? (bundle.default as Messages) : null;
 }
 
+type ArkNamespaces = {ark: Messages; talkPage: Messages; companions: {ark: Messages}; home: {ark: Messages}};
+
 /**
- * The Ark's namespaces (`ark`, the Talk pages' Ark keys) in `language`, any
- * app language, English key by key where it lacks one. An unknown language
- * reads English.
+ * The Ark's namespaces (`ark`, the Talk pages' Ark keys, `companions.ark`,
+ * `home.ark`) in `language`, any app language, English key by key where it
+ * lacks one. An unknown language reads English.
  */
-export async function getArkMessages(language: string): Promise<{language: ArkLanguage; messages: {ark: Messages; talkPage: Messages}}> {
+export async function getArkMessages(language: string): Promise<{language: ArkLanguage; messages: ArkNamespaces}> {
     const resolved = arkLanguage(language) ?? EN_FALLBACK_LOCALE;
     const [english, local] = await Promise.all([
         readArkMessages(EN_FALLBACK_LOCALE),
         resolved === EN_FALLBACK_LOCALE ? Promise.resolve(null) : readArkMessages(resolved).catch(() => null)
     ]);
-    return {language: resolved, messages: mergeArkMessages(english ?? {}, local) as {ark: Messages; talkPage: Messages}};
+    return {language: resolved, messages: mergeArkMessages(english ?? {}, local) as ArkNamespaces};
 }
 
 /**

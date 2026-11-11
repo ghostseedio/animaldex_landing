@@ -584,9 +584,9 @@ export default function ProfileContent({
     // Life Sim: Ark Score in place of Overall, Steps and Powers beside it.
     const arkWords = (companionWords ?? COMPANION_WORDS_EN).ark;
     const arkStats = ark?.stats ?? null;
-    // Ark 3.3: the world score (0–100) when the server sends it; the old key only from one that has not switched.
+    // Captures + thrive: v3's points (no top) when the server sends them; v2's 0–100, or the old key, only from one that has not switched.
     const arkScoreRead: ArkScoreRead | null = arkStats
-        ? {value: arkStats.arkScore, outOf: arkStats.arkScoreOutOf, world: arkStats.arkWorld}
+        ? {value: arkStats.arkScore, outOf: arkStats.arkScoreOutOf, world: arkStats.arkWorld, points: arkStats.arkPoints}
         : ark?.score ?? null;
     const arkScore = arkScoreRead?.value ?? null;
     const arkWeekChange = arkStats?.weekChange ?? ark?.weekChange ?? null;

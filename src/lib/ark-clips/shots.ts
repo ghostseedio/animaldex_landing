@@ -130,7 +130,7 @@ const ZONE_NAMES: Record<ArkZone, string> = {
 const SEA_ZONES = new Set<ArkZone>(["open_ocean", "coral_reef"]);
 
 /** How the general rule is said: no step, problem or person, only how animals come aboard. */
-export const ARK_HOW_LINE = "Animals come aboard when someone tries an animal's advice and it works.";
+export const ARK_HOW_LINE = "Animals come aboard when someone captures them, and steps that work keep them thriving.";
 export const ARK_END_TITLE = "THE ARK";
 export const ARK_END_URL = "animaldex.app/ark";
 

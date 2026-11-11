@@ -667,6 +667,8 @@ export default function CaptureDetailClient({
                                     name={speciesName}
                                     words={arkWords}
                                     onTalk={() => talk()}
+                                    // The reader's own capture: the band says what it did (captures + thrive); anyone else's, the species' only.
+                                    captureId={viewer.isOwner ? capture.id : null}
                                 />
                             </div>
                         ) : null}
