@@ -140,6 +140,10 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const mix = new Color();
     const palettes = Object.fromEntries(Object.entries(ZONE_PALETTES).map(([zone, palette]) => [zone, [srgb(palette.ground[0]), srgb(palette.ground[1])]])) as Record<string, [Color, Color]>;
     const sand = srgb(ZONE_PALETTES.seashore.ground[0]);
+    // Batch 6: the beach takes its coast's character: warm savanna sand beside the grassland and the desert (the zebras'
+    // coast read as white).
+    const warmSand = srgb("#d0a868");
+    const beachTone = new Color();
     const reefFloor = srgb(ZONE_PALETTES.coral_reef.ground[0]);
     const seaFloor = srgb(ZONE_PALETTES.open_ocean.ground[0]);
 
@@ -165,7 +169,9 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         }
         const polar = w.polar ?? 0;
         const beach = (1 - smoothstep(0.45, 1, sample.land)) * (1 - polar) * (1 - sample.cliff);
-        color.lerp(sand, beach * 0.85);
+        const warm = Math.min((w.grassland ?? 0) + (w.desert ?? 0), 1);
+        beachTone.copy(sand).lerp(warmSand, warm * 0.85);
+        color.lerp(beachTone, beach * 0.85);
         if (sample.height < 0) {
             const floor = mix.copy(seaFloor).lerp(reefFloor, sample.reef);
             color.lerp(floor, smoothstep(0.2, 3, -sample.height));
@@ -414,7 +420,7 @@ float arkWet = 0.0;`)
     // Snow along a ledge lies in patches, only where the ledge is gentle enough to hold it.
     float ledgeSnow = ledge * bedClear * smoothstep(snowLine - 9.0, snowLine - 3.0, snowAt) * (1.0 - alpine) * massif
         * smoothstep(0.45, 0.75, arkNoise(vec2(dot(p, vec2(0.7, 0.7)) * 0.35, bed))) * (1.0 - smoothstep(0.45, 0.65, slopeHere));
-    float snowW = max(max(vArkLayers.w, alpine), ledgeSnow * 0.75);
+    float snowW = max(max(vArkLayers.w, alpine), ledgeSnow * 0.5);
     vec3 base = diffuseColor.rgb;
 
     // Grass and earth: clumps, dry patches, a fine grain close up.
@@ -426,7 +432,20 @@ float arkWet = 0.0;`)
 
     // Sand: wind ripples, lighter crests.
     float ripple = sin(dot(p, vec2(0.82, 0.57)) * 2.4 + arkFbm(p * 0.3) * 6.0) * 0.5 + 0.5;
-    vec3 sandy = mix(base, sandTone, 0.35) * (0.9 + 0.12 * ripple * near + 0.08 * arkNoise(p * 0.8));
+    // (Batch 6: only a little toward the seashore's pale sand, so warm coasts keep their own tone.)
+    vec3 sandy = mix(base, sandTone, 0.15) * (0.9 + 0.12 * ripple * near + 0.08 * arkNoise(p * 0.8));
+    // Sand that reads as sand from the island view, not snow or white paper (batch 6): warmer and darker, damp in patches,
+    // in wind-sorted bands, shell grit close up, an ochre edge where the grass and the savanna meet it.
+    {
+        float damp = smoothstep(0.52, 0.8, arkFbm(p * 0.08 + 3.0));
+        float bands = 0.5 + 0.5 * sin(dot(p, vec2(0.31, 0.95)) * 0.9 + arkFbm(p * 0.05) * 5.0);
+        float grit = smoothstep(0.8, 0.93, arkNoise(p * 11.0)) * near;
+        float edge = smoothstep(0.35, 0.75, sandW) * (1.0 - smoothstep(0.75, 0.98, sandW));
+        sandy *= vec3(0.93, 0.86, 0.74) * (0.9 + 0.1 * bands);
+        sandy *= mix(1.0, 0.78, damp);
+        sandy = mix(sandy, sandy * vec3(1.05, 0.9, 0.7), edge * 0.6);
+        sandy = mix(sandy, vec3(0.62, 0.58, 0.52), grit * 0.45);
+    }
     ground = mix(ground, sandy, smoothstep(0.15, 0.85, sandW));
 
     // Wetland: dark wet mud in the low hollows, the rest reedy grass.
@@ -520,7 +539,8 @@ float arkWet = 0.0;`)
     rock *= mix(vec3(1.0), mix(vec3(0.94, 0.97, 1.04), vec3(1.07, 0.99, 0.9), arkHash(vec2(bed, 1.9))), beds);
     float runs = smoothstep(0.5, 0.85, arkNoise(vec2(faceAt.x * 1.1, faceAt.y * 0.05 + bed * 3.0)));
     float gully = smoothstep(0.35, 0.05, rib) * massif;
-    rock *= 1.0 - beds * (0.3 * runs * hard + 0.2 * underhang + 0.12 * planes) + beds * 0.1 * ledge;
+    // Batch 6: the beds blend into the faces (the ledges read as boxy slabs stuck on): a faint lip and underhang.
+    rock *= 1.0 - beds * (0.3 * runs * hard + 0.1 * underhang + 0.1 * planes) + beds * 0.05 * ledge;
     rock *= 1.0 - 0.3 * gully + 0.12 * smoothstep(0.7, 0.95, rib) * massif;
     ground = mix(ground, rock, steep * step(0.3, world.y + 0.4));
     // The ledges and overhangs as shape, not just paint: the shading normal tips up at a ledge and down under a hang.
@@ -530,7 +550,7 @@ float arkWet = 0.0;`)
         // And across the face: the ribs stand out, the gullies sink.
         vec3 acrossFace = normalize(cross(vec3(0.0, 1.0, 0.0), nw0) + vec3(1e-4));
         float ribSlope = arkFbm(vec2((faceAt.x + 0.6) * 0.16, faceAt.y * 0.035 + 5.0)) - arkFbm(vec2((faceAt.x - 0.6) * 0.16, faceAt.y * 0.035 + 5.0));
-        arkBend += upOnFace * (0.6 * ledge - 0.35 * underhang) * steep * beds + acrossFace * ribSlope * 6.0 * steep * massif;
+        arkBend += upOnFace * (0.22 * ledge - 0.1 * underhang) * steep * beds + acrossFace * ribSlope * 6.0 * steep * massif;
     }
 
     // Scree (batch 4): grey stone gathered at the foot of the faces, lighter than the rock it fell from.
