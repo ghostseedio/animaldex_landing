@@ -196,6 +196,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     };
     const fitFor = (tier: QualityTier) => ({near: arkBudget(tier).nearTexture, far: arkBudget(tier).farTexture});
     ctx.library.fit = fitFor(ctx.tier());
+    // Part B: the starting view's far models from the first tier's pack (streaming/pack.ts), when the model set has one.
+    ctx.library.packTier = ctx.tier();
     ctx.library.paced = true;
     // More files at once on a desktop's connection (HTTP/2 to the bucket); a phone keeps four.
     ctx.library.setConcurrency(ctx.tier() === "high" ? 8 : 6);

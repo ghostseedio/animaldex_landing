@@ -203,6 +203,12 @@ export type ArkSceneStats = {
     closeUpSkins?: number;
     /** The liveliness wiring this frame: sheltering, young at heel, moved off the tide, rain drops, traces, sound. */
     liveliness?: {/** Main-thread ms a frame in the wiring (mean of the last 60). */ ms: number; /** Last frame's split (ms). */ split?: {pose: number; drawn: number; step: number}; sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
+    /**
+     * Part B, the world in chunks (docs/ark/streaming.md): the render distance now (m) and its memory scale, the map
+     * view, the edge haze (0…1), chunks drawn in full / as the map / not, the ground's tiles by level, animals skipped
+     * past the distance this frame and drawn as map markers.
+     */
+    streaming?: {renderDistance: number; renderScale: number; map: boolean; haze: number; chunks: {in: number; map: number; out: number; content: number}; changes: number; tiles: {full: number; map: number; hidden: number}; animalsSkipped: number; mapMarkers: number};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
@@ -210,6 +216,11 @@ export type ArkHerdInfo = {key: string; slug: string; name: string; count: numbe
 
 export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
+    /**
+     * Part B: the device's memory in GB as the app knows it (iOS never tells the page; Chromium caps it at 8), for the
+     * quality tier and its render distance and memory budget (`streaming/tiers.ts`). The embed also reads `?mem=`.
+     */
+    deviceMemoryGB?: number | null;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
     /**

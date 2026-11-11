@@ -18,6 +18,13 @@
  *
  * The models come from the public model bucket (read only), as on the site; `--network 4g` throttles them to a
  * mid 4G link (9 Mbit/s down, 60 ms) through the DevTools protocol.
+ *
+ * Part B (docs/ark/streaming.md): `--render <m>` / `--render-scale <share>` set the render distance; `--tour` takes
+ * the camera down into each region and back; `--mem <GB>` is the app's memory figure; `--models-dir <dir>` serves a
+ * local model set (the far-model pack, the far-ark files: scripts/ark-model-pack.mjs) at /models/ after
+ * `--latency <ms>` (default 180, the bucket's measured time to first byte); `--serve <port>` serves the page on
+ * 0.0.0.0 for a WebView (the iOS Simulator, an Android emulator) without a browser of its own: the page posts its
+ * result to /report and it is written to the output folder (open `/measure.html?…&report=/report&label=<name>`).
  */
 
 import {createServer} from "node:http";
@@ -33,6 +40,7 @@ const arg = (name, fallback) => {
     return at > 0 && process.argv[at + 1] && !process.argv[at + 1].startsWith("--") ? process.argv[at + 1] : fallback;
 };
 const flag = (name) => process.argv.includes(`--${name}`);
+const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 
 const DEVICES = {
     desktop: {viewport: {width: 1440, height: 900}, deviceScaleFactor: 1, isMobile: false, hasTouch: false, cpuThrottle: 1},
@@ -111,7 +119,36 @@ async function cdn(request, response, pathname) {
     await new Promise((resolve) => setTimeout(resolve, 25));
     response.writeHead(200, {"Content-Type": "application/octet-stream", "Cache-Control": rel.endsWith("manifest.json") ? "public, max-age=60" : "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": "*"}).end(readFileSync(file));
 }
+const modelsDir = arg("models-dir", "") ? path.resolve(arg("models-dir", "")) : "";
+const latency = Number(arg("latency", "180"));
+const reports = [];
 const server = createServer((request, response) => {
+    if (request.method === "POST" && request.url.startsWith("/report")) {
+        const chunks = [];
+        request.on("data", (chunk) => chunks.push(chunk));
+        request.on("end", () => {
+            try {
+                const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+                const name = `${(body.label || "webview").replace(/[^a-z0-9_.-]/gi, "_")}-${Date.now()}.json`;
+                writeFileSync(path.join(out, name), JSON.stringify(body, null, 2));
+                reports.push(name);
+                log("report", name, body.result ? `heap ${body.result.peakHeapMB} MB peak, GPU ${body.result.peakGpuMB} MB peak, ${body.result.frameRate?.fps} fps, in view ${body.result.inViewMs} ms, mount ${body.result.mountMs} ms, tier ${body.result.stats?.tier}` : body.error);
+            } catch (error) {
+                log("bad report", String(error));
+            }
+            response.writeHead(204, {"Access-Control-Allow-Origin": "*"}).end();
+        });
+        return;
+    }
+    if (modelsDir && request.url.startsWith("/models/")) {
+        const rel = decodeURIComponent(new URL(request.url, "http://localhost").pathname.replace(/^\/models\//, ""));
+        const file = path.join(modelsDir, rel);
+        if (!file.startsWith(modelsDir) || !existsSync(file)) return response.writeHead(404, {"Access-Control-Allow-Origin": "*"}).end();
+        setTimeout(() => {
+            response.writeHead(200, {"Content-Type": file.endsWith(".json") ? "application/json" : "application/octet-stream", "Cache-Control": rel.endsWith("manifest.json") ? "no-store" : flag("repeat") ? "public, max-age=31536000, immutable" : "no-store", "Access-Control-Allow-Origin": "*"}).end(readFileSync(file));
+        }, latency);
+        return;
+    }
     if (cdnDir && request.url.startsWith("/cdn/")) {
         void cdn(request, response, new URL(request.url, "http://localhost").pathname).catch(() => response.writeHead(502).end());
         return;
@@ -131,8 +168,14 @@ const server = createServer((request, response) => {
     const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
-await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+const servePort = Number(arg("serve", "0"));
+await new Promise((resolve) => server.listen(servePort, servePort ? "0.0.0.0" : "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
+if (servePort) {
+    // WebView mode: no browser here; the page posts its result to /report. Runs until stopped.
+    log(`serving ${base}/measure.html (on 0.0.0.0:${servePort}); reports to ${out}`);
+    await new Promise(() => undefined);
+}
 
 function cachedChromium() {
     const cache = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
@@ -153,7 +196,6 @@ const browser = await chromium.launch({
     headless: !flag("headed"),
     args: [...(flag("headed") ? [] : ["--headless=new"]), ...gpuArgs, "--enable-precise-memory-info", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]
 });
-const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 
 const results = [];
 for (const deviceName of devices) {
@@ -207,8 +249,8 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
-        const modelsParam = cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
+        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}`, {waitUntil: "commit", timeout: 120_000});
         // `--repeat`: this load only primes the page's caches; the measured one is a second visit in the same browser.
         if (flag("repeat")) {
@@ -257,6 +299,11 @@ for (const deviceName of devices) {
             longTasksAfterFirstFrame: after.length,
             longTasksBeforeFirstFrame: beforeFirst.length,
             heapMB: r.heapMB,
+            peakHeapMB: r.peakHeapMB ?? null,
+            peakGpuMB: r.peakGpuMB ?? null,
+            inViewRequests: r.inViewRequests ?? null,
+            library: r.library ?? null,
+            streaming: r.streaming ?? null,
             jsHeapUsedMB: metrics.JSHeapUsedSize ? Math.round(metrics.JSHeapUsedSize / 2 ** 20) : null,
             memory: r.memory,
             tier: r.stats.tier,
@@ -272,7 +319,7 @@ for (const deviceName of devices) {
             errors: errors.filter((e) => !/Failed to load resource/.test(e)).slice(0, 8)
         };
         results.push(row);
-        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
+        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB (peak ${row.peakHeapMB}), GPU peak ${row.peakGpuMB} MB, requests to view ${row.inViewRequests} (pack ${row.library?.packHits ?? "-"}/${(row.library?.packHits ?? 0) + (row.library?.fileHits ?? 0)}), chunks in ${row.streaming?.chunks?.in ?? "-"}, skipped ${row.streaming?.animalsSkipped ?? "-"}, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
         await context.close();
     }
 }
@@ -287,12 +334,12 @@ writeFileSync(path.join(out, "runtime.json"), JSON.stringify(results, null, 2));
 const lines = [
     `Ark runtime "${label}", ${new Date().toISOString()}, GPU ${gpu}, network ${arg("network", "none")}, quality ${quality}, ${runs} runs × ${seconds} s per device (medians).`,
     "",
-    "| device | first frame ms | mount ms | in view ms | longest task ms | long tasks | longest after 1st frame | heap MB | GPU geometry MB | GPU textures MB | models | tier |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|"
+    "| device | first frame ms | mount ms | in view ms | requests to view | longest task ms | long tasks | longest after 1st frame | heap MB | peak heap MB | peak GPU MB | fps | p50 ms | p95 ms | GPU geometry MB | GPU textures MB | models | tier |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"
 ];
 for (const deviceName of devices) {
     const rows = results.filter((r) => r.device === deviceName);
-    lines.push(`| ${deviceName} | ${median(rows.map((r) => r.firstFrameMs))} | ${median(rows.map((r) => r.mountMs))} | ${median(rows.map((r) => r.inViewMs))} | ${median(rows.map((r) => r.longestTaskMs))} | ${median(rows.map((r) => r.longTasks))} | ${median(rows.map((r) => r.longestAfterFirstFrameMs))} | ${median(rows.map((r) => r.heapMB))} | ${median(rows.map((r) => r.memory?.geometryMB))} | ${median(rows.map((r) => r.memory?.textureMB))} | ${median(rows.map((r) => r.models))} | ${rows[0]?.tier} |`);
+    lines.push(`| ${deviceName} | ${median(rows.map((r) => r.firstFrameMs))} | ${median(rows.map((r) => r.mountMs))} | ${median(rows.map((r) => r.inViewMs))} | ${median(rows.map((r) => r.inViewRequests))} | ${median(rows.map((r) => r.longestTaskMs))} | ${median(rows.map((r) => r.longTasks))} | ${median(rows.map((r) => r.longestAfterFirstFrameMs))} | ${median(rows.map((r) => r.heapMB))} | ${median(rows.map((r) => r.peakHeapMB))} | ${median(rows.map((r) => r.peakGpuMB))} | ${median(rows.map((r) => r.frameRate?.fps))} | ${median(rows.map((r) => r.frameRate?.p50Ms))} | ${median(rows.map((r) => r.frameRate?.p95Ms))} | ${median(rows.map((r) => r.memory?.geometryMB))} | ${median(rows.map((r) => r.memory?.textureMB))} | ${median(rows.map((r) => r.models))} | ${rows[0]?.tier} |`);
 }
 writeFileSync(path.join(out, "runtime.md"), lines.join("\n") + "\n");
 log("wrote", path.join(out, "runtime.md"));

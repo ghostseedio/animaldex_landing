@@ -21,19 +21,17 @@ import {SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass.js";
 import {FXAAShader} from "three/examples/jsm/shaders/FXAAShader.js";
 import {HorizontalTiltShiftShader} from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
 import {VerticalTiltShiftShader} from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
+import {chooseTier, deviceSignals} from "@/ark-scene/streaming/tiers";
 
 export type QualityTier = "high" | "medium" | "low";
 
-/** A first guess from what the device says about itself. */
-export function tierFor(): QualityTier {
+/**
+ * A first guess from what the device says about itself (Part B: `streaming/tiers.ts` chooseTier, the device's memory
+ * as the browser or the app reports it, and its cores and pointer).
+ */
+export function tierFor(appMemoryGB?: number | null): QualityTier {
     if (typeof window === "undefined") return "medium";
-    const nav = navigator as Navigator & {deviceMemory?: number};
-    const coarse = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-    const cores = nav.hardwareConcurrency || 4;
-    const memory = nav.deviceMemory ?? 8;
-    if (!coarse && cores >= 8 && memory >= 8) return "high";
-    if (cores >= 6 && memory >= 4) return "medium";
-    return coarse ? "low" : "medium";
+    return chooseTier(deviceSignals(appMemoryGB));
 }
 
 export function lowerTier(tier: QualityTier): QualityTier {

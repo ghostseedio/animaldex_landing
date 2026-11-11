@@ -22,7 +22,7 @@ import type {Scene} from "three";
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
-type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number; modelTextureMB?: number; evicted?: number; mode?: string};
+type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number; modelTextureMB?: number; evicted?: number; mode?: string; heapMB?: number | null; chunksIn?: number; haze?: number};
 
 declare global {
     interface Window {
@@ -43,6 +43,18 @@ const round = (value: number) => Math.round(value * 10) / 10;
     // `?budget=<MB>`: a small skin ceiling, to watch the near levels being let go (runtime/budgets.ts).
     const budget = Number(params.get("budget"));
     if (budget > 0) (globalThis as {__arkBudgetMB?: number}).__arkBudgetMB = budget;
+    // Part B: `?render=<m>` / `?renderScale=<share>` set the render distance (streaming/tiers.ts), to measure what a
+    // smaller one saves (as a bigger island would need); `?mem=<GB>` is the app's memory figure (the tier).
+    const render = Number(params.get("render"));
+    if (render > 0) (globalThis as {__arkRenderDistance?: number}).__arkRenderDistance = render;
+    const renderScale = Number(params.get("renderScale"));
+    if (renderScale > 0) (globalThis as {__arkRenderScale?: number}).__arkRenderScale = renderScale;
+    const memoryGB = Number(params.get("mem")) || null;
+    // `?report=<url>`: post the result there when done (a WebView in the iOS Simulator or an Android emulator, where
+    // no driver reads the page).
+    const report = params.get("report");
+    // `?tour=1`: after the opening, the camera goes down close in each region in turn and back to the island view.
+    const tour = params.get("tour") === "1";
     // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
     const walk = params.get("walk") === "1";
     try {
@@ -60,6 +72,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
             snapshot,
             // `?models=<base>`: the model files from elsewhere (the measure script's simulated cached CDN).
             modelBase: params.get("models") ?? MODELS,
+            deviceMemoryGB: memoryGB,
             iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
             onReady: () => {
                 firstFrame = performance.now();
@@ -91,26 +104,42 @@ const round = (value: number) => Math.round(value * 10) / 10;
         // The walk: animal after animal (one species each), flown to close up, so near levels come in and are let go.
         const bySpecies = new Map<string, string>();
         for (const animal of [...snapshot.animals].sort((x, y) => x.id.localeCompare(y.id))) if (!bySpecies.has(animal.model_slug)) bySpecies.set(animal.model_slug, animal.id);
-        const tour = Array.from(bySpecies.values());
+        const visits = Array.from(bySpecies.values());
         let nextVisit = performance.now() + 6000;
         let visit = 0;
+        const regions = ["home", "forest", "open_land", "high_cold", "fresh_water", "coast", "ocean", null] as const;
+        let nextRegion = performance.now() + 8000;
+        let region = 0;
+        let peakHeap = 0;
+        let inViewRequests: number | null = null;
+        let peakGpu = 0;
         while (performance.now() < until) {
             await new Promise((resolve) => setTimeout(resolve, 250));
             if (walk && performance.now() > nextVisit) {
                 nextVisit = performance.now() + 3000;
-                handle.select(tour[visit++ % tour.length]);
+                handle.select(visits[visit++ % visits.length]);
             }
             const stats = handle.stats();
+            if (tour && performance.now() > nextRegion) {
+                nextRegion = performance.now() + 4000;
+                (handle as unknown as {focusRegion?: (region: string | null) => void}).focusRegion?.(regions[region++ % regions.length]);
+            }
             const memory = debug ? sceneMemory(debug.scene) : {geometryBytes: 0, textureBytes: 0};
+            const heapNow = (performance as Performance & {memory?: {usedJSHeapSize: number}}).memory?.usedJSHeapSize ?? null;
+            if (heapNow !== null) peakHeap = Math.max(peakHeap, heapNow);
+            peakGpu = Math.max(peakGpu, memory.geometryBytes + memory.textureBytes);
             const loading = handle.loading();
             const t = performance.now() - t0;
             const run = (handle as unknown as {runtime?: () => {modelTextureMB: number; evicted: number; mode: string}}).runtime?.();
-            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode});
+            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode, heapMB: heapNow === null ? null : round(heapNow / 2 ** 20), chunksIn: stats.streaming?.chunks.in, haze: stats.streaming?.haze});
             // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
             // In view: past the opening flight (4.6 s), the first moment every model the view draws is in (the runtime's
             // own test); the old test (nothing at all loading) as `quietMs`.
             const complete = (handle as unknown as {runtime?: () => {viewComplete?: boolean}}).runtime?.().viewComplete;
-            if (!inView && firstFrame && t > 5000 && (complete ?? !loading)) inView = t;
+            if (!inView && firstFrame && t > 5000 && (complete ?? !loading)) {
+                inView = t;
+                inViewRequests = (window as unknown as {__arkDebug?: {library?: {requests: number}}}).__arkDebug?.library?.requests ?? null;
+            }
             if (!quiet && firstFrame && !loading && t > 5000) quiet = t;
         }
         framing = false;
@@ -135,6 +164,16 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 stats,
                 memory: memory ? {geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), geometries: memory.geometries, textures: memory.textures, instances: memory.instances} : null,
                 heapMB: heap === null ? null : round(heap / 2 ** 20),
+                peakHeapMB: peakHeap ? round(peakHeap / 2 ** 20) : null,
+                peakGpuMB: round(peakGpu / 2 ** 20),
+                inViewRequests,
+                streaming: stats.streaming ?? null,
+                library: (() => {
+                    const library = (window as unknown as {__arkDebug?: {library?: {requests: number; packHits: number; fileHits: number; farOrder: string[]}}}).__arkDebug?.library;
+                    return library ? {requests: library.requests, packHits: library.packHits, fileHits: library.fileHits, farOrder: library.farOrder.slice(0, 400)} : null;
+                })(),
+                userAgent: navigator.userAgent,
+                viewport: {width: innerWidth, height: innerHeight, dpr: devicePixelRatio},
                 runtime,
                 prepared,
                 animals: snapshot.animals.length,
@@ -143,5 +182,10 @@ const round = (value: number) => Math.round(value * 10) / 10;
         };
     } catch (error) {
         window.__arkMeasure = {done: true, error: String((error as Error)?.stack ?? error)};
+    }
+    if (report) {
+        const label = params.get("label") ?? "";
+        await fetch(report, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({label, ...window.__arkMeasure})}).catch(() => undefined);
+        document.title = "ark-measure-done";
     }
 })();
