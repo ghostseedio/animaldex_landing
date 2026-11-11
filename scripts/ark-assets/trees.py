@@ -1248,12 +1248,12 @@ SPECIES = {
         # clouds at the branch ends: a ragged pad along the outer part of each main branch (its edge a
         # fringe of hanging needles) with fringed needle domes on the shoots above it. Dark
         # blue-green needles, lit on top, shaded below; thin needle stars among them near the camera.
-        clumps=[dict(kind="bough", levels=[1], t0=0.4, width=0.55, roof=[10, 12, 16], segs=[6, 3, 2],
-                     fringe=[0.45, 0.4, 0.3], lod_width=[1, 1.15, 1.4], under=0.6, tip_mix=0.8,
-                     weight=(0.4, 0.5, 0.55), share=(0.88, 1.0, 1.0)),
-                dict(kind="fan", levels=[2, 3], per_limb=(1, 2), t=(0.5, 1.0), r=(0.42, 0.58), points=22, notch=0.76,
-                     cup=0.25, droop=0.35, face_up=0.92, tilt=0.12, grow_max=2.4, under=0.6, tip_mix=0.8,
-                     weight=(0.6, 0.5, 0.45))],
+        clumps=[dict(kind="bough", levels=[1], t0=0.4, width=0.45, roof=[12, 14, 20], segs=[6, 3, 2],
+                     fringe=[0.45, 0.4, 0.0], lod_width=[1, 1.15, 1.4], under=0.6, tip_mix=0.6,
+                     weight=(0.3, 0.4, 0.45), share=(0.88, 1.0, 1.0)),
+                dict(kind="bristle", levels=[2, 3], per_limb=(1, 2), t=(0.5, 1.0), r=(0.36, 0.5), points=12, notch=0.8,
+                     cup=0.3, droop=0.45, spikes=[10, 6, 4], spike_len=1.35, spike_w=0.07, face_up=0.9, tilt=0.15,
+                     grow_max=2.4, under=0.6, tip_mix=0.9, weight=(0.7, 0.6, 0.55))],
         wood_share=(0.26, 0.24, 0.22),
         H=13, trunk=dict(length=12.0, radius=0.26, taper=0.25, wobble=0.035, lean=0.07, flare=0.25),
         levels=[dict(count=(16, 20), t=(0.5, 0.99), angle=86, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
@@ -1262,16 +1262,16 @@ SPECIES = {
                 dict(per_m=2.5, t=(0.3, 1.0), angle=45, ratio=0.4, rratio=0.5, bend=0.3, wobble=0.15, planar=0.6)],
         leaves=dict(kind="needles", per_m=16, length=0.3, width=0.02, needles=9, levels=[2, 3], t0=0.45, angle=12,
                     spread=(0.35, 1.3), colors=G("#2c4836", "#33503c", "#284232", "#3a5a40"), tip=hexc("#5e7c58"),
-                    keep_scale=[1, 1.3, 1.6]),
+                    keep_scale=[1, 1.3, 1.6], grow_max=1.6),
         bark=dict(color=hexc("#b8683a"), dark=hexc("#4a3428"), fx=3, fy=1.5, contrast=1.0,
                   marks=dict(color=hexc("#4f4038"), lo=-0.2, hi=0.3, foot=hexc("#3b2f28"))),
         bark_top=0.55, card_style="tiers", card_tiers=dict(n=5, apex=0.6, ragged=0.35), card_ribbons=1, card_true_trunk=True),
     "spruce": dict(
         # Needle foliage only: a ragged, roof-shaped bough along every main branch, tier on tier, and
         # sprays hanging from the side branches like curtains.
-        clumps=dict(kind="bough", levels=[1], width=0.4, roof=[28, 30, 40], segs=[7, 4, 2], fringe=[0.7, 0.6, 0.0],
+        clumps=dict(kind="bough", levels=[1], width=0.4, roof=[28, 30, 40], segs=[8, 4, 2], fringe=[0.7, 0.6, 0.0],
                     lod_width=[1, 1.12, 1.35], under=0.6, tip_mix=1.2, share=(0.9, 1.0, 1.0)),
-        wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
+        wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], leaf_fill=(0.25, 0.0, 0.0), core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
                      rratio=0.35, bend=0.25, wobble=0.06, abs_length=3.3),
@@ -1376,7 +1376,8 @@ VARIANTS = {
             (13, {"H": 9.5, "trunk.length": 7.0, "trunk.lean": 0.12})],
     "beech": [(21, {}), (22, {"H": 9.5, "trunk.length": 7.6, "leaves.colors": G("#8aa83a", "#9aae42", "#a0a03a")}),
               (23, {"H": 12.5, "trunk.length": 10.2})],
-    "pine": [(31, {}), (32, {"H": 10, "trunk.length": 9.2, "trunk.lean": 0.15, "levels.0.t": (0.45, 0.99)}),
+    "pine": [(31, {}), (32, {"H": 10, "trunk.length": 9.2, "trunk.lean": 0.15, "levels.0.t": (0.45, 0.99),
+                             "levels.0.abs_length": 2.4}),
              (33, {"H": 15, "trunk.length": 14.0, "levels.0.abs_length": 3.0})],
     "spruce": [(41, {}), (42, {"H": 8, "trunk.length": 7.6, "levels.0.abs_length": 2.4, "levels.0.count": (32, 36)}),
                (43, {"H": 15, "trunk.length": 14.5, "levels.0.abs_length": 3.6, "levels.0.count": (48, 52)})],
@@ -1471,8 +1472,11 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
                 share = clump_groups(spec)[0].get("share", (0.72, 0.9, 1.0))[detail]
                 mesh_clumps(spec, tree, detail, m, np.random.default_rng(seed + 50 + detail), avail * share)
                 avail = budget[detail] - m.tris
+            avail *= spec.get("leaf_fill", (1, 1, 1))[detail]
             if avail >= per * 8:
                 mesh_leaves(spec, tree, detail, m, np.random.default_rng(seed + detail), target=avail / per)
+        if m.tris > budget[detail] * 1.02:
+            raise RuntimeError(f"{kind}-{variant} lod{detail}: {m.tris} triangles, budget {budget[detail]}")
         lods.append(m)
         tree.wood_tris = getattr(tree, "wood_tris", []) + [wood]
     card = mesh_card(spec, tree, np.random.default_rng(seed))
