@@ -319,7 +319,9 @@ export function perceive(me: ReactiveInput, other: ReactiveInput, world: Reactiv
     const loud = other.shared.moving ? (LOUD_PLANS.has(other.plan) ? 1 : 0.6) * (1 + Math.min(other.length, 3) * 0.2) : 0.25;
     const hearingRange = p.hearing * loud * (1 - 0.5 * world.weather.rain) * (1 - 0.3 * world.weather.wind);
     if (d < hearingRange) return "hearing";
-    if (d < p.smell * (0.5 + world.weather.wind) && d > 0.01) {
+    // Scent carries best on a steady breeze; a gale or a storm breaks it up (and rain washes it out).
+    const scent = (0.5 + Math.min(world.weather.wind, 0.5)) * (1 - 0.6 * world.weather.storm) * (1 - 0.3 * world.weather.rain);
+    if (d < p.smell * scent && d > 0.01) {
         // The wind blows from it to me: its direction (toward which it blows) points from other to me.
         const toMe = {x: -dx / d, z: -dz / d};
         const along = Math.cos(world.weather.windDirection) * toMe.x + Math.sin(world.weather.windDirection) * toMe.z;
@@ -750,7 +752,10 @@ export class ReactiveLayer {
             const flightDistance = p.flight * person.fleeDistance * (1 + 0.25 * Math.min(agent.memory.predators.length, 2)) * threatScale(me, danger ? byId.get(danger.id) : null);
             if (!REACTING.has(agent.mode)) agent.reactedAt = world.now;
             // It calls the alarm once at the start (a sentinel, an alarm-caller, a group animal), never more than every 8 s.
-            if ((p.alarm || p.sentinel) && world.now - agent.calledAt > 8 && danger) {
+            // In a storm or a downpour it keeps low and quiet (a call would not carry): it calls only at a predator already
+            // inside its flight distance. Weather itself (thunder, lightning, wind) never sets off an alarm.
+            const stormQuiet = world.weather.storm > 0.5 || world.weather.rain > 0.8;
+            if ((p.alarm || p.sentinel) && world.now - agent.calledAt > 8 && danger && (!stormQuiet || d < flightDistance)) {
                 called = true;
                 agent.calledAt = world.now;
                 this.alarms.push({caller: me.id, slug: me.slug, x: me.shared.x, z: me.shared.z, tx: danger.x, tz: danger.z, at: world.now, threat: danger.id});
