@@ -493,8 +493,16 @@ float arkWet = 0.0;`)
     float bedTone = clamp(arkHash(vec2(bed, 7.7)) + 0.35 * (arkFbm(p * 0.035 + bed * 1.7) - 0.5), 0.0, 1.0);
     // Thin bedding planes inside each bed, and ribs and gullies running down the steep faces.
     float planes = (1.0 - smoothstep(0.03, 0.07, fwidth(bedAt))) * smoothstep(0.82, 0.97, fract(bedAt * 3.6 + 0.3 * arkNoise(p * 0.2)));
-    vec2 faceAt = abs(vArkNormal.x) > abs(vArkNormal.z) ? vec2(world.z, world.y) : vec2(world.x, world.y);
-    float rib = 1.0 - abs(2.0 * arkFbm(vec2(faceAt.x * 0.16, faceAt.y * 0.035 + 5.0)) - 1.0);
+    // Batch 6 (the owner: "dark rectangular slabs on the snowy faces"): the ribs were drawn on whichever side plane the
+    // face turned to most, so they jumped where a face swung through 45° and, with the beds' level edges, cut the snow
+    // into boxes. Now drawn on both planes and blended across that turn; the across-face terms fade out over it.
+    bool faceX = abs(vArkNormal.x) > abs(vArkNormal.z);
+    vec2 faceAt = faceX ? vec2(world.z, world.y) : vec2(world.x, world.y);
+    float ribOnZ = arkFbm(vec2(world.z * 0.16, world.y * 0.035 + 5.0));
+    float ribOnX = arkFbm(vec2(world.x * 0.16, world.y * 0.035 + 5.0));
+    float faceTurn = smoothstep(0.3, 0.7, abs(vArkNormal.x) / (abs(vArkNormal.x) + abs(vArkNormal.z) + 1e-4));
+    float faceClear = abs(2.0 * faceTurn - 1.0);
+    float rib = 1.0 - abs(2.0 * mix(ribOnX, ribOnZ, faceTurn) - 1.0);
     // The top of a soft bed is a ledge; the foot of a hard one, an overhang in shade.
     // Both come and go along the bed, so no line runs unbroken round the mountain.
     float showing = smoothstep(0.3, 0.7, arkNoise(vec2(dot(p, vec2(0.6, 0.8)) * 0.09, bed * 1.3)));
@@ -507,13 +515,17 @@ float arkWet = 0.0;`)
     float snowLine = 27.0 - 12.0 * envSnow;
     float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);
     float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);
-    float high = smoothstep(snowLine + 2.0, snowLine + 11.0, world.y);
-    float holdTo = mix(0.48, 0.7, high) - 0.12 * hard * smoothstep(0.4, 0.6, slopeHere);
+    // The upper reach, by a wandering line that runs down the gullies and back up the ribs (batch 6: a level line here
+    // capped the steep peaks like a lid).
+    float high = smoothstep(snowLine + 2.0, snowLine + 11.0, snowAt + 6.0 * (0.5 - rib));
+    // How steep a face still holds snow: no longer less on the hard beds (their level edges boxed the bare rock in),
+    // but wandering in broad patches, so the rock shows through in irregular windows (batch 6).
+    float holdTo = mix(0.48, 0.7, high) + 0.16 * (arkNoise(p * 0.11 + 3.7) - 0.5);
     alpine *= 1.0 - smoothstep(holdTo, holdTo + 0.28, slopeHere + 0.14 * (arkNoise(p * 0.4) - 0.5));
     float streak = smoothstep(0.25, 0.75, arkNoise(vec2(dot(p, vec2(0.8, 0.6)) * 0.12, dot(p, vec2(-0.6, 0.8)) * 1.4)));
     alpine *= mix(0.8, 1.0, streak) * smoothstep(0.0, 0.25, alpine);
     // Rock ribs stand bare through the snow on the steep faces; the gullies between them fill.
-    alpine *= 1.0 - smoothstep(0.6, 0.88, rib) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);
+    alpine *= 1.0 - smoothstep(0.6, 0.88, rib + 0.2 * (arkNoise(p * 0.35 - 2.1) - 0.5)) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);
     // Snow along a ledge lies in patches, only where the ledge is gentle enough to hold it.
     float ledgeSnow = ledge * bedClear * smoothstep(snowLine - 9.0, snowLine - 3.0, snowAt) * (1.0 - alpine) * massif
         * smoothstep(0.45, 0.75, arkNoise(vec2(dot(p, vec2(0.7, 0.7)) * 0.35, bed))) * (1.0 - smoothstep(0.45, 0.65, slopeHere));
@@ -630,11 +642,12 @@ float arkWet = 0.0;`)
     // where water runs down them, a pale lip along each ledge and shade under each overhang.
     float slope = 1.0 - clamp(vArkNormal.y, 0.0, 1.0);
     float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);
-    float beds = bedClear * mix(0.45, 1.0, massif);
+    // Up in the snow the beds fade (batch 6): rock showing through it reads as one stone, not a stack of dark slabs.
+    float beds = bedClear * mix(0.45, 1.0, massif) * (1.0 - 0.7 * high);
     vec3 rock = mix(rockDark, rockLight, mix(0.45, 0.12 + 0.8 * bedTone - 0.2 * hard, beds) + 0.25 * (arkFbm(p * 0.9) - 0.5) + 0.1 * (arkNoise(p * 4.0) - 0.5));
     // Some beds warmer (iron), some cooler.
     rock *= mix(vec3(1.0), mix(vec3(0.94, 0.97, 1.04), vec3(1.07, 0.99, 0.9), arkHash(vec2(bed, 1.9))), beds);
-    float runs = smoothstep(0.5, 0.85, arkNoise(vec2(faceAt.x * 1.1, faceAt.y * 0.05 + bed * 3.0)));
+    float runs = smoothstep(0.5, 0.85, arkNoise(vec2(faceAt.x * 1.1, faceAt.y * 0.05 + bed * 3.0))) * faceClear;
     float gully = smoothstep(0.35, 0.05, rib) * massif;
     // Batch 6: the beds blend into the faces (the ledges read as boxy slabs stuck on): a faint lip and underhang.
     rock *= 1.0 - beds * (0.3 * runs * hard + 0.1 * underhang + 0.1 * planes) + beds * 0.05 * ledge;
@@ -646,7 +659,8 @@ float arkWet = 0.0;`)
         vec3 upOnFace = vec3(0.0, 1.0, 0.0) - nw0 * nw0.y;
         // And across the face: the ribs stand out, the gullies sink.
         vec3 acrossFace = normalize(cross(vec3(0.0, 1.0, 0.0), nw0) + vec3(1e-4));
-        float ribSlope = arkFbm(vec2((faceAt.x + 0.6) * 0.16, faceAt.y * 0.035 + 5.0)) - arkFbm(vec2((faceAt.x - 0.6) * 0.16, faceAt.y * 0.035 + 5.0));
+        // One-sided against the rib already sampled on this face's plane (one noise stack fewer), and none across the turn.
+        float ribSlope = 2.0 * (arkFbm(vec2((faceAt.x + 0.6) * 0.16, faceAt.y * 0.035 + 5.0)) - (faceX ? ribOnZ : ribOnX)) * faceClear;
         arkBend += upOnFace * (0.22 * ledge - 0.1 * underhang) * steep * beds + acrossFace * ribSlope * 6.0 * steep * massif;
     }
 
