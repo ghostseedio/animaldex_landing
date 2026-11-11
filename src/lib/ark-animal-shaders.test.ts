@@ -62,11 +62,27 @@ test("every lane's animal-shader globals are declared once (no attribute clash),
     }
 });
 
-test("the head look (arkLook, vec3) and the coat (arkCoat, vec2) are separate attributes, and the variation's arkVary is there", () => {
+test("the head look (arkLook, vec4: w is lane L2's body channel) and the coat (arkCoat, vec2) are separate attributes, and the variation's arkVary is there", () => {
     const {vertex} = compose({rig: bones, lookChain: chain, look: fox, level: "near"});
     const attributes = Array.from(vertex.matchAll(/^[ \t]*attribute\s+(\w+)\s+(\w+)\s*;/gm)).map((m) => `${m[1]} ${m[2]}`);
-    assert.ok(attributes.includes("vec3 arkLook"), attributes.join(", "));
+    assert.ok(attributes.includes("vec4 arkLook"), attributes.join(", "));
     assert.ok(attributes.includes("vec2 arkCoat"), attributes.join(", "));
     assert.ok(attributes.some((a) => a.endsWith(" arkVary")), attributes.join(", "));
     assert.equal(attributes.filter((a) => a.endsWith(" arkLook")).length, 1);
+});
+
+test("the attribute slots stay within WebGL's 16 with every pass on (rig, look chain, fur shell, L2's body wave)", () => {
+    // Three's own: position, normal, uv (1 each) and instanceMatrix (4). Ours: one slot each (a vec4 is one slot, so
+    // widening arkLook to vec4 for L2's body channel costs none).
+    const swimmer = {motionHead: 0.1, motionPower: 2, motionTip: 0.1, motionLift: 0, motionStretch: 0, motionFin: 0, motionWavesL2: 0.9, motionAxisL2: 0};
+    for (const [label, options] of [
+        ["rigged fur shell with a body wave", {rig: bones, lookChain: chain, look: fox, level: "near" as const, shell: true, shellLength: 0.02, bodyMotion: swimmer}],
+        ["near fur shell with a body wave", {look: fox, level: "near" as const, shell: true, shellLength: 0.02, bodyMotion: swimmer}]
+    ] as const) {
+        const {vertex} = compose(options);
+        const ours = Array.from(new Set(Array.from(vertex.matchAll(/^[ \t]*attribute\s+(\w+)\s+(\w+)\s*;/gm)).map((m) => m[2])));
+        const slots = 3 + 4 + ours.length;
+        assert.ok(slots <= 16, `${label}: ${slots} slots (${ours.join(", ")})`);
+        assert.ok(/arkLook\.w >= 1\.0/.test(vertex), `${label}: the body channel is read`);
+    }
 });
