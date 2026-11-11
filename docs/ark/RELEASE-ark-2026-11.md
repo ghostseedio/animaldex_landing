@@ -23,7 +23,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Map | `ark-map` | 345160a9 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 3d3ecc22 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
-| Behaviour recipes | `ark-behaviour-recipes` | 164ed408 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
+| Behaviour recipes | `ark-behaviour-recipes` | f1c88d05 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
@@ -132,10 +132,10 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 7. Flags the owner chooses, one at a time.
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` d66123fd (2,235/2,237), both behaviour's, fixes coming:**
+- **Red tests on `ark-release` b20469d3 (2,236/2,238), both behaviour's, fixes coming:**
   - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second).
   - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22).
-- **Default view** (corrected check, ece63768): backwards 2.3% (a house sparrow 5 s backwards), ground turns 0 a minute (median), pace ratio median 1.22, nothing over 1.6×. Circling: an Atlantic puffin at 6.7 a minute (forage), zebras and a dog at 2–3.
+- **Default view** (corrected check, b20469d3): backwards 0.9%, nothing backwards over 1 s, ground turns 0 a minute (median), pace ratio median 1.26, nothing over 1.61×. Circling, all mild: a plains zebra at 5.9 a minute (watch, graze), two mallards at 4.9 (forage), a harbour seal at 3.2, an emperor penguin at 3.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **The rock hyrax's den** (golden den_rock, d66123fd): on dry land now (map 345160a9), but in open grassland, so it reads as a burrow on grass, not a den among rocks.
