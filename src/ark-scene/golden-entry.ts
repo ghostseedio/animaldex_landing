@@ -327,6 +327,8 @@ async function mountGolden(el: HTMLElement) {
             const distanceFor = (length: number) =>
                 options.distance ??
                 (length < 0.3 ? (options.detail || moving ? Math.max(0.06, length * 3) : Math.max(0.12, length * 6)) : options.detail || moving ? Math.max(0.35, length * 1.35 + 0.3) : Math.max(4, length * 1.2 + 1.5));
+            // Its size for framing: the longer of length and height (a penguin stands taller than it is long).
+            const sizeOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => Math.max(at.length, at.height);
             // Under the sea, level with it (as the scene dives to a swimmer), so the camera is under the surface too.
             const polarFor = (at: NonNullable<ReturnType<typeof handle.locate>>) => (at.y < -0.3 ? 1.52 : 1.3);
             // Its middle where it is now (`ground` is its home spot's, not where a walk has taken it).
@@ -334,7 +336,7 @@ async function mountGolden(el: HTMLElement) {
             /** Nothing between the camera and the animal: no other animal's body, and the ground below the line. */
             const clear = (id: string, at: NonNullable<ReturnType<typeof handle.locate>>, azimuth: number) => {
                 const target = targetOf(at);
-                const distance = distanceFor(at.length);
+                const distance = distanceFor(sizeOf(at));
                 const polar = polarFor(at);
                 const camera = {x: target.x + distance * Math.sin(polar) * Math.sin(azimuth), y: target.y + distance * Math.cos(polar), z: target.z + distance * Math.sin(polar) * Math.cos(azimuth)};
                 for (let t = 0.1; t < 0.95; t += 0.1) {
@@ -378,7 +380,7 @@ async function mountGolden(el: HTMLElement) {
             const frame = () => {
                 at = handle.locate(pick.id) ?? at;
                 const located = at!;
-                const view: ArkCameraView = {target: targetOf(located), distance: distanceFor(located.length), polar: polarFor(located), azimuth: located.yaw + pick.turn};
+                const view: ArkCameraView = {target: targetOf(located), distance: distanceFor(sizeOf(located)), polar: polarFor(located), azimuth: located.yaw + pick.turn};
                 handle.setView(view);
                 return view;
             };
