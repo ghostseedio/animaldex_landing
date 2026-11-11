@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {ARK_LIVE_BUDGET, ARK_REST_STEP_SECONDS, arkOutside, arkQuotas, type ArkLiveCandidate} from "@/ark-scene/live-budget";
+import {ARK_LIVE_BUDGET, ARK_REST_STEP_SECONDS, arkOutside, arkQuotas, arkWithinCapacity, type ArkLiveCandidate} from "@/ark-scene/live-budget";
 
 /** A population like the backfill's: a few big kinds, many with one or two. */
 function population(): ArkLiveCandidate[] {
@@ -100,4 +100,19 @@ test("live budget: a kind's resting members sit out first; still shared and nest
     // A crowded kind with everyone resting still has its quota out.
     const allResting = flagged.map((c) => ({...c, resting: true}));
     assert.ok(arkOutside(allResting, 400, T).size >= 380);
+});
+
+test("rule E: a crowded zone keeps its visible capacity (resting first, pins always), the same for everyone; the budget after it stays nested", () => {
+    const all = population().map((c, i) => ({...c, zone: i % 4 === 0 ? "woodland" : "grassland", resting: i % 5 === 0}));
+    const woodland = all.filter((c) => c.zone === "woodland").length;
+    const capacity = (zone: string) => (zone === "woodland" ? 40 : null);
+    const kept = arkWithinCapacity(all, capacity, T, new Set(["a0"]));
+    assert.equal(kept.filter((c) => c.zone === "woodland").length, 40, `${woodland} -> 40`);
+    assert.ok(kept.some((c) => c.id === "a0"), "pinned stays");
+    assert.equal(kept.filter((c) => c.zone === "grassland").length, all.filter((c) => c.zone === "grassland").length);
+    assert.ok(kept.filter((c) => c.zone === "woodland" && c.id !== "a0").every((c) => !c.resting), "resting ones go first");
+    assert.deepEqual(arkWithinCapacity([...all].reverse(), capacity, T + 5, new Set(["a0"])).map((c) => c.id).sort(), kept.map((c) => c.id).sort());
+    const low = arkOutside(kept, ARK_LIVE_BUDGET.low, T);
+    const high = arkOutside(kept, ARK_LIVE_BUDGET.high, T);
+    low.forEach((id) => assert.ok(high.has(id)));
 });

@@ -98,7 +98,7 @@
     if (!snapshot) return;
     if (scene) { scene.update(snapshot); return; }
     if (!prepared && Ark.prepareArk) {
-      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js"}).then(function () { prepared = true; mount(snapshot); });
+      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); });
       return;
     }
     if (prepared !== true && Ark.prepareArk) return;

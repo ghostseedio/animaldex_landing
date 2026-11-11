@@ -142,3 +142,53 @@ export function arkOutside(candidates: readonly ArkLiveCandidate[], budget: numb
     pinned.forEach((id) => out.add(id));
     return out;
 }
+
+// MARK: Rule E (the captures dry run): a zone's visible capacity
+
+/**
+ * The map lane's per-zone visible capacity (how many animals a zone's own land shows without crowding; null: no
+ * limit). Set once by the map (`setArkZoneCapacity`); the scene applies it before the tier's budget, so it is the same
+ * on every device (and the budget's tiers stay nested).
+ */
+let zoneCapacity: ((zone: string) => number | null) | null = null;
+export function setArkZoneCapacity(capacity: ((zone: string) => number | null) | null): void {
+    zoneCapacity = capacity;
+}
+export function arkZoneCapacity(): ((zone: string) => number | null) | null {
+    return zoneCapacity;
+}
+
+/**
+ * Rule E: in a zone holding more than its capacity, the rest rest out of sight, by the same shared rotation (a ring by
+ * id hash, moving one on each step; resting members sit out first; pinned ones always stay). Tier-independent.
+ */
+export function arkWithinCapacity<T extends ArkLiveCandidate & {zone: string}>(candidates: readonly T[], capacity: (zone: string) => number | null, epochSeconds: number, pinned: ReadonlySet<string> = new Set(), isResting?: (candidate: T) => boolean): T[] {
+    const byZone = new Map<string, T[]>();
+    for (const candidate of candidates) {
+        const list = byZone.get(candidate.zone);
+        if (list) list.push(candidate);
+        else byZone.set(candidate.zone, [candidate]);
+    }
+    const step = arkRestStep(epochSeconds);
+    const kept: T[] = [];
+    byZone.forEach((members, zone) => {
+        const cap = capacity(zone);
+        if (cap === null || members.length <= cap) {
+            kept.push(...members);
+            return;
+        }
+        const ring = members.map((member) => ({member, h: arkHash(`zone:${member.id}`)})).sort((a, b) => a.h - b.h || (a.member.id < b.member.id ? -1 : 1));
+        const start = (step + (arkHash(`zone:${zone}`) % ring.length)) % ring.length;
+        const awake: T[] = [];
+        const settled: T[] = [];
+        for (let i = 0; i < ring.length; i++) {
+            const member = ring[(start + i) % ring.length].member;
+            if (pinned.has(member.id)) continue;
+            const resting = member.resting ?? (isResting ? isResting(member) : false);
+            (resting ? settled : awake).push(member);
+        }
+        const room = Math.max(cap - members.filter((member) => pinned.has(member.id)).length, 0);
+        kept.push(...members.filter((member) => pinned.has(member.id)), ...[...awake, ...settled].slice(0, room));
+    });
+    return kept;
+}

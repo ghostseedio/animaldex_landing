@@ -24,7 +24,7 @@ import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-s
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
 import {arkAnimalClock, arkEpochSeconds, ArkShaderClock} from "@/ark-scene/shared-clock";
-import {ARK_LIVE_BUDGET, arkOutside, arkRestStep, type ArkLiveCandidate} from "@/ark-scene/live-budget";
+import {ARK_LIVE_BUDGET, arkOutside, arkRestStep, arkWithinCapacity, arkZoneCapacity, type ArkLiveCandidate} from "@/ark-scene/live-budget";
 
 export type {ArkPower, ArkRenderMode} from "@/ark-scene/runtime/governor";
 
@@ -338,18 +338,22 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          * tier's budget (the lighter view's: the low tier's), the same for every viewer, the reader's own and `pins`
          * always. Everyone else rests out of sight; the counts are untouched.
          */
-        outside(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean, restingOf?: (id: string) => boolean): Set<string> {
+        outside(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean; zone: string}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean, restingOf?: (id: string) => boolean): Set<string> {
             const budget = ARK_LIVE_BUDGET[lite ? "low" : ctx.tier()];
             const epoch = arkEpochSeconds();
             restAt = {step: arkRestStep(epoch), budget};
-            const candidates: ArkLiveCandidate[] = [];
+            let candidates: Array<ArkLiveCandidate & {zone: string}> = [];
             const pinned = new Set<string>(pins);
             for (const animal of animals) {
                 if (!live.has(animal.id)) continue;
-                candidates.push({id: animal.id, group: animal.species_profile_id || `slug:${animal.model_slug}`});
+                candidates.push({id: animal.id, group: animal.species_profile_id || `slug:${animal.model_slug}`, zone: animal.zone});
                 if (animal.mine) pinned.add(animal.id);
             }
-            return arkOutside(candidates, budget, epoch, pinned, restingOf ? (candidate) => restingOf(candidate.id) : undefined);
+            const resting = restingOf ? (candidate: ArkLiveCandidate) => restingOf(candidate.id) : undefined;
+            // Rule E first (the map's visible capacity per zone, the same on every device), then the tier's budget.
+            const capacity = arkZoneCapacity();
+            if (capacity) candidates = arkWithinCapacity(candidates, capacity, epoch, pinned, resting);
+            return arkOutside(candidates, budget, epoch, pinned, resting);
         },
 
         /** Behaviour's world is built (who is resting at home is known now): lay the snapshot out again next frame. */

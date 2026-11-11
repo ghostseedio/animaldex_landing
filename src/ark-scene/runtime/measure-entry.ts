@@ -51,7 +51,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
         if (!snapshot) throw new Error("fixture did not decode");
         // `?prebuild=1`: the mount's heavy work in the prebuild worker first (runtime/prebuild.ts).
         let prepared: ArkPrepared | null = null;
-        if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot, workerUrl: "./ark-prebuild-worker.js"});
+        if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"});
         const el = document.getElementById("ark") as HTMLElement;
         let firstFrame = 0;
         const mountStart = performance.now();

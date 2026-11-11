@@ -52,4 +52,5 @@ next-env.d.ts
 /public/ark/ark-scene.js
 /public/ark/ark-scene.js.map
 /public/ark/ark-prebuild-worker.js
+/public/ark/ark-prebuild-places-worker.js
 /.ark-golden
