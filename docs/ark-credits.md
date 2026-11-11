@@ -110,3 +110,13 @@ Every asset the Ark scene (`src/ark-scene`, `public/ark`) uses from outside the 
 Processing: the 1k JPG diffuse maps are high-passed (large-scale light drift divided out, so repeats don't show) and resized to 512 px; the OpenGL normal maps are resized to 512 px; each set becomes one layer of a vertical strip, read into a texture array at load. Licences: Poly Haven "Our assets are all licensed as CC0" (polyhaven.com/license, checked 2026-11-11); ambientCG is CC0 1.0 (docs.ambientcg.com/license, checked 2026-11-11, nothing used from it yet).
 
 Tools (not shipped): `playwright-core` (Apache-2.0, existing dev dependency) for the golden-shot harness.
+
+## Animal look (fur, feathers, scales, eyes, contact shadows, close-up skins)
+
+No third-party art. The surfaces (fur, feathers, scales, skin, shell, slime), wet, dust, eye catchlights, fur shells and contact shadows are procedural (`src/ark-scene/animal-look-shader.ts`, `marks.ts`). The close-up skins are the project's own talking-model textures (`<build>/assets/<slug>.talking.jpg`), re-encoded.
+
+| Component | Source | Licence | Used as | Committed file(s) |
+|---|---|---|---|---|
+| Basis Universal transcoder (JS + WASM) | three.js r170 `examples/jsm/libs/basis/` (byte-identical copy of the npm package's files; Basis Universal by Binomial) | Apache-2.0 (Basis Universal), redistributed in three.js (MIT) | decodes the KTX2 close-up skins in the browser | `public/ark/basis/basis_transcoder.js`, `basis_transcoder.wasm` |
+
+Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0, `brew install basis_universal`) builds the close-up skins offline (AnimalDex `scripts/talking-models/ark/export_closeup.py`).
