@@ -276,6 +276,8 @@ export type AttachPoint = {
     forward?: Vec3;
     /** Trees only: 0…1, the share of sight lines within 40° of out-and-up that leave its tree unblocked (seen from outside). */
     open?: number;
+    /** Tree leaves only: on a single leaf ("blade") or on the crown's leaf mass ("clump"). */
+    leaf?: "blade" | "clump";
     /** Trees only: how its tree's wind moves it (`attachPointAt`); points without it hold still. */
     wind?: TreeWind;
 };
@@ -402,6 +404,7 @@ export function allAttachPoints(): AttachPoint[] {
                 asset: point.asset,
                 forward: point.forward,
                 open: point.open,
+                ...(point.leaf ? {leaf: point.leaf} : {}),
                 wind: point.wind
             });
         }

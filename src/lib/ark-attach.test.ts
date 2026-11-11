@@ -154,12 +154,12 @@ test("attach: every leaf point lies on a drawn leaf, every bark and branch point
             const forward = new Vector3(row[7], row[8], row[9]);
             assert.ok(Math.abs(forward.dot(normal)) < 0.02, `${id} ${tag} forward leaves the surface`);
             // The wind weights are the drawn surface's own, there.
-            const bary = on.t.tri.getBarycoord(on.point, new Vector3());
+            const bary = on.t.tri.getBarycoord(on.point, new Vector3())!;
             const w = [0, 1, 2, 3].map((k) => {
                 const get = (i: number) => [tree.wind.getX(i), tree.wind.getY(i), tree.wind.getZ(i), tree.wind.getW(i)][k];
                 return bary.x * get(on.t.ids[0]) + bary.y * get(on.t.ids[1]) + bary.z * get(on.t.ids[2]);
             });
-            for (let k = 0; k < 4; k++) assert.ok(Math.abs(w[k] - row[12 + k]) < 0.02, `${id} ${tag} wind weight ${k}: ${w[k].toFixed(3)} vs ${row[12 + k]}`);
+            for (let k = 0; k < 4; k++) assert.ok(Math.abs(w[k] - (row[12 + k] as number)) < 0.02, `${id} ${tag} wind weight ${k}: ${w[k].toFixed(3)} vs ${row[12 + k]}`);
         }
     }
 });
@@ -178,7 +178,7 @@ test("attach: an animal on a leaf moves with the leaf (the CPU sway is the shade
         const w = point.wind!;
         const local = new Vector3(w.local.x, w.local.y, w.local.z);
         const on = nearest(tree, local, point.tag === "leaf");
-        const bary = on.t.tri.getBarycoord(on.point, new Vector3());
+        const bary = on.t.tri.getBarycoord(on.point, new Vector3())!;
         const rootAt = new Vector3(w.root.x, w.root.y, w.root.z);
         for (const time of [0, 3.7, 41.2]) {
             for (const wind of winds) {
