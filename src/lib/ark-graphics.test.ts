@@ -3,6 +3,8 @@ import test from "node:test";
 import {goldenClearance, goldenEye, goldenView, type GoldenPlace, type GoldenWorld} from "@/ark-scene/golden-shots";
 import {goldenObstacles} from "@/ark-scene/golden-world";
 import {nearFadeEnd, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
+import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {attachPoints} from "@/ark-scene/sampler";
 import {CROPS, cropAt, fieldAt, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
@@ -85,4 +87,27 @@ test("graphics: Home's fields: every crop grows somewhere, plants sit on the pai
     assert.ok(planted > 1000, `${planted} plants`);
     assert.equal(cropAt(farm.x, farm.z), null, "the animals' clearing is grass");
     assert.equal(cropAt(COTTAGE.x, COTTAGE.z), null, "the cottage's yard is grass");
+});
+
+test("graphics: every decor rock is drawn as an asset rock in its place, and its rock faces sit on that rock, looking out", () => {
+    const rocks = worldDecor().filter((item) => item.kind === "rock");
+    assert.ok(rocks.length > 100);
+    const points = attachPoints({tag: "rock_face"});
+    for (const [i, item] of worldDecor().entries()) {
+        if (item.kind !== "rock") continue;
+        const placed = rockAssetFor(item);
+        assert.ok(placed, "every rock has an asset");
+        assert.equal(placed!.x, item.x);
+        assert.equal(placed!.z, item.z);
+        const b = rockAssetInfo(placed!.id).bounds;
+        const reach = Math.hypot(b.max[0] - b.min[0], b.max[2] - b.min[2]) * placed!.scale / 2 + 0.05;
+        // The same four ids per rock as before (other lanes attach by id).
+        const mine = points.filter((point) => point.id.startsWith(`rock_face:decor${i}:`));
+        assert.equal(mine.length, 4, `rock ${i} keeps 4 rock faces`);
+        for (const point of mine) {
+            const d = {x: point.position.x - placed!.x, y: point.position.y - placed!.y, z: point.position.z - placed!.z};
+            assert.ok(Math.hypot(d.x, d.z) <= reach, "on the rock, not beside it");
+            assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
+        }
+    }
 });

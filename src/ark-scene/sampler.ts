@@ -16,6 +16,7 @@
 
 import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
 import {forestFill, rockSurfacePoint, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {rockAssetFor, rockFaceToward} from "@/ark-scene/rock-assets";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -369,10 +370,20 @@ export function allAttachPoints(): AttachPoint[] {
         if (item.kind !== "rock") return;
         const zone = zoneOf(item.x, item.z);
         const s = item.scale;
-        // On the drawn surface itself (decor.ts rockSurfacePoint is the shape vegetation.ts draws).
+        // On the drawn surface itself: the asset rock's own faces and ledges (rock-assets.ts, batch 5), else the
+        // procedural shape (decor.ts rockSurfacePoint). Same ids and the same random draws either way.
+        const asset = rockAssetFor(item);
+        const used = new Set<number>();
         for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.1 + random() * 0.75;
+            const face = asset ? rockFaceToward(asset, a, up, used) : null;
+            if (face) {
+                used.add(face.index);
+                const {position, normal} = face.point;
+                add("rock_face", `decor${i}`, k, {x: position.x + normal.x * 0.004, y: position.y + normal.y * 0.004, z: position.z + normal.z * 0.004}, normal, zone);
+                continue;
+            }
             const point = rockSurfacePoint(item, 3, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
             add("rock_face", `decor${i}`, k, {x: point.x, y: point.y + 0.004, z: point.z}, {x: point.nx, y: point.ny, z: point.nz}, zone);
         }

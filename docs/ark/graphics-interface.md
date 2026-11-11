@@ -48,6 +48,8 @@ Points are seeded, so every viewer gets the same ones.
 | `leaf_litter` | leaf_litter | the forest floor |
 | `worm_hole`, `burrow` | burrow | soft open ground, and banks |
 
+**Rocks (batch 5):** every decor rock is drawn as one of the asset lane's rocks (`rock-assets.ts` `rockAssetFor(item)`: same place, turn and footprint; tide-pool rocks and barnacled clusters on the shore, mossy boulders in the woods and by the water, boulders and clusters elsewhere). A rock's `rock_face` points keep their ids (`rock_face:decor<i>:<k>`, four per rock) and now sit on the asset's own faces and ledges (`rockAttachPoints(placement)`, from the asset's attach.json, measured on the drawn lod0 surface), choosing faces that look outward. The assets also carry `ledge`, `crevice`, `burrow_entrance` and `tide_pool` points: `rockAttachPoints` returns them all, for any lane that wants them. When `ark-graphics-attach` is merged, its `drawnRockPoint` (the procedural rock's triangles) applies only where `rockAssetFor` returns null (the rock set missing).
+
 **Coming next:** up close, the leaf, flower head, bark patch or rock face round the camera is swapped for a detailed near version that an animal can sit on. The asset lane's models will bring their own tagged points, merged into the same list.
 
 ## Weather and tide
