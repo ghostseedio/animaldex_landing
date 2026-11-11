@@ -11,8 +11,9 @@
  */
 
 import React from "react";
-import Link from "@/app/[locale]/_components/link";
-import {arkFounderDisplayName, arkFounderPath, arkHandle, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
+import {useParams} from "next/navigation";
+import {arkFounderDisplayName, arkHandle, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
+import {arkProfileHref, postArkOpenProfile} from "@/lib/ark-profile-link";
 import {arkBringerLabel} from "@/lib/ark-life";
 
 export function ArkFounderAvatar({founder, size = 18, className = ""}: {founder: ArkFounder; size?: number; className?: string}) {
@@ -40,11 +41,21 @@ const NAME_LINK = "inline-flex min-w-0 max-w-full items-baseline gap-1 font-semi
  * The bringer, linked to their profile: "@ada" always (never cut short), and
  * with `withName` their display name before it when it says more ("Ada
  * Lovelace · @ada"; the name gives way first when space is short).
+ *
+ * A real link to `/u/{handle}`, never a client-side route change, so that in
+ * the apps' WebView the app sees it (it intercepts the navigation); where the
+ * app's bridge is there, it is told `{type: "ark:open-profile", handle}` and
+ * opens its own profile screen (`lib/ark-profile-link`).
  */
 export function ArkFounderLink({founder, className = NAME_LINK, withName = false}: {founder: ArkFounder; className?: string; withName?: boolean}) {
     const name = withName ? arkFounderDisplayName(founder) : null;
+    const locale = useParams<{locale?: string}>()?.locale ?? null;
+    const onClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (postArkOpenProfile(window as unknown as Parameters<typeof postArkOpenProfile>[0], founder.handle)) event.preventDefault();
+    };
     return (
-        <Link href={arkFounderPath(founder)} className={className} data-testid="ark-founder-link" aria-label={name ? `${name} ${arkHandle(founder)}` : arkHandle(founder)}>
+        <a href={arkProfileHref(founder.handle, locale)} onClick={onClick} className={className} data-testid="ark-founder-link" aria-label={name ? `${name} ${arkHandle(founder)}` : arkHandle(founder)}>
             {name ? (
                 <>
                     <span className="min-w-0 truncate">{name}</span>
@@ -52,7 +63,7 @@ export function ArkFounderLink({founder, className = NAME_LINK, withName = false
                 </>
             ) : null}
             <span className="shrink-0" data-testid="ark-founder-handle">{arkHandle(founder)}</span>
-        </Link>
+        </a>
     );
 }
 
