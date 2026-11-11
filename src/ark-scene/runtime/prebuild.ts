@@ -13,7 +13,7 @@ import {primeDecor} from "@/ark-scene/decor";
 import {placeAnimals, primePlaces, type Placement} from "@/ark-scene/placement";
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";
-import {computeScenery, packGrass, unpackGrass, type ArkSceneryPrebuild} from "@/ark-scene/runtime/prebuild-scenery";
+import {computeScenery, packGrass, primeGroundIfAble, unpackGrass, type ArkSceneryPrebuild} from "@/ark-scene/runtime/prebuild-scenery";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 
 export {packGrass, unpackGrass};
@@ -22,7 +22,7 @@ export {packGrass, unpackGrass};
 export const PLACES_IN_WORKER_FROM = 1000;
 
 export type ArkPrebuild = ArkSceneryPrebuild & {places: Array<[string, Placement]> | null};
-export type ArkPrebuildInput = {grass: number; animals: ArkAnimal[] | null};
+export type ArkPrebuildInput = {grass: number; animals: ArkAnimal[] | null; tier?: QualityTier};
 
 /** The tier the scene will pick (the same rule as `mountArk`: a pinned `__arkQuality`, else the device's). */
 export function arkStartTier(): QualityTier {
@@ -32,13 +32,14 @@ export function arkStartTier(): QualityTier {
 
 /** All of it at once (the tests; what the two workers do between them). */
 export function computeArkPrebuild(input: ArkPrebuildInput): ArkPrebuild {
-    const scenery = computeScenery(input.grass);
+    const scenery = computeScenery(input.grass, input.tier);
     return {...scenery, places: input.animals ? Array.from(placeAnimals(input.animals).entries()) : null};
 }
 
 /** Hand a prebuild to the modules (the mount then uses it). `animals` must be the very array the mount is given. */
 export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[] | null): void {
     if (data.decor && data.fill && data.grass) primeDecor({decor: data.decor, fill: data.fill, grass: {count: data.grass.count, tufts: unpackGrass(data.grass)}});
+    primeGroundIfAble(data.ground);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
 }
 
@@ -80,7 +81,7 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
     if (typeof Worker === "undefined") return {where: "skipped", ms: 0, error: "no workers"};
     const animals = options.snapshot?.animals ?? null;
     const timeout = options.timeoutMs ?? 60_000;
-    const scenery = ask<ArkSceneryPrebuild>(() => (options.workerUrl ? new Worker(options.workerUrl) : new Worker(new URL("./prebuild-worker.ts", import.meta.url))), {grass: GRASS_BUILD[arkStartTier()]}, timeout);
+    const scenery = ask<ArkSceneryPrebuild>(() => (options.workerUrl ? new Worker(options.workerUrl) : new Worker(new URL("./prebuild-worker.ts", import.meta.url))), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier()}, timeout);
     const big = Boolean(animals && animals.length >= PLACES_IN_WORKER_FROM);
     const places = big
         ? ask<{places: Array<[string, Placement]>}>(() => (options.placesWorkerUrl ? new Worker(options.placesWorkerUrl) : new Worker(new URL("./prebuild-places-worker.ts", import.meta.url))), {animals}, timeout)

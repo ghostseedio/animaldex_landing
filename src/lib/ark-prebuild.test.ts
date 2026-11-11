@@ -36,3 +36,11 @@ test("prebuild: the grass packs and unpacks without loss; a prime for another ar
     assert.equal(placed.size, other.length);
     primeDecor({});
 });
+
+test("prebuild: the ground's arrays (graphics' groundArrays, once in the release) cross the thread boundary unchanged", async () => {
+    const terrain = (await import("@/ark-scene/terrain")) as unknown as {groundArrays?: (tier: string) => Record<string, unknown>};
+    if (!terrain.groundArrays) return; // Not in this release yet: the worker sends no ground and the mount builds it.
+    const reference = terrain.groundArrays("medium");
+    const sent = structuredClone(computeArkPrebuild({grass: 10, animals: null, tier: "medium"}));
+    assert.deepEqual(sent.ground, reference);
+});
