@@ -30,7 +30,8 @@ const SPECIES: Record<string, {id: string; name: string; zone: string; activity:
     "red-squirrel": {id: "0dc31b55-7102-4391-9616-0cab092062a5", name: "Red Squirrel", zone: "woodland", activity: "diurnal", sociality: null},
     chimpanzee: {id: "56169946-7f4c-4aa1-89d6-bc2512abd7b4", name: "Chimpanzee", zone: "rainforest", activity: "diurnal", sociality: null},
     meerkat: {id: "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01", name: "Meerkat", zone: "desert", activity: "diurnal", sociality: "group"},
-    bateleur: {id: "5b50ee3a-fc81-480c-bef7-f42a844209a9", name: "Bateleur", zone: "grassland", activity: "diurnal", sociality: "pair"}
+    // The meerkat's main aerial predator (its stored diet names mongooses). The bateleur used before is a carrion-first eater with no hunting default since the profile review.
+    "martial-eagle": {id: "4b4c0931-2ea3-4392-8dbc-9892ec8618c4", name: "Martial Eagle", zone: "grassland", activity: "diurnal", sociality: null}
 };
 
 /** The scenario animals: id prefix, species, how many. */
@@ -42,7 +43,7 @@ const CAST: Array<[string, string, number]> = [
     ["squirrel", "red-squirrel", 2],
     ["chimp", "chimpanzee", 5],
     ["meerkat", "meerkat", 6],
-    ["eagle", "bateleur", 1]
+    ["eagle", "martial-eagle", 1]
 ];
 
 /** A fixed uuid per scenario animal (the prefix's index and the animal's). */
@@ -219,7 +220,7 @@ async function mountScenarios(el: HTMLElement) {
             view(at.x, at.z - 1, 7, Math.PI, 1.2);
             return {note: "the camera 7 m from the group", watch: byPrefix.chimp};
         },
-        /** Meerkats with one on watch; a bateleur comes over: the sentinel calls first and the mob runs. */
+        /** Meerkats with one on watch; a martial eagle comes over: the sentinel calls first and the mob runs. */
         sentinel_raptor: async () => {
             const at = site("desert", 0, 0);
             hold("meerkat", at.x, at.z, 2.2, "forage");
@@ -231,7 +232,7 @@ async function mountScenarios(el: HTMLElement) {
                 });
             eagle(nowS() + 1e6);
             view(at.x, at.z, 8, 0.5, 1.15);
-            return {note: "the bateleur comes over 8 s in", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 8)};
+            return {note: "the martial eagle comes over 8 s in", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 8)};
         }
     };
 
