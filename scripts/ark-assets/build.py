@@ -5,6 +5,8 @@ Run inside Blender (it renders the tiles with Cycles on the CPU), from the repo 
 
   nice -n 10 blender -b --factory-startup -t 6 --python scripts/ark-assets/build.py -- --set trees
   options: --only oak,beech   --no-render   --no-pack   --work <dir>
+           --review   write GLBs, attach.json and the manifest under <work>/review-public instead of the
+                      repo (public/ and src/ark-scene/assets-manifest.json stay untouched)
 
 Then `python3 scripts/ark-assets/sheet.py --set trees --work <dir> --out <dir>` lays the tiles out.
 """
@@ -227,13 +229,28 @@ def main():
     ap.add_argument("--no-pack", action="store_true")
     ap.add_argument("--shots", default="", help="only render these tiles (e.g. card); keeps the others")
     ap.add_argument("--variants", default="", help="only these variant letters (e.g. a)")
+    ap.add_argument("--review", action="store_true",
+                    help="write outputs under <work>/review-public, leaving public/ and the manifest alone")
     ap.add_argument("--work", default=os.environ.get("ARK_ASSETS_WORK", "/tmp/ark-assets-work"))
     args = ap.parse_args(argv)
     only = [s for s in args.only.split(",") if s]
     work = os.path.abspath(args.work)
     raw_dir = os.path.join(work, "raw", args.set)
     tile_dir = os.path.join(work, "tiles", args.set)
-    out_dir = os.path.join(OUT_BASE, args.set)
+    global MANIFEST
+    out_base = OUT_BASE
+    os.makedirs(work, exist_ok=True)
+    if args.review:
+        out_base = os.path.join(work, "review-public")
+        review_manifest = os.path.join(work, "review-manifest.json")
+        if not os.path.exists(review_manifest) and os.path.exists(MANIFEST):
+            shutil.copy(MANIFEST, review_manifest)
+        repo_attach = os.path.join(OUT_BASE, args.set, "attach.json")
+        os.makedirs(os.path.join(out_base, args.set), exist_ok=True)
+        if not os.path.exists(os.path.join(out_base, args.set, "attach.json")) and os.path.exists(repo_attach):
+            shutil.copy(repo_attach, os.path.join(out_base, args.set, "attach.json"))
+        MANIFEST = review_manifest
+    out_dir = os.path.join(out_base, args.set)
     for d in (raw_dir, tile_dir, out_dir):
         os.makedirs(d, exist_ok=True)
 
@@ -242,7 +259,12 @@ def main():
     attach_path = os.path.join(out_dir, "attach.json")
     attach_all = json.load(open(attach_path)) if os.path.exists(attach_path) else {}
     frag_path = os.path.join(work, f"manifest-{args.set}.json")
-    frag = json.load(open(frag_path)) if os.path.exists(frag_path) else {}
+    frag = json.load(open(frag_path)) if os.path.exists(frag_path) else None
+    if frag is None:
+        # A fresh work dir: start from the set's assets already in the manifest, so a partial
+        # (--only) build replaces those assets and keeps the rest of the set.
+        man = json.load(open(MANIFEST)) if os.path.exists(MANIFEST) else {}
+        frag = {k: v for k, v in man.get("assets", {}).items() if v.get("set") == args.set}
     tiles = json.load(open(os.path.join(work, f"tiles-{args.set}.json"))) if os.path.exists(
         os.path.join(work, f"tiles-{args.set}.json")) else {}
     for make in factories:
