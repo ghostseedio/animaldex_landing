@@ -209,7 +209,8 @@ if (only.includes("prints")) {
     await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment({...calm, wetness: 0.4}), CALM);
     // A walker on sand: the desert's camels first, then the shore's and anyone else on the move.
     const list = (await animals()).filter((a) => a.sched && !a.water && a.zone !== "open_ocean");
-    const order = [...list.filter((a) => a.zone === "desert"), ...list.filter((a) => ["seashore", "polar", "wetland", "farm_garden"].includes(a.zone)), ...list];
+    const big = list.filter((a) => a.length > 0.9);
+    const order = [...big.filter((a) => a.zone === "desert"), ...big.filter((a) => ["seashore", "polar", "wetland", "farm_garden"].includes(a.zone)), ...big];
     await page.evaluate(() => window.__arkGolden.handle.setClockScale(2));
     let chosen = null;
     for (const a of order.slice(0, 18)) {
@@ -235,6 +236,30 @@ if (only.includes("prints")) {
         }
     }
     await page.evaluate(() => window.__arkGolden.handle.setClockScale(1));
+}
+
+if (only.includes("printtest")) {
+    // The print shader itself: a deer-sized walker stepped across the desert's sand beside the camera, and a bird's.
+    await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment({...calm, wetness: 0.5}), CALM);
+    const sand = (await animals()).find((a) => a.zone === "desert") ?? {x: 40, z: 40};
+    const ground = await page.evaluate((p) => window.__arkGolden.handle.heightAt(p.x, p.z), sand);
+    await look({x: sand.x + 6, y: ground, z: sand.z + 6}, 6, 0.75, 0.3);
+    await wait(1500);
+    await page.evaluate(([x, z]) => {
+        const L = window.__arkDebug.liveliness;
+        const H = window.__arkGolden.handle;
+        const env = L.environment;
+        const t0 = L.traces.time.value;
+        for (const [id, dz, length, bird] of [["probe-deer", 0, 1.6, false], ["probe-bird", 1.6, 0.6, true]]) {
+            for (let i = 0; i <= 120; i++) {
+                const px = x + 3 + i * 0.05;
+                const pz = z + 6 + dz;
+                L.traces.observe({id, x: px, y: H.heightAt(px, pz), z: pz, yaw: Math.PI / 2, length, onGround: true, atSurface: false, bird, distance: 5}, t0 + i * 0.05, env);
+            }
+        }
+    }, [sand.x, sand.z]);
+    await wait(1200);
+    notes.printtest = await frame("probe", "printtest");
 }
 
 if (only.includes("sound")) {
