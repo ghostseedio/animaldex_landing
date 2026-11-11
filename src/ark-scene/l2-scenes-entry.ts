@@ -54,7 +54,8 @@ function castId(prefix: string): string {
 
 function castAnimals(): Raw[] {
     const template = fixture.animals[0];
-    return CAST.map(([prefix, slug, zone], k) => ({...template, id: castId(prefix), name: slug, scientific_name: slug, model_slug: slug, zone, activity: "diurnal", sociality: null, slot: 120 + k, slot_rank: 0} as Raw));
+    // (The moth is "yours", so the scene draws it close up at its porch light whatever the camera's distance.)
+    return CAST.map(([prefix, slug, zone], k) => ({...template, id: castId(prefix), name: slug, scientific_name: slug, model_slug: slug, zone, activity: prefix === "moth" ? "nocturnal" : "diurnal", sociality: null, slot: 120 + k, slot_rank: 0, ...(prefix === "moth" ? {mine: true} : {})} as Raw));
 }
 
 type Debug = {
@@ -341,14 +342,14 @@ async function mountScenes(el: HTMLElement) {
             const id = ids.shark;
             swimLine(id, nowS() + 1e6, {x: at.x - 10, z: at.z}, Math.PI / 2, 1.6, -2);
             // From behind and a little below: the tail's side-to-side beat (a side view hides it).
-            track(id, 5.5, 1.75, (yaw) => yaw + Math.PI + 0.45, 0);
+            track(id, 5.5, 1.75, (yaw) => yaw + 0.45, 0);
             return {note: "a great white (thunniform: only the tail beats), from behind and below", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 10, z: at.z}, Math.PI / 2, 1.6, -2)};
         },
         swim_salmon: () => {
             const at = site("open_ocean", 4, -8);
             const id = ids.salmon;
             swimLine(id, nowS() + 1e6, {x: at.x - 6, z: at.z}, Math.PI / 2, 0.8, -1.5);
-            track(id, 2.4, 1.75, (yaw) => yaw + Math.PI + 0.45, 0);
+            track(id, 2.4, 1.75, (yaw) => yaw + 0.45, 0);
             return {note: "an Atlantic salmon (subcarangiform)", watch: [id], go: () => swimLine(id, nowS(), {x: at.x - 6, z: at.z}, Math.PI / 2, 0.8, -1.5)};
         },
         swim_manta: () => {
@@ -383,7 +384,7 @@ async function mountScenes(el: HTMLElement) {
             const id = ids.eel;
             const from = {x: LAKE.x - 4, z: LAKE.z};
             swimLine(id, nowS() + 1e6, from, Math.PI / 2, 0.35, -1);
-            track(id, 2.2, 1.7, (yaw) => yaw + Math.PI + 0.6, 0);
+            track(id, 2.2, 1.7, (yaw) => yaw + 0.6, 0);
             return {note: "a European eel in the lake (anguilliform: the whole body waves)", watch: [id], go: () => swimLine(id, nowS(), from, Math.PI / 2, 0.35, -1)};
         },
         /** A green mamba crawls across the grass (lateral undulation, no slip). */
@@ -456,7 +457,10 @@ async function mountScenes(el: HTMLElement) {
                     mode: e?.l2?.flight?.mode ?? null,
                     swim: e?.l2?.swim ? {cycles: r2(e.l2.swim.cycles), speed: r2(e.l2.swim.speed)} : null,
                     crawl: e?.l2?.legless ? {cycles: r2(e.l2.legless.cycles), speed: r2(e.l2.legless.speed)} : null,
-                    y: r2(e?.middle?.y)
+                    y: r2(e?.middle?.y),
+                    micro: Boolean((e as {place?: {micro?: unknown}} | undefined)?.place?.micro),
+                    aloft: (e as {sched?: {pose?: {aloft?: boolean}} | null} | undefined)?.sched?.pose?.aloft ?? null,
+                    air: r2(e?.air)
                 };
             });
         },

@@ -2639,9 +2639,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // and the take-off plays from the ground); otherwise as its state's air eases in.
         const pose = own?.pose ?? null;
         const airLeg = Boolean(pose && pose.moving && (pose.beat === "fly" || pose.beat === "glide"));
-        // (Lane L2: a small flyer at its microhabitat in the air, a moth round the porch light, a bee in its swarm, a starling
-        // in its murmuration, flies on its rig too: it has no schedule pose to say so.)
-        const microAloft = Boolean(place.micro && flies && !entry.visitor && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12));
+        // (Lane L2: a small flyer off its microhabitat's surface, a moth round the porch light or a starling in its
+        // murmuration, flies on its rig too: it has no schedule pose to say so. On its leaf, bark or wall it is not flying.)
+        const microAloft = Boolean(place.micro && flies && !entry.visitor && ((entry.toLight ?? 0) > 0.5 || (entry.recipeAct?.flock && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12))));
         const inAir = (pose ? pose.aloft || airLeg : entry.air > 0.001) || microAloft;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
         const rising = (pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne) || microAloft;
