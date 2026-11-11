@@ -202,14 +202,17 @@ float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
 #ifdef ARK_SHELL
 {
     // Strands: a jittered point in each small cell of the rest pose; a layer keeps the round patch round it, thinner outward.
-    vec3 q = vArkRest * 420.0;
+    vec3 q = vArkRest * 300.0;
     vec3 cell = floor(q);
     vec3 jitter = vec3(arkLookHash(cell), arkLookHash(cell + 19.1), arkLookHash(cell + 37.7)) - 0.5;
     float d = length(fract(q) - 0.5 - jitter * 0.55);
     float keep = arkLookHash(cell + 3.3) < 0.82 ? 1.0 : 0.0;
-    if (d > 0.62 * (1.0 - vArkShell) * keep || arkEyeAmount > 0.01) discard;
-    // Deeper in, less light reaches: the roots darker than the tips.
-    diffuseColor.rgb *= mix(0.62, 1.06, vArkShell);
+    // Where the coat faces the camera the shells would only speckle it (the relief draws that fur): they thin away
+    // there and stand full toward the outline, where a coat's softness shows.
+    float arkEdge = smoothstep(0.2, 0.7, 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))));
+    if (d > 0.62 * (1.0 - vArkShell) * keep * arkEdge || arkEyeAmount > 0.01) discard;
+    // Deeper in, less light reaches: the roots a little darker than the tips.
+    diffuseColor.rgb *= mix(0.8, 1.05, vArkShell);
 }
 #endif
 diffuseColor.rgb *= mix(1.0, arkWetDark, arkWet);

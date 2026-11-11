@@ -170,8 +170,11 @@ const percentile = (values: number[], p: number) => {
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
 };
 const round = (value: number) => Math.round(value * 100) / 100;
-/** The world moment every animal close-up starts from (its schedules, so before and after match). */
-const GOLDEN_WORLD_MS = Date.UTC(2026, 10, 11, 9, 30);
+/**
+ * The world moment every animal close-up starts from (its schedules, so before and after match): island midday,
+ * awake animals and no dawn mist (the mist pools by the world clock's hour, not the pinned light).
+ */
+const GOLDEN_WORLD_MS = Date.UTC(2026, 10, 11, 12, 30);
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve));
 
 /** Frames for `ms`: intervals free-running, then (for half as long) each frame drained with a 1-pixel read. */
@@ -299,7 +302,7 @@ async function mountGolden(el: HTMLElement) {
             if (!kin.length) return {found: false as const};
             const moving = options.still === false;
             const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
-            let pinning = Boolean(options.detail && debug);
+            let pinning = Boolean((options.detail || moving) && debug);
             const pin = () => {
                 if (!pinning || !debug) return;
                 debug.controls.minDistance = 0.3;
@@ -307,6 +310,9 @@ async function mountGolden(el: HTMLElement) {
             };
             pin();
             const restart = () => handle.setClockScale(1, GOLDEN_WORLD_MS);
+            // Twice, with frames between, so every animal's trip is planned from the same moment whatever came before.
+            restart();
+            for (let i = 0; i < 30; i++) await nextFrame();
             restart();
             handle.setReducedMotion(!moving);
             // Swims timed by a fixed island moment, so the same animals are wet from a swim in every run.
@@ -318,7 +324,7 @@ async function mountGolden(el: HTMLElement) {
             const others = snapshot.animals.map((row) => ({id: row.id, at: handle.locate(row.id)}));
             const polar = 1.3;
             const distanceFor = (length: number) =>
-                options.distance ?? (options.detail ? Math.max(0.35, length * 1.35 + 0.3) : length < 0.3 ? Math.max(0.15, length * 4) : Math.max(4, length * 1.2 + 1.5));
+                options.distance ?? (options.detail || moving ? Math.max(0.35, length * 1.35 + 0.3) : length < 0.3 ? Math.max(0.15, length * 4) : Math.max(4, length * 1.2 + 1.5));
             // Its middle where it is now (`ground` is its home spot's, not where a walk has taken it).
             const targetOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => ({x: at.x, y: at.y - at.height * 0.05, z: at.z});
             /** Nothing between the camera and the animal: no other animal's body, and the ground below the line. */
