@@ -73,7 +73,8 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chase
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {hasNestSource, microMurmuration, nestStageAt, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, fallbackNests, microMurmuration, molehillsOf, nestSourceOf, nestStageAt, setFishSource, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -129,7 +130,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
@@ -298,6 +299,10 @@ type Entry = {
     glance?: number;
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
+    /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
+    recipeFlock?: Flock | null;
+    /** The duller sex's dim (`sexDim`), worked out once. */
+    sexDim?: number;
     /** A rigged animal on the ground walks about its spot now and then (`stepWander`). */
     wander?: Wander | null;
     /** A leaper in the air: how far across (0…1), else 0. */
@@ -473,6 +478,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // ambient fish and flockmates (`recipe-scene.ts`); the poses are the schedule's.
     const recipeScene = new RecipeScene();
     scene.add(recipeScene.root);
+    // The reef lane's ambient schools: a chase or a plunge goes after the nearest one (`setFishSource`).
+    setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     /** Its seeded sex's size (`behaviour-recipes.ts` sexLook: a stag bigger than a hind; the species' mean stays). */
     const sexScale = (animal: ArkAnimal) => sexLook(animal.id, animal.model_slug).scale;
     // Clutches laid and hatching, in a replay (A9).
@@ -1674,6 +1681,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
             const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
             entry.recipeAct = flock?.act ?? null;
+            // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
+            entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
             if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
             return microPose(entry, reducedMotion ? 0 : time);
         }
@@ -1990,15 +1999,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let lastEvict = 0;
 
     /** Marks (holes, mounds) and nests near the camera, worked out again every second (pure: the same for every viewer). */
-    const recipeNear = new Map<string, {at: number; marks: RecipeMark[]; nest: RecipeNest | null}>();
+    const recipeNear = new Map<string, {at: number; marks: RecipeMark[]; nest: RecipeNest | null; coat: RecipeCoat | null}>();
+    const COATING = new Set(["wallow", "dust_bathe", "roll", "bathe", "dabble", "surface_dive", "chase_fish", "perch_plunge", "air_plunge", "talon_grab", "pouch_scoop", "river_fish"]);
     const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce"]);
     const stepRecipeScene = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose; modelHeight: number}>, now: number, epoch: number) => {
         if (!world) return;
         const actors: RecipeActor[] = [];
         const marks: RecipeMark[] = [];
         const nests: RecipeNest[] = [];
+        const flocks: Flock[] = [];
         for (const c of list) {
             const own = c.entry.sched;
+            if (c.entry.recipeFlock) flocks.push(c.entry.recipeFlock);
+            const flockNow = (own?.pose as RecipePose | null | undefined)?.flock;
+            if (flockNow) flocks.push(flockNow);
             // A house starling's murmuration (its flockmates are drawn round it, far as it may be).
             if (c.entry.recipeAct) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act: c.entry.recipeAct});
             if (!own?.pose || c.distance > 90) continue;
@@ -2009,22 +2023,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             let near = recipeNear.get(c.entry.animal.id);
             if (!near || epoch - near.at > 1 || epoch < near.at) {
                 const digs = recipes.some((r) => MARKING.has(r.id));
-                const builds = recipes.some((r) => r.id === "nest_build") && !hasNestSource();
+                // Its nest (this branch's drawing, until the props lane's are wired; a sitter's at the wired site).
+                const sourced = nestSourceOf(c.entry.animal.id, epoch);
+                const builds = fallbackNests() && (recipes.some((r) => r.id === "nest_build") || Boolean(sourced));
                 const site = builds ? recipeNest(world, own.profile, own.animal, epoch) : null;
-                const stage = site ? nestStageAt(c.entry.animal.model_slug, epoch) : 0;
+                const stage = sourced ? ((sourced.eggs ?? 0) > 0 || (sourced.chicks ?? 0) > 0 ? 1 : sourced.stage) : site ? nestStageAt(c.entry.animal.model_slug, epoch) : 0;
                 const species = speciesRecipes(c.entry.animal.model_slug);
                 near = {
                     at: epoch,
                     marks: digs ? recipeMarks(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : [],
-                    nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.9, 0.12), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null
+                    nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.9, 0.12), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null,
+                    coat: recipes.some((r) => COATING.has(r.id)) ? recipeCoat(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : null
                 };
                 recipeNear.set(c.entry.animal.id, near);
             }
             marks.push(...near.marks);
             if (near.nest) nests.push(near.nest);
         }
+        // Molehills round the moles' burrows (underground animals: off the schedule, not in the list).
+        for (const entry of allEntries()) {
+            if (!entry.place.burrow || !speciesRecipes(entry.animal.model_slug).has.has("molehills")) continue;
+            if (Math.hypot(entry.place.x - camera.position.x, entry.place.z - camera.position.z) > 50) continue;
+            marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt));
+        }
         if (recipeNear.size > 300) recipeNear.clear();
-        recipeScene.update(actors, marks, nests, now, epoch, camera.position);
+        recipeScene.update(actors, marks, nests, now, epoch, camera.position, flocks);
     };
 
     let lastUpdate = 0;
@@ -2367,7 +2390,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, act ? act.dim : dim, entry.rest);
+            // (The duller sex a little greyer: `sexDim`, additive to the per-instance variation.)
+            entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest);
+            // Wet or muddy or dusty from its recent acts (a wallow, a dust bath, a dive): over the look pass's coat. On the
+            // release this goes after `look.instance(...)`, which writes the coat first.
+            applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat);
 
             if (!where.afloat) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;

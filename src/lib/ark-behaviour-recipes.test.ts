@@ -4,9 +4,9 @@ import table from "@/ark-scene/recipes.json";
 import full from "../../data/ark/behaviour-recipes.json";
 import {ARK_RECIPE_STATES, BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {AFTER_STYLES, ENTRY_STYLES, EXIT_STYLES, POSTURES, TEMPLATES, type PreyKind} from "@/ark-scene/recipe-templates";
-import {decodeRecipeRow, forgetRecipes, microMurmuration, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {coatOf as _coatOf, decodeRecipeRow, emergencePoint, forgetRecipes, microMurmuration, molehillsOf, setNestSource, sexDim, swarmFlock, swarmPoint, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {basePoseOnTrip, poseOnTrip, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {basePoseOnTrip, poseOnTrip, recipeCoat, roostOf, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 
 const world = scheduleWorld(sceneSampler());
@@ -231,4 +231,140 @@ test("house starlings (off the schedule) fly their flock's murmuration over thei
     assert.ok(Math.hypot(a!.x - b!.x, a!.y - b!.y, a!.z - b!.z) > 0.1, "each its own place");
     assert.equal(microMurmuration("starling-a", "european-starling", {x: 10, y: 1, z: 12}, t, 12, ground), null, "not at noon");
     assert.equal(microMurmuration("sparrow", "house-sparrow", {x: 10, y: 1, z: 12}, t, 17.85, ground), null, "not a species without it");
+});
+
+// MARK: Round 2
+
+test("swarms: bees round their spot by day, mayflies at dusk, bugs in a crawling cluster; ambient, pure in the time", () => {
+    const at = {x: 5, y: 1, z: 5};
+    const t = Math.floor(Date.UTC(2026, 5, 10, 12) / 1000);
+    assert.equal(swarmFlock("bee", "asian-honey-bee", at, t, 12)?.kind, "swarm");
+    assert.equal(swarmFlock("bee", "asian-honey-bee", at, t, 23), null, "not at night");
+    assert.equal(swarmFlock("fly", "giant-burrowing-mayfly", at, t, 12), null, "mayflies dance at dusk");
+    assert.equal(swarmFlock("fly", "giant-burrowing-mayfly", at, t, 17.8)?.kind, "swarm");
+    assert.equal(swarmFlock("bug", "firebug", at, t, 12)?.kind, "cluster");
+    for (let i = 0; i < 60; i++) {
+        const p = swarmPoint(at, 9, i, t);
+        assert.ok(Math.hypot(p.x - at.x, p.z - at.z) < 2.2 && p.y > at.y + 0.4 && p.y < at.y + 2.6, `insect ${i}`);
+        assert.deepEqual(p, swarmPoint(at, 9, i, t));
+        const c = swarmPoint(at, 9, i, t, true);
+        assert.ok(Math.abs(c.y - at.y) < 0.02 && Math.hypot(c.x - at.x, c.z - at.z) < 0.35);
+    }
+});
+
+test("bats hang under limbs by day (canopy_hang) and stream out of the roost at dusk", () => {
+    const hangs = world.sampler.attachPoints("canopy_hang");
+    assert.ok(hangs.length > 100, `hang points ${hangs.length}`);
+    const point = hangs[Math.floor(hangs.length / 2)];
+    const bat = animal("bat-1", "kuhls-pipistrelle-bat", {x: point.x + 2, z: point.z + 1}, 0.08);
+    const roost = roostOf(world, bat.profile, bat.animal);
+    assert.ok(roost.point && hangs.some((p) => p.id === roost.point), `roost ${roost.point}`);
+    // By day it sleeps there, hanging (its posture rolls it upside down).
+    const noon = Math.floor(Date.UTC(2026, 5, 10, 12) / 1000);
+    const day = poseOnTrip(world, tripAt(world, bat.profile, bat.animal, noon, hoursAt, "nocturnal"), noon) as RecipePose;
+    assert.ok(Math.hypot(day.x - roost.x, day.y - roost.y, day.z - roost.z) < 0.05, "at its hang point");
+    assert.ok(day.act && Math.abs(day.act.roll - Math.PI) < 1e-6, "upside down");
+    // At dusk its roost-mates stream out (the stream is pure in the time; each bat leaves and is gone by 60 m).
+    const dusk = Math.floor(Date.UTC(2026, 5, 10, 17, 50) / 1000);
+    const pose = poseOnTrip(world, tripAt(world, bat.profile, bat.animal, dusk, hoursAt, "nocturnal"), dusk) as RecipePose;
+    assert.equal(pose.flock?.kind, "bats");
+    const out = Array.from({length: 180}, (_, i) => emergencePoint(roost, 3, i, dusk)).filter(Boolean);
+    assert.ok(out.length > 30, `in the air ${out.length}`);
+    for (const p of out) assert.ok(Math.hypot(p!.x - roost.x, p!.z - roost.z) < 66);
+});
+
+test("a sitter with eggs sits on its nest (the props lane's nests), awake and asleep; without eggs it goes about", () => {
+    const duck = animal("duck-1", "mallard", {x: -60, z: 30}, 0.55);
+    const site = {x: -58, y: Math.max(world.sampler.heightAt(-58, 31), 0), z: 31};
+    let eggs = 4;
+    setNestSource((id) => (id === "duck-1" ? {...site, stage: 1, eggs} : null));
+    try {
+        const t0 = Math.floor(Date.UTC(2026, 4, 10, 6) / 1000);
+        for (let k = 0; k < 30; k++) {
+            const t = t0 + k * 1777;
+            const trip = tripAt(world, duck.profile, duck.animal, t, hoursAt, "diurnal");
+            assert.equal(trip.recipe, "incubate_sit");
+            assert.ok(Math.hypot(trip.to.x - site.x, trip.to.z - site.z) < 1e-6);
+            if (t >= trip.arrive + 1) {
+                const p = poseOnTrip(world, trip, t);
+                assert.ok(Math.hypot(p.x - site.x, p.z - site.z) < 0.05, "on the nest");
+            }
+        }
+        eggs = 0;
+        forgetRecipes();
+        const free = [0, 1, 2, 3, 4, 5].map((k) => tripAt(world, duck.profile, duck.animal, t0 + 90000 + k * 997, hoursAt, "diurnal"));
+        assert.ok(free.every((trip) => trip.recipe !== "incubate_sit"));
+    } finally {
+        setNestSource(null);
+    }
+});
+
+test("molehills appear round a mole's burrow and fade; pure, and none for other species", () => {
+    const at = {x: 10, y: 0.5, z: 10};
+    const t = Math.floor(Date.UTC(2026, 3, 2, 10) / 1000);
+    const ground = () => 0.5;
+    const hills = molehillsOf("mole-1", "star-nosed-mole", at, t, ground);
+    assert.ok(hills.length >= 5 && hills.length <= 10, `hills ${hills.length}`);
+    for (const h of hills) {
+        assert.ok(h.kind === "mound" && h.from <= t && h.to >= t);
+        assert.ok(Math.hypot(h.x - at.x, h.z - at.z) < 3.1);
+    }
+    assert.deepEqual(hills, molehillsOf("mole-1", "star-nosed-mole", at, t, ground));
+    assert.equal(molehillsOf("rabbit", "european-rabbit", at, t, ground).length, 0);
+});
+
+test("a wallow leaves the coat muddy (wet and dusty), drying over twenty minutes", () => {
+    forgetRecipes();
+    const pig = animal("pig-1", "domestic-pig", {x: -66, z: 25}, 1.1);
+    const t0 = Math.floor(Date.UTC(2026, 6, 14, 6) / 1000);
+    let checked = 0;
+    for (let t = t0; t < t0 + 14 * 3600 && checked < 2; t += SLOT_SECONDS) {
+        const trip = tripAt(world, pig.profile, pig.animal, t, hoursAt, "diurnal");
+        if (trip.recipe !== "wallow") continue;
+        const ep = tripEpisode(world, trip);
+        const key = ep?.keys.find((k) => k.block.id === "wallow");
+        if (!key) continue;
+        const coat = recipeCoat(world, pig.profile, pig.animal, key.t1 + 30, hoursAt, "diurnal");
+        assert.ok(coat.dust > 0.6 && coat.wet > 0.15, `muddy ${JSON.stringify(coat)}`);
+        // Drying: only where it has not wallowed again since.
+        let again = false;
+        for (let u = trip.end; u < key.t1 + 1500; u += SLOT_SECONDS) {
+            const next = tripAt(world, pig.profile, pig.animal, u, hoursAt, "diurnal");
+            if (next.recipe === "wallow" || tripEpisode(world, next)?.keys.some((k) => k.block.id === "wallow" || k.block.id === "dust_bathe")) again = true;
+        }
+        if (again) continue;
+        const later = recipeCoat(world, pig.profile, pig.animal, key.t1 + 1500, hoursAt, "diurnal");
+        assert.ok(later.dust < coat.dust * 0.3, `dried ${JSON.stringify(later)}`);
+        checked++;
+    }
+    assert.ok(checked >= 1, "found a wallow");
+    void _coatOf;
+});
+
+test("mixed flocks: a blue tit joins another species' flock for a while, at its side", () => {
+    forgetRecipes();
+    const tit = animal("tit-1", "blue-tit", {x: -40, z: -26}, 0.12);
+    const flock = animal("finch-1", "european-starling", {x: -36, z: -24}, 0.2);
+    wireRecipes([tit, flock]);
+    const t0 = Math.floor(Date.UTC(2026, 6, 14, 9) / 1000);
+    let joined = 0;
+    for (let t = t0; t < t0 + 6 * 3600 && joined < 20; t += 7) {
+        const p = poseOnTrip(world, tripAt(world, tit.profile, tit.animal, t, hoursAt, "diurnal"), t) as RecipePose;
+        if (p.act?.recipe !== "mixed_follow" || p.act.u < 0.2 || p.act.u > 0.8) continue;
+        const other = basePoseOnTrip(world, tripAt(world, flock.profile, flock.animal, t, hoursAt, "diurnal"), t);
+        assert.ok(Math.hypot(p.x - other.x, p.z - other.z) < 5, `beside it (${Math.hypot(p.x - other.x, p.z - other.z).toFixed(2)} m)`);
+        joined++;
+    }
+    assert.ok(joined >= 5, `with the flock ${joined}`);
+});
+
+test("the duller sex is drawn a little greyer (additive dim), the brighter not", () => {
+    const ids = Array.from({length: 400}, (_, i) => `duck-${i}`);
+    for (const id of ids) {
+        const sex = sexLook(id, "mallard").sex;
+        const dim = sexDim(id, "mallard");
+        if (sex === "female") assert.ok(dim > 0.2 && dim <= 0.4, `${id} ${dim}`);
+        else assert.equal(dim, 0);
+    }
+    assert.equal(sexDim("x", "acorn-barnacle"), 0);
 });

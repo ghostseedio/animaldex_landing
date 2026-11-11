@@ -45,7 +45,9 @@ export const ATTACH_TAGS = [
     "shade",
     // (2026-11-11, from the graphics lane's new points: the drawn hollows in tree trunks; fence posts and roof edges.)
     "tree_hollow",
-    "post"
+    "post",
+    // (Behaviour recipes: the hanging points under thick limbs, where bats and sloths hang.)
+    "canopy_hang"
 ] as const;
 export type AttachTag = (typeof ATTACH_TAGS)[number];
 
@@ -64,6 +66,9 @@ export type AttachPoint = {
     /** The body lengths (m) it suits. */
     size: [number, number];
     zone: ArkZone;
+    /** Under a limb (`canopy_hang`): the clear drop below it (m), and the limb's radius there. */
+    clearBelow?: number;
+    radius?: number;
 };
 
 export interface ArkWorldSampler {
@@ -81,7 +86,7 @@ export interface ArkWorldSampler {
     blocked(x: number, z: number, clearance: number): boolean;
 }
 
-/** The scenery's tags as the behaviour system uses them (the hanging points under limbs are for hangers only, not used yet). */
+/** The scenery's tags as the behaviour system uses them (the hanging points under limbs: hangers only, `recipeRoostTags`). */
 const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     leaf: "leaf",
     branch: "branch",
@@ -100,12 +105,13 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     burrow: "burrow_entrance",
     pond_surface: "pond_surface",
     // (2026-11-11.) Shelves on cliffs and rocks are ledges; a thick limb is a branch (its size range says who it bears);
-    // fence posts and roof edges are posts to perch on. (canopy_hang waits for a hanging behaviour.)
+    // fence posts and roof edges are posts to perch on; the hanging points under limbs are where bats and sloths hang.
     ledge: "cliff_ledge",
     limb: "branch",
     tree_hollow: "tree_hollow",
     fence_post: "post",
-    roof_edge: "post"
+    roof_edge: "post",
+    canopy_hang: "canopy_hang"
 };
 
 class GridIndex {
@@ -203,7 +209,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const p = scenery[i];
         const tag = FROM_SCENERY[p.tag];
         if (!tag) return;
-        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone});
+        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {})});
     }));
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.

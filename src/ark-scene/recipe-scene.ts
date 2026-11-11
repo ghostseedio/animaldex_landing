@@ -27,7 +27,7 @@ import {
     SphereGeometry,
     Vector3
 } from "three";
-import {MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
+import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
 import {hashString} from "@/ark-scene/world";
 
 export type RecipeActor = {id: string; x: number; y: number; z: number; yaw: number; pitch: number; length: number; height: number; act: RecipeAct};
@@ -46,6 +46,10 @@ const MAX_MARKS = 96;
 const MAX_TWIGS = 600;
 const MAX_FLOCK = MURMURATION_AMBIENT;
 const MAX_PARTICLES = 900;
+const SWARM_INSECTS = 90;
+const CLUSTER_BUGS = 40;
+const MAX_INSECTS = SWARM_INSECTS * 4;
+const MAX_BATS = EMERGENCE_AMBIENT * 2;
 const NEST_TWIGS = 44;
 
 /**
@@ -78,6 +82,8 @@ export class RecipeScene {
     private readonly marks: {hole: InstancedMesh; mound: InstancedMesh; hollow: InstancedMesh};
     private readonly twigs: InstancedMesh;
     private readonly flock: InstancedMesh;
+    private readonly insects: InstancedMesh;
+    private readonly bats: InstancedMesh;
     private readonly points: Points;
     private readonly particles: Particle[] = [];
     private readonly emitted = new Map<string, number>();
@@ -120,6 +126,9 @@ export class RecipeScene {
         this.twigs = make(rod, "#6e5235", MAX_TWIGS, 0.95);
         this.flock = make(chevronGeometry(), "#1f2024", MAX_FLOCK, 0.8);
         (this.flock.material as MeshStandardMaterial).side = 2;
+        this.insects = make(new SphereGeometry(0.5, 5, 3), "#1c1a17", MAX_INSECTS, 0.9);
+        this.bats = make(chevronGeometry(), "#191513", MAX_BATS, 0.85);
+        (this.bats.material as MeshStandardMaterial).side = 2;
         const geometry = new BufferGeometry();
         geometry.setAttribute("position", new BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(DynamicDrawUsage));
         geometry.setAttribute("color", new BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(DynamicDrawUsage));
@@ -144,19 +153,22 @@ export class RecipeScene {
      * This frame's actors (animals in a recipe act close by, with where they are drawn), the marks and nests near the
      * camera, the render clock (s) and the world clock (epoch s).
      */
-    update(actors: RecipeActor[], marks: RecipeMark[], nests: RecipeNest[], now: number, epoch: number, camera: {x: number; y: number; z: number}) {
+    update(actors: RecipeActor[], marks: RecipeMark[], nests: RecipeNest[], now: number, epoch: number, camera: {x: number; y: number; z: number}, extraFlocks: Flock[] = []) {
         for (const kind of ITEM_KINDS) this.items[kind].count = 0;
         this.fish.count = 0;
         this.twigs.count = 0;
         this.flock.count = 0;
+        this.insects.count = 0;
+        this.bats.count = 0;
         for (const m of Object.values(this.marks)) m.count = 0;
         this.chasers = [];
         const flocks = new Map<string, NonNullable<RecipeAct["flock"]>>();
+        for (const f of extraFlocks) flocks.set(`${f.kind ?? "murmuration"}#${f.seed}#${f.t0}`, f);
         for (const a of actors) {
             const act = a.act;
             const fx = Math.sin(a.yaw);
             const fz = Math.cos(a.yaw);
-            if (act.flock) flocks.set(`${act.flock.seed}#${act.flock.t0}`, act.flock);
+            if (act.flock) flocks.set(`${act.flock.kind ?? "murmuration"}#${act.flock.seed}#${act.flock.t0}`, act.flock);
             // What it carries.
             if (act.carry) {
                 const kind: ItemKind = act.carry.item === "material" ? MATERIAL_ITEM[act.carry.material ?? "twigs"] ?? "twig" : act.carry.item === "seed" ? "nut" : act.carry.item === "stick" ? "twig" : (act.carry.item as ItemKind);
@@ -252,8 +264,36 @@ export class RecipeScene {
         }
         // A murmuration's ambient flockmates, round the catalogue starlings in it (only near enough to see).
         let drawn = 0;
+        const seen = new Set<string>();
         for (const flock of Array.from(flocks.values())) {
-            if (Math.hypot(flock.centre.x - camera.x, flock.centre.z - camera.z) > 320) continue;
+            const kind = flock.kind ?? "murmuration";
+            // One drawing per swarm or roost, whichever of its catalogue animals reported it.
+            if (seen.has(`${kind}#${flock.seed}`)) continue;
+            seen.add(`${kind}#${flock.seed}`);
+            const away = Math.hypot(flock.centre.x - camera.x, flock.centre.z - camera.z);
+            if (kind === "swarm" || kind === "cluster") {
+                if (away > 35) continue;
+                const n = kind === "cluster" ? CLUSTER_BUGS : SWARM_INSECTS;
+                for (let i = 0; i < n && this.insects.count < MAX_INSECTS; i++) {
+                    const p = swarmPoint(flock.centre, flock.seed, i, epoch, kind === "cluster");
+                    // A few millimetres to a centimetre or two; never under a pixel or so far off.
+                    const size = Math.max(kind === "cluster" ? 0.012 : 0.009, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.0016);
+                    this.put(this.insects, p.x, p.y, p.z, 0, 0, 0, size, size * (kind === "cluster" ? 0.6 : 1), size * 1.5);
+                }
+                continue;
+            }
+            if (kind === "bats") {
+                if (away > 160) continue;
+                for (let i = 0; i < EMERGENCE_AMBIENT && this.bats.count < MAX_BATS; i++) {
+                    const p = emergencePoint(flock.centre, flock.seed, i, epoch);
+                    if (!p) continue;
+                    const flap = Math.sin(now * 22 + i * 1.7);
+                    const size = Math.max(0.28, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.004);
+                    this.put(this.bats, p.x, p.y, p.z, p.yaw, 0, flap * 0.25, size * 1.2, size * (1 + 0.8 * flap), size * 0.8);
+                }
+                continue;
+            }
+            if (away > 320) continue;
             const k = Math.min(Math.min(epoch - flock.t0, flock.t1 - epoch) / 40, 1);
             for (let i = 0; i < MURMURATION_AMBIENT && drawn < MAX_FLOCK; i++, drawn++) {
                 const p = murmurationPoint(flock.centre, flock.seed, 1000 + i, epoch);
@@ -267,7 +307,7 @@ export class RecipeScene {
                 this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.8, size * (0.6 + 0.4 * flap), size * (1 + 0.6 * flap), size);
             }
         }
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, ...Object.values(this.marks)]) {
+        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) {
             mesh.instanceMatrix.needsUpdate = true;
             if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
         }
@@ -316,11 +356,11 @@ export class RecipeScene {
     clear() {
         this.particles.length = 0;
         this.emitted.clear();
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, ...Object.values(this.marks)]) mesh.count = 0;
+        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) mesh.count = 0;
     }
 
     dispose() {
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, ...Object.values(this.marks)]) {
+        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) {
             mesh.geometry.dispose();
             (mesh.material as MeshStandardMaterial).dispose();
             mesh.dispose();
