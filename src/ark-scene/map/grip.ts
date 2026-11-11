@@ -7,8 +7,12 @@
  * rig the model's underside (its bounds) stands in, as before.
  *
  * Pure: `index.ts` places the model with it and the validator
- * (`validate.ts`, `validateGrips`) checks the same numbers.
+ * (`validate.ts`, `validateGrips`) checks the same numbers. The rig player
+ * (`rig-player.ts`) only keeps each rig's grip bones (`gripBones`) when it
+ * loads one.
  */
+
+import {Vector3, type Bone, type BufferGeometry, type SkinnedMesh} from "three";
 
 /** A rig bone that grips: a foot, a hand, a paw, a claw, a toe (never a wing's "hand" or a fin). */
 export const GRIP_BONE = /^(?!.*(?:wing|fin|flipper)).*(?:foot|hand|paw|claw|toe|wrist|ankle)/i;
@@ -71,4 +75,52 @@ export function gripSpread(rows: BoneRows, row: number, grips: Array<{bone: numb
     let worst = 0;
     for (const grip of grips) worst = Math.max(worst, Math.abs(bonePoint(rows, row, grip.bone, grip.rest).y - centre.y));
     return worst;
+}
+
+/** The rig's grip bones (GRIP_BONE) and where each is at rest, in the model's space. */
+export function gripBones(mesh: SkinnedMesh, boneNames: string[]): Array<{bone: number; rest: Vec3}> {
+    const out: Array<{bone: number; rest: Vec3}> = [];
+    const at = new Vector3();
+    for (const bone of mesh.skeleton.bones as Bone[]) {
+        const index = boneNames.indexOf(bone.name);
+        if (index < 0 || !GRIP_BONE.test(bone.name)) continue;
+        bone.getWorldPosition(at);
+        out.push({bone: index, rest: {x: at.x, y: at.y, z: at.z}});
+    }
+    return out;
+}
+
+/** Float16 to float (the rig's bone matrices; as `rig-player.ts` halfToFloat, kept here so the two modules do not import each other). */
+function half(h: number): number {
+    const s = h & 0x8000 ? -1 : 1;
+    const e = (h >> 10) & 0x1f;
+    const f = h & 0x3ff;
+    if (e === 0) return s * 2 ** -14 * (f / 1024);
+    if (e === 31) return f ? NaN : s * Infinity;
+    return s * 2 ** (e - 15) * (1 + f / 1024);
+}
+
+/** A loaded rig's bone matrices as the grip functions read them. */
+export function boneRows(model: {bones: number; data: Uint16Array}): BoneRows {
+    return {bones: model.bones, at: (row, bone, element) => half(model.data[row * model.bones * 12 + bone * 12 + element])};
+}
+
+const gripSize = new Vector3();
+
+/**
+ * Where a loaded rig's supporting grip bones' middle is (model units) between
+ * two frame rows (`rig-player.ts` clipRows: the rows and how far between),
+ * or null with no grip bones: what a hanger, climber or percher puts on its
+ * branch (`index.ts`).
+ */
+export function gripPoint(model: {bones: number; data: Uint16Array; grips: Array<{bone: number; rest: Vec3}>; geometry: BufferGeometry}, rows: [number, number, number], out: Vector3): Vector3 | null {
+    const [r0, r1, t] = rows;
+    const bones = boneRows(model);
+    const size = model.geometry.boundingBox ? model.geometry.boundingBox.getSize(gripSize) : gripSize.set(1, 1, 1);
+    const tolerance = Math.max(size.x, size.y, size.z) * GRIP_TOLERANCE;
+    // The feet down on the surface (a raised leg is not among them).
+    const a = gripSupport(bones, r0, model.grips, tolerance)?.centre;
+    const b = gripSupport(bones, r1, model.grips, tolerance)?.centre;
+    if (!a || !b) return null;
+    return out.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
 }

@@ -84,7 +84,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBaseFrom} from "@/ark-scene/rig-clips";
-import {clipRows, cyclesFor, gripPoint, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -92,6 +92,7 @@ import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, 
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
+import {gripPoint} from "@/ark-scene/map/grip";
 import {mapHabitatAt} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -2244,7 +2245,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
             }
             const state = rig ? entry.rig : null;
-            if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, rig.clips[state.now.name], state.now.phase, rigGrip)) {
+            if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, clipRows(rig.clips[state.now.name], state.now.phase), rigGrip)) {
                 // On a branch, a trunk, a ledge or a wall: its grip (the rig's feet, hands, claws) on the surface, not its underside (`map/grip.ts`).
                 rigGrip.multiplyScalar(s).applyQuaternion(rotation);
                 position.set(where.x - rigGrip.x, where.base - rigGrip.y, where.z - rigGrip.z);

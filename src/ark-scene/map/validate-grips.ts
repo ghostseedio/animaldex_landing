@@ -18,9 +18,9 @@ import {join} from "node:path";
 import {Box3, type Bone, type SkinnedMesh} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {GRIP_TOLERANCE, gripSupport, type BoneRows} from "@/ark-scene/map/grip";
+import {GRIP_TOLERANCE, gripBones, gripSupport, type BoneRows} from "@/ark-scene/map/grip";
 import {decodeRigEntry, rigClip} from "@/ark-scene/rig-clips";
-import {gripBones, halfToFloat} from "@/ark-scene/rig-player";
+import {halfToFloat} from "@/ark-scene/rig-player";
 import type {Placement} from "@/ark-scene/placement";
 
 export type GripFailure = {slug: string; clip: string; detail: string};

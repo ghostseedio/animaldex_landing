@@ -41,7 +41,7 @@ import {
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {decodeRigEntry, decodeRigIndex, rigClip, rigPlayable, type RigClip, type RigIndex} from "@/ark-scene/rig-clips";
-import {GRIP_BONE, GRIP_TOLERANCE, gripSupport, type BoneRows} from "@/ark-scene/map/grip";
+import {gripBones} from "@/ark-scene/map/grip";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -270,43 +270,6 @@ export class RigLibrary {
         this.models.clear();
     }
 }
-
-/** The rig's grip bones (`map/grip.ts` GRIP_BONE) and where each is at rest, in the model's space. */
-export function gripBones(mesh: SkinnedMesh, boneNames: string[]): Array<{bone: number; rest: {x: number; y: number; z: number}}> {
-    const out: Array<{bone: number; rest: {x: number; y: number; z: number}}> = [];
-    const at = new Vector3();
-    for (const bone of mesh.skeleton.bones as Bone[]) {
-        const index = boneNames.indexOf(bone.name);
-        if (index < 0 || !GRIP_BONE.test(bone.name)) continue;
-        bone.getWorldPosition(at);
-        out.push({bone: index, rest: {x: at.x, y: at.y, z: at.z}});
-    }
-    return out;
-}
-
-/** The rig's bone matrices as `map/grip.ts` reads them. */
-export function boneRows(model: Pick<RigModel, "bones" | "data">): BoneRows {
-    return {bones: model.bones, at: (row, bone, element) => halfToFloat(model.data[row * model.bones * 12 + bone * 12 + element])};
-}
-
-/**
- * Where its supporting grip bones' middle is (model units) at a clip's
- * phase, or null with no grip bones: what a hanger, climber or percher puts
- * on its branch (`map/grip.ts`).
- */
-export function gripPoint(model: RigModel, clip: RigClipData, phase: number, out: Vector3): Vector3 | null {
-    const [r0, r1, t] = clipRows(clip, phase);
-    const rows = boneRows(model);
-    const size = model.geometry.boundingBox ? model.geometry.boundingBox.getSize(gripSize) : gripSize.set(1, 1, 1);
-    const tolerance = Math.max(size.x, size.y, size.z) * GRIP_TOLERANCE;
-    // The feet down on the surface (a raised leg is not among them).
-    const a = gripSupport(rows, r0, model.grips, tolerance)?.centre;
-    const b = gripSupport(rows, r1, model.grips, tolerance)?.centre;
-    if (!a || !b) return null;
-    return out.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
-}
-
-const gripSize = new Vector3();
 
 /**
  * The skinned mesh in its rest pose, in the model's space (what the bone
