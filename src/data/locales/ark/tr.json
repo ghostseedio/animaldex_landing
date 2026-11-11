@@ -203,6 +203,12 @@
             "auto": "bu cihaz için açık",
             "hint": "Bu cihazda daha akıcı bir Ark için daha az ayrıntı"
         },
+        "sound": {
+            "label": "Ses",
+            "hint": "Hayvan sesleri ve adanın sesleri. Sen açana kadar kapalı.",
+            "credits": "Ses kaynakları",
+            "empty": "Henüz ses duyulmadı."
+        },
         "a11y": {
             "scene": "3D Ark. Ok tuşları görünümü hareket ettirir, artı ve eksi yakınlaştırıp uzaklaştırır, Escape kartı kapatır. Ardından gemidekilerin listesi gelir.",
             "list": "Gemideki tüm türler, bölgeye göre",

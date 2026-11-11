@@ -64,7 +64,13 @@ test("microhabitats: nobody moves when another small animal arrives or leaves", 
         animal("domestic-cat", "farm_garden", 46)
     ];
     const before = placeAnimals(animals);
-    assert.ok(animals.every((a) => before.get(a.id)?.micro), "all at a microhabitat");
+    // The map (B3): every small one on an attach point (the water strider on the water itself); the cat, not small, round the house (or its garden).
+    for (const a of animals) {
+        const place = before.get(a.id)!;
+        if (a.model_slug === "water-strider") assert.ok(place.water && ["pond", "lake", "stream_river"].includes(place.map!.tag!), "the strider on still water");
+        else if (a.model_slug === "domestic-cat") assert.ok(["house", "garden"].includes(place.map!.tag!), "the cat round the house or in the garden");
+        else assert.ok(place.micro?.attach, `${a.model_slug} on an attach point`);
+    }
     const after = placeAnimals(animals.filter((_, i) => i % 2 === 0));
     after.forEach((place, id) => assert.deepEqual(place, before.get(id)));
     const more = placeAnimals([...animals, animal("tropical-house-gecko", "farm_garden", 47), animal("house-fly", "woodland", 31)]);
@@ -139,9 +145,14 @@ test("rigged clips: passed rigs, a partial rig's own passing clips; never flight
 test("rig player: the rig folder beside the model set, texture rows, planted feet, half floats", async () => {
     const {rigBaseFrom} = await import("@/ark-scene/rig-clips");
     const {clipRows, cyclesFor, halfToFloat} = await import("@/ark-scene/rig-player");
-    assert.equal(rigBaseFrom("https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark"), "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig/v1");
-    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark/"), "/api/dev/ark-models/ark-rig/v1");
+    assert.equal(rigBaseFrom("https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark", "v1"), "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig/v1");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark/", "v1"), "/api/dev/ark-models/ark-rig/v1");
     assert.equal(rigBaseFrom("/somewhere/else"), null);
+    // Versioned: a re-made set (v2) beside the old one; the release moves ARK_RIG_VERSION (v1 stays the fallback: ark-rig.test.ts).
+    const {ARK_RIG_VERSION} = await import("@/ark-scene/rig-clips");
+    assert.equal(ARK_RIG_VERSION, "v2");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "v2"), "/api/dev/ark-models/ark-rig/v2");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "../x"), null);
     const walk = {name: "walk", frames: 24, loop: true, seconds: 0.5, ground_speed: 0.2, pass: true, row: 49, rows: 25};
     assert.deepEqual(clipRows(walk, 0), [49, 50, 0]);
     // Looping: the phase wraps, and the last row (the first frame again) closes the cycle.

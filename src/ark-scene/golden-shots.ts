@@ -16,17 +16,26 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "reef_closeup", "kelp_forest", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "ant_bark", "waves_beach", "storm_trees", "fields_close"] as const;
+
+/** Shots in their own weather (everything else is calm, mean tide). */
+export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
+    storm_trees: {wind: 1, storm: 1, cloud: 0.95, wetness: 0.85},
+    waves_beach: {wind: 0.7, storm: 0, cloud: 0.35, wetness: 0}
+};
 
 /**
- * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
- * (`sampler.ts`), framed close. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly.
+ * The small-animal close-ups (graphics pass): a real catalogue species at its true size on an attach point of the
+ * scenery (`sampler.ts`), framed as the scene frames a small animal you tap (its length × 6, 0.12–3 m away) unless
+ * the shot gives a distance. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly
+ * (5 cm, a caterpillar's length); the ant on the bark (5 mm) checks the near plane for the smallest animals.
  */
-export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
-    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.9},
-    bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house", distance: 1.1},
-    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools", distance: 0.8},
-    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.2}
+export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "bark" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance?: number}>> = {
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.55},
+    bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house"},
+    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools"},
+    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house"},
+    ant_bark: {slug: "black-ant", tag: "bark", near: "forest_floor"}
 };
 export type GoldenPlace = typeof GOLDEN_PLACES[number];
 
@@ -49,10 +58,16 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     river_pond: "River and pond",
     mountain: "Mountain",
     reef_underwater: "Underwater reef",
+    reef_closeup: "Reef close-up (corals, sponges, anemones, fish)",
+    kelp_forest: "Kelp forest off a cliff coast",
     caterpillar_leaf: "Small animal on a leaf (no caterpillar model yet: a small butterfly)",
     bee_flower: "Bee on a flower",
     limpet_tidepool: "Limpet in a tide pool",
-    gecko_wall: "Gecko on the house wall"
+    gecko_wall: "Gecko on the house wall",
+    ant_bark: "Ant on a tree's bark (5 mm: the near plane)",
+    waves_beach: "Waves running up the beach",
+    storm_trees: "Trees in a storm",
+    fields_close: "Crop rows close up"
 };
 
 type XZ = {x: number; z: number};
@@ -83,6 +98,16 @@ export type GoldenWorld = {
     mountainArea: () => (XZ & {radius: number}) | null;
     /** The coral reef's middle, under the sea. */
     reef: () => XZ | null;
+    /** A dense knot of corals on the reef (its bed height), and the bearing to look at it from. */
+    reefCloseup?: () => (XZ & {y: number; azimuth: number}) | null;
+    /** The middle of a kelp stand (its bed height), and the bearing to look across it from. */
+    kelpStand?: () => (XZ & {y: number; azimuth: number}) | null;
+    /** An open clearing inside the forest (a site's own ground), to look out at the trees from. */
+    forestClearing?: () => XZ | null;
+    /** Trunks, lamps and walls as circles on the ground (`golden-world.ts`): the close shots stand clear of them. */
+    obstacles?: () => Array<XZ & {radius: number}>;
+    /** A field of standing crops (batch 4: the fields' close shot). */
+    cropField?: () => XZ | null;
 };
 
 export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
@@ -99,6 +124,58 @@ function bearing(from: XZ, to: XZ): number {
 
 const mix = (a: XZ, b: XZ, k: number): XZ => ({x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k});
 
+/** Where a view's camera stands on the ground plane (the scene's orbit: polar from straight up, azimuth from +z). */
+export function goldenEye(view: ArkCameraView): {x: number; y: number; z: number} {
+    const t = view.target;
+    return {
+        x: t.x + Math.sin(view.polar) * Math.sin(view.azimuth) * view.distance,
+        y: t.y + Math.cos(view.polar) * view.distance,
+        z: t.z + Math.sin(view.polar) * Math.cos(view.azimuth) * view.distance
+    };
+}
+
+/**
+ * How clear a view's near field is (batch 4): the least gap (m) between any obstacle and the camera, or the first
+ * 60% of its sight line to the target, where a trunk would fill the picture.
+ */
+export function goldenClearance(view: ArkCameraView, obstacles: Array<XZ & {radius: number}>): number {
+    const eye = goldenEye(view);
+    let least = Infinity;
+    for (const o of obstacles) {
+        if (Math.abs(o.x - eye.x) > 12 || Math.abs(o.z - eye.z) > 12) continue;
+        for (let k = 0; k <= 6; k++) {
+            const at = mix(eye, view.target, k * 0.1);
+            // Along the sight line only the camera's own spot needs the full margin; further out a trunk is smaller.
+            least = Math.min(least, Math.hypot(o.x - at.x, o.z - at.z) - o.radius + k * 0.25);
+        }
+    }
+    return least;
+}
+
+/**
+ * The bearing nearest the preferred one whose camera stands at least `clear` metres from every obstacle (else the
+ * clearest within reach), so the close shots never open with a trunk or limb beside the lens.
+ */
+function clearView(view: ArkCameraView, world: GoldenWorld, clear: number, reach = 1.6): ArkCameraView {
+    const obstacles = world.obstacles?.() ?? [];
+    if (!obstacles.length) return view;
+    let best = view;
+    let bestGap = -Infinity;
+    for (let step = 0; step <= Math.round(reach / 0.08); step++) {
+        const turn = ((step + 1) >> 1) * (step % 2 ? 1 : -1) * 0.08;
+        const candidate = {...view, azimuth: view.azimuth + turn};
+        const eye = goldenEye(candidate);
+        // Never a spot inside a hill.
+        const gap = eye.y > world.groundAt(eye.x, eye.z) + 0.8 ? goldenClearance(candidate, obstacles) : -Infinity;
+        if (gap >= clear) return candidate;
+        if (gap > bestGap) {
+            bestGap = gap;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
 export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
     const home = world.homeView();
     const fallback = (why: string): GoldenView => ({place, view: home, anchor: `fallback: home view (${why})`});
@@ -110,13 +187,16 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             const beach = world.beach();
             const rocks = world.shoreRocks();
             if (!beach && !rocks.length) return fallback("no beach, no shore rocks");
-            // The biggest cluster of shore rocks nearest the beach: score each rock by its neighbours' size, less its distance.
+            // The biggest cluster of shore rocks nearest the beach: score each rock by its neighbours' size, less its distance,
+            // less a steep bank behind it (batch 4: a shore, not the foot of a wall of sand).
             const from = beach ?? {x: 0, z: 80};
             let best: (XZ & {scale: number}) | null = null;
             let bestScore = -Infinity;
             for (const rock of rocks) {
                 const near = rocks.filter((other) => Math.hypot(other.x - rock.x, other.z - rock.z) < 7).reduce((sum, other) => sum + other.scale, 0);
-                const score = near * 3 - Math.hypot(rock.x - from.x, rock.z - from.z) * 0.08;
+                const r = Math.hypot(rock.x, rock.z) || 1;
+                const rise = world.groundAt(rock.x - (rock.x / r) * 8, rock.z - (rock.z / r) * 8) - Math.max(world.groundAt(rock.x, rock.z), 0);
+                const score = near * 3 - Math.hypot(rock.x - from.x, rock.z - from.z) * 0.08 - Math.max(rise - 2, 0);
                 if (score > bestScore) {
                     bestScore = score;
                     best = rock;
@@ -124,15 +204,19 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             }
             const at = best ?? from;
             const ground = Math.max(world.groundAt(at.x, at.z), 0);
-            // From the sea, a little to one side, so the shore runs across the picture.
-            return {place, anchor: best ? "shore rock cluster nearest the beach" : "beach", view: {target: {x: at.x, y: ground + 0.6, z: at.z}, distance: 16, polar: 1.16, azimuth: outward(at) + 0.5}};
+            // From the shallows, looking along the shore (batch 4): the rocks run into the distance, the sea and its
+            // horizon on one side, the beach on the other, and no forest edge cut off at the frame's top.
+            const view = {target: {x: at.x, y: ground + 0.5, z: at.z}, distance: 13, polar: 1.27, azimuth: outward(at) + 1.05};
+            return {place, anchor: best ? "shore rock cluster nearest the beach" : "beach", view: clearView(view, world, 4)};
         }
 
         case "forest_floor": {
             const floor = world.forestFloor();
             if (!floor) return fallback("no forest floor");
             const ground = world.groundAt(floor.x, floor.z);
-            return {place, anchor: "forest floor corner", view: {target: {x: floor.x, y: ground + 0.25, z: floor.z}, distance: 4.6, polar: 1.18, azimuth: outward(floor) + 0.3}};
+            // Batch 4: turned to the nearest bearing where no trunk or limb stands beside the lens.
+            const view = {target: {x: floor.x, y: ground + 0.25, z: floor.z}, distance: 4.6, polar: 1.18, azimuth: outward(floor) + 0.3};
+            return {place, anchor: "forest floor corner", view: clearView(view, world, 2.6)};
         }
 
         case "house_fields": {
@@ -176,8 +260,53 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
         case "bee_flower":
         case "limpet_tidepool":
         case "gecko_wall":
+        case "ant_bark":
             // Framed by the page itself once the animal is placed (golden-entry.ts `microShot`).
             return fallback("micro shot: framed on its attach point");
+
+        case "waves_beach": {
+            const beach = world.beach();
+            if (!beach) return fallback("no beach");
+            // Low over the wet sand at the water's edge, looking along the shore.
+            const out = outward(beach);
+            const r = Math.hypot(beach.x, beach.z);
+            const edge = {x: beach.x + (beach.x / r) * 4.5, z: beach.z + (beach.z / r) * 4.5};
+            return {place, anchor: "beach waterline", view: {target: {x: edge.x, y: 0.3, z: edge.z}, distance: 9, polar: 1.3, azimuth: out + 1.25}};
+        }
+
+        case "fields_close": {
+            const field = world.cropField?.() ?? null;
+            if (!field) return fallback("no crop field");
+            const ground = world.groundAt(field.x, field.z);
+            // Low over the field's edge, the rows running away into it, the cottage's side of the farm behind.
+            const view = {target: {x: field.x, y: ground + 0.4, z: field.z}, distance: 7, polar: 1.22, azimuth: outward(field) + 0.4};
+            return {place, anchor: "standing crops", view: clearView(view, world, 2)};
+        }
+
+        case "storm_trees": {
+            const floor = world.forestFloor();
+            const clearing = world.forestClearing?.() ?? null;
+            if (!floor) return fallback("no forest");
+            const ground = world.groundAt(floor.x, floor.z);
+            // From inside the clearing, looking out at the trees beyond its edge.
+            const from = clearing ?? {x: floor.x, z: floor.z + 10};
+            const away = bearing(floor, from);
+            return {place, anchor: "forest edge from the clearing", view: {target: {x: floor.x, y: ground + 3.5, z: floor.z}, distance: 10, polar: 1.42, azimuth: away}};
+        }
+
+        case "reef_closeup": {
+            const spot = world.reefCloseup?.() ?? null;
+            if (!spot) return fallback("no reef close-up spot");
+            // Down among the corals, a little above them, from the open water side.
+            return {place, anchor: `coral knot, bed ${spot.y.toFixed(1)} m`, view: {target: {x: spot.x, y: spot.y + 0.45, z: spot.z}, distance: 4.2, polar: 1.3, azimuth: spot.azimuth}};
+        }
+
+        case "kelp_forest": {
+            const stand = world.kelpStand?.() ?? null;
+            if (!stand) return fallback("no kelp stand");
+            // Mid-water in the stand, looking across it, a little up toward the light.
+            return {place, anchor: `kelp stand, bed ${stand.y.toFixed(1)} m`, view: {target: {x: stand.x, y: Math.min(stand.y + 2.4, -1.2), z: stand.z}, distance: 5.5, polar: 1.6, azimuth: stand.azimuth}};
+        }
 
         case "reef_underwater": {
             const reef = world.reef();

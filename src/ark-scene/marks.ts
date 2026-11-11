@@ -18,32 +18,56 @@ import {
     RingGeometry,
     ShaderMaterial,
     UniformsLib,
-    UniformsUtils
+    UniformsUtils,
+    Vector3
 } from "three";
 
-function radialTexture(): CanvasTexture {
+function radialTexture(stops: Array<[number, number]> = [[0, 1], [0.45, 0.65], [1, 0]]): CanvasTexture {
     const canvas = document.createElement("canvas");
     canvas.width = 64;
     canvas.height = 64;
     const context = canvas.getContext("2d") as CanvasRenderingContext2D;
     const gradient = context.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gradient.addColorStop(0, "rgba(255,255,255,1)");
-    gradient.addColorStop(0.45, "rgba(255,255,255,0.65)");
-    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    for (const [at, alpha] of stops) gradient.addColorStop(at, `rgba(255,255,255,${alpha})`);
     context.fillStyle = gradient;
     context.fillRect(0, 0, 64, 64);
     return new CanvasTexture(canvas);
 }
 
-export type Shadow = {x: number; y: number; z: number; width: number; length: number; yaw: number; strength: number};
+/**
+ * `nx, ny, nz`: the surface's normal where the animal touches it (the animal-look
+ * pass): the shadow lies on the slope, or on the wall, leaf or stone a small
+ * animal clings to, instead of flat on the ground below.
+ */
+export type Shadow = {
+    x: number;
+    y: number;
+    z: number;
+    width: number;
+    length: number;
+    yaw: number;
+    strength: number;
+    nx?: number;
+    ny?: number;
+    nz?: number;
+    /** On a surface: the way the animal heads along it (its length lies that way; `yaw` means nothing on a wall). */
+    tx?: number;
+    ty?: number;
+    tz?: number;
+};
 
 export class ContactShadows {
     readonly mesh: InstancedMesh;
     private readonly texture = radialTexture();
+    /** The animal-look pass's: a dark core where the body meets the ground (its contact), fading wide and soft. */
+    private readonly contactTexture = radialTexture([[0, 1], [0.22, 0.92], [0.5, 0.42], [0.78, 0.12], [1, 0]]);
     private readonly material: MeshBasicMaterial;
     private capacity = 0;
     private readonly matrix = new Matrix4();
     private readonly rotation = new Matrix4();
+    private readonly up = new Vector3();
+    private readonly along = new Vector3();
+    private readonly across = new Vector3();
 
     constructor() {
         this.material = new MeshBasicMaterial({color: 0x1d1a12, alphaMap: this.texture, transparent: true, opacity: 0.22, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
@@ -67,12 +91,39 @@ export class ContactShadows {
         this.material.opacity = opacity;
     }
 
+    /** The animal-look pass's contact shadow (a dark core), or the plain soft blob. */
+    setContact(on: boolean) {
+        const map = on ? this.contactTexture : this.texture;
+        if (this.material.alphaMap !== map) {
+            this.material.alphaMap = map;
+            this.material.needsUpdate = true;
+        }
+    }
+
     set(shadows: Shadow[]) {
         if (shadows.length > this.capacity) this.grow(Math.max(shadows.length, this.capacity * 2));
         shadows.forEach((shadow, i) => {
-            this.matrix.makeScale(shadow.width * shadow.strength, 1, shadow.length * shadow.strength);
-            this.rotation.makeRotationY(shadow.yaw);
-            this.matrix.premultiply(this.rotation).setPosition(shadow.x, shadow.y + 0.05, shadow.z);
+            const width = shadow.width * shadow.strength;
+            const length = shadow.length * shadow.strength;
+            if (shadow.ny !== undefined && shadow.nx !== undefined && shadow.nz !== undefined) {
+                // On its surface: the quad's up is the surface's normal, its length along the animal's heading in that plane.
+                this.up.set(shadow.nx, shadow.ny, shadow.nz).normalize();
+                if (shadow.tx !== undefined && shadow.ty !== undefined && shadow.tz !== undefined) this.along.set(shadow.tx, shadow.ty, shadow.tz);
+                else this.along.set(Math.sin(shadow.yaw), 0, Math.cos(shadow.yaw));
+                this.along.addScaledVector(this.up, -this.along.dot(this.up));
+                if (this.along.lengthSq() < 1e-6) this.along.set(0, 0, 1).addScaledVector(this.up, -this.up.z);
+                this.along.normalize();
+                this.across.crossVectors(this.up, this.along);
+                this.matrix.makeBasis(this.across.multiplyScalar(width), this.up, this.along.multiplyScalar(length));
+                // Off the surface by a little of the animal's own size (the polygon offset does the rest): a fixed lift
+                // floats a small one's shadow beside it on a wall seen from the side.
+                const lift = Math.min(0.05, Math.max(0.0015, 0.06 * Math.min(width, length)));
+                this.matrix.setPosition(shadow.x + this.up.x * lift, shadow.y + this.up.y * lift, shadow.z + this.up.z * lift);
+            } else {
+                this.matrix.makeScale(width, 1, length);
+                this.rotation.makeRotationY(shadow.yaw);
+                this.matrix.premultiply(this.rotation).setPosition(shadow.x, shadow.y + 0.05, shadow.z);
+            }
             this.mesh.setMatrixAt(i, this.matrix);
         });
         this.mesh.count = shadows.length;
@@ -84,6 +135,7 @@ export class ContactShadows {
         this.mesh.geometry.dispose();
         this.material.dispose();
         this.texture.dispose();
+        this.contactTexture.dispose();
         this.mesh.dispose();
     }
 }

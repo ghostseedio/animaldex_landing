@@ -16,9 +16,10 @@
  */
 
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {allAttachPoints, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import type {ArkZone} from "@/ark-scene/types";
+import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
 
 /** The behaviour system's place tags. */
@@ -156,8 +157,18 @@ class HeightLattice {
     };
 }
 
-/** The sampler over the graphics lane's scenery interface. */
+/** The sampler over the graphics lane's scenery interface, built now. */
 export function sceneSampler(): ArkWorldSampler {
+    const job = sceneSamplerTasks();
+    return new SlicedBuild(job.tasks, job.finish).run();
+}
+
+/**
+ * The sampler as tasks (`behaviour-build.ts`): the same work in the same order as building it all at once (so the
+ * same points, ids and version), cut small so it can be built between frames. The graphics lane's
+ * `allAttachPoints` is one task (it is theirs, and shared with the props); everything derived here is cut fine.
+ */
+export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorldSampler} {
     const points = new Map<AttachTag, AttachPoint[]>();
     const indexes = new Map<AttachTag, GridIndex>();
     const add = (point: Omit<AttachPoint, "id"> & {id?: string}) => {
@@ -171,19 +182,27 @@ export function sceneSampler(): ArkWorldSampler {
     };
     const surface = (x: number, z: number) => surfaceAt(x, z);
     const lattice = new HeightLattice();
+    const tasks: BuildTask[] = [];
 
     // The scenery's own points (trees, flowers, rocks, the house, lamps, ponds, the ground's holes and litter).
-    const scenery: SceneryPoint[] = allAttachPoints();
-    for (const p of scenery) {
+    let scenery: SceneryPoint[] = [];
+    tasks.push(once(() => {
+        scenery = allAttachPoints();
+    }));
+    tasks.push(chunked(() => scenery.length, 400, (i) => {
+        const p = scenery[i];
         const tag = FROM_SCENERY[p.tag];
-        if (!tag) continue;
+        if (!tag) return;
         add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone});
-    }
+    }));
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
     const obstacles: Array<[number, number, number]> = [];
-    const items: DecorItem[] = [...worldDecor(), ...forestFill()];
-    for (let i = 0; i < items.length; i++) {
+    let items: DecorItem[] = [];
+    tasks.push(once(() => {
+        items = [...worldDecor(), ...forestFill()];
+    }));
+    tasks.push(chunked(() => items.length, 60, (i) => {
         const item = items[i];
         if (TREE_KINDS.has(item.kind)) {
             const sx = item.x + 1.4 * item.scale;
@@ -205,8 +224,10 @@ export function sceneSampler(): ArkWorldSampler {
             }
             obstacles.push([item.x, item.z, 0.5 * item.scale]);
         } else if (item.kind === "barn") obstacles.push([item.x, item.z, 5.5]);
-    }
-    obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+    }));
+    tasks.push(once(() => {
+        obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+    }));
 
     // Water edges: just dry ground at the lake, along the river, round the garden pond, walked out from the water.
     const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
@@ -220,27 +241,38 @@ export function sceneSampler(): ArkWorldSampler {
             }
         }
     };
-    for (let k = 0; k < 28; k++) {
+    tasks.push(chunked(() => 28, 7, (k) => {
         const a = (k / 28) * Math.PI * 2;
         edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
-    }
-    for (let s = 0; s + 1 < RIVER.length; s++) {
-        const [ax, az] = RIVER[s];
-        const [bx, bz] = RIVER[s + 1];
+    }));
+    tasks.push(chunked(() => Math.max(RIVER.length - 1, 0), 2, (seg) => {
+        const [ax, az] = RIVER[seg];
+        const [bx, bz] = RIVER[seg + 1];
         const normal = Math.atan2(bx - ax, -(bz - az));
         for (let t = 0.2; t < 1; t += 0.3) {
             edge(ax + (bx - ax) * t, az + (bz - az) * t, normal);
             edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI);
         }
-    }
-    for (let k = 0; k < 6; k++) {
+    }));
+    tasks.push(chunked(() => 6, 6, (k) => {
         const a = (k / 6) * Math.PI * 2;
         edge(GARDEN_POND.x + Math.cos(a) * GARDEN_POND.radius * 0.6, GARDEN_POND.z + Math.sin(a) * GARDEN_POND.radius * 0.6, a, "farm_garden");
-    }
+    }));
+    // The sea's shore: just dry ground at the waterline all round the island (where seals, penguins and turtles go in and out).
+    tasks.push(chunked(() => 120, 12, (k) => {
+        const theta = (k / 120) * Math.PI * 2;
+        const r = shoreRadius(theta);
+        const s0 = surface(Math.cos(theta) * (r + 1.5), Math.sin(theta) * (r + 1.5));
+        if (s0.cliff > 0.45) return;
+        edge(Math.cos(theta) * (r + 2), Math.sin(theta) * (r + 2), theta + Math.PI);
+    }));
 
-    // A lattice over the land: grazing grass where the ground is grass, ledges where the coast is a cliff.
+    // A lattice over the land: grazing grass where the ground is grass, ledges where the coast is a cliff (a column of it a task).
     const step = 6;
-    for (let x = -TERRAIN_HALF; x <= TERRAIN_HALF; x += step) {
+    const columns: number[] = [];
+    for (let x = -TERRAIN_HALF; x <= TERRAIN_HALF; x += step) columns.push(x);
+    tasks.push(chunked(() => columns.length, 1, (c) => {
+        const x = columns[c];
         for (let z = -TERRAIN_HALF; z <= TERRAIN_HALF; z += step) {
             const jitter = hashString(`${x},${z}`);
             const px = x + ((jitter % 97) / 97 - 0.5) * step;
@@ -250,42 +282,69 @@ export function sceneSampler(): ArkWorldSampler {
             if (s.cliff > 0.45 && s.normal.y > 0.6) add({tag: "cliff_ledge", x: px, y: s.height, z: pz, ...UP, yaw: Math.atan2(-px, -pz), size: [0.1, 1.5], zone: s.zone});
             if ((s.weights.grass ?? 0) > 0.45 && s.normal.y > 0.85) add({tag: "grass", x: px, y: s.height, z: pz, ...UP, yaw: 0, size: [0.05, 6], zone: s.zone});
         }
-    }
+    }));
 
-    const obstacleIndex = new Map<string, Array<[number, number, number]>>();
-    for (const o of obstacles) {
-        const key = `${Math.floor(o[0] / 6)},${Math.floor(o[1] / 6)}`;
-        const list = obstacleIndex.get(key) ?? [];
-        list.push(o);
-        obstacleIndex.set(key, list);
-    }
-    const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
-    return {
-        version: `scene:${items.length}:${scenery.length}:${counts}`,
-        // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
-        heightAt: lattice.at,
-        isWater: (x, z) => surface(x, z).waterDepth > 0,
-        slope: (x, z) => {
-            const n = surface(x, z).normal;
-            return Math.sqrt(Math.max(1 - n.y * n.y, 0)) / Math.max(n.y, 0.05);
-        },
-        zoneAt: (x, z) => surface(x, z).zone,
-        attachPoints: (tag, near) => (near ? indexes.get(tag)?.near(near.x, near.z, near.r) ?? [] : points.get(tag) ?? []),
-        blocked: (x, z, clearance) => {
-            const cx = Math.floor(x / 6);
-            const cz = Math.floor(z / 6);
-            for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
-            return false;
+    const finish = (): ArkWorldSampler => {
+        const obstacleIndex = new Map<string, Array<[number, number, number]>>();
+        for (const o of obstacles) {
+            const key = `${Math.floor(o[0] / 6)},${Math.floor(o[1] / 6)}`;
+            const list = obstacleIndex.get(key) ?? [];
+            list.push(o);
+            obstacleIndex.set(key, list);
         }
+        const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
+        return {
+            version: `scene:${items.length}:${scenery.length}:${counts}`,
+            // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
+            heightAt: lattice.at,
+            isWater: (x, z) => surface(x, z).waterDepth > 0,
+            slope: (x, z) => {
+                const n = surface(x, z).normal;
+                return Math.sqrt(Math.max(1 - n.y * n.y, 0)) / Math.max(n.y, 0.05);
+            },
+            zoneAt: (x, z) => surface(x, z).zone,
+            attachPoints: (tag, near) => (near ? indexes.get(tag)?.near(near.x, near.z, near.r) ?? [] : points.get(tag) ?? []),
+            blocked: (x, z, clearance) => {
+                const cx = Math.floor(x / 6);
+                const cz = Math.floor(z / 6);
+                for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
+                return false;
+            }
+        };
     };
+    return {tasks, finish};
 }
 
 let shared: ArkWorldSampler | null = null;
+/** The shared sampler being built a slice at a time (`worldSamplerBuild`); asked for before it is done, it is finished at once. */
+let building: SlicedBuild<ArkWorldSampler> | null = null;
 /** The sampler in use, built once from the scenery (and again whenever `resetWorldSampler` is called after a terrain change). */
 export function worldSampler(): ArkWorldSampler {
-    if (!shared) shared = sceneSampler();
+    if (!shared) shared = building ? building.run() : sceneSampler();
     return shared;
+}
+/** Built already (`worldSampler` would return at once). */
+export function worldSamplerReady(): boolean {
+    return shared !== null;
+}
+/** The shared sampler built a slice at a time (`SlicedBuild.step`); it becomes `worldSampler`'s once done. */
+export function worldSamplerBuild(): SlicedBuild<ArkWorldSampler> {
+    if (shared) {
+        const built = shared;
+        return new SlicedBuild<ArkWorldSampler>([], () => built);
+    }
+    if (building) return building;
+    const job = sceneSamplerTasks();
+    const build: SlicedBuild<ArkWorldSampler> = new SlicedBuild(job.tasks, () => {
+        const made = job.finish();
+        shared = made;
+        if (building === build) building = null;
+        return made;
+    });
+    building = build;
+    return build;
 }
 export function resetWorldSampler() {
     shared = null;
+    building = null;
 }
