@@ -27,6 +27,7 @@ import {eggLength, eggLook, nestRadius, type NestForm, type NestProfile, type Ne
 import {buildOf, nestStage, registerNestSites, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
 import {eggGeometry, nestFarGeometry, nestGeometry} from "@/ark-scene/props/nest-shapes";
 import {nestSpots} from "@/ark-scene/props/nest-sites";
+import {surfaceAt} from "@/ark-scene/sampler";
 import {arkBody} from "@/ark-scene/stats";
 import {groundAt, namedPlace, propRandom, propsPoints, type PropsPoint} from "@/ark-scene/props/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
@@ -64,18 +65,6 @@ const zoneCorner = (zone: ArkZone) => {
     if (site.kind === "sea") return {x: ZONE_SITES.seashore.x, z: ZONE_SITES.seashore.z};
     return microCorner(zone);
 };
-
-/** A point on the ground near (x, z), out of the water: walks toward `toward` until dry. */
-function dryGround(x: number, z: number, toward: {x: number; z: number}): {x: number; y: number; z: number} {
-    for (let k = 0; k <= 20; k++) {
-        const t = k / 20;
-        const px = x + (toward.x - x) * t;
-        const pz = z + (toward.z - z) * t;
-        const y = groundAt(px, pz);
-        if (y > 0.12) return {x: px, y, z: pz};
-    }
-    return {x: toward.x, y: groundAt(toward.x, toward.z), z: toward.z};
-}
 
 /** A trail drawn on a surface: a strip `width` wide along `points` (each with its out-normal), a hair above it. */
 function strip(points: Array<{p: Vector3; n: Vector3}>, width: number, colour: string, shade: (t: number, i: number) => number = () => 1): BufferGeometry {
@@ -136,6 +125,18 @@ function specks(points: Array<{p: Vector3; n: Vector3}>, every: number, random: 
         }
     }
     return out;
+}
+
+/** A spiral search out from (x, z) for the first spot `ok` accepts (deterministic). */
+function spiralSearch<T>(x: number, z: number, reach: number, step: number, ok: (px: number, pz: number) => T | null): T | null {
+    for (let k = 0; k < 4000; k++) {
+        const r = step * Math.sqrt(k);
+        if (r > reach) break;
+        const a = k * 2.39996;
+        const found = ok(x + Math.cos(a) * r, z + Math.sin(a) * r);
+        if (found) return found;
+    }
+    return null;
 }
 
 /** The decor tree under a host id (`decor12`), for its trunk's axis. */
@@ -506,46 +507,58 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         if (items.length) add(new LodBatch(group, items, build(size), null, warm, {cap: 12, reach: 1.3, shadow: true}));
     }
 
-    // MARK: Sea turtles: a nest above the tide line, its tracks to the water
+    // MARK: Sea turtles: a body pit on dry sand above the tide line (the eggs buried, never seen), its crawl tracks to the water
     if (presence.turtleNests.length) {
         const beach = namedPlace("beach");
         const random = propRandom("turtle-nest");
-        const out = Math.atan2(beach.x, beach.z);
-        const ox = Math.sin(out);
-        const oz = Math.cos(out);
         const nests: PropInstance[] = [];
-        const eggsHere: PropInstance[] = [];
         const tracks: BufferGeometry[] = [];
+        const taken: Array<{x: number; z: number}> = [];
         presence.turtleNests.forEach((nest, k) => {
-            // Along the beach from its middle, a little inland of the animals' line.
-            const along = 9 + k * 4.5;
-            const x0 = beach.x - oz * along - ox * 2.5;
-            const z0 = beach.z + ox * along - oz * 2.5;
-            const dry = dryGround(x0, z0, {x: x0 - ox * 4, z: z0 - oz * 4});
-            nests.push({x: dry.x, y: dry.y - 0.04, z: dry.z, turn: out, scale: 1});
-            if (k === 0) marks.turtleNest = {x: dry.x, y: dry.y, z: dry.z};
-            // The clutch at the bottom of its pit, a heap of round eggs half in the sand.
-            for (let e = 0; e < nest.eggs; e++) {
-                const a = e * 2.39996;
-                const d = 0.035 + 0.1 * Math.sqrt((e + 0.5) / nest.eggs);
-                eggsHere.push({x: dry.x + Math.cos(a) * d, y: dry.y + 0.01 + (e < 3 ? 0.03 : 0), z: dry.z + Math.sin(a) * d, turn: e, scale: 0.8, tint: new Color("#f4efe4")});
-            }
-            // Two lines of flipper marks to the waterline and back.
-            for (const offset of [-0.32, 0.32]) {
-                let wx = dry.x + ox * 0.9;
-                let wz = dry.z + oz * 0.9;
-                for (let s = 0; s < 40 && groundAt(wx, wz) > -0.05; s++) {
+            // Dry, open sand (the sampler's surface), well away from the cottage's garden and from another nest.
+            const site = spiralSearch(beach.x, beach.z, 50, 1.4, (x, z) => {
+                const surface = surfaceAt(x, z);
+                if ((surface.weights.sand ?? 0) < 0.55 || surface.waterDepth > 0 || surface.height < 0.45 || surface.height > 2.2 || surface.normal.y < 0.94) return null;
+                if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 18 || taken.some((t) => Math.hypot(t.x - x, t.z - z) < 4)) return null;
+                return {x, z, y: surface.height, normal: surface.normal};
+            });
+            if (!site) return;
+            taken.push(site);
+            // Downhill is the way to the sea.
+            const flat = Math.hypot(site.normal.x, site.normal.z) || 1;
+            const ox = site.normal.x / flat;
+            const oz = site.normal.z / flat;
+            nests.push({x: site.x, y: site.y - 0.03, z: site.z, turn: Math.atan2(ox, oz), scale: 1});
+            if (k === 0) marks.turtleNest = {x: site.x, y: site.y, z: site.z, facing: Math.atan2(ox, oz)} as {x: number; y: number; z: number};
+            // Up the beach and back: two crawl tracks a stride apart, each a body-drag furrow with flipper marks either side.
+            for (const side of [-0.75, 0.75]) {
+                let wx = site.x + ox * 1.1;
+                let wz = site.z + oz * 1.1;
+                for (let s = 0; s < 60 && surfaceAt(wx, wz).waterDepth <= 0; s++) {
                     wx += ox * 0.35;
                     wz += oz * 0.35;
                 }
-                const line = groundPath(dry.x + ox * 0.9 - oz * offset, dry.z + oz * 0.9 + ox * offset, wx - oz * offset, wz + ox * offset, 0.12, random);
-                tracks.push(strip(line, 0.09, "#b59c74", (t, i) => (Math.floor(i / 6) % 3 === 0 ? 0.8 : 1.0)));
+                const line = groundPath(site.x + ox * 1.0 - oz * side, site.z + oz * 1.0 + ox * side, wx - oz * side * 1.3, wz + ox * side * 1.3, 0.25, random);
+                tracks.push(strip(line, 0.2, "#a8916b", () => 0.92));
+                for (let i = 1; i < line.length - 1; i++) {
+                    const p = line[i].p;
+                    const ahead = line[i + 1].p.clone().sub(p).setY(0).normalize();
+                    const across = new Vector3(-ahead.z, 0, ahead.x);
+                    for (const flank of [-1, 1]) {
+                        // A short scuff angled back from each flipper.
+                        const from = p.clone().addScaledVector(across, flank * 0.3);
+                        const to = from.clone().addScaledVector(across, flank * 0.16).addScaledVector(ahead, -0.14);
+                        tracks.push(strip([{p: from.setY(groundAt(from.x, from.z)), n: line[i].n}, {p: to.setY(groundAt(to.x, to.z)), n: line[i].n}], 0.06, "#b49c76", () => 0.88));
+                    }
+                }
             }
+            void nest;
         });
-        add(new LodBatch("turtle-nests", nests, shapes.turtleNest(0.65), null, sand, {cap: 6, reach: 1}));
-        if (eggsHere.length) add(new LodBatch("turtle-eggs", eggsHere, eggGeometry(0.06), null, warm, {cap: 40, reach: 0.5}));
-        add(new LodBatch("turtle-tracks", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(tracks), null, decal, {cap: 1, reach: 100}));
-        batches[batches.length - 1].setCentre(new Vector3(beach.x, beach.y, beach.z));
+        if (nests.length) {
+            add(new LodBatch("turtle-nests", nests, shapes.turtlePit(0.7), null, sand, {cap: 6, reach: 1}));
+            add(new LodBatch("turtle-tracks", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(tracks), null, decal, {cap: 1, reach: 100}));
+            batches[batches.length - 1].setCentre(new Vector3(nests[0].x, nests[0].y, nests[0].z));
+        }
     }
 
     // MARK: Beavers: a lodge on the lake by the outflow, a dam across the river below it

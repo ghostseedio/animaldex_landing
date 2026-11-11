@@ -365,20 +365,56 @@ export function lair(r: number, seed = 11): BufferGeometry {
     return merge(parts);
 }
 
-/** A sea turtle's nest: a low mound of churned sand in its body pit (`r` across). */
-export function turtleNest(r: number, seed = 12): BufferGeometry {
-    const random = seeded(5200 + seed);
-    const mound = new SphereGeometry(r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-    mound.scale(1, 0.12, 1.25);
-    lumpy(mound, 0.35, random);
-    const rim = new TorusGeometry(r * 1.05, r * 0.16, 5, 18);
-    rim.rotateX(Math.PI / 2);
-    rim.scale(1, 0.4, 1.25);
-    lumpy(rim, 0.25, random);
-    return merge([
-        paint(mound, new Color("#c9b08a"), (y, i) => 0.8 + ((i * 7) % 9) / 40),
-        paint(place(rim, 0, 0.02, 0), new Color("#d6c19c"), (_, i) => 0.9 + ((i * 5) % 7) / 45)
-    ]);
+/**
+ * A sea turtle's nest as it is left: a body pit about `r` across, its rim of
+ * thrown sand, the covered egg chamber a low hump in the middle (the eggs are
+ * half a metre down, never seen), and a fan of sand flung out behind (+z,
+ * toward the sea). Standing on y = 0, the sand's own grain from the material.
+ */
+export function turtlePit(r: number, seed = 12): BufferGeometry {
+    const random = seeded(5300 + seed);
+    const rings = 12;
+    const segments = 28;
+    const reach = 1.6;
+    const bumps = Array.from({length: 7}, () => ({a: random() * Math.PI * 2, d: 0.3 + random() * 1.1, s: 0.15 + random() * 0.2, h: (random() - 0.4) * 0.05}));
+    const height = (rho: number, theta: number) => {
+        let h = 0.07 * Math.exp(-(((rho - 0.95) / 0.2) ** 2)) - 0.06 * Math.exp(-(((rho - 0.5) / 0.22) ** 2)) + 0.035 * Math.exp(-((rho / 0.22) ** 2));
+        h += 0.06 * Math.exp(-(((rho - 1.25) / 0.22) ** 2)) * Math.max(0, Math.cos(theta)) ** 2;
+        for (const bump of bumps) {
+            const dx = Math.cos(theta) * rho - Math.cos(bump.a) * bump.d;
+            const dz = Math.sin(theta) * rho - Math.sin(bump.a) * bump.d;
+            h += bump.h * Math.exp(-(dx * dx + dz * dz) / (bump.s * bump.s));
+        }
+        // Down to the beach at its edge.
+        return h * (1 - smooth(1.2, reach, rho));
+    };
+    const point = (ring: number, segment: number) => {
+        const rho = (ring / rings) * reach;
+        const theta = (segment / segments) * Math.PI * 2;
+        return new Vector3(Math.sin(theta) * rho * r, height(rho, theta) * r * 1.4, Math.cos(theta) * rho * r);
+    };
+    const positions: number[] = [];
+    for (let ring = 0; ring < rings; ring++) {
+        for (let segment = 0; segment < segments; segment++) {
+            const a = point(ring, segment);
+            const b = point(ring + 1, segment);
+            const c = point(ring + 1, segment + 1);
+            const d = point(ring, segment + 1);
+            positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z, a.x, a.y, a.z, c.x, c.y, c.z, d.x, d.y, d.z);
+        }
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    // Dug sand is darker and damper than the dry surface round it.
+    return paint(geometry, new Color("#cdb68f"), (y, i, x, z) => {
+        const rho = Math.hypot(x, z) / r;
+        return (rho < 1.15 ? 0.82 : 0.95) + 0.06 * Math.sin(i * 0.37) + Math.min(y / r, 0.05);
+    });
+}
+
+function smooth(a: number, b: number, x: number): number {
+    const t = Math.min(Math.max((x - a) / (b - a), 0), 1);
+    return t * t * (3 - 2 * t);
 }
 
 /** A beaver lodge: a dome of peeled sticks and mud standing in the water (`r` across, base at y = 0 = the water). */

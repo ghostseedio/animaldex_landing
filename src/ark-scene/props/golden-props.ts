@@ -165,7 +165,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "turtle_nest": {
             const nest = spots.turtleNest;
             if (!nest) return null;
-            return {view: look(nest, 4.5, 1.0, Math.atan2(nest.x, nest.z) + 0.6), hours: 7.4, weather: null, environment: calm, anchor: "turtle nest + tracks", minDistance: 0.3};
+            // From up the beach, looking down the crawl tracks to the sea.
+            const facing = (nest as {facing?: number}).facing ?? Math.atan2(nest.x, nest.z);
+            return {view: look(nest, 5.5, 0.95, facing + Math.PI + 0.35), hours: 7.4, weather: null, environment: calm, anchor: "turtle nest + tracks", minDistance: 0.3};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;
