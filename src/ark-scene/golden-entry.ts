@@ -288,6 +288,8 @@ async function mountGolden(el: HTMLElement) {
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             pinSeaClock(GOLDEN_SEA_EPOCH);
+            // A golden-only camera (batch 5): the shot's own limits, for this shot only.
+            (window as unknown as {__arkGoldenCamera?: unknown}).__arkGoldenCamera = "camera" in shot ? shot.camera : undefined;
             handle.setView(shot.view);
             // The view keeps itself over the ground for a few frames (setView, then the scene's own limits): hold it there.
             for (let i = 0; i < 20; i++) {

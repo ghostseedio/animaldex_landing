@@ -105,14 +105,14 @@ function screeLayer(heights: Float32Array, size: number, out: Float32Array) {
             const h = heights[i];
             if (h < 2.5 || slopes[i] > 0.42) continue;
             let scree = 0;
-            for (let reach = 2; reach <= 6; reach++) {
+            for (let reach = 2; reach <= 9; reach++) {
                 for (const [dc, dr] of directions) {
                     const c = Math.round(column + dc * reach);
                     const r = Math.round(row + dr * reach);
                     if (c < 0 || r < 0 || c >= size || r >= size) continue;
                     const j = r * size + c;
                     if (heights[j] < h + reach * cell * 0.35) continue;
-                    scree = Math.max(scree, smoothstep(0.4, 0.6, slopes[j]) * (1 - (reach - 1) / 6));
+                    scree = Math.max(scree, smoothstep(0.4, 0.6, slopes[j]) * (1 - (reach - 1) / 9));
                 }
                 if (scree > 0.8) break;
             }
@@ -406,7 +406,7 @@ float arkWet = 0.0;`)
     float streak = smoothstep(0.25, 0.75, arkNoise(vec2(dot(p, vec2(0.8, 0.6)) * 0.12, dot(p, vec2(-0.6, 0.8)) * 1.4)));
     alpine *= mix(0.8, 1.0, streak) * smoothstep(0.0, 0.25, alpine);
     // Rock ribs stand bare through the snow on the steep faces; the gullies between them fill.
-    alpine *= 1.0 - smoothstep(0.55, 0.85, rib) * smoothstep(0.32, 0.55, slopeHere) * (1.0 - 0.5 * high);
+    alpine *= 1.0 - smoothstep(0.6, 0.88, rib) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);
     // Snow along a ledge lies in patches, only where the ledge is gentle enough to hold it.
     float ledgeSnow = ledge * bedClear * smoothstep(snowLine - 9.0, snowLine - 3.0, snowAt) * (1.0 - alpine) * massif
         * smoothstep(0.45, 0.75, arkNoise(vec2(dot(p, vec2(0.7, 0.7)) * 0.35, bed))) * (1.0 - smoothstep(0.45, 0.65, slopeHere));
@@ -531,15 +531,18 @@ float arkWet = 0.0;`)
 
     // Scree (batch 4): grey stone gathered at the foot of the faces, lighter than the rock it fell from.
     float scree = smoothstep(0.12, 0.55, vArkRock.x + (arkNoise(p * 0.9) - 0.5) * 0.3) * (1.0 - steep);
-    vec3 screeTone = mix(rockTone, rockLight, 0.45 + 0.35 * arkNoise(p * 3.7)) * (0.82 + 0.3 * arkNoise(p * 11.0));
-    ground = mix(ground, screeTone, scree * 0.9 * (1.0 - smoothstep(0.3, 0.7, snowW)));
+    // Lighter than the faces and fanning out below them, so the fans show from the far view too (batch 5).
+    vec3 screeTone = rockLight * (1.02 + 0.22 * arkNoise(p * 3.7)) * (0.84 + 0.26 * arkNoise(p * 11.0));
+    ground = mix(ground, screeTone, scree * 0.95 * (1.0 - smoothstep(0.3, 0.7, snowW)));
 
     // Snow on the peaks and the ice, thinning on steep faces (less so up high), dimmer at night (batch 4: the moon's
     // light on snow read as a lamp).
     float snow = snowW * (1.0 - steep * 0.5 * (1.0 - high));
     float snowNight = mix(0.58, 1.0, smoothstep(0.2, 0.65, arkDaylight));
-    ground = mix(ground, snowTone * snowNight * (0.9 + 0.08 * arkNoise(p * 0.7) + 0.04 * streak), smoothstep(0.12, 0.8, snow));
-    arkSnowy = smoothstep(0.12, 0.8, snow);
+    // Batch 5: whiter, with a crisper edge, so it reads as snow in daylight and not as a grey wash.
+    float snowCover = smoothstep(0.22, 0.6, snow);
+    ground = mix(ground, snowTone * snowNight * (0.98 + 0.04 * arkNoise(p * 0.7) + 0.02 * streak), snowCover);
+    arkSnowy = snowCover;
 
     // The waterline: wet, darker sand just above the water.
     float waterline = 1.0 - smoothstep(0.0, 0.55, world.y);
@@ -604,7 +607,12 @@ float arkWet = 0.0;`)
             vec3 s_ = arkGroundTriplanar(5.0, world * 2.3, n, 0.2) / groundMeans[5];
             col = mix(col, vec3(dot(s_, vec3(0.3333))), scree * 0.7);
         }
-        ARK_LAYER(7.0, wSnow, 0.18)
+        // Snow's texture at half strength: its mottling read as dirt from afar (batch 5).
+        if (wSnow > 0.01) {
+            vec3 t_ = arkGroundTex(7.0, p, 0.18) / groundMeans[7];
+            col = mix(col, mix(vec3(1.0), t_, 0.5), wSnow);
+            if (groundLite < 0.5) nor = normalize(mix(nor, arkGroundNor(7.0, p, 0.18), wSnow));
+        }
         // Detail strength: full up close, gone far away; the plain colour (with the cloud shade) is under it.
         col = mix(vec3(1.0), col, fade);
         ground *= col;
@@ -668,7 +676,9 @@ float arkWet = 0.0;`)
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 // Wet ground shines; a bed under the water does not (batch 4: the reef's sand mirrored the sun and read as snow).
-roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, envSeaLevel - vArkWorld.y)));`)
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, envSeaLevel - vArkWorld.y)));
+// Snow has a faint sheen (batch 5).
+roughnessFactor = mix(roughnessFactor, 0.6, arkSnowy);`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 if (groundReady > 0.5 && groundLite < 0.5) {
     // The layers' normal maps, in world space round the ground's own normal (u along +x, v along +z), then to view space.
