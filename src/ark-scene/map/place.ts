@@ -27,7 +27,9 @@ import {borrowedKey, clusterKey, MapPoints, pointIndex} from "@/ark-scene/map/po
 import {attachFits, type ArkMapSampler, type AttachPoint, type AttachTag} from "@/ark-scene/map/sampler";
 import {isHeldOnMap, mapSpecies, type MapSpecies} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-scene/map/tags";
+import {waterSpot, waterTagAt, type WaterClass} from "@/ark-scene/map/water";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
+import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
 import {hashString, VISITOR_LANDING} from "@/ark-scene/world";
 
@@ -54,6 +56,8 @@ export type MapPlace = {
     sea: boolean;
     /** On a scenery attach point (a small animal). */
     attach?: AttachPoint;
+    /** A water species (`water.ts`): placed by its depth band's water, never by a land tag. */
+    water?: WaterClass;
     roost: MapRoost | null;
     /** Its cluster's key (zone and slot) and its point's level (0: on the point). */
     key: number;
@@ -157,6 +161,15 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     const key = clusterKey(zone, slot);
     const ownHash = hashString(animal.id);
     if (isHeldOnMap(animal.model_slug)) {
+        const depth = speciesDepth(animal.model_slug, zone);
+        if (depth) {
+            // A held water species waits in the water: the sea off the landing's shore (or the lake), never on the beach.
+            const spot = waterHomeSpot(depth.water === "fresh" ? depth : {...depth, home: "coast"}, depth.water === "fresh" ? zone : "seashore", 400 + (key % 400), rank, length);
+            if (spot) {
+                const ground = mapPoints().sampler.ground(spot.x, spot.z);
+                return {x: spot.x, z: spot.z, ground: ground.height, yaw: (((ownHash >>> 4) % 1000) / 1000) * Math.PI * 2, water: true, map: {species: null, tag: null, area: null, held: true, sea: depth.water === "salt", roost: null, key, level: 0}};
+            }
+        }
         // Waiting at the landing (the jetty's foot), in a row along the beach.
         const foot = VISITOR_LANDING.foot;
         const along = 1.6 + (key % 7) * 1.4 + rank * 0.9;
@@ -171,6 +184,33 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     const all = mapPoints();
     const sampler = all.sampler;
     const tags = tagsToTry(species);
+
+    // A water species (its depth band, `sea-depth.ts`): in its band's water, never on a land tag.
+    const depth = speciesDepth(animal.model_slug, zone);
+    if (depth) {
+        // A small one of the rocky shore's floor (a limpet, a shore crab): a tide pool, salt water at the foot of the shore's rocks.
+        if (species.small && depth.water === "salt" && (depth.band === "seabed" || depth.band === "reef") && species.allowed.has("rocky_shore") && species.move !== "swim") {
+            const found = all.attachOf("rocky_shore", trueLength, zone, true);
+            const pools = found.list.filter((point) => point.tag === "tide_pool");
+            if (pools.length) {
+                const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), pools.length);
+                const point = pools[index];
+                return {
+                    x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tangent[0], point.tangent[2]), water: true, micro: attachPlace(point, key, level, rank, trueLength),
+                    map: {species, tag: "rocky_shore", area: TAG_AREA.rocky_shore, held: false, sea: true, attach: point, roost: null, key, level}
+                };
+            }
+        }
+        const spot = waterSpot(all.water, depth, zone, slot, rank, length);
+        if (spot) {
+            const ground = sampler.ground(spot.x, spot.z);
+            const tag = waterTagAt(sampler, spot.cls, spot.x, spot.z);
+            return {
+                x: spot.x, z: spot.z, ground: ground.height, yaw: (((ownHash >>> 4) % 1000) / 1000) * Math.PI * 2, water: true,
+                map: {species, tag, area: tag ? TAG_AREA[tag] : null, held: false, sea: spot.cls !== "lake", water: spot.cls, roost: null, key, level: 0}
+            };
+        }
+    }
 
     // A small animal: on an attach point.
     const watery = ["water", "floor", "surface", "fixed", "air", "station", "anemone", "ice"].includes(species.attach);

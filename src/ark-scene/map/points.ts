@@ -16,6 +16,7 @@ import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {attachFits, attachPointTags, type ArkMapSampler, type AttachPoint} from "@/ark-scene/map/sampler";
 import {launchPoints} from "@/ark-scene/map/species";
 import {MAP_TAGS, type MapTag} from "@/ark-scene/map/tags";
+import {WaterCells} from "@/ark-scene/map/water";
 import {hashString, ZONE_SITES} from "@/ark-scene/world";
 
 export type SpawnPoint = {tag: MapTag; zone: ArkZone; x: number; z: number; y: number; water: "sea" | "fresh" | null; depth: number; /** Half the distance to the nearest other point of its partition (m): room for its cluster. */ room: number};
@@ -113,8 +114,12 @@ export class MapPoints {
         return out;
     }
 
+    /** The sea's cells by depth band and zone (`water.ts`). */
+    readonly water: WaterCells;
+
     constructor(sampler: ArkMapSampler) {
         this.sampler = sampler;
+        this.water = new WaterCells(sampler);
     }
 
     /** The ground on a grid: each cell's zone and tags. */

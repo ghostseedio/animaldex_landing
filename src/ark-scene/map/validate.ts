@@ -38,6 +38,8 @@ import {mapPoints, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
+import {waterSuits} from "@/ark-scene/map/water";
+import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {arkBody} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -129,6 +131,28 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             const n = [at.nx, at.ny, at.nz];
             const t = [at.tx, at.ty, at.tz];
             if (Math.abs(Math.hypot(...n) - 1) > 0.02 || Math.abs(dot(n, t)) > 0.05 || dot(n, point.normal) < 0.95) fail("wrong_facing", `normal ${n.map((v) => v.toFixed(2))} heading ${t.map((v) => v.toFixed(2))} on ${point.tag}`);
+            continue;
+        }
+        if (map.water) {
+            // A water species, by its depth band (`water.ts`): in its band's water, salt or fresh as it lives, its loop in the water.
+            const depth = speciesDepth(animal.model_slug, animal.zone)!;
+            const g = sampler.ground(place.x, place.z);
+            if (!place.water) fail("wrong_medium", `a ${depth.band} species out of the water`);
+            if (!g.water) fail("wrong_medium", `a ${depth.band} species on dry ground at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            else if ((depth.water === "fresh") !== (g.water === "fresh")) fail("wrong_water", `${depth.water} water species in ${g.water} water`);
+            if (!waterSuits(sampler, map.water, place.x, place.z)) fail("wrong_depth_band", `${depth.band} (${map.water}) in ${g.depth.toFixed(1)} m of ${g.water ?? "no"} water`);
+            if (!map.tag || !g.tags.includes(map.tag) || !(SEA_TAGS.has(map.tag) || FRESH_TAGS.has(map.tag))) fail("invalid_surface", `${map.tag} (not water) at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            if (Math.abs(place.ground - g.height) > 0.05) fail("floats_or_sinks", `its floor at ${place.ground.toFixed(2)}, the ground at ${g.height.toFixed(2)}`);
+            const motion = waterMotion(depth);
+            const radius = safeLoopRadius(place.x, place.z, waterLoopRadius(motion, depthSeed(animal.id), length));
+            for (let k = 0; k < 8; k++) {
+                const a = (k / 8) * Math.PI * 2;
+                const floor = sampler.ground(place.x + Math.cos(a) * radius, place.z + Math.sin(a) * radius);
+                if (!floor.water || floor.depth < 0.5) {
+                    fail("floats_or_sinks", `its loop leaves the water (${radius.toFixed(1)} m round ${place.x.toFixed(1)},${place.z.toFixed(1)})`);
+                    break;
+                }
+            }
             continue;
         }
         // A small flyer with no perch that fits it in reach lands on its ground or its water (section 2: "only at valid perches, the ground or the water").

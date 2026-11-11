@@ -76,7 +76,8 @@ test("map: every small animal sits on an attach point its tags allow and its siz
     for (const animal of validatorAnimals()) {
         const species = mapSpecies(animal.model_slug, animal.zone);
         const place = placed.get(animal.id);
-        if (!species?.small || !place?.map) continue;
+        // (A water species is placed by its depth band, in the water: not on a point.)
+        if (!species?.small || !place?.map || place.map.water) continue;
         small++;
         if (place.map.attach) onPoints++;
     }
