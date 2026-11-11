@@ -28,7 +28,9 @@ export type PlayerControlEvent =
     | {kind: "started"; animalId: string}
     | {kind: "denied"; animalId: string; reason: string}
     | {kind: "ended"; animalId: string; reason: string}
-    | {kind: "haptic"; type: "takeoff" | "land" | "bump" | "warn"};
+    | {kind: "haptic"; type: "takeoff" | "land" | "bump" | "warn"}
+    /** Phase 2: Talk pressed beside another animal (the page opens that animal's chat with its Ark id). */
+    | {kind: "talk"; animalId: string; slug?: string | null};
 
 export type PlayerControlOptions = {
     url: string;
@@ -55,6 +57,7 @@ export class PlayerControl {
     private pending: ArkAnimal | null = null;
     private lastMode: string | null = null;
     private readonly words: ControlWords;
+    private talkTarget: string | null = null;
 
     constructor(private readonly o: PlayerControlOptions) {
         this.words = {...CONTROL_WORDS_EN, ...(o.words ?? {})} as ControlWords;
@@ -77,7 +80,11 @@ export class PlayerControl {
                     else if (phase === "arrived" || phase === "rescued" || phase === "turned-back") this.hud?.setCrossing(phase === "turned-back", false);
                     else if (phase === "denied" && reason) this.hud?.flash(reason);
                 },
-                onControlledSet: () => o.onPins?.()
+                onControlledSet: () => o.onPins?.(),
+                onTalkReady: (animalId) => {
+                    this.talkTarget = animalId;
+                    this.hud?.setTalk(Boolean(animalId));
+                }
             }
         );
     }
@@ -154,6 +161,10 @@ export class PlayerControl {
             this.hud.onView = () => this.setView(this.view === "third" ? "first" : "third");
             this.hud.onCross = () => this.live.cross();
             this.hud.onTurnBack = () => this.live.turnBack();
+            this.hud.onTalk = () => {
+                if (this.talkTarget) this.o.onEvent?.({kind: "talk", animalId: this.talkTarget});
+            };
+            this.hud.setTalk(Boolean(this.talkTarget));
             this.hud.setView(this.view);
         }
         this.o.onEvent?.({kind: "started", animalId: animal.id});
@@ -180,6 +191,16 @@ export class PlayerControl {
         }
         if (own?.blocked) this.hud?.notice_(own.blocked === "steep" ? "steep" : own.blocked === "pen" ? "pen" : own.blocked === "cant_swim" ? "cant_swim" : own.blocked === "paddle" ? "paddle" : "");
         if (own?.oneWayDrop) this.hud?.notice_("one_way_drop");
+    }
+
+    /** Phase 2: an NPC's reaction shared by the server, or null (its local layer). */
+    npcReaction(id: string) {
+        return this.live.npcReaction(id);
+    }
+
+    /** While the player talks to another animal, theirs holds still (stamina rests). */
+    setTalking(active: boolean): void {
+        this.live.setTalking(active);
     }
 
     poseFor(animalId: string): ControlledPose | null {

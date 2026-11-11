@@ -65,6 +65,7 @@
  * Player control, to the host (?live=wss://… turns it on; docs/ark/player-control-contract.md §4):
  *   {type: "ark:live", available}  {type: "ark:control-request", animal_id}  {type: "ark:control", active, animal_id, reason?, denied?}
  *   {type: "ark:haptic", kind: "takeoff" | "land" | "bump" | "warn"}
+ *   {type: "ark:talk", animal_id, slug}   Talk beside another animal: open that species' chat with ark_animal_id (phase 2)
  * To the host: {type: "ark:selected", animal, founders}, where founders is that animal's named founders and shared story
  * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
  * {display_name, handle, avatar_url}; null while the server's founder_names switch is off or the animal has none), so the
@@ -193,6 +194,7 @@
         else if (event.kind === "ended") tell({type: "ark:control", active: false, animal_id: event.animalId, reason: event.reason});
         else if (event.kind === "denied") tell({type: "ark:control", active: false, animal_id: event.animalId, denied: event.reason});
         else if (event.kind === "haptic") tell({type: "ark:haptic", kind: event.type});
+        else if (event.kind === "talk") tell({type: "ark:talk", animal_id: event.animalId, slug: event.slug || null});
       }
     });
     for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);

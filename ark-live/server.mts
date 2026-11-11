@@ -12,6 +12,8 @@
  *   ARK_LIVE_SNAPSHOT         development: a snapshot file (voyage_public_v2's shape) to know the animals by; read in place
  *   SUPABASE_URL, SUPABASE_ANON_KEY, ARK_LIVE_JWT   production store (the ark_live role)
  *   ARK_LIVE_ATLAS_CACHE      where baked atlases are kept (default ark-live/.cache)
+ *   ARK_LIVE_SNAPSHOT_URL     phase 2: the public snapshot (the site's /api/ark/voyage) the NPC world is built from
+ *                             (development reads ARK_LIVE_SNAPSHOT); without either, no shared NPC reactions
  */
 
 import {createServer, type IncomingMessage, type ServerResponse} from "node:http";
@@ -26,6 +28,10 @@ import {MemoryStore} from "@/ark-live/memory-store";
 import {Atlas} from "@/ark-live/terrain";
 import {ISLANDS, isIslandId, STRAITS, type IslandId} from "@/ark-live/islands";
 import {MSG} from "@/ark-live/protocol";
+import {NpcWorld, type Released} from "@/ark-live/npc-world";
+import {NpcReactions} from "@/ark-live/npc-reactions";
+import {decodeArkSnapshot} from "@/ark-scene/snapshot";
+import type {ArkAnimal} from "@/ark-scene/types";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {defaultHomePlots} from "@/ark-scene/props/home-layout";
 import type {ArkArea, ArkZone} from "@/ark-scene/types";
@@ -97,12 +103,59 @@ const {store, memory} = makeStore();
 
 // MARK: Rooms
 
+// MARK: Phase 2: the shared schedule near players
+
+let npc: {world: NpcWorld; reactions: NpcReactions} | null = null;
+let npcKey = "";
+
+async function snapshotAnimals(): Promise<ArkAnimal[] | null> {
+    try {
+        if (env.ARK_LIVE_SNAPSHOT_URL) return decodeArkSnapshot(await (await fetch(env.ARK_LIVE_SNAPSHOT_URL)).json())?.animals ?? null;
+        if (env.ARK_LIVE_SNAPSHOT && existsSync(env.ARK_LIVE_SNAPSHOT)) return decodeArkSnapshot(JSON.parse(readFileSync(env.ARK_LIVE_SNAPSHOT, "utf8")))?.animals ?? null;
+    } catch (error) {
+        log(`snapshot read failed: ${(error as Error).message}`);
+    }
+    return null;
+}
+
+async function releasedRecords(): Promise<Map<string, Released>> {
+    const out = new Map<string, Released>();
+    let rows: Array<{animal_id: string; plan: Released["plan"]; home?: Released["home"]}> = [];
+    if (memory) rows = memory.publicStates("wild") as never;
+    else if (env.SUPABASE_URL && env.SUPABASE_ANON_KEY) {
+        try {
+            const res = await fetch(`${env.SUPABASE_URL.replace(/\/+$/, "")}/rest/v1/rpc/voyage_animal_states_v1`, {method: "POST", headers: {"content-type": "application/json", apikey: env.SUPABASE_ANON_KEY, authorization: `Bearer ${env.SUPABASE_ANON_KEY}`}, body: JSON.stringify({p_island: "wild"})});
+            if (res.ok) rows = (await res.json()) as never;
+        } catch {
+            // (Next minute.)
+        }
+    }
+    for (const r of rows) if (r && r.plan) out.set(r.animal_id, {plan: r.plan, home: r.home ?? null});
+    return out;
+}
+
+/** (Re)build the NPC world when the animals aboard change (a second or more of work, off the tick's way). */
+async function refreshNpc(): Promise<void> {
+    const animals = await snapshotAnimals();
+    if (!animals?.length) return;
+    const key = animals.map((a) => `${a.id}:${a.slot ?? ""}:${a.slot_rank ?? ""}`).sort().join(",");
+    if (key !== npcKey) {
+        const started = Date.now();
+        const sampler = worldSampler();
+        const world = new NpcWorld(animals, sampler);
+        npc = {world, reactions: new NpcReactions(world, sampler)};
+        npcKey = key;
+        log(`npc world: ${world.size()} scheduled animals in ${((Date.now() - started) / 1000).toFixed(1)} s`);
+    }
+    npc?.world.setReleased(await releasedRecords());
+}
+
 const epochBase = Date.now();
 const rooms = new Map<IslandId, Room>();
 const userSessions = new Map<string, {island: IslandId; sessionId: string}>();
 const islands: IslandId[] = (env.ARK_LIVE_ISLANDS ?? "wild").split(",").filter(isIslandId);
 for (const island of islands) {
-    rooms.set(island, new Room({island, terrain: loadAtlas(island), ticketKey, store, now: Date.now, epochBase, straits: STRAITS, peers: () => rooms, userSessions, log}));
+    rooms.set(island, new Room({island, terrain: loadAtlas(island), ticketKey, store, now: Date.now, epochBase, straits: STRAITS, peers: () => rooms, userSessions, log, npc: () => (island === "wild" ? npc : null)}));
 }
 
 // MARK: HTTP
@@ -213,6 +266,9 @@ function attach(ws: WsConnection, initial: Room, tier: string | null): void {
 const timer = setInterval(() => {
     for (const room of Array.from(rooms.values())) room.tick();
 }, 100);
+
+setTimeout(() => void refreshNpc(), 1000);
+setInterval(() => void refreshNpc(), 60_000);
 
 server.listen(PORT, () => log(`ark-live listening on :${PORT} (${DEV ? "development" : "production store"}; islands ${islands.join(", ")})`));
 

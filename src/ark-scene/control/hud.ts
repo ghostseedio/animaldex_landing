@@ -32,6 +32,7 @@ export type ControlWords = {
     cross: string;
     turnBack: string;
     crossing: string;
+    talk: string;
     released: Record<string, string>;
     rotate: string;
     keys: string;
@@ -77,6 +78,7 @@ export const CONTROL_WORDS_EN: ControlWords = {
     cross: "Cross to the other island",
     turnBack: "Turn back",
     crossing: "Crossing the strait",
+    talk: "Talk",
     released: {
         player: "Back to its own life",
         session_limit: "It needs to rest now",
@@ -125,6 +127,8 @@ export class ControlHud {
     private stickOrigin = {x: 0, y: 0};
     private readonly touch: boolean;
     private crossing = false;
+    private readonly talkButton: HTMLButtonElement;
+    onTalk: (() => void) | null = null;
     onRelease: (() => void) | null = null;
     onView: (() => void) | null = null;
     onCross: (() => void) | null = null;
@@ -151,7 +155,11 @@ export class ControlHud {
         this.crossButton = el("button", PILL + "pointer-events:auto;display:none;", words.cross);
         this.crossButton.type = "button";
         this.crossButton.addEventListener("click", () => (this.crossing ? this.onTurnBack?.() : this.onCross?.()));
-        foot.append(this.crossButton, this.line, this.bar);
+        this.talkButton = el("button", PILL + "pointer-events:auto;display:none;background:rgba(185,247,90,.9);color:#10140f;", words.talk);
+        this.talkButton.type = "button";
+        this.talkButton.setAttribute("data-testid", "ark-control-talk");
+        this.talkButton.addEventListener("click", () => this.onTalk?.());
+        foot.append(this.talkButton, this.crossButton, this.line, this.bar);
         this.notice = el("div", "position:absolute;left:50%;top:30%;transform:translateX(-50%);font:600 14px system-ui,sans-serif;color:#fff;background:rgba(20,24,22,.55);padding:8px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;");
         this.hint = el("div", `position:absolute;left:50%;transform:translateX(-50%);bottom:calc(${insets.bottom}px + 70px + env(safe-area-inset-bottom));font:500 12px system-ui,sans-serif;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.7);transition:opacity 1s;`, this.touch ? "" : words.keys);
         setTimeout(() => (this.hint.style.opacity = "0"), 7000);
@@ -249,6 +257,11 @@ export class ControlHud {
         this.line.textContent = text;
         this.time.textContent = fill(w.left, {time: `${Math.floor(m.sessionLeft / 60)}:${String(Math.floor(m.sessionLeft % 60)).padStart(2, "0")}`});
         if (!this.crossing) this.crossButton.style.display = m.flags & METER_FLAG.CAN_CROSS ? "block" : "none";
+    }
+
+    /** Phase 2: Talk shows while another animal is within reach (the server says so). */
+    setTalk(ready: boolean): void {
+        this.talkButton.style.display = ready ? "block" : "none";
     }
 
     setCrossing(active: boolean, canTurnBack: boolean): void {

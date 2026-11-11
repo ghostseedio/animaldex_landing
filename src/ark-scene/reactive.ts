@@ -112,6 +112,12 @@ export type ReactiveWorld = {
     night: number;
     weather: ReactiveWeather;
     camera: Vec3 | null;
+    /**
+     * Where the layer works when there is no viewer's camera to centre it (player control's server, phase 2: the
+     * controlled animals): the animals within the budget's radius of any of these points react; unlike the camera,
+     * they are not something to look at or flee. Absent: the camera.
+     */
+    focus?: ReadonlyArray<{x: number; z: number}>;
     /** 0 blocked … 1 clear: terrain and dense vegetation between two points (eye heights). */
     sight?: (from: Vec3, to: Vec3) => number;
     /** The nearest refuge of a kind within r of a point, or null. */
@@ -546,9 +552,10 @@ export class ReactiveLayer {
         }
         this.camPrev = cam ? {...cam} : null;
         const byId = new Map(inputs.map((i) => [i.id, i]));
-        const near = cam
+        const focus = world.focus && world.focus.length ? world.focus : cam ? [cam] : [];
+        const near = focus.length
             ? inputs
-                  .map((i) => ({i, d: Math.hypot(i.shared.x - cam.x, i.shared.z - cam.z)}))
+                  .map((i) => ({i, d: Math.min(...focus.map((f) => Math.hypot(i.shared.x - f.x, i.shared.z - f.z)))}))
                   .filter((c) => c.d <= this.budget.radius)
                   .sort((a, b) => a.d - b.d || (a.i.id < b.i.id ? -1 : 1))
                   .slice(0, this.budget.agents)

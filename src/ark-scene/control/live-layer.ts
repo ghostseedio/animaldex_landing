@@ -42,7 +42,14 @@ export type LiveEvents = {
     onNotice?: (key: string) => void;
     onCrossing?: (phase: string, reason?: string) => void;
     onControlledSet?: (ids: ReadonlySet<string>) => void;
+    /** Phase 2: the animal the controller's own is close enough to talk to (null: none). */
+    onTalkReady?: (animalId: string | null) => void;
 };
+
+/** A server-shared NPC reaction (phase 2), eased from the last one over a fifth of a second. */
+export type NpcReaction = {dx: number; dz: number; dyaw: number; doing: number; alarm: number};
+const NPC_FRESH_MS = 600;
+const NPC_EASE_MS = 200;
 
 export type LiveStatus = "connecting" | "open" | "closed" | "slow";
 
@@ -80,6 +87,8 @@ export class LiveLayer {
     private terrain: Terrain | null = null;
     private readonly island: IslandId;
     lastMeter: MeterMessage | null = null;
+    private readonly npcTable: string[] = [];
+    private readonly npcs = new Map<string, {from: NpcReaction; to: NpcReaction; at: number}>();
 
     constructor(private readonly o: LiveOptions, private readonly events: LiveEvents = {}) {
         this.island = o.island ?? "wild";
@@ -173,6 +182,16 @@ export class LiveLayer {
             case "correction":
                 this.onCorrection(d.correction);
                 return;
+            case "npc": {
+                const now = Date.now();
+                for (const e of d.npc.offsets) {
+                    const id = this.npcTable[e.idx];
+                    if (!id) continue;
+                    const from = this.npcReaction(id, now) ?? {dx: 0, dz: 0, dyaw: 0, doing: e.doing, alarm: 0};
+                    this.npcs.set(id, {from, to: {dx: e.dx, dz: e.dz, dyaw: e.dyaw, doing: e.doing, alarm: e.alarm}, at: now});
+                }
+                return;
+            }
             case "meter":
                 this.lastMeter = d.meter;
                 if (this.own) this.own.meter = d.meter;
@@ -240,6 +259,12 @@ export class LiveLayer {
             }
             case "notice":
                 this.events.onNotice?.(m.key);
+                return;
+            case "npcs":
+                m.ids.forEach((id, i) => (this.npcTable[m.base + i] = id));
+                return;
+            case "talk-ready":
+                this.events.onTalkReady?.(m.animalId);
                 return;
             case "crossing":
                 this.events.onCrossing?.(m.phase, m.reason);
@@ -362,6 +387,26 @@ export class LiveLayer {
         const at = track.at(this.serverNow() - INTERP_DELAY_MS[this.o.tier]);
         if (!at) return null;
         return {x: at.x, y: at.y, z: at.z, yaw: at.yaw, pitch: 0, roll: at.roll, mode: at.mode, clip: at.stale ? "idle" : at.clip, speed: at.stale ? 0 : at.speed, own: false, flags: at.flags};
+    }
+
+    /**
+     * Phase 2: how an NPC reacts now, as the server worked it out for everyone (eased between its 5 Hz updates); null
+     * when the server says nothing about it (its own local layer then, as before).
+     */
+    npcReaction(id: string, now = Date.now()): NpcReaction | null {
+        const r = this.npcs.get(id);
+        if (!r) return null;
+        if (now - r.at > NPC_FRESH_MS) {
+            this.npcs.delete(id);
+            return null;
+        }
+        const k = Math.min((now - r.at) / NPC_EASE_MS, 1);
+        return {dx: r.from.dx + (r.to.dx - r.from.dx) * k, dz: r.from.dz + (r.to.dz - r.from.dz) * k, dyaw: r.from.dyaw + (r.to.dyaw - r.from.dyaw) * k, doing: r.to.doing, alarm: r.to.alarm};
+    }
+
+    /** The controller's animal holds still while its player talks (design §6.3). */
+    setTalking(active: boolean): void {
+        this.send({t: "talking", active});
     }
 
     /** A watcher's view centre (the server sends it the nearest controlled animals). */

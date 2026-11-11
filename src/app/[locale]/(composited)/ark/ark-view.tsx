@@ -526,6 +526,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         } else if (event.kind === "denied") {
             setControlStarting(false);
             setControlNote(ARK_CONTROL_WORDS.denied[event.reason] ?? ARK_CONTROL_WORDS.denied.other);
+        } else if (event.kind === "talk") {
+            // Talk (phase 2): that animal's own chat, the server deciding from its Ark id whose it is (visitor rules).
+            if (event.slug) window.open(`/talk/${encodeURIComponent(event.slug)}?ark=${encodeURIComponent(event.animalId)}`, "_blank", "noopener");
         } else if (event.kind === "ended") {
             setControlling(null);
             setControlNote(ARK_CONTROL_WORDS.ended[event.reason] ?? ARK_CONTROL_WORDS.ended.player);

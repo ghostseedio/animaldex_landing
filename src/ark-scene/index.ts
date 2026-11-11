@@ -166,6 +166,7 @@ import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {arkClockOffsetMs} from "@/ark-scene/shared-clock";
 import {PlayerControl, controlRigClip, type LiveTier} from "@/ark-scene/control";
+import {REACTIVE_ACTIONS} from "@/ark-live/npc-reactions";
 import type {CameraPose} from "@/ark-scene/control/camera";
 import {MODES, type Clip, type Mode, type StartPose} from "@/ark-live/protocol";
 import {evalPlan, planEnd, type ReleasePlan} from "@/ark-live/plan-eval";
@@ -2153,9 +2154,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reach = budget.radius + budget.reach;
         const inputs: ReactiveInput[] = [];
         const byId = new Map<string, (typeof list)[number]>();
+        // Phase 2: NPCs near players react as the server worked it out, the same for every viewer; never locally too.
+        const shared: Array<{c: (typeof list)[number]; out: ReactiveOut}> = [];
         for (const c of list) {
             const e = c.entry;
             e.reactive = null;
+            const r = control?.npcReaction(e.animal.id) ?? null;
+            if (r) {
+                const action = (REACTIVE_ACTIONS[r.doing] ?? "alert") as ReactiveOut["action"];
+                shared.push({c, out: {dx: r.dx, dz: r.dz, bodyYaw: r.dyaw, headYaw: 0, headPitch: 0, headWeight: 0, crouch: action === "freeze" || action === "stalk" ? 0.6 : 0, action, called: false, alarmed: r.alarm, looking: null}});
+                continue;
+            }
             // (Animals under control are neither actors nor stimuli of the local layer: phase 2's server reactions are.)
             if (!e.sched || e.micro || e.visitor || e.place.burrow || c.distance > reach || control?.controlledIds().has(e.animal.id)) continue;
             const intel = intelProfile(e.animal.model_slug, null, e.stats.intelligence);
@@ -2190,27 +2199,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Nothing near, or the world's sampler still being built a slice at a time (`worldSamplerReady` on the behaviour
         // lane's 67d6ddf3; asking for it now would finish the build in one stall): the layer waits a frame.
         const samplerReady = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
-        if (!inputs.length || (samplerReady && !samplerReady())) {
+        if (samplerReady && !samplerReady()) {
             reactiveMs = performance.now() - t0;
             return;
         }
         const sampler = worldSampler();
-        reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
-        reactiveQueries.samples = budget.sightSamples;
-        const queries = reactiveQueries;
-        const out = reactive.step(inputs, {
-            now: worldMs() / 1000,
-            dt,
-            hours: hoursNow(),
-            night: lighting.daylight.night,
-            weather: reactiveWeather,
-            camera: {x: camera.position.x, y: camera.position.y, z: camera.position.z},
-            sight: queries.sight,
-            refuge: queries.refuge
-        });
-        out.forEach((o, id) => {
-            const c = byId.get(id);
-            if (!c) return;
+        /** A reaction onto the pose (local or shared): never into the water for a land animal, nor onto a shore for a water one. */
+        const applyReaction = (c: (typeof list)[number], o: ReactiveOut) => {
             c.entry.reactive = o;
             const pose = c.pose;
             if (o.dx || o.dz) {
@@ -2226,6 +2221,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             pose.yaw += o.bodyYaw;
             pose.base -= o.crouch * c.modelHeight * 0.08;
+        };
+        for (const {c, out} of shared) applyReaction(c, out);
+        if (!inputs.length) {
+            reactiveMs = performance.now() - t0;
+            return;
+        }
+        reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
+        reactiveQueries.samples = budget.sightSamples;
+        const queries = reactiveQueries;
+        const out = reactive.step(inputs, {
+            now: worldMs() / 1000,
+            dt,
+            hours: hoursNow(),
+            night: lighting.daylight.night,
+            weather: reactiveWeather,
+            camera: {x: camera.position.x, y: camera.position.y, z: camera.position.z},
+            sight: queries.sight,
+            refuge: queries.refuge
+        });
+        out.forEach((o, id) => {
+            const c = byId.get(id);
+            if (c) applyReaction(c, o);
         });
         reactiveMs = performance.now() - t0;
     };
@@ -5175,6 +5192,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             if (typeof document !== "undefined" && document.pointerLockElement) document.exitPointerLock?.();
         }
+        // Talk: the scene knows which kind it is (the host opens that species' chat with the Ark animal's id).
+        if (event.kind === "talk") event = {...event, slug: findEntry(event.animalId)?.animal.model_slug ?? null};
         options.onControl?.(event);
     };
     if (options.live?.url) {

@@ -92,6 +92,9 @@ async function controller(i: number, counter: Counter, stopAt: number): Promise<
                     ws.send(encodePing(Date.now() - epochBase));
                 } else if (m.t === "control-ok") {
                     state = startMover(m.start, ctx);
+                    // (The mover steps by the time that really passed, as the page does by its frame time: a timer that
+                    // fires late or early must not move the animal a fixed 100 ms worth.)
+                    let lastStep = Date.now();
                     const timer = setInterval(() => {
                         if (Date.now() > stopAt || !state) {
                             clearInterval(timer);
@@ -102,7 +105,8 @@ async function controller(i: number, counter: Counter, stopAt: number): Promise<
                         // A wandering walk: turn a little now and then, run sometimes.
                         heading += (Math.sin(Date.now() / 3000 + i) * 0.4) * 0.1;
                         const t = (Date.now() / 1000 + i) % 20;
-                        state = stepMover(state, {...NO_INPUT, dirX: Math.sin(heading), dirZ: Math.cos(heading), amount: 1, run: t > 12, takeoff: a.canFly && t > 5 && t < 5.1, vertical: a.canFly ? (t < 9 ? 0.5 : t > 16 ? -1 : 0) : 0, flap: t < 9}, 0.1, ctx);
+                        state = stepMover(state, {...NO_INPUT, dirX: Math.sin(heading), dirZ: Math.cos(heading), amount: 1, run: t > 12, takeoff: a.canFly && t > 5 && t < 5.1, vertical: a.canFly ? (t < 9 ? 0.5 : t > 16 ? -1 : 0) : 0, flap: t < 9}, Math.min((Date.now() - lastStep) / 1000, 0.25), ctx);
+                        lastStep = Date.now();
                         seq = (seq + 1) & 0xffff;
                         ws.send(encodePose({...state, seq, t: Date.now() - epochBase, flags: 0}, unit));
                         if (seq % 100 === 0) ws.send(encodePing(Date.now() - epochBase));

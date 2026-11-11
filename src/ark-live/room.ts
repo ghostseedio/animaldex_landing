@@ -43,6 +43,9 @@ import {homeOverrideOf, homeRadius, planRelease, type HomeDisc, type HomeOverrid
 import type {ReleasePlan} from "@/ark-live/plan-eval";
 import {arrivalPoint, corridorToIsland, crossingDone, crossingStep, preCheck, rescueStep, startCrossing, type Crossing} from "@/ark-live/crossing";
 import {ZONE_SITES} from "@/ark-scene/world";
+import {encodeNpc, type NpcOffset} from "@/ark-live/protocol";
+import {actionCode, NPC_HZ, type NpcReactions} from "@/ark-live/npc-reactions";
+import type {NpcWorld} from "@/ark-live/npc-world";
 import {ZONE_REGION, type ArkArea, type ArkZone} from "@/ark-scene/types";
 
 export interface ClientLink {
@@ -133,6 +136,8 @@ export type RoomOptions = {
      * (`src/ark-scene/positions/`), else a stored record's settled disc or its zone's site (`defaultHomeOf`).
      */
     homeOf?: HomeLookup;
+    /** Phase 2: the shared schedule and reactions near players, once built (null until then, or without a snapshot). */
+    npc?: () => {world: NpcWorld; reactions: NpcReactions} | null;
     log?: (line: string) => void;
 };
 
@@ -220,6 +225,12 @@ export class Room {
     private nextClient = 1;
     private lastHeartbeat = 0;
     private traceBuffer: TraceRow[] = [];
+    // Phase 2: the NPCs reacting near players, by a room-wide index (the `npcs` table each viewer keeps).
+    private readonly npcIdx = new Map<string, number>();
+    private readonly npcIds: string[] = [];
+    private lastNpcAt = 0;
+    private readonly talkReady = new Map<string, string | null>();
+    private lastTalkAt = 0;
     readonly counters = {posesIn: 0, accepted: 0, corrections: 0, snapshots: 0, bytesOut: 0, bytesIn: 0, messagesOut: 0, tickMs: 0, ticks: 0, releases: 0, starts: 0, denied: 0};
     /** Corrections by reason and species (the audit; a pattern of rejected sprints shows here). */
     readonly correctionReasons: Record<string, number> = {};
@@ -240,6 +251,7 @@ export class Room {
         this.clients.set(id, client);
         this.sendText(client, {t: "welcome", proto: PROTOCOL_VERSION, island: this.island, epochBase: this.o.epochBase, unit: this.unit, rate: SNAPSHOT_HZ[tier], aoi: AOI_CAP[tier], tier});
         for (const s of Array.from(this.sessions.values())) this.sendText(client, {t: "joined", idx: s.idx, animalId: s.animalId, slug: s.slug, island: this.island});
+        if (this.npcIds.length) this.sendText(client, {t: "npcs", base: 0, ids: this.npcIds.slice()});
         return id;
     }
 
@@ -804,6 +816,14 @@ export class Room {
             if (ids.length) this.o.store.heartbeat(ids).catch((error: Error) => this.o.log?.(`heartbeat failed: ${error.message}`));
         }
         this.sendSnapshots(now);
+        if (now - this.lastNpcAt >= 1000 / NPC_HZ - 5) {
+            this.lastNpcAt = now;
+            this.stepNpcs(now);
+        }
+        if (now - this.lastTalkAt >= 500) {
+            this.lastTalkAt = now;
+            this.stepTalk(now);
+        }
         const ended = typeof performance !== "undefined" ? performance.now() : Date.now();
         this.counters.tickMs += ended - started;
         this.counters.ticks++;
@@ -854,6 +874,71 @@ export class Room {
             });
             this.counters.snapshots++;
             this.sendBinary(client, encodeSnapshot({tick: now - this.o.epochBase, ack: own ? own.motion.last.seq : 0, flags: 0, entities}, this.unit));
+        }
+    }
+
+    // MARK: Phase 2: shared reactions and Talk
+
+    /** The NPCs near players react once, here, for everyone (design §3.5): their offsets go to the viewers near them. */
+    private stepNpcs(now: number): void {
+        const npc = this.o.npc?.() ?? null;
+        if (!npc) return;
+        const controlled = Array.from(this.sessions.values())
+            .filter((s) => !s.crossing)
+            .map((s) => ({id: s.animalId, x: s.motion.last.x, y: s.motion.last.y, z: s.motion.last.z, yaw: s.motion.last.yaw, speed: now - s.motion.last.received > 400 ? 0 : s.motion.last.speed, mode: s.motion.last.mode}));
+        if (!controlled.length) return;
+        const reactions = npc.reactions.step(controlled, now / 1000, 1 / NPC_HZ);
+        if (!reactions.length) return;
+        const fresh: string[] = [];
+        for (const r of reactions) {
+            if (this.npcIdx.has(r.id)) continue;
+            this.npcIdx.set(r.id, this.npcIds.length);
+            this.npcIds.push(r.id);
+            fresh.push(r.id);
+        }
+        if (fresh.length) this.broadcastText({t: "npcs", base: this.npcIds.length - fresh.length, ids: fresh});
+        for (const client of Array.from(this.clients.values())) {
+            const own = client.sessionId ? this.sessions.get(client.sessionId) ?? null : null;
+            const centre = own ? this.drawnPose(own) : client.view;
+            const near = reactions
+                .map((r) => ({r, d: centre ? Math.hypot(r.pose.x - centre.x, r.pose.z - centre.z) : 0}))
+                .filter((e) => e.d <= 120)
+                .sort((a, b) => a.d - b.d)
+                .slice(0, 60);
+            if (!near.length) continue;
+            const offsets: NpcOffset[] = near.map(({r}) => ({idx: this.npcIdx.get(r.id)!, dx: r.out.dx, dz: r.out.dz, dyaw: r.out.bodyYaw, doing: actionCode(r.out.action), alarm: r.out.alarmed, look: r.out.looking && this.byAnimal.has(r.out.looking) ? 1 : 0}));
+            this.sendBinary(client, encodeNpc({tick: now - this.o.epochBase, offsets}));
+        }
+    }
+
+    /** Talk (design §6.3): the nearest animal within 4 m + half both lengths of a controller's own, told when it changes. */
+    private stepTalk(now: number): void {
+        const npc = this.o.npc?.() ?? null;
+        for (const s of Array.from(this.sessions.values())) {
+            const client = s.clientId !== null ? this.clients.get(s.clientId) : null;
+            if (!client || s.crossing) continue;
+            const me = s.motion.last;
+            let best: {id: string; d: number} | null = null;
+            const consider = (id: string, x: number, z: number, slug: string) => {
+                if (id === s.animalId) return;
+                const reach = 4 + (s.a.D + abilitiesOf(slug).D) / 2;
+                const d = Math.hypot(x - me.x, z - me.z);
+                if (d <= reach && (!best || d < best.d)) best = {id, d};
+            };
+            for (const other of Array.from(this.sessions.values())) if (other !== s && !other.crossing) consider(other.animalId, other.motion.last.x, other.motion.last.z, other.slug);
+            if (npc) {
+                for (const id of npc.world.candidates(me.x, me.z, 12)) {
+                    if (this.byAnimal.has(id)) continue;
+                    const pose = npc.world.poseAt(id, now / 1000);
+                    const slug = npc.world.slugOf(id);
+                    if (pose && slug) consider(id, pose.x, pose.z, slug);
+                }
+            }
+            const chosen: string | null = best ? (best as {id: string}).id : null;
+            if (this.talkReady.get(s.id) !== chosen) {
+                this.talkReady.set(s.id, chosen);
+                this.sendText(client, {t: "talk-ready", animalId: chosen});
+            }
         }
     }
 
