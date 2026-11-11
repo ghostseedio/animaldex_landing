@@ -13,6 +13,12 @@
  *   options: --places island_far,house_fields,...  --measure 3000  --port 3216  --desktop-quality high
  *            --phone-quality auto  --gpu metal|swiftshader  --out <dir>
  *
+ * On a real phone (the owner's mid-range Android, same Wi-Fi as this Mac): build and serve only, on every interface:
+ *   node scripts/ark-scale-run.mjs --serve-only --host 0.0.0.0
+ *   then open http://<this Mac's LAN IP>:3216/golden.html?population=population-1x.json (or -3x, or no query for the
+ *   130-animal fixture) in Chrome, or in the app's WebView. window.__arkGolden.measure(3000) and .timing() give the
+ *   numbers in remote DevTools (chrome://inspect).
+ *
  * Devices (as scripts/ark-golden-shots.mjs):
  *   desktop  1440x900 DPR 1, no throttle, host GPU, quality pinned (default high)
  *   phone    360x800 DPR 2, Android UA, 8 cores / 4 GB reported, 4x CPU throttle, the tier the scene picks
@@ -37,6 +43,7 @@ const DEVICES = {
         userAgent: "Mozilla/5.0 (Linux; Android 14; SM-A356B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
     }
 };
+const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 const label = arg("label", "scale");
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "scale", label)));
 const devices = arg("devices", "desktop,phone").split(",").filter((d) => DEVICES[d]);
@@ -81,8 +88,13 @@ const server = createServer((request, response) => {
     const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".json") ? "application/json" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".glb") ? "model/gltf-binary" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
-await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+const host = arg("host", "127.0.0.1");
+await new Promise((resolve) => server.listen(port, host, resolve));
 const base = `http://127.0.0.1:${port}`;
+if (process.argv.includes("--serve-only")) {
+    log("serving", site, "on", `${host}:${port}`, "- open /golden.html?population=population-1x.json; Ctrl-C to stop");
+    await new Promise(() => {});
+}
 
 function cachedChromium() {
     const cache = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
@@ -102,7 +114,6 @@ const browser = await chromium.launch({
     headless: true,
     args: ["--headless=new", ...gpuArgs, "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--enable-precise-memory-info"]
 });
-const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 const results = [];
 const loads = [];
 
