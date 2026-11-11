@@ -117,9 +117,18 @@ const FIELD_OF: Record<Exclude<Field, "activity" | "sociality" | "ambient" | "b1
 };
 type TextField = keyof typeof FIELD_OF;
 
-/** The clause (between sentence or comma breaks, at most ~90 characters) round a match: a verbatim substring of the text. */
-function clause(text: string, index: number, length: number): string {
-    const sentenceStart = Math.max(text.lastIndexOf(". ", index) + 2, text.lastIndexOf("; ", index) + 2, 0);
+/**
+ * The clause (between sentence or comma breaks, at most ~90 characters) round a match: a verbatim substring of the
+ * text, always whole words. (It used to drop a field's first letter, "nsects": a break not found is index -1, and
+ * -1 + 2 is 1. Fixed 2026-11-11.)
+ */
+export function clause(text: string, index: number, length: number): string {
+    // Just after the last break before the match (the field's start when there is none).
+    const after = (stop: string) => {
+        const at = index > 0 ? text.lastIndexOf(stop, index - 1) : -1;
+        return at < 0 ? 0 : at + stop.length;
+    };
+    const sentenceStart = Math.max(after(". "), after("; "));
     let sentenceEnd = text.length;
     for (const stop of [". ", "; "]) {
         const at = text.indexOf(stop, index + length);
@@ -128,13 +137,18 @@ function clause(text: string, index: number, length: number): string {
     let start = sentenceStart;
     let end = sentenceEnd;
     if (end - start > 90) {
-        const comma = text.lastIndexOf(", ", index);
-        if (comma + 2 > start && index - (comma + 2) < 60) start = comma + 2;
-        const after = text.indexOf(", ", index + length);
-        if (after >= 0 && after < end) end = after;
+        const comma = after(", ");
+        if (comma > start && index - comma < 60) start = comma;
+        const next = text.indexOf(", ", index + length);
+        if (next >= 0 && next < end) end = next;
         if (end - start > 110) {
-            start = Math.max(start, index - 40);
-            end = Math.min(end, index + length + 50);
+            // A window round the match, widened to whole words.
+            let from = Math.max(start, index - 40);
+            while (from > start && /\w/.test(text[from - 1])) from--;
+            let to = Math.min(end, index + length + 50);
+            while (to < end && /\w/.test(text[to])) to++;
+            start = from;
+            end = to;
         }
     }
     return text.slice(start, end).trim().replace(/[.;,]$/, "");
@@ -145,7 +159,9 @@ function clause(text: string, index: number, length: number): string {
  * The words before a match that make it about something else: a prey's colony, an insect's nest, three pairs of eyes,
  * a negation ("little gliding"), new colonies started by people.
  */
-const NOT_ITS_OWN = /\b(weaver|weavers'?|ant|ants'?|termite|termites'?|bee|bees'?|wasp|wasps'?|insect|insects'?|bird|birds'?|seabird|prey|new|introduced|three|four|two|eight|six|little|no|rarely|seldom|without|not|never|cannot|can't|unable to|too heavy to)\s+$/i;
+const NOT_ITS_OWN = /\b(weaver|weavers'?|ant|ants'?|termite|termites'?|bee|bees'?|wasp|wasps'?|insect|insects'?|bird|birds'?|seabird|prey|new|introduced|three|four|two|eight|six|little|no|rarely|seldom|without|not|never|cannot|can't|unable to|too heavy to|follow\w*|hunt\w*|target\w*|raid\w*|attack\w*|chas\w*|stalk\w*|ambush\w*|feral|escaped|established)\s+(\w+\s+)?$/i;
+/** What follows a match that makes it about something else: "schooling fish", "swarms of krill", "colonies inside trunks". */
+const NOT_ITS_OWN_AFTER = /^\s+(of\s+|inside\s+|within\s+)?(\w+\s+)?(ants?|termites?|bees?|wasps?|krill|fish|baitfish|prey|plankton|copepods|insects?|trunks|logs|wood|sardines|anchov\w*|squid|locusts?)\b/i;
 
 /** The first field (in order) whose text matches, with its phrase (a match about something else is passed over). */
 function find(row: Row, fields: TextField[], pattern: RegExp): {field: TextField; phrase: string; match: string} | null {
@@ -155,7 +171,8 @@ function find(row: Row, fields: TextField[], pattern: RegExp): {field: TextField
         if (!text) continue;
         global.lastIndex = 0;
         for (let m = global.exec(text); m; m = global.exec(text)) {
-            if (NOT_ITS_OWN.test(text.slice(Math.max(0, m.index - 24), m.index))) continue;
+            if (NOT_ITS_OWN.test(text.slice(Math.max(0, m.index - 32), m.index))) continue;
+            if (NOT_ITS_OWN_AFTER.test(text.slice(m.index + m[0].length, m.index + m[0].length + 40))) continue;
             return {field, phrase: clause(text, m.index, m[0].length), match: m[0].toLowerCase()};
         }
     }
@@ -187,7 +204,8 @@ function planOf(row: Row): {plan: string; src: Source} {
 type Activity = "diurnal" | "nocturnal" | "crepuscular" | "any";
 const TIME_WORDS: Array<[RegExp, Activity]> = [
     [/^(anytime|any time|day and night|all day)/i, "any"],
-    [/dawn and dusk|early morning and (late afternoon|evening)|morning and (late afternoon|evening)|twilight/i, "crepuscular"],
+    // ("Morning and late afternoon" is a day animal busy at both ends of the day: `rhythmOf`'s two peaks, not twilight.)
+    [/dawn and dusk|dusk and dawn|twilight/i, "crepuscular"],
     [/^(night|nighttime|night-time|evening and night|dusk and night|after dark|late evening)/i, "nocturnal"],
     [/^(day|daytime|daylight|morning|midday|afternoon|late morning|early morning|warm|sunny)/i, "diurnal"]
 ];
@@ -222,26 +240,53 @@ function rhythmOf(row: Row, activity: Activity): {value: string[]; src: Source[]
     return {value, src};
 }
 
-type Roost = "tree" | "tree_hole" | "cliff" | "cave" | "crevice" | "rocks" | "burrow" | "den" | "ground_cover" | "reeds" | "water" | "bottom" | "reef" | "leaf" | "bark" | "wall" | "nest" | "attached" | "open";
+type Roost = "tree" | "tree_hole" | "cliff" | "cave" | "crevice" | "rocks" | "burrow" | "den" | "ground_cover" | "reeds" | "water" | "bottom" | "reef" | "leaf" | "bark" | "wall" | "nest" | "attached" | "open" | "shore";
 const ROOST_RULES: Array<[RegExp, Roost]> = [
-    [/\b(tree[- ]?holes?|hollows?|tree cavit\w*|cavities|nest[- ]?holes?|hollow trees?|hollow logs?)\b/i, "tree_hole"],
-    [/\b(burrows?|underground|tunnels?|dig(s|ging)? (itself|its own)|holes? in the (ground|soil|sand))\b/i, "burrow"],
+    // (A tree's hollow only: "scraped hollows", "a snow hollow" and "hollow logs" are on the ground, below.)
+    [/\b(tree[- ]?holes?|tree hollows?|hollow (trees?|trunks?|branch\w*|limbs?)|tree cavit\w*|cavities|nest[- ]?holes?|holes? in (a |the )?trees?)\b/i, "tree_hole"],
+    [/\b(burrows?|underground|below (the )?ground|in(to)? the soil|tunnels?|dig(s|ging)? (itself|its own)|holes? in the (ground|soil|sand))\b/i, "burrow"],
     [/\b(dens?|lairs?)\b/i, "den"],
     [/\bcaves?\b|\bmines?\b|\broof spaces?\b|\battics?\b/i, "cave"],
     [/\b(crevices?|cracks?|under (rocks?|stones?|logs?)|rock piles?|beneath (rocks?|stones?))\b/i, "crevice"],
     [/\b(cliffs?|ledges?|rock faces?)\b/i, "cliff"],
     [/\b(buried|burying|bur(y|ies) (itself|themselves)|in (soft )?(mud|sand|silt)|on the bottom|on the (sea|river|lake) ?(bed|floor|bottom))\b/i, "bottom"],
     [/\b(among (the )?(coral|tentacles)|anemone|reef crevice|in the reef|on the reef)\b/i, "reef"],
-    [/\b(undersides? of (a )?leaf|undersides? of leaves|on (a )?leaf|on leaves|among leaves|in (the )?foliage)\b/i, "leaf"],
+    [/\b(undersides? of (a )?leaf|undersides? of leaves|on (a )?leaf|on leaves|among leaves|in (the )?foliage|(in|into|under) (the )?(leaf litter|moss))\b/i, "leaf"],
     [/\b(bark|trunks?)\b/i, "bark"],
     [/\b(reeds?|reedbeds?|marsh vegetation)\b/i, "reeds"],
     [/\b(on (the )?water|on or (beside|near) (the )?water|at sea|on the sea|rafts?|floating|afloat|on open water|on the surface)\b/i, "water"],
     [/\b(rocks|boulders|lava|wrecks|stones)\b/i, "rocks"],
-    [/\b(in trees|in a tree|roosts? (high )?in (trees|a tree|the canopy)|branches|treetops?|canopy|perch(es)? (in|on) (trees|branches))\b/i, "tree"],
+    [/\b(in (\w+ )?trees|in a (\w+ )?tree|roosts? (high )?in (trees|a tree|the canopy)|(?<!under (?:\w+ ){0,2})branches|treetops?|canopy|perch(es)? (in|on) (trees|branches)|tree forks?|tree crowns?|conifers)\b/i, "tree"],
     [/\b(walls?|on buildings|in buildings|houses|eaves|roof spaces?)\b/i, "wall"],
-    [/\b(on the ground|ground roost|scrapes?|in (dense |thick |tall )?(grass|cover|undergrowth|tussocks?|vegetation|thickets?|shrubs?|bushes|bamboo)|under (cover|bushes|shrubs))\b/i, "ground_cover"],
+    [/\b(on the ground|ground roost|scrapes?|in (dense |thick |tall )?(grass|cover|undergrowth|tussocks?|vegetation|thickets?|shrubs?|bushes|bamboo)|under (cover|bushes|shrubs)|under (\w+ ){0,2}branches|(in|inside|among|under) (dense |thick |low |tall )?(gorse|brambles?|heather|scrub|brush)|hollow logs?|fallen logs?|hollows?)\b/i, "ground_cover"],
     [/\b(sleeping nests?|nests?)\b/i, "nest"]
 ];
+
+/**
+ * A sleep text's clauses (split at sentence ends, semicolons, colons and "while/before/after/then/but"; not at commas,
+ * which split lists), in order, with where each starts; a clause about feeding, basking or breeding and not about
+ * resting is left out ("foraging on the ground", "basking on rocks", "hunting over shelves, walls and bedding").
+ */
+const FEEDING = /\b(forag\w*|feed\w*|fed|hunt\w*|graz\w*|brows\w*|eat\w*|walking|catch\w*|display\w*|bask\w*|sunn\w*|warm(s|ing)? up|breed\w*|eggs?|chicks?|young|incubat\w*)\b/i;
+const RESTING = /\b(roost\w*|rest\w*|sleep\w*|slept|shelter\w*|hid(e|es|ing|den)|retreat\w*|lie[sd]? up|lying up|lies|bed(s|ded)? down|settles?|stays?|spends?|spent|each night|for the night|overnight|spending|day is spent|dormant|inactive|torpor|hibernat\w*|wedg\w*|tucked|curled|holes? up|nest(s|ing)?|return(s|ing)? to|lives? in|lie[s]? still|lying still)\b/i;
+function restClauses(text: string): Array<{text: string; at: number}> {
+    const out: Array<{text: string; at: number}> = [];
+    const breaks = /(?<=[.;:])\s+|,?\s+(?:while|before|after|then|but|whereas)\s+/g;
+    let at = 0;
+    const push = (end: number) => {
+        const part = text.slice(at, end);
+        if (part.trim() && !(FEEDING.test(part) && !RESTING.test(part))) out.push({text: part, at});
+    };
+    for (let m = breaks.exec(text); m; m = breaks.exec(text)) {
+        push(m.index);
+        at = m.index + m[0].length;
+    }
+    push(text.length);
+    return out;
+}
+
+const BUILDINGS = /\b(houses?|buildings?|homes?|roofs?|eaves|sheds?|barns?|verandas?|ceilings?|windows?|attics?|lofts?|towns?|cities|city|gardens?|human)\b/i;
+const everything = (row: Row) => (Object.keys(FIELD_OF) as TextField[]).map((f) => FIELD_OF[f](row) ?? "").join(" ");
 
 function roostOf(row: Row, plan: string, layer: string, zone: string): {value: Roost; src: Source} {
     // Where it spends the night (or the day, for a night animal): its sleep text first, then where it lives.
@@ -249,17 +294,24 @@ function roostOf(row: Row, plan: string, layer: string, zone: string): {value: R
         for (const field of fields) {
             const text = FIELD_OF[field](row);
             if (!text) continue;
-            // In the sleep text only the sentences about resting count; in the others only "roost/rest/shelter/sleep ... in X".
-            const restText = field === "sleep" ? text : null;
-            for (const [pattern, roost] of ROOST_RULES) {
-                if (restText) {
-                    const m = pattern.exec(restText);
-                    if (m && !NOT_ITS_OWN.test(restText.slice(Math.max(0, m.index - 24), m.index))) return {value: roost, src: {field, phrase: clause(restText, m.index, m[0].length)}};
-                } else {
-                    const near = new RegExp(`\\b(roost|rests?|resting|shelter|sleep|hides?|hid|retreats?|spends? the (day|night))[^.]{0,50}${pattern.source}`, "i");
-                    const m = near.exec(text);
-                    if (m && !NOT_ITS_OWN.test(m[0].slice(0, m[0].length - (pattern.exec(m[0])?.[0].length ?? 0)).slice(-24))) return {value: roost, src: {field, phrase: clause(text, m.index, m[0].length)}};
+            // In the sleep text its clauses in order, leaving out the ones about feeding or breeding ("foraging on the
+            // ground", "breeding birds stay in the nest hole"); in the others only "roost/rest/shelter/sleep ... in X".
+            if (field === "sleep") {
+                for (const part of restClauses(text)) {
+                    for (const [pattern, roost] of ROOST_RULES) {
+                        // A wall is a building's (the mossy frog's "wet wall" of rock is not).
+                        if (roost === "wall" && !BUILDINGS.test(everything(row))) continue;
+                        const m = pattern.exec(part.text);
+                        if (m && !NOT_ITS_OWN.test(part.text.slice(Math.max(0, m.index - 24), m.index))) return {value: roost, src: {field, phrase: clause(text, part.at + m.index, m[0].length)}};
+                    }
                 }
+                continue;
+            }
+            for (const [pattern, roost] of ROOST_RULES) {
+                if (roost === "wall" && !BUILDINGS.test(everything(row))) continue;
+                const near = new RegExp(`\\b(roost|rests?|resting|shelter|sleep|hides?|hid|retreats?|spends? the (day|night))[^.]{0,50}${pattern.source}`, "i");
+                const m = near.exec(text);
+                if (m && !NOT_ITS_OWN.test(m[0].slice(0, m[0].length - (pattern.exec(m[0])?.[0].length ?? 0)).slice(-24))) return {value: roost, src: {field, phrase: clause(text, m.index, m[0].length)}};
             }
         }
     }
@@ -307,6 +359,10 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Phocoenidae: {social: "group"},
     Monodontidae: {social: "group"},
     Accipitridae: {social: "solitary"},
+    // Ants and termites: the colony's nest (underground, in a mound or in wood) where the text does not say.
+    Formicidae: {roost: "burrow"},
+    Termitidae: {roost: "burrow"},
+    Rhinotermitidae: {roost: "burrow"},
     Cyprinidae: {social: "school"},
     Clupeidae: {social: "school"},
     Scombridae: {social: "school"},
@@ -333,7 +389,16 @@ type Move = "walk" | "climb" | "perch" | "fly" | "swim" | "burrow" | "crawl" | "
 const SESSILE = /(?:^|-)(coral|sponge|anemone|barnacle|mussel|oyster|clam|scallop|sea-squirt|tunicate|sea-pen|sea-fan|hydroid|bryozoan|feather-star|tube-worm|fan-worm|cockle|limpet)(?:-|$)/;
 const CRAWLER = /(?:^|-)(snail|slug|worm|earthworm|leech|starfish|sea-star|urchin|sea-cucumber|nudibranch|chiton|whelk|periwinkle|conch|millipede|centipede|woodlouse|planarian|flatworm)(?:-|$)/;
 
-function movesOf(row: Row, plan: string, layer: string, mode: string, zone: string, rig: Rig | undefined): {primary: Move; also: Move[]; src: Record<string, Source>} {
+/** Lives in the trees: climbs first (a koala, a tree kangaroo, a sloth), not just now and then. */
+const ARBOREAL = /\b(arboreal|tree[- ]dwelling|anchored in trees|lives? in (the )?trees|spends? (most|much|nearly all|almost all) of (its|the|their) (life|lives|time) in (the )?(trees|canopy)|rarely (comes|descends) to the ground)\b/i;
+const WATER_SWIMMER = /(?:^|-)(shrimp|prawn|krill)(?:-|$)/;
+const WATER_WALKER = /(?:^|-)(shrimp|prawn|krill|lobster|crayfish|horseshoe-crab)(?:-|$)/;
+/** Hoofed and other big ground mammals: they never climb or roost in a tree. */
+const BIG_GROUND = /^(Artiodactyla|Perissodactyla|Proboscidea|Cetartiodactyla)$/;
+/** A bird's text that says it does not fly. */
+const FLIGHTLESS = /\b(flightless|cannot fly|can't fly|unable to fly|does not fly|never flies)\b/i;
+
+function movesOf(row: Row, plan: string, layer: string, mode: string, zone: string, rig: Rig | undefined, roost: Roost): {primary: Move; also: Move[]; src: Record<string, Source>} {
     const slug = row.slug!;
     const src: Record<string, Source> = {};
     const also = new Set<Move>();
@@ -389,6 +454,13 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
                 primary = layer === "underground" ? "burrow" : layer === "canopy" && (mode === "climb" || mode === "hang" || mode === "leap") ? "climb" : "walk";
                 src.move = {rule: `plan ${plan}, layer ${layer}${mode ? ` (${mode})` : ""}`};
         }
+    // Water crustaceans by name: shrimps and prawns swim (and walk the bottom); lobsters, crayfish and horseshoe crabs
+    // walk the bottom (`seabed`). Crabs are left to their text: many are land or shore crabs.
+    if (plan === "crustacean" && WATER_ZONES.has(zone) && WATER_SWIMMER.test(slug)) {
+        also.add("walk");
+        primary = "swim";
+        src.move = {rule: `a water crustacean (${WATER_SWIMMER.exec(slug)![1]}): swims`};
+    }
     // Seals, sea lions and walruses swim first and haul out.
     if (/^(Phocidae|Otariidae|Odobenidae)$/.test(row.family_name ?? "")) {
         also.add("walk");
@@ -441,6 +513,28 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         src.burrow = {field: dig.field, phrase: dig.phrase};
     }
     if (plan === "amphibian" && clips.has("leap")) also.add("hop");
+    // A walking bird (a dove, a pigeon, a tinamou, a secretarybird) still flies: up to its roost, away from danger.
+    if (plan === "walking_bird" && /Aves/.test(row.class_name ?? "") && !also.has("fly") && primary !== "fly") {
+        const grounded = find(row, ALL, FLIGHTLESS);
+        if (!grounded) {
+            also.add("fly");
+            src["move.fly"] = {rule: "plan walking_bird: a bird that flies"};
+        }
+    }
+    // A mammal of the trees climbs first (the koala's "anchored in trees"); one that sleeps in a tree climbs to it.
+    if ((plan === "quadruped" || plan === "primate") && primary === "walk") {
+        const trees = find(row, ["habitat", "sleep", "look", "traits", "facts", "spotlight"], ARBOREAL);
+        if (trees) {
+            also.add("walk");
+            primary = "climb";
+            src.move = {field: trees.field, phrase: trees.phrase};
+        }
+    }
+    const treeRoost = roost === "tree" || roost === "tree_hole" || roost === "bark" || (roost === "nest" && /\b(trees?|branch\w*|canopy|dreys?|tree cavit\w*)\b/i.test(FIELD_OF.sleep(row) ?? ""));
+    if (treeRoost && !BIG_GROUND.test(row.order_name ?? "") && !["fly", "climb", "swim", "sessile"].includes(primary) && !also.has("fly") && !also.has("climb") && ["quadruped", "primate", "lizard", "legless", "amphibian", "insect", "arachnid", "crustacean"].includes(plan)) {
+        also.add("climb");
+        src.climb = {rule: `roost ${roost}: climbs to it`};
+    }
     also.delete(primary);
     return {primary, also: [...also], src};
 }
@@ -470,7 +564,8 @@ function socialOf(row: Row, plan: string): {value: Social; src: Source} {
     if (stored === "group") {
         const own = kindFromText(row.sociality_phrase);
         if (own) return {value: own.kind, src: {field: "sociality", phrase: row.sociality_phrase ?? own.phrase}};
-        const hit = find(row, ALL, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"));
+        // (Not the diet text: its groups are the prey's, "small schooling fish".)
+        const hit = find(row, BEHAVIOUR_TEXT, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"));
         const kind = hit ? kindFromText(hit.phrase) : null;
         if (hit && kind) return {value: kind.kind, src: {field: hit.field, phrase: hit.phrase}};
         return {value: "group", src: {field: "sociality", phrase: row.sociality_phrase ?? "group"}};
@@ -481,7 +576,7 @@ function socialOf(row: Row, plan: string): {value: Social; src: Source} {
         if (kind) return {value: kind.kind, src: {field: group.field, phrase: group.phrase}};
     }
     // Insects and others gathering in numbers (the lanternfly's "large numbers"): a swarm.
-    const crowd = find(row, BEHAVIOUR_TEXT, /\b(aggregat\w+|in large numbers|in (huge |great )?numbers|gather(s|ing)? in (groups|numbers|masses))\b/i);
+    const crowd = find(row, BEHAVIOUR_TEXT, /\b(aggregat\w+|in large numbers|in (huge |great )?numbers|gather(s|ing)? in (groups|numbers|masses)|(several|many) (animals|individuals|adults) (often )?share|share (the same|a|one) (shelter|den|burrow|roost|nest|hollow))\b/i);
     if (crowd) return {value: ["insect", "flying_insect", "arachnid", "crustacean", "other"].includes(plan) ? "swarm" : "group", src: {field: crowd.field, phrase: crowd.phrase}};
     const alone = find(row, BEHAVIOUR_TEXT, /\b(solitary|alone|singly|territorial)\b/i);
     if (alone) return {value: "solitary", src: {field: alone.field, phrase: alone.phrase}};
@@ -499,26 +594,49 @@ const DIET_WORDS: Array<[RegExp, Diet]> = [
     [/\b(seeds?|grains?|nuts?|acorns?)\b/i, "seeds"],
     [/\b(fruits?|berries|figs)\b/i, "fruit"],
     [/\b(nectar|pollen|feeds? (at|on) flowers)\b/i, "nectar"],
-    [/\b(insects?|caterpillars?|beetles?|ants|termites|larvae|grubs|spiders?|invertebrates?|worms?|bugs|aphids|flies)\b/i, "insects"],
+    [/\b(insects?|caterpillars?|beetles?|ants|termites|larvae|grubs|spiders?|invertebrates?|worms?|bugs|aphids|flies|aerial plankton)\b/i, "insects"],
     [/\b(fish|fishes|squid)\b/i, "fish"],
-    [/\b(meat|prey|mammals|rodents?|rabbits?|birds|lizards?|snakes?|frogs?|deer|antelopes?|hunt\w*|vertebrates)\b/i, "meat"],
+    [/\b(meat|prey|mammals|rodents?|rabbits?|hares?|squirrels?|voles?|mice|lemmings?|rats|grouse|ptarmigans?|birds|lizards?|snakes?|frogs?|deer|antelopes?|gazelles?|ungulates|monkeys?|seals|hunt\w*|vertebrates)\b/i, "meat"],
     [/\b(carrion|carcass\w*|scaveng\w+|dead animals)\b/i, "carrion"],
-    [/\b(plankton|krill|filter\w*|suspended)\b/i, "filter"],
+    // ("Aerial plankton" is a swift's insects, above; krill caught one by one is a hunter's, `dietOf`.)
+    [/\b((?<!aerial )plankton|krill|filter\w*|suspended)\b/i, "filter"],
     [/\b(algae|seaweed|kelp|biofilm)\b/i, "algae"],
     [/\b(detritus|decaying|rotting|dung|leaf litter)\b/i, "detritus"],
     [/\b(blood[- ]?meals?|blood[- ]feed\w*|suck\w* blood|feeds? on (the )?blood|drinks? blood|on blood)\b/i, "blood"]
 ];
 
 function dietOf(row: Row, plan: string): {value: Diet; also: Diet[]; src: Source} {
-    const text = row.diet_summary;
+    // The adult's food: for an insect or an amphibian a sentence whose subject is its young ("Caterpillars eat the
+    // leaves...") is left out (for a bird, "Caterpillars ... are the main food" is its food).
+    const metamorphic = /Insecta|Amphibia/.test(row.class_name ?? "") || ["insect", "flying_insect", "amphibian"].includes(plan);
+    const text = row.diet_summary && metamorphic ? row.diet_summary.split(/(?<=[.;])\s+/).filter((sentence) => !/^(the |its |their )?(larva|larvae|caterpillars?|nymphs?|naiads?|tadpoles?|grubs|maggots)\b/i.test(sentence)).join(" ") || null : row.diet_summary;
     const found: Array<{diet: Diet; index: number; phrase: string}> = [];
     if (text) {
+        // Its own name is not its food ("Goitered Gazelle feeds on grasses", "Roloway Monkey feeds on fruit").
+        const own = row.name ? new RegExp(row.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi") : null;
+        const scan = own ? text.replace(own, (m) => " ".repeat(m.length)) : text;
         for (const [pattern, diet] of DIET_WORDS) {
-            const m = pattern.exec(text);
+            const m = pattern.exec(scan);
             if (m) found.push({diet, index: m.index, phrase: clause(text, m.index, m[0].length)});
         }
     }
     found.sort((a, b) => a.index - b.index);
+    // Filter feeding is a way of eating (baleen, gill rakers, a sieving bill, a sessile animal's fan), not a food: a
+    // penguin, a petrel, an auklet or a seal that catches krill one by one hunts in the water, as a fish eater does.
+    const sieves = /\b(filter\w*|siev\w+|strain\w*|baleen|gill rakers|lamellae)\b/i.test(text ?? "") || /^(Balaenidae|Balaenopteridae|Eschrichtiidae|Neobalaenidae|Phoenicopteridae|Rhincodontidae|Cetorhinidae|Megachasmidae|Mobulidae)$/.test(row.family_name ?? "") || SESSILE.test(row.slug ?? "");
+    const hunter = /Aves|Mammalia|Reptilia/.test(row.class_name ?? "") && !sieves;
+    for (const f of found) if (f.diet === "filter" && hunter) f.diet = "fish";
+    // "Grazes algae", "grazes biofilm": the verb, with no grass in the text, is the food named, not grass.
+    const grassNamed = /\b(grass(es)?|sedges?|herbage|hay)\b/i.test(text ?? "");
+    if (!grassNamed && found.some((f) => f.diet === "algae" || f.diet === "detritus")) found.splice(0, found.length, ...found.filter((f) => f.diet !== "grazer"));
+    // A baleen whale's food is filtered whatever the text calls it (the gray whale's "amphipods"); a seal's or a
+    // walrus's clams and crabs are caught in the water, as a fish eater's are (the diet kinds have no "invertebrates").
+    const baleen = /^(Balaenidae|Balaenopteridae|Eschrichtiidae|Neobalaenidae)$/.test(row.family_name ?? "");
+    const seaHunter = /Mammalia|Aves|Reptilia/.test(row.class_name ?? "") && /^(Phocidae|Otariidae|Odobenidae|Spheniscidae|Alcidae|Delphinidae|Phocoenidae|Monodontidae|Physeteridae|Ziphiidae|Lutrinae|Enhydra)$/.test(row.family_name ?? "");
+    for (const f of found) {
+        if (baleen && (f.diet === "insects" || f.diet === "fish")) f.diet = "filter";
+        else if (seaHunter && f.diet === "insects") f.diet = "fish";
+    }
     if (found.length) {
         const kinds = [...new Set(found.map((f) => f.diet))];
         const plants = kinds.filter((k) => ["grazer", "browser", "seeds", "fruit", "nectar", "algae"].includes(k)).length;
@@ -528,7 +646,7 @@ function dietOf(row: Row, plan: string): {value: Diet; also: Diet[]; src: Source
     }
     const ambient = row.ambient ?? [];
     const map: Record<string, Diet> = {grass: "grazer", plants: "browser", seeds: "seeds", fruit: "fruit", nectar: "nectar", insects: "insects", worms: "insects", plankton: "filter", algae: "algae", detritus: "detritus", dung: "detritus"};
-    for (const [i, a] of ambient.entries()) if (map[a]) return {value: map[a], also: [], src: {field: "ambient", phrase: row.ambient_phrases?.[i] ?? a}};
+    for (const [i, a] of ambient.entries()) if (map[a] && !(metamorphic && YOUNG.test(row.ambient_phrases?.[i] ?? ""))) return {value: map[a] === "filter" && hunter ? "fish" : map[a], also: [], src: {field: "ambient", phrase: row.ambient_phrases?.[i] ?? a}};
     const prior = priorOf(row);
     if (prior?.prior.diet) return {value: prior.prior.diet, also: [], src: {rule: `${prior.name}: ${prior.prior.diet}`}};
     const byPlan: Record<string, Diet> = {fish: "omnivore", insect: "omnivore", flying_insect: "nectar", arachnid: "insects", bat: "insects", lizard: "insects", amphibian: "insects", legless: "meat", other: "detritus"};
@@ -542,7 +660,7 @@ export const BEHAVIOURS = ["rest", "wander", "forage", "graze", "drink", "perch"
 type Behaviour = (typeof BEHAVIOURS)[number];
 
 /** Places in the world an animal goes to (the map lane's spawn tags and the graphics lane's attach points). */
-export const INTERACTIONS = ["drink_edge", "bask_rock", "graze_grass", "perch_branch", "perch_rock", "dig_soil", "leaf_litter", "flower", "porch_light", "cave_mouth", "cliff_ledge", "sea_dive", "tide_pool", "bark", "wall", "burrow_mouth", "reeds", "water_surface", "reef", "shade"] as const;
+export const INTERACTIONS = ["drink_edge", "bask_rock", "graze_grass", "perch_branch", "perch_rock", "dig_soil", "leaf_litter", "flower", "porch_light", "cave_mouth", "cliff_ledge", "sea_dive", "tide_pool", "bark", "wall", "burrow_mouth", "reeds", "water_surface", "reef", "shade", "shore"] as const;
 type Interaction = (typeof INTERACTIONS)[number];
 
 type Profile = {
@@ -603,10 +721,38 @@ function profile(row: Row): Profile {
 
     const activity = activityOf(row, plan);
     const rhythm = rhythmOf(row, activity.value);
-    const roost = roostOf(row, plan, layer, zone);
-    const moves = movesOf(row, plan, layer, mode, zone, rig);
+    const roostFound = roostOf(row, plan, layer, zone);
+    const moves = movesOf(row, plan, layer, mode, zone, rig, roostFound.value);
     const social = socialOf(row, plan);
     const diet = dietOf(row, plan);
+
+    // Seabed walkers (crabs, lobsters, stars, urchins, bottom fish): its ground is the sea floor.
+    const allMoves = new Set([moves.primary, ...moves.also]);
+    const bottomHit = ["fish", "crustacean", "other", "cephalopod_jelly"].includes(plan) ? find(row, ["habitat", "look", "sleep", "traits"], /\b(sea ?floor|seabed|sea bed|bottom[- ]dwell\w*|on the bottom|benthic|stream ?bed|river ?bed|lake ?bed)\b/i) : null;
+    const bottomText: Source | null = bottomHit ? {field: bottomHit.field, phrase: bottomHit.phrase} : null;
+    const seabed = (SEA_ZONES.has(zone) && (plan === "crustacean" || moves.primary === "crawl" || layer === "reef" && mode === "floor" || /(?:^|-)(crab|lobster|starfish|sea-star|urchin|sea-cucumber|octopus)(?:-|$)/.test(slug))) || (Boolean(bottomText) && moves.primary !== "fly") || (plan === "crustacean" && WATER_ZONES.has(zone) && (allMoves.has("swim") || WATER_WALKER.test(slug)));
+    // Where it sleeps, fitted to how it lives (rules, 2026-11-11 audit):
+    // - a water animal never sleeps on land: a burrow, crevice, cave or ledge it rests in is on the bottom (the reef
+    //   on a coral reef), anything else is in the water (fish "among branches" of coral, catfish "in hollows in the mud");
+    // - one that hauls out (seals, sea lions, the walrus, penguins) rests at the shore;
+    // - one that climbs first (a koala) sleeps in the trees when its text does not say where.
+    const waterLife = seabed || (moves.primary === "swim" && !moves.also.includes("walk"));
+    const HAULS = find(row, ALL, /\b(haul(s|ed|ing)? out|haul-outs?|ashore|on (the )?(beach|beaches|shore|ice|sea ice|ice floes?|pack ice)|ice floes?)\b/i);
+    const hauls = !waterLife && moves.primary === "swim" && moves.also.includes("walk") && (/^(Phocidae|Otariidae|Odobenidae|Spheniscidae)$/.test(row.family_name ?? "") || Boolean(HAULS));
+    let roost = roostFound;
+    const LAND_ROOSTS: Roost[] = ["tree", "tree_hole", "cliff", "cave", "crevice", "rocks", "burrow", "den", "ground_cover", "reeds", "leaf", "bark", "wall", "nest", "shore"];
+    if (waterLife && LAND_ROOSTS.includes(roost.value)) {
+        const under = ["burrow", "den", "cave", "crevice", "rocks", "cliff", "tree_hole", "nest"].includes(roost.value) || (roost.value === "tree" && zone === "coral_reef");
+        const value: Roost = under ? (zone === "coral_reef" ? "reef" : "bottom") : "water";
+        roost = {value, src: "default" in roost.src ? {default: `lives in the water: ${value}`} : {rule: `lives in the water: its ${roost.value} is ${value}${"phrase" in roost.src ? ` ("${roost.src.phrase}")` : ""}`}};
+    } else if (hauls && ("default" in roost.src || ["ground_cover", "rocks", "cliff", "open", "water"].includes(roost.value))) {
+        roost = {value: "shore", src: HAULS ? {field: HAULS.field, phrase: HAULS.phrase} : {rule: `family ${row.family_name}: hauls out at the shore`}};
+    } else if (moves.primary === "climb" && "default" in roost.src && roost.value !== "tree" && roost.value !== "tree_hole") {
+        roost = {value: "tree", src: {rule: "climbs first: sleeps in the trees"}};
+    } else if (BIG_GROUND.test(row.order_name ?? "") && ["tree", "tree_hole", "bark"].includes(roost.value)) {
+        // A deer, an antelope, a rhino or an elephant rests among trees, never in one.
+        roost = {value: "ground_cover", src: {rule: `order ${row.order_name}: rests on the ground${"phrase" in roost.src ? ` ("${roost.src.phrase}")` : ""}`}};
+    }
 
     const src: Record<string, Source | Source[]> = {plan: planSrc, activity: activity.src, roost: roost.src, social: social.src, diet: diet.src, ...moves.src};
     if (rhythm.src.length) src.rhythm = rhythm.src;
@@ -664,9 +810,18 @@ function profile(row: Row): Profile {
     // Places it goes to: from its behaviours, its spawn tags (B1) and its roost.
     const it = new Set<Interaction>();
     if (b.drink) it.add("drink_edge");
-    if (b.bask) it.add("bask_rock");
-    if (b.graze) it.add("graze_grass");
-    if (b.perch || roost.value === "tree" || roost.value === "tree_hole") if (all.has("fly") || all.has("climb")) it.add("perch_branch");
+    // A seal or a penguin hauls out at the shore to rest and bask (not on a rock top inland).
+    if (hauls) {
+        add("bask", 0.3, (HAULS ? {field: HAULS.field, phrase: HAULS.phrase} : {rule: `family ${row.family_name}: hauls out`}) as Source);
+        it.add("shore");
+    }
+    if (b.bask && !hauls) it.add("bask_rock");
+    // Grass on land only: a sea turtle's or a manatee's grazing is on the bottom, where it is.
+    if (b.graze && !waterLife) it.add("graze_grass");
+    // Seabirds (albatrosses, petrels, auks, gulls, skuas, penguins) perch on rocks and ledges, never on branches.
+    const seabird = /^(Procellariiformes|Sphenisciformes)$/.test(row.order_name ?? "") || /^(Alcidae|Laridae|Stercorariidae)$/.test(row.family_name ?? "");
+    if (b.perch && seabird) it.add("perch_rock");
+    else if (b.perch || roost.value === "tree" || roost.value === "tree_hole") if (all.has("fly") || all.has("climb")) it.add("perch_branch");
     const rocky = textHit(/\b(rocks?|boulders?|cliffs?|crags?|outcrops?|ledges?)\b/i, ["look", "habitat", "sleep", "traits"]);
     if (b.perch && (roost.value === "cliff" || roost.value === "rocks" || rocky)) it.add("perch_rock");
     if (b.burrow) it.add("dig_soil");
@@ -698,8 +853,6 @@ function profile(row: Row): Profile {
     // Birds on the water only count when they dive (penguins, loons, grebes); a duck just floats.
     const breathes = swimmer && airClass && (plan !== "fish" || /Mammalia|Reptilia/.test(row.class_name ?? "")) && (!/Aves/.test(row.class_name ?? "") || Boolean(b.dive) || plan === "flightless_bird");
     if (breathes) src.breathes = {rule: `${row.class_name ?? plan} swimmer`};
-    const bottomText = ["fish", "crustacean", "other", "cephalopod_jelly"].includes(plan) ? textHit(/\b(sea ?floor|seabed|sea bed|bottom[- ]dwell\w*|on the bottom|benthic|stream ?bed|river ?bed|lake ?bed)\b/i, ["habitat", "look", "sleep", "traits"]) : null;
-    const seabed = (SEA_ZONES.has(zone) && (plan === "crustacean" || moves.primary === "crawl" || layer === "reef" && mode === "floor" || /(?:^|-)(crab|lobster|starfish|sea-star|urchin|sea-cucumber|octopus)(?:-|$)/.test(slug))) || (Boolean(bottomText) && moves.primary !== "fly") || (plan === "crustacean" && WATER_ZONES.has(zone) && all.has("swim"));
     if (seabed) src.seabed = bottomText ?? {rule: layer === "reef" && mode === "floor" ? "layers.json floor" : `plan ${plan} in ${zone}`};
     if (roost.value === "wall" || spawn.has("house")) if (["insect", "arachnid", "lizard", "flying_insect", "other"].includes(plan)) it.add("wall");
     const reedText = textHit(/\breed(s|beds?)?\b/i, ["habitat", "look", "sleep"]);

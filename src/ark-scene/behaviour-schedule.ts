@@ -27,8 +27,9 @@
  */
 
 import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
-import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
-import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
+import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
+import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import type {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
@@ -249,7 +250,9 @@ const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
     wall: ["house_wall"],
     nest: ["branch", "shade"],
     attached: [],
-    open: []
+    open: [],
+    // Hauled out where the water meets the land (seals, sea lions, the walrus, penguins).
+    shore: ["water_edge", "rock_top"]
 };
 
 const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
@@ -270,13 +273,14 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     burrow_mouth: ["burrow_entrance"],
     reeds: ["reeds"],
     shade: ["shade"],
-    water_surface: ["pond_surface"]
+    water_surface: ["pond_surface"],
+    shore: ["water_edge"]
 };
 
 /** Which places each behaviour goes to (the first of its interactions that has one near home). */
 const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     drink: ["drink_edge"],
-    bask: ["bask_rock"],
+    bask: ["bask_rock", "shore"],
     graze: ["graze_grass"],
     forage: ["leaf_litter", "dig_soil", "graze_grass", "tide_pool", "flower", "bark", "wall", "water_surface"],
     perch: ["perch_branch", "perch_rock", "cliff_ledge"],
@@ -285,12 +289,61 @@ const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     hide: ["shade", "burrow_mouth", "reeds"],
     visit_flowers: ["flower"],
     circle_light: ["porch_light"],
-    rest: ["shade"]
+    rest: ["shore", "shade"]
 };
 
 export type ScheduleWorld = {sampler: ArkWorldSampler; nav: NavGrid};
 export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
     return {sampler, nav: navGrid(sampler)};
+}
+
+/**
+ * The shared schedule world (`worldSampler`'s places, then the walk grid) built a few milliseconds at a time between
+ * frames (`behaviour-build.ts`): the same world, to the bit, as `scheduleWorld(worldSampler())` all at once. `step`
+ * works for about its budget and returns the world once it is built; `spentMs` is the main-thread time it took.
+ */
+export class ScheduleWorldBuild {
+    private sampler: SlicedBuild<ArkWorldSampler> | null = worldSamplerBuild();
+    private nav: SlicedBuild<NavGrid> | null = null;
+    private world: ScheduleWorld | null = null;
+    spentMs = 0;
+    slices = 0;
+    /** The longest single slice (ms): the graphics lane's `allAttachPoints`, one task, sets it unless it was built already. */
+    longestMs = 0;
+
+    get done(): boolean {
+        return this.world !== null;
+    }
+
+    step(budgetMs: number): ScheduleWorld | null {
+        if (this.world) return this.world;
+        const started = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const left = () => budgetMs - ((typeof performance !== "undefined" ? performance.now() : Date.now()) - started);
+        this.slices++;
+        if (this.sampler) {
+            const sampler = this.sampler.step(budgetMs);
+            if (sampler) {
+                this.sampler = null;
+                this.nav = navGridBuild(sampler);
+            }
+        }
+        if (this.nav && (left() > 0 || this.nav.done)) {
+            const nav = this.nav.step(Math.max(left(), 0));
+            if (nav) this.world = {sampler: worldSampler(), nav};
+        }
+        const took = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
+        this.spentMs += took;
+        this.longestMs = Math.max(this.longestMs, took);
+        return this.world;
+    }
+
+    /** Everything left, now. */
+    run(): ScheduleWorld {
+        for (;;) {
+            const world = this.step(Infinity);
+            if (world) return world;
+        }
+    }
 }
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
@@ -398,7 +451,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
         }
     }
     const seed = rng(hashString(`${animal.id}#roost`))();
-    const tags = ROOST_TAGS[profile.roost] ?? [];
+    // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
     if (point) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
@@ -607,7 +661,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const placeKinds = doing === "browse" ? (["shade", "perch_branch"] as ArkInteraction[]) : BEHAVIOUR_PLACES[behaviour];
     if (placeKinds) {
         for (const place of placeKinds) {
-            if (!profile.interactions.includes(place) && behaviour !== "rest" && doing !== "browse") continue;
+            // Anyone may rest in the shade; every other place is the animal's own (a seal's shore, a lizard's rock).
+            if (!profile.interactions.includes(place) && !(behaviour === "rest" && place === "shade") && doing !== "browse") continue;
             const tags = INTERACTION_TAGS[place] ?? [];
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
@@ -615,15 +670,18 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const point = placeNear(world, centre, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * 1.4, cap), random());
             if (point) {
                 const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
-                // A patch of ground (grass, shade, the water's edge, the litter): each animal stands its own place in it,
-                // so a herd spreads over the grass instead of stacking on one point.
-                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "water_edge" ? 0.9 : 0;
+                // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
+                // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
+                // point or standing in the ledges' even row.
+                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "cliff_ledge" ? 1.8 : point.tag === "rock_top" ? 1 : point.tag === "water_edge" ? 0.9 : 0;
                 if (spread && !up) {
                     const a = random() * Math.PI * 2;
                     const r = spread * (0.25 + 0.75 * Math.sqrt(random())) * Math.max(Math.min(animal.length, 2), 0.3);
                     const x = point.x + Math.cos(a) * r;
                     const z = point.z + Math.sin(a) * r;
-                    if (world.nav.walkable(x, z, maxSlopeOf(animal)) && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
+                    // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
+                    const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
+                    if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
                         return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(doing, random, null)};
                     }
                 }
@@ -882,7 +940,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                     break;
                 }
             }
-            if (mode === "water" || (fromWet && toWet)) water(from, to);
+            // Over land it walks, in the water it swims: one that does both (a seal, a penguin) goes by the ground under it.
+            if ((mode === "water" && !amphibious(profile)) || (fromWet && toWet)) water(from, to);
             else ground(from, to);
             break;
         }
