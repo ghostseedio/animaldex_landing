@@ -28,6 +28,7 @@ import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
 import {groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
+import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
@@ -411,7 +412,7 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         // Its back into the slope: a little uphill of the ledge point, sunk in.
         const x = ledge.x - ledge.normal.x * size * 0.3;
         const z = ledge.z - ledge.normal.z * size * 0.3;
-        outcrops.push({x, y: groundAt(x, z) - size * 0.25, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.1, 0.55 + random() * 0.15)});
+        outcrops.push({x, y: groundAt(x, z) - size * 0.12, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.08, 0.62 + random() * 0.12)});
         // A fan of scree below it, downhill.
         for (let s = 0; s < 46; s++) {
             const d = size * 0.5 + random() * random() * size * 3.5;
@@ -420,7 +421,10 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
             const pz = ledge.z + ledge.normal.z * d - ledge.normal.x * spread;
             const ground = sampleGround(px, pz);
             if (ground.height < 0.5 || ground.land < 0.9) continue;
-            scree.push({x: px, y: ground.height - 0.02, z: pz, turn: random() * 6, scale: 0.35 + random() * random() * 2.2, tint: new Color().setHSL(0.08, 0.06, 0.45 + random() * 0.25)});
+            // Scree lies where the slope eases to its resting angle, not on the cliff itself.
+            const normal = surfaceAt(px, pz).normal;
+            if (normal.y < 0.72) continue;
+            scree.push({x: px, y: ground.height - 0.03, z: pz, turn: random() * 6, scale: 0.3 + random() * random() * 1.8, tint: new Color().setHSL(0.08, 0.06, 0.4 + random() * 0.18)});
         }
     });
     // Snow drifts: in the lee of rocks and outcrops high on the mountain (shown with the snow), always on the ice.

@@ -158,7 +158,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             if (!outcrop) return null;
             // From below, looking up the scree fan at the outcrop.
             const out = (outcrop as {turn?: number}).turn ?? 0.4;
-            return {view: look(outcrop, 12, 1.12, out, 0.6), hours: 8.5, weather: {cold: 0.9, snowCover: 0.6, wind: 0.8}, environment: {wetness: 0, snow: 0.2, wind: 0.8}, anchor: "strata outcrop + scree + drifts"};
+            return {view: look(outcrop, 12, 1.12, out, 0.6), hours: 8.5, weather: {cold: 0.75, snowCover: 0.3, wind: 0.8}, environment: {wetness: 0, snow: 0.2, wind: 0.8}, anchor: "strata outcrop + scree + drifts"};
         }
         case "cave_roost": {
             const cave = marks.cave;

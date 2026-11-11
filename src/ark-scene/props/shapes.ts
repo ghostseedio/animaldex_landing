@@ -147,15 +147,20 @@ export function eavesNest(r: number, seed = 4): BufferGeometry {
     return merge(parts);
 }
 
-/** A tree hollow: a dark oval in the bark with a swollen lip (on a trunk, facing +z). */
-export function hollow(r: number): BufferGeometry {
+/**
+ * A tree hollow: a dark opening in the bark with a swollen lip of healed wood
+ * (on a trunk, facing +z). Round for a woodpecker's or a parrot's hole; a
+ * tall split (`slit`) for a natural hollow where a limb rotted out (a wild
+ * bees' nest).
+ */
+export function hollow(r: number, slit = false): BufferGeometry {
     const parts: BufferGeometry[] = [];
-    const lip = new TorusGeometry(r, r * 0.3, 7, 20);
-    lip.scale(0.75, 1, 0.6);
+    const lip = new TorusGeometry(r, r * (slit ? 0.24 : 0.3), 7, 20);
+    lip.scale(slit ? 0.48 : 0.75, slit ? 1.35 : 1, 0.6);
     lumpy(lip, 0.25, seeded(4380));
     parts.push(paint(place(lip, 0, 0, r * 0.05), new Color("#5a4431"), (_, i) => jitter(i, 5)));
     const dark = new SphereGeometry(r * 0.9, 12, 8, 0, Math.PI * 2, 0, Math.PI);
-    dark.scale(0.7, 1, 0.25);
+    dark.scale(slit ? 0.44 : 0.7, slit ? 1.3 : 1, 0.25);
     parts.push(paint(dark, new Color("#120d09")));
     return merge(parts);
 }
@@ -534,31 +539,39 @@ export function screeStone(size: number, seed = 16): BufferGeometry {
     return paint(place(stone, 0, size * 0.18, 0), new Color("#8a8479"), (y, i) => 0.75 + 0.5 * (y / size) + ((i * 7) % 5) / 30);
 }
 
-/** A rock outcrop in strata: one weathered mass, banded by its beds (tilted a little), its foot buried (`w` wide, `h` high), its face toward +z. */
+/**
+ * A rock outcrop in strata: beds of rock stacked like a worn pile of slabs,
+ * each a little set back or proud of the one below, the whole tilted with
+ * the bedding, its back and foot buried in the slope (`w` wide, `h` high),
+ * its face toward +z; bands of colour by bed, crisp edges, the rock's own
+ * texture from the material.
+ */
 export function strataOutcrop(w: number, h: number, seed = 17): BufferGeometry {
     const random = seeded(5700 + seed);
-    const bands = [new Color("#8c8172"), new Color("#a69a85"), new Color("#766c60"), new Color("#b3a58d"), new Color("#857a6b")];
-    const mass = new IcosahedronGeometry(1, 3);
-    mass.scale(w / 2, h / 2, w * 0.36);
-    lumpy(mass, 0.22, random);
-    // Bedding: the faces stepped where the beds meet, so each band stands a little proud of the next.
-    const tilt = (random() - 0.5) * 0.5;
-    const bed = h / 6;
-    const position = mass.getAttribute("position");
-    for (let i = 0; i < position.count; i++) {
-        const x = position.getX(i);
-        const y = position.getY(i) + x * tilt;
-        const within = ((y / bed) % 1 + 1) % 1;
-        const k = 1 + 0.07 * (within < 0.18 ? -1 : 0.3);
-        position.setX(i, x * k);
-        position.setZ(i, position.getZ(i) * k);
+    const tones = ["#6f665b", "#857a6b", "#5f574e", "#948875", "#77695a"];
+    const parts: BufferGeometry[] = [];
+    const beds = 5;
+    let y = 0;
+    for (let k = 0; k < beds; k++) {
+        const thick = (h / beds) * (0.75 + random() * 0.5);
+        const width = w * (1 - 0.09 * k) * (0.85 + random() * 0.25);
+        const depth = w * 0.75 * (1 - 0.05 * k);
+        const slab = new BoxGeometry(width, thick, depth, 3, 1, 2);
+        lumpy(slab, 0.07, random);
+        // Set back or proud of the bed below; its front edge rounded off by the weather.
+        const step = (random() - 0.35) * w * 0.12;
+        const sideways = (random() - 0.5) * w * 0.1;
+        place(slab, sideways, y + thick / 2, step - depth * 0.15);
+        const tone = new Color(tones[(k + Math.floor(random() * 2)) % tones.length]);
+        parts.push(paint(slab, tone, (_, i) => 0.86 + ((i * 7) % 9) / 50));
+        y += thick * 0.96;
     }
-    mass.translate(0, h * 0.32, 0);
-    return paint(mass, new Color("#ffffff"), (y, i, x) => {
-        const band = Math.floor((y - h * 0.32 + x * tilt + 0.12 * Math.sin(x * 2.3)) / bed + 20);
-        const c = bands[band % bands.length];
-        return (0.85 + ((i * 7) % 9) / 60) * (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) / 0.6;
-    });
+    const tilt = (random() - 0.5) * 0.35;
+    const geometry = merge(parts);
+    geometry.rotateZ(tilt);
+    geometry.translate(0, -h * 0.18, 0);
+    geometry.computeVertexNormals();
+    return geometry;
 }
 
 /** A snow drift: a long smooth mound, its steep side to −z (the wind's), `l` long. */

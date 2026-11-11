@@ -376,7 +376,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         if (hollow) {
             used.add(hollow.host);
             const turn = Math.atan2(hollow.normal.x, hollow.normal.z);
-            const combNest = merge([shapes.hollow(0.2), shapes.comb(0.2)]);
+            const combNest = merge([shapes.hollow(0.2, true), shapes.comb(0.2)]);
             add(new LodBatch("bee-hollow", [{x: hollow.x, y: hollow.y, z: hollow.z, turn, scale: 1}], combNest, null, warm, {cap: 2, reach: 1}));
             marks.beesHollow = {x: hollow.x, y: hollow.y, z: hollow.z};
             marks.beesFacing = {x: hollow.normal.x, y: 0, z: hollow.normal.z};
