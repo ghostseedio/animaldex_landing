@@ -457,12 +457,13 @@ function pendant(w: Weave) {
 
 /** A raft of wet weed at the water's edge (the water at y = 0): a grebe's, a coot's. */
 function floating(w: Weave) {
-    const body: Array<[number, number]> = [[0, -0.28], [0.8, -0.22], [1.0, -0.02], [0.9, 0.13], [0.6, 0.2]];
+    // A heaped raft standing well proud of the water (it rides the ripples), a wet dip in its top.
+    const body: Array<[number, number]> = [[0, -0.28], [0.8, -0.22], [1.0, 0.02], [0.88, 0.26], [0.55, 0.36]];
     w.lathe(body, 14, () => w.pick(WEED, 0.6), 0.25, 0.1);
-    w.lathe([[0.6, 0.2], [0.35, 0.15], [0, 0.12]], 12, () => w.pick(WEED, 0.5), 0.6, 0.05);
+    w.lathe([[0.55, 0.36], [0.3, 0.3], [0, 0.28]], 12, () => w.pick(WEED, 0.45), 0.6, 0.05);
     for (let k = 0; k < 110; k++) {
         const h = w.random();
-        const y = -0.05 + h * 0.22;
+        const y = -0.05 + h * 0.4;
         w.strand(arc(w, radiusAt(body, y) + 0.04, y, w.random() * Math.PI * 2, 0.8 + w.random() * 1.6, 0.12), 0.026 + w.random() * 0.016, w.pick(k % 5 ? WEED : FRESH_GRASS), 0.04 + 0.86 * h);
     }
 }

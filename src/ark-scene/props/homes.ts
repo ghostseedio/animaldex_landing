@@ -165,7 +165,7 @@ function trunkPoint(near: {x: number; z: number}, zone: ArkZone, used: Set<strin
 }
 
 /** Where eggs lie in each form's cup (its floor, at radius 1), and how far apart. Forms not listed hide theirs. */
-const EGG_FLOOR: Partial<Record<NestForm, number>> = {cup: 0.31, platform: 0.34, eyrie: 0.65, scrape: 0.03, down_bowl: 0.17, floating: 0.13, mound: 0.44, pebbles: 0.05};
+const EGG_FLOOR: Partial<Record<NestForm, number>> = {cup: 0.31, platform: 0.34, eyrie: 0.65, scrape: 0.03, down_bowl: 0.17, floating: 0.29, mound: 0.44, pebbles: 0.05};
 /** How far a nest's detail is drawn, against the tier's near radius. */
 const NEST_REACH: Partial<Record<NestForm, number>> = {eyrie: 1.8, megapode: 1.6, mound: 1.3, platform: 1.3, pendant: 1.0, cup: 0.8, mud_cup: 0.8, ball: 0.9, dome: 1.0, scrape: 0.7, pebbles: 0.8, floating: 1.0, down_bowl: 0.9};
 
