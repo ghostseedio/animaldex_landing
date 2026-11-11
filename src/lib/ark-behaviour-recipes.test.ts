@@ -4,7 +4,7 @@ import table from "@/ark-scene/recipes.json";
 import full from "../../data/ark/behaviour-recipes.json";
 import {ARK_RECIPE_STATES, BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {AFTER_STYLES, ENTRY_STYLES, EXIT_STYLES, POSTURES, TEMPLATES, type PreyKind} from "@/ark-scene/recipe-templates";
-import {decodeRecipeRow, forgetRecipes, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {decodeRecipeRow, forgetRecipes, microMurmuration, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {basePoseOnTrip, poseOnTrip, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
@@ -218,4 +218,17 @@ test("turned off, the schedule's own pose stands", () => {
     } finally {
         setRecipesEnabled(true);
     }
+});
+
+test("house starlings (off the schedule) fly their flock's murmuration over their spot at dusk, and only then", () => {
+    const ground = () => 1;
+    const t = Math.floor(Date.UTC(2026, 10, 11, 17, 50) / 1000);
+    const a = microMurmuration("starling-a", "european-starling", {x: 10, y: 1, z: 12}, t, 17.85, ground);
+    const b = microMurmuration("starling-b", "european-starling", {x: 13, y: 1, z: 9}, t, 17.85, ground);
+    assert.ok(a && b);
+    assert.deepEqual(a!.act.flock!.centre, b!.act.flock!.centre, "one flock for the starlings at one spot");
+    assert.ok(a!.y > 5 && b!.y > 5, "up in it");
+    assert.ok(Math.hypot(a!.x - b!.x, a!.y - b!.y, a!.z - b!.z) > 0.1, "each its own place");
+    assert.equal(microMurmuration("starling-a", "european-starling", {x: 10, y: 1, z: 12}, t, 12, ground), null, "not at noon");
+    assert.equal(microMurmuration("sparrow", "house-sparrow", {x: 10, y: 1, z: 12}, t, 17.85, ground), null, "not a species without it");
 });
