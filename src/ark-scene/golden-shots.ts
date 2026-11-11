@@ -31,7 +31,7 @@ export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: n
  * (5 cm, a caterpillar's length); the ant on the bark (5 mm) checks the near plane for the smallest animals.
  */
 export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "bark" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance?: number}>> = {
-    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.42},
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.55},
     bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house"},
     limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools"},
     gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house"},
