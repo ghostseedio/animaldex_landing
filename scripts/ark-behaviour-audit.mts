@@ -164,7 +164,17 @@ if (!isMainThread) {
     log(`pass B: ${flyers.length} flyers`);
     if (flyers.length) await runPass("B", flyers, T0 + 6 * 3600, 1, secondsB, (_t, s) => meter.observeB(s));
     await Promise.all(pool.map((w) => w.terminate()));
-    const result = {...meter.result({days, stepA, secondsB}), static: staticChecks(profiles, data, model.features), fixture: {order, profiles: path.basename(profilesFile), animals: n, species: fixture.profileOf.size, modelsDir: modelsDir ? "local model + rig set" : "none"}, seconds: Math.round((Date.now() - started) / 1000)};
+    // Pass C: the local reactive layer round a camera, at pass A's encounters (where the tree has the layer).
+    let camera: ReturnType<NonNullable<AuditModel["cameraPass"]>> | null = null;
+    if (model.cameraPass && !args.includes("--no-camera")) {
+        const stops = meter.cameraStops(Number(opt("camera-stops", "40")));
+        log(`pass C: ${stops.length} camera stops`);
+        camera = model.cameraPass(stops, (hunter, prey) => preyOf.get(hunter)?.has(prey) ?? false);
+        log(`pass C done in ${Math.round(camera.ms / 1000)} s`);
+    }
+    const metered = meter.result({days, stepA, secondsB});
+    if (camera) metered.features = {...metered.features, headLook: camera.heads.turned > 0, preyFlee: camera.hunts.fled > 0};
+    const result = {...metered, camera, static: staticChecks(profiles, data, metered.features), fixture: {order, profiles: path.basename(profilesFile), animals: n, species: fixture.profileOf.size, modelsDir: modelsDir ? "local model + rig set" : "none"}, seconds: Math.round((Date.now() - started) / 1000)};
     writeFileSync(path.join(out, `${label}.json`), JSON.stringify(result, null, 1));
     writeFileSync(path.join(out, `${label}.md`), renderOne(result));
     log(`done in ${result.seconds} s -> ${path.join(out, `${label}.json`)}`);

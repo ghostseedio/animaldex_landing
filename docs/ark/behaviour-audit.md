@@ -15,6 +15,25 @@ Branch `ark-audit` = `origin/ark-release` (e99a6bf4) + this harness. Live = land
 - `scripts/ark-behaviour-audit-record.mjs`: clips of the 7 problems on `/ark?fixture=1` (v2 fixture:
   zebras, roe deer + eurasian wolves, mallards, eagles/hawk/owl/puffins), CDP screencast + ffmpeg.
 
+## The model on the merged scene (2026-11-11, release integration)
+On a tree with behaviour v2 (`spaceHomes` exported) `model-schedule.ts` mirrors that scene, not e99a6bf4's:
+- `wireSchedules`: group members keep to their leader through the schedule (`ScheduleGroup`, no pose replay);
+  predators' homes spaced from their prey's (`spaceHomes` with the tree's food links and the map's `mapHabitatAt`);
+  `wireThreats` (shared-layer wariness) and `wireRecipes`; the spawn check reads the spaced homes.
+- `makeSched`: species held off the water are not scheduled (`schedule-water.ts`; they stay aloft).
+- In the water a water species is drawn in its depth band (`inDepthBand`/`scheduledWater`), unless a recipe act of
+  its own keeps its height; a hole-dweller stays at its place.
+- Clips: the beat's own clip (`rig-player.ts` `beatClip`): head down = the graze clip; wings open wherever the tree's
+  rig rules let a flight clip play (flap, glide, soar, hover, banks, the take-off held). With the local v1 rig set no
+  flight clip and no graze clip passes, so problems 1 and 3 stay at 0 until rig v2.
+- Pass C (`cameraPass`, new): the local reactive layer (`reactive.ts`, near the camera only) at 10 fps, medium tier,
+  round a camera 12 m from the prey at up to 40 of pass A's encounters (hunter within 15 m, one per prey species):
+  head turns (weight > 0.15), prey reacting to a hunter within 25 m (alert, freeze, flee, startle, threat display,
+  shelter, shielding young, or looking at it) and fleeing, timed from the stop's first frame, and group variety.
+  The rig lane's "a watching grazer lifts its head" lives here too (it needs the reactive layer).
+- Not modelled: liveliness's shared pose (young at heel, shelter from rain, off the tide), the tide's water level.
+- New rows: pass C's heads, reactions and variety; variety counting only moments a whole group is awake.
+
 ## Numbers so far
 Only a trial on ark-release (150 species, 1 day): `docs/ark/audit/release-trial.md`. Full runs (live and
 release) were in progress at handover; outputs land in the session scratchpad `ark/audit-out/`.

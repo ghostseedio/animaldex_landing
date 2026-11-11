@@ -78,7 +78,8 @@ class Grid {
     }
 }
 
-type Encounter = {start: number; looked: number | null; nearest: number};
+/** An encounter: when it began, when the prey first looked, the closest the hunter came, and who (prey, hunter) and where. */
+type Encounter = {start: number; looked: number | null; nearest: number; prey: number; hunter: number; x: number; z: number};
 /** How often (s) pass A looks for predators near prey. */
 export const SIGHT_EVERY_S = 60;
 
@@ -109,7 +110,7 @@ export class AuditMeter {
     private changes: Float64Array;
     private syncedChanges: Float64Array;
     private species = new Map<string, number[]>();
-    private variety = {samples: 0, allSame: 0, distinctSum: 0, bySpecies: new Map<string, {samples: number; allSame: number}>()};
+    private variety = {samples: 0, allSame: 0, distinctSum: 0, awakeSamples: 0, awakeAllSame: 0, bySpecies: new Map<string, {samples: number; allSame: number}>()};
     private sightClock = Infinity;
     private speciesIndex: Int32Array;
     /** Per prey animal: the species indices that hunt it. */
@@ -290,6 +291,11 @@ export class AuditMeter {
             const members = this.groups[g];
             const slug = this.groupSlugs[g];
             const labels = new Set(members.map((i) => samples[i].doing ?? samples[i].state));
+            // The same, only at moments the whole group is awake (asleep together at night is right).
+            if (members.every((i) => samples[i].state !== "asleep" && samples[i].doing !== "sleep" && samples[i].doing !== "to_roost")) {
+                this.variety.awakeSamples++;
+                if (labels.size === 1) this.variety.awakeAllSame++;
+            }
             this.variety.samples++;
             this.variety.distinctSum += labels.size;
             const row = this.variety.bySpecies.get(slug) ?? {samples: 0, allSame: 0};
@@ -323,6 +329,7 @@ export class AuditMeter {
                     continue;
                 }
                 let nearest = Infinity;
+                let nearestHunter = -1;
                 let looks = false;
                 for (const i of this.hunterGrid.near(o.x, o.z, SIGHT_M, this.scratch)) {
                     if (!hunters.has(this.speciesIndex[i])) continue;
@@ -330,7 +337,10 @@ export class AuditMeter {
                     if (s.aloft || s.state === "asleep") continue;
                     const d = Math.hypot(o.x - s.x, o.z - s.z);
                     if (d > SIGHT_M) continue;
-                    if (d < nearest) nearest = d;
+                    if (d < nearest) {
+                        nearest = d;
+                        nearestHunter = i;
+                    }
                     if (rule && d < rule.within && (!rule.predatorMoving || s.moving) && !o.moving) looks = true;
                 }
                 if (nearest === Infinity) {
@@ -340,7 +350,7 @@ export class AuditMeter {
                 this.inSight++;
                 if (Number.isNaN(this.encounterAt[j])) {
                     this.encounterAt[j] = epoch;
-                    this.encounterLog.push({start: epoch, looked: null, nearest});
+                    this.encounterLog.push({start: epoch, looked: null, nearest, prey: j, hunter: nearestHunter, x: o.x, z: o.z});
                     this.encounterOpen[j] = this.encounterLog.length - 1;
                 }
                 const e = this.encounterLog[this.encounterOpen[j]];
@@ -353,6 +363,31 @@ export class AuditMeter {
         }
         lap("sight");
         for (let i = 0; i < this.n; i++) this.prev[i] = samples[i];
+    }
+
+    /**
+     * Pass C's camera stops (where a viewer would be watching): up to `max` of pass A's encounters in which the hunter
+     * came within 15 m, one per prey species (the earliest by a seeded order), so many kinds of prey and hunter are seen.
+     */
+    cameraStops(max = 40): Array<{epoch: number; prey: number; hunter: number}> {
+        const close = this.encounterLog.filter((e) => e.nearest < 15 && e.hunter >= 0);
+        const hash = (n: number) => {
+            let h = 2166136261 ^ n;
+            h = Math.imul(h ^ (h >>> 15), 2246822507);
+            h = Math.imul(h ^ (h >>> 13), 3266489909);
+            return (h ^ (h >>> 16)) >>> 0;
+        };
+        const sorted = close.map((e, k) => ({e, k: hash(k)})).sort((a, b) => a.k - b.k).map((x) => x.e);
+        const seen = new Set<string>();
+        const out: Array<{epoch: number; prey: number; hunter: number}> = [];
+        for (const e of sorted) {
+            const slug = this.subjects[e.prey].slug;
+            if (seen.has(slug)) continue;
+            seen.add(slug);
+            out.push({epoch: e.start, prey: e.prey, hunter: e.hunter});
+            if (out.length >= max) break;
+        }
+        return out;
     }
 
     /** Which animals pass B follows (flyers). */
@@ -625,6 +660,7 @@ export class AuditMeter {
             variety: {
                 speciesWith3Plus: this.variety.bySpecies.size,
                 allSameStatePct: pct(this.variety.allSame, this.variety.samples),
+                awakeAllSamePct: pct(this.variety.awakeAllSame, this.variety.awakeSamples),
                 meanDistinctStates: this.variety.samples ? Math.round((100 * this.variety.distinctSum) / this.variety.samples) / 100 : null,
                 speciesAlwaysInStep: speciesVariety.filter((r) => r.allSame >= 0.999).length,
                 stateChangesInStepPct: pct(synced, changes),

@@ -4,8 +4,12 @@
  */
 
 import type {AuditResult} from "./metrics";
+import type {CameraResult} from "./types";
 
-type Full = AuditResult & {static?: unknown};
+type Full = AuditResult & {static?: unknown; camera?: CameraResult | null};
+/** Pass C's numbers, or "–" for a tree without the reactive layer (or a run from before pass C). */
+const cam = (r: Full, pick: (c: CameraResult) => unknown) => (r.camera ? pick(r.camera) : "–");
+const pc = (x: number | null) => (x === null ? "–" : `${x}%`);
 type Row = {problem: string; check: string; target: string; value: (r: Full) => unknown};
 
 const v = (x: unknown): string => {
@@ -43,16 +47,21 @@ export const ROWS: Row[] = [
     {problem: "4 Land↔water", check: "An entry/exit motion (wade, hop in, climb out)", target: "yes", value: (r) => r.landWater.entryExitClip},
     {problem: "5 Heads", check: "Rigged species with a neck or head bone (published)", target: "most", value: (r) => (staticOf(r) ? `neck ${staticOf(r)!.headBones.total.neck ?? 0}, head ${staticOf(r)!.headBones.total.head ?? 0} of ${staticOf(r)!.headBones.total.rigged ?? 0} rigged; published with one ${staticOf(r)!.headBones.total.publishedWithHead ?? 0}` : "–")},
     {problem: "5 Heads", check: "A head turns on its own (look-at)", target: "yes", value: (r) => r.features.headLook},
+    {problem: "5 Heads", check: "Near the camera (pass C): awake animals that turn their heads; share of their time", target: "most", value: (r) => cam(r, (c) => `${pc(c.heads.turnedPct)} of ${c.heads.animals}; ${pc(c.heads.framesTurnedPct)}`)},
     {problem: "6 Predators", check: "Predators with prey aboard; nearest prey at spawn (m)", target: "min ≥ 20", value: (r) => `${r.predatorPrey.predatorsWithPreyAboard}; ${v(r.predatorPrey.spawnNearestPreyM)}`},
     {problem: "6 Predators", check: "Predators with prey spawned within 5 / 10 / 20 m", target: "0", value: (r) => `${r.predatorPrey.predatorsWithPreyWithinM["5"]} / ${r.predatorPrey.predatorsWithPreyWithinM["10"]} / ${r.predatorPrey.predatorsWithPreyWithinM["20"]}`},
     {problem: "6 Predators", check: `Encounters (awake prey within ${25} m of an awake predator that hunts it; checked once a minute)`, target: "–", value: (r) => r.predatorPrey.encounters},
     {problem: "6 Predators", check: "…of which the predator came within 6 m", target: "–", value: (r) => (r.predatorPrey as {encountersCloserThan6M?: number}).encountersCloserThan6M ?? "–"},
     {problem: "6 Predators", check: "…where the prey reacts at all (looks); flees", target: "most; most flee", value: (r) => `${r.predatorPrey.preyReactPct ?? 0}%; ${r.predatorPrey.encountersWithFlight}`},
     {problem: "6 Predators", check: "Median seconds to react", target: "< 3", value: (r) => r.predatorPrey.medianSecondsToLook},
+    {problem: "6 Predators", check: "Near the camera (pass C): prey with a hunter within 25 m that react; flee", target: "most; most flee", value: (r) => cam(r, (c) => `${pc(c.hunts.reactPct)}; ${pc(c.hunts.fleePct)} of ${c.hunts.encounters}`)},
+    {problem: "6 Predators", check: "Near the camera (pass C): median seconds to react", target: "< 3", value: (r) => cam(r, (c) => c.hunts.medianSecondsToReact)},
     {problem: "7 Variety", check: "Species with 3+ aboard: moments all in one state", target: "rarely", value: (r) => (r.variety.allSameStatePct === null ? "–" : `${r.variety.allSameStatePct}%`)},
+    {problem: "7 Variety", check: "…counting only moments the whole group is awake", target: "rarely", value: (r) => pc((r.variety as {awakeAllSamePct?: number | null}).awakeAllSamePct ?? null)},
     {problem: "7 Variety", check: "Species always in the same state", target: "0", value: (r) => `${r.variety.speciesAlwaysInStep} / ${r.variety.speciesWith3Plus}`},
     {problem: "7 Variety", check: "Mean distinct states in a group of 4", target: "≥ 2", value: (r) => r.variety.meanDistinctStates},
     {problem: "7 Variety", check: "State changes made by the whole group in the same step", target: "low", value: (r) => (r.variety.stateChangesInStepPct === null ? "–" : `${r.variety.stateChangesInStepPct}%`)},
+    {problem: "7 Variety", check: "Near the camera (pass C): a group of 3+ all taking the same action", target: "rarely", value: (r) => cam(r, (c) => pc(c.variety.allSamePct))},
     {problem: "Env", check: "On the wrong surface (animals; share of samples)", target: "0", value: (r) => `${r.environment.invalidSurface.animals}; ${r.environment.invalidSurface.sharePct}%`},
     {problem: "Env", check: "Floating / sinking (animals)", target: "0 / 0", value: (r) => `${r.environment.floating.animals} / ${r.environment.sinking.animals}`},
     {problem: "Env", check: "Overlapping another (animals; share of samples)", target: "0", value: (r) => `${r.environment.overlapping.animals}; ${r.environment.overlapping.sharePct}% (${v((r.environment.overlapping as {causes?: unknown}).causes)})`},
@@ -63,6 +72,7 @@ export function renderOne(r: Full): string {
     const lines = [`# Ark behaviour audit: ${r.label} (${r.commit})`, "", `${r.period.animals} animals, ${r.period.species} species; ${r.period.days} days every ${r.period.stepSecondsA} s; flyers every 1 s for ${r.period.flightSecondsB / 3600} h.`, "", "| Problem | Check | Target | Value |", "|---|---|---|---|"];
     for (const row of ROWS) lines.push(`| ${row.problem} | ${row.check} | ${row.target} | ${v(row.value(r))} |`);
     lines.push("", `State mix: ${v(r.stateMix)}`);
+    if (r.camera) lines.push("", `Pass C (${r.camera.stops} camera stops × ${r.camera.secondsPerStop} s at 10 fps, reactive tier ${r.camera.tier}): actions ${v(r.camera.actions)}`);
     return lines.join("\n") + "\n";
 }
 

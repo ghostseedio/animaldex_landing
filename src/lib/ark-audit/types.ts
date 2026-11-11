@@ -85,4 +85,28 @@ export type AuditModel = {
     sample(i: number, epoch: number, dt: number): AuditSample;
     /** Interaction points near a spot, by tag (null: the tree has no attach points). */
     attachCount: ((tag: string, x: number, z: number, r: number) => number) | null;
+    /**
+     * Pass C, where the tree has the local reactive layer (`reactive.ts`, near the camera only): the layer run at the
+     * scene's frame rate round a camera at each stop (pass A's encounters), as `stepReactive` feeds it. Absent: none.
+     */
+    cameraPass?: (stops: CameraStop[], hunts: (hunter: string, prey: string) => boolean) => CameraResult;
+};
+
+/** A camera stop: a prey animal a hunter came near in pass A, at that moment. */
+export type CameraStop = {epoch: number; prey: number; hunter: number};
+
+export type CameraResult = {
+    stops: number;
+    frames: number;
+    secondsPerStop: number;
+    tier: string;
+    /** Problem 5: awake animals the layer ran for, how many turned their heads (weight > 0.15) at least once, and the share of their frames turned. */
+    heads: {animals: number; turned: number; turnedPct: number | null; framesTurnedPct: number | null};
+    /** Problem 6: prey with one of its hunters (awake, on the ground) within 25 m of it while the layer ran for it. */
+    hunts: {encounters: number; reacted: number; fled: number; reactPct: number | null; fleePct: number | null; medianSecondsToReact: number | null};
+    /** Problem 7: frames in which a group (3+ of a species, all awake) all took the same action. */
+    variety: {groupFrames: number; allSame: number; allSamePct: number | null};
+    /** Share of awake agent-frames per action. */
+    actions: Record<string, number>;
+    ms: number;
 };
