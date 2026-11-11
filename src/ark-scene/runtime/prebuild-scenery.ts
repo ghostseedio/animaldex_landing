@@ -5,6 +5,7 @@
 
 import {forestFill, grassTufts, worldDecor, type DecorItem, type FillItem, type GrassTuft} from "@/ark-scene/decor";
 import * as terrain from "@/ark-scene/terrain";
+import {reefGrowth, type ReefItem} from "@/ark-scene/reef";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 
 /**
@@ -23,7 +24,7 @@ export function groundBuffers(arrays: GroundArrays | null | undefined): ArrayBuf
 }
 
 export type ArkPackedGrass = {count: number; numbers: Float64Array; zones: Uint8Array};
-export type ArkSceneryPrebuild = {decor: DecorItem[]; fill: FillItem[]; grass: ArkPackedGrass; ground: GroundArrays | null; ms: number};
+export type ArkSceneryPrebuild = {decor: DecorItem[]; fill: FillItem[]; grass: ArkPackedGrass; ground: GroundArrays | null; reef?: ReefItem[]; ms: number};
 
 export function packGrass(tufts: GrassTuft[], count: number): ArkPackedGrass {
     const numbers = new Float64Array(tufts.length * 6);
@@ -48,5 +49,5 @@ export function unpackGrass(grass: ArkPackedGrass): GrassTuft[] {
 export function computeScenery(grass: number, tier: "high" | "medium" | "low" = "high"): ArkSceneryPrebuild {
     const started = Date.now();
     const ground = groundApi.groundArrays ? groundApi.groundArrays(tier) : null;
-    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, ms: Date.now() - started};
+    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), ms: Date.now() - started};
 }

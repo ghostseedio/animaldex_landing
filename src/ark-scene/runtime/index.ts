@@ -118,6 +118,9 @@ const FAR_UPFRONT: Record<QualityTier, number> = {high: 160, medium: 120, low: 8
 /** Kinds in view whose far models are fetched (the nearest; the scene draws its nearest 150 / 120 / 80 animals as models). */
 const FAR_IN_VIEW: Record<QualityTier, number> = {high: 150, medium: 120, low: 80};
 
+/** The mount's steps' share per frame (ms) before the first frame. */
+const MOUNT_SLICE_MS = 40;
+
 /** The shader warm-up's synchronous share per frame (ms). */
 const WARM_SLICE_MS = 30;
 
@@ -144,6 +147,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     let shaders: ArkRuntimeStats["shaders"] = "pending";
     let warming = false;
     let warmQueue: Object3D[] = [];
+    /** The mount's remaining steps (`mountLater`), run before the first frame a frame at a time. */
+    let mountSteps: Array<() => boolean> = [];
     let warmPending: Array<Promise<"ready" | "timeout" | "failed">> = [];
     let warmLimit = 5000;
     let drawn = 0;
@@ -250,6 +255,12 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          */
         frame(nowMs: number): "draw" | "skip" | "sleep" {
             if (!governor.visible()) return "sleep";
+            // The rest of the mount, before the first frame: its steps a frame at a time (each its own task), as many as
+            // fit in MOUNT_SLICE_MS; a step returns false to go on in the next frame.
+            if (mountSteps.length) {
+                skipped++;
+                return "skip";
+            }
             // The first frame (and the first after a tier change, whose shadows and finish are new shader variants)
             // waits for the scene's shaders, compiled in parallel: the last picture stays up meanwhile, and the page
             // keeps answering. Never longer than the warm-up's own limit.
@@ -286,6 +297,30 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                 return "skip";
             }
             return "draw";
+        },
+
+        /**
+         * The rest of the mount, in steps run before the first frame, each in its own task (a step returns true when it
+         * is done, false to be called again next frame). The first frame waits for them, then the shader warm-up.
+         */
+        mountLater(steps: Array<() => boolean>) {
+            const idle = mountSteps.length === 0;
+            mountSteps = [...mountSteps, ...steps];
+            // Each run is its own task (a message to ourselves), not inside an animation frame, where it would add to
+            // every other lane's per-frame slices in one long task.
+            const channel = typeof MessageChannel !== "undefined" ? new MessageChannel() : null;
+            const next = () => (channel ? channel.port2.postMessage(0) : setTimeout(run, 0));
+            const run = () => {
+                const sliceStarted = performance.now();
+                while (mountSteps.length && performance.now() - sliceStarted < MOUNT_SLICE_MS) {
+                    if (mountSteps[0]()) mountSteps.shift();
+                    else break;
+                }
+                if (mountSteps.length) next();
+                else channel?.port1.close();
+            };
+            if (channel) channel.port1.onmessage = run;
+            if (idle) next();
         },
 
         /** Asked by the frame loop when it stops (hidden); called back when visible again. */
