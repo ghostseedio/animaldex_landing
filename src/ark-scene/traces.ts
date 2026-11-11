@@ -14,7 +14,13 @@
  */
 
 import {
+    AddEquation,
+    CustomBlending,
     DynamicDrawUsage,
+    OneFactor,
+    OneMinusSrcAlphaFactor,
+    SrcAlphaFactor,
+    ZeroFactor,
     InstancedBufferAttribute,
     InstancedMesh,
     Matrix4,
@@ -107,10 +113,11 @@ void main() {
         shape = oval * min(cleft, 1.0) * (0.75 + 0.25 * (1.0 - smoothstep(0.2, 0.9, length(p))));
     }
     float strength = abs(vPrint.z);
-    float a = shape * strength * (1.0 - smoothstep(life * 0.55, life, age)) * smoothstep(0.0, 0.25, age);
+    // A clean edge to the shape, then the surface's own depth of print (sand light, mud deep), fading with age.
+    float a = smoothstep(0.08, 0.4, shape) * min(strength * 1.4, 0.92) * (1.0 - smoothstep(life * 0.55, life, age)) * smoothstep(0.0, 0.25, age);
     if (a < 0.01) discard;
-    vec3 colour = vPrint.z < 0.0 ? vec3(0.42, 0.5, 0.62) : vec3(0.16, 0.12, 0.09);
-    gl_FragColor = vec4(colour * mix(0.5, 1.0, daylight), a * 0.8);
+    vec3 colour = vPrint.z < 0.0 ? vec3(0.36, 0.44, 0.58) : vec3(0.13, 0.1, 0.07);
+    gl_FragColor = vec4(colour * mix(0.5, 1.0, daylight), a);
     #include <colorspace_fragment>
 }`;
 
@@ -126,7 +133,7 @@ void main() {
     float k = age / life;
     float r = length(vUv * 2.0 - 1.0);
     float ring = (1.0 - smoothstep(0.0, 0.09, abs(r - (0.15 + 0.85 * k)))) * (1.0 - k) * (1.0 - k);
-    float a = ring * vPrint.z;
+    float a = min(ring * vPrint.z * 1.8, 0.9);
     if (a < 0.01) discard;
     gl_FragColor = vec4(vec3(0.9, 0.95, 0.98) * mix(0.4, 1.0, daylight), a);
     #include <colorspace_fragment>
@@ -139,11 +146,26 @@ varying vec4 vPrint;
 void main() {
     vec2 p = vUv * 2.0 - 1.0;
     float n = fract(sin(dot(floor(vUv * 9.0) + vec2(vPrint.w), vec2(12.9898, 78.233))) * 43758.5453);
-    float a = (1.0 - smoothstep(0.35, 1.0, length(p))) * vPrint.z * (0.75 + 0.25 * n);
+    float a = min((1.0 - smoothstep(0.35, 1.0, length(p))) * vPrint.z * 1.6 * (0.75 + 0.25 * n), 0.6);
     if (a < 0.01) discard;
     gl_FragColor = vec4(vec3(0.34, 0.27, 0.18) * mix(0.45, 1.0, daylight), a);
     #include <colorspace_fragment>
 }`;
+
+/**
+ * Normal blending for the colour, but the frame's alpha left as it is: the scene draws into a target with an alpha
+ * channel that the output pass composites over the page, so a half-transparent decal would otherwise let the page's
+ * background show through it (a print on sand vanished).
+ */
+export function keepFrameAlpha<T extends {blending: number; blendEquation: number; blendSrc: number; blendDst: number; blendSrcAlpha: number | null; blendDstAlpha: number | null}>(material: T, additive = false): T {
+    material.blending = CustomBlending;
+    material.blendEquation = AddEquation;
+    material.blendSrc = SrcAlphaFactor;
+    material.blendDst = additive ? OneFactor : OneMinusSrcAlphaFactor;
+    material.blendSrcAlpha = ZeroFactor;
+    material.blendDstAlpha = OneFactor;
+    return material;
+}
 
 type Walker = {x: number; z: number; travelled: number; side: number; seen: number; lastRipple: number; lastDust: number; wasSurface: boolean};
 
@@ -158,7 +180,7 @@ class Ring {
         this.attribute = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
         this.attribute.setUsage(DynamicDrawUsage);
         geometry.setAttribute("print", this.attribute);
-        const material = new ShaderMaterial({
+        const material = keepFrameAlpha(new ShaderMaterial({
             vertexShader: PRINT_VERTEX,
             fragmentShader: fragment,
             uniforms: {now: this.now, daylight: ARK_DAYLIGHT},
@@ -167,7 +189,7 @@ class Ring {
             polygonOffset: true,
             polygonOffsetFactor: -2,
             polygonOffsetUnits: -2
-        });
+        }));
         this.mesh = new InstancedMesh(geometry, material, capacity);
         this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
         this.mesh.count = 0;

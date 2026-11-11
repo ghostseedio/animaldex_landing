@@ -18,14 +18,12 @@
  */
 
 import {
-    AdditiveBlending,
     Color,
     DoubleSide,
     Group,
     InstancedBufferAttribute,
     InstancedBufferGeometry,
     Mesh,
-    NormalBlending,
     PlaneGeometry,
     ShaderMaterial,
     Vector2,
@@ -35,6 +33,7 @@ import {
     type WebGLRenderer
 } from "three";
 import {ARK_DAYLIGHT, ARK_TIME} from "@/ark-scene/glsl";
+import {keepFrameAlpha} from "@/ark-scene/traces";
 import type {QualityTier} from "@/ark-scene/post";
 
 /** What the effects read each frame (the clock's weather, or the pinned environment). */
@@ -242,7 +241,7 @@ export class WeatherFx {
         // A streak: a quad from its head (y 0) to its tail (y 1), widened across in pixels.
         const streak = new PlaneGeometry(1, 1);
         streak.translate(0, 0.5, 0);
-        this.rainMaterial = new ShaderMaterial({
+        this.rainMaterial = keepFrameAlpha(new ShaderMaterial({
             vertexShader: RAIN_VERTEX,
             fragmentShader: RAIN_FRAGMENT,
             uniforms: {
@@ -261,35 +260,33 @@ export class WeatherFx {
             },
             transparent: true,
             depthWrite: false,
-            blending: NormalBlending,
             side: DoubleSide
-        });
+        }));
         this.rain = new Mesh(instanced(streak, TIER_DROPS.high, 11), this.rainMaterial);
         this.rain.frustumCulled = false;
         this.rain.renderOrder = 6;
         const ring = new PlaneGeometry(1, 1);
-        this.ringMaterial = new ShaderMaterial({
+        this.ringMaterial = keepFrameAlpha(new ShaderMaterial({
             vertexShader: RING_VERTEX,
             fragmentShader: RING_FRAGMENT,
             uniforms: {arkTime: ARK_TIME, daylight: ARK_DAYLIGHT, centre: {value: new Vector2()}, boxSize: {value: RING_BOX}, seaLevel: {value: 0}, amount: {value: 0}, opacity: {value: 0.55}},
             transparent: true,
             depthWrite: false,
-            blending: AdditiveBlending,
             side: DoubleSide
-        });
+        }), true);
         // Flat on the water: the quad's x and y are the world's x and z.
         this.rings = new Mesh(instanced(ring, TIER_RINGS.high, 23), this.ringMaterial);
         this.rings.frustumCulled = false;
         this.rings.renderOrder = 2;
         const leaf = new PlaneGeometry(1, 1);
-        this.leafMaterial = new ShaderMaterial({
+        this.leafMaterial = keepFrameAlpha(new ShaderMaterial({
             vertexShader: LEAF_VERTEX,
             fragmentShader: LEAF_FRAGMENT,
             uniforms: {arkTime: ARK_TIME, daylight: ARK_DAYLIGHT, box: {value: LEAF_BOX.clone()}, centre: {value: new Vector3()}, wind: {value: new Vector2()}, amount: {value: 0}},
             transparent: true,
             depthWrite: false,
             side: DoubleSide
-        });
+        }));
         this.leaves = new Mesh(instanced(leaf, TIER_LEAVES.high, 37), this.leafMaterial);
         this.leaves.frustumCulled = false;
         this.root.add(this.rain, this.rings, this.leaves);

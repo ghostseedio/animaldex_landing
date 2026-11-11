@@ -254,7 +254,7 @@ if (only.includes("printtest")) {
             for (let i = 0; i <= 120; i++) {
                 const px = x + 3 + i * 0.05;
                 const pz = z + 6 + dz;
-                L.traces.observe({id, x: px, y: H.heightAt(px, pz), z: pz, yaw: Math.PI / 2, length, onGround: true, atSurface: false, bird, distance: 5}, t0 + i * 0.05, env);
+                L.traces.observe({id, x: px, y: H.heightAt(px, pz), z: pz, yaw: Math.PI / 2, length, onGround: true, atSurface: false, bird, distance: 5}, t0 - (120 - i) * 0.05, env);
             }
         }
     }, [sand.x, sand.z]);
@@ -266,27 +266,9 @@ if (only.includes("printtest")) {
         const m = prints.mesh;
         const first = Array.from(m.instanceMatrix.array.slice(0, 16)).map((v) => Math.round(v * 1000) / 1000);
         const attr = Array.from(prints.attribute.array.slice(0, 8)).map((v) => Math.round(v * 1000) / 1000);
-        m.material.depthTest = false;
         return {count: m.count, visible: m.visible, inScene: Boolean(m.parent?.parent?.parent), now: m.material.uniforms.now.value, first, attr, camera: window.__arkDebug.camera.position.toArray().map((v) => Math.round(v * 100) / 100)};
     });
     log("print debug", JSON.stringify(notes.printDebug));
-    await wait(500);
-    await frame("probe-nodepth", "printtest");
-    // Bisect: the fragment as solid red (does the geometry reach the screen at all?).
-    await page.evaluate(() => {
-        const material = window.__arkDebug.liveliness.traces.prints.mesh.material;
-        material.userData.fragment = material.fragmentShader;
-        material.fragmentShader = "varying vec4 vPrint; uniform float now; void main() { gl_FragColor = vec4(clamp(vPrint.x / 30.0, 0.0, 1.0), clamp(vPrint.y / 200.0, 0.0, 1.0), clamp(now / 30.0, 0.0, 1.0), 1.0); }";
-        material.needsUpdate = true;
-    });
-    await wait(600);
-    await frame("probe-red", "printtest");
-    await page.evaluate(() => {
-        const material = window.__arkDebug.liveliness.traces.prints.mesh.material;
-        material.fragmentShader = material.userData.fragment;
-        material.depthTest = true;
-        material.needsUpdate = true;
-    });
 }
 
 if (only.includes("sound")) {
