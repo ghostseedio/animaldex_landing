@@ -123,7 +123,44 @@ nonPerturbedNormal *= faceDirection;
         if (near) {
             shader.fragmentShader = shader.fragmentShader
                 .replace("#include <common>", `#include <common>${ARK_NEAR_FADE_PARS}`)
-                .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${ARK_NEAR_FADE_CLIP}`);
+                // After the noise helpers (inserted after <common> above).
+                .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>
+// Close-range bark (batch 6): furrows along the trunk in its own coordinates, a few cracks across, lichen flecks.
+float arkBarkHeight(vec3 q) {
+    float around = atan(q.z, q.x);
+    float furrows = arkNoise(vec2(around * 26.0, q.y * 3.2));
+    float fine = arkNoise(vec2(around * 70.0, q.y * 11.0));
+    float cracks = smoothstep(0.82, 0.95, arkNoise(vec2(around * 9.0, q.y * 14.0)));
+    return furrows * 0.7 + fine * 0.3 - cracks * 0.5;
+}
+float arkBarkNear = 0.0;
+float arkBarkH = 0.0;`)
+                .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${ARK_NEAR_FADE_CLIP}`)
+                // Taken here, in uniform control flow, for the bump's screen derivatives below.
+                .replace("#include <color_fragment>", `{
+    arkBarkNear = (1.0 - vArkLeafy) * (1.0 - smoothstep(1.2, 3.2, length(vViewPosition)));
+    arkBarkH = arkBarkHeight(vArkLocal);
+}
+#include <color_fragment>`)
+                .replace("#include <lights_fragment_begin>", `{
+    // The bark's relief as a bump on the shading normal (three's surface-gradient method), only close up.
+    vec3 bdx = dFdx(-vViewPosition);
+    vec3 bdy = dFdy(-vViewPosition);
+    vec3 r1 = cross(bdy, normal);
+    vec3 r2 = cross(normal, bdx);
+    float det = dot(bdx, r1);
+    vec3 grad = sign(det) * (dFdx(arkBarkH) * r1 + dFdy(arkBarkH) * r2) * 0.035;
+    normal = normalize(mix(normal, normalize(abs(det) * normal - grad), arkBarkNear));
+}
+#include <lights_fragment_begin>`);
+            // The bark's colour close up: darker in the furrows, lighter on the ridges, a few grey-green lichen flecks.
+            shader.fragmentShader = shader.fragmentShader.replace("    diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);", `    diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);
+    {
+        float lichen = smoothstep(0.84, 0.93, arkNoise(vArkLocal.xz * 95.0 + vArkLocal.y * 60.0)) * smoothstep(0.4, 0.7, arkNoise(vArkLocal.xz * 6.0 + vArkLocal.y * 3.0));
+        vec3 bark = diffuseColor.rgb * (0.62 + 0.62 * clamp(arkBarkH, 0.0, 1.0));
+        bark = mix(bark, vec3(0.3, 0.34, 0.25), lichen * 0.35);
+        diffuseColor.rgb = mix(diffuseColor.rgb, bark, arkBarkNear);
+    }`);
         }
     };
     return material;
