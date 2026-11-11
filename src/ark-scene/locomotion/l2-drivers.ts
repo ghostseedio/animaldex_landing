@@ -101,6 +101,20 @@ export function foldWing(rig: LocoRig, world: Matrix4[], wing: readonly number[]
     }
 }
 
+/** How far the legs swing back under the tail in level flight (radians at the hip), on top of the clip's own tuck. */
+export const LEG_TUCK = 0.6;
+const LATERAL = new Vector3(1, 0, 0);
+
+/**
+ * Legs drawn back under the tail in level flight (birds trail their feet; the clips' tuck leaves a duck's feet hanging
+ * under its belly): each leg swung back about its hip.
+ */
+export function tuckLegs(rig: LocoRig, world: Matrix4[], amount: number): void {
+    if (amount <= 1e-4) return;
+    qTmp.setFromAxisAngle(LATERAL, LEG_TUCK * amount);
+    for (const leg of rig.legs) rotateSubtree(rig, world, leg.upper, qTmp, pos(world[leg.upper], vA));
+}
+
 /** Beat one wing about the body's long axis at its shoulder (+ up), for a rig with no flap of its own. */
 export function beatWing(rig: LocoRig, world: Matrix4[], wing: readonly number[], side: 1 | -1, angle: number): void {
     if (!wing.length || Math.abs(angle) < 1e-5) return;
@@ -111,7 +125,7 @@ export function beatWing(rig: LocoRig, world: Matrix4[], wing: readonly number[]
 export const flightDriver: LocoDriver = {
     name: "l2-flight",
     takes(rig, input) {
-        return !input.grounded && rig.wings.left.length >= 1 && rig.wings.right.length >= 1 && FLIGHT_DRIVER_CLIPS.has(input.clipNow);
+        return (globalThis as {__arkL2?: boolean}).__arkL2 !== false && !input.grounded && rig.wings.left.length >= 1 && rig.wings.right.length >= 1 && FLIGHT_DRIVER_CLIPS.has(input.clipNow);
     },
     init(): FlightState {
         return {spec: null, length: 0, track: newTrack(), stroke: 0};
@@ -148,6 +162,8 @@ export const flightDriver: LocoDriver = {
             beatWing(rig, world, rig.wings.right, -1, angle);
             mode = spec.style === "flutter" ? "flutter" : "whir";
         }
+        // Feet back under the tail in the air (not in a take-off, a landing or a dive: legs push off, reach down, or stay in).
+        if (spec.kind !== "insect" && (clip === "flap" || clip === "glide" || clip === "soar" || clip === "bank_l" || clip === "bank_r")) tuckLegs(rig, world, 1);
         // The head level with the horizon in a bank (birds and bats), up to 70% of the roll.
         if (spec.kind !== "insect") {
             const steady = rig.neck >= 0 ? rig.neck : rig.head;
@@ -170,7 +186,7 @@ export const flightDriver: LocoDriver = {
 
 export const CHAIN_DRIVER_CLIPS: ReadonlySet<string> = new Set(["slither", "swim"]);
 
-type ChainState = {track: Track; swim: SwimMemory | null; legless: LeglessMemory | null; rest: Vector3[]; front: number; run: number};
+type ChainState = {track: Track; swim: SwimMemory | null; legless: LeglessMemory | null; rest: Vector3[]; targets: Vector3[]; front: number; run: number};
 
 /**
  * Bend a chain to targets (mesh space, one per chain bone): from the front, each segment turned to point at its
@@ -227,7 +243,7 @@ export function laidOnTrack(rest: readonly Vector3[], front: number, amp: number
 export const chainDriver: LocoDriver = {
     name: "l2-chain",
     takes(rig, input) {
-        if (rig.chain.length < 3 || !CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
+        if ((globalThis as {__arkL2?: boolean}).__arkL2 === false || rig.chain.length < 3 || !CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
         const style = locoStyle(rig.slug, rig.plan);
         return Boolean(style.swim || style.legless);
     },
@@ -238,7 +254,7 @@ export const chainDriver: LocoDriver = {
         const rest = rig.chain.map((b) => new Vector3().setFromMatrixPosition(rig.bones[b].restWorld));
         const front = rest[0].z;
         const run = Math.max(front - rest[rest.length - 1].z, 1e-3) / 0.9;
-        return {track: newTrack(), swim: null, legless: null, rest, front, run};
+        return {track: newTrack(), swim: null, legless: null, rest, targets: rest.map((p) => p.clone()), front, run};
     },
     pose(rig, input, world, raw): GaitState | null {
         const state = raw as ChainState;
@@ -246,7 +262,9 @@ export const chainDriver: LocoDriver = {
         const style = locoStyle(rig.slug, rig.plan);
         const length = Math.max(rig.length * input.scale, 0.01);
         const L = state.run;
-        const targets = state.rest.map((p) => p.clone());
+        // (Reused each frame: no allocation while posing.)
+        const targets = state.targets;
+        state.rest.forEach((p, k) => targets[k].copy(p));
         let gait = "undulate";
         let phase = 0;
         let cadence = 0;

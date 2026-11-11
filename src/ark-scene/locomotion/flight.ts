@@ -424,6 +424,8 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     if (memory.flare > 0.3 || sinceTakeoff < 1.6 || burst) mode = "flap";
     else if (input.climb > 0.12) mode = spec.style === "flap_bound" && rhythm.mode === "bound" ? "bound" : "flap";
     else if ((input.beat === "glide" || input.climb < -0.12) && spec.style !== "continuous" && spec.style !== "whir" && spec.style !== "bat") mode = spec.style === "soar" || input.soaring ? "soar" : "glide";
+    // (A continuous flapper sets its wings on a steep way down, well above the ground: a duck gliding in.)
+    else if (spec.style === "continuous" && input.climb < -0.2 && input.agl > flareHeight * 1.5) mode = "glide";
     else if (spec.style === "continuous" || spec.style === "bat" || spec.style === "whir") mode = "flap";
     else mode = rhythm.mode;
     // A flap bout ends on a whole beat (wings back up), never mid-stroke.
