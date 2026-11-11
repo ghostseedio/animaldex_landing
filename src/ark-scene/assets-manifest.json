@@ -1,0 +1,3959 @@
+{
+ "version": 1,
+ "about": "Ark scene asset library (scripts/ark-assets). Procedural, made in this repo (CC0, see docs/ark-credits.md). Files are under `base`; every GLB is one mesh, one primitive, one vertex-coloured material, meshopt-compressed (EXT_meshopt_compression, float positions: no node transform), read with GLTFLoader + MeshoptDecoder.",
+ "base": "/ark/assets/v1",
+ "units": "metres, +Y up, origin at the ground contact (trees: trunk base at y=0)",
+ "attributes": {
+  "COLOR_0": "linear RGBA vertex colour (the whole look: no textures). three: geometry 'color'",
+  "_WIND": "vec4 unorm8, three: geometry '_wind'. x sway weight (0 at the ground; trunk <=0.2, branches 0.2-0.9, leaves 0.9-1), y phase of the limb (0..1, a leaf shares its limb's), z flutter (0 at a leaf's stalk -> 1 at its tip, 0 on wood), w the leaf's own phase (0..1)",
+  "morph": "flowers carry one morph target named 'closed' (weight 0 open, 1 closed)"
+ },
+ "material": "Each lod lists doubleSided. true (leaves, petals, blades are single sheets): side DoubleSide; false (cards, which carry both faces as geometry; closed solids): side FrontSide",
+ "lods": "lod0 near (attach points are real geometry here), lod1 mid, lod2 far, card = crossed vertex-coloured silhouettes for the horizon. lod_distances (m) are suggestions: lod0 below [0], lod1 below [1], lod2 below [2], card beyond",
+ "attach": "Per set `<set>/attach.json`: {assetId: [{tag, p, n, f, q, size, spot, lod, ...}]} in asset space. n = the animal's up (surface normal), f = its forward along the surface, q = the quaternion (x,y,z,w) taking local +Y to n and +Z to f, size = [min, max] body length (m) that fits. spot = the nearest micro.ts MicroSpot.",
+ "tags": {
+  "leaf": {
+   "spot": "flowers",
+   "about": "upper side of a real leaf blade"
+  },
+  "branch": {
+   "spot": "bark",
+   "about": "top of a roughly horizontal branch; forward runs along it"
+  },
+  "bark": {
+   "spot": "bark",
+   "about": "trunk surface; normal points out, forward points up the trunk (clingers)"
+  },
+  "tree_hollow": {
+   "spot": "bark",
+   "about": "the mouth of a hole in a trunk; normal out of the hole"
+  },
+  "crown": {
+   "spot": "bark",
+   "about": "the top of a palm trunk among the frond bases"
+  },
+  "frond": {
+   "spot": "bark",
+   "about": "top of a palm frond's midrib"
+  },
+  "root": {
+   "spot": "rocks",
+   "about": "top of an above-ground root (prop roots, root flares)"
+  },
+  "fruit": {
+   "spot": "flowers",
+   "about": "on top of a hanging fruit"
+  },
+  "flower_head": {
+   "spot": "flowers",
+   "about": "the centre of an open flower, normal out of the flower"
+  },
+  "bromeliad": {
+   "spot": "pond_surface",
+   "about": "the water cup of a bromeliad rosette"
+  },
+  "fungus_shelf": {
+   "spot": "bark",
+   "about": "the top of a bracket fungus"
+  },
+  "stem": {
+   "spot": "flowers",
+   "about": "a plant stem or grass blade; forward runs up it"
+  },
+  "pad": {
+   "spot": "pond_surface",
+   "about": "the top of a floating leaf (lily pad)"
+  },
+  "rock_face": {
+   "spot": "rocks",
+   "about": "a rock surface, up-facing or steep"
+  },
+  "ledge": {
+   "spot": "rocks",
+   "about": "a flat shelf on a cliff or boulder"
+  },
+  "crevice": {
+   "spot": "rocks",
+   "about": "a crack or gap between stones; normal out of it"
+  },
+  "tide_pool": {
+   "spot": "pond_surface",
+   "about": "the water surface in a rock hollow"
+  },
+  "burrow_entrance": {
+   "spot": "leaf_litter",
+   "about": "an opening into the ground, a log or under a stone"
+  },
+  "cave_mouth": {
+   "spot": "rocks",
+   "about": "the floor at the mouth of a cave"
+  },
+  "cave_ceiling": {
+   "spot": "rocks",
+   "about": "the underside of a cave roof (bats); normal points down"
+  },
+  "leaf_litter": {
+   "spot": "leaf_litter",
+   "about": "the ground among fallen leaves, twigs or cones"
+  },
+  "log_top": {
+   "spot": "bark",
+   "about": "the top of a fallen log; forward runs along it"
+  },
+  "moss": {
+   "spot": "leaf_litter",
+   "about": "a moss cushion"
+  },
+  "soil": {
+   "spot": "leaf_litter",
+   "about": "bare soil"
+  },
+  "shell": {
+   "spot": "rocks",
+   "about": "on or in a shell on the shore"
+  },
+  "sand": {
+   "spot": "rocks",
+   "about": "sand or shingle between stones"
+  }
+ },
+ "sets": {
+  "plants": {
+   "attach": "plants/attach.json",
+   "assets": 26,
+   "bytes": 2015020,
+   "lod0_tris_max": 3864
+  },
+  "trees": {
+   "attach": "trees/attach.json",
+   "assets": 33,
+   "bytes": 17127228,
+   "lod0_tris_max": 9500
+  }
+ },
+ "assets": {
+  "dandelion-a": {
+   "set": "plants",
+   "kind": "dandelion",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.147,
+     -0.0,
+     -0.159
+    ],
+    "max": [
+     0.149,
+     0.254,
+     0.147
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/dandelion-a.lod0.glb",
+     "tris": 1068,
+     "verts": 1006,
+     "bytes": 64628,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/dandelion-a.lod1.glb",
+     "tris": 188,
+     "verts": 241,
+     "bytes": 16496,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/dandelion-a.lod2.glb",
+     "tris": 72,
+     "verts": 91,
+     "bytes": 7392,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 1,
+   "height": 0.28,
+   "group": "flower",
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ],
+   "morph_targets": [
+    "closed"
+   ]
+  },
+  "dandelion-seedhead-a": {
+   "set": "plants",
+   "kind": "dandelion-seedhead",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.14,
+     -0.0,
+     -0.14
+    ],
+    "max": [
+     0.128,
+     0.353,
+     0.141
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/dandelion-seedhead-a.lod0.glb",
+     "tris": 1335,
+     "verts": 1990,
+     "bytes": 73104,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "plants/dandelion-seedhead-a.lod1.glb",
+     "tris": 254,
+     "verts": 429,
+     "bytes": 16652,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "plants/dandelion-seedhead-a.lod2.glb",
+     "tris": 128,
+     "verts": 195,
+     "bytes": 8404,
+     "doubleSided": true,
+     "morph": false
+    }
+   ],
+   "attach": 1,
+   "height": 0.36,
+   "group": "flower",
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-black-eyed-susan-a": {
+   "set": "plants",
+   "kind": "flower-black-eyed-susan",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.054,
+     -0.0,
+     -0.073
+    ],
+    "max": [
+     0.073,
+     0.463,
+     0.059
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-black-eyed-susan-a.lod0.glb",
+     "tris": 272,
+     "verts": 240,
+     "bytes": 16972,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-black-eyed-susan-a.lod1.glb",
+     "tris": 82,
+     "verts": 80,
+     "bytes": 6856,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-black-eyed-susan-a.lod2.glb",
+     "tris": 56,
+     "verts": 57,
+     "bytes": 5412,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.44,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-black-eyed-susan-b": {
+   "set": "plants",
+   "kind": "flower-black-eyed-susan",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.108,
+     -0.0,
+     -0.098
+    ],
+    "max": [
+     0.171,
+     0.479,
+     0.156
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-black-eyed-susan-b.lod0.glb",
+     "tris": 1088,
+     "verts": 960,
+     "bytes": 62200,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-black-eyed-susan-b.lod1.glb",
+     "tris": 328,
+     "verts": 320,
+     "bytes": 21788,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-black-eyed-susan-b.lod2.glb",
+     "tris": 212,
+     "verts": 204,
+     "bytes": 14592,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 6,
+   "height": 0.46,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-bluebell-a": {
+   "set": "plants",
+   "kind": "flower-bluebell",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.2,
+     -0.0,
+     -0.2
+    ],
+    "max": [
+     0.194,
+     0.353,
+     0.199
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-bluebell-a.lod0.glb",
+     "tris": 596,
+     "verts": 391,
+     "bytes": 27360,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-bluebell-a.lod1.glb",
+     "tris": 178,
+     "verts": 122,
+     "bytes": 9780,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-bluebell-a.lod2.glb",
+     "tris": 48,
+     "verts": 41,
+     "bytes": 4452,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.35,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-bluebell-b": {
+   "set": "plants",
+   "kind": "flower-bluebell",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.197,
+     -0.0,
+     -0.245
+    ],
+    "max": [
+     0.268,
+     0.34,
+     0.277
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-bluebell-b.lod0.glb",
+     "tris": 1788,
+     "verts": 1173,
+     "bytes": 78316,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-bluebell-b.lod1.glb",
+     "tris": 534,
+     "verts": 366,
+     "bytes": 25584,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-bluebell-b.lod2.glb",
+     "tris": 136,
+     "verts": 107,
+     "bytes": 8684,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 5,
+   "height": 0.34,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-buttercup-a": {
+   "set": "plants",
+   "kind": "flower-buttercup",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.059,
+     -0.0,
+     -0.067
+    ],
+    "max": [
+     0.029,
+     0.305,
+     0.055
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-buttercup-a.lod0.glb",
+     "tris": 378,
+     "verts": 328,
+     "bytes": 22528,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-buttercup-a.lod1.glb",
+     "tris": 166,
+     "verts": 164,
+     "bytes": 12064,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-buttercup-a.lod2.glb",
+     "tris": 48,
+     "verts": 53,
+     "bytes": 5128,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.29,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-buttercup-b": {
+   "set": "plants",
+   "kind": "flower-buttercup",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.056,
+     -0.0,
+     -0.153
+    ],
+    "max": [
+     0.094,
+     0.328,
+     0.136
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-buttercup-b.lod0.glb",
+     "tris": 1890,
+     "verts": 1640,
+     "bytes": 105088,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-buttercup-b.lod1.glb",
+     "tris": 830,
+     "verts": 820,
+     "bytes": 52792,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-buttercup-b.lod2.glb",
+     "tris": 224,
+     "verts": 233,
+     "bytes": 16280,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 7,
+   "height": 0.32,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-coneflower-a": {
+   "set": "plants",
+   "kind": "flower-coneflower",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.088,
+     -0.0,
+     -0.065
+    ],
+    "max": [
+     0.074,
+     0.608,
+     0.085
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-coneflower-a.lod0.glb",
+     "tris": 284,
+     "verts": 252,
+     "bytes": 17704,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-coneflower-a.lod1.glb",
+     "tris": 86,
+     "verts": 86,
+     "bytes": 7204,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-coneflower-a.lod2.glb",
+     "tris": 56,
+     "verts": 57,
+     "bytes": 5400,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.58,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-coneflower-b": {
+   "set": "plants",
+   "kind": "flower-coneflower",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.127,
+     -0.0,
+     -0.103
+    ],
+    "max": [
+     0.135,
+     0.6,
+     0.188
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-coneflower-b.lod0.glb",
+     "tris": 1136,
+     "verts": 1008,
+     "bytes": 65168,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-coneflower-b.lod1.glb",
+     "tris": 344,
+     "verts": 344,
+     "bytes": 23216,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-coneflower-b.lod2.glb",
+     "tris": 212,
+     "verts": 204,
+     "bytes": 14584,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 6,
+   "height": 0.57,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-cornflower-a": {
+   "set": "plants",
+   "kind": "flower-cornflower",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.055,
+     -0.0,
+     -0.064
+    ],
+    "max": [
+     0.063,
+     0.328,
+     0.044
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-cornflower-a.lod0.glb",
+     "tris": 290,
+     "verts": 264,
+     "bytes": 18416,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-cornflower-a.lod1.glb",
+     "tris": 102,
+     "verts": 104,
+     "bytes": 8320,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-cornflower-a.lod2.glb",
+     "tris": 48,
+     "verts": 53,
+     "bytes": 5132,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.31,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-cornflower-b": {
+   "set": "plants",
+   "kind": "flower-cornflower",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.168,
+     -0.0,
+     -0.129
+    ],
+    "max": [
+     0.059,
+     0.486,
+     0.066
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-cornflower-b.lod0.glb",
+     "tris": 870,
+     "verts": 792,
+     "bytes": 51464,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-cornflower-b.lod1.glb",
+     "tris": 306,
+     "verts": 312,
+     "bytes": 21200,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-cornflower-b.lod2.glb",
+     "tris": 136,
+     "verts": 143,
+     "bytes": 10708,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 5,
+   "height": 0.47,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-cosmos-a": {
+   "set": "plants",
+   "kind": "flower-cosmos",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.075,
+     -0.0,
+     -0.053
+    ],
+    "max": [
+     0.048,
+     0.567,
+     0.054
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-cosmos-a.lod0.glb",
+     "tris": 196,
+     "verts": 178,
+     "bytes": 13024,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-cosmos-a.lod1.glb",
+     "tris": 64,
+     "verts": 66,
+     "bytes": 5944,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-cosmos-a.lod2.glb",
+     "tris": 50,
+     "verts": 57,
+     "bytes": 5356,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.56,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-cosmos-b": {
+   "set": "plants",
+   "kind": "flower-cosmos",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.067,
+     -0.0,
+     -0.124
+    ],
+    "max": [
+     0.191,
+     0.69,
+     0.16
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-cosmos-b.lod0.glb",
+     "tris": 784,
+     "verts": 712,
+     "bytes": 46460,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-cosmos-b.lod1.glb",
+     "tris": 256,
+     "verts": 264,
+     "bytes": 18200,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-cosmos-b.lod2.glb",
+     "tris": 182,
+     "verts": 192,
+     "bytes": 13720,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 6,
+   "height": 0.67,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-daisy-a": {
+   "set": "plants",
+   "kind": "flower-daisy",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.029,
+     -0.0,
+     -0.067
+    ],
+    "max": [
+     0.064,
+     0.349,
+     0.034
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-daisy-a.lod0.glb",
+     "tris": 360,
+     "verts": 338,
+     "bytes": 22972,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-daisy-a.lod1.glb",
+     "tris": 90,
+     "verts": 104,
+     "bytes": 8236,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-daisy-a.lod2.glb",
+     "tris": 60,
+     "verts": 71,
+     "bytes": 6204,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.34,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-daisy-b": {
+   "set": "plants",
+   "kind": "flower-daisy",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.155,
+     -0.0,
+     -0.053
+    ],
+    "max": [
+     0.048,
+     0.417,
+     0.165
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-daisy-b.lod0.glb",
+     "tris": 1080,
+     "verts": 1014,
+     "bytes": 65160,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-daisy-b.lod1.glb",
+     "tris": 270,
+     "verts": 312,
+     "bytes": 20972,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-daisy-b.lod2.glb",
+     "tris": 172,
+     "verts": 197,
+     "bytes": 13940,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 5,
+   "height": 0.41,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-foxglove-a": {
+   "set": "plants",
+   "kind": "flower-foxglove",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.155,
+     -0.0,
+     -0.15
+    ],
+    "max": [
+     0.154,
+     1.131,
+     0.119
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-foxglove-a.lod0.glb",
+     "tris": 1288,
+     "verts": 842,
+     "bytes": 56776,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-foxglove-a.lod1.glb",
+     "tris": 440,
+     "verts": 296,
+     "bytes": 21096,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-foxglove-a.lod2.glb",
+     "tris": 82,
+     "verts": 69,
+     "bytes": 6224,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 1.13,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-foxglove-b": {
+   "set": "plants",
+   "kind": "flower-foxglove",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.156,
+     -0.0,
+     -0.155
+    ],
+    "max": [
+     0.199,
+     1.134,
+     0.182
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-foxglove-b.lod0.glb",
+     "tris": 3864,
+     "verts": 2526,
+     "bytes": 166544,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-foxglove-b.lod1.glb",
+     "tris": 1320,
+     "verts": 888,
+     "bytes": 59544,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-foxglove-b.lod2.glb",
+     "tris": 234,
+     "verts": 183,
+     "bytes": 13532,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 5,
+   "height": 1.13,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-iris-a": {
+   "set": "plants",
+   "kind": "flower-iris",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.301,
+     -0.0,
+     -0.273
+    ],
+    "max": [
+     0.327,
+     0.777,
+     0.322
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-iris-a.lod0.glb",
+     "tris": 140,
+     "verts": 125,
+     "bytes": 9692,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-iris-a.lod1.glb",
+     "tris": 46,
+     "verts": 56,
+     "bytes": 5256,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-iris-a.lod2.glb",
+     "tris": 40,
+     "verts": 53,
+     "bytes": 5052,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.7,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-iris-b": {
+   "set": "plants",
+   "kind": "flower-iris",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.356,
+     -0.0,
+     -0.374
+    ],
+    "max": [
+     0.345,
+     0.778,
+     0.349
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-iris-b.lod0.glb",
+     "tris": 560,
+     "verts": 500,
+     "bytes": 33220,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-iris-b.lod1.glb",
+     "tris": 184,
+     "verts": 224,
+     "bytes": 15504,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-iris-b.lod2.glb",
+     "tris": 148,
+     "verts": 188,
+     "bytes": 13268,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 6,
+   "height": 0.7,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-lupine-a": {
+   "set": "plants",
+   "kind": "flower-lupine",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.044,
+     -0.0,
+     -0.083
+    ],
+    "max": [
+     0.065,
+     0.74,
+     0.036
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-lupine-a.lod0.glb",
+     "tris": 332,
+     "verts": 428,
+     "bytes": 27848,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-lupine-a.lod1.glb",
+     "tris": 96,
+     "verts": 114,
+     "bytes": 8836,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-lupine-a.lod2.glb",
+     "tris": 46,
+     "verts": 56,
+     "bytes": 5280,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.74,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-lupine-b": {
+   "set": "plants",
+   "kind": "flower-lupine",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.123,
+     -0.0,
+     -0.092
+    ],
+    "max": [
+     0.091,
+     0.779,
+     0.087
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-lupine-b.lod0.glb",
+     "tris": 1660,
+     "verts": 2140,
+     "bytes": 131700,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-lupine-b.lod1.glb",
+     "tris": 480,
+     "verts": 570,
+     "bytes": 36684,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-lupine-b.lod2.glb",
+     "tris": 206,
+     "verts": 232,
+     "bytes": 16108,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 7,
+   "height": 0.78,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-poppy-a": {
+   "set": "plants",
+   "kind": "flower-poppy",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.078,
+     -0.0,
+     -0.104
+    ],
+    "max": [
+     0.06,
+     0.378,
+     0.041
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-poppy-a.lod0.glb",
+     "tris": 142,
+     "verts": 118,
+     "bytes": 9336,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-poppy-a.lod1.glb",
+     "tris": 62,
+     "verts": 62,
+     "bytes": 5704,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-poppy-a.lod2.glb",
+     "tris": 48,
+     "verts": 53,
+     "bytes": 5116,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.35,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-poppy-b": {
+   "set": "plants",
+   "kind": "flower-poppy",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.131,
+     -0.0,
+     -0.091
+    ],
+    "max": [
+     0.183,
+     0.553,
+     0.142
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-poppy-b.lod0.glb",
+     "tris": 710,
+     "verts": 590,
+     "bytes": 39184,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-poppy-b.lod1.glb",
+     "tris": 310,
+     "verts": 310,
+     "bytes": 21096,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-poppy-b.lod2.glb",
+     "tris": 224,
+     "verts": 233,
+     "bytes": 16268,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 7,
+   "height": 0.53,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-wild-rose-a": {
+   "set": "plants",
+   "kind": "flower-wild-rose",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -0.049,
+     -0.0,
+     -0.039
+    ],
+    "max": [
+     0.045,
+     0.377,
+     0.058
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-wild-rose-a.lod0.glb",
+     "tris": 160,
+     "verts": 142,
+     "bytes": 10792,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-wild-rose-a.lod1.glb",
+     "tris": 64,
+     "verts": 66,
+     "bytes": 5952,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-wild-rose-a.lod2.glb",
+     "tris": 50,
+     "verts": 57,
+     "bytes": 5364,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 2,
+   "height": 0.37,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "flower-wild-rose-b": {
+   "set": "plants",
+   "kind": "flower-wild-rose",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.035,
+     -0.0,
+     -0.103
+    ],
+    "max": [
+     0.104,
+     0.441,
+     0.139
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "plants/flower-wild-rose-b.lod0.glb",
+     "tris": 480,
+     "verts": 426,
+     "bytes": 28624,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod1",
+     "file": "plants/flower-wild-rose-b.lod1.glb",
+     "tris": 192,
+     "verts": 198,
+     "bytes": 14120,
+     "doubleSided": true,
+     "morph": true
+    },
+    {
+     "level": "lod2",
+     "file": "plants/flower-wild-rose-b.lod2.glb",
+     "tris": 138,
+     "verts": 147,
+     "bytes": 10936,
+     "doubleSided": true,
+     "morph": true
+    }
+   ],
+   "attach": 5,
+   "height": 0.43,
+   "group": "flower",
+   "morph_targets": [
+    "closed"
+   ],
+   "lod_distances": [
+    4.0,
+    10.0,
+    25.0
+   ]
+  },
+  "acacia-a": {
+   "set": "trees",
+   "kind": "acacia",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -3.272,
+     -0.037,
+     -3.573
+    ],
+    "max": [
+     2.934,
+     7.014,
+     2.458
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/acacia-a.lod0.glb",
+     "tris": 7499,
+     "verts": 13399,
+     "bytes": 475160,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/acacia-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3876,
+     "bytes": 138616,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/acacia-a.lod2.glb",
+     "tris": 599,
+     "verts": 1066,
+     "bytes": 39088,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/acacia-a.card.glb",
+     "tris": 300,
+     "verts": 368,
+     "bytes": 14944,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    1277,
+    372,
+    97
+   ],
+   "leaves": 3406,
+   "height": 7.01,
+   "crown_radius": 3.57,
+   "trunk_radius": 0.286,
+   "lod_distances": [
+    17.5,
+    42.1,
+    98.2
+   ]
+  },
+  "acacia-b": {
+   "set": "trees",
+   "kind": "acacia",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -6.037,
+     -0.04,
+     -4.475
+    ],
+    "max": [
+     3.257,
+     7.176,
+     5.536
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/acacia-b.lod0.glb",
+     "tris": 7499,
+     "verts": 13062,
+     "bytes": 464372,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/acacia-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3822,
+     "bytes": 136888,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/acacia-b.lod2.glb",
+     "tris": 600,
+     "verts": 1079,
+     "bytes": 39508,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/acacia-b.card.glb",
+     "tris": 284,
+     "verts": 344,
+     "bytes": 14080,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    1577,
+    408,
+    88
+   ],
+   "leaves": 5914,
+   "height": 7.18,
+   "crown_radius": 6.04,
+   "trunk_radius": 0.286,
+   "lod_distances": [
+    17.9,
+    43.1,
+    100.5
+   ]
+  },
+  "acacia-c": {
+   "set": "trees",
+   "kind": "acacia",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -2.703,
+     -0.021,
+     -1.119
+    ],
+    "max": [
+     2.546,
+     4.929,
+     2.712
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/acacia-c.lod0.glb",
+     "tris": 4359,
+     "verts": 7513,
+     "bytes": 267960,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/acacia-c.lod1.glb",
+     "tris": 2200,
+     "verts": 3987,
+     "bytes": 142172,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/acacia-c.lod2.glb",
+     "tris": 599,
+     "verts": 1084,
+     "bytes": 39664,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/acacia-c.card.glb",
+     "tris": 284,
+     "verts": 352,
+     "bytes": 14336,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    943,
+    298,
+    85
+   ],
+   "leaves": 1708,
+   "height": 4.93,
+   "crown_radius": 2.71,
+   "trunk_radius": 0.286,
+   "lod_distances": [
+    12.3,
+    29.6,
+    69.0
+   ]
+  },
+  "apple-a": {
+   "set": "trees",
+   "kind": "apple",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.529,
+     -0.025,
+     -2.198
+    ],
+    "max": [
+     2.592,
+     4.901,
+     2.136
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/apple-a.lod0.glb",
+     "tris": 6971,
+     "verts": 9498,
+     "bytes": 347152,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/apple-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3400,
+     "bytes": 123384,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/apple-a.lod2.glb",
+     "tris": 600,
+     "verts": 946,
+     "bytes": 35244,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/apple-a.card.glb",
+     "tris": 292,
+     "verts": 368,
+     "bytes": 14896,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 50,
+   "doubleSided": true,
+   "wood_tris": [
+    3251,
+    730,
+    196
+   ],
+   "leaves": 1860,
+   "height": 4.9,
+   "crown_radius": 2.59,
+   "trunk_radius": 0.208,
+   "lod_distances": [
+    12.3,
+    29.4,
+    68.6
+   ]
+  },
+  "apple-b": {
+   "set": "trees",
+   "kind": "apple",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -3.764,
+     -0.023,
+     -3.008
+    ],
+    "max": [
+     2.522,
+     5.559,
+     2.457
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/apple-b.lod0.glb",
+     "tris": 7499,
+     "verts": 10876,
+     "bytes": 394420,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/apple-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3413,
+     "bytes": 123796,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/apple-b.lod2.glb",
+     "tris": 600,
+     "verts": 976,
+     "bytes": 36208,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/apple-b.card.glb",
+     "tris": 292,
+     "verts": 368,
+     "bytes": 14896,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 47,
+   "doubleSided": true,
+   "wood_tris": [
+    3111,
+    718,
+    172
+   ],
+   "leaves": 2871,
+   "height": 5.56,
+   "crown_radius": 3.76,
+   "trunk_radius": 0.208,
+   "lod_distances": [
+    13.9,
+    33.4,
+    77.8
+   ]
+  },
+  "apple-c": {
+   "set": "trees",
+   "kind": "apple",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -2.163,
+     -0.017,
+     -2.369
+    ],
+    "max": [
+     2.759,
+     4.528,
+     1.885
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/apple-c.lod0.glb",
+     "tris": 3499,
+     "verts": 4813,
+     "bytes": 176396,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/apple-c.lod1.glb",
+     "tris": 1676,
+     "verts": 2627,
+     "bytes": 95504,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/apple-c.lod2.glb",
+     "tris": 665,
+     "verts": 1066,
+     "bytes": 39480,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/apple-c.card.glb",
+     "tris": 276,
+     "verts": 344,
+     "bytes": 14032,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 63,
+   "doubleSided": true,
+   "wood_tris": [
+    2793,
+    970,
+    485
+   ],
+   "leaves": 353,
+   "height": 4.53,
+   "crown_radius": 2.76,
+   "trunk_radius": 0.208,
+   "lod_distances": [
+    11.3,
+    27.2,
+    63.4
+   ]
+  },
+  "beech-a": {
+   "set": "trees",
+   "kind": "beech",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -3.552,
+     -0.014,
+     -5.267
+    ],
+    "max": [
+     3.563,
+     12.72,
+     4.242
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/beech-a.lod0.glb",
+     "tris": 7499,
+     "verts": 10325,
+     "bytes": 376788,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/beech-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2898,
+     "bytes": 107316,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/beech-a.lod2.glb",
+     "tris": 599,
+     "verts": 905,
+     "bytes": 33928,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/beech-a.card.glb",
+     "tris": 356,
+     "verts": 440,
+     "bytes": 17588,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "doubleSided": true,
+   "wood_tris": [
+    3849,
+    1084,
+    211
+   ],
+   "leaves": 3832,
+   "height": 12.72,
+   "crown_radius": 5.27,
+   "trunk_radius": 0.405,
+   "lod_distances": [
+    31.8,
+    76.3,
+    178.1
+   ]
+  },
+  "beech-b": {
+   "set": "trees",
+   "kind": "beech",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.133,
+     -0.012,
+     -3.335
+    ],
+    "max": [
+     3.253,
+     9.943,
+     2.963
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/beech-b.lod0.glb",
+     "tris": 7499,
+     "verts": 11195,
+     "bytes": 404632,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/beech-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3045,
+     "bytes": 112020,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/beech-b.lod2.glb",
+     "tris": 599,
+     "verts": 898,
+     "bytes": 33704,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/beech-b.card.glb",
+     "tris": 356,
+     "verts": 440,
+     "bytes": 17584,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "doubleSided": true,
+   "wood_tris": [
+    3107,
+    986,
+    219
+   ],
+   "leaves": 2373,
+   "height": 9.94,
+   "crown_radius": 3.34,
+   "trunk_radius": 0.405,
+   "lod_distances": [
+    24.9,
+    59.7,
+    139.2
+   ]
+  },
+  "beech-c": {
+   "set": "trees",
+   "kind": "beech",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -6.155,
+     -0.01,
+     -4.117
+    ],
+    "max": [
+     4.807,
+     14.292,
+     5.273
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/beech-c.lod0.glb",
+     "tris": 7499,
+     "verts": 10402,
+     "bytes": 379252,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/beech-c.lod1.glb",
+     "tris": 2200,
+     "verts": 3072,
+     "bytes": 112884,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/beech-c.lod2.glb",
+     "tris": 599,
+     "verts": 805,
+     "bytes": 30724,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/beech-c.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17888,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "doubleSided": true,
+   "wood_tris": [
+    3395,
+    932,
+    281
+   ],
+   "leaves": 6976,
+   "height": 14.29,
+   "crown_radius": 6.15,
+   "trunk_radius": 0.405,
+   "lod_distances": [
+    35.7,
+    85.8,
+    200.1
+   ]
+  },
+  "birch-a": {
+   "set": "trees",
+   "kind": "birch",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -4.268,
+     -0.008,
+     -4.455
+    ],
+    "max": [
+     3.206,
+     11.062,
+     3.795
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/birch-a.lod0.glb",
+     "tris": 7499,
+     "verts": 10739,
+     "bytes": 390036,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/birch-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3493,
+     "bytes": 126360,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/birch-a.lod2.glb",
+     "tris": 599,
+     "verts": 968,
+     "bytes": 35940,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/birch-a.card.glb",
+     "tris": 308,
+     "verts": 376,
+     "bytes": 15248,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 36,
+   "doubleSided": true,
+   "wood_tris": [
+    3523,
+    654,
+    169
+   ],
+   "leaves": 6497,
+   "height": 11.06,
+   "crown_radius": 4.45,
+   "trunk_radius": 0.18,
+   "lod_distances": [
+    27.7,
+    66.4,
+    154.9
+   ]
+  },
+  "birch-b": {
+   "set": "trees",
+   "kind": "birch",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.485,
+     -0.022,
+     -3.273
+    ],
+    "max": [
+     4.558,
+     8.486,
+     2.498
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/birch-b.lod0.glb",
+     "tris": 7499,
+     "verts": 11963,
+     "bytes": 429200,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/birch-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3713,
+     "bytes": 133400,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/birch-b.lod2.glb",
+     "tris": 599,
+     "verts": 1004,
+     "bytes": 37100,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/birch-b.card.glb",
+     "tris": 284,
+     "verts": 352,
+     "bytes": 14336,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 36,
+   "doubleSided": true,
+   "wood_tris": [
+    2491,
+    504,
+    147
+   ],
+   "leaves": 3428,
+   "height": 8.49,
+   "crown_radius": 4.56,
+   "trunk_radius": 0.18,
+   "lod_distances": [
+    21.2,
+    50.9,
+    118.8
+   ]
+  },
+  "birch-c": {
+   "set": "trees",
+   "kind": "birch",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -5.135,
+     -0.011,
+     -5.182
+    ],
+    "max": [
+     3.472,
+     13.039,
+     4.3
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/birch-c.lod0.glb",
+     "tris": 7499,
+     "verts": 10486,
+     "bytes": 381940,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/birch-c.lod1.glb",
+     "tris": 2200,
+     "verts": 3060,
+     "bytes": 112500,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/birch-c.lod2.glb",
+     "tris": 599,
+     "verts": 887,
+     "bytes": 33352,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/birch-c.card.glb",
+     "tris": 332,
+     "verts": 408,
+     "bytes": 16416,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 36,
+   "doubleSided": true,
+   "wood_tris": [
+    3455,
+    960,
+    227
+   ],
+   "leaves": 11569,
+   "height": 13.04,
+   "crown_radius": 5.18,
+   "trunk_radius": 0.18,
+   "lod_distances": [
+    32.6,
+    78.2,
+    182.6
+   ]
+  },
+  "emergent-a": {
+   "set": "trees",
+   "kind": "emergent",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -5.033,
+     -0.046,
+     -6.297
+    ],
+    "max": [
+     7.288,
+     24.566,
+     8.003
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/emergent-a.lod0.glb",
+     "tris": 9500,
+     "verts": 14368,
+     "bytes": 518172,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/emergent-a.lod1.glb",
+     "tris": 2799,
+     "verts": 3877,
+     "bytes": 142248,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/emergent-a.lod2.glb",
+     "tris": 799,
+     "verts": 1291,
+     "bytes": 47488,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/emergent-a.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17896,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 51,
+   "doubleSided": true,
+   "wood_tris": [
+    3612,
+    1293,
+    219
+   ],
+   "leaves": 4424,
+   "height": 24.57,
+   "crown_radius": 8.0,
+   "trunk_radius": 0.55,
+   "lod_distances": [
+    61.4,
+    147.4,
+    343.9
+   ]
+  },
+  "emergent-b": {
+   "set": "trees",
+   "kind": "emergent",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -4.984,
+     -0.044,
+     -6.287
+    ],
+    "max": [
+     5.106,
+     20.597,
+     7.067
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/emergent-b.lod0.glb",
+     "tris": 9330,
+     "verts": 14860,
+     "bytes": 532896,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/emergent-b.lod1.glb",
+     "tris": 2800,
+     "verts": 4147,
+     "bytes": 150892,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/emergent-b.lod2.glb",
+     "tris": 799,
+     "verts": 1318,
+     "bytes": 48352,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/emergent-b.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17896,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 51,
+   "doubleSided": true,
+   "wood_tris": [
+    2978,
+    1108,
+    201
+   ],
+   "leaves": 3176,
+   "height": 20.6,
+   "crown_radius": 7.07,
+   "trunk_radius": 0.55,
+   "lod_distances": [
+    51.5,
+    123.6,
+    288.4
+   ]
+  },
+  "mangrove-a": {
+   "set": "trees",
+   "kind": "mangrove",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.473,
+     -0.214,
+     -1.805
+    ],
+    "max": [
+     2.586,
+     6.461,
+     2.818
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/mangrove-a.lod0.glb",
+     "tris": 6511,
+     "verts": 9714,
+     "bytes": 351308,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/mangrove-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3063,
+     "bytes": 112600,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/mangrove-a.lod2.glb",
+     "tris": 600,
+     "verts": 727,
+     "bytes": 28240,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/mangrove-a.card.glb",
+     "tris": 340,
+     "verts": 424,
+     "bytes": 16984,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 47,
+   "doubleSided": true,
+   "wood_tris": [
+    2517,
+    958,
+    346
+   ],
+   "leaves": 1997,
+   "height": 6.46,
+   "crown_radius": 2.82,
+   "trunk_radius": 0.18,
+   "lod_distances": [
+    16.2,
+    38.8,
+    90.5
+   ]
+  },
+  "mangrove-b": {
+   "set": "trees",
+   "kind": "mangrove",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.895,
+     -0.263,
+     -2.457
+    ],
+    "max": [
+     2.936,
+     6.284,
+     2.889
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/mangrove-b.lod0.glb",
+     "tris": 6477,
+     "verts": 9346,
+     "bytes": 339328,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/mangrove-b.lod1.glb",
+     "tris": 2200,
+     "verts": 2913,
+     "bytes": 107800,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/mangrove-b.lod2.glb",
+     "tris": 599,
+     "verts": 669,
+     "bytes": 26380,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/mangrove-b.card.glb",
+     "tris": 332,
+     "verts": 416,
+     "bytes": 16680,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 50,
+   "doubleSided": true,
+   "wood_tris": [
+    2709,
+    1060,
+    385
+   ],
+   "leaves": 1884,
+   "height": 6.28,
+   "crown_radius": 2.94,
+   "trunk_radius": 0.18,
+   "lod_distances": [
+    15.7,
+    37.7,
+    88.0
+   ]
+  },
+  "oak-a": {
+   "set": "trees",
+   "kind": "oak",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -4.757,
+     -0.038,
+     -4.557
+    ],
+    "max": [
+     4.603,
+     8.621,
+     3.504
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/oak-a.lod0.glb",
+     "tris": 7499,
+     "verts": 11421,
+     "bytes": 411856,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/oak-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2866,
+     "bytes": 106288,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/oak-a.lod2.glb",
+     "tris": 599,
+     "verts": 897,
+     "bytes": 33668,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/oak-a.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17888,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 41,
+   "doubleSided": true,
+   "wood_tris": [
+    2887,
+    1116,
+    219
+   ],
+   "leaves": 3345,
+   "height": 8.62,
+   "crown_radius": 4.76,
+   "trunk_radius": 0.558,
+   "lod_distances": [
+    21.6,
+    51.7,
+    120.7
+   ]
+  },
+  "oak-b": {
+   "set": "trees",
+   "kind": "oak",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -3.042,
+     -0.033,
+     -2.89
+    ],
+    "max": [
+     4.609,
+     7.556,
+     3.562
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/oak-b.lod0.glb",
+     "tris": 4855,
+     "verts": 7647,
+     "bytes": 275216,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/oak-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3464,
+     "bytes": 125424,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/oak-b.lod2.glb",
+     "tris": 600,
+     "verts": 1001,
+     "bytes": 37008,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/oak-b.card.glb",
+     "tris": 324,
+     "verts": 400,
+     "bytes": 16108,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 41,
+   "doubleSided": true,
+   "wood_tris": [
+    1657,
+    682,
+    146
+   ],
+   "leaves": 1599,
+   "height": 7.56,
+   "crown_radius": 4.61,
+   "trunk_radius": 0.558,
+   "lod_distances": [
+    18.9,
+    45.3,
+    105.8
+   ]
+  },
+  "oak-c": {
+   "set": "trees",
+   "kind": "oak",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -4.391,
+     -0.066,
+     -4.495
+    ],
+    "max": [
+     4.437,
+     9.065,
+     5.221
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/oak-c.lod0.glb",
+     "tris": 7499,
+     "verts": 11753,
+     "bytes": 422476,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/oak-c.lod1.glb",
+     "tris": 2200,
+     "verts": 2986,
+     "bytes": 110124,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/oak-c.lod2.glb",
+     "tris": 599,
+     "verts": 946,
+     "bytes": 35236,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/oak-c.card.glb",
+     "tris": 356,
+     "verts": 440,
+     "bytes": 17580,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 41,
+   "doubleSided": true,
+   "wood_tris": [
+    2619,
+    1022,
+    183
+   ],
+   "leaves": 3212,
+   "height": 9.07,
+   "crown_radius": 5.22,
+   "trunk_radius": 0.558,
+   "lod_distances": [
+    22.7,
+    54.4,
+    126.9
+   ]
+  },
+  "palm-a": {
+   "set": "trees",
+   "kind": "palm",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -1.595,
+     -0.059,
+     -2.476
+    ],
+    "max": [
+     4.298,
+     8.626,
+     3.22
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/palm-a.lod0.glb",
+     "tris": 3390,
+     "verts": 4569,
+     "bytes": 167932,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/palm-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3541,
+     "bytes": 127892,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/palm-a.lod2.glb",
+     "tris": 599,
+     "verts": 892,
+     "bytes": 33512,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/palm-a.card.glb",
+     "tris": 336,
+     "verts": 416,
+     "bytes": 16696,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 46,
+   "doubleSided": true,
+   "wood_tris": [
+    1538,
+    614,
+    235
+   ],
+   "leaves": 926,
+   "height": 8.63,
+   "crown_radius": 4.3,
+   "trunk_radius": 0.28,
+   "lod_distances": [
+    21.6,
+    51.8,
+    120.8
+   ]
+  },
+  "palm-b": {
+   "set": "trees",
+   "kind": "palm",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -4.687,
+     -0.089,
+     -0.984
+    ],
+    "max": [
+     1.084,
+     9.99,
+     4.028
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/palm-b.lod0.glb",
+     "tris": 3518,
+     "verts": 4639,
+     "bytes": 170936,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/palm-b.lod1.glb",
+     "tris": 2200,
+     "verts": 3505,
+     "bytes": 126740,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/palm-b.lod2.glb",
+     "tris": 599,
+     "verts": 877,
+     "bytes": 33032,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/palm-b.card.glb",
+     "tris": 336,
+     "verts": 416,
+     "bytes": 16696,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 46,
+   "doubleSided": true,
+   "wood_tris": [
+    1662,
+    638,
+    245
+   ],
+   "leaves": 928,
+   "height": 9.99,
+   "crown_radius": 4.69,
+   "trunk_radius": 0.28,
+   "lod_distances": [
+    25.0,
+    59.9,
+    139.9
+   ]
+  },
+  "palm-c": {
+   "set": "trees",
+   "kind": "palm",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -2.605,
+     -0.021,
+     -2.45
+    ],
+    "max": [
+     3.091,
+     6.686,
+     2.812
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/palm-c.lod0.glb",
+     "tris": 2902,
+     "verts": 3881,
+     "bytes": 142988,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/palm-c.lod1.glb",
+     "tris": 2090,
+     "verts": 3445,
+     "bytes": 124160,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/palm-c.lod2.glb",
+     "tris": 599,
+     "verts": 937,
+     "bytes": 34952,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/palm-c.card.glb",
+     "tris": 336,
+     "verts": 416,
+     "bytes": 16692,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 45,
+   "doubleSided": true,
+   "wood_tris": [
+    1338,
+    526,
+    201
+   ],
+   "leaves": 782,
+   "height": 6.69,
+   "crown_radius": 3.09,
+   "trunk_radius": 0.28,
+   "lod_distances": [
+    16.7,
+    40.1,
+    93.6
+   ]
+  },
+  "pine-a": {
+   "set": "trees",
+   "kind": "pine",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.563,
+     -0.023,
+     -3.211
+    ],
+    "max": [
+     4.502,
+     13.751,
+     3.462
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/pine-a.lod0.glb",
+     "tris": 7495,
+     "verts": 16913,
+     "bytes": 587580,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/pine-a.lod1.glb",
+     "tris": 2200,
+     "verts": 5323,
+     "bytes": 184920,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/pine-a.lod2.glb",
+     "tris": 599,
+     "verts": 1462,
+     "bytes": 51752,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/pine-a.card.glb",
+     "tris": 280,
+     "verts": 360,
+     "bytes": 14568,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 26,
+   "doubleSided": true,
+   "wood_tris": [
+    2455,
+    536,
+    143
+   ],
+   "leaves": 1114,
+   "height": 13.75,
+   "crown_radius": 4.5,
+   "trunk_radius": 0.325,
+   "lod_distances": [
+    34.4,
+    82.5,
+    192.5
+   ]
+  },
+  "pine-b": {
+   "set": "trees",
+   "kind": "pine",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.602,
+     -0.047,
+     -5.008
+    ],
+    "max": [
+     4.427,
+     11.543,
+     2.718
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/pine-b.lod0.glb",
+     "tris": 7491,
+     "verts": 15887,
+     "bytes": 554720,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/pine-b.lod1.glb",
+     "tris": 2200,
+     "verts": 4975,
+     "bytes": 173780,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/pine-b.lod2.glb",
+     "tris": 597,
+     "verts": 1341,
+     "bytes": 47868,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/pine-b.card.glb",
+     "tris": 288,
+     "verts": 368,
+     "bytes": 14872,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 26,
+   "doubleSided": true,
+   "wood_tris": [
+    2941,
+    692,
+    193
+   ],
+   "leaves": 1507,
+   "height": 11.54,
+   "crown_radius": 5.01,
+   "trunk_radius": 0.325,
+   "lod_distances": [
+    28.9,
+    69.3,
+    161.6
+   ]
+  },
+  "pine-c": {
+   "set": "trees",
+   "kind": "pine",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -3.552,
+     -0.024,
+     -2.79
+    ],
+    "max": [
+     2.52,
+     14.533,
+     3.153
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/pine-c.lod0.glb",
+     "tris": 7493,
+     "verts": 17333,
+     "bytes": 601008,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/pine-c.lod1.glb",
+     "tris": 2200,
+     "verts": 5303,
+     "bytes": 184280,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/pine-c.lod2.glb",
+     "tris": 598,
+     "verts": 1377,
+     "bytes": 49028,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/pine-c.card.glb",
+     "tris": 272,
+     "verts": 352,
+     "bytes": 14264,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 26,
+   "doubleSided": true,
+   "wood_tris": [
+    2273,
+    548,
+    178
+   ],
+   "leaves": 826,
+   "height": 14.53,
+   "crown_radius": 3.55,
+   "trunk_radius": 0.325,
+   "lod_distances": [
+    36.3,
+    87.2,
+    203.5
+   ]
+  },
+  "snag-a": {
+   "set": "trees",
+   "kind": "snag",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.521,
+     -0.019,
+     -2.098
+    ],
+    "max": [
+     1.582,
+     6.879,
+     1.863
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/snag-a.lod0.glb",
+     "tris": 952,
+     "verts": 601,
+     "bytes": 26312,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/snag-a.lod1.glb",
+     "tris": 479,
+     "verts": 320,
+     "bytes": 14484,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/snag-a.lod2.glb",
+     "tris": 194,
+     "verts": 130,
+     "bytes": 6688,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/snag-a.card.glb",
+     "tris": 136,
+     "verts": 200,
+     "bytes": 8580,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 32,
+   "doubleSided": true,
+   "wood_tris": [
+    952,
+    479,
+    194
+   ],
+   "leaves": 0,
+   "height": 6.88,
+   "crown_radius": 2.52,
+   "trunk_radius": 0.435,
+   "lod_distances": [
+    17.2,
+    41.3,
+    96.3
+   ]
+  },
+  "snag-b": {
+   "set": "trees",
+   "kind": "snag",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -0.441,
+     -0.023,
+     -1.155
+    ],
+    "max": [
+     0.863,
+     4.664,
+     1.646
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/snag-b.lod0.glb",
+     "tris": 496,
+     "verts": 319,
+     "bytes": 14552,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/snag-b.lod1.glb",
+     "tris": 233,
+     "verts": 166,
+     "bytes": 8076,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/snag-b.lod2.glb",
+     "tris": 104,
+     "verts": 71,
+     "bytes": 4252,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/snag-b.card.glb",
+     "tris": 64,
+     "verts": 96,
+     "bytes": 4816,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 19,
+   "doubleSided": true,
+   "wood_tris": [
+    496,
+    233,
+    104
+   ],
+   "leaves": 0,
+   "height": 4.66,
+   "crown_radius": 1.65,
+   "trunk_radius": 0.435,
+   "lod_distances": [
+    11.7,
+    28.0,
+    65.3
+   ]
+  },
+  "snag-c": {
+   "set": "trees",
+   "kind": "snag",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -0.53,
+     -0.025,
+     -0.542
+    ],
+    "max": [
+     0.53,
+     7.943,
+     0.639
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/snag-c.lod0.glb",
+     "tris": 570,
+     "verts": 362,
+     "bytes": 16372,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/snag-c.lod1.glb",
+     "tris": 255,
+     "verts": 180,
+     "bytes": 8660,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/snag-c.lod2.glb",
+     "tris": 117,
+     "verts": 78,
+     "bytes": 4556,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/snag-c.card.glb",
+     "tris": 24,
+     "verts": 32,
+     "bytes": 2520,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 17,
+   "doubleSided": true,
+   "wood_tris": [
+    570,
+    255,
+    117
+   ],
+   "leaves": 0,
+   "height": 7.94,
+   "crown_radius": 0.64,
+   "trunk_radius": 0.522,
+   "lod_distances": [
+    19.9,
+    47.7,
+    111.2
+   ]
+  },
+  "spruce-a": {
+   "set": "trees",
+   "kind": "spruce",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -4.369,
+     -0.898,
+     -4.378
+    ],
+    "max": [
+     3.964,
+     11.516,
+     4.829
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/spruce-a.lod0.glb",
+     "tris": 7499,
+     "verts": 9555,
+     "bytes": 352144,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/spruce-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2670,
+     "bytes": 100020,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/spruce-a.lod2.glb",
+     "tris": 599,
+     "verts": 908,
+     "bytes": 34024,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/spruce-a.card.glb",
+     "tris": 356,
+     "verts": 440,
+     "bytes": 17588,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    4063,
+    1248,
+    209
+   ],
+   "leaves": 9825,
+   "height": 11.52,
+   "crown_radius": 4.83,
+   "trunk_radius": 0.312,
+   "lod_distances": [
+    28.8,
+    69.1,
+    161.2
+   ]
+  },
+  "spruce-b": {
+   "set": "trees",
+   "kind": "spruce",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -3.184,
+     -0.69,
+     -2.657
+    ],
+    "max": [
+     2.722,
+     7.616,
+     2.405
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/spruce-b.lod0.glb",
+     "tris": 7499,
+     "verts": 11267,
+     "bytes": 406932,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/spruce-b.lod1.glb",
+     "tris": 2200,
+     "verts": 2806,
+     "bytes": 104372,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/spruce-b.lod2.glb",
+     "tris": 599,
+     "verts": 835,
+     "bytes": 31688,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/spruce-b.card.glb",
+     "tris": 316,
+     "verts": 400,
+     "bytes": 16068,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    3031,
+    1242,
+    279
+   ],
+   "leaves": 4220,
+   "height": 7.62,
+   "crown_radius": 3.18,
+   "trunk_radius": 0.312,
+   "lod_distances": [
+    19.0,
+    45.7,
+    106.6
+   ]
+  },
+  "spruce-c": {
+   "set": "trees",
+   "kind": "spruce",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -4.676,
+     -0.98,
+     -5.091
+    ],
+    "max": [
+     4.127,
+     14.509,
+     4.451
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/spruce-c.lod0.glb",
+     "tris": 7499,
+     "verts": 9055,
+     "bytes": 336144,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/spruce-c.lod1.glb",
+     "tris": 2200,
+     "verts": 2753,
+     "bytes": 102676,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/spruce-c.lod2.glb",
+     "tris": 599,
+     "verts": 869,
+     "bytes": 32776,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/spruce-c.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17892,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "doubleSided": true,
+   "wood_tris": [
+    4315,
+    1154,
+    235
+   ],
+   "leaves": 13670,
+   "height": 14.51,
+   "crown_radius": 5.09,
+   "trunk_radius": 0.312,
+   "lod_distances": [
+    36.3,
+    87.1,
+    203.1
+   ]
+  },
+  "willow-a": {
+   "set": "trees",
+   "kind": "willow",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -3.657,
+     -0.044,
+     -5.269
+    ],
+    "max": [
+     3.475,
+     8.467,
+     2.688
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/willow-a.lod0.glb",
+     "tris": 7499,
+     "verts": 9007,
+     "bytes": 334612,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/willow-a.lod1.glb",
+     "tris": 2200,
+     "verts": 3140,
+     "bytes": 115064,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/willow-a.lod2.glb",
+     "tris": 599,
+     "verts": 999,
+     "bytes": 36936,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/willow-a.card.glb",
+     "tris": 364,
+     "verts": 448,
+     "bytes": 17892,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 36,
+   "doubleSided": true,
+   "wood_tris": [
+    4535,
+    914,
+    145
+   ],
+   "leaves": 13028,
+   "height": 8.47,
+   "crown_radius": 5.27,
+   "trunk_radius": 0.532,
+   "lod_distances": [
+    21.2,
+    50.8,
+    118.5
+   ]
+  },
+  "willow-b": {
+   "set": "trees",
+   "kind": "willow",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -1.61,
+     -0.091,
+     -1.871
+    ],
+    "max": [
+     3.016,
+     6.336,
+     3.348
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/willow-b.lod0.glb",
+     "tris": 7499,
+     "verts": 11194,
+     "bytes": 404596,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/willow-b.lod1.glb",
+     "tris": 2199,
+     "verts": 3458,
+     "bytes": 125236,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/willow-b.lod2.glb",
+     "tris": 599,
+     "verts": 1035,
+     "bytes": 38096,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/willow-b.card.glb",
+     "tris": 332,
+     "verts": 416,
+     "bytes": 16676,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 36,
+   "doubleSided": true,
+   "wood_tris": [
+    2919,
+    689,
+    121
+   ],
+   "leaves": 7028,
+   "height": 6.34,
+   "crown_radius": 3.35,
+   "trunk_radius": 0.532,
+   "lod_distances": [
+    15.8,
+    38.0,
+    88.7
+   ]
+  }
+ },
+ "totalBytes": 19142248
+}
