@@ -18,6 +18,7 @@ import {Color, MeshStandardMaterial, type Texture} from "three";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
+import {varyShader} from "@/ark-scene/ark-variation";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -236,6 +237,8 @@ outgoingLight += arkRim * pow(1.0 - saturate(dot(normal, normalize(vViewPosition
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
     gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);
 }`);
+        // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
+        varyShader(shader, options.maxY - options.minY);
     };
     return material;
 }
