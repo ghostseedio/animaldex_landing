@@ -1,6 +1,6 @@
 /**
  * The mountain's cave (the owner's brief, section 6): a rock hood with an
- * arched mouth set into a steep rise (`sampler.ts` CAVE_SITE), a chamber
+ * arched mouth set into a steep rise (the sampler's `place("cave")`), a chamber
  * behind it that goes dark toward the back (the light only reaches the
  * front: its walls are shaded darker with depth, so it reads dark even
  * without shadows), damp glossy walls, stalactites and stalagmites, and,

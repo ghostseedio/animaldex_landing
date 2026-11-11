@@ -28,7 +28,7 @@ import {cropAt} from "@/ark-scene/fields";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
-import {CAVE_SITE, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
+import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
@@ -413,7 +413,9 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
     const random = propRandom("mountain");
     const outcrops: PropInstance[] = [];
     const scree: PropInstance[] = [];
-    const ledges = propsPoints("ledge").filter((point) => point.zone === "mountains" || point.zone === "polar");
+    const cave = caveSite();
+    // The ground's cliff ledges (not the rock tops'): the way out of the cliff is the ledge's `forward`.
+    const ledges = propsPoints("ledge").filter((point) => point.host === "ground" && (point.zone === "mountains" || point.zone === "polar")).map((point) => ({...point, normal: point.forward ?? point.normal}));
     ledges.forEach((ledge, k) => {
         if (k % 2) return;
         const size = 1.6 + random() * 2.2;
@@ -447,7 +449,7 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         if (zone !== "polar" && !high) continue;
         const x = item.x + Math.cos(lee - Math.PI) * item.scale * 1.2;
         const z = item.z + Math.sin(lee - Math.PI) * item.scale * 1.2;
-        if (zone === "polar" && Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        if (zone === "polar" && Math.hypot(x - cave.x, z - cave.z) < 9) continue;
         (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.4 + item.scale * 0.35});
     }
     for (const outcrop of outcrops) {
@@ -464,7 +466,7 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         const ground = sampleGround(x, z);
         if (ground.land < 0.9 || zoneAt(ground) !== "polar") continue;
         // Not across the cave's mouth.
-        if (Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        if (Math.hypot(x - cave.x, z - cave.z) < 9) continue;
         polarDrifts.push({x, y: ground.height - 0.08, z, turn: random() * 0.6, scale: 0.7 + random() * 1.0});
     }
     // Icicles: under the ice's rock faces.
