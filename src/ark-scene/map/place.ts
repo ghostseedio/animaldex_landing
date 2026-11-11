@@ -21,12 +21,14 @@
  *   the landing (the jetty), never on a habitat.
  */
 
-import {canopyPlace, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
-import type {MicroPlace, MicroSpot} from "@/ark-scene/micro";
+import {canopyPlace, canopyPoint, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {surfacePoint, type MicroPlace, type MicroSpot} from "@/ark-scene/micro";
 import {borrowedKey, clusterKey, MapPoints, pointIndex, type SlotKind, type SlotPick} from "@/ark-scene/map/points";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {attachFits, type ArkMapSampler, type AttachPoint, type AttachTag} from "@/ark-scene/map/sampler";
-import {isHeldOnMap, mapSpecies, type MapSpecies} from "@/ark-scene/map/species";
+import {bodyOf, isHeldOnMap, mapSpecies, trueMicro, type MapSpecies} from "@/ark-scene/map/species";
+import {arkStats, massFromSize} from "@/ark-scene/stats";
 import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-scene/map/tags";
 import {waterSpot, waterTagAt, type WaterClass} from "@/ark-scene/map/water";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
@@ -65,8 +67,13 @@ export type MapPlace = {
     level: number;
 };
 
+/** A perch: a bird's, a bat's or a small vertebrate's attach point, as the surface it stands on (its back to `n`, heading `t`). */
+export type MapPerch = {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number; tag: AttachTag; id: string};
+
 /** What `placement.ts` gets back: a placement's fields. */
 export type MapPlacement = {
+    /** A small vertebrate on its attach point (`trueMicro` says it is not a micro animal): its perch, home and roost. */
+    perch?: MapPerch;
     x: number;
     z: number;
     ground: number;
@@ -99,7 +106,8 @@ const HEX_SPIRAL: Array<[number, number]> = (() => {
 })();
 const SPOT_OF: Record<AttachTag, MicroSpot> = {
     leaf: "leaf_litter", branch: "bark", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "pond_surface",
-    house_wall: "house", house_eave: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter"
+    house_wall: "house", house_eave: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter",
+    limb: "bark", canopy_hang: "bark", fence_post: "rocks", roof_edge: "house", ledge: "rocks", tree_hollow: "bark"
 };
 
 let enabled = true;
@@ -131,7 +139,7 @@ export function wetOf(species: MapSpecies, tag: MapTag): boolean {
     return ["water", "floor", "surface", "ice", "anemone", "station", "fixed"].includes(species.attach);
 }
 
-const CANOPY_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["canopy", "leaves", "trunks_bark", "bamboo", "host_nests"]);
+export const CANOPY_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["canopy", "leaves", "trunks_bark", "bamboo", "host_nests"]);
 
 /**
  * Lives on a canopy tree's limbs (not small, not a water species): its table
@@ -241,27 +249,20 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
             const found = all.attachOf(tag, trueLength, zone, holes);
             // A bird on bark only where its own text names bark (woodpeckers, nuthatches, treecreepers).
             // Upside down under the eaves: crawlers only (geckos, spiders), never a bird or a moth at rest.
-            const list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb"));
+            // Hang points under limbs are a bat's or a hanger's; a bat takes them first where its tags allow.
+            const hanger = bodyOf(animal.model_slug) === "t" || species.move === "hang";
+            let list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb") && !(point.tag === "canopy_hang" && !hanger));
+            if (hanger && list.some((point) => point.tag === "canopy_hang")) list = list.filter((point) => point.tag === "canopy_hang");
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
             let point = list[index];
             let memberRank = rank;
-            if (rank > 0 && trueLength * 3.2 * Math.sqrt(rank) > 0.12) {
-                // A cluster too big for one point: each member on the next nearest point of the same kind (within a few metres).
-                const leader = point;
-                const near = list.filter((other) => other !== leader && Math.hypot(other.x - leader.x, other.y - leader.y, other.z - leader.z) < 25)
-                    .sort((a, b) => Math.hypot(a.x - leader.x, a.y - leader.y, a.z - leader.z) - Math.hypot(b.x - leader.x, b.y - leader.y, b.z - leader.z) || a.id.localeCompare(b.id));
-                // Each a couple of body lengths from the others (greedily, nearest first).
-                const spaced: AttachPoint[] = [leader];
-                const gap = Math.max(2 * trueLength, 0.1);
-                for (const other of near) {
-                    if (spaced.length >= 12) break;
-                    if (spaced.every((p) => Math.hypot(p.x - other.x, p.y - other.y, p.z - other.z) >= gap)) spaced.push(other);
-                }
-                // Too few for the whole cluster: they share them, round in turn.
-                point = spaced[rank % spaced.length];
-                memberRank = Math.floor(rank / spaced.length);
+            const tiny = trueMicro(species, animal.model_slug, trueLength);
+            if (rank > 0) {
+                const spread = spreadMembers(list, point, rank, trueLength, tiny);
+                point = spread.point;
+                memberRank = spread.memberRank;
             }
             const roost = roostOf(species, all, point.x, point.z, trueLength, key, ownHash, point);
             if (digger && (point.tag === "burrow_entrance" || point.tag === "worm_hole")) {
@@ -273,9 +274,38 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
                 };
             }
             const micro = attachPlace(point, key, level, memberRank, trueLength);
+            if (!trueMicro(species, animal.model_slug, trueLength)) {
+                // A bird, a bat, a small mammal, a lizard or a frog: its attach point is its perch (its home and its roost on the
+                // behaviour schedule, which flies, walks or hops it from there and back), not a micro animal's spot.
+                const at = surfacePoint(micro, zone);
+                return {
+                    x: at.x, z: at.z, ground: at.y, yaw: Math.atan2(at.tx, at.tz), water: false, perch: {...at, tag: point.tag, id: point.id},
+                    map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost, key, level}
+                };
+            }
             return {
                 x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tangent[0], point.tangent[2]), water: point.tag === "tide_pool", micro,
                 map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost, key, level}
+            };
+        }
+    }
+
+    // A large tree climber, hanger or percher: a thick limb of the real forest (the scenery's `limb` points, matched to its body by the
+    // limb's fit and load and the room above it), a hanger a hang point under a limb; its perch, home and roost on the schedule.
+    if (arborealOf(species, animal.model_slug) && !species.small) {
+        const hang = species.move === "hang";
+        const mass = massFromSize(arkStats(animal).size);
+        const found = all.limbsFor(hang ? "canopy_hang" : "limb", trueLength, mass, zone);
+        if (found.list.length) {
+            const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), found.list.length);
+            const point = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            const n = point.normal;
+            const t = point.tangent;
+            const tag = tags.find((t2) => CANOPY_TAGS.has(t2)) ?? "canopy";
+            return {
+                x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(t[0], t[2]), water: false,
+                perch: {x: point.x, y: point.y, z: point.z, nx: n[0], ny: n[1], nz: n[2], tx: t[0], ty: t[1], tz: t[2], tag: point.tag, id: point.id},
+                map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost: null, key, level}
             };
         }
     }
@@ -338,8 +368,9 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         // cover where it has it); past its kind's cells, the plain ones.
         // (A cover slot past the covered cells takes the edge's, then looks for cover round it.)
         const order: SlotKind[] = kind === "cover" ? ["cover", "edge", "plain"] : kind === "plain" ? ["plain"] : [kind, "plain"];
-        let pick = all.pick(all.kindOf(partition.list, order[0]), partition.own, zone, slot);
-        for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
+        // (A zone borrowing another's cells takes the whole list: its keys spread over every cell, never lapping one kind's few.)
+        let pick = all.pick(partition.own ? all.kindOf(partition.list, order[0]) : partition.list, partition.own, zone, slot, partition.borrowers);
+        if (partition.own) for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
         const choice: Choice = {tag, wet, pick, ok: okFor(tag, wet)};
         first ??= choice;
         // Free: its cell, or the cell's first lap (half a cell over), so it keeps to the place its text names first.
@@ -429,6 +460,71 @@ export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: 
     const species = mapSpecies(animal.model_slug, animal.zone);
     if (!species) return true;
     return mapPoints().sampler.ground(x, z).tags.some((tag) => species.allowed.has(tag));
+}
+
+/**
+ * On the behaviour lane's schedule (`index.ts` makeSched): everyone but a
+ * true micro animal (`trueMicro`) and an underground one that never comes up
+ * to graze (a mole, a naked mole-rat). A bird, a bat or a small mammal on an
+ * attach point is scheduled from its perch; a wombat or a badger from its
+ * burrow's entrance.
+ */
+export function onSchedule(place: {micro?: unknown; burrow?: unknown; hamlet?: unknown}, slug: string): boolean {
+    // (A hamlet resident: the hamlet's rotation brings it out of its door and back, `hamlet.ts`.)
+    if (place.micro || place.hamlet) return false;
+    if (place.burrow) return speciesLayer(slug).layer !== "underground" || (behaviourProfile(slug).weights.graze ?? 0) > 0;
+    return true;
+}
+
+/** A spot on the schedule's terms (`behaviour-schedule.ts` Spot). */
+export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: number; nz: number; point: string | null};
+
+/**
+ * Where the schedule takes it to sleep: the roost its text names
+ * (`sleep_pattern`: a tree, an attach point, a burrow, ground of a tag), else
+ * its perch; null leaves the choice to the schedule (its profile's roost).
+ * So the scene's sleepers are where the validator checks them.
+ */
+export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
+    const roost = place.map?.roost;
+    if (roost) {
+        if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`};
+        if (roost.kind === "canopy" && roost.canopy) {
+            const at = canopyPoint(roost.canopy.zone ?? zone, roost.canopy);
+            return {x: at.x, y: at.y, z: at.z, nx: at.nx, ny: at.ny, nz: at.nz, point: `map:canopy`};
+        }
+        if (roost.kind === "burrow" && roost.burrow) return {x: roost.burrow.x, y: roost.burrow.ground, z: roost.burrow.z, nx: 0, ny: 1, nz: 0, point: "map:burrow"};
+        return {x: roost.x, y: roost.y, z: roost.z, nx: 0, ny: 1, nz: 0, point: `map:${roost.tag}`};
+    }
+    const perch = place.perch;
+    return perch ? {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`} : null;
+}
+
+/**
+ * A cluster's member's point: the rank-th of the list's points nearest its
+ * leader's, each a body and a half from the others (greedy, nearest first),
+ * so no two of a perched cluster ever share a point (a puffin colony on its
+ * ledges). A micro animal's cluster shares up to twelve points, round in
+ * turn, a step apart on each (`attachPlace`).
+ */
+function spreadMembers(list: AttachPoint[], leader: AttachPoint, rank: number, length: number, tiny: boolean): {point: AttachPoint; memberRank: number} {
+    if (tiny && length * 3.2 * Math.sqrt(rank) <= 0.12) return {point: leader, memberRank: rank};
+    const gap = tiny ? Math.max(2 * length, 0.1) : Math.max(1.5 * length, 0.3);
+    const want = tiny ? 12 : rank + 1;
+    const distance = (p: AttachPoint) => Math.hypot(p.x - leader.x, p.y - leader.y, p.z - leader.z);
+    const spaced: AttachPoint[] = [leader];
+    // Within 25 m first, then anywhere on the list.
+    for (const reach of [25, Infinity]) {
+        const near = list.filter((other) => other !== leader && distance(other) < reach && !spaced.includes(other)).sort((a, b) => distance(a) - distance(b) || a.id.localeCompare(b.id));
+        for (const other of near) {
+            if (spaced.length >= want) break;
+            if (spaced.every((p) => Math.hypot(p.x - other.x, p.y - other.y, p.z - other.z) >= gap)) spaced.push(other);
+        }
+        if (spaced.length >= want) break;
+    }
+    if (!tiny && spaced.length > rank) return {point: spaced[rank], memberRank: 0};
+    // Too few for the whole cluster: they share them, round in turn.
+    return {point: spaced[rank % spaced.length], memberRank: Math.floor(rank / spaced.length)};
 }
 
 /** How far it goes to sleep, by how it moves (m). */

@@ -85,6 +85,8 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
+    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
+    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**

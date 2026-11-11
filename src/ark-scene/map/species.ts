@@ -14,6 +14,7 @@ import {MAP_ATTACHMENTS, MAP_MOVES, MAP_TAGS, type HostGroup, type MapAttachment
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import type {ArkActivity} from "@/lib/ark-daylight";
 import holds from "@/ark-scene/map/validator-holds.json";
+import bodies from "@/ark-scene/map/body.json";
 
 type Row = [number, string, number, number, number, string, string, string, number, string];
 const TABLE = table as unknown as {held: string[]; hosts: Record<HostGroup, {ids: string[]; slugs: string[]}>; points: Record<string, Record<string, number>>; species: Record<string, Row>};
@@ -135,4 +136,33 @@ export function mapHolds(): {decision: string[]; reviewed: Record<string, string
 /** Every listed slug (for the tests and the probes). */
 export function mapSlugs(): string[] {
     return Object.keys(TABLE.species);
+}
+
+/** b bird, t bat, m mammal, r reptile, a amphibian, f fish, i invertebrate (`body.json`, from the rig plans' body plan and taxonomy). */
+export type MapBody = "b" | "t" | "m" | "r" | "a" | "f" | "i";
+const BODY = new Map<string, MapBody>();
+for (const body of ["b", "t", "m", "r", "a", "f", "i"] as const) for (const slug of (bodies as unknown as Record<MapBody, string[]>)[body]) BODY.set(slug, body);
+
+/** A species' body class, or null when the plans do not say (a breed takes its kind's slug's). */
+export function bodyOf(slug: string): MapBody | null {
+    return BODY.get(slug) ?? null;
+}
+
+/** The longest body (m) still drawn as a micro animal at its microhabitat. */
+export const MICRO_MAX_LENGTH = 0.12;
+
+/**
+ * A true micro animal (the integrator's regression, 2026-11-11): a small
+ * invertebrate (an insect, a spider, a snail, a woodlouse, a worm) under
+ * 12 cm, which lives at its attach point and is drawn true to size close
+ * by, off the behaviour schedule. A bird, a bat, a mammal, a reptile or an
+ * amphibian is never micro: it perches on its attach point and the schedule
+ * flies, walks or hops it from there and back (`onSchedule`).
+ */
+export function trueMicro(species: MapSpecies, slug: string, trueLength: number): boolean {
+    if (!species.small || trueLength > MICRO_MAX_LENGTH) return false;
+    const body = bodyOf(slug);
+    if (body) return body === "i";
+    // Not in the plans: by how it moves (crawlers and fixed ones are the invertebrates' ways).
+    return species.move === "crawl" || species.move === "fixed";
 }

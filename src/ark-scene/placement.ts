@@ -28,7 +28,9 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
-import {mapPlace, mapPoints, type MapPlace} from "@/ark-scene/map/place";
+import {mapPlace, mapPoints, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
+import {hamletPlotsFor, plotOf, plotSpots} from "@/ark-scene/map/hamlet";
+import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {isHost} from "@/ark-scene/map/species";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
@@ -65,6 +67,10 @@ export type Placement = {
     sea?: boolean;
     /** Its place on the Ark map (`map/place.ts`): the tag it stands for, its roost, its partner role; absent when placed by its zone. */
     map?: MapPlace;
+    /** A small bird, bat or other vertebrate on its attach point (`map/place.ts` MapPerch): its home and roost on the behaviour schedule. */
+    perch?: MapPerch;
+    /** A hamlet resident (a captured pet or farm animal, `map/hamlet.ts`): its plot; `x`, `z`, `ground` are its door (indoors). */
+    hamlet?: {plot: HomePlot};
     /**
      * A partner with its host aboard (section 6): a rider on its back (the
      * oxpecker on a buffalo, the remora under a shark), one at its feet (the
@@ -344,6 +350,8 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
     obstacles ??= new DecorObstacles(worldDecor());
     const places = allocateArkPlaces(animals);
     const placed = new Map<string, Placement>();
+    // The hamlet's plots for this snapshot's residents (append-only as they grow).
+    const hamletPlots = hamletPlotsFor(animals);
     /** Per zone and slot: the lowest-ranked member here, and how many are here. */
     const clusters = new Map<string, {leader: string; rank: number; count: number}>();
     for (const animal of animals) {
@@ -364,6 +372,13 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         const key = `${zoneKey}#${slotIndex}`;
         const slotHash = hashString(key);
         const ownHash = hashString(animal.id);
+        // A hamlet resident (a captured pet or farm animal): its plot, indoors at its door; the hamlet's rotation brings it out.
+        const plot = plotOf(animal, hamletPlots);
+        if (plot) {
+            const door = plotSpots(plot).door;
+            placed.set(animal.id, {x: door.x, z: door.z, ground: door.y, yaw: plot.rotation, water: false, sea: false, hamlet: {plot}});
+            continue;
+        }
         // The Ark map (B3): its spawn tag's place on the terrain, from the same zone, slot and rank.
         const mapped = mapPlace(animal, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal), arkBody(animal).metres, slotKind(animal, slotIndex));
         if (mapped) {
@@ -378,6 +393,7 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
                 Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), canopy: mapped.canopy});
             }
             if (mapped.burrow) chosen.burrow = mapped.burrow;
+            if (mapped.perch) chosen.perch = mapped.perch;
             const cluster = clusters.get(key)!;
             if (cluster.count > 1) {
                 chosen.leader = cluster.leader;
@@ -512,5 +528,6 @@ function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
         place.sea = best.place.sea;
         delete place.micro;
         delete place.canopy;
+        delete place.perch;
     }
 }

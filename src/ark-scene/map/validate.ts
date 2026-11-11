@@ -38,15 +38,15 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, mapPoints, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, CANOPY_TAGS, mapPoints, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
-import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
+import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
-import {arkBody} from "@/ark-scene/stats";
+import {arkBody, arkStats, massFromSize} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {sunElevation} from "@/lib/ark-daylight";
 
@@ -119,17 +119,26 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             // A small burrower: its burrow's entrance on its attach point, the chamber in the ground below.
             const point = map.attach;
             if (!all.tagsOf(point).some((tag) => allowed.has(tag))) fail("invalid_surface", `${point.tag} stands for ${all.tagsOf(point).join(" ")}`);
+            if (point.tag === "limb" && (point.load ?? 0) < massFromSize(arkStats(animal).size)) fail("invalid_surface", `a limb that holds ${(point.load ?? 0).toFixed(0)} kg under ${massFromSize(arkStats(animal).size).toFixed(0)} kg`);
+            if (point.tag === "canopy_hang" && species.move !== "hang" && bodyOf(animal.model_slug) !== "t") fail("invalid_surface", "on a hang point, but it neither hangs nor is a bat");
             if (!attachFits(point, length)) fail("small_not_on_attach_point", `${length.toFixed(3)} m does not fit ${point.tag}`);
             if (Math.hypot(place.burrow.x - point.x, place.burrow.z - point.z) > 0.01 || Math.abs(place.burrow.ground - point.y) > 0.05) fail("floats_or_sinks", "its burrow's entrance is not its point");
             if (tunnelPoint(place.burrow, 1).y > place.burrow.ground - 0.4) fail("floats_or_sinks", "its burrow's chamber is not underground");
             continue;
         }
-        if (place.micro?.attach) {
-            const point = place.micro.attach;
+        if ((place.micro || place.perch) && map.attach) {
+            // A micro animal at its attach point, or a bird, bat or small vertebrate perched on it (its home and roost on the schedule).
+            const point = map.attach;
             const tags = all.tagsOf(point);
-            if (!tags.some((tag) => allowed.has(tag))) fail("invalid_surface", `${point.tag} at ${point.x.toFixed(1)},${point.z.toFixed(1)} stands for ${tags.join(" ")}`);
+            // A tree animal on a limb or a hang point: any tree its text names (a bamboo rat's bamboo), a hanger or a leaper any.
+            const treeOk = (point.tag === "limb" || point.tag === "canopy_hang") && arborealOf(species, animal.model_slug) && (species.move === "hang" || species.move === "leap" || Array.from(allowed).some((tag) => CANOPY_TAGS.has(tag)));
+            if (!treeOk && !tags.some((tag) => allowed.has(tag))) fail("invalid_surface", `${point.tag} at ${point.x.toFixed(1)},${point.z.toFixed(1)} stands for ${tags.join(" ")}`);
+            if (point.tag === "limb" && (point.load ?? 0) < massFromSize(arkStats(animal).size)) fail("invalid_surface", `a limb that holds ${(point.load ?? 0).toFixed(0)} kg under ${massFromSize(arkStats(animal).size).toFixed(0)} kg`);
+            if (point.tag === "canopy_hang" && species.move !== "hang" && bodyOf(animal.model_slug) !== "t") fail("invalid_surface", "on a hang point, but it neither hangs nor is a bat");
             if (!attachFits(point, length)) fail("small_not_on_attach_point", `${length.toFixed(3)} m does not fit ${point.tag} (${point.size.min}–${point.size.max})`);
-            const at = surfacePoint(place.micro, animal.zone);
+            const at = place.perch ?? surfacePoint(place.micro!, animal.zone);
+            if (place.micro && !trueMicro(species, animal.model_slug, length)) fail("invalid_surface", `a ${bodyOf(animal.model_slug) ?? "?"} drawn as a micro animal, off the behaviour schedule`);
+            if (place.perch && trueMicro(species, animal.model_slug, length)) fail("invalid_surface", "a micro animal perched like a bird");
             if ((species.move === "fly" || species.move === "perch") && (point.tag === "worm_hole" || point.tag === "burrow_entrance")) fail("invalid_surface", `a flyer on a ${point.tag}`);
             // On it: never further off it than its surface allows a crawl (a hole's ground the most).
             if (Math.hypot(at.x - point.x, at.y - point.y, at.z - point.z) > 0.9) fail("floats_or_sinks", `${Math.hypot(at.x - point.x, at.y - point.y, at.z - point.z).toFixed(2)} m off its ${point.tag}`);
