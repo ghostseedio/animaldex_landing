@@ -20,13 +20,14 @@ import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
 import {microDrawnLength} from "@/ark-scene/micro";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
-import {Box3, Group, Quaternion, Raycaster, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {Box3, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Raycaster, SphereGeometry, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
-import {pinSeaClock} from "@/ark-scene/fish-schools";
+import {fishSchoolAt, fishSchools, pinSeaClock, type FishChaser} from "@/ark-scene/fish-schools";
+import {setFishChasers} from "@/ark-scene/fish-render";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -425,6 +426,7 @@ async function mountGolden(el: HTMLElement) {
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: Holder = {current: null, minDistance: 0.3, stop: null, chosen: new Map()};
+    let chaserBody: ThreeMesh | null = null;
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -584,6 +586,38 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /** Clips (development): hold the camera on this view. */
+        setView: (view: ArkCameraView) => handle.setView(view),
+        /** Clips (development): run the sea's clock from this epoch second. */
+        pinSea: (epochSeconds: number) => pinSeaClock(epochSeconds),
+        /** Clips: a school now (by id), at the sea's clock. */
+        school: (id: string) => {
+            const school = fishSchools().find((each) => each.id === id);
+            return school ? fishSchoolAt(school) : null;
+        },
+        /**
+         * Clips: one chaser the fish split round (`setFishChasers`), drawn as a plain dark body `length` long heading
+         * `yaw`; null clears it. Stands in for the recipes lane's hunters.
+         */
+        setChaser: (chaser: (FishChaser & {length: number; yaw: number}) | null) => {
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (!chaser) {
+                setFishChasers(null);
+                if (chaserBody && debug) debug.scene.remove(chaserBody);
+                return;
+            }
+            const list: FishChaser[] = [{x: chaser.x, y: chaser.y, z: chaser.z, r: chaser.r}];
+            setFishChasers(() => list);
+            if (!chaserBody) {
+                const body = new SphereGeometry(0.5, 18, 10);
+                body.scale(0.32, 0.3, 1);
+                chaserBody = new ThreeMesh(body, new MeshStandardMaterial({color: "#4a4844", roughness: 0.45}));
+            }
+            chaserBody.scale.setScalar(chaser.length);
+            chaserBody.position.set(chaser.x, chaser.y, chaser.z);
+            chaserBody.rotation.set(0, chaser.yaw, 0);
+            if (debug && !chaserBody.parent) debug.scene.add(chaserBody);
+        },
         /**
          * The animal-look pass's close-ups (docs/ark/animal-look.md): one animal of the species, face to face from
          * three-quarters in front, as close as a viewer can come (the scene's 4 m floor; a small animal's own close

@@ -730,6 +730,46 @@ export function fishPosition(school: FishSchool, i: number, t: number, out: Vec3
     return placeFish(schoolFrame(school, t), i, out);
 }
 
+// MARK: - Chasers (a hunter through a school)
+
+/** A hunter the fish get out of the way of: where it is and its reach (m), e.g. the recipes lane's `recipeScene.chasers`. */
+export type FishChaser = {x: number; y: number; z: number; r: number};
+
+/**
+ * How a fish at `p` gets out of the chasers' way: a closed-form offset from where the shared motion put it (no state,
+ * the same for everyone who sees the same chasers), added into `offset`, and a flee velocity (m/s) into `flee` to
+ * point it away. Inside a chaser's reach (r + 0.6 m) each fish is pushed straight out from it, by half the reach at
+ * the middle down to nothing at the edge, (1 − d/reach)² — so the school opens round the hunter (a hole of half its
+ * reach), never folds over itself (a fish nearer the hunter always stays nearer), and closes up again behind it as it
+ * passes: split, flee, rejoin. Mostly sideways (the push up and down is 0.6 of it). Returns how frightened (0…1).
+ */
+export function fleeFrom(p: Vec3, chasers: readonly FishChaser[], offset: Vec3, flee: Vec3): number {
+    let fright = 0;
+    for (const c of chasers) {
+        const reach = c.r + 0.6;
+        const dx = p.x - c.x;
+        const dy = p.y - c.y;
+        const dz = p.z - c.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 >= reach * reach) continue;
+        const d = Math.sqrt(d2);
+        // Dead centre: away along +x (any fixed way; it is measure zero).
+        const ux = d > 1e-5 ? dx / d : 1;
+        const uy = d > 1e-5 ? dy / d : 0;
+        const uz = d > 1e-5 ? dz / d : 0;
+        const left = 1 - d / reach;
+        const push = 0.5 * reach * left * left;
+        offset.x += ux * push;
+        offset.y += uy * push * 0.6;
+        offset.z += uz * push;
+        flee.x += ux * 2.4 * left;
+        flee.y += uy * 1.2 * left;
+        flee.z += uz * 2.4 * left;
+        fright = Math.max(fright, left);
+    }
+    return fright;
+}
+
 /** Every fish of a school at `epochSeconds`, positions only (for later lanes: a predator picking a fish to lunge at). */
 export function schoolFish(school: FishSchool, epochSeconds: number = seaEpochSeconds()): Vec3[] {
     const frame = schoolFrame(school, localTime(school, epochSeconds));
