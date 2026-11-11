@@ -17,13 +17,14 @@
  */
 
 import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
-import {IcosahedronGeometry, type BufferGeometry} from "three";
+import {IcosahedronGeometry, Quaternion, Vector3, type BufferGeometry} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
 import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-assets";
+import {floorPlacements} from "@/ark-scene/floor-assets";
 import {defaultHomePlots, fencePostTops as homeFencePosts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {snowCover} from "@/ark-scene/snow";
-import {treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import {floorLogTops, treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -294,7 +295,9 @@ export const ATTACH_TAGS = [
     // Added 2026-11-11 (props lane): cliff and rock shelves; the drawn hollows in the asset trees' trunks.
     "ledge", "tree_hollow",
     // Added 2026-11-11 (map lane): fence posts and roof edges (perches, basking spots); thick limbs for large climbers.
-    "fence_post", "roof_edge", "limb"
+    "fence_post", "roof_edge", "limb",
+    // Added 2026-11-11 (graphics batch 6's forest floor): the tops of fallen logs.
+    "log"
 ] as const;
 export type AttachTag = typeof ATTACH_TAGS[number];
 export type AttachSpot = "house" | "lamp" | "bark" | "flowers" | "rocks" | "leaf_litter" | "pond_surface" | "canopy" | "burrow" | "spawn";
@@ -303,7 +306,7 @@ export const TAG_SPOT: Record<AttachTag, AttachSpot> = {
     leaf: "canopy", branch: "canopy", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "rocks",
     house_wall: "house", house_eave: "house", porch_light: "lamp", lamp: "lamp", leaf_litter: "leaf_litter", worm_hole: "burrow",
     burrow: "burrow", pond_surface: "pond_surface", canopy_perch: "canopy", canopy_climb: "canopy", canopy_hang: "canopy",
-    ledge: "rocks", tree_hollow: "bark", fence_post: "house", roof_edge: "house", limb: "canopy"
+    ledge: "rocks", tree_hollow: "bark", fence_post: "house", roof_edge: "house", limb: "canopy", log: "bark"
 };
 
 export type AttachPoint = {
@@ -350,7 +353,7 @@ const SIZE: Record<AttachTag, [number, number]> = {
     tide_pool: [0.008, 0.3], house_wall: [0.004, 0.25], house_eave: [0.004, 0.2], porch_light: [0.004, 0.12], lamp: [0.004, 0.12],
     leaf_litter: [0.004, 0.35], worm_hole: [0.02, 0.4], burrow: [0.05, 0.7], pond_surface: [0.008, 0.4],
     canopy_perch: [0.05, 0.9], canopy_climb: [0.05, 1.4], canopy_hang: [0.1, 1.2],
-    ledge: [0.05, 1.0], tree_hollow: [0.02, 0.35], fence_post: [0.01, 0.45], roof_edge: [0.01, 0.6], limb: [0.15, 1.6]
+    ledge: [0.05, 1.0], tree_hollow: [0.02, 0.35], fence_post: [0.01, 0.45], roof_edge: [0.01, 0.6], limb: [0.15, 1.6], log: [0.005, 0.8]
 };
 
 let attachCache: AttachPoint[] | null = null;
@@ -845,6 +848,35 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
             [-2.4, 0, 2.4].forEach((x, k) => roof(`decor${i}`, base + k, turn(x, BARN_ROOF.top, side * BARN_ROOF.half), along));
         }
     });
+    yield;
+
+    // Fallen logs (graphics batch 6, floor-assets.ts, drawn on every tier): the tops of the logs the forest floor
+    // draws, from the floor set's attach.json put onto the drawn lod0 bark (tree-attach.json `logs`), placed as
+    // asset-rocks.ts draws them (turned to lie along the ground's slope, then about it by its yaw). Fungus beetles,
+    // basking lizards, a wren. `log:floor<k>:<n>`, forward along the log.
+    const yAxis = new Vector3(0, 1, 0);
+    const placements = floorPlacements();
+    for (let k = 0; k < placements.length; k++) {
+        const placed = placements[k];
+        if (!placed.id.startsWith("log-")) continue;
+        const rows = floorLogTops(placed.id);
+        if (!rows.length) continue;
+        const turn = new Quaternion().setFromUnitVectors(yAxis, new Vector3(placed.up[0], placed.up[1], placed.up[2])).multiply(new Quaternion().setFromAxisAngle(yAxis, placed.yaw));
+        const zone = zoneOf(placed.x, placed.z);
+        rows.forEach((row, n) => {
+            const p = new Vector3(row[0], row[1], row[2]).multiplyScalar(placed.scale).applyQuaternion(turn);
+            const normal = new Vector3(row[3], row[4], row[5]).applyQuaternion(turn).normalize();
+            const forward = new Vector3(row[6], row[7], row[8]).applyQuaternion(turn).normalize();
+            const at = {x: placed.x + p.x, y: placed.y + p.y, z: placed.z + p.z};
+            const f = {x: forward.x, y: forward.y, z: forward.z};
+            add("log", `floor${k}`, n, at, {x: normal.x, y: normal.y, z: normal.z}, zone, yawFor(normal, f));
+            const point = points[points.length - 1];
+            point.forward = f;
+            point.hostKind = "log";
+            point.size = [row[9] * placed.scale, row[10] * placed.scale];
+        });
+        if (k % 32 === 0) yield;
+    }
     yield;
 
     // Limbs for large climbers and hang points under them, on the asset trees every tier draws (added 2026-11-11 for
