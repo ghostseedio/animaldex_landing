@@ -117,9 +117,18 @@ const FIELD_OF: Record<Exclude<Field, "activity" | "sociality" | "ambient" | "b1
 };
 type TextField = keyof typeof FIELD_OF;
 
-/** The clause (between sentence or comma breaks, at most ~90 characters) round a match: a verbatim substring of the text. */
-function clause(text: string, index: number, length: number): string {
-    const sentenceStart = Math.max(text.lastIndexOf(". ", index) + 2, text.lastIndexOf("; ", index) + 2, 0);
+/**
+ * The clause (between sentence or comma breaks, at most ~90 characters) round a match: a verbatim substring of the
+ * text, always whole words. (It used to drop a field's first letter, "nsects": a break not found is index -1, and
+ * -1 + 2 is 1. Fixed 2026-11-11.)
+ */
+export function clause(text: string, index: number, length: number): string {
+    // Just after the last break before the match (the field's start when there is none).
+    const after = (stop: string) => {
+        const at = index > 0 ? text.lastIndexOf(stop, index - 1) : -1;
+        return at < 0 ? 0 : at + stop.length;
+    };
+    const sentenceStart = Math.max(after(". "), after("; "));
     let sentenceEnd = text.length;
     for (const stop of [". ", "; "]) {
         const at = text.indexOf(stop, index + length);
@@ -128,13 +137,18 @@ function clause(text: string, index: number, length: number): string {
     let start = sentenceStart;
     let end = sentenceEnd;
     if (end - start > 90) {
-        const comma = text.lastIndexOf(", ", index);
-        if (comma + 2 > start && index - (comma + 2) < 60) start = comma + 2;
-        const after = text.indexOf(", ", index + length);
-        if (after >= 0 && after < end) end = after;
+        const comma = after(", ");
+        if (comma > start && index - comma < 60) start = comma;
+        const next = text.indexOf(", ", index + length);
+        if (next >= 0 && next < end) end = next;
         if (end - start > 110) {
-            start = Math.max(start, index - 40);
-            end = Math.min(end, index + length + 50);
+            // A window round the match, widened to whole words.
+            let from = Math.max(start, index - 40);
+            while (from > start && /\w/.test(text[from - 1])) from--;
+            let to = Math.min(end, index + length + 50);
+            while (to < end && /\w/.test(text[to])) to++;
+            start = from;
+            end = to;
         }
     }
     return text.slice(start, end).trim().replace(/[.;,]$/, "");
@@ -499,11 +513,12 @@ const DIET_WORDS: Array<[RegExp, Diet]> = [
     [/\b(seeds?|grains?|nuts?|acorns?)\b/i, "seeds"],
     [/\b(fruits?|berries|figs)\b/i, "fruit"],
     [/\b(nectar|pollen|feeds? (at|on) flowers)\b/i, "nectar"],
-    [/\b(insects?|caterpillars?|beetles?|ants|termites|larvae|grubs|spiders?|invertebrates?|worms?|bugs|aphids|flies)\b/i, "insects"],
+    [/\b(insects?|caterpillars?|beetles?|ants|termites|larvae|grubs|spiders?|invertebrates?|worms?|bugs|aphids|flies|aerial plankton)\b/i, "insects"],
     [/\b(fish|fishes|squid)\b/i, "fish"],
     [/\b(meat|prey|mammals|rodents?|rabbits?|birds|lizards?|snakes?|frogs?|deer|antelopes?|hunt\w*|vertebrates)\b/i, "meat"],
     [/\b(carrion|carcass\w*|scaveng\w+|dead animals)\b/i, "carrion"],
-    [/\b(plankton|krill|filter\w*|suspended)\b/i, "filter"],
+    // ("Aerial plankton" is a swift's insects, above; krill caught one by one is a hunter's, `dietOf`.)
+    [/\b((?<!aerial )plankton|krill|filter\w*|suspended)\b/i, "filter"],
     [/\b(algae|seaweed|kelp|biofilm)\b/i, "algae"],
     [/\b(detritus|decaying|rotting|dung|leaf litter)\b/i, "detritus"],
     [/\b(blood[- ]?meals?|blood[- ]feed\w*|suck\w* blood|feeds? on (the )?blood|drinks? blood|on blood)\b/i, "blood"]
@@ -519,6 +534,11 @@ function dietOf(row: Row, plan: string): {value: Diet; also: Diet[]; src: Source
         }
     }
     found.sort((a, b) => a.index - b.index);
+    // Filter feeding is a way of eating (baleen, gill rakers, a sieving bill, a sessile animal's fan), not a food: a
+    // penguin, a petrel, an auklet or a seal that catches krill one by one hunts in the water, as a fish eater does.
+    const sieves = /\b(filter\w*|siev\w+|strain\w*|baleen|gill rakers|lamellae)\b/i.test(text ?? "") || /^(Balaenidae|Balaenopteridae|Eschrichtiidae|Neobalaenidae|Phoenicopteridae|Rhincodontidae|Cetorhinidae|Megachasmidae|Mobulidae)$/.test(row.family_name ?? "") || SESSILE.test(row.slug ?? "");
+    const hunter = /Aves|Mammalia|Reptilia/.test(row.class_name ?? "") && !sieves;
+    for (const f of found) if (f.diet === "filter" && hunter) f.diet = "fish";
     if (found.length) {
         const kinds = [...new Set(found.map((f) => f.diet))];
         const plants = kinds.filter((k) => ["grazer", "browser", "seeds", "fruit", "nectar", "algae"].includes(k)).length;
