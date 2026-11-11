@@ -77,7 +77,7 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 
 const MAX_DENSITY = 5;
 
-/** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank). */
+/** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank); the desert keeps its cacti and rocks but on the lanes themselves. */
 const FOREST_ZONES: ReadonlySet<ArkZone> = new Set(["rainforest", "woodland", "mountains", "polar"]);
 
 const WOODS_TREES = new Set<DecorKind>(["broadleaf", "rainforest", "conifer"]);
@@ -159,7 +159,7 @@ export function worldDecor(): DecorItem[] {
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
         if (riverDistance(x, z) < 4) continue;
         // The hamlet's village (home growth): nothing grows on its lanes and the plots along them.
-        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < VILLAGE_REACH) continue;
+        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < (zone === "desert" ? LANE_WIDTH / 2 + 2 : VILLAGE_REACH)) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
@@ -457,7 +457,7 @@ export function forestFill(): FillItem[] {
         if (riverDistance(x, z) < 5) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
         if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
-        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < VILLAGE_REACH) continue;
+        if (!FOREST_ZONES.has(zone) && laneDistance(x, z) < (zone === "desert" ? LANE_WIDTH / 2 + 2 : VILLAGE_REACH)) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
         if (taken.has(key)) continue;
         taken.add(key);
