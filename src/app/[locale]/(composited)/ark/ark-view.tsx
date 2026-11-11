@@ -8,6 +8,8 @@ import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {PlayerControlEvent} from "@/ark-scene/control";
+import {ARK_CONTROL_SCENE_WORDS, ARK_CONTROL_WORDS} from "@/lib/ark-control-words";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkHerdKeys} from "@/ark-scene/herds";
 import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -206,6 +208,14 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     const [life, setLife] = useState<LifeState | null>(null);
     const livesRef = useRef(new Map<string, ArkLife | null>());
     const [following, setFollowing] = useState(false);
+    // Player control (docs/ark/player-control-contract.md): a live server reachable, the animal this viewer controls,
+    // the animals anyone controls now (the card's "Exploring now"), a starting request, and the last outcome's line.
+    const [liveOn, setLiveOn] = useState(false);
+    const [controlling, setControlling] = useState<string | null>(null);
+    const [exploringNow, setExploringNow] = useState<ReadonlySet<string>>(new Set());
+    const [controlStarting, setControlStarting] = useState(false);
+    const [controlNote, setControlNote] = useState<string | null>(null);
+    const liveRef = useRef<{url: string; devTickets: boolean} | null>(null);
     const [storyOpen, setStoryOpen] = useState(false);
     const [replay, setReplay] = useState<ReplayState | null>(null);
     const [summary, setSummary] = useState<string | null>(null);
@@ -315,9 +325,16 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 // Runtime: the mount's heavy seeded work (decor, forest, grass, places) in a worker first (docs/ark/runtime.md §7).
                 await prepareArk({snapshot: snapshotRef.current ?? initial});
                 if (disposed) return;
+                // Player control: the live server's address (`?live=` in development; the build's NEXT_PUBLIC_ARK_LIVE_URL),
+                // and development's own tickets (`?devticket=1`, ark-live's /dev/ticket) for local runs only.
+                const params = new URLSearchParams(window.location.search);
+                const devLive = process.env.NODE_ENV !== "production" ? params.get("live") : null;
+                const liveUrl = devLive ?? process.env.NEXT_PUBLIC_ARK_LIVE_URL ?? null;
+                liveRef.current = liveUrl ? {url: liveUrl, devTickets: Boolean(devLive) && params.get("devticket") === "1"} : null;
                 try {
                     handle = mountArk(el, {
                         snapshot: snapshotRef.current ?? initial,
+                        ...(liveUrl ? {live: {url: liveUrl, client: "web", words: ARK_CONTROL_SCENE_WORDS}, onControl: onControlEvent} : {}),
                         modelBase,
                         ...(rigBase !== undefined ? {rigBase} : {}),
                         // Development: `?behaviour=0` turns the behaviour schedule off (the placed spots, as before).
@@ -496,6 +513,91 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             // For this visit.
         }
         sceneRef.current?.setLite(next);
+    };
+
+    // MARK: Player control
+
+    const onControlEvent = useCallback((event: PlayerControlEvent) => {
+        if (event.kind === "live") setLiveOn(event.available);
+        else if (event.kind === "started") {
+            setControlStarting(false);
+            setControlling(event.animalId);
+            setControlNote(null);
+        } else if (event.kind === "denied") {
+            setControlStarting(false);
+            setControlNote(ARK_CONTROL_WORDS.denied[event.reason] ?? ARK_CONTROL_WORDS.denied.other);
+        } else if (event.kind === "ended") {
+            setControlling(null);
+            setControlNote(ARK_CONTROL_WORDS.ended[event.reason] ?? ARK_CONTROL_WORDS.ended.player);
+        }
+    }, []);
+
+    // The card's "Exploring now", while a card is open.
+    useEffect(() => {
+        if (!selected || !liveOn) return;
+        const read = () => setExploringNow(new Set(sceneRef.current?.controlledNow() ?? []));
+        read();
+        const timer = window.setInterval(read, 2000);
+        return () => window.clearInterval(timer);
+    }, [selected, liveOn]);
+
+    // Released animals' stored records (the hand-back): read every 30 s and right after this viewer lets go.
+    const readReleased = useCallback(async () => {
+        const live = liveRef.current;
+        if (!live || !sceneRef.current) return;
+        try {
+            const url = live.devTickets ? `${live.url.replace(/^ws/, "http")}/dev/states?island=wild` : "/api/ark/control-states?island=wild";
+            const body = (await (await fetch(url)).json()) as {states?: unknown};
+            if (Array.isArray(body.states)) sceneRef.current?.setReleased(body.states as Parameters<ArkSceneHandle["setReleased"]>[0]);
+        } catch {
+            // (Next time.)
+        }
+    }, []);
+    useEffect(() => {
+        if (!ready || !liveRef.current) return;
+        void readReleased();
+        const timer = window.setInterval(() => void readReleased(), 30_000);
+        return () => window.clearInterval(timer);
+    }, [ready, readReleased]);
+    useEffect(() => {
+        if (!controlling) void readReleased();
+    }, [controlling, readReleased]);
+
+    useEffect(() => {
+        if (!controlNote) return;
+        const timer = window.setTimeout(() => setControlNote(null), 5000);
+        return () => window.clearTimeout(timer);
+    }, [controlNote]);
+
+    /** Control: a ticket for this animal (the database checks it is theirs and within the limits), then the scene starts. */
+    const startControl = async (animal: ArkAnimal) => {
+        const scene = sceneRef.current;
+        const live = liveRef.current;
+        if (!scene || !live || controlStarting) return;
+        setControlStarting(true);
+        setControlNote(null);
+        try {
+            let result: {ok: boolean; ticket?: string; reason?: string};
+            if (live.devTickets) {
+                const http = live.url.replace(/^ws/, "http");
+                result = await (await fetch(`${http}/dev/ticket?animal=${encodeURIComponent(animal.id)}`)).json();
+            } else {
+                result = await (await fetch("/api/ark/control-ticket", {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({animal_id: animal.id})})).json();
+            }
+            if (!result.ok || !result.ticket) {
+                setControlStarting(false);
+                setControlNote(ARK_CONTROL_WORDS.denied[result.reason ?? "other"] ?? ARK_CONTROL_WORDS.denied.other);
+                return;
+            }
+            closeCard();
+            if (!scene.startControl(animal.id, result.ticket)) {
+                setControlStarting(false);
+                setControlNote(ARK_CONTROL_WORDS.denied.other);
+            }
+        } catch {
+            setControlStarting(false);
+            setControlNote(ARK_CONTROL_WORDS.denied.network);
+        }
     };
 
     const toggleFollow = () => {
@@ -868,7 +970,12 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                     </div>
                 ) : null}
 
-                {selected ? (
+                {controlNote ? (
+                    <p role="status" className="pointer-events-none absolute left-1/2 top-16 z-30 -translate-x-1/2 rounded-full bg-canvas-950/80 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur" data-testid="ark-control-note">
+                        {controlNote}
+                    </p>
+                ) : null}
+                {selected && !controlling ? (
                     <ArkAnimalBand
                         bandRef={bandRef}
                         animal={selected}
@@ -883,6 +990,12 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         rest={selectedRest?.id === selected.id ? selectedRest.rest : sceneRef.current?.rest(selected.id) ?? null}
                         following={following}
                         onFollow={toggleFollow}
+                        control={
+                            liveOn && selected.mine && !controlling && sceneRef.current?.canControl(selected.id)
+                                ? {label: controlStarting ? ARK_CONTROL_WORDS.starting : ARK_CONTROL_WORDS.control, busy: controlStarting, onControl: () => void startControl(selected)}
+                                : null
+                        }
+                        exploringNow={exploringNow.has(selected.id) && selected.brought_by.named ? ARK_CONTROL_WORDS.exploringNow : null}
                         storyOpen={storyOpen}
                         onStory={() => setStoryOpen((open) => !open)}
                         onClose={closeCard}
@@ -963,6 +1076,13 @@ type BandProps = {
     rest: string | null;
     following: boolean;
     onFollow: () => void;
+    /** Player control: the Control button on the viewer's own animal while a live server is reachable (else null). */
+    control: {label: string; busy: boolean; onControl: () => void} | null;
+    /**
+     * "Exploring now" (D11): only on the card, only for a named founder's animal (it says a named person is online);
+     * the name switch, teens and no-handle accounts are never named, so it never shows for them.
+     */
+    exploringNow: string | null;
     storyOpen: boolean;
     onStory: () => void;
     onClose: () => void;
@@ -1038,7 +1158,7 @@ function ageText(days: number, words: ArkWords, locale: string): string {
  * in a line (and in full under "Life story", in the band itself), and the
  * next moves: talking to it, or following it.
  */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, arkDay, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
+function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, arkDay, asleep, rest, following, onFollow, control, exploringNow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
@@ -1054,7 +1174,8 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
         facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
         facts.condition ? words.life[facts.condition] : null,
         // Right now: how it rests in plain words ("Asleep in its den", "Keeping watch"), else "Asleep now" or nothing.
-        restChip
+        restChip,
+        exploringNow
     ].filter((chip): chip is string => Boolean(chip));
     const hasLife = Boolean(life) || animal.origin !== undefined;
     return (
@@ -1110,6 +1231,15 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                             <span aria-hidden="true">→</span>
                         </Link>
                     )}
+                    {control ? (
+                        <button type="button" onClick={control.onControl} disabled={control.busy} data-testid="ark-card-control" className={`${pill} flex-1 border border-primary-400 px-4 text-primary-100 hover:bg-primary-400/15 disabled:opacity-60 sm:flex-none`}>
+                            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <circle cx="10" cy="10" r="7.2" />
+                                <path d="M10 6.2v7.6M6.2 10h7.6" />
+                            </svg>
+                            {control.label}
+                        </button>
+                    ) : null}
                     <button
                         type="button"
                         aria-pressed={following}

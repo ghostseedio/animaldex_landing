@@ -25,6 +25,21 @@ export const ARK_TIME_REBASE_AFTER = 3600;
 export const ARK_CLOCK_PERIOD = 3600;
 
 let pinned: {epoch: number; at: number} | null = null;
+/**
+ * The server's clock less the device's (ms), from `ark-live`'s ping and pong (design §2.4; `src/ark-live/clock.ts`
+ * slews it at ≤ 50 ms a second, so no pose jumps). 0 without a live connection: the device clock, as before.
+ */
+let offsetMs = 0;
+
+/** Set the device clock's offset to the server's (ms); 0 hands back to the device clock. */
+export function setArkClockOffset(ms: number): void {
+    offsetMs = Number.isFinite(ms) ? ms : 0;
+}
+
+/** The server's offset in force now (ms; 0 without a live connection). */
+export function arkClockOffsetMs(): number {
+    return offsetMs;
+}
 
 function monotonicMs(): number {
     return typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -32,7 +47,7 @@ function monotonicMs(): number {
 
 /** Epoch seconds now: the same for every viewer (or, pinned, running on from the pin). */
 export function arkEpochSeconds(): number {
-    return pinned ? pinned.epoch + (monotonicMs() - pinned.at) / 1000 : Date.now() / 1000;
+    return pinned ? pinned.epoch + (monotonicMs() - pinned.at) / 1000 : (Date.now() + offsetMs) / 1000;
 }
 
 /** Development (golden shots, recordings): run the shared clock from this epoch second, or (null) the real clock again. */

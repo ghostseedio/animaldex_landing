@@ -8,6 +8,7 @@ import type {ArkRestStatus} from "@/ark-scene/sleep";
 
 export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
+import type {ControlWords, PlayerControlEvent} from "@/ark-scene/control";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -210,6 +211,14 @@ export type ArkHerdInfo = {key: string; slug: string; name: string; count: numbe
 
 export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
+    /**
+     * Player control (docs/ark/player-control-contract.md): `ark-live`'s WebSocket URL. With it, animals under
+     * control are drawn where the server says, and the viewer can control their own with a ticket (`startControl`).
+     * Absent: no live layer (formula animals only, as before).
+     */
+    live?: {url: string; words?: Partial<ControlWords>; insets?: () => {top: number; bottom: number}; client?: string; appVersion?: string} | null;
+    /** Player control's events: the live server's availability, control started, denied or ended, haptic taps. */
+    onControl?: (event: PlayerControlEvent) => void;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
     /**
@@ -312,6 +321,24 @@ export type ArkVisitor = {slug: string; name: string; /** Its label in the scene
 export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
 export type ArkSceneHandle = ArkRuntimeHandle & {
+    /** Control one of the viewer's animals with a ticket from the database (false: not here, or not controllable). */
+    startControl: (id: string, ticket: string) => boolean;
+    /** Release the animal under control back into its own life. */
+    stopControl: () => void;
+    setControlView: (view: "third" | "first") => void;
+    /** The animal this viewer controls now, or null. */
+    controlling: () => string | null;
+    /** Whether the live server is reachable (the Control button shows only then). */
+    liveAvailable: () => boolean;
+    /** Whether this animal can be controlled at all (not a stand-in, not sessile, D16). */
+    canControl: (id: string) => boolean;
+    /** Every animal under control now (the tap card's "Exploring now"). */
+    controlledNow: () => string[];
+    /**
+     * The stored records of animals that were controlled (`voyage_animal_states_v1`, no user ids): each walks its
+     * release plan from where it was let go, then rejoins its schedule, from its home override where it settled anew.
+     */
+    setReleased: (records: Array<{animal_id: string; plan: import("@/ark-live/plan-eval").ReleasePlan; home?: import("@/ark-live/release").HomeOverride | null}>) => void;
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;

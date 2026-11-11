@@ -154,6 +154,8 @@ const server = createServer((req, res) => {
     if (url.pathname === "/health") return json(res, 200, {ok: true, rooms: Array.from(rooms.keys()), sessions: Array.from(rooms.values()).reduce((n, r) => n + r.sessionCount(), 0)});
     if (url.pathname === "/stats") return json(res, 200, statsBody());
     if (url.pathname === "/dev/ticket" && DEV) return void devTicket(req, res, url);
+    // Development: the stored records the page walks released animals by (production: the web's /api/ark/control-states).
+    if (url.pathname === "/dev/states" && DEV && memory) return json(res, 200, {states: memory.publicStates((url.searchParams.get("island") ?? "wild") as IslandId)});
     json(res, 404, {error: "not found"});
 });
 

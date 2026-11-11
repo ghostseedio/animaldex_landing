@@ -164,6 +164,13 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
+import {arkClockOffsetMs} from "@/ark-scene/shared-clock";
+import {PlayerControl, controlRigClip, type LiveTier} from "@/ark-scene/control";
+import type {CameraPose} from "@/ark-scene/control/camera";
+import {MODES, type Clip, type Mode, type StartPose} from "@/ark-live/protocol";
+import {evalPlan, planEnd, type ReleasePlan} from "@/ark-live/plan-eval";
+import {abilitiesOf} from "@/ark-live/species";
+import type {HomeOverride} from "@/ark-live/release";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {arkOutside} from "@/ark-scene/live-budget";
 import * as liveBudget from "@/ark-scene/live-budget";
@@ -517,9 +524,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // (`src/lib/ark-clock.ts`), not the viewer's own clock. `hours` / `setHours` still pin it (golden shots, recordings).
     // The world's time (ms): the clock, or (development, `setClockScale`) the clock run faster for a day-night recording.
     let clockScale = 1;
-    let clockAnchor = Date.now();
+    // (The device clock plus `ark-live`'s offset when connected, design §2.4: every viewer's schedule poses agree.)
+    const deviceNow = () => Date.now() + arkClockOffsetMs();
+    let clockAnchor = deviceNow();
     let clockAnchorReal = clockAnchor;
-    const worldMs = () => clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
+    const worldMs = () => clockAnchor + (deviceNow() - clockAnchorReal) * clockScale;
     const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
     let pinnedEnvironment: LivePin | null = null;
@@ -911,6 +920,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
     const scheduleOn = options.behaviour !== false;
     let world: ScheduleWorld | null = null;
+    /**
+     * Player control (docs/ark/player-control-design.md, phase 1): with a live server, every animal under control is
+     * drawn where `ark-live` says (pinned on every viewer), and the viewer may steer one of their own.
+     */
+    let control: PlayerControl | null = null;
+    let cameraFovBefore: number | null = null;
     /**
      * The places and the walk grid, from the graphics lane's scenery interface: built a few milliseconds a frame
      * (`ScheduleWorldBuild`, the same world to the bit as all at once), not in one half-second stall at load. Until it
@@ -1515,6 +1530,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pins = new Set<string>(replayPins);
         if (selectionPin) pins.add(selectionPin);
         if (followId) pins.add(followId);
+        // Animals under control are always drawn one by one, on every viewer (design §9.4).
+        for (const id of Array.from(control?.controlledIds() ?? [])) pins.add(id);
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -2139,7 +2156,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const c of list) {
             const e = c.entry;
             e.reactive = null;
-            if (!e.sched || e.micro || e.visitor || e.place.burrow || c.distance > reach) continue;
+            // (Animals under control are neither actors nor stimuli of the local layer: phase 2's server reactions are.)
+            if (!e.sched || e.micro || e.visitor || e.place.burrow || c.distance > reach || control?.controlledIds().has(e.animal.id)) continue;
             const intel = intelProfile(e.animal.model_slug, null, e.stats.intelligence);
             const sp = e.sched.pose;
             const young = youngFor(e);
@@ -2340,7 +2358,75 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
     };
 
+    // MARK: Released animals (player control's hand-back, design §3.3)
+
+    /** Stored records of animals that were controlled (`voyage_animal_states_v1`): their plan, then their home override. */
+    type Released = {plan: ReleasePlan; home: HomeOverride | null; appliedTo?: Sched | null; rejoinMs?: number};
+    let released = new Map<string, Released>();
+    /** What a released animal's rig plays while it walks its plan or rejoins its schedule (this frame). */
+    const releasedClips = new Map<string, {clip: Clip; mode: Mode; speed: number}>();
+    const REJOIN_MIN_S = 2;
+    const REJOIN_MAX_S = 90;
+    /**
+     * A released animal: on its plan's legs (the same on every viewer, from the shared clock), then walking back into its
+     * schedule at its own pace (from where the plan ended to where its schedule has got to), then its schedule, from
+     * its home override where it settled somewhere new. Null: nothing to do (its schedule as usual).
+     */
+    const releasedPose = (entry: Entry, modelHeight: number): Pose | null => {
+        releasedClips.delete(entry.animal.id);
+        const rec = released.get(entry.animal.id);
+        if (!rec || !scheduleOn || reducedMotion) return null;
+        const t = worldMs();
+        const at = evalPlan(rec.plan, t);
+        if (!at) return null;
+        const a = abilitiesOf(entry.animal.model_slug);
+        const mode = MODES[at.mode] ?? "ground";
+        const baseOf = (x: number, z: number, m: Mode) => (m === "air" || m === "strait" ? Math.max(heightAt(x, z), 0) + 6 : m === "swim" ? Math.min(heightAt(x, z) + modelHeight, -modelHeight * 0.6) : Math.max(heightAt(x, z), 0));
+        if (!at.done) {
+            releasedClips.set(entry.animal.id, {clip: at.moving ? (mode === "air" || mode === "strait" ? "glide" : mode === "swim" ? "swim" : "walk") : "idle", mode, speed: at.moving ? Math.max(a.walk, a.swim * 0.8, a.fly * 0.8) : 0});
+            return {x: at.x, z: at.z, base: baseOf(at.x, at.z, mode), yaw: at.yaw, pitch: 0, roll: 0, afloat: mode !== "ground"};
+        }
+        // Settled somewhere new: its schedule's home moves there (once per schedule it is given).
+        if (rec.home && typeof rec.home.x === "number" && typeof rec.home.z === "number" && entry.sched && rec.appliedTo !== entry.sched) {
+            entry.sched.animal = {...entry.sched.animal, home: {x: rec.home.x, y: heightAt(rec.home.x, rec.home.z), z: rec.home.z}};
+            entry.sched.trip = null;
+            entry.sched.lead = null;
+            rec.appliedTo = entry.sched;
+        }
+        if (!entry.sched || !scheduled(entry) || !entry.sched.pose) return null;
+        const end = planEnd(rec.plan)!;
+        const pace = Math.max(a.walk, a.swim * 0.8, a.fly * 0.8, 0.2);
+        if (rec.rejoinMs === undefined) {
+            // (Worked out once: where its schedule had got to when the plan ended, at its own pace from there.)
+            const then = schedulePose(entry, end / 1000);
+            entry.sched.trip = null;
+            rec.rejoinMs = Math.min(Math.max(Math.hypot(then.x - at.x, then.z - at.z) / pace, REJOIN_MIN_S), REJOIN_MAX_S) * 1000;
+        }
+        const rejoinMs = rec.rejoinMs;
+        const k = (t - end) / rejoinMs;
+        if (k >= 1) return null;
+        const now = fromSchedule(entry, modelHeight);
+        const e = k * k * (3 - 2 * k);
+        const x = at.x + (now.x - at.x) * e;
+        const z = at.z + (now.z - at.z) * e;
+        releasedClips.set(entry.animal.id, {clip: "walk", mode: "ground", speed: pace});
+        return {...now, x, z, base: now.afloat ? now.base : Math.max(heightAt(x, z), 0), yaw: Math.atan2(now.x - at.x, now.z - at.z)};
+    };
+
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
+        // Under control: where its controller moves it (their own, predicted) or `ark-live` says (anyone else's).
+        const ctl = control?.poseFor(entry.animal.id);
+        if (ctl) {
+            // Grounded modes give the feet; the water and the air give the body's middle.
+            const middle = ctl.mode === "swim" || ctl.mode === "air" || ctl.mode === "strait";
+            const base = middle ? ctl.y - modelHeight * 0.5 : ctl.mode === "paddle" ? ctl.y - modelHeight * 0.15 : ctl.y;
+            return {x: ctl.x, z: ctl.z, base, yaw: ctl.yaw, pitch: ctl.pitch, roll: ctl.roll, afloat: ctl.mode !== "ground" && ctl.mode !== "wade" && ctl.mode !== "burrow"};
+        }
+        // Back in its own life after control: its stored plan, then rejoining its schedule.
+        if (released.size && !entry.act && !entry.visitor) {
+            const back = releasedPose(entry, modelHeight);
+            if (back) return back;
+        }
         // An act's pose, from a replayed event.
         if (entry.act) {
             const act = entry.act;
@@ -2630,6 +2716,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const inAir = pose ? pose.aloft || airLeg : entry.air > 0.001;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
         const rising = pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne;
+        // Under control: the clip its controller (or the server, for someone else's) says, the first its rig has.
+        const controlled = control?.poseFor(entry.animal.id) ?? releasedClips.get(entry.animal.id) ?? null;
+        clipChoice: {
+        if (controlled) {
+            const pick = controlRigClip(controlled.clip, (name) => Boolean(clip(name)));
+            if (pick) {
+                want = pick.name;
+                if (pick.hold !== undefined) {
+                    mode = "sync";
+                    sync = pick.hold;
+                } else if (pick.byDistance) {
+                    mode = "distance";
+                } else if (pick.name === "swim" || pick.name === "flap") {
+                    const playing = clip(pick.name);
+                    rate = playing?.ground_speed ? Math.min(Math.max(controlled.speed / playing.ground_speed, 0.5), 1.8) : 1;
+                }
+            }
+            state.flying = controlled.mode === "air" || controlled.mode === "strait";
+            break clipChoice;
+        }
         if (flies && !state.flying && inAir && rising) {
             // Leaving the ground: a take-off, unless it comes into view already up in the air.
             state.flying = true;
@@ -2820,6 +2926,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let beat = !state.flying && !byRecipe && !reacted && own?.pose ? beatClip(own.pose.beat, own.pose.doing, (name) => Boolean(clip(name))) : null;
         if (watching && headDown(beat)) beat = null;
         if (beat && (!want || want === "idle")) want = beat;
+        }
         if (!want && clip("idle")) want = "idle";
         if (!want) {
             // Nothing for standing still (an idle that did not pass): its moving clip held at its first frame.
@@ -5018,6 +5125,74 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let measureFrom = 0;
     const measured: number[] = [];
 
+    /** The controller's camera: eased behind the animal in third person (0.14 s), at its head in first. */
+    const applyControlCamera = (cam: CameraPose, dt: number) => {
+        const third = control?.viewMode() !== "first";
+        const k = third ? 1 - Math.exp(-dt / 0.14) : 1;
+        camera.position.x += (cam.eye.x - camera.position.x) * k;
+        camera.position.y += (cam.eye.y - camera.position.y) * k;
+        camera.position.z += (cam.eye.z - camera.position.z) * k;
+        controls.target.set(cam.target.x, cam.target.y, cam.target.z);
+        camera.lookAt(controls.target);
+        if (third) runtime.collide(controls.target, dt, true);
+        if (Math.abs(camera.fov - cam.fov) > 0.01 || Math.abs(camera.near - cam.near) > 1e-4) {
+            cameraFovBefore ??= camera.fov;
+            camera.fov = cam.fov;
+            camera.near = cam.near;
+            camera.updateProjectionMatrix();
+        }
+        // First person, wide-eyed prey: the screen's edge toward an animal it would notice out of view.
+        if (control?.viewMode() === "first") {
+            const own = control.controllingId();
+            const nearby: Array<{x: number; z: number}> = [];
+            for (const e of entries) if (e.middle && e.animal.id !== own) nearby.push({x: e.middle.x, z: e.middle.z});
+            control.edges(nearby, camera.aspect);
+        }
+    };
+
+    /** Where control starts: where the scene draws the animal now (the server checks it against its home and the ground). */
+    const startOf = (entry: Entry): StartPose => {
+        const m = entry.middle;
+        const x = m?.x ?? entry.place.x;
+        const z = m?.z ?? entry.place.z;
+        const yaw = entry.yawNow ?? entry.place.yaw;
+        if (m && entry.depth && inWater(entry)) return {x, y: m.y, z, yaw, mode: "swim"};
+        if (m && (entry.air > 0.5 || entry.state.airborne)) return {x, y: m.y, z, yaw, mode: "air"};
+        return {x, y: heightAt(x, z), z, yaw, mode: "ground"};
+    };
+
+    const onControlEvent = (event: Parameters<NonNullable<ArkSceneOptions["onControl"]>>[0]) => {
+        if (event.kind === "started") {
+            controls.enabled = false;
+            controls.autoRotate = false;
+            flight = null;
+        } else if (event.kind === "ended") {
+            controls.enabled = true;
+            if (cameraFovBefore !== null) {
+                camera.fov = cameraFovBefore;
+                cameraFovBefore = null;
+                camera.updateProjectionMatrix();
+            }
+            if (typeof document !== "undefined" && document.pointerLockElement) document.exitPointerLock?.();
+        }
+        options.onControl?.(event);
+    };
+    if (options.live?.url) {
+        control = new PlayerControl({
+            url: options.live.url,
+            island: "wild",
+            tier: (): LiveTier => (liteOn() ? "low" : tier),
+            host: el,
+            sampler: () => world?.sampler ?? (scheduleOn ? null : worldSampler()),
+            words: options.live.words,
+            insets: options.live.insets,
+            client: options.live.client,
+            appVersion: options.live.appVersion,
+            onEvent: onControlEvent,
+            onPins: () => setSnapshot(current, false)
+        });
+    }
+
     const frame = () => {
         if (disposed) return;
         // Runtime: hidden, the loop stops until visible again (onWake); idle-capped or warming shaders, this display frame is skipped.
@@ -5048,11 +5223,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
-        runtime.controls(frameDt);
-        controls.update();
-        keepInWorld();
-        fitCloseUp();
-        if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+        // Player control: the controller's own animal steps, and the camera follows it (third or first person).
+        control?.frame(frameDt);
+        const controlCamera = control?.camera(camera.aspect) ?? null;
+        if (controlCamera) {
+            applyControlCamera(controlCamera, frameDt);
+        } else {
+            runtime.controls(frameDt);
+            controls.update();
+            keepInWorld();
+            fitCloseUp();
+            if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+        }
         stepLayers(elapsed);
         foldTrees(elapsed);
         micro.step(camera.position);
@@ -5242,9 +5424,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Development: the world's time runs `scale` times faster from now, or from `atMs` (a day-night recording); 1 is the clock again.
             const now = typeof atMs === "number" && Number.isFinite(atMs) ? atMs : worldMs();
             clockAnchor = now;
-            clockAnchorReal = Date.now();
+            clockAnchorReal = deviceNow();
             clockScale = Math.max(Number.isFinite(scale) ? scale : 1, 1);
-            if (clockScale === 1 && atMs === undefined) clockAnchor = clockAnchorReal = Date.now();
+            if (clockScale === 1 && atMs === undefined) clockAnchor = clockAnchorReal = deviceNow();
             setLight();
         },
         setHours: (hours) => {
@@ -5311,6 +5493,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             controls.target.set(view.target.x, view.target.y, view.target.z);
             camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
             controls.update();
+        },
+        startControl: (id, ticket) => {
+            const entry = findEntry(id);
+            if (!control || !entry || entry.visitor || !control.controllable(entry.animal)) return false;
+            control.begin(entry.animal, ticket, startOf(entry));
+            return true;
+        },
+        stopControl: () => control?.end(),
+        setControlView: (view) => control?.setView(view),
+        controlling: () => control?.controllingId() ?? null,
+        liveAvailable: () => control?.available() ?? false,
+        canControl: (id) => {
+            const entry = findEntry(id);
+            return Boolean(control && entry && !entry.visitor && control.controllable(entry.animal));
+        },
+        controlledNow: () => Array.from(control?.controlledIds() ?? []),
+        setReleased: (records) => {
+            const next = new Map<string, Released>();
+            for (const r of records) {
+                if (!r || typeof r.animal_id !== "string" || !r.plan || !Array.isArray(r.plan.legs)) continue;
+                const before = released.get(r.animal_id);
+                next.set(r.animal_id, {plan: r.plan, home: r.home ?? null, appliedTo: before && JSON.stringify(before.plan) === JSON.stringify(r.plan) ? before.appliedTo : null});
+            }
+            released = next;
         },
         locate: (id) => {
             const entry = findEntry(id);
@@ -5416,6 +5622,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }),
         dispose: () => {
             disposed = true;
+            control?.dispose();
             cancelAnimationFrame(raf);
             runtime.dispose();
             resizeObserver.disconnect();
