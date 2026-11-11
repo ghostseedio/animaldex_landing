@@ -132,7 +132,8 @@ const UP = {nx: 0, ny: 1, nz: 0};
 class HeightLattice {
     private static readonly STEP = 0.5;
     private readonly n = Math.ceil((TERRAIN_HALF * 2) / HeightLattice.STEP) + 2;
-    private readonly cache = new Float32Array(this.n * this.n).fill(Number.NaN);
+    // Doubles: a value read back must be the value first worked out (float32 would round only after the first read).
+    private readonly cache = new Float64Array(this.n * this.n).fill(Number.NaN);
     private corner(i: number, j: number): number {
         const k = j * this.n + i;
         let h = this.cache[k];
