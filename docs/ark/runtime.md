@@ -116,8 +116,27 @@ The owner's decision that captures bring animals aboard (AnimalDex `docs/ark/cap
 
 The phone profile ran on the low tier in both builds (the scene drops a tier under the 4× throttle on this loaded Mac): budget 200; a phone that holds the medium tier gets 400. Per-frame CPU no longer grows with the population: 3× costs what 1× does. The desktop's 1× load to quiet is the one number that got slower (the release loaded the island's models in a different order and finished sooner; the branch asks for them as they come into view and was still filling in the near views). Full tables: `docs/ark/scale/runtime-budget-v1.md` (this branch) and `release-same-time-v1.md` (the release, same session); the dry run's own numbers (load ~61) are in `scale-v1.md`.
 
-**What is left: the mount itself.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
-1. **A worker prebuild.** Before `mountArk`, a worker computes the seeded, pure data: `worldDecor`, `forestFill`, `grassTufts(tier)`, the ground's height grid, `placeAnimals(snapshot)` and `scheduleWorld(worldSampler())`, and hands them over as typed arrays. Each builder takes a primed cache (one `prime…` export per module: decor.ts, terrain.ts, placement.ts, behaviour-schedule.ts). The worker file is built by `scripts/build-ark-bundle.mjs` into `public/ark/ark-worker.js` (the apps' embed) and loaded with `new Worker(new URL(...))` on the site; without workers, the same functions run on the main thread as today.
+**Resting animals sit out first.** `ArkLiveCandidate.resting` (or, lazily, the scene asking behaviour's `restingAtRoost(...).resting` for the members of a crowded kind): a kind's quota is filled with the members not settled at their roost first, in ring order from the step's start, then the resting ones. Still the same for every viewer and nested across tiers (one ordered list, cut longer for a larger budget). Until behaviour's `restingAtRoost` is in the release the scene guards for its absence (no one counts as resting); the snapshot is laid out again once behaviour's world is built.
+
+**The prebuild (done).** `prepareArk({snapshot, workerUrl?})` (`runtime/prebuild.ts`) runs the decor, the forest fill, the grass for the device's tier and the animals' places in a worker (`runtime/prebuild-worker.ts`; built as `public/ark/ark-prebuild-worker.js` by `scripts/build-ark-bundle.mjs` for the apps, and by the site's bundler from `new URL(..., import.meta.url)`), and hands them to the modules through thin prime hooks before `mountArk`:
+- `decor.ts`: `primeDecor({decor, fill, grass})` (fills the existing `cached` and `fillCache`; `grassTufts(count)` returns a primed list of that count once);
+- `placement.ts`: `primePlaces(animals, places)` (`placeAnimals` returns it once, for that very array).
+The output is identical: `src/lib/ark-prebuild.test.ts` deep-compares every list after a structured clone. The /ark page and the embed await it before mounting; without workers nothing is primed and the mount computes as before. The grass travels packed (six numbers and a zone per tuft).
+
+Measured (`node scripts/ark-runtime-measure.mjs --population 1x|3x [--prebuild]`, one run each, the same session, load ~30–50; the phone profile's 4× throttle applies to the main thread only, so its worker runs at desktop speed here: on a real phone the worker takes longer, on another core):
+
+| | mount task, without → with the prebuild (ms) | first frame (ms) | worker (ms) |
+|---|---|---|---|
+| fixture, phone | 11,002 → 3,408 | 12,218 → 6,075 | 1,963 |
+| 1×, desktop | 4,772 → 1,784 | 5,991 → 4,920 | 2,556 |
+| 1×, phone | 16,879 → 7,592 | 18,526 → 10,725 | 2,180 |
+| 3×, desktop | 4,729 → 1,727 | 5,886 → 4,980 | 2,672 |
+| 3×, phone | 16,307 → 6,785 | 18,029 → 10,075 | 2,160 |
+
+Not yet at the ~200 ms target: the ground (below) and the rest of the scene's setup stay in the mount, and with the prebuild the phone profile also showed one 2.6–2.7 s task a few seconds after the first frame (without it, 0.2–0.3 s), not yet attributed (a tier change's rebuild is the first suspect).
+
+**What is left of the mount.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
+1. **The ground (graphics).** `terrain.ts` `groundGeometry` samples the ground at every vertex (~2 s of the phone profile's remaining mount). The hook it needs: move its per-vertex loop into a pure `groundArrays()` returning the typed arrays (heights, colours, layers, the depth map), which the prebuild worker computes and `primeGround(arrays)` hands in; the geometry is then built from them. Transferred as typed arrays, no copy. (The behaviour world already builds in 6 ms slices, and the attach points too.)
 2. **A progressive mount.** `mountArk` builds in slices under 50 ms (the ground, the water, each vegetation kind, the micro scene, the layers, the animals in batches), yielding between them, and draws the first frame from the ground and the sky while the rest comes in behind the quiet loading bar; the handle works from the first call (calls queue until the animals are in).
 3. Meanwhile the forest fill's 2.3× speed-up (§8) and the grass by tier cut the scenery's share now.
 
