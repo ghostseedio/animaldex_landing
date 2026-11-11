@@ -14,6 +14,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import * as arkSampler from "@/ark-scene/sampler";
 import {attachPointAt, attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
@@ -24,6 +25,8 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
+import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
+import {pinSeaClock} from "@/ark-scene/fish-schools";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -52,11 +55,16 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
             return {x: site.x, z: site.z - 6, radius: Math.max(centre.radius * 0.5, 26)};
         },
         reef: () => ZONE_SITES.coral_reef,
+        reefCloseup: () => reefCloseupSpot(),
+        kelpStand: () => kelpStandSpot(),
         forestClearing: () => ZONE_SITES.woodland,
         obstacles: () => goldenObstacles(),
         cropField: () => goldenCropField()
     };
 }
+
+/** The sea's clock for every shot (2026-11-11 10:00 UTC): the fish and the surge start from the same moment each time. */
+const GOLDEN_SEA_EPOCH = 1_794_391_200;
 
 /** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
 const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
@@ -440,6 +448,31 @@ async function mountGolden(el: HTMLElement) {
     return {
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
+        /**
+         * The attach points' build as the scene's mount pays for it (the decor already built): the synchronous build's
+         * one long task, and (where the sampler offers it) the sliced build's longest slice. Each from a fresh start.
+         */
+        attachTiming: async () => {
+            const sampler = arkSampler as unknown as {resetAttachPoints: () => void; allAttachPoints: () => unknown[]; prepareAttachPoints?: (sliceMs?: number) => Promise<unknown[]>; attachBuildSlices?: () => number[]};
+            const runs: number[] = [];
+            for (let i = 0; i < 3; i++) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                sampler.allAttachPoints();
+                runs.push(Math.round((performance.now() - started) * 10) / 10);
+            }
+            let sliced: {total: number; longest: number; slices: number} | null = null;
+            if (sampler.prepareAttachPoints && sampler.attachBuildSlices) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                await sampler.prepareAttachPoints(6);
+                const slices = sampler.attachBuildSlices();
+                sliced = {total: Math.round((performance.now() - started) * 10) / 10, longest: Math.round(Math.max(...slices) * 10) / 10, slices: slices.length};
+            }
+            return {syncMs: runs, points: sampler.allAttachPoints().length, sliced};
+        },
         /** Every species' models in, before the first shot (so nothing pops in). */
         prepare: async () => {
             await settle(200);
@@ -462,6 +495,7 @@ async function mountGolden(el: HTMLElement) {
             }
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
+            pinSeaClock(GOLDEN_SEA_EPOCH);
             const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
             const hold = () => {
                 if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;

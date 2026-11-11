@@ -9,6 +9,7 @@ The graphics pass owns the terrain and scenery (branch `ark-graphics`). Other la
 - `surface` and `weights` use the ground shader's own layers: `grass, forest_floor, soil, sand, wet_sand, rock, mud, snow, tilled, seabed, lakebed`.
 - `wetness` (0–1) covers the waterline, mud and banks, plus the weather's wetness. Footprints and sheen read it.
 - `waterDepth` is measured at the given sea level, so the tide is included.
+- **Snow** (2026-11-11, `snow.ts`): follows the terrain shader's rule: the ice's own layer, and the mountain's snow above a line at 27 m that the weather's snow cover (`environment.snow`) brings down 12 m, held on all but the steepest faces. `surface` is `snow` only where the shader draws snow whatever its per-pixel noise does, and never where it may not; `weights.snow` is the expected drawn cover. (Before, a band from 19 to 25.5 m, and snow cover painted everything.) The patches of snow on the ledges below the line are not counted. `ark-attach.test` holds snow.ts to terrain.ts's lines.
 - `groundNormal(x, z)` and `shoreRadius(theta)` are helpers.
 
 ## Named places
@@ -22,6 +23,8 @@ The map build keeps these names and moves their positions. Golden shots and spaw
 ## Attach points
 
 `attachPoints({tag?, spot?, near?, size?, zone?}) → AttachPoint[]`; `allAttachPoints()` returns all of them.
+
+**Building them without a long task (2026-11-11).** The points are built once, on first use: about 0.3 s on the phone profile (4× CPU) and 0.1 s on a desktop, in one go. Call `prepareAttachPoints(sliceMs = 6) → Promise<AttachPoint[]>` at mount instead: it builds them a slice a frame (at most about 6 ms each; 7 ms measured on the phone profile, 46 slices). A synchronous `allAttachPoints()` while that runs finishes the build at once. The points, their ids and their order are the same either way (`ark-attach.test`).
 
 Each point has:
 - `id`: stable, `<tag>:<host>:<n>`;
@@ -41,6 +44,10 @@ Tree points (`leaf`, `bark`, `branch`, `tree_hollow`) also carry, all optional (
 - `open`: 0–1, the share of sight lines within 40° of out-and-up that leave the tree unblocked (how visible the point is from outside the tree);
 - `leaf`: `blade` (a single leaf) or `clump` (the crown's leaf mass), on leaves;
 - `depth`: how deep the hole runs into the trunk (m), on hollows;
+- `radius`: the limb's radius there (m), on `limb`, `canopy_perch` and `canopy_hang`;
+- `load`: about what the limb holds there (kg), on `limb` (`limbLoad(radius, arm)`: a cantilever in green wood, 20 MPa, the lever being the distance out from the trunk; a 10 cm thick limb 1 m out holds about 200 kg, a 6 cm one about 40 kg). An estimate for matching animal to limb;
+- `clearAbove`: the clear room above a `limb`, to the tree's wood (m, up to 3);
+- `clearBelow`: the clear drop below a `limb` or `canopy_hang`, to anything of its tree or the ground (m);
 - `wind`: how the tree's wind moves the point (see below).
 
 Points are seeded, so every viewer gets the same ones.
@@ -51,7 +58,10 @@ Points are seeded, so every viewer gets the same ones.
 | `branch` | canopy | on top of the drawn branches' wood, where it faces the sky |
 | `bark` | bark | on the drawn trunk's wood, facing out, forward up the trunk |
 | `tree_hollow` | bark | the middle of the mouth of each hole drawn in the oaks' and snags' trunks (from attach.json), facing out of the hole, with its `depth`: parrots, owls, a bees' hollow (added 2026-11-11) |
-| `canopy_perch`, `canopy_hang`, `canopy_climb` | canopy | the canopy trees' limbs (on top, under) and trunk |
+| `canopy_perch`, `canopy_hang`, `canopy_climb` | canopy | the 16 canopy trees' limbs (2 mm over the top, 2 mm under the underside of the limb as drawn, with `radius`) and trunk. `canopy_hang` also on the asset trees (added 2026-11-11): the underside of a thick limb (radius 3 cm and up) where nothing of the tree is below for at least 1.2 m (`clearBelow`, which also counts the ground): bats, hanging sloths; up to 4 a tree. The canopy trees' points moved down onto the limbs as drawn (they sat 8 cm high: a hanging bat was inside the limb) |
+| `limb` | canopy | for large climbers (added 2026-11-11: sloths, orangutans, tree kangaroos, koalas): the top of thick (radius 3 cm and up), not too steep (top normal y ≥ 0.6) wood up in the asset trees every tier draws, not on palms. Each has `radius`, `load`, `clearAbove` and `clearBelow`; `size` is [0.15, min(1.6, 24 × radius)]. Up to 10 a tree, at least 0.9 m apart, thickest first: about 1,800 points (the forests alone have hundreds, on 60+ trees). Match an animal to a limb by `radius` and `load` |
+| `fence_post` | house | the top of each post of the decor fences (vegetation.ts `fence`; one post where two segments meet), up is up, `forward` along the fence (added 2026-11-11). The current map has no decor fences: the paddock and the picket fence are drawn by the props lane, which should publish their post tops (see below) |
+| `roof_edge` | house | along the cottage's ridge cap and its two eaves' top edges, and the barn's ridge and eaves; up is up, `forward` along the edge (added 2026-11-11): perching birds, basking lizards |
 | `flower_head` | flowers | the top of each flower |
 | `rock_face` | rocks | round every rock, 2 mm off the flat faces vegetation.ts draws (`drawnRockPoint`), facing out |
 | `tide_pool` | rocks | at the foot of the shore's low rocks |
@@ -69,11 +79,21 @@ Points are seeded, so every viewer gets the same ones.
 - **Which trees.** Every decor tree, and the forest fill up to rank `EVERY_TIER_FILL` (0.3, the share the low tier draws), so an animal on a tree never floats where a lighter tier leaves its tree out. Per tree: up to 12 leaves, 6 bark and 8 branch points (pines and snags have no leaf points: needles and bare wood).
 - **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds (`treeLodDistance`, `TREE_CLOSE`), so the leaf under a close-up is always the one the point is on.
 - **Leaf size.** A leaf point takes animals up to 12 cm, whatever the leaf.
-- **Every other point** (the house walls, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before. The four eave points keep their ids but moved under the drawn roof (they sat above it on the long walls and in mid-air at the gables). Rock points keep their ids but moved by millimetres to a few centimetres, from the smooth rock shape onto the flat faces actually drawn (they had floated about 8 mm off the rock, or sat up to 5 cm inside it).
+- **Every other point** (the house walls, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before. The four eave points keep their ids but moved under the drawn roof (they sat above it on the long walls and in mid-air at the gables).
+
+### Scaling the climbers' points
+
+The owner's captures will bring many more animals aboard. The climbers' points scale by data, not code: each asset tree holds up to 16 `limb` and 8 `canopy_hang` candidates (`scripts/ark-tree-attach.mjs`), of which the sampler keeps up to `TREE_CAP.limb` (10) and `TREE_CAP.canopy_hang` (4) on each tree drawn at every tier. Raise those caps (and the generator's 16/8, 0.9 m spacing) for more; or let small climbers share a thick limb by `load`. The fill trees past rank 0.3 carry none (the low tier does not draw them): raising `EVERY_TIER_FILL` needs the low tier to draw more fill.
+
+### Fences the props lane draws
+
+The paddock's post-and-rail fence and the cottage's picket fence are the props lane's (`props/areas.ts`), so the sampler cannot see their posts. To list them as `fence_post` points, the props lane should export their post tops from a small pure module that does not import the sampler (no cycle), and the sampler will add them under ids `fence_post:paddock:<n>` and `fence_post:picket:<n>`.
 
 ### Wind: an animal on a leaf moves with the leaf
 
 `attachPointAt(point, time, wind) → Vec3` is where the point is now; `attachSway(point, time, wind)` is the offset. Pass the shader's own clock and wind, `ARK_TIME.value` and `ARK_WIND.value` (glsl.ts): the result is the tree shader's sway and leaf flutter at that point, so an animal set there each frame stays on its leaf (a leaf moves 2–6 cm in a storm, more than a small animal's length). Points on still hosts return no sway. This is drawing only: the time is the viewer's scene clock, and nothing shared depends on it. `treeSway` in `tree-assets.ts` is the CPU twin of `asset-trees.ts` windMaterial; the test fails if the shader's wind lines change without it.
+
+**Rocks (batch 5):** every decor rock is drawn as one of the asset lane's rocks (`rock-assets.ts` `rockAssetFor(item)`: same place, turn and footprint; tide-pool rocks and barnacled clusters on the shore, mossy boulders in the woods and by the water, boulders and clusters elsewhere). A rock's `rock_face` points keep their ids (`rock_face:decor<i>:<k>`, four per rock) and now sit on the asset's own faces and ledges (`rockAttachPoints(placement)`, from the asset's attach.json, measured on the drawn lod0 surface), choosing faces that look outward. The assets also carry `ledge`, `crevice`, `burrow_entrance` and `tide_pool` points: `rockAttachPoints` returns them all, for any lane that wants them. When `ark-graphics-attach` is merged, its `drawnRockPoint` (the procedural rock's triangles) applies only where `rockAssetFor` returns null (the rock set missing).
 
 ## Weather and tide
 
@@ -89,3 +109,30 @@ The shaders read `ARK_ENV` (`glsl.ts`):
 - the water reads sea level and roughness;
 - the ground reads wetness and the snow line;
 - the foliage reads the wind's strength through `ARK_WIND`.
+
+## Under the sea (graphics batch 4, branch `ark-graphics-reef`)
+
+Pure and deterministic, like the rest of this file: no three.js, no DOM, the same answer for every viewer.
+
+### Reef growth (`src/ark-scene/reef.ts`)
+
+- `reefGrowth() → ReefItem[]`: every coral, sponge, anemone, kelp plant and seagrass clump, with `kind`, `variant`, position (`y` is the bed), `scale`, `rotation`, `depth` (water over it at mean tide) and `substrate` (`reef | rock | rubble | sand`).
+- `seaBedAt(x, z) → {depth, height, slope, substrate, reef, framework, shore, inland, cliff}`: what the sea bed is made of there.
+- `reefLandmarks() → {anemones, cleaning, heads}`: the anemone patch and the cleaning station (the map lane's `anemone` and `cleaner_station` anchors, same positions), and the biggest coral heads with the height of their crowns (`top`).
+- `REEF_HEIGHT[kind]`: each kind's height at scale 1, so a lane that puts an animal on a coral head can find its crown.
+
+Placement rules: nothing stony shallower than 1.9 m (`CORAL_MIN_DEPTH`) or nearer than 0.9 m to the mean surface; corals on the reef's hard ground (patch reefs and rocky slopes) by depth band; seagrass on sand at 1.2–3.5 m (the lagoon, and patchy meadows off the beach); kelp on rock off the cliff coasts at 2.2–9 m. The map lane's tags (`coral_reef`, `seagrass`, `kelp`) use the same rules.
+
+### Ambient fish schools (`src/ark-scene/fish-schools.ts`)
+
+Decoration only, NOT catalogue animals: never counted, never selectable, never in the stats or the snapshot. Every fish's place is a closed-form function of the shared clock (epoch seconds) and its school's id: no simulation state, no per-viewer randomness.
+
+- `fishSchoolsNear(pos, radius, epochSeconds?) → FishSchoolNow[]`: the schools whose middle is within `radius` of `pos` (y ignored if not given), nearest first. Each has:
+  - `id` (stable, `fish:<habitat>:<n>`), `kind` (the look), `habitat` (`reef | reef_edge | open_water | kelp | shallows`), `style` (`school | roam | hover`);
+  - `centre` {x, y, z}, `radius` (m), `heading` (unit, horizontal), `speed` (m/s), `count`;
+  - `mode`: `"mill"` while it is balled up (a bait ball: what a predator chases), `"cruise"` streaming along, `"hover"` over its coral head; `milling` 0…1 as it eases in and out.
+- `fishSchools()`: the static list (homes, ranges, sizes); `fishSchoolAt(school, epochSeconds?)`: one school now.
+- `schoolFish(school, epochSeconds?) → Vec3[]`: every fish's position (for a predator picking one to lunge at).
+- `seaEpochSeconds()`: the sea's clock (epoch seconds; golden shots pin it with `pinSeaClock`). Pass your own epoch to ask about any moment: the same epoch always gives the same answer.
+
+Bait schools mill on seeded 50 s slots of the clock (about a third of the time for the reef-edge and open-water schools). Behaviour lanes that want a predator to chase a bait ball, or a bird or seal to fish, read `fishSchoolsNear` and steer their animal to `centre`; the fish themselves do not react (nothing is caught, nothing changes in the ecology).

@@ -6,9 +6,10 @@
  * blobs whose normals point out from the canopy's middle (so light wraps
  * them like foliage, not like faceted balls), shaded darker inside and
  * below, with real trunks; palms have drooping fronds, acacias flat crowns,
- * conifers stacked tiers. Rocks are displaced and smooth. Leaves, blades,
- * reeds and kelp sway in the wind (or the swell) from a shared clock, each
- * on its own phase.
+ * conifers stacked tiers. Rocks are displaced and smooth. Leaves, blades
+ * and reeds sway in the wind from a shared clock, each on its own phase.
+ * Under the sea, the reef, kelp, seagrass and fish schools are `reef-render.ts`
+ * and `fish-render.ts` (batch 4), built and updated from here.
  */
 
 import {
@@ -29,7 +30,8 @@ import {
     CircleGeometry,
     SRGBColorSpace,
     Vector3,
-    type Material
+    type Material,
+    type Object3D
 } from "three";
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKind} from "@/ark-scene/decor";
@@ -39,6 +41,8 @@ import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS} from "@/ark-scene
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
+import {buildReef} from "@/ark-scene/reef-render";
+import {FishView} from "@/ark-scene/fish-render";
 
 // MARK: - Building blocks
 
@@ -389,62 +393,9 @@ function lily(): BufferGeometry {
     return finish(pad, (_, __, i) => 0.9 + (i % 3) * 0.05, 1);
 }
 
-function coral(variant: number): BufferGeometry {
-    const random = seeded(771 + variant);
-    if (variant === 1) {
-        // A brain coral: a squat, lumpy dome.
-        const dome = rock(variant);
-        dome.scale(0.8, 0.9, 0.8);
-        return dome;
-    }
-    if (variant === 2) {
-        // Tube sponges: a clutch of open-topped tubes.
-        const tubes: BufferGeometry[] = [];
-        for (let k = 0; k < 5; k++) {
-            const height = 0.35 + random() * 0.55;
-            const tube = new CylinderGeometry(0.09, 0.07, height, 7, 1, true);
-            tube.translate((random() - 0.5) * 0.4, height / 2, (random() - 0.5) * 0.4);
-            tubes.push(finish(tube, (_, t) => 0.65 + 0.5 * t, 1));
-        }
-        return mergeGeometries(tubes)!;
-    }
-    const parts: BufferGeometry[] = [];
-    for (let b = 0; b < 7; b++) {
-        const height = 0.5 + random() * 0.6;
-        const branch = new ConeGeometry(0.07, height, 5);
-        branch.translate(0, height / 2, 0);
-        branch.rotateZ((random() - 0.5) * 1.1);
-        branch.rotateY(random() * Math.PI * 2);
-        parts.push(finish(branch, (_, t) => 0.7 + 0.5 * t, 1));
-    }
-    return mergeGeometries(parts)!;
-}
-
-function kelp(): BufferGeometry {
-    const random = seeded(881);
-    const parts: BufferGeometry[] = [];
-    for (let r = 0; r < 3; r++) {
-        const height = 2.2 + random() * 1.2;
-        const steps = 8;
-        const points: number[] = [];
-        const ox = (random() - 0.5) * 0.5;
-        const oz = (random() - 0.5) * 0.5;
-        for (let s = 0; s < steps; s++) {
-            const y0 = (s / steps) * height;
-            const y1 = ((s + 1) / steps) * height;
-            const w = 0.12;
-            const a0 = s * 0.5;
-            const a1 = (s + 1) * 0.5;
-            const p = (y: number, a: number, side: number): [number, number, number] => [ox + Math.cos(a) * w * side, y, oz + Math.sin(a) * w * side];
-            points.push(...p(y0, a0, -1), ...p(y1, a1, -1), ...p(y1, a1, 1), ...p(y0, a0, -1), ...p(y1, a1, 1), ...p(y0, a0, 1));
-        }
-        const ribbon = new BufferGeometry();
-        ribbon.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
-        ribbon.computeVertexNormals();
-        parts.push(finish(ribbon, (_, t) => 0.6 + 0.5 * t, 1));
-    }
-    return mergeGeometries(parts)!;
-}
+// The reef's corals, sponges and anemones, the kelp and the seagrass (graphics pass, batch 4): `reef.ts` places them,
+// `reef-render.ts` draws them (real shapes, near and far versions, the shared surge). The decor's old coral domes and
+// kelp cards are no longer drawn.
 
 function barn(): BufferGeometry {
     const wall = new Color("#9b4b36");
@@ -803,8 +754,6 @@ const SHAPES: Shape[] = [
     ...[0, 1, 2].map((variant) => ({kind: "rock" as const, variant, build: () => rock(variant), wind: 0, windHeight: 1, shadow: true})),
     {kind: "reed", variant: 0, build: reed, wind: 0.14, windHeight: 1.6, shadow: false},
     {kind: "lily", variant: 0, build: lily, wind: 0, windHeight: 1, shadow: false},
-    ...[0, 1, 2].map((variant) => ({kind: "coral" as const, variant, build: () => coral(variant), wind: 0, windHeight: 1, doubleSide: variant === 2, shadow: false})),
-    {kind: "kelp", variant: 0, build: kelp, wind: 0.2, windHeight: 3, doubleSide: true, shadow: false},
     {kind: "barn", variant: 0, build: barn, wind: 0, windHeight: 1, shadow: true},
     {kind: "hay", variant: 0, build: hay, wind: 0, windHeight: 1, shadow: true},
     {kind: "fence", variant: 0, build: fence, wind: 0, windHeight: 1, shadow: true},
@@ -825,6 +774,11 @@ export type Vegetation = {
     setFill: (fraction: number) => void;
     /** Hide these decor kinds' own shapes (the asset library's trees stand in for them once loaded). */
     hideKinds: (kinds: Set<string>) => void;
+    /**
+     * Under the sea (batch 4): the reef's near and far versions re-sorted round the camera, the fish placed (only the
+     * schools in the picture), the surge's clock run.
+     */
+    update: (camera: Object3D) => void;
     triangles: number;
     dispose: () => void;
 };
@@ -907,6 +861,12 @@ export function buildVegetation(maxGrass: number): Vegetation {
     grass.receiveShadow = true;
     const grassTriangles = grassGeometry.getAttribute("position").count / 3;
 
+    // Under the sea (graphics pass, batch 4): the reef and the ambient fish schools, decoration only.
+    const reef = buildReef();
+    const fish = new FishView();
+    const seaView = new Vector3();
+    meshes.push(...reef.meshes, ...fish.meshes);
+
     return {
         meshes,
         grass,
@@ -922,12 +882,22 @@ export function buildVegetation(maxGrass: number): Vegetation {
         },
         setFill: (fraction) => {
             for (const entry of fillMeshes) entry.mesh.count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));
+            // The tier's share (1 / 0.6 / 0.3) pulls the reef's reaches in and thins the schools.
+            reef.setReach(0.4 + 0.6 * fraction);
+            fish.setTier(Math.max(fraction, 0.35), 0.5 + 0.5 * fraction);
+        },
+        update: (camera) => {
+            camera.getWorldDirection(seaView);
+            reef.update(camera.position);
+            fish.update(camera.position, seaView);
         },
         get triangles() {
-            return triangles + grassTriangles * grass.count + fillMeshes.reduce((sum, entry) => sum + (entry.mesh.count - entry.base) * entry.triangles, 0);
+            return triangles + grassTriangles * grass.count + fillMeshes.reduce((sum, entry) => sum + (entry.mesh.count - entry.base) * entry.triangles, 0) + reef.triangles + fish.triangles;
         },
         dispose: () => {
-            for (const mesh of [...meshes, grass]) {
+            reef.dispose();
+            fish.dispose();
+            for (const mesh of [...meshes.filter((mesh) => !reef.meshes.includes(mesh) && !fish.meshes.includes(mesh)), grass]) {
                 mesh.geometry.dispose();
                 mesh.dispose();
             }

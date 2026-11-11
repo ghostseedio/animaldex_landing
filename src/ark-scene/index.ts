@@ -98,6 +98,7 @@ import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
 import {AssetTrees} from "@/ark-scene/asset-trees";
+import {AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
@@ -404,6 +405,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const assetTrees = new AssetTrees(options.assetBase);
     scene.add(assetTrees.group);
     let assetTreesShown = false;
+    // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
+    const assetRocks = new AssetRocks(options.assetBase);
+    scene.add(assetRocks.group);
+    let assetRocksShown = false;
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -459,6 +464,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
         // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
         assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
+        assetRocks.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -2942,6 +2948,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail.update(controls.target, viewDistance);
         assetTrees.update(camera.position);
+        assetRocks.update(camera.position);
+        if (assetRocks.ready && !assetRocksShown) {
+            assetRocksShown = true;
+            vegetation.hideKinds(new Set(["rock"]));
+        }
+        vegetation.update(camera);
         if (assetTrees.ready && !assetTreesShown) {
             assetTreesShown = true;
             vegetation.hideKinds(ASSET_TREE_KINDS);
@@ -3176,6 +3188,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             landscape.dispose();
             nearDetail.dispose();
             assetTrees.dispose();
+            assetRocks.dispose();
             vegetation.dispose();
             micro.dispose();
             for (const sceneModule of modules) sceneModule.dispose();
