@@ -56,7 +56,7 @@ const BIG_SWIMMER_APART = 30;
 const BIG_SWIMMER_CLEAR = 14;
 const BIG_SWIMMER_DEPTH = 9;
 const BIG_SWIMMER_CELLS = 4;
-const OPEN_CLASSES: ReadonlySet<WaterClass> = new Set(["deep", "surface", "upper", "mid"]);
+const OPEN_CLASSES: ReadonlySet<WaterClass> = new Set<WaterClass>(["deep", "surface", "upper", "mid"]);
 
 /** The least water (m) a cell of the sea needs for a swimmer's loop about it. */
 export const WATER_MIN_DEPTH = 1.2;
@@ -183,8 +183,7 @@ export class WaterCells {
 
     /** Within the clear water about a big swimmer's reserved cell. */
     private nearGiant(x: number, z: number): boolean {
-        for (const list of this.giantCells().values()) for (const cell of list) if (Math.hypot(cell.x - x, cell.z - z) < BIG_SWIMMER_CLEAR) return true;
-        return false;
+        return Array.from(this.giantCells().values()).some((list) => list.some((cell) => Math.hypot(cell.x - x, cell.z - z) < BIG_SWIMMER_CLEAR));
     }
 
     /** A big swimmer's cells for its zone (else the nearest zone's that has some), in slot order. */

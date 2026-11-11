@@ -46,6 +46,14 @@ export function screenWeight(length: number, distance: number): number {
     return length / Math.max(distance, 0.5);
 }
 
+/** On screen this many CSS px or more, an animal gets its near model however far off it is (a whale across the bay). */
+export const NEAR_BY_SIZE_PIXELS = 220;
+
+/** Whether an animal is large enough on screen for its near model, whatever its distance (true scale: a 25 m whale at 80 m). */
+export function nearBySize(length: number, distance: number, viewportHeight: number, fovDegrees: number): boolean {
+    return screenPixels(length, distance, viewportHeight, fovDegrees) >= NEAR_BY_SIZE_PIXELS;
+}
+
 /** Whether an animal past the model cap is shown by its marker (too small on screen for an icon to mean anything) rather than its icon. */
 export function markerNotIcon(pixels: number): boolean {
     return pixels < MARKER_BELOW_PIXELS * 2;

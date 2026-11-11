@@ -109,7 +109,7 @@ import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident}
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
-import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
+import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {CAMERA_RANGE, fitWhole, meetDistance} from "@/ark-scene/runtime/camera";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
@@ -3106,7 +3106,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (In the water at its own depth: a seabed animal is culled and loaded by where it is, not the surface over it.)
             position.set(where.x, where.water ? where.base : Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
-            if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
+            // (Or large on screen at true size: a whale or an elephant across the bay, motion pass §3.)
+            if ((distance < LOAD_NEAR_WITHIN || nearBySize(entry.length, distance, height, FOV)) && library.has(slug)) library.request(slug, "near");
             // A walker on the move with a rig: its near model too, from the island view (it is drawn rigged, near).
             else if (moverGait && distance < MOVING_RIG_WITHIN && !reducedMotion && entry.air <= 0.001 && gaitMoving(entry.gait, entry.length) && rigs.available(slug) && library.has(slug)) library.request(slug, "near");
             sphere.center.copy(position);
@@ -3149,8 +3150,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             !reducedMotion &&
             rigs.walks(c.entry.animal.model_slug) && c.entry.air <= 0.001 && !c.entry.visitor && !c.pose.afloat && gaitMoving(c.entry.gait, c.entry.length) && rigs.available(c.entry.animal.model_slug);
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN))))
-            .sort((a, b) => a.distance - b.distance);
+            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN)) || nearBySize(c.entry.length, c.distance, height, FOV)))
+            // (Largest on screen first at true size: a whale far off before a beetle near by.)
+            .sort((a, b) => screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
         const cap = caps();
