@@ -2,7 +2,7 @@
  * The Ark's islands as player control sees them (docs/ark/player-control-contract.md §1).
  *
  * Today there is one island, `wild` (the shared position module's default island: every key carries it, encounter
- * lane, POSITIONS_VERSION 1; DECISIONS.md #15). Part C enlarges it and adds `town`; their sizes and the strait between
+ * lane, POSITIONS_VERSION 1; DECISIONS.md #62). Part C enlarges it and adds `town`; their sizes and the strait between
  * them are placeholders until the islands plan lands (design §12, DECISIONS.md #8).
  *
  * Pure: no Node, no DOM. Shared by `ark-live` and the page.

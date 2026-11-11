@@ -9,7 +9,7 @@ Nothing here is deployed. `ark-live` runs locally only until the owner decides h
 ## 1. Islands
 
 - Island ids are short lowercase words. **Today's single island is `wild`**, the shared position module's default island
-  (encounter lane, `_shared/ark-positions` POSITIONS_VERSION 1: every key carries it; DECISIONS.md #15). Part C enlarges
+  (encounter lane, `_shared/ark-positions` POSITIONS_VERSION 1: every key carries it; DECISIONS.md #62). Part C enlarges
   it and adds `town`; every table, message and atlas already carries the id.
 - On the wire an island is a byte: `0 = wild`, `1 = town` (`ISLAND_IDS` in `src/ark-live/islands.ts`).
 

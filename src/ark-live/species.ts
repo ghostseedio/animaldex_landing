@@ -53,7 +53,7 @@ const RAPTOR = /(?:^|-)(?:eagle|hawk|falcon|kestrel|kite|buzzard|harrier|osprey|
 /**
  * Digging along under the ground is for the true burrowers (design §4.1's list): the data's secondary `burrow` mostly
  * means "lives in a burrow" (a wallaby, a babirusa, the elephant's quirk), so under control it needs the primary move or
- * one of these (DECISIONS.md #16).
+ * one of these (DECISIONS.md #63).
  */
 const FOSSORIAL = /(?:^|-)(?:mole|mole-rat|wombat|armadillo|gopher|caecilian|worm-lizard|amphisbaena|blind-snake|aardvark|badger|prairie-dog|marmot|ground-squirrel|meerkat|jerboa|kangaroo-rat|tuco-tuco|pangolin|echidna|bilby|ferret|naked-mole-rat|sand-boa|skink)(?:-|$)/;
 /** Species whose data lists a move they must not have under control (design §4.1, "data quirks"). */
