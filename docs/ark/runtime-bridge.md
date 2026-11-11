@@ -95,6 +95,7 @@ Android's WebView keeps running `requestAnimationFrame` while its view is merely
 | Saver | Off, unless the Battery API (Chrome, Android WebView) reports ≤ 20 % and not charging. Safari and WKWebView have no Battery API: off. |
 | Heat | `nominal`, unless the Compute Pressure API (desktop Chrome) reports CPU pressure `serious` / `critical`. |
 | Tier | The device's own (`tierFor`), dropped once if frames run long, and re-checked only at display rate (never while capped). |
+| Memory (Part B) | The browser's `navigator.deviceMemory` (Chromium, capped at 8 GB). iOS never tells a page its memory. The app can pass the real figure on the embed's URL as `?mem=<GB>` (iOS `ProcessInfo.physicalMemory`, Android `ActivityManager.MemoryInfo.totalMem`, rounded to GB): 2 GB or less starts on the low tier, 3 GB on low (touch). The render distance and memory budgets follow the tier (`docs/ark/streaming.md`). |
 
 The app's word wins field by field over the browser's (a host `thermal: "nominal"` beats a browser pressure reading). When the power cap lets go, the tier from before it comes back (unless the reader chose the lighter view meanwhile, which `ark:lite` still controls).
 

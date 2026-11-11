@@ -115,6 +115,7 @@ import {ARK_GROUND_LITE, buildLandscape, GROUND_SEGMENTS} from "@/ark-scene/terr
 import {ArkStreamer, spansFromHeights, STATE_IN, STATE_MAP, STATE_OUT} from "@/ark-scene/streaming";
 import {CHUNK_HEADROOM, chunkCount, chunkGridFor} from "@/ark-scene/streaming/chunks";
 import {hazeFog} from "@/ark-scene/streaming/haze";
+import {keepsModelBeyond} from "@/ark-scene/streaming/tiers";
 import {StreamCull} from "@/ark-scene/streaming/cull";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
@@ -210,6 +211,11 @@ const RIG_BLEND_SECONDS = 0.5;
 const RIG_KEEP_SECONDS = 45;
 const RIG_KEEP = 24;
 const LOAD_NEAR_WITHIN = 48;
+/**
+ * Part B: an animal past the render distance is not drawn or stepped (unless it is big on screen in the map view: `streaming/tiers.ts` keepsModelBeyond); where it is (its schedule's pose, the same for
+ * every viewer) is worked out again after this many seconds (plus up to one more, by its phase, so they spread out).
+ */
+const STREAM_RECHECK_SECONDS = 2;
 const FOV = 38;
 const MAX_DISTANCE = 340;
 const ENTRANCE_SECONDS = 1.6;
@@ -239,11 +245,6 @@ const MICRO_DRAW_WITHIN = 42;
 const MICRO_CLOSE_WITHIN = 3.5;
 /** How close the camera may come to a small animal (m). */
 const MICRO_MIN_DISTANCE = 0.08;
-/**
- * Part B: an animal past the render distance is not drawn or stepped; where it is (its schedule's pose, the same for
- * every viewer) is worked out again after this many seconds (plus up to one more, by its phase, so they spread out).
- */
-const STREAM_RECHECK_SECONDS = 2;
 
 /** Birds that take to the air above their zone. */
 const FLYERS = ARK_FLYERS;
@@ -730,8 +731,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     });
     let streamSkipped = 0;
     let streamMarkers = 0;
-    /** The props and other modules' objects, by chunk (`streaming/cull.ts`); made with the modules. */
+    /** The props and other modules' objects, by chunk (`streaming/cull.ts`): the cottage and pond, the burrows and pit, and the modules once built. */
     const streamCull = new StreamCull();
+    streamCull.track(micro.group);
+    streamCull.track(layersScene.group);
     const drawnIn = (chunk: number) => streamer.stateOf(chunk) === STATE_IN;
     const drawnAny = (chunk: number) => streamer.stateOf(chunk) !== STATE_OUT;
     const atIn = (x: number, z: number) => streamer.stateAt(x, z) === STATE_IN;
@@ -1785,9 +1788,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
             herdSphere.radius = herd.radius + herd.length * 2 + 4;
             if (!frustum.intersectsSphere(herdSphere)) continue;
-            // Part B: a herd wholly past the render distance is not drawn (its badge and count stay: they are data).
-            if (!streamer.allIn && cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius > streamer.renderDistance) continue;
             const body = arkBody(herd.sample, model.behaviour?.plan);
+            // Part B: a herd wholly past the render distance is not drawn (its badge and count stay: they are data), unless
+            // the map view sees its members big on screen (true scale: elephants across the island).
+            if (!streamer.allIn) {
+                const beyond = cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius;
+                if (beyond > streamer.renderDistance && !(streamer.map && keepsModelBeyond(body.display, beyond, height, FOV))) continue;
+            }
             herd.length = body.display;
             const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / herd.length, 0.25), 1);
             const modelScale = herd.length / model.bodyLength;
@@ -3112,6 +3119,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamSkipped = 0;
         const streaming = !streamer.allIn;
         const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held);
+        // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
+        // scale); otherwise skipped (a marker in the map view).
+        const streamedOut = (entry: Entry, at: {x: number; y: number; z: number}) => {
+            const state = streamer.stateAt(at.x, at.z);
+            if (state === STATE_IN) return false;
+            if (state === STATE_OUT) return true;
+            return !keepsModelBeyond(entry.length, cameraPosition.distanceTo(position.set(at.x, at.y, at.z)), height, FOV);
+        };
         const skipStreamed = (entry: Entry, at: {x: number; y: number; z: number}) => {
             entry.middle = null;
             // Back in range it is drawn as it is then (never lying down on arrival).
@@ -3133,7 +3148,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
             // Part B: last seen past the render distance, and seen recently: skipped (its schedule is not stepped).
-            if (streaming && entry.streamAt && !pinnedNow(entry) && now - entry.streamAt.t < STREAM_RECHECK_SECONDS + entry.phase && streamer.stateAt(entry.streamAt.x, entry.streamAt.z) !== STATE_IN) {
+            if (streaming && entry.streamAt && !pinnedNow(entry) && now - entry.streamAt.t < STREAM_RECHECK_SECONDS + entry.phase && streamedOut(entry, entry.streamAt)) {
                 skipStreamed(entry, entry.streamAt);
                 continue;
             }
@@ -3206,7 +3221,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 at.y = where.base;
                 at.z = where.z;
                 at.t = now;
-                if (!pinnedNow(entry) && streamer.stateAt(where.x, where.z) !== STATE_IN) {
+                if (!pinnedNow(entry) && streamedOut(entry, at)) {
                     skipStreamed(entry, at);
                     continue;
                 }

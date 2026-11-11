@@ -116,3 +116,21 @@ export function forcedRenderDistance(tier: StreamTier): number | null {
     if (typeof g.__arkRenderScale === "number" && g.__arkRenderScale > 0) return tier.renderDistance * g.__arkRenderScale;
     return null;
 }
+
+/**
+ * True scale (motion pass §3, lane L4): what is drawn past the render distance goes by size on screen, not distance
+ * alone. In the map view an animal at least `MAP_MODEL_PIXELS` CSS px long on screen keeps its model there (a 25 m
+ * whale is ~45 px at 640 m on a phone, and stays a model across a Part C island); smaller ones are a marker. Past the
+ * distance in a ground view the haze is whole, so nothing there is drawn, big or small (like the land it stands on).
+ */
+export const MAP_MODEL_PIXELS = 6;
+
+/** CSS px a length (m) covers on screen at `distance` (m), for a vertical field of view (degrees) and a viewport height. */
+export function screenPixelsAt(length: number, distance: number, viewportHeight: number, fovDegrees: number): number {
+    return (length * viewportHeight) / (2 * Math.tan((fovDegrees * Math.PI) / 360) * Math.max(distance, 0.01));
+}
+
+/** Whether an animal past the render distance, seen from the map view, keeps its model (big enough on screen). */
+export function keepsModelBeyond(length: number, distance: number, viewportHeight: number, fovDegrees: number): boolean {
+    return screenPixelsAt(length, distance, viewportHeight, fovDegrees) >= MAP_MODEL_PIXELS;
+}

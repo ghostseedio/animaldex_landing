@@ -258,3 +258,38 @@ test("streaming: the streamer leaves everything in from the home view and hides 
         delete (globalThis as {__arkRenderDistance?: number}).__arkRenderDistance;
     }
 });
+
+test("streaming: the far-model pack reads back what was written, by kind and version", async () => {
+    const {parseArkPack, writeArkPack} = await import("@/ark-scene/streaming/pack");
+    const a = new Uint8Array([1, 2, 3, 4, 5]);
+    const b = new Uint8Array([9, 8, 7]);
+    const bytes = writeArkPack("medium", 256, [
+        {slug: "red-fox", version: "abc", glb: a},
+        {slug: "zebra", version: "def", glb: b}
+    ]);
+    const pack = parseArkPack(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+    assert.equal(pack.header.tier, "medium");
+    assert.equal(pack.header.far, 256);
+    assert.deepEqual(new Uint8Array(pack.glb("red-fox", "abc")!), a);
+    assert.deepEqual(new Uint8Array(pack.glb("zebra", "def")!), b);
+    // Another version (the manifest moved on): not from the pack.
+    assert.equal(pack.glb("zebra", "xyz"), null);
+    assert.equal(pack.glb("lion", "abc"), null);
+    assert.throws(() => parseArkPack(new ArrayBuffer(16)));
+});
+
+test("streaming: true scale past the render distance — a 25 m whale keeps its model from the map view, a 7.5 mm beetle is a marker", async () => {
+    const {keepsModelBeyond, screenPixelsAt, MAP_MODEL_PIXELS} = await import("@/ark-scene/streaming/tiers");
+    // A phone held upright (800 CSS px tall), the scene's 38° field of view.
+    for (const tier of ["high", "medium", "low"] as StreamTierName[]) {
+        const R = ARK_STREAM_TIERS[tier].renderDistance;
+        // At the render distance and at three times it (a Part C island seen whole), the whale is tens of pixels long.
+        assert.ok(screenPixelsAt(25, R, 800, 38) > 25, `${tier}: whale at ${R} m`);
+        assert.equal(keepsModelBeyond(25, R * 3, 800, 38), true, `${tier}: whale at ${R * 3} m`);
+        // A beetle is under a pixel long anywhere near the distance: its marker, never a model.
+        assert.equal(keepsModelBeyond(0.0075, R, 800, 38), false);
+        assert.equal(keepsModelBeyond(0.0075, 2, 800, 38), false);
+    }
+    // Where the beetle's own size reaches MAP_MODEL_PIXELS: about 1.5 m off (inside every distance, where L4's own rules decide).
+    assert.ok(screenPixelsAt(0.0075, 1.4, 800, 38) > MAP_MODEL_PIXELS && screenPixelsAt(0.0075, 1.6, 800, 38) < MAP_MODEL_PIXELS);
+});

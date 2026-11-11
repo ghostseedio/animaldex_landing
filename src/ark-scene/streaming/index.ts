@@ -179,8 +179,9 @@ export class ArkStreamer {
             if (next[key] !== this.states[key]) changed = true;
             if (this.content[key] && next[key] !== STATE_IN) allIn = false;
         }
+        const allInChanged = allIn !== this.allInNow;
         this.allInNow = allIn;
-        if (!changed) return;
+        if (!changed && !allInChanged) return;
         this.states = next;
         this.changes++;
         for (const listener of this.listeners) listener(this.states);

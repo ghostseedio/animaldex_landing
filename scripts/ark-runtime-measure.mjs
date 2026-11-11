@@ -23,7 +23,7 @@
  * the camera down into each region and back; `--mem <GB>` is the app's memory figure; `--models-dir <dir>` serves a
  * local model set (the far-model pack, the far-ark files: scripts/ark-model-pack.mjs) at /models/ after
  * `--latency <ms>` (default 180, the bucket's measured time to first byte); `--serve <port>` serves the page on
- * 0.0.0.0 for a WebView (the iOS Simulator, an Android emulator) without a browser of its own: the page posts its
+ * the loopback for a WebView (the iOS Simulator, an Android emulator) without a browser of its own: the page posts its
  * result to /report and it is written to the output folder (open `/measure.html?…&report=/report&label=<name>`).
  */
 
@@ -169,11 +169,13 @@ const server = createServer((request, response) => {
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 const servePort = Number(arg("serve", "0"));
-await new Promise((resolve) => server.listen(servePort, servePort ? "0.0.0.0" : "127.0.0.1", resolve));
+// (Loopback only, also for the WebViews: the iOS Simulator shares the Mac's loopback, and an Android emulator reaches
+// it as 10.0.2.2.)
+await new Promise((resolve) => server.listen(servePort, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 if (servePort) {
     // WebView mode: no browser here; the page posts its result to /report. Runs until stopped.
-    log(`serving ${base}/measure.html (on 0.0.0.0:${servePort}); reports to ${out}`);
+    log(`serving ${base}/measure.html (an Android emulator: http://10.0.2.2:${servePort}/measure.html); reports to ${out}`);
     await new Promise(() => undefined);
 }
 

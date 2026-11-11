@@ -76,6 +76,11 @@ const round = (value: number) => Math.round(value * 10) / 10;
             iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
             onReady: () => {
                 firstFrame = performance.now();
+                // In an app's WebView (the iOS app's panel, measured in the Simulator): tell the host it is up, as the
+                // embed does, so the app shows the web view rather than its fallback.
+                const host = window as unknown as {webkit?: {messageHandlers?: {ark?: {postMessage: (m: unknown) => void}}}; AndroidArk?: {postMessage: (m: string) => void}};
+                if (host.webkit?.messageHandlers?.ark) host.webkit.messageHandlers.ark.postMessage({type: "ark:ready"});
+                else host.AndroidArk?.postMessage(JSON.stringify({type: "ark:ready"}));
             }
         });
         const mountMs = performance.now() - mountStart;
