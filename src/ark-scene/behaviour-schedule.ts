@@ -663,15 +663,18 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const point = placeNear(world, centre, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * 1.4, cap), random());
             if (point) {
                 const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
-                // A patch of ground (grass, shade, the water's edge, the litter): each animal stands its own place in it,
-                // so a herd spreads over the grass instead of stacking on one point.
-                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "water_edge" ? 0.9 : 0;
+                // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
+                // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
+                // point or standing in the ledges' even row.
+                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "cliff_ledge" ? 1.8 : point.tag === "rock_top" ? 1 : point.tag === "water_edge" ? 0.9 : 0;
                 if (spread && !up) {
                     const a = random() * Math.PI * 2;
                     const r = spread * (0.25 + 0.75 * Math.sqrt(random())) * Math.max(Math.min(animal.length, 2), 0.3);
                     const x = point.x + Math.cos(a) * r;
                     const z = point.z + Math.sin(a) * r;
-                    if (world.nav.walkable(x, z, maxSlopeOf(animal)) && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
+                    // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
+                    const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
+                    if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
                         return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(doing, random, null)};
                     }
                 }
