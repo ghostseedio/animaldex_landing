@@ -321,8 +321,8 @@ export function paddockFence(plot: HomePlot): Array<{a: {x: number; z: number}; 
     });
 }
 
-/** The paddock's post height (its top over the ground). */
-export const PADDOCK_POST_TOP = 1.075;
+/** The paddock's post height (its top over the ground): a post-and-rail fence's real 1.3 m (decision 34; it was 1.075 m). */
+export const PADDOCK_POST_TOP = 1.3;
 
 /** Where the smallholding's coop stands (local): just outside the paddock's corner nearest its origin, clear of trees. */
 export function coopSpot(plot: HomePlot): {x: number; z: number; turn: number} {

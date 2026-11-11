@@ -22,6 +22,8 @@ import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {ASSETS, ASSET_BASE, TREE_CLOSE, assetTreePlacement, treeLodDistance} from "@/ark-scene/tree-assets";
+// The least share of the woods' fill every tier draws (batch 6), shared with the attach points (decision 33).
+import {WOODS_FILL} from "@/ark-scene/tree-pick";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {sampleGround, zoneAt} from "@/ark-scene/world";
 
@@ -30,12 +32,6 @@ type Level = typeof LEVELS[number];
 
 type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean};
 
-/**
- * The least share of the forest fill drawn in the rainforest and the woodland, whatever the tier (batch 6: on the low tier
- * a 0.3 share of the thinned fill left the decor emergents standing as tall bare trunks with small tufts from the island
- * view; the lower canopy is what makes the woods read leafy). Other zones keep the tier's share.
- */
-const WOODS_FILL = 0.6;
 
 /** The least reach of the lod2 → card hand-over (the medium tier's), see `update`. */
 const CARD_REACH_MIN = 0.45;
@@ -292,6 +288,9 @@ export class AssetTrees {
             const d2 = entry.distances[2] * Math.max(this.reach, CARD_REACH_MIN);
             for (const instance of entry.instances) {
                 if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
+                // A tree's levels hand over at distances for its own size (decision 34: trees at their real heights,
+                // twice the library's and more): a 40 m emergent keeps its detail as far as it looks the same size.
+                const size = Math.max(instance.scale, 1);
                 if (entry.near) {
                     const across = Math.hypot(instance.x - camera.x, instance.z - camera.z);
                     const above = camera.y - instance.y;
@@ -302,7 +301,7 @@ export class AssetTrees {
                         continue;
                     }
                 }
-                const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
+                const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z) / size;
                 // Right beside the tree (up in its crown, a close-up on one of its leaves): full detail, the level its attach points are on.
                 const close = d >= d0 && treeLodDistance(instance, camera) < TREE_CLOSE;
                 let level: Level = d < d0 || close ? "lod0" : d < d1 ? "lod1" : d < d2 ? "lod2" : "card";

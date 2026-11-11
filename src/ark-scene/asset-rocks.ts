@@ -11,7 +11,8 @@
  * and a pale salt line above it.
  */
 
-import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Mesh} from "three";
+import type {RockMesh} from "@/ark-scene/rock-shapes";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
@@ -25,10 +26,19 @@ const LEVELS = ["lod0", "lod1", "lod2"] as const;
 type Level = typeof LEVELS[number];
 type Instance = {x: number; y: number; z: number; matrix: Matrix4; tint: Color};
 
-function rockMaterial(): MeshStandardMaterial {
+/** Rock above this height (m) carries a dusting of snow on its upward faces, full by `ROCK_DUST_FULL` (the high crags). */
+export const ROCK_DUST_FROM = 20;
+export const ROCK_DUST_FULL = 27;
+
+/**
+ * The rocks' material, shared by the asset rocks and the island's own rocks (`rock-shapes.ts`): one material for every
+ * rock, so a crag high in the snow and a boulder by the sea draw in the same batches. High up, snow lies on the upward
+ * faces by height (`ROCK_DUST_FROM`), in drifts that follow the rock's own grain.
+ */
+export function rockMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.9, metalness: 0});
     const uniforms = {groundAlbedo: ARK_GROUND_TEXTURES.albedo, groundReady: ARK_GROUND_TEXTURES.ready, envSeaLevel: ARK_ENV.seaLevel, envWetness: ARK_ENV.wetness};
-    material.customProgramCacheKey = () => "ark-asset-rock-1";
+    material.customProgramCacheKey = () => "ark-asset-rock-2";
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -72,12 +82,25 @@ float rockWet = 0.0;`)
     c = mix(c, c * 1.3 + 0.03, smoothstep(0.55, 0.62, h) * (1.0 - smoothstep(0.62, 0.8, h)) * 0.55);
     rockWet = max(wet, envWetness * 0.7);
     c *= mix(1.0, 0.72, envWetness * (1.0 - wet));
+    // High up, snow lying on the ledges and tops, in drifts that follow the rock's own grain.
+    float snowy = smoothstep(${ROCK_DUST_FROM.toFixed(1)}, ${ROCK_DUST_FULL.toFixed(1)}, w.y) * smoothstep(0.45, 0.8, n.y) * smoothstep(0.3, 0.6, arkFbm(w.xz * 1.7 + w.y * 0.6));
+    c = mix(c, vec3(0.86, 0.88, 0.9), clamp(snowy * 1.4, 0.0, 1.0));
     diffuseColor.rgb = c;
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.28, rockWet);`);
     };
     return material;
+}
+
+/** A rock made in code (`rock-shapes.ts`) as three.js geometry: position, normal, colour. */
+export function rockGeometry(mesh: RockMesh): BufferGeometry {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(mesh.positions, 3));
+    geometry.setAttribute("normal", new BufferAttribute(mesh.normals, 3));
+    geometry.setAttribute("color", new BufferAttribute(mesh.colors, 3));
+    geometry.computeBoundingSphere();
+    return geometry;
 }
 
 type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};

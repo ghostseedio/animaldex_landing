@@ -25,6 +25,7 @@ import {floorPlacements} from "@/ark-scene/floor-assets";
 import {defaultHomePlots, fencePostTops as homeFencePosts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {snowCover} from "@/ark-scene/snow";
 import {floorLogTops, treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import {fillDrawnOnEveryTier} from "@/ark-scene/tree-pick";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -568,7 +569,8 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     const drawnTrees: Array<{item: DecorItem & Partial<FillItem>; host: string; real: TreeAttach[]}> = [];
     for (const {item, host} of trees) {
         yield;
-        if (item.rank !== undefined && item.rank > EVERY_TIER_FILL) continue;
+        // Fill every tier draws: the low tier's share, and the woods' WOODS_FILL (decision 33, tree-pick.ts).
+        if (!fillDrawnOnEveryTier(item, EVERY_TIER_FILL)) continue;
         const real = treeAttachPoints(item);
         if (!real.length) continue;
         drawnTrees.push({item, host, real});

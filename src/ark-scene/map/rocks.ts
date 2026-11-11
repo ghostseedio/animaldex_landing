@@ -8,14 +8,19 @@
  * blocked; `water.ts` for the sea floor's animals), and the validator fails a
  * body that reaches into one. On top of a rock (its `ledge` and `rock_face`
  * points) is fine: that is the rock's surface.
+ *
+ * The one source of every solid rock (scenery lane, the motion 100x pass, for the collisions lane): the decor's rocks,
+ * and the mountain's crags, boulders and scree stones 0.3 m and more across (`rock-layout.ts`; smaller stones are
+ * walked over), each tagged with its `source`.
  */
 
 import {worldDecor} from "@/ark-scene/decor";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
+import {allMountainRocks, pieceBox, SOLID_ACROSS} from "@/ark-scene/rock-layout";
 
 /** A drawn rock: its middle, its turn, its half-extents along its own x and z, its foot and its top (m). */
-export type DrawnRock = {x: number; z: number; cos: number; sin: number; hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number; reach: number};
+export type DrawnRock = {x: number; z: number; cos: number; sin: number; hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number; reach: number; /** What it is: a decor rock, or the mountain's crag, boulder or scree stone (`rock-layout.ts`). */ source?: "decor" | "crag" | "boulder" | "scree"};
 
 /** The rock index's cell (m): each rock is listed in every cell its reach covers. */
 export const ROCK_CELL = 4;
@@ -37,12 +42,18 @@ export function drawnRocks(): DrawnRock[] {
             const hx1 = b.max[0] * s;
             const hz0 = b.min[2] * s;
             const hz1 = b.max[2] * s;
-            list.push({x: placed.x, z: placed.z, cos: Math.cos(placed.yaw), sin: Math.sin(placed.yaw), hx0, hx1, hz0, hz1, y0: placed.y + b.min[1] * s, y1: placed.y + b.max[1] * s, reach: Math.hypot(Math.max(-hx0, hx1), Math.max(-hz0, hz1))});
+            list.push({x: placed.x, z: placed.z, cos: Math.cos(placed.yaw), sin: Math.sin(placed.yaw), hx0, hx1, hz0, hz1, y0: placed.y + b.min[1] * s, y1: placed.y + b.max[1] * s, reach: Math.hypot(Math.max(-hx0, hx1), Math.max(-hz0, hz1)), source: "decor"});
         } else {
             // vegetation.ts rock(): about 1.9 × 1.6 m at scale 1, about 1 m tall.
             const r = 0.9 * item.scale;
-            list.push({x: item.x, z: item.z, cos: 1, sin: 0, hx0: -r, hx1: r, hz0: -r * 0.85, hz1: r * 0.85, y0: item.y - DECOR_SINK, y1: item.y - DECOR_SINK + 0.6 * item.scale, reach: r * 1.32});
+            list.push({x: item.x, z: item.z, cos: 1, sin: 0, hx0: -r, hx1: r, hz0: -r * 0.85, hz1: r * 0.85, y0: item.y - DECOR_SINK, y1: item.y - DECOR_SINK + 0.6 * item.scale, reach: r * 1.32, source: "decor"});
         }
+    }
+    // The mountain's crags, boulders and the scree stones an animal walks round (rock-layout.ts).
+    for (const piece of allMountainRocks()) {
+        if (piece.across < SOLID_ACROSS) continue;
+        const box = pieceBox(piece);
+        list.push({x: piece.x, z: piece.z, cos: Math.cos(piece.yaw), sin: Math.sin(piece.yaw), ...box, reach: Math.hypot(Math.max(-box.hx0, box.hx1), Math.max(-box.hz0, box.hz1)), source: piece.role});
     }
     return list;
 }

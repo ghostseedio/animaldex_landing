@@ -647,38 +647,7 @@ test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of a
     assert.deepEqual(Array.from(new Set(hits)), []);
 });
 
-// MARK: - The mountain's outcrops
-
-import {OUTCROP_CEILING, OUTCROP_DUST, OUTCROP_SLOPE} from "@/ark-scene/props/areas";
-import {snowCover} from "@/ark-scene/snow";
-
-test("props outcrops: below the snow, on slopes a slab can sit on, sunk and tilted, near only (no far box)", () => {
-    const areas = buildAreas(PROPS_TIERS.high);
-    const plain = areas.batches.find((batch) => batch.name === "strata")!;
-    const dusted = areas.batches.find((batch) => batch.name === "strata-dusted")!;
-    assert.ok(plain.count + dusted.count >= 3, `${plain.count + dusted.count} outcrops`);
-    for (const batch of [plain, dusted]) {
-        assert.equal(batch.far, null, "no far proxy");
-        const matrices = (batch as unknown as {matrices: Float32Array}).matrices;
-        for (let i = 0; i < batch.count; i++) {
-            const x = matrices[i * 16 + 12];
-            const y = matrices[i * 16 + 13];
-            const z = matrices[i * 16 + 14];
-            const surface = surfaceAt(x, z);
-            assert.ok(surface.height < OUTCROP_CEILING, `${surface.height.toFixed(1)} m`);
-            assert.ok(surface.normal.y >= OUTCROP_SLOPE.maxNormalY - 0.02, "a slab can sit there");
-            assert.ok(snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).sure < 0.02, "never on sure snow");
-            // Its up is tilted toward the slope (the matrix's y axis).
-            const upY = matrices[i * 16 + 5] / Math.hypot(matrices[i * 16 + 4], matrices[i * 16 + 5], matrices[i * 16 + 6]);
-            assert.ok(upY < 0.999, "tilted to the slope");
-            // Sunk: its base well under the ground (60% of its 0.88 × size height; scale = size / 2.5).
-            const scale = Math.hypot(matrices[i * 16], matrices[i * 16 + 1], matrices[i * 16 + 2]);
-            assert.ok(surface.height - y > 0.5 * 0.88 * scale * 2.5, "sunk");
-            if (batch === dusted) assert.ok(surface.height > OUTCROP_DUST && snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).mean > 0.1);
-        }
-    }
-    areas.dispose();
-});
+// MARK: - The mountain's rocks: `src/lib/ark-scenery.test.ts` (scenery lane: the crags, scree and boulders replaced the strata).
 
 // MARK: - Burrows and dens
 

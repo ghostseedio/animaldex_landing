@@ -26,6 +26,7 @@ import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
 import {LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import {snowCover, snowLine} from "@/ark-scene/snow";
 import {TREE_CLOSE, floorLogTops, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
+import {fillDrawnOnEveryTier} from "@/ark-scene/tree-pick";
 
 const root = process.cwd();
 const base = path.join(root, "public", (manifest as {base: string}).base);
@@ -128,8 +129,8 @@ test("attach: the trees' points sit on the trees as the renderer places them, on
     const scale = new Vector3();
     for (const point of points) {
         const item = hostItem(point.host);
-        // Every tier draws it: a decor tree, or forest fill within the low tier's share.
-        if (item.rank !== undefined) assert.ok(item.rank <= EVERY_TIER_FILL, `${point.id} on fill the low tier leaves out`);
+        // Every tier draws it: a decor tree, or forest fill within the low tier's share (the woods': WOODS_FILL, decision 33).
+        if (item.rank !== undefined) assert.ok(fillDrawnOnEveryTier(item, EVERY_TIER_FILL), `${point.id} on fill the low tier leaves out`);
         const asset = treeAssetFor(item)!;
         assert.equal(point.asset, asset.id, point.id);
         // asset-trees.ts's own instance matrix, composed here from the decor item.
