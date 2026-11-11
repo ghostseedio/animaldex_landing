@@ -7,7 +7,9 @@
  *   surfaceAt(x, z)      height, normal, what the ground is made of there, wetness, water depth
  *   place(name)          named anchor places ("beach", "house", "reef", …), never raw coordinates
  *   attachPoints(query)  seeded points on the scenery where small animals sit, cling, crawl and hide,
- *                        tagged by microhabitat (the tags of microhabitats.json and layers.json)
+ *                        tagged by microhabitat (the tags of microhabitats.json and layers.json); on the
+ *                        trees they lie on the drawn leaves, bark and branches (`tree-assets.ts`)
+ *   attachPointAt(point, time, wind)  where a point is now, moved by its tree's wind as the shader moves the leaf
  *
  * Pure (no three.js scene, no DOM) and deterministic: every viewer gets the
  * same points. The graphics pass keeps these signatures stable; what it
@@ -15,8 +17,9 @@
  */
 
 import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
-import {forestFill, rockSurfacePoint, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {forestFill, rockSurfacePoint, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
+import {treeAttachPoints, treeSway, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type Vec3 = {x: number; y: number; z: number};
@@ -267,6 +270,14 @@ export type AttachPoint = {
     host: string;
     /** The host's kind: a decor kind ("broadleaf", "rock", "flower"…), "house", "lamp", "pond", "lake" or "ground". */
     hostKind: string;
+    /** Trees only (optional, added 2026-11-11): the asset tree it is on ("oak-a"). */
+    asset?: string;
+    /** Trees only: along the surface (a leaf's midrib base → tip, up the trunk, along the branch); `yaw` turns +z onto it. */
+    forward?: Vec3;
+    /** Trees only: 0…1, the share of sight lines within 40° of out-and-up that leave its tree unblocked (seen from outside). */
+    open?: number;
+    /** Trees only: how its tree's wind moves it (`attachPointAt`); points without it hold still. */
+    wind?: TreeWind;
 };
 
 const SIZE: Record<AttachTag, [number, number]> = {
@@ -291,6 +302,54 @@ function normalise(v: Vec3): Vec3 {
 
 const TREES = new Set(["broadleaf", "rainforest", "orchard", "acacia", "conifer"]);
 
+/**
+ * Forest-fill trees drawn on every tier: the low tier draws the fill up to this rank (index.ts TIER_SETTINGS.low.fill).
+ * Only these (and every decor tree) carry attach points, so an animal on a tree never floats where a lighter tier
+ * leaves that tree out.
+ */
+export const EVERY_TIER_FILL = 0.3;
+
+/** At most this many points of each kind on one tree (the asset has up to 12 leaves, 8 bark, 24 branch points). */
+const TREE_CAP: Record<TreeAttachTag, number> = {leaf: 12, bark: 6, branch: 8};
+/** A leaf bends away under anything heavier than this, however big the leaf (body length, m). */
+const LEAF_MAX = 0.12;
+
+/**
+ * The heading round the normal that points an animal's +z along `forward`, in the convention the scene uses to set
+ * a model on a point: quaternion = setFromUnitVectors(+y, normal) · rotationY(yaw) (three's own maths, by hand).
+ */
+export function yawFor(normal: Vec3, forward: Vec3): number {
+    const n = normalise(normal);
+    let qx: number;
+    let qz: number;
+    let qw = n.y + 1;
+    if (qw < 1e-6) {
+        // Straight down: three turns half a circle about z.
+        qx = 0;
+        qz = 1;
+        qw = 0;
+    } else {
+        qx = n.z;
+        qz = -n.x;
+    }
+    const l = Math.hypot(qx, qz, qw);
+    qx /= l;
+    qz /= l;
+    qw /= l;
+    // The inverse rotation (x, 0, z, w)⁻¹ = (-x, 0, -z, w) applied to forward: v + 2w(u × v) + 2u × (u × v), u = (-x, 0, -z).
+    const ux = -qx;
+    const uz = -qz;
+    const v = forward;
+    const cx = -uz * v.y;
+    const cy = uz * v.x - ux * v.z;
+    const cz = ux * v.y;
+    const ccx = -uz * cy;
+    const ccz = ux * cy;
+    const x = v.x + 2 * qw * cx + 2 * ccx;
+    const z = v.z + 2 * qw * cz + 2 * ccz;
+    return Math.atan2(x, z);
+}
+
 /** Every attach point on the island (built once, seeded). */
 export function allAttachPoints(): AttachPoint[] {
     if (attachCache) return attachCache;
@@ -307,32 +366,44 @@ export function allAttachPoints(): AttachPoint[] {
     decor.forEach((item, i) => kinds.set(`decor${i}`, item.kind));
     fill.forEach((item, i) => kinds.set(`fill${i}`, item.kind));
 
-    // Trees: bark on the trunk (outward), leaves round the crown (facing out and up), branches under it.
-    const trees = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...fill.map((item, i) => ({item, host: `fill${i}`}))].filter(({item}) => TREES.has(item.kind));
+    // Trees: on the drawn asset trees' own leaves, bark and branches (tree-assets.ts, from attach.json moved onto the
+    // lod0 surface), where the renderer stands each tree. Only trees drawn on every tier carry points.
+    const trees = [
+        ...decor.map((item, i) => ({item: item as DecorItem & Partial<FillItem>, host: `decor${i}`})),
+        ...fill.map((item, i) => ({item: item as DecorItem & Partial<FillItem>, host: `fill${i}`}))
+    ].filter(({item}) => TREES.has(item.kind) || item.kind === "palm");
     for (const {item, host} of trees) {
-        const s = item.scale;
+        // The rest of the island's points keep the seeded positions they had before the asset trees: the stream
+        // advances as the procedural tree points did (3 bark × 2, 6 leaves × 3, 2 branches × 2 draws a tree).
+        if (TREES.has(item.kind)) for (let k = 0; k < 28; k++) random();
+        if (item.rank !== undefined && item.rank > EVERY_TIER_FILL) continue;
+        const real = treeAttachPoints(item);
+        if (!real.length) continue;
         const zone = zoneOf(item.x, item.z);
-        const trunkHeight = (item.kind === "rainforest" ? 4.6 : item.kind === "conifer" ? 1.4 : item.kind === "orchard" ? 1.3 : 2.4) * s;
-        const trunkRadius = (item.kind === "rainforest" ? 0.26 : item.kind === "orchard" ? 0.12 : 0.2) * s;
-        for (let k = 0; k < 3; k++) {
-            const a = random() * Math.PI * 2;
-            const h = (0.3 + random() * 0.6) * trunkHeight;
-            const r = trunkRadius * (1 - 0.35 * h / trunkHeight);
-            add("bark", host, k, {x: item.x + Math.sin(a) * r, y: item.y + h, z: item.z + Math.cos(a) * r}, {x: Math.sin(a), y: 0, z: Math.cos(a)}, zone, 0);
-        }
-        const crownY = item.y + trunkHeight + (item.kind === "conifer" ? 1.2 * s : 1.0 * s);
-        const crownR = (item.kind === "rainforest" ? 3.0 : item.kind === "conifer" ? 1.3 : item.kind === "orchard" ? 1.3 : 2.1) * s;
-        for (let k = 0; k < 6; k++) {
-            const a = random() * Math.PI * 2;
-            const up = 0.15 + random() * 0.7;
-            const out = {x: Math.sin(a) * Math.sqrt(1 - up * up), y: up, z: Math.cos(a) * Math.sqrt(1 - up * up)};
-            // Just outside the leaf cards, where a near leaf (a real leaf mesh) is put when the camera comes close.
-            add("leaf", host, k, {x: item.x + out.x * crownR * 1.12, y: crownY + out.y * crownR * 0.78, z: item.z + out.z * crownR * 1.12}, {x: out.x * 0.6, y: 1, z: out.z * 0.6}, zone);
-        }
-        for (let k = 0; k < 2; k++) {
-            const a = random() * Math.PI * 2;
-            const reach = crownR * (0.4 + random() * 0.4);
-            add("branch", host, k, {x: item.x + Math.sin(a) * reach, y: crownY - crownR * 0.45, z: item.z + Math.cos(a) * reach}, {x: 0, y: 1, z: 0}, zone, a);
+        // Which of the asset's points this tree keeps (seeded by the tree, so two trees of one asset differ).
+        const pick = seeded(hashString(host) + 7919);
+        const order = real.map((point) => ({point, key: pick()})).sort((a, b) => a.key - b.key);
+        const kept: Record<TreeAttachTag, number> = {leaf: 0, bark: 0, branch: 0};
+        for (const {point} of order) {
+            if (kept[point.tag]++ >= TREE_CAP[point.tag]) continue;
+            const size: [number, number] = point.tag === "leaf" ? [point.size[0], Math.min(point.size[1], LEAF_MAX)] : point.size;
+            const hostKind = kinds.get(host) ?? item.kind;
+            points.push({
+                id: `${point.tag}:${host}:${point.n}`,
+                tag: point.tag,
+                spot: TAG_SPOT[point.tag],
+                position: point.position,
+                normal: normalise(point.normal),
+                yaw: yawFor(point.normal, point.forward),
+                size,
+                zone,
+                host,
+                hostKind,
+                asset: point.asset,
+                forward: point.forward,
+                open: point.open,
+                wind: point.wind
+            });
         }
     }
 
@@ -449,6 +520,21 @@ export function attachPoints(query: AttachQuery = {}): AttachPoint[] {
         && (!query.zone || point.zone === query.zone)
         && (query.size === undefined || (query.size >= point.size[0] && query.size <= point.size[1]))
         && (!query.near || Math.hypot(point.position.x - query.near.x, point.position.z - query.near.z) <= query.near.radius));
+}
+
+/**
+ * How far its host's wind has moved an attach point (m): the tree's sway and leaf flutter, exactly as the tree shader
+ * draws them, so a small animal on a leaf moves with the leaf. `time` and `wind` are the scene's own shader clock and
+ * wind (`ARK_TIME.value`, `ARK_WIND.value` in glsl.ts). Zero for points on still hosts (rocks, the house, the ground).
+ */
+export function attachSway(point: AttachPoint, time: number, wind: {x: number; y: number}): Vec3 {
+    return point.wind ? treeSway(point.wind, time, wind) : {x: 0, y: 0, z: 0};
+}
+
+/** Where an attach point is now: its position plus its host's sway (`attachSway`). */
+export function attachPointAt(point: AttachPoint, time: number, wind: {x: number; y: number}): Vec3 {
+    const sway = attachSway(point, time, wind);
+    return {x: point.position.x + sway.x, y: point.position.y + sway.y, z: point.position.z + sway.z};
 }
 
 /** The coast's waterline radius at a bearing, for anything that follows the shore (the tide moves it by `seaLevel`). */
