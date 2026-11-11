@@ -263,7 +263,7 @@ test("bats hang under limbs by day (canopy_hang) and stream out of the roost at 
     const noon = Math.floor(Date.UTC(2026, 5, 10, 12) / 1000);
     const day = poseOnTrip(world, tripAt(world, bat.profile, bat.animal, noon, hoursAt, "nocturnal"), noon) as RecipePose;
     assert.ok(Math.hypot(day.x - roost.x, day.y - roost.y, day.z - roost.z) < 0.05, "at its hang point");
-    assert.ok(day.act && Math.abs(day.act.roll - Math.PI) < 1e-6, "upside down");
+    assert.ok(day.act && Math.abs(day.act.pitch - Math.PI / 2) < 1e-6, "head down from its feet");
     // At dusk its roost-mates stream out (the stream is pure in the time; each bat leaves and is gone by 60 m).
     const dusk = Math.floor(Date.UTC(2026, 5, 10, 17, 50) / 1000);
     const pose = poseOnTrip(world, tripAt(world, bat.profile, bat.animal, dusk, hoursAt, "nocturnal"), dusk) as RecipePose;

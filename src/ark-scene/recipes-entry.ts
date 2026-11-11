@@ -8,8 +8,8 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
-import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
-import {microMurmuration, nestStageAt, pairWindows, sexLook, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {forgetSchedules, roostOf, scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {microMurmuration, nestStageAt, pairWindows, setFallbackNests, setNestSource, sexLook, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {heightAt} from "@/ark-scene/world";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -27,7 +27,12 @@ const SPECIES: Record<string, Species> = {
     "black-billed-magpie": {id: "ddf29082-be9b-449a-9007-dbc34818102f", name: "Black-billed Magpie", zone: "woodland", activity: "diurnal", sociality: "group"},
     "barn-swallow": {id: "389d6e31-1cd3-491e-b92d-3c23a94b2a1e", name: "Barn Swallow", zone: "farm_garden", activity: "diurnal", sociality: null},
     "grey-heron": {id: "18bed140-4543-4a6f-b741-d32f764b75ce", name: "Grey Heron", zone: "wetland", activity: "diurnal", sociality: null},
-    osprey: {id: "360d1b44-2874-4312-aa80-c4f99d5e1156", name: "Osprey", zone: "seashore", activity: "diurnal", sociality: null}
+    osprey: {id: "360d1b44-2874-4312-aa80-c4f99d5e1156", name: "Osprey", zone: "seashore", activity: "diurnal", sociality: null},
+    "giant-burrowing-mayfly": {id: "90f14d65-4f5c-4625-a6f0-5516ae48cb04", name: "Giant Burrowing Mayfly", zone: "river_lake", activity: null, sociality: null},
+    // (Staged in the grassland for the clips: lone acacias, so the roost and the stream are seen against the sky, not in a crown.)
+    "kuhls-pipistrelle-bat": {id: "015d256f-f9c3-45b4-bdfc-88c9b56c1ea9", name: "Kuhl's Pipistrelle", zone: "grassland", activity: "nocturnal", sociality: "group"},
+    "large-flying-fox": {id: "b4cc55f6-a237-4578-96db-267844168da4", name: "Large Flying Fox", zone: "grassland", activity: "nocturnal", sociality: "group"},
+    mallard: {id: "85fd945d-1452-4b1d-b3e8-3d737b2eac6c", name: "Mallard", zone: "river_lake", activity: "any", sociality: "group"}
 };
 
 type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null};
@@ -138,6 +143,58 @@ const CLIPS: Record<string, Clip> = {
                 }
             }
             return null;
+        }
+    },
+    swarm: {
+        cast: [["mf", "giant-burrowing-mayfly", 2]],
+        hours: 17.8,
+        date: Date.UTC(2026, 5, 20, 17) / 1000,
+        find: (ctx) => {
+            const a = ctx.animals[0];
+            if (!a) return null;
+            const h = a.animal.home;
+            return {start: ctx.date + 600, seconds: 12, step: 1 / 12, view: view(h.x, h.y + 1.2, h.z, 3.2, 1.3, 0.7), note: `mayflies dancing over ${h.x.toFixed(1)},${h.z.toFixed(1)}`};
+        }
+    },
+    bats: {
+        cast: [["pi", "kuhls-pipistrelle-bat", 3], ["ff", "large-flying-fox", 2]],
+        hours: 17.9,
+        date: Date.UTC(2026, 5, 20, 17) / 1000,
+        find: (ctx) => {
+            const a = ctx.animals.find((x) => x.slug === "large-flying-fox") ?? ctx.animals[0];
+            if (!a) return null;
+            const roost = roostOf(ctx.world, a.profile, a.animal);
+            // From the east, low, against the sunset glow in the west (bats are seen against the sky), 80 m off.
+            return {start: ctx.date + 600, seconds: 16, step: 1 / 10, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 45, 1.36, Math.PI / 2), note: `${a.slug} roost ${roost.point}, ${roost.y.toFixed(1)} m up`};
+        }
+    },
+    bats_day: {
+        cast: [["pi", "kuhls-pipistrelle-bat", 3], ["ff", "large-flying-fox", 2]],
+        hours: 12,
+        date: Date.UTC(2026, 5, 20, 12) / 1000,
+        find: (ctx) => {
+            // The pipistrelles (woodland, lower limbs), close under the limb.
+            const a = ctx.animals.find((x) => x.slug === "large-flying-fox") ?? ctx.animals[0];
+            if (!a) return null;
+            const roost = roostOf(ctx.world, a.profile, a.animal);
+            return {start: ctx.date + 600, seconds: 2, step: 1, view: view(roost.x, Math.max(heightAt(roost.x, roost.z), 0), roost.z, 9, 1.2, Math.PI / 2), note: `${a.slug} hanging at ${roost.point}, ${roost.y.toFixed(1)} m up`};
+        }
+    },
+    sitter: {
+        cast: [["md", "mallard", 2]],
+        hours: 10,
+        date: Date.UTC(2026, 4, 10, 10) / 1000,
+        find: (ctx) => {
+            // The duck (the female: drakes don't sit) with eggs in a stand-in for the props lane's nest, at the nearest water's edge.
+            const a = ctx.animals.find((x) => sexLook(x.id, x.slug).sex === "female") ?? ctx.animals[0];
+            if (!a) return null;
+            const edge = ctx.world.sampler.attachPoints("water_edge", {x: a.animal.home.x, z: a.animal.home.z, r: 30})[0];
+            if (!edge) return null;
+            const site = {x: edge.x, y: Math.max(ctx.world.sampler.heightAt(edge.x, edge.z), 0), z: edge.z};
+            setNestSource((id) => (id === a.id ? {...site, stage: 1, eggs: 8} : null));
+            setFallbackNests(true);
+            forgetSchedules();
+            return {start: ctx.date + 900, seconds: 16, step: 1 / 4, view: view(site.x, site.y, site.z, 2.6, 1.25, 0.9), note: `${a.id.slice(-4)} on its nest at ${site.x.toFixed(1)},${site.z.toFixed(1)} (8 eggs, stand-in source)`};
         }
     },
     osprey: {

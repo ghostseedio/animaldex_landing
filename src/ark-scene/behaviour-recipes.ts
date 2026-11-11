@@ -1368,10 +1368,14 @@ const postureActs = new Map<string, RecipeAct>();
 function postureOf(owner: TripOwner, base: TripPose): RecipePose {
     const posture = speciesRecipes(owner.slug).posture;
     if (!posture) return base;
-    const roll = posture === "hang" || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
-    const key = `${posture}#${roll}`;
+    // A bat hangs head down from its feet (nose down a quarter turn about its feet on the limb); a sloth hangs level,
+    // upside down (a half roll); an otter floats on its back.
+    const flyer = owner.profile.move === "fly" || owner.profile.moves.includes("fly");
+    const roll = (posture === "hang" && !flyer) || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
+    const pitch = posture === "hang" && flyer ? Math.PI / 2 : posture === "curl" ? 0.15 : 0;
+    const key = `${posture}#${roll}#${pitch}`;
     let act = postureActs.get(key);
-    if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch: posture === "curl" ? 0.15 : 0, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
+    if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
     return {...base, act};
 }
 

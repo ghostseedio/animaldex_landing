@@ -126,7 +126,9 @@ export class RecipeScene {
         this.twigs = make(rod, "#6e5235", MAX_TWIGS, 0.95);
         this.flock = make(chevronGeometry(), "#1f2024", MAX_FLOCK, 0.8);
         (this.flock.material as MeshStandardMaterial).side = 2;
-        this.insects = make(new SphereGeometry(0.5, 5, 3), "#1c1a17", MAX_INSECTS, 0.9);
+        // Pale, a little lit: a swarm is seen by its wings catching the light (dark specks vanish against dusk ground).
+        this.insects = make(new SphereGeometry(0.5, 5, 3), "#e8e2cf", MAX_INSECTS, 0.6);
+        (this.insects.material as MeshStandardMaterial).emissive.set("#5a564b");
         this.bats = make(chevronGeometry(), "#191513", MAX_BATS, 0.85);
         (this.bats.material as MeshStandardMaterial).side = 2;
         const geometry = new BufferGeometry();
@@ -277,8 +279,9 @@ export class RecipeScene {
                 for (let i = 0; i < n && this.insects.count < MAX_INSECTS; i++) {
                     const p = swarmPoint(flock.centre, flock.seed, i, epoch, kind === "cluster");
                     // A few millimetres to a centimetre or two; never under a pixel or so far off.
-                    const size = Math.max(kind === "cluster" ? 0.012 : 0.009, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.0016);
-                    this.put(this.insects, p.x, p.y, p.z, 0, 0, 0, size, size * (kind === "cluster" ? 0.6 : 1), size * 1.5);
+                    const size = Math.max(kind === "cluster" ? 0.012 : 0.012, Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.0022);
+                    // (A cluster's bugs are dark red-brown; a swarm's are pale.)
+                    this.put(this.insects, p.x, p.y, p.z, 0, 0, 0, size, size * (kind === "cluster" ? 0.6 : 1), size * 1.5, kind === "cluster" ? "#3a1a12" : "#ffffff");
                 }
                 continue;
             }
