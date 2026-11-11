@@ -1,0 +1,4 @@
+{
+  "about": "The motion 100x pass's metrics in one CI summary (scripts/ark-motion-ci.mts, docs/ark/NEXT.md). One entry per lane check: the command writes `output` (the lane's own JSON); each metric reads a dotted `path` from it (optionally `op`: length or sum) and fails past `max` / `min`. `before` is the live release's value (7764fe12), for the table. A check runs only once every file in `requires` exists. The integrator adds entries as the lanes land.",
+  "checks": []
+}
