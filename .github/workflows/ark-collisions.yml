@@ -1,0 +1,54 @@
+# The Ark's collisions (motion pass L5, the owner: "animals walk through fences and rocks"): no animal passes through a
+# fence, a building, a trunk, a rock, a log or a hay bale, none steps through a fence, and overlaps between animals stay
+# at or under today's (tests/ark-collide/thresholds.json).
+#   1. the collision tests (src/lib/ark-collide.test.ts): the colliders, the queries, every path clear for its body, the
+#      layer's purity, and a half-hour run of a synthetic Ark;
+#   2. the collision audit (scripts/ark-collide-audit.mts) on the synthetic Ark (every catalogue species and the
+#      captures dry run's hamlet at 1x: src/lib/ark-collide/fixture.ts), 6 island hours every 2 s, against the thresholds.
+# Deterministic: nothing here has randomness, so a changed number is a changed scene. The real snapshot's long runs
+# (many hours, the 3,142 animals) are run locally (the real snapshot is never committed).
+name: Ark collisions
+
+on:
+  pull_request:
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-collide/**"
+      - "src/lib/ark-collide.test.ts"
+      - "scripts/ark-collide-audit*"
+      - "tests/ark-collide/**"
+      - ".github/workflows/ark-collisions.yml"
+  push:
+    branches: [ark-next, ark-collisions]
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-collide/**"
+      - "tests/ark-collide/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ark-collisions-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  collisions:
+    name: Pass-throughs, fence crossings and overlaps
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Collision tests
+        run: npx tsx --test src/lib/ark-collide.test.ts
+      - name: Collision audit (CI configuration)
+        run: npx tsx scripts/ark-collide-audit.mts --fixture --hours 6 --step 2 --workers 4 --models none --label ci --out .ark-collide
+      - name: Against the thresholds
+        run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/ci.json --thresholds tests/ark-collide/thresholds.json

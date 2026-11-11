@@ -148,7 +148,12 @@ import {
 import {arkThriveOf} from "@/ark-scene/thrive";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
-import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {attachedOn} from "@/ark-scene/collide/attach";
+import {bodyShape} from "@/ark-scene/collide/bodies";
+import {CollideLayer} from "@/ark-scene/collide/layer";
+import {doorWalkAt} from "@/ark-scene/collide/routes";
+import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
@@ -312,6 +317,8 @@ type Entry = {
     /** Where it was drawn this frame (its middle), for picking; null when not drawn. */
     middle: Vector3 | null;
     drawnHeight: number;
+    /** A hamlet resident out of doors: where the collisions last put it (m) and when (s): `collide/layer.ts`. */
+    residentAt?: {x: number; z: number; at: number} | null;
     /** 0 on the ground, 1 aloft (flyers); eased. */
     air: number;
     /** 0…1 the selected lift, eased. */
@@ -1197,6 +1204,64 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const sharedPins = new Map<string, (epoch: number) => Partial<TripPose & {doing: ArkDoing}>>();
     /** Development only (the head-look probe): a fixed `arkLook` (yaw, pitch, weight) for an animal, over the reactive layer's. */
     const forcedLooks = new Map<string, [number, number, number]>();
+
+    // MARK: Collisions (motion pass L5: `collide/`)
+
+    /** Its shared pose before the collisions: its schedule's, then liveliness's (young at heel, shelter, the tide), a pin. */
+    const sharedBase = (entry: Entry, epoch: number, pin = sharedPins.size ? sharedPins.get(entry.animal.id) : undefined) => {
+        const fromTrip = liveliness.sharedPose(entry, schedulePose(entry, epoch), epoch);
+        return pin ? {...fromTrip, ...pin(epoch)} : fromTrip;
+    };
+    /** Development only: `window.__arkCollideOff = true` before mounting draws the schedule's poses as they come. */
+    const collisionsOn = (globalThis as {__arkCollideOff?: boolean}).__arkCollideOff !== true;
+    const HUDDLED = new Set(["huddle", "pile", "cluster", "row"]);
+    const collideInput = (entry: Entry, pose: TripPose & {doing: ArkDoing; act?: RecipeAct | null}, epoch: number): ResolvePose => ({
+        x: pose.x,
+        y: pose.y,
+        z: pose.z,
+        yaw: pose.yaw,
+        aloft: pose.aloft,
+        asleep: pose.doing === "sleep",
+        partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
+        attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
+        // (Perched up on a surface: held there, never eased off its branch into the air.)
+        fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && attachedOn(entry.sched.trip, epoch))
+    });
+    /** A hamlet resident out of doors (on its spot, or walking its door route), before the collisions; null indoors. */
+    const residentBase = (entry: Entry): (ResolvePose & {yaw: number}) | null => {
+        const plot = entry.place.hamlet?.plot;
+        if (!plot || entry.visitor) return null;
+        const state = hamletAt();
+        const beat = state.beats.get(entry.animal.id);
+        const out = state.out.get(entry.animal.id);
+        if (!beat && !out) return null;
+        // (A door beat walks its route round the house, the fences and the props: `collide/routes.ts`.)
+        const walk = beat ? doorWalkAt(collisionsOn && world ? world.nav : null, beat.from, beat.to, bodyShape(entry.animal.model_slug, entry.full).radius, beat.t) : null;
+        const at = walk ?? out!.at;
+        const yaw = walk ? walk.yaw : plot.rotation + (((hamletHash(entry.animal.id) >>> 5) % 628) / 100);
+        return {x: at.x, y: Math.max(heightAt(at.x, at.z), 0), z: at.z, yaw, aloft: false};
+    };
+    const collisions = new CollideLayer<Entry>({
+        colliders: () => (collisionsOn && world ? world.sampler.colliders ?? null : null),
+        body: (entry) => {
+            const shape = bodyShape(entry.animal.model_slug, entry.full);
+            return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social)};
+        },
+        base: (entry, epoch) => (scheduled(entry) && entry.sched?.wired ? collideInput(entry, sharedBase(entry, epoch), epoch) : entry.place.hamlet ? residentBase(entry) : null),
+        everyone: () => entries.filter((entry) => (scheduled(entry) && entry.sched!.wired && entry.sched!.pose) || (entry.place.hamlet && !entry.visitor && entry.residentAt)),
+        last: (entry) => (entry.sched?.pose ? {x: entry.sched.pose.x, z: entry.sched.pose.z, at: entry.sched.at} : entry.residentAt ?? null),
+        // (A resident walks its door route over a door beat: never faster than 3 m/s.)
+        speed: (entry) => (entry.sched ? bodyLengthsPerSecond(entry.sched.profile) * Math.max(entry.full, 0.05) * Math.max(runFactor(entry.sched.profile), 1) * 1.5 : 3)
+    });
+    /** Its pose with the collisions (the same pose when nothing moved it; on the ground, at the ground's height where it moved to). */
+    const withCollisions = <P extends TripPose & {doing: ArkDoing}>(entry: Entry, base: P, epoch: number): P => {
+        if (!collisionsOn || !world) return base;
+        const at = collisions.apply(entry, epoch, collideInput(entry, base, epoch));
+        if (at.x === base.x && at.z === base.z) return base;
+        const onGround = !base.aloft && base.y >= -0.01;
+        const y = onGround ? Math.max(heightAt(at.x, at.z), 0) + Math.max(base.y - Math.max(heightAt(base.x, base.z), 0), 0) : base.y;
+        return {...base, x: at.x, z: at.z, y};
+    };
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
         if (!world) return;
@@ -1206,9 +1271,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Every frame close by (its near model, the one looked at, or a pinned one); twice a second as a far model; once a second as an icon.
         const every = entry.level === "near" || watched || pin ? 0 : entry.level === "far" ? 0.5 : 1;
         if (!own.pose || epoch - own.at >= every || epoch < own.at) {
-            // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared).
-            const fromTrip = liveliness.sharedPose(entry, schedulePose(entry, epoch), epoch);
-            const at = (own.pose = pin ? {...fromTrip, ...pin(epoch)} : fromTrip);
+            // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared); then
+            // the collisions: out of anything solid, eased off its neighbours (`collide/`; shared).
+            const at = (own.pose = withCollisions(entry, sharedBase(entry, epoch, pin), epoch));
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
             const onLand = !at.aloft && own.ground > 0.02 && Math.abs(at.y - own.ground) < 0.05;
@@ -2353,13 +2418,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
-            const state = hamletAt();
-            const beat = state.beats.get(entry.animal.id);
-            const out = state.out.get(entry.animal.id);
+            // Out of doors, the collisions have the last word (out of the props, eased off the others: `collide/`).
+            const outside = residentBase(entry);
+            if (outside) {
+                const epoch = worldMs() / 1000;
+                const at = collisionsOn && world ? collisions.apply(entry, epoch, outside) : outside;
+                entry.residentAt = {x: at.x, z: at.z, at: epoch};
+                return {x: at.x, z: at.z, base: Math.max(heightAt(at.x, at.z), 0), yaw: outside.yaw, pitch: 0, roll: 0, afloat: false};
+            }
+            entry.residentAt = null;
             const door = plotSpots(place.hamlet.plot).door;
-            const at = beat ? {x: beat.from.x + (beat.to.x - beat.from.x) * beat.t, z: beat.from.z + (beat.to.z - beat.from.z) * beat.t} : out ? out.at : door;
-            const yaw = beat ? Math.atan2(beat.to.x - beat.from.x, beat.to.z - beat.from.z) : out ? place.hamlet.plot.rotation + (((hamletHash(entry.animal.id) >>> 5) % 628) / 100) : place.hamlet.plot.rotation;
-            return {x: at.x, z: at.z, base: Math.max(heightAt(at.x, at.z), 0), yaw, pitch: 0, roll: 0, afloat: false};
+            return {x: door.x, z: door.z, base: Math.max(heightAt(door.x, door.z), 0), yaw: place.hamlet.plot.rotation, pitch: 0, roll: 0, afloat: false};
         }
         if (place.host && !entry.visitor) {
             // A partner on its host (map section 6): on its back, under a shark, at a grazer's feet, beside it, as the host moves now.
