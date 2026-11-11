@@ -1,0 +1,188 @@
+{
+    "version": 1,
+    "path": "/ark/sound/ambient",
+    "formats": ["webm", "m4a"],
+    "notes": "Each bed: where (zones, near water, altitude), when (time of day), what weather drives or quietens it, and its recordings. See src/ark-scene/ambient-beds.ts for how the fields combine. A bed with ready=false is never selected.",
+    "beds": [
+        {
+            "id": "rain",
+            "label": "Rain",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.7,
+            "ramp": 3,
+            "zones": {"*": 1},
+            "time": {"any": 1},
+            "weather": {"rain": [0.03, 0.8]},
+            "quiet": {"storm": 0.35},
+            "underwater": 0.12,
+            "sources": []
+        },
+        {
+            "id": "storm",
+            "label": "Storm: heavy rain and thunder",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.85,
+            "ramp": 4,
+            "zones": {"*": 1},
+            "time": {"any": 1},
+            "weather": {"storm": [0.1, 0.9]},
+            "underwater": 0.2,
+            "sources": []
+        },
+        {
+            "id": "night_insects",
+            "label": "Crickets at night",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.5,
+            "ramp": 4,
+            "zones": {"grassland": 1, "farm_garden": 1, "rainforest": 1, "woodland": 0.8, "wetland": 0.8, "river_lake": 0.6, "desert": 0.6, "seashore": 0.3, "mountains": 0.3, "polar": 0, "*": 0},
+            "time": {"night": 1, "dusk": 0.6},
+            "weather": {"insects": [0.1, 0.8]},
+            "quiet": {"cold": 0.6},
+            "sources": []
+        },
+        {
+            "id": "night_frogs",
+            "label": "Frogs at night",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.5,
+            "ramp": 4,
+            "zones": {"wetland": 1, "river_lake": 1, "rainforest": 0.7, "farm_garden": 0.35, "woodland": 0.3, "*": 0},
+            "near": [
+                {"water": "pond", "full": 6, "silent": 60},
+                {"water": "lake", "full": 8, "silent": 70, "weight": 0.9},
+                {"water": "river", "full": 6, "silent": 45, "weight": 0.6}
+            ],
+            "combine": "max",
+            "time": {"night": 1, "dusk": 1, "dawn": 0.3},
+            "quiet": {"wind": 0.5, "cold": 0.7},
+            "sources": []
+        },
+        {
+            "id": "dawn_chorus",
+            "label": "Dawn chorus",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.7,
+            "ramp": 5,
+            "zones": {"woodland": 1, "rainforest": 1, "farm_garden": 0.9, "wetland": 0.8, "grassland": 0.7, "river_lake": 0.7, "mountains": 0.4, "seashore": 0.3, "desert": 0.3, "polar": 0.1, "*": 0},
+            "time": {"dawn": 1},
+            "quiet": {"rain": 0.7, "wind": 0.4},
+            "sources": []
+        },
+        {
+            "id": "forest_day",
+            "label": "Forest by day",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.5,
+            "ramp": 4,
+            "zones": {"woodland": 1, "rainforest": 1, "farm_garden": 0.5, "river_lake": 0.4, "wetland": 0.3, "grassland": 0.3, "mountains": 0.3, "*": 0},
+            "time": {"day": 1},
+            "quiet": {"rain": 0.7, "wind": 0.3},
+            "sources": []
+        },
+        {
+            "id": "wind_trees",
+            "label": "Wind in the trees",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.6,
+            "ramp": 3,
+            "zones": {"woodland": 1, "rainforest": 0.8, "farm_garden": 0.5, "river_lake": 0.5, "grassland": 0.3, "wetland": 0.3, "mountains": 0.4, "*": 0},
+            "time": {"any": 1},
+            "weather": {"wind": [0.15, 0.9, 0.15]},
+            "sources": []
+        },
+        {
+            "id": "mountain_wind",
+            "label": "Mountain wind",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.6,
+            "ramp": 3,
+            "zones": {"mountains": 1, "polar": 0.9, "desert": 0.4, "grassland": 0.25, "*": 0},
+            "altitude": [8, 26],
+            "combine": "max",
+            "time": {"any": 1},
+            "weather": {"wind": [0, 1, 0.35]},
+            "sources": []
+        },
+        {
+            "id": "surf",
+            "label": "Surf",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.75,
+            "ramp": 2.5,
+            "near": [{"water": "sea", "full": 8, "silent": 110}],
+            "time": {"any": 1},
+            "weather": {"wind": [0, 1, 0.65]},
+            "tide": {"high": 0.3},
+            "pan": true,
+            "underwater": 0.35,
+            "sources": []
+        },
+        {
+            "id": "shore",
+            "label": "Water lapping on the shore",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.55,
+            "ramp": 2.5,
+            "near": [{"water": "sea", "full": 1.5, "silent": 26}],
+            "time": {"any": 1},
+            "quiet": {"storm": 0.6},
+            "tide": {"low": 0.4},
+            "pan": true,
+            "sources": []
+        },
+        {
+            "id": "rapids",
+            "label": "River rapids",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.7,
+            "ramp": 2,
+            "near": [
+                {"water": "rapids", "full": 4, "silent": 55},
+                {"water": "river", "full": 3, "silent": 40, "weight": 0.55}
+            ],
+            "time": {"any": 1},
+            "pan": true,
+            "sources": []
+        },
+        {
+            "id": "waterfall",
+            "label": "Waterfall",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.85,
+            "ramp": 2,
+            "near": [{"water": "waterfall", "full": 5, "silent": 90}],
+            "time": {"any": 1},
+            "pan": true,
+            "sources": []
+        },
+        {
+            "id": "pond",
+            "label": "Pond by day",
+            "ready": false,
+            "loopSeconds": null,
+            "level": 0.45,
+            "ramp": 3,
+            "near": [
+                {"water": "pond", "full": 3, "silent": 30},
+                {"water": "lake", "full": 4, "silent": 45, "weight": 0.8}
+            ],
+            "time": {"day": 1, "night": 0.3},
+            "quiet": {"rain": 0.5},
+            "pan": true,
+            "sources": []
+        }
+    ]
+}
