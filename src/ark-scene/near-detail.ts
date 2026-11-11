@@ -3,7 +3,9 @@
  * camera when it comes close, so the far view stays cheap. Pebbles and shells
  * on the beach, a strandline of seaweed, fallen leaves, twigs, pinecones,
  * ferns and mushrooms on the forest floor, clover and small rosettes in the
- * grass, scree under the rocks.
+ * grass, scree under the rocks. Batch 4: the crops of Home's fields on their
+ * rows (`fields.ts`, the same rows the ground paints): sprouts, cabbages,
+ * wheat and maize.
  *
  * Deterministic: each 2 m cell of ground is filled from its own seed and the
  * ground it is (`sampler.ts` surfaces), so everyone sees the same pebble in
@@ -28,11 +30,20 @@ import {
     Vector3
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {sampleGround, seeded, zoneAt} from "@/ark-scene/world";
+import {sampleGround, seeded, smoothstep, zoneAt} from "@/ark-scene/world";
+import {fieldRipe, snapToRow, type Crop} from "@/ark-scene/fields";
 import {setNearFade} from "@/ark-scene/near-fade";
 
-type DetailKind = "pebble" | "shell" | "seaweed" | "leaf" | "twig" | "pinecone" | "fern" | "mushroom" | "clover";
-const KINDS: DetailKind[] = ["pebble", "shell", "seaweed", "leaf", "twig", "pinecone", "fern", "mushroom", "clover"];
+type DetailKind = "pebble" | "shell" | "seaweed" | "leaf" | "twig" | "pinecone" | "fern" | "mushroom" | "clover" | "sprout" | "cabbage" | "wheat" | "maize";
+const KINDS: DetailKind[] = ["pebble", "shell", "seaweed", "leaf", "twig", "pinecone", "fern", "mushroom", "clover", "sprout", "cabbage", "wheat", "maize"];
+
+/** The plant each crop grows, and how many stand per m² of its field. Ploughed ground grows none. */
+const CROP_PLANTS: Partial<Record<Crop, {kind: DetailKind; perM2: number}>> = {
+    sprouts: {kind: "sprout", perM2: 5},
+    cabbage: {kind: "cabbage", perM2: 3.2},
+    cereal: {kind: "wheat", perM2: 5.5},
+    maize: {kind: "maize", perM2: 2.8}
+};
 
 type Item = {kind: DetailKind; x: number; y: number; z: number; yaw: number; tilt: number; scale: number; colour: number};
 
@@ -40,7 +51,7 @@ const CELL = 2;
 /** Detail out to this far from what the camera looks at, and only while the camera is this close. */
 const RADIUS = 16;
 const SHOW_WITHIN = 42;
-const CAP: Record<DetailKind, number> = {pebble: 2600, shell: 700, seaweed: 600, leaf: 3600, twig: 900, pinecone: 500, fern: 700, mushroom: 400, clover: 2600};
+const CAP: Record<DetailKind, number> = {pebble: 2600, shell: 700, seaweed: 600, leaf: 3600, twig: 900, pinecone: 500, fern: 700, mushroom: 400, clover: 2600, sprout: 2400, cabbage: 1800, wheat: 2600, maize: 1400};
 
 function colourGeometry(geometry: BufferGeometry, shade: (x: number, y: number, z: number) => number): BufferGeometry {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
@@ -130,6 +141,74 @@ function shapes(): Record<DetailKind, BufferGeometry> {
         clovers.push(lobe);
     }
     const clover = mergeGeometries(clovers)!;
+    // Crops (batch 4).
+    const sproutLeaves: BufferGeometry[] = [];
+    for (let i = 0; i < 4; i++) {
+        const leaf = flatLeaf(0.08, 0.026, 3);
+        leaf.rotateX(-0.75);
+        leaf.rotateY(i * Math.PI / 2 + 0.4);
+        sproutLeaves.push(leaf);
+    }
+    const sprout = mergeGeometries(sproutLeaves)!;
+    const ball = new IcosahedronGeometry(0.1, 1);
+    ball.scale(1, 0.82, 1);
+    ball.translate(0, 0.095, 0);
+    ball.deleteAttribute("uv");
+    ball.deleteAttribute("normal");
+    const wraps: BufferGeometry[] = [ball.toNonIndexed()];
+    for (let i = 0; i < 6; i++) {
+        const leaf = flatLeaf(0.17, 0.09, 4);
+        leaf.rotateX(-0.45);
+        leaf.rotateY(i / 6 * Math.PI * 2);
+        leaf.translate(0, 0.015, 0);
+        wraps.push(leaf);
+    }
+    const cabbage = mergeGeometries(wraps)!;
+    // A tuft of wheat: thin stems leaning a little, each with its ear.
+    const stems: number[] = [];
+    const stemRandom = seeded(9090);
+    for (let i = 0; i < 14; i++) {
+        const a = stemRandom() * Math.PI * 2;
+        const r = 0.05 * Math.sqrt(stemRandom());
+        const bx = Math.cos(a) * r;
+        const bz = Math.sin(a) * r;
+        const h = 0.62 + stemRandom() * 0.2;
+        const tx = bx * 2.2 + (stemRandom() - 0.5) * 0.05;
+        const tz = bz * 2.2 + (stemRandom() - 0.5) * 0.05;
+        const w = 0.004;
+        const side = {x: -Math.sin(a) * w, z: Math.cos(a) * w};
+        stems.push(bx - side.x, 0, bz - side.z, bx + side.x, 0, bz + side.z, tx, h, tz);
+        // The ear: a narrow diamond along the stem's top.
+        const e = 0.008;
+        const ex = {x: -Math.sin(a) * e, z: Math.cos(a) * e};
+        const mid = {x: tx, y: h + 0.035, z: tz};
+        stems.push(tx, h - 0.005, tz, mid.x + ex.x, mid.y, mid.z + ex.z, tx, h + 0.075, tz);
+        stems.push(tx, h - 0.005, tz, tx, h + 0.075, tz, mid.x - ex.x, mid.y, mid.z - ex.z);
+    }
+    const wheat = new BufferGeometry();
+    wheat.setAttribute("position", new BufferAttribute(new Float32Array(stems), 3));
+    // Maize: a stalk, long arching leaves up it, a tassel on top.
+    const stalk = new CylinderGeometry(0.012, 0.022, 1.7, 5, 1);
+    stalk.translate(0, 0.85, 0);
+    stalk.deleteAttribute("uv");
+    stalk.deleteAttribute("normal");
+    const tassel = new ConeGeometry(0.03, 0.18, 4, 1);
+    tassel.translate(0, 1.78, 0);
+    tassel.deleteAttribute("uv");
+    tassel.deleteAttribute("normal");
+    const maizeParts: BufferGeometry[] = [stalk.toNonIndexed(), tassel.toNonIndexed()];
+    for (let i = 0; i < 7; i++) {
+        const leaf = flatLeaf(0.6, 0.045, 5);
+        const position = leaf.getAttribute("position");
+        for (let k = 0; k < position.count; k++) {
+            const z = position.getZ(k);
+            position.setY(k, position.getY(k) + Math.sin(z / 0.6 * Math.PI * 0.75) * 0.22 - (z / 0.6) ** 2 * 0.12);
+        }
+        leaf.rotateY(i * 2.4);
+        leaf.translate(0, 0.25 + i * 0.17, 0);
+        maizeParts.push(leaf);
+    }
+    const maize = mergeGeometries(maizeParts)!;
     return {
         pebble: colourGeometry(pebble, (_, y) => 0.8 + 3 * y),
         shell: colourGeometry(shell, (x, _, z) => 0.82 + 0.18 * Math.abs(Math.sin(Math.atan2(z, x) * 9))),
@@ -139,7 +218,11 @@ function shapes(): Record<DetailKind, BufferGeometry> {
         pinecone: colourGeometry(pinecone, (x) => 0.75 + 4 * Math.abs(x)),
         fern: colourGeometry(fern, (_, y) => 0.7 + 1.6 * y),
         mushroom: colourGeometry(mushroom, (_, y) => (y > 0.06 ? 1.0 : 0.95)),
-        clover: colourGeometry(clover, () => 1)
+        clover: colourGeometry(clover, () => 1),
+        sprout: colourGeometry(sprout, () => 1),
+        cabbage: colourGeometry(cabbage, (_, y) => (y > 0.05 ? 1.08 : 0.92)),
+        wheat: colourGeometry(wheat, (_, y) => 0.85 + 0.3 * Math.min(y / 0.75, 1)),
+        maize: colourGeometry(maize, (_, y) => 0.8 + 0.15 * Math.min(y / 1.7, 1))
     };
 }
 
@@ -152,7 +235,12 @@ const TINTS: Record<DetailKind, string[]> = {
     pinecone: ["#6b4a2c", "#7a5634"],
     fern: ["#4f7d33", "#5b8a3a", "#45702c"],
     mushroom: ["#c7a27a", "#b8452f", "#e9dcc4", "#9a6a43"],
-    clover: ["#5d8f3a", "#6c9c42", "#4f7f32"]
+    clover: ["#5d8f3a", "#6c9c42", "#4f7f32"],
+    sprout: ["#5f9136", "#6b9a3c", "#558632"],
+    cabbage: ["#6f9466", "#7a9e70", "#628a5c"],
+    // Ripe first, then still green (fieldRipe picks the pair).
+    wheat: ["#d2b468", "#c4a75c", "#a6a85c", "#97a052"],
+    maize: ["#4f7d2e", "#5a8834", "#46722a"]
 };
 
 /** What a cell grows, from its ground: expected items per m². */
@@ -207,6 +295,24 @@ function buildCell(cx: number, cz: number, share: number): Item[] {
             items.push({kind, x, y, z, yaw: random() * Math.PI * 2, tilt: (random() - 0.5) * 0.4, scale: kind === "pebble" ? 0.4 + random() ** 2 * 2.4 : 0.7 + random() * 0.6, colour: Math.floor(random() * tints.length)});
         }
     }
+    // Home's crops (batch 4): only well inside the fields; each plant moved onto its row's middle.
+    const centre = sampleGround(cx * CELL + CELL / 2, cz * CELL + CELL / 2);
+    if ((centre.weights.farm_garden ?? 0) * smoothstep(0.6, 1, centre.land) > 0.75 && centre.height > 0.2) {
+        const tries = Math.round(7 * CELL * CELL * share);
+        for (let k = 0; k < tries; k++) {
+            const px = cx * CELL + random() * CELL;
+            const pz = cz * CELL + random() * CELL;
+            const keep = random();
+            const yaw = random() * Math.PI * 2;
+            const size = random();
+            const tone = random();
+            const plant = snapToRow(px, pz);
+            const grows = plant ? CROP_PLANTS[plant.crop] : undefined;
+            if (!plant || !grows || keep > grows.perM2 / 7) continue;
+            const ripe = grows.kind === "wheat" ? (fieldRipe(plant.cell) ? 0 : 2) + (tone < 0.5 ? 0 : 1) : Math.floor(tone * TINTS[grows.kind].length);
+            items.push({kind: grows.kind, x: plant.x, y: sampleGround(plant.x, plant.z).height, z: plant.z, yaw, tilt: (size - 0.5) * 0.2, scale: 0.8 + size * 0.4, colour: ripe});
+        }
+    }
     return items;
 }
 
@@ -235,7 +341,7 @@ export class NearDetail {
             mesh.count = 0;
             mesh.frustumCulled = false;
             mesh.receiveShadow = true;
-            mesh.castShadow = kind === "fern" || kind === "mushroom";
+            mesh.castShadow = kind === "fern" || kind === "mushroom" || kind === "maize";
             this.meshes.set(kind, mesh);
             this.group.add(mesh);
         }

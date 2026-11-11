@@ -51,6 +51,12 @@ function srgb(hex: string): Color {
     return new Color(hex);
 }
 
+/** A colour as a GLSL constant in the shader's linear space (batch 4: the crops' tones). */
+function linearVec3(hex: string): string {
+    const c = new Color(hex);
+    return `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
+}
+
 // MARK: - Ground
 
 /** The river's direction downstream at a point: along its nearest segment (radians, atan2(dz, dx); always 0…π, it runs south). */
@@ -457,25 +463,25 @@ float arkWet = 0.0;`)
                 cover = inRow;
                 coverMean = 0.5;
             } else if (crop == 2) {
-                plant = vec3(0.36, 0.55, 0.2) * growth;
+                plant = ${linearVec3("#5f9136")} * growth;
                 cover = smoothstep(0.72, 0.95, inRow) * smoothstep(0.25, 0.6, arkNoise(vec2(alongAt * 4.0, rowAt)));
                 coverMean = 0.18;
             } else if (crop == 3) {
                 // Cabbages: blue-green heads along each row.
-                plant = vec3(0.36, 0.5, 0.36) * growth;
+                plant = ${linearVec3("#6f9466")} * growth;
                 float heads = smoothstep(0.25, 0.75, 0.5 + 0.5 * cos(6.2831853 * alongAt / 0.45));
                 cover = smoothstep(0.45, 0.85, inRow) * heads;
                 coverMean = 0.4;
             } else if (crop == 4) {
                 // Cereal, ripe or still green by field, rippling as the wind runs over it.
-                plant = mix(vec3(0.62, 0.6, 0.3), vec3(0.8, 0.68, 0.36), step(0.5, arkHash(cell + 11.0))) * growth;
+                plant = mix(${linearVec3("#a3a65a")}, ${linearVec3("#cdae62")}, float((arkFieldHash(ivec2(cell)) >> 17u) & 1u)) * growth;
                 soil = plant * 0.62;
                 cover = 0.55 + 0.45 * inRow;
                 coverMean = 0.8;
                 plant *= 1.0 + 0.1 * envWind * sin(dot(p, vec2(0.55, 0.83)) * 0.7 - arkTime * 1.7 + 2.0 * arkNoise(p * 0.15));
             } else {
                 // Maize: dark green rows over the soil.
-                plant = vec3(0.26, 0.44, 0.16) * growth;
+                plant = ${linearVec3("#4f7d2e")} * growth;
                 cover = smoothstep(0.35, 0.8, inRow);
                 coverMean = 0.55;
             }

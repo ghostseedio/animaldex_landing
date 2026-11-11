@@ -30,8 +30,9 @@ const world: GoldenWorld = {
 };
 
 test("graphics: the near-camera fade keeps a close-up's subject and never reaches past 2.2 m", () => {
-    // A bee on a flower 1.1 m away, a caterpillar on a leaf 0.9 m away: the fade ends well before the subject.
-    for (const distance of [0.8, 0.9, 1.1, 1.2]) assert.ok(nearFadeEnd(distance) < distance * 0.5, `close-up at ${distance} m`);
+    // A bee on a flower 1.1 m away, a caterpillar on a leaf at 0.55 m, an ant on bark at 0.12 m: the fade ends well
+    // before the subject, at every distance (no floor that would reach past a very close subject).
+    for (const distance of [0.05, 0.12, 0.3, 0.55, 0.8, 0.9, 1.1, 1.2, 2, 4]) assert.ok(nearFadeEnd(distance) < distance * 0.5, `close-up at ${distance} m`);
     // The forest floor at 4.6 m and every wider view: the full 2.2 m.
     assert.ok(nearFadeEnd(4.6) > 2);
     for (const distance of [6, 30, 120, 400]) assert.equal(nearFadeEnd(distance), NEAR_FADE_MAX);

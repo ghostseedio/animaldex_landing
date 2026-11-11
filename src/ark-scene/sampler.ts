@@ -7,16 +7,21 @@
  *   surfaceAt(x, z)      height, normal, what the ground is made of there, wetness, water depth
  *   place(name)          named anchor places ("beach", "house", "reef", …), never raw coordinates
  *   attachPoints(query)  seeded points on the scenery where small animals sit, cling, crawl and hide,
- *                        tagged by microhabitat (the tags of microhabitats.json and layers.json)
+ *                        tagged by microhabitat (the tags of microhabitats.json and layers.json); on the
+ *                        trees they lie on the drawn leaves, bark and branches (`tree-assets.ts`)
+ *   attachPointAt(point, time, wind)  where a point is now, moved by its tree's wind as the shader moves the leaf
  *
  * Pure (no three.js scene, no DOM) and deterministic: every viewer gets the
  * same points. The graphics pass keeps these signatures stable; what it
  * changes is underneath (the terrain, the trees, the house).
  */
 
-import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
-import {forestFill, rockSurfacePoint, worldDecor, type DecorItem} from "@/ark-scene/decor";
-import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
+import {IcosahedronGeometry, type BufferGeometry} from "three";
+import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
+import {treeAttachPoints, treeSway, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type Vec3 = {x: number; y: number; z: number};
@@ -115,10 +120,29 @@ export function surfaceAt(x: number, z: number, environment: ArkEnvironment = CA
 export const PLACE_NAMES = [
     "island_middle", "beach", "shore_rocks", "tide_pools", "visitor_landing", "forest_floor", "rainforest", "woodland",
     "house", "house_porch_light", "garden_pond", "fields", "lake", "river_source", "river_mouth", "wetland", "grassland",
-    "desert", "mountain", "mountain_peak", "cold_cove", "reef", "open_ocean"
+    "desert", "mountain", "mountain_peak", "cold_cove", "reef", "open_ocean",
+    // Added 2026-11-11 (props lane): the cave and its bat roost.
+    "cave"
 ] as const;
 export type PlaceName = typeof PLACE_NAMES[number];
-export type Place = {name: PlaceName; x: number; y: number; z: number; /** How far the place reaches (m). */ radius: number};
+export type Place = {
+    name: PlaceName;
+    x: number;
+    y: number;
+    z: number;
+    /** How far the place reaches (m). */
+    radius: number;
+    /** Places that face a way (the cave's mouth): the way out, radians about y (three's: local +z → (sin, cos)). */
+    facing?: number;
+};
+
+/**
+ * The cave: a rock outcrop on flat, open ground in the cold, at the ice's edge below the mountain, its mouth toward
+ * the island's middle (the props lane builds the outcrop and the chamber). Found by the props lane's search (ground
+ * within 0.3 m over 4.5 m round it, nothing of the decor or the forest fill within 6.5 m), kept fixed so nothing
+ * searches at startup; `ark-attach.test` checks it still holds.
+ */
+export const CAVE_SITE = {x: 45.5, z: -45.5};
 
 const placeCache = new Map<PlaceName, Place>();
 
@@ -219,6 +243,14 @@ export function place(name: PlaceName): Place {
             result = {name, x: centre.x, y: 0, z: centre.z, radius: centre.radius};
             break;
         }
+        case "cave": {
+            // Its floor: a little over the highest ground round the site (as the props lane seats the outcrop).
+            const {x, z} = CAVE_SITE;
+            let floor = -Infinity;
+            for (let a = 0; a < 12; a++) for (const r of [0, 2.5, 4.5]) floor = Math.max(floor, sampleGround(x + Math.cos(a * 0.5236) * r, z + Math.sin(a * 0.5236) * r).height);
+            result = {name, x, y: floor + 0.04, z, radius: 4.5, facing: Math.atan2(-x, -z)};
+            break;
+        }
     }
     placeCache.set(name, result);
     return result;
@@ -239,7 +271,9 @@ function shoreRocks(): Array<{x: number; y: number; z: number; scale: number}> {
  */
 export const ATTACH_TAGS = [
     "leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "house_eave", "porch_light", "lamp",
-    "leaf_litter", "worm_hole", "burrow", "pond_surface", "canopy_perch", "canopy_climb", "canopy_hang"
+    "leaf_litter", "worm_hole", "burrow", "pond_surface", "canopy_perch", "canopy_climb", "canopy_hang",
+    // Added 2026-11-11 (props lane): cliff and rock shelves; the drawn hollows in the asset trees' trunks.
+    "ledge", "tree_hollow"
 ] as const;
 export type AttachTag = typeof ATTACH_TAGS[number];
 export type AttachSpot = "house" | "lamp" | "bark" | "flowers" | "rocks" | "leaf_litter" | "pond_surface" | "canopy" | "burrow" | "spawn";
@@ -247,7 +281,8 @@ export type AttachSpot = "house" | "lamp" | "bark" | "flowers" | "rocks" | "leaf
 export const TAG_SPOT: Record<AttachTag, AttachSpot> = {
     leaf: "canopy", branch: "canopy", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "rocks",
     house_wall: "house", house_eave: "house", porch_light: "lamp", lamp: "lamp", leaf_litter: "leaf_litter", worm_hole: "burrow",
-    burrow: "burrow", pond_surface: "pond_surface", canopy_perch: "canopy", canopy_climb: "canopy", canopy_hang: "canopy"
+    burrow: "burrow", pond_surface: "pond_surface", canopy_perch: "canopy", canopy_climb: "canopy", canopy_hang: "canopy",
+    ledge: "rocks", tree_hollow: "bark"
 };
 
 export type AttachPoint = {
@@ -267,13 +302,26 @@ export type AttachPoint = {
     host: string;
     /** The host's kind: a decor kind ("broadleaf", "rock", "flower"…), "house", "lamp", "pond", "lake" or "ground". */
     hostKind: string;
+    /** Trees only (optional, added 2026-11-11): the asset tree it is on ("oak-a"). */
+    asset?: string;
+    /** Trees only: along the surface (a leaf's midrib base → tip, up the trunk, along the branch); `yaw` turns +z onto it. */
+    forward?: Vec3;
+    /** Trees only: 0…1, the share of sight lines within 40° of out-and-up that leave its tree unblocked (seen from outside). */
+    open?: number;
+    /** Tree leaves only: on a single leaf ("blade") or on the crown's leaf mass ("clump"). */
+    leaf?: "blade" | "clump";
+    /** Tree hollows only: how deep the hole runs into the trunk (m). */
+    depth?: number;
+    /** Trees only: how its tree's wind moves it (`attachPointAt`); points without it hold still. */
+    wind?: TreeWind;
 };
 
 const SIZE: Record<AttachTag, [number, number]> = {
     leaf: [0.004, 0.08], branch: [0.01, 0.6], bark: [0.004, 0.35], flower_head: [0.004, 0.06], rock_face: [0.004, 0.45],
     tide_pool: [0.008, 0.3], house_wall: [0.004, 0.25], house_eave: [0.004, 0.2], porch_light: [0.004, 0.12], lamp: [0.004, 0.12],
     leaf_litter: [0.004, 0.35], worm_hole: [0.02, 0.4], burrow: [0.05, 0.7], pond_surface: [0.008, 0.4],
-    canopy_perch: [0.05, 0.9], canopy_climb: [0.05, 1.4], canopy_hang: [0.1, 1.2]
+    canopy_perch: [0.05, 0.9], canopy_climb: [0.05, 1.4], canopy_hang: [0.1, 1.2],
+    ledge: [0.05, 1.0], tree_hollow: [0.02, 0.35]
 };
 
 let attachCache: AttachPoint[] | null = null;
@@ -291,6 +339,54 @@ function normalise(v: Vec3): Vec3 {
 
 const TREES = new Set(["broadleaf", "rainforest", "orchard", "acacia", "conifer"]);
 
+/**
+ * Forest-fill trees drawn on every tier: the low tier draws the fill up to this rank (index.ts TIER_SETTINGS.low.fill).
+ * Only these (and every decor tree) carry attach points, so an animal on a tree never floats where a lighter tier
+ * leaves that tree out.
+ */
+export const EVERY_TIER_FILL = 0.3;
+
+/** At most this many points of each kind on one tree (the asset has up to 12 leaves, 8 bark, 24 branch points). */
+const TREE_CAP: Record<TreeAttachTag, number> = {leaf: 12, bark: 6, branch: 8, tree_hollow: 4};
+/** A leaf bends away under anything heavier than this, however big the leaf (body length, m). */
+const LEAF_MAX = 0.12;
+
+/**
+ * The heading round the normal that points an animal's +z along `forward`, in the convention the scene uses to set
+ * a model on a point: quaternion = setFromUnitVectors(+y, normal) · rotationY(yaw) (three's own maths, by hand).
+ */
+export function yawFor(normal: Vec3, forward: Vec3): number {
+    const n = normalise(normal);
+    let qx: number;
+    let qz: number;
+    let qw = n.y + 1;
+    if (qw < 1e-6) {
+        // Straight down: three turns half a circle about z.
+        qx = 0;
+        qz = 1;
+        qw = 0;
+    } else {
+        qx = n.z;
+        qz = -n.x;
+    }
+    const l = Math.hypot(qx, qz, qw);
+    qx /= l;
+    qz /= l;
+    qw /= l;
+    // The inverse rotation (x, 0, z, w)⁻¹ = (-x, 0, -z, w) applied to forward: v + 2w(u × v) + 2u × (u × v), u = (-x, 0, -z).
+    const ux = -qx;
+    const uz = -qz;
+    const v = forward;
+    const cx = -uz * v.y;
+    const cy = uz * v.x - ux * v.z;
+    const cz = ux * v.y;
+    const ccx = -uz * cy;
+    const ccz = ux * cy;
+    const x = v.x + 2 * qw * cx + 2 * ccx;
+    const z = v.z + 2 * qw * cz + 2 * ccz;
+    return Math.atan2(x, z);
+}
+
 /** Every attach point on the island (built once, seeded). */
 export function allAttachPoints(): AttachPoint[] {
     if (attachCache) return attachCache;
@@ -307,32 +403,50 @@ export function allAttachPoints(): AttachPoint[] {
     decor.forEach((item, i) => kinds.set(`decor${i}`, item.kind));
     fill.forEach((item, i) => kinds.set(`fill${i}`, item.kind));
 
-    // Trees: bark on the trunk (outward), leaves round the crown (facing out and up), branches under it.
-    const trees = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...fill.map((item, i) => ({item, host: `fill${i}`}))].filter(({item}) => TREES.has(item.kind));
+    // Trees: on the drawn asset trees' own leaves, bark and branches (tree-assets.ts, from attach.json moved onto the
+    // lod0 surface), where the renderer stands each tree. Only trees drawn on every tier carry points.
+    const trees = [
+        ...decor.map((item, i) => ({item: item as DecorItem & Partial<FillItem>, host: `decor${i}`})),
+        ...fill.map((item, i) => ({item: item as DecorItem & Partial<FillItem>, host: `fill${i}`}))
+    ].filter(({item}) => TREES.has(item.kind) || item.kind === "palm");
     for (const {item, host} of trees) {
-        const s = item.scale;
+        // The rest of the island's points keep the seeded positions they had before the asset trees: the stream
+        // advances as the procedural tree points did (3 bark × 2, 6 leaves × 3, 2 branches × 2 draws a tree).
+        if (TREES.has(item.kind)) for (let k = 0; k < 28; k++) random();
+        if (item.rank !== undefined && item.rank > EVERY_TIER_FILL) continue;
+        const real = treeAttachPoints(item);
+        if (!real.length) continue;
         const zone = zoneOf(item.x, item.z);
-        const trunkHeight = (item.kind === "rainforest" ? 4.6 : item.kind === "conifer" ? 1.4 : item.kind === "orchard" ? 1.3 : 2.4) * s;
-        const trunkRadius = (item.kind === "rainforest" ? 0.26 : item.kind === "orchard" ? 0.12 : 0.2) * s;
-        for (let k = 0; k < 3; k++) {
-            const a = random() * Math.PI * 2;
-            const h = (0.3 + random() * 0.6) * trunkHeight;
-            const r = trunkRadius * (1 - 0.35 * h / trunkHeight);
-            add("bark", host, k, {x: item.x + Math.sin(a) * r, y: item.y + h, z: item.z + Math.cos(a) * r}, {x: Math.sin(a), y: 0, z: Math.cos(a)}, zone, 0);
-        }
-        const crownY = item.y + trunkHeight + (item.kind === "conifer" ? 1.2 * s : 1.0 * s);
-        const crownR = (item.kind === "rainforest" ? 3.0 : item.kind === "conifer" ? 1.3 : item.kind === "orchard" ? 1.3 : 2.1) * s;
-        for (let k = 0; k < 6; k++) {
-            const a = random() * Math.PI * 2;
-            const up = 0.15 + random() * 0.7;
-            const out = {x: Math.sin(a) * Math.sqrt(1 - up * up), y: up, z: Math.cos(a) * Math.sqrt(1 - up * up)};
-            // Just outside the leaf cards, where a near leaf (a real leaf mesh) is put when the camera comes close.
-            add("leaf", host, k, {x: item.x + out.x * crownR * 1.12, y: crownY + out.y * crownR * 0.78, z: item.z + out.z * crownR * 1.12}, {x: out.x * 0.6, y: 1, z: out.z * 0.6}, zone);
-        }
-        for (let k = 0; k < 2; k++) {
-            const a = random() * Math.PI * 2;
-            const reach = crownR * (0.4 + random() * 0.4);
-            add("branch", host, k, {x: item.x + Math.sin(a) * reach, y: crownY - crownR * 0.45, z: item.z + Math.cos(a) * reach}, {x: 0, y: 1, z: 0}, zone, a);
+        // Which of the asset's points this tree keeps (seeded by the tree, so two trees of one asset differ). The
+        // hollows (added later) come after, outside the draw, so the leaves, bark and branches kept stay the same.
+        const pick = seeded(hashString(host) + 7919);
+        const order = [
+            ...real.filter((point) => point.tag !== "tree_hollow").map((point) => ({point, key: pick()})).sort((a, b) => a.key - b.key),
+            ...real.filter((point) => point.tag === "tree_hollow").map((point) => ({point, key: 0}))
+        ];
+        const kept: Record<TreeAttachTag, number> = {leaf: 0, bark: 0, branch: 0, tree_hollow: 0};
+        for (const {point} of order) {
+            if (kept[point.tag]++ >= TREE_CAP[point.tag]) continue;
+            const size: [number, number] = point.tag === "leaf" ? [point.size[0], Math.min(point.size[1], LEAF_MAX)] : point.size;
+            const hostKind = kinds.get(host) ?? item.kind;
+            points.push({
+                id: `${point.tag}:${host}:${point.n}`,
+                tag: point.tag,
+                spot: TAG_SPOT[point.tag],
+                position: point.position,
+                normal: normalise(point.normal),
+                yaw: yawFor(point.normal, point.forward),
+                size,
+                zone,
+                host,
+                hostKind,
+                asset: point.asset,
+                forward: point.forward,
+                open: point.open,
+                ...(point.leaf ? {leaf: point.leaf} : {}),
+                ...(point.depth !== undefined ? {depth: point.depth} : {}),
+                wind: point.wind
+            });
         }
     }
 
@@ -369,12 +483,12 @@ export function allAttachPoints(): AttachPoint[] {
         if (item.kind !== "rock") return;
         const zone = zoneOf(item.x, item.z);
         const s = item.scale;
-        // On the drawn surface itself (decor.ts rockSurfacePoint is the shape vegetation.ts draws).
+        // On the drawn surface itself: the very triangles vegetation.ts draws (`drawnRockPoint`), 2 mm off them.
         for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.1 + random() * 0.75;
-            const point = rockSurfacePoint(item, 3, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
-            add("rock_face", `decor${i}`, k, {x: point.x, y: point.y + 0.004, z: point.z}, {x: point.nx, y: point.ny, z: point.nz}, zone);
+            const point = drawnRockPoint(item, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
+            add("rock_face", `decor${i}`, k, {x: point.x + point.nx * 0.002, y: point.y + point.ny * 0.002, z: point.z + point.nz * 0.002}, {x: point.nx, y: point.ny, z: point.nz}, zone);
         }
         if (item.y < 0.4 && item.y > -0.7) {
             const a = random() * Math.PI * 2;
@@ -399,7 +513,16 @@ export function allAttachPoints(): AttachPoint[] {
             const y = c.floor + 0.4 + random() * (c.wall - 0.7);
             add("house_wall", "house", w * 10 + k, {x: c.x + wall.cx + wall.along.x * t + wall.n.x * 0.01, y, z: c.z + wall.cz + wall.along.z * t + wall.n.z * 0.01}, wall.n, "farm_garden", random() * Math.PI * 2);
         }
-        add("house_eave", "house", w, {x: c.x + wall.cx + wall.n.x * (c.overhang * 0.6), y: c.floor + c.wall - 0.02, z: c.z + wall.cz + wall.n.z * (c.overhang * 0.6)}, {x: 0, y: -1, z: 0}, "farm_garden");
+        // Under the drawn eave (micro-scene.ts: two roof slabs falling from the ridge, `roofHeight`, out past the walls):
+        // on the long walls under the slope, 0.21 m out; on the gable ends under the verge at its peak.
+        const out = c.overhang * 0.6;
+        if (wall.n.z !== 0) {
+            const fall = c.ridge / (c.depth / 2);
+            const underside = c.floor + c.wall + c.ridge * (1 - (c.depth / 2 + out) / (c.depth / 2));
+            add("house_eave", "house", w, {x: c.x + wall.cx, y: underside - 0.004, z: c.z + wall.cz + wall.n.z * out}, {x: 0, y: -1, z: -wall.n.z * fall}, "farm_garden");
+        } else {
+            add("house_eave", "house", w, {x: c.x + wall.cx + wall.n.x * out, y: c.floor + c.wall + c.ridge - 0.004, z: c.z}, {x: 0, y: -1, z: 0}, "farm_garden");
+        }
     });
     add("porch_light", "house", 0, {x: c.x + c.light.x, y: c.floor + c.light.y + 0.1, z: c.z + c.light.z + 0.06}, {x: 0, y: 0, z: 1}, "farm_garden");
     for (const zone of ["farm_garden", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar"] as ArkZone[]) {
@@ -434,8 +557,157 @@ export function allAttachPoints(): AttachPoint[] {
         else if (holes < 200 && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) add("worm_hole", "ground", holes++, ground, surface.normal, surface.zone);
         else if (burrows < 120 && surface.normal.y < 0.97 && surface.normal.y > 0.8 && surface.surface !== "rock" && surface.surface !== "snow") add("burrow", "ground", burrows++, ground, surface.normal, surface.zone, Math.atan2(surface.normal.x, surface.normal.z));
     }
+
+    // Ledges (added 2026-11-11 for the props lane, its own search and seed, so its ids are unchanged): steep ground
+    // facing out on the sea cliffs, the mountain and the ice, where a cliff nester's shelf goes. Up is up (the animal
+    // stands on the shelf); `forward` and the yaw face out from the cliff.
+    const ledgeRandom = seeded(880011);
+    let ledges = 0;
+    for (let i = 0; i < 2600 && ledges < 90; i++) {
+        const x = (ledgeRandom() * 2 - 1) * 110;
+        const z = (ledgeRandom() * 2 - 1) * 110;
+        const sample = sampleGround(x, z);
+        if (sample.height < 1.2) continue;
+        const zone = zoneAt(sample) as ArkZone;
+        const surface = surfaceAt(x, z);
+        const steep = 1 - surface.normal.y;
+        const cliffy = sample.cliff > 0.45 && sample.inland < 12;
+        if (!(cliffy || (zone === "mountains" && steep > 0.18) || (zone === "polar" && steep > 0.1))) continue;
+        const flat = Math.hypot(surface.normal.x, surface.normal.z) || 1;
+        const forward = {x: surface.normal.x / flat, y: 0, z: surface.normal.z / flat};
+        add("ledge", "ground", ledges++, {x, y: sample.height, z}, {x: 0, y: 1, z: 0}, cliffy ? (zone === "polar" ? "polar" : "seashore") : zone, Math.atan2(forward.x, forward.z));
+        points[points.length - 1].forward = forward;
+    }
+    // And rock shelves: the flat tops of the big rocks on the shore, the mountain and the ice (on their drawn faces).
+    decor.forEach((item, i) => {
+        if (item.kind !== "rock" || item.scale < 1.3) return;
+        const zone = zoneOf(item.x, item.z);
+        if (zone !== "mountains" && zone !== "polar" && zone !== "seashore") return;
+        const top = drawnRockPoint(item, 0, 1, 0);
+        // Out of the sea at high tide, and flat enough to sit on.
+        if (top.ny < 0.8 || top.y < 0.6) return;
+        // Facing out to sea, or down the mountain: away from the island's middle, along the shelf.
+        const normal = {x: top.nx, y: top.ny, z: top.nz};
+        const away = {x: Math.sin(Math.atan2(item.x, item.z)), y: 0, z: Math.cos(Math.atan2(item.x, item.z))};
+        const dot = away.x * normal.x + away.z * normal.z;
+        const forward = normalise({x: away.x - normal.x * dot, y: -normal.y * dot, z: away.z - normal.z * dot});
+        add("ledge", `decor${i}`, 0, {x: top.x + top.nx * 0.002, y: top.y + top.ny * 0.002, z: top.z + top.nz * 0.002}, normal, zone, yawFor(normal, forward));
+        points[points.length - 1].forward = forward;
+    });
     attachCache = points;
     return points;
+}
+
+// MARK: - The drawn rocks
+
+const rockMeshes = new Map<number, {p: Float32Array; index: ArrayLike<number>}>();
+
+/**
+ * A rock's drawn mesh in its own frame, before the instance's scale: vegetation.ts `rock(variant)` (an icosphere of
+ * detail 3, each corner pushed out to decor.ts rockRadius, then 1.1 × 0.62 × 0.95 and lifted 0.18), so a point found
+ * on it lies on the flat faces actually drawn, not on the smooth shape between their corners (up to 5 cm apart).
+ */
+export function drawnRockMesh(variant: number): {p: Float32Array; index: ArrayLike<number>} {
+    const cached = rockMeshes.get(variant);
+    if (cached) return cached;
+    let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 3);
+    geometry.deleteAttribute("normal");
+    geometry.deleteAttribute("uv");
+    geometry = mergeVertices(geometry);
+    const position = geometry.getAttribute("position");
+    const p = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+        let x = position.getX(i);
+        let y = position.getY(i);
+        let z = position.getZ(i);
+        const l = Math.hypot(x, y, z) || 1;
+        x /= l;
+        y /= l;
+        z /= l;
+        const r = rockRadius(variant, x, y, z);
+        p[i * 3] = x * r * 1.1;
+        p[i * 3 + 1] = y * r * 0.62 + 0.18;
+        p[i * 3 + 2] = z * r * 0.95;
+    }
+    const mesh = {p, index: geometry.index!.array};
+    rockMeshes.set(variant, mesh);
+    return mesh;
+}
+
+/** Where a ray from the rock's middle along a direction in its own frame (y up) meets its drawn faces, in the world, with the face's normal. */
+export function drawnRockPoint(item: DecorItem, dx: number, dy: number, dz: number): {x: number; y: number; z: number; nx: number; ny: number; nz: number} {
+    const {p, index} = drawnRockMesh(item.variant % 3);
+    // In the mesh's own frame the shape is stretched 1.1 × 0.62 × 0.95 round (0, 0.18, 0).
+    let rx = dx * 1.1;
+    let ry = dy * 0.62;
+    let rz = dz * 0.95;
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    rx /= rl;
+    ry /= rl;
+    rz /= rl;
+    const ox = 0;
+    const oy = 0.18;
+    const oz = 0;
+    let best = Infinity;
+    let hit = {x: 0, y: 0.18, z: 0, nx: 0, ny: 1, nz: 0};
+    for (let t = 0; t < index.length; t += 3) {
+        const a = index[t] * 3;
+        const b = index[t + 1] * 3;
+        const c = index[t + 2] * 3;
+        const e1x = p[b] - p[a];
+        const e1y = p[b + 1] - p[a + 1];
+        const e1z = p[b + 2] - p[a + 2];
+        const e2x = p[c] - p[a];
+        const e2y = p[c + 1] - p[a + 1];
+        const e2z = p[c + 2] - p[a + 2];
+        // Möller–Trumbore.
+        const hx = ry * e2z - rz * e2y;
+        const hy = rz * e2x - rx * e2z;
+        const hz = rx * e2y - ry * e2x;
+        const det = e1x * hx + e1y * hy + e1z * hz;
+        if (Math.abs(det) < 1e-12) continue;
+        const f = 1 / det;
+        const sx = ox - p[a];
+        const sy = oy - p[a + 1];
+        const sz = oz - p[a + 2];
+        const u = f * (sx * hx + sy * hy + sz * hz);
+        if (u < -1e-9 || u > 1 + 1e-9) continue;
+        const qx = sy * e1z - sz * e1y;
+        const qy = sz * e1x - sx * e1z;
+        const qz = sx * e1y - sy * e1x;
+        const v = f * (rx * qx + ry * qy + rz * qz);
+        if (v < -1e-9 || u + v > 1 + 1e-9) continue;
+        const d = f * (e2x * qx + e2y * qy + e2z * qz);
+        if (d <= 0 || d >= best) continue;
+        best = d;
+        // The face's normal, pointing out (away from the middle).
+        let nx = e1y * e2z - e1z * e2y;
+        let ny = e1z * e2x - e1x * e2z;
+        let nz = e1x * e2y - e1y * e2x;
+        if (nx * rx + ny * ry + nz * rz < 0) {
+            nx = -nx;
+            ny = -ny;
+            nz = -nz;
+        }
+        hit = {x: ox + rx * d, y: oy + ry * d, z: oz + rz * d, nx, ny, nz};
+    }
+    // Into the world: the instance's scale (s, s × squash, s), its turn about y, its foot sunk as the decor is.
+    const s = item.scale;
+    const sy = s * rockSquash(item);
+    const c = Math.cos(item.rotation);
+    const sn = Math.sin(item.rotation);
+    const lx = hit.x * s;
+    const ly = hit.y * sy;
+    const lz = hit.z * s;
+    // Normals take the inverse scale.
+    let nx = hit.nx / s;
+    let ny = hit.ny / sy;
+    let nz = hit.nz / s;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl;
+    ny /= nl;
+    nz /= nl;
+    return {x: item.x + lx * c + lz * sn, y: item.y - DECOR_SINK + ly, z: item.z - lx * sn + lz * c, nx: nx * c + nz * sn, ny, nz: -nx * sn + nz * c};
 }
 
 export type AttachQuery = {tag?: AttachTag | AttachTag[]; spot?: AttachSpot; near?: {x: number; z: number; radius: number}; size?: number; zone?: ArkZone};
@@ -449,6 +721,21 @@ export function attachPoints(query: AttachQuery = {}): AttachPoint[] {
         && (!query.zone || point.zone === query.zone)
         && (query.size === undefined || (query.size >= point.size[0] && query.size <= point.size[1]))
         && (!query.near || Math.hypot(point.position.x - query.near.x, point.position.z - query.near.z) <= query.near.radius));
+}
+
+/**
+ * How far its host's wind has moved an attach point (m): the tree's sway and leaf flutter, exactly as the tree shader
+ * draws them, so a small animal on a leaf moves with the leaf. `time` and `wind` are the scene's own shader clock and
+ * wind (`ARK_TIME.value`, `ARK_WIND.value` in glsl.ts). Zero for points on still hosts (rocks, the house, the ground).
+ */
+export function attachSway(point: AttachPoint, time: number, wind: {x: number; y: number}): Vec3 {
+    return point.wind ? treeSway(point.wind, time, wind) : {x: 0, y: 0, z: 0};
+}
+
+/** Where an attach point is now: its position plus its host's sway (`attachSway`). */
+export function attachPointAt(point: AttachPoint, time: number, wind: {x: number; y: number}): Vec3 {
+    const sway = attachSway(point, time, wind);
+    return {x: point.position.x + sway.x, y: point.position.y + sway.y, z: point.position.z + sway.z};
 }
 
 /** The coast's waterline radius at a bearing, for anything that follows the shore (the tide moves it by `seaLevel`). */
