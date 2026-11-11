@@ -3,7 +3,7 @@ import test from "node:test";
 import {BoxGeometry, BufferGeometry, Float32BufferAttribute, InstancedBufferAttribute, InstancedMesh, MeshStandardMaterial, Scene} from "three";
 import lookTable from "@/ark-scene/animal-look.json";
 import {aquatic, chooseLook, dusty, LOOK_CLASSES, LOOK_FLAG, semiAquatic} from "@/ark-scene/animal-look-rules";
-import {coatWetness, groundDryness, shellLevel, speciesLook, swimWetness, weatherDust} from "@/ark-scene/animal-look";
+import {coatWetness, groundContact, groundDryness, SHADOW_SURFACE_TAGS, shellLevel, speciesLook, swimWetness, weatherDust} from "@/ark-scene/animal-look";
 import {LOOK_PARAMS} from "@/ark-scene/animal-look-shader";
 import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -187,4 +187,31 @@ test("fur shells: each animal its own layers and reach; the drawn count is what 
     shells.end(() => null, 4);
     assert.equal(shells.drawn, 0);
     shells.dispose();
+});
+
+test("contact shadows: on the ground under the animal now, fading off it, none in water, high up or under the ground", () => {
+    // On the ground (on a slope, below its home spot): the shadow lies at the ground under it, full.
+    assert.deepEqual(groundContact(3.2, 3.2, null, 0.4), {y: 3.2, strength: 1});
+    assert.deepEqual(groundContact(1.0, 0.98, null, 0.4), {y: 0.98, strength: 1});
+    // A hop: still there, fainter; a perch, a flight: gone (never a shadow floating up where the animal is).
+    const hop = groundContact(0.25, 0, null, 0.4)!;
+    assert.ok(hop.y === 0 && hop.strength > 0 && hop.strength < 1);
+    assert.equal(groundContact(2.9, 0, null, 0.2), null, "a sparrow on a branch");
+    assert.equal(groundContact(14.7, 1, null, 0.6), null, "a hawk on a high limb");
+    assert.equal(groundContact(12, 0, null, 0.5), null, "a bird in flight");
+    // Water over the ground: none (a swimming seal, a duck afloat, a bird over the lake), nor one in its burrow.
+    assert.equal(groundContact(-0.3, -1.0, 0, 0.5), null);
+    assert.equal(groundContact(0.02, -2.1, 0, 0.3), null);
+    assert.equal(groundContact(-0.6, 0, null, 0.3), null);
+    // Its strength never grows as it rises.
+    let last = 1;
+    for (let gap = 0; gap < 2; gap += 0.05) {
+        const shadow = groundContact(gap, 0, null, 0.5);
+        const strength = shadow?.strength ?? 0;
+        assert.ok(strength <= last + 1e-9, `at ${gap}`);
+        last = strength;
+    }
+    // Broad surfaces keep their own shadow; thin perches never do.
+    for (const tag of ["house_wall", "rock_face", "log", "ledge"]) assert.ok(SHADOW_SURFACE_TAGS.has(tag), tag);
+    for (const tag of ["branch", "limb", "fence_post", "canopy_hang", "lamp", "canopy_perch"]) assert.ok(!SHADOW_SURFACE_TAGS.has(tag), tag);
 });

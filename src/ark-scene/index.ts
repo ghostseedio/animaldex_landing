@@ -72,7 +72,7 @@ import {
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
-import {AnimalLook, attachLook, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
+import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
 import {applyRecipeCoat, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
@@ -3040,7 +3040,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 actor.root.position.set(where.x, where.base + lift - actor.minY * as, where.z);
                 actor.root.scale.setScalar(as);
                 actor.root.visible = true;
-                if (!where.afloat) shadowList.push({x: where.x, y: rest, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: 1});
+                // Its shadow on the ground under it now (not its home spot's height), gone off the ground or in water.
+                const under = look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true);
+                const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
+                if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
                 if (marked) ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
                 counts.near++;
                 continue;
@@ -3136,34 +3139,43 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // the larger of the two (`applyRecipeCoat`).
             applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat);
 
-            if (!where.afloat || (look.on && surface && !entry.toLight)) {
+            // Contact shadows (the animal-look pass): on a broad surface the animal really is on (a small one on a wall,
+            // a leaf, a stone; a perch on bark, a rock face, a log), never on a limb, a post or a leap through the canopy,
+            // nor under water; everything else is projected down onto the ground under it now, and fades as it leaves
+            // the ground (a hop, a perch, flight), none where water covers the ground.
+            const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
+            const underFeet = broadSurface && look.on ? null : look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near");
+            const contact = underFeet ? groundContact(where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
+            if ((broadSurface && look.on) || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
                 const length = model.length * candidate.modelScale * sizeUp * 1.0;
-                if (surface) {
+                if (broadSurface && look.on && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
                     shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
-                } else {
-                    // On the ground: on its slope (near ones, with the pass on), under the body's middle (a model's origin
-                    // is not always there: a seal's is at its chest), turned with it.
+                } else if (contact) {
+                    // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
+                    // model's origin is not always there: a seal's is at its chest), turned with it.
                     const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;
                     const midX = look.on ? ((box.min.x + box.max.x) / 2) * s : 0;
                     const midZ = look.on ? ((box.min.z + box.max.z) / 2) * s : 0;
                     shadowList.push({
                         x: where.x + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
-                        y: rest,
+                        y: contact.y,
                         z: where.z - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
                         width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
                         length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
                         yaw: where.yaw,
-                        strength: grow * (1 - entry.lift * 0.3),
+                        strength: grow * (1 - entry.lift * 0.3) * contact.strength,
                         ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
                     });
                 }
             }
             if (marked && !entry.micro) {
-                ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                // On the ground under it now (its home spot's height floated the ring over one that had walked downhill).
+                const ringY = where.afloat ? 0 : Math.max(underFeet?.height ?? look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, 0);
+                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
                 ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : MINE, alpha: 1});
