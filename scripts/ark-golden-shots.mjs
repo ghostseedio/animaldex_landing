@@ -15,6 +15,7 @@
  *   node scripts/ark-golden-shots.mjs --animals red-fox,mallard --label animal-look     (the animal-look pass:
  *            each species close up, the pass off ("before") then on ("after"); --wet adds a rain shot;
  *            --rigged red-fox,... adds a moving shot of those (the rig playing: the look on a skinned mesh);
+ *            --detail adds a shot closer than a viewer can come, to judge the surface (the wet one is then close too);
  *            --measure-animals measures each; the close-up skins come from the local build,
  *            ~/animaldex-talking-models/ark-closeup, or --closeup-dir)
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
@@ -191,12 +192,16 @@ if (animals.length) {
         const gpuName = await renderer(page);
         const prepared = await page.evaluate(() => window.__arkGolden.prepare());
         log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
-        const variants = [{wetness: 0, suffix: "", moving: false}, ...(flag("wet") ? [{wetness: 1, suffix: "-wet", moving: false}] : [])];
+        const variants = [
+            {wetness: 0, suffix: "", moving: false, detail: false},
+            ...(flag("detail") ? [{wetness: 0, suffix: "-detail", moving: false, detail: true}] : []),
+            ...(flag("wet") ? [{wetness: 1, suffix: "-wet", moving: false, detail: flag("detail")}] : [])
+        ];
         for (const time of times) {
             for (const slug of animals) {
-                for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true}] : [])]) {
+                for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true, detail: false}] : [])]) {
                     for (const look of [false, true]) {
-                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving"))}]);
+                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving")), detail: variant.detail}]);
                         if (!shot.found) {
                             log(deviceName, slug, "not in the fixture");
                             break;
