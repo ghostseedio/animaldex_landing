@@ -554,6 +554,7 @@ function spreadMembers(list: AttachPoint[], leader: AttachPoint, rank: number, l
 const ANTARCTIC = new Set(["emperor-penguin", "adelie-penguin", "king-penguin", "gentoo-penguin", "macaroni-penguin", "southern-rockhopper-penguin", "weddell-seal", "leopard-seal", "snow-petrel", "antarctic-petrel", "snowy-sheathbill"]);
 const PENGUIN = /(^|-)penguin($|-)/;
 const PINNIPED = /(^|-)seal($|-)|sea-lion|fur-seal|walrus/;
+const AUK = /murre|guillemot|auklet|murrelet|razorbill|(^|-)auk($|-)|dovekie/;
 const POLAR_TAGS: readonly MapTag[] = ["sea_ice", "tundra", "snow_ice"];
 const SHORE_TAGS: readonly MapTag[] = ["snow_ice", "tundra", "rocky_shore", "sandy_beach", "sea_cliffs", "rocks_boulders", "mudflat"];
 
@@ -568,7 +569,12 @@ const SHORE_TAGS: readonly MapTag[] = ["snow_ice", "tundra", "rocky_shore", "san
 export function shoreOf(slug: string, zone: ArkZone): "cove" | ArkZone | null {
     if (ANTARCTIC.has(slug) && !(speciesDepth(slug, zone) && !PENGUIN.test(slug) && !PINNIPED.test(slug))) return "cove";
     if (PENGUIN.test(slug)) return "cove";
-    if (!PINNIPED.test(slug) || bodyOf(slug) === "f") return null;
+    // The auks that the table puts at sea (murres, guillemots, auklets, murrelets): home on their cliffs and rocks by the sea (they
+    // raft on the water and dive from it on their schedule; the puffins already stand on their ledges).
+    // (Not an auk sea-depth's table gives a band of its own: that one is the table's water species.)
+    const tabled = speciesDepth(slug, zone);
+    const auk = AUK.test(slug) && bodyOf(slug) === "b" && !(tabled && tabled.source !== "default");
+    if ((!PINNIPED.test(slug) && !auk) || bodyOf(slug) === "f") return null;
     const species = mapSpecies(slug, zone);
     if (zone === "polar" || (species && POLAR_TAGS.some((tag) => species.allowed.has(tag)))) return "cove";
     return ZONE_SITES[zone]?.kind === "sea" ? "seashore" : zone;
