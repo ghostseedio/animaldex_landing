@@ -133,7 +133,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomesTasks, tripAt, wireThreats, type ArkDoing, type ScheduleGroup, type SpacedHome, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomesTasks, tripAt, wireThreats, withLazyRoost, type ArkDoing, type ScheduleGroup, type SpacedHome, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
@@ -800,7 +800,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
-            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, roost: scheduleRoost(place, animal.zone)},
+            // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`.)
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea}, () => scheduleRoost(place, animal.zone)),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -915,14 +916,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The spacing being worked out, and what to do with it once it is. */
     let spacing: {build: SlicedBuild<Map<string, SpacedHome>>; apply: (spaced: Map<string, SpacedHome>) => void} | null = null;
     let spacingMs = 0;
+    /** The longest single spacing step (ms, its slice and its wiring when done): runtime's phone budget is 200 ms. */
+    let spacingLongestMs = 0;
     const stepSpacing = (budgetMs: number) => {
         if (!spacing) return;
         const now = spacing;
+        const began = performance.now();
         const spaced = now.build.step(budgetMs);
         spacingMs = now.build.spentMs;
-        if (!spaced) return;
-        spacing = null;
-        now.apply(spaced);
+        if (spaced) {
+            spacing = null;
+            now.apply(spaced);
+        }
+        spacingLongestMs = Math.max(spacingLongestMs, performance.now() - began);
     };
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
@@ -4163,6 +4169,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             behaviourBuildMs: Math.round(behaviourBuildMs),
             behaviourBuildSlices,
             behaviourSpacingMs: Math.round(spacingMs),
+            behaviourSpacingLongestMs: Math.round(spacingLongestMs),
             behaviourBuildLongestMs: Math.round(behaviourBuildLongestMs),
             rigsLoaded: rigs.loadedCount,
             rigBytes: rigs.bytes

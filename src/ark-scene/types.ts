@@ -166,6 +166,8 @@ export type ArkSceneStats = {
     behaviourBuildLongestMs?: number;
     /** The main-thread time the last predator-prey spacing took, sliced (ms). */
     behaviourSpacingMs?: number;
+    /** The longest single spacing step, its wiring included (ms). */
+    behaviourSpacingLongestMs?: number;
     rigsLoaded: number;
     rigBytes: number;
 };

@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, kthNearest, withLazyRoost, amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {hashString} from "@/ark-scene/world";
 import {eats} from "@/ark-scene/food-links";
@@ -730,4 +730,87 @@ test("an in-place activity barely turns: grazing, browsing, grooming, resting, f
     }
     assert.ok(minutes > 1000, `minutes ${minutes}`);
     assert.deepEqual(over.slice(0, 8), [], `${over.length} of ${minutes} minutes`);
+});
+
+test("cheaper, the same: the k-th nearest place, threats a kind at a time, the roost when first asked", () => {
+    // kthNearest is what sorting by distance then id and taking the k-th gives (ties included).
+    const random = (() => {
+        let s = 12345;
+        return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
+    })();
+    for (let trial = 0; trial < 300; trial++) {
+        const n = 1 + Math.floor(random() * 60);
+        const list = Array.from({length: n}, (_, i) => ({id: `p${Math.floor(random() * 1000)}-${i}`, x: Math.round(random() * 20) / 2, z: Math.round(random() * 20) / 2}));
+        const centre = {x: Math.round(random() * 20) / 2, z: Math.round(random() * 20) / 2};
+        const sorted = [...list].sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z) || a.id.localeCompare(b.id));
+        for (let k = 0; k < n; k++) assert.equal(kthNearest(list, centre, k), sorted[k]);
+    }
+    // wireThreats: the old way (every animal against every top predator, copied as it was) and the kind-at-a-time way.
+    const oldWire = (list: Array<{slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkAnimal["activity"]}>) => {
+        const slugs = Array.from(new Set(list.map((i) => i.slug)));
+        const hunters = slugs.filter((p) => slugs.some((q) => q !== p && eats(p, q)));
+        const top = new Set(hunters.filter((p) => !slugs.some((q) => q !== p && eats(q, p))));
+        const tops = list.filter((i) => top.has(i.slug));
+        return list.map((i) => {
+            const threats = tops.filter((p) => p !== i && p.slug !== i.slug && eats(p.slug, i.slug)).map((p) => ({animal: p.animal, profile: p.profile, activity: p.activity}));
+            return threats.length ? threats : null;
+        });
+    };
+    const wired = animals.map((i) => ({slug: i.a.model_slug, animal: {...i.animal, threats: null}, profile: i.profile, activity: i.a.activity}));
+    const expected = oldWire(wired);
+    wireThreats(wired, eats);
+    assert.deepEqual(wired.map((i) => i.animal.threats ?? null), expected);
+    assert.ok(expected.some((t) => t && t.length), "some animals have threats");
+    // The roost: not looked for until asked, then once, and the same spot.
+    let looked = 0;
+    const spot = {x: 1, y: 2, z: 3, nx: 0, ny: 1, nz: 0, point: "rock:1"};
+    const lazy = withLazyRoost({id: "lazy", zone: "grassland", home: {x: 0, y: 0, z: 0}, length: 1, sea: false}, () => {
+        looked++;
+        return spot;
+    });
+    assert.equal(looked, 0);
+    assert.equal(lazy.roost, spot);
+    assert.equal(lazy.roost, spot);
+    assert.equal(looked, 1);
+    assert.deepEqual({...lazy}.roost, spot);
+    // And a schedule over a day with the roost given lazily is the one with it given at once.
+    let checked = 0;
+    for (const i of animals.filter((x) => !x.animal.group && x.profile.move !== "swim").slice(0, 12)) {
+        // (A fixed roost of its own, as the map gives one: here its schedule's own roost, given at once or when asked.)
+        const fixed = roostOf(world, i.profile, i.animal);
+        const eager: ScheduleAnimal = {...i.animal, roost: fixed};
+        const later = withLazyRoost(Object.fromEntries(Object.entries(i.animal).filter(([key]) => key !== "roost")) as Omit<ScheduleAnimal, "roost">, () => fixed);
+        checked++;
+        for (let k = 0; k < 45 * 4; k += 7) {
+            const t = DAY + k * SLOT_SECONDS + 13;
+            assert.deepEqual(poseOnTrip(world, tripAt(world, i.profile, later, t, hoursAt, i.a.activity), t), poseOnTrip(world, tripAt(world, i.profile, eager, t, hoursAt, i.a.activity), t));
+        }
+    }
+    assert.ok(checked >= 10, `checked ${checked}`);
+});
+
+test("the same for every viewer: where an animal is never depends on what was asked before (memo order, a cold start)", () => {
+    // (2026-11-11: the walk chain compared goal objects; a planned intent worked out again after the memo let it go is a
+    // new object, so a school's leader's swim could read as a walk and its school stop following, depending on the
+    // order poses were asked for. Here: each animal asked alone, fresh, and the same asked in one long run of all.)
+    const times = [0, 37, 185, 1301, 4000, 9100, 15000];
+    const fresh = new Map<string, string>();
+    for (const i of animals) {
+        for (const s of times) {
+            forgetSchedules();
+            const p = poseOf(i, DAY + s);
+            fresh.set(`${i.a.id}@${s}`, `${p.x.toFixed(9)},${p.y.toFixed(9)},${p.z.toFixed(9)},${p.yaw.toFixed(9)},${p.beat}`);
+        }
+    }
+    forgetSchedules();
+    const differ: string[] = [];
+    for (const i of animals) {
+        for (let s = 0; s <= 15000; s += 37) {
+            const p = poseOf(i, DAY + s);
+            const key = `${i.a.id}@${s}`;
+            const was = fresh.get(key);
+            if (was !== undefined && was !== `${p.x.toFixed(9)},${p.y.toFixed(9)},${p.z.toFixed(9)},${p.yaw.toFixed(9)},${p.beat}`) differ.push(`${i.a.model_slug} at ${s}`);
+        }
+    }
+    assert.deepEqual(differ.slice(0, 8), [], `${differ.length} differ`);
 });
