@@ -659,3 +659,75 @@ test("on the ground nothing moves backwards: never 5 s in a row going more than 
     assert.ok(moving > 10000, `moving ${moving}`);
     assert.deepEqual(backwards.slice(0, 8), [], `${backwards.length} backwards runs`);
 });
+
+test("walking goes at its walk clip's own pace: a pace ratio of 0.8-1.3 (running, its run clip's), never a slow-motion walk", () => {
+    // (The integrator's default-view check, 2026-11-11: with the v2 rigs up, walkers held to 1.5 times a v1 walk's pace
+    // walked at 0.35-0.45 of their clips. Sampled as the check samples: every 0.25 s, moving faster than 0.15 of its
+    // length a second on the ground.)
+    const off: string[] = [];
+    let walking = 0;
+    let within = 0;
+    for (const i of animals.filter((x) => x.profile.walkPace && x.profile.move !== "swim" && x.profile.move !== "fly")) {
+        const length = Math.max(i.animal.length, 0.05);
+        const ratios: number[] = [];
+        let last = poseOf(i, DAY + 6 * 3600);
+        for (let k = 1; k < 4 * 3600 * 4; k++) {
+            const t = DAY + 6 * 3600 + k * 0.25;
+            const p = poseOf(i, t);
+            const speed = Math.hypot(p.x - last.x, p.z - last.z) / 0.25;
+            const ground = !p.aloft && !last.aloft && p.y >= -0.01 && last.y >= -0.01;
+            if (ground && speed > Math.max(0.05, 0.15 * length) && (p.beat === "walk" || p.beat === "run" || p.beat === "step")) {
+                const clip = p.beat === "run" && i.profile.runPace ? i.profile.runPace : i.profile.walkPace!;
+                const ratio = speed / length / clip;
+                ratios.push(ratio);
+                walking++;
+                if (ratio >= 0.8 && ratio <= 1.3) within++;
+            }
+            last = p;
+        }
+        if (ratios.length < 20) continue;
+        ratios.sort((a, b) => a - b);
+        const median = ratios[ratios.length >> 1];
+        if (median < 0.8 || median > 1.3) off.push(`${i.a.model_slug} ${median.toFixed(2)}`);
+    }
+    assert.ok(walking > 5000, `walking samples ${walking}`);
+    assert.deepEqual(off, [], "median pace ratios off 0.8-1.3");
+    assert.ok(within / walking > 0.85, `${((within / walking) * 100).toFixed(1)}% of walking samples within 0.8-1.3`);
+});
+
+test("an in-place activity barely turns: grazing, browsing, grooming, resting, foraging or watching, under one turn in any minute", () => {
+    // (The default view's buffalo turned 16.5 times a minute grooming, an elephant 5.7 grazing: the release's recipe
+    // episodes. The schedule's own time at a place: facing summed over each minute it stays.)
+    const IN_PLACE = new Set(["graze", "browse", "groom", "rest", "forage", "watch", "idle"]);
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let minutes = 0;
+    const over: string[] = [];
+    for (const i of animals) {
+        let last = poseOf(i, DAY + 6 * 3600);
+        let lastTrip = tripOf(i, DAY + 6 * 3600);
+        let turned = 0;
+        let span = 0;
+        for (let k = 1; k < 6 * 3600 * 2; k++) {
+            const t = DAY + 6 * 3600 + k * 0.5;
+            const trip = tripOf(i, t);
+            const p = poseOf(i, t);
+            if (trip === lastTrip && t >= trip.arrive + 0.5 && !trip.shadow && !p.aloft && IN_PLACE.has(trip.doing)) {
+                turned += Math.abs(wrap(p.yaw - last.yaw));
+                span += 0.5;
+                if (span >= 60) {
+                    minutes++;
+                    if (turned >= Math.PI * 2) over.push(`${i.a.model_slug} ${trip.doing} ${(turned / Math.PI / 2).toFixed(2)}`);
+                    turned = 0;
+                    span = 0;
+                }
+            } else {
+                turned = 0;
+                span = 0;
+            }
+            last = p;
+            lastTrip = trip;
+        }
+    }
+    assert.ok(minutes > 1000, `minutes ${minutes}`);
+    assert.deepEqual(over.slice(0, 8), [], `${over.length} of ${minutes} minutes`);
+});
