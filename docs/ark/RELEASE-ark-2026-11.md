@@ -22,7 +22,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
 | Map | `ark-map` | fd384d86 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
-| Behaviour | `ark-behaviour` | 16a098d1 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
+| Behaviour | `ark-behaviour` | 6ad9b3e8 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
 | Behaviour recipes | `ark-behaviour-recipes` | c6299edf | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
@@ -135,6 +135,18 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 7. Publish the privacy and terms change (`docs/ark/founders-privacy.md`), with `founder_names` on.
 8. The other flags the owner chooses, one at a time.
 
+### 7b. The owner's founder decision (2026-11-11, about 21:30 WIB, confirmed again)
+- **`@username` on by default:** every bringer with a handle shows as their `@username` (linked to `/u/{handle}`) once
+  `founder_names` is on, which this release does (§7).
+- **Name now, ask age after:** a bringer is named straight away; the age question (the one-tap 18+ confirmation) comes
+  afterwards, inline, and does not hold the name back.
+- **Only the Ark switch hides a name:** the bringer's own Ark setting is the one thing that turns their name back into
+  "Voyager N". Their Play record privacy and their Diary settings do not (no Play record or Diary rule).
+- **Teens with a stored year are always Voyager:** a bringer whose stored birth year makes them under 18 is never named,
+  whatever else is set.
+- The server decides all of this (`voyage_public_v2`'s founder keys, founders contract); the web and the apps only read
+  its answer. Check the founders server branch implements exactly these four rules before `founder_names` goes on.
+
 ### 7a. Real data only, and the post-deploy check
 - **Nothing made-up in production.** The page reads the live Ark; the fixture, the made-up live feed and the fixture
   founders exist only behind development parameters (`?fixture=`, `&feed=1`, `?arkfixture=`, `?arkresult=`, …, each
@@ -167,8 +179,12 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   profile throttles the CPU, not the GPU.)
 
 ## 8. Known issues (at m5)
-- **Tests on `ark-release` 2856dec7: 2,245/2,245, none red** (behaviour 16a098d1, map fd384d86 and recipes c6299edf fixed the polar bear, the orca, the centipede and the red fox).
-- **Default view** (corrected check, after behaviour 16a098d1, two runs): backwards 0.9–1.0%, ground turns 0 a minute (median). **Walk pace ratio median 0.42** (it was 1.22–1.49 in every run before): walkers grazing, grooming, resting and foraging move at about 0.4× their walk clip's own ground speed for 15–20 s at a time (zebras, goats, camels, a cheetah, an elephant, a buffalo), so the clip plays in slow motion. Behaviour lane. Circling: an African forest buffalo at 16.5 a minute (groom), an elephant at 5.7 (graze), zebras at 5–6.
+- **Red tests on `ark-release` dd50bd5e (2,243/2,247)**, after behaviour 6ad9b3e8 put walkers on the v2 clips' pace:
+  - "groups stay together as loose clusters, never a row": five African lions in an even row at slot 275 (timing dependent). Behaviour.
+  - "an in-place activity barely turns" (behaviour's new test): 184 of 13,572 in-place minutes over one turn, all from the recipes' episodes laid over the schedule. By recipe: dabble 70 of 205 minutes (mallard, worst 1.33 turns), chase_fish 37 of 291 (harbour seal, puffin, emperor penguin, 1.50), surface_dive 33 of 150 (puffin, 1.45), wade_spear 21 of 125 (grey heron, 1.44), root_dig 12 of 98 (meerkat, 1.44), bathe 2 of 104 (1.03); without a recipe 1 of 12,145 (a grey heron watching, 1.07). Recipes.
+  - "no spinning": the red fox's pounce at 1.02 full turns in 20 s (it passed before the pace change). Recipes.
+  - "stags in the rut meet, face each other and clash antlers": head to head at 2.13 rad (it passed before the pace change). Recipes.
+- **Default view** (corrected check, dd50bd5e, two runs): **walk pace ratio median 0.99 and 0.95** (back from 0.41), nothing over 1.67×; backwards 1.2% and 2.8%, nothing backwards over 1 s; ground turns 0.1 and 0.7 a minute (median). Circling: a plains zebra at 15.4 a minute watching and 7.1 grooming and grazing, a grey heron at 10.3 foraging (wade_spear), a harbour seal at 5.6, a goat at 3.4.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
