@@ -25,12 +25,16 @@ type Raw = (typeof fixture)["animals"][number];
 const SPECIES: Record<string, {name: string; zone: string; activity: string | null; sociality: string | null}> = {
     mallard: {name: "Mallard", zone: "grassland", activity: "diurnal", sociality: null},
     "golden-eagle": {name: "Golden Eagle", zone: "grassland", activity: "diurnal", sociality: null},
-    "red-deer": {name: "Red Deer", zone: "grassland", activity: "any", sociality: "group"}
+    "red-deer": {name: "Red Deer", zone: "grassland", activity: "any", sociality: "group"},
+    "domestic-goat": {name: "Domestic Goat", zone: "grassland", activity: "diurnal", sociality: "group"},
+    "plains-zebra": {name: "Plains Zebra", zone: "grassland", activity: "any", sociality: "group"}
 };
 const CAST: Array<[string, string, number]> = [
     ["duck", "mallard", 1],
     ["eagle", "golden-eagle", 1],
-    ["deer", "red-deer", 3]
+    ["deer", "red-deer", 12],
+    ["goat", "domestic-goat", 6],
+    ["zebra", "plains-zebra", 6]
 ];
 
 function castId(prefix: string, i: number): string {
@@ -78,7 +82,9 @@ const smooth = (k: number) => {
 
 async function mountScenes(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
-    const rigBase = params.get("rig") ? new URL(params.get("rig")!, location.href).href.replace(/\/+$/, "") : undefined;
+    const rigBase = params.get("norig") ? null : params.get("rig") ? new URL(params.get("rig")!, location.href).href.replace(/\/+$/, "") : undefined;
+    const quality = params.get("quality");
+    if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     const cast = castAnimals();
     const snapshot = decodeArkSnapshot({...fixture, animals: cast});
     if (!snapshot) throw new Error("fixture did not decode");
@@ -186,18 +192,30 @@ async function mountScenes(el: HTMLElement) {
         /** Three red deer grazing: head down to bite and chew, now and then the head up to look round, each on its own time. */
         deer_graze: () => {
             const at = site("grassland", -6, 8);
-            ids.deer.forEach((id, i) => stand(id, at.x + i * 1.9 - 1.9, at.z + (i % 2) * 1.3, 0.6 + i * 1.9, "graze", [["bite", 5], ["chew", 2.5], ["scan", 3.5]], i * 3.7));
+            ids.deer.slice(0, 3).forEach((id, i) => stand(id, at.x + i * 1.9 - 1.9, at.z + (i % 2) * 1.3, 0.6 + i * 1.9, "graze", [["bite", 5], ["chew", 2.5], ["scan", 3.5]], i * 3.7));
             // From past 14 m: nearer, the reactive layer has them watch the camera (heads up) instead of grazing.
             view(at.x, at.z + 0.5, 15.5, 1.2, 1.28, 0.7);
-            return {note: "bite 5 s, chew 2.5 s, scan 3.5 s, each deer offset; the camera 15.5 m off", watch: ids.deer};
+            return {note: "bite 5 s, chew 2.5 s, scan 3.5 s, each deer offset; the camera 15.5 m off", watch: ids.deer.slice(0, 3)};
         },
         /** A red deer at rest near the camera: the reactive layer turns its head (to the camera, round, to its kin). */
         deer_look: () => {
             const at = site("grassland", -6, 8);
             stand(ids.deer[0], at.x, at.z, 0.3, "rest", [["rest", 60]], 0);
-            ids.deer.slice(1).forEach((id, i) => stand(id, at.x + 3 + i * 1.5, at.z - 2.5, 2.4, "graze", [["bite", 6], ["scan", 3]], i * 2));
+            ids.deer.slice(1, 3).forEach((id, i) => stand(id, at.x + 3 + i * 1.5, at.z - 2.5, 2.4, "graze", [["bite", 6], ["scan", 3]], i * 2));
             view(at.x, at.z, 4.2, 0.9, 1.2, 0.9);
-            return {note: "the camera 4 m from a resting deer; two more grazing behind it", watch: ids.deer};
+            return {note: "the camera 4 m from a resting deer; two more grazing behind it", watch: ids.deer.slice(0, 3)};
+        },
+        /** The perf scene: 24 grazers of 3 species round the camera, all within the rig distance (the caps decide how many rig). */
+        crowd: () => {
+            const at = site("grassland", -6, 8);
+            const all = [...ids.deer, ...ids.goat, ...ids.zebra];
+            all.forEach((id, i) => {
+                const a = i * 2.39996;
+                const r = 2 + 7 * Math.sqrt(i / all.length);
+                stand(id, at.x + Math.cos(a) * r, at.z + Math.sin(a) * r, a * 1.3, "graze", [["bite", 5], ["chew", 2.5], ["scan", 3.5], ["walk", 1]], i * 1.7);
+            });
+            view(at.x, at.z, 11, 0.8, 1.15, 0.6);
+            return {note: "24 grazers (12 red deer, 6 goats, 6 zebras) within 9 m, the camera 11 m off", watch: all};
         }
     };
 
@@ -244,6 +262,22 @@ async function mountScenes(el: HTMLElement) {
             });
         },
         stats: () => handle.stats(),
+        /** Frame intervals over `ms` (the frame clock) and the scene's own counts. */
+        measure: async (ms: number) => {
+            const gaps: number[] = [];
+            let last = await nextFrame();
+            const until = last + ms;
+            while (last < until) {
+                const now = await nextFrame();
+                gaps.push(now - last);
+                last = now;
+            }
+            gaps.sort((a, b) => a - b);
+            const at = (q: number) => Math.round(gaps[Math.min(gaps.length - 1, Math.floor(q * gaps.length))] * 10) / 10;
+            const mean = gaps.reduce((sum, g) => sum + g, 0) / Math.max(gaps.length, 1);
+            const stats = handle.stats() as unknown as Record<string, unknown>;
+            return {frames: gaps.length, fps: Math.round((1000 / mean) * 10) / 10, p50: at(0.5), p95: at(0.95), p99: at(0.99), tier: stats.tier, lite: stats.lite, rigged: stats.rigged, rigsLoaded: stats.rigsLoaded, near: stats.near, drawCalls: stats.drawCalls, triangles: stats.triangles, frameMs: stats.frameMs, behaviourMs: stats.behaviourMs};
+        },
         /** Every frame from now: each watched animal's clip changes (and its head look's turns), with the time since the start. */
         trace: (watch: string[]) => {
             const log: Array<{t: number; id: string; clip: string | null; flying: boolean | null; weight: number | null; headYaw: number | null}> = [];

@@ -164,8 +164,8 @@ async function record(cdp, name) {
 
 const query = set ? "rig=/ark-rig/v2" : "";
 const summary = [];
-const wanted = arg("scenes", "");
-for (const name of wanted ? wanted.split(",") : ["duck_flight", "deer_graze", "deer_look"]) {
+const wanted = arg("scenes", flag("perf") ? "none" : "");
+for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["duck_flight", "deer_graze", "deer_look"]) {
     const {context, page, errors, cdp} = await open(deviceName, query);
     const prepared = await page.evaluate(() => window.__arkRig.prepare());
     log(name, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier}));
@@ -224,7 +224,23 @@ for (const name of wanted ? wanted.split(",") : ["duck_flight", "deer_graze", "d
     log(name, JSON.stringify(row).slice(0, 600));
 }
 
+const perf = [];
+if (flag("perf")) {
+    for (const device of ["desktop", "phone"]) {
+        for (const rigs of [true, false]) {
+            const {context, page} = await open(device, rigs ? query : "norig=1");
+            await page.evaluate(() => window.__arkRig.prepare());
+            await page.evaluate(() => window.__arkRig.setup("crowd"));
+            await page.waitForTimeout(4000);
+            const m = await page.evaluate(() => window.__arkRig.measure(8000));
+            perf.push({device, rigs, ...m});
+            log("perf", device, rigs ? "rigs" : "no rigs", JSON.stringify(m));
+            await context.close();
+        }
+    }
+}
+
 await browser.close();
 server.close();
-writeFileSync(path.join(out, "summary.json"), JSON.stringify({summary}, null, 2));
+writeFileSync(path.join(out, "summary.json"), JSON.stringify({summary, perf}, null, 2));
 log("wrote", out);
