@@ -59,7 +59,7 @@ const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windD
 type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}; lighting?: {sun?: {position: Vector3; target: {position: Vector3}}}};
 
 /** The micro shot on screen: its animal, the closest the camera may come, and how to stop it following its leaf. */
-type Holder = {current: Object3D | null; minDistance: number; stop: (() => void) | null};
+type Holder = {current: Object3D | null; minDistance: number; stop: (() => void) | null; chosen: Map<string, {point: AttachPoint; out: Vector3; checked: string}>};
 
 const nextFrames = async (count: number) => {
     for (let i = 0; i < count; i++) await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -93,6 +93,15 @@ function treeOut(point: AttachPoint): Vector3 {
     return new Vector3(Math.sin(polar) * Math.sin(azimuth), Math.cos(polar), Math.sin(polar) * Math.cos(azimuth));
 }
 
+/** Where the camera stands, seen from the point: out from a tree (`treeOut`); else out along the surface's normal, lifted a little. */
+function outFrom(point: AttachPoint): Vector3 {
+    if (point.wind) return treeOut(point);
+    const out = new Vector3(point.normal.x, point.normal.y, point.normal.z);
+    out.y = Math.max(out.y, 0) * 0.55 + 0.35;
+    if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
+    return out.normalize();
+}
+
 /** Nothing drawn between the camera and the point (any visible mesh: trees, canopy crowns, rocks, the house). */
 function clearSight(debug: Debug, view: ArkCameraView, point: AttachPoint, skip: Object3D | null): string | null {
     const meshes: Object3D[] = [];
@@ -106,8 +115,11 @@ function clearSight(debug: Debug, view: ArkCameraView, point: AttachPoint, skip:
     const from = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(new Vector3(view.target.x, view.target.y, view.target.z));
     const to = new Vector3(point.position.x, point.position.y, point.position.z);
     const length = from.distanceTo(to);
-    const ray = new Raycaster(from, to.clone().sub(from).normalize(), 0, Math.max(length - 0.012, 0));
-    const hit = ray.intersectObjects(meshes, false)[0];
+    const toward = to.clone().sub(from).normalize();
+    const there = new Raycaster(from, toward, 0, Math.max(length - 0.012, 0)).intersectObjects(meshes, false)[0];
+    // And back from just off the point: one-sided surfaces (a rock) are only seen from outside.
+    const back = new Raycaster(to.clone().addScaledVector(toward, -0.012), toward.clone().negate(), 0, Math.max(length - 0.012, 0)).intersectObjects(meshes, false)[0];
+    const hit = there ?? back;
     return hit ? String(hit.object.userData.kind ?? hit.object.name ?? hit.object.type) : null;
 }
 
@@ -172,8 +184,17 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         Object.defineProperty(controls, "minDistance", {configurable: true, get: () => holder.minDistance, set: () => {}});
     }
     // Where the sun is (the shot's own hour comes later, but the morning sun is the same side): lit faces score better.
-    const sunLight = debug?.lighting?.sun;
-    const sun = sunLight ? sunLight.position.clone().sub(sunLight.target.position).normalize() : new Vector3(0.5, 0.7, 0.5).normalize();
+    const sunNow = () => {
+        const sunLight = debug?.lighting?.sun;
+        return sunLight ? sunLight.position.clone().sub(sunLight.target.position).normalize() : new Vector3(0.5, 0.7, 0.5).normalize();
+    };
+    let sun = sunNow();
+    // The point is chosen in the morning light whatever the shot's own hour (set after this), so it is the same in all three.
+    if (!holder.chosen.has(shot.slug + shot.tag)) {
+        handle.setHours(GOLDEN_TIMES.day);
+        await nextFrames(2);
+        sun = sunNow();
+    }
     const lit = (point: AttachPoint) => Math.max(point.normal.x * sun.x + point.normal.y * sun.y + point.normal.z * sun.z, 0);
     const tree = shot.tag === "leaf" || shot.tag === "bark";
     const candidates = attachPoints({tag: shot.tag, near: {x: near.x, z: near.z, radius: tree ? 40 : 18}})
@@ -208,18 +229,25 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     holder.current = null;
     const lift = Math.max(length * 0.35, 0.004);
     let point = ranked[0];
-    let out = tree ? treeOut(point) : new Vector3();
+    let out = outFrom(point);
     let checked = "";
-    if (tree) {
-        // Of the best few with nothing in front of it from where the camera will be: in the sun if any is (nothing
-        // between it and the sun), then the least foreground clutter (leaves right in front of the lens).
+    // The same point in every light: chosen once per shot, in the morning (the shot's own hour is set after this).
+    const known = holder.chosen.get(shot.slug + shot.tag);
+    if (known) {
+        point = known.point;
+        out = known.out;
+        checked = known.checked;
+    } else {
+        // Of the best few, one seen from where the camera will be with nothing in between (either way along the sight
+        // line: a camera inside a rock sees nothing of it); on a tree, in the sun if any is (nothing between it and
+        // the sun), then with the least foreground clutter (leaves right in front of the lens).
         type Option = {point: AttachPoint; out: Vector3; sunlit: boolean; clutter: number; rank: number};
         const options: Option[] = [];
         const blockers: string[] = [];
         let rank = 0;
-        for (const candidate of ranked.slice(0, 16)) {
+        for (const candidate of ranked.slice(0, tree ? 16 : 8)) {
             rank++;
-            const o = treeOut(candidate);
+            const o = outFrom(candidate);
             const view = viewOnto(candidate, o, distance, lift);
             debug.controls.minDistance = holder.minDistance;
             handle.setView(view);
@@ -229,22 +257,18 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
                 blockers.push(blocked);
                 continue;
             }
-            options.push({point: candidate, out: o, sunlit: lit(candidate) > 0.15 && !inShade(debug, candidate, sun), clutter: clutterOf(debug, view), rank});
+            options.push({point: candidate, out: o, sunlit: tree && lit(candidate) > 0.15 && !inShade(debug, candidate, sun), clutter: tree ? clutterOf(debug, view) : 0, rank});
+            if (!tree) break;
         }
-        options.sort((a, b) => Number(b.sunlit) - Number(a.sunlit) || Math.round(a.clutter * 10) - Math.round(b.clutter * 10) || a.rank - b.rank);
+        options.sort((x, y) => Number(y.sunlit) - Number(x.sunlit) || Math.round(x.clutter * 10) - Math.round(y.clutter * 10) || x.rank - y.rank);
         const pick = options[0] ?? null;
         if (pick) {
             point = pick.point;
             out = pick.out;
         }
-        checked = pick ? `, clear sight${pick.sunlit ? ", in the sun" : ", in shade"}, clutter ${pick.clutter.toFixed(2)}${blockers.length ? ` (skipped ${blockers.length}: ${Array.from(new Set(blockers)).join("/")})` : ""}` : ", no clear sight in the best 16";
-    } else {
-        const n = new Vector3(point.normal.x, point.normal.y, point.normal.z);
-        // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
-        out = n.clone();
-        out.y = Math.max(out.y, 0) * 0.55 + 0.35;
-        if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
-        out.normalize();
+        const skipped = blockers.length ? ` (skipped ${blockers.length}: ${Array.from(new Set(blockers)).join("/")})` : "";
+        checked = pick ? `, clear sight${tree ? `${pick.sunlit ? ", in the sun" : ", in shade"}, clutter ${pick.clutter.toFixed(2)}` : ""}${skipped}` : `, no clear sight in the best ${rank}`;
+        holder.chosen.set(shot.slug + shot.tag, {point, out, checked});
     }
     const manifest = await (await fetch(`${MODELS}/manifest.json`)).json() as {models: Record<string, string>};
     const version = manifest.models[shot.slug];
@@ -370,7 +394,7 @@ async function mountGolden(el: HTMLElement) {
     handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
-    const holder: Holder = {current: null, minDistance: 0.3, stop: null};
+    const holder: Holder = {current: null, minDistance: 0.3, stop: null, chosen: new Map()};
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
