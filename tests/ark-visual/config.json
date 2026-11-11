@@ -1,5 +1,5 @@
 {
-  "about": "The Ark's visual-regression set (docs/ark/visual-ci.md): golden shots rendered with WebGL on SwiftShader (the same software renderer locally and in CI), the island clock frozen per shot, compared with tests/ark-visual/baselines/<id>.webp. Desktop on the medium tier (SwiftShader's cost), two shots on the high tier for its ambient occlusion and bloom. Overrides: the shots where an animal that loops on its own moved between two renders of the same code (release 9acd9a74 vs ark-runtime-web fedab7a2: one tile 40-83% changed, the whole picture under 1.1%) take a looser worst-tile limit.",
+  "about": "The Ark's visual-regression set (docs/ark/visual-ci.md): golden shots rendered with WebGL on SwiftShader (the same software renderer locally and in CI), the island clock frozen per shot, compared with tests/ark-visual/baselines/<id>.webp. Desktop on the medium tier (SwiftShader's cost), two shots on the high tier for its ambient occlusion and bloom. No overrides: the harness's frozen time makes a shot a function of its time (runtime round 9), so every shot keeps the default limits.",
   "devices": {
     "desktop": {
       "width": 800,
@@ -126,21 +126,5 @@
     "mean": 2.5,
     "block": 0.35
   },
-  "overrides": {
-    "desktop-caterpillar_leaf-day": {
-      "block": 0.9
-    },
-    "desktop-house_fields-day": {
-      "block": 0.9
-    },
-    "desktop-river_pond-day": {
-      "block": 0.9
-    },
-    "desktophigh-house_fields-dusk": {
-      "block": 0.9
-    },
-    "phone-house_fields-day": {
-      "block": 0.9
-    }
-  }
+  "overrides": {}
 }
