@@ -24,12 +24,22 @@ import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} fr
 import {ASSETS, ASSET_BASE, treeAssetFor} from "@/ark-scene/tree-assets";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
-import {heightAt} from "@/ark-scene/world";
+import {heightAt, sampleGround, zoneAt} from "@/ark-scene/world";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
 
-type Instance = {x: number; y: number; z: number; scale: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number};
+type Instance = {x: number; y: number; z: number; scale: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean};
+
+/**
+ * The least share of the forest fill drawn in the rainforest and the woodland, whatever the tier (batch 6: on the low tier
+ * a 0.3 share of the thinned fill left the decor emergents standing as tall bare trunks with small tufts from the island
+ * view; the lower canopy is what makes the woods read leafy). Other zones keep the tier's share.
+ */
+const WOODS_FILL = 0.6;
+
+/** The least reach of the lod2 → card hand-over (the medium tier's), see `update`. */
+const CARD_REACH_MIN = 0.45;
 
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). */
 function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
@@ -202,7 +212,8 @@ export class AssetTrees {
             const matrix = new Matrix4().compose(position.set(item.x, item.y - DECOR_SINK, item.z), rotation.setFromAxisAngle(up, item.rotation), scale.setScalar(asset.scale));
             const frac = (value: number) => value - Math.floor(value);
             const shade = 0.9 + 0.2 * frac(item.x * 7.13 + item.z * 3.71);
-            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank});
+            const zone = fill ? zoneAt(sampleGround(item.x, item.z)) : null;
+            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank, woods: zone === "rainforest" || zone === "woodland"});
         };
         worldDecor().forEach((item) => add(item, false, 0));
         forestFill().forEach((item) => add(item, true, item.rank));
@@ -279,9 +290,13 @@ export class AssetTrees {
         this.byAsset.forEach((entry) => {
             const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0, card: 0};
             let nearCount = 0;
-            const [d0, d1, d2] = entry.distances.map((d) => d * this.reach);
+            const [d0, d1] = entry.distances.map((d) => d * this.reach);
+            // The crown's far level (lod2) reaches at least as far as on the medium tier (batch 6: on the low tier the
+            // crossed cards took over from about 110 m, and from the island view the woods stood as bare trunks with small
+            // tufts); the full levels keep the tier's reach.
+            const d2 = entry.distances[2] * Math.max(this.reach, CARD_REACH_MIN);
             for (const instance of entry.instances) {
-                if (instance.fill && instance.rank > this.fill) continue;
+                if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
                 if (entry.near) {
                     const across = Math.hypot(instance.x - camera.x, instance.z - camera.z);
                     const above = camera.y - instance.y;
