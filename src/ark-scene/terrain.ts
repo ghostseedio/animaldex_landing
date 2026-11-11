@@ -30,6 +30,7 @@ import {
     UniformsLib,
     UniformsUtils,
     Vector3,
+    DoubleSide,
     type BufferGeometry
 } from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
@@ -43,7 +44,7 @@ export const WATER_WIND = {value: 1};
 /** 1 on the low tier: one texture sample per layer and no normal maps. */
 export const ARK_GROUND_LITE = {value: 0};
 
-const SEGMENTS = 200;
+const SEGMENTS = 240;
 
 function srgb(hex: string): Color {
     return new Color(hex);
@@ -104,7 +105,8 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         const sandLayer = Math.min(1, beach + (w.desert ?? 0) * 0.9 + (w.seashore ?? 0) * 0.7 + (sample.height < 0 ? sample.reef : 0));
         const mud = (w.wetland ?? 0) * smoothstep(0.2, 1, sample.land) * (1 - beach);
         const farmland = (w.farm_garden ?? 0) * smoothstep(0.6, 1, sample.land) * (sample.height > 0.2 ? 1 : 0);
-        const snow = Math.max(polar * smoothstep(0.3, 1, sample.land), smoothstep(16, 25, sample.height + 3 * (noise(x * 0.3, z * 0.3) - 0.5)));
+        // The ice's snow only: the mountain's is drawn per pixel by height and slope (graphics pass).
+        const snow = polar * smoothstep(0.3, 1, sample.land);
         layers[i * 4] = sandLayer;
         layers[i * 4 + 1] = mud;
         layers[i * 4 + 2] = farmland;
@@ -187,7 +189,9 @@ function groundMaterial(): MeshStandardMaterial {
         groundMeans: {value: GROUND_MEANS.map(([r, g, b]) => new Vector3(r, g, b))},
         groundLite: ARK_GROUND_LITE,
         envWetness: ARK_ENV.wetness,
-        envSnow: ARK_ENV.snow
+        envSnow: ARK_ENV.snow,
+        envSeaLevel: ARK_ENV.seaLevel,
+        envWind: ARK_ENV.wind
     };
     material.customProgramCacheKey = () => "ark-ground-2";
     material.onBeforeCompile = (shader) => {
@@ -217,6 +221,8 @@ uniform float groundReady;
 uniform float groundLite;
 uniform float envWetness;
 uniform float envSnow;
+uniform float envSeaLevel;
+uniform float envWind;
 uniform vec3 groundMeans[9];
 uniform vec3 fieldTones[${FIELD_TONES.length}];
 uniform float arkCaustics;
@@ -273,8 +279,15 @@ float arkWet = 0.0;`)
     float sandW = vArkLayers.x;
     float mudW = vArkLayers.y;
     float farmW = vArkLayers.z;
-    // Snow cover from the weather (the island clock): the snow line comes down the mountain.
-    float snowW = max(vArkLayers.w, envSnow * smoothstep(17.0 - 9.0 * envSnow, 21.0 - 9.0 * envSnow, world.y + 2.0 * (arkNoise(p * 0.3) - 0.5)));
+    // Mountain snow (graphics pass): continuous above a snow line that wanders with the ground, soft-edged, sliding off
+    // steep faces (rock shows there), combed into wind streaks. The weather's snow cover brings the line down.
+    float snowLine = 23.0 - 11.0 * envSnow;
+    float slopeHere = 1.0 - clamp(normalize(vArkNormal).y, 0.0, 1.0);
+    float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5));
+    alpine *= 1.0 - smoothstep(0.3, 0.55, slopeHere + 0.12 * (arkNoise(p * 0.4) - 0.5));
+    float streak = smoothstep(0.25, 0.75, arkNoise(vec2(dot(p, vec2(0.8, 0.6)) * 0.12, dot(p, vec2(-0.6, 0.8)) * 1.4)));
+    alpine *= mix(0.65, 1.0, streak) * smoothstep(0.0, 0.25, alpine);
+    float snowW = max(vArkLayers.w, alpine);
     vec3 base = diffuseColor.rgb;
 
     // Grass and earth: clumps, dry patches, a fine grain close up.
@@ -322,8 +335,8 @@ float arkWet = 0.0;`)
     ground = mix(ground, rock, steep * step(0.3, world.y + 0.4));
 
     // Snow on the peaks and the ice, thinning on steep faces.
-    float snow = snowW * (1.0 - steep * 0.75);
-    ground = mix(ground, snowTone * (0.94 + 0.06 * arkNoise(p * 0.7)), smoothstep(0.25, 0.75, snow));
+    float snow = snowW * (1.0 - steep * 0.5);
+    ground = mix(ground, snowTone * (0.9 + 0.08 * arkNoise(p * 0.7) + 0.04 * streak), smoothstep(0.12, 0.8, snow));
 
     // The waterline: wet, darker sand just above the water.
     float waterline = 1.0 - smoothstep(0.0, 0.55, world.y);
@@ -377,14 +390,41 @@ float arkWet = 0.0;`)
         // A little of the textures' own colour, so grass looks like grass and not tinted paper.
         arkGroundDetailN = normalize(mix(vec3(0.0, 0.0, 1.0), nor, fade * 0.9));
     }
+    // The swash (graphics pass): each wave runs up the beach as a thin wet film with a lace of foam at its edge, then
+    // slides back, leaving the sand dark and shiny; bigger in wind. Only on sand by the sea.
+    {
+        float h = world.y - envSeaLevel;
+        float beachy = smoothstep(0.2, 0.7, sandW) * (1.0 - snowW) * step(-0.08, h) * (1.0 - smoothstep(1.2, 1.6, h));
+        if (beachy > 0.0) {
+            float phase = arkTime * 0.42 + arkFbm(p * 0.04) * 6.2831;
+            float run = 0.5 + 0.5 * sin(phase);
+            float reach = (0.12 + 0.3 * run * run) * (0.8 + 0.8 * envWind);
+            float film = smoothstep(reach + 0.02, reach - 0.06, h);
+            float lace = smoothstep(0.035, 0.0, abs(h - reach)) * smoothstep(0.35, 0.75, arkNoise(p * 3.2 + vec2(arkTime * 0.3, 0.0)));
+            // The sand a wave just left: wet for a while above the film.
+            float left = smoothstep(reach + 0.25, reach, h) * (1.0 - film);
+            ground = mix(ground, ground * vec3(0.62, 0.66, 0.68), film * beachy * 0.85);
+            ground *= mix(1.0, 0.8, left * beachy);
+            ground = mix(ground, vec3(0.92, 0.94, 0.93), lace * beachy * 0.85);
+            arkWet = max(arkWet, (film + left * 0.7) * beachy);
+        }
+    }
     // Rain-wet ground: darker and glossier (sand dries first).
     ground *= mix(1.0, 0.74, envWetness * (1.0 - 0.4 * sandW) * (1.0 - snowW));
     arkWet = max(arkWet, envWetness * 0.75 * (1.0 - snowW));
     diffuseColor.rgb = ground * arkCloudShade(world);
+    // Under water (graphics pass): the light that reaches the bed is absorbed with depth, red first, so the sand turns
+    // blue-green and darker the deeper it lies (never blown out white), with sand ripples on the bed.
+    float depthBelow = envSeaLevel - world.y;
+    if (depthBelow > 0.0) {
+        vec3 absorb = exp(-depthBelow * vec3(0.42, 0.12, 0.085)) * mix(1.0, 0.82, smoothstep(0.0, 2.0, depthBelow));
+        float bedRipple = sin(dot(p, vec2(0.6, 0.8)) * 5.5 + arkNoise(p * 0.7) * 4.0) * 0.5 + 0.5;
+        diffuseColor.rgb *= absorb * (0.92 + 0.12 * bedRipple * (1.0 - smoothstep(-2.0, 0.0, -depthBelow + 2.0) * 0.0));
+    }
     // The sun's caustics on the sea floor, fading with depth.
-    if (world.y < -0.05 && arkCaustics > 0.0) {
-        float under = smoothstep(-0.05, -0.6, world.y) * (1.0 - smoothstep(-4.0, -11.0, world.y));
-        diffuseColor.rgb += vec3(0.75, 0.95, 0.9) * min(arkCausticAt(world.xz, arkTime), 1.5) * under * arkCaustics * 0.12;
+    if (world.y < envSeaLevel - 0.05 && arkCaustics > 0.0) {
+        float under = smoothstep(0.05, 0.6, depthBelow) * (1.0 - smoothstep(4.0, 11.0, depthBelow));
+        diffuseColor.rgb += vec3(0.6, 0.9, 0.85) * min(arkCausticAt(world.xz, arkTime), 1.5) * under * arkCaustics * 0.1 * exp(-depthBelow * 0.15);
     }
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
@@ -506,6 +546,17 @@ void main() {
     float alpha = mix(0.2, 1.0, smoothstep(0.1, 5.5, depth));
     alpha = max(alpha, max(fresnel, foam));
     alpha = max(alpha, fresh * 0.82);
+    // Seen from under the water (graphics pass): the bright Snell's window overhead, rippling, and outside it the
+    // surface mirrors the dim blue-green below (total internal reflection). Opaque, never a hole to the sky.
+    if (cameraPosition.y < seaLevel - 0.02) {
+        vec3 up = normalize(vec3(-slope.x * 2.5, -1.0, -slope.y * 2.5));
+        float straight = max(dot(-view, -up), 0.0);
+        float window = smoothstep(0.62, 0.8, straight);
+        vec3 below = mix(vec3(0.04, 0.2, 0.24), vec3(0.08, 0.3, 0.32), daylight) * mix(0.35, 1.0, daylight);
+        vec3 through = mix(skyHorizon, skyZenith, 0.4) * (0.9 + 0.6 * pow(max(dot(-view, sunDirection), 0.0), 40.0)) * mix(0.25, 1.1, daylight);
+        colour = mix(below, through, window);
+        alpha = 1.0;
+    }
     gl_FragColor = vec4(colour, alpha);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -541,6 +592,7 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
         ]),
         transparent: true,
         depthWrite: false,
+        side: DoubleSide,
         fog: true
     });
     material.uniforms.depthMap.value = depth;
