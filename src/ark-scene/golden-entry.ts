@@ -302,7 +302,8 @@ async function mountGolden(el: HTMLElement) {
             if (!kin.length) return {found: false as const};
             const moving = options.still === false;
             const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
-            let pinning = Boolean((options.detail || moving) && debug);
+            // A small animal needs no pin (the scene drops its floor to 8 cm round one; 0.3 m would only push the camera back).
+            let pinning = Boolean((options.detail || moving) && debug && (handle.locate(kin[0].id)?.length ?? 1) >= 0.3);
             const pin = () => {
                 if (!pinning || !debug) return;
                 debug.controls.minDistance = 0.3;
