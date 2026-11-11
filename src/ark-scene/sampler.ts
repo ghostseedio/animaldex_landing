@@ -16,8 +16,10 @@
  * changes is underneath (the terrain, the trees, the house).
  */
 
-import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
-import {forestFill, rockSurfacePoint, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
+import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
+import {IcosahedronGeometry, type BufferGeometry} from "three";
+import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type FillItem} from "@/ark-scene/decor";
 import {treeAttachPoints, treeSway, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -443,12 +445,12 @@ export function allAttachPoints(): AttachPoint[] {
         if (item.kind !== "rock") return;
         const zone = zoneOf(item.x, item.z);
         const s = item.scale;
-        // On the drawn surface itself (decor.ts rockSurfacePoint is the shape vegetation.ts draws).
+        // On the drawn surface itself: the very triangles vegetation.ts draws (`drawnRockPoint`), 2 mm off them.
         for (let k = 0; k < 4; k++) {
             const a = random() * Math.PI * 2;
             const up = 0.1 + random() * 0.75;
-            const point = rockSurfacePoint(item, 3, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
-            add("rock_face", `decor${i}`, k, {x: point.x, y: point.y + 0.004, z: point.z}, {x: point.nx, y: point.ny, z: point.nz}, zone);
+            const point = drawnRockPoint(item, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
+            add("rock_face", `decor${i}`, k, {x: point.x + point.nx * 0.002, y: point.y + point.ny * 0.002, z: point.z + point.nz * 0.002}, {x: point.nx, y: point.ny, z: point.nz}, zone);
         }
         if (item.y < 0.4 && item.y > -0.7) {
             const a = random() * Math.PI * 2;
@@ -510,6 +512,118 @@ export function allAttachPoints(): AttachPoint[] {
     }
     attachCache = points;
     return points;
+}
+
+// MARK: - The drawn rocks
+
+const rockMeshes = new Map<number, {p: Float32Array; index: ArrayLike<number>}>();
+
+/**
+ * A rock's drawn mesh in its own frame, before the instance's scale: vegetation.ts `rock(variant)` (an icosphere of
+ * detail 3, each corner pushed out to decor.ts rockRadius, then 1.1 × 0.62 × 0.95 and lifted 0.18), so a point found
+ * on it lies on the flat faces actually drawn, not on the smooth shape between their corners (up to 5 cm apart).
+ */
+export function drawnRockMesh(variant: number): {p: Float32Array; index: ArrayLike<number>} {
+    const cached = rockMeshes.get(variant);
+    if (cached) return cached;
+    let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 3);
+    geometry.deleteAttribute("normal");
+    geometry.deleteAttribute("uv");
+    geometry = mergeVertices(geometry);
+    const position = geometry.getAttribute("position");
+    const p = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+        let x = position.getX(i);
+        let y = position.getY(i);
+        let z = position.getZ(i);
+        const l = Math.hypot(x, y, z) || 1;
+        x /= l;
+        y /= l;
+        z /= l;
+        const r = rockRadius(variant, x, y, z);
+        p[i * 3] = x * r * 1.1;
+        p[i * 3 + 1] = y * r * 0.62 + 0.18;
+        p[i * 3 + 2] = z * r * 0.95;
+    }
+    const mesh = {p, index: geometry.index!.array};
+    rockMeshes.set(variant, mesh);
+    return mesh;
+}
+
+/** Where a ray from the rock's middle along a direction in its own frame (y up) meets its drawn faces, in the world, with the face's normal. */
+export function drawnRockPoint(item: DecorItem, dx: number, dy: number, dz: number): {x: number; y: number; z: number; nx: number; ny: number; nz: number} {
+    const {p, index} = drawnRockMesh(item.variant % 3);
+    // In the mesh's own frame the shape is stretched 1.1 × 0.62 × 0.95 round (0, 0.18, 0).
+    let rx = dx * 1.1;
+    let ry = dy * 0.62;
+    let rz = dz * 0.95;
+    const rl = Math.hypot(rx, ry, rz) || 1;
+    rx /= rl;
+    ry /= rl;
+    rz /= rl;
+    const ox = 0;
+    const oy = 0.18;
+    const oz = 0;
+    let best = Infinity;
+    let hit = {x: 0, y: 0.18, z: 0, nx: 0, ny: 1, nz: 0};
+    for (let t = 0; t < index.length; t += 3) {
+        const a = index[t] * 3;
+        const b = index[t + 1] * 3;
+        const c = index[t + 2] * 3;
+        const e1x = p[b] - p[a];
+        const e1y = p[b + 1] - p[a + 1];
+        const e1z = p[b + 2] - p[a + 2];
+        const e2x = p[c] - p[a];
+        const e2y = p[c + 1] - p[a + 1];
+        const e2z = p[c + 2] - p[a + 2];
+        // Möller–Trumbore.
+        const hx = ry * e2z - rz * e2y;
+        const hy = rz * e2x - rx * e2z;
+        const hz = rx * e2y - ry * e2x;
+        const det = e1x * hx + e1y * hy + e1z * hz;
+        if (Math.abs(det) < 1e-12) continue;
+        const f = 1 / det;
+        const sx = ox - p[a];
+        const sy = oy - p[a + 1];
+        const sz = oz - p[a + 2];
+        const u = f * (sx * hx + sy * hy + sz * hz);
+        if (u < -1e-9 || u > 1 + 1e-9) continue;
+        const qx = sy * e1z - sz * e1y;
+        const qy = sz * e1x - sx * e1z;
+        const qz = sx * e1y - sy * e1x;
+        const v = f * (rx * qx + ry * qy + rz * qz);
+        if (v < -1e-9 || u + v > 1 + 1e-9) continue;
+        const d = f * (e2x * qx + e2y * qy + e2z * qz);
+        if (d <= 0 || d >= best) continue;
+        best = d;
+        // The face's normal, pointing out (away from the middle).
+        let nx = e1y * e2z - e1z * e2y;
+        let ny = e1z * e2x - e1x * e2z;
+        let nz = e1x * e2y - e1y * e2x;
+        if (nx * rx + ny * ry + nz * rz < 0) {
+            nx = -nx;
+            ny = -ny;
+            nz = -nz;
+        }
+        hit = {x: ox + rx * d, y: oy + ry * d, z: oz + rz * d, nx, ny, nz};
+    }
+    // Into the world: the instance's scale (s, s × squash, s), its turn about y, its foot sunk as the decor is.
+    const s = item.scale;
+    const sy = s * rockSquash(item);
+    const c = Math.cos(item.rotation);
+    const sn = Math.sin(item.rotation);
+    const lx = hit.x * s;
+    const ly = hit.y * sy;
+    const lz = hit.z * s;
+    // Normals take the inverse scale.
+    let nx = hit.nx / s;
+    let ny = hit.ny / sy;
+    let nz = hit.nz / s;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl;
+    ny /= nl;
+    nz /= nl;
+    return {x: item.x + lx * c + lz * sn, y: item.y - DECOR_SINK + ly, z: item.z - lx * sn + lz * c, nx: nx * c + nz * sn, ny, nz: -nx * sn + nz * c};
 }
 
 export type AttachQuery = {tag?: AttachTag | AttachTag[]; spot?: AttachSpot; near?: {x: number; z: number; radius: number}; size?: number; zone?: ArkZone};

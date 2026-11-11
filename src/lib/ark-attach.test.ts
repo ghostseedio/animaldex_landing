@@ -14,8 +14,9 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import manifest from "@/ark-scene/assets-manifest.json";
 import attachData from "@/ark-scene/tree-attach.json";
-import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
+import {rock} from "@/ark-scene/vegetation";
 import {EVERY_TIER_FILL, allAttachPoints, attachPointAt, attachSway, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {TREE_CLOSE, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 
@@ -239,11 +240,46 @@ test("attach: a camera close on a leaf draws that tree at full detail, the level
     }
 });
 
+test("attach: every rock point lies on the rock vegetation.ts draws (its flat faces, within 3 mm), facing out of it", () => {
+    const meshes = [0, 1, 2].map((variant) => rock(variant).getAttribute("position") as BufferAttribute);
+    const decor = worldDecor();
+    const points = allAttachPoints().filter((point) => point.tag === "rock_face");
+    assert.ok(points.length > 500);
+    let worst = 0;
+    for (const point of points) {
+        const item = decor[Number(point.host.slice(5))];
+        // vegetation.ts's own instance matrix for a rock.
+        const matrix = new Matrix4().compose(new Vector3(item.x, item.y - DECOR_SINK, item.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), item.rotation), new Vector3(item.scale, item.scale * rockSquash(item), item.scale));
+        const P = meshes[item.variant % 3];
+        const p = new Vector3(point.position.x, point.position.y, point.position.z);
+        let best = Infinity;
+        let face = new Vector3();
+        const q = new Vector3();
+        for (let i = 0; i < P.count; i += 3) {
+            const tri = new Triangle(new Vector3().fromBufferAttribute(P, i).applyMatrix4(matrix), new Vector3().fromBufferAttribute(P, i + 1).applyMatrix4(matrix), new Vector3().fromBufferAttribute(P, i + 2).applyMatrix4(matrix));
+            tri.closestPointToPoint(p, q);
+            const d = q.distanceTo(p);
+            if (d < best) {
+                best = d;
+                face = tri.getNormal(new Vector3());
+            }
+        }
+        worst = Math.max(worst, best);
+        assert.ok(best < 0.003, `${point.id} is ${best.toFixed(4)} m off its rock`);
+        assert.ok(Math.abs(face.dot(new Vector3(point.normal.x, point.normal.y, point.normal.z))) > 0.95, `${point.id} normal`);
+        // Out of the rock: away from its middle.
+        const middle = new Vector3(item.x, item.y - DECOR_SINK + 0.18 * item.scale * rockSquash(item), item.z);
+        assert.ok(p.clone().sub(middle).dot(new Vector3(point.normal.x, point.normal.y, point.normal.z)) > 0, `${point.id} faces into its rock`);
+    }
+    assert.ok(worst > 0.0015, "points sit just off the face (2 mm)");
+});
+
 test("attach: every other point on the island is where it was before the asset trees (ids and positions)", () => {
     const at = (id: string) => allAttachPoints().find((point) => point.id === id) as AttachPoint;
     const close = (point: AttachPoint, x: number, y: number, z: number) => Math.hypot(point.position.x - x, point.position.y - y, point.position.z - z) < 1e-9;
     assert.ok(close(at("house_wall:house:22"), 13.61, 2.682718591185397, 52.698830182105304));
-    assert.ok(close(at("rock_face:decor261:3"), -47.75783732649006, 0.16665187806617743, 64.09430146821144));
+    // (Rock points moved by millimetres to centimetres onto the drawn faces; their ids stay.)
+    assert.ok(Math.hypot(at("rock_face:decor261:3").position.x + 47.75783732649006, at("rock_face:decor261:3").position.z - 64.09430146821144) < 0.05);
     assert.ok(close(at("leaf_litter:ground:0"), -45.331413857638836, 9.989909153851938, 4.594026831910014));
     assert.ok(close(at("canopy_perch:decor682:0"), -34.58297404572754, 10.50234125028666, 29.229413565007295));
     const ids = allAttachPoints().map((point) => point.id);
