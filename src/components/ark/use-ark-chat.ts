@@ -1,23 +1,29 @@
 "use client";
 
 /**
- * The shared Ark in the animal chat (Part 2, docs/ark-next.md): the line
- * under a live step card, and the arrival a step that worked brings.
+ * The shared Ark in the animal chat (Part 2, docs/ark-next.md; captures +
+ * thrive, 2026-11-11): the line under a live step card, the line under the
+ * reply that finished a step that worked, and (history) the arrival a step
+ * brought before captures did.
  *
  * - `useArkStepOffer`: `/api/ark/step-offer` for this species, read when a
- *   step is live and again after an arrival.
+ *   step is live and again after a step worked: "If this works, your
+ *   {species} will thrive", by state and band.
+ * - `useArkStepResults`: for each reply that finished a worked step (its
+ *   step id), `/api/ark/step-result`: the band it left the reader's animals
+ *   in and the step's locked Ark Score points. A step that worked while the
+ *   chat is open is read again for a couple of minutes (the outbox applies it
+ *   once a minute); when it lands, the line plays in.
  * - `useArkArrivals`: which replies that finished a worked step brought one
- *   of the reader's animals aboard (the public snapshot, read with their
- *   session, so theirs come back `mine`; the server sets `arrived_at` to the
- *   step's `done_at`). A step that worked while the chat is open is read
- *   again for a couple of minutes (the outbox applies arrivals once a
- *   minute); when it lands, the thread's line plays in, the Ark panel flies
- *   to it, and the arrival counts as seen.
+ *   of the reader's animals aboard, under the old rule (the public snapshot,
+ *   read with their session; never a capture's animal). History only: steps
+ *   no longer bring animals.
  *
- * Nothing opens a window. Development: `?arkoffer=new|pair_complete|milestone`
- * draws the line without a session; `?arkarrival=1` reads the fixture Ark
- * and treats every worked step in the thread as having brought one
- * (`?arkarrival=fresh`: and plays them in, as if they had just landed).
+ * Nothing opens a window. Development: `?arkoffer=thrive|good|prime|later`
+ * draws the step's line without a session; `?arkresult=1` answers every
+ * worked step in the thread as done (`?arkresult=fresh`: and plays them in);
+ * `?arkarrival=1` reads the fixture Ark and treats every worked step in the
+ * thread as having brought one (`?arkarrival=fresh`: and plays them in).
  */
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
@@ -31,9 +37,9 @@ import {
     arkMatchArrivals,
     arkWorkedFinishers,
     decodeArkStepOffer,
-    type ArkStepOffer,
-    type ArkStepOfferState
+    type ArkStepOffer
 } from "@/lib/ark-world";
+import {decodeArkStepResult, type ArkStepResult} from "@/lib/ark-thrive";
 
 type Species = {speciesProfileId: string | null; slug: string | null; name: string | null};
 
@@ -68,9 +74,15 @@ export function useArkStepOffer({enabled, species, refreshKey = 0}: {enabled: bo
     useEffect(() => {
         if (!enabled || (!species.speciesProfileId && !species.slug)) return;
         const fixture = devParam("arkoffer");
-        if (fixture === "new" || fixture === "pair_complete" || fixture === "milestone") {
-            const state = fixture as ArkStepOfferState;
-            setOffer({key, value: {state, species: species.name ?? "Red Fox", livingBrought: state === "new" ? 0 : state === "pair_complete" ? 1 : 2, aboard: 3}});
+        const name = species.name ?? "Red Fox";
+        const fixtures: Record<string, ArkStepOffer> = {
+            thrive: {state: "thrive", species: name, livingBrought: 2, bandNow: "ordinary", bandIfWorked: "good"},
+            good: {state: "thrive", species: name, livingBrought: 1, bandNow: "good", bandIfWorked: "prime"},
+            prime: {state: "thrive", species: name, livingBrought: 2, bandNow: "prime", bandIfWorked: "prime"},
+            later: {state: "thrive_later", species: name, livingBrought: 0, bandNow: "ordinary", bandIfWorked: "good"}
+        };
+        if (fixture && fixtures[fixture]) {
+            setOffer({key, value: fixtures[fixture]});
             return;
         }
         let cancelled = false;
@@ -200,6 +212,116 @@ export function useArkArrivals({enabled, species, messages, onArrived}: {
         const arrivals = new Map<string, ArkThreadArrival>();
         found.forEach((animal, finisherId) => arrivals.set(finisherId, {animal, fresh: fresh.has(finisherId)}));
         return arrivals;
+    }, [found, fresh]);
+}
+
+// MARK: - What a step that worked did (captures + thrive)
+
+async function readStepResult(stepId: string): Promise<ArkStepResult | null> {
+    try {
+        const response = await fetch(`/api/ark/step-result?step=${encodeURIComponent(stepId)}`, {headers: {Accept: "application/json"}, cache: "no-store"});
+        if (!response.ok) return null;
+        const body = await response.json() as {result?: unknown};
+        return decodeArkStepResult(body.result);
+    } catch {
+        return null;
+    }
+}
+
+/** Development's `?arkresult=1`: every worked step done, its animals thriving, in an order of bands that shows each. */
+function fixtureStepResult(index: number, species: Species): ArkStepResult {
+    const shapes: Array<Pick<ArkStepResult, "livingBrought" | "thriveBefore" | "thriveAfter" | "points">> = [
+        {livingBrought: 1, thriveBefore: "ordinary", thriveAfter: "good", points: 10},
+        {livingBrought: 2, thriveBefore: "good", thriveAfter: "prime", points: 30},
+        {livingBrought: 0, thriveBefore: null, thriveAfter: null, points: 10}
+    ];
+    return {status: "done", species: species.name ?? "Red Fox", ...shapes[index % shapes.length]};
+}
+
+export type ArkThreadStepResult = {result: ArkStepResult; fresh: boolean};
+
+/**
+ * The line under each reply that finished a worked step, by that reply's id:
+ * what the step did for the reader's animals of this kind. Read once when the
+ * thread opens; a step that worked while it is open is read again until it is
+ * done (`ARK_ARRIVAL_POLL_MS`), and then plays in (`fresh`). `onDone` runs
+ * once for each that lands while the chat is open (to read the step's line again).
+ */
+export function useArkStepResults({enabled, species, messages, onDone}: {
+    enabled: boolean;
+    species: Species;
+    messages: readonly Message[];
+    onDone?: () => void;
+}): Map<string, ArkThreadStepResult> {
+    const finishers = useMemo(() => (enabled ? arkWorkedFinishers(messages).filter((finisher) => finisher.stepId) : []), [enabled, messages]);
+    const finisherKey = finishers.map((finisher) => `${finisher.id}:${finisher.stepId}`).join(",");
+    const [found, setFound] = useState<Map<string, ArkStepResult>>(() => new Map());
+    const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set());
+    const known = useRef<Set<string> | null>(null);
+    const landed = useRef(new Set<string>());
+    const onDoneRef = useRef(onDone);
+    onDoneRef.current = onDone;
+    const finishersRef = useRef(finishers);
+    finishersRef.current = finishers;
+    const speciesRef = useRef(species);
+    speciesRef.current = species;
+    const speciesKey = `${species.speciesProfileId ?? ""}|${species.slug ?? ""}`;
+    useEffect(() => {
+        known.current = null;
+        landed.current = new Set();
+        setFound(new Map());
+        setFresh(new Set());
+    }, [speciesKey]);
+
+    const read = useCallback(async (only?: ReadonlySet<string>) => {
+        const current = finishersRef.current.filter((finisher) => !only || only.has(finisher.id));
+        if (current.length === 0) return;
+        const devFixture = devParam("arkresult");
+        const answers = await Promise.all(current.map(async (finisher, index) => [finisher.id, devFixture ? fixtureStepResult(index, speciesRef.current) : await readStepResult(finisher.stepId as string)] as const));
+        setFound((before) => {
+            const next = new Map(before);
+            for (const [id, result] of answers) if (result) next.set(id, result);
+            return next;
+        });
+        const recent = new Set(current.filter((finisher) => Date.now() - Date.parse(finisher.createdAt) < RECENT_MS).map((finisher) => finisher.id));
+        const playIn: string[] = [];
+        for (const [id, result] of answers) {
+            if (result?.status !== "done" || landed.current.has(id)) continue;
+            landed.current.add(id);
+            // Only a step that worked while this chat was open, just now (an older one read late is shown, not played).
+            if (devFixture === "fresh" || (known.current && !known.current.has(id) && recent.has(id))) playIn.push(id);
+        }
+        if (playIn.length === 0) return;
+        setFresh((before) => new Set([...Array.from(before), ...playIn]));
+        onDoneRef.current?.();
+    }, []);
+
+    useEffect(() => {
+        if (!enabled || finishers.length === 0) {
+            if (known.current === null && enabled && messages.length > 0) known.current = new Set();
+            return;
+        }
+        if (known.current === null) {
+            // The thread as it opened: these are shown, never played in.
+            known.current = new Set(finishers.map((finisher) => finisher.id));
+            void read();
+            return;
+        }
+        const waiting = new Set(finishers.filter((finisher) => !known.current?.has(finisher.id) && !landed.current.has(finisher.id)).map((finisher) => finisher.id));
+        if (waiting.size === 0) return;
+        // A step worked just now: the outbox applies it within the minute.
+        const timers = ARK_ARRIVAL_POLL_MS.map((delay) => window.setTimeout(() => void read(waiting), delay));
+        return () => timers.forEach((timer) => window.clearTimeout(timer));
+        // The finishers are read through their key.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled, finisherKey, read]);
+
+    return useMemo(() => {
+        const results = new Map<string, ArkThreadStepResult>();
+        found.forEach((result, finisherId) => {
+            if (result.status === "done") results.set(finisherId, {result, fresh: fresh.has(finisherId)});
+        });
+        return results;
     }, [found, fresh]);
 }
 

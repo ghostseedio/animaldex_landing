@@ -139,8 +139,8 @@ import {
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
-import {ArkArrivalLine, ArkStepOfferNote} from "@/components/ark/ark-chat-lines";
-import {useArkArrivals, useArkStepOffer} from "@/components/ark/use-ark-chat";
+import {ArkArrivalLine, ArkStepOfferNote, ArkStepResultLine} from "@/components/ark/ark-chat-lines";
+import {useArkArrivals, useArkStepOffer, useArkStepResults} from "@/components/ark/use-ark-chat";
 import {useArkPanelControl} from "@/components/ark/ark-panel";
 import {arkStepOutcome} from "@/lib/ark-measure";
 import {trackArk} from "@/lib/ark-measure-client";
@@ -1982,6 +1982,16 @@ function AskConversation({
             setArkOfferVersion((version) => version + 1);
         }
     });
+    // Captures + thrive: what each step that worked did for the reader's animals of this kind; the step's line reads again once one lands.
+    const arkStepResults = useArkStepResults({
+        enabled: ownerChat,
+        species: arkSpecies,
+        messages,
+        onDone: () => {
+            sticksToBottom.current = true;
+            setArkOfferVersion((version) => version + 1);
+        }
+    });
     const arkPanel = useArkPanelControl();
     /**
      * "I've done it" puts the bar in report mode: one button, no accepting
@@ -2660,11 +2670,29 @@ function AskConversation({
             </>
         );
     };
-    /** The animal a worked step brought aboard, under the reply that finished it (after its reveal), never under words still being typed out. */
+    /**
+     * Under the reply that finished a step that worked (after its reveal), never under words still being typed out:
+     * what the step did for their animals ("Your Komodo Dragons are thriving"), and, history only, the animal a step
+     * brought aboard before captures did.
+     */
     const arkArrivalBlock = (message: AskMessage) => {
+        if (pacer.revealing && pacer.messageId === message.id) return null;
         const arrival = arkArrivals.get(message.id);
-        if (!arrival || (pacer.revealing && pacer.messageId === message.id)) return null;
+        const stepResult = arkStepResults.get(message.id);
+        const resultLine = stepResult ? (
+            <ArkStepResultLine
+                key={`ark-result-${message.id}`}
+                result={stepResult.result}
+                slug={arkSpecies.slug}
+                fresh={stepResult.fresh && !reducedMotion}
+                words={words.ark}
+                locale={locale}
+            />
+        ) : null;
+        if (!arrival) return resultLine;
         return (
+            <>
+            {resultLine}
             <ArkArrivalLine
                 key={`ark-arrival-${arrival.animal.id}`}
                 species={arrival.animal.name}
@@ -2675,6 +2703,7 @@ function AskConversation({
                 locale={locale}
                 onSee={arkPanel ? () => arkPanel.show(arrival.animal) : undefined}
             />
+            </>
         );
     };
     /** The open step's own message: the animal's face and the step section, no words above it (those are the model's alone). */

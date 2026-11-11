@@ -1,15 +1,21 @@
 "use client";
 
 /**
- * The Ark's two lines in the animal chat (Part 2, docs/ark-next.md). Both are
- * UI labels, never the animal's words, and neither opens a window:
+ * The Ark's lines in the animal chat (Part 2, docs/ark-next.md; captures +
+ * thrive, 2026-11-11). Every one is a UI label, never the animal's words, and
+ * none opens a window:
  *
- * - under a live step card, what the step means for the Ark ("If this works,
- *   a Red Fox comes aboard the Ark");
- * - in the thread, under the reply that finished a step that worked, the
- *   animal that came aboard, with its icon. Fresh (it landed while the chat
- *   was open), it plays in; "See it in the Ark" opens the panel beside the
- *   chat on it, when the chat has one.
+ * - under a live step card, what the step does for the reader's animals of
+ *   that kind ("If this works, your Komodo Dragons will thrive", "…will be in
+ *   prime condition", "…will stay in prime condition", "…will thrive once one
+ *   is aboard"), by the server's state and bands;
+ * - in the thread, under the reply that finished a step that worked, what it
+ *   did: "Your Komodo Dragons are thriving", the band it left them in, and the
+ *   step's locked Ark Score points ("+30 Ark Score"). Fresh (it landed while
+ *   the chat was open), it plays in;
+ * - history: under a reply whose step brought an animal aboard (before
+ *   captures did), the animal, with its icon; "See it in the Ark" opens the
+ *   panel beside the chat on it, when the chat has one.
  * - under that line, when the reader may share it (founders contract,
  *   section 4): one calm moment, in place, never a window: the name question
  *   first when the server says to ask it, then "Share how this worked?".
@@ -18,6 +24,8 @@
 import {AskSpecialBubble} from "@/components/ask-animaldex/ask-messenger";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {arkArrivalLine, arkStepOfferLine, type ArkStepOffer, type ArkWorldWords} from "@/lib/ark-world";
+import {arkStepResultLines, type ArkStepResult, type ArkStepResultWords} from "@/lib/ark-thrive";
+import {pluralAnimalName} from "@/lib/ark-population";
 import {ARK_STORY_PROBLEM_MAX, ARK_STORY_STEP_MAX} from "@/lib/ark-founders";
 import {useArkFounderShare} from "@/components/ark/use-ark-chat";
 
@@ -54,17 +62,63 @@ export function ArkGlyph({className = "h-3.5 w-3.5"}: {className?: string}) {
     );
 }
 
-/** Under a live step: one quiet line with the Ark's mark. */
-export function ArkStepOfferNote({offer, words, locale}: {offer: Pick<ArkStepOffer, "state" | "species">; words: ArkWorldWords; locale: string}) {
+/** Under a live step: one quiet line with the Ark's mark, what the step does for their animals of this kind. */
+export function ArkStepOfferNote({offer, words, locale}: {offer: ArkStepOffer; words: ArkWorldWords; locale: string}) {
     return (
-        <p className="flex items-start gap-1.5 text-[12px] font-semibold leading-[18px] text-primary-200/90" data-testid={`ark-step-offer-${offer.state}`}>
+        <p className="flex items-start gap-1.5 text-[12px] font-semibold leading-[18px] text-primary-200/90" data-testid={`ark-step-offer-${offer.state}`} data-band={offer.bandNow}>
             <span className="mt-[2px] shrink-0 text-primary-300"><ArkGlyph /></span>
-            <span>{arkStepOfferLine(offer, words, locale)}</span>
+            <span>{arkStepOfferLine(offer, words, locale, pluralAnimalName)}</span>
         </p>
     );
 }
 
-/** In the thread: the animal that came aboard, with its icon. */
+/**
+ * In the thread, under the reply that finished a step that worked: what it
+ * did for their animals of this kind, in the step card's own container, with
+ * the kind's icon, the band in plain words, and the step's points.
+ */
+export function ArkStepResultLine({result, slug, fresh, words, locale, plain = true}: {
+    result: ArkStepResult;
+    slug: string | null;
+    fresh: boolean;
+    words: ArkStepResultWords;
+    locale: string;
+    /** The chat's plain thread (full width, as the step card); false beside the animal's face. */
+    plain?: boolean;
+}) {
+    const lines = arkStepResultLines(result, words, locale, pluralAnimalName);
+    if (!lines) return null;
+    return (
+        <div className={`pt-1.5 ${fresh ? "ask-ark-arrive" : ""}`} data-testid="ark-step-result" data-thrive={result.thriveAfter ?? undefined}>
+            <AskSpecialBubble avatarUrl={null} showsFace={false} plain={plain}>
+                <div className="flex items-center gap-3" role={fresh ? "status" : undefined}>
+                    {slug ? (
+                        <span className={`relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f6f1e7] ${fresh ? "ark-arrival-icon" : ""}`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={getSpeciesArtworkUrl(slug)} alt="" width={36} height={36} className="h-[82%] w-[82%] object-contain" />
+                        </span>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold leading-5 text-white">
+                            <span className="mr-1.5 inline-block align-[-2px] text-primary-300"><ArkGlyph /></span>
+                            {lines.line}
+                        </p>
+                        {lines.band || lines.points ? (
+                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                {lines.band ? (
+                                    <span className={`rounded-full px-2 py-0.5 text-[12px] font-semibold leading-5 ${result.thriveAfter === "ordinary" ? "bg-white/[0.08] text-white/80" : "bg-primary-400/15 text-primary-200"}`}>{lines.band}</span>
+                                ) : null}
+                                {lines.points ? <span className="text-[12px] font-bold tabular-nums text-primary-300" data-testid="ark-step-result-points">{lines.points}</span> : null}
+                            </p>
+                        ) : null}
+                    </div>
+                </div>
+            </AskSpecialBubble>
+        </div>
+    );
+}
+
+/** In the thread (history: a step brought it, before captures did): the animal that came aboard, with its icon. */
 export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plain = true, animalId = null}: {
     species: string;
     slug: string;
