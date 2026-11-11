@@ -71,6 +71,8 @@ export type FlipState = {
 export class WeatherFlips {
     private readonly cache = new Map<number, boolean>();
     private readonly flips = new Map<number, number>();
+    /** The last two changes at or before grid point `index` (the backward scan, done once per grid point). */
+    private readonly scans = new Map<number, [number, number]>();
 
     constructor(
         private readonly predicate: (ms: number) => boolean,
@@ -96,6 +98,9 @@ export class WeatherFlips {
         });
         this.flips.forEach((_, key) => {
             if (Math.abs(key - index) > keep) this.flips.delete(key);
+        });
+        this.scans.forEach((_, key) => {
+            if (Math.abs(key - index) > keep) this.scans.delete(key);
         });
     }
 
@@ -129,10 +134,17 @@ export class WeatherFlips {
             on = !on;
         }
         const found: number[] = since === -Infinity ? [] : [since];
-        for (let k = 0; k < steps && found.length < 2; k++) {
-            const i = index - k - 1;
-            if (this.at(i) !== this.at(i + 1)) found.push(this.flipIn(i));
+        let scan = this.scans.get(index);
+        if (!scan) {
+            const back: number[] = [];
+            for (let k = 0; k < steps && back.length < 2; k++) {
+                const i = index - k - 1;
+                if (this.at(i) !== this.at(i + 1)) back.push(this.flipIn(i));
+            }
+            scan = [back[0] ?? -Infinity, back[1] ?? -Infinity];
+            this.scans.set(index, scan);
         }
+        for (const flip of scan) if (found.length < 2 && flip !== -Infinity) found.push(flip);
         if (since === -Infinity) {
             since = found[0] ?? -Infinity;
             before = found[1] ?? -Infinity;

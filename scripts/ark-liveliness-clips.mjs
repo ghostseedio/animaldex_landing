@@ -88,6 +88,11 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext(DEVICES[deviceName]);
 const page = await context.newPage();
+// Every request for the sounds bucket, to show nothing is fetched before sound is turned on.
+const soundRequests = [];
+page.on("request", (request) => {
+    if (/animal-chat-sounds/.test(request.url())) soundRequests.push({at: Date.now(), url: request.url()});
+});
 const errors = [];
 page.on("pageerror", (error) => errors.push(String(error)));
 page.on("console", (message) => {
@@ -230,6 +235,34 @@ if (only.includes("prints")) {
         }
     }
     await page.evaluate(() => window.__arkGolden.handle.setClockScale(1));
+}
+
+if (only.includes("sound")) {
+    // Off until the tap: no context, no request. Then on (the harness's click stands for the viewer's tap).
+    await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment(calm), CALM);
+    await page.evaluate(() => window.__arkGolden.shoot("river_pond", "day"));
+    await wait(3000);
+    const before = await page.evaluate(() => ({unlocked: window.__arkDebug.liveliness.audio.unlocked, sound: window.__arkGolden.handle.sound()}));
+    notes.soundBefore = {...before, requests: soundRequests.length};
+    log("sound before", JSON.stringify(notes.soundBefore));
+    await page.evaluate(() => {
+        const button = document.createElement("button");
+        button.id = "sound-tap";
+        button.textContent = "sound";
+        Object.assign(button.style, {position: "fixed", left: "8px", top: "8px", zIndex: "9"});
+        button.onclick = () => window.__arkGolden.handle.setSound(true);
+        document.body.appendChild(button);
+    });
+    await page.click("#sound-tap");
+    for (let i = 0; i < 8; i++) {
+        await wait(2500);
+        const now = await page.evaluate(() => ({stats: window.__arkGolden.handle.stats().liveliness, counts: window.__arkDebug.liveliness.audio.counts, credits: window.__arkGolden.handle.sound().credits.length}));
+        log("sound", i, JSON.stringify(now));
+        notes[`sound-${i}`] = now;
+    }
+    notes.soundRequests = soundRequests.length;
+    notes.soundUrls = soundRequests.slice(0, 12).map((r) => r.url.replace(/^https:\/\/[^/]+/, ""));
+    await page.evaluate(() => window.__arkGolden.handle.setSound(false));
 }
 
 writeFileSync(path.join(out, "notes.json"), JSON.stringify({frames, notes, errors}, null, 2));
