@@ -16,7 +16,9 @@
 import {
     BufferAttribute,
     BufferGeometry,
+    CanvasTexture,
     Color,
+    SRGBColorSpace,
     ConeGeometry,
     CylinderGeometry,
     DoubleSide,
@@ -30,28 +32,218 @@ import {
     Vector3
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {sampleGround, seeded, smoothstep, zoneAt} from "@/ark-scene/world";
+import {sampleGround, seeded, smoothstep, zoneAt, ZONE_SITES} from "@/ark-scene/world";
 import {fieldRipe, snapToRow, type Crop} from "@/ark-scene/fields";
 import {setNearFade} from "@/ark-scene/near-fade";
 
-type DetailKind = "pebble" | "shell" | "seaweed" | "leaf" | "twig" | "pinecone" | "fern" | "mushroom" | "clover" | "sprout" | "cabbage" | "wheat" | "maize";
-const KINDS: DetailKind[] = ["pebble", "shell", "seaweed", "leaf", "twig", "pinecone", "fern", "mushroom", "clover", "sprout", "cabbage", "wheat", "maize"];
+type DetailKind = "pebble" | "shell" | "seaweed" | "leaf" | "twig" | "pinecone" | "fern" | "mushroom" | "clover" | "sprout" | "cabbage" | "wheat" | "maize" | "wheatband" | "litter" | "needles" | "sapling";
+/** The kinds built per cell round the camera (the wheat stands are built once for the whole farm: `wheatStands`). */
+const KINDS: DetailKind[] = ["pebble", "shell", "seaweed", "leaf", "twig", "pinecone", "fern", "mushroom", "clover", "sprout", "cabbage", "wheat", "maize", "litter", "needles", "sapling"];
 
 /** The plant each crop grows, and how many stand per m² of its field. Ploughed ground grows none. */
 const CROP_PLANTS: Partial<Record<Crop, {kind: DetailKind; perM2: number}>> = {
     sprouts: {kind: "sprout", perM2: 5},
     cabbage: {kind: "cabbage", perM2: 3.2},
-    cereal: {kind: "wheat", perM2: 5.5},
+    cereal: {kind: "wheat", perM2: 6.5},
     maize: {kind: "maize", perM2: 2.8}
 };
 
-type Item = {kind: DetailKind; x: number; y: number; z: number; yaw: number; tilt: number; scale: number; colour: number};
+/** `up`: lie along the ground's own slope (the litter mats), instead of standing upright with a small tilt. */
+type Item = {kind: DetailKind; x: number; y: number; z: number; yaw: number; tilt: number; scale: number; colour: number; up?: [number, number, number]};
 
 const CELL = 2;
+/** The farm's wheat stands show while the camera is this close to what it looks at. */
+const STANDS_WITHIN = 140;
 /** Detail out to this far from what the camera looks at, and only while the camera is this close. */
 const RADIUS = 16;
 const SHOW_WITHIN = 42;
-const CAP: Record<DetailKind, number> = {pebble: 2600, shell: 700, seaweed: 600, leaf: 3600, twig: 900, pinecone: 500, fern: 700, mushroom: 400, clover: 2600, sprout: 2400, cabbage: 1800, wheat: 2600, maize: 1400};
+const CAP: Record<DetailKind, number> = {pebble: 2600, shell: 700, seaweed: 600, leaf: 3600, twig: 900, pinecone: 500, fern: 700, mushroom: 400, clover: 2600, sprout: 2400, cabbage: 1800, wheat: 1600, maize: 1400, wheatband: 2600, litter: 1800, needles: 2400, sapling: 300};
+
+/**
+ * The forest floor's litter (batch 5), painted once in code (no third-party art): fallen leaves in browns, rusts and
+ * yellows with their midribs, a few twigs and needles, thinning to clear at the edge so a mat never shows a corner.
+ */
+let litterTexture: CanvasTexture | null = null;
+function litterMapTexture(): CanvasTexture | null {
+    if (litterTexture) return litterTexture;
+    if (typeof document === "undefined") return null;
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext("2d");
+    if (!g) return null;
+    const random = seeded(8086);
+    g.clearRect(0, 0, size, size);
+    const tones = [[122, 78, 40], [150, 96, 44], [104, 70, 42], [168, 120, 52], [96, 84, 46], [140, 62, 34], [118, 104, 58]];
+    const inside = () => {
+        const a = random() * Math.PI * 2;
+        const r = Math.sqrt(random()) * 112;
+        return [128 + Math.cos(a) * r, 128 + Math.sin(a) * r];
+    };
+    // Needles and twigs under the leaves.
+    for (let i = 0; i < 90; i++) {
+        const [x, y] = inside();
+        const a = random() * Math.PI;
+        const l = 6 + random() * 9;
+        g.strokeStyle = `rgb(${110 + random() * 40},${70 + random() * 25},${36 + random() * 15})`;
+        g.lineWidth = 0.8;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+        g.stroke();
+    }
+    for (let i = 0; i < 8; i++) {
+        const [x, y] = inside();
+        const a = random() * Math.PI;
+        const l = 25 + random() * 35;
+        g.strokeStyle = "rgb(78,62,46)";
+        g.lineWidth = 2;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+        g.stroke();
+    }
+    for (let i = 0; i < 95; i++) {
+        const [x, y] = inside();
+        const [r, gg, b] = tones[Math.floor(random() * tones.length)];
+        const shade = 0.8 + 0.35 * random();
+        const l = 7 + random() * 8;
+        g.save();
+        g.translate(x, y);
+        g.rotate(random() * Math.PI * 2);
+        g.fillStyle = `rgb(${Math.round(r * shade)},${Math.round(gg * shade)},${Math.round(b * shade)})`;
+        g.beginPath();
+        g.ellipse(0, 0, l, l * (0.38 + 0.2 * random()), 0, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = "rgba(40,28,18,0.45)";
+        g.lineWidth = 0.7;
+        g.beginPath();
+        g.moveTo(-l, 0);
+        g.lineTo(l, 0);
+        g.stroke();
+        g.restore();
+    }
+    litterTexture = new CanvasTexture(canvas);
+    litterTexture.colorSpace = SRGBColorSpace;
+    litterTexture.anisotropy = 4;
+    return litterTexture;
+}
+
+/** A flat litter mat, 0.9 m across, lit as ground (normal up). */
+function litterGeometry(): BufferGeometry {
+    const h = 0.45;
+    const positions = new Float32Array([-h, 0.012, -h, h, 0.012, h, h, 0.012, -h, -h, 0.012, -h, -h, 0.012, h, h, 0.012, h]);
+    const uvs = new Float32Array([0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1]);
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(positions, 3));
+    geometry.setAttribute("uv", new BufferAttribute(uvs, 2));
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]), 3));
+    geometry.setAttribute("color", new BufferAttribute(new Float32Array(18).fill(1), 3));
+    return geometry;
+}
+
+/**
+ * Standing wheat as a mass (batch 5): a strip of a field's stalks and ears, painted once in code (no third-party art):
+ * dense stems, golden ears leaning a little, darker and denser low down. Neutral light tones; the instance tints it ripe
+ * or green.
+ */
+let wheatTexture: CanvasTexture | null = null;
+function wheatBandTexture(): CanvasTexture | null {
+    if (wheatTexture) return wheatTexture;
+    if (typeof document === "undefined") return null;
+    const width = 256;
+    const height = 128;
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const g = canvas.getContext("2d");
+    if (!g) return null;
+    const random = seeded(31337);
+    g.clearRect(0, 0, width, height);
+    // The mass low down: a dense, darker band of stems.
+    for (let i = 0; i < 260; i++) {
+        const x = random() * width;
+        const top = height * (0.35 + 0.35 * random());
+        const tone = Math.round(120 + 60 * random());
+        g.strokeStyle = `rgb(${tone},${Math.round(tone * 0.95)},${Math.round(tone * 0.7)})`;
+        g.lineWidth = 1.2;
+        g.beginPath();
+        g.moveTo(x, height);
+        g.lineTo(x + 6 * random(), top);
+        g.stroke();
+    }
+    // Stalks to the ears, back (darker) to front (lighter), all leaning the same way a little.
+    for (let i = 0; i < 150; i++) {
+        const front = i / 150;
+        const x = random() * width;
+        const lean = 5 + 9 * random();
+        const top = height * (0.05 + 0.18 * random());
+        const tone = Math.round(150 + 80 * front + 20 * random());
+        g.strokeStyle = `rgb(${tone},${Math.round(tone * 0.93)},${Math.round(tone * 0.66)})`;
+        g.lineWidth = 1;
+        g.beginPath();
+        g.moveTo(x, height);
+        g.quadraticCurveTo(x + lean * 0.3, height * 0.5, x + lean, top + 12);
+        g.stroke();
+        // The ear: a plump grain head along the stalk's end, with whiskers.
+        g.save();
+        g.translate(x + lean, top + 6);
+        g.rotate(0.18 + 0.12 * random());
+        g.fillStyle = `rgb(${Math.min(255, tone + 30)},${Math.round((tone + 30) * 0.88)},${Math.round((tone + 30) * 0.58)})`;
+        g.beginPath();
+        g.ellipse(0, 0, 2.6, 8, 0, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = `rgba(${tone},${Math.round(tone * 0.9)},${Math.round(tone * 0.6)},0.7)`;
+        g.lineWidth = 0.6;
+        for (let k = -2; k <= 2; k++) {
+            g.beginPath();
+            g.moveTo(k * 0.8, -6);
+            g.lineTo(k * 2.2, -16);
+            g.stroke();
+        }
+        g.restore();
+    }
+    wheatTexture = new CanvasTexture(canvas);
+    wheatTexture.colorSpace = SRGBColorSpace;
+    wheatTexture.anisotropy = 4;
+    return wheatTexture;
+}
+
+/** Two crossed upright cards 1 m long, 0.72 m tall, leaning a little; lit from above like a crop's top (not their faces). */
+function wheatBandGeometry(): BufferGeometry {
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const h = 0.72;
+    const lean = 0.09;
+    for (const turn of [0.33, -0.33]) {
+        const c = Math.cos(turn);
+        const s = Math.sin(turn);
+        const corner = (u: number, v: number) => {
+            const x = (u - 0.5) * 1.0;
+            const y = v * h;
+            const z = v * lean;
+            positions.push(x * c + z * s, y, -x * s + z * c);
+            uvs.push(u, v);
+        };
+        corner(0, 0); corner(1, 0); corner(1, 1);
+        corner(0, 0); corner(1, 1); corner(0, 1);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    geometry.setAttribute("uv", new BufferAttribute(new Float32Array(uvs), 2));
+    const count = positions.length / 3;
+    const normals = new Float32Array(count * 3);
+    const colours = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        normals[i * 3 + 1] = 1;
+        // Darker low in the stand, where the light does not reach.
+        const v = uvs[i * 2 + 1];
+        colours[i * 3] = colours[i * 3 + 1] = colours[i * 3 + 2] = 0.6 + 0.45 * v;
+    }
+    geometry.setAttribute("normal", new BufferAttribute(normals, 3));
+    geometry.setAttribute("color", new BufferAttribute(colours, 3));
+    return geometry;
+}
 
 function colourGeometry(geometry: BufferGeometry, shade: (x: number, y: number, z: number) => number): BufferGeometry {
     const flat = geometry.index ? geometry.toNonIndexed() : geometry;
@@ -84,6 +276,42 @@ function flatLeaf(length: number, width: number, steps = 5): BufferGeometry {
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
     return geometry;
+}
+
+/** A fallen cluster of pine needles: thin slivers in a loose star (batch 5). */
+function needleCluster(): BufferGeometry {
+    const random = seeded(4411);
+    const points: number[] = [];
+    for (let i = 0; i < 14; i++) {
+        const a = random() * Math.PI * 2;
+        const l = 0.05 + random() * 0.04;
+        const ox = (random() - 0.5) * 0.04;
+        const oz = (random() - 0.5) * 0.04;
+        const w = 0.0025;
+        const dx = Math.cos(a);
+        const dz = Math.sin(a);
+        points.push(ox - dz * w, 0.004, oz + dx * w, ox + dz * w, 0.004, oz - dx * w, ox + dx * l, 0.006 + random() * 0.006, oz + dz * l);
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
+    return geometry;
+}
+
+/** A sapling of the understorey: a thin stem, a few leaves high on it (batch 5). */
+function sapling(): BufferGeometry {
+    const stem = new CylinderGeometry(0.006, 0.012, 0.75, 4, 1);
+    stem.translate(0, 0.375, 0);
+    stem.deleteAttribute("uv");
+    stem.deleteAttribute("normal");
+    const parts: BufferGeometry[] = [stem.toNonIndexed()];
+    for (let i = 0; i < 7; i++) {
+        const leaf = flatLeaf(0.11, 0.045, 3);
+        leaf.rotateX(-0.35);
+        leaf.rotateY(i * 2.39);
+        leaf.translate(0, 0.38 + i * 0.055, 0);
+        parts.push(leaf);
+    }
+    return mergeGeometries(parts)!;
 }
 
 function shapes(): Record<DetailKind, BufferGeometry> {
@@ -222,7 +450,11 @@ function shapes(): Record<DetailKind, BufferGeometry> {
         sprout: colourGeometry(sprout, () => 1),
         cabbage: colourGeometry(cabbage, (_, y) => (y > 0.05 ? 1.08 : 0.92)),
         wheat: colourGeometry(wheat, (_, y) => 0.85 + 0.3 * Math.min(y / 0.75, 1)),
-        maize: colourGeometry(maize, (_, y) => 0.8 + 0.15 * Math.min(y / 1.7, 1))
+        maize: colourGeometry(maize, (_, y) => 0.8 + 0.15 * Math.min(y / 1.7, 1)),
+        wheatband: wheatBandGeometry(),
+        litter: litterGeometry(),
+        needles: colourGeometry(needleCluster(), () => 1),
+        sapling: colourGeometry(sapling(), (_, y) => (y > 0.3 ? 1.05 : 0.7))
     };
 }
 
@@ -240,7 +472,12 @@ const TINTS: Record<DetailKind, string[]> = {
     cabbage: ["#6f9466", "#7a9e70", "#628a5c"],
     // Ripe first, then still green (fieldRipe picks the pair).
     wheat: ["#d2b468", "#c4a75c", "#a6a85c", "#97a052"],
-    maize: ["#4f7d2e", "#5a8834", "#46722a"]
+    maize: ["#4f7d2e", "#5a8834", "#46722a"],
+    // Ripe first, then still green (as wheat).
+    wheatband: ["#e2c272", "#d6b466", "#b4b464", "#a6aa5c"],
+    litter: ["#ffffff", "#e8dccb", "#d9d2c0", "#f2e2c8"],
+    needles: ["#9a6a3a", "#8a5e34", "#b07a40"],
+    sapling: ["#5a8a36", "#6b9640", "#4f7a30"]
 };
 
 /** What a cell grows, from its ground: expected items per m². */
@@ -261,10 +498,14 @@ function densities(x: number, z: number): {height: number; per: Partial<Record<D
     }
     if (forest > 0.3 && h > 0.4) {
         per.leaf = 6 * forest;
-        per.twig = 0.5 * forest;
+        per.twig = 0.6 * forest;
         per.pinecone = zone === "woodland" || zone === "mountains" ? 0.35 * forest : 0;
-        per.fern = 0.35 * forest;
-        per.mushroom = 0.12 * forest;
+        // Batch 5: a floor, not a painted texture: litter mats, needles under the conifers, more and bigger ferns, saplings.
+        per.litter = 1.3 * forest;
+        per.needles = zone === "woodland" || zone === "mountains" ? 2.6 * forest : 0;
+        per.fern = 0.6 * forest;
+        per.sapling = 0.1 * forest;
+        per.mushroom = 0.14 * forest;
     }
     if (grass > 0.3 && h > 0.5) {
         per.clover = 1.6 * grass;
@@ -292,7 +533,20 @@ function buildCell(cx: number, cz: number, share: number): Item[] {
             const y = sampleGround(x, z).height;
             if (kind !== "pebble" && kind !== "shell" && y < -0.02) continue;
             const tints = TINTS[kind];
-            items.push({kind, x, y, z, yaw: random() * Math.PI * 2, tilt: (random() - 0.5) * 0.4, scale: kind === "pebble" ? 0.4 + random() ** 2 * 2.4 : 0.7 + random() * 0.6, colour: Math.floor(random() * tints.length)});
+            const yaw = random() * Math.PI * 2;
+            const tilt = (random() - 0.5) * 0.4;
+            const roll = random();
+            const scale = kind === "pebble" ? 0.4 + roll ** 2 * 2.4 : kind === "fern" ? 0.7 + roll * 1.3 : kind === "sapling" ? 0.7 + roll * 0.8 : 0.7 + roll * 0.6;
+            const item: Item = {kind, x, y, z, yaw, tilt, scale, colour: Math.floor(random() * tints.length)};
+            if (kind === "litter") {
+                // Along the ground's slope, so the mat lies on it edge to edge.
+                const e = 0.4;
+                const nx = sampleGround(x - e, z).height - sampleGround(x + e, z).height;
+                const nz = sampleGround(x, z - e).height - sampleGround(x, z + e).height;
+                const l = Math.hypot(nx, 2 * e, nz);
+                item.up = [nx / l, (2 * e) / l, nz / l];
+            }
+            items.push(item);
         }
     }
     // Home's crops (batch 4): only well inside the fields; each plant moved onto its row's middle.
@@ -309,11 +563,60 @@ function buildCell(cx: number, cz: number, share: number): Item[] {
             const plant = snapToRow(px, pz);
             const grows = plant ? CROP_PLANTS[plant.crop] : undefined;
             if (!plant || !grows || keep > grows.perM2 / 7) continue;
+            // Cereal (batch 5) stands as a mass along its rows (`wheatStands`, the whole farm at once); single stalks
+            // here only on the field's outer fringe.
+            if (grows.kind === "wheat" && plant.edge > WHEAT_FRINGE) continue;
             const ripe = grows.kind === "wheat" ? (fieldRipe(plant.cell) ? 0 : 2) + (tone < 0.5 ? 0 : 1) : Math.floor(tone * TINTS[grows.kind].length);
             items.push({kind: grows.kind, x: plant.x, y: sampleGround(plant.x, plant.z).height, z: plant.z, yaw, tilt: (size - 0.5) * 0.2, scale: 0.8 + size * 0.4, colour: ripe});
         }
     }
     return items;
+}
+
+/** Inside this far from a cereal field's edge the wheat stands as a mass; outside it, single stalks (the fringe). */
+const WHEAT_FRINGE = 1.3;
+
+/**
+ * Every cereal field's standing wheat on the farm (batch 5), as crossed cards along the rows: built once, cheap (4
+ * triangles a card), so the field reads as one crop at every distance instead of a patch round the camera. Each card has
+ * a rank so a tier can thin them evenly.
+ */
+function wheatStands(): Array<Item & {rank: number}> {
+    const farm = ZONE_SITES.farm_garden;
+    const items: Array<Item & {rank: number}> = [];
+    for (let cx = Math.floor((farm.x - 46) / CELL); cx <= Math.ceil((farm.x + 46) / CELL); cx++) {
+        for (let cz = Math.floor((farm.z - 40) / CELL); cz <= Math.ceil((farm.z + 40) / CELL); cz++) {
+            // A cheap first test per cell; each card then checks its own ground, as the ground shader paints the rows.
+            const centre = sampleGround(cx * CELL + CELL / 2, cz * CELL + CELL / 2);
+            if ((centre.weights.farm_garden ?? 0) * smoothstep(0.6, 1, centre.land) < 0.45 || centre.height < 0.2) continue;
+            const random = seeded(((cx * 92821) ^ (cz * 68917) ^ 0x5a17) >>> 0);
+            for (let k = 0; k < Math.round(6.5 * CELL * CELL); k++) {
+                const px = cx * CELL + random() * CELL;
+                const pz = cz * CELL + random() * CELL;
+                const turn = random();
+                const size = random();
+                const tone = random();
+                const rank = random();
+                const plant = snapToRow(px, pz);
+                if (!plant || plant.crop !== "cereal" || plant.edge <= WHEAT_FRINGE) continue;
+                const ground = sampleGround(plant.x, plant.z);
+                // Where the ground paints rows (terrain.ts cropsHere): well inside the farm, off the sand.
+                if ((ground.weights.farm_garden ?? 0) * smoothstep(0.6, 1, ground.land) < 0.7 || ground.height < 0.2) continue;
+                items.push({
+                    kind: "wheatband",
+                    x: plant.x,
+                    y: ground.height - 0.02,
+                    z: plant.z,
+                    yaw: Math.atan2(-plant.direction.z, plant.direction.x) + (turn - 0.5) * 0.5,
+                    tilt: (size - 0.5) * 0.08,
+                    scale: 0.85 + size * 0.3,
+                    colour: (fieldRipe(plant.cell) ? 0 : 2) + (tone < 0.5 ? 0 : 1),
+                    rank
+                });
+            }
+        }
+    }
+    return items.sort((a, b) => a.rank - b.rank);
 }
 
 export class NearDetail {
@@ -331,19 +634,44 @@ export class NearDetail {
     private readonly tilt = new Quaternion();
     private readonly colour = new Color();
     private dirty = false;
+    private materials: MeshStandardMaterial[] = [];
+    /** The per-cell detail (shown only close up) and the farm's wheat stands (shown from further). */
+    private readonly detail = new Group();
+    private readonly stands: InstancedMesh;
+    private standsTotal = 0;
 
     constructor() {
         const geometry = shapes();
         const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, side: DoubleSide});
+        const wheatMaterial = new MeshStandardMaterial({vertexColors: true, roughness: 0.9, side: DoubleSide, map: wheatBandTexture(), alphaTest: 0.4});
+        // Litter lies on the ground: cut out, and drawn just in front of it.
+        const litterMaterial = new MeshStandardMaterial({vertexColors: true, roughness: 0.95, map: litterMapTexture(), alphaTest: 0.5, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2});
+        this.materials = [material, wheatMaterial, litterMaterial];
+        this.group.add(this.detail);
+        const stands = wheatStands();
+        this.stands = new InstancedMesh(geometry.wheatband, wheatMaterial, Math.max(stands.length, 1));
+        stands.forEach((item, i) => {
+            this.rotation.setFromAxisAngle(this.axis.set(0, 1, 0), item.yaw);
+            this.tilt.setFromAxisAngle(this.axis.set(1, 0, 0), item.tilt);
+            this.rotation.multiply(this.tilt);
+            this.matrix.compose(this.position.set(item.x, item.y, item.z), this.rotation, this.size.setScalar(item.scale));
+            this.stands.setMatrixAt(i, this.matrix);
+            this.stands.setColorAt(i, this.colour.set(TINTS.wheatband[item.colour]));
+        });
+        this.standsTotal = stands.length;
+        this.stands.count = stands.length;
+        this.stands.receiveShadow = true;
+        this.stands.computeBoundingSphere();
+        this.group.add(this.stands);
         for (const kind of KINDS) {
-            const mesh = new InstancedMesh(geometry[kind], material, CAP[kind]);
+            const mesh = new InstancedMesh(geometry[kind], kind === "litter" ? litterMaterial : material, CAP[kind]);
             mesh.instanceMatrix.setUsage(DynamicDrawUsage);
             mesh.count = 0;
             mesh.frustumCulled = false;
             mesh.receiveShadow = true;
-            mesh.castShadow = kind === "fern" || kind === "mushroom" || kind === "maize";
+            mesh.castShadow = kind === "fern" || kind === "mushroom" || kind === "maize" || kind === "sapling";
             this.meshes.set(kind, mesh);
-            this.group.add(mesh);
+            this.detail.add(mesh);
         }
     }
 
@@ -351,6 +679,8 @@ export class NearDetail {
     setShare(share: number) {
         if (share === this.share) return;
         this.share = share;
+        // The wheat stands thin evenly (they are sorted by rank), never below half: the field must still read as one.
+        this.stands.count = Math.round(this.standsTotal * Math.max(share, 0.5));
         this.cells.clear();
         this.lastCell = "";
     }
@@ -360,7 +690,8 @@ export class NearDetail {
         // The near-camera fade's reach follows the view (near-fade.ts): a close-up keeps its subject.
         setNearFade(viewDistance);
         const show = viewDistance < SHOW_WITHIN && this.share > 0;
-        this.group.visible = show;
+        this.detail.visible = show;
+        this.stands.visible = viewDistance < STANDS_WITHIN;
         if (!show) return;
         const cx = Math.floor(target.x / CELL);
         const cz = Math.floor(target.z / CELL);
@@ -406,9 +737,16 @@ export class NearDetail {
                 const mesh = this.meshes.get(item.kind)!;
                 const n = counts.get(item.kind) ?? 0;
                 if (n >= CAP[item.kind]) continue;
-                this.rotation.setFromAxisAngle(this.axis.set(0, 1, 0), item.yaw);
-                this.tilt.setFromAxisAngle(this.axis.set(1, 0, 0), item.tilt * (item.kind === "fern" || item.kind === "mushroom" ? 0.3 : 1));
-                this.rotation.multiply(this.tilt);
+                if (item.up) {
+                    // Turned to lie on the slope, then spun about its own up.
+                    this.rotation.setFromUnitVectors(this.axis.set(0, 1, 0), this.position.set(item.up[0], item.up[1], item.up[2]));
+                    this.tilt.setFromAxisAngle(this.axis.set(0, 1, 0), item.yaw);
+                    this.rotation.multiply(this.tilt);
+                } else {
+                    this.rotation.setFromAxisAngle(this.axis.set(0, 1, 0), item.yaw);
+                    this.tilt.setFromAxisAngle(this.axis.set(1, 0, 0), item.tilt * (item.kind === "fern" || item.kind === "mushroom" || item.kind === "sapling" ? 0.3 : 1));
+                    this.rotation.multiply(this.tilt);
+                }
                 this.matrix.compose(this.position.set(item.x, item.y, item.z), this.rotation, this.size.setScalar(item.scale));
                 mesh.setMatrixAt(n, this.matrix);
                 mesh.setColorAt(n, this.colour.set(TINTS[item.kind][item.colour]));
@@ -427,5 +765,8 @@ export class NearDetail {
             mesh.geometry.dispose();
             mesh.dispose();
         });
+        this.stands.geometry.dispose();
+        this.stands.dispose();
+        this.materials.forEach((material) => material.dispose());
     }
 }

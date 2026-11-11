@@ -125,8 +125,9 @@ export class AssetRocks {
                     if (!geometry) return;
                     const mesh = new InstancedMesh(geometry, this.material, entry.instances.length);
                     mesh.count = 0;
-                    mesh.frustumCulled = false;
-                    mesh.castShadow = this.shadows;
+                    // Culled against the view by the bounds of the instances drawn at this level (set in update).
+                    mesh.frustumCulled = true;
+                    mesh.castShadow = this.shadows && lod.level !== "lod2";
                     mesh.receiveShadow = true;
                     mesh.userData.kind = "asset-rock";
                     entry.meshes[lod.level] = mesh;
@@ -151,7 +152,8 @@ export class AssetRocks {
         this.byAsset.forEach((entry) => {
             for (const level of LEVELS) {
                 const mesh = entry.meshes[level];
-                if (mesh) mesh.castShadow = shadows;
+                // Far rocks' shadows fall outside the shadow map's reach anyway.
+                if (mesh) mesh.castShadow = shadows && level !== "lod2";
             }
         });
         this.lastAt.set(Infinity, 0, 0);
@@ -186,6 +188,7 @@ export class AssetRocks {
                 mesh.visible = counts[level] > 0;
                 mesh.instanceMatrix.needsUpdate = true;
                 if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+                if (mesh.visible) mesh.computeBoundingSphere();
             }
         });
     }

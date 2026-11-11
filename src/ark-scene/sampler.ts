@@ -24,6 +24,7 @@ import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-a
 import {snowCover} from "@/ark-scene/snow";
 import {treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type Vec3 = {x: number; y: number; z: number};
@@ -80,13 +81,15 @@ function surfaceFrom(sample: GroundSample, x: number, z: number, environment: Ar
     const zone = zoneAt(sample) as ArkZone;
     const slope = 1 - normal.y;
     const height = sample.height;
-    const waterDepth = Math.max(environment.seaLevel - height, 0);
+    // The lake and the river keep their own level; the sea rises and falls with the tide (batch 5: water-level.ts).
+    const level = freshFrom(sample, x, z) >= 0.5 ? FRESH_LEVEL : environment.seaLevel;
+    const waterDepth = Math.max(level - height, 0);
     const weights: Partial<Record<SurfaceKind, number>> = {};
     let cover = {mean: 0, sure: 0};
     const put = (kind: SurfaceKind, value: number) => {
         if (value > 0.001) weights[kind] = (weights[kind] ?? 0) + value;
     };
-    if (height < environment.seaLevel - 0.05) {
+    if (height < level - 0.05) {
         const fresh = Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
         put(fresh ? "lakebed" : "seabed", 1);
     } else {

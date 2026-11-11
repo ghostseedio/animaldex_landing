@@ -10,7 +10,8 @@ import math
 import numpy as np
 
 from arkgeo import (UP, Asset, Mesh, attach, fbm, hexc, icosphere, jitter, kmeans, leaf_blade, mix, norm, perp,
-                    place_frame, resample, rotate, smoothstep, thin, tube, uv_sphere)
+                    place_frame, polyline_frames, resample, rotate, smoothstep, thin, tube, uv_sphere,
+                    vertex_normals)
 
 # Triangle budgets per level of detail (mid-range phone, instanced): the leaves fill what the wood leaves.
 BUDGET = (7500, 2200, 600)
@@ -252,7 +253,19 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
         count = max(2, int(math.ceil(limb.length / seg)) + 1)
         if limb.level == 0:
             count = max(count, spec.get("trunk_rings", [12, 6, 3])[detail])
-        pts, (rad, s) = resample(limb.pts, [limb.rad, limb.s / max(limb.length, 1e-6)], count)
+        buttress = limb.level == 0 and spec.get("buttress") and detail < 2
+        if buttress:
+            # Half the rings in the buttressed foot (where the fins change fast), the rest above.
+            B = spec["buttress"]
+            foot = min(0.9, B["height"] * 3.0 / max(limb.length, 1e-3))
+            nf = max(3, count // 2)
+            ts = np.concatenate([np.linspace(0, foot, nf, endpoint=False), np.linspace(foot, 1, count - nf)])
+            u = ts * limb.length
+            pts = np.stack([np.interp(u, limb.s, limb.pts[:, i]) for i in range(3)], 1)
+            rad = np.interp(u, limb.s, limb.rad)
+            s = ts
+        else:
+            pts, (rad, s) = resample(limb.pts, [limb.rad, limb.s / max(limb.length, 1e-6)], count)
         sides = spec.get("sides", D["sides"])[lvl] if "sides" in spec and detail == 0 else D["sides"][lvl]
         if limb.level == 0 and "trunk_sides" in spec:
             sides = spec["trunk_sides"][detail]
@@ -262,14 +275,13 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
             sw = limb.sway(s)
         W = np.stack([sw, np.full(len(sw), limb.phase), np.zeros(len(sw)), np.zeros(len(sw))], 1)
         ring_shape = None
-        if limb.level == 0 and spec.get("buttress") and detail < 2:
-            B = spec["buttress"]
+        if buttress:
             hts = pts[:, 1]
 
             def ring_shape(i, a, B=B, hts=hts):
                 h = max(hts[i], 0)
                 k = B["amount"] * math.exp(-h / B["height"])
-                return 1 + k * np.maximum(0, np.cos(B["fins"] * (a - B["offset"]))) ** 6
+                return 1 + k * np.maximum(0, np.cos(B["fins"] * (a - B["offset"]))) ** B.get("power", 6)
         elif spec["bark"].get("rough") and limb.level <= 1:
             rough = spec["bark"]["rough"]
 
@@ -277,6 +289,12 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
                 return 1 + rough * np.cos(a * max(3, sides // 2) + i * 1.7)
         cap = not (limb.level == 0 and spec.get("open_top")) and rad[-1] > 0.012
         P, F, N, C, W2 = tube(pts, rad, sides, wind=W, color_fn=fn, ring_shape=ring_shape, cap_end=cap)
+        if buttress:
+            # The fins' flanks face sideways, not out from the axis: normals from the surface itself
+            # (radial normals lit the flanks as if they faced out, and screen-space AO read them as
+            # deep black slots), then the bark colour again with those normals.
+            N = vertex_normals(P, F)
+            C = fn(P, N, None, None)
         if limb.broken and detail == 0:
             C[-1:] = hexc("#c9b48a")
         out.add(P, F, N, C, W2)
@@ -941,9 +959,20 @@ def tree_attach(spec, tree, rng):
             continue
         if limb.level == 0:
             top = min(spec.get("bark_top", 0.75), 0.95)
+            B = spec.get("buttress")
+            if B:
+                _, U_, V_ = polyline_frames(limb.pts)
             for t in np.linspace(0.06, top, 10):
                 p, d, r = limb.at(t)
                 side = rotate(perp(d), d, rng.uniform(0, 2 * math.pi))
+                if B:
+                    # Between two buttress fins (where the trunk is its plain radius), in the angle
+                    # convention the trunk tube is built with.
+                    i = int(np.argmin(np.abs(limb.s - t * limb.length)))
+                    a = math.atan2(side @ V_[i], side @ U_[i])
+                    k = round((a - B["offset"]) * B["fins"] / (2 * math.pi) - 0.5)
+                    a = B["offset"] + (2 * k + 1) * math.pi / B["fins"]
+                    side = U_[i] * math.cos(a) + V_[i] * math.sin(a)
                 side = norm(side - d * (side @ d))
                 pts.append(attach("bark", p + side * r, side, d, (0.005, min(1.0, 2.5 * r + 0.15)), lod=0,
                                   spot="bark"))
@@ -1386,7 +1415,9 @@ SPECIES = {
                     tip=hexc("#8aac4a"), fold=0.3, curl=0.1, keep_scale=[1, 1, 1], grow_scale=[1, 1, 1]),
         bark=dict(color=hexc("#a49a86"), dark=hexc("#6e6656"), fx=2, fy=0.6, contrast=0.7,
                   moss=dict(color=hexc("#6a7a3a"), lo=0.3, hi=1.1, top=99)),
-        buttress=dict(fins=5, amount=3.2, height=1.4, offset=0.3), trunk_sides=[20, 12, 6], trunk_rings=[22, 10, 4],
+        # Buttresses: wedge fins with real thickness (power 3, 48 sides near so each fin spans several
+        # vertices), half the trunk rings in the foot.
+        buttress=dict(fins=5, amount=3.2, height=1.4, offset=0.3, power=3), trunk_sides=[48, 24, 6], trunk_rings=[24, 12, 4],
         lianas=4, bromeliads=7, bark_top=0.75, budget=(9500, 2800, 800), seg_scale=1.5, card_lobes=7, n_branch=24),
     "snag": dict(
         H=7, trunk=dict(length=6.0, radius=0.3, taper=0.6, wobble=0.04, lean=0.05, flare=0.45),

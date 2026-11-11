@@ -75,6 +75,9 @@ ${NOISE_GLSL}`)
     // Only dark bark is lifted (pale birch and emergent bark stays as it is, or far forests turn to white sticks).
     float arkLift = mix(1.55, 1.0, smoothstep(0.05, 0.14, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))));
     diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);
+    // Moss on the roots and the trunk's foot (batch 5), in patches.
+    float arkMoss = arkWood * (1.0 - smoothstep(0.25, 1.1, vArkLocal.y)) * smoothstep(0.4, 0.68, arkNoise(vArkLocal.xz * 7.0 + vArkLocal.y * 4.0));
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.115, 0.03) * (0.8 + 0.4 * arkGrain), arkMoss * 0.75);
 }`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
