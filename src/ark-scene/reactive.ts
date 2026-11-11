@@ -45,7 +45,7 @@
  */
 
 import {canEat, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
-import {clampLook, headLimits as headLimitsOf, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
+import {headLimits as headLimitsOf, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
 import {animalPersonality, unit, type ArkPersonality} from "@/lib/ark-clock";
 import {alarmLevel} from "@/lib/ark-sound";
 import {GAIT_CADENCE} from "@/ark-scene/behaviour-profile";
@@ -403,6 +403,9 @@ type Agent = {
     woke: {at: number; until: number; why: "threat" | "alarm" | "kin" | "camera"} | null;
     /** Its senses asleep (its profile with sight and hearing cut), made once. */
     dozing: ReactiveInput | null;
+    /** Where its body is turning to (radians off the shared heading), and until when it keeps a move's facing after the move eases off. */
+    bodyGoal: number;
+    moveHold: number;
 };
 
 function newAgent(id: string, now: number): Agent {
@@ -437,7 +440,9 @@ function newAgent(id: string, now: number): Agent {
         camApproach: false,
         camNear: false,
         woke: null,
-        dozing: null
+        dozing: null,
+        bodyGoal: 0,
+        moveHold: -1e9
     };
 }
 
@@ -458,6 +463,8 @@ const ALARM_FLIGHT = 1.3;
  */
 const BACK_STEPS = new Set<ReactiveAction>(["back_off_camera", "wait_turn"]);
 const BACK_STEP_SPEED = 0.28;
+/** The actions in which it turns its body to keep what it watches in view (a threat, its prey, the camera it watches); in any other a look is the head's alone. */
+const BODY_WATCH = new Set<ReactiveAction>(["alert", "freeze", "threat_display", "shield_young", "hide_behind_parent", "play_dead", "recover", "sentinel", "stalk", "watch_prey", "watch_camera"]);
 /** How much further the one on sentinel watch sees: it is looking for exactly this. */
 const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -968,10 +975,13 @@ export class ReactiveLayer {
         const wz = target.z - agent.offset.z;
         const wl = Math.hypot(wx, wz);
         let moveFace: number | null = null;
-        if (!backStep && wl > 1e-4 && dt > 0 && Math.min(wl / dt, speed) > BACK_STEP_SPEED) {
+        // A move starts above 0.3 m/s and, once going, carries on down to 0.15 (no flicking between moving and standing).
+        const moveFrom = world.now < agent.moveHold ? 0.15 : 0.3;
+        if (!backStep && wl > 1e-4 && dt > 0 && Math.min(wl / dt, speed) > moveFrom) {
             const dir = Math.atan2(wx, wz);
             moveFace = dir;
-            if (Math.abs(wrapAngle(dir - (me.shared.yaw + agent.bodyYaw))) > 1.2) speed = Math.min(speed, BACK_STEP_SPEED);
+            // More than 70 degrees off the way: it turns on the spot first (no step), then goes.
+            if (Math.abs(wrapAngle(dir - (me.shared.yaw + agent.bodyYaw))) > 1.2) speed = 0;
         }
         const before = {x: agent.offset.x, z: agent.offset.z};
         this.moveOffset(agent, target, speed, dt, reach);
@@ -979,7 +989,8 @@ export class ReactiveLayer {
         // Its actual step this frame (the envelope pulling it in, keeping short of prey) decides the facing when it is a move.
         const sx = agent.offset.x - before.x;
         const sz = agent.offset.z - before.z;
-        if (!backStep && dt > 0 && Math.hypot(sx, sz) / dt > BACK_STEP_SPEED) moveFace = Math.atan2(sx, sz);
+        if (!backStep && dt > 0 && Math.hypot(sx, sz) / dt > moveFrom) moveFace = Math.atan2(sx, sz);
+        if (moveFace !== null) agent.moveHold = world.now + 0.4;
 
         agent.mode = action;
         if (look) {
@@ -987,7 +998,7 @@ export class ReactiveLayer {
             agent.lookLabel = lookLabel;
         }
         const scan = !look && (action === "scan" || action === "sentinel" || action === "alert");
-        this.stepLook(me, agent, look, scan, world, dt, limits, moveFace ?? faceYaw, action, moveFace !== null);
+        this.stepLook(me, agent, look, scan, world, dt, limits, faceYaw, action, moveFace);
         agent.crouch += (crouchWant - agent.crouch) * Math.min(dt * 4, 1);
         const alarmed = agent.threat || heardNow ? 1 : action === "recover" ? alarmLevel((world.now - agent.reactedAt) * 1000) : 0;
         // Woken here: kept up while it reacts or recovers; calm, it goes back to sleep when its time is up.
@@ -1471,7 +1482,7 @@ export class ReactiveLayer {
         agent.offset.z = pz + uz * want - me.shared.z;
     }
 
-    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction, moving = false) {
+    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction, moveDir: number | null = null) {
         const head = {x: me.shared.x + agent.offset.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z + agent.offset.z};
         const bodyNow = me.shared.yaw + agent.bodyYaw;
         let want: {yaw: number; pitch: number};
@@ -1485,14 +1496,25 @@ export class ReactiveLayer {
             const wide = action === "sentinel" ? 1 : action === "alert" ? 0.9 : 0.7;
             want = {yaw: (unit(me.id, "scan-yaw", agent.scanIndex) * 2 - 1) * limits.yaw * wide, pitch: (unit(me.id, "scan-pitch", agent.scanIndex) - 0.35) * 0.3 + (action === "sentinel" ? 0.12 : 0)};
         } else want = {yaw: 0, pitch: action === "feed" || action === "drink" ? -limits.down : 0};
-        const clamped = clampLook(want, limits);
-        // The body turns when it must (a threat behind it, fleeing, facing the camera to investigate), at its own pace.
-        let bodyWant = clamped.body;
-        if (faceYaw !== null) bodyWant = wrapAngle(faceYaw - me.shared.yaw);
-        // Moving, it turns right round if it must (the way it goes may lie behind the shared heading); standing, a little.
-        const maxBody = moving ? Math.PI : action === "flee" ? 1.2 : 0.9;
-        bodyWant = Math.min(Math.max(bodyWant, -maxBody), maxBody);
-        agent.bodyYaw = wrapAngle(agent.bodyYaw + wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (moving || action === "flee" ? 6 : 2.5), 1));
+        // The body (radians off the shared heading). Moving, it faces the way it goes. A deliberate facing (a display at a
+        // threat, investigating the camera) turns it there. Watching something, the head goes first and the body turns only
+        // when the head can't follow (past its limit), squaring up to it, and then holds: a dead zone, so it does not hunt
+        // back and forth (before, the body's share of the look was set back to nothing as soon as the head could reach,
+        // so a watcher swung to and fro). A calm look (a herd mate, its own flank, a spot) is the head's alone. With
+        // nothing to watch it comes back to the shared heading, and while the shared layer walks it, it keeps to it.
+        const moving = moveDir !== null;
+        if (moving) agent.bodyGoal = wrapAngle(moveDir! - me.shared.yaw);
+        else if (world.now < agent.moveHold) {
+            // A move easing off: it keeps the move's facing a moment (no flick).
+        } else if (faceYaw !== null) agent.bodyGoal = wrapAngle(faceYaw - me.shared.yaw);
+        else if (me.shared.moving) agent.bodyGoal = 0;
+        else if (look && BODY_WATCH.has(action)) {
+            if (limits.bodyAfter > 0 && Math.abs(want.yaw) > limits.yaw) agent.bodyGoal = wrapAngle(agent.bodyYaw + want.yaw);
+        } else agent.bodyGoal = 0;
+        // At its own pace: big animals turn slower (the behaviour lane's turn rate, 1.8 / length^0.4 rad/s, 0.7–3.5), moving twice that.
+        const rate = Math.min(Math.max(1.8 / Math.pow(Math.max(me.length, 0.1), 0.4), 0.7), 3.5) * (moving || action === "flee" ? 2 : 1);
+        const d = wrapAngle(agent.bodyGoal - agent.bodyYaw);
+        agent.bodyYaw = wrapAngle(agent.bodyYaw + Math.sign(d) * Math.min(Math.abs(d), rate * dt, Math.abs(d) * Math.min(dt * 8, 1) + rate * dt * 0.15));
         const relative = look ? lookAngles(head, me.shared.yaw + agent.bodyYaw, look) : want;
         agent.head = stepHead(agent.head, relative, dt, limits);
     }

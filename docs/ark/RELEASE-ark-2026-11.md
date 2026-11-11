@@ -24,13 +24,13 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 6ad9b3e8 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
 | Behaviour recipes | `ark-behaviour-recipes` | c6299edf | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
-| Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
+| Intelligence | `ark-intelligence-web` | c78628ee | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
 | Animal look | `ark-animal-look` | a20f2e8d | Fur, feathers, scales, eyes, wet and dust, contact shadows, close-up skins (when uploaded) |
 | Liveliness wiring | `ark-liveliness-wiring` | 36b4d8e6 | WebAudio engine (tap only), weather visuals (rain, fog, lightning), sheltering, young, tide, per-instance variation, traces |
 | Ambient sound | `ark-ambient` | e0f92416 | 13 beds and 2 thunder claps (public domain and CC0) |
-| Runtime | `ark-runtime-web` | 5a3598f8 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
+| Runtime | `ark-runtime-web` | 1ee10e02 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
 | Captures + thrive (web) | `ark-thrive-web` | ab82aa0c | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
 | Home growth | `ark-home-growth` | 7588a2e8 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
@@ -114,6 +114,68 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 1. **Rig `v2`** (owner-approved once checks pass): `ARK_FLIGHT_APPROVED=1 python3 publish_rig.py --prefix ark-rig/v2 --no-facing`, dry run first, then `--apply`. Inert until a web build reads it (this release reads v2 first).
 2. **The 14 turned birds' near/far** (`publish_ark.py`): only **with or after** the web deploy (the live web turns them itself; uploading first turns them twice). `publish_rig.py --apply` runs it first and refuses if anything else changed.
 3. **Close-up skins** (678 MiB, 2,630 species; `export_closeup.py`): **still needs the owner's approval.** Read only near the camera; 404s until uploaded.
+4. **The model files' cache header** (owner, 2026-11-11 about 22:00 WIB): §5a. In the same window as the web deploy, after it (§7 step 3a).
+
+### 5a. Cache the versioned model files for a year (owner decision, 2026-11-11 about 22:00 WIB)
+**Why.** Every model file is served `cache-control: private, no-cache` with `cf-cache-status: DYNAMIC` today (checked
+read-only on 2026-11-11: `v1/ark/manifest.json`, `v1/ark/aardvark/dda71d1badae.far.glb`,
+`ark-rig/v2/aardvark/d6525f0276c7.rig.glb`), although the publishers sent `Cache-Control: max-age=31536000` (models) and
+`max-age=600` (manifests) with each upload. So every visit downloads every model again (about 0.5 s each; the runtime's
+Cache Storage, merged in 1ee10e02, only helps the same browser). The decision: re-upload the Ark's **versioned** model
+files with `cache-control: public, max-age=31536000, immutable`; the manifests stay on a short cache.
+
+**What is versioned** (a changed file always gets a new path; the publishers never overwrite: `x-upsert: false`):
+
+| Prefix | Files | Count (2026-11-11) | The version in the path |
+|---|---|---|---|
+| `talking-models/v1/ark/<slug>/<version>.near.glb`, `.far.glb`, `.ark.json` | the Ark model set | 2,630 species × 3 = 7,890 | first 12 hex of sha256 of the three files (`publish_ark.py`, refuses a slug whose bytes no longer match) |
+| `talking-models/ark-rig/v2/<slug>/<version>.rig.glb` | the rig set this release reads first | 2,028 | first 12 hex of sha256 of the rig file (`publish_rig.py`) |
+| `talking-models/ark-rig/v1/<slug>/<version>.rig.glb` | the fallback rig set | 1,971 | the same |
+
+About 11,900 files in all (not 2k–4k: the model set alone is three files a species).
+
+**Not versioned: stay on a short cache, never immutable.** `v1/ark/manifest.json`, `ark-rig/v1/manifest.json`,
+`ark-rig/v2/manifest.json` (re-written in place on every publish), and later `v1/ark-closeup/manifest.json`. Also out of
+scope: the talking models (`v1/<slug>/<version>.*`, the apps' too; their GLB's name is the hash of the iOS files, not of
+the GLB itself) and the species icons (`animals/<slug>.webp`, unversioned).
+
+**1. The check first** (dry run, read only). List every object under the three prefixes (Storage list API, service key)
+and sort each path into "versioned" (`^(v1/ark|ark-rig/v[0-9]+)/<slug>/[0-9a-f]{12}\.(near\.glb|far\.glb|ark\.json|rig\.glb)$`,
+and listed in its set's manifest or `published.json`) or "not versioned". Print both counts and the full list of the
+second kind (expected: only the manifests; anything else, such as an unversioned `ark/<slug>.glb`, stays on a short cache
+and is named in the report). For the rig sets, also hash a sample of 50 downloads and compare with the path's version.
+
+**2. The command.** There is no re-upload script yet: add `scripts/talking-models/recache_ark.py` on `ark-rigging` before
+the window (it follows `publish_ark.py`'s key handling, retries and headers):
+```
+python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1            # dry run: the check above, nothing written
+python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1 --canary   # one file, then curl -sI it
+python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1 --apply
+```
+For each versioned path: download the public bytes, PUT the same bytes back to the same path with the same content type,
+`Cache-Control: public, max-age=31536000, immutable` and `x-upsert: true` (the only overwrite these paths ever get:
+same bytes, new header), 8 at a time, resumable from its own record. The manifests are not touched. **Who:** the owner
+(a production bucket change), with `SERVICE_KEY` from the environment as the other publishers. **How long:** about
+11,900 files and roughly 0.8–1 GB down and up again; at 8 in parallel and about 0.4–0.6 s a file, 10–15 minutes, longer on
+a slow uplink. **The canary matters:** the publishers already sent `max-age=31536000` and the bucket still serves
+`private, no-cache`, so confirm on one file that the new header is served before running all of them. If it is not, stop
+(the bucket or project setting is the cause, not the header) and keep everything as it is.
+
+**3. Verify after.**
+```
+B=https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models
+for p in v1/ark/aardvark/dda71d1badae.far.glb v1/ark/aardvark/dda71d1badae.near.glb ark-rig/v2/aardvark/d6525f0276c7.rig.glb; do
+  curl -sI "$B/$p" | grep -i 'cache-control\|cf-cache-status'; curl -sI "$B/$p" | grep -i 'cf-cache-status'
+done
+curl -sI "$B/v1/ark/manifest.json" | grep -i 'cache-control'     # still short: never immutable
+```
+Pass: each model file says `cache-control: public, max-age=31536000, immutable`, and its second request
+`cf-cache-status: HIT`; the manifest is unchanged. Then /ark on a second visit loads its models from cache (DevTools:
+"(disk cache)" or the CDN's HIT).
+
+**4. Rollback.** Re-upload with the old header: the same script with `--cache-control "max-age=31536000"` (what the
+publishers send; it was served `private, no-cache`). Nothing else changes: the bytes, paths and manifests stay as they
+are. A file that must change never needs this: it gets a new version path, and the manifest (short cache) points to it.
 
 ## 6. Apps (3.3)
 - Merge `ark-founders-ios` / `ark-founders-android` (founders + the 18+ confirmation), `ark-thrive-ios` / `ark-thrive-android` (offer and arrival lines, the Ark Score explainer), and the runtime bridge branches (`ark:visible`, `ark:power`: `docs/ark/runtime-bridge.md`) into each app's main, then the owner builds and submits.
@@ -126,6 +188,8 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 1. Server: founders migration (switch off) and `voyage-founder-story`; then the thrive function and migrations 3–7 (§3).
 2. Bucket: rig `v2`.
 3. Web: merge, build, deploy (§4); with it or after it, the 14 turned birds.
+3a. Bucket, in the same window, after the web deploy: the model files' cache header (§5a): the check, the canary, then
+    `--apply`, then the verification.
 4. Server, **part of the release** (owner, 2026-11-11: "only use real player data and animals", "the same for the production
    too when we next deploy"): the captures backfill (needs this web build), `voyage_backfill_captures` run to completion,
    then `voyage_backfill_verify_v1`; then `founder_names` on; then `thrive` on, then the capture triggers. Production then
@@ -166,17 +230,20 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   switch is still off). Then open /ark: the header's counts match, a tapped animal's card shows "@handle" linking to
   `/u/{handle}`, and that profile page loads (no 404).
 - **Measured at this scale** (the owner's 3,137-animal snapshot, `scripts/ark-runtime-measure.mjs --prebuild
-  --population-file <it>`, the page's own path, 2 runs each, 2026-11-11 on the shared Mac):
+  --population-file <it>`, the page's own path, 2 runs each on the shared Mac). With runtime round 5 (1ee10e02, on
+  `ark-release` eb6e6006), and before it (2856dec7):
 
-  | Device | First frame | Mount (main thread) | In view | Frames once in view | Long tasks after the first frame | Heap | Draw calls / triangles |
-  |---|---|---|---|---|---|---|---|
-  | desktop (host GPU, high tier) | 3.2 s | 0.72 s | still loading models at 30 s (280–380 in) | 60 fps, p95 16.8 ms | 3, longest 0.74 s | 180–200 MB | 850 / 3.3 M |
-  | phone profile (4× CPU, DPR 2, low tier) | 5.5 s | 2.7 s | 19–22 s | 60 fps, p95 16.8 ms | 16–17, longest 0.65 s | 157–172 MB | 149 / 0.36 M |
+  | Device | First frame | Mount (main thread) | In view | Frames once in view | Long tasks after the first frame | Heap | GPU estimate | Draw calls / triangles |
+  |---|---|---|---|---|---|---|---|---|
+  | desktop (host GPU, high tier), round 5 | 3.5–3.6 s | 0.65–0.67 s | **13.6 s** | 60 fps, p95 16.8 ms | 4, longest **76 ms** | 231–261 MB | 68 + 184–189 MB (507–531 models) | |
+  | desktop, before | 3.2 s | 0.72 s | still loading at 30 s | 60 fps, p95 16.8 ms | 3, longest 0.74 s | 180–200 MB | 56–64 + 111–152 MB | 850 / 3.3 M |
+  | phone profile (4× CPU, DPR 2, low tier), round 5 | 6.2–6.4 s | **2.2 s** | 16.5–18.2 s | 60 fps, p95 16.8 ms | 12, longest **0.21 s** | 134–146 MB | 45 + 31 MB (205–210 models) | |
+  | phone profile, before | 5.5 s | 2.7 s | 19–22 s | 60 fps, p95 16.8 ms | 16–17, longest 0.65 s | 157–172 MB | 45 + 32 MB | 149 / 0.36 M |
 
-  Without the prebuild worker the phone's mount holds the main thread 12 s (first frame 12.8 s). What breaks first
-  on a phone is the mount: one 2.7 s main-thread task with the page frozen, then about 17 long tasks (to 0.65 s)
-  while the models stream in. Once in view it holds 60 fps on both. (Headless Chromium on the Mac's GPU: the phone
-  profile throttles the CPU, not the GPU.)
+  Round 5 settles the desktop view in about 14 s and keeps every phone task after the first frame near 0.2 s. What is
+  left first on a phone is the mount itself: one 2.2 s main-thread task before the first frame (6.2–6.4 s in), with the
+  page frozen. Without the prebuild worker the phone's mount holds the main thread 12 s. (Headless Chromium on the Mac's
+  GPU: the phone profile throttles the CPU, not the GPU.)
 
 ## 8. Known issues (at m5)
 - **Red tests on `ark-release` dd50bd5e (2,243/2,247)**, after behaviour 6ad9b3e8 put walkers on the v2 clips' pace:
@@ -184,7 +251,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   - "an in-place activity barely turns" (behaviour's new test): 184 of 13,572 in-place minutes over one turn, all from the recipes' episodes laid over the schedule. By recipe: dabble 70 of 205 minutes (mallard, worst 1.33 turns), chase_fish 37 of 291 (harbour seal, puffin, emperor penguin, 1.50), surface_dive 33 of 150 (puffin, 1.45), wade_spear 21 of 125 (grey heron, 1.44), root_dig 12 of 98 (meerkat, 1.44), bathe 2 of 104 (1.03); without a recipe 1 of 12,145 (a grey heron watching, 1.07). Recipes.
   - "no spinning": the red fox's pounce at 1.02 full turns in 20 s (it passed before the pace change). Recipes.
   - "stags in the rut meet, face each other and clash antlers": head to head at 2.13 rad (it passed before the pace change). Recipes.
-- **Default view** (corrected check, dd50bd5e, two runs): **walk pace ratio median 0.99 and 0.95** (back from 0.41), nothing over 1.67×; backwards 1.2% and 2.8%, nothing backwards over 1 s; ground turns 0.1 and 0.7 a minute (median). Circling: a plains zebra at 15.4 a minute watching and 7.1 grooming and grazing, a grey heron at 10.3 foraging (wade_spear), a harbour seal at 5.6, a goat at 3.4.
+- **Default view** (corrected check, eb6e6006, after intelligence c78628ee and runtime 1ee10e02, two runs): walk pace ratio median 1.06 and 1.00; backwards 0.6% and 2.5%, nothing backwards over 1 s; ground turns 1.3 and 0.7 a minute (median). Way-turns per minute of movement over 2, for animals whose activity includes watching: a goat 3.1 (watch) and 2.7 (browse, watch), a meerkat 8.1 (watch, groom), grey herons 4.7–35.6 (forage, watch; wade_spear) and 7.6 (fly, watch). The zebra watching at 15.4 is gone. Grazers still turn: plains zebras 3.6–42.6 (graze; the graze steps), an African forest buffalo 11.9 (graze, groom).
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
