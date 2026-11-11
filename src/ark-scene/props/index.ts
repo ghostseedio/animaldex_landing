@@ -198,9 +198,10 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         },
         /** The home area's plots (the map lane's `homePlots()`): each gets its own garden or yard, paddock, coop and fences. */
         setHomePlots: (plots: HomePlot[]) => {
+            const same = plots.length === homePlots.length && plots.every((plot, i) => plot.id === homePlots[i].id && plot.x === homePlots[i].x && plot.z === homePlots[i].z && plot.rotation === homePlots[i].rotation);
             homePlots = plots;
             setAttachHomePlots(plots); // the sampler's fence_post points follow the same plots (graphics attach)
-            if (!areas) return;
+            if (!areas || same) return;
             root.remove(areas.group);
             areas.dispose();
             areas = buildAreas(tier, homePlots);
