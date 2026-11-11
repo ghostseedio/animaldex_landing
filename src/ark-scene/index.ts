@@ -1195,9 +1195,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The selected animal's state as last told to the page (its tap card). */
     let toldState: ArkBehaviourState | null = null;
+    let toldRest: {id: string; rest: ArkRestStatus | null} | null = null;
+    /**
+     * How it rests now, in the tap card's words (`sleep.ts` restStatus): from its one state, its schedule's doing, its
+     * posture, its roost (in its den: gone in, or a den animal settled at its way in), and the sun.
+     */
+    const restOf = (entry: Entry): ArkRestStatus | null => {
+        const own = entry.sched ?? null;
+        const pose = own?.pose ?? null;
+        const style = sleepStyle(entry.animal.model_slug);
+        const asleep = entry.state.asleep && !entry.reactive?.woke;
+        const settled = Boolean(own && pose && !pose.moving && own.trip && (own.trip.doing === "sleep" || own.trip.doing === "rest" || own.trip.doing === "to_roost"));
+        const enclosed = (entry.denIn ?? 0) > 0.5 || Boolean(settled && own && goesIntoRoost(own.trip?.to.point, own.profile.roost));
+        const raised = Boolean(pose && own && pose.y > Math.max(own.ground, 0) + 0.4) || Boolean(entry.place.canopy);
+        const inWater = Boolean(entry.depth && (pose ? pose.y < 0.02 && own!.ground < 0 : true)) || Boolean(entry.place.water);
+        const sunny = lighting.daylight.night < 0.2 && reactiveWeather.rain < 0.3;
+        return restStatus({asleep, doing: entry.state.doing ?? null, atRoost: settled, enclosed, roost: own?.profile.roost ?? null, posture: entry.sleepNow?.posture ?? style.posture, social: style.social, raised, inWater, sunny});
+    };
     const tellState = () => {
         const entry = selectedId ? findEntry(selectedId) : null;
         const state = entry ? entry.state : null;
+        if (entry && options.onRest) {
+            const rest = restOf(entry);
+            if (toldRest?.id !== entry.animal.id || toldRest.rest !== rest) {
+                toldRest = {id: entry.animal.id, rest};
+                options.onRest(entry.animal.id, rest);
+            }
+        }
         if (sameBehaviour(state, toldState)) return;
         toldState = state;
         if (entry && state) options.onBehaviour?.(entry.animal.id, state);
@@ -4966,6 +4990,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
+        rest: (id) => {
+            const entry = findEntry(id);
+            return entry ? restOf(entry) : null;
+        },
         reactive: (id) => {
             const r = findEntry(id)?.reactive;
             return r ? {...r} : null;

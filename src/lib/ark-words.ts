@@ -38,6 +38,24 @@ export type ArkHudWords = {
 
 export type ArkStoryWords = {generic: string; debate: string; openDebate: string};
 
+/** How an animal rests now (`sleep.ts` restStatus), in plain words: "Asleep in its den", "Keeping watch". */
+export type ArkRestWords = {
+    asleep: string;
+    asleepDen: string;
+    asleepBurrow: string;
+    asleepPerch: string;
+    asleepHanging: string;
+    asleepStanding: string;
+    asleepOneLeg: string;
+    asleepWater: string;
+    asleepHuddle: string;
+    resting: string;
+    restingDen: string;
+    dozingSun: string;
+    basking: string;
+    onWatch: string;
+};
+
 /** The tap card's life story (life v2). */
 export type ArkLifeWords = {
     bornAboard: string;
@@ -65,6 +83,8 @@ export type ArkLifeWords = {
     hungry: string;
     old: string;
     asleep: string;
+    /** How it rests now (the sleep lane's `restStatus`), in plain words: the card's state chip. */
+    rest: ArkRestWords;
     ended: string;
     endedEaten: string;
     endedOld: string;

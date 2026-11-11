@@ -204,7 +204,7 @@ test("what the tap card says: plain words for where and how it rests", () => {
     assert.equal(restStatus({asleep: true, posture: "hang"}), "asleep_hanging");
     assert.equal(restStatus({asleep: true, posture: "float_back"}), "asleep_water");
     assert.equal(restStatus({asleep: true, posture: "side", social: "pile"}), "asleep_huddle");
-    assert.equal(restStatus({asleep: true, posture: "tuck", raised: true}), "asleep_tree");
+    assert.equal(restStatus({asleep: true, posture: "tuck", raised: true}), "asleep_perch");
     assert.equal(restStatus({asleep: true, posture: "sternal"}), "asleep");
     assert.equal(restStatus({asleep: false, doing: "watch"}), "on_watch");
     assert.equal(restStatus({asleep: false, doing: "rest", sunny: true}), "dozing_sun");
@@ -417,9 +417,9 @@ const grassHome = (() => {
 })();
 function herd(slug: string, n: number, length: number, young: number[] = []): ScheduleAnimal[] {
     const profile = behaviourProfile(slug);
-    const leader: ScheduleAnimal = {id: `${slug}-lead`, zone: "grassland", home: {...grassHome}, length};
+    const leader: ScheduleAnimal = {id: `${slug}-lead`, zone: "grassland", home: {...grassHome}, length, sea: false};
     const list = [leader];
-    for (let r = 1; r < n; r++) list.push({id: `${slug}-${r}`, zone: "grassland", home: {...grassHome}, length: young.includes(r) ? length * 0.5 : length, young: young.includes(r), group: {leader, profile, activity: "diurnal", rank: r, size: n}});
+    for (let r = 1; r < n; r++) list.push({id: `${slug}-${r}`, zone: "grassland", home: {...grassHome}, sea: false, length: young.includes(r) ? length * 0.5 : length, young: young.includes(r), group: {leader, profile, activity: "diurnal", rank: r, size: n}});
     return list;
 }
 
@@ -462,4 +462,24 @@ test("piled pigs and a young mammal sleep touching; a zebra herd sleeps a little
     // A foal sleeps against the adult its group keeps to.
     const foal = spread("grevys-zebra", [3]).find((x) => x.young)!;
     assert.ok(foal.d < 0.8, `foal ${foal.d.toFixed(2)} body lengths from the adult`);
+});
+
+test("the tap card's rest words: every status has words, in every Ark language", async () => {
+    const {ARK_REST_KEYS, arkRestWords, arkRestIsSleep} = await import("@/lib/ark-rest-words");
+    const {ARK_LANGUAGES} = await import("@/lib/ark-languages");
+    const {readFileSync} = await import("node:fs");
+    const statuses = ["asleep", "asleep_den", "asleep_burrow", "asleep_perch", "asleep_hanging", "asleep_standing", "asleep_one_leg", "asleep_water", "asleep_huddle", "resting", "resting_den", "dozing_sun", "basking", "on_watch"];
+    assert.deepEqual(Object.keys(ARK_REST_KEYS).sort(), [...statuses].sort());
+    for (const lang of ARK_LANGUAGES) {
+        const file = lang === "en" || lang === "id" ? `src/data/locales/${lang}.json` : `src/data/locales/ark/${lang}.json`;
+        const words = JSON.parse(readFileSync(file, "utf8")).ark.life.rest;
+        for (const status of statuses) {
+            const said = arkRestWords(status, words);
+            assert.ok(said && said.trim().length > 1, `${lang} ${status}`);
+        }
+        assert.equal(new Set(statuses.map((s) => arkRestWords(s, words))).size, statuses.length, `${lang}: each status its own words`);
+    }
+    assert.equal(arkRestWords(null, {asleep: "Asleep"}), null);
+    assert.equal(arkRestWords("asleep_den", null), null);
+    assert.ok(arkRestIsSleep("asleep_den") && !arkRestIsSleep("on_watch") && !arkRestIsSleep(null));
 });

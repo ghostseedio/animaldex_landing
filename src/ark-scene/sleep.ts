@@ -248,7 +248,7 @@ export type ArkRestStatus =
     | "asleep"
     | "asleep_den"
     | "asleep_burrow"
-    | "asleep_tree"
+    | "asleep_perch"
     | "asleep_hanging"
     | "asleep_standing"
     | "asleep_one_leg"
@@ -287,7 +287,7 @@ export function restStatus(input: RestStatusInput): ArkRestStatus | null {
         if (input.social === "huddle" || input.social === "pile") return "asleep_huddle";
         if (input.posture === "one_leg") return "asleep_one_leg";
         if (input.posture === "stand") return "asleep_standing";
-        if (input.raised) return "asleep_tree";
+        if (input.raised) return "asleep_perch";
         return "asleep";
     }
     if (input.doing === "watch") return "on_watch";

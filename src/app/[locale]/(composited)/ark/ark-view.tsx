@@ -11,6 +11,7 @@ import {arkHerdKeys} from "@/ark-scene/herds";
 import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
 import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkPopulation, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {cardSaysAsleep, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import {arkRestIsSleep, arkRestWords} from "@/lib/ark-rest-words";
 import {arkBringerLabel, arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
 import {fixtureArkStory} from "@/lib/ark-story";
 import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFounder, type ArkFounders, type ArkFounderStory} from "@/lib/ark-founders";
@@ -173,6 +174,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     /** What the selected animal is doing now, as the scene animates it (never worked out here from a clock of the page's own). */
     const [selectedState, setSelectedState] = useState<{id: string; state: ArkBehaviourState} | null>(null);
     const onBehaviour = useCallback((id: string, state: ArkBehaviourState) => setSelectedState({id, state}), []);
+    /** How the selected animal rests now (the sleep lane's status: "Asleep in its den"), as the scene draws it. */
+    const [selectedRest, setSelectedRest] = useState<{id: string; rest: string | null} | null>(null);
+    const onRest = useCallback((id: string, rest: string | null) => setSelectedRest({id, rest}), []);
     const [mineOnly, setMineOnly] = useState(false);
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
@@ -300,6 +304,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         iconUrl: arkIconUrl,
                         onSelect,
                         onBehaviour,
+                        onRest,
                         onHerd: setHerd,
                         herdBadge: (count) => fillArkWords(words.herd.badge, {count: count.toLocaleString(locale)}),
                         canvasLabel: words.a11y.scene,
@@ -847,6 +852,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         names={founders.names}
                         arkDay={snapshot?.ark_day ?? null}
                         asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
+                        rest={selectedRest?.id === selected.id ? selectedRest.rest : sceneRef.current?.rest(selected.id) ?? null}
                         following={following}
                         onFollow={toggleFollow}
                         storyOpen={storyOpen}
@@ -929,6 +935,8 @@ type BandProps = {
     names: boolean;
     arkDay: number | null;
     asleep: boolean;
+    /** How it rests now (`sleep.ts` restStatus), shown in plain words in its state chip. */
+    rest: string | null;
     following: boolean;
     onFollow: () => void;
     storyOpen: boolean;
@@ -1000,17 +1008,20 @@ function ageText(days: number, words: ArkWords, locale: string): string {
  * in a line (and in full under "Life story", in the band itself), and the
  * next moves: talking to it, or following it.
  */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, names, arkDay, asleep, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
+function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, names, arkDay, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
+    const restChip = arkRestWords(rest, words.life.rest) ?? (asleep ? words.life.asleep : null);
+    const restNight = Boolean(restChip) && (arkRestIsSleep(rest) || (!rest && asleep));
     const chips = [
         facts.generation !== null && facts.generation > 0 ? fillArkWords(words.life.generationShort, {n: facts.generation}) : null,
         facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
         facts.condition ? words.life[facts.condition] : null,
-        asleep ? words.life.asleep : null
+        // Right now: how it rests in plain words ("Asleep in its den", "Keeping watch"), else "Asleep now" or nothing.
+        restChip
     ].filter((chip): chip is string => Boolean(chip));
     const hasLife = Boolean(life) || animal.origin !== undefined;
     return (
@@ -1041,7 +1052,7 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                         {chips.length ? (
                             <p className={`mt-1.5 flex-wrap gap-1.5 ${storyOpen ? "hidden md:flex" : "flex"}`}>
                                 {chips.map((chip) => (
-                                    <span key={chip} className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${chip === words.life.hungry ? "bg-[#5a3a1e] text-[#ffd8a8]" : chip === words.life.asleep ? "bg-[#26304a] text-[#c9d6ff]" : "bg-white/[0.08] text-ink-100"}`}>{chip}</span>
+                                    <span key={chip} className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${chip === words.life.hungry ? "bg-[#5a3a1e] text-[#ffd8a8]" : chip === restChip && restNight ? "bg-[#26304a] text-[#c9d6ff]" : "bg-white/[0.08] text-ink-100"}`}>{chip}</span>
                                 ))}
                             </p>
                         ) : null}
