@@ -33,6 +33,8 @@ export type MapSpecies = {
     small: boolean;
     /** Placed by its zone (no text, or not in the table). */
     fallback: boolean;
+    /** A fish (its body plan): always in water. */
+    fish: boolean;
 };
 
 /** The validator's reviewed hold list (`validator-holds.json`): species it cannot place well on this terrain yet, each with its reason. */
@@ -82,7 +84,8 @@ export function mapSpecies(slug: string, zone: ArkZone): MapSpecies | null {
             host: (row[6] || null) as HostGroup | null,
             colony: flags.includes("c"),
             small: flags.includes("s"),
-            fallback: flags.includes("z")
+            fallback: flags.includes("z"),
+            fish: flags.includes("f")
         };
     } else {
         const tag = fallbackTag(zone, slug);
@@ -98,7 +101,8 @@ export function mapSpecies(slug: string, zone: ArkZone): MapSpecies | null {
             host: null,
             colony: false,
             small: false,
-            fallback: true
+            fallback: true,
+            fish: false
         };
     }
     known.set(key, out);

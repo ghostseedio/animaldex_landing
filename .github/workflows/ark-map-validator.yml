@@ -1,0 +1,43 @@
+# The Ark map's spawn validator (docs/ark-map/validator.md): places every
+# catalogue species on the map's terrain and fails on any animal floating,
+# sinking, inside scenery, in the wrong medium, depth band or water, on a
+# surface its tags do not allow, facing the wrong way, or small and off an
+# attach point. The grip check needs the local rig files: CI skips it.
+name: Ark map validator
+
+on:
+  pull_request:
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-*.test.ts"
+      - "scripts/ark-map*.mts"
+      - ".github/workflows/ark-map-validator.yml"
+  push:
+    branches: [main, ark-map]
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-*.test.ts"
+      - "scripts/ark-map*.mts"
+      - ".github/workflows/ark-map-validator.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Spawn validator and the Ark scene tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Spawn validator
+        run: npx tsx --test src/lib/ark-map.test.ts
+      - name: The Ark scene's placement tests
+        run: npx tsx --test src/lib/ark-scene.test.ts src/lib/ark-micro.test.ts src/lib/ark-layers.test.ts src/lib/ark-stats.test.ts src/lib/ark-edge.test.ts

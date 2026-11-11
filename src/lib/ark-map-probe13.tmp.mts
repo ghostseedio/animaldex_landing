@@ -1,0 +1,10 @@
+import {mapPoints} from "@/ark-scene/map/place";
+import {sampleGround} from "@/ark-scene/world";
+let t = performance.now();
+for (let i = 0; i < 16000; i++) sampleGround((i % 128) * 2 - 128, Math.floor(i / 128) * 2 - 128);
+console.log("16k sampleGround", Math.round(performance.now() - t));
+t = performance.now();
+const s = mapPoints().sampler; for (let i = 0; i < 4000; i++) s.ground((i % 64) * 4 - 128, Math.floor(i / 64) * 4 - 128);
+console.log("4k ground()", Math.round(performance.now() - t));
+t = performance.now(); mapPoints().cellsWith("grassland", false); console.log("grid", Math.round(performance.now() - t));
+t = performance.now(); mapPoints().all(); console.log("launch", Math.round(performance.now() - t));

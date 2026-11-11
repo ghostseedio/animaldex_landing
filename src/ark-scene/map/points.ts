@@ -22,7 +22,7 @@ export type SpawnPoint = {tag: MapTag; zone: ArkZone; x: number; z: number; y: n
 
 type Cell = {x: number; z: number; zone: ArkZone; tags: readonly MapTag[]; wet: boolean; depth: number};
 
-const GRID = 2;
+const GRID = 2.5;
 /** No two launch points (of any tags) nearer than this (m). */
 const CLEAR = 3;
 
@@ -39,6 +39,79 @@ export class MapPoints {
     private overflowLists = new Map<string, Array<{x: number; z: number}>>();
     /** Every launch point, in the order made. */
     private launchList: SpawnPoint[] = [];
+    /** The launch points by 8 m square, for "is any near?" and "which is nearest?". */
+    private launchIndex = new Map<string, SpawnPoint[]>();
+
+    private indexPoint(point: SpawnPoint) {
+        const key = `${Math.floor(point.x / 8)},${Math.floor(point.z / 8)}`;
+        const list = this.launchIndex.get(key) ?? [];
+        list.push(point);
+        this.launchIndex.set(key, list);
+    }
+
+    /** Is any launch point (but `except`) nearer than `distance` (at most 8 m)? */
+    nearLaunch(x: number, z: number, distance: number, except: {x: number; z: number} | null = null): boolean {
+        this.launch();
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                for (const p of this.launchIndex.get(`${cx + dx},${cz + dz}`) ?? []) {
+                    if (except && p.x === except.x && p.z === except.z) continue;
+                    if (Math.hypot(p.x - x, p.z - z) < distance) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Past a partition's satellites (every point's full: more clusters than
+     * it has room for), cluster (index, level) takes an ordinal of its own
+     * among the partition's overflowing pairs, in (level, index) order, so no
+     * two ever share one; `overflowCells` are the cells it indexes.
+     */
+    overflowOrdinal(list: SpawnPoint[], wet: boolean, index: number, level: number): number {
+        const caps = list.map((point) => this.satellites(point, wet, 2.6).length);
+        let ordinal = 0;
+        for (let l = 1; l < level; l++) for (const cap of caps) if (cap < l) ordinal++;
+        for (let i = 0; i < index; i++) if (caps[i] < level) ordinal++;
+        return ordinal;
+    }
+
+    /** A partition's overflow cells: its points' own cells (nearer them than any other point) past their satellites, 1.6 m apart. */
+    overflowCells(list: SpawnPoint[], wet: boolean): Array<{x: number; z: number}> {
+        const key = `${list.map((p) => `${p.tag}@${p.x},${p.z}`).join("|")}|${wet}`;
+        let cells = this.overflowLists.get(key);
+        if (!cells) {
+            const taken = list.flatMap((point) => [{x: point.x, z: point.z}, ...this.satellites(point, wet, 2.6)]);
+            const tag = list[0]?.tag;
+            const others = (cell: Cell) => this.launchNear(cell.x, cell.z, 2);
+            cells = [];
+            if (tag) {
+                const own = this.cellsWith(tag, wet).filter((cell) => {
+                    const d = Math.min(...list.map((p) => Math.hypot(p.x - cell.x, p.z - cell.z)));
+                    return d < 40 && others(cell).every((o) => list.includes(o) || Math.hypot(o.x - cell.x, o.z - cell.z) > d) && taken.every((t) => Math.hypot(t.x - cell.x, t.z - cell.z) >= 1.3);
+                });
+                own.sort((a, b) => a.x - b.x || a.z - b.z);
+                for (const cell of own) {
+                    if (cells.length >= 400) break;
+                    if (cells.every((c) => Math.hypot(c.x - cell.x, c.z - cell.z) >= 1.6)) cells.push({x: cell.x, z: cell.z});
+                }
+            }
+            this.overflowLists.set(key, cells);
+        }
+        return cells;
+    }
+
+    /** The launch points in the squares within `rings` of a point's (8 m squares). */
+    private launchNear(x: number, z: number, rings: number): SpawnPoint[] {
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        const out: SpawnPoint[] = [];
+        for (let dx = -rings; dx <= rings; dx++) for (let dz = -rings; dz <= rings; dz++) out.push(...(this.launchIndex.get(`${cx + dx},${cz + dz}`) ?? []));
+        return out;
+    }
 
     constructor(sampler: ArkMapSampler) {
         this.sampler = sampler;
@@ -107,14 +180,17 @@ export class MapPoints {
                 if (!want.length) continue;
                 const out = this.make(tag, wet, want);
                 this.byTag.set(`${tag}${wet ? "~w" : ""}`, out);
-                for (const list of Array.from(out.values())) this.launchList.push(...list);
+                for (const list of Array.from(out.values())) {
+                    this.launchList.push(...list);
+                    list.forEach((point) => this.indexPoint(point));
+                }
             }
         }
     }
 
     /** A tag's points for each zone's count: spread over its cells (the zone's own first), clear of every launch point made before. */
     private make(tag: MapTag, wet: boolean, want: Array<[ArkZone, number]>): Map<ArkZone, SpawnPoint[]> {
-        const clear = (cell: Cell) => this.launchList.every((point) => Math.hypot(point.x - cell.x, point.z - cell.z) >= CLEAR);
+        const clear = (cell: Cell) => !this.nearLaunch(cell.x, cell.z, CLEAR);
         const candidates = this.cellsWith(tag, wet).filter(clear);
         const taken = new Set<Cell>();
         const out = new Map<ArkZone, SpawnPoint[]>();
@@ -222,50 +298,16 @@ export class MapPoints {
         if (!list) {
             // Only the cells nearer this point than any other launch point of its tag (so two points' satellites never meet).
             // (Every launch point, of every tag, and this tag's own: a cell is one point's at most.)
-            const others = [...this.launchList, ...Array.from(this.partitions(point.tag, wet).values()).flat()].filter((other) => other !== point);
-            const mine = (cell: Cell) => {
-                const d = Math.hypot(cell.x - point.x, cell.z - point.z);
-                return others.every((other) => Math.hypot(cell.x - other.x, cell.z - other.z) > d);
-            };
-            const cells = this.cellsWith(point.tag, wet).map((cell) => ({cell, d: Math.hypot(cell.x - point.x, cell.z - point.z)})).filter(({cell, d}) => d >= spacing && (!owned || mine(cell))).sort((a, b) => a.d - b.d || a.cell.x - b.cell.x || a.cell.z - b.cell.z);
+            // (Satellites lie within 24 m of their point, so a nearer point is within 48 m of it: only those are asked.)
+            const others = [...this.launchNear(point.x, point.z, 6), ...Array.from(this.partitions(point.tag, wet).values()).flat()].filter((other) => other !== point && Math.hypot(other.x - point.x, other.z - point.z) < 48);
+            const mine = (cell: Cell, d: number) => others.every((other) => Math.hypot(cell.x - other.x, cell.z - other.z) > d);
+            const cells = this.cellsWith(point.tag, wet).map((cell) => ({cell, d: Math.hypot(cell.x - point.x, cell.z - point.z)})).filter(({cell, d}) => d >= spacing && d <= 24 && (!owned || mine(cell, d))).sort((a, b) => a.d - b.d || a.cell.x - b.cell.x || a.cell.z - b.cell.z);
             list = [];
             for (const {cell} of cells) {
                 if (list.length >= 80) break;
                 if (list.every((other) => Math.hypot(other.x - cell.x, other.z - cell.z) >= spacing)) list.push({x: cell.x, z: cell.z});
             }
             this.satelliteLists.set(key, list);
-        }
-        return list;
-    }
-
-    /**
-     * When every tag of a species is full: one list per tag, medium and zone
-     * of the tag's cells nearest the zone's own points (or the island's
-     * middle), 2.6 m apart and clear of every launch point. A zone's slot
-     * picks its cell, so a zone's overflow never doubles up.
-     */
-    overflow(tag: MapTag, wet: boolean, zone: ArkZone): Array<{x: number; z: number}> {
-        const key = `${tag}|${wet}|${zone}`;
-        let list = this.overflowLists.get(key);
-        if (!list) {
-            this.launch();
-            const own = this.partitionFor(tag, wet, zone);
-            const cx = own.length ? own.reduce((sum, p) => sum + p.x, 0) / own.length : 0;
-            const cz = own.length ? own.reduce((sum, p) => sum + p.z, 0) / own.length : 0;
-            // Each cell is one tag's overflow only (picked from its tags by the cell alone) and, where the zone has enough, one zone's.
-            const mine = (cell: Cell) => {
-                const tags = cell.tags.filter((t) => launchPoints()[t]);
-                return tags.length > 0 && tags[hashString(`${cell.x},${cell.z}`) % tags.length] === tag;
-            };
-            const free = this.cellsWith(tag, wet).filter((cell) => mine(cell) && this.launchList.every((point) => Math.hypot(point.x - cell.x, point.z - cell.z) >= 2.6));
-            const territory = free.filter((cell) => cell.zone === zone);
-            const cells = (territory.length >= 20 ? territory : free).map((cell) => ({cell, d: Math.hypot(cell.x - cx, cell.z - cz)})).sort((a, b) => a.d - b.d || a.cell.x - b.cell.x || a.cell.z - b.cell.z);
-            list = [];
-            for (const {cell} of cells) {
-                if (list.length >= 400) break;
-                if (list.every((other) => Math.hypot(other.x - cell.x, other.z - cell.z) >= 2.6)) list.push({x: cell.x, z: cell.z});
-            }
-            this.overflowLists.set(key, list);
         }
         return list;
     }
@@ -307,7 +349,9 @@ export class MapPoints {
         const key = `${tag}|${length.toFixed(3)}|${zone}|${holes}`;
         let found = this.attachLists.get(key);
         if (!found) {
-            const fitting = this.sampler.attachPoints().filter((point) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag));
+            // (The ground's own points, a hole or a pool, never on a launch point: a small one is never under a big one's feet.)
+            const low = (point: AttachPoint) => point.tag === "worm_hole" || point.tag === "burrow_entrance" || point.tag === "tide_pool";
+            const fitting = this.sampler.attachPoints().filter((point) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)));
             const own = fitting.filter((point) => point.zone === zone);
             found = own.length ? {list: own, own: true} : {list: fitting, own: false};
             this.attachLists.set(key, found);
@@ -316,7 +360,7 @@ export class MapPoints {
     }
 }
 
-/** `count` cells spread out over the pool: farthest-point sampling from the cell nearest its middle. */
+/** `count` cells spread evenly over the pool: farthest-point sampling from the cell nearest its middle, then relaxed. */
 function spread(pool: Cell[], count: number): Cell[] {
     if (!pool.length || count <= 0) return [];
     const cx = pool.reduce((sum, cell) => sum + cell.x, 0) / pool.length;
@@ -332,6 +376,45 @@ function spread(pool: Cell[], count: number): Cell[] {
         const next = pool[best];
         chosen.push(next);
         for (let i = 0; i < pool.length; i++) distance[i] = Math.min(distance[i], Math.hypot(pool[i].x - next.x, pool[i].z - next.z));
+    }
+    // Farthest-point sampling picks the pool's edges first: three rounds of moving each point to the cell nearest the middle of the
+    // cells nearest it (Lloyd's relaxation) spread them evenly through the pool instead, the edges included but not crowded.
+    for (let round = 0; round < 3 && chosen.length > 1; round++) {
+        const sums = chosen.map(() => ({x: 0, z: 0, n: 0}));
+        for (const cell of pool) {
+            let best = 0;
+            let d = Infinity;
+            for (let k = 0; k < chosen.length; k++) {
+                const e = Math.hypot(cell.x - chosen[k].x, cell.z - chosen[k].z);
+                if (e < d) {
+                    d = e;
+                    best = k;
+                }
+            }
+            sums[best].x += cell.x;
+            sums[best].z += cell.z;
+            sums[best].n++;
+        }
+        const taken = new Set<Cell>();
+        for (let k = 0; k < chosen.length; k++) {
+            if (!sums[k].n) continue;
+            const mx = sums[k].x / sums[k].n;
+            const mz = sums[k].z / sums[k].n;
+            let best: Cell | null = null;
+            let d = Infinity;
+            for (const cell of pool) {
+                if (taken.has(cell)) continue;
+                const e = Math.hypot(cell.x - mx, cell.z - mz);
+                if (e < d) {
+                    d = e;
+                    best = cell;
+                }
+            }
+            if (best) {
+                chosen[k] = best;
+                taken.add(best);
+            }
+        }
     }
     return chosen;
 }

@@ -21,7 +21,9 @@
  *   and whose size range fits it (the owner, 2026-11-11); a small flyer
  *   with no perch that fits may land on its ground or water instead, and a
  *   flyer never sits in a worm hole or a burrow's entrance;
- * - sleeps (by the behaviour state) where its roost tag does not hold.
+ * - sleeps (by the behaviour state) where its roost tag does not hold;
+ * - (a partner with its host aboard) is not on its host's back, at its feet
+ *   or beside it as its role says, or is in the water beside a host on land.
  *
  * Pure: the same terrain gives the same report. `src/lib/ark-map.test.ts`
  * runs it in CI (`npm test`); `scripts/ark-map-validate.mts` writes the
@@ -91,6 +93,21 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         if (!map || map.held) continue;
         const length = arkBody(animal).metres;
         const allowed = species.allowed;
+        if (place.host) {
+            // A partner on its host (section 6): on its back, at its feet, or beside it; never inside scenery, the host aboard.
+            const host = placed.get(place.host.id);
+            if (!host) fail("invalid_surface", "its host is not aboard");
+            else {
+                if (Math.hypot(place.x - host.x - place.host.dx, place.z - host.z - place.host.dz) > 0.01) fail("floats_or_sinks", "off its host");
+                if (place.host.role !== "rider" && !host.water) {
+                    const g = sampler.ground(place.x, place.z);
+                    if (Math.abs(place.ground - g.height) > 0.05) fail("floats_or_sinks", `beside its host at ${place.ground.toFixed(2)}, the ground at ${g.height.toFixed(2)}`);
+                    if (g.water && !wetOf(species, map.tag!)) fail("wrong_medium", "beside its host in the water");
+                }
+                if (place.host.role === "rider" && host.water !== place.water) fail("wrong_medium", "a rider out of its host's medium");
+            }
+            continue;
+        }
         if (place.burrow && map.attach) {
             // A small burrower: its burrow's entrance on its attach point, the chamber in the ground below.
             const point = map.attach;
@@ -131,6 +148,7 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         const tag = map.tag!;
         if (!ground.tags.includes(tag) || !allowed.has(tag)) fail("invalid_surface", `${tag} does not hold at ${place.x.toFixed(1)},${place.z.toFixed(1)} (${ground.tags.join(" ")})`);
         const wetAnimal = wetOf(species, tag);
+        if (species.fish && ground.water === null) fail("wrong_medium", `a fish on dry ground (${tag})`);
         if (wetAnimal !== (ground.water !== null)) fail("wrong_medium", `${species.attach} (${species.move}) ${ground.water ? `in ${ground.water} water ${ground.depth.toFixed(1)} m` : "on dry ground"}`);
         if (ground.water) {
             const salt = SEA_TAGS.has(tag);

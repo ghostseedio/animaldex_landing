@@ -1,0 +1,10 @@
+import {mapPlace, mapPoints, setArkMapSampler} from "@/ark-scene/map/place";
+import {mapSpecies} from "@/ark-scene/map/species";
+setArkMapSampler({id: "flat", half: 40, ground: (x: number) => (x < 0 ? {height: 1, water: null, depth: 0, zone: "grassland", tags: ["grassland", "on_grazers", "soil", "burrows", "open_sky"]} : {height: -2, water: "fresh", depth: 2, zone: "river_lake", tags: ["lake", "stream_river", "pond"]}), blocked: () => false, anchors: () => [], attachPoints: () => []} as never);
+console.log(mapSpecies("plains-zebra", "grassland"));
+console.log(mapPoints().partitionOf("grassland", false, "grassland").list.length, mapPoints().cellsWith("grassland", false).length);
+const z = {id: "flat-zebra", species_profile_id: "z", name: "z", scientific_name: null, model_slug: "plains-zebra", zone: "grassland", arrived_at: "", brought_by: {label: "", named: false}, mine: false, slot: 3, slot_rank: 0};
+console.log(mapPlace(z as never, "grassland", 3, 0, 2, 2.4));
+console.log(mapPlace({...z, model_slug: "koi", zone: "river_lake"} as never, "river_lake", 3, 0, 0.6, 0.6));
+const c = mapSpecies("common-carp", "river_lake")!; console.log(c.spawn, c.attach, c.move, [...c.allowed], c.small);
+for (const t of c.allowed) console.log(t, mapPoints().partitionOf(t, true, "river_lake").list.length, mapPoints().cellsWith(t, true).length);
