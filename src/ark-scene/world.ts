@@ -171,7 +171,7 @@ const ZONE_CENTRES: Record<LandZone, {x: number; z: number}> = {
     wetland: {x: 22, z: 12},
     rainforest: {x: -48, z: 20},
     woodland: {x: -42, z: -26},
-    grassland: {x: 42, z: -16},
+    grassland: {x: 40, z: -12},
     desert: {x: 105, z: -4},
     mountains: {x: -10, z: -50},
     polar: {x: ZONE_SITES.polar.x + 4, z: ZONE_SITES.polar.z - 4}
