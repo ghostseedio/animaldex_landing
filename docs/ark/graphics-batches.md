@@ -212,3 +212,16 @@ From the coordinator's review of batch 4 ("several places still read as a demo")
 - **Still water (`water-level.ts`, `terrain.ts`, `sampler.ts`):** the lake and the river keep a fixed level; the sea rises and falls with the tide. Two water meshes from one shader (the sea discards over fresh water); the ground and the sampler use the same rule (`waterLevelAt`).
 - **Waterfall:** skipped. The island's one river runs from the lake in the middle (level 0) to the southern coast; nothing flows out of the mountains, so no drop fits without a new stream (a map change).
 - **Close-up framing:** a micro shot takes the best point whose camera stands above the ground; the gecko keeps off the side windows. Note: reshaping the range shifted the decor indices, and so the `rock_face:decor<i>` ids and the sampler's later random points (the gecko's and the leaf's spots moved). Any map change does this.
+
+Same-conditions A/B, batch 4 (97cb85ed scene source) against batch 5 (c372c52f). The runs were interleaved A, B, A, B on six places whose cameras did not change in batch 5 (island far, house and fields, storm trees, river and pond, waves on the beach, coast rocks), in day light, with the tier pinned. Load average was 11 to 15. Both sides draw the same tree and rock GLBs from `public/`, so this is the scene code's own cost:
+
+| | interval p50 / p95 ms | scene CPU ms | GPU drain ms | draw calls | triangles |
+|---|---|---|---|---|---|
+| phone medium, batch 4 | 16.7 / 16.7–16.8 | 5.8–5.9 | 4.8 | 134.5 | 1.27 M |
+| phone medium, batch 5 | 16.7 / 16.7–16.8 | 6.4–6.7 | 4.8–5.1 | 140.5 | 1.20 M |
+| desktop high, batch 4 | 16.7 / 16.7–16.8 | 2.2–2.4 | 13.8 | 354 | 6.62 M |
+| desktop high, batch 5 | 16.7 / 16.7–16.8 | 2.3 | 14.0–14.1 | 373 | 6.52 M |
+
+The phone profile held 60 fps in every run. It draws about 6 more calls (rock levels, litter, needles, saplings, wheat), with about 5% fewer triangles (the rock assets' far levels are lighter than the procedural rocks). Its GPU drain is level to +6%, and its scene CPU is about +0.7 ms at 4× throttle. A real mid-range phone is still unmeasured.
+
+Golden sheets: `batch5-desktop-before-after.jpg`, `batch5-phone-before-after.jpg` and `batch5-lake-level-tides.jpg` (mean tide against spring high) in the handover folder's `ark/graphics/`.
