@@ -466,6 +466,10 @@ function segmentDistance(x: number, z: number, a: {x: number; z: number}, b: {x:
 
 /** The hamlet's plots the behaviour world keeps walkers out of (null: none beyond today's cottage and barn). */
 let behaviourPlots: HomePlot[] | null = null;
+/** The plots the behaviour world is built for now (`collide/` builds its colliders for the same ones). */
+export function behaviourHomePlots(): HomePlot[] | null {
+    return behaviourPlots;
+}
 let behaviourPlotsKey = "";
 
 /**
