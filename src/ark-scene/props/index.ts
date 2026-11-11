@@ -50,7 +50,10 @@ function override(): Partial<PropsConditions> | null {
 /** What the props draw now (for the golden shots' numbers and development). */
 export type PropsStats = {enabled: boolean; tier: QualityTier; drawn: Record<string, number>; presence: string; nests: Homes["nests"]};
 
-export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModule & {stats: () => PropsStats; conditions: () => PropsConditions} {
+/** Where the props' things are: the homes' and the areas' marks, the cave's mouth and its way out. */
+export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number}};
+
+export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModule & {stats: () => PropsStats; conditions: () => PropsConditions; marks: () => PropsMarks} {
     const root = new Group();
     root.name = "props";
     context.scene.add(root);
@@ -78,7 +81,12 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     let moved = true;
     const rebuildHomes = () => {
         const presence = propsPresence(snapshot, context.planOf);
-        const key = presenceKey(presence);
+        // The sitters' and the den-keepers' places too: the scene places everyone after the module is built.
+        const placed = [...presence.nests.map((nest) => nest.sitter), ...Array.from(presence.groups.values()).flat().map((animal) => animal.id)]
+            .map((id) => (id ? context.placeOf(id) : null))
+            .map((at) => (at ? `${at.x.toFixed(2)},${at.z.toFixed(2)}` : "-"))
+            .join(";");
+        const key = `${presenceKey(presence)}|${placed}`;
         if (key === homesKey && homes) return;
         homesKey = key;
         if (homes) {
@@ -93,12 +101,21 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         root.add(homes.group);
         webs = homes.webs.length ? buildWebs(homes.webs) : null;
         if (webs) root.add(webs.lines);
-        effects.setWebBeads(webs?.beads ?? new Float32Array(0));
+        effects.setGlints(webs?.beads ?? new Float32Array(0), homes.slimeGlints);
         cave.setRoost(homes.roost);
         moved = true;
     };
     rebuildHomes();
 
+    /** The places worth a close look: the nests, the homes' marks, the webs, the cave's mouth. */
+    let closeCache: {key: string; spots: Array<{x: number; y: number; z: number}>} = {key: "", spots: []};
+    const closeSpots = () => {
+        if (closeCache.key === homesKey) return closeCache.spots;
+        const inside = cave.toWorld(new Vector3(0, 1.4, -2));
+        const spots = [...(homes?.nests ?? []), ...Object.values(homes?.marks ?? {}), ...Object.values(areas.marks), {x: cave.origin.x, y: cave.origin.y + 1.4, z: cave.origin.z}, inside];
+        closeCache = {key: homesKey, spots};
+        return spots;
+    };
     const batches = (): LodBatch[] => [...areas.batches, ...(homes?.batches ?? [])];
     const pieces = (): LodPiece[] => [...areas.pieces, ...cave.pieces];
 
@@ -187,7 +204,14 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             for (const piece of pieces()) if (piece.near.visible || piece.far?.visible) drawn[piece.name] = piece.near.visible ? 2 : 1;
             return {enabled, tier: tierName, drawn, presence: homesKey, nests: homes?.nests ?? []};
         },
+        closeUp: (x: number, y: number, z: number): number | null => {
+            if (!enabled) return null;
+            const spots = closeSpots();
+            for (const spot of spots) if (Math.hypot(spot.x - x, spot.y - y, spot.z - z) < 2.6) return 1;
+            return null;
+        },
         conditions: () => conditions,
+        marks: (): PropsMarks => ({spots: {...areas.marks, ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing}}),
         dispose: () => {
             context.scene.remove(root);
             areas.dispose();
@@ -201,5 +225,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         }
     };
     root.visible = enabled;
+    // Development (the golden shots): the module itself, to read where things are and what is drawn.
+    if (process.env.NODE_ENV !== "production") (globalThis as {__arkPropsModule?: unknown}).__arkPropsModule = propsModule;
     return propsModule;
 }

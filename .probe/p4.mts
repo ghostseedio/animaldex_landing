@@ -1,0 +1,13 @@
+import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {decodeArkSnapshot} from "@/ark-scene/snapshot";
+import {placeAnimals} from "@/ark-scene/placement";
+import {propsFixture} from "@/ark-scene/props/golden-props";
+import {propsPresence} from "@/ark-scene/props/presence";
+import {buildHomes} from "@/ark-scene/props/homes";
+import {PROPS_TIERS} from "@/ark-scene/props/kit";
+import {sampleGround} from "@/ark-scene/world";
+const s = propsFixture(decodeArkSnapshot(fixture)!);
+const places = placeAnimals(s.animals);
+const homes = buildHomes(propsPresence(s), (id) => places.get(id) ?? null, PROPS_TIERS.high);
+for (const n of homes.nests) console.log(n.style, n.key.slice(0, 8), n.x.toFixed(2), n.y.toFixed(2), n.z.toFixed(2), "ground", sampleGround(n.x, n.z).height.toFixed(2), n.sitter ? s.animals.find((a) => a.id === n.sitter)?.model_slug : "");
+console.log(homes.marks);

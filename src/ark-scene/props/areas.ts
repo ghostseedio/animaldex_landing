@@ -41,6 +41,8 @@ export type Areas = {
     chimney: Vector3;
     /** The troughs' and the paddock's middle (for shots). */
     farm: Vector3;
+    /** Where things are (for the golden shots): the highest outcrop with scree below it. */
+    marks: Record<string, {x: number; y: number; z: number}>;
     dispose: () => void;
 };
 
@@ -91,13 +93,6 @@ function garden(): {near: BufferGeometry; far: BufferGeometry; chimney: Vector3;
     parts.push(paint(place(butt, buttAt.x, groundAt(buttAt.x, buttAt.z) + 0.42, buttAt.z), "#3d5a3e", (y) => 0.8 + 0.3 * (y + 0.4)));
 
     // Weathering: rain streaks under the front windows, moss along the plinth, moss cushions on the roof.
-    for (const wx of [-1.75, 1.8]) {
-        for (let k = 0; k < 3; k++) {
-            const streak = new BoxGeometry(0.05 + random() * 0.04, 0.5 + random() * 0.4, 0.004);
-            const at = house(wx - 0.3 + k * 0.3 + random() * 0.1, 0.62 - random() * 0.15, halfD + 0.012);
-            parts.push(paint(place(streak, at.x, at.y, at.z), "#8f8a7c", () => 0.85));
-        }
-    }
     for (const [sx, sz, length, turn] of [[0, halfD, C.width, 0], [0, -halfD, C.width, 0], [halfW, 0, C.depth, Math.PI / 2], [-halfW, 0, C.depth, Math.PI / 2]] as const) {
         const moss = new BoxGeometry(length + 0.14, 0.12, 0.03);
         moss.rotateY(turn);
@@ -372,12 +367,12 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         if (zone !== "polar" && !high) continue;
         const x = item.x + Math.cos(lee - Math.PI) * item.scale * 1.2;
         const z = item.z + Math.sin(lee - Math.PI) * item.scale * 1.2;
-        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.05, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.8 + item.scale * 0.9});
+        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.5 + item.scale * 0.5});
     }
     for (const outcrop of outcrops) {
         const ground = sampleGround(outcrop.x, outcrop.z);
         if (ground.height < 16) continue;
-        drifts.push({x: outcrop.x + 1.5, y: ground.height - 0.1, z: outcrop.z + 1.2, turn: 0.4, scale: outcrop.scale * 1.6});
+        drifts.push({x: outcrop.x + 1.2, y: ground.height - 0.12, z: outcrop.z + 1.0, turn: 0.4, scale: outcrop.scale * 0.8});
     }
     const polar = ZONE_SITES.polar;
     for (let k = 0; k < 26; k++) {
@@ -446,12 +441,12 @@ export function buildAreas(tier: PropsTier): Areas {
     const group = new Group();
     group.name = "props:areas";
     const warm = propMaterial();
-    const cold = propMaterial({cold: true, flatShading: true});
-    const snow = propMaterial({roughness: 0.75});
+    const cold = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5});
+    const snow = propMaterial({roughness: 0.75, texture: 7, textureScale: 0.35, textureStrength: 0.6});
     const foliage = propMaterial({doubleSide: true});
     const water = new MeshStandardMaterial({color: new Color("#4d5f66"), roughness: 0.04, metalness: 0.85, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -2});
     const puddleMaterial = new MeshStandardMaterial({color: new Color("#56646c"), roughness: 0.03, metalness: 0.9, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3});
-    const mudMaterial = propMaterial({roughness: 0.55});
+    const mudMaterial = propMaterial({roughness: 0.55, texture: 6, textureScale: 0.8});
     const batches: LodBatch[] = [];
     const pieces: LodPiece[] = [];
     const addBatch = (batch: LodBatch) => {
@@ -502,6 +497,7 @@ export function buildAreas(tier: PropsTier): Areas {
         pieces,
         chimney: g.chimney,
         farm: f.centre,
+        marks: {chimney: g.chimney, farm: f.centre, ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
         setWeather: (w) => {
             puddleMaterial.opacity = Math.min(w.puddles * 1.2, 0.92);
             const key = `${w.puddles > 0.05}|${w.snowCover > 0.35}|${w.cold > 0.55}`;

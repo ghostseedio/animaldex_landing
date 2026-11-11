@@ -97,13 +97,27 @@ export function groundNest(r: number, seed = 3): BufferGeometry {
     const parts: BufferGeometry[] = [];
     const rim = new TorusGeometry(r * 0.75, r * 0.26, 6, 16);
     rim.rotateX(Math.PI / 2);
-    rim.scale(1, 0.5, 1);
-    lumpy(rim, 0.18, random);
-    parts.push(paint(place(rim, 0, r * 0.1, 0), STRAW, (_, i) => 0.75 + ((i * 11) % 9) / 30));
+    rim.scale(1, 0.55, 1);
+    lumpy(rim, 0.3, random);
+    parts.push(paint(place(rim, 0, r * 0.1, 0), STRAW, (_, i) => 0.62 + ((i * 11) % 9) / 22));
     const down = new SphereGeometry(r * 0.72, 12, 5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
     down.scale(1, 0.3, 1);
     lumpy(down, 0.08, random);
     parts.push(paint(place(down, 0, r * 0.14, 0), DOWN, (_, i) => 0.8 + ((i * 5) % 7) / 35));
+    // Loose straws and down feathers round the rim.
+    for (let i = 0; i < 40; i++) {
+        const a = random() * Math.PI * 2;
+        const from = r * (0.55 + random() * 0.3);
+        const to = r * (0.95 + random() * 0.45);
+        const y = r * (0.05 + random() * 0.18);
+        parts.push(stick(Math.cos(a) * from, y, Math.sin(a) * from, Math.cos(a + 0.4) * to, y + (random() - 0.5) * r * 0.15, Math.sin(a + 0.4) * to, r * 0.03, random() < 0.7 ? STRAW : TWIG));
+    }
+    for (let i = 0; i < 6; i++) {
+        const a = random() * Math.PI * 2;
+        const feather = new SphereGeometry(r * 0.09, 5, 4);
+        feather.scale(1.4, 0.5, 1);
+        parts.push(paint(place(feather, Math.cos(a) * r * 0.75, r * 0.22, Math.sin(a) * r * 0.75), DOWN, () => 1.05));
+    }
     for (let i = 0; i < 12; i++) {
         const a = random() * Math.PI * 2;
         const d = r * (0.85 + random() * 0.3);
@@ -136,8 +150,9 @@ export function eavesNest(r: number, seed = 4): BufferGeometry {
 /** A tree hollow: a dark oval in the bark with a swollen lip (on a trunk, facing +z). */
 export function hollow(r: number): BufferGeometry {
     const parts: BufferGeometry[] = [];
-    const lip = new TorusGeometry(r, r * 0.28, 6, 16);
+    const lip = new TorusGeometry(r, r * 0.3, 7, 20);
     lip.scale(0.75, 1, 0.6);
+    lumpy(lip, 0.25, seeded(4380));
     parts.push(paint(place(lip, 0, 0, r * 0.05), new Color("#5a4431"), (_, i) => jitter(i, 5)));
     const dark = new SphereGeometry(r * 0.9, 12, 8, 0, Math.PI * 2, 0, Math.PI);
     dark.scale(0.7, 1, 0.25);
@@ -152,32 +167,22 @@ export function egg(size: number): BufferGeometry {
     return paint(place(geometry, 0, size * 0.42, 0), new Color("#f3eee2"), (y, i) => 0.88 + 0.12 * (y / size) + (i % 5 === 0 ? -0.08 : 0));
 }
 
-/** A chick: a fluffy body, a head, an open beak (begging). */
-export function chick(size: number): BufferGeometry {
-    const body = new IcosahedronGeometry(size * 0.42, 1);
-    body.scale(1, 0.85, 1.1);
-    lumpy(body, 0.12, seeded(71));
-    const head = new IcosahedronGeometry(size * 0.26, 1);
-    const upper = new ConeGeometry(size * 0.1, size * 0.22, 5);
-    upper.rotateX(-Math.PI / 2 - 0.5);
-    const lower = new ConeGeometry(size * 0.09, size * 0.18, 5);
-    lower.rotateX(-Math.PI / 2 + 0.45);
-    return merge([
-        paint(place(body, 0, size * 0.36, 0), new Color("#a49a8c"), (y) => 0.8 + 0.4 * (y / size)),
-        paint(place(head, 0, size * 0.78, size * 0.12), new Color("#9c9284"), () => 0.95),
-        paint(place(upper, 0, size * 0.86, size * 0.38), new Color("#f2b33c")),
-        paint(place(lower, 0, size * 0.76, size * 0.36), new Color("#e9a030"))
-    ]);
-}
-
 // MARK: - Insects' homes
 
 /** An ant mound: a dome of needles and fine soil, speckled, with a few entrances (`r` across, `h` high). */
 export function antMound(r: number, h: number, seed = 5): BufferGeometry {
     const random = seeded(4500 + seed);
-    const dome = new SphereGeometry(r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+    const dome = new SphereGeometry(r, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2);
     dome.scale(1, h / r, 1);
-    lumpy(dome, 0.06, random);
+    lumpy(dome, 0.1, random);
+    // A fine, grainy surface: every vertex nudged a little (a heap of needles and grit, not a shell).
+    {
+        const position = dome.getAttribute("position");
+        for (let i = 0; i < position.count; i++) {
+            const k = 1 + (random() - 0.5) * 0.06;
+            position.setXYZ(i, position.getX(i) * k, position.getY(i) * (1 + (random() - 0.5) * 0.08), position.getZ(i) * k);
+        }
+    }
     const parts = [paint(dome, new Color("#7b5d3f"), (y, i, x, z) => 0.72 + 0.35 * (y / h) + (((Math.floor(x * 30) * 7 + Math.floor(z * 30) * 13) % 9) - 4) / 40)];
     for (let i = 0; i < 5; i++) {
         const a = random() * Math.PI * 2;
@@ -187,6 +192,16 @@ export function antMound(r: number, h: number, seed = 5): BufferGeometry {
         const y = h * Math.cos(t * Math.PI / 2) * 0.98;
         const d = r * Math.sin(t * Math.PI / 2);
         parts.push(paint(place(hole, Math.cos(a) * d, y, Math.sin(a) * d), new Color("#21170f")));
+    }
+    // Needles and twigs over it, the ants' thatch.
+    for (let i = 0; i < 90; i++) {
+        const a = random() * Math.PI * 2;
+        const t = Math.sqrt(random()) * 0.95;
+        const d = r * Math.sin(t * Math.PI / 2);
+        const y = h * Math.cos(t * Math.PI / 2);
+        const b = a + (random() - 0.5) * 2.5;
+        const length = r * (0.08 + random() * 0.12);
+        parts.push(stick(Math.cos(a) * d, y, Math.sin(a) * d, Math.cos(a) * d + Math.cos(b) * length, y + (random() - 0.6) * length * 0.4, Math.sin(a) * d + Math.sin(b) * length, r * 0.012, random() < 0.6 ? new Color("#8a6236") : new Color("#5d4128")));
     }
     // A skirt of loose spoil.
     const skirt = new CylinderGeometry(r * 1.25, r * 1.4, 0.04, 18, 1);
@@ -247,9 +262,9 @@ export function hiveBox(): BufferGeometry {
 export function comb(r: number): BufferGeometry {
     const parts: BufferGeometry[] = [];
     for (let k = 0; k < 3; k++) {
-        const plate = new SphereGeometry(r * 0.5, 10, 8);
-        plate.scale(0.5, 1, 0.12);
-        parts.push(paint(place(plate, (k - 1) * r * 0.3, -r * 0.15, r * 0.08), new Color("#d9a43a"), (y, i, x) => 0.75 + 0.25 * Math.abs(Math.sin(x * 60 + y * 50)) * (i % 2 ? 1 : 0.8)));
+        const plate = new SphereGeometry(r * 0.5, 24, 18);
+        plate.scale(0.5, 1, 0.16);
+        parts.push(paint(place(plate, (k - 1) * r * 0.3, -r * 0.15, r * 0.2), new Color("#d9a43a"), (y, i, x) => 0.62 + 0.38 * Math.abs(Math.sin(x * 140) * Math.sin(y * 120 + (Math.floor(x * 44) % 2) * 1.57))));
     }
     return merge(parts);
 }
@@ -354,15 +369,15 @@ export function lair(r: number, seed = 11): BufferGeometry {
 export function turtleNest(r: number, seed = 12): BufferGeometry {
     const random = seeded(5200 + seed);
     const mound = new SphereGeometry(r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
-    mound.scale(1, 0.14, 1.25);
-    lumpy(mound, 0.14, random);
+    mound.scale(1, 0.12, 1.25);
+    lumpy(mound, 0.35, random);
     const rim = new TorusGeometry(r * 1.05, r * 0.16, 5, 18);
     rim.rotateX(Math.PI / 2);
     rim.scale(1, 0.4, 1.25);
     lumpy(rim, 0.25, random);
     return merge([
-        paint(mound, SAND, (y, i) => 0.84 + ((i * 7) % 9) / 50),
-        paint(place(rim, 0, 0.02, 0), SAND, (_, i) => 0.92 + ((i * 5) % 7) / 60)
+        paint(mound, new Color("#c9b08a"), (y, i) => 0.8 + ((i * 7) % 9) / 40),
+        paint(place(rim, 0, 0.02, 0), new Color("#d6c19c"), (_, i) => 0.9 + ((i * 5) % 7) / 45)
     ]);
 }
 
@@ -472,22 +487,31 @@ export function screeStone(size: number, seed = 16): BufferGeometry {
     return paint(place(stone, 0, size * 0.18, 0), new Color("#8a8479"), (y, i) => 0.75 + 0.5 * (y / size) + ((i * 7) % 5) / 30);
 }
 
-/** A rock outcrop in strata: stacked, slightly offset slabs in alternating bands (`w` wide, `h` high), its face toward +z. */
+/** A rock outcrop in strata: one weathered mass, banded by its beds (tilted a little), its foot buried (`w` wide, `h` high), its face toward +z. */
 export function strataOutcrop(w: number, h: number, seed = 17): BufferGeometry {
     const random = seeded(5700 + seed);
-    const bands = [new Color("#8c8172"), new Color("#a39783"), new Color("#7a7064"), new Color("#b0a28b")];
-    const parts: BufferGeometry[] = [];
-    const layers = 5 + Math.floor(random() * 3);
-    let y = 0;
-    for (let k = 0; k < layers; k++) {
-        const t = h / layers * (0.7 + random() * 0.6);
-        const shrink = 1 - k / (layers + 2);
-        const slab = new BoxGeometry(w * shrink * (0.85 + random() * 0.3), t, w * 0.55 * shrink * (0.8 + random() * 0.4), 4, 1, 2);
-        lumpy(slab, 0.08, random);
-        parts.push(paint(place(slab, (random() - 0.5) * w * 0.12, y + t / 2, (random() - 0.5) * w * 0.1 + k * 0.03 * w, (random() - 0.5) * 0.25), bands[k % bands.length], (yy, i) => 0.78 + 0.25 * ((yy - y) / t + 0.5) + ((i * 13) % 9) / 60));
-        y += t * 0.96;
+    const bands = [new Color("#8c8172"), new Color("#a69a85"), new Color("#766c60"), new Color("#b3a58d"), new Color("#857a6b")];
+    const mass = new IcosahedronGeometry(1, 3);
+    mass.scale(w / 2, h / 2, w * 0.36);
+    lumpy(mass, 0.22, random);
+    // Bedding: the faces stepped where the beds meet, so each band stands a little proud of the next.
+    const tilt = (random() - 0.5) * 0.5;
+    const bed = h / 6;
+    const position = mass.getAttribute("position");
+    for (let i = 0; i < position.count; i++) {
+        const x = position.getX(i);
+        const y = position.getY(i) + x * tilt;
+        const within = ((y / bed) % 1 + 1) % 1;
+        const k = 1 + 0.07 * (within < 0.18 ? -1 : 0.3);
+        position.setX(i, x * k);
+        position.setZ(i, position.getZ(i) * k);
     }
-    return merge(parts);
+    mass.translate(0, h * 0.32, 0);
+    return paint(mass, new Color("#ffffff"), (y, i, x) => {
+        const band = Math.floor((y - h * 0.32 + x * tilt + 0.12 * Math.sin(x * 2.3)) / bed + 20);
+        const c = bands[band % bands.length];
+        return (0.85 + ((i * 7) % 9) / 60) * (c.r * 0.3 + c.g * 0.59 + c.b * 0.11) / 0.6;
+    });
 }
 
 /** A snow drift: a long smooth mound, its steep side to −z (the wind's), `l` long. */

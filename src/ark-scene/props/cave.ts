@@ -51,12 +51,23 @@ export function buildCave(tier: PropsTier): Cave {
     const rock = new Color("#8b8274");
     const damp = new Color("#6c6458");
 
-    // The outer hood: a lumpy shell round the chamber, cut open at the mouth.
-    const outerShell = new SphereGeometry(1, 30, 18);
-    outerShell.scale(CHAMBER.rx * 1.28, CHAMBER.ry * 1.3, CHAMBER.rz * 1.18);
-    lumpy(outerShell, 0.16, random);
+    // The outcrop: a lumpy massif of rock round the chamber, cut open at the mouth, its foot sunk into the ground.
+    const outerShell = new SphereGeometry(1, 40, 24);
+    outerShell.scale(CHAMBER.rx * 1.4, CHAMBER.ry * 1.3, CHAMBER.rz * 1.22);
+    lumpy(outerShell, 0.28, random);
     outerShell.translate(CHAMBER.cx, CHAMBER.cy, CHAMBER.cz);
-    const outer = paint(keepTriangles(outerShell, (x, y, z) => !(z > -1.2 && inArch(x, y, MOUTH.w + 0.25, MOUTH.h + 0.25)) && y > -1.2), rock, (y, i) => 0.7 + 0.12 * Math.max(Math.min(y / 3, 1), 0) + ((i * 7) % 9) / 45);
+    {
+        // Ledges: the massif's faces stepped a little, like bedded rock.
+        const position = outerShell.getAttribute("position");
+        for (let i = 0; i < position.count; i++) {
+            const y = position.getY(i);
+            const step = Math.floor(y / 0.7) * 0.7;
+            const k = 1 + 0.06 * Math.sin(step * 5.1 + i * 0.001) - 0.05 * ((y - step) / 0.7);
+            position.setX(i, position.getX(i) * k);
+            position.setZ(i, CHAMBER.cz + (position.getZ(i) - CHAMBER.cz) * k);
+        }
+    }
+    const outer = paint(keepTriangles(outerShell, (x, y, z) => !(z > -1.2 && inArch(x, y, MOUTH.w + 0.25, MOUTH.h + 0.25)) && y > -1.2), rock, (y, i) => 0.62 + 0.14 * Math.max(Math.min(y / 3, 1), 0) + ((i * 7) % 9) / 40);
 
     // The chamber's inside, darker with depth (the light reaches only the front), seen from within.
     const innerShell = new SphereGeometry(1, 30, 18);
@@ -71,7 +82,7 @@ export function buildCave(tier: PropsTier): Cave {
     floorGeometry.scale(CHAMBER.rx * 0.98, 0.12, CHAMBER.rz * 1.1);
     lumpy(floorGeometry, 0.05, random);
     floorGeometry.translate(0, 0.0, CHAMBER.cz + 0.4);
-    const floor = paint(floorGeometry, new Color("#5f584e"), (_, i, x, z) => depthShade(z) * (0.85 + ((i * 3) % 5) / 30));
+    const floor = paint(floorGeometry, new Color("#4a443c"), (_, i, x, z) => depthShade(z - 0.8) * (0.7 + ((i * 3) % 5) / 30));
 
     // The arch: boulders along the mouth's rim, joining the hood to the chamber.
     const rim: BufferGeometry[] = [];
@@ -79,9 +90,28 @@ export function buildCave(tier: PropsTier): Cave {
         const t = (k / 14) * Math.PI;
         const x = Math.cos(t) * (MOUTH.w + 0.15);
         const y = 0.15 + Math.sin(t) * (MOUTH.h + 0.1);
-        const boulder = new DodecahedronGeometry(0.45 + random() * 0.25, 1);
+        const boulder = new DodecahedronGeometry(0.3 + random() * 0.18, 1);
         lumpy(boulder, 0.22, random);
-        rim.push(paint(place(boulder, x, y, -0.9 + random() * 0.3), rock, (yy, i) => 0.68 + ((i * 7) % 9) / 40 + 0.05 * yy));
+        rim.push(paint(place(boulder, x * 1.08, y + 0.1, -1.0 + random() * 0.2), rock, (yy, i) => 0.68 + ((i * 7) % 9) / 40 + 0.05 * yy));
+    }
+    // Boulders fallen round the outcrop's foot.
+    for (let k = 0; k < 14; k++) {
+        const a = random() * Math.PI * 2;
+        if (Math.abs(Math.atan2(Math.sin(a), Math.cos(a)) - Math.PI / 2) < 0.5) continue;
+        const reach = 1.05 + random() * 0.25;
+        const boulder = new DodecahedronGeometry(0.4 + random() * 0.8, 1);
+        lumpy(boulder, 0.3, random);
+        rim.push(paint(place(boulder, Math.cos(a) * CHAMBER.rx * 1.4 * reach, 0.1, CHAMBER.cz + Math.sin(a) * CHAMBER.rz * 1.22 * reach), rock, (_, i) => 0.62 + ((i * 7) % 9) / 38));
+    }
+    // The rock face round the mouth: big slabs and boulders, the cliff the cave opens in.
+    for (let k = 0; k < 16; k++) {
+        const x = (random() * 2 - 1) * 4.6;
+        const y = random() * 3.9;
+        if (inArch(x, y, MOUTH.w + 0.7, MOUTH.h + 0.6)) continue;
+        const slab = new DodecahedronGeometry(0.7 + random() * 0.7, 1);
+        lumpy(slab, 0.3, random);
+        slab.scale(1.2, 0.8, 0.6);
+        rim.push(paint(place(slab, x, y, -0.8 - random() * 0.5, (random() - 0.5) * 0.6), rock, (yy, i) => 0.6 + ((i * 7) % 9) / 35 + 0.04 * yy));
     }
     for (const side of [-1, 1]) {
         for (let k = 0; k < 3; k++) {
@@ -112,14 +142,13 @@ export function buildCave(tier: PropsTier): Cave {
         }
     }
 
-    const outerMaterial = propMaterial({cold: true});
-    const innerMaterial = propMaterial({roughness: 0.42});
+    const outerMaterial = propMaterial({cold: true, texture: 5, textureScale: 0.45, flatShading: true});
+    const innerMaterial = propMaterial({roughness: 0.4, texture: 5, textureScale: 0.6});
     innerMaterial.side = BackSide;
-    const insideMaterial = propMaterial({roughness: 0.38});
-    const far = paint(new SphereGeometry(1, 10, 6).scale(CHAMBER.rx * 1.28, CHAMBER.ry * 1.3, CHAMBER.rz * 1.18).translate(CHAMBER.cx, CHAMBER.cy, CHAMBER.cz), rock, () => 0.72);
+    const insideMaterial = propMaterial({roughness: 0.38, texture: 5, textureScale: 0.9, textureStrength: 0.6});
     const centre = new Vector3(0, 1, -2).applyMatrix4(group.matrixWorld);
     const pieces = [
-        new LodPiece("cave-hood", centre, merge([outer, ...rim]), far, outerMaterial, {near: 140, far: 260, shadow: true}),
+        new LodPiece("cave-hood", centre, merge([outer, ...rim]), null, outerMaterial, {near: 200, far: 0, shadow: true}),
         new LodPiece("cave-chamber", centre, inner, null, innerMaterial, {near: 90, far: 0}),
         new LodPiece("cave-formations", centre, merge([floor, ...formations]), null, insideMaterial, {near: 60, far: 0})
     ];
@@ -134,7 +163,7 @@ export function buildCave(tier: PropsTier): Cave {
     stain.scale(1.1, 0.12, 0.9);
     const roostGeometry = merge([
         paint(place(stain, CAVE_ROOST.x, CAVE_ROOST.y - 0.06, CAVE_ROOST.z), new Color("#2d261f"), () => 0.9),
-        paint(place(shapes.heap(0.7, 0.16, "#4b4134", 3, 0.2), CAVE_ROOST.x, 0.04, CAVE_ROOST.z), new Color("#ffffff"), () => 1)
+        place(shapes.heap(0.7, 0.16, "#3f372d", 3, 0.2), CAVE_ROOST.x, 0.04, CAVE_ROOST.z)
     ]);
     const roost = new Mesh(roostGeometry, insideMaterial);
     roost.visible = false;

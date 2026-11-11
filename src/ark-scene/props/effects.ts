@@ -40,7 +40,7 @@ uniform float opacity;
 varying float vAlpha;
 void main() {
     vec2 d = gl_PointCoord - 0.5;
-    float core = 1.0 - smoothstep(0.0, 0.22, length(d));
+    float core = 1.0 - smoothstep(0.05, 0.32, length(d));
     float cross = (1.0 - smoothstep(0.0, 0.05, abs(d.x))) * (1.0 - smoothstep(0.1, 0.5, abs(d.y))) + (1.0 - smoothstep(0.0, 0.05, abs(d.y))) * (1.0 - smoothstep(0.1, 0.5, abs(d.x)));
     float a = clamp(core + cross * 0.5, 0.0, 1.0) * vAlpha * opacity;
     if (a < 0.003) discard;
@@ -115,7 +115,7 @@ void main() {
     vec3 toCamera = normalize(cameraPosition - world.xyz);
     // A drop glints when the camera sees the sun's reflection in it, more or less, and twinkles as the view moves.
     float facing = 0.35 + 0.65 * pow(max(dot(reflect(-sun, vec3(0.0, 1.0, 0.0)), toCamera), 0.0), 3.0);
-    float twinkle = 0.5 + 0.5 * sin(seed * 91.0 + dot(world.xz, vec2(3.1, 2.7)) + arkTime * 1.5 + cameraPosition.x * 4.0);
+    float twinkle = 0.6 + 0.4 * sin(seed * 91.0 + dot(world.xz, vec2(3.1, 2.7)) + arkTime * 1.5 + cameraPosition.x * 4.0);
     float d = length(cameraPosition - world.xyz);
     vec4 mv = viewMatrix * world;
     gl_Position = projectionMatrix * mv;
@@ -179,8 +179,8 @@ export type Effects = {
     setPixelRatio: (ratio: number) => void;
     /** Per frame (cheap): the conditions now and the camera. */
     update: (conditions: PropsConditions, camera: Vector3, sun: Vector3) => void;
-    /** The webs' dew beads (rebuilt with the webs). */
-    setWebBeads: (beads: Float32Array) => void;
+    /** The webs' dew beads and the slime trails' glints (rebuilt with the homes). */
+    setGlints: (beads: Float32Array, slime: Float32Array) => void;
     dispose: () => void;
 };
 
@@ -221,7 +221,9 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
         }
     }
     const dew = add(field(dewPositions, dewSeeds, DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color("#f4fbff")}, sun: sunUniform, size: {value: 0.02}}, {additive: true}));
-    let beads = add(field([], [], DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color("#ffffff")}, sun: sunUniform, size: {value: 0.014}}, {additive: true}));
+    let beads = add(field([], [], DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color("#ffffff")}, sun: sunUniform, size: {value: 0.03}}, {additive: true}));
+    let slime = add(field([], [], DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color("#f2fbff")}, sun: sunUniform, size: {value: 0.02}}, {additive: true}));
+    let ratio = 1;
 
     // Snow blown over the mountain's top and across the ice; dust over the savanna and the desert.
     const peak = namedPlace("mountain_peak");
@@ -286,8 +288,9 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
             particles = value;
             for (const f of fields) setCount(f);
         },
-        setPixelRatio: (ratio) => {
-            for (const f of fields) f.material.uniforms.pixelRatio.value = ratio;
+        setPixelRatio: (next) => {
+            ratio = next;
+            for (const f of fields) f.material.uniforms.pixelRatio.value = next;
         },
         update: (c, camera, sun) => {
             windUniform.value[0] = Math.cos(c.windDirection) * (0.25 + c.wind);
@@ -306,6 +309,8 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
             beads.points.visible = on && beads.base > 0;
             // Silk catches a little light at any hour; dawn's dew makes it shine.
             beads.material.uniforms.opacity.value = 0.18 + 0.82 * c.dew + 0.4 * c.wetness;
+            slime.points.visible = on && slime.base > 0;
+            slime.material.uniforms.opacity.value = Math.min(1, 0.2 + c.wetness * 0.9 + c.dawn * 0.4);
             const blowing = on ? Math.max(0, Math.min(1, (c.wind - 0.35) * 2.5)) : 0;
             snowPeak.points.visible = blowing > 0 && c.cold > 0.55 && c.snowCover > 0.3 && near(snowPeak.points.position, 140);
             snowPeak.material.uniforms.opacity.value = blowing * c.snowCover;
@@ -322,14 +327,20 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
                 mistMaterials[k].uniforms.opacity.value = mist;
             });
         },
-        setWebBeads: (positions) => {
-            group.remove(beads.points);
-            beads.points.geometry.dispose();
-            beads.material.dispose();
-            fields.splice(fields.indexOf(beads), 1);
-            const seeds = Array.from({length: positions.length / 3}, (_, k) => (k * 0.618) % 1);
-            beads = add(field(Array.from(positions), seeds, DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color("#ffffff")}, sun: sunUniform, size: {value: 0.014}}, {additive: true}));
-            setCount(beads);
+        setGlints: (webBeads, slimePoints) => {
+            const rebuild = (old: Field, positions: Float32Array, tint: string, size: number) => {
+                group.remove(old.points);
+                old.points.geometry.dispose();
+                old.material.dispose();
+                fields.splice(fields.indexOf(old), 1);
+                const seeds = Array.from({length: positions.length / 3}, (_, k) => (k * 0.618) % 1);
+                const next = add(field(Array.from(positions), seeds, DEW_VERTEX, GLINT_FRAGMENT, {tint: {value: new Color(tint)}, sun: sunUniform, size: {value: size}}, {additive: true}));
+                next.material.uniforms.pixelRatio.value = ratio;
+                setCount(next);
+                return next;
+            };
+            beads = rebuild(beads, webBeads, "#ffffff", 0.05);
+            slime = rebuild(slime, slimePoints, "#f2fbff", 0.035);
         },
         dispose: () => {
             for (const f of fields) {

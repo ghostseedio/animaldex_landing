@@ -31,6 +31,7 @@ import {
 } from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type {QualityTier} from "@/ark-scene/post";
+import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 
 // MARK: - Tiers
 
@@ -138,29 +139,59 @@ export const PROPS_WEATHER = {
 /**
  * A vertex-coloured standard material that darkens and shines when wet,
  * and (the cold one) whitens on its upward faces with frost and lying snow.
+ * `texture` lays one of the ground's CC0 photo layers (`ground-textures.ts`:
+ * 1 forest floor, 2 soil, 3 sand, 5 rock, 6 mud, 7 snow) over the vertex
+ * colour, projected three ways in world space, so the props share the
+ * ground's and the rocks' grain (until the textures are in, plain colour).
  */
-export function propMaterial(options: {cold?: boolean; roughness?: number; doubleSide?: boolean; flatShading?: boolean} = {}): MeshStandardMaterial {
+export function propMaterial(options: {cold?: boolean; roughness?: number; doubleSide?: boolean; flatShading?: boolean; texture?: number; textureScale?: number; textureStrength?: number} = {}): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: options.roughness ?? 0.9, metalness: 0, flatShading: options.flatShading ?? false});
     if (options.doubleSide) material.side = 2;
     const cold = Boolean(options.cold);
+    const layer = options.texture ?? -1;
+    const mean = layer >= 0 ? GROUND_MEANS[layer] : [1, 1, 1];
     material.onBeforeCompile = (shader) => {
         shader.uniforms.propWet = PROPS_WEATHER.wet;
         shader.uniforms.propFrost = PROPS_WEATHER.frost;
         shader.uniforms.propSnow = PROPS_WEATHER.snow;
+        shader.uniforms.propAlbedo = ARK_GROUND_TEXTURES.albedo;
+        shader.uniforms.propTexReady = ARK_GROUND_TEXTURES.ready;
         shader.vertexShader = shader.vertexShader
-            .replace("#include <common>", "#include <common>\nvarying float vPropUp;")
-            .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\nvPropUp = objectNormal.y;");
+            .replace("#include <common>", "#include <common>\nvarying float vPropUp;\nvarying vec3 vPropWorld;\nvarying vec3 vPropNormal;")
+            .replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\nvPropUp = objectNormal.y;")
+            .replace(
+                "#include <project_vertex>",
+                `#include <project_vertex>
+vec4 propAt = vec4(transformed, 1.0);
+vec3 propN = objectNormal;
+#ifdef USE_INSTANCING
+propAt = instanceMatrix * propAt;
+propN = mat3(instanceMatrix) * propN;
+#endif
+vPropWorld = (modelMatrix * propAt).xyz;
+vPropNormal = normalize(mat3(modelMatrix) * propN);`
+            );
         shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", "#include <common>\nvarying float vPropUp;\nuniform float propWet;\nuniform float propFrost;\nuniform float propSnow;")
+            .replace("#include <common>", "#include <common>\nvarying float vPropUp;\nvarying vec3 vPropWorld;\nvarying vec3 vPropNormal;\nuniform float propWet;\nuniform float propFrost;\nuniform float propSnow;\nuniform highp sampler2DArray propAlbedo;\nuniform float propTexReady;")
             .replace(
                 "#include <color_fragment>",
                 `#include <color_fragment>
+${layer >= 0 ? `if (propTexReady > 0.5) {
+    vec3 pn = normalize(vPropNormal);
+    vec3 pk = pow(abs(pn), vec3(4.0));
+    pk /= (pk.x + pk.y + pk.z);
+    vec3 pw = vPropWorld * ${(options.textureScale ?? 0.6).toFixed(3)};
+    vec3 pt = texture(propAlbedo, vec3(pw.zy, ${layer.toFixed(1)})).rgb * pk.x + texture(propAlbedo, vec3(pw.xz, ${layer.toFixed(1)})).rgb * pk.y + texture(propAlbedo, vec3(pw.xy, ${layer.toFixed(1)})).rgb * pk.z;
+    vec3 pd = pt / vec3(${mean.map((v) => v.toFixed(4)).join(", ")});
+    pd = mix(vec3(dot(pd, vec3(0.3333))), pd, 0.4);
+    diffuseColor.rgb *= mix(vec3(1.0), pd, ${(options.textureStrength ?? 0.85).toFixed(2)});
+}` : ""}
 diffuseColor.rgb *= 1.0 - 0.3 * propWet;
 ${cold ? "float propWhite = clamp(propFrost * 0.65 * smoothstep(0.1, 0.8, vPropUp) + propSnow * smoothstep(0.35, 0.8, vPropUp), 0.0, 1.0);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), propWhite);" : ""}`
             )
             .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.22, propWet * 0.85);");
     };
-    material.customProgramCacheKey = () => (cold ? "ark-prop-cold" : "ark-prop");
+    material.customProgramCacheKey = () => `ark-prop-${cold ? "cold" : "warm"}-${layer}-${options.textureScale ?? 0.6}-${options.textureStrength ?? 0.85}`;
     return material;
 }
 
