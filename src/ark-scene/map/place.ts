@@ -367,7 +367,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     const settle = ({pick, ok}: Choice): {x: number; z: number} | null => {
         for (const [bx, bz] of [[pick.x, pick.z], [pick.point.x, pick.point.z]]) {
             if (ok(bx, bz)) return {x: bx, z: bz};
-            for (let k = 1; k < 30; k++) {
+            // (Up to 2 m round: a cell beside a drawn rock may have its clear ground a step away.)
+            for (let k = 1; k < 84; k++) {
                 const r = 0.22 * Math.sqrt(k);
                 const tx = bx + Math.cos(k * GOLDEN) * r;
                 const tz = bz + Math.sin(k * GOLDEN) * r;
@@ -402,6 +403,17 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         if (at) fallback ??= {...choice, at};
     }
     chosen ??= fallback;
+    if (!chosen && first) {
+        // Nothing settles on any of its tags' cells (a corner of drawn rocks, steep ground): the nearest spot within 6 m on any ground
+        // its text names that it can stand and walk on.
+        const any = okOn(first.wet, (here) => here.some((t) => species.allowed.has(t)));
+        for (let k = 1; k < 600 && !chosen; k++) {
+            const r = 0.25 * Math.sqrt(k);
+            const tx = first.pick.x + Math.cos(k * GOLDEN) * r;
+            const tz = first.pick.z + Math.sin(k * GOLDEN) * r;
+            if (any(tx, tz)) chosen = {...first, ok: any, at: {x: tx, z: tz}};
+        }
+    }
     if (!chosen && !first) return null;
     const {tag, wet, pick, ok} = chosen ?? first!;
     const point = pick.point;
@@ -601,28 +613,25 @@ function shoreSpot(shore: "cove" | ArkZone, zone: ArkZone, slot: number, rank: n
     const key = clusterKey(zone, slot);
     const lap = Math.floor(key / n);
     const cell = list[key % n];
-    const [ox, oz] = lap < 4 ? ([[0, 0], [1.25, 0], [0, 1.25], [1.25, 1.25]] as const)[lap] : [((0.5 + lap * 0.7548776662) % 1) * 2.5 - 1.25, ((0.5 + lap * 0.5698402910) % 1) * 2.5 - 1.25];
     const dry = (x: number, z: number) => sampler.ground(x, z).water === null && !sampler.blocked(x, z, Math.min(Math.max(length * 0.2, 0.1), 0.5)) && !sampler.reserved?.(x, z);
-    let cx = cell.x + ox;
-    let cz = cell.z + oz;
-    if (!dry(cx, cz)) {
-        // Its lap's spot is wet or blocked: the nearest dry spot round it (never back onto the first lap's).
-        let found = false;
-        for (let k = 1; k < 30 && !found; k++) {
+    // A cell's own spots for its laps: the dry ones of a half-metre grid within 1.6 m of it, a metre apart, nearest first (a function of
+    // the terrain alone), so two clusters on one cell never share a spot, whatever drawn rock stands beside it.
+    const spots = lapSpots(cell, dry, Math.min(Math.max(length * 0.2, 0.1), 0.5));
+    let spot = lap < spots.length ? spots[lap] : {x: cell.x + ((0.5 + lap * 0.7548776662) % 1) * 2.5 - 1.25, z: cell.z + ((0.5 + lap * 0.5698402910) % 1) * 2.5 - 1.25};
+    if (!dry(spot.x, spot.z)) {
+        // Past the cell's own spots (more laps than it holds): the nearest dry, clear spot within 3 m.
+        for (let k = 1; k < 150; k++) {
             const r = 0.25 * Math.sqrt(k);
-            const tx = cx + Math.cos(k * GOLDEN) * r;
-            const tz = cz + Math.sin(k * GOLDEN) * r;
-            if (dry(tx, tz) && (lap === 0 || Math.hypot(tx - cell.x, tz - cell.z) > 0.95)) {
-                cx = tx;
-                cz = tz;
-                found = true;
+            const tx = spot.x + Math.cos(k * GOLDEN) * r;
+            const tz = spot.z + Math.sin(k * GOLDEN) * r;
+            if (dry(tx, tz)) {
+                spot = {x: tx, z: tz};
+                break;
             }
         }
-        if (!found) {
-            cx = cell.x;
-            cz = cell.z;
-        }
     }
+    const cx = spot.x;
+    const cz = spot.z;
     let x = cx;
     let z = cz;
     if (rank > 0) {
@@ -653,6 +662,25 @@ function shoreSpot(shore: "cove" | ArkZone, zone: ArkZone, slot: number, rank: n
         }
     }
     return {x, z, toSea};
+}
+
+const lapSpotCache = new Map<string, Array<{x: number; z: number}>>();
+function lapSpots(cell: {x: number; z: number}, dry: (x: number, z: number) => boolean, radius: number): Array<{x: number; z: number}> {
+    // (Per body: a walrus needs more clear ground than a penguin.)
+    const key = `${cell.x},${cell.z},${radius.toFixed(2)}`;
+    let list = lapSpotCache.get(key);
+    if (!list) {
+        const candidates: Array<{x: number; z: number; d: number}> = [];
+        for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) {
+            const d = Math.hypot(i, j) * 0.5;
+            if (d <= 1.6 && dry(cell.x + i * 0.5, cell.z + j * 0.5)) candidates.push({x: cell.x + i * 0.5, z: cell.z + j * 0.5, d});
+        }
+        candidates.sort((a, b) => a.d - b.d || a.x - b.x || a.z - b.z);
+        list = [];
+        for (const c of candidates) if (list.every((p) => Math.hypot(p.x - c.x, p.z - c.z) >= 1)) list.push({x: c.x, z: c.z});
+        lapSpotCache.set(key, list);
+    }
+    return list;
 }
 
 let cove: {x: number; z: number} | null = null;
