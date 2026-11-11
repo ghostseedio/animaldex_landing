@@ -93,6 +93,8 @@ export type GoldenWorld = {
     reef: () => XZ | null;
     /** An open clearing inside the forest (a site's own ground), to look out at the trees from. */
     forestClearing?: () => XZ | null;
+    /** Trunks, lamps and walls as circles on the ground (`golden-world.ts`): the close shots stand clear of them. */
+    obstacles?: () => Array<XZ & {radius: number}>;
 };
 
 export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
@@ -109,6 +111,58 @@ function bearing(from: XZ, to: XZ): number {
 
 const mix = (a: XZ, b: XZ, k: number): XZ => ({x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k});
 
+/** Where a view's camera stands on the ground plane (the scene's orbit: polar from straight up, azimuth from +z). */
+export function goldenEye(view: ArkCameraView): {x: number; y: number; z: number} {
+    const t = view.target;
+    return {
+        x: t.x + Math.sin(view.polar) * Math.sin(view.azimuth) * view.distance,
+        y: t.y + Math.cos(view.polar) * view.distance,
+        z: t.z + Math.sin(view.polar) * Math.cos(view.azimuth) * view.distance
+    };
+}
+
+/**
+ * How clear a view's near field is (batch 4): the least gap (m) between any obstacle and the camera, or the first
+ * 60% of its sight line to the target, where a trunk would fill the picture.
+ */
+export function goldenClearance(view: ArkCameraView, obstacles: Array<XZ & {radius: number}>): number {
+    const eye = goldenEye(view);
+    let least = Infinity;
+    for (const o of obstacles) {
+        if (Math.abs(o.x - eye.x) > 12 || Math.abs(o.z - eye.z) > 12) continue;
+        for (let k = 0; k <= 6; k++) {
+            const at = mix(eye, view.target, k * 0.1);
+            // Along the sight line only the camera's own spot needs the full margin; further out a trunk is smaller.
+            least = Math.min(least, Math.hypot(o.x - at.x, o.z - at.z) - o.radius + k * 0.25);
+        }
+    }
+    return least;
+}
+
+/**
+ * The bearing nearest the preferred one whose camera stands at least `clear` metres from every obstacle (else the
+ * clearest within reach), so the close shots never open with a trunk or limb beside the lens.
+ */
+function clearView(view: ArkCameraView, world: GoldenWorld, clear: number, reach = 1.6): ArkCameraView {
+    const obstacles = world.obstacles?.() ?? [];
+    if (!obstacles.length) return view;
+    let best = view;
+    let bestGap = -Infinity;
+    for (let step = 0; step <= Math.round(reach / 0.08); step++) {
+        const turn = ((step + 1) >> 1) * (step % 2 ? 1 : -1) * 0.08;
+        const candidate = {...view, azimuth: view.azimuth + turn};
+        const eye = goldenEye(candidate);
+        // Never a spot inside a hill.
+        const gap = eye.y > world.groundAt(eye.x, eye.z) + 0.8 ? goldenClearance(candidate, obstacles) : -Infinity;
+        if (gap >= clear) return candidate;
+        if (gap > bestGap) {
+            bestGap = gap;
+            best = candidate;
+        }
+    }
+    return best;
+}
+
 export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
     const home = world.homeView();
     const fallback = (why: string): GoldenView => ({place, view: home, anchor: `fallback: home view (${why})`});
@@ -120,13 +174,16 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             const beach = world.beach();
             const rocks = world.shoreRocks();
             if (!beach && !rocks.length) return fallback("no beach, no shore rocks");
-            // The biggest cluster of shore rocks nearest the beach: score each rock by its neighbours' size, less its distance.
+            // The biggest cluster of shore rocks nearest the beach: score each rock by its neighbours' size, less its distance,
+            // less a steep bank behind it (batch 4: a shore, not the foot of a wall of sand).
             const from = beach ?? {x: 0, z: 80};
             let best: (XZ & {scale: number}) | null = null;
             let bestScore = -Infinity;
             for (const rock of rocks) {
                 const near = rocks.filter((other) => Math.hypot(other.x - rock.x, other.z - rock.z) < 7).reduce((sum, other) => sum + other.scale, 0);
-                const score = near * 3 - Math.hypot(rock.x - from.x, rock.z - from.z) * 0.08;
+                const r = Math.hypot(rock.x, rock.z) || 1;
+                const rise = world.groundAt(rock.x - (rock.x / r) * 8, rock.z - (rock.z / r) * 8) - Math.max(world.groundAt(rock.x, rock.z), 0);
+                const score = near * 3 - Math.hypot(rock.x - from.x, rock.z - from.z) * 0.08 - Math.max(rise - 2, 0);
                 if (score > bestScore) {
                     bestScore = score;
                     best = rock;
@@ -134,15 +191,19 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             }
             const at = best ?? from;
             const ground = Math.max(world.groundAt(at.x, at.z), 0);
-            // From the sea, a little to one side, so the shore runs across the picture.
-            return {place, anchor: best ? "shore rock cluster nearest the beach" : "beach", view: {target: {x: at.x, y: ground + 0.6, z: at.z}, distance: 16, polar: 1.16, azimuth: outward(at) + 0.5}};
+            // From the shallows, looking along the shore (batch 4): the rocks run into the distance, the sea and its
+            // horizon on one side, the beach on the other, and no forest edge cut off at the frame's top.
+            const view = {target: {x: at.x, y: ground + 0.5, z: at.z}, distance: 13, polar: 1.27, azimuth: outward(at) + 1.05};
+            return {place, anchor: best ? "shore rock cluster nearest the beach" : "beach", view: clearView(view, world, 4)};
         }
 
         case "forest_floor": {
             const floor = world.forestFloor();
             if (!floor) return fallback("no forest floor");
             const ground = world.groundAt(floor.x, floor.z);
-            return {place, anchor: "forest floor corner", view: {target: {x: floor.x, y: ground + 0.25, z: floor.z}, distance: 4.6, polar: 1.18, azimuth: outward(floor) + 0.3}};
+            // Batch 4: turned to the nearest bearing where no trunk or limb stands beside the lens.
+            const view = {target: {x: floor.x, y: ground + 0.25, z: floor.z}, distance: 4.6, polar: 1.18, azimuth: outward(floor) + 0.3};
+            return {place, anchor: "forest floor corner", view: clearView(view, world, 2.6)};
         }
 
         case "house_fields": {
