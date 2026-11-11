@@ -148,8 +148,14 @@ test("birds fly between places and land: no circles, most of the day perched or 
             if (trip.doing === "sleep") continue;
             for (const leg of trip.legs.filter((l) => l.mode === "air")) {
                 flights++;
-                // A flight goes somewhere: never back to where it took off.
+                // A flight goes somewhere: never back to where it took off. (A soar may come home to its own perch, as an
+                // eagle does, but by a sweep out over its range and back, never by turning on the spot.)
                 if (trip.shadow) continue;
+                if (trip.doing === "soar" && leg.path) {
+                    const out = Math.max(...leg.path.map((p) => Math.hypot(p.x - leg.from.x, p.z - leg.from.z)));
+                    assert.ok(out > 3, `${i.a.model_slug} soars on the spot`);
+                    continue;
+                }
                 assert.ok(Math.hypot(leg.to.x - leg.from.x, leg.to.z - leg.from.z) + Math.abs(leg.to.y - leg.from.y) > 0.3 || leg.seconds < 1, `${i.a.model_slug} flies a loop`);
             }
             for (let s = 5; s < SLOT_SECONDS; s += 10) {
@@ -250,6 +256,8 @@ test("predators keep a safe distance from the animals they eat", () => {
             if (at.aloft) continue;
             for (const q of prey) {
                 const qa = poseOf(q, t);
+                // (A bird soaring wide over its range passes over others: the spacing is for where they stand.)
+                if (qa.aloft) continue;
                 const d = Math.hypot(at.x - qa.x, at.z - qa.z);
                 assert.ok(d >= safe * 0.9, `${p.a.model_slug} within ${d.toFixed(1)} m of a ${q.a.model_slug} (safe ${safe.toFixed(0)})`);
                 samples++;

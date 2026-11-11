@@ -1068,15 +1068,29 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
                 // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
                 // where it began runs out along a seeded heading and back.
+                // (2026-11-11: it glides at about half its flapping cruise, so a soar over a near goal sweeps out far
+                // enough to fill its time aloft; before, every soar crawled along a few metres at under 1 m/s.)
                 const r = Math.max(homeRadius(profile, animal) * 0.8, 6);
-                const span = Math.max(flat, r);
-                const dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) : random() * Math.PI * 2;
-                const bow = (random() < 0.5 ? -1 : 1) * (0.18 + random() * 0.14) * span;
-                const ux = Math.sin(dir);
-                const uz = Math.cos(dir);
-                const first = flat > 0.5 ? flat / 3 : span * 0.5;
-                const second = flat > 0.5 ? (2 * flat) / 3 : span * 0.5;
-                const route: NavPoint[] = [from, {x: from.x + ux * first + uz * bow, z: from.z + uz * first - ux * bow}, {x: from.x + ux * second + uz * bow * 0.9, z: from.z + uz * second - ux * bow * 0.9}, to];
+                const glideReach = Math.min(60, (air * 0.55 * SLOT_SECONDS * 0.55) / 2.2);
+                const span = Math.max(flat, r, glideReach);
+                const side = random() < 0.5 ? -1 : 1;
+                const bow = side * (0.18 + random() * 0.14) * span;
+                let route: NavPoint[];
+                if (flat >= span * 0.8) {
+                    const dir = Math.atan2(to.x - from.x, to.z - from.z);
+                    const ux = Math.sin(dir);
+                    const uz = Math.cos(dir);
+                    route = [from, {x: from.x + ux * (flat / 3) + uz * bow, z: from.z + uz * (flat / 3) - ux * bow}, {x: from.x + ux * ((2 * flat) / 3) + uz * bow * 0.9, z: from.z + uz * ((2 * flat) / 3) - ux * bow * 0.9}, to];
+                } else {
+                    // Out along a heading (towards its goal, or seeded), round in one wide U at the far end, and back
+                    // to the goal: half a turn, not a loop. Towards the island's middle if the far end would be off it.
+                    let dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (random() - 0.5) * 0.8 : random() * Math.PI * 2;
+                    if (Math.hypot(from.x + Math.sin(dir) * span, from.z + Math.cos(dir) * span) > Math.max(Math.hypot(from.x, from.z), 60)) dir = Math.atan2(-from.x, -from.z) + (random() - 0.5) * 0.8;
+                    const ux = Math.sin(dir);
+                    const uz = Math.cos(dir);
+                    const at = (along: number, across: number): NavPoint => ({x: from.x + ux * along + uz * across, z: from.z + uz * along - ux * across});
+                    route = [from, at(span * 0.5, bow * 0.15), at(span * 0.9, bow * 0.45), at(span * 0.85, bow * 0.85), at(span * 0.45, bow * 0.8), to];
+                }
                 const length = pathLength(route) + Math.abs(to.y - from.y);
                 legs.push({mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2});
             } else {

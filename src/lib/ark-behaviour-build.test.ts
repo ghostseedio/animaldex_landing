@@ -4,9 +4,10 @@ import test from "node:test";
 import {NavGrid, navGridBuild, type NavCells} from "@/ark-scene/behaviour-nav";
 import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
-import {ATTACH_TAGS, drawnRock, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {ATTACH_TAGS, ROCK_MARGIN, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {homePlots} from "@/ark-scene/map/hamlet";
 import {floorObstacles} from "@/ark-scene/floor-assets";
+import {drawnRocks, inRock} from "@/ark-scene/map/rocks";
 import {paddockRect, paddockSegments, picketRuns, plotFrame} from "@/ark-scene/props/home-layout";
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt} from "@/ark-scene/sampler";
@@ -58,7 +59,7 @@ function referenceCells(sampler: ArkWorldSampler): Omit<NavCells, "version" | "s
 /** The old `sceneSampler`'s places and version, verbatim (the index, the lattice and the obstacle test are unchanged code). */
 function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint[]>} {
     // (The scenery-to-place tag mapping is data, not the build: it follows world-sampler.ts's, here as of 2026-11-11.)
-    const FROM: Record<string, AttachTag> = {leaf: "leaf", branch: "branch", canopy_perch: "branch", bark: "bark", canopy_climb: "bark", flower_head: "flower", rock_face: "rock_face", tide_pool: "tide_pool", house_wall: "house_wall", house_eave: "house_wall", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf_litter", worm_hole: "worm_hole", burrow: "burrow_entrance", pond_surface: "pond_surface", ledge: "cliff_ledge", limb: "branch", tree_hollow: "tree_hollow", fence_post: "post", roof_edge: "post"};
+    const FROM: Record<string, AttachTag> = {leaf: "leaf", branch: "branch", canopy_perch: "branch", bark: "bark", canopy_climb: "bark", flower_head: "flower", rock_face: "rock_face", tide_pool: "tide_pool", house_wall: "house_wall", house_eave: "house_wall", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf_litter", worm_hole: "worm_hole", burrow: "burrow_entrance", pond_surface: "pond_surface", ledge: "cliff_ledge", limb: "branch", tree_hollow: "tree_hollow", fence_post: "post", roof_edge: "post", log: "log_top"};
     const TREE_KINDS = new Set<DecorItem["kind"]>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy"]);
     const UP = {nx: 0, ny: 1, nz: 0};
     const points = new Map<AttachTag, AttachPoint[]>();
@@ -84,9 +85,9 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
             if (s.waterDepth <= 0 && i % 2 === 0) add({tag: "shade", x: sx, y: s.height, z: sz, ...UP, yaw: item.rotation, size: [0.05, 4], zone: s.zone});
         } else if (item.kind === "rock") {
             const s = surface(item.x, item.z);
-            // (The drawn asset rock's top since graphics batch 5, here as there.)
-            const solid = drawnRock(item);
-            add({tag: "rock_top", x: item.x, y: solid ? solid.top : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
+            // (The drawn asset rock's top since graphics batch 5, from the map lane's drawnRocks, here as there.)
+            const solid = drawnRocks().find((rock) => rock.x === item.x && rock.z === item.z);
+            add({tag: "rock_top", x: item.x, y: solid ? solid.y1 : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
             if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
         } else if (item.kind === "reed") {
             add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
@@ -97,12 +98,7 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
             }
         }
     }
-    // (Graphics batch 6's fallen logs: their tops, added 2026-11-11 to the build, here as there.)
-    for (const log of floorObstacles()) {
-        const s = surface(log.x, log.z);
-        if (s.waterDepth > 0) continue;
-        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
-    }
+    // (Graphics batch 6's fallen logs: their tops are the scenery's `log` points on the drawn bark, mapped above.)
     const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
         for (let d = 0; d < 6; d += 0.25) {
             const px = x + Math.cos(outward) * d;
@@ -151,7 +147,7 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
         }
     }
     const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
-    return {version: `scene:${items.length}:${scenery.length}:${counts}`, points};
+    return {version: `scene:${items.length}:${scenery.length}:${counts}:rocks${drawnRocks().length}`, points};
 }
 
 const bytes = (cells: Pick<NavCells, "walk" | "steep" | "depth" | "height">) => [cells.walk, cells.steep, cells.depth, cells.height].map((a) => Buffer.from(a.buffer, a.byteOffset, a.byteLength));
@@ -296,12 +292,14 @@ test("fallen logs: walkers go round them, and their tops are a place for small a
     assert.ok(logs.length > 0, "graphics batch 6 has fallen logs");
     const grid = new NavGrid(allAtOnce);
     for (const log of logs) assert.ok(allAtOnce.blocked(log.x, log.z, 0.2), `a log at ${log.x.toFixed(1)},${log.z.toFixed(1)} is not an obstacle`);
-    // Every log circle on dry land has a top to stand on, raised over the ground, for animals up to 0.8 m.
+    // The tops: the scenery's points on the drawn bark, raised over the ground, for small animals (the attach data's
+    // size range, up to about 0.8 m at the thickest log).
     const tops = allAtOnce.attachPoints("log_top");
-    assert.ok(tops.length > 0 && tops.length <= logs.length);
+    assert.equal(tops.length, allAttachPoints().filter((p) => p.tag === "log").length);
+    assert.ok(tops.length > 0);
     for (const top of tops) {
         assert.ok(top.y > allAtOnce.heightAt(top.x, top.z), "a log's top is above the ground");
-        assert.ok(top.size[1] <= 0.8);
+        assert.ok(top.size[1] <= 0.9);
     }
     // The grid's cell under a log's middle circle (the log itself) is not walked through.
     const middles = logs.filter((_, k) => k % 3 === 1);
@@ -309,24 +307,44 @@ test("fallen logs: walkers go round them, and their tops are a place for small a
     assert.equal(blockedCells, middles.length, `only ${blockedCells} of ${middles.length} log middles off the grid`);
 });
 
-test("the drawn rocks: walkers go round them, a small animal stands on top, never inside", () => {
-    const rocks = [...worldDecor(), ...forestFill()].filter((item) => item.kind === "rock");
+test("the drawn rocks: the map's shapes (drawnRocks, inRock), walkers never inside one, a small animal on top", () => {
+    const rocks = drawnRocks();
+    assert.ok(rocks.length > 10, `rocks ${rocks.length}`);
     const grid = new NavGrid(allAtOnce);
-    let checked = 0;
+    // Every point of every rock (a lattice over its box, 0.25 m apart) is blocked and on no walkable cell of the grid.
+    let inside = 0;
     for (const rock of rocks) {
-        const solid = drawnRock(rock);
-        if (!solid) continue;
-        checked++;
-        // Its middle and a point halfway out are blocked; the grid's cell under its middle is never walked through.
-        assert.ok(allAtOnce.blocked(rock.x, rock.z, 0.2), `a rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)} is not an obstacle`);
-        assert.ok(allAtOnce.blocked(rock.x + solid.radius * 0.5, rock.z, 0.2));
-        if (allAtOnce.heightAt(rock.x, rock.z) > 0.05) assert.ok(!grid.walkable(rock.x, rock.z, 9), `the walk grid crosses a rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)}`);
+        // (From 1 cm inside its edges, clear of rounding at the boundary.)
+        for (let lx = rock.hx0 + 0.01; lx <= rock.hx1 - 0.01; lx += 0.25) {
+            for (let lz = rock.hz0 + 0.01; lz <= rock.hz1 - 0.01; lz += 0.25) {
+                // (Back out of the rock's frame: the inverse of inRock's turn.)
+                const x = rock.x + lx * rock.cos + lz * rock.sin;
+                const z = rock.z - lx * rock.sin + lz * rock.cos;
+                assert.ok(inRock(x, z, 0), "the lattice point is in the map's rock");
+                assert.ok(allAtOnce.blocked(x, z, 0.2), `a rock's point at ${x.toFixed(2)},${z.toFixed(2)} is not blocked`);
+                assert.ok(!grid.walkable(x, z, 9), `the walk grid crosses a rock at ${x.toFixed(2)},${z.toFixed(2)}`);
+                inside++;
+            }
+        }
     }
-    assert.ok(checked > 10, `rocks ${checked}`);
-    // Its top: on the drawn rock, never below its surface.
-    for (const top of allAtOnce.attachPoints("rock_top")) {
-        const rock = rocks.find((r) => Math.abs(r.x - top.x) < 1e-9 && Math.abs(r.z - top.z) < 1e-9);
-        const solid = rock ? drawnRock(rock) : null;
-        if (solid) assert.ok(Math.abs(top.y - solid.top) < 1e-9, "a rock's top is its drawn top");
+    assert.ok(inside > 1000, `points ${inside}`);
+    // Where the map's inRock says a body reaches a rock, the walk agrees (blocked; the walk keeps ROCK_MARGIN more).
+    let reached = 0;
+    let clear = 0;
+    for (let x = -TERRAIN_HALF; x < TERRAIN_HALF; x += 1.7) {
+        for (let z = -TERRAIN_HALF; z < TERRAIN_HALF; z += 1.7) {
+            if (inRock(x, z, 0.2 + ROCK_MARGIN)) {
+                reached++;
+                assert.ok(allAtOnce.blocked(x, z, 0.2), `inRock at ${x.toFixed(1)},${z.toFixed(1)} but not blocked`);
+            } else if (!inRock(x, z, 4)) clear++;
+        }
+    }
+    assert.ok(reached > 100 && clear > 1000, `reached ${reached}, clear ${clear}`);
+    // Its top: the drawn rock's top, over the rock's middle.
+    const tops = allAtOnce.attachPoints("rock_top");
+    for (const rock of rocks) {
+        const top = tops.find((t) => t.x === rock.x && t.z === rock.z);
+        assert.ok(top, "every drawn rock has a top");
+        assert.equal(top!.y, rock.y1, "a rock's top is its drawn top");
     }
 });

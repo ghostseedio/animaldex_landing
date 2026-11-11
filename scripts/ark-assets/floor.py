@@ -266,11 +266,12 @@ def pinecones(variant, seed):
 
 LITTER = {
     "autumn": dict(colors=G("#a8582a", "#c87a2a", "#d8a03a", "#8a4a26", "#b86a30", "#6a4a2a", "#c8b04a", "#7a8a3a"),
-                   base=(hexc("#4a3424"), hexc("#6a4a30")), shapes=["maple", "oak", "blade"], size=(0.07, 0.12), n=150),
-    "conifer": dict(colors=G("#b07a44", "#c08850", "#9a6a3a", "#c8a068"), base=(hexc("#4a3020"), hexc("#6a4628")),
-                    shapes=["needle"], size=(0.04, 0.06), n=520, cones=5),
-    "tropical": dict(colors=G("#6a5a2a", "#8a6a30", "#4a5a2a", "#a07a3a", "#5a4a24"),
-                     base=(hexc("#3a2c1e"), hexc("#5a4028")), shapes=["blade"], size=(0.18, 0.32), n=60),
+                   bits=G("#3e2c1e", "#4e3624", "#5a4028"), shapes=["maple", "oak", "blade"], size=(0.07, 0.12), n=230,
+                   n_bits=120),
+    "conifer": dict(colors=G("#b07a44", "#c08850", "#9a6a3a", "#c8a068", "#8a5a34"), bits=G("#5a3e26", "#6a4a2e"),
+                    shapes=["needle"], size=(0.045, 0.07), n=900, n_bits=60, cones=5),
+    "tropical": dict(colors=G("#6a5a2a", "#8a6a30", "#4a5a2a", "#a07a3a", "#5a4a24"), bits=G("#2e2418", "#3a2c1e"),
+                     shapes=["blade"], size=(0.2, 0.34), n=95, n_bits=80),
 }
 
 
@@ -303,53 +304,58 @@ def lying_leaf(shape, L, rng):
 
 
 def litter(variant, seed):
+    """Fallen leaves, needles or fronds scattered loose on the ground (no base plate: they sit on the
+    terrain's own soil), thickest in the middle and thinning out to a ragged edge so the patch has
+    no outline, with small dark humus flecks among them. Far LODs keep fewer, larger cards."""
     kind = {"a": "autumn", "b": "conifer", "c": "tropical"}[variant]
     S = LITTER[kind]
     rng = np.random.default_rng(seed)
     R = 1.0
+
+    def place(n, inner=0.55):
+        out = []
+        while len(out) < n:
+            a, r = rng.uniform(0, 2 * math.pi), R * math.sqrt(rng.uniform())
+            edge = 1 + 0.25 * fbm(np.array([[math.cos(a) * 2, math.sin(a) * 2, seed]]), 2)[0]
+            if r > R * edge or rng.uniform() > 1 - 0.9 * smoothstep(inner, 1.0, r / (R * edge)):
+                continue
+            out.append((a, r))
+        return out
+
     leaves = []
-    for i in range(S["n"]):
-        a, r = rng.uniform(0, 2 * math.pi), R * math.sqrt(rng.uniform()) * 0.95
+    for i, (a, r) in enumerate(place(S["n"])):
         c = np.array([math.cos(a) * r, 0.004 + rng.uniform(0, 0.012), math.sin(a) * r])
         fwd = np.array([math.cos(rng.uniform(0, 6.28)), rng.uniform(-0.15, 0.15), math.sin(rng.uniform(0, 6.28))])
         up = norm(UP + rng.normal(0, 0.15, 3))
+        col = jitter(S["colors"][int(rng.integers(len(S["colors"])))], rng, 0.1, 0.03)
+        col[:3] *= rng.uniform(0.7, 1.0)
         leaves.append(dict(c=c, fwd=fwd, up=up, L=rng.uniform(*S["size"]), shape=S["shapes"][i % len(S["shapes"])],
-                           col=jitter(S["colors"][int(rng.integers(len(S["colors"])))], rng, 0.1, 0.03)))
+                           col=col))
+    bits = []
+    for a, r in place(S["n_bits"], inner=0.3):
+        bits.append(dict(c=np.array([math.cos(a) * r, 0.003, math.sin(a) * r]), a=rng.uniform(0, 6.28),
+                         s=rng.uniform(0.02, 0.05), col=jitter(S["bits"][int(rng.integers(len(S["bits"])))], rng, 0.08)))
     lods, pts = [], []
-    for detail, (rings, sides, keep) in enumerate([(4, 20, 1.0), (2, 12, 0.3), (1, 8, 0.0)]):
+    for detail, (keep, scale, bit_keep) in enumerate([(1.0, 1.0, 1.0), (0.32, 1.5, 0.0), (0.1, 2.4, 0.0)]):
         m = Mesh()
-        # The base: a mottled, slightly domed disc that fades into the ground at its edge.
-        P = [[0, 0.003, 0]]
-        for i in range(1, rings + 1):
-            t = i / rings
-            for j in range(sides):
-                aa = 2 * math.pi * j / sides
-                jag = 1 + 0.18 * fbm(np.array([[math.cos(aa) * 2, math.sin(aa) * 2, seed]]), 2)[0]
-                P.append([math.cos(aa) * R * t * jag, 0.003 * (1 - t), math.sin(aa) * R * t * jag])
-        P = np.array(P)
-        F = [[0, 1 + (j + 1) % sides, 1 + j] for j in range(sides)]
-        for i in range(rings - 1):
-            for j in range(sides):
-                a0 = 1 + i * sides + j
-                a1 = 1 + i * sides + (j + 1) % sides
-                F += [[a0, a1, a1 + sides], [a0, a1 + sides, a0 + sides]]
-        n = fbm(P * 6 + seed, 3)
-        C = mix(S["base"][0], S["base"][1], np.clip(0.5 + n * 1.5, 0, 1))
-        if detail == 2:
-            # Far: the leaves' colour folded into the base.
-            avg = np.mean([l["col"] for l in leaves], 0)
-            C = mix(C, avg, np.clip(0.5 + fbm(P * 9 + 3, 2) * 2, 0, 1) * 0.7)
-        m.add(P, F, np.tile(UP, (len(P), 1)), C, np.zeros((len(P), 4)))
-        for l in leaves[: int(len(leaves) * keep)]:
-            Pl, Fl, fl = lying_leaf(l["shape"] if detail == 0 else ("needle" if l["shape"] == "needle" else "blade"),
-                                    l["L"] * (1 if detail == 0 else 1.4), rng)
+        order = np.random.default_rng(seed + 9).permutation(len(leaves))
+        for idx in order[: max(6, int(len(leaves) * keep))]:
+            l = leaves[idx]
+            shape = l["shape"] if detail == 0 else ("needle" if l["shape"] == "needle" else "blade")
+            Pl, Fl, fl = lying_leaf(shape, l["L"] * scale, rng)
+            if shape == "needle" and detail:
+                Pl[:2, 0] *= scale  # far needles stay visible: wider, not only longer
             Pw, x, y, z = place_frame(Pl, l["c"], l["fwd"], l["up"])
             Cl = np.tile(l["col"], (len(Pw), 1))
             Cl[:, :3] *= (0.85 + 0.2 * fl)[:, None]
             m.add(Pw, Fl, np.tile(norm(y + UP), (len(Pw), 1)), Cl, np.zeros((len(Pw), 4)))
+        for b in bits[: int(len(bits) * bit_keep)]:
+            ang = b["a"] + np.array([0, 2.2, 4.1])
+            Pb = b["c"] + np.stack([np.cos(ang), np.zeros(3), np.sin(ang)], 1) * b["s"] * np.array([1.0, 0.7, 0.85])[:, None]
+            m.add(Pb, [[0, 2, 1]], np.tile(UP, (3, 1)), np.tile(b["col"], (3, 1)), np.zeros((3, 4)))
         if S.get("cones") and detail < 2:
             for k in range(S["cones"]):
-                a, r = rng.uniform(0, 6.28), rng.uniform(0.1, 0.8)
+                a, r = rng.uniform(0, 6.28), rng.uniform(0.1, 0.7)
                 ax = np.array([math.cos(a + 1), 0.1, math.sin(a + 1)])
                 pinecone(m, np.array([math.cos(a) * r, 0.03, math.sin(a) * r]) - ax * 0.05, ax, 0.11, 0.03, "spruce",
                          detail, rng)
@@ -358,7 +364,8 @@ def litter(variant, seed):
         pts.append(attach("leaf_litter", l["c"] + UP * 0.01, UP, l["fwd"], (0.001, 0.12), lod=0, spot="leaf_litter"))
     return Asset("floor", f"litter-{kind}", "a", lods, None, pts,
                  dict(height=0.03, group="litter", decal=True,
-                      note="a flat decal patch (radius 1 m): lay it on the terrain, scale freely",
+                      note="loose leaves, needles or fronds (no base plate), about 1 m across, thinning to a ragged "
+                           "edge: lay it on the terrain's soil, scale and rotate freely",
                       lod_distances=[6.0, 15.0, 40.0], view=dict(elev=55)))
 
 

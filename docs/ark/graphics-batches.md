@@ -112,6 +112,7 @@ Known gaps:
 - caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
 - Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.
 
+## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
 ## Batch 4: terrain and near-camera (f04ebfb4 and on)
 
 Lane: terrain and near-camera. The reef, kelp, fish schools (`ark-graphics-reef`) and the leaf/bark attach points (`ark-graphics-attach`) are separate lanes.
@@ -154,6 +155,7 @@ The phone profile held 60 fps in every run. GPU drain is about 1 ms higher (the 
 Golden shots: the before/after sheets are `batch4-desktop-before-after.jpg`, `batch4-desktop-closeups-reef.jpg` and `batch4-phone-before-after.jpg` in the handover folder's `ark/graphics/`. Pin the tier for comparisons (`--quality high` on desktop, `--quality medium` on phone): under load the auto tier drops while the page prepares, and the shots then differ in more than the change.
 
 Seen while checking, not this lane's: the props lane's mist (`props/effects.ts` on `ark-release`) is flat horizontal sheets 0.6 to 1.5 m above the ground at each patch's middle. On sloping woodland and farm ground a sheet cuts through the land and the animals, and seen nearly edge-on it reads as a frosted band with straight edges (the animal-look lane's barn owl and fox shots). Over the lake it makes the shore's grass look as if it were under the water. A fix: give each sheet segments and drape it over the ground (`sampleGround` per vertex plus the offset), and fade it as the camera comes within about 2 m of its height.
+
 
 ## Batch 4, reef and coast water (branch `ark-graphics-reef`, cut from `ark-graphics` 7fb87467)
 
@@ -259,3 +261,60 @@ Same-conditions A/B, batch 5 (79f22ee6 scene source) against batch 6 (f8a2ad0c),
 The phone profile held 60 fps in every run, with about 4 more draw calls (the floor set) and the same triangles. Its scene CPU looks about 1.5 ms higher at 4× throttle, but under this load that is within the noise. Worth re-measuring on a quiet machine or a real phone.
 
 Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg`, `batch6-bark-closeup.png` and `batch6-buttress-before-after.png` in the handover folder's `ark/graphics/`.
+
+## Batch 6: the forest thinned, the snowy faces (owner: "the trees are too dense"; "dark rectangular slabs on the snowy faces")
+
+- **Forest (`decor.ts`):**
+  - one rule, `woodsCover(x, z)`, for the rainforest and the woodland:
+    - 0 in a glade (broad open patches a few tens of metres across), 1 in the deep woods;
+    - a ragged edge where the forest fades into its neighbour;
+    - the map's clearings stay as they were.
+  - The forest fill:
+    - about half of what it was in the woods, with a lower canopy of broadleaves under fewer emergents in the rainforest;
+    - none in the glades, thinning towards the edge;
+    - 508 → 407 trees and shrubs.
+  - The decor trees:
+    - a tree in a glade, or past the edge by a per-tree roll, now stands as an understorey shrub (48: 29 in the rainforest, 19 in the woodland);
+    - the change is made after every skip test and with no extra random draw, so no decor id or spot moves.
+  - The canopy trees (the large climbers' limbs) are untouched.
+  - From the island view the woods read leafy but broken up: ground, shrubs and trunks show between the crown groups.
+- **Attach hosts:**
+  - `docs/ark/forest-thinning-hosts.json` lists them:
+    - decor trees now shrubs;
+    - fill hosts removed, re-kinded or added;
+    - every kept fill id's renumbering (`forestFill()` is rank-ordered).
+  - `scripts/ark-tree-attach.mjs` and the attach baseline are not on this branch.
+  - `tree-attach.json` is per tree asset and does not change.
+  - The baseline needs `ARK_ATTACH_BASELINE=update` on the release.
+- **Snow formula (`terrain.ts`), for `snow.ts` to mirror:**
+  - The ribs are drawn on both side planes and blended across the 45° turn: `faceTurn = smoothstep(0.3, 0.7, |n.x| / (|n.x| + |n.z|))`, `rib = 1 - |2·mix(fbm(x-plane), fbm(z-plane), faceTurn) - 1|`. Before, they were drawn on whichever plane the face turned to most and jumped at the turn. The across-face streaks and the rib bend fade out over the turn.
+  - `high`: was `smoothstep(snowLine + 2, snowLine + 11, world.y)`, now `smoothstep(snowLine + 2, snowLine + 11, snowAt + 6·(0.5 - rib))`. The upper reach runs down the gullies and back up the ribs; a level line capped the steep peaks like a lid.
+  - `holdTo`: was `mix(0.48, 0.7, high) - 0.12·hard·smoothstep(0.4, 0.6, slope)`, now `mix(0.48, 0.7, high) + 0.16·(noise(p·0.11 + 3.7) - 0.5)`. The hard beds' level edges no longer box the bare rock in; it shows through in irregular windows.
+  - The rib cut takes a wobble: `smoothstep(0.6, 0.88, rib + 0.2·(noise(p·0.35 - 2.1) - 0.5))`.
+  - The rock beds' tone fades by 70 % up in the snow (`beds *= 1 - 0.7·high`), so rock showing through reads as one stone.
+  - The alpine snow line, the ledge snow and the ice are unchanged.
+- **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
+
+  | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
+  |---|---|---|---|
+  | island_far | 3.53 → 3.11 M | 386 → 386 | 0.93 → 0.91 M |
+  | forest_floor | 11.37 → 8.19 M | 568 → 562 | 2.27 → 1.79 M |
+  | storm_trees | 11.14 → 7.87 M | 444 → 438 | 1.94 → 1.55 M |
+  | mountain | 5.01 → 3.87 M | 339 → 333 | 0.99 → 0.88 M |
+
+  - Every shot held 60 fps.
+  - The terrain shader runs the same number of noise stacks: one more for the second rib plane, one fewer for the rib bend.
+- **Golden sheets** (in the handover folder's `ark/graphics/`):
+  - `batch6-forest-desktop-day.jpg` and `batch6-forest-desktop-night.jpg`;
+  - `batch6-forest-phone.jpg`;
+  - `batch6-forest-overview-crop.jpg` and `batch6-mountain-slabs.jpg`.
+
+## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
+
+- **Tree attach points on the drawn trees.** attach.json's points are computed before the level-of-detail cut and the leaves' fold, curl and growth: its leaf points sat a median 1–46 cm off the drawn lod0 leaves. `scripts/ark-tree-attach.mjs` moves each onto the drawn surface (a single leaf within 0.6 m first, else the leaf mass; bark and branch tops on the wood) and records the wind weights there (`src/ark-scene/tree-attach.json`, 1,011 points, 34 KB gzipped). `tree-assets.ts` places them where `asset-trees.ts` draws each tree (one shared `assetTreePlacement`); only decor trees and the fill every tier draws carry them.
+- **Wind.** An animal on a leaf moves with it: `attachPointAt(point, ARK_TIME.value, ARK_WIND.value)` is the tree shader's own sway and flutter at that point (2–6 cm in a storm). Chosen over "only where the sway is small", because every leaf flutters.
+- **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds, so a close-up's leaf is always the one the point is on (before, a camera up in a tall crown could see lod1).
+- **Rocks.** Rock points sat on the smooth rock shape, not the flat faces drawn (a true-size limpet half buried); `drawnRockPoint` fixed that. Since batch 5 the rocks are the asset lane's (`rock-assets.ts`), and `drawnRockPoint` only applies if the rock set is missing.
+- **Close-up golden shots** (`caterpillar_leaf`, `bee_flower`, `limpet_tidepool`, `gecko_wall`, and the new `ant_bark`): the animal at its true size, framed as the scene frames a tapped small animal (length × 6, 0.12–3 m; the leaf shot 0.55 m to show the whole leaf). The camera is checked clear both ways along its sight line, the leaf or trunk in the sun and with nothing in front of the lens, chosen once in the morning light and kept for dusk and night. The harness had been drawing them from 0.3 m or more: the scene eased its closest distance back out every frame; the shots now hold it. The leaf shot uses a small cabbage white (5 cm): there is still no caterpillar model.
+- **Near plane under 5 cm.** The scene sets near to 8 % of the camera's distance to what it looks at (at least 1 cm). The 5 mm ant at 0.12 m has near 1 cm, nothing clips, and the 24-bit depth resolves about 0.1 µm there: no z-fighting between an animal and its leaf, bark or rock (2 mm off). No change was needed. GTAO (high tier) keeps its 1.2 m radius in close-ups: the same leaf shot is 3–5 % darker on high than on medium and the bark shot is the same, so it was left.
+

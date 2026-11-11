@@ -4,9 +4,11 @@
  * the woods' gentle ground. Pure and deterministic (each 3 m cell from its
  * own seed), so every viewer sees the same log in the same place.
  *
- * Twigs everywhere under the trees; pine and spruce cones under the conifers;
- * logs, fresh, mossy or rotten, more rarely. (The set's litter patches are
- * not used: see DENSITY.) Never on a site's clearing (where the
+ * Litter patches under the trees, by the nearest one: autumn leaves under
+ * broadleaves, needles under conifers, tropical leaves in the rainforest
+ * (batch 6, once the asset lane rebuilt them without a base plate); twigs
+ * everywhere under the trees; pine and spruce cones under the conifers; logs,
+ * fresh, mossy or rotten, more rarely. Never on a site's clearing (where the
  * animals stand), on steep ground or against a trunk.
  */
 
@@ -28,9 +30,7 @@ const CELL = 3;
 const TREE_KINDS = new Set(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy"]);
 
 /** Per m² of forest floor (at full forest weight). */
-// Litter patches are left out (batch 6): their opaque base plate reads as a square rug on our ground; the procedural
-// litter mats (near-detail.ts) cover the floor instead. Logs, twigs and cones are used.
-const DENSITY = {litter: 0, twigs: 1 / 18, cones: 1 / 22, log: 1 / 55};
+const DENSITY = {litter: 1 / 10, twigs: 1 / 18, cones: 1 / 22, log: 1 / 55};
 
 function has(id: string): boolean {
     return Boolean(ASSETS[id]);
@@ -45,13 +45,13 @@ export function floorPlacements(): FloorPlacement[] {
         cached = out;
         return out;
     }
-    // Trunks to keep clear of, on a coarse grid.
-    const trunks = new Map<string, Array<[number, number]>>();
+    // Trunks to keep clear of (and the litter's tree), on a coarse grid.
+    const trunks = new Map<string, Array<[number, number, string]>>();
     for (const item of [...worldDecor(), ...forestFill()]) {
         if (!TREE_KINDS.has(item.kind)) continue;
         const key = `${Math.floor(item.x / 4)},${Math.floor(item.z / 4)}`;
         const list = trunks.get(key) ?? [];
-        list.push([item.x, item.z]);
+        list.push([item.x, item.z, item.kind]);
         trunks.set(key, list);
     }
     const nearTrunk = (x: number, z: number, r: number) => {
@@ -61,6 +61,28 @@ export function floorPlacements(): FloorPlacement[] {
             }
         }
         return false;
+    };
+    /** The nearest tree's kind within 5 m (litter lies under trees), or null in the open. */
+    const treeOver = (x: number, z: number): string | null => {
+        let best: string | null = null;
+        let bestD = 5;
+        for (let dx = -2; dx <= 2; dx++) {
+            for (let dz = -2; dz <= 2; dz++) {
+                for (const [tx, tz, kind] of trunks.get(`${Math.floor(x / 4) + dx},${Math.floor(z / 4) + dz}`) ?? []) {
+                    const d = Math.hypot(tx - x, tz - z);
+                    if (d < bestD) {
+                        bestD = d;
+                        best = kind;
+                    }
+                }
+            }
+        }
+        return best;
+    };
+    const litterFor = (x: number, z: number): string[] => {
+        const kind = treeOver(x, z);
+        if (!kind) return [];
+        return kind === "conifer" ? ["litter-conifer-a"] : kind === "rainforest" ? ["litter-tropical-a"] : ["litter-autumn-a"];
     };
     const clearings = (Object.keys(ZONE_SITES) as ArkZone[]).map((zone) => ZONE_SITES[zone]).filter((site) => site.kind === "land");
     const onClearing = (x: number, z: number, margin: number) => clearings.some((site) => Math.hypot(x - site.x, z - site.z) < site.clearing + margin);
@@ -77,8 +99,9 @@ export function floorPlacements(): FloorPlacement[] {
             const random = seeded(((cx * 48271) ^ (cz * 69621) ^ 0x7f10) >>> 0);
             const area = CELL * CELL * smoothstep(0.35, 0.8, forest);
             const conifers = zone === "woodland" || zone === "mountains";
-            const kinds: Array<{ids: string[]; per: number; clear: number; log?: boolean}> = [
-                {ids: zone === "rainforest" ? ["litter-tropical-a"] : conifers && random() < 0.45 ? ["litter-conifer-a"] : ["litter-autumn-a"], per: DENSITY.litter, clear: 0.6},
+            const kinds: Array<{ids: string[] | null; per: number; clear: number; log?: boolean}> = [
+                // null: chosen per patch by the tree over it.
+                {ids: null, per: DENSITY.litter, clear: 0.6},
                 {ids: ["twigs-a", "twigs-b"], per: DENSITY.twigs, clear: 0.5},
                 {ids: conifers ? ["pinecones-pine-a", "pinecones-spruce-a"] : [], per: DENSITY.cones, clear: 0.4},
                 {ids: ["log-fresh-a", "log-fresh-b", "log-mossy-a", "log-mossy-b", "log-rotten-a", "log-rotten-b"], per: DENSITY.log, clear: 1.6, log: true}
@@ -92,7 +115,7 @@ export function floorPlacements(): FloorPlacement[] {
                     const yaw = random() * Math.PI * 2;
                     const pick = random();
                     const size = random();
-                    const ids = kind.ids.filter(has);
+                    const ids = (kind.ids ?? litterFor(x, z)).filter(has);
                     if (!ids.length) continue;
                     if (onClearing(x, z, kind.log ? 4 : 0.5) || nearTrunk(x, z, kind.clear)) continue;
                     const e = 0.5;
