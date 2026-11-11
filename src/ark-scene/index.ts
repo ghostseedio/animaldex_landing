@@ -100,6 +100,9 @@ import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, m
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {AssetTrees} from "@/ark-scene/asset-trees";
+import {AssetRocks} from "@/ark-scene/asset-rocks";
+import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
@@ -129,6 +132,7 @@ import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
+import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
@@ -484,6 +488,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     scene.add(nearDetail.group);
+    // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
+    const assetTrees = new AssetTrees(options.assetBase);
+    scene.add(assetTrees.group);
+    let assetTreesShown = false;
+    // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
+    const assetRocks = new AssetRocks(options.assetBase);
+    scene.add(assetRocks.group);
+    let assetRocksShown = false;
     for (const mesh of vegetation.meshes) scene.add(mesh);
     scene.add(vegetation.grass);
     const motes = buildMotes(260);
@@ -535,6 +547,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         vegetation.setGrassCount(settings.grass);
         vegetation.setFill(settings.fill);
         nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
+        assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
+        assetRocks.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -722,9 +737,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourBuildLongestMs = worldBuild.longestMs;
         worldBuild = null;
     }
+    // The graphics lane's attach points first, a slice a frame on their own (`prepareAttachPoints`, about 6 ms each): the
+    // places start from them, so this build waits for them rather than building them in one task itself.
+    let attachReady = !worldBuild;
+    if (worldBuild) void prepareAttachPoints().then(() => (attachReady = true));
     const scheduleWorldNow = (): ScheduleWorld => world!;
     const stepWorldBuild = (budgetMs: number) => {
-        if (world || !worldBuild) return;
+        if (world || !worldBuild || !attachReady) return;
         const built = worldBuild.step(budgetMs);
         behaviourBuildMs = worldBuild.spentMs;
         behaviourBuildSlices = worldBuild.slices;
@@ -3805,6 +3824,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail.update(controls.target, viewDistance);
+        assetTrees.update(camera.position);
+        assetRocks.update(camera.position);
+        if (assetRocks.ready && !assetRocksShown) {
+            assetRocksShown = true;
+            vegetation.hideKinds(new Set(["rock"]));
+        }
+        vegetation.update(camera);
+        if (assetTrees.ready && !assetTreesShown) {
+            assetTreesShown = true;
+            vegetation.hideKinds(ASSET_TREE_KINDS);
+        }
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
@@ -4052,6 +4082,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rings.dispose();
             landscape.dispose();
             nearDetail.dispose();
+            assetTrees.dispose();
+            assetRocks.dispose();
             vegetation.dispose();
             micro.dispose();
             motes.dispose();

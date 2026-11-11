@@ -220,9 +220,22 @@ function hourly(profile: ArkBehaviourProfile, behaviour: ArkBehaviour, weight: n
     }
 }
 
-function pick(profile: ArkBehaviourProfile, hours: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+/**
+ * Its own leanings (problem 7: every animal of a kind doing the same thing): each behaviour's pull times 0.65-1.35,
+ * and its busy hours shifted up to 45 minutes either way, both its own for life (seeded by its id), so two of a kind
+ * with the same profile still choose differently, and not all at the same dawn.
+ */
+function leaning(id: string, behaviour: ArkBehaviour): number {
+    return 0.65 + 0.7 * ((hashString(`${id}#lean#${behaviour}`) % 1000) / 1000);
+}
+function chronotype(id: string): number {
+    return (((hashString(`${id}#chrono`) % 1000) / 1000) - 0.5) * 1.5;
+}
+
+function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+    const hours = (((hoursNow + chronotype(id)) % 24) + 24) % 24;
     const entries = (Object.entries(profile.weights) as Array<[ArkBehaviour, number]>)
-        .map(([b, w]) => [b, b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)] as const)
+        .map(([b, w]) => [b, (b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)) * leaning(id, b)] as const)
         .filter(([, w]) => w > 0);
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
     if (!total) return "rest";
@@ -238,7 +251,7 @@ function pick(profile: ArkBehaviourProfile, hours: number, roll: number, bold: n
 
 const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
     tree: ["branch"],
-    tree_hole: ["bark", "branch"],
+    tree_hole: ["tree_hollow", "bark", "branch"],
     cliff: ["cliff_ledge", "rock_top"],
     cave: ["cave_mouth", "rock_face"],
     crevice: ["rock_face", "rock_top"],
@@ -265,7 +278,7 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     bask_rock: ["rock_top"],
     graze_grass: ["grass"],
     perch_branch: ["branch"],
-    perch_rock: ["rock_top"],
+    perch_rock: ["rock_top", "post"],
     dig_soil: ["worm_hole", "burrow_entrance"],
     leaf_litter: ["leaf_litter"],
     flower: ["flower"],
@@ -352,6 +365,15 @@ export class ScheduleWorldBuild {
 }
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
+
+/** Where a flyer lands to perch: its own kinds first (a seabird's rocks, ledges and posts, never a branch). */
+function perchTags(profile: ArkBehaviourProfile): AttachTag[] {
+    const tags: AttachTag[] = [];
+    if (profile.interactions.includes("perch_branch")) tags.push("branch");
+    if (profile.interactions.includes("perch_rock")) tags.push("rock_top", "post");
+    if (profile.interactions.includes("cliff_ledge")) tags.push("cliff_ledge");
+    return tags.length ? tags : ["branch", "post", "rock_top", "cliff_ledge"];
+}
 const flies = (profile: ArkBehaviourProfile) => profile.move === "fly" || profile.moves.includes("fly");
 const swims = (profile: ArkBehaviourProfile) => profile.move === "swim" || profile.moves.includes("swim");
 const walks = (profile: ArkBehaviourProfile) => profile.move === "walk" || profile.moves.includes("walk") || profile.moves.includes("hop");
@@ -654,7 +676,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // predator's own schedule (the same for every viewer), sends it to the far side of its range to watch it. Near the
     // camera the local layer (`reactive.ts`) adds the look, the alarm and any dash on top. (Its own seeded stream: an
     // animal with no predator in sight chooses exactly as before.)
-    const threat = threatAt(world, animal, start, hoursAt, centre);
+    const threat = threatAt(world, profile, animal, start, hoursAt, centre, radius);
     if (threat) {
         const wary = rng(hashString(`${animal.id}#wary#${slot}`));
         const away = {x: centre.x + ((centre.x - threat.x) / threat.d) * radius * 0.7, z: centre.z + ((centre.z - threat.z) / threat.d) * radius * 0.7};
@@ -670,7 +692,12 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // A school keeps together nearly always (a loose cluster round its leader).
     if (group && FLOCKING.has(profile.social) && (flyer || aquatic(profile)) && random() < (aquatic(profile) ? 0.9 : 0.75)) {
         const lead = leaderIntentAt(world, group, start + 1, hoursAt);
-        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to) return {doing: lead.doing, to: null, mode: lead.mode, stay: [], follow: true};
+        // Its place is by its leader; what it does there is its own (a school's fish feed or cruise, a flock's birds fly),
+        // so a school is one shape but not one state (problem 7).
+        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to) {
+            const own: ArkDoing = lead.mode === "air" ? "fly" : random() < 0.45 ? "forage" : "swim";
+            return {doing: own, to: null, mode: lead.mode, stay: [], follow: true};
+        }
     }
     // Young play near their group.
     if (animal.young && group && random() < 0.45) {
@@ -678,7 +705,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
-    let behaviour = pick(profile, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
+    let behaviour = pick(profile, animal.id, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
     // A browser's grazing is at bushes and trees.
     let doing: ArkDoing = behaviour as ArkDoing;
     if ((behaviour === "graze" || behaviour === "forage") && (profile.diet === "browser" || profile.diet === "fruit") && walks(profile) && !flyer) doing = "browse";
@@ -734,7 +761,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         case "soar": {
             // A goal: a perch, a feeding spot on the ground, or (a floater) the water.
             const roll = random();
-            const perch = roll < 0.5 ? placeNear(world, centre, animal.length, ["branch", "rock_top", "cliff_ledge"], radius, random()) : null;
+            const perch = roll < 0.5 ? placeNear(world, centre, animal.length, perchTags(profile), radius, random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
             return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, centre, radius, random), mode: "air", stay: stayBeats("forage", random, null)};
@@ -750,7 +777,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         case "forage":
         case "graze":
             return {
-                doing: profile.move === "swim" ? "swim" : behaviour === "wander" && profile.surface ? "crawl" : doing,
+                // (A swimmer feeding is foraging, cruising is swimming: its states stay its own, not all "swim".)
+                doing: profile.move === "swim" ? (behaviour === "wander" ? "swim" : doing) : behaviour === "wander" && profile.surface ? "crawl" : doing,
                 to: rangeSpot(world, profile, groupAnimal, centre, radius, random),
                 mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground",
                 stay: stayBeats(doing, random, null)
@@ -759,6 +787,13 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const stayDoing: ArkDoing = STAY_DOINGS.has(doing) ? doing : "rest";
             // A group member that rests keeps near its group (it walks to it first if it has drifted away).
             if (group) return {doing: stayDoing, to: rangeSpot(world, profile, groupAnimal, centre, radius * 0.6, random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats(stayDoing, random, null)};
+            // A den, burrow, cave, hole or crevice animal mostly rests in it, out of sight (`restingAtRoost`: the runtime's
+            // rotation hides the ones resting at home, so one out of sight is plausibly there). Its own seeded stream.
+            if (stayDoing === "rest" && ENCLOSED_ROOSTS.has(profile.roost) && rng(hashString(`${animal.id}#den#${slot}`))() < 0.6) {
+                const roost = roostOf(world, profile, animal);
+                const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
+                return {doing: "rest", to: roost, mode: travel, stay: stayBeats("rest", random, null)};
+            }
             return {doing: stayDoing, to: null, mode: "stay", stay: stayBeats(stayDoing, random, null)};
         }
     }
@@ -991,21 +1026,24 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const flat = Math.hypot(to.x - from.x, to.z - from.z);
             const air = speed * 4;
             if (now.doing === "soar") {
-                // Wide, irregular arcs: through three seeded points high over its range, then down to its perch or the ground.
-                const route: NavPoint[] = [from];
-                const centre = {x: (from.x + to.x) / 2, z: (from.z + to.z) / 2};
+                // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
+                // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
+                // where it began runs out along a seeded heading and back.
                 const r = Math.max(homeRadius(profile, animal) * 0.8, 6);
-                let a = random() * Math.PI * 2;
-                for (let k = 0; k < 3; k++) {
-                    a += (0.8 + random() * 1.4) * (random() < 0.5 ? -1 : 1);
-                    route.push({x: centre.x + Math.cos(a) * r * (0.5 + random() * 0.6), z: centre.z + Math.sin(a) * r * (0.5 + random() * 0.6)});
-                }
-                route.push(to);
+                const span = Math.max(flat, r);
+                const dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) : random() * Math.PI * 2;
+                const bow = (random() < 0.5 ? -1 : 1) * (0.18 + random() * 0.14) * span;
+                const ux = Math.sin(dir);
+                const uz = Math.cos(dir);
+                const first = flat > 0.5 ? flat / 3 : span * 0.5;
+                const second = flat > 0.5 ? (2 * flat) / 3 : span * 0.5;
+                const route: NavPoint[] = [from, {x: from.x + ux * first + uz * bow, z: from.z + uz * first - ux * bow}, {x: from.x + ux * second + uz * bow * 0.9, z: from.z + uz * second - ux * bow * 0.9}, to];
                 const length = pathLength(route) + Math.abs(to.y - from.y);
                 legs.push({mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2});
             } else {
-                // Its own line: bowed to one side by a seeded amount.
-                const side = (random() - 0.5) * 0.7 * flat;
+                // Its own line: bowed a little to one side by a seeded amount (a straight flight to where it is going, not
+                // a weaving one: problem 2's turns).
+                const side = (random() - 0.5) * 0.25 * flat;
                 const mid = {x: (from.x + to.x) / 2 + ((to.z - from.z) / (flat || 1)) * side, z: (from.z + to.z) / 2 - ((to.x - from.x) / (flat || 1)) * side};
                 const route = [from, mid, to];
                 const length = pathLength(route) + Math.abs(to.y - from.y);
@@ -1269,14 +1307,52 @@ export function airborneDoing(doing: ArkDoing): boolean {
 
 // MARK: Predators and prey
 
-/** How far a prey animal notices a predator in the shared layer (about the reactive layer's sight for a walking hunter by day). */
-export const WARY_METRES = 35;
+/** Roosts an animal resting in is out of sight: a den, a burrow, a cave, a tree hole, a crevice. */
+const ENCLOSED_ROOSTS: ReadonlySet<ArkRoost> = new Set<ArkRoost>(["den", "burrow", "cave", "tree_hole", "crevice"]);
 
 /**
- * The nearest of its predators it can see at a moment (awake, within `WARY_METRES` of where it is about), or null.
- * Pure: the predator's own schedule, which never depends on its prey's.
+ * Whether its schedule has it settled at its roost now (asleep there, or resting there), and whether that roost hides
+ * it (`enclosed`: a den, a burrow, a cave, a tree hole, a crevice). Pure and shared: the runtime lane's `arkOutside`
+ * rotation (live-budget.ts) can hide these first, so an animal out of sight is plausibly at home, the same for every
+ * viewer (it never depends on a viewer's budget).
  */
-export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home): {x: number; z: number; d: number} | null {
+export function restingAtRoost(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): {resting: boolean; enclosed: boolean} {
+    const trip = tripAt(world, profile, animal, epochSeconds, hoursAt, activity);
+    if (epochSeconds < trip.arrive) return {resting: false, enclosed: false};
+    const settled = trip.doing === "sleep" || trip.doing === "to_roost" || trip.doing === "rest";
+    if (!settled) return {resting: false, enclosed: false};
+    const roost = roostOf(world, profile, animal);
+    const at = poseOnTrip(world, trip, epochSeconds);
+    const home = Math.hypot(at.x - roost.x, at.z - roost.z) < Math.max(animal.length * 2, 1.5) && !at.moving;
+    return {resting: home, enclosed: home && ENCLOSED_ROOSTS.has(profile.roost)};
+}
+
+/** The farthest any prey animal notices a predator in the shared layer (open ground, a big prey, a big hunter on the move). */
+export const WARY_METRES = 55;
+
+/** How far one can see across each zone, against open grassland (trees, reeds and undergrowth hide a hunter). */
+const OPENNESS: Partial<Record<ArkZone, number>> = {grassland: 1.15, desert: 1.15, polar: 1.15, mountains: 1, seashore: 1, open_ocean: 1, coral_reef: 0.9, river_lake: 0.9, farm_garden: 0.9, wetland: 0.8, woodland: 0.65, rainforest: 0.5};
+
+/**
+ * How far a prey animal notices a predator (scene metres), on the reactive layer's sight model
+ * (flee-envelope.md §2): its own sight by how it moves (a bird's best, a fish's short) and its size, how easy the
+ * hunter is to see (bigger, and moving, more), and how open its zone is. A zebra sees a lion walking across the
+ * grassland about 43 m off, one lying still about 24 m; a forest hides both at half that.
+ */
+export function waryRange(prey: ArkBehaviourProfile, zone: ArkZone, hunterLength: number, hunterMoving: boolean): number {
+    const sight = prey.move === "fly" || prey.moves.includes("fly") ? 40 : aquatic(prey) ? 12 : 30;
+    const size = 0.7 + (prey.size ?? 40) / 160;
+    const seen = (hunterMoving ? 1.25 : 0.7) * (0.7 + 0.15 * Math.min(Math.max(hunterLength, 0.2), 3));
+    return Math.min(Math.max(sight * size * seen * (OPENNESS[zone] ?? 0.8), 4), WARY_METRES);
+}
+
+/**
+ * The nearest of its predators it can see at a moment (awake, within its `waryRange` of anywhere in its range: `near`
+ * and `radius`, where it is about), or null. Pure: the predator's own schedule, which never depends on its prey's
+ * (and never the prey's own earlier slots: measuring from where the last slot left it would chain back through every
+ * slot before it). `d` is the distance from `near`.
+ */
+export function threatAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home, radius = 0): {x: number; z: number; d: number} | null {
     if (!animal.threats?.length) return null;
     let best: {x: number; z: number; d: number} | null = null;
     for (const threat of animal.threats) {
@@ -1284,7 +1360,7 @@ export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeco
         if (trip.doing === "sleep" || trip.doing === "to_roost") continue;
         const at = poseOnTrip(world, trip, epochSeconds);
         const d = Math.hypot(at.x - near.x, at.z - near.z);
-        if (d < WARY_METRES && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
+        if (d - radius < waryRange(profile, animal.zone, threat.animal.length, at.moving) && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
     }
     return best;
 }

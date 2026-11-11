@@ -54,7 +54,8 @@ function referenceCells(sampler: ArkWorldSampler): Omit<NavCells, "version" | "s
 
 /** The old `sceneSampler`'s places and version, verbatim (the index, the lattice and the obstacle test are unchanged code). */
 function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint[]>} {
-    const FROM: Record<string, AttachTag> = {leaf: "leaf", branch: "branch", canopy_perch: "branch", bark: "bark", canopy_climb: "bark", flower_head: "flower", rock_face: "rock_face", tide_pool: "tide_pool", house_wall: "house_wall", house_eave: "house_wall", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf_litter", worm_hole: "worm_hole", burrow: "burrow_entrance", pond_surface: "pond_surface"};
+    // (The scenery-to-place tag mapping is data, not the build: it follows world-sampler.ts's, here as of 2026-11-11.)
+    const FROM: Record<string, AttachTag> = {leaf: "leaf", branch: "branch", canopy_perch: "branch", bark: "bark", canopy_climb: "bark", flower_head: "flower", rock_face: "rock_face", tide_pool: "tide_pool", house_wall: "house_wall", house_eave: "house_wall", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf_litter", worm_hole: "worm_hole", burrow: "burrow_entrance", pond_surface: "pond_surface", ledge: "cliff_ledge", limb: "branch", tree_hollow: "tree_hollow", fence_post: "post", roof_edge: "post"};
     const TREE_KINDS = new Set<DecorItem["kind"]>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy"]);
     const UP = {nx: 0, ny: 1, nz: 0};
     const points = new Map<AttachTag, AttachPoint[]>();

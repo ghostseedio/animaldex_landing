@@ -42,7 +42,10 @@ export const ATTACH_TAGS = [
     "cliff_ledge",
     "cave_mouth",
     "reeds",
-    "shade"
+    "shade",
+    // (2026-11-11, from the graphics lane's new points: the drawn hollows in tree trunks; fence posts and roof edges.)
+    "tree_hollow",
+    "post"
 ] as const;
 export type AttachTag = (typeof ATTACH_TAGS)[number];
 
@@ -95,7 +98,14 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     leaf_litter: "leaf_litter",
     worm_hole: "worm_hole",
     burrow: "burrow_entrance",
-    pond_surface: "pond_surface"
+    pond_surface: "pond_surface",
+    // (2026-11-11.) Shelves on cliffs and rocks are ledges; a thick limb is a branch (its size range says who it bears);
+    // fence posts and roof edges are posts to perch on. (canopy_hang waits for a hanging behaviour.)
+    ledge: "cliff_ledge",
+    limb: "branch",
+    tree_hollow: "tree_hollow",
+    fence_post: "post",
+    roof_edge: "post"
 };
 
 class GridIndex {
