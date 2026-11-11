@@ -187,8 +187,9 @@ async function mountScenes(el: HTMLElement) {
         deer_graze: () => {
             const at = site("grassland", -6, 8);
             ids.deer.forEach((id, i) => stand(id, at.x + i * 1.9 - 1.9, at.z + (i % 2) * 1.3, 0.6 + i * 1.9, "graze", [["bite", 5], ["chew", 2.5], ["scan", 3.5]], i * 3.7));
-            view(at.x, at.z + 0.5, 5.5, 1.2, 1.15, 0.7);
-            return {note: "bite 5 s, chew 2.5 s, scan 3.5 s, each deer offset", watch: ids.deer};
+            // From past 14 m: nearer, the reactive layer has them watch the camera (heads up) instead of grazing.
+            view(at.x, at.z + 0.5, 15.5, 1.2, 1.28, 0.7);
+            return {note: "bite 5 s, chew 2.5 s, scan 3.5 s, each deer offset; the camera 15.5 m off", watch: ids.deer};
         },
         /** A red deer at rest near the camera: the reactive layer turns its head (to the camera, round, to its kin). */
         deer_look: () => {
