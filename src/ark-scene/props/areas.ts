@@ -32,7 +32,7 @@ import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sam
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {barnBase, buildHamletBuildings, type HamletBuildings} from "@/ark-scene/props/hamlet-buildings";
-import {barnStyle, chimneyTop, cottageStyle, coopSpot, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {barnStyle, chimneyTop, COMPOST, cottageStyle, coopSpot, GARDEN_BEDS, troughSpots, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -205,11 +205,11 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
 
     // The vegetable patch west of the cottage: ridged beds, bean canes in a wigwam.
     const cabbages: PropInstance[] = [];
-    const bedX = -7.6;
-    for (let row = 0; row < 4; row++) {
-        const x = bedX + row * 0.95;
-        const z0 = -1.6;
-        const z1 = 2.4;
+    const bedX = GARDEN_BEDS.x0;
+    for (let row = 0; row < GARDEN_BEDS.rows; row++) {
+        const x = bedX + row * GARDEN_BEDS.pitch;
+        const z0 = GARDEN_BEDS.z0;
+        const z1 = GARDEN_BEDS.z1;
         const ground = Math.min(G(x, z0), G(x, z1));
         const ridge = new BoxGeometry(0.6, 0.22, 4, 2, 1, 8);
         lumpy(ridge, 0.05, random);
@@ -240,7 +240,7 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
     }
 
     // The compost heap behind the cottage: a slatted bin of three sides, the heap spilling out of its front.
-    const bin = house(3.4, 0, -halfD - 2.2);
+    const bin = house(COMPOST.x, 0, COMPOST.z);
     const bg = G(bin.x, bin.z);
     for (let k = 0; k < 4; k++) {
         parts.push(boxAlong(bin.x - 0.7, bin.z - 0.7, bin.x + 0.7, bin.z - 0.7, bg + 0.12 + k * 0.2, 0.13, 0.04, "#7d6448", 0.9));
@@ -348,8 +348,7 @@ function farm(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; centr
     const water: BufferGeometry[] = [];
     const mud: PropInstance[] = [];
     const puddles: PropInstance[] = [];
-    const troughSpots: Array<[number, number, number]> = [[paddock.x0 + (paddock.x1 - paddock.x0) * 0.75, paddock.z0 + (paddock.z1 - paddock.z0) * 0.38, 2.2], [1.2, 3.0, 1.6]];
-    for (const [lx, lz, length] of troughSpots) {
+    for (const {x: lx, z: lz, length} of troughSpots(plot)) {
         const p = at(lx, lz);
         const g = groundAt(p.x, p.z);
         troughs.push({x: p.x, y: g, z: p.z, turn, scale: length / 2, tall: 1});
@@ -567,7 +566,14 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     const firstFarm = farms[0]?.built;
 
     yield;
-    const m = yield* mountain();
+    // (Stepped by hand, not `yield*`: the project's TypeScript target iterates generators only that way.)
+    const mountainSteps = mountain();
+    let mountainStep = mountainSteps.next();
+    while (!mountainStep.done) {
+        yield;
+        mountainStep = mountainSteps.next();
+    }
+    const m = mountainStep.value;
     addBatch(new LodBatch("strata", m.outcrops, shapes.strataOutcrop(2.5, 2.2), paint(new BoxGeometry(2.2, 1.8, 1.2).translate(0, 0.9, 0), "#8f8576"), cold, {cap: 40, reach: 2.2, farReach: 1, shadow: true}));
     addBatch(new LodBatch("scree", m.scree, shapes.screeStone(0.22), null, cold, {cap: 2600, reach: 0.9}));
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
@@ -575,7 +581,13 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     const icicles = addBatch(new LodBatch("icicles", m.icicles, shapes.icicle(0.45), null, new MeshStandardMaterial({vertexColors: true, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.85}), {cap: 120, reach: 0.6, fine: true}));
 
     yield;
-    const gr = yield* grassland();
+    const grassSteps = grassland();
+    let grassStep = grassSteps.next();
+    while (!grassStep.done) {
+        yield;
+        grassStep = grassSteps.next();
+    }
+    const gr = grassStep.value;
     gr.tussocks.forEach((items, kind) => addBatch(new LodBatch(`tussock-${kind}`, items, shapes.tussock(kind, kind === 1 ? 0.55 : 0.42), null, foliage, {cap: kind === 0 ? 900 : 600, reach: 0.85})));
     for (let variant = 0; variant < 3; variant++) {
         const items = gr.flowers.filter((flower) => flower.tall === variant).map((flower) => ({...flower, tall: undefined}));

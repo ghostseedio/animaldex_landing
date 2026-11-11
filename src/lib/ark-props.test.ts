@@ -588,3 +588,37 @@ test("props slices: the homes and the areas built a slice at a time are the same
     for (const built of [sliced, whole]) built.dispose();
     for (const built of [areasSliced, areasWhole]) built.dispose();
 });
+
+// MARK: - Where no animal stands
+
+import {COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
+import {plotSpots} from "@/ark-scene/map/hamlet";
+
+test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props draw are listed for the map's spots to avoid", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        const at = (lx: number, lz: number) => frame.toWorld(lx, lz);
+        if (plot.kind === "house") {
+            // Every cabbage row and the wigwam, the compost bin: on a keep-out of this plot.
+            for (let row = 0; row < GARDEN_BEDS.rows; row++) for (const lz of [GARDEN_BEDS.z0 + 0.35, 0.4, GARDEN_BEDS.z1 - 0.35]) {
+                const w = at(GARDEN_BEDS.x0 + row * GARDEN_BEDS.pitch, lz);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "beds", `${plot.id} bed ${row}`);
+            }
+            const bin = at(COMPOST.x, COMPOST.z);
+            assert.equal(onHomeKeepOut(bin.x, bin.z, [plot], 0)?.what, "compost");
+        } else {
+            for (const trough of troughSpots(plot)) {
+                const w = at(trough.x, trough.z);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "trough");
+            }
+            const coop = coopAt(plot);
+            const w = at(coop.x, coop.z);
+            assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "coop");
+        }
+        assert.ok(plotKeepOuts(plot).length >= 3);
+    }
+    // The map's spots today (a report for the map lane, which places on them): how many fall on a keep-out.
+    const clashes = plots.flatMap((plot) => plotSpots(plot).spots.filter((spot) => onHomeKeepOut(spot.x, spot.z, plots)).map((spot) => `${plot.id} ${spot.where} → ${onHomeKeepOut(spot.x, spot.z, plots)!.what}`));
+    console.log(`map spots on a props keep-out: ${clashes.length}${clashes.length ? `: ${clashes.join("; ")}` : ""}`);
+});

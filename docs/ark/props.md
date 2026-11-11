@@ -109,6 +109,13 @@ The hamlet grows by plots. Each house plot gets its own garden: a picket fence w
   - No decor item is moved or removed, so the decor's ids do not shift. `fieldCropAt` is the raw field; the props' paddocks and the map's slot planning keep reading it.
 - **Golden shots:** `hamlet_day`, `hamlet_night`, `hamlet_close_day` and `hamlet_close_night`, with the hamlet at 1× (7 houses, 3 smallholdings).
 
+### Where no animal stands
+`home-layout.ts` `plotKeepOuts(plot)` lists the rectangles in a plot's frame that animals should keep off:
+- a house plot's vegetable beds and bean wigwam, compost bin and water butt;
+- a smallholding's hay shelter, loose hay, troughs, and the coop's house (its run stays open to the hens).
+
+`onHomeKeepOut(x, z, plots, margin = 0.3)` checks a world point against every plot. `props/areas.ts` draws from the same constants (`GARDEN_BEDS`, `COMPOST`, `troughSpots`, `coopSpot`), so the map lane's yard and lawn spots can avoid them. Today two of the map's coop-run spots fall on a hay shelter (smallholding-1 and smallholding-2; the test logs them).
+
 ## Mount cost (the runtime lane's measure, docs/ark/runtime.md)
 
 The scenery is built after the first frame, a few milliseconds a frame, so the props add no long task to a big Ark's mount:
