@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 6772 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 11357 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -14,7 +14,7 @@
   - `small_not_on_attach_point`: 0
   - `roost_invalid`: 0
   - `off_walk_grid`: 0
-- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1026 rigs checked, 8 with too few feet down in some frame (reviewed: 8).
+- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1037 rigs checked, 7 with too few feet down in some frame (reviewed: 8).
 
 | Area | Animals placed there |
 |---|---:|
@@ -38,39 +38,38 @@
 
 | Where | Animals |
 |---|---:|
-| on the ground | 2670 |
-| attach point: leaf | 324 |
-| canopy limb (climb) | 300 |
-| canopy limb (perch) | 260 |
+| on the ground | 3230 |
+| attach point: leaf | 352 |
 | in the water by its depth band (lake) | 250 |
-| attach point: branch | 200 |
 | in the water by its depth band (reef) | 196 |
+| attach point: branch | 183 |
 | in the water by its depth band (seabed) | 132 |
 | in fresh water (no band) | 120 |
 | in the water by its depth band (mid) | 90 |
 | in the water by its depth band (upper) | 88 |
 | in the sea (no band) | 74 |
-| attach point: rock_face | 66 |
-| attach point: house_wall | 58 |
 | in the water by its depth band (coast) | 56 |
-| attach point: worm_hole | 49 |
+| attach point: rock_face | 53 |
+| attach point: worm_hole | 51 |
 | in the water by its depth band (deep) | 48 |
-| attach point: burrow_entrance | 33 |
-| attach point: flower_head | 31 |
-| attach point: bark | 31 |
+| attach point: house_wall | 44 |
+| attach point: bark | 34 |
+| attach point: flower_head | 29 |
+| attach point: burrow_entrance | 28 |
 | in the water by its depth band (surface) | 26 |
 | attach point: tide_pool | 24 |
-| burrow at an attach point | 20 |
-| attach point: porch_light | 16 |
+| burrow at an attach point | 22 |
+| attach point: roof_edge | 18 |
+| canopy limb (climb) | 16 |
 | burrow | 14 |
+| attach point: porch_light | 13 |
 | on its host (beside) | 12 |
-| canopy limb (leap) | 12 |
 | on its host (parasite) | 12 |
-| canopy limb (hang) | 6 |
 | on its host (rider) | 4 |
-| attach point: house_eave | 4 |
+| attach point: tree_hollow | 4 |
+| attach point: house_eave | 3 |
 
-Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 367.
+Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 364.
 
 ## Failures by species
 
@@ -106,6 +105,5 @@ None.
 - **blue-crowned-motmot** (idle): only 1 of 2 grip bones on the surface in a frame (needs 2) (reviewed)
 - **cuckoo-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
 - **mexican-paper-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
-- **parasitic-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
 - **red-lory** (idle): only 1 of 2 grip bones on the surface in a frame (needs 2) (reviewed)
 - **black-and-yellow-garden-spider** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)

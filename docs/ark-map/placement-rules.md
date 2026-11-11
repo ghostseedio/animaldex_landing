@@ -13,8 +13,8 @@ Every place is a pure function of the terrain (the graphics lane's `sampler.ts`)
    - A reef or open-ocean zone's own species: a cell of their band's water. Reef on the reef; seabed on the floor under 7.5 m; deep in deep water (7.5 m and more); surface, upper and mid sharing the open water on a fixed pattern. Every cell is at least 1.2 m deep, inside the ring the camera sees.
    - A small salt-water floor species of the rocky shore (a limpet, a shore crab): a tide pool.
    - A floor species (a crab, a star, a flatfish; an octopus or a moray in its hole) keeps half its body clear of the reef lane's coral heads and the cleaning station's coral (`reef.ts` reefLandmarks), so it is never drawn inside one. The map's anemone and cleaning-station anchors (the reef site −3, −2 and +4, +3) are where the reef lane draws them: keep them there.
-3. **Small animals** (size stat 15 or less): an attach point of the graphics lane's scenery whose tag their text names and whose size fits them (`attachOf`), each list thinned to 1.2 body lengths apart.
-4. **Tree animals**: hangers and leapers always, and canopy-layer climbers and perchers whose text names the trees (not only as their roost), go on a canopy tree's limb (`arborealOf`).
+3. **Small animals** (size stat 15 or less): an attach point of the graphics lane's scenery whose tag their text names and whose size fits them (`attachOf`), each list thinned to 1.2 body lengths apart. Only small invertebrates under 12 cm are micro animals (`trueMicro`, from `body.json`). A small bird, bat, mammal, lizard or frog is perched on its point (`perch`), which is its home and fixed roost on the behaviour schedule. Bats take hang points under limbs first. A perched cluster's members each take a point of their own, 1.5 body lengths apart (a puffin colony's ledges).
+4. **Tree animals**: hangers and leapers always, and canopy-layer climbers and perchers whose text names the trees (not only as their roost). A large one takes a thick `limb` of the real forest that fits it, holds its mass with a margin of 1.5, and has room above it; a hanger takes a `canopy_hang` point with the drop below it (`limbsFor`). With no fitting limb, it takes a canopy tree's limb (`arborealOf`, `layers.ts`).
 5. **Everyone else**: a cell of their tag (`points.ts`). Each 2.5 m cell belongs to one tag, shared out by the launch points each tag needs in its zone. The launch points come first in a zone's list. Slot k takes cell k mod n, lap k div n (a fixed half-cell offset), so no two clusters ever take one spot. Their tags are tried in their text's order, up to each tag's first lap.
 6. **Partners**: attached to a host of their group when one is aboard, otherwise at their own spot (section 6 of the plan).
 
@@ -37,6 +37,5 @@ Every place is a pure function of the terrain (the graphics lane's `sampler.ts`)
 ## Open
 
 - **Rig clips that lift too many feet** on a branch or wall (8 species: 3 spiders, 3 wasps, a motmot, a lory). They are reviewed in `validator-holds.json` and are the rig lane's to fix.
-- **Hang points** (`canopy_hang` in the scenery interface) are not used yet. Small hangers (bats) take branches.
-- **Fence posts and roof edges** are not attach points in the scenery interface yet. When the graphics lane adds them, the map takes them through `SCENERY_TAG` in `world-sampler.ts`.
+- **Fence posts**: the map takes `fence_post` points, but none exist until the props lane publishes its paddock and picket fences' post tops (graphics-interface.md, "Fences the props lane draws").
 - **Launch points**: the table asks for 481. 412 stand on the ground or in the water, because some tags in some zones have fewer cells than they want. The canopy's 92 are the canopy trees' limbs (`layers.ts`), not ground cells.

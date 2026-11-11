@@ -48,7 +48,8 @@ test("every animal stands on its map tag's ground (the Ark map, B3), apart from 
     for (const animal of full.animals) {
         const place = places.get(animal.id)!;
         assert.ok(place.map, `${animal.name} on the map`);
-        if (place.map!.held || place.canopy || place.micro) continue;
+        // (A perched animal stands for its attach point's tags, which the validator checks.)
+        if (place.map!.held || place.canopy || place.micro || place.perch) continue;
         const ground = sampler.ground(place.x, place.z);
         assert.ok(ground.tags.includes(place.map!.tag!), `${animal.name} on ${place.map!.tag}`);
         // At sea in the sea, on land on land.

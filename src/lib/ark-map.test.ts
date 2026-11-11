@@ -147,6 +147,13 @@ test("map: a hanger hangs under its limb and a percher sits on top, on the drawn
     let hangers = 0;
     for (const animal of validatorAnimals()) {
         const place = placed.get(animal.id);
+        // A hanger under a limb of the real forest (the scenery's hang point, on the limb's drawn underside): its back down.
+        if (place?.perch?.tag === "canopy_hang") {
+            hangers++;
+            assert.ok(place.perch.ny < -0.5, `${animal.model_slug} hangs with its back down`);
+            assert.ok((place.map?.attach?.clearBelow ?? 0) >= arkBody(animal).metres, `${animal.model_slug} has the room to hang`);
+            continue;
+        }
         if (!place?.canopy || place.canopy.limb < 0) continue;
         const tree = canopyTrees(place.canopy.zone ?? animal.zone)[place.canopy.tree % canopyTrees(place.canopy.zone ?? animal.zone).length].item;
         const point = canopyPoint(animal.zone, place.canopy);

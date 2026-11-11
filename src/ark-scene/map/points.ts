@@ -321,6 +321,31 @@ export class MapPoints {
         return tags;
     }
 
+    private limbLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
+
+    /**
+     * The limb points (`limb`, or `canopy_hang` for a hanger) a large climber
+     * fits: its body within the point's size, a limb that holds its mass
+     * (with a margin) and has room above it, or a hang point with a drop
+     * below it; a body and a little apart; its zone's first.
+     */
+    limbsFor(tag: "limb" | "canopy_hang", length: number, mass: number, zone: ArkZone): {list: AttachPoint[]; own: boolean} {
+        const key = `${tag}|${length.toFixed(3)}|${mass.toFixed(1)}|${zone}`;
+        let found = this.limbLists.get(key);
+        if (!found) {
+            const fits = this.sampler.attachPoints().filter((point) => {
+                if (point.tag !== tag || !attachFits(point, length)) return false;
+                if (tag === "limb") return (point.load ?? 0) >= mass * LOAD_MARGIN && (point.clearAbove ?? 0) >= length * 0.6;
+                return (point.radius ?? 0) >= 0.03 && (point.clearBelow ?? 0) >= length;
+            });
+            const list = thin(fits, Math.max(length * 1.2, 0.3));
+            const own = list.filter((point) => point.zone === zone);
+            found = own.length ? {list: own, own: true} : {list, own: false};
+            this.limbLists.set(key, found);
+        }
+        return found;
+    }
+
     /**
      * The attach points a small animal can sit on: of its tag, fitting its
      * length, in its zone first (else any zone's), and whether the list is
@@ -354,6 +379,29 @@ export class MapPoints {
         }
         return found;
     }
+}
+
+/** A body's mass a limb must hold, as a share of the limb's load (a margin for a moving, landing body). */
+const LOAD_MARGIN = 1.5;
+
+/** Keep the points at least `gap` apart (greedy, in the list's order), with a 2 m spatial hash. */
+function thin(points: AttachPoint[], gap: number): AttachPoint[] {
+    const out: AttachPoint[] = [];
+    const near = new Map<string, AttachPoint[]>();
+    const size = Math.max(2, gap);
+    for (const point of points) {
+        const cx = Math.floor(point.x / size);
+        const cz = Math.floor(point.z / size);
+        let clear = true;
+        for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z) >= gap);
+        if (!clear) continue;
+        out.push(point);
+        const key = `${cx},${cz}`;
+        const list = near.get(key) ?? [];
+        list.push(point);
+        near.set(key, list);
+    }
+    return out;
 }
 
 /** A fixed number in [0, 1) for a cell (the same on every device). */

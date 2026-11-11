@@ -25,7 +25,12 @@ import type {MapTag} from "@/ark-scene/map/tags";
 import type {AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 
 /** The graphics lane's attach-point tags (owner, 2026-11-11). */
-export const ATTACH_TAGS = ["leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "house_eave", "porch_light", "worm_hole", "burrow_entrance"] as const;
+export const ATTACH_TAGS = [
+    "leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "house_eave", "porch_light", "worm_hole", "burrow_entrance",
+    // From the scenery interface's 2026-11-11 additions: thick limbs for large climbers, hang points under limbs (bats, sloths),
+    // fence posts and roof edges (perching birds, basking lizards), cliff and rock ledges (nesting seabirds), tree hollows.
+    "limb", "canopy_hang", "fence_post", "roof_edge", "ledge", "tree_hollow"
+] as const;
 export type AttachTag = typeof ATTACH_TAGS[number];
 
 export type AttachPoint = {
@@ -45,6 +50,13 @@ export type AttachPoint = {
     zone: ArkZone;
     /** The scenery interface's own point, when it sways with its tree (a leaf, bark, a branch): the scene moves the animal with it (`attachSway`). */
     source?: SceneryPoint;
+    /** On a limb or a hang point: the limb's radius there (m). */
+    radius?: number;
+    /** On a limb: about what it holds there (kg; the scenery's estimate). */
+    load?: number;
+    /** On a limb: the clear room above it (m); on a limb or a hang point, the clear drop below it (m). */
+    clearAbove?: number;
+    clearBelow?: number;
 };
 
 export type GroundSurface = {
@@ -106,6 +118,12 @@ export const ATTACH_MEANS: Record<AttachTag, {own: readonly MapTag[]; context: r
     /** Under the eaves and the porch roof: a ceiling, for clingers upside down (geckos, spiders). */
     house_eave: {own: ["house"], context: []},
     porch_light: {own: ["house"], context: []},
+    limb: {own: ["canopy", "trunks_bark"], context: ["mangrove", "bamboo", "scrub", "garden", "town_park"]},
+    canopy_hang: {own: ["canopy"], context: ["mangrove", "caves"]},
+    fence_post: {own: ["farm_barn"], context: ["garden", "town_park", "grassland", "scrub", "flower_meadow"]},
+    roof_edge: {own: ["house"], context: ["farm_barn", "garden", "town_park"]},
+    ledge: {own: ["cliffs", "rocks_boulders"], context: ["sea_cliffs", "mountain_alpine", "snow_ice", "sea_ice", "rocky_shore", "caves", "tundra", "desert_sand"]},
+    tree_hollow: {own: ["trunks_bark", "canopy"], context: ["host_nests"]},
     worm_hole: {own: ["soil"], context: ["garden", "grassland", "forest_floor", "farm_barn", "compost", "flower_meadow", "town_park", "marsh_reeds", "scrub", "logs_deadwood"]},
     burrow_entrance: {own: ["burrows", "soil"], context: ["grassland", "desert_sand", "scrub", "forest_floor", "mountain_alpine", "tundra", "sandy_beach", "termite_ant_mounds", "garden", "farm_barn", "mudflat", "marsh_reeds", "stream_river", "lake", "rocks_boulders", "sea_cliffs"]}
 };

@@ -25,7 +25,7 @@ import type {Placement} from "@/ark-scene/placement";
 
 export type GripFailure = {slug: string; clip: string; detail: string};
 
-const GRIPPING = new Set(["branch", "bark", "leaf", "rock_face", "house_wall"]);
+const GRIPPING = new Set(["branch", "bark", "leaf", "rock_face", "house_wall", "house_eave", "limb", "canopy_hang", "ledge", "fence_post", "roof_edge", "tree_hollow"]);
 
 /** The clip the scene plays for it there (`index.ts` rigFor): hang, climb or perch's idle. */
 function clipFor(mode: string, has: (name: string) => boolean): string {
@@ -56,7 +56,7 @@ export async function validateGrips(placed: Map<string, Placement>, slugOf: (id:
         const entry = extras ? decodeRigEntry(extras.rig) : null;
         if (!extras || !entry) continue;
         const own = {species: {[slug]: entry}};
-        const mode = place.canopy?.mode ?? "perch";
+        const mode = place.canopy?.mode ?? (place.perch?.tag === "canopy_hang" ? "hang" : "perch");
         const clip = clipFor(mode, (name) => Boolean(rigClip(own, slug, name)));
         const playing = rigClip(own, slug, clip);
         if (!playing || typeof playing.row !== "number" || typeof playing.rows !== "number") continue;
