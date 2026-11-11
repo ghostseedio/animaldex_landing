@@ -595,12 +595,22 @@ async function mountGolden(el: HTMLElement) {
             const polarFor = (at: NonNullable<ReturnType<typeof handle.locate>>) => (at.y < -0.3 ? 1.52 : 1.3);
             // Its middle where it is now (`ground` is its home spot's, not where a walk has taken it).
             const targetOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => ({x: at.x, y: at.y - at.height * 0.05, z: at.z});
-            /** Nothing between the camera and the animal: no other animal's body, and the ground below the line. */
+            // The trunks, lamps and buildings the golden cameras stand clear of (`golden-world.ts`), near this species.
+            const firstAt = handle.locate(kin[0].id);
+            const trunks = goldenObstacles().filter((o) => !firstAt || Math.hypot(o.x - firstAt.x, o.z - firstAt.z) < 40);
+            /** Nothing between the camera and the animal: no trunk or wall, no other animal's body, the ground below the line. */
             const clear = (id: string, at: NonNullable<ReturnType<typeof handle.locate>>, azimuth: number) => {
                 const target = targetOf(at);
                 const distance = distanceFor(sizeOf(at));
                 const polar = polarFor(at);
                 const camera = {x: target.x + distance * Math.sin(polar) * Math.sin(azimuth), y: target.y + distance * Math.cos(polar), z: target.z + distance * Math.sin(polar) * Math.cos(azimuth)};
+                // The whole sight line (a trunk anywhere on it hides the animal), with a margin at the lens.
+                for (let t = 0; t < 0.97; t += 0.04) {
+                    const x = camera.x + (target.x - camera.x) * t;
+                    const z = camera.z + (target.z - camera.z) * t;
+                    const margin = t < 0.15 ? 0.35 : 0.05;
+                    for (const o of trunks) if (Math.hypot(o.x - x, o.z - z) < o.radius + margin) return false;
+                }
                 for (let t = 0.1; t < 0.95; t += 0.1) {
                     const x = camera.x + (target.x - camera.x) * t;
                     const z = camera.z + (target.z - camera.z) * t;
@@ -621,7 +631,7 @@ async function mountGolden(el: HTMLElement) {
                 }
                 return true;
             };
-            const turns = options.turn !== undefined ? [options.turn] : [0.55, -0.55, 0.95, -0.95, 0.2, -0.2, 1.4, -1.4];
+            const turns = options.turn !== undefined ? [options.turn] : [0.55, -0.55, 0.95, -0.95, 0.2, -0.2, 1.4, -1.4, 1.9, -1.9, 2.5, -2.5];
             let chosen: {id: string; turn: number} | null = null;
             for (const turn of turns) {
                 for (const row of kin) {
