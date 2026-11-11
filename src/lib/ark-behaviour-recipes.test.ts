@@ -146,6 +146,55 @@ test("episodes are deterministic and continuous: the same poses from a fresh wor
     }
 });
 
+test("no spinning (behaviour's rule): a chase or a forage goes on forward and turns at its own rate; nothing snaps round", () => {
+    // (The owner: "animals moving in circles". Episodes snapped to every leg's heading and picked their spots anywhere
+    // round the anchor, so a seal chasing fish turned 21 times a minute.)
+    forgetRecipes();
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const cases: Array<[string, string, number]> = [
+        ["harbor-seal", "chase_fish", 1.6],
+        ["mallard", "dabble", 0.58],
+        ["grey-heron", "wade_spear", 0.95],
+        ["atlantic-puffin", "surface_dive", 0.3],
+        ["red-fox", "pounce", 0.9],
+        ["meerkat", "root_dig", 0.3]
+    ];
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    for (const [slug, recipe, length] of cases) {
+        const a = animal(`spin-${slug}`, slug, {x: -70, z: 22}, length);
+        let episodes = 0;
+        for (let start = day; start < day + 24 * 3600 && episodes < 6; start += SLOT_SECONDS) {
+            const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
+            if (trip.recipe !== recipe) continue;
+            const episode = tripEpisode(world, trip);
+            if (!episode) continue;
+            episodes++;
+            let last = poseOnTrip(world, trip, episode.t0);
+            const turns: number[] = [];
+            for (let t = episode.t0 + 0.2; t <= episode.t1; t += 0.2) {
+                const p = poseOnTrip(world, trip, t);
+                const d = Math.abs(wrap(p.yaw - last.yaw));
+                assert.ok(d < 0.9, `${slug} ${recipe}: snapped ${d.toFixed(2)} rad in 0.2 s (${(p as RecipePose).act?.block})`);
+                turns.push(d);
+                last = p;
+            }
+            for (let i = 0; i + 100 <= turns.length; i += 5) {
+                const sum = turns.slice(i, i + 100).reduce((x, y) => x + y, 0);
+                assert.ok(sum < TAU, `${slug} ${recipe}: ${(sum / TAU).toFixed(2)} full turns in 20 s`);
+            }
+        }
+        assert.ok(episodes >= 1, `${slug}: no ${recipe} episode in a day`);
+    }
+});
+
+test("only real cachers cache: squirrels, jays, nutcrackers, hoarding rodents, mustelids; not a camel's fat or a wader's buried prey", () => {
+    for (const slug of ["red-squirrel", "eurasian-jay", "clarks-nutcracker", "merriams-kangaroo-rat", "stoat"]) assert.ok(speciesRecipes(slug).recipes.some((r) => r.id === "cache_food"), slug);
+    for (const slug of ["dromedary-camel", "african-sacred-ibis", "short-billed-dowitcher", "himalayan-monal", "black-rat", "javan-myna", "red-river-hog", "fat-tailed-dunnart"]) {
+        assert.ok(!speciesRecipes(slug).recipes.some((r) => r.id === "cache_food"), slug);
+    }
+});
+
 test("stags in the rut meet, face each other and clash antlers; both run one timeline", () => {
     forgetRecipes();
     // Two stags on the grassland, 14 m apart; a hind for the courtship pairing.

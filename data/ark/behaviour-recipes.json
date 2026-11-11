@@ -3013,13 +3013,6 @@
       "match": "bill to probe"
      }
     ],
-    "caching": [
-     {
-      "field": "evidence",
-      "phrase": "which matters because buried prey is distributed unpredictably and cannot be targeted in advance",
-      "match": "buried prey"
-     }
-    ],
     "flock": [
      {
       "field": "traits",
@@ -3095,14 +3088,6 @@
      "src": {
       "field": "diet",
       "phrase": "It feeds by walking slowly and probing mud, soft soil and shallow water with its long, down-curved bill, and scavenges at rubbish dumps"
-     }
-    },
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "evidence",
-      "phrase": "which matters because buried prey is distributed unpredictably and cannot be targeted in advance"
      }
     },
     {
@@ -30769,15 +30754,7 @@
    "plan": "quadruped",
    "zone": "farm_garden",
    "excluded": null,
-   "behaviours": {
-    "caching": [
-     {
-      "field": "sd",
-      "phrase": "a tree crown or a cliff ledge turns the safest place in the ocean into an open larder",
-      "match": "larder"
-     }
-    ]
-   },
+   "behaviours": {},
    "sex": {
     "system": "separate",
     "maleShare": 0.5,
@@ -30807,14 +30784,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "sd",
-      "phrase": "a tree crown or a cliff ledge turns the safest place in the ocean into an open larder"
-     }
-    },
     {
      "id": "groom_self",
      "weight": 2,
@@ -44192,18 +44161,6 @@
    "zone": "coral_reef",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "traits",
-      "phrase": "Barbels at the snout for feeling out buried prey",
-      "match": "buried prey"
-     },
-     {
-      "field": "spotlight",
-      "phrase": "working slowly through rubble at night for the buried prey faster hunters never stop to find",
-      "match": "buried prey"
-     }
-    ],
     "freeze": [
      {
       "field": "basis",
@@ -56983,9 +56940,9 @@
       "match": "caching"
      },
      {
-      "field": "spotlight",
-      "phrase": "By burying seeds and recovering them months later, they survive winter and also help mountain pines spread across high forests",
-      "match": "burying seeds"
+      "field": "basis",
+      "phrase": "Clark’s Nutcrackers cache thousands of pine seeds and relocate many of them later, helping shape mountain pine ecosystems",
+      "match": "cache"
      }
     ],
     "incubate": [
@@ -84217,13 +84174,6 @@
    "zone": "desert",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "basis",
-      "phrase": "Dromedary Camels are adapted for desert travel with humps storing fat",
-      "match": "storing fat"
-     }
-    ],
     "herd": [
      {
       "field": "offspring",
@@ -84299,14 +84249,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "basis",
-      "phrase": "Dromedary Camels are adapted for desert travel with humps storing fat"
-     }
-    },
     {
      "id": "wrestle",
      "weight": 4,
@@ -100461,13 +100403,6 @@
    "zone": "desert",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "diet",
-      "phrase": "because food is gathered carefully and converted into reserves, caches, or survival energy",
-      "match": "caches"
-     }
-    ],
     "bask": [
      {
       "field": "sd",
@@ -100522,14 +100457,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "diet",
-      "phrase": "because food is gathered carefully and converted into reserves, caches, or survival energy"
-     }
-    },
     {
      "id": "bask_sun",
      "weight": 6,
@@ -133616,13 +133543,6 @@
    "zone": "mountains",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "spotlight",
-      "phrase": "The strong, curved bill turns over soil, and snow in winter, to reach buried food, leaving freshly dug patches across the slopes",
-      "match": "buried food"
-     }
-    ],
     "migration": [
      {
       "field": "story",
@@ -133717,14 +133637,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "spotlight",
-      "phrase": "The strong, curved bill turns over soil, and snow in winter, to reach buried food, leaving freshly dug patches across the slopes"
-     }
-    },
     {
      "id": "dust_bathe",
      "weight": 4,
@@ -140944,13 +140856,6 @@
    "zone": "seashore",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "story",
-      "phrase": "The Indo-Pacific Horseshoe Crab still uses a body plan hundreds of millions of years old, ploughing coastal mud for buried prey",
-      "match": "buried prey"
-     }
-    ],
     "dig": [
      {
       "field": "offspring",
@@ -144122,13 +144027,6 @@
    "zone": "farm_garden",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "sd",
-      "phrase": "wall of unfamiliar things to almost everything else is an open larder to this one",
-      "match": "larder"
-     }
-    ],
     "flock": [
      {
       "field": "sd",
@@ -144192,14 +144090,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "sd",
-      "phrase": "wall of unfamiliar things to almost everything else is an open larder to this one"
-     }
-    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -194682,8 +194572,8 @@
      },
      {
       "field": "sd",
-      "phrase": "These buried seeds are both food reserves and, in nature, a sink that removes potential weed seedlings from the surface",
-      "match": "buried seeds"
+      "phrase": "and a tendency to work the same ground repeatedly so caches are easy to relocate",
+      "match": "caches"
      }
     ]
    },
@@ -206701,18 +206591,6 @@
       "match": "ambush"
      }
     ],
-    "caching": [
-     {
-      "field": "facts",
-      "phrase": "Jelly-filled pores on the snout, the ampullae of Lorenzini, detect the faint electric fields produced by the muscles of buried prey",
-      "match": "buried prey"
-     },
-     {
-      "field": "basis",
-      "phrase": "and locate buried prey with ampullae of Lorenzini that read the faint electric fields thrown off by a hidden animal's own muscles",
-      "match": "buried prey"
-     }
-    ],
     "freeze": [
      {
       "field": "facts",
@@ -213043,18 +212921,6 @@
    "zone": "rainforest",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "evidence",
-      "phrase": "working through an area turns over a substantial quantity of soil, burying seeds, aerating ground and altering what grows there afterwards",
-      "match": "burying seeds"
-     },
-     {
-      "field": "sd",
-      "phrase": "through an area turns over a substantial amount of ground, which buries seeds, aerates soil and changes what grows there afterwards",
-      "match": "buries seeds"
-     }
-    ],
     "dig": [
      {
       "field": "basis",
@@ -213122,14 +212988,6 @@
      "src": {
       "field": "basis",
       "phrase": "Red River Hogs root through soil, leaf litter, and damp forest cover with strong snouts, using social groups and powerful bodies to forage"
-     }
-    },
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "evidence",
-      "phrase": "working through an area turns over a substantial quantity of soil, burying seeds, aerating ground and altering what grows there afterwards"
      }
     },
     {
@@ -231780,18 +231638,6 @@
       "match": "probing mud"
      }
     ],
-    "caching": [
-     {
-      "field": "diet",
-      "phrase": "It feeds in mud and shallow water, probing rapidly up and down with its long bill in a sewing-machine motion, finding buried prey by touch",
-      "match": "buried prey"
-     },
-     {
-      "field": "spotlight",
-      "phrase": "Touch-sensitive nerve endings packed near the bill tip let it find buried prey without seeing it",
-      "match": "buried prey"
-     }
-    ],
     "flock": [
      {
       "field": "spotlight",
@@ -231881,14 +231727,6 @@
      "src": {
       "field": "basis",
       "phrase": "Short-billed Dowitchers feed by probing mud with a rapid up-and-down motion often compared to sewing-machine stitching"
-     }
-    },
-    {
-     "id": "cache_food",
-     "weight": 4,
-     "src": {
-      "field": "diet",
-      "phrase": "It feeds in mud and shallow water, probing rapidly up and down with its long bill in a sewing-machine motion, finding buried prey by touch"
      }
     },
     {
@@ -246118,13 +245956,6 @@
    "zone": "coral_reef",
    "excluded": null,
    "behaviours": {
-    "caching": [
-     {
-      "field": "diet",
-      "phrase": "It blows jets of water into the sand to uncover buried prey",
-      "match": "buried prey"
-     }
-    ],
     "freeze": [
      {
       "field": "sleep",
