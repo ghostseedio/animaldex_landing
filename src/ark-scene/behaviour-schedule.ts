@@ -601,7 +601,8 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
             }
             break;
         case "play":
-            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.9, dz: (random() - 0.5) * 1.4, turn: (random() - 0.5) * 2.4});
+            // Dashes and dodges, not spins (its turns were up to 70 degrees a second: young went round in circles).
+            for (let n = 0; n < 18; n++) add("play", 0.9 + random() * 0.8, {dx: 0.6 + random() * 0.9, dz: (random() - 0.5) * 0.7, turn: (random() - 0.5) * 1.2});
             break;
         case "stalk":
             for (let n = 0; n < 6; n++) {
@@ -882,21 +883,34 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
  * Its time at its destination, placed in the world: the beats from where it arrives, turned to a seeded heading
  * (so where it ends never depends on the way it came), and where it is when they are done.
  */
-function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent): {beats: StayBeat[]; finish: Spot} | null {
+function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent, activity: ArkBehaviourProfile["activity"] | null | undefined, hoursAt: HoursAt): {beats: StayBeat[]; finish: Spot} | null {
     if (!now.to) return null;
-    // Facing roughly its way out from home (seeded, within about 35 degrees), not any way at all: arriving it turns a
-    // little, not round (a heading from where it came from would chain back through every slot).
+    // It arrives facing the way it came: from its last goal to this one (within about 10 degrees, seeded), so it doesn't
+    // turn round on arriving. (Its last goal, not where its last slot ended, which would chain back through every slot;
+    // with no goal in the last four slots, roughly its way out from home.)
     const roll = rng(hashString(`${animal.id}#yaw#${slot}`))();
-    const out = Math.hypot(now.to.x - animal.home.x, now.to.z - animal.home.z);
-    const yaw = now.face ?? (out > 0.5 ? Math.atan2(now.to.x - animal.home.x, now.to.z - animal.home.z) + (roll - 0.5) * 1.2 : roll * Math.PI * 2);
+    const before = lastGoal(world, profile, animal, activity, slot, hoursAt);
+    const from = before && Math.hypot(now.to.x - before.x, now.to.z - before.z) > 0.5 ? before : animal.home;
+    const away = Math.hypot(now.to.x - from.x, now.to.z - from.z);
+    const yaw = now.face ?? (away > 0.5 ? Math.atan2(now.to.x - from.x, now.to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
     return placeStay(world, profile, animal, now.to, yaw, now.stay, Infinity);
+}
+
+/** Where its last slots were going (the nearest of the four before with a goal), or null. Pure in (id, slot). */
+function lastGoal(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Spot | null {
+    for (let back = 1; back <= 4; back++) {
+        const earlier = intent(world, profile, animal, activity, slot - back, hoursAt);
+        if (earlier.follow) return null;
+        if (earlier.to) return earlier.to;
+    }
+    return null;
 }
 
 /** Where a slot ends, worked out the same way by every caller (from its intent alone: never from the route there). */
 function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, depth = 0): Spot {
     const i = intent(world, profile, animal, activity, slot, hoursAt);
     if (i.follow && animal.group) return shadowOf(world, animal, slot, hoursAt).finish;
-    const settled = settle(world, profile, animal, slot, i);
+    const settled = settle(world, profile, animal, slot, i, activity, hoursAt);
     if (settled) return settled.finish;
     if (depth < 6) return finishOf(world, profile, animal, activity, slot - 1, hoursAt, depth + 1);
     return groundSpot(world, animal.home.x, animal.home.z);
@@ -1095,7 +1109,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
     if (travel > SLOT_SECONDS * 0.8) for (const leg of legs) leg.seconds *= (SLOT_SECONDS * 0.8) / travel;
     travel = Math.min(travel, SLOT_SECONDS * 0.8);
-    const settled = settle(world, profile, animal, slot, {...now, to}) ?? {beats: [], finish: to};
+    const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt) ?? {beats: [], finish: to};
     // Its beats fitted into the time left (all of them, so it ends where `finishOf` says); a shake first after a swim.
     const left = SLOT_SECONDS - travel;
     // The last beat starts at least 3 s before the slot ends, so a last step is finished by then.
