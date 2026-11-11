@@ -35,6 +35,7 @@ import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeo
 import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKind} from "@/ark-scene/decor";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
+import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS} from "@/ark-scene/near-fade";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
@@ -687,12 +688,15 @@ function foliageMaterial(windAmount: number, windHeight: number, doubleSide = fa
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.88, metalness: 0, map: leafTexture()});
     if (doubleSide || cards) material.side = DoubleSide;
     if (cards) material.alphaTest = 0.45;
-    const uniforms = {arkTime: ARK_TIME, arkWind: ARK_WIND, windAmount: {value: windAmount}, windHeight: {value: windHeight}};
-    material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}-${cards ? "c" : "s"}`;
+    const uniforms = {arkTime: ARK_TIME, arkWind: ARK_WIND, windAmount: {value: windAmount}, windHeight: {value: windHeight}, arkNearFade: ARK_NEAR_FADE};
+    material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}-${cards ? "c" : "s"}-b4`;
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", "#include <common>\nvarying float vArkCard;")
+            .replace("#include <common>", `#include <common>\nvarying float vArkCard;${cards ? ARK_NEAR_FADE_PARS : ""}`)
+            // Trees beside the camera dissolve (batch 4: near-fade.ts), never a dark shard across the view. Only on the
+            // leaf-card trees, which cut out already, so nothing else loses the early depth test.
+            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${cards ? ARK_NEAR_FADE_CLIP : ""}`)
             // Foliage is lit from its own (soft) normals on both sides: never flipped dark on a back face.
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
