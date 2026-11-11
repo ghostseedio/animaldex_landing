@@ -42,6 +42,8 @@ export interface ArkSceneModule {
     setReducedMotion(reduced: boolean): void;
     /** Every frame: seconds since the scene started, the camera and what it looks at. */
     step(elapsed: number, camera: PerspectiveCamera, target: Vector3): void;
+    /** How near the camera may come when it looks at this point (a nest, a web: less than the usual 4 m), or null. */
+    closeUp?(x: number, y: number, z: number): number | null;
     dispose(): void;
 }
 

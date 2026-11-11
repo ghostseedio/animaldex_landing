@@ -60,6 +60,9 @@ const quality = arg("quality", "auto");
 const gpu = arg("gpu", "metal");
 const measureMs = Number(arg("measure", "3000"));
 const studies = arg("study", "") ? arg("study", "").split(",") : [];
+// The props lane's close-ups (src/ark-scene/props/golden-props.ts): --props all, or --props bird_nest,cave_roost
+const PROPS_SHOTS = ["bird_nest", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"];
+const propsShots = arg("props", "") ? (arg("props", "") === "all" ? PROPS_SHOTS : arg("props", "").split(",").filter((name) => PROPS_SHOTS.includes(name))) : [];
 
 // MARK: build + serve
 
@@ -166,7 +169,30 @@ async function renderer(page) {
     });
 }
 
-if (!studies.length) {
+if (propsShots.length) {
+    for (const deviceName of devices) {
+        const {context, page, errors} = await openPage(deviceName, `props=1${quality === "auto" ? "" : `&quality=${quality}`}`);
+        await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+        const failed = await page.evaluate(() => window.__arkGoldenError);
+        if (failed) throw new Error(failed);
+        const gpuName = await renderer(page);
+        const prepared = await page.evaluate(() => window.__arkGolden.prepare());
+        log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        for (const shotName of propsShots) {
+            const shot = await page.evaluate((name) => window.__arkGolden.shootProps(name), shotName);
+            const file = `${deviceName}-props-${shotName}.png`;
+            await page.screenshot({path: path.join(out, file)});
+            const numbers = await page.evaluate((ms) => window.__arkGolden.measure(ms), measureMs);
+            results.push({device: deviceName, gpu, gpuName, place: `props:${shotName}`, time: "-", file, anchor: shot.anchor, view: shot.actual, props: shot.props, ...numbers});
+            log(deviceName, shotName, shot.anchor, `${numbers.intervalP50}ms p50 / ${numbers.intervalP95} p95, cpu ${numbers.cpuMs}, drain ${numbers.gpuDrainMs}, ${numbers.drawCalls} calls, ${numbers.triangles} tris, ${numbers.tier}`);
+        }
+        if (errors.length) {
+            writeFileSync(path.join(out, `errors-${deviceName}.txt`), errors.join("\n\n"));
+            log(deviceName, errors.length, "page errors (errors-" + deviceName + ".txt)");
+        }
+        await context.close();
+    }
+} else if (!studies.length) {
     for (const deviceName of devices) {
         const {context, page, errors} = await openPage(deviceName, quality === "auto" ? "" : `quality=${quality}`);
         await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});

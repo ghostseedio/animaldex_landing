@@ -130,24 +130,22 @@ export function groundAt(x: number, z: number): number {
 }
 
 /**
- * The cave's mouth on the mountain (asked of the graphics lane as the named
- * place `cave`): a steep rise on the mountain's west flank, above the
- * grass line, with nothing of the forest fill within 3.6 m of the mouth.
- * Found by a search over the mountain (rise ≥ 4.5 m over the 5 m behind,
- * at least 14 m up; `ark-props.test` checks it still holds), kept here so
- * startup does no search. The forest fill grows all over the mountain since
- * graphics batch 1, so the graphics lane is asked for a `cave` place kept
- * clear of the fill.
+ * The cave (asked of the graphics lane as the named place `cave`): a rock
+ * outcrop standing on flat open ground in the cold, at the ice's edge below
+ * the mountain, its mouth toward the island's middle. Since graphics batch 1
+ * the forest fill covers the mountain, and a cave cut into a slope shows the
+ * terrain inside it (the terrain cannot be holed from here), so the chamber
+ * sits in an outcrop on flat ground instead: found by a search (ground within
+ * 0.3 m over 4.5 m round it, nothing of the decor or the fill within 6.5 m;
+ * `ark-props.test` checks it still holds), kept here so startup does no search.
  */
-export const CAVE_SITE = {x: -28.5, z: -46.5};
+export const CAVE_SITE = {x: 45.5, z: -45.5};
 
 export function caveSite(): {x: number; y: number; z: number; /** The way out of the mouth (radians about y, three's: local +z → (sin, cos)). */ facing: number} {
     const {x, z} = CAVE_SITE;
-    const e = 1;
-    const gx = (sampleGround(x + e, z).height - sampleGround(x - e, z).height) / 2;
-    const gz = (sampleGround(x, z + e).height - sampleGround(x, z - e).height) / 2;
-    // Out of the mouth: downhill.
-    return {x, y: sampleGround(x, z).height, z, facing: Math.atan2(-gx, -gz)};
+    let floor = -Infinity;
+    for (let a = 0; a < 12; a++) for (const r of [0, 2.5, 4.5]) floor = Math.max(floor, sampleGround(x + Math.cos(a * 0.5236) * r, z + Math.sin(a * 0.5236) * r).height);
+    return {x, y: floor + 0.04, z, facing: Math.atan2(-x, -z)};
 }
 
 /** A small, stable random for a prop, from its name and an index. */

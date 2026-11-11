@@ -36,12 +36,16 @@ export type Homes = {
     group: Group;
     batches: LodBatch[];
     webs: WebSpot[];
+    /** Points along the slime trails that glint (`effects.ts`). */
+    slimeGlints: Float32Array;
     /** Whether the cave's bats' roost shows. */
     roost: boolean;
     /** Where the nests are (for the golden shots and the map lane): style, position. */
     nests: Array<{key: string; style: NestStyle; x: number; y: number; z: number; sitter: string | null}>;
     /** The materials that answer the weather, to dispose. */
     dispose: () => void;
+    /** Where things are (for the golden shots and the other lanes): an ant mound, the bees' hollow, a web… */
+    marks: Record<string, {x: number; y: number; z: number}>;
     /** A glint on the slime trails: brighter wet and in a low sun. */
     setGlint: (glint: number) => void;
 };
@@ -137,7 +141,8 @@ function strip(points: Array<{p: Vector3; n: Vector3}>, width: number, colour: s
         const b = points[i + 1];
         dir.copy(b.p).sub(a.p).normalize();
         side.crossVectors(a.n, dir).normalize().multiplyScalar(width / 2);
-        const lift = 0.012;
+        // Proud of the ground by more than the terrain mesh's own error between its vertices.
+        const lift = a.n.y > 0.7 ? 0.04 : 0.008;
         const a0 = a.p.clone().addScaledVector(a.n, lift).sub(side);
         const a1 = a.p.clone().addScaledVector(a.n, lift).add(side);
         const b0 = b.p.clone().addScaledVector(b.n, lift).sub(side);
@@ -180,7 +185,7 @@ function specks(points: Array<{p: Vector3; n: Vector3}>, every: number, random: 
         const length = a.p.distanceTo(b.p);
         for (let d = 0; d < length; d += every * (0.6 + random() * 0.8)) {
             const t = d / length;
-            const p = a.p.clone().lerp(b.p, t).addScaledVector(a.n, 0.018);
+            const p = a.p.clone().lerp(b.p, t).addScaledVector(a.n, a.n.y > 0.7 ? 0.045 : 0.012);
             out.push({x: p.x, y: p.y, z: p.z, turn: random() * Math.PI * 2, scale: 1, up: a.n.clone()});
         }
     }
@@ -192,8 +197,12 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     group.name = "props:homes";
     const batches: LodBatch[] = [];
     const warm = propMaterial();
-    const slime = new MeshStandardMaterial({color: new Color("#c9d4d6"), roughness: 0.06, metalness: 0.75, transparent: true, opacity: 0.32, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
-    const decal = propMaterial({roughness: 1});
+    const slime = new MeshStandardMaterial({color: new Color("#eef5f7"), roughness: 0.1, metalness: 0.35, transparent: true, opacity: 0.3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
+    const decal = propMaterial({roughness: 1, texture: 2, textureScale: 1.2, textureStrength: 0.5});
+    decal.side = 2;
+    const straw = propMaterial({texture: 1, textureScale: 3, textureStrength: 0.7});
+    const soil = propMaterial({texture: 1, textureScale: 1.6});
+    const sand = propMaterial({texture: 3, textureScale: 1.2});
     decal.polygonOffset = true;
     decal.polygonOffsetFactor = -2;
     const extraMaterials: MeshStandardMaterial[] = [];
@@ -205,13 +214,13 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     const has = (g: Parameters<Presence["groups"]["get"]>[0]) => (presence.groups.get(g)?.length ?? 0) > 0;
     const first = (g: Parameters<Presence["groups"]["get"]>[0]) => presence.groups.get(g)?.[0] ?? null;
     const nestsOut: Homes["nests"] = [];
+    const marks: Homes["marks"] = {};
     const webs: WebSpot[] = [];
 
     // MARK: Birds' nests, eggs and chicks
     const used = new Set<string>();
     const byStyle = new Map<NestStyle, PropInstance[]>();
     const eggs: PropInstance[] = [];
-    const chicks: PropInstance[] = [];
     const hollows: PropInstance[] = [];
     for (const plan of presence.nests) {
         const spot = nestSpot(plan, placeOf, used);
@@ -240,12 +249,6 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             const p = at(Math.cos(a) * d, Math.sin(a) * d);
             eggs.push({x: p.x, y: spot.y + floor, z: p.z, turn: random() * Math.PI, scale: eggSize / 0.06, tint: new Color().setHSL(0.1 + random() * 0.4, 0.25, 0.82 + random() * 0.1)});
         }
-        for (let k = 0; k < plan.chicks; k++) {
-            const a = k * 2.39996 + 1;
-            const d = plan.chicks === 1 ? 0 : r * 0.3;
-            const p = at(Math.cos(a) * d, Math.sin(a) * d);
-            chicks.push({x: p.x, y: spot.y + floor, z: p.z, turn: spot.turn + (random() - 0.5) * 1.2, scale: Math.max(r * 0.55, 0.08) / 0.1});
-        }
     }
     const nestShapes: Record<string, () => BufferGeometry> = {
         tree: () => shapes.cupNest(NEST_RADIUS.tree),
@@ -253,10 +256,9 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         ground: () => shapes.groundNest(NEST_RADIUS.ground),
         eaves: () => shapes.eavesNest(NEST_RADIUS.eaves)
     };
-    byStyle.forEach((items, style) => add(new LodBatch(`nest-${style}`, items, nestShapes[style](), null, warm, {cap: 24, reach: 1.1})));
+    byStyle.forEach((items, style) => add(new LodBatch(`nest-${style}`, items, nestShapes[style](), null, straw, {cap: 24, reach: 1.1})));
     if (hollows.length) add(new LodBatch("nest-hole", hollows, shapes.hollow(0.15), null, warm, {cap: 16, reach: 0.9}));
     if (eggs.length) add(new LodBatch("eggs", eggs, shapes.egg(0.06), null, warm, {cap: 60, reach: 0.6, fine: false}));
-    if (chicks.length) add(new LodBatch("chicks", chicks, shapes.chick(0.1), null, warm, {cap: 30, reach: 0.6}));
 
     // MARK: Ants: a mound by the zone's corner, its trail to a tree and up the trunk (and up the cottage's wall at Home)
     if (has("ants")) {
@@ -267,8 +269,10 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const tree = fork ? worldDecor()[Number(fork.host.replace("decor", ""))] : null;
         const moundAt = tree ? {x: tree.x + 2.2, z: tree.z + 1.6} : {x: corner.x + 1.5, z: corner.z + 1};
         const moundY = groundAt(moundAt.x, moundAt.z);
+        marks.ants = {x: moundAt.x, y: moundY, z: moundAt.z};
+        if (tree) marks.antsTree = {x: tree.x, y: tree.y, z: tree.z};
         const mounds: PropInstance[] = [{x: moundAt.x, y: moundY - 0.02, z: moundAt.z, turn: random() * 6, scale: 1}];
-        add(new LodBatch("ant-mound", mounds, shapes.antMound(0.55, 0.45), shapes.heap(0.55, 0.45, "#7b5d3f", 1, 0.05), warm, {cap: 4, reach: 1.4}));
+        add(new LodBatch("ant-mound", mounds, shapes.antMound(0.5, 0.34), shapes.heap(0.5, 0.34, "#7b5d3f", 1, 0.05), soil, {cap: 4, reach: 1.4}));
         const trails: BufferGeometry[] = [];
         const dots: PropInstance[] = [];
         if (tree) {
@@ -277,8 +281,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             const ang = Math.atan2(moundAt.z - tree.z, moundAt.x - tree.x);
             const foot = {x: tree.x + Math.cos(ang) * trunkR * 1.05, z: tree.z + Math.sin(ang) * trunkR * 1.05};
             const ground = groundPath(moundAt.x - Math.cos(ang) * 0.4, moundAt.z - Math.sin(ang) * 0.4, foot.x, foot.z, 0.25, random);
-            trails.push(strip(ground, 0.07, "#5a4532", () => 0.9));
-            dots.push(...specks(ground, 0.035, random));
+            trails.push(strip(ground, 0.1, "#b39a72", () => 0.95));
+            dots.push(...specks(ground, 0.03, random));
             // Up the trunk to the fork.
             const up: Array<{p: Vector3; n: Vector3}> = [];
             const height = fork ? fork.y - groundAt(foot.x, foot.z) : 1.6;
@@ -288,13 +292,13 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
                 const r = trunkR * (1.02 - 0.4 * t * (height / 3));
                 up.push({p: new Vector3(tree.x + Math.cos(twist) * r, groundAt(foot.x, foot.z) + t * height * 0.95, tree.z + Math.sin(twist) * r), n: new Vector3(Math.cos(twist), 0, Math.sin(twist))});
             }
-            trails.push(strip(up, 0.05, "#3c2d20"));
-            dots.push(...specks(up, 0.03, random));
+            trails.push(strip(up, 0.06, "#2a1f17"));
+            dots.push(...specks(up, 0.025, random));
         }
         // Along the ground in another direction, foraging.
         const away = groundPath(moundAt.x + 0.4, moundAt.z, moundAt.x + 3.2, moundAt.z + 1.8, 0.4, random);
-        trails.push(strip(away, 0.05, "#5d4734", () => 0.92));
-        dots.push(...specks(away, 0.04, random));
+        trails.push(strip(away, 0.08, "#b0976f", () => 0.92));
+        dots.push(...specks(away, 0.035, random));
         // At Home: up the cottage's wall too.
         if (ants.zone === "farm_garden") {
             const wallX = COTTAGE.x - COTTAGE.width / 2 - 0.01;
@@ -308,23 +312,29 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const trailCentre = new Vector3(moundAt.x, moundY, moundAt.z);
         add(new LodBatch("ant-trails", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(trails), null, decal, {cap: 1, reach: 100, fine: true}));
         batches[batches.length - 1].setCentre(trailCentre);
-        add(new LodBatch("ants", dots, paint(new BoxGeometry(0.012, 0.007, 0.022), "#1c140e"), null, warm, {cap: 900, reach: 0.4, fine: true}));
+        add(new LodBatch("ants", dots, merge([paint(new BoxGeometry(0.016, 0.012, 0.03), "#120c08"), paint(new BoxGeometry(0.012, 0.01, 0.012).translate(0, 0, 0.022), "#120c08")]), null, warm, {cap: 900, reach: 0.4, fine: true}));
     }
 
     // MARK: Bees: comb in a tree hollow, and a hive in the garden
     if (has("bees")) {
         const bees = first("bees")!;
         const corner = zoneCorner(bees.zone === "farm_garden" ? "woodland" : bees.zone);
-        const hollow = propsPoints("hollow", {x: corner.x, z: corner.z, radius: 60}).find((p) => !used.has(p.host)) ?? propsPoints("hollow", {x: COTTAGE.x, z: COTTAGE.z, radius: 120})[0];
+        const decor = worldDecor();
+        // A hollow with open ground in front of it (seen, not hidden behind a neighbour).
+        const open = (p: PropsPoint) => !decor.some((item, index) => item.kind !== "flower" && item.kind !== "leaf" && `decor${index}` !== p.host && Math.hypot(item.x - (p.x + p.normal.x * 1.6), item.z - (p.z + p.normal.z * 1.6)) < 1.8);
+        const candidates = propsPoints("hollow", {x: corner.x, z: corner.z, radius: 60}).filter((p) => !used.has(p.host));
+        const hollow = candidates.find(open) ?? candidates[0] ?? propsPoints("hollow", {x: COTTAGE.x, z: COTTAGE.z, radius: 120})[0];
         if (hollow) {
             used.add(hollow.host);
             const turn = Math.atan2(hollow.normal.x, hollow.normal.z);
             const combNest = merge([shapes.hollow(0.2), shapes.comb(0.2)]);
             add(new LodBatch("bee-hollow", [{x: hollow.x, y: hollow.y, z: hollow.z, turn, scale: 1}], combNest, null, warm, {cap: 2, reach: 1}));
-            nestsOut.push({key: "bees", style: "hole", x: hollow.x, y: hollow.y, z: hollow.z, sitter: null});
+            marks.beesHollow = {x: hollow.x, y: hollow.y, z: hollow.z};
+            marks.beesFacing = {x: hollow.normal.x, y: 0, z: hollow.normal.z};
         }
         const hiveX = COTTAGE.x - 6.2;
         const hiveZ = COTTAGE.z - 2.4;
+        marks.hiveBox = {x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ};
         add(new LodBatch("hive-box", [{x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ, turn: 0.3, scale: 1}], shapes.hiveBox(), null, warm, {cap: 2, reach: 1.2, shadow: true}));
     }
 
@@ -363,7 +373,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const corner = zoneCorner(spiders.zone === "farm_garden" ? "woodland" : spiders.zone);
         const branches = propsPoints("branch", {x: corner.x, z: corner.z, radius: 25});
         const random = propRandom("webs");
-        for (const branch of branches.slice(0, 5)) {
+        for (const branch of branches) {
+            if (webs.some((w) => Math.hypot(w.x - branch.x, w.z - branch.z) < 1.4) || webs.length >= 6) continue;
             webs.push({x: branch.x, y: branch.y - 0.35, z: branch.z, facing: Math.atan2(branch.x - corner.x, branch.z - corner.z) + (random() - 0.5) * 0.6, radius: 0.3 + random() * 0.18});
         }
         // Between two fence pickets at the garden's gate.
@@ -404,7 +415,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             runs.push(strip(groundPath(last.x, last.z, x, z, 0.3, random), 0.14, "#8a7550", () => 0.95));
             last = {x, z};
         }
-        add(new LodBatch("warren", mouths, shapes.warrenMouth(0.28), null, warm, {cap: 10, reach: 1}));
+        marks.warren = {x: at.x, y: at.ground, z: at.z - 1.5};
+        add(new LodBatch("warren", mouths, shapes.warrenMouth(0.28), null, decal, {cap: 10, reach: 1}));
         add(new LodBatch("warren-runs", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(runs), null, decal, {cap: 1, reach: 100}));
         batches[batches.length - 1].setCentre(new Vector3(at.x, at.ground, at.z));
     }
@@ -439,6 +451,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             const x = at.x + Math.sin(at.yaw + Math.PI) * 0.4;
             const z = at.z - size * 2.6;
             items.push({x, y: groundAt(x, z) - 0.05, z, turn: 0, scale: 1});
+            marks[group] ??= {x, y: groundAt(x, z), z};
         }
         if (items.length) add(new LodBatch(group, items, build(size), null, warm, {cap: 12, reach: 1.3, shadow: true}));
     }
@@ -455,17 +468,20 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const tracks: BufferGeometry[] = [];
         presence.turtleNests.forEach((nest, k) => {
             // Along the beach from its middle, a little inland of the animals' line.
-            const along = (k + 1) * 4.5;
+            const along = 9 + k * 4.5;
             const x0 = beach.x - oz * along - ox * 2.5;
             const z0 = beach.z + ox * along - oz * 2.5;
             const dry = dryGround(x0, z0, {x: x0 - ox * 4, z: z0 - oz * 4});
             nests.push({x: dry.x, y: dry.y - 0.04, z: dry.z, turn: out, scale: 1});
+            if (k === 0) marks.turtleNest = {x: dry.x, y: dry.y, z: dry.z};
+            // The clutch at the bottom of its pit, a heap of round eggs half in the sand.
             for (let e = 0; e < nest.eggs; e++) {
-                const a = e * 2.4;
-                eggsHere.push({x: dry.x + Math.cos(a) * 0.12, y: dry.y + 0.03, z: dry.z + Math.sin(a) * 0.12, turn: 0, scale: 0.75, tint: new Color("#f4efe4")});
+                const a = e * 2.39996;
+                const d = 0.035 + 0.1 * Math.sqrt((e + 0.5) / nest.eggs);
+                eggsHere.push({x: dry.x + Math.cos(a) * d, y: dry.y + 0.01 + (e < 3 ? 0.03 : 0), z: dry.z + Math.sin(a) * d, turn: e, scale: 0.8, tint: new Color("#f4efe4")});
             }
             // Two lines of flipper marks to the waterline and back.
-            for (const offset of [-0.35, 0.35]) {
+            for (const offset of [-0.32, 0.32]) {
                 let wx = dry.x + ox * 0.9;
                 let wz = dry.z + oz * 0.9;
                 for (let s = 0; s < 40 && groundAt(wx, wz) > -0.05; s++) {
@@ -473,10 +489,10 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
                     wz += oz * 0.35;
                 }
                 const line = groundPath(dry.x + ox * 0.9 - oz * offset, dry.z + oz * 0.9 + ox * offset, wx - oz * offset, wz + ox * offset, 0.12, random);
-                tracks.push(strip(line, 0.16, "#c3ab80", (t, i) => (Math.floor(i / 6) % 2 ? 0.86 : 1.02)));
+                tracks.push(strip(line, 0.09, "#b59c74", (t, i) => (Math.floor(i / 6) % 3 === 0 ? 0.8 : 1.0)));
             }
         });
-        add(new LodBatch("turtle-nests", nests, shapes.turtleNest(0.75), null, warm, {cap: 6, reach: 1}));
+        add(new LodBatch("turtle-nests", nests, shapes.turtleNest(0.65), null, sand, {cap: 6, reach: 1}));
         if (eggsHere.length) add(new LodBatch("turtle-eggs", eggsHere, shapes.egg(0.06), null, warm, {cap: 40, reach: 0.5}));
         add(new LodBatch("turtle-tracks", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(tracks), null, decal, {cap: 1, reach: 100}));
         batches[batches.length - 1].setCentre(new Vector3(beach.x, beach.y, beach.z));
@@ -489,6 +505,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         // The lodge: on the lake's margin beside the outflow, in the water.
         const side = Math.atan2(az - LAKE.z, ax - LAKE.x) + 0.55;
         const lodge = {x: LAKE.x + Math.cos(side) * (LAKE.r - 2.2), z: LAKE.z + Math.sin(side) * (LAKE.r - 2.2)};
+        marks.beaverLodge = {x: lodge.x, y: 0, z: lodge.z};
         add(new LodBatch("beaver-lodge", [{x: lodge.x, y: 0, z: lodge.z, turn: 0.4, scale: 1}], shapes.beaverLodge(1.9), null, warm, {cap: 2, reach: 1.6, shadow: true}));
         // The dam: a third of the way down the river's first stretch, square across it.
         const t = 0.35;
@@ -500,6 +517,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
 
     // MARK: Snails and slugs: slime trails on the rocks near their ground, the cottage's wall and the garden path's stones
     let setGlint = (_glint: number) => {};
+    const slimeGlints: number[] = [];
     if (has("snails")) {
         const snails = first("snails")!;
         const corner = zoneCorner(snails.zone);
@@ -519,21 +537,26 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
                 const v = Math.sin(k * 0.6 + phase) * 0.12;
                 points.push({p: new Vector3(rock.x, rock.y, rock.z).addScaledVector(t1, u).addScaledVector(t2, v), n});
             }
-            trails.push(strip(points, 0.03, "#ffffff"));
+            trails.push(strip(points, 0.018, "#ffffff"));
         }
         // Up the cottage's front wall from the flower bed, wandering.
         const wallZ = COTTAGE.z + COTTAGE.depth / 2 + 0.012;
         const wall: Array<{p: Vector3; n: Vector3}> = [];
         for (let k = 0; k <= 18; k++) wall.push({p: new Vector3(COTTAGE.x - 2.3 + Math.sin(k * 0.45) * 0.18 + k * 0.02, COTTAGE.floor - 0.05 + k * 0.07, wallZ), n: new Vector3(0, 0, 1)});
-        trails.push(strip(wall, 0.025, "#ffffff"));
+        trails.push(strip(wall, 0.016, "#ffffff"));
+        marks.slimeWall = {x: COTTAGE.x - 2.1, y: COTTAGE.floor + 0.6, z: wallZ};
+        if (rocks[0]) marks.slimeRock = {x: rocks[0].x, y: rocks[0].y, z: rocks[0].z};
         // Across the path's stones.
         const path = groundPath(COTTAGE.x - 0.6, COTTAGE.z + 4.6, COTTAGE.x + 0.7, COTTAGE.z + 6.8, 0.3, random);
-        trails.push(strip(path, 0.025, "#ffffff"));
+        trails.push(strip(path, 0.016, "#ffffff"));
         const geometry = merge(trails);
+        // Glints along the trails (`effects.ts` draws them): a point every few centimetres.
+        const position = geometry.getAttribute("position");
+        for (let i = 0; i < position.count; i += 9) slimeGlints.push(position.getX(i), position.getY(i) + 0.004, position.getZ(i));
         add(new LodBatch("slime-trails", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], geometry, null, slime, {cap: 1, reach: 100, fine: true}));
         batches[batches.length - 1].setCentre(new Vector3(COTTAGE.x, COTTAGE.floor, COTTAGE.z));
         setGlint = (glint) => {
-            slime.opacity = 0.16 + 0.5 * glint;
+            slime.opacity = 0.12 + 0.35 * glint;
         };
     }
 
@@ -542,6 +565,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         batches,
         webs,
         roost: has("bats"),
+        slimeGlints: new Float32Array(slimeGlints),
+        marks: {...marks, ...(webs[0] ? {web: webs[0]} : {}), ...(webs[1] ? {webBranch: webs[1]} : {})},
         nests: nestsOut,
         setGlint,
         dispose: () => {
@@ -549,6 +574,9 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             warm.dispose();
             slime.dispose();
             decal.dispose();
+            soil.dispose();
+            straw.dispose();
+            sand.dispose();
             for (const material of extraMaterials) material.dispose();
         }
     };
@@ -590,7 +618,7 @@ export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
-    const lines = new LineSegments(geometry, new LineBasicMaterial({color: new Color("#f2f4f6"), transparent: true, opacity: 0.4, depthWrite: false}));
+    const lines = new LineSegments(geometry, new LineBasicMaterial({color: new Color("#eef2f4"), transparent: true, opacity: 0.26, depthWrite: false}));
     lines.name = "props:webs";
     return {lines, beads: new Float32Array(beads)};
 }
