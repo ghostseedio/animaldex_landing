@@ -22,7 +22,7 @@ import type {Scene} from "three";
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
-type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number; modelTextureMB?: number; evicted?: number; mode?: string; heapMB?: number | null; chunksIn?: number; haze?: number};
+type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number; modelTextureMB?: number; evicted?: number; mode?: string; heapMB?: number | null; chunksIn?: number; haze?: number; frameMs?: number; skipped?: number; markers?: number};
 
 declare global {
     interface Window {
@@ -55,6 +55,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
     const report = params.get("report");
     // `?tour=1`: after the opening, the camera goes down close in each region in turn and back to the island view.
     const tour = params.get("tour") === "1";
+    // `?focus=<region>`: after the opening, the camera goes down to that region once and stays (a fixed ground view).
+    const focus = params.get("focus");
     // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
     const walk = params.get("walk") === "1";
     try {
@@ -125,6 +127,10 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 handle.select(visits[visit++ % visits.length]);
             }
             const stats = handle.stats();
+            if (focus && performance.now() > nextRegion && region === 0) {
+                region = 1;
+                (handle as unknown as {focusRegion?: (region: string | null) => void}).focusRegion?.(focus);
+            }
             if (tour && performance.now() > nextRegion) {
                 nextRegion = performance.now() + 4000;
                 (handle as unknown as {focusRegion?: (region: string | null) => void}).focusRegion?.(regions[region++ % regions.length]);
@@ -136,7 +142,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
             const loading = handle.loading();
             const t = performance.now() - t0;
             const run = (handle as unknown as {runtime?: () => {modelTextureMB: number; evicted: number; mode: string}}).runtime?.();
-            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode, heapMB: heapNow === null ? null : round(heapNow / 2 ** 20), chunksIn: stats.streaming?.chunks.in, haze: stats.streaming?.haze});
+            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode, heapMB: heapNow === null ? null : round(heapNow / 2 ** 20), chunksIn: stats.streaming?.chunks.in, haze: stats.streaming?.haze, frameMs: stats.frameMs, skipped: stats.streaming?.animalsSkipped, markers: stats.streaming?.mapMarkers});
             // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
             // In view: past the opening flight (4.6 s), the first moment every model the view draws is in (the runtime's
             // own test); the old test (nothing at all loading) as `quietMs`.

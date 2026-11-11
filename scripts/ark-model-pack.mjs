@@ -320,19 +320,13 @@ for (const slug of slugs) {
 log(`far-ark files: ${written} (${(bytesBefore / 2 ** 20).toFixed(1)} → ${(bytesAfter / 2 ** 20).toFixed(1)} MB with the ark.json inside); ${downloaded} files fetched from the bucket`);
 
 const manifest = {...live, far_ark: true, packs: {}};
+// The packs are rebuilt whole each time (their names carry their content's hash: an old one is never uploaded again).
+rmSync(path.join(packed, "packs"), {recursive: true, force: true});
 mkdirSync(path.join(packed, "packs"), {recursive: true});
-for (const [tier, list] of Object.entries(kinds)) {
-    const edge = FAR_EDGE[tier] ?? 256;
-    const files = [];
-    for (const slug of list) {
-        const version = live.models[slug];
-        if (!version) continue;
-        const far = readFileSync((await published(slug, version, "far.glb")).path);
-        const ark = JSON.parse(readFileSync((await published(slug, version, "ark.json")).path, "utf8"));
-        const glb = embedArk(far, ark, edge);
-        if (verify) check(far, glb, ark, slug);
-        files.push({slug, version, glb});
-    }
+/** The kinds the starting view asks for first (runtime/index.ts FIRST_VIEW_KINDS): the first part of each tier's pack. */
+const FIRST_PART = 60;
+
+function packFile(tier, edge, files) {
     // The same layout as src/ark-scene/streaming/pack.ts writeArkPack.
     const entries = [];
     let offset = 0;
@@ -349,11 +343,33 @@ for (const [tier, list] of Object.entries(kinds)) {
     pack.writeUInt32LE(head.length, 8);
     head.copy(pack, 12);
     files.forEach((file, i) => file.glb.copy(pack, 12 + head.length + entries[i].offset));
-    const name = `packs/far-${tier}-${createHash("sha256").update(pack).digest("hex").slice(0, 12)}.arkpack`;
-    writeFileSync(path.join(packed, name), pack);
-    manifest.packs[tier] = {file: name, kinds: files.map((file) => file.slug)};
+    return pack;
+}
+
+for (const [tier, list] of Object.entries(kinds)) {
+    const edge = FAR_EDGE[tier] ?? 256;
+    const files = [];
+    for (const slug of list) {
+        const version = live.models[slug];
+        if (!version) continue;
+        const far = readFileSync((await published(slug, version, "far.glb")).path);
+        const ark = JSON.parse(readFileSync((await published(slug, version, "ark.json")).path, "utf8"));
+        const glb = embedArk(far, ark, edge);
+        if (verify) check(far, glb, ark, slug);
+        files.push({slug, version, glb});
+    }
+    // Two parts: the starting view's first kinds, then the rest (fetched one after the other).
+    const parts = [files.slice(0, FIRST_PART), files.slice(FIRST_PART)].filter((part) => part.length);
+    manifest.packs[tier] = [];
+    for (const [index, part] of parts.entries()) {
+        const pack = packFile(tier, edge, part);
+        const name = `packs/far-${tier}-${index + 1}-${createHash("sha256").update(pack).digest("hex").slice(0, 12)}.arkpack`;
+        writeFileSync(path.join(packed, name), pack);
+        manifest.packs[tier].push({file: name, kinds: part.map((file) => file.slug)});
+        log(`pack ${tier} part ${index + 1}: ${part.length} kinds, ${(pack.length / 2 ** 20).toFixed(2)} MB → ${name}`);
+    }
     const singles = files.reduce((sum, file) => sum + readFileSync(path.join(packed, file.slug, `${file.version}.far-ark.glb`)).length, 0);
-    log(`pack ${tier}: ${files.length} kinds, ${(pack.length / 2 ** 20).toFixed(2)} MB (the same kinds as single far files: ${(singles / 2 ** 20).toFixed(2)} MB, ${files.length * 2} requests before, 1 now) → ${name}`);
+    log(`pack ${tier}: ${files.length} kinds in ${parts.length} files (the same kinds as published single files: ${(singles / 2 ** 20).toFixed(2)} MB, ${files.length * 2} requests)`);
 }
 writeFileSync(path.join(packed, "manifest.json"), JSON.stringify(manifest));
 if (flag("serve-layout")) writeFileSync(path.join(outRoot, "base", "manifest.json"), JSON.stringify(live));

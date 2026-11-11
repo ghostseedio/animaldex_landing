@@ -28,6 +28,9 @@ import {fittedSize} from "@/ark-scene/runtime/budgets";
 import {geometryBytes, textureBytes} from "@/ark-scene/runtime/memory";
 import {parseArkPack, type ArkPack} from "@/ark-scene/streaming/pack";
 
+/** One file of a tier's far-model pack: its path beside the manifest and the kinds in it. */
+export type ArkPackPart = {file: string; kinds: string[]};
+
 export type ArkManifest = {
     models: Record<string, string>;
     /** Development only: species served from the full talking model instead. */
@@ -36,7 +39,7 @@ export type ArkManifest = {
      * Part B (docs/ark/streaming.md §6): the far-model pack per tier (`streaming/pack.ts`): its file (beside the
      * manifest) and the kinds in it. A kind in the pack at the manifest's version loads from it; anything else as before.
      */
-    packs?: Record<string, {file: string; kinds: string[]}>;
+    packs?: Record<string, ArkPackPart | ArkPackPart[]>;
     /** Part B: the far files carry their `ark.json` inside (`<version>.far-ark.glb`, `extras.ark`): one request a model. */
     far_ark?: boolean;
 };
@@ -153,8 +156,8 @@ export class ModelLibrary {
     private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
     /** Part B: the tier whose far-model pack the starting view reads (set once, before the first far model is asked for). */
     private packTierName: string | null = null;
-    private packKinds: Set<string> | null = null;
-    private pack: Promise<ArkPack | null> | null = null;
+    /** The pack's parts (the starting view's first kinds, then the rest), fetched one after another; by kind. */
+    private packParts: Map<string, Promise<ArkPack | null>> | null = null;
     /** Network requests made (the manifest, the pack, every model file): the measurement page reads it. */
     requests = 0;
     /** Kinds whose far model came from the pack, and from single files. */
@@ -204,18 +207,29 @@ export class ModelLibrary {
     }
 
     private startPack() {
-        if (this.pack || !this.manifest || !this.packTierName) return;
+        if (this.packParts || !this.manifest || !this.packTierName) return;
         const entry = this.manifest.packs?.[this.packTierName];
-        if (!entry?.file || !Array.isArray(entry.kinds)) return;
-        this.packKinds = new Set(entry.kinds);
-        this.requests++;
-        this.pack = fetch(`${this.base.replace(/\/+$/, "")}/${entry.file}`, {signal: this.abort.signal})
-            .then((response) => (response.ok ? response.arrayBuffer() : null))
-            .then((buffer) => (buffer ? parseArkPack(buffer) : null))
-            .catch((error) => {
-                if (!this.disposed) console.warn("[ark] pack", error instanceof Error ? error.message : error);
-                return null;
+        const parts = (Array.isArray(entry) ? entry : entry ? [entry] : []).filter((part) => part?.file && Array.isArray(part.kinds));
+        if (!parts.length) return;
+        this.packParts = new Map();
+        // In order, each after the one before: the first part (the kinds the starting view asks for first) has the
+        // connection to itself.
+        let before: Promise<unknown> = Promise.resolve();
+        for (const part of parts) {
+            const fetched: Promise<ArkPack | null> = before.then(() => {
+                if (this.disposed) return null;
+                this.requests++;
+                return fetch(`${this.base.replace(/\/+$/, "")}/${part.file}`, {signal: this.abort.signal})
+                    .then((response) => (response.ok ? response.arrayBuffer() : null))
+                    .then((buffer) => (buffer ? parseArkPack(buffer) : null))
+                    .catch((error) => {
+                        if (!this.disposed) console.warn("[ark] pack", error instanceof Error ? error.message : error);
+                        return null;
+                    });
             });
+            before = fetched;
+            for (const slug of part.kinds) if (!this.packParts.has(slug)) this.packParts.set(slug, fetched);
+        }
     }
 
     /**
@@ -387,8 +401,9 @@ export class ModelLibrary {
 
     /** Part B: a kind's far model from the pack, or null (not in it, another version, or the pack failed). */
     private async fromPack(slug: string, version: string, edge: number): Promise<(ModelLevel & {ark?: unknown}) | null> {
-        if (!this.pack || !this.packKinds?.has(slug)) return null;
-        const pack = await this.pack;
+        const part = this.packParts?.get(slug);
+        if (!part) return null;
+        const pack = await part;
         const glb = pack?.glb(slug, version);
         if (!glb) return null;
         const gltf = await this.loader.parseAsync(glb, "");

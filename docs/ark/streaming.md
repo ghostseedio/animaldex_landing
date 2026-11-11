@@ -93,7 +93,45 @@ The badges, labels, HUD counts and population are data and are always there.
 
 ## 6. The far-model pack and `ark.json` in the GLB
 
-See §8 for the tooling, the measured effect and the upload commands.
+These are the Part B inputs from `runtime.md` §10.
+
+**`ark.json` in the GLB.**
+- Each far model gets a new file, `<version>.far-ark.glb`. It is the published far GLB with its `ark.json` as the glTF's top-level `extras.ark`.
+- Every other byte is as published. `--verify` decodes each file's meshopt geometry and compares it with the published file's; all 2,630 match.
+- three's GLTFLoader puts the extras on `gltf.userData.ark`, and the library reads `behaviour` from there.
+- The manifest says `far_ark: true`, so a far model is one request instead of two.
+- The old `.far.glb` and `.ark.json` stay where they are, so an older page that read the old manifest keeps working.
+
+**The far-model pack, one per tier, in two parts** (`streaming/pack.ts`).
+- Layout of each part: `ARKP`, version, a JSON header of `{slug, version, offset, length}`, then the far-ark GLBs.
+- A tier's pack holds the starting view's kinds: the first 160 / 120 / 80 far models (high / medium / low) that a run of the real Ark asked for.
+- It comes in two parts. The first holds the 60 kinds the starting view asks for first (`FIRST_VIEW_KINDS`); the second holds the rest. They are fetched one after the other, so on a phone's link the first part is not sharing its bandwidth. Each kind waits only for its own part.
+- The skins are fitted to the tier's far size, 256 px (high, medium) or 128 px (low), with cwebp at quality 85. The runtime fitted them to that size anyway.
+- The manifest's `packs.<tier>` is the list of parts, each `{file, kinds}`.
+- The library fetches the first tier's parts as soon as the manifest is in. A kind in a part at the manifest's version loads from it; any other kind loads its single file. A dropped tier never fetches another pack. A recording reads no pack.
+
+| Pack | Kinds | Part 1 (60 kinds) | Part 2 | The same kinds as published single files |
+|---|---|---|---|---|
+| high | 160 | 2.05 MB | 3.37 MB | 10.70 MB, 320 requests (far.glb + ark.json) |
+| medium | 120 | 2.08 MB | 2.07 MB | 8.25 MB, 240 requests |
+| low | 80 | 1.22 MB | 0.42 MB | 5.54 MB, 160 requests |
+
+**Tooling:** `scripts/ark-model-pack.mjs`.
+- It reads the live manifest, and takes each file from the local talking-models build where its version matches, else from the bucket (read only).
+- It writes `<out>/packed/`: the far-ark files, the packs and the manifest.
+- `--serve-layout` adds `<out>/base/` (today's layout, linked), so `ark-runtime-measure.mjs --models-dir` can measure both.
+- The kinds come from measurement runs (`--kinds`, pointing at their `runtime.json`; the library records `farOrder`).
+- The publish pipeline can rebuild the packs from the live population whenever it publishes. A kind that leaves the starting view still loads, from its own file.
+
+**The upload is owner-approved only. Nothing has been uploaded.**
+```
+node scripts/ark-model-pack.mjs --out <dir> --kinds <kinds.json> --serve-layout --verify      # build (done locally)
+node scripts/ark-model-pack.mjs upload --out <dir>                                             # dry run: lists 2,636 files + the manifest
+ARK_PACK_UPLOAD_APPROVED=1 SERVICE_KEY=<service_role key> node scripts/ark-model-pack.mjs upload --out <dir>
+```
+- The upload sends the far-ark files and the packs first, under new versioned names, immutable for a year, never overwritten (`x-upsert: false`). The manifest goes last (10 minutes, upsert), as `publish_ark.py` does.
+- Rollback is re-uploading the previous manifest. The new files are inert without it.
+- **The visual CI:** the golden page reads the live bucket. A recording never reads a pack, because it waits for every model anyway, and the far-ark files carry the published skins byte for byte. So once the packed manifest is live, the golden shots are the same models. Re-run the visual CI after the upload anyway.
 
 ## 7. Measured
 
