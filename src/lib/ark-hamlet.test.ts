@@ -5,8 +5,8 @@ import slots from "@/ark-scene/map/hamlet-slots.json";
 import {DOOR_SECONDS, HAMLET_STEP_SECONDS, HOUSE_SPOT_COUNT, MAX_HOUSES, MAX_SMALLHOLDINGS, SMALLHOLDING_SPOT_COUNT, hamletState, homePlots, houseCount, outKind, outShare, planHamletSlots, planWithReport, plotFootprint, plotOf, plotSpots, reservedAt, reservedPlots, smallholdingCount, spotSize, type HamletResident} from "@/ark-scene/map/hamlet";
 import {cottageStyle, onHomeKeepOut, plotFrame} from "@/ark-scene/props/home-layout";
 import {cropAt} from "@/ark-scene/fields";
-import {COTTAGE} from "@/ark-scene/micro-decor";
-import {laneDistance, LANE_WIDTH} from "@/ark-scene/world";
+import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
+import {laneDistance, LANE_WIDTH, riverDistance, sampleGround} from "@/ark-scene/world";
 import {validateCapacity, validatePlots, validatePopulation, CROWD_MAX} from "@/ark-scene/map/validate-hamlet";
 import {validateMap} from "@/ark-scene/map/validate";
 import {defaultHomePlots} from "@/ark-scene/props/home-layout";
@@ -181,5 +181,16 @@ test("hamlet: a house's door and window follow its cottage's size", () => {
         assert.ok(Math.abs(local.z - ((COTTAGE.depth / 2) * k + 0.3)) < 1e-6 && Math.abs(local.x) < 1e-6, plot.id);
         const window = plotFrame(plot).toLocal(plotSpots(plot).window!.x, plotSpots(plot).window!.z);
         assert.ok(Math.abs(window.x - 1.6 * k) < 1e-6, plot.id);
+    }
+});
+
+test("hamlet: no resident spot (nor a door) in a pond or at its stones, nor in the river or the sea", () => {
+    for (const plot of reservedPlots()) {
+        const spots = plotSpots(plot);
+        for (const spot of [...spots.spots, spots.door, ...(spots.coopDoor ? [spots.coopDoor] : [])]) {
+            // A dog's half-length clear of the pond's ring of stones (the pond's radius and 0.3 m of stones).
+            assert.ok(Math.hypot(spot.x - GARDEN_POND.x, spot.z - GARDEN_POND.z) > GARDEN_POND.radius + 0.3 + 0.5, `${plot.id} spot in the garden pond`);
+            assert.ok(sampleGround(spot.x, spot.z).height >= 0.3 && riverDistance(spot.x, spot.z) >= 3, `${plot.id} spot in water`);
+        }
     }
 });
