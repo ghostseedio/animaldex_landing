@@ -327,3 +327,27 @@ The scenario script is `scenario.ts` in the lane folder. Each animal is posed ev
      - In `arkOutside`, fill each kind's quota with not-resting members first, in ring order from the step's start, then resting ones.
      - It stays the same for every viewer and nested across tiers: the order is the same everywhere, and a bigger quota only extends the list.
      - What is hidden is then the animals at home.
+
+## Part 6: circling, pace, rocks (2026-11-11, after the owner's "animals move in circles")
+
+1. **Circling on the ground.** Measured with the rig lane's island script (`node scripts/ark-rig-scenes.mjs --island`):
+   - Ground turns a minute, median: 6.5 → 0.1.
+   - What changed: walking faces 1.5 m ahead on its path, and leaves its old heading over 0.8 s. A scan is a glance that comes back, not a turn that adds up. Grazing steps are small and mostly forward (0.2–0.45 m, turns under 0.1 rad); foraging steps are 0.3–0.7 m.
+   - Settling: an animal settles facing the way it came, turned by up to 0.15 rad, or else outwards from home by up to 0.6 rad.
+   - What is left is the recipes lane's episodes (`behaviour-recipes.ts`): seals' chase_fish 3.9 rad/m, puffins' surface_dive 3.0, camels' cache_food 3.3.
+2. **Backwards walking.** Each stay step faces its own way while it moves, then turns to the beat's heading once stopped. The backwards share went from 4.1% to 2.8–4.9%; the rest is the rig player's.
+3. **Pace.** Walking speed is capped at 1.5 × the clip's corrected pace (`ground_speed / duty`, with duty 0.62 walking, 0.38 running, 0.72 if unknown).
+   - The generator writes `walkPace` and `runPace` (row fields 15 and 16).
+   - The air and the water keep their own free pace, and `gait` is unchanged for the reactive lane's flee cap.
+   - Pace ratio, median: 1.79 → 1.63.
+4. **Rocks: the map's shapes.** The walk grid now blocks each drawn rock's box (the map lane's `map/rocks.ts` `drawnRocks()`, the same box its `inRock` tests), widened by `ROCK_MARGIN` 1.25 m.
+   - With the grid's 0.2 m clearance that is 1.45 m. That is more than half a 2 m cell's diagonal however the rock is turned, so no walkable cell holds a point of a rock.
+   - A test checks a 0.25 m lattice over every rock: every point is blocked and off the grid. Wherever `inRock` reaches a rock, `blocked` agrees.
+   - `rock_top` is the drawn top (`y1`).
+   - Log tops are now the scenery's `log` points on the drawn bark: 89 on 15 logs. The old guesses from the log circles are gone, and the logs still block.
+5. **Soars glided at a crawl.** Every soar in the fixture moved at under 1 m/s (85 of 85): a few metres of route stretched over 44 s.
+   - A soar now glides at about half its flying cruise. Over a near goal it sweeps out up to 60 m (towards the island's middle when the far end would be off it), turns in one wide U, and comes back.
+   - Median soar speed: 0.3 → 2.6 m/s.
+   - Flight turns a minute: 0.44, still under 0.5. Circling: 0%.
+   - The spacing test now skips prey in the air as well as predators: a bird soaring wide passes over others, and the spacing is for where they stand.
+6. **The map's hook line** in `wireSchedules` stays as the map wrote it: a flyer's home may be any dry ground, with a 5 m `mapHabitatAt` margin.

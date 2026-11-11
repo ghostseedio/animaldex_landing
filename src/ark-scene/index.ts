@@ -90,7 +90,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -860,8 +860,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const nav = scheduleWorldNow().nav;
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
+        // (The map lane's line, 2026-11-11: a flyer's home may be any dry ground; every home keeps 5 m inside its habitat.)
         const job = spaceHomesTasks(
-            onIt.filter((e) => !groups.get(e)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
+            onIt.filter((e) => !groups.get(e)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && mapHabitatAt(e.animal, x, z, 5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z, 5))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -1691,7 +1692,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const spec = waterSpec(entry.depth, ground, entry.seed, clock, breath);
-            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: 0, roll: 0, afloat: true, water: spec};
+            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0, roll: 0, afloat: true, water: spec};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -1758,7 +1759,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // The school swims at its first one's depth in the band (its own breath apart).
         const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
-        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along);
+        // (A penguin lies down to swim: `swimBodyPitch`.)
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
         return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined};
     };
 
@@ -1811,7 +1813,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const plan = model?.behaviour?.plan ?? "";
         // A water species (`sea-depth.ts`): in its depth band, its whole body under the surface (a floater on it, a
         // bottom-dweller on the floor, an octopus in its hole), an air-breather up for air when its state says so.
-        if (entry.depth && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
+        // (Only where it is placed in the water: a penguin or a seal standing on its shore has a band for its swims, not for its rest.)
+        if (entry.depth && entry.place.water && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
         // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
         if (!entry.depth && atSeaOf(entry) && entry.layer.mode === "floor") {
             const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);
