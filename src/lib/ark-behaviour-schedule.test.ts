@@ -49,9 +49,14 @@ test("nothing jumps: where a slot ends is where the next one starts", () => {
     let checked = 0;
     for (const {animal, profile, a} of animals.filter((_, i) => i % 3 === 0)) {
         for (let k = 0; k < 24 * 45; k += 7) {
-            const end = DAY + (k + 1) * SLOT_SECONDS;
-            const before = poseOnTrip(world, tripAt(world, profile, animal, end - 0.001, hoursAt, a.activity), end - 0.001);
-            const after = poseOnTrip(world, tripAt(world, profile, animal, end, hoursAt, a.activity), end);
+            // At the end of the slot it is in (each animal's slots are offset by its id).
+            const end = tripAt(world, profile, animal, DAY + k * SLOT_SECONDS, hoursAt, a.activity).end;
+            const first = tripAt(world, profile, animal, end - 0.001, hoursAt, a.activity);
+            const before = poseOnTrip(world, first, end - 0.001);
+            const next = tripAt(world, profile, animal, end, hoursAt, a.activity);
+            const after = poseOnTrip(world, next, end);
+            // The cheaper way (handing the last trip over) gives the same trip.
+            assert.deepEqual(tripAt(world, profile, animal, end, hoursAt, a.activity, first), next);
             const gap = Math.hypot(after.x - before.x, after.y - before.y, after.z - before.z);
             assert.ok(gap < 0.25, `${a.model_slug} jumps ${gap.toFixed(2)} m at slot ${k + 1}`);
             checked++;
@@ -67,7 +72,8 @@ test("asleep means at its roost, and getting there is a visible trip", () => {
         if (profile.move === "sessile") continue;
         const roost = roostOf(world, profile, animal);
         for (let k = 0; k < 24 * 45; k += 3) {
-            const t = DAY + k * SLOT_SECONDS + SLOT_SECONDS * 0.9;
+            const probe = tripAt(world, profile, animal, DAY + k * SLOT_SECONDS, hoursAt, a.activity);
+            const t = probe.start + SLOT_SECONDS * 0.9;
             const trip = tripAt(world, profile, animal, t, hoursAt, a.activity);
             const asleep = !awakeAt(profile, a.activity, hoursAt(trip.start));
             assert.equal(asleep, trip.doing === "sleep" || trip.doing === "to_roost", `${a.model_slug} at slot ${k}`);

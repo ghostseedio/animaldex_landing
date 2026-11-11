@@ -30,6 +30,14 @@ import type {ArkZone} from "@/ark-scene/types";
 
 export const SLOT_SECONDS = 80;
 
+/** Each animal's slots are shifted by its own offset (from its id), so a thousand animals don't all change plans in the same frame. */
+export function slotOffset(id: string): number {
+    return (hashString(`${id}#slot`) % 8000) / 100;
+}
+export function slotStart(animal: ScheduleAnimal, slot: number): number {
+    return slot * SLOT_SECONDS - slotOffset(animal.id);
+}
+
 /** What it is doing (one state, which the animation, the tap card and follow all read). */
 export type ArkDoing =
     | "sleep"
@@ -223,10 +231,21 @@ export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
     return {sampler, nav: navGrid(sampler)};
 }
 
+/** How far it can go in one slot at its own pace (ground, water; flyers go four times as fast). */
+export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
+    const flyer = profile.move === "fly";
+    return bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
+}
+
+/**
+ * Its home area's radius: by how it moves and its size, and never more than half what it can cover in a slot, so
+ * any trip inside its home area is finished in its slot at its own pace (no rushing, no sliding feet).
+ */
 function homeRadius(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
     const flyer = profile.move === "fly";
     const base = flyer ? 18 : profile.move === "swim" ? 14 : 6;
-    return Math.min(Math.max(base + animal.length * 5, 3), flyer ? 40 : 26);
+    const wanted = Math.min(Math.max(base + animal.length * 5, 3), flyer ? 40 : 26);
+    return Math.max(Math.min(wanted, reachOf(profile, animal) / 2), 0.4);
 }
 
 function spotOf(point: AttachPoint): Spot {
@@ -319,7 +338,7 @@ function intent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sche
 }
 
 function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
-    const start = slot * SLOT_SECONDS;
+    const start = slotStart(animal, slot);
     const hours = hoursAt(start);
     const awake = awakeAt(profile, activity, hours);
     const wasAwake = awakeAt(profile, activity, hoursAt(start - SLOT_SECONDS));
@@ -343,7 +362,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         for (const place of places) {
             if (!profile.interactions.includes(place) && behaviour !== "rest") continue;
             const tags = INTERACTION_TAGS[place] ?? [];
-            const point = placeNear(world, animal, tags, place === "drink_edge" || place === "porch_light" ? 45 : radius * 1.4, random());
+            const point = placeNear(world, animal, tags, place === "drink_edge" || place === "porch_light" ? Math.min(45, reachOf(profile, animal) / 2) : radius * 1.4, random());
             if (point) {
                 const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
                 const mode: TripMode = profile.surface && point.ny < 0.7 ? "surface" : flyer && (up || behaviour === "visit_flowers" || behaviour === "circle_light") ? "air" : aquatic(profile) ? "water" : "ground";
@@ -382,12 +401,13 @@ function endOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sched
 const CRUISE: Record<"low" | "mid" | "high", number> = {low: 1.6, mid: 6, high: 14};
 
 /** The trip an animal is on at a world time (pure: the same for every viewer). */
-export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): Trip {
-    const slot = Math.floor(epochSeconds / SLOT_SECONDS);
-    const start = slot * SLOT_SECONDS;
+export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null, previous?: Trip | null): Trip {
+    const slot = Math.floor((epochSeconds + slotOffset(animal.id)) / SLOT_SECONDS);
+    const start = slotStart(animal, slot);
     const end = start + SLOT_SECONDS;
     const now = intent(world, profile, animal, activity, slot, hoursAt);
-    const from = endOf(world, profile, animal, activity, slot - 1, hoursAt);
+    // Where the last slot ended (the last trip's own target, when the caller still has it: the same answer, cheaper).
+    const from = previous && previous.slot === slot - 1 ? previous.to : endOf(world, profile, animal, activity, slot - 1, hoursAt);
     const to = now.to ?? from;
     let path: NavPoint[] | null = null;
     let mode = now.mode;

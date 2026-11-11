@@ -175,6 +175,8 @@ export type ArkSceneOptions = {
     talkingBase?: string;
     /** A fixed hour (0–24) for the light and who is asleep; default: the viewer's clock, read every minute. */
     hours?: number | null;
+    /** The behaviour schedule (`behaviour-schedule.ts`): animals walk, fly, swim, sleep at their roosts and visit places by the time and their ids. Default on. */
+    behaviour?: boolean;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
     /**
@@ -254,6 +256,8 @@ export type ArkSceneHandle = {
      */
     setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number}> | null) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
+    /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
+    setClockScale: (scale: number) => void;
     setHours: (hours: number | null) => void;
     /**
      * Act out what the server says happened ("while you were away"): each act

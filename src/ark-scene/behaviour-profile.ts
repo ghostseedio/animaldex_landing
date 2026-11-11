@@ -48,6 +48,8 @@ export type ArkBehaviourProfile = {
     size: number | null;
     speed: number | null;
     dominance: number | null;
+    /** Its rig's fastest passing ground clip at the clip's own pace (body lengths a second); null without a rig. */
+    gait: number | null;
     /** Some field is a body-plan default (data missing). */
     defaulted: boolean;
     /** Not in the table: the body plan's defaults. */
@@ -59,7 +61,7 @@ const ROWS = (table as {species: Record<string, string>}).species;
 const cache = new Map<string, ArkBehaviourProfile>();
 
 export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfile {
-    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance] = row.split("|");
+    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait] = row.split("|");
     const weights: Partial<Record<ArkBehaviour, number>> = {};
     for (let i = 0; i + 1 < behaviours.length; i += 2) {
         const name = ARK_BEHAVIOURS[parseInt(behaviours[i], 36)];
@@ -85,6 +87,7 @@ export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfi
         size: number(size),
         speed: number(speed),
         dominance: number(dominance),
+        gait: number(gait),
         defaulted: flags.includes("d"),
         fallback: false
     };
@@ -111,7 +114,7 @@ export function behaviourProfile(slug: string, plan?: string | null): ArkBehavio
     const row = ROWS[slug];
     const profile: ArkBehaviourProfile = row
         ? decodeBehaviourRow(slug, row)
-        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, size: null, speed: null, dominance: null, defaulted: true, fallback: true};
+        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, size: null, speed: null, dominance: null, gait: null, defaulted: true, fallback: true};
     cache.set(slug, profile);
     return profile;
 }
@@ -120,8 +123,16 @@ export function hasBehaviourProfile(slug: string): boolean {
     return slug in ROWS;
 }
 
-/** Ground speed in body lengths a second (visual only, the speed stat's gentle curve, docs/ark-next.md stats §2). */
+/** How much faster than its clip's own pace its feet may be played (the rig player's cap) before they slide. */
+export const GAIT_CADENCE = 2.5;
+
+/**
+ * Ground speed in body lengths a second (visual only): the speed stat's gentle curve (docs/ark-next.md stats §2),
+ * but never faster than its rig's fastest ground clip can carry it without sliding (the rigs' strides are short, so
+ * this is what holds most animals back; the same for every viewer, rig drawn or not).
+ */
 export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     const speed = profile.speed ?? 40;
-    return Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
+    const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
+    return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
 }

@@ -278,6 +278,8 @@ export default function ArkView({locale, initial, growFrom, fixture, signedIn, w
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
                         ...(rigBase !== undefined ? {rigBase} : {}),
+                        // Development: `?behaviour=0` turns the behaviour schedule off (the placed spots, as before).
+                        ...(process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).get("behaviour") === "0" ? {behaviour: false} : {}),
                         iconUrl: arkIconUrl,
                         onSelect,
                         onBehaviour,

@@ -15,6 +15,7 @@
  */
 
 import {isAwake, type ArkActivity} from "@/lib/ark-daylight";
+import type {ArkDoing} from "@/ark-scene/behaviour-schedule";
 
 export type ArkBehaviourKind = "asleep" | "flying" | "awake";
 
@@ -24,6 +25,8 @@ export type ArkBehaviourState = {
     asleep: boolean;
     /** Up in the air, on its circle (a bird of the air, awake). */
     airborne: boolean;
+    /** What it is doing (`behaviour-schedule.ts`), for an animal on the behaviour schedule. */
+    doing?: ArkDoing;
 };
 
 export type ArkBehaviourInput = {
@@ -39,6 +42,11 @@ export type ArkBehaviourInput = {
     visitor?: boolean;
     /** Reduced motion: nothing flies; an awake flyer waits on its spot. */
     reducedMotion?: boolean;
+    /**
+     * On the behaviour schedule: what its trip says it is doing now and whether its pose is up in the air. Then
+     * asleep is the schedule's sleep (the same hour rule, at its slot's start) and airborne its pose.
+     */
+    scheduled?: {doing: ArkDoing; aloft: boolean} | null;
 };
 
 const ASLEEP: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false});
@@ -46,7 +54,17 @@ const FLYING: ArkBehaviourState = Object.freeze({kind: "flying", asleep: false, 
 const AWAKE: ArkBehaviourState = Object.freeze({kind: "awake", asleep: false, airborne: false});
 
 /** The state (one shared object per kind, so it can be worked out every frame for free). */
+const SCHEDULED = new Map<string, ArkBehaviourState>();
+
 export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
+    const plan = input.scheduled;
+    if (plan && !input.acting && !input.visitor) {
+        const kind: ArkBehaviourKind = plan.doing === "sleep" ? "asleep" : plan.aloft && !input.reducedMotion ? "flying" : "awake";
+        const key = `${kind}:${plan.doing}`;
+        let state = SCHEDULED.get(key);
+        if (!state) SCHEDULED.set(key, (state = Object.freeze({kind, asleep: kind === "asleep", airborne: kind === "flying", doing: plan.doing})));
+        return state;
+    }
     const awake = Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
     if (!awake) return ASLEEP;
     return input.flyer && !input.acting && !input.visitor && !input.reducedMotion ? FLYING : AWAKE;
