@@ -223,21 +223,25 @@ export function breathRate(length: number, factor: number): number {
  * seconds: the head lifts and settles (`lift` 0…1) or the tail flicks (`flick` 0…1), or it only shifts; each stir
  * settles it on a slightly new heading (`shift`, radians, eased during the stir and kept).
  */
+const STIR_PERIOD = 47;
+/** Each animal's stir for its current period, worked out once a period (the hashes are most of a sleeper's cost). */
+const STIRS = new Map<string, {k: number; offset: number; at: number; kind: number; from: number; to: number}>();
 export function sleepStir(id: string, epochSeconds: number): {lift: number; shift: number; flick: number} {
-    const PERIOD = 47;
-    const offset = (hashString(`${id}#stir`) % 1000) / 1000 * PERIOD;
-    const k = Math.floor((epochSeconds + offset) / PERIOD);
-    const into = epochSeconds + offset - k * PERIOD;
-    const h = hashString(`${id}#stir#${k}`);
-    const at = 4 + ((h % 1000) / 1000) * (PERIOD - 12);
-    const kind = (h >> 10) % 4;
-    const shiftOf = (n: number) => (((hashString(`${id}#shift#${n}`) % 1000) / 1000) - 0.5) * 0.4;
-    const u = (into - at) / 3.2;
+    let memo = STIRS.get(id);
+    const offset = memo ? memo.offset : ((hashString(`${id}#stir`) % 1000) / 1000) * STIR_PERIOD;
+    const k = Math.floor((epochSeconds + offset) / STIR_PERIOD);
+    if (!memo || memo.k !== k) {
+        if (STIRS.size > 4096) STIRS.clear();
+        const h = hashString(`${id}#stir#${k}`);
+        const shiftOf = (n: number) => (((hashString(`${id}#shift#${n}`) % 1000) / 1000) - 0.5) * 0.4;
+        memo = {k, offset, at: 4 + ((h % 1000) / 1000) * (STIR_PERIOD - 12), kind: (h >> 10) % 4, from: shiftOf(k - 1), to: shiftOf(k)};
+        STIRS.set(id, memo);
+    }
+    const u = (epochSeconds + offset - k * STIR_PERIOD - memo.at) / 3.2;
     const pulse = u > 0 && u < 1 ? Math.sin(Math.PI * u) ** 2 : 0;
     // Every stir settles it on a slightly new heading: eased from the last stir's to this one's during the stir, then kept.
-    const lastShift = shiftOf(k - 1);
-    const shift = lastShift + (shiftOf(k) - lastShift) * smooth(0, 1, u);
-    return {lift: kind === 0 || kind === 3 ? pulse : 0, shift, flick: kind === 2 ? pulse : 0};
+    const shift = memo.from + (memo.to - memo.from) * smooth(0, 1, u);
+    return {lift: memo.kind === 0 || memo.kind === 3 ? pulse : 0, shift, flick: memo.kind === 2 ? pulse : 0};
 }
 
 // MARK: Sleeping together

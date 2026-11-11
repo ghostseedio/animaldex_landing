@@ -71,6 +71,33 @@ const executablePath = path.join(cache, chromiumDir, "chrome-mac-arm64", "Google
 const {chromium} = createRequire(path.join(root, "node_modules", "x.js"))("playwright-core");
 const browser = await chromium.launch({executablePath, headless: true, args: ["--use-angle=metal", "--ignore-gpu-blocklist"]});
 const summary = {};
+if (process.argv.includes("--perf")) {
+    // The phone tier: 360×800 at DPR 2, touch and an Android UA, the CPU throttled 4×, medium quality; the night clip's
+    // cast asleep at 01:30 against the same cast awake at 18:00, from its first view, 15 s on the real clock.
+    const results = {};
+    for (const hours of [1.5, 18]) {
+        const context = await browser.newContext({viewport: {width: 360, height: 800}, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36"});
+        const page = await context.newPage();
+        const cdp = await context.newCDPSession(page);
+        await page.goto(`${base}?clip=night&quality=medium&hours=${hours}&mul=${arg("mul", "1")}`, {waitUntil: "domcontentloaded", timeout: 120000});
+        await page.waitForFunction(() => window.__clip, null, {timeout: 300000});
+        await page.evaluate(() => window.__clip.perfView());
+        await page.waitForTimeout(4000);
+        await cdp.send("Emulation.setCPUThrottlingRate", {rate: 4});
+        await page.waitForTimeout(3000);
+        const runs = [];
+        for (let i = 0; i < 3; i++) runs.push(await page.evaluate(() => window.__clip.measure(5000)));
+        const s = await page.evaluate(() => window.__clip.stats());
+        const reactive = await page.evaluate(() => window.__clip.handle?.reactiveStats?.() ?? null);
+        results[hours] = {meanMs: runs.map((r) => +r.mean.toFixed(1)), p95Ms: runs.map((r) => +r.p95.toFixed(1)), near: s.near, far: s.far, rigged: s.rigged, live: s.live, tier: s.tier, reactiveMs: reactive?.ms ?? null};
+        console.log(`hours ${hours}`, JSON.stringify(results[hours]));
+        await context.close();
+    }
+    writeFileSync(path.join(out, "perf.json"), JSON.stringify(results, null, 1));
+    await browser.close();
+    server.close();
+    process.exit(0);
+}
 for (const clip of clips) {
     try {
         const context = await browser.newContext({viewport: {width, height}, deviceScaleFactor: scaleFactor});

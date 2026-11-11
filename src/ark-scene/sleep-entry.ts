@@ -47,7 +47,8 @@ const centroid = (list: Array<{x: number; y: number; z: number}>) => ({x: list.r
 const CLIPS: Record<string, Clip> = {
     night: {
         cast: [["grevys-zebra", 7], ["blue-wildebeest", 6], ["african-lion", 4], ["superb-starling", 5]],
-        hours: 1.5,
+        // (`?hours=18`: the same animals awake, for the cost.)
+        hours: Number(new URLSearchParams(location.search).get("hours") ?? 1.5),
         date: Date.UTC(2026, 10, 12, 1, 30) / 1000,
         find: (ctx) => {
             const t = ctx.date0 + 30;
@@ -141,9 +142,11 @@ function castId(k: number, i: number): string {
 function castAnimals(cast: Clip["cast"]): Raw[] {
     const template = fixture.animals[0];
     const out: Raw[] = [];
+    // (`?mul=3`: three times the cast, for the cost.)
+    const mul = Math.max(Number(new URLSearchParams(location.search).get("mul") ?? 1), 1);
     cast.forEach(([slug, n], k) => {
         const sp = SPECIES[slug];
-        for (let i = 0; i < n; i++) out.push({...template, id: castId(k, i), species_profile_id: sp.id, name: sp.name, scientific_name: sp.name, model_slug: slug, zone: sp.zone, activity: sp.activity, sociality: sp.sociality, slot: 90 + k, slot_rank: i} as Raw);
+        for (let i = 0; i < n * mul; i++) out.push({...template, id: castId(k, i), species_profile_id: sp.id, name: sp.name, scientific_name: sp.name, model_slug: slug, zone: sp.zone, activity: sp.activity, sociality: sp.sociality, slot: 90 + k, slot_rank: i} as Raw);
     });
     return out;
 }
@@ -208,6 +211,28 @@ async function main() {
     const api = {
         script: script ? {seconds: script.seconds, fps: script.fps, note: script.note, shots: script.shots.map((s) => ({at: s.at, label: s.label}))} : null,
         /** Frame `i` of the clip: the world time, the camera, and a label. */
+        /** The cost (`--perf`): the clip's first view on the real clock, and the scene's own numbers. */
+        perfView: () => handle.setView(script!.shots[1]?.view(0, (id) => handle.locate(id)) ?? script!.shots[0].view(0, (id) => handle.locate(id))),
+        handle,
+        stats: () => handle.stats(),
+        /** Frames drawn over `ms` on the real clock: the mean and 95th-percentile interval (ms). */
+        measure: (ms: number) =>
+            new Promise<{frames: number; mean: number; p95: number}>((resolve) => {
+                const gaps: number[] = [];
+                let last = realPerfNow();
+                const end = last + ms;
+                const tick = () => {
+                    const now = realPerfNow();
+                    gaps.push(now - last);
+                    last = now;
+                    if (now < end) requestAnimationFrame(tick);
+                    else {
+                        const sorted = [...gaps].sort((a, b) => a - b);
+                        resolve({frames: gaps.length, mean: gaps.reduce((s, g) => s + g, 0) / gaps.length, p95: sorted[Math.floor(sorted.length * 0.95)]});
+                    }
+                };
+                requestAnimationFrame(tick);
+            }),
         /** Development: draw the eyes open (to compare the shut ones). */
         eyesOpen: async (open: boolean) => {
             (globalThis as {__arkEyesOpen?: boolean}).__arkEyesOpen = open;
