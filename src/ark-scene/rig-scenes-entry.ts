@@ -447,7 +447,7 @@ async function mountIsland(el: HTMLElement) {
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
     // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
     const view = params.get("view")?.split(",").map(Number);
-    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null; trip?: {recipe?: string | null} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
     const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
     const settle = async (maxMs = 180_000) => {
         const until = performance.now() + maxMs;
@@ -472,7 +472,7 @@ async function mountIsland(el: HTMLElement) {
         },
         stats: () => handle.stats(),
         motion: async (seconds: number) => {
-            type Track = {schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            type Track = {byRecipe?: Map<string, {turn: number; moving: number}>; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
             let last = t0;
@@ -559,6 +559,17 @@ async function mountIsland(el: HTMLElement) {
                                 while (turn > Math.PI) turn -= Math.PI * 2;
                                 while (turn < -Math.PI) turn += Math.PI * 2;
                                 tr.turn += Math.abs(turn);
+                                // Whose turning: a recipe episode laid over the schedule (its pose acts), or the schedule's own steps.
+                                const source = e.sched?.pose?.act ? `recipe:${e.sched.trip?.recipe ?? "?"}` : "schedule";
+                                const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
+                                by.turn += Math.abs(turn);
+                                tr.byRecipe.set(source, by);
+                            }
+                            {
+                                const source = e.sched?.pose?.act ? `recipe:${e.sched.trip?.recipe ?? "?"}` : "schedule";
+                                const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
+                                by.moving += span;
+                                tr.byRecipe.set(source, by);
                             }
                             (tr as Track & {way?: number}).way = way;
                         } else tr.backRun = 0;
@@ -589,7 +600,9 @@ async function mountIsland(el: HTMLElement) {
                     schedDist: Math.round((t.schedDist ?? 0) * 10) / 10,
                     drawnDist: Math.round(t.dist * 10) / 10,
                     reactiveOffsetMax: Math.round((t.offsetMax ?? 0) * 100) / 100,
-                    actions: Array.from(t.actions ?? []).join(",")
+                    actions: Array.from(t.actions ?? []).join(","),
+                    // Turns a minute of movement by source: each recipe episode, and the schedule's own steps.
+                    turnsBySource: Object.fromEntries(Array.from(t.byRecipe ?? new Map<string, {turn: number; moving: number}>()).map(([key, v]) => [key, {moving: Math.round(v.moving * 10) / 10, turnsPerMinute: v.moving > 0 ? Math.round(((v.turn / (Math.PI * 2)) / v.moving) * 60 * 10) / 10 : 0}]))
                 };
             });
             return {rows, stats: handle.stats()};
