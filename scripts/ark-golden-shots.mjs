@@ -20,6 +20,7 @@
  *            ~/animaldex-talking-models/ark-closeup, or --closeup-dir)
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
  *            --quality auto|high|medium|low  --gpu metal|swiftshader  --measure <ms>  --headed
+ *            --attach-timing  also time the scenery attach points' build (sampler.ts) after the models are in
  *
  * Devices (GOLDEN_DEVICES in golden-shots.ts):
  *   desktop  1440×900, DPR 1, no throttle, the host GPU
@@ -257,6 +258,12 @@ if (animals.length) {
         log(deviceName, "preparing (every model in) on", gpuName);
         const prepared = await page.evaluate(() => window.__arkGolden.prepare());
         log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        if (flag("attach-timing")) {
+            // The scenery attach points' build (sampler.ts), as the mount pays for it: sync, and sliced where offered.
+            const timing = await page.evaluate(() => window.__arkGolden.attachTiming());
+            log(deviceName, "attach points", JSON.stringify(timing));
+            results.push({device: deviceName, attachTiming: timing});
+        }
         for (const time of times) {
             for (const place of places) {
                 const shot = await page.evaluate(([p, t]) => window.__arkGolden.shoot(p, t), [place, time]);
@@ -302,7 +309,7 @@ await browser.close();
 server.close();
 
 writeFileSync(path.join(out, "numbers.json"), JSON.stringify(results, null, 2));
-const rows = results.map((r) => `| ${r.device} | ${r.study ? `${r.study} / ${r.view}` : r.place} | ${r.time} | ${r.intervalP50} | ${r.intervalP95} | ${r.fps} | ${r.cpuMs ?? "–"} | ${r.gpuDrainMs} | ${r.drawCalls} | ${r.triangles} | ${r.tier ?? "–"} |`);
+const rows = results.filter((r) => r.place || r.study).map((r) => `| ${r.device} | ${r.study ? `${r.study} / ${r.view}` : r.place} | ${r.time} | ${r.intervalP50} | ${r.intervalP95} | ${r.fps} | ${r.cpuMs ?? "–"} | ${r.gpuDrainMs} | ${r.drawCalls} | ${r.triangles} | ${r.tier ?? "–"} |`);
 writeFileSync(path.join(out, "numbers.md"), [
     `Golden shots "${label}", ${new Date().toISOString()}, GPU mode ${gpu} (${results[0]?.gpuName ?? "?"}), quality ${quality}, ${measureMs} ms measured per shot.`,
     "",

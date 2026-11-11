@@ -12,7 +12,10 @@
  *           own up, forward = along its midrib (base → tip), size from its length;
  *   bark    the nearest point of the trunk's wood, up = the wood's normal there, forward = up the trunk;
  *   branch  the top of the nearest branch's wood, up = its normal (kept only where it faces the sky);
- *   tree_hollow  the middle of the drawn hole's mouth (its dark ring), facing out of the hole, with its depth.
+ *   tree_hollow  the middle of the drawn hole's mouth (its dark ring), facing out of the hole, with its depth;
+ *   limb    the top of thick (radius 3 cm and up), not too steep wood up in the tree, for large climbers, with the
+ *           limb's radius and the clear room above and below; canopy_hang  the underside of such a limb where the
+ *           drop below is clearest (bats).
  *
  * Each point also gets the drawn surface's wind weights there (COLOR_1, interpolated), so the scene can move an
  * animal with its leaf exactly as the tree shader moves the leaf (`tree-assets.ts` treeSway), and `open`: the share
@@ -38,7 +41,7 @@ const {MeshoptDecoder} = await import(pathToFileURL(path.join(nm, "three/example
 const {Vector3, Triangle, Ray} = THREE;
 
 /** Bump when the method changes (it is part of the source hash). */
-const GENERATOR = 3;
+const GENERATOR = 4;
 const OUT = path.join(root, "src/ark-scene/tree-attach.json");
 const manifest = JSON.parse(readFileSync(path.join(root, "src/ark-scene/assets-manifest.json"), "utf8"));
 const base = path.join(root, "public", manifest.base);
@@ -163,9 +166,13 @@ function closestOn(list, p) {
 function rayHit(list, origin, direction, far, skip) {
     const ray = new Ray(origin, direction);
     const hit = new Vector3();
+    const box = new THREE.Box3();
     let best = null;
     for (const t of list) {
         if (skip && skip.has(t)) continue;
+        // Skip a triangle whose box the ray misses (most of them), before the exact test.
+        t.box ??= new THREE.Box3().setFromPoints([t.tri.a, t.tri.b, t.tri.c]).expandByScalar(1e-4);
+        if (!ray.intersectsBox(box.copy(t.box))) continue;
         if (!ray.intersectTriangle(t.tri.a, t.tri.b, t.tri.c, false, hit)) continue;
         const d = hit.distanceTo(origin);
         if (d <= far && (!best || d < best.d)) best = {d, t, point: hit.clone()};
@@ -251,7 +258,7 @@ for (const id of Object.keys(attach).sort()) {
             const weights = windAt(leafy, position);
             const open = openness(tris, position, leaf.up, new Set(leaf.list));
             const maxSize = leaf.blade ? 0.6 * leaf.length : 0.45 * leaf.length;
-            rows.push(["leaf", ...position.toArray().map(r3), ...leaf.up.toArray().map(r3), ...forward.toArray().map(r3), 0.002, r3(maxSize), ...weights.map(r4), r3(open), source, leaf.blade ? 1 : 0, 0]);
+            rows.push(["leaf", ...position.toArray().map(r3), ...leaf.up.toArray().map(r3), ...forward.toArray().map(r3), 0.002, r3(maxSize), ...weights.map(r4), r3(open), source, leaf.blade ? 1 : 0, 0, 0, 0, 0]);
             snapped.leaf.push(best.d);
             counts.leaf[1]++;
             return;
@@ -286,7 +293,7 @@ for (const id of Object.keys(attach).sort()) {
             const weights = windAt(wood, mouth);
             const forward = along(row.f, normal);
             const depth = r3(mouth.distanceTo(deepest) + (row.depth ?? 0));
-            rows.push(["tree_hollow", ...mouth.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), r3(row.size[0]), r3(Math.min(row.size[1], widest * 2.2)), ...weights.map(r4), 0, source, 0, depth]);
+            rows.push(["tree_hollow", ...mouth.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), r3(row.size[0]), r3(Math.min(row.size[1], widest * 2.2)), ...weights.map(r4), 0, source, 0, depth, 0, 0, 0]);
             snapped.tree_hollow.push(p.distanceTo(mouth));
             counts.tree_hollow[1]++;
             return;
@@ -311,17 +318,98 @@ for (const id of Object.keys(attach).sort()) {
         const weights = windAt(wood, position);
         const forward = along(row.f, normal);
         const open = row.tag === "bark" ? openness(tris, position, normal, new Set([hit.t])) : 0;
-        rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source, 0, 0]);
+        rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source, 0, 0, 0, 0, 0]);
         snapped[row.tag].push(p.distanceTo(hit.point));
         counts[row.tag][1]++;
     });
+    // Limbs for large climbers (sloths, orangutans, tree kangaroos): the tops of thick, not too steep wood up in the
+    // tree, each with the limb's radius (half its chord straight through, along the surface normal), the clear room
+    // above it (to wood) and below it (to anything of the tree), spread at least 0.9 m apart, thickest first. And the
+    // hang points under them (bats, hanging sloths): the limb's underside where the drop below is clearest.
+    const H = manifest.assets[id].height;
+    let limbCount = 0;
+    let hangCount = 0;
+    const limbs = [];
+    for (const t of wood) {
+        if (t.area < 2e-4) continue;
+        const c = t.tri.getMidpoint(new Vector3());
+        if (c.y < 0.2 * H) continue;
+        const n = new Vector3(...interpolate(N, t, c, 3)).normalize();
+        if (n.y < 0.6 || t.normal.dot(n) < 0.3) continue;
+        // The chord from just inside the surface, measured from the point 2 mm off it (as the point is stored), twice
+        // from two depths: where overlapping pieces of wood meet (a limb's root inside the trunk) they disagree, and
+        // a limb is never thicker than the trunk.
+        const point = c.clone().addScaledVector(n, 0.002);
+        const chordFrom = (depth) => {
+            const hit = rayHit(wood, point.clone().addScaledVector(n, -depth), n.clone().negate(), 1.5);
+            return hit ? hit.point.distanceTo(point) : Infinity;
+        };
+        const chord = chordFrom(0.006);
+        if (!Number.isFinite(chord) || Math.abs(chordFrom(0.01) - chord) > 0.01) continue;
+        const radius = chord / 2;
+        if (radius < 0.03 || radius > 0.9 * manifest.assets[id].trunk_radius) continue;
+        // Its underside: straight down through the limb from its top (below that, the drop is open air or the next limb).
+        const under = rayHit(wood, point.clone().add(new Vector3(0, -0.006, 0)), new Vector3(0, -1, 0), 1.5);
+        if (!under) continue;
+        limbs.push({t, c, n, radius, bottom: under.point});
+    }
+    limbs.sort((a, b) => b.radius - a.radius || a.c.y - b.c.y || a.c.x - b.c.x);
+    const spread = (list, count) => {
+        const kept = [];
+        for (const entry of list) {
+            if (kept.length >= count) break;
+            if (kept.some((other) => other.c.distanceTo(entry.c) < 0.9)) continue;
+            kept.push(entry);
+        }
+        return kept;
+    };
+    // Along the limb: the axis the wood's normals round it turn about (the least-varying direction of those normals).
+    const axisAt = (c, n) => {
+        const m = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        for (const t of wood) {
+            const mid = t.tri.getMidpoint(new Vector3());
+            if (mid.distanceTo(c) > 0.3) continue;
+            const v = t.normal;
+            const a = [v.x, v.y, v.z];
+            for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) m[i][j] += t.area * a[i] * a[j];
+        }
+        // The smallest eigenvector: power iteration on (trace·I − M).
+        const tr = m[0][0] + m[1][1] + m[2][2];
+        let v = [1, 0.3, 0.2];
+        for (let k = 0; k < 60; k++) {
+            const w = [0, 1, 2].map((i) => tr * v[i] - (m[i][0] * v[0] + m[i][1] * v[1] + m[i][2] * v[2]));
+            const l = Math.hypot(...w) || 1;
+            v = w.map((x) => x / l);
+        }
+        const axis = along(v, n);
+        // Pointing out from the trunk.
+        if (axis.x * c.x + axis.z * c.z < 0) axis.negate();
+        return axis;
+    };
+    // (Not on palms: a frond's stalk is no limb to climb along; bats still hang under them.)
+    for (const limb of spread(id.startsWith("palm") ? [] : limbs, 16)) {
+        const above = rayHit(wood, limb.c.clone().addScaledVector(limb.n, 0.01), new Vector3(0, 1, 0), 3)?.d ?? 3;
+        const below = rayHit(tris, limb.bottom.clone().add(new Vector3(0, -0.01, 0)), new Vector3(0, -1, 0), 6)?.d ?? 6;
+        const position = new Vector3(...limb.c.clone().addScaledVector(limb.n, 0.002).toArray().map(r3));
+        rows.push(["limb", ...position.toArray().map(r3), ...limb.n.toArray().map(r3), ...axisAt(limb.c, limb.n).toArray().map(r3), 0.15, r3(Math.min(1.6, 24 * limb.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(limb.radius), r3(above), r3(below)]);
+        limbCount++;
+    }
+    // (The drop measured from 5 mm under the underside, as the test does: an apple hanging just under it counts.)
+    const hangs = limbs.map((limb) => ({...limb, below: (rayHit(tris, limb.bottom.clone().add(new Vector3(0, -0.005, 0)), new Vector3(0, -1, 0), 6)?.d ?? 5.995) + 0.005}))
+        .filter((limb) => limb.below >= 1.2)
+        .sort((a, b) => b.below - a.below || b.radius - a.radius);
+    for (const hang of spread(hangs, 8)) {
+        const position = new Vector3(...hang.bottom.clone().add(new Vector3(0, -0.002, 0)).toArray().map(r3));
+        rows.push(["canopy_hang", ...position.toArray().map(r3), 0, -1, 0, ...along(axisAt(hang.c, hang.n).toArray(), new Vector3(0, -1, 0)).toArray().map(r3), 0.02, r3(Math.min(0.6, 12 * hang.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(hang.radius), 0, r3(hang.below)]);
+        hangCount++;
+    }
     assets[id] = rows;
     const med = (list) => (list.length ? list.slice().sort((a, b) => a - b)[list.length >> 1].toFixed(3) : "-");
-    report.push(`${id}: ${Object.entries(counts).map(([tag, [n, kept]]) => `${tag} ${kept}/${n} (moved ${med(snapped[tag])} m median)`).join(", ")}`);
+    report.push(`${id}: ${Object.entries(counts).map(([tag, [n, kept]]) => `${tag} ${kept}/${n} (moved ${med(snapped[tag])} m median)`).join(", ")}, limb ${limbCount}, canopy_hang ${hangCount}`);
 }
 
 const out = {
-    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index, 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood, a hollow's depth (m) / 0]. Do not edit by hand.",
+    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index, 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood, a hollow's depth (m) / 0, limb radius (m) / 0, clear room above to wood (m), clear drop below to anything of the tree (m)]. Do not edit by hand.",
     generator: GENERATOR,
     source: sourceHash(),
     assets

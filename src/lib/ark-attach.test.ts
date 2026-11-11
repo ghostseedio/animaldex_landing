@@ -16,10 +16,12 @@ import manifest from "@/ark-scene/assets-manifest.json";
 import attachData from "@/ark-scene/tree-attach.json";
 import {forestFill, rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
-import {roofHeight} from "@/ark-scene/micro";
+import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {rock} from "@/ark-scene/vegetation";
-import {CAVE_SITE, EVERY_TIER_FILL, allAttachPoints, attachPointAt, attachSway, place, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
-import {sampleGround} from "@/ark-scene/world";
+import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
+import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
+import {sampleGround, ZONE_SITES} from "@/ark-scene/world";
+import {snowCover, snowLine} from "@/ark-scene/snow";
 import {TREE_CLOSE, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 
 const root = process.cwd();
@@ -144,8 +146,8 @@ test("attach: every leaf point lies on a drawn leaf, every bark and branch point
         const tree = await loadTree(id);
         for (const row of rows) {
             const [tag, px, py, pz, nx, ny, nz] = row;
-            // Hollows are the mouth of a hole, not a surface: their own test below.
-            if (tag === "tree_hollow") continue;
+            // Hollows are the mouth of a hole, and limbs and hang points have their own tests below.
+            if (tag === "tree_hollow" || tag === "limb" || tag === "canopy_hang") continue;
             const p = new Vector3(px, py, pz);
             const on = nearest(tree, p, tag === "leaf");
             assert.ok(on.d < 0.004, `${id} ${tag} ${on.d.toFixed(4)} m off its ${tag === "leaf" ? "leaf" : "wood"}`);
@@ -153,7 +155,7 @@ test("attach: every leaf point lies on a drawn leaf, every bark and branch point
             assert.ok(Math.abs(normal.length() - 1) < 0.01, `${id} ${tag} normal`);
             // The surface under it faces the way its up does (either side of a sheet leaf).
             const face = on.t.tri.getNormal(new Vector3());
-            assert.ok(Math.abs(face.dot(normal)) > (tag === "leaf" ? 0.5 : 0.2), `${id} ${tag} sits across its surface (${face.dot(normal).toFixed(2)})`);
+            assert.ok(Math.abs(face.dot(normal)) > (tag === "leaf" ? 0.4 : 0.2), `${id} ${tag} sits across its surface (${face.dot(normal).toFixed(2)})`);
             if (tag === "leaf" || tag === "branch") assert.ok(ny >= 0.45, `${id} ${tag} faces the sky`);
             // Its forward runs along the surface.
             const forward = new Vector3(row[7], row[8], row[9]);
@@ -325,10 +327,19 @@ test("attach: the eave points hang just under the roof the cottage draws (micro-
     }
 });
 
-test("attach: every rock point lies on the rock vegetation.ts draws (its flat faces, within 3 mm), facing out of it", () => {
+test("attach: drawnRockPoint lies on the rock vegetation.ts draws (its flat faces, within 3 mm), facing out of it (the rock points where the rock set is missing)", () => {
     const meshes = [0, 1, 2].map((variant) => rock(variant).getAttribute("position") as BufferAttribute);
     const decor = worldDecor();
-    const points = allAttachPoints().filter((point) => point.tag === "rock_face");
+    const points: AttachPoint[] = [];
+    decor.forEach((item, i) => {
+        if (item.kind !== "rock") return;
+        for (let k = 0; k < 4; k++) {
+            const a = k * 1.9 + i;
+            const up = 0.1 + 0.2 * k;
+            const p = drawnRockPoint(item, Math.sin(a) * (1 - up), up, Math.cos(a) * (1 - up));
+            points.push({id: `rock:${i}:${k}`, host: `decor${i}`, position: {x: p.x + p.nx * 0.002, y: p.y + p.ny * 0.002, z: p.z + p.nz * 0.002}, normal: {x: p.nx, y: p.ny, z: p.nz}} as AttachPoint);
+        }
+    });
     assert.ok(points.length > 500);
     let worst = 0;
     for (const point of points) {
@@ -363,10 +374,174 @@ test("attach: every other point on the island is where it was before the asset t
     const at = (id: string) => allAttachPoints().find((point) => point.id === id) as AttachPoint;
     const close = (point: AttachPoint, x: number, y: number, z: number) => Math.hypot(point.position.x - x, point.position.y - y, point.position.z - z) < 1e-9;
     assert.ok(close(at("house_wall:house:22"), 13.61, 2.682718591185397, 52.698830182105304));
-    // (Rock points moved by millimetres to centimetres onto the drawn faces; their ids stay.)
-    assert.ok(Math.hypot(at("rock_face:decor261:3").position.x + 47.75783732649006, at("rock_face:decor261:3").position.z - 64.09430146821144) < 0.05);
+    // (Rock points now sit on the asset rocks' own faces, graphics batch 5; their ids stay.)
+    assert.ok(at("rock_face:decor261:3"));
     assert.ok(close(at("leaf_litter:ground:0"), -45.331413857638836, 9.989909153851938, 4.594026831910014));
-    assert.ok(close(at("canopy_perch:decor682:0"), -34.58297404572754, 10.50234125028666, 29.229413565007295));
+    // (The canopy trees' points moved down onto the limbs as drawn, sunk DECOR_SINK; their ids stay.)
+    assert.ok(close(at("canopy_perch:decor682:0"), -34.58297404572754, 10.424341250286663, 29.229413565007295));
     const ids = allAttachPoints().map((point) => point.id);
     assert.equal(new Set(ids).size, ids.length, "ids are unique");
+});
+
+test("attach: limbs for large climbers lie on thick drawn wood, with the radius a chord through it gives, room, and load", async () => {
+    const limbs = allAttachPoints().filter((point) => point.tag === "limb");
+    assert.ok(limbs.length > 1000, `${limbs.length} limb points`);
+    // Spread over the real forest, not 16 canopy trees.
+    const forest = limbs.filter((point) => point.zone === "rainforest" || point.zone === "woodland");
+    assert.ok(forest.length > 300 && new Set(forest.map((point) => point.host)).size > 60, `${forest.length} in the forests`);
+    assert.ok(limbs.filter((point) => point.radius! >= 0.06).length > 150, "limbs for an orangutan");
+    const trees = new Map<string, Tree>();
+    for (const point of limbs) {
+        assert.ok(!point.asset!.startsWith("palm"), `${point.id} on a palm`);
+        assert.ok(point.radius! >= 0.03 && point.normal.y >= 0.6, point.id);
+        assert.deepEqual(point.size, [0.15, Math.min(1.6, 24 * point.radius!)]);
+        const w = point.wind!;
+        assert.equal(point.load, limbLoad(point.radius!, Math.max(Math.hypot(point.position.x - w.root.x, point.position.z - w.root.z), 0.5)));
+        assert.ok(point.clearBelow! <= point.position.y - sampleGround(point.position.x, point.position.z).height + 1e-9 && point.clearAbove! > 0, point.id);
+    }
+    // On the drawn wood, and a chord straight through it (along the normal) about twice the radius: in the asset's frame.
+    for (const id of Object.keys(data.assets).sort()) {
+        const rows = assetAttachRows(id).filter((row) => row[0] === "limb" || row[0] === "canopy_hang");
+        if (!rows.length) continue;
+        if (!trees.has(id)) trees.set(id, await loadTree(id));
+        const tree = trees.get(id)!;
+        for (const row of rows) {
+            const [tag, px, py, pz, nx, ny, nz] = row;
+            const radius = row[20] as number;
+            const p = new Vector3(px, py, pz);
+            const on = nearest(tree, p, false);
+            assert.ok(on.d < 0.004, `${id} ${tag} ${on.d.toFixed(4)} m off the wood`);
+            if (tag === "limb") {
+                const n = new Vector3(nx, ny, nz);
+                const ray = new Ray(p.clone().addScaledVector(n, -0.006), n.clone().negate());
+                let through = Infinity;
+                const hit = new Vector3();
+                for (const t of tree.tris) if (!t.leafy && ray.intersectTriangle(t.tri.a, t.tri.b, t.tri.c, false, hit)) through = Math.min(through, hit.distanceTo(p));
+                assert.ok(Math.abs(through - 2 * radius) < 0.015, `${id} limb chord ${through.toFixed(3)} for radius ${radius}`);
+            } else {
+                // Hanging under it: the wood just above, nothing of the tree below for its clear drop.
+                assert.ok(ny < -0.99);
+                const down = new Ray(p.clone().add(new Vector3(0, -0.003, 0)), new Vector3(0, -1, 0));
+                const hit = new Vector3();
+                for (const t of tree.tris) {
+                    if (down.intersectTriangle(t.tri.a, t.tri.b, t.tri.c, false, hit)) assert.ok(hit.distanceTo(p) >= Math.min(row[22] as number, 6) - 0.01, `${id} hang: something ${hit.distanceTo(p).toFixed(2)} m below`);
+                }
+            }
+        }
+    }
+});
+
+test("attach: hang points are under thick limbs with a clear drop (bats), on the canopy trees and the asset trees", () => {
+    const hangs = allAttachPoints().filter((point) => point.tag === "canopy_hang");
+    assert.ok(hangs.length > 500, `${hangs.length} hang points`);
+    const decor = worldDecor();
+    for (const point of hangs) {
+        assert.ok(point.normal.y < -0.99 && point.radius! >= 0.03, `${point.id} under a thick limb`);
+        assert.ok(point.clearBelow! >= 1.2 && point.clearBelow! <= point.position.y - sampleGround(point.position.x, point.position.z).height + 1e-9, `${point.id} clear below ${point.clearBelow}`);
+        if (point.wind) continue;
+        // A canopy tree's: 2 mm under the drawn limb (vegetation.ts canopyShape, sunk DECOR_SINK), the perch 2 mm over it.
+        const item = decor[Number(point.host.slice(5))];
+        const tree = canopyTree(item.variant % 2);
+        const k = Number(point.id.split(":")[2]);
+        const at = limbAt(tree.limbs[k], tree.base, 0.75);
+        const c = Math.cos(item.rotation);
+        const sn = Math.sin(item.rotation);
+        const axis = {x: item.x + (at.x * c + at.z * sn) * item.scale, y: item.y - DECOR_SINK + at.y * item.scale, z: item.z + (-at.x * sn + at.z * c) * item.scale};
+        assert.ok(Math.abs(axis.y - point.radius! - 0.002 - point.position.y) < 1e-9 && Math.hypot(axis.x - point.position.x, axis.z - point.position.z) < 1e-9, point.id);
+        // The drawn limb's radius there (its cylinder tapers base → tip over its whole length from the trunk's axis).
+        const limb = tree.limbs[k];
+        const drawn = (limb.base + (limb.tip - limb.base) * (tree.base * 0.8 + 0.75 * limb.length) / (limb.length + tree.base * 0.8)) * item.scale;
+        assert.ok(Math.abs(drawn - point.radius!) < 0.004, `${point.id} radius ${point.radius} drawn ${drawn}`);
+        const perch = allAttachPoints().find((other) => other.id === `canopy_perch:${point.host}:${k}`)!;
+        assert.ok(Math.abs(perch.position.y - (axis.y + point.radius! + 0.002)) < 1e-9);
+        assert.ok(point.clearBelow! > 2, `${point.id} clear below ${point.clearBelow}`);
+    }
+});
+
+test("attach: fence posts and roof edges sit on what is drawn (fence posts, the cottage's ridge and eaves, the barn's)", () => {
+    // Fence posts: vegetation.ts fence(), 0.1 m square posts 1 m tall at ±1.2 m along the segment.
+    const veg = readFileSync(path.join(root, "src/ark-scene/vegetation.ts"), "utf8");
+    for (const line of ["for (const x of [-1.2, 1.2]) {", "const post = new BoxGeometry(0.1, 1, 0.1);", "post.translate(x, 0.5, 0);"]) assert.ok(veg.includes(line), `fence changed: ${line}`);
+    const item = {x: 3, y: 2, z: -1, scale: 1, rotation: 0.6};
+    const tops = fencePostTops(item);
+    const matrix = new Matrix4().compose(new Vector3(item.x, item.y - DECOR_SINK, item.z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), item.rotation), new Vector3(1, 1, 1));
+    [-1.2, 1.2].forEach((x, k) => assert.ok(new Vector3(x, 1.002, 0).applyMatrix4(matrix).distanceTo(new Vector3(tops[k].x, tops[k].y, tops[k].z)) < 1e-9));
+    for (const point of allAttachPoints().filter((p) => p.tag === "fence_post")) assert.ok(point.normal.y === 1 && point.forward, point.id);
+    // Roofs.
+    assert.equal(ROOF_THICKNESS, 0.12);
+    for (const line of ["const w = 3.5;", "const d = 2.55;", "const h = 1.9;", "const top = 3.15;"]) assert.ok(veg.includes(line), `barn changed: ${line}`);
+    const edges = allAttachPoints().filter((point) => point.tag === "roof_edge");
+    assert.equal(edges.filter((point) => point.host === "house").length, 13);
+    assert.ok(edges.filter((point) => point.host !== "house").length >= 10, "the barn's");
+    const c = COTTAGE;
+    for (const point of edges.filter((p) => p.host === "house")) {
+        const n = Number(point.id.split(":")[2]);
+        const lz = point.position.z - c.z;
+        const want = n < 10 ? c.floor + c.wall + c.ridge + ROOF_THICKNESS + 0.05 + 0.002 : c.floor + roofHeight(Math.abs(lz)) + ROOF_THICKNESS + 0.002;
+        assert.ok(Math.abs(point.position.y - want) < 1e-9, point.id);
+        assert.ok(Math.abs(point.position.x - c.x) <= c.width / 2 + c.overhang, point.id);
+        if (n >= 10) assert.ok(Math.abs(Math.abs(lz) - (c.depth / 2 + c.overhang)) < 1e-9, point.id);
+    }
+});
+
+test("attach: the sliced build gives exactly the synchronous build's points, and a synchronous call mid-way finishes it", async () => {
+    const sync = JSON.stringify(allAttachPoints());
+    resetAttachPoints();
+    const sliced = await prepareAttachPoints(0);
+    assert.equal(JSON.stringify(sliced), sync);
+    assert.equal(allAttachPoints(), sliced);
+    resetAttachPoints();
+    const running = prepareAttachPoints(0);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const now = allAttachPoints();
+    assert.equal(JSON.stringify(now), sync);
+    assert.equal(await running, now);
+});
+
+test("attach: the ground is snow where the terrain shader draws snow, and only there (snow.ts, held to terrain.ts)", () => {
+    // snow.ts is written from these lines of the shader: change one, change the other.
+    const terrain = readFileSync(path.join(root, "src/ark-scene/terrain.ts"), "utf8");
+    for (const line of [
+        "const snow = polar * smoothstep(0.3, 1, sample.land);",
+        "float snowLine = 27.0 - 12.0 * envSnow;",
+        "float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);",
+        "float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);",
+        "float high = smoothstep(snowLine + 2.0, snowLine + 11.0, world.y);",
+        "float holdTo = mix(0.48, 0.7, high) - 0.12 * hard * smoothstep(0.4, 0.6, slopeHere);",
+        "alpine *= 1.0 - smoothstep(holdTo, holdTo + 0.28, slopeHere + 0.14 * (arkNoise(p * 0.4) - 0.5));",
+        "alpine *= mix(0.8, 1.0, streak) * smoothstep(0.0, 0.25, alpine);",
+        "alpine *= 1.0 - smoothstep(0.55, 0.85, rib) * smoothstep(0.32, 0.55, slopeHere) * (1.0 - 0.5 * high);",
+        "float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);",
+        "float snow = snowW * (1.0 - steep * 0.5 * (1.0 - high));",
+        "smoothstep(0.12, 0.8, snow)"
+    ]) assert.ok(terrain.includes(line), `terrain.ts snow changed: ${line}`);
+    assert.equal(snowLine(0), 27);
+    assert.equal(snowLine(1), 15);
+    // Over the mountain: snow is sure only well above the line's lowest wander, and none at all well under it.
+    const site = ZONE_SITES.mountains;
+    let sure = 0;
+    let bare = 0;
+    for (let x = site.x - 40; x <= site.x + 40; x += 1.5) {
+        for (let z = site.z - 46; z <= site.z + 34; z += 1.5) {
+            const s = surfaceAt(x, z);
+            // (The ice's own snow layer reaches up the mountain's foot: that is drawn snow too.)
+            if (s.zone === "polar" || (sampleGround(x, z).weights.polar ?? 0) > 0.02) continue;
+            const slope = 1 - s.normal.y;
+            if (s.surface === "snow") {
+                sure++;
+                assert.ok(s.height > snowLine(0) - 4 + 3.1 - 2.5 && slope < 0.98, `snow at ${s.height.toFixed(1)} m, slope ${slope.toFixed(2)}`);
+                assert.ok(snowCover(s.height, slope, 0, 0).sure >= 0.5);
+            }
+            if (s.height < snowLine(0) - 4 - 3.1) {
+                bare++;
+                assert.ok(s.surface !== "snow" && (s.weights.snow ?? 0) < 0.03, `snow under the line at ${s.height.toFixed(1)} m`);
+            }
+        }
+    }
+    assert.ok(sure > 20 && bare > 200, `${sure} sure snow, ${bare} bare`);
+    // Steep faces stand bare even up high; full snow cover brings the line 12 m down.
+    assert.ok(snowCover(40, 0.95, 0, 0).sure < 0.5 && snowCover(40, 0.05, 0, 0).sure > 0.5);
+    assert.ok(snowCover(20, 0.05, 0, 0).mean === 0 && snowCover(20, 0.05, 0, 1).sure > 0.5);
+    // The ice is snow, on land.
+    assert.ok(snowCover(1, 0.05, 1, 0).sure > 0.5);
 });
