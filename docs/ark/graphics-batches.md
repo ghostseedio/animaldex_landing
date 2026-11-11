@@ -111,3 +111,28 @@ Known gaps:
 - The dark diamond in forest_floor and coast_rocks is a canopy tree's trunk right beside the camera, not a rendering fault.
 - caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
 - Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.
+
+## Batch 4, reef and coast water (branch `ark-graphics-reef`, cut from `ark-graphics` 7fb87467)
+
+Handover §4.1 items 3–4. Visual only: nothing here touches the server, the snapshot, the stats or the ecology.
+
+- **Coast:** no coral grows in the beach's shallows. `reef.ts` places nothing stony shallower than 1.9 m, nearer than 0.9 m to the mean surface, or within 45 m of the beach in water under 3 m (tested). The coast_rocks shallows show only rock and sand.
+- **Reef (`reef.ts` places, `reef-render.ts` draws):**
+  - branching corals (staghorn with pale tips; bushy with blue-violet tips), table corals (one or two tiers), brain corals (warped meanders), boulder and column corals (polyps), sea fans (an organic open lattice) and sea whips, anemones (swaying tentacles), barrel, tube and ball sponges;
+  - encrusting cover (turf, crusts, pink coralline algae) on the reef framework between the heads;
+  - placed by depth and substrate: the patch reefs' framework and rocky slopes take corals by depth band (flat and crest: branching, tables, brain; upper slope: tables, boulders, the first fans and sponges; deeper: fans, barrel sponges). Sand takes seagrass; rubble takes the odd boulder, sponge or anemone;
+  - real reef colours (tans, browns, olive, ochre, purple-grey; red and purple fans; orange and purple sponges), with the red absorbed with depth and the sun's caustics on what faces up;
+  - the map lane's anemone and cleaning-station anchors are an anemone patch and a big boulder coral.
+- **Kelp and seagrass:** real meshes.
+  - Kelp: holdfasts, bowed stipes, ruffled blades trailing along the coast, and floats. It grows on rock off the cliff coasts at 2.2–9 m and reaches to within about 0.4–1.2 m of the surface.
+  - Seagrass: strap-blade clumps in the reef's lagoon and in patchy meadows off the beach (1.8–3.5 m, never in the swash). The far version is a low mat, so a meadow reads from above as a dark patch.
+  - Sway: one surge, on and off the shore (an 8 s swell with a second wave), in the vertex shader. It runs on the sea's clock (epoch seconds, so every viewer sees the same; every frequency makes whole cycles in the 600 s wrap). Kelp bends in a wave that runs up its stipes. The surge grows with wind and storm and fades with depth.
+- **Fish (`fish-schools.ts` model and API, `fish-render.ts` drawing):** decoration only, not catalogue animals; never counted, selectable or in stats.
+  - Fifteen schools: damselfish and anthias hovering over coral heads, grunts by the cleaning station, tangs grazing round the reef, bait schools that mill into bait balls off the reef edge and in the open water, jacks, fry in the beach shallows, and perch in the kelp.
+  - Closed form from the clock, so there is no state.
+  - A near fish (body, tail, fins, countershading, stripes or bars, eye, tail beat) and a far fish of ten triangles.
+  - Schools outside the view cone are not placed.
+  - API: `fishSchoolsNear(pos, radius)`, documented in `graphics-interface.md`.
+- **LOD:** every reef kind has a near and a far version, instanced and re-sorted round the camera in 8 m cells (when it moves 1 m, or every 30 frames). Nothing is drawn past the far reach, so far views pay nothing. The tier's fill share pulls the reaches in (high 1, medium 0.76, low 0.58) and thins the schools.
+- **Under water fix (`lighting.ts`):** `apply()` turned the sky domes back on under water, and the sky showed past the terrain's edge as a white band. They now stay hidden under water.
+- **Golden cameras:** `reef_closeup` (down among the corals at a head that fish hover over) and `kelp_forest` (mid-water in the densest stand, looking along the coast and a little up). The sea's clock is pinned per shot, so the fish are in the same place each time.
