@@ -532,12 +532,17 @@ function leaderIntentAt(world: ScheduleWorld, group: ScheduleGroup, epoch: numbe
     return intent(world, group.profile, group.leader, group.activity, slotOf(group.leader, epoch), hoursAt);
 }
 
-/** The group's middle for a member's slot: where its leader is halfway through it. */
+/**
+ * The group's middle for a member's slot: the place its leader is at halfway through it (its slot's goal), not where
+ * the leader's own steps there have walked it by then. (2026-11-11, five lions in a row: each member's slot is offset
+ * from the leader's, so each took a different moment of the leader's forage, a line of forward steps, as its middle,
+ * and the members near their middles stood along that line.)
+ */
 function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): {x: number; z: number} | null {
     const group = animal.group;
     if (!group) return null;
-    const at = leaderAt(world, group, slotStart(animal, slot) + SLOT_SECONDS / 2, hoursAt);
-    return {x: at.x, z: at.z};
+    const trip = tripAt(world, group.profile, group.leader, slotStart(animal, slot) + SLOT_SECONDS / 2, hoursAt, group.activity);
+    return {x: trip.to.x, z: trip.to.z};
 }
 
 // MARK: The slot
