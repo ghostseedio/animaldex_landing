@@ -274,7 +274,7 @@ const summarise = (list: Run[]) => {
         medianReactAtM: median(list.filter((r) => r.reactedAtM !== null).map((r) => r.reactedAtM!))
     };
 };
-const plans = [...new Set(encounters.map((r) => r.plan))].sort();
+const plans = Array.from(new Set(encounters.map((r) => r.plan))).sort();
 const headed = headRows.filter((h) => !NO_HEAD.has(h.plan));
 const summary = {
     tier: TIER,

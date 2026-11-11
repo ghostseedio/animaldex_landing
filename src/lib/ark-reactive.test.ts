@@ -128,7 +128,7 @@ test("an armoured animal pulls in and stays put; a sessile one is never moved", 
         list.find((i) => i.id === "croc")!.shared.x = -12 + (t - 1000) * 1.5;
     }});
     const actions = new Set(frames.map((f) => f.out.get("t")!.action));
-    assert.ok(actions.has("withdraw"), `it withdraws (${[...actions].join(", ")})`);
+    assert.ok(actions.has("withdraw"), `it withdraws (${Array.from(actions).join(", ")})`);
     assert.ok(!actions.has("flee"), "it does not run");
     const pulled = frames.filter((f) => f.out.get("t")!.action === "withdraw");
     assert.ok(pulled.every((f) => Math.hypot(f.out.get("t")!.dx, f.out.get("t")!.dz) < 0.3), "it stays where it is");
