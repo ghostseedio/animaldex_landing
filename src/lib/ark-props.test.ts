@@ -646,3 +646,81 @@ test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of a
     }
     assert.deepEqual(Array.from(new Set(hits)), []);
 });
+
+// MARK: - The mountain's outcrops
+
+import {OUTCROP_CEILING, OUTCROP_DUST, OUTCROP_SLOPE} from "@/ark-scene/props/areas";
+import {snowCover} from "@/ark-scene/snow";
+
+test("props outcrops: below the snow, on slopes a slab can sit on, sunk and tilted, near only (no far box)", () => {
+    const areas = buildAreas(PROPS_TIERS.high);
+    const plain = areas.batches.find((batch) => batch.name === "strata")!;
+    const dusted = areas.batches.find((batch) => batch.name === "strata-dusted")!;
+    assert.ok(plain.count + dusted.count >= 3, `${plain.count + dusted.count} outcrops`);
+    for (const batch of [plain, dusted]) {
+        assert.equal(batch.far, null, "no far proxy");
+        const matrices = (batch as unknown as {matrices: Float32Array}).matrices;
+        for (let i = 0; i < batch.count; i++) {
+            const x = matrices[i * 16 + 12];
+            const y = matrices[i * 16 + 13];
+            const z = matrices[i * 16 + 14];
+            const surface = surfaceAt(x, z);
+            assert.ok(surface.height < OUTCROP_CEILING, `${surface.height.toFixed(1)} m`);
+            assert.ok(surface.normal.y >= OUTCROP_SLOPE.maxNormalY - 0.02, "a slab can sit there");
+            assert.ok(snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).sure < 0.02, "never on sure snow");
+            // Its up is tilted toward the slope (the matrix's y axis).
+            const upY = matrices[i * 16 + 5] / Math.hypot(matrices[i * 16 + 4], matrices[i * 16 + 5], matrices[i * 16 + 6]);
+            assert.ok(upY < 0.999, "tilted to the slope");
+            // Sunk: its base well under the ground (60% of its 0.88 × size height; scale = size / 2.5).
+            const scale = Math.hypot(matrices[i * 16], matrices[i * 16 + 1], matrices[i * 16 + 2]);
+            assert.ok(surface.height - y > 0.5 * 0.88 * scale * 2.5, "sunk");
+            if (batch === dusted) assert.ok(surface.height > OUTCROP_DUST && snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).mean > 0.1);
+        }
+    }
+    areas.dispose();
+});
+
+// MARK: - Burrows and dens
+
+import {burrowMouth, entranceInstances, entranceStyle, mouthRadius, rockDen, type DenEntrance} from "@/ark-scene/props/burrows";
+
+test("props den entrances: a burrow mouth or a rock den at the sleep lane's ways in, sized to the animal, seated on the slope, one per roost", () => {
+    assert.equal(entranceStyle("burrow_entrance:burrow12,-40:0", "burrow"), "burrow");
+    assert.equal(entranceStyle("burrow:ground:42", "den"), "burrow");
+    assert.equal(entranceStyle("cave_mouth:decor12:0", "den"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "crevice"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "den"), null);
+    assert.equal(entranceStyle("branch:decor1:0", "burrow"), null);
+    assert.equal(entranceStyle(null, "burrow"), null);
+    // The map lane's roosts (`map/place.ts` scheduleRoost): `map:` before the point's id, or its own spots.
+    assert.equal(entranceStyle("map:burrow_entrance:burrow12,-40:0", "burrow"), "burrow");
+    assert.equal(entranceStyle("map:burrow", "den"), "burrow");
+    assert.equal(entranceStyle("map:rock_face:decor3:1", "crevice"), "rock");
+    assert.equal(entranceStyle("map:rock_foot", "crevice"), "rock");
+    assert.equal(entranceStyle("map:canopy", "den"), null);
+    // Two dens at two rocks' feet are two entrances, though both are `map:rock_foot`.
+    const feet = entranceInstances([
+        {point: "map:rock_foot", x: 10, y: 1, z: 10, nx: 0, ny: 1, nz: 0, length: 0.5, kind: "crevice", slug: "rock-hyrax"},
+        {point: "map:rock_foot", x: 30, y: 1, z: -4, nx: 0, ny: 1, nz: 0, length: 0.3, kind: "crevice", slug: "gundi"}
+    ]);
+    assert.equal(feet.rocks.length, 2);
+    // Sized to the body: a meerkat's hole is small, an aardvark's big, both bounded.
+    assert.ok(mouthRadius(0.4) < mouthRadius(1.6));
+    assert.ok(mouthRadius(0.05) >= 0.07 && mouthRadius(9) <= 0.85);
+    const base = {nx: 0.2, ny: 0.97, nz: 0.1, kind: "den"};
+    const list: DenEntrance[] = [
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.8, slug: "bat-eared-fox"},
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.9, slug: "bat-eared-fox"},
+        {...base, point: "cave_mouth:decor7:0", x: 5, y: 1, z: 5, length: 0.5, slug: "rock-hyrax", kind: "den"},
+        {...base, point: "leaf:decor1:0", x: 0, y: 0, z: 0, length: 0.5, slug: "x"}
+    ];
+    const built = entranceInstances(list);
+    assert.equal(built.burrows.length, 1, "one entrance a roost");
+    assert.equal(built.burrows[0].scale, mouthRadius(0.9), "sized to the biggest that uses it");
+    assert.ok(built.burrows[0].up!.y < 0.999 && built.burrows[0].up!.x > 0, "tilted to the slope");
+    assert.equal(built.rocks.length, 1);
+    assert.ok(built.marks["den:bat-eared-fox"] && built.marks["den:rock-hyrax"]);
+    assert.deepEqual(entranceInstances([...list].reverse()).burrows.map((b) => [b.x, b.z, b.scale]), built.burrows.map((b) => [b.x, b.z, b.scale]), "the same whatever the order");
+    // Small: a few hundred triangles each.
+    for (const geometry of [burrowMouth(), rockDen()]) assert.ok(geometry.getAttribute("position").count / 3 < 1500);
+});

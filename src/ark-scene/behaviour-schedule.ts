@@ -34,10 +34,15 @@ import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
-import type {ArkZone} from "@/ark-scene/types";
+import type {ArkZone, ArkThrive} from "@/ark-scene/types";
+import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
+/** The raised perches a group sleeps along in a row or a cluster (sleep lane). */
+const RAISED_TAGS: AttachTag[] = ["branch", "canopy_hang", "cliff_ledge", "post", "rock_top", "tree_hollow"];
+/** A night watch stands this many slots (sleep lane: about five minutes). */
+export const NIGHT_WATCH_SLOTS = 4;
 
 /** Each animal's slots are shifted by its own offset (from its id), so a thousand animals don't all change plans in the same frame. */
 export function slotOffset(id: string): number {
@@ -161,6 +166,11 @@ export type ScheduleAnimal = {
     group?: ScheduleGroup | null;
     /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
     threats?: ScheduleThreat[] | null;
+    /**
+     * How well kept it is (`thrive.ts`): the hook for energy (more active when prime, more resting when ordinary)
+     * and for who claims the best places first. Not read yet: every band is scheduled the same.
+     */
+    thrive?: ArkThrive;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
 };
@@ -484,12 +494,22 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
     if (animal.roost) return animal.roost;
     const group = animal.group;
-    if (group && !FLOCKING.has(profile.social)) {
-        // The group sleeps together: round its leader's roost, each a little apart.
+    // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
+    const together = sleepStyle(profile.slug).social !== "apart";
+    if (group && (!FLOCKING.has(profile.social) || together)) {
+        // The group sleeps together: round its leader's roost, each a little apart; huddled, piled or a young mammal
+        // against the adult, touching (`sleepSpacing`); on a raised perch in a row along it or a bat's cluster.
         const lead = roostOf(world, group.profile, group.leader);
+        if (lead.point && raised(world, lead) && together) {
+            // (The point's id keeps the tag it was made with, not always the schedule's: a limb is a branch.)
+            const at = RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: lead.x, z: lead.z, r: 0.3}).find((p) => p.id === lead.point)).find(Boolean);
+            const off = roostOffset(profile.slug, group.rank, Math.max(animal.length, group.leader.length), at?.yaw ?? 0);
+            if (off) return {...lead, x: lead.x + off.dx, y: lead.y + off.dy, z: lead.z + off.dz};
+        }
         if (!lead.point || !raised(world, lead)) {
             const angle = group.rank * 2.39996;
-            const d = Math.max(animal.length, group.leader.length) * (0.9 + 0.35 * Math.sqrt(group.rank));
+            const close = sleepSpacing(profile.slug, Boolean(animal.young));
+            const d = Math.max(animal.length, group.leader.length) * (close < 1 ? (animal.young && !together ? 0.5 : 0.55 * Math.sqrt(group.rank)) : 0.9 + 0.35 * Math.sqrt(group.rank));
             const x = lead.x + Math.cos(angle) * d;
             const z = lead.z + Math.sin(angle) * d;
             if (wet(world, lead)) return {...waterSpot(world, profile, animal, x, z, () => 0.5)};
@@ -837,7 +857,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     const watchTurn = size >= 3 ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
     if (!awake) {
         const roost = roostOf(world, profile, animal);
-        if (watchTurn && !FLOCKING.has(profile.social) && !wasAwake) return {doing: "watch", to: roost, mode: "stay", stay: stayBeats("watch", random, null)};
+        // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing about
+        // five minutes at a time on the shared clock (each member's slots are offset, so the turn is read at the middle of
+        // its slot from one window for the whole group), so the herd is never all asleep and the guard changes now and then.
+        const watchWindow = Math.floor((start + SLOT_SECONDS / 2) / (SLOT_SECONDS * NIGHT_WATCH_SLOTS));
+        const nightWatch = size >= 3 ? ((watchWindow + hashString(group!.leader.id)) % (size - 1)) + 1 === group!.rank : false;
+        if (nightWatch && !FLOCKING.has(profile.social) && !wasAwake) return {doing: "watch", to: roost, mode: "stay", stay: stayBeats("watch", random, null)};
         const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
         return {doing: wasAwake ? "to_roost" : "sleep", to: roost, mode: wasAwake ? travel : "stay", stay: []};
     }
@@ -1529,6 +1554,9 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
     }
 }
 
+/** How fast an animal turns where it stands (rad/s, about 90 degrees a second). */
+export const TURN_RATE = 1.6;
+
 /**
  * Where an animal on a trip is at a world time (its foot point), which way it faces, and its beat, with its recipe's
  * episode laid over (`behaviour-recipes.ts`: a fishing dive, a contest, a dust bath; `act` says which).
@@ -1560,9 +1588,6 @@ export function recipeNest(world: ScheduleWorld, profile: ArkBehaviourProfile, a
 export function tripEpisode(world: ScheduleWorld, trip: Trip): Episode | null {
     return episodeOfTrip(world, trip, KIT);
 }
-
-/** How fast an animal turns where it stands (rad/s, about 90 degrees a second). */
-export const TURN_RATE = 1.6;
 
 /** Where an animal on a trip is at a world time without its recipe's episode (the schedule's own pose). */
 export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: number): TripPose {

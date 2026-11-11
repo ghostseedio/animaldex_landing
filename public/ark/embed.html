@@ -8,10 +8,24 @@
 <style>
   html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   #ark { position: fixed; inset: 0; }
+  /* What the host draws over the world's top and foot (?insetTop=, ?insetBottom= in px; the iOS panel's close button
+     and title: insetTop=52): every corner overlay keeps clear of it, as of the safe area. */
+  :root { --ark-inset-top: 0px; --ark-inset-bottom: 0px; }
+  /* Sound (liveliness): off until this is tapped, inside the panel (a host's message can't start audio). */
+  /* The end side (right in left-to-right, left in Arabic, Hebrew, Persian, Urdu), clear of the app's close button,
+     which sits at the start side. */
+  #ark-sound { position: fixed; inset-inline-end: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top) + var(--ark-inset-top, 0px)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+  [dir="rtl"] #ark-sound { inset-inline-end: calc(10px + env(safe-area-inset-left)); }
+  #ark-sound[hidden] { display: none; }
+  #ark-sound svg { width: 20px; height: 20px; }
+  #ark-sound .on { display: none; }
+  #ark-sound[aria-pressed="true"] .on { display: inline; }
+  #ark-sound[aria-pressed="true"] .off { display: none; }
 </style>
 </head>
 <body>
 <div id="ark"></div>
+<button id="ark-sound" type="button" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 5 6m0-6-5 6"/></svg></button>
 <script src="./ark-scene.js"></script>
 <script>
 /*
@@ -23,6 +37,11 @@
  * the page's lang and dir, the herds' counts), ?label=<the world's accessible name; default: the Ark's own, in ?lang>,
  * ?regions=1 (the seven regions' names drawn over the world from far, in ?lang),
  * ?lite=1|0 (the lighter view; absent: the device decides), ?fixture=1 (development: the v2 fixture).
+ * ?insetTop=<px>, ?insetBottom=<px>: what the host draws over the world's top and foot (the iOS panel: insetTop=52); the
+ * sound button, the bars, the log and the reset button keep clear of it, and of the safe area.
+ * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
+ * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
+ * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
  * From the host (postMessage or window.AnimalDexArkHost):
  *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?}  {type: "ark:region", region}
  *   {type: "ark:visitor", visitor: {slug, name, label} | null}   the chat's animal visiting (not aboard): answered with
@@ -32,7 +51,16 @@
  *   {type: "ark:talk-pulse", level}                              the reply heard aloud: its loudness now, 0…1
  *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
  *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
+ *   {type: "ark:visible", visible}                               the panel shown (true) or covered / the app in the background (false):
+ *                                                                nothing is drawn while false (docs/ark/runtime-bridge.md)
+ *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
+ *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
+ *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
+ *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
+ * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
+ * {type: "ark:sound", on} when the viewer turns sound on or off,
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
@@ -47,6 +75,20 @@
   var lang = params.get("lang") || undefined;
   var lite = params.get("lite") === "1" ? true : params.get("lite") === "0" ? false : null;
   var motion = matchMedia("(prefers-reduced-motion: reduce)");
+  // The host's covered strips (?insetTop=52 from the iOS panel): whole pixels, 0 to 400, anything else 0.
+  function insetPx(name) {
+    var value = Math.round(Number(params.get(name)));
+    return value > 0 ? Math.min(value, 400) + "px" : "0px";
+  }
+  document.documentElement.style.setProperty("--ark-inset-top", insetPx("insetTop"));
+  document.documentElement.style.setProperty("--ark-inset-bottom", insetPx("insetBottom"));
+  // The live HUD (src/ark-scene/live): the log and the bars, opt-in; development's fixture shows both.
+  var hudAsked = params.get("hud") || (params.get("fixture") ? "1" : "0");
+  var hudLog = hudAsked === "1" || hudAsked === "log";
+  var hudBars = hudAsked === "1" || hudAsked === "bars";
+  var feedOn = Boolean(Ark.ArkLiveFixtureFeed) && (params.get("feed") === "1" || (Boolean(params.get("fixture")) && params.get("feed") !== "0"));
+  var hud = null;
+  var shown = null;
   var RTL = /^(ar|he|iw|fa|ur)([-_]|$)/i;
   if (lang) {
     document.documentElement.lang = lang;
@@ -63,6 +105,7 @@
       document.documentElement.lang = body.language;
       document.documentElement.dir = body.dir;
       document.title = words.metaTitle || document.title;
+      if (hud) hud.setWords(words, body.language);
     })
     .catch(function () {})]);
 
@@ -77,8 +120,22 @@
     else if (window.parent !== window) window.parent.postMessage(message, "*");
   }
 
+  // The runtime's prebuild (the mount's heavy seeded work in a worker), once, before the first mount.
+  var prepared = null;
   function show(snapshot) {
     if (!snapshot) return;
+    shown = snapshot;
+    if (hud) hud.snapshot(snapshot);
+    if (scene) { scene.update(snapshot); return; }
+    if (!prepared && Ark.prepareArk) {
+      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); });
+      return;
+    }
+    if (prepared !== true && Ark.prepareArk) return;
+    mount(snapshot);
+  }
+
+  function mount(snapshot) {
     if (scene) { scene.update(snapshot); return; }
     scene = Ark.mountArk(document.getElementById("ark"), {
       snapshot: snapshot,
@@ -89,26 +146,81 @@
       reducedMotion: motion.matches,
       lite: lite,
       canvasLabel: params.get("label") || (words && words.a11y && words.a11y.scene) || undefined,
+      resetLabel: (words && words.a11y && words.a11y.resetView) || undefined,
       regionLabels: params.get("regions") === "1" && words ? words.regions : undefined,
       herdBadge: function (count) {
         var number = count.toLocaleString(lang);
         return words && words.herd && words.herd.badge ? fill(words.herd.badge, {count: number}) : number;
       },
-      onSelect: function (animal) { tell({type: "ark:selected", animal: animal}); },
+      onSelect: function (animal) { if (hud) hud.setSelected(animal ? animal.id : null); tell({type: "ark:selected", animal: animal}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
     });
+    for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
+    runtimeHeld = {};
+    if ((hudLog || hudBars) && Ark.mountArkLiveHud) {
+      hud = Ark.mountArkLiveHud(document.getElementById("ark"), {
+        scene: function () { return scene; },
+        words: words,
+        locale: document.documentElement.lang || lang || "en",
+        eventsUrl: params.get("fixture") || feedOn ? null : "/api/ark/events",
+        log: hudLog,
+        bars: hudBars,
+        reducedMotion: motion.matches
+      });
+      hud.snapshot(snapshot);
+      if (feedOn) startFeed(snapshot);
+    }
+    var button = document.getElementById("ark-sound");
+    var label = words && words.sound ? words.sound.label : "Sound";
+    button.setAttribute("aria-label", label);
+    button.title = words && words.sound ? words.sound.hint : label;
+    button.hidden = false;
+  }
+
+  // Sound: nothing plays until this button is tapped (and nothing is remembered in the apps' panel).
+  var soundOn = false;
+  function setSound(on) {
+    if (!scene) return;
+    var ok = scene.setSound(on);
+    soundOn = Boolean(on && ok);
+    document.getElementById("ark-sound").setAttribute("aria-pressed", soundOn ? "true" : "false");
+    tell({type: "ark:sound", on: soundOn});
+  }
+  document.getElementById("ark-sound").addEventListener("click", function () { setSound(!soundOn); });
+
+  // Development's live feed: a beat every 8 s (arrivals, births, meals, deaths), as a running tick would send them.
+  var feeding = false;
+  function startFeed(snapshot) {
+    var feed = new Ark.ArkLiveFixtureFeed(snapshot);
+    feeding = true;
+    setInterval(function () {
+      if (document.visibilityState !== "visible") return;
+      var step = feed.next(new Date(), shown || snapshot);
+      if (!step) return;
+      hud.events(step.events);
+      show(step.snapshot);
+    }, 8000);
   }
 
   function read() {
+    if (feeding) return Promise.resolve();
     return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead])
       .then(function (both) { var body = both[0]; show(Ark.decodeArkSnapshot(body && body.snapshot ? body.snapshot : body)); })
       .catch(function () {});
   }
 
+  // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
+  var runtimeHeld = {};
   function receive(message) {
     if (!message || typeof message !== "object") return;
+    if (message.type === "ark:visible" || message.type === "ark:power") {
+      if (scene && scene.receive) scene.receive(message);
+      else runtimeHeld[message.type] = message;
+      return;
+    }
+    if (scene && message.type === "ark:reset") { scene.resetView(); return; }
     if (message.type === "ark:snapshot") { var snapshot = Ark.decodeArkSnapshot(message.snapshot); wordsRead.then(function () { show(snapshot); }); }
     else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
     else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
@@ -119,6 +231,7 @@
     else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);
     else if (scene && message.type === "ark:herd") scene.selectHerd(message.key || null);
     else if (scene && message.type === "ark:lite") scene.setLite(message.value === true ? true : message.value === false ? false : null);
+    else if (scene && message.type === "ark:sound" && message.value === false) setSound(false);
   }
   if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
   window.AnimalDexArkHost = {send: receive};

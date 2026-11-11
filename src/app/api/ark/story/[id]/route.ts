@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {decodeArkStory, isArkUuid, isMissingArkFunction} from "@/lib/ark-story";
+import {decodeArkStoryRead, isArkUuid, isMissingArkFunction} from "@/lib/ark-story";
 import {createSupabasePublicClient} from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -27,5 +27,5 @@ export async function GET(_request: Request, {params}: {params: {id: string}}) {
         // Not there yet: ask again in a minute, not on every tap.
         return NextResponse.json({story: null}, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=60" : "no-store"}});
     }
-    return NextResponse.json({story: decodeArkStory(data)}, {headers: {"Cache-Control": CACHED}});
+    return NextResponse.json({story: decodeArkStoryRead(data)}, {headers: {"Cache-Control": CACHED}});
 }

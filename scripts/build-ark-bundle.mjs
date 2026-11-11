@@ -34,3 +34,22 @@ const result = await build({
 });
 const bytes = Object.values(result.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
 console.log(`public/ark/ark-scene.js: ${(bytes / 1024).toFixed(0)} KB`);
+// The runtime's prebuild workers (src/ark-scene/runtime/prebuild.ts): the scenery (~20 KB) and a big Ark's places.
+for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
+    const worker = await build({
+        entryPoints: [path.join(root, "src/ark-scene/runtime", entry)],
+        outfile: path.join(root, "public/ark", out),
+        bundle: true,
+        format: "iife",
+        platform: "browser",
+        target: ["es2020", "safari15"],
+        minify: !dev,
+        tsconfig: path.join(root, "tsconfig.json"),
+        define: {"process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production")},
+        legalComments: "none",
+        metafile: true,
+        logLevel: "warning"
+    });
+    const workerBytes = Object.values(worker.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
+    console.log(`public/ark/${out}: ${(workerBytes / 1024).toFixed(0)} KB`);
+}

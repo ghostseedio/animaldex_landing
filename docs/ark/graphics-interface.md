@@ -107,6 +107,34 @@ The shaders read `ARK_ENV` (`glsl.ts`):
 - the ground reads wetness and the snow line;
 - the foliage reads the wind's strength through `ARK_WIND`.
 
+## The shared clock (runtime lane)
+
+Everything that moves on its own runs on one clock, the same for every viewer (`src/ark-scene/shared-clock.ts`). Before, `ARK_TIME` was seconds since the page opened, so two people saw different wave and sway phases, and an animal riding `attachPointAt` swayed differently on each screen.
+
+- **The shader time** `ARK_TIME.value` is epoch seconds from an origin that is a whole number of **600 s windows** (`ARK_TIME_PERIOD`; the reef lane's sea clock uses the same window). It starts under 600 when the page opens and grows with the visit, like the old clock, so float precision in the shaders is as before. It **never wraps while anyone is looking** (no seam to hide): it is brought back down by whole windows only at a moment nobody sees, when the scene is hidden or paused, once it has passed an hour (`ArkShaderClock.rebase`).
+- **The rule for shared motion:** a periodic term is the same on every screen when its angular frequency makes a whole number of cycles in 600 s: `arkWholeCycles(f)` rounds one (steps of 2π/600 ≈ 0.01047 rad/s, under 1 % from any frequency above 1 rad/s, so nothing looks different). A `fract(t * rate)` loop: `arkWholeLoops(rate)` (whole loops in 600 s). CPU twins of shader motion (`treeSway`, fish schools) take `ARK_TIME.value`, or `arkWindowSeconds()` (epoch mod 600): for aligned terms both give the same phase.
+- **The animals' idle clock** `ARK_CLOCK.value` (animal-material.ts) is epoch seconds mod an hour: shared, wrapping at the top of each UTC hour for everyone at once (it wrapped hourly per viewer before).
+- **Pinning:** `pinArkClock(epochSeconds)` runs the shared clock from a fixed second (golden shots, recordings); `null` follows the real clock again. The visual CI freezes `Date.now` itself.
+
+Consumers whose frequencies are not yet whole cycles (each owner rounds its constants with `arkWholeCycles`; until then the term moves smoothly but its phase differs between viewers who opened in different 10-minute windows):
+
+| Where (owner) | Now (rad/s) | Whole cycles in 600 s |
+|---|---|---|
+| vegetation.ts foliage sway (graphics) | 1.5, 2.9 | 1.49749, 2.90074 |
+| vegetation.ts leaf flutter (graphics) | 6.3, 5.1, 5.7 | 6.30413, 5.09985, 5.69675 |
+| tree-assets.ts `treeSway` and asset-trees.ts windMaterial (graphics attach; keep the two equal, `ark-attach.test.ts`) | 1.25, 2.6, 7.1, 6.3, 6.7 | 1.24617, 2.59705, 7.10000, 6.30413, 6.70206 |
+| terrain.ts shore foam phase (graphics) | 0.42 | 0.41888 |
+| terrain.ts `arkCausticAt` (graphics) | 0.55, 0.47 | 0.55501, 0.47124 |
+| terrain.ts `waves()`: ω = 0.55·√(9.8 f), f = 0.42, 0.67, 1.13, 1.71 (graphics) | 1.1158, 1.4093, 1.8303, 2.2515 | 1.12050, 1.41372, 1.83260, 2.25147 (set ω directly) |
+| terrain.ts depth lines (graphics) | 1.4 | 1.40324 |
+| marks.ts ring pulse, dot breathe (scene) | 2.2, 1.8 | 2.19911, 1.80118 |
+| life.ts mote glow (scene) | 2.0 | 2.00015 |
+| props/effects.ts drift, twinkle (props) | 0.7, 0.6, 1.5 | 0.70162, 0.59690, 1.49749 |
+
+Already shared: props/effects.ts `fract(t·0.11)` and `fract(t·0.05)` (66 and 30 loops in 600 s); the reef lane's fish schools and corals (built on the 600 s window).
+
+Not periodic, so not shared by rounding: per-particle frequencies (`t·(1.6 + seed·1.4)` in effects.ts, `t·(0.25 + seed·0.25)` in life.ts, the stars' `t·(1.5 + h·3)`; per-seed randomness anyway, nobody compares a twinkle) and the noise patterns scrolled by the wind (cloud shadows `CLOUD_GLSL`, the sky's clouds in lighting.ts, the water's lace, streaks, rapids and river flow in terrain.ts). Those move smoothly with no seam; to share them too, the noise needs a tile period P (`arkHash` of the lattice coordinate mod P) and each scroll's distance over 600 s a whole number of tiles, the wind's part integrated on the CPU from the island clock's weather rather than `arkWind · arkTime`. That is a graphics-lane change; it is listed here, not made.
+
 ## Under the sea (graphics batch 4, branch `ark-graphics-reef`)
 
 Pure and deterministic, like the rest of this file: no three.js, no DOM, the same answer for every viewer.
@@ -132,4 +160,15 @@ Decoration only, NOT catalogue animals: never counted, never selectable, never i
 - `schoolFish(school, epochSeconds?) → Vec3[]`: every fish's position (for a predator picking one to lunge at).
 - `seaEpochSeconds()`: the sea's clock (epoch seconds; golden shots pin it with `pinSeaClock`). Pass your own epoch to ask about any moment: the same epoch always gives the same answer.
 
-Bait schools mill on seeded 50 s slots of the clock (about a third of the time for the reef-edge and open-water schools). Behaviour lanes that want a predator to chase a bait ball, or a bird or seal to fish, read `fishSchoolsNear` and steer their animal to `centre`; the fish themselves do not react (nothing is caught, nothing changes in the ecology).
+Bait schools mill on seeded 50 s slots of the clock (about a third of the time for the reef-edge and open-water schools). Behaviour lanes that want a predator to chase a bait ball, or a bird or seal to fish, read `fishSchoolsNear` and steer their animal to `centre`. Nothing is caught and nothing changes in the ecology.
+
+#### Chasers: fish split round a hunter (optional input)
+
+- `setFishChasers(() => chasers)` (`src/ark-scene/fish-render.ts`) takes a function, read once a frame, that returns `Array<{x, y, z, r}>`: each hunter's position and reach in metres. The recipes lane's `recipeScene.chasers` has exactly this shape: `r = max(length × 2.5, 0.8)`, and the array is rebuilt each frame, so pass the function, not the array. `null` clears it. Typical hook, one line where the recipe scene is built: `setFishChasers(() => recipeScene.chasers)`.
+- The fish near a chaser split round it, flee and rejoin behind it. This uses `fleeFrom(p, chasers, offset, flee)` in `fish-schools.ts`, which is pure:
+  - Each fish inside a chaser's reach (`r + 0.6` m) is pushed straight out from it, by half the reach at the middle down to nothing at the edge: `(1 − d/reach)²`. The push up or down is 0.6 of the push sideways.
+  - The school opens a hole of half the reach round the hunter. It never folds over itself: a fish nearer the hunter always stays nearer.
+  - It closes again behind the hunter as it passes.
+  - Each fish is also turned away from the hunter: a flee velocity is added to its heading, and its tail beats harder.
+- The shared closed-form motion stays the base, and the flight is an offset from it. It depends only on the chaser positions, so everyone who sees the same chasers sees the same flight. It applies only to the schools drawn near the camera; far schools, and every school when there are no chasers, are exactly the shared motion.
+

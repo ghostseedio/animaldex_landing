@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import holds from "@/ark-scene/map/validator-holds.json";
 import table from "@/ark-scene/map/species.json";
-import {mapHabitatAt, mapPlace, mapPoints, onSchedule, scheduleRoost, setArkMapSampler} from "@/ark-scene/map/place";
+import {atRock, denIsDry, denKindOf, mapHabitatAt, mapPlace, mapPoints, onSchedule, scheduleRoost, setArkMapSampler} from "@/ark-scene/map/place";
 import {bodyOf} from "@/ark-scene/map/species";
 import fixture from "@/ark-scene/fixtures/snapshot.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {groupSpread, rangeReach, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
+import {groupSpread, rangeReach, roostOf, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
@@ -19,7 +19,7 @@ import {shoreOf} from "@/ark-scene/map/place";
 import {place as scenePlace} from "@/ark-scene/sampler";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
-import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
+import {denProblems, failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
 import {canopyPoint, canopyTrees} from "@/ark-scene/layers";
 import {arkBody} from "@/ark-scene/stats";
 import {validateGrips} from "@/ark-scene/map/validate-grips";
@@ -244,8 +244,14 @@ test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (
             perched++;
             const roost = scheduleRoost(place, animal.zone);
             assert.ok(roost, `${animal.model_slug} has a roost`);
-            // Its own perch, or the roost its text names (sleep_pattern).
-            if (!place.map?.roost) assert.deepEqual([roost.x, roost.y, roost.z], [place.perch.x, place.perch.y, place.perch.z], animal.model_slug);
+            // Its own perch, or the roost its text names (sleep_pattern); a den-dweller's perch in the tide or the surf (a
+            // Surinam toad's hole by the sea), its den on dry land instead.
+            const wetDen = Boolean(denKindOf(animal.model_slug)) && !denIsDry(place.perch.x, place.perch.z);
+            // (A crevice or cave dweller, a cane toad on a leaf by day, sleeps at a rock: a rock face, a ledge or a rock's foot.)
+            const rocky = denKindOf(animal.model_slug) === "crevice" || denKindOf(animal.model_slug) === "cave";
+            if (rocky && !wetDen && atRock(roost.x, roost.z, roost.point)) continue;
+            if (wetDen) assert.ok(denIsDry(roost.x, roost.z) || roost.y - mapPoints().sampler.ground(roost.x, roost.z).height >= 1, `${animal.model_slug}'s den on dry land`);
+            else if (!place.map?.roost) assert.deepEqual([roost.x, roost.y, roost.z], [place.perch.x, place.perch.y, place.perch.z], animal.model_slug);
         }
     }
     assert.deepEqual(off, [], `${off.length} off the schedule: ${off.slice(0, 12).join(", ")}`);
@@ -337,4 +343,62 @@ test("inRock finds a rock just over a cell edge: a body at the edge of a cell ne
     // The case the old lookup missed is really tested: bodies touching a rock from a cell it is not listed in.
     assert.ok(edgeCases > 20, `${edgeCases} bodies touch a rock from a cell it is not listed in`);
     assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} bodies where inRock disagrees with the rocks checked one by one`);
+});
+
+test("dens on dry land: no land animal's den, as its schedule takes it, in the sea, its tide or its surf", () => {
+    // (The rock hyrax's den on a boulder in the surf, 2026-11-11.) Every den-dweller aboard (a cave, a crevice, a burrow, a
+    // den, a tree hole), each catalogue species twice and both fixtures: where the behaviour schedule sends it to sleep (the
+    // map's den when it lives by the sea, else the schedule's own choice) is never in the sea, nor on ground the spring
+    // tide or the surf reaches. A water animal's home and den are the water's; a den up a tree is above the surf.
+    const world = scheduleWorld(sceneSampler());
+    const all = mapPoints();
+    const wrong: string[] = [];
+    let dens = 0;
+    for (const animals of [validatorAnimals(), decodeArkSnapshot(fixture)!.animals, decodeArkSnapshot(fixtureV2)!.animals]) {
+        const places = placeAnimals(animals);
+        for (const a of animals) {
+            const p = places.get(a.id);
+            if (!p || p.water || !onSchedule(p, a.model_slug) || !denKindOf(a.model_slug)) continue;
+            const animal = {id: a.id, zone: a.zone, home: {x: p.x, y: p.ground, z: p.z}, length: displayLength(a), sea: false, roost: scheduleRoost(p, a.zone)};
+            const den = roostOf(world, behaviourProfile(a.model_slug), animal);
+            dens++;
+            if (den.y - all.sampler.ground(den.x, den.z).height >= 1) continue;
+            if (all.inSurf(den.x, den.z)) wrong.push(`${a.model_slug} ${a.id.slice(-6)}: its ${denKindOf(a.model_slug)} at ${den.x.toFixed(1)},${den.z.toFixed(1)} (${den.point ?? "ground"})`);
+        }
+    }
+    assert.ok(dens > 1000, `${dens} dens`);
+    assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} dens in the sea's tide or surf`);
+});
+
+test("a crevice or cave dweller's den is rock's: a dry rock face, ledge or a drawn rock's foot; one away from any rock fails", () => {
+    // (The golden den_rock's rock hyrax, 2026-11-11: its den dry, but in open grassland, the props' rock-den slot a hole on grass.)
+    const {placed} = validated();
+    const animals = validatorAnimals();
+    const dwellers = animals.filter((a) => ["rock-hyrax", "common-gundi", "american-pika", "yellow-footed-rock-wallaby"].includes(a.model_slug));
+    assert.ok(dwellers.length >= 4, `${dwellers.length} rock dwellers`);
+    for (const a of dwellers) {
+        const place = placed.get(a.id)!;
+        const den = scheduleRoost(place, a.zone);
+        assert.ok(den && atRock(den.x, den.z, den.point), `${a.model_slug} ${a.id}: its den at a rock (${den?.point})`);
+        assert.ok(denIsDry(den!.x, den!.z), `${a.model_slug}: its den dry`);
+        assert.deepEqual(denProblems(a, place), [], a.model_slug);
+    }
+    // The validator's case: the hyrax's home put on open ground, over 22 m from any drawn rock, rock face or ledge (its den's
+    // reach is 20 m): its den is away from rock, and fails.
+    const hyrax = dwellers.find((a) => a.model_slug === "rock-hyrax")!;
+    const place = placed.get(hyrax.id)!;
+    const sampler = mapPoints().sampler;
+    // (The island's grassland has a rock within 22 m everywhere: the open ground of the home district's meadows, then.)
+    const rockPoints = sampler.attachPoints().filter((p) => p.tag === "rock_face" || p.tag === "ledge");
+    let open: {x: number; z: number} | null = null;
+    for (let x = -150; x <= 150 && !open; x += 4) {
+        for (let z = -150; z <= 150 && !open; z += 4) {
+            const g = sampler.ground(x, z);
+            if (g.water === null && g.tags.length && denIsDry(x, z) && !sampler.reserved?.(x, z) && !inRock(x, z, 22) && !rockPoints.some((p) => Math.hypot(p.x - x, p.z - z) < 22)) open = {x, z};
+        }
+    }
+    assert.ok(open, "open ground far from any rock");
+    const onGrass = {...place, x: open!.x, z: open!.z, ground: sampler.ground(open!.x, open!.z).height, perch: undefined, map: {...place.map!, roost: null, attach: undefined}};
+    const problems = denProblems(hyrax, onGrass);
+    assert.ok(problems.some((p) => p.check === "roost_invalid" && /away from any rock/.test(p.detail)), JSON.stringify(problems));
 });

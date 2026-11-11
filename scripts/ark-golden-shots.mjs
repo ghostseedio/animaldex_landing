@@ -12,6 +12,12 @@
  *   node scripts/ark-golden-shots.mjs --label before
  *   node scripts/ark-golden-shots.mjs --label before-gpu-proxy --devices phone --gpu swiftshader
  *   node scripts/ark-golden-shots.mjs --study natural,toon,real --label studies
+ *   node scripts/ark-golden-shots.mjs --animals red-fox,mallard --label animal-look     (the animal-look pass:
+ *            each species close up, the pass off ("before") then on ("after"); --wet adds a rain shot;
+ *            --rigged red-fox,... adds a moving shot of those (the rig playing: the look on a skinned mesh);
+ *            --detail adds a shot closer than a viewer can come, to judge the surface (the wet one is then close too);
+ *            --measure-animals measures each; the close-up skins come from the local build,
+ *            ~/animaldex-talking-models/ark-closeup, or --closeup-dir)
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
  *            --quality auto|high|medium|low  --gpu metal|swiftshader  --measure <ms>  --headed
  *            --attach-timing  also time the scenery attach points' build (sampler.ts) after the models are in
@@ -61,8 +67,14 @@ const quality = arg("quality", "auto");
 const gpu = arg("gpu", "metal");
 const measureMs = Number(arg("measure", "3000"));
 const studies = arg("study", "") ? arg("study", "").split(",") : [];
+const animals = arg("animals", "") ? arg("animals", "").split(",") : [];
+const rigged = new Set(arg("rigged", "") ? arg("rigged", "").split(",") : []);
+// The shadow audit's animals: one id per --animals entry ("-" for any), and a fixed camera distance (m).
+const animalIds = arg("ids", "") ? arg("ids", "").split(",") : [];
+const fixedDistance = arg("distance", "") ? Number(arg("distance", "")) : undefined;
+const closeUpDir = path.resolve(arg("closeup-dir", path.join(os.homedir(), "animaldex-talking-models", "ark-closeup")));
 // The props lane's close-ups (src/ark-scene/props/golden-props.ts): --props all, or --props bird_nest,cave_roost
-const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"];
+const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night", "den_dawn", "den_rock"];
 const propsShots = arg("props", "") ? (arg("props", "") === "all" ? PROPS_SHOTS : arg("props", "").split(",").filter((name) => PROPS_SHOTS.includes(name))) : [];
 
 // MARK: build + serve
@@ -95,14 +107,21 @@ writeFileSync(path.join(site, "golden.html"), `<!doctype html>
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
     // The scene's own art is served from public/ (as the site serves it); the page and its script from .ark-golden/site.
-    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/");
+    // The animal-look pass's close-up skins from the local build (`/ark-closeup/<slug>/<version>.near.ktx2` → `<slug>/near.ktx2`).
+    const closeUp = /^\/ark-closeup\/(?:(manifest\.json)|([a-z0-9-]+)\/[0-9a-f]{12}\.near\.ktx2)$/.exec(url.pathname);
+    if (closeUp) {
+        const file = closeUp[1] ? path.join(closeUpDir, "manifest.json") : path.join(closeUpDir, closeUp[2], "near.ktx2");
+        if (!existsSync(file)) return response.writeHead(404).end();
+        return response.writeHead(200, {"Content-Type": closeUp[1] ? "application/json" : "image/ktx2", "Cache-Control": "no-store"}).end(readFileSync(file));
+    }
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "golden.html");
     if (!file.startsWith(folder) || !existsSync(file)) {
         response.writeHead(404).end();
         return;
     }
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".wasm") ? "application/wasm" : file.endsWith(".glb") ? "model/gltf-binary" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
 await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -170,7 +189,55 @@ async function renderer(page) {
     });
 }
 
-if (propsShots.length) {
+if (flag("shadow-audit")) {
+    // The contact-shadow audit: animals standing on ground far from their home spot's height (where a shadow used to lie).
+    const {context, page} = await openPage(devices[0], quality === "auto" ? "" : `quality=${quality}`);
+    await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+    await page.evaluate(() => window.__arkGolden.prepare());
+    const rows = await page.evaluate((s) => window.__arkGolden.shadowAudit(s), Number(arg("seconds", "20")));
+    writeFileSync(path.join(out, "shadow-audit.json"), JSON.stringify(rows, null, 1));
+    log("shadow audit", rows.length, "animals off their home's ground; worst:", JSON.stringify(rows.slice(0, 12).map((r) => `${r.slug} ${r.off.toFixed(2)}`)));
+    await context.close();
+} else if (animals.length) {
+    for (const deviceName of devices) {
+        const query = [quality === "auto" ? "" : `quality=${quality}`, `closeup=${encodeURIComponent(`${base}/ark-closeup`)}`].filter(Boolean).join("&");
+        const {context, page, errors} = await openPage(deviceName, query);
+        await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+        const failed = await page.evaluate(() => window.__arkGoldenError);
+        if (failed) throw new Error(failed);
+        const gpuName = await renderer(page);
+        const prepared = await page.evaluate(() => window.__arkGolden.prepare());
+        log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
+        const variants = [
+            {wetness: 0, suffix: "", moving: false, detail: false},
+            ...(flag("detail") ? [{wetness: 0, suffix: "-detail", moving: false, detail: true}] : []),
+            ...(flag("wet") ? [{wetness: 1, suffix: "-wet", moving: false, detail: flag("detail")}] : [])
+        ];
+        for (const time of times) {
+            for (const slug of animals) {
+                for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true, detail: false}] : [])]) {
+                    for (const look of [false, true]) {
+                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving")), detail: variant.detail, ...(animalIds[animals.indexOf(slug)] && animalIds[animals.indexOf(slug)] !== "-" ? {id: animalIds[animals.indexOf(slug)]} : {}), ...(fixedDistance ? {distance: fixedDistance} : {})}]);
+                        if (!shot.found) {
+                            log(deviceName, slug, "not in the fixture");
+                            break;
+                        }
+                        const file = `${deviceName}-${slug}-${time}${variant.suffix}-${look ? "after" : "before"}.png`;
+                        await page.screenshot({path: path.join(out, file)});
+                        const numbers = flag("measure-animals") ? await page.evaluate((ms) => window.__arkGolden.measure(ms), measureMs) : {};
+                        results.push({device: deviceName, gpu, gpuName, place: slug, time: `${time}${variant.suffix} ${look ? "after" : "before"}`, file, clear: shot.clear, closeUpSkins: shot.closeUpSkins, furShells: shot.furShells, rigged: shot.rigged, ...numbers});
+                        log(deviceName, slug, time + variant.suffix, look ? "after" : "before", JSON.stringify({clear: shot.clear, closeUp: shot.closeUpSkins, shells: shot.furShells, rigged: shot.rigged, ...numbers}));
+                    }
+                }
+            }
+        }
+        if (errors.length) {
+            writeFileSync(path.join(out, `errors-${deviceName}.txt`), errors.join("\n\n"));
+            log(deviceName, errors.length, "page errors (errors-" + deviceName + ".txt)");
+        }
+        await context.close();
+    }
+} else if (propsShots.length) {
     for (const deviceName of devices) {
         const {context, page, errors} = await openPage(deviceName, `props=1${quality === "auto" ? "" : `&quality=${quality}`}`);
         await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});

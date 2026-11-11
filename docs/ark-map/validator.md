@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 4505 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 9127 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -15,7 +15,7 @@
   - `roost_invalid`: 0
   - `off_walk_grid`: 0
   - `inside_rock`: 0
-- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1039 rigs checked, 7 with too few feet down in some frame (reviewed: 8).
+- **Grip check** (hangers, climbers, perchers on branches, trunks, ledges, walls, with the rig's foot bones): 1018 rigs checked, 8 with too few feet down in some frame (reviewed: 8).
 
 | Area | Animals placed there |
 |---|---:|
@@ -26,43 +26,42 @@
 | beach | 44 |
 | estuary | 46 |
 | cold_cove | 38 |
-| river | 126 |
-| lake_marsh | 604 |
-| grassland | 474 |
-| scrub | 190 |
-| canopy | 1134 |
-| forest_floor | 536 |
+| river | 128 |
+| lake_marsh | 618 |
+| grassland | 476 |
+| scrub | 196 |
+| canopy | 1076 |
+| forest_floor | 549 |
 | underground | 80 |
-| desert | 184 |
-| mountain | 324 |
-| homestead | 694 |
+| desert | 188 |
+| mountain | 339 |
+| homestead | 696 |
 
 | Where | Animals |
 |---|---:|
-| on the ground | 3250 |
-| attach point: leaf | 309 |
+| on the ground | 3262 |
+| attach point: leaf | 316 |
 | in the water by its depth band (lake) | 250 |
 | in the water by its depth band (reef) | 196 |
-| attach point: branch | 189 |
+| attach point: branch | 167 |
 | in the water by its depth band (seabed) | 132 |
 | in fresh water (no band) | 118 |
 | in the water by its depth band (mid) | 90 |
 | in the water by its depth band (upper) | 88 |
+| attach point: rock_face | 59 |
+| attach point: flower_head | 59 |
 | in the sea (no band) | 58 |
-| attach point: burrow_entrance | 58 |
 | in the water by its depth band (coast) | 56 |
-| attach point: rock_face | 55 |
 | in the water by its depth band (deep) | 48 |
-| attach point: house_wall | 35 |
-| attach point: worm_hole | 35 |
-| attach point: bark | 32 |
-| attach point: flower_head | 31 |
+| attach point: worm_hole | 44 |
+| attach point: house_wall | 39 |
+| attach point: bark | 36 |
+| attach point: burrow_entrance | 32 |
 | in the water by its depth band (surface) | 26 |
-| attach point: roof_edge | 24 |
+| burrow at an attach point | 24 |
 | attach point: tide_pool | 24 |
-| burrow at an attach point | 20 |
-| attach point: fence_post | 20 |
-| canopy limb (climb) | 16 |
+| attach point: roof_edge | 23 |
+| attach point: fence_post | 15 |
 | burrow | 14 |
 | attach point: porch_light | 13 |
 | on its host (beside) | 12 |
@@ -70,9 +69,8 @@
 | on its host (rider) | 4 |
 | attach point: tree_hollow | 4 |
 | attach point: house_eave | 3 |
-| attach point: ledge | 2 |
 
-Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 325.
+Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 338.
 
 ## Failures by species
 
@@ -104,6 +102,7 @@ None.
 ## Grip check by species
 
 - **joro-spider** (idle): only 1 of 7 grip bones on the surface in a frame (needs 4) (reviewed)
+- **wasp-spider** (idle): only 2 of 8 grip bones on the surface in a frame (needs 4) (reviewed)
 - **blue-crowned-motmot** (idle): only 1 of 2 grip bones on the surface in a frame (needs 2) (reviewed)
 - **cuckoo-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)
 - **mexican-paper-wasp** (idle): only 2 of 6 grip bones on the surface in a frame (needs 3) (reviewed)

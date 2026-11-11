@@ -38,7 +38,9 @@ import {buildCave, CAVE_ROOST} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
 import {buildEffects} from "@/ark-scene/props/effects";
 import {buildHomesSteps, buildWebs, type Homes} from "@/ark-scene/props/homes";
-import {PROPS_TIERS, PROPS_WEATHER, runSliced, type LodBatch, type LodPiece} from "@/ark-scene/props/kit";
+import {PROPS_TIERS, PROPS_WEATHER, propMaterial, runSliced, type LodBatch, type LodPiece} from "@/ark-scene/props/kit";
+import {buildEntrances, entranceStyle, type DenEntrance} from "@/ark-scene/props/burrows";
+import {arkBody} from "@/ark-scene/stats";
 import {presenceKey, propsPresence} from "@/ark-scene/props/presence";
 
 type Override = Partial<PropsConditions> | string | null | undefined;
@@ -203,7 +205,41 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         closeCache = {key: cacheKey, spots};
         return spots;
     };
-    const batches = (): LodBatch[] => [...(areas?.batches ?? []), ...(homes?.batches ?? [])];
+    // The ways in that den, burrow, cave and crevice animals sleep in (burrows.ts), at their schedule's roosts: asked of
+    // the scene (context.roostOf) once its schedule's world is built, again with each snapshot.
+    const entranceGroup = new Group();
+    entranceGroup.name = "props:den-entrances";
+    root.add(entranceGroup);
+    const entranceMaterial = propMaterial({doubleSide: true, texture: 2, textureScale: 1.4, textureStrength: 0.5});
+    let entrances: {batches: LodBatch[]; marks: Record<string, {x: number; y: number; z: number; facing: number}>} = {batches: [], marks: {}};
+    let entrancesKey = "";
+    let entrancesUntil = Date.now() + 90_000;
+    let entrancesAt = -Infinity;
+    const refreshEntrances = () => {
+        const roostOf = context.roostOf;
+        if (!roostOf) return;
+        const list: DenEntrance[] = [];
+        for (const animal of snapshot.animals) {
+            const roost = roostOf(animal.id);
+            if (!roost || !roost.point || !entranceStyle(roost.point, roost.kind)) continue;
+            list.push({point: roost.point, x: roost.x, y: roost.y, z: roost.z, nx: roost.nx, ny: roost.ny, nz: roost.nz, length: arkBody(animal).display, kind: roost.kind, slug: animal.model_slug});
+        }
+        const key = list.map((entrance) => `${entrance.point}:${entrance.length.toFixed(2)}`).sort().join(";");
+        if (key === entrancesKey) return;
+        entrancesKey = key;
+        for (const batch of entrances.batches) {
+            entranceGroup.remove(batch.near);
+            batch.dispose();
+        }
+        entrances = buildEntrances(list, entranceMaterial);
+        for (const batch of entrances.batches) {
+            batch.setTier(tier);
+            batch.setShadows(shadows);
+            batch.add(entranceGroup);
+        }
+        moved = true;
+    };
+    const batches = (): LodBatch[] => [...(areas?.batches ?? []), ...(homes?.batches ?? []), ...entrances.batches];
     const pieces = (): LodPiece[] => [...(areas?.pieces ?? []), ...cave.pieces];
 
     let conditions: PropsConditions = conditionsFromArkWeather({rain: 0, wind: 0.3, windDirection: 0.6, fog: 0, wetness: 0, puddles: 0, cold: 0.4, mountainSnowCover: 0.5}, hours);
@@ -248,6 +284,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         setSnapshot: (next: ArkSnapshot) => {
             snapshot = next;
             rebuildHomes();
+            entrancesUntil = Date.now() + 60_000;
+            entrancesAt = -Infinity;
         },
         setHours: (next: number) => {
             hours = next;
@@ -276,6 +314,11 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 cave.setIcicles(conditions.cold > 0.55 ? conditions.cold : 0);
                 // A slime trail glints when wet and in a low, raking light.
                 homes?.setGlint(Math.min(1, 0.25 + conditions.wetness * 0.8 + conditions.dawn * 0.4));
+                // The den entrances: every 3 s for a minute after a snapshot (the schedule's world comes in behind the mount).
+                if (nowMs < entrancesUntil && nowMs - entrancesAt > 3000) {
+                    entrancesAt = nowMs;
+                    refreshEntrances();
+                }
                 // The nests grow with the Ark's days (nest-growth.ts): refill when one has visibly grown.
                 if (homes?.setNestStages(arkDayNow(snapshot, nowMs, arkDayPin))) moved = true;
             }
@@ -317,7 +360,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             arkDayPin = day;
             if (homes?.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin))) moved = true;
         },
-        marks: (): PropsMarks => ({spots: {...(areas?.marks ?? {}), ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing, roost: (({x, y, z}) => ({x, y, z}))(cave.toWorld(CAVE_ROOST))}}),
+        marks: (): PropsMarks => ({spots: {...(areas?.marks ?? {}), ...(homes?.marks ?? {}), ...entrances.marks}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing, roost: (({x, y, z}) => ({x, y, z}))(cave.toWorld(CAVE_ROOST))}}),
         dispose: () => {
             disposed = true;
             context.scene.remove(root);
@@ -325,6 +368,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             cave.dispose();
             effects.dispose();
             homes?.dispose();
+            for (const batch of entrances.batches) batch.dispose();
+            entranceMaterial.dispose();
             if (webs) {
                 webs.lines.geometry.dispose();
                 (webs.lines.material as {dispose: () => void}).dispose();

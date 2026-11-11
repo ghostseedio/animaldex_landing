@@ -32,6 +32,8 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
 import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder";
 import {arkBringerLabel} from "@/lib/ark-life";
+import {arkFoundersOf, ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-founders";
+import {ArkFounderAvatar, ArkFounderLink, ArkFounderStoryBlock, arkTemplateParts} from "@/components/ark/ark-founder-bits";
 import {emitArkArrival, onArkArrival, recentArkArrival, type ArkArrivalEvent} from "@/lib/ark/arrival-bus";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {loadTalkingModelManifest, TALKING_MODELS_BASE_URL, talkingModelSlugFor} from "@/lib/talking-models/catalog";
@@ -248,7 +250,7 @@ type Focus = {kind: "aboard"; animal: ArkAnimal} | {kind: "visitor"; animal: Ark
 
 const EMPTY_SNAPSHOT: ArkSnapshot = {voyage: {slug: "first", name: "", started_at: null}, counts: {animals: 0, species: 0, founders: 0}, zones: [], animals: [], as_of: null};
 
-/** Development's fixtures (`?arkfixture=1|early`) and its talking demo (`?arktalk=1`). */
+/** Development's fixtures (`?arkfixture=1|early|founders`) and its talking demo (`?arktalk=1`). */
 function devParam(name: string): string | null {
     if (process.env.NODE_ENV !== "development") return null;
     try {
@@ -258,15 +260,24 @@ function devParam(name: string): string | null {
     }
 }
 
-async function readSnapshot(): Promise<ArkSnapshot | null> {
+/** The Ark now; `onFounders` gets the named founders and shared stories beside it (founders contract). */
+async function readSnapshot(onFounders?: (founders: ArkFounders) => void): Promise<ArkSnapshot | null> {
     const fixture = devParam("arkfixture");
     if (fixture === "early") return decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default);
+    if (fixture === "founders") {
+        // As the server answers with its founder_names switch on (made-up founders, src/lib/ark-founders-fixture.ts).
+        const raw = (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
+        onFounders?.(arkFoundersOf(raw));
+        return decodeArkSnapshot(raw);
+    }
     if (fixture) return decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot.json")).default);
     try {
         const response = await fetch("/api/ark/voyage", {cache: "no-store"});
         if (!response.ok) return null;
-        const body = await response.json() as {snapshot?: unknown};
-        return decodeArkSnapshot(body.snapshot);
+        const body = await response.json() as {snapshot?: unknown; founders?: unknown};
+        const snapshot = decodeArkSnapshot(body.snapshot);
+        if (snapshot) onFounders?.(decodeArkFounders(body.founders));
+        return snapshot;
     } catch {
         return null;
     }
@@ -280,6 +291,8 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     const focusIdRef = useRef<string | null>(null);
     const modelSlugRef = useRef<string | null>(null);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(null);
+    const [founders, setFounders] = useState<ArkFounders>(ARK_NO_FOUNDERS);
+    const keepFounders = useCallback((next: ArkFounders) => setFounders((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next)), []);
     const snapshotRef = useRef<ArkSnapshot | null>(null);
     snapshotRef.current = snapshot;
     const [failed, setFailed] = useState(false);
@@ -305,7 +318,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     useEffect(() => {
         let stopped = false;
         const read = async () => {
-            const next = await readSnapshot();
+            const next = await readSnapshot(keepFounders);
             if (stopped) return;
             setSnapshot((current) => next ?? current ?? EMPTY_SNAPSHOT);
             if (next) sceneRef.current?.update(next);
@@ -318,7 +331,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
             stopped = true;
             window.clearInterval(timer);
         };
-    }, []);
+    }, [keepFounders]);
 
     // The scene, once there is an Ark to show; focused on the chat's animal.
     const hasSnapshot = snapshot !== null;
@@ -394,7 +407,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     const arrive = useCallback(async (event: ArkArrivalEvent) => {
         const scene = sceneRef.current;
         if (!scene || !voiceIsAbout(event, subject)) return;
-        const read = await readSnapshot();
+        const read = await readSnapshot(keepFounders);
         const current = read ?? snapshotRef.current;
         if (!current || sceneRef.current !== scene) return;
         // Not in the read yet (a cached answer, or the dev fixture): it comes aboard from the chat's own read.
@@ -409,7 +422,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
         scene.select(event.animal.id, true);
         autoSelecting.current = false;
         noteArkArrivalsSeen([event.animal], "chat_panel");
-    }, [subject]);
+    }, [subject, keepFounders]);
     useEffect(() => onArkArrival((event) => void arrive(event)), [arrive]);
     // Opened just after one landed (or from its line): fly to it once the world is drawn.
     useEffect(() => {
@@ -457,6 +470,10 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
     const count = snapshot?.counts.animals ?? 0;
     const shown = selected ?? focus?.animal ?? null;
     const isVisitor = Boolean(shown && shown.id.startsWith("visitor:"));
+    // Founders (founders contract, section 5): the named founder linked, and the story they shared.
+    const named = shown && !isVisitor ? founders.animals[shown.id] ?? null : null;
+    const arrivedOn = shown?.arrived_at ? dateFormat.format(new Date(shown.arrived_at)) : "";
+    const [beforeFounder, afterFounder] = arkTemplateParts(words.arkBroughtBy.replace("{date}", arrivedOn), "founder");
 
     return (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -511,14 +528,25 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                             ) : (
                                 <>
                                     <p className="truncate text-[12px] font-semibold leading-4 text-primary-300">{words.arkAboard}</p>
-                                    <p className="truncate text-[12px] leading-4 text-ink-400">
-                                        {words.arkBroughtBy.replace("{founder}", arkBringerLabel(shown.brought_by.label, words.arkFormerVoyager)).replace("{date}", shown.arrived_at ? dateFormat.format(new Date(shown.arrived_at)) : "")}
-                                    </p>
+                                    {named?.brought_by ? (
+                                        <p className="flex min-w-0 items-center gap-1 text-[12px] leading-4 text-ink-400" data-testid="ark-panel-founder">
+                                            {beforeFounder.trim() ? <span className="shrink-0">{beforeFounder.trim()}</span> : null}
+                                            <ArkFounderAvatar founder={named.brought_by} size={16} />
+                                            <ArkFounderLink founder={named.brought_by} className="min-w-0 truncate font-semibold text-ink-200 underline decoration-white/25 underline-offset-2 hover:text-primary-200" />
+                                            {afterFounder.trim() ? <span className="shrink-0 truncate">{afterFounder.trim()}</span> : null}
+                                        </p>
+                                    ) : (
+                                        <p className="truncate text-[12px] leading-4 text-ink-400">
+                                            {words.arkBroughtBy.replace("{founder}", arkBringerLabel(shown.brought_by.label, words.arkFormerVoyager)).replace("{date}", arrivedOn)}
+                                        </p>
+                                    )}
                                 </>
                             )}
                         </div>
                     </div>
                 ) : null}
+                {/* D6: a capture's animal's story is of a step that keeps it thriving; one a step brought, of how it got aboard. */}
+                {named?.story ? <ArkFounderStoryBlock story={named.story} founder={named.brought_by} title={shown?.source === "capture" ? words.arkHowThriving : words.arkHowAboard} className="mt-2.5 pl-14" /> : null}
                 <Link href="/ark" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/14 text-[13px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200" data-testid="ark-panel-full">
                     {words.arkOpenFull}
                     <span aria-hidden="true">→</span>

@@ -51,4 +51,7 @@ next-env.d.ts
 # The Ark scene bundle (npm run build:ark, scripts/build-ark-bundle.mjs)
 /public/ark/ark-scene.js
 /public/ark/ark-scene.js.map
+/public/ark/ark-prebuild-worker.js
+/public/ark/ark-prebuild-places-worker.js
 /.ark-golden
+/.ark-audit

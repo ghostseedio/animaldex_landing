@@ -16,6 +16,8 @@ import {getArkWords} from "@/loaders/ark-words";
 import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
+import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
+import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 /**
  * /ark: the shared Ark (Ark v1 contract, section 5). Every animal in it came
@@ -46,17 +48,26 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * capture page's "See it in the Ark"), the reader's own one first.
  *
  * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
- * condition, activity, sociality) with its event log and life stories
+ * condition, activity, sociality; and, captures + thrive, each animal's
+ * `thrive` band, `area`, `source` and its life story's family line,
+ * `src/lib/ark-thrive-fixture.ts`) with its event log and life stories
  * (`scripts/generate-ark-life-fixtures.mts`, in the server's shapes). `?hour=5.5` pins the light's
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
- * server's `public_story` flag would.
+ * server's `public_story` flag would. Every `?fixture=` answers as the server
+ * does with names on (owner, 2026-11-11): bringers as their @usernames
+ * (@mayachen with a shared story, @lendawg, …; two stay Voyagers), and
+ * `&founders=0` as a server that names nobody (`src/lib/ark-founders-fixture.ts`).
  *
  * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
  * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
  * the fixture (samples only); otherwise the live Ark.
+ *
+ * The live log and bars in development: `&feed=1` (or `?fixture=live`) runs a made-up feed over the fixture,
+ * what a running tick would send (arrivals, births, clutches, meals, deaths), a beat every 8 s
+ * (`src/lib/ark-live-fixture.ts`); `?fixture=grow` runs it by default (`&feed=0`: the old growth only).
  *
  * `?lang=<app language>` (any of the apps' 44, e.g. `ja`, `ar`, `zh-Hant`)
  * shows the Ark's words in that language from its Ark-only bundle
@@ -65,7 +76,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -180,24 +191,38 @@ function arkJsonLd(locale: string, description: string, name: string, homeName: 
     ];
 }
 
-async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
+async function loadFixture(mode: FixtureMode, founders: boolean): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; founders: ArkFounders}> {
+    const named = founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders : null;
+    const read = await loadFixtureSnapshot(mode, named);
+    return {...read, founders: read.raw ? arkFoundersOf(read.raw) : ARK_NO_FOUNDERS};
+}
+
+async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const raw = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    // Captures + thrive: with the frozen contract's `thrive`, `area` and `source` laid on (`lib/ark-thrive-fixture`).
+    const {withArkThriveFixture} = await import("@/lib/ark-thrive-fixture");
+    const base = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
+    // Founders (on unless `&founders=0`): the same answer as names-on writes it.
+    const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
         const edge = await import("@/ark-scene/fixtures/edge");
         const base = JSON.parse(JSON.stringify(raw)) as Parameters<typeof edge.herdFixture>[0];
         const built = mode === "herd1000" || mode === "herd5" ? edge.herdFixture(base, mode) : mode === "placeholder" ? edge.placeholderFixture(base) : edge.eggsFixture(base).snapshot;
-        return {snapshot: decodeArkSnapshot(built)!, full: null};
+        return {snapshot: decodeArkSnapshot(built)!, full: null, raw: built};
     }
     const full = decodeArkSnapshot(raw)!;
-    if (mode === "full") return {snapshot: full, full: null};
-    if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
-    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
-    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null};
-    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null};
+    if (mode === "full") return {snapshot: full, full: null, raw};
+    if (mode === "early") {
+        const earlyBase = (await import("@/ark-scene/fixtures/snapshot-early.json")).default;
+        const early = named ? named(earlyBase) : earlyBase;
+        return {snapshot: decodeArkSnapshot(early)!, full: null, raw: early};
+    }
+    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null, raw};
+    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null, raw};
+    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null, raw};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
-    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
+    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full, raw};
 }
 
 /**
@@ -393,7 +418,15 @@ function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
     return {...base, animals, counts: {...base.counts, animals: animals.length, species: base.counts.species + extra.length}};
 }
 
-function modelBase(): string {
+/**
+ * The Ark model set. Development's `?models=local` reads the local build
+ * through the dev route (the 14 birds turned to face the right way, before
+ * that upload), `?models=live` the bucket's, whatever the environment says.
+ */
+function modelBase(searchParams?: Props["searchParams"]): string {
+    const asked = process.env.NODE_ENV === "development" ? searchParams?.models : undefined;
+    if (asked === "local") return "/api/dev/ark-models/v1/ark";
+    if (asked === "live") return `${TALKING_MODELS_BASE_URL}/ark`;
     const configured = process.env.NEXT_PUBLIC_ARK_MODELS_URL?.trim();
     if (configured) return configured.replace(/\/+$/, "");
     return process.env.NODE_ENV === "development" ? "/api/dev/ark-models/v1/ark" : `${TALKING_MODELS_BASE_URL}/ark`;
@@ -406,14 +439,20 @@ function modelBase(): string {
  * model set.
  */
 function rigOverride(searchParams: Props["searchParams"]): string | null | undefined {
-    if (process.env.NODE_ENV !== "development" || typeof searchParams.rig !== "string") return undefined;
+    if (process.env.NODE_ENV !== "development") return undefined;
+    // `?rigv=v2`: another rig set beside the model set (a re-made one, before the release moves ARK_RIG_VERSION).
+    if (typeof searchParams.rigv === "string" && typeof searchParams.rig !== "string") return rigBaseFrom(modelBase(searchParams), searchParams.rigv) ?? undefined;
+    if (typeof searchParams.rig !== "string") return undefined;
     if (searchParams.rig === "0") return null;
     return /^(\/|https?:\/\/)/.test(searchParams.rig) ? searchParams.rig.replace(/\/+$/, "") : undefined;
 }
 
 /** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
-async function loadFixtureLife(mode: FixtureMode): Promise<ArkFixtureLife> {
-    const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+async function loadFixtureLife(mode: FixtureMode, founders: boolean): Promise<ArkFixtureLife> {
+    const [events, read, thrive, snapshot] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json"), import("@/lib/ark-thrive-fixture"), import("@/ark-scene/fixtures/snapshot-v2.json")]);
+    // Captures + thrive: each life story's `thrive`, `area`, `origin.source` and `lineage`, as the contract's read answers.
+    const told = thrive.withArkThriveFixtureLives(read.default as unknown as Record<string, unknown>, thrive.withArkThriveFixture(snapshot.default));
+    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(told) : told};
     if (mode === "eggs") {
         const edge = await import("@/ark-scene/fixtures/edge");
         const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];
@@ -428,14 +467,17 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
+    // Names are on by default (owner, 2026-11-11: every bringer with a handle shows as their @username); `&founders=0`: a server that names nobody.
+    const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
     const [{words, talk, language}, data] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
-        mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
+        mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
-    const fixtureLife = mode ? await loadFixtureLife(mode) : null;
+    const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
+    const founders = data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
-    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
+    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
     const wordsLocale = otherLanguage ? language : locale;
     // The words under the world: the snapshot the page drew (the same Ark for everyone; `mine` is never said there).
@@ -449,12 +491,13 @@ export default async function ArkPage({params, searchParams}: Props) {
         <ArkView
             locale={wordsLocale}
             initial={snapshot}
+            founders={founders}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}
             signedIn={data.read?.signedIn ?? false}
             words={words}
             talkTitles={talk}
-            modelBase={modelBase()}
+            modelBase={modelBase(searchParams)}
             rigBase={rigOverride(searchParams)}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
             fixtureLife={fixtureLife}
@@ -462,6 +505,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             since={since}
             publicStory={Boolean(mode) && searchParams.publicStory === "1"}
             shareLocalePath={getLocalePath(locale, "/ark")}
+            liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
         </>

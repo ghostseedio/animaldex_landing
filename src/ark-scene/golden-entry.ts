@@ -20,13 +20,14 @@ import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
 import {microDrawnLength} from "@/ark-scene/micro";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
-import {Box3, Group, Quaternion, Raycaster, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {Box3, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Raycaster, SphereGeometry, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
-import {pinSeaClock} from "@/ark-scene/fish-schools";
+import {fishSchoolAt, fishSchools, pinSeaClock, type FishChaser} from "@/ark-scene/fish-schools";
+import {setFishChasers} from "@/ark-scene/fish-render";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -370,6 +371,11 @@ const percentile = (values: number[], p: number) => {
     return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))];
 };
 const round = (value: number) => Math.round(value * 100) / 100;
+/**
+ * The world moment every animal close-up starts from (its schedules, so before and after match): island midday,
+ * awake animals and no dawn mist (the mist pools by the world clock's hour, not the pinned light).
+ */
+const GOLDEN_WORLD_MS = Date.UTC(2026, 10, 11, 12, 30);
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve));
 
 /** Frames for `ms`: intervals free-running, then (for half as long) each frame drained with a 1-pixel read. */
@@ -399,10 +405,17 @@ async function mountGolden(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const decoded = decodeArkSnapshot(fixture);
+    // Scale runs (scripts/ark-scale-run.mjs): ?population=<file> loads a synthetic snapshot instead of the fixture.
+    const population = params.get("population");
+    const fetchStarted = performance.now();
+    const raw = population ? await (await fetch(population)).json() : fixture;
+    const decodeStarted = performance.now();
+    const decoded = decodeArkSnapshot(raw);
     if (!decoded) throw new Error("fixture did not decode");
     // The props lane's close-ups (`?props=1`): the props' species aboard, in the breeding season, clutches in.
     const snapshot = params.get("props") ? propsFixture(decoded) : decoded;
+    const timing: Record<string, number> = {fetchMs: decodeStarted - fetchStarted, decodeMs: performance.now() - decodeStarted};
+    const mountStarted = performance.now();
     let ready = false;
     const handle = mountArk(el, {
         snapshot,
@@ -410,15 +423,21 @@ async function mountGolden(el: HTMLElement) {
         iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
         recording: true,
         hours: GOLDEN_TIMES.day,
+        // The animal-look pass: `?look=0` starts with it off; `?closeup=<url>` serves the close-up skins (the harness's local build).
+        animalLook: params.get("look") !== "0",
+        closeUpBase: params.get("closeup") || undefined,
         onReady: () => {
             ready = true;
+            timing.readyMs = performance.now() - mountStarted;
         }
     });
+    timing.mountMs = performance.now() - mountStarted;
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
     handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: Holder = {current: null, minDistance: 0.3, stop: null, chosen: new Map()};
+    let chaserBody: ThreeMesh | null = null;
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -455,6 +474,8 @@ async function mountGolden(el: HTMLElement) {
     };
 
     return {
+        /** The scene itself (the liveliness clips pin the weather, the tide and the camera through it). */
+        handle,
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
         /**
@@ -576,6 +597,203 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /**
+         * The contact-shadow audit (development): the scene running, every drawn animal whose home spot's ground (where
+         * its shadow used to lie) is off the ground under it now by more than 25 cm, worst first. The schedule walks
+         * them off their spot; a shadow left at the home's height floated over one that had walked downhill.
+         */
+        shadowAudit: async (seconds: number) => {
+            handle.setReducedMotion(false);
+            handle.setClockScale(1, GOLDEN_WORLD_MS);
+            const until = performance.now() + seconds * 1000;
+            while (performance.now() < until) await nextFrame();
+            const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string; model_slug: string}; place: {ground: number}; middle?: {x: number; y: number; z: number} | null; drawnHeight: number; air: number}>}}).__arkDebug;
+            const rows: Array<{id: string; slug: string; home: number; ground: number; feet: number; off: number}> = [];
+            for (const entry of debug?.entries() ?? []) {
+                if (!entry.middle) continue;
+                const ground = Math.max(heightAt(entry.middle.x, entry.middle.z), 0);
+                const home = Math.max(entry.place.ground, 0);
+                const feet = entry.middle.y - entry.drawnHeight / 2;
+                if (Math.abs(home - ground) > 0.25 && Math.abs(feet - ground) < 0.3 && entry.air < 0.5) {
+                    rows.push({id: entry.animal.id, slug: entry.animal.model_slug, home, ground, feet, off: home - ground});
+                }
+            }
+            return rows.sort((a, b) => Math.abs(b.off) - Math.abs(a.off));
+        },
+        /** Clips (development): hold the camera on this view. */
+        setView: (view: ArkCameraView) => handle.setView(view),
+        /** Clips (development): run the sea's clock from this epoch second. */
+        pinSea: (epochSeconds: number) => pinSeaClock(epochSeconds),
+        /** Clips: a school now (by id), at the sea's clock. */
+        school: (id: string) => {
+            const school = fishSchools().find((each) => each.id === id);
+            return school ? fishSchoolAt(school) : null;
+        },
+        /**
+         * Clips: one chaser the fish split round (`setFishChasers`), drawn as a plain dark body `length` long heading
+         * `yaw`; null clears it. Stands in for the recipes lane's hunters.
+         */
+        setChaser: (chaser: (FishChaser & {length: number; yaw: number}) | null) => {
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (!chaser) {
+                setFishChasers(null);
+                if (chaserBody && debug) debug.scene.remove(chaserBody);
+                return;
+            }
+            const list: FishChaser[] = [{x: chaser.x, y: chaser.y, z: chaser.z, r: chaser.r}];
+            setFishChasers(() => list);
+            if (!chaserBody) {
+                const body = new SphereGeometry(0.5, 18, 10);
+                body.scale(0.32, 0.3, 1);
+                chaserBody = new ThreeMesh(body, new MeshStandardMaterial({color: "#4a4844", roughness: 0.45}));
+            }
+            chaserBody.scale.setScalar(chaser.length);
+            chaserBody.position.set(chaser.x, chaser.y, chaser.z);
+            chaserBody.rotation.set(0, chaser.yaw, 0);
+            if (debug && !chaserBody.parent) debug.scene.add(chaserBody);
+        },
+        /** Scale runs: the load timings, the animals given, and the JS heap. */
+        timing: () => ({...timing, animals: snapshot.animals.length, heapMb: Math.round(((performance as unknown as {memory?: {usedJSHeapSize: number}}).memory?.usedJSHeapSize ?? 0) / 1048576)}),
+        /** Scale runs: resolves once nothing is loading for quietMs (or after maxMs), with the time it took. */
+        settle: async (quietMs = 1500, maxMs = 120_000) => {
+            const started = performance.now();
+            const settled = await settle(quietMs, maxMs);
+            return {settled, ms: Math.round(performance.now() - started)};
+        },
+        /**
+         * The animal-look pass's close-ups (docs/ark/animal-look.md): one animal of the species, face to face from
+         * three-quarters in front, as close as a viewer can come (the scene's 4 m floor; a small animal's own close
+         * distance), from the first bearing where no other animal and no ground stands between, in the named light,
+         * the pass on or off, dry or in the rain. Still (reduced motion: before and after are the same pose), or
+         * `moving` (the rig plays: a rigged animal, so the look is checked on skinned meshes). `detail` comes closer
+         * than a viewer can (development only: the 4 m floor held down) to judge the surface itself. The world clock
+         * restarts from one fixed moment for every shot, so before and after catch the animal in the same place.
+         * Resolves once its close-up skin is in and the frame is quiet.
+         */
+        animal: async (slug: string, time: GoldenTime, options: {look: boolean; wetness?: number; still?: boolean; distance?: number; turn?: number; detail?: boolean; id?: string}) => {
+            // One animal by id (the shadow audit's), else every one of the species to choose from.
+            const kin = snapshot.animals.filter((row) => row.model_slug === slug && (!options.id || row.id === options.id));
+            if (!kin.length) return {found: false as const};
+            const moving = options.still === false;
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            // A small animal needs no pin (the scene drops its floor to 8 cm round one; 0.3 m would only push the camera back).
+            let pinning = Boolean((options.detail || moving) && debug && (handle.locate(kin[0].id)?.length ?? 1) >= 0.3);
+            const pin = () => {
+                if (!pinning || !debug) return;
+                debug.controls.minDistance = 0.3;
+                requestAnimationFrame(pin);
+            };
+            pin();
+            const restart = () => handle.setClockScale(1, GOLDEN_WORLD_MS);
+            // Twice, with frames between, so every animal's trip is planned from the same moment whatever came before.
+            restart();
+            for (let i = 0; i < 30; i++) await nextFrame();
+            restart();
+            handle.setReducedMotion(!moving);
+            // Swims timed by a fixed island moment, so the same animals are wet from a swim in every run.
+            handle.setAnimalLook(options.look, {islandMs: Date.UTC(2026, 10, 11, 10, 7)});
+            const wet = options.wetness ?? 0;
+            handle.setEnvironment({seaLevel: 0, wetness: wet, rain: wet, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41});
+            handle.setHours(GOLDEN_TIMES[time]);
+            for (let i = 0; i < 4; i++) await nextFrame();
+            const others = snapshot.animals.map((row) => ({id: row.id, at: handle.locate(row.id)}));
+            // A small animal: the scene's own close distance (about six lengths); the rest as close as the 4 m floor allows.
+            const distanceFor = (length: number) =>
+                options.distance ??
+                (length < 0.3 ? (options.detail || moving ? Math.max(0.06, length * 3) : Math.max(0.12, length * 6)) : options.detail || moving ? Math.max(0.35, length * 1.35 + 0.3) : Math.max(4, length * 1.2 + 1.5));
+            // Its size for framing: the longer of length and height (a penguin stands taller than it is long).
+            const sizeOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => Math.max(at.length, at.height);
+            // Under the sea, level with it (as the scene dives to a swimmer), so the camera is under the surface too.
+            const polarFor = (at: NonNullable<ReturnType<typeof handle.locate>>) => (at.y < -0.3 ? 1.52 : 1.3);
+            // Its middle where it is now (`ground` is its home spot's, not where a walk has taken it).
+            const targetOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => ({x: at.x, y: at.y - at.height * 0.05, z: at.z});
+            // The trunks, lamps and buildings the golden cameras stand clear of (`golden-world.ts`), near this species.
+            const firstAt = handle.locate(kin[0].id);
+            const trunks = goldenObstacles().filter((o) => !firstAt || Math.hypot(o.x - firstAt.x, o.z - firstAt.z) < 40);
+            /** Nothing between the camera and the animal: no trunk or wall, no other animal's body, the ground below the line. */
+            const clear = (id: string, at: NonNullable<ReturnType<typeof handle.locate>>, azimuth: number) => {
+                const target = targetOf(at);
+                const distance = distanceFor(sizeOf(at));
+                const polar = polarFor(at);
+                const camera = {x: target.x + distance * Math.sin(polar) * Math.sin(azimuth), y: target.y + distance * Math.cos(polar), z: target.z + distance * Math.sin(polar) * Math.cos(azimuth)};
+                // The whole sight line (a trunk anywhere on it hides the animal), with a margin at the lens.
+                for (let t = 0; t < 0.97; t += 0.04) {
+                    const x = camera.x + (target.x - camera.x) * t;
+                    const z = camera.z + (target.z - camera.z) * t;
+                    const margin = t < 0.15 ? 0.35 : 0.05;
+                    for (const o of trunks) if (Math.hypot(o.x - x, o.z - z) < o.radius + margin) return false;
+                }
+                for (let t = 0.1; t < 0.95; t += 0.1) {
+                    const x = camera.x + (target.x - camera.x) * t;
+                    const z = camera.z + (target.z - camera.z) * t;
+                    if (camera.y + (target.y - camera.y) * t < handle.heightAt(x, z) + 0.05) return false;
+                }
+                for (const other of others) {
+                    if (other.id === id || !other.at) continue;
+                    const radius = Math.max(other.at.length * 0.55, other.at.height * 0.6) + 0.15;
+                    const dx = target.x - camera.x;
+                    const dy = target.y - camera.y;
+                    const dz = target.z - camera.z;
+                    const t = ((other.at.x - camera.x) * dx + (other.at.y - camera.y) * dy + (other.at.z - camera.z) * dz) / (dx * dx + dy * dy + dz * dz);
+                    if (t <= 0 || t >= 1) continue;
+                    const px = camera.x + dx * t - other.at.x;
+                    const py = camera.y + dy * t - other.at.y;
+                    const pz = camera.z + dz * t - other.at.z;
+                    if (px * px + py * py + pz * pz < radius * radius) return false;
+                }
+                return true;
+            };
+            const turns = options.turn !== undefined ? [options.turn] : [0.55, -0.55, 0.95, -0.95, 0.2, -0.2, 1.4, -1.4, 1.9, -1.9, 2.5, -2.5];
+            let chosen: {id: string; turn: number} | null = null;
+            for (const turn of turns) {
+                for (const row of kin) {
+                    const at = handle.locate(row.id);
+                    if (at && clear(row.id, at, at.yaw + turn)) {
+                        chosen = {id: row.id, turn};
+                        break;
+                    }
+                }
+                if (chosen) break;
+            }
+            const pick = chosen ?? {id: kin[0].id, turn: options.turn ?? 0.55};
+            let at = handle.locate(pick.id);
+            if (!at) {
+                pinning = false;
+                return {found: false as const};
+            }
+            const frame = () => {
+                at = handle.locate(pick.id) ?? at;
+                const located = at!;
+                const view: ArkCameraView = {target: targetOf(located), distance: distanceFor(sizeOf(located)), polar: polarFor(located), azimuth: located.yaw + pick.turn};
+                handle.setView(view);
+                return view;
+            };
+            let view = frame();
+            for (let i = 0; i < 24; i++) {
+                await nextFrame();
+                if (i < 8 || moving) view = frame();
+            }
+            // The close-up skin (when served), its rig (moving) and any new shader in before the shot.
+            const until = performance.now() + 9000;
+            while (performance.now() < until) {
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                if (moving) view = frame();
+                const stats = handle.stats();
+                const skinIn = !options.look || (stats.closeUpSkins ?? 0) > 0 || !params.get("closeup");
+                if (skinIn && (!moving || stats.rigged > 0)) break;
+            }
+            if (!moving) await settle(500, 20_000);
+            // Everything is in: the clock back to the fixed moment and the same number of frames for every shot, so
+            // before and after catch the animal at the same place (and a moving one mid-stride).
+            restart();
+            for (let i = 0; i < 30; i++) {
+                await nextFrame();
+                view = frame();
+            }
+            pinning = false;
+            const stats = handle.stats();
+            return {found: true as const, id: pick.id, clear: Boolean(chosen), view, located: at, closeUpSkins: stats.closeUpSkins ?? 0, furShells: stats.furShells ?? 0, rigged: stats.rigged};
+        },
         /**
          * The flythrough (graphics pass): `seconds` of flight through the golden places in turn, eased, the hour going
          * from morning through dusk to night, in real time. Returns the frame intervals over the whole flight.

@@ -13,11 +13,14 @@
  *   server's flag lets it through.
  */
 
-import type {ArkSnapshot, ArkSociality, ArkZone} from "@/ark-scene/types";
+import type {ArkArea, ArkArrivalSource, ArkSnapshot, ArkSociality, ArkThrive, ArkZone} from "@/ark-scene/types";
+import {arkArea, arkArrivalSource} from "@/ark-scene/thrive";
+import {decodeArkLineage, decodeArkThriveField, type ArkLineage} from "@/lib/ark-thrive";
 import {ARK_ZONES} from "@/ark-scene/types";
 import {arkActivity, type ArkActivity} from "@/lib/ark-daylight";
 import {decodeArkStory, type ArkAnimalStory} from "@/lib/ark-story";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkLabelHasFounderKey, arkLabelText, decodeArkFounder, decodeArkFounderStory, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
 
 /**
  * The log's kinds. `starved`: a predator dead of long hunger (owner decision
@@ -26,7 +29,9 @@ import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
  * (A3): the step that brought an animal was revised after it arrived; the
  * animal stays. Counted in its life story, never acted out.
  */
-export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised"] as const;
+export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated"] as const;
+/* `mated` (owner, 2026-11-11, the live log): a pair bred, `parents: [id, id]`, written just before its litter's
+ * `birth` rows or its clutch's `laid` row. Said in the live log; not acted out in the replay. */
 export type ArkEventKind = typeof ARK_EVENT_KINDS[number];
 
 export type ArkAnimalStatus = "present" | "eaten" | "died_old" | "starved";
@@ -52,6 +57,9 @@ export type ArkEventAnimal = {
     sociality: ArkSociality | null;
     /** As it is now (an eaten one is `eaten`). */
     status: ArkAnimalStatus | null;
+    /** Captures + thrive: how well kept it is now, and its area (placement only); null from an older server (absent where it is made by hand). */
+    thrive?: ArkThrive | null;
+    area?: ArkArea | null;
 };
 
 export type ArkEvent = {
@@ -70,10 +78,16 @@ export type ArkEvent = {
     /** A birth's parents (animal ids) and the young's born-to labels; empty otherwise. */
     parents: string[];
     bringers: string[];
+    /** The named bringers behind `bringers` (null for a Voyager), for their @username links. */
+    bringer_founders?: Array<ArkFounder | null>;
     /** A birth that hatched from an egg (`payload.from_egg`). */
     from_egg: boolean;
     /** A `laid` row's clutch: how many eggs (`payload.eggs`), when the server says. */
     eggs: number | null;
+    /** On a `milestone` (a worked step): the band the step left the person's animals in; else null. */
+    thrive: ArkThrive | null;
+    /** On an `arrival`: how it came aboard (a capture, or before them a step); else null. */
+    source: ArkArrivalSource | null;
 };
 
 const ZONES = new Set<string>(ARK_ZONES);
@@ -98,14 +112,23 @@ function record(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
-/** `[{label, named}]` → the labels (never a user id: the server sends only labels). */
+/**
+ * `[{label, named, founder?}]` → the labels as the reader reads them (never a user id: the server sends only
+ * labels): a named bringer's @username (owner, 2026-11-11), else the label ("Voyager 5").
+ */
 function labels(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
-    return value.map((item) => text(record(item)?.label, 60)).filter((label): label is string => Boolean(label)).slice(0, 4);
+    return value.map((item) => arkLabelText(item)).filter((label): label is string => Boolean(label)).slice(0, 4);
 }
 
 function label(value: unknown): string | null {
-    return text(record(value)?.label, 60);
+    return arkLabelText(value);
+}
+
+/** The named bringers behind `labels` (null for a Voyager), in the same order, for links. */
+function labelFounders(value: unknown): Array<ArkFounder | null> {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item) => Boolean(arkLabelText(item))).slice(0, 4).map((item) => decodeArkFounder(record(item)?.founder));
 }
 
 function status(value: unknown): ArkAnimalStatus | null {
@@ -137,7 +160,9 @@ function eventAnimal(value: unknown, aboard: Map<string, ArkSnapshot["animals"][
         slot_rank: whole(row.slot_rank),
         activity: arkActivity(row.activity),
         sociality: sociality === "solitary" || sociality === "pair" || sociality === "group" ? sociality : null,
-        status: status(row.status)
+        status: status(row.status),
+        thrive: decodeArkThriveField(row.thrive),
+        area: arkArea(row.area)
     };
 }
 
@@ -178,8 +203,11 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             phrase: text(row.phrase, 160),
             parents: Array.from(new Set(parents)).slice(0, 2),
             bringers: labels(row.bringers),
+            bringer_founders: labelFounders(row.bringers),
             from_egg: payload.from_egg === true || row.from_egg === true,
-            eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null
+            eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
+            thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
+            source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null
         });
     });
     return events
@@ -193,7 +221,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
 export type ArkAct =
     | {kind: "arrival"; at: string; animal: ArkEventAnimal}
     /** `fromEgg`: the young hatch from a nest or clutch (A9), the one laid earlier in the replay when it is in it. */
-    | {kind: "birth"; at: string; young: ArkEventAnimal[]; parents: string[]; bringers: string[]; fromEgg: boolean}
+    | {kind: "birth"; at: string; young: ArkEventAnimal[]; parents: string[]; bringers: string[]; /** The named ones behind `bringers`, for links. */ bringerFounders?: Array<ArkFounder | null>; fromEgg: boolean}
     /** An egg-layer laid a clutch (A9): a nest or clutch appears beside it. `eggs` when the server counts them. */
     | {kind: "laid"; at: string; animal: ArkEventAnimal; eggs: number | null; nest: string; parents: string[]}
     | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean}
@@ -244,7 +272,7 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
                 const litter = births.get(key);
                 if (litter) litter.young.push(event.animal);
                 else {
-                    const act = {kind: "birth" as const, at: event.at, young: [event.animal], parents: event.parents, bringers: event.bringers, fromEgg: event.from_egg};
+                    const act = {kind: "birth" as const, at: event.at, young: [event.animal], parents: event.parents, bringers: event.bringers, bringerFounders: event.bringer_founders, fromEgg: event.from_egg};
                     births.set(key, act);
                     acts.push(act);
                 }
@@ -362,7 +390,8 @@ export type ArkLife = {
     model_slug: string | null;
     status: ArkAnimalStatus;
     origin:
-        | {kind: "arrived"; at: string | null; brought_by: string | null}
+        /** `source`: a capture brought it, or (before captures did) a step; null from an older server. */
+        | {kind: "arrived"; at: string | null; brought_by: string | null; source: ArkArrivalSource | null}
         | {kind: "born"; at: string | null; parents: string[]; born_to: string[]; breeding_source: ArkBreedingSource | null; /** Hatched from an egg (A9). */ from_egg: boolean};
     generation: number;
     born_ark_day: number | null;
@@ -382,6 +411,20 @@ export type ArkLife = {
     revision: {at: string | null; worked: boolean} | null;
     /** The public debate it came from: only when the server's `public_story` flag is on. */
     story_public: ArkAnimalStory | null;
+    /**
+     * Founders (founders contract, section 2): the named founders behind the
+     * labels above, each null for a Voyager. `names` when the server sent the
+     * `founder` keys (its switch is on); all null and false before.
+     */
+    founders: {names: boolean; brought_by: ArkFounder | null; born_to: Array<ArkFounder | null>; ancestor: ArkFounder | null};
+    /** The story its founder chose to share (what they did, the problem line), or null. */
+    founder_story: ArkFounderStory | null;
+    /** Captures + thrive: how well kept it is now (null once it has died, or from an older server). */
+    thrive: ArkThrive | null;
+    /** The house or the farm (placement only), or null: its zone. */
+    area: ArkArea | null;
+    /** Its descendants ever born, by generation, and how many live (null from an older server). */
+    lineage: ArkLineage | null;
 };
 
 function count(value: unknown): number {
@@ -403,6 +446,8 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
     const ageYears = number(row.ark_age_years);
     const preyName = text(meal?.prey, 120);
     const breeding = origin.breeding_source;
+    const bornTo = (Array.isArray(origin.born_to) ? origin.born_to : []).filter((item) => Boolean(text(record(item)?.label, 60))).slice(0, 4);
+    const names = arkLabelHasFounderKey(origin.brought_by) || arkLabelHasFounderKey(row.ancestor_brought_by) || bornTo.some(arkLabelHasFounderKey);
     return {
         id,
         species: text(row.species, 120),
@@ -417,7 +462,7 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
                 breeding_source: breeding === "stored" || breeding === "partial" || breeding === "estimate" ? breeding : null,
                 from_egg: origin.from_egg === true || record(origin.payload)?.from_egg === true
             }
-            : {kind: "arrived", at: text(origin.at, 40), brought_by: label(origin.brought_by)},
+            : {kind: "arrived", at: text(origin.at, 40), brought_by: label(origin.brought_by), source: arkArrivalSource(origin.source ?? row.source)},
         generation: count(row.generation),
         born_ark_day: number(row.born_ark_day),
         ark_age_days: ageDays !== null && ageDays >= 0 ? ageDays : null,
@@ -430,7 +475,18 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         ancestor_brought_by: label(row.ancestor_brought_by),
         died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved") ? {at: text(died.at, 40), kind: died.kind} : null,
         revision: revision ? {at: text(revision.at, 40), worked: revision.worked === true} : null,
-        story_public: decodeArkStory(row.story_public)
+        story_public: decodeArkStory(row.story_public),
+        founders: {
+            names,
+            brought_by: origin.kind === "born" ? null : decodeArkFounder(record(origin.brought_by)?.founder),
+            born_to: origin.kind === "born" ? bornTo.map((item) => decodeArkFounder(record(item)?.founder)) : [],
+            ancestor: decodeArkFounder(record(row.ancestor_brought_by)?.founder)
+        },
+        founder_story: origin.kind === "born" ? null : decodeArkFounderStory(row.founder_story),
+        // Once it has died it has no condition (the contract's null); the read's band otherwise.
+        thrive: died ? null : decodeArkThriveField(row.thrive),
+        area: arkArea(row.area),
+        lineage: decodeArkLineage(row.lineage)
     };
 }
 

@@ -1,0 +1,67 @@
+# The Ark's behaviour checks (docs/ark/behaviour-audit.md): the owner's problems 1-7 as numbers, guarded at today's
+# merged values (tests/ark-audit/thresholds.json) so a change that makes the animals worse fails the PR.
+#   1. the map's spawn validator (src/lib/ark-map.test.ts);
+#   2. the behaviour audit (scripts/ark-behaviour-audit.mts) in its CI configuration: every catalogue species, one
+#      island day every 30 s, flyers every second for 1 h, the reactive layer at 8 camera stops, no rig files
+#      (the rig checks need the local rig set: they run on the integrator's machine);
+#   3. the reactive layer's encounter scenario (scripts/ark-intelligence-encounters.mts);
+#   4. scripts/ark-audit-check.mts against the thresholds.
+# Deterministic: nothing here has randomness, so a changed number is a changed scene. A deliberate change updates the
+# thresholds in the same PR, with why. About 6 minutes (the audit about 4).
+name: Ark behaviour checks
+
+on:
+  pull_request:
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-audit/**"
+      - "data/ark/**"
+      - "scripts/ark-behaviour-audit*"
+      - "scripts/ark-intelligence-encounters.mts"
+      - "scripts/ark-audit-check.mts"
+      - "tests/ark-audit/**"
+      - ".github/workflows/ark-behaviour-audit.yml"
+  push:
+    branches: [ark-release]
+    paths:
+      - "src/ark-scene/**"
+      - "src/lib/ark-audit/**"
+      - "data/ark/**"
+      - "tests/ark-audit/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ark-behaviour-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  behaviour:
+    name: Problems 1-7, the reactive encounters and the spawn validator
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Spawn validator
+        run: npx tsx --test src/lib/ark-map.test.ts
+      - name: Behaviour audit (CI configuration)
+        run: npx tsx scripts/ark-behaviour-audit.mts --label ci --days 1 --step 30 --flight-hours 1 --workers 4 --camera-stops 8 --models none --out .ark-audit
+      - name: Reactive encounters
+        run: npx tsx scripts/ark-intelligence-encounters.mts --limit 150 --out .ark-audit/encounters.json > .ark-audit/encounters.log
+      - name: Against the thresholds
+        run: npx tsx scripts/ark-audit-check.mts --audit .ark-audit/ci.json --encounters .ark-audit/encounters.json | tee .ark-audit/check.md
+      - name: Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ark-behaviour-audit
+          path: .ark-audit
+          retention-days: 14

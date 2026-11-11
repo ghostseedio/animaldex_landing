@@ -38,7 +38,7 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, mapPoints, shoreOf, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, atRock, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, denKindOf, inTheTrees, mapPoints, onSchedule, rockHomes, scheduleRoost, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
@@ -86,6 +86,28 @@ export function validatorAnimals(): ArkAnimal[] {
     return animals;
 }
 
+/**
+ * A den's problems (as its schedule takes it: `scheduleRoost`): in the sea, its tide or its surf (a rock hyrax's on a
+ * boulder in the surf, 2026-11-11); a crevice or cave dweller's away from any rock (a rock face, a ledge or a drawn
+ * rock's foot), never a hole on open grass (the golden den_rock's rock hyrax). A water animal's home and den are the
+ * water's; a den up a tree is above the surf; a micro animal's crevice is any crack (it is off the schedule); a partner
+ * rides its host (a chicken mite); a shore's colony sleeps on its shore's rocks; one whose zone has no dry rock on its
+ * ground could not be moved to one.
+ */
+export function denProblems(animal: ArkAnimal, place: Placement): Array<{check: ValidatorCheck; detail: string}> {
+    const out: Array<{check: ValidatorCheck; detail: string}> = [];
+    const kind = denKindOf(animal.model_slug);
+    if (!kind || place.water || place.canopy || place.hamlet) return out;
+    const all = mapPoints();
+    const den = scheduleRoost(place, animal.zone);
+    if (den && den.y - all.sampler.ground(den.x, den.z).height < 1 && all.inSurf(den.x, den.z)) out.push({check: "roost_invalid", detail: `its ${kind} in the sea's tide or surf at ${den.x.toFixed(1)},${den.z.toFixed(1)}`});
+    const species = mapSpecies(animal.model_slug, animal.zone);
+    if ((kind === "crevice" || kind === "cave") && species && !place.micro && !place.host && !place.map?.shore && !place.map?.held && !inTheTrees(place, animal.model_slug) && onSchedule(place, animal.model_slug)) {
+        if ((!den || !atRock(den.x, den.z, den.point)) && rockHomes(species, animal.zone, arkBody(animal).metres).length) out.push({check: "roost_invalid", detail: `its ${kind} den away from any rock${den ? ` at ${den.x.toFixed(1)},${den.z.toFixed(1)}` : ""}`});
+    }
+    return out;
+}
+
 export function validateMap(): {failures: ValidatorFailure[]; animals: number; species: number; placed: Map<string, Placement>} {
     const animals = validatorAnimals();
     const placed = placeAnimals(animals);
@@ -116,6 +138,7 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             if (mouth && inRock(mouth.x, mouth.z, 0.15)) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `its burrow's mouth in a drawn rock at ${mouth.x.toFixed(1)},${mouth.z.toFixed(1)}`, rank});
             const hole = place.perch ?? place.micro?.attach ?? null;
             if (hole && (hole.tag === "burrow_entrance" || hole.tag === "worm_hole") && inRock(hole.x, hole.z, Math.min(Math.max(length * 0.2, 0.05), 0.3))) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `at a ${hole.tag} in a drawn rock at ${hole.x.toFixed(1)},${hole.z.toFixed(1)}`, rank});
+            for (const problem of denProblems(animal, place)) failures.push({slug: animal.model_slug, ...problem, rank});
             const roost = place.map?.roost;
             if (rank === 0 && roost && (roost.kind === "ground") && inRock(roost.x, roost.z, Math.min(Math.max(length * 0.2, 0.05), 0.6), roost.y, Math.max(length * 0.5, 0.05))) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `its roost in a drawn rock at ${roost.x.toFixed(1)},${roost.z.toFixed(1)}`, rank});
         }

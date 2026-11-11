@@ -35,6 +35,9 @@ import {AppRequestError} from "@/lib/user-facing-error";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {forgetAllTalkThreads} from "@/components/ask-animaldex/ask-thread-meta";
 import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {arkFounderSwitch, decodeArkFounderSettings, type ArkFounderSettings} from "@/lib/ark-founders";
+import type {ArkFoundersWords} from "@/lib/ark-words";
+import {ArkBroughtByFounder} from "@/components/ark/ark-founder-bits";
 
 async function postSetting(body: Record<string, unknown>) {
     const response = await fetch("/api/app/settings", {
@@ -113,6 +116,78 @@ export function DebateRosterSection({initial, words}: {initial: boolean | null; 
                     });
                 }}
             />
+        </SettingsSection>
+    );
+}
+
+async function saveArkFounderName(show: boolean): Promise<{settings: ArkFounderSettings} | {refusal: "adult_confirmation_required" | "under_18" | null}> {
+    try {
+        const response = await fetch("/api/ark/founder-settings", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", Accept: "application/json"},
+            body: JSON.stringify({show}),
+            cache: "no-store"
+        });
+        const body = await response.json().catch(() => null) as {settings?: unknown; error?: unknown} | null;
+        const settings = response.ok ? decodeArkFounderSettings(body?.settings) : null;
+        if (settings) return {settings};
+        return {refusal: body?.error === "adult_confirmation_required" || body?.error === "under_18" ? body.error : null};
+    } catch {
+        return {refusal: null};
+    }
+}
+
+/**
+ * "Show my name on my Ark animals" (founders contract, section 3; owner,
+ * 2026-11-11): an opt-out, on by default. Every person with a handle shows on
+ * the animals they bring as their @username, linked to their profile (private
+ * profiles too), with no 18+ step; turning it off shows them as a Voyager
+ * number. Shown only while the server names founders (`enabled`). Blocked (a
+ * stored under-18 year, no @handle): off and disabled, with the reason. It
+ * calls `set_voyage_founder_name_v1(p_show)` and follows `show_name`.
+ */
+export function ArkFounderNameSection({initial, title, words, broughtBy}: {initial: ArkFounderSettings; title: string; words: ArkFoundersWords["settings"]; broughtBy: string}) {
+    const [settings, setSettings] = useState(initial);
+    const [saving, setSaving] = useState(false);
+    const [failed, setFailed] = useState(false);
+    const describeError = useUserFacingError();
+    const {checked, disabled} = arkFounderSwitch(settings);
+    const blockedNote = settings.blocked === "under_18" ? words.under18 : settings.blocked === "no_handle" ? words.noHandle : null;
+    const save = (show: boolean) => {
+        const previous = settings;
+        setSettings({...settings, show_name: show, chosen: true});
+        setSaving(true);
+        setFailed(false);
+        void saveArkFounderName(show).then((result) => {
+            setSaving(false);
+            if ("settings" in result) {
+                setSettings(result.settings);
+                return;
+            }
+            setSettings(previous);
+            setFailed(true);
+        });
+    };
+    /** On or off, in one tap: no 18+ step for a name (owner, 2026-11-11). */
+    const turnOn = () => save(true);
+    return (
+        <SettingsSection title={title.toUpperCase()} footer={failed ? describeError(new Error("ark_founder_name")) : undefined}>
+            <SettingsToggleRow
+                icon={SettingsIcons.person}
+                title={words.title}
+                subtitle={blockedNote ?? words.note}
+                checked={checked}
+                disabled={disabled || saving}
+                onChange={(next) => (next ? turnOn() : save(false))}
+            />
+            {checked && settings.founder ? (
+                <>
+                    <SettingsDivider />
+                    <div className="flex min-h-11 items-center px-4 py-2.5 pl-[54px] text-[13px]" data-testid="ark-founder-preview">
+                        <ArkBroughtByFounder template={broughtBy} founder={settings.founder} textClassName="text-white/45" />
+                    </div>
+                </>
+            ) : null}
         </SettingsSection>
     );
 }

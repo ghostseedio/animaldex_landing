@@ -112,7 +112,6 @@ Known gaps:
 - caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
 - Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.
 
-## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
 ## Batch 4: terrain and near-camera (f04ebfb4 and on)
 
 Lane: terrain and near-camera. The reef, kelp, fish schools (`ark-graphics-reef`) and the leaf/bark attach points (`ark-graphics-attach`) are separate lanes.
@@ -156,7 +155,6 @@ Golden shots: the before/after sheets are `batch4-desktop-before-after.jpg`, `ba
 
 Seen while checking, not this lane's: the props lane's mist (`props/effects.ts` on `ark-release`) is flat horizontal sheets 0.6 to 1.5 m above the ground at each patch's middle. On sloping woodland and farm ground a sheet cuts through the land and the animals, and seen nearly edge-on it reads as a frosted band with straight edges (the animal-look lane's barn owl and fox shots). Over the lake it makes the shore's grass look as if it were under the water. A fix: give each sheet segments and drape it over the ground (`sampleGround` per vertex plus the offset), and fade it as the camera comes within about 2 m of its height.
 
-
 ## Batch 4, reef and coast water (branch `ark-graphics-reef`, cut from `ark-graphics` 7fb87467)
 
 Handover §4.1 items 3–4. Visual only: nothing here touches the server, the snapshot, the stats or the ecology.
@@ -193,6 +191,15 @@ Same-conditions A/B: the same build with the sea life on and off (a temporary lo
 | waves_beach | 7.4, 8.9 | 8.8, 8.8 | 99 / 94 | 1.16 M / 1.13 M | 60 |
 
 GPU drain was within the noise. Desktop high (`reef-final2-desktop`) held 60 fps on every reef and coast shot, at 3.1–3.8 ms scene CPU and 250–360 calls. The fish placement costs about 0.2–0.3 ms a frame on the desktop CPU for the schools in view: each fish's matrix is built straight from its motion, and schools outside the view cone are skipped.
+
+## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
+
+- **Tree attach points on the drawn trees.** attach.json's points are computed before the level-of-detail cut and the leaves' fold, curl and growth: its leaf points sat a median 1–46 cm off the drawn lod0 leaves. `scripts/ark-tree-attach.mjs` moves each onto the drawn surface (a single leaf within 0.6 m first, else the leaf mass; bark and branch tops on the wood) and records the wind weights there (`src/ark-scene/tree-attach.json`, 1,011 points, 34 KB gzipped). `tree-assets.ts` places them where `asset-trees.ts` draws each tree (one shared `assetTreePlacement`); only decor trees and the fill every tier draws carry them.
+- **Wind.** An animal on a leaf moves with it: `attachPointAt(point, ARK_TIME.value, ARK_WIND.value)` is the tree shader's own sway and flutter at that point (2–6 cm in a storm). Chosen over "only where the sway is small", because every leaf flutters.
+- **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds, so a close-up's leaf is always the one the point is on (before, a camera up in a tall crown could see lod1).
+- **Rocks.** Rock points sat on the smooth rock shape, not the flat faces drawn (a true-size limpet half buried); `drawnRockPoint` fixed that. Since batch 5 the rocks are the asset lane's (`rock-assets.ts`), and `drawnRockPoint` only applies if the rock set is missing.
+- **Close-up golden shots** (`caterpillar_leaf`, `bee_flower`, `limpet_tidepool`, `gecko_wall`, and the new `ant_bark`): the animal at its true size, framed as the scene frames a tapped small animal (length × 6, 0.12–3 m; the leaf shot 0.55 m to show the whole leaf). The camera is checked clear both ways along its sight line, the leaf or trunk in the sun and with nothing in front of the lens, chosen once in the morning light and kept for dusk and night. The harness had been drawing them from 0.3 m or more: the scene eased its closest distance back out every frame; the shots now hold it. The leaf shot uses a small cabbage white (5 cm): there is still no caterpillar model.
+- **Near plane under 5 cm.** The scene sets near to 8 % of the camera's distance to what it looks at (at least 1 cm). The 5 mm ant at 0.12 m has near 1 cm, nothing clips, and the 24-bit depth resolves about 0.1 µm there: no z-fighting between an animal and its leaf, bark or rock (2 mm off). No change was needed. GTAO (high tier) keeps its 1.2 m radius in close-ups: the same leaf shot is 3–5 % darker on high than on medium and the bark shot is the same, so it was left.
 
 ## Batch 5: rocks, crops, the range, the floor, still water (b73d2b75 and on)
 
@@ -293,6 +300,26 @@ Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg
   - The rib cut takes a wobble: `smoothstep(0.6, 0.88, rib + 0.2·(noise(p·0.35 - 2.1) - 0.5))`.
   - The rock beds' tone fades by 70 % up in the snow (`beds *= 1 - 0.7·high`), so rock showing through reads as one stone.
   - The alpine snow line, the ledge snow and the ice are unchanged.
+- **Dark blocks on every tier (follow-up; the integrator saw them at the island view on the low tier):**
+  - Two causes, both in the rock's tone, not the snow:
+    - the beds' fade used `fwidth(bedAt)`, which is constant per triangle and jumps from one to the next, so the ground's 1.1 m grid showed through the faces as squares;
+    - the water runs on the hard beds took a fresh noise row per bed, so they were cut off square at the bed lines: dark blocks from afar.
+  - The low tier shows these plainly because it has no tilt-shift blur; medium and high had them too, softened.
+  - Now the fade uses the pixel's size on the ground, `distance × length(fwidth(view ray))`, which is the same on every triangle. The bedding planes fade once they are under a few pixels tall. The runs run continuously through the beds, fade towards each bed's top and foot, and show only near the camera.
+  - The snow formula is unchanged (the ledge snow's fade now uses this pixel size, but `snow.ts` does not count ledges).
+  - Checked at the island view and the mountain camera on low, medium and high (desktop), and on low and medium (phone): no grid and no blocks. The sheet is `batch6-mountain-tiers.jpg`.
+- **Low tier woods (follow-up; the integrator saw the thinned forest as tall bare trunks with small tufts from the island view on low):**
+  - On low, trees reach 0.3 of their level distances, so from the island view nearly every tree was a crossed card. The emergents' cards are a tall trunk with a few tufts, and only 0.3 of the fill (the lower canopy) was drawn.
+  - `asset-trees.ts` now uses at least the medium tier's distance for the lod2 → card change (`CARD_REACH_MIN` 0.45); the full levels keep the tier's distance.
+  - It draws at least 0.6 of the fill in the rainforest and the woodland (`WOODS_FILL`); other zones keep the tier's share.
+  - The medium and high tiers are unchanged (identical numbers).
+  - Low, before → after: desktop island_far 357 → 369 k triangles (106 → 107 calls), forest_floor 576 → 627 k, storm_trees 502 → 540 k. Phone island_far 356 → 366 k, forest_floor 538 → 588 k, storm_trees 495 → 533 k. Still under a third of medium.
+  - From the island view the low tier now reads like medium: the giants' full crowns and a lower canopy. The sheets are `batch6-low-woods-desktop.jpg` and `batch6-low-woods-phone.jpg`.
+- **Lamp halos at night, high tier (follow-up; dark square frames round the lamps):**
+  - GTAO's depth and normal pass draws every visible object with one opaque material. The glow sprites stood in it as solid squares, and the occlusion shaded a dark frame round each lamp. Only the high tier runs GTAO; medium and low were already round.
+  - `post.ts` now leaves the glows out of that pass: sprites and additive, depth-less layers such as the light shafts. The water stays in.
+  - High tier: about 2–10 fewer draw calls at these views; medium and low unchanged.
+  - Checked river_pond and house_fields at night, high and medium, desktop and phone: soft round glows and the porch glow, no frame. The sheets are `batch6-halos-desktop.jpg` and `batch6-halos-phone.jpg`.
 - **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
 
   | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
@@ -308,13 +335,3 @@ Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg
   - `batch6-forest-desktop-day.jpg` and `batch6-forest-desktop-night.jpg`;
   - `batch6-forest-phone.jpg`;
   - `batch6-forest-overview-crop.jpg` and `batch6-mountain-slabs.jpg`.
-
-## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
-
-- **Tree attach points on the drawn trees.** attach.json's points are computed before the level-of-detail cut and the leaves' fold, curl and growth: its leaf points sat a median 1–46 cm off the drawn lod0 leaves. `scripts/ark-tree-attach.mjs` moves each onto the drawn surface (a single leaf within 0.6 m first, else the leaf mass; bark and branch tops on the wood) and records the wind weights there (`src/ark-scene/tree-attach.json`, 1,011 points, 34 KB gzipped). `tree-assets.ts` places them where `asset-trees.ts` draws each tree (one shared `assetTreePlacement`); only decor trees and the fill every tier draws carry them.
-- **Wind.** An animal on a leaf moves with it: `attachPointAt(point, ARK_TIME.value, ARK_WIND.value)` is the tree shader's own sway and flutter at that point (2–6 cm in a storm). Chosen over "only where the sway is small", because every leaf flutters.
-- **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds, so a close-up's leaf is always the one the point is on (before, a camera up in a tall crown could see lod1).
-- **Rocks.** Rock points sat on the smooth rock shape, not the flat faces drawn (a true-size limpet half buried); `drawnRockPoint` fixed that. Since batch 5 the rocks are the asset lane's (`rock-assets.ts`), and `drawnRockPoint` only applies if the rock set is missing.
-- **Close-up golden shots** (`caterpillar_leaf`, `bee_flower`, `limpet_tidepool`, `gecko_wall`, and the new `ant_bark`): the animal at its true size, framed as the scene frames a tapped small animal (length × 6, 0.12–3 m; the leaf shot 0.55 m to show the whole leaf). The camera is checked clear both ways along its sight line, the leaf or trunk in the sun and with nothing in front of the lens, chosen once in the morning light and kept for dusk and night. The harness had been drawing them from 0.3 m or more: the scene eased its closest distance back out every frame; the shots now hold it. The leaf shot uses a small cabbage white (5 cm): there is still no caterpillar model.
-- **Near plane under 5 cm.** The scene sets near to 8 % of the camera's distance to what it looks at (at least 1 cm). The 5 mm ant at 0.12 m has near 1 cm, nothing clips, and the 24-bit depth resolves about 0.1 µm there: no z-fighting between an animal and its leaf, bark or rock (2 mm off). No change was needed. GTAO (high tier) keeps its 1.2 m radius in close-ups: the same leaf shot is 3–5 % darker on high than on medium and the bark shot is the same, so it was left.
-

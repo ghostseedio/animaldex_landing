@@ -1,8 +1,13 @@
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
+import type {ArkSeenNow} from "@/lib/ark-live-log";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import type {ArkRestStatus} from "@/ark-scene/sleep";
+
+export type {ArkRestStatus} from "@/ark-scene/sleep";
+import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -46,6 +51,20 @@ export const ZONE_REGION: Record<ArkZone, ArkRegion> = Object.fromEntries(
 
 /** How an animal is doing, as the server says (`voyage_public_v2`). */
 export type ArkCondition = "well_fed" | "hungry" | "old";
+/**
+ * How well kept it is (captures + thrive, 2026-11-11; the frozen read
+ * contract, `docs/ark/captures-thrive-design.md` section 0): its bringer's
+ * condition for its kind, raised by their steps that worked, drifting back
+ * to ordinary without them. The band only, never the 0–100 value. Separate
+ * from `condition` (hunger and age). For looks and behaviour, realistic
+ * only: never a glow, a badge, an aura or a turn to the camera.
+ */
+export type ArkThrive = "ordinary" | "good" | "prime";
+export const ARK_THRIVE_BANDS: readonly ArkThrive[] = ["ordinary", "good", "prime"];
+/** Where in the home region a pet or a farm animal lives (placement only; its zone is unchanged). Null: its own zone. */
+export type ArkArea = "house" | "farm";
+/** How an arrived animal came aboard: a capture (since 2026-11-11) or, before that, a step that worked. */
+export type ArkArrivalSource = "capture" | "step";
 /** The species' stored social life: `group` gathers in a cluster, `pair` stays close. */
 export type ArkSociality = "solitary" | "pair" | "group";
 
@@ -75,8 +94,18 @@ export type ArkAnimal = {
     brought_by: {label: string; named: boolean};
     mine: boolean;
     // Ark life v2 (`voyage_public_v2`): absent from a v1 snapshot.
-    /** Came aboard after a step, or was born on the Ark. */
+    /** Came aboard (with a capture, or earlier after a step), or was born on the Ark. */
     origin?: "arrived" | "born";
+    /** How an arrived one came aboard (`source`); null for the born, absent from an older server. */
+    source?: ArkArrivalSource | null;
+    /** How well kept it is now (`thrive`); absent from an older server, which the scene reads as ordinary. */
+    thrive?: ArkThrive | null;
+    /**
+     * The house or the farm, for a pet or a farm animal (`area`, the server's `voyage_animals.area` from the capture's
+     * setting; placement only): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`). Null or
+     * absent: its zone, placed by the map.
+     */
+    area?: ArkArea | null;
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
     condition?: ArkCondition | null;
@@ -84,8 +113,6 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
-    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
-    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**
@@ -168,12 +195,18 @@ export type ArkSceneStats = {
     behaviourSpacingMs?: number;
     rigsLoaded: number;
     rigBytes: number;
+    /** The animal-look pass: on, animals in fur shells this frame, close-up skins on the GPU. */
+    animalLook?: boolean;
+    furShells?: number;
+    closeUpSkins?: number;
+    /** The liveliness wiring this frame: sheltering, young at heel, moved off the tide, rain drops, traces, sound. */
+    liveliness?: {/** Main-thread ms a frame in the wiring (mean of the last 60). */ ms: number; /** Last frame's split (ms). */ split?: {pose: number; drawn: number; step: number}; sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
 export type ArkHerdInfo = {key: string; slug: string; name: string; count: number; mine: number};
 
-export type ArkSceneOptions = {
+export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
@@ -191,6 +224,11 @@ export type ArkSceneOptions = {
      * the tap card's state line reads this, the same state the scene animates, never a clock of its own.
      */
     onBehaviour?: (id: string, state: ArkBehaviourState) => void;
+    /**
+     * How the selected animal is resting now, in the tap card's plain words (`sleep.ts` restStatus: asleep in its den,
+     * on one leg, keeping watch, dozing in the sun…; null up and about), when it is selected and whenever that changes.
+     */
+    onRest?: (id: string, rest: ArkRestStatus | null) => void;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
@@ -207,6 +245,8 @@ export type ArkSceneOptions = {
     hours?: number | null;
     /** The behaviour schedule (`behaviour-schedule.ts`): animals walk, fly, swim, sleep at their roosts and visit places by the time and their ids. Default on. */
     behaviour?: boolean;
+    /** The local reactive layer (`reactive.ts`): animals near the camera look round, react to predators, sounds and the camera. Default on (off with reduced motion). */
+    reactive?: boolean;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
     /**
@@ -224,6 +264,18 @@ export type ArkSceneOptions = {
     lite?: boolean | null;
     /** The scene's own art (ground textures, sky light): `<graphicsBase>/ground-albedo-512.webp`… Default "/ark/graphics". */
     graphicsBase?: string;
+    /**
+     * The animal-look pass (`animal-look.ts`): surfaces by species, wet and dust, eyes, fur shells, close-up skins and
+     * contact shadows on the surface. Default on; false draws the animals exactly as before.
+     */
+    animalLook?: boolean;
+    /**
+     * The close-up skins' folder (`<closeUpBase>/manifest.json`, `<slug>/<version>.near.ktx2`), loaded only when the
+     * camera is close. Default: beside the model set (`…/v1/ark` → `…/v1/ark-closeup`); null: none.
+     */
+    closeUpBase?: string | null;
+    /** Where the KTX2 transcoder is (`basis_transcoder.js` / `.wasm`). Default "/ark/basis/". */
+    basisBase?: string;
     /** The asset library (trees, plants, rocks): `<assetBase>/trees/oak-a.lod0.glb`… Default its manifest's base, "/ark/assets/v1". */
     assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
@@ -233,6 +285,13 @@ export type ArkSceneOptions = {
      * dew, mist, smoke: `src/ark-scene/props`): true on (default), false off.
      */
     props?: boolean;
+    /**
+     * The storage host the animals' sounds come from (`https://<project>.supabase.co`): the chat's
+     * `animal-chat-sounds` bucket. Default: the model set's host; null: no calls.
+     */
+    soundBase?: string | null;
+    /** The list of recordings heard changed (the Sounds panel's credits). */
+    onSoundCredits?: () => void;
 };
 
 /** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
@@ -250,7 +309,7 @@ export type ArkVisitor = {slug: string; name: string; /** Its label in the scene
 /** Who is talking: the animal's id (an aboard animal's, or the visitor's), its model slug, and whether it is talking now. */
 export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
-export type ArkSceneHandle = {
+export type ArkSceneHandle = ArkRuntimeHandle & {
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;
@@ -291,13 +350,28 @@ export type ArkSceneHandle = {
     follow: (id: string | null) => void;
     /**
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
-     * island clock with null. Any field left out keeps following the clock.
+     * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now): coats soak in it
+     * (the animal-look pass) and animals shelter from it (liveliness); a pinned `wetness` without it means no rain.
      */
-    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; /** Rain falling, 0–1 (animals shelter above 0.45). */ rain: number; fog: number}> | null) => void;
+    /**
+     * Sound on or off (liveliness wiring, `ark-audio.ts`). Call it only from the viewer's tap (the handler itself):
+     * the audio is made there and nowhere else, so nothing sounds before a tap, on the web or in the apps.
+     * False when the device has no WebAudio.
+     */
+    setSound: (on: boolean) => boolean;
+    /** Whether sound is on now, whether it has been unlocked by a tap, and every recording heard in this visit (the Sounds panel). */
+    sound: () => {on: boolean; unlocked: boolean; credits: Array<{text: string; page: string | null; license: string}>};
+    setSoundVolume: (volume: number) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
     setClockScale: (scale: number, atMs?: number) => void;
     setHours: (hours: number | null) => void;
+    /**
+     * The animal-look pass on or off (off: every animal exactly as before). `islandMs` pins the island time its
+     * swims are timed by (who is wet from a swim), or follows the clock again with null.
+     */
+    setAnimalLook: (on: boolean, pin?: {islandMs?: number | null}) => void;
     /**
      * Act out what the server says happened ("while you were away"): each act
      * in turn, at speed, from the Ark as it is now (who arrived is held back
@@ -317,6 +391,18 @@ export type ArkSceneHandle = {
     locate: (id: string) => ArkLocated | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
+    /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */
+    rest: (id: string) => ArkRestStatus | null;
+    /** What the local reactive layer has an animal doing this frame (its action, head look, offset, alarm); null outside its budget. */
+    reactive: (id: string) => ArkReactiveSnapshot | null;
+    /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */
+    reactiveStats: () => ArkReactiveStats;
+    /**
+     * The live log's "seen" lines (`lib/ark-live-log.ts`): the visible animals near the camera running one of the
+     * logged recipes now (courtship, contests, catches, nest building), and the alarm calls they made in the last
+     * few seconds. Visual only (the shared layers, the same for every viewer); empty while motion is reduced.
+     */
+    seen: () => ArkSeenNow;
     /** The ground's height at a point (never below the sea). */
     heightAt: (x: number, z: number) => number;
     /** Ask for these species' models, near and far (resolves once asked; `loading` says when they are in). */
@@ -337,3 +423,7 @@ export type ArkSceneHandle = {
     setCutaway: (open: boolean | null) => void;
     dispose: () => void;
 };
+
+/** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
+export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};
+export type ArkReactiveStats = {tier: string; agents: number; inputs: number; perceptions: number; sightChecks: number; alarms: number; ms: number};

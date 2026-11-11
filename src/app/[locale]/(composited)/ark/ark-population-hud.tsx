@@ -8,6 +8,7 @@ import {arkPopulation, type ArkPairStatus, type ArkSpeciesRow} from "@/lib/ark-p
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkIconUrl} from "@/ark-scene/placeholder";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
+import {arkBarIndex, ArkCountTrend, ArkRegionBar, ArkSpeciesBar} from "@/app/[locale]/(composited)/ark/ark-live-bars";
 
 /**
  * Who is aboard the Ark, species by species: the totals, then every species
@@ -87,6 +88,8 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
         }
     }, [selectedKey]);
     const population = useMemo(() => arkPopulation(snapshot), [snapshot]);
+    // The live bars (owner, 2026-11-11): each count against the others in its region, growing and shrinking as it changes.
+    const bars = useMemo(() => arkBarIndex(population), [population]);
     const number = (value: number) => value.toLocaleString(locale);
     const status = (value: ArkPairStatus) => hud[value];
     let index = 0;
@@ -178,10 +181,11 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                             aria-pressed={region === group.region}
                             aria-label={fillArkWords(hud.flyTo, {region: words.regions[group.region]})}
                             title={REGION_ZONES[group.region].map((zone) => words.zones[zone]).join(" · ")}
-                            className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${FOCUS} ${region === group.region ? "text-white" : "text-ink-300"}`}
+                            className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} relative min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${FOCUS} ${region === group.region ? "text-white" : "text-ink-300"}`}
                         >
                             <span id={`ark-region-${group.region}`} className="text-[11px] font-bold uppercase tracking-[0.14em]">{words.regions[group.region]}</span>
-                            <span className="text-[12px] tabular-nums text-ink-400">{number(group.animals)}</span>
+                            <span className="flex items-center gap-1.5 text-[12px] tabular-nums text-ink-400"><ArkCountTrend count={group.animals} locale={locale} words={words} />{number(group.animals)}</span>
+                            <ArkRegionBar share={bars.region(group.region)} words={words} />
                         </button>
                         </h3>
                         <ul aria-label={fillArkWords(words.a11y.regionCount, {region: words.regions[group.region], count: number(group.animals)})}>
@@ -210,6 +214,7 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                                                     {row.mine ? <span className="shrink-0 rounded-full bg-primary-400/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.08em] text-primary-200">{hud.yours}</span> : null}
                                                 </span>
                                                 <span className={`block text-[12px] ${STATUS_TONE[row.status].text}`}>{status(row.status)}{isHerd ? <span className="text-ink-400"> · {hud.herdTag}</span> : null}</span>
+                                                <ArkSpeciesBar count={row.count} status={row.status} words={words} {...bars.species(row.key)} />
                                                 {/* A kind with breeds aboard (A1): one row, its breeds named. */}
                                                 {row.breeds.length ? (
                                                     <span className="block truncate text-[11px] text-ink-400">
@@ -218,7 +223,7 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                                                 ) : null}
                                             </span>
                                             <span className="flex shrink-0 items-center gap-2.5">
-                                                <PairMeter count={row.count} status={row.status} />
+                                                <ArkCountTrend count={row.count} locale={locale} words={words} />
                                                 <span className="min-w-6 text-right font-display text-base font-extrabold tabular-nums text-white">{number(row.count)}</span>
                                             </span>
                                         </button>

@@ -2,6 +2,7 @@ import "server-only";
 import {cookies} from "next/headers";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
+import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
 import {isMissingArkFunction} from "@/lib/ark-story";
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
@@ -12,13 +13,18 @@ import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supa
  * Ark's day), or `voyage_public_v1` until v2 is applied, read as the visitor: with their session when they have one, so their
  * own animals come back `mine`, and anonymously otherwise.
  *
+ * `founders`: the named founders and shared stories in the same answer
+ * (`lib/ark-founders.ts`), beside the snapshot (the scene's decoder keeps
+ * only the labels). None from v1, or while the server's `founder_names`
+ * switch is off.
+ *
  * `available: false` until the migration is applied (the function is
  * missing), or when the read fails: the page then says the Ark opens soon.
  */
 /** Until when `voyage_public_v2` is known to be missing (asked again a minute later). */
 let v2Missing = 0;
 
-export type ArkVoyageRead = {available: true; snapshot: ArkSnapshot; signedIn: boolean} | {available: false; signedIn: boolean};
+export type ArkVoyageRead = {available: true; snapshot: ArkSnapshot; founders: ArkFounders; signedIn: boolean} | {available: false; signedIn: boolean};
 
 export async function readArkVoyage(): Promise<ArkVoyageRead> {
     const signedIn = requestHasSupabaseAuthCookie(cookies().getAll());
@@ -38,5 +44,5 @@ export async function readArkVoyage(): Promise<ArkVoyageRead> {
         return {available: false, signedIn};
     }
     const snapshot = decodeArkSnapshot(data);
-    return snapshot ? {available: true, snapshot, signedIn} : {available: false, signedIn};
+    return snapshot ? {available: true, snapshot, founders: read ? arkFoundersOf(data) : ARK_NO_FOUNDERS, signedIn} : {available: false, signedIn};
 }

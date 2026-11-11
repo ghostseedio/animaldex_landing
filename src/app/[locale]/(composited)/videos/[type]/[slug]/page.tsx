@@ -112,7 +112,7 @@ export default async function VideoWatchPage({params}: WatchPageProps) {
                         <p className="text-lg leading-8 text-ink-200">
                             A clip recorded in{" "}
                             <Link href={articlePath} className="font-bold text-white underline decoration-primary-400 underline-offset-4">the AnimalDex Ark</Link>
-                            , the shared world where animals come aboard when someone tries an animal&apos;s advice and it works. Its captions come from each animal&apos;s stored field guide and the Ark&apos;s live counts.
+                            , the shared world where animals come aboard when someone captures them, and steps that work keep them thriving. Its captions come from each animal&apos;s stored field guide and the Ark&apos;s live counts.
                         </p>
                     ) : (
                         <p className="text-lg leading-8 text-ink-200">

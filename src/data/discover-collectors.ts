@@ -132,11 +132,14 @@ function resolveBestFindImage(captureId: string | null, row: QueryRow | null | u
  * never sorted by: the view works Ark Score out per row.
  */
 async function loadArkSummaries(userIds: string[]) {
-    // Ark 3.3: the world score (`ark_world_score`, 0–100); a server without the column refuses the select, so the old one is asked then.
-    const withWorld = await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_world_score,steps_total,powers_earned", "user_id", userIds);
+    // Captures + thrive: v3's points (`ark_points`), beside v2's world score; a server without a column refuses the whole select,
+    // so v2 alone, then the old key, is asked then.
+    const read = (select: string) => fetchRowsByIds<QueryRow>("member_profile_summaries_v1", select, "user_id", userIds);
+    const withPoints = await read("user_id,ark_points,ark_world_score,steps_total,powers_earned");
+    const withWorld = withPoints.length || !userIds.length ? withPoints : await read("user_id,ark_world_score,steps_total,powers_earned");
     const rows = withWorld.length || !userIds.length
         ? withWorld
-        : await fetchRowsByIds<QueryRow>("member_profile_summaries_v1", "user_id,ark_score,steps_total,powers_earned", "user_id", userIds);
+        : await read("user_id,ark_score,steps_total,powers_earned");
     const nullable = (row: QueryRow, key: string) => (row[key] == null ? null : readNumber(row, key));
     return new Map(rows.flatMap((row) => {
         const userId = readString(row, "user_id");

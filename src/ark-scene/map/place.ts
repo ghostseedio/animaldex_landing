@@ -36,6 +36,7 @@ import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {place as scenePlace} from "@/ark-scene/sampler";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
 import {hashString, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
+import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
 
 /** Where it sleeps (when that is not where it lives). */
 export type MapRoost = {
@@ -68,6 +69,8 @@ export type MapPlace = {
     /** Its cluster's key (zone and slot) and its point's level (0: on the point). */
     key: number;
     level: number;
+    /** Whose place it is (its species and drawn length), for its den on the schedule (`scheduleRoost`). */
+    who?: {slug: string; length: number};
 };
 
 /** A perch: a bird's, a bat's or a small vertebrate's attach point, as the surface it stands on (its back to `n`, heading `t`). */
@@ -201,6 +204,47 @@ function attachPlace(point: AttachPoint, key: number, level: number, rank: numbe
  * is its drawn length, `trueLength` its true body length (m).
  */
 export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain" = "plain"): MapPlacement | null {
+    const placed = mapPlaceOn(animal, zone, slot, rank, length, trueLength, kind);
+    if (placed) placed.map.who = {slug: animal.model_slug, length};
+    // (A tree's climber stays in its tree, a centipede on its limb: its den is a rock in reach, else its perch.)
+    if (placed && !placed.water && !placed.canopy && !placed.micro && !placed.map.held && !placed.map.shore && !inTheTrees(placed, animal.model_slug) && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !rockInReach(placed.map, placed.perch ?? null, placed.x, placed.z)) {
+        const moved = toTheRocks(placed, zone, slot, rank, length);
+        if (moved) return moved;
+    }
+    return placed;
+}
+
+/** Does it live in the trees: a climber, hanger or percher of the trees (`arborealOf`), or perched on a tree's point? */
+export function inTheTrees(place: {perch?: MapPerch; canopy?: unknown; map?: MapPlace}, slug: string): boolean {
+    if (place.canopy) return true;
+    if (place.perch && TREE_POINT.has(place.perch.tag)) return true;
+    return Boolean(place.map?.species && arborealOf(place.map.species, slug));
+}
+
+/**
+ * A crevice or cave dweller with no dry rock in reach of its home: its home at the foot of the nearest dry drawn rock
+ * of its zone, on ground its text allows (the cluster round it, a body and more apart, each slot its own bearing).
+ * A pure function of its zone, slot and rank, as every place is.
+ */
+function toTheRocks(placed: MapPlacement, zone: ArkZone, slot: number, rank: number, length: number): MapPlacement | null {
+    const species = placed.map.species;
+    if (!species) return null;
+    const feet = rockHomes(species, zone, length).map((foot) => ({...foot, d: Math.hypot(foot.x - placed.x, foot.z - placed.z)})).sort((a, b) => a.d - b.d || a.x - b.x || a.z - b.z);
+    if (!feet.length) return null;
+    const sampler = mapPoints().sampler;
+    // The nearest rock's feet first; the slot picks among the nearest dozen, a member a few bearings on.
+    const pick = feet[(hashString(`${zone}#rocks#${slot}`) + rank * 5) % Math.min(feet.length, 12)];
+    const g = sampler.ground(pick.x, pick.z);
+    const tag = g.tags.find((t) => species.allowed.has(t))!;
+    void length;
+    const {perch: _perch, micro: _micro, burrow: _burrow, ...rest} = placed;
+    void _perch;
+    void _micro;
+    void _burrow;
+    return {...rest, x: pick.x, z: pick.z, ground: g.height, water: false, map: {...placed.map, tag, area: TAG_AREA[tag], attach: undefined, roost: null}};
+}
+
+function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain"): MapPlacement | null {
     if (!enabled) return null;
     const key = clusterKey(zone, slot);
     const ownHash = hashString(animal.id);
@@ -547,7 +591,18 @@ export type ScheduleSpot = {x: number; y: number; z: number; nx: number; ny: num
  * So the scene's sleepers are where the validator checks them.
  */
 export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: ArkZone): ScheduleSpot | null {
+    // A crevice or cave dweller (a rock hyrax, a gundi, a pika, a rock wallaby): a dry rock face, ledge or the foot of a
+    // drawn rock, never a hole on open grass (the props' rock-den slot reads as one: golden den_rock, 2026-11-11).
+    const home = place as {x?: number; z?: number};
+    if (place.map?.who && !place.map.water && ROCK_DENS.has(denKindOf(place.map.who.slug) ?? "") && typeof home.x === "number" && typeof home.z === "number") {
+        const rock = rockDen(place.map, place.perch ?? null, home.x, home.z!);
+        if (rock) return rock;
+    }
     const roost = place.map?.roost;
+    // (A burrow or a sleeping ground of its text in the tide or the surf: its den on dry land instead, when it has one.)
+    const wetDen = roost && (roost.kind === "burrow" || roost.kind === "ground" || roost.kind === "attach") && !denIsDry(roost.burrow?.x ?? roost.x, roost.burrow?.z ?? roost.z);
+    const dry = wetDen && place.map?.who && typeof (place as {x?: number}).x === "number" ? coastalDen(place.map, (place as {x: number}).x, (place as {z: number}).z, (place as {ground?: number}).ground ?? 0) : null;
+    if (dry) return dry;
     if (roost) {
         if (roost.kind === "attach" && roost.attach) return {x: roost.attach.x, y: roost.attach.y, z: roost.attach.z, nx: roost.attach.normal[0], ny: roost.attach.normal[1], nz: roost.attach.normal[2], point: `map:${roost.attach.id}`};
         if (roost.kind === "canopy" && roost.canopy) {
@@ -558,10 +613,167 @@ export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: A
         return {x: roost.x, y: roost.y, z: roost.z, nx: 0, ny: 1, nz: 0, point: `map:${roost.tag}`};
     }
     const perch = place.perch;
+    // (A den on its perch in the tide or the surf, a desert rain frog's hole on the beach: its den on dry land instead.)
+    const wetPerch = perch && place.map?.who && !denIsDry(perch.x, perch.z) ? coastalDen(place.map, perch.x, perch.z, perch.y) : null;
+    if (wetPerch) return wetPerch;
     if (perch) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
     // A hauled-out diver rests where it stands on its shore (a penguin colony on the cove's ice).
     const at = place as {x?: number; z?: number; ground?: number};
-    if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") return {x: at.x, y: at.ground ?? 0, z: at.z, nx: 0, ny: 1, nz: 0, point: `map:shore`};
+    if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") {
+        // (A burrow-nesting penguin's or a crevice auklet's den above the surf, though it stands in the splash: dry land.)
+        const den = place.map.who && !denIsDry(at.x, at.z) ? coastalDen(place.map, at.x, at.z, at.ground ?? 0) : null;
+        return den ?? {x: at.x, y: at.ground ?? 0, z: at.z, nx: 0, ny: 1, nz: 0, point: `map:shore`};
+    }
+    // A den by the sea on dry land (a rock hyrax's crevice, a porcupine's cave): never a boulder in the surf.
+    if (place.map?.who && typeof at.x === "number" && typeof at.z === "number") return coastalDen(place.map, at.x, at.z, at.ground ?? 0);
+    return null;
+}
+
+/** A den is found for an animal living within this of the sea (the schedule's own choice reaches up to its range, about this far). */
+const COAST_REACH = 40;
+/** Roosts that are dens (`behaviour-profile.ts` roost), and the map's points that make one. */
+const DEN_POINTS: Partial<Record<string, AttachTag[]>> = {cave: ["rock_face", "ledge"], crevice: ["rock_face", "ledge"], burrow: ["burrow_entrance"], den: ["burrow_entrance", "rock_face"], tree_hole: ["tree_hollow", "bark", "branch"]};
+
+/** The kind of den its schedule's roost is (a cave, a crevice, a burrow, a den, a tree hole), or null when it sleeps in the open. */
+export function denKindOf(slug: string): string | null {
+    const roost = behaviourProfile(slug).roost;
+    return DEN_POINTS[roost] ? roost : null;
+}
+
+/** Dry land for a den: not in any water, and above the sea's tide and surf (`points.ts` DEN_DRY, inSurf). */
+export function denIsDry(x: number, z: number): boolean {
+    const all = mapPoints();
+    return all.sampler.ground(x, z).water === null && !all.inSurf(x, z);
+}
+
+/** The dens that are rock's: a crevice, a cave. */
+const ROCK_DENS: ReadonlySet<string> = new Set(["crevice", "cave"]);
+/** How far a rock den may be from its home (m); none: the home goes to the rocks (`mapPlace`). */
+export const ROCK_DEN_REACH = 20;
+/** A drawn rock's foot: this far out from its footprint (m). */
+const FOOT = 0.35;
+
+/** The ground just outside a drawn rock along a bearing (its own frame's box, turned as drawn). */
+function rockFoot(rock: DrawnRock, bearing: number, out: number): {x: number; z: number} {
+    const lx = Math.sin(bearing);
+    const lz = Math.cos(bearing);
+    const tx = lx > 0 ? rock.hx1 / lx : lx < 0 ? rock.hx0 / lx : Infinity;
+    const tz = lz > 0 ? rock.hz1 / lz : lz < 0 ? rock.hz0 / lz : Infinity;
+    const t = Math.min(tx, tz) + out;
+    const ax = lx * t;
+    const az = lz * t;
+    // (Local to world: the inverse of rocks.ts's turn.)
+    return {x: rock.x + ax * rock.cos + az * rock.sin, z: rock.z - ax * rock.sin + az * rock.cos};
+}
+
+/** Can a den be at a drawn rock's foot here: dry, outside every rock, off the plots and the scenery. */
+function footFits(x: number, z: number): boolean {
+    const sampler = mapPoints().sampler;
+    return denIsDry(x, z) && !inRock(x, z, 0.12) && !sampler.reserved?.(x, z) && !sampler.blocked(x, z, 0.12);
+}
+
+/** Dry rock feet round the drawn rocks within `reach` of a spot, nearest first (12 bearings a rock, `out` from its side). */
+function rockFeet(x: number, z: number, reach: number, keep: (x: number, z: number, rock: DrawnRock) => boolean = () => true, out0 = FOOT): Array<{x: number; z: number; d: number}> {
+    const out: Array<{x: number; z: number; d: number}> = [];
+    for (const rock of drawnRocks()) {
+        if (Math.hypot(rock.x - x, rock.z - z) > reach + rock.reach + out0) continue;
+        for (let k = 0; k < 12; k++) {
+            const foot = rockFoot(rock, (k / 12) * Math.PI * 2, out0);
+            const d = Math.hypot(foot.x - x, foot.z - z);
+            if (d <= reach && footFits(foot.x, foot.z) && keep(foot.x, foot.z, rock)) out.push({...foot, d});
+        }
+    }
+    return out.sort((a, b) => a.d - b.d || a.x - b.x || a.z - b.z);
+}
+
+/** Is a spot a rock den: a rock face's or a ledge's point (`point` its id), or the foot of a drawn rock (within a metre of it, outside it)? */
+export function atRock(x: number, z: number, point: string | null): boolean {
+    if (point && /^map:(rock_face|ledge):/.test(point)) return true;
+    return inRock(x, z, 1) && !inRock(x, z, 0);
+}
+
+/**
+ * A crevice or cave dweller's den: its perch when that is a dry rock face or ledge; else a dry rock face or ledge within
+ * `ROCK_DEN_REACH` of its home (nearer likelier, seeded by its cluster); else a drawn rock's foot there. Null with no rock
+ * in reach (its home was put by rocks when it had none: `mapPlace`).
+ */
+function rockDen(map: MapPlace, perch: MapPerch | null, x: number, z: number): ScheduleSpot | null {
+    if (perch && (perch.tag === "rock_face" || perch.tag === "ledge") && denIsDry(perch.x, perch.z)) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
+    const who = map.who!;
+    const roll = (hashString(`${who.slug}#rockden#${map.key}`) % 1000) / 1000;
+    const points = mapPoints()
+        .sampler.attachPoints()
+        .filter((point) => (point.tag === "rock_face" || point.tag === "ledge") && Math.hypot(point.x - x, point.z - z) <= ROCK_DEN_REACH && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
+        .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (points.length) {
+        const point = points[Math.floor(roll ** 1.4 * points.length)];
+        return {x: point.x, y: point.y, z: point.z, nx: point.normal[0], ny: point.normal[1], nz: point.normal[2], point: `map:${point.id}`};
+    }
+    const feet = rockFeet(x, z, ROCK_DEN_REACH);
+    // (Its home at a rock's foot already, the rocks' own home for it: there.)
+    if (!feet.length && atRock(x, z, null) && denIsDry(x, z)) return {x, y: mapPoints().sampler.ground(x, z).height, z, nx: 0, ny: 1, nz: 0, point: "map:rock_foot"};
+    if (!feet.length) return null;
+    const foot = feet[Math.floor(roll ** 1.4 * Math.min(feet.length, 12))];
+    return {x: foot.x, y: mapPoints().sampler.ground(foot.x, foot.z).height, z: foot.z, nx: 0, ny: 1, nz: 0, point: "map:rock_foot"};
+}
+
+const rockHomeLists = new Map<string, Array<{x: number; z: number}>>();
+/**
+ * Where a crevice or cave dweller of its zone can live by the rocks: every dry drawn rock's foot in the zone, on ground
+ * its text allows, its body clear of the rock and the scenery and (a walker) on the walk grid. Empty: its zone has none.
+ */
+export function rockHomes(species: MapSpecies, zone: ArkZone, length: number): Array<{x: number; z: number}> {
+    const radius = Math.min(Math.max(length * 0.2, 0.1), 0.6);
+    const key = `${zone}|${Array.from(species.allowed).sort().join(",")}|${species.move}|${radius.toFixed(2)}`;
+    let list = rockHomeLists.get(key);
+    if (!list) {
+        const sampler = mapPoints().sampler;
+        const walker = ["walk", "crawl", "slither", "hop", "burrow"].includes(species.move);
+        const maxSlope = zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE;
+        const site = ZONE_SITES[zone];
+        list = rockFeet(site.x, site.z, 1000, (x, z) => {
+            const g = sampler.ground(x, z);
+            return g.zone === zone && g.tags.some((tag) => species.allowed.has(tag)) && !inRock(x, z, radius) && !sampler.blocked(x, z, radius) && (!walker || !sampler.walkable || sampler.walkable(x, z, maxSlope));
+        }, FOOT + radius).map(({x, z}) => ({x, z}));
+        rockHomeLists.set(key, list);
+    }
+    return list;
+}
+
+/** Has a crevice or cave dweller a rock den in reach of a home there? */
+function rockInReach(map: MapPlace, perch: MapPerch | null, x: number, z: number): boolean {
+    return rockDen(map, perch, x, z) !== null;
+}
+
+/**
+ * The den of a land animal living by the sea, on dry land: a point of its den's kind within 15 m of its home (nearer
+ * ones likelier, seeded by its cluster), never one in the tide or the surf; none, the ground at home if that is dry,
+ * else the nearest dry ground within 30 m. Null (the schedule's own choice) for one living inland, a water animal, or
+ * one whose roost is not a den.
+ */
+function coastalDen(map: MapPlace, x: number, z: number, ground: number): ScheduleSpot | null {
+    const who = map.who!;
+    const profile = behaviourProfile(who.slug);
+    const kinds = DEN_POINTS[profile.roost];
+    if (!kinds || map.water || !mapPoints().seaWithin(x, z, COAST_REACH)) return null;
+    const sampler = mapPoints().sampler;
+    const near = sampler
+        .attachPoints()
+        .filter((point) => kinds.includes(point.tag) && Math.hypot(point.x - x, point.z - z) <= 15 && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
+        .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    if (near.length) {
+        const roll = (hashString(`${who.slug}#den#${map.key}`) % 1000) / 1000;
+        const point = near[Math.floor(roll ** 1.4 * near.length)];
+        return {x: point.x, y: point.y, z: point.z, nx: point.normal[0], ny: point.normal[1], nz: point.normal[2], point: `map:${point.id}`};
+    }
+    if (denIsDry(x, z)) return {x, y: ground, z, nx: 0, ny: 1, nz: 0, point: "map:den"};
+    for (let k = 1; k < 400; k++) {
+        const r = 0.5 * Math.sqrt(k);
+        if (r > 30) break;
+        const tx = x + Math.cos(k * GOLDEN) * r;
+        const tz = z + Math.sin(k * GOLDEN) * r;
+        if (denIsDry(tx, tz) && !sampler.blocked(tx, tz, 0.3) && !sampler.reserved?.(tx, tz)) return {x: tx, y: sampler.ground(tx, tz).height, z: tz, nx: 0, ny: 1, nz: 0, point: "map:den"};
+    }
     return null;
 }
 

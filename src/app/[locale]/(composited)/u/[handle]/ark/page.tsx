@@ -2,12 +2,14 @@ import type {Metadata} from "next";
 import {notFound, permanentRedirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {readArkVoyage, type ArkVoyageRead} from "@/data/ark-voyage";
+import {readArkFounder} from "@/data/ark-founders";
+import {arkFounderStories, arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounderPage, type ArkFounders} from "@/lib/ark-founders";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {getCompanionWords} from "@/loaders/companion-words";
 import {getProfileViewerState} from "@/data/profile-authenticated";
 import {getPublicArkSummary, getPublicProfileCard, normalizePublicHandle} from "@/data/public-profiles";
-import {arkPersonView, arkScoreShare} from "@/lib/ark-world";
+import {arkPersonView, arkScoreShare, arkSignedChange, readArkScore} from "@/lib/ark-world";
 import {fillArkWords} from "@/lib/ark-words";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
@@ -24,6 +26,12 @@ import {getArkWords} from "@/loaders/ark-words";
  * chose to show their name on the Ark; otherwise it says they travel
  * anonymously and shows only their Ark Score (public, as on their profile)
  * and the whole Ark's counts. Never which step, problem or chat brought one.
+ *
+ * Founders (founders contract, section 5): while the server's
+ * `founder_names` switch is on, `voyage_founder_v1` lists the arrivals they
+ * are named on with the stories they chose to share, under "How their
+ * animals got aboard". It answers null with the switch off (or before the
+ * migration), and the page is then exactly as before.
  */
 
 export const dynamic = "force-dynamic";
@@ -33,10 +41,25 @@ type Props = {params: {locale: string; handle: string}; searchParams?: {fixture?
 /**
  * Development only: `?fixture=self` (your own page, the fixture Ark's three
  * `mine` animals), `?fixture=named` (someone who shows their name: one
- * Voyager's animals named as them), `?fixture=anonymous`.
+ * Voyager's animals named as them), `?fixture=anonymous`, `?fixture=founder`
+ * (names on: Voyager 1's animals named as them, with their shared stories).
+ * Every fixture mode also answers the Ark Score as v3 does (`ark_points` 140,
+ * `ark_points_week` 30: captures + thrive), so the score's line can be seen.
  */
-async function fixtureRead(mode: string | undefined, username: string): Promise<{snapshot: ArkSnapshot; isSelf: boolean} | null> {
+async function fixtureRead(mode: string | undefined, username: string): Promise<{snapshot: ArkSnapshot; isSelf: boolean; founders?: ArkFounders; founderPage?: ArkFounderPage} | null> {
     if (process.env.NODE_ENV !== "development" || !mode) return null;
+    if (mode === "founder") {
+        const fixture = await import("@/lib/ark-founders-fixture");
+        const raw = fixture.withArkFixtureFounders((await import("@/ark-scene/fixtures/snapshot.json")).default);
+        const named = decodeArkSnapshot(raw);
+        if (!named) return null;
+        const maya = fixture.ARK_FIXTURE_FOUNDERS["Voyager 1"];
+        // The fixture's founder is the page's person: their handle on the animals they are named on.
+        const founders = arkFoundersOf(raw);
+        const animals = Object.fromEntries(Object.entries(founders.animals).map(([id, entry]) => [id, {...entry, brought_by: entry.brought_by?.handle === maya.handle ? {...maya, handle: username} : entry.brought_by}]));
+        const page = fixture.fixtureArkFounderPage(maya.handle);
+        return {snapshot: named, isSelf: false, founders: {...founders, animals}, founderPage: {...page, founder: page.founder ? {...page.founder, handle: username} : null}};
+    }
     const snapshot = decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot.json")).default);
     if (!snapshot) return null;
     if (mode === "self") return {snapshot, isSelf: true};
@@ -48,6 +71,12 @@ async function fixtureRead(mode: string | undefined, username: string): Promise<
         };
     }
     return {snapshot: {...snapshot, animals: snapshot.animals.map((animal) => ({...animal, mine: false}))}, isSelf: false};
+}
+
+function fixtureSummary(mode: string | undefined) {
+    if (process.env.NODE_ENV !== "development" || !mode) return null;
+    const score = readArkScore({ark_points: 140})!;
+    return Promise.resolve({score, arkScore: score.value, weekChange: 30, stepsTotal: 9, powersEarned: 2});
 }
 
 function arkPath(handle: string) {
@@ -80,18 +109,27 @@ export default async function PersonArkPage({params, searchParams}: Props) {
     if (!profile) notFound();
     if (profile.username.toLowerCase() !== handle) permanentRedirect(getLocalePath(params.locale, arkPath(profile.username)));
 
-    const [viewer, live, summary, {words}, companion, fixture] = await Promise.all([
+    const [viewer, live, summary, {words}, companion, fixture, founderRead] = await Promise.all([
         getProfileViewerState(profile.userId),
         readArkVoyage(),
-        getPublicArkSummary(profile.userId).catch(() => null),
+        // Development's fixtures: the score as v3 answers it (no top, never lower), without a server.
+        fixtureSummary(searchParams?.fixture) ?? getPublicArkSummary(profile.userId).catch(() => null),
         getArkWords(params.locale),
         getCompanionWords(params.locale),
-        fixtureRead(searchParams?.fixture, profile.username)
+        fixtureRead(searchParams?.fixture, profile.username),
+        readArkFounder(profile.username)
     ]);
-    const read: ArkVoyageRead = fixture ? {available: true, snapshot: fixture.snapshot, signedIn: true} : live;
+    const read: ArkVoyageRead = fixture ? {available: true, snapshot: fixture.snapshot, founders: fixture.founders ?? ARK_NO_FOUNDERS, signedIn: true} : live;
+    // Founders: null while the server names nobody (switch off, or before the migration): the page as before.
+    const founderPage = fixture ? fixture.founderPage ?? null : founderRead;
+    const founders = read.available ? read.founders : ARK_NO_FOUNDERS;
     const person = words.person;
     const isSelf = fixture ? fixture.isSelf : viewer.isOwner;
-    const view = read.available ? arkPersonView(read.snapshot.animals, {isSelf, username: profile.username}) : null;
+    const view = read.available
+        ? arkPersonView(read.snapshot.animals, {isSelf, username: profile.username, founderHandle: (animal) => founders.animals[animal.id]?.brought_by?.handle ?? null})
+        : null;
+    // Only a named founder's page lists stories: an anonymous Voyager's are never tied to a profile.
+    const stories = founderPage?.founder ? arkFounderStories(founderPage) : null;
     const number = (value: number) => new Intl.NumberFormat(params.locale).format(value);
     const count = (value: number, one: string, other: string) => fillArkWords(value === 1 ? one : other, {count: number(value)});
     const dateFormat = new Intl.DateTimeFormat(params.locale, {day: "numeric", month: "short", year: "numeric"});
@@ -115,11 +153,19 @@ export default async function PersonArkPage({params, searchParams}: Props) {
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{companion.ark.score}</p>
                     <p className="mt-1 flex items-baseline gap-2">
                         <span className="font-display text-[44px] font-black leading-none tabular-nums text-primary-400">{number(summary.score.value)}</span>
-                        <span className="text-sm font-semibold text-white/40">{fillArkWords(person.outOf, {max: summary.score.outOf})}</span>
+                        {/* v3 has no top: no "of 100" and no bar; an older server's 0–100 keeps both. */}
+                        {summary.score.outOf ? <span className="text-sm font-semibold text-white/40">{fillArkWords(person.outOf, {max: summary.score.outOf})}</span> : null}
+                        {summary.score.world && summary.weekChange ? (
+                            <span className="ml-auto text-[12px] font-bold tabular-nums text-primary-300" data-testid="person-ark-score-week">
+                                {fillArkWords(companion.ark.scoreWeek, {delta: arkSignedChange(summary.weekChange)})}
+                            </span>
+                        ) : null}
                     </p>
-                    <span className="mt-3 block h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
-                        <span className="block h-full rounded-full bg-primary-400" style={{width: `${arkScoreShare(summary.score)}%`}} />
-                    </span>
+                    {arkScoreShare(summary.score) !== null ? (
+                        <span className="mt-3 block h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
+                            <span className="block h-full rounded-full bg-primary-400" style={{width: `${arkScoreShare(summary.score)}%`}} />
+                        </span>
+                    ) : null}
                     {summary.score.world ? <p className="mt-2 text-[12px] leading-4 text-white/50">{isSelf ? person.scoreAboutSelf : person.scoreAbout}</p> : null}
                 </section>
             ) : null}
@@ -175,6 +221,40 @@ export default async function PersonArkPage({params, searchParams}: Props) {
                     </ul>
                 </section>
             )}
+
+            {stories ? (
+                <section className="flex flex-col gap-3" aria-labelledby="person-ark-stories" data-testid="person-ark-stories">
+                    <h2 id="person-ark-stories" className="text-[15px] font-bold text-white">{words.founders.founder.storiesTitle}</h2>
+                    {stories.length === 0 ? (
+                        <p className="text-[13px] leading-5 text-white/60" data-testid="person-ark-no-stories">{words.founders.founder.noStories}</p>
+                    ) : (
+                        <ul className="flex flex-col border-t border-white/[0.06]">
+                            {stories.map((animal) => (
+                                <li key={animal.id} className="flex items-start gap-3 border-b border-white/[0.06] py-3.5" data-testid="person-ark-story">
+                                    <span className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-full bg-[#f6f1e7]">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={getSpeciesArtworkUrl(animal.model_slug ?? "")} alt="" width={44} height={44} className="h-[82%] w-[82%] object-contain" />
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="flex flex-wrap items-baseline gap-x-2 text-[15px] font-semibold text-white">
+                                            {animal.name}
+                                            {animal.arrived_at ? <span className="text-[12px] font-normal text-white/45">{fillArkWords(person.since, {date: dateFormat.format(new Date(animal.arrived_at))})}</span> : null}
+                                        </p>
+                                        <p className="mt-1 text-[14px] leading-5 text-white/85">{animal.story.step}</p>
+                                        {animal.story.problem ? <p className="mt-1 text-[13px] italic leading-5 text-white/55">{`\u201C${animal.story.problem}\u201D`}</p> : null}
+                                    </div>
+                                    <Link
+                                        href={`/ark?focus=${encodeURIComponent(animal.species_profile_id || animal.model_slug || "")}`}
+                                        className="shrink-0 rounded-full border border-white/14 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200"
+                                    >
+                                        {person.see}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+            ) : null}
 
             {read.available ? (
                 <footer className="flex flex-col gap-3 border-t border-white/10 pt-5">

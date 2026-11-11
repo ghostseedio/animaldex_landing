@@ -39,7 +39,7 @@ function Figure({title, value, delta}: {title: string; value: number; delta: num
  * change and Powers this week, in place of captures.
  */
 function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<ProfileStatsWeek["ark"]>; words: CompanionWords["ark"]}) {
-    // Ark 3.3: the world score's week (its locked contributions); the old sum's only from an older server.
+    // Captures + thrive: this week's Ark Score points (`ark_points_week`, never below 0); v2's world change, or the old sum's, only from an older server.
     const change = ark.worldChange ?? ark.arkScoreChange;
     return (
         <section className="space-y-4 border-b border-white/[0.06] bg-[#12351C]/40 p-4" data-testid="profile-week-ark">
@@ -50,8 +50,9 @@ function ArkWeek({week, ark, words}: {week: ProfileStatsWeek; ark: NonNullable<P
             <div className="flex items-start gap-3.5">
                 <Figure title={words.weekSteps} value={ark.steps} delta={ark.previousSteps === null ? null : ark.steps - ark.previousSteps} />
                 <span className="h-11 w-px bg-white/10" aria-hidden="true" />
-                <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-medium uppercase text-white/40">{words.weekArkChange}</p>
+                {/* How it is earned, on hover and to a screen reader: the number alone says nothing. */}
+                <div className="min-w-0 flex-1" title={words.scoreHint} data-testid="profile-week-ark-score">
+                    <p className="text-[11px] font-medium uppercase text-white/40">{words.weekArkChange}<span className="sr-only">. {words.scoreHint}</span></p>
                     <p className="mt-1 text-[28px] font-extrabold leading-none tabular-nums" style={{color: change < 0 ? "#FFC24B" : NEON}}>
                         {change > 0 ? `+${change}` : change < 0 ? `\u2212${Math.abs(change)}` : "0"}
                     </p>
