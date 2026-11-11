@@ -37,7 +37,7 @@
  */
 
 import {canEat, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
-import {clampLook, headLimits, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
+import {clampLook, headLimits as headLimitsOf, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
 import {animalPersonality, unit, type ArkPersonality} from "@/lib/ark-clock";
 import {alarmLevel} from "@/lib/ark-sound";
 
@@ -164,6 +164,18 @@ export type ReactiveOut = {
     /** What it is looking at: an animal's id, "camera", "sound", "spot", or null (scanning). */
     looking: string | null;
 };
+
+/** Head limits per plan and species, worked out once (they never change). */
+const LIMITS = new Map<string, HeadLimits>();
+function headLimits(plan: string, slug: string): HeadLimits {
+    const key = `${plan}|${slug}`;
+    let hit = LIMITS.get(key);
+    if (!hit) {
+        hit = headLimitsOf(plan, slug);
+        LIMITS.set(key, hit);
+    }
+    return hit;
+}
 
 const ZERO_OUT: ReactiveOut = Object.freeze({dx: 0, dz: 0, bodyYaw: 0, headYaw: 0, headPitch: 0, headWeight: 0, crouch: 0, action: "off", called: false, alarmed: 0, looking: null}) as ReactiveOut;
 
@@ -384,7 +396,7 @@ export class ReactiveLayer {
     /** Who could eat whom, per species pair (the food links don't change). */
     private eatsCache = new Map<string, Map<string, boolean>>();
     /** Lines of sight per pair, kept half a second (the terrain doesn't move; an animal walks a step). */
-    private sightCache = new Map<string, {t: number; v: number}>();
+    private sightCache = new Map<string, {t: number; v: number; ttl: number}>();
     private around: (x: number, z: number, r: number) => ReactiveInput[] = () => [];
     budget: ReactiveBudget;
     private envelope: EnvelopeFn;
@@ -433,11 +445,18 @@ export class ReactiveLayer {
         const cell = 8;
         const key = (cx: number, cz: number) => (cx + 4096) * 8192 + (cz + 4096);
         const grid = new Map<number, ReactiveInput[]>();
+        const cells: Array<{cx: number; cz: number; list: ReactiveInput[]}> = [];
         for (const i of inputs) {
-            const k = key(Math.floor(i.shared.x / cell), Math.floor(i.shared.z / cell));
+            const cx = Math.floor(i.shared.x / cell);
+            const cz = Math.floor(i.shared.z / cell);
+            const k = key(cx, cz);
             const list = grid.get(k);
             if (list) list.push(i);
-            else grid.set(k, [i]);
+            else {
+                const fresh = [i];
+                grid.set(k, fresh);
+                cells.push({cx, cz, list: fresh});
+            }
         }
         const around = (x: number, z: number, r: number): ReactiveInput[] => {
             const found: ReactiveInput[] = [];
@@ -445,15 +464,22 @@ export class ReactiveLayer {
             const cx = Math.floor(x / cell);
             const cz = Math.floor(z / cell);
             const r2 = r * r;
+            const take = (list: ReactiveInput[]) => {
+                for (const i of list) {
+                    const dx = i.shared.x - x;
+                    const dz = i.shared.z - z;
+                    if (dx * dx + dz * dz <= r2) found.push(i);
+                }
+            };
+            // A wide look (a sentinel, a bird on the sky): walk the occupied cells, not every empty one in the square.
+            if ((2 * span + 1) * (2 * span + 1) > cells.length) {
+                for (const c of cells) if (Math.abs(c.cx - cx) <= span && Math.abs(c.cz - cz) <= span) take(c.list);
+                return found;
+            }
             for (let a = -span; a <= span; a++) {
                 for (let b = -span; b <= span; b++) {
                     const list = grid.get(key(cx + a, cz + b));
-                    if (!list) continue;
-                    for (const i of list) {
-                        const dx = i.shared.x - x;
-                        const dz = i.shared.z - z;
-                        if (dx * dx + dz * dz <= r2) found.push(i);
-                    }
+                    if (list) take(list);
                 }
             }
             return found;
@@ -554,9 +580,10 @@ export class ReactiveLayer {
                 const line = world.sight
                     ? (eye: Vec3, target: Vec3) => {
                           const hit = this.sightCache.get(pair);
-                          if (hit && world.now - hit.t < 0.5) return hit.v;
+                          if (hit && world.now - hit.t < hit.ttl) return hit.v;
                           const v = world.sight!(eye, target);
-                          this.sightCache.set(pair, {t: world.now, v});
+                          // Each pair keeps its line its own while (0.5–1 s), so they don't all fall due on one frame.
+                          this.sightCache.set(pair, {t: world.now, v, ttl: hit?.ttl ?? 0.5 + 0.5 * unit(pair, "sight-ttl")});
                           return v;
                       }
                     : undefined;
@@ -593,8 +620,9 @@ export class ReactiveLayer {
             if (agent.memory.predators.length > 6) agent.memory.predators.shift();
         }
         const remember = 25 + 90 * p.learning;
-        agent.memory.predators = agent.memory.predators.filter((m) => world.now - m.t < remember * Math.max(m.strength, 0.5));
-        agent.memory.disturbances = agent.memory.disturbances.filter((d) => world.now - d.t < remember);
+        // (Filtered only when something has expired: no new arrays every frame.)
+        if (agent.memory.predators.some((m) => world.now - m.t >= remember * Math.max(m.strength, 0.5))) agent.memory.predators = agent.memory.predators.filter((m) => world.now - m.t < remember * Math.max(m.strength, 0.5));
+        if (agent.memory.disturbances.some((d) => world.now - d.t >= remember)) agent.memory.disturbances = agent.memory.disturbances.filter((d) => world.now - d.t < remember);
 
         // Alarms heard: from its own kind and any group animal (eavesdropping), with a delay that grows with distance.
         for (const call of this.alarms) {
