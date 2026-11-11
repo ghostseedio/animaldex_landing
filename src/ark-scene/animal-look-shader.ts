@@ -65,6 +65,7 @@ varying float vArkScale;
 attribute vec2 arkShellLayer;
 uniform float arkShellLength;
 varying float vArkShell;
+varying float vArkShellHere;
 #endif
 `;
 
@@ -99,7 +100,14 @@ export const LOOK_VERTEX = `
 export const SHELL_VERTEX = `
 #ifdef ARK_SHELL
 vArkShell = arkShellLayer.x;
-transformed += normalize(objectNormal) * arkShellLength * arkShellLayer.x * arkShellLayer.y * (1.0 - 0.7 * arkCoat.x);
+{
+    // The coat's own length here: none on the front of the head (a muzzle and nose are short-haired or bare: a shell
+    // there stood off it as a grey halo) or on the hooves and feet, full from behind the eyes and up the legs.
+    float fromFront = clamp((motionStill - position.z) / max(motionStill - motionRear, 0.001), 0.0, 1.0);
+    float up = clamp((position.y - motionBottom) / max(motionTop - motionBottom, 0.001), 0.0, 1.0);
+    vArkShellHere = smoothstep(0.05, 0.16, fromFront) * smoothstep(0.03, 0.1, up);
+}
+transformed += normalize(objectNormal) * arkShellLength * arkShellLayer.x * arkShellLayer.y * vArkShellHere * (1.0 - 0.7 * arkCoat.x);
 #endif
 `;
 
@@ -121,6 +129,7 @@ varying vec3 vArkEyeR;
 varying float vArkScale;
 #ifdef ARK_SHELL
 varying float vArkShell;
+varying float vArkShellHere;
 #endif
 float arkLookHash(vec3 p) {
     p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -216,7 +225,8 @@ float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
     // Where the coat faces the camera the shells would only speckle it (the relief draws that fur): they thin away
     // there and stand full toward the outline, where a coat's softness shows.
     float arkEdge = smoothstep(0.2, 0.7, 1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))));
-    if (d > 0.62 * (1.0 - vArkShell) * keep * arkEdge || arkEyeAmount > 0.01) discard;
+    // Where the coat has no length (the muzzle, the hooves) the layer would lie on the skin: no strands there at all.
+    if (d > 0.62 * (1.0 - vArkShell) * keep * arkEdge * step(0.02, vArkShellHere) || arkEyeAmount > 0.01) discard;
     // Deeper in, less light reaches: the roots a little darker than the tips.
     diffuseColor.rgb *= mix(0.8, 1.05, vArkShell);
 }
