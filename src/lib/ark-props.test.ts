@@ -109,9 +109,15 @@ test("props build: the areas and every gated home build, the same for every view
     const homes = buildHomes(presence, (id) => places.get(id) ?? null, PROPS_TIERS.high);
     for (const mark of ["ants", "beesHollow", "hiveBox", "turtleNest", "beaverLodge", "slimeWall", "warren", "web"]) assert.ok(homes.marks[mark], mark);
     assert.ok(homes.nests.length >= 5);
-    // The mallard's nest is under the mallard that sits it.
-    const mallard = homes.nests.find((nest) => nest.form === "down_bowl" && nest.sitter && places.get(nest.sitter)?.x === nest.x);
-    assert.ok(mallard, "a ground nest under its sitter");
+    // The mallard's nest: under the mallard when it stands on dry land; when the map has it swimming, on the nearest
+    // dry bank (never in the water), a few strides from it.
+    const mallard = homes.nests.find((nest) => nest.form === "down_bowl" && nest.sitter);
+    assert.ok(mallard, "the mallard has its nest");
+    const sitter = places.get(mallard.sitter!)!;
+    const onLand = !sitter.water && !sitter.micro && !sitter.canopy && surfaceAt(sitter.x, sitter.z).waterDepth === 0;
+    if (onLand) assert.ok(sitter.x === mallard.x && sitter.z === mallard.z, "a ground nest under its sitter");
+    else assert.ok(Math.hypot(sitter.x - mallard.x, sitter.z - mallard.z) < 30, "a ground nest on the bank near its swimming sitter");
+    assert.equal(surfaceAt(mallard.x, mallard.z).waterDepth, 0, "on dry ground");
     const again = buildHomes(presence, (id) => places.get(id) ?? null, PROPS_TIERS.high);
     assert.deepEqual(again.nests, homes.nests);
     const webs = buildWebs(homes.webs);
