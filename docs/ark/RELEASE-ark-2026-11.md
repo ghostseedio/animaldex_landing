@@ -23,7 +23,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Map | `ark-map` | fd384d86 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 16a098d1 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
-| Behaviour recipes | `ark-behaviour-recipes` | f1c88d05 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
+| Behaviour recipes | `ark-behaviour-recipes` | c6299edf | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
@@ -147,7 +147,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   aboard, plus every capture since 2026-11-11 that qualifies.
 - **Post-deploy check** (read only), once the backfill is verified and `founder_names` is on:
   ```
-  curl -s https://<site>/api/ark/voyage | jq '{counts: .snapshot.counts, named: ([.snapshot.animals[] | select(.brought_by.founder != null)] | length)}'
+  curl -s https://animaldex.app/api/ark/voyage | jq '{counts: .snapshot.counts, named: ([.snapshot.animals[] | select(.brought_by.founder != null)] | length)}'
   ```
   or `select voyage_public_v2() -> 'counts';` through the read-only query path. Pass: animals ≥ 3,137 and within the
   captures since 2026-11-11 of it, species ≥ 951, founders ≥ 645, and named bringers on most animals (none means the
@@ -167,9 +167,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   profile throttles the CPU, not the GPU.)
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` 87b551a9 (2,240/2,242), both the recipes lane's red fox, fix coming:**
-  - "no spinning": the red fox's pounce turns 1.06 full turns in 20 s.
-  - "the garden pond": a red fox comes within 1.23 m of the pond's middle while foraging (walk, forage). Behaviour blocks the pond for walks; the recipes' forage episode still crosses it.
+- **Tests on `ark-release` 2856dec7: 2,245/2,245, none red** (behaviour 16a098d1, map fd384d86 and recipes c6299edf fixed the polar bear, the orca, the centipede and the red fox).
 - **Default view** (corrected check, after behaviour 16a098d1, two runs): backwards 0.9–1.0%, ground turns 0 a minute (median). **Walk pace ratio median 0.42** (it was 1.22–1.49 in every run before): walkers grazing, grooming, resting and foraging move at about 0.4× their walk clip's own ground speed for 15–20 s at a time (zebras, goats, camels, a cheetah, an elephant, a buffalo), so the clip plays in slow motion. Behaviour lane. Circling: an African forest buffalo at 16.5 a minute (groom), an elephant at 5.7 (graze), zebras at 5–6.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
