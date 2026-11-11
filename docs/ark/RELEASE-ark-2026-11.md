@@ -44,7 +44,7 @@ Not yet in the release: `ark-scale-test`, newer rig-publish. The behaviour audit
 | Branch | Head | What |
 |---|---|---|
 | `ark-founders-server` | 041af963 | Migration `20261114100000_voyage_founders`, function `voyage-founder-story` |
-| `ark-captures-thrive` | a002fd2a | Captures bring animals aboard, steps make them thrive: module, `voyage-world` routing, migrations `20261115100000`–`160000` (owner-approved design, D1–D12) |
+| `ark-captures-thrive` | **0ab8f4fb** (final) | Captures bring animals aboard, steps make them thrive: module, `voyage-world` routing, migrations `20261115100000`–`160000` (owner-approved design, D1–D12), and the Part A launch ecology (§7d) |
 | `ark-aware-chat` | 55eb1114 | **Held** (owner decisions open): migration `20261114130000`, chat changes behind `ark_kin_activity` |
 | `ark-rigging` | dc7d9182 | Rig v5 tooling; the v2 set is produced from it (§5) |
 | `ark-closeup-textures` | a501b005 | Close-up skin tooling (the 678 MiB set is built locally) |
@@ -179,9 +179,9 @@ unchanged. Rollback: `recache_ark.py --rollback` (the same re-upload with the ol
    too when we next deploy"): the captures backfill (needs this web build), `voyage_backfill_captures` run to completion,
    then `voyage_backfill_verify_v1`; then `founder_names` on; then `thrive` on, then the capture triggers. Production then
    shows what the owner sees locally with `/ark?snapshot=/ark-local/real.json` (§7a).
-4a. Server, the launch ecology (§7d, ecology's checklist): `voyage-world` from `ark-captures-thrive` (101fba1d or its final
-    head); the launch grace and ramp and `launch_ecology` set; the diet-audit migration (§3 row 11); then `tick_enabled`
-    on, and `voyages.clock_started_ark_day` checked.
+4a. Server, the launch ecology (§7d, ecology's checklist): `voyage-world` from `ark-captures-thrive` **0ab8f4fb**; the
+    launch grace, ramp and `launch_ecology` checked (seeded by `20261115130000`); the diet-audit migration (§3 row 11);
+    then `tick_enabled` on, and `voyages.clock_started_ark_day` checked.
 5. The post-deploy check (§7a).
 6. Apps: merge and submit.
 7. Publish the privacy and terms change (`docs/ark/founders-privacy.md`), with `founder_names` on.
@@ -241,7 +241,9 @@ unchanged. Rollback: `recache_ark.py --rollback` (the same re-upload with the ol
   replaces "parents protect young"); keep the floor of 3. The plan: `~/animaldex-ark-handover-2026-11-11/ark/queued/encounter-hunting-plan.md`.
 
 ### 7d. Launch ecology, Part A (owner approved, 2026-11-11 about 22:45 WIB)
-AnimalDex `ark-captures-thrive` 101fba1d (being finalised; deploy its final head).
+AnimalDex `ark-captures-thrive` **0ab8f4fb** (final). Its migration `20261115130000` seeds the approved `launch_ecology`, grace
+and ramp values, and the simulation ran with exactly that configuration. It also fixes a `voyage-world` validator bug: the
+old cap of 365 would have silently dropped the decided cold-blooded base of 448.
 
 **The rules.**
 - A 14-day grace that spares arrived animals and Ark-born young, then a 7-day fade-in.
@@ -255,9 +257,9 @@ AnimalDex `ark-captures-thrive` 101fba1d (being finalised; deploy its final head
 and 15.3% at 3×.
 
 **Deploy steps (ecology's checklist).**
-1. Deploy `voyage-world` from that branch.
-2. Before `tick_enabled`: set `launch_grace_real_days` = 14, `launch_ramp_real_days` = 7 and `launch_ecology` (the
-   JSON in the branch's §9.10).
+1. Deploy `voyage-world` from 0ab8f4fb.
+2. Before `tick_enabled`: check `launch_grace_real_days` = 14, `launch_ramp_real_days` = 7 and `launch_ecology` (the
+   branch's §9.10 JSON), as `20261115130000` seeds them.
 3. Apply the diet-audit migration `20261116100000` with the release (§3 row 11; its rollback is rehearsed in the chain:
    TESTS_OK and ROLLBACKS_OK).
 4. Turn on `tick_enabled`, then check `voyages.clock_started_ark_day` is set.
@@ -265,8 +267,10 @@ and 15.3% at 3×.
 6. Keep `ark_digest` off until after day 21.
 7. Rollback: `launch_ecology` = `{}` and both grace values = 0.
 
-Note: in the chained rehearsal, migration 7's trigger rollback deadlocked with a live capture writer; Postgres aborted it
-harmlessly, but any real rollback of migration 7 runs at a quiet moment.
+**Rollback caveat.** A real rollback of the captures-thrive chain's migration 1 (`20261115100000_voyage_capture_source`) or
+7 (`20261115160000_voyage_capture_triggers`) takes exclusive locks on `captures` and `analysis_results`: run it as its
+own short step at a quiet time. In the chained rehearsal both deadlocked with live writes; Postgres aborted them
+harmlessly.
 
 ## 8. Known issues (at m5)
 - **Red tests on `ark-release` f51368ee (2,247/2,249), both behaviour's (both fail with the recipes off too):**
@@ -286,6 +290,15 @@ harmlessly, but any real rollback of migration 7 runs at a quiet moment.
 ## 9. Checks (CI)
 - `ark-map-validator.yml`: the spawn validator and the placement tests.
 - `ark-visual.yml`: golden shots against baselines, then the hooks in `tests/ark-visual/hooks.json`.
+  - **Baselines reset** (runtime lane, 4c450d2d, merged with runtime round 6 in dcadc6ab): the old baselines dated from
+    bd63e552 and were red on release itself (graphics batches 4–6, props, map and look had changed every shot), so they
+    were re-accepted at the release's picture then. The worst-tile limit is looser (90%) on the five shots where an animal
+    that loops on its own moves between renders of the same code (one tile per shot, the whole picture under 1.1%).
+  - **On dcadc6ab: 17 of 19 pass.** `desktop-house_fields-day` (changed 1.97% over 1.2%, mean 2.62 over 2.5) and
+    `desktop-house_fields-dusk` (a 60.6% tile over 35%) differ. Looked at, not accepted: the house, fields, light and
+    trees are the same; what moved is a dog by the path, another animal at the left, and the lawn's dig marks, i.e.
+    the behaviour (6ad9b3e8) and recipes (5adf8c29) merged after the reset. Re-accept those two once behaviour
+    55e98019 is in (it moves animals again).
 - `ark-behaviour-audit.yml`: the behaviour audit's key checks (problems 1–7) at today's merged values, the reactive encounter scenario and the map validator; thresholds in `tests/ark-audit/thresholds.json`.
 
 ## 10. Owner questions still open (from the lanes)
