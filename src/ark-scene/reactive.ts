@@ -244,6 +244,34 @@ export function threatScale(me: ReactiveInput, threat: ReactiveInput | null | un
     return size * (coming ? 1.3 : 1);
 }
 
+/**
+ * How much of its reactive offset an animal may take (0–1) without leaving its element. A land animal is never pushed
+ * into the water; a water animal (one swimming or walking under the surface, or floating on it) is never pushed onto a
+ * shore, nor over a floor that rises above its body (out of its depth band: `schedule-water.ts` on the release has the
+ * band; the band's base is passed in as `base`). The offset halves up to three times until the end point is right, else
+ * none. Pure: `isWater` and `ground` are the scene's (the sampler's water test, the terrain's height, below 0 is water).
+ */
+export function offsetShare(
+    at: {x: number; z: number; base: number},
+    dx: number,
+    dz: number,
+    element: "land" | "water" | "free",
+    isWater: (x: number, z: number) => boolean,
+    ground: (x: number, z: number) => number
+): number {
+    if (element === "free" || (!dx && !dz)) return 1;
+    const fits = (k: number) => {
+        const x = at.x + dx * k;
+        const z = at.z + dz * k;
+        if (element === "land") return !isWater(x, z);
+        // In the water, and the floor there still under its lowest point (a hand's breadth of play for a floor walker).
+        return isWater(x, z) && ground(x, z) < 0 && ground(x, z) <= at.base + 0.05;
+    };
+    let k = 1;
+    for (let i = 0; i < 3 && !fits(k); i++) k *= 0.5;
+    return fits(k) ? k : 0;
+}
+
 /** How close a stalking predator ever gets to its prey (m): never close enough to catch it. */
 export function minGap(predator: ReactiveInput, prey: ReactiveInput): number {
     return Math.max(1.6 * (predator.length + prey.length), prey.intel.flight * 0.6, 1.2);

@@ -3,7 +3,7 @@ import test from "node:test";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
 import {HEAD_LIMITS, clampLook, headLimits, lookAngles, stepHead} from "@/ark-scene/head-look";
-import {ReactiveLayer, fleeSpeed, minGap, perceive, reactiveEnvelope, threatScale, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
+import {ReactiveLayer, fleeSpeed, minGap, offsetShare, perceive, reactiveEnvelope, threatScale, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
 
 // MARK: Helpers
 
@@ -444,6 +444,32 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
     assert.ok(sleepers.length === 6);
     // Something did happen to the awake ones.
     assert.ok(frames.some((f) => Array.from(f.out.values()).some((o) => o.action === "flee")));
+});
+
+test("an offset never takes a land animal into the water, nor a water animal onto a shore or out of its depth", () => {
+    // A straight shore at x = 0: water for x < 0, the floor shelving down 0.5 m a metre; land rising the other way.
+    const isWater = (x: number) => x < 0;
+    const ground = (x: number) => x * 0.5;
+    const end = (at: {x: number; z: number; base: number}, dx: number, k: number) => ({x: at.x + dx * k, floor: ground(at.x + dx * k)});
+    // A fish 3 m out, swimming 1 m down, startled toward the shore: it stops where the floor is still under it.
+    const fish = {x: -3, z: 0, base: -1};
+    const k = offsetShare(fish, 5, 0, "water", isWater, ground);
+    assert.ok(k < 1, "the offset is cut");
+    const at = end(fish, 5, k);
+    assert.ok(isWater(at.x) && at.floor <= fish.base + 0.05, `in the water, the floor under its body (${at.x}, floor ${at.floor})`);
+    assert.equal(offsetShare(fish, -3, 0, "water", isWater, ground), 1, "away from the shore it takes all of it");
+    // A duck floating on the surface stays on the water.
+    const duck = {x: -1, z: 0, base: 0};
+    const kd = offsetShare(duck, 3, 0, "water", isWater, ground);
+    assert.ok(isWater(end(duck, 3, kd).x), "the duck stays on the water");
+    // A deer on the bank is never pushed into the water (the rule that was there).
+    const deer = {x: 2, z: 0, base: 1};
+    const kl = offsetShare(deer, -5, 0, "land", isWater, ground);
+    assert.ok(kl < 1 && !isWater(end(deer, -5, kl).x), "the deer stays on land");
+    // In the air (or neither): free.
+    assert.equal(offsetShare(deer, -5, 0, "free", isWater, ground), 1);
+    // Right at the edge with nowhere to go: none of it.
+    assert.equal(offsetShare({x: -0.05, z: 0, base: -0.02}, 4, 0, "water", isWater, ground), 0);
 });
 
 // MARK: Variety

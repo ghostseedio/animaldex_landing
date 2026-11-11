@@ -123,7 +123,7 @@ import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState}
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {poseOnTrip, scheduleWorld, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {worldSampler} from "@/ark-scene/world-sampler";
-import {ReactiveLayer, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
+import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {ageOf, speciesCare} from "@/lib/ark-age";
@@ -1509,10 +1509,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (o.dx || o.dz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
-                // A land animal is never pushed into the water: the offset shortens until it stays on land.
-                let k = 1;
-                if (onGround) for (let i = 0; i < 3 && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k); i++) k *= 0.5;
-                if (onGround && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k)) k = 0;
+                // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
+                const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
+                // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
+                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
                 pose.x += o.dx * k;
                 pose.z += o.dz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
