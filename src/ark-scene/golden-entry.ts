@@ -13,7 +13,7 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
-import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
 import {attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
@@ -48,6 +48,9 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         reef: () => ZONE_SITES.coral_reef
     };
 }
+
+/** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
+const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
 
 type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}};
 
@@ -213,7 +216,7 @@ async function mountGolden(el: HTMLElement) {
         }
     });
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
-    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35});
+    handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: {current: Object3D | null} = {current: null};
@@ -249,6 +252,7 @@ async function mountGolden(el: HTMLElement) {
                 holder.current = null;
             }
             handle.setHours(GOLDEN_TIMES[time]);
+            handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             handle.setView(shot.view);
             // The view keeps itself over the ground for a few frames (setView, then the scene's own limits): hold it there.
             for (let i = 0; i < 20; i++) {
@@ -256,6 +260,15 @@ async function mountGolden(el: HTMLElement) {
                 if (i < 6) handle.setView(shot.view);
             }
             await settle(700, 30_000);
+            if (micro) {
+                // The scene eases its closest distance back out each frame when nothing is selected: hold the close-up.
+                const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+                for (let i = 0; i < 3; i++) {
+                    if (debug) debug.controls.minDistance = 0.3;
+                    handle.setView(shot.view);
+                    await nextFrame();
+                }
+            }
             return {anchor: shot.anchor, asked: shot.view, actual: handle.view() as ArkCameraView};
         },
         measure: async (ms = 3000): Promise<Measure> => {

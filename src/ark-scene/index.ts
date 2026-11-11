@@ -520,11 +520,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             top: "0",
             transform: "translate(-50%, -50%)",
             whiteSpace: "nowrap",
-            font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+            font: "500 10px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
             letterSpacing: arkTracking(text, "0.16em"),
             textTransform: "uppercase",
-            color: "rgba(255, 252, 244, 0.95)",
-            textShadow: "0 1px 2px rgba(30, 24, 12, 0.5), 0 0 16px rgba(30, 24, 12, 0.4)",
+            color: "rgba(255, 252, 244, 0.82)",
+            textShadow: "0 1px 2px rgba(30, 24, 12, 0.45), 0 0 10px rgba(30, 24, 12, 0.25)",
             opacity: "0",
             transition: "opacity 400ms ease",
             willChange: "transform"
@@ -559,7 +559,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const anchor = regionLabelAnchor(region);
             labelPoint.set(anchor.x, Math.max(heightAt(anchor.x, anchor.z), 0) + (region === "high_cold" ? 14 : 0), anchor.z).project(camera);
             const visible = show && labelPoint.z < 1 && Math.abs(labelPoint.x) < 1.05 && Math.abs(labelPoint.y) < 1.05;
-            label.style.opacity = visible ? "1" : "0";
+            // Less dominant (graphics pass): fade in only as the camera pulls back past the island's own size.
+            label.style.opacity = visible ? Math.min(Math.max((distance - 95) / 70, 0), 1).toFixed(2) : "0";
             if (!visible) return;
             let size = labelSizes.get(region);
             if (!size || !size.w) {
@@ -2310,7 +2311,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 left: "0",
                 top: "0",
                 whiteSpace: "nowrap",
-                font: "600 11px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
+                font: "500 10px/1 var(--font-sans, ui-sans-serif, system-ui, sans-serif)",
                 letterSpacing: "0.04em",
                 color: "rgba(255, 252, 244, 0.96)",
                 padding: "6px 9px",

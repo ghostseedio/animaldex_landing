@@ -16,7 +16,13 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"] as const;
+
+/** Shots in their own weather (everything else is calm, mean tide). */
+export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
+    storm_trees: {wind: 1, storm: 1, cloud: 0.95, wetness: 0.85},
+    waves_beach: {wind: 0.7, storm: 0, cloud: 0.35, wetness: 0}
+};
 
 /**
  * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
@@ -52,7 +58,9 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     caterpillar_leaf: "Small animal on a leaf (no caterpillar model yet: a small butterfly)",
     bee_flower: "Bee on a flower",
     limpet_tidepool: "Limpet in a tide pool",
-    gecko_wall: "Gecko on the house wall"
+    gecko_wall: "Gecko on the house wall",
+    waves_beach: "Waves running up the beach",
+    storm_trees: "Trees in a storm"
 };
 
 type XZ = {x: number; z: number};
@@ -178,6 +186,23 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
         case "gecko_wall":
             // Framed by the page itself once the animal is placed (golden-entry.ts `microShot`).
             return fallback("micro shot: framed on its attach point");
+
+        case "waves_beach": {
+            const beach = world.beach();
+            if (!beach) return fallback("no beach");
+            // Low over the wet sand at the water's edge, looking along the shore.
+            const out = outward(beach);
+            const r = Math.hypot(beach.x, beach.z);
+            const edge = {x: beach.x + (beach.x / r) * 4.5, z: beach.z + (beach.z / r) * 4.5};
+            return {place, anchor: "beach waterline", view: {target: {x: edge.x, y: 0.3, z: edge.z}, distance: 9, polar: 1.3, azimuth: out + 1.25}};
+        }
+
+        case "storm_trees": {
+            const floor = world.forestFloor();
+            if (!floor) return fallback("no forest");
+            const ground = world.groundAt(floor.x, floor.z);
+            return {place, anchor: "forest edge", view: {target: {x: floor.x, y: ground + 4, z: floor.z}, distance: 22, polar: 1.25, azimuth: outward(floor) + 0.2}};
+        }
 
         case "reef_underwater": {
             const reef = world.reef();
