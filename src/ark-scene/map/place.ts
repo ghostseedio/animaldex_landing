@@ -33,8 +33,9 @@ import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-s
 import {waterSpot, waterTagAt, type WaterClass} from "@/ark-scene/map/water";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
+import {place as scenePlace} from "@/ark-scene/sampler";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
-import {hashString, VISITOR_LANDING} from "@/ark-scene/world";
+import {hashString, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
 
 /** Where it sleeps (when that is not where it lives). */
 export type MapRoost = {
@@ -61,6 +62,8 @@ export type MapPlace = {
     attach?: AttachPoint;
     /** A water species (`water.ts`): placed by its depth band's water, never by a land tag. */
     water?: WaterClass;
+    /** A diver that hauls out (a penguin, a seal): on its shore, the cold cove's or its own coast's (`haulsOut`). */
+    shore?: "cove" | "coast";
     roost: MapRoost | null;
     /** Its cluster's key (zone and slot) and its point's level (0: on the point). */
     key: number;
@@ -185,6 +188,22 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     if (!enabled) return null;
     const key = clusterKey(zone, slot);
     const ownHash = hashString(animal.id);
+    // A penguin or a seal: standing on its shore (the cold cove's ice and rocks for the penguins and the polar seals), its home and its
+    // rest; its schedule takes it swimming and back. Held Antarctic species wait on the cove's land too, never bobbing at sea.
+    const shore = shoreOf(animal.model_slug, zone);
+    if (shore) {
+        const spot = shoreSpot(shore, zone, slot, rank, length);
+        if (spot) {
+            const sampler = mapPoints().sampler;
+            const g = sampler.ground(spot.x, spot.z);
+            const tag = SHORE_TAGS.find((t) => g.tags.includes(t)) ?? g.tags[0] ?? null;
+            const held = isHeldOnMap(animal.model_slug);
+            return {
+                x: spot.x, z: spot.z, ground: g.height, yaw: ((((ownHash >>> 4) % 1000) / 1000) - 0.5) * 1.6 + spot.toSea, water: false,
+                map: {species: held ? null : mapSpecies(animal.model_slug, zone), tag, area: tag ? TAG_AREA[tag] : null, held, sea: false, shore: shore === "cove" ? "cove" : "coast", roost: null, key, level: 0}
+            };
+        }
+    }
     if (isHeldOnMap(animal.model_slug)) {
         const depth = speciesDepth(animal.model_slug, zone);
         if (depth) {
@@ -497,7 +516,11 @@ export function scheduleRoost(place: {perch?: MapPerch; map?: MapPlace}, zone: A
         return {x: roost.x, y: roost.y, z: roost.z, nx: 0, ny: 1, nz: 0, point: `map:${roost.tag}`};
     }
     const perch = place.perch;
-    return perch ? {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`} : null;
+    if (perch) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
+    // A hauled-out diver rests where it stands on its shore (a penguin colony on the cove's ice).
+    const at = place as {x?: number; z?: number; ground?: number};
+    if (place.map?.shore && typeof at.x === "number" && typeof at.z === "number") return {x: at.x, y: at.ground ?? 0, z: at.z, nx: 0, ny: 1, nz: 0, point: `map:shore`};
+    return null;
 }
 
 /**
@@ -525,6 +548,108 @@ function spreadMembers(list: AttachPoint[], leader: AttachPoint, rank: number, l
     if (!tiny && spaced.length > rank) return {point: spaced[rank], memberRank: 0};
     // Too few for the whole cluster: they share them, round in turn.
     return {point: spaced[rank % spaced.length], memberRank: Math.floor(rank / spaced.length)};
+}
+
+/** The owner's decision 2 (map-plan.md §4): the Antarctic species held for a future southern island; they wait on the cold cove. */
+const ANTARCTIC = new Set(["emperor-penguin", "adelie-penguin", "king-penguin", "gentoo-penguin", "macaroni-penguin", "southern-rockhopper-penguin", "weddell-seal", "leopard-seal", "snow-petrel", "antarctic-petrel", "snowy-sheathbill"]);
+const PENGUIN = /(^|-)penguin($|-)/;
+const PINNIPED = /(^|-)seal($|-)|sea-lion|fur-seal|walrus/;
+const POLAR_TAGS: readonly MapTag[] = ["sea_ice", "tundra", "snow_ice"];
+const SHORE_TAGS: readonly MapTag[] = ["snow_ice", "tundra", "rocky_shore", "sandy_beach", "sea_cliffs", "rocks_boulders", "mudflat"];
+
+/**
+ * A diver that hauls out stands on a shore, never floats on the sea (the
+ * owner, 2026-11-11: "penguins floating in the ocean"): every penguin and the
+ * polar seals and walrus on the cold cove (its ice runs down to the sea, the
+ * owner's choice; its rocky shore beside it), the other seals and sea lions on
+ * their own coast's rocks and beaches. A held Antarctic species (decision 2,
+ * not a water species) waits on the cove. Null for everyone else.
+ */
+export function shoreOf(slug: string, zone: ArkZone): "cove" | ArkZone | null {
+    if (ANTARCTIC.has(slug) && !(speciesDepth(slug, zone) && !PENGUIN.test(slug) && !PINNIPED.test(slug))) return "cove";
+    if (PENGUIN.test(slug)) return "cove";
+    if (!PINNIPED.test(slug) || bodyOf(slug) === "f") return null;
+    const species = mapSpecies(slug, zone);
+    if (zone === "polar" || (species && POLAR_TAGS.some((tag) => species.allowed.has(tag)))) return "cove";
+    return ZONE_SITES[zone]?.kind === "sea" ? "seashore" : zone;
+}
+
+/** A shore's spot for a cluster (its zone and slot) and its rank: one spot each, close together, standing. */
+function shoreSpot(shore: "cove" | ArkZone, zone: ArkZone, slot: number, rank: number, length: number): {x: number; z: number; toSea: number} | null {
+    const all = mapPoints();
+    const centre = shore === "cove" ? coldCove() : ZONE_SITES[shore] ?? ZONE_SITES.seashore;
+    let list = all.shoreList(shore, centre);
+    // A zone with no shore of its own near the sea: the beach's.
+    if (!list.length && shore !== "cove") list = all.shoreList("seashore", ZONE_SITES.seashore);
+    if (!list.length) return null;
+    const sampler = all.sampler;
+    const n = list.length;
+    // Every zone's clusters share a shore's list: its key is unique over zones and slots.
+    const key = clusterKey(zone, slot);
+    const lap = Math.floor(key / n);
+    const cell = list[key % n];
+    const [ox, oz] = lap < 4 ? ([[0, 0], [1.25, 0], [0, 1.25], [1.25, 1.25]] as const)[lap] : [((0.5 + lap * 0.7548776662) % 1) * 2.5 - 1.25, ((0.5 + lap * 0.5698402910) % 1) * 2.5 - 1.25];
+    const dry = (x: number, z: number) => sampler.ground(x, z).water === null && !sampler.blocked(x, z, Math.min(Math.max(length * 0.2, 0.1), 0.5)) && !sampler.reserved?.(x, z);
+    let cx = cell.x + ox;
+    let cz = cell.z + oz;
+    if (!dry(cx, cz)) {
+        // Its lap's spot is wet or blocked: the nearest dry spot round it (never back onto the first lap's).
+        let found = false;
+        for (let k = 1; k < 30 && !found; k++) {
+            const r = 0.25 * Math.sqrt(k);
+            const tx = cx + Math.cos(k * GOLDEN) * r;
+            const tz = cz + Math.sin(k * GOLDEN) * r;
+            if (dry(tx, tz) && (lap === 0 || Math.hypot(tx - cell.x, tz - cell.z) > 0.95)) {
+                cx = tx;
+                cz = tz;
+                found = true;
+            }
+        }
+        if (!found) {
+            cx = cell.x;
+            cz = cell.z;
+        }
+    }
+    let x = cx;
+    let z = cz;
+    if (rank > 0) {
+        // A colony stands close: its members on a hexagonal lattice a body apart (and never on its leader's spot), on dry ground.
+        const gap = Math.max(0.95, length * 0.9);
+        const turn = ((hashString(`${zone}#${slot}#shore`) >>> 12) % 360) / 180 * Math.PI;
+        let seen = 0;
+        for (const [i, j] of HEX_SPIRAL) {
+            const lx = gap * (i + j / 2);
+            const lz = gap * (j * Math.sqrt(3) / 2);
+            const tx = cx + lx * Math.cos(turn) - lz * Math.sin(turn);
+            const tz = cz + lx * Math.sin(turn) + lz * Math.cos(turn);
+            if (!dry(tx, tz)) continue;
+            if (++seen === rank) {
+                x = tx;
+                z = tz;
+                break;
+            }
+        }
+    }
+    // Facing the sea: towards the nearest water of its shore's list order (the list is nearest the water first).
+    let toSea = 0;
+    for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2;
+        if (sampler.ground(x + Math.sin(a) * 6, z + Math.cos(a) * 6).water === "sea") {
+            toSea = a;
+            break;
+        }
+    }
+    return {x, z, toSea};
+}
+
+let cove: {x: number; z: number} | null = null;
+/** The cold cove's middle (the graphics lane's named place). */
+function coldCove(): {x: number; z: number} {
+    cove ??= (() => {
+        const p = scenePlace("cold_cove");
+        return {x: p.x, z: p.z};
+    })();
+    return cove;
 }
 
 /** How far it goes to sleep, by how it moves (m). */
