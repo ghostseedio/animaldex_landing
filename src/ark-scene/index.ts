@@ -84,8 +84,8 @@ import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Sha
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {rigBaseFrom} from "@/ark-scene/rig-clips";
-import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {rigBasesFrom} from "@/ark-scene/rig-clips";
+import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -160,6 +160,11 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
 const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
 const RIG_WITHIN = 20;
+/**
+ * A bird in the air whose rig flies is drawn near (and rigged) this much further off: a flapping flight reads from
+ * across the island, and the far level has no motion at all. Nothing changes for a set without flight (v1).
+ */
+const FLIGHT_RIG_EXTRA = 20;
 /** Seconds a rig takes to fade in or out against the procedural motion. */
 const RIG_BLEND_SECONDS = 0.5;
 /** Rigs not drawn for this long are let go (keeping this many). */
@@ -583,9 +588,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const library = new ModelLibrary(options.modelBase, 4);
     const species = new Map<string, SpeciesMeshes>();
-    // The rigs: the manifest beside the model set (or the page's own), read once; nothing while motion is reduced.
-    const rigBase = options.rigBase === undefined ? rigBaseFrom(options.modelBase) : options.rigBase;
-    const rigs = new RigLibrary(rigBase, RIG_CAPS);
+    // The rigs: the release's set beside the model set (or the page's own folder), then the v1 fallback set, each
+    // manifest read once; a species plays from the first set that lists it. Nothing while motion is reduced.
+    const rigs = new RigLibrary(rigBasesFrom(options.modelBase, options.rigBase), RIG_CAPS);
     rigs.onEvict = (slug) => {
         const meshes = species.get(slug);
         if (meshes?.rig) {
@@ -1977,6 +1982,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const rigHere = new Vector3();
     const rigLift = new Vector3();
+    /** The reactive layer's actions that have an animal watching something: it stops feeding and lifts its head to look. */
+    const WATCHING_ACTIONS: ReadonlySet<string> = new Set(["scan", "watch_camera", "investigate_camera", "back_off_camera", "sentinel", "alert", "freeze", "threat_display", "watch_prey", "startle", "look_kin", "shield_young"]);
     /**
      * An animal's rig this frame, when it has one ready and is close enough:
      * fades it in or out (never in the middle of a peek out of its burrow),
@@ -1985,9 +1992,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * hopping and swimming (so the feet stay planted whatever the pace), with
      * the path for a leap or a burrow's emerge, by time otherwise. Null: draw
      * it procedural. The clip follows the animal's one behaviour state
-     * (`behaviour-state.ts`): asleep, its idle (slowed); flying, no rig at all
-     * (flight clips are held: the shader glide); awake, what the scene is doing
-     * with it.
+     * (`behaviour-state.ts`): asleep, its idle (slowed); flying, its flight
+     * clips when its rig flies (`rigFlies`: the set's and the species'
+     * approval, rig contract 3.1): a take-off as it leaves the ground, then
+     * flap, glide, soar, hover or a bank into the turn (`flightClip`), and a
+     * landing as it comes down, after which it walks with its wings closed;
+     * a rig that does not fly fades out in the air (the procedural flight).
+     * Awake, what the scene is doing with it, and the schedule's beat where
+     * the rig has a clip for it (`beatClip`: graze, browse, scan, shake_off,
+     * into and out of the water).
      */
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
@@ -2004,10 +2017,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             state.last = null;
             return null;
         }
-        const target = entry.rigOn && !entry.state.airborne && entry.air <= 0.001 && !entry.visitor ? 1 : 0;
+        const flies = rigFlies(rig);
+        const grounded = !entry.state.airborne && entry.air <= 0.001;
+        const target = entry.rigOn && !entry.visitor && (grounded || flies) ? 1 : 0;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
+        // Its path's climb and turn (for the flight clips), eased so a frame's jitter never flips flap and glide.
+        if (state.last && dt > 0) {
+            const dx = where.x - state.last.x;
+            const dz = where.z - state.last.z;
+            const flat = Math.hypot(dx, dz);
+            const climbNow = flat > 1e-5 ? Math.atan2(where.base - state.last.y, flat) : 0;
+            let dyaw = state.yaw === null ? 0 : where.yaw - state.yaw;
+            while (dyaw > Math.PI) dyaw -= Math.PI * 2;
+            while (dyaw < -Math.PI) dyaw += Math.PI * 2;
+            const ease = Math.min(dt * 4, 1);
+            if (flat < 3) {
+                state.climb += (climbNow - state.climb) * ease;
+                state.turn += (dyaw / dt - state.turn) * ease;
+            }
+        }
+        state.yaw = where.yaw;
+        const groundSpeed = state.last && dt > 0 ? Math.hypot(where.x - state.last.x, where.z - state.last.z) / dt : 0;
         let moved = state.last ? rigHere.distanceTo(state.last) / Math.max(modelScale, 1e-6) : 0;
         // A jump (a new spot, an act's cut): no stride for it.
         if (moved > 3) moved = 0;
@@ -2023,7 +2055,64 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let rate = 1;
         const place = entry.place;
         const up = where.surface ? where.surface.ny : 1;
-        if (entry.state.asleep && !entry.act) {
+        const own = entry.sched && scheduled(entry) ? entry.sched : null;
+        // In the air: on its schedule, from the moment an air leg starts (the pose counts as aloft only a little way up,
+        // and the take-off plays from the ground); otherwise as its state's air eases in.
+        const pose = own?.pose ?? null;
+        const airLeg = Boolean(pose && pose.moving && (pose.beat === "fly" || pose.beat === "glide"));
+        const inAir = pose ? pose.aloft || airLeg : entry.air > 0.001;
+        // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
+        const rising = pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne;
+        if (flies && !state.flying && inAir && rising) {
+            // Leaving the ground: a take-off, unless it comes into view already up in the air.
+            state.flying = true;
+            if (entry.air < 0.35 && clip("takeoff")) rigSwitch(state, "takeoff", 0);
+        } else if (state.flying && (!flies || (!inAir && entry.air <= 0.001)) && state.now.name !== "land") {
+            state.flying = false;
+        }
+        const oneShot = (name: string) => state.now.name === name && state.now.phase < 1;
+        // Coming down: the landing plays as it touches down (its wings folding away), once it is low and descending on
+        // its schedule's leg, or its state's air has nearly eased out.
+        const landing = pose ? (!pose.aloft && state.climb < -0.01) || !inAir : !entry.state.airborne && entry.air < 0.2;
+        if (state.flying && landing && !oneShot("takeoff") && state.now.name !== "land" && clip("land")) rigSwitch(state, "land", 0);
+        if (state.flying && state.now.name === "land" && state.now.phase >= 1) {
+            state.flying = false;
+            state.landedAt = clockNow();
+        }
+        if (state.flying) {
+            if (oneShot("takeoff") || oneShot("land")) {
+                want = state.now.name;
+            } else {
+                const glideClip = clip("glide") ?? clip("soar");
+                want = flightClip({
+                    has: (name) => Boolean(clip(name)),
+                    current: state.now.name,
+                    climb: state.climb,
+                    turn: state.turn,
+                    speed: groundSpeed / Math.max(entry.length, 0.01),
+                    beat: own?.pose?.beat ?? null,
+                    soaring: own?.pose?.doing === "soar",
+                    clock: clockNow(),
+                    seed: entry.phase,
+                    glideShare: glideClip?.glide_share,
+                    open: rig.flightOpen
+                });
+                // No open-wing loop: the take-off's last frame held (wings spread), never the closed rest pose.
+                if (want === OPEN_WINGS_HOLD) {
+                    mode = "sync";
+                    sync = 1;
+                }
+            }
+            if (want) {
+                // The rig levels the body in flight itself: the instance keeps only its path's climb, and rolls into a
+                // turn only when no bank clip does it (soaring on its circle a little, flapping hardly).
+                const w = state.weight;
+                const banking = want === "bank_l" || want === "bank_r";
+                const into = Math.max(-1, Math.min(1, state.turn / 0.2));
+                where.pitch = where.pitch * (1 - w) + -0.6 * state.climb * w;
+                where.roll = where.roll * (1 - w) + (banking ? 0 : -0.35 * into * (want === "soar" ? 1 : 0.4)) * w;
+            }
+        } else if (entry.state.asleep && !entry.act) {
             // Asleep: its idle, slow (and the head lowered by the material's droop); never a walk.
         } else if (place.canopy && !entry.visitor) {
             const kind = place.canopy.mode;
@@ -2105,10 +2194,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 mode = "distance";
             }
         }
-        // The schedule's beat picks its own clip where the rig has one (graze, browse, scan, into and out of the water, shake off).
-        const beat = entry.sched && scheduled(entry) ? entry.sched.pose?.beat : null;
-        const beatClip = beat === "bite" || beat === "chew" ? (entry.sched!.pose!.doing === "browse" ? clip("browse") ?? clip("graze") : clip("graze")) : beat === "scan" ? clip("scan") : beat === "shake" ? clip("shake") : beat === "enter_water" ? clip("enter_water") : beat === "exit_water" ? clip("exit_water") : null;
-        if (beatClip && (!want || want === "idle")) want = beatClip.name;
+        // The schedule's beat picks its own clip where the rig has one (graze, browse, scan, shake_off, into and out of
+        // the water); a water animal in its depth band keeps the band's place (`PATH_CARRIED_CLIPS`). While the reactive
+        // layer has it watching something (the camera, a predator, its kin), it stops feeding and lifts its head: its idle,
+        // the look turning the head.
+        let beat = !state.flying && own?.pose ? beatClip(own.pose.beat, own.pose.doing, (name) => Boolean(clip(name))) : null;
+        const watching = Boolean(entry.reactive && entry.reactive.headWeight > 0.3 && WATCHING_ACTIONS.has(entry.reactive.action));
+        if (watching && (beat === "graze" || beat === "browse" || beat === "scan")) beat = null;
+        if (beat && (!want || want === "idle")) want = beat;
         if (!want && clip("idle")) want = "idle";
         if (!want) {
             // Nothing for standing still (an idle that did not pass): its moving clip held at its first frame.
@@ -2118,10 +2211,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mode = "sync";
             sync = 0;
         }
-        // Each animal's loops start at its own point (no herd stepping in time).
-        rigSwitch(state, want, mode === "sync" ? sync : entry.phase);
         const playing = rig.clips[want];
         if (!playing) return null;
+        // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
+        rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
         if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 2.5);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
@@ -2151,7 +2244,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 maxY: box.max.y,
                 animated: true,
                 rig: rig.texture,
-                neck: rig.neck,
+                lookChain: rig.look,
                 level: "near",
                 look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry)
             });
@@ -2306,7 +2399,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
+            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0))
             .sort((a, b) => a.distance - b.distance);
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
@@ -2327,7 +2420,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const rigPriority = (entry: Entry) => (entry.animal.id === selectedId || entry.animal.id === followId ? 0 : entry.animal.mine ? 1 : 2);
         const rigWanted = rigCap
             ? candidates
-                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && c.entry.air <= 0.001 && (c.distance < RIG_WITHIN || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
+                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && (c.entry.air <= 0.001 || rigs.mayFly(c.entry.animal.model_slug)) && (c.distance < RIG_WITHIN + (c.entry.air > 0.5 || c.entry.rig?.flying ? FLIGHT_RIG_EXTRA : 0) || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
                   .sort((a, b) => rigPriority(a.entry) - rigPriority(b.entry) || a.distance - b.distance)
             : [];
         const rigSpecies = new Set<string>();
@@ -2525,6 +2618,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     position.x -= rigLift.x;
                     position.z -= rigLift.z;
                 }
+                // A take-off, a landing, into or out of the water: the path (and the depth band) already makes the rise and
+                // the sink, so the clip's own body offset from the rest pose comes off, in the share each clip is drawn.
+                const fromShare = state.from ? 1 - easeInOut(Math.min(state.fade, 1)) : 0;
+                for (const [play, share] of [[state.now, 1 - fromShare], [state.from, fromShare]] as const) {
+                    const carried = play && share > 0 && PATH_CARRIED_CLIPS.has(play.name) ? rig.clips[play.name] : undefined;
+                    if (!carried || !play) continue;
+                    rootOffset(rig, carried, play.phase, rigLift, true).multiplyScalar(s * state.weight * share).applyQuaternion(rotation);
+                    position.sub(rigLift);
+                }
                 const clipNow = rig.clips[state.now.name];
                 const [a0, a1, at] = clipNow ? clipRows(clipNow, state.now.phase) : [0, 0, 0];
                 (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, a0, a1, at, clipNow ? state.weight : 0);
@@ -2543,6 +2645,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
             if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+            // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
+            if (lookAttr && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
             // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
             const sea = ARK_ENVIRONMENT.seaLevel.value;
             look.instance(mesh, index, {
