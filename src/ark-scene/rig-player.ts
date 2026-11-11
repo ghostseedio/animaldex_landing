@@ -5,8 +5,11 @@
  * own. Everyone else keeps today's near and far meshes and their procedural
  * motion (`animal-material.ts`).
  *
- * `<rigBase>/manifest.json` (`rig-clips.ts`) is read once (cached by the
- * browser) and gives each species' rig file, `<rigBase>/<slug>/<v>.rig.glb`:
+ * The rig sets (`rigBasesFrom`: v2, then v1) each have a manifest
+ * (`<rigBase>/manifest.json`, `rig-clips.ts`), read once (cached by the
+ * browser). A species plays from the first set that lists it (v2 when its
+ * manifest is up and lists it, else v1), and from the next if that file
+ * fails. Each gives the species' rig file, `<rigBase>/<slug>/<v>.rig.glb`:
  * a skinned glTF (meshopt) without its animations or skin texture (the near
  * level's texture is the same image), carrying in `extras.ark_rig` its entry
  * (state, pose, facing, the published clips and their rows) and a buffer
@@ -40,7 +43,21 @@ import {
 } from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {decodeRigEntry, decodeRigIndex, rigClip, rigPlayable, type RigClip, type RigIndex} from "@/ark-scene/rig-clips";
+import {
+    FLIGHT_CLIPS,
+    decodeRigEntry,
+    decodeRigLook,
+    decodeRigSet,
+    flightApproved,
+    rigClip,
+    rigLookLimits,
+    rigPlayable,
+    rigSetVersion,
+    type RigClip,
+    type RigEntry,
+    type RigIndex,
+    type RigSetIndex
+} from "@/ark-scene/rig-clips";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -57,9 +74,97 @@ export type RigModel = {
     data: Uint16Array;
     /** The rest mesh's middle (model units). */
     centre: Vector3;
+    /** The set it was read from (2: v2; 1: the v1 fallback), and the file's own entry format (1 when absent). */
+    set: number;
+    entryVersion: number;
+    plan: string | null;
+    /** Whether its flight clips play (the set's and the species' approval, and at least one kept). */
+    flight: boolean;
+    /** A flyer with no playable flap: in the air its wings are drawn open (an open-wing clip held, the shader flap on it). */
+    flightOpen: boolean;
+    /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
+    look: RigLookChain | null;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
 };
+
+/**
+ * A rig's look chain for the shader (contract section 5): the bones'
+ * texture indices (neck -1 on a chain rig: the head only), their pivots in
+ * the rest pose (model space), the limits in radians, and the neck's share.
+ */
+export type RigLookChain = {
+    neck: number;
+    head: number;
+    neckPivot: [number, number, number];
+    headPivot: [number, number, number];
+    yaw: number;
+    up: number;
+    down: number;
+    neckShare: number;
+};
+
+const DEG = Math.PI / 180;
+
+/**
+ * A rig's look chain: a v2 entry's `look` (its bones, pivots, limits and
+ * share), else (a v1 file) its own `neck` and `head` bones at their rest
+ * joints, within the plan's limits. Null without a head bone.
+ */
+export function rigLookChain(entry: RigEntry, slug: string, boneNames: readonly string[], restPivot: (name: string) => [number, number, number] | null): RigLookChain | null {
+    const look = decodeRigLook(entry.look);
+    if (look) {
+        const hasNeck = look.bones.length === 2 && look.bones[0] === "neck";
+        const headName = look.bones[look.bones.length - 1];
+        const head = boneNames.indexOf(headName);
+        const neck = hasNeck ? boneNames.indexOf(look.bones[0]) : -1;
+        if (head < 0 || (hasNeck && neck < 0)) return null;
+        const share = hasNeck ? Math.min(Math.max(Number(look.share.neck ?? 0.5), 0), 1) : 0;
+        return {
+            neck,
+            head,
+            neckPivot: hasNeck ? look.rest[look.bones[0]].head : [0, 0, 0],
+            headPivot: look.rest[headName].head,
+            yaw: look.limits_deg.yaw * DEG,
+            up: look.limits_deg.pitch_up * DEG,
+            down: look.limits_deg.pitch_down * DEG,
+            neckShare: share
+        };
+    }
+    if (entry.look === null && (entry.version ?? 1) >= 2) return null;
+    // A v1 file: no `look`; its neck and head bones (every legged v1 rig has them) at their rest joints.
+    const head = boneNames.indexOf("head");
+    if (head < 0) return null;
+    const headPivot = restPivot("head");
+    if (!headPivot) return null;
+    const neckAt = boneNames.indexOf("neck");
+    const neckPivot = neckAt >= 0 ? restPivot("neck") : null;
+    const neck = neckPivot ? neckAt : -1;
+    const {limits_deg, neck: neckShare} = rigLookLimits(entry.plan, slug);
+    if (limits_deg.yaw <= 0 && limits_deg.pitch_up <= 0 && limits_deg.pitch_down <= 0) return null;
+    return {neck, head, neckPivot: neckPivot ?? [0, 0, 0], headPivot, yaw: limits_deg.yaw * DEG, up: limits_deg.pitch_up * DEG, down: limits_deg.pitch_down * DEG, neckShare: neck >= 0 ? neckShare : 0};
+}
+
+/** A rig set as the library reads it: its folder, and its manifest. */
+export type RigSet = RigSetIndex & {base: string};
+
+/**
+ * Which sets a species plays from, in order: every set that lists it, the
+ * first one first (v2 before the v1 fallback). A species no set lists has
+ * no rig.
+ */
+export function rigChoices(sets: readonly (RigSet | null)[]): Map<string, RigSet[]> {
+    const out = new Map<string, RigSet[]>();
+    for (const set of sets) {
+        if (!set) continue;
+        for (const slug of Object.keys(set.index)) {
+            const list = out.get(slug);
+            if (list) list.push(set);
+            else out.set(slug, [set]);
+        }
+    }
+    return out;
+}
 
 export type RigCaps = {species: number; bytes: number};
 
@@ -83,7 +188,8 @@ export function halfToFloat(h: number): number {
 }
 
 export class RigLibrary {
-    private manifest: RigIndex | null = null;
+    private sets: RigSet[] = [];
+    private choices: Map<string, RigSet[]> | null = null;
     private readonly manifestReady: Promise<RigIndex | null>;
     private readonly loader: GLTFLoader;
     private readonly models = new Map<string, RigModel>();
@@ -99,30 +205,54 @@ export class RigLibrary {
     /** Called when a rig is ready to draw. */
     onLoad: (slug: string) => void = () => undefined;
 
-    constructor(private readonly base: string | null, caps: RigCaps, private readonly concurrency = 2) {
+    /**
+     * `bases`: the rig sets in order (`rigBasesFrom`: the release's set, then
+     * the v1 fallback); one folder or null (no rigs) as before.
+     */
+    constructor(bases: readonly string[] | string | null, caps: RigCaps, private readonly concurrency = 2) {
         this.caps = caps;
         this.loader = new GLTFLoader();
         this.loader.setMeshoptDecoder(MeshoptDecoder);
-        const root = base?.replace(/\/+$/, "") ?? null;
-        this.manifestReady = !root
+        const roots = (bases === null ? [] : typeof bases === "string" ? [bases] : bases).map((base) => base.replace(/\/+$/, "")).filter(Boolean);
+        this.manifestReady = !roots.length
             ? Promise.resolve(null)
-            : fetch(`${root}/manifest.json`, {signal: this.abort.signal})
-                  .then((response) => (response.ok ? response.json() : null))
-                  .then((raw: unknown) => {
-                      this.manifest = decodeRigIndex(raw);
-                      this.pump();
-                      return this.manifest;
-                  })
-                  .catch(() => null);
+            : Promise.all(roots.map((base) => this.readSet(base))).then((sets) => {
+                  this.sets = sets.filter((set): set is RigSet => Boolean(set));
+                  this.choices = rigChoices(this.sets);
+                  this.pump();
+                  if (!this.sets.length) return null;
+                  const index: RigIndex = {};
+                  this.choices.forEach((list, slug) => {
+                      index[slug] = list[0].index[slug];
+                  });
+                  return index;
+              });
+    }
+
+    /** One set's manifest; null when it is missing, malformed, or not the version its folder names (v2 then falls back to v1). */
+    private async readSet(base: string): Promise<RigSet | null> {
+        try {
+            const response = await fetch(`${base}/manifest.json`, {signal: this.abort.signal});
+            if (!response.ok) return null;
+            const set = decodeRigSet(await response.json(), rigSetVersion(base));
+            return set ? {...set, base} : null;
+        } catch {
+            return null;
+        }
     }
 
     ready(): Promise<RigIndex | null> {
         return this.manifestReady;
     }
 
-    /** Whether the manifest lists a rig for this species (one that has not failed to load). */
+    /** The sets read (folder, version, flight, how many species), for the debug overlay and tests. */
+    get setSummary(): {base: string; version: number; flight: boolean; species: number}[] {
+        return this.sets.map((set) => ({base: set.base, version: set.version, flight: set.flight, species: Object.keys(set.index).length}));
+    }
+
+    /** Whether a set lists a rig for this species (one that has not failed to load from every set). */
     available(slug: string): boolean {
-        return !this.failed.has(slug) && Boolean(this.manifest?.[slug]);
+        return !this.failed.has(slug) && Boolean(this.choices?.get(slug)?.length);
     }
 
     /** A loaded rig's clip (only clips that passed `rigClip`'s rule are kept at load). */
@@ -173,7 +303,7 @@ export class RigLibrary {
     onEvict: (slug: string) => void = () => undefined;
 
     private pump() {
-        if (!this.manifest || this.disposed) return;
+        if (!this.choices || this.disposed) return;
         while (this.active < this.concurrency && this.queue.length) {
             const slug = this.queue.shift()!;
             if (this.downloaded >= this.caps.bytes) {
@@ -195,10 +325,27 @@ export class RigLibrary {
         }
     }
 
+    /** From the first set that lists it; a file that fails falls back to the next set's (v2 → v1). */
     private async load(slug: string) {
-        const version = this.manifest?.[slug];
-        if (!version || !this.base) throw new Error("not listed");
-        const url = `${this.base.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${encodeURIComponent(version)}.rig.glb`;
+        const sets = this.choices?.get(slug) ?? [];
+        if (!sets.length) throw new Error("not listed");
+        let last: unknown = null;
+        for (const set of sets) {
+            if (this.disposed) return;
+            try {
+                await this.loadFrom(set, slug);
+                return;
+            } catch (error) {
+                last = error;
+            }
+        }
+        throw last instanceof Error ? last : new Error(String(last));
+    }
+
+    private async loadFrom(set: RigSet, slug: string) {
+        const version = set.index[slug];
+        if (!version) throw new Error("not listed");
+        const url = `${set.base}/${encodeURIComponent(slug)}/${encodeURIComponent(version)}.rig.glb`;
         const response = await fetch(url, {signal: this.abort.signal});
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const buffer = await response.arrayBuffer();
@@ -208,7 +355,8 @@ export class RigLibrary {
         const extras = (gltf.parser.json as {extras?: {ark_rig?: RigExtras}}).extras?.ark_rig;
         if (!extras || !Number.isInteger(extras.bufferView) || !Array.isArray(extras.bones) || !extras.bones.length) throw new Error("no bones");
         const entry = decodeRigEntry(extras.rig);
-        const own = entry ? {species: {[slug]: entry}} : null;
+        // The set's flight switch and the file's own entry: `rigClip`'s rule, per file.
+        const own = entry ? {flight: set.flight, species: {[slug]: entry}} : null;
         if (!entry || !rigPlayable(own, slug)) throw new Error("no playable clip");
         const view = (await gltf.parser.getDependency("bufferView", extras.bufferView)) as ArrayBuffer;
         const boneCount = extras.bones.length;
@@ -222,6 +370,13 @@ export class RigLibrary {
         const mesh = skinned as SkinnedMesh | null;
         if (!mesh) throw new Error("no skinned mesh");
         const geometry = restGeometry(mesh, extras.bones);
+        const restPivot = (name: string): [number, number, number] | null => {
+            const bone = (mesh.skeleton.bones as Bone[]).find((b) => b.name === name);
+            if (!bone) return null;
+            const at = new Vector3().setFromMatrixPosition(bone.matrixWorld);
+            return [at.x, at.y, at.z];
+        };
+        const look = rigLookChain(entry, slug, extras.bones, restPivot);
         const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         material.forEach((m) => m.dispose());
         mesh.geometry.dispose();
@@ -252,7 +407,25 @@ export class RigLibrary {
             return;
         }
         const centre = geometry.boundingBox!.getCenter(new Vector3());
-        this.models.set(slug, {slug, geometry, texture, bones: boneCount, clips, facingDeg: Number(entry.facing_deg) || 0, bytes: buffer.byteLength, data, centre, usedAt: 0});
+        const flight = flightApproved(own, slug) && Object.keys(clips).some((name) => FLIGHT_CLIPS.has(name));
+        this.models.set(slug, {
+            slug,
+            geometry,
+            texture,
+            bones: boneCount,
+            clips,
+            facingDeg: Number(entry.facing_deg) || 0,
+            bytes: buffer.byteLength,
+            data,
+            centre,
+            set: set.version,
+            entryVersion: Number(entry.version) || 1,
+            plan: typeof entry.plan === "string" ? entry.plan : null,
+            flight,
+            flightOpen: entry.flight_fallback_open === true,
+            look,
+            usedAt: 0
+        });
         this.onLoad(slug);
     }
 

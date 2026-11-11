@@ -82,7 +82,7 @@ import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Sha
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {rigBaseFrom} from "@/ark-scene/rig-clips";
+import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
@@ -505,9 +505,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const library = new ModelLibrary(options.modelBase, 4);
     const species = new Map<string, SpeciesMeshes>();
-    // The rigs: the manifest beside the model set (or the page's own), read once; nothing while motion is reduced.
-    const rigBase = options.rigBase === undefined ? rigBaseFrom(options.modelBase) : options.rigBase;
-    const rigs = new RigLibrary(rigBase, RIG_CAPS);
+    // The rigs: the release's set beside the model set (or the page's own folder), then the v1 fallback set, each
+    // manifest read once; a species plays from the first set that lists it. Nothing while motion is reduced.
+    const rigs = new RigLibrary(rigBasesFrom(options.modelBase, options.rigBase), RIG_CAPS);
     rigs.onEvict = (slug) => {
         const meshes = species.get(slug);
         if (meshes?.rig) {
