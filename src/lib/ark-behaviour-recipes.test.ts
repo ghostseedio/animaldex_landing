@@ -267,6 +267,48 @@ test("on the spot the body holds still: a dig, a peck or a scrape is the head's 
     assert.ok(holds >= 3, `holds ${holds}`);
 });
 
+test("no in-place episode turns more than once in any minute: a dabbling duck pivots, a hunting fox swings round once, nothing spins", () => {
+    // (Behaviour's measure on the release: a mallard dabbling turned 44 times a minute, a puffin, a heron and a meerkat
+    // over once; the facing summed over every minute of a recipe's stay, its last turn to the way it sets off included.)
+    forgetRecipes();
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    const cases: Array<[string, string, number]> = [
+        ["harbor-seal", "chase_fish", 1.6],
+        ["mallard", "dabble", 0.58],
+        ["grey-heron", "wade_spear", 0.95],
+        ["atlantic-puffin", "surface_dive", 0.3],
+        ["atlantic-puffin", "chase_fish", 0.3],
+        ["red-fox", "pounce", 0.9],
+        ["domestic-cat", "pounce", 0.45],
+        ["meerkat", "root_dig", 0.3],
+        ["american-alligator", "root_dig", 3.2]
+    ];
+    let stays = 0;
+    for (const [slug, recipe, length] of cases) {
+        const a = animal(`minute-${slug}-${recipe}`, slug, {x: -70, z: 22}, length);
+        for (let start = day; start < day + 24 * 3600; start += SLOT_SECONDS) {
+            const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
+            if (trip.recipe !== recipe || !tripEpisode(world, trip)) continue;
+            stays++;
+            const turns: number[] = [];
+            let last = poseOnTrip(world, trip, trip.arrive + 0.5);
+            for (let t = trip.arrive + 1; t < trip.end; t += 0.5) {
+                const p = poseOnTrip(world, trip, t);
+                turns.push(Math.abs(wrap(p.yaw - last.yaw)));
+                last = p;
+            }
+            let sum = 0;
+            for (let k = 0; k < turns.length; k++) {
+                sum += turns[k] - (k >= 120 ? turns[k - 120] : 0);
+                assert.ok(sum < TAU, `${slug} ${recipe}: ${(sum / TAU).toFixed(2)} turns in a minute`);
+            }
+        }
+    }
+    assert.ok(stays >= 20, `stays ${stays}`);
+});
+
 test("setting off after a recipe stay it has already turned on the spot: it holds still through its schedule's turn, never turning on the move", () => {
     forgetRecipes();
     const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));

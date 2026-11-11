@@ -477,3 +477,12 @@ Circling on this branch (with home growth b95b0026): every animal 0.18% facing, 
 - **Holds:** no hold shuffles the body (see above).
 
 Measured with the release merged: circling, every animal, 0.15% facing and 0.02% travel. Flyers 0.464 turns a minute. Full npm test 2,243/2,243. New test: setting off after a recipe stay.
+
+## Under one turn a minute in place (release 20cb95d1, the v2 clip pace)
+
+- **A minute's turning budget.** A solo step may not take the last 60 s of turning past 5.4 rad (`MINUTE_BUDGET`). The count includes its way home as it would go from there, `homeTurning`: a turn on the spot and the curve's own turning, a detour round the shore included. Within its slot's last minute it also includes its last turn to the way it sets off. Steps are budgeted on the turning drawn along their keys (`keyTurning`), not just where they end up facing. The 20 s budget (3.2 rad) stays.
+- **No pivot after arriving.** A stay that keeps its homecoming heading uses that heading on its leg home, even with nowhere left to go (it had turned on the spot to the stay's first heading as the episode ended). It heads for its fixed place, so its schedule pose bobbing on the water only moves it, never swings it round.
+- **Stags square up.** A pair's walk up to its rival ends turning on the spot to face it, for the same time on both sides (`1.5π` over the larger one's turn rate, at most 1.6 rad/s), before the clash. With the new pace they had reached their fight still turning.
+- **Measured** (behaviour's "an in-place activity barely turns", 13,763 minutes): 1 over, a grey heron's plain `watch` slot. It has no recipe and fails with recipes off too: behaviour's arrival turn and glances. The release had 184 minutes over.
+- **Circling**, every animal: 0.17% facing, 0.01% travel. Flyers: 0.463 turns a minute.
+- **New test:** no in-place episode turns more than once in any minute (nine species and recipes, sliding minutes, the last turn included).

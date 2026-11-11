@@ -644,6 +644,9 @@ type BuildContext = {
     yaw0: number;
     /** A stay that keeps the heading it comes home with (its leg home does not line up with the stay's heading). */
     holds?: boolean;
+    /** Such a stay's last turn: on the spot at its slot's end (`slotEnd`), to the way its next slot sets off. */
+    nextYaw?: number | null;
+    slotEnd?: number;
     /** The heading its legs bend towards at a time (set by `buildEpisode`): one slow half loop over the episode, so it
      *  comes back round towards where it began instead of turning back on itself (an out-and-back is two U-turns). */
     plan?: (t: number) => number;
@@ -657,6 +660,9 @@ const TURN_SPOT = 1.6;
 
 /** The most a solo episode's steps turn it in any 20 s before it heads home (rad: about half a circle, so its way home still fits). */
 const TURN_BUDGET = 3.2;
+
+/** The most it turns in any minute of a solo episode, with its way home (rad: under a full turn; a dabbling duck pivots, never spins). */
+const MINUTE_BUDGET = 5.4;
 
 /** A solo leg further than this off its heading (rad) turns on the spot first, then sets off. */
 const TURN_FIRST = 1.2;
@@ -1149,11 +1155,33 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             yaw = keyPose(world, key, key.t1, length, keys.length > 1 ? keys[keys.length - 2] : null).yaw;
             t += seconds;
             pos = target;
+            // A pair's walk up to its rival ends squaring up on the spot, face to face, before what comes next (both sides
+            // the same time, from the larger one's turn rate: one timeline).
+            if (ctx.pair && face && block.motion === "travel" && block.id !== "clash") {
+                const square = (Math.PI * 1.5) / Math.min(turnRate(Math.max(length, ctx.pair.otherLength)), TURN_SPOT);
+                if (t + square <= ctx.t1 - reserve) {
+                    const toward = Math.atan2(face.x - pos.x, face.z - pos.z);
+                    keys.push({t0: t, t1: t + square, block: BLOCKS.turn, from: pos, to: pos, yawIn: yaw, yaw: toward, c: null, c2: null, endLen: 0, face, carry, catch: null, prey: null, wade: false, toBase: false});
+                    yaw = keyPose(world, keys[keys.length - 1], t + square, length, key).yaw;
+                    t += square;
+                }
+            }
             if (step.eat || step.drop) carry = null;
             if (budgeted && !ctx.pair) {
-                const turn = Math.abs(yaw - before.yaw);
+                // (The turning it is drawn with along the step's keys, not just where it ends up facing: a curve swings.)
+                let turn = 0;
+                for (let k = before.n; k < keys.length; k++) turn += keyTurning(world, keys[k], length, k > 0 ? keys[k - 1] : null);
                 const recent = turns.reduce((sum, e) => (e.t > t - 20 ? sum + e.turn : sum), 0);
-                if (turn > 0.05 && recent + turn > TURN_BUDGET) {
+                // (And over any minute, with the turn it still needs to head home: never a full turn in a minute.)
+                const minute = turns.reduce((sum, e) => (e.t > t - 60 ? sum + e.turn : sum), 0);
+                const away = Math.hypot(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) > 0.3;
+                const homeYaw = away ? Math.atan2(ctx.anchor.x - pos.x, ctx.anchor.z - pos.z) : yaw;
+                // (Its way home as it would go from here: a turn on the spot and the curve's own turning, a detour round
+                // the shore or a rock included.)
+                const homeward = away ? homeTurning(world, owner.profile, kit, pos, yaw, ctx.anchor) : 0;
+                // (Within its slot's last minute, its last turn on the spot to the way it sets off counts too.)
+                const last = ctx.nextYaw !== undefined && ctx.nextYaw !== null && ctx.slotEnd !== undefined && t > ctx.slotEnd - 60 ? Math.abs(wrapAngle(ctx.nextYaw - homeYaw)) : 0;
+                if (turn > 0.05 && (recent + turn > TURN_BUDGET || minute + turn + homeward + last > MINUTE_BUDGET)) {
                     keys.length = before.n;
                     t = before.t;
                     pos = before.pos;
@@ -1205,7 +1233,9 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     const along = ctx.pair || Math.hypot(home.x - pos.x, home.z - pos.z) <= 0.03 ? away : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, home);
     const wanted = Math.max(along / speedOf(back, pace(owner.profile, length), 0, owner.profile, length), 0.6, ctx.pair ? 0 : turning);
     const seconds = Math.min(wanted, room);
-    keys.push({t0: t, t1: t + seconds, block: back, from: pos, to: home, yawIn: yaw, yaw: ctx.yaw0, c: curve?.c ?? null, c2: null, endLen: curve?.len ?? 0, face: null, carry, catch: null, prey: null, wade: false, toBase: true});
+    // (Its heading on the way: a stay that keeps its homecoming heading keeps the one it has, even with nowhere left to
+    // go; anything else turns to its schedule pose's.)
+    keys.push({t0: t, t1: t + seconds, block: back, from: pos, to: home, yawIn: yaw, yaw: ctx.holds ? yaw : ctx.yaw0, c: curve?.c ?? null, c2: null, endLen: curve?.len ?? 0, face: null, carry, catch: null, prey: null, wade: false, toBase: true});
     t += seconds;
     return {id: ctx.seed, recipe: template.id, t0: ctx.t0, t1: t, keys, anchor: ctx.anchor, length, other: null, role: ctx.pair?.role ?? null};
 }
@@ -1351,7 +1381,10 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
     const key = keys[i];
     const live = key.toBase ? {...key, to: {x: base.x, y: base.y, z: base.z}} : key;
     const holds = episode.endYaw !== undefined && episode.endYaw !== null;
-    const at = keyPose(world, live, epoch, episode.length, i > 0 ? keys[i - 1] : null, key.toBase ? (holds ? keys[keys.length - 1].yaw : base.yaw) : null);
+    const drawn = keyPose(world, live, epoch, episode.length, i > 0 ? keys[i - 1] : null, key.toBase ? (holds ? keys[keys.length - 1].yaw : base.yaw) : null);
+    // (A stay that keeps its heading heads for its fixed place, where its homecoming heading was worked out: its
+    // schedule pose bobbing on the water only moves it, never swings it round.)
+    const at = key.toBase && holds ? {...drawn, yaw: keyPose(world, key, epoch, episode.length, i > 0 ? keys[i - 1] : null, keys[keys.length - 1].yaw).yaw} : drawn;
     // Into its schedule's pose over the last 0.6 s (that is where it ends).
     const out = Math.min(Math.max((epoch - (episode.t1 - 0.6)) / 0.6, 0), 1);
     const k = ease(out);
@@ -1387,12 +1420,13 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
         const t1 = trip.end - (trip.end - trip.arrive >= 40 ? 10 : holds ? 5.5 : 2.5);
         if (t1 - t0 > 6) {
             const yaw0 = kit.basePose(world, trip, t0).yaw;
-            const built = buildEpisode({world, kit, owner, species, template: TEMPLATES[recipe], anchor, t0, t1, seed: `${owner.animal.id}#ep#${trip.slot}#${recipe}`, hours, yaw0, holds});
+            const next = holds ? kit.tripAt(world, owner.profile, owner.animal, trip.end + 0.01, owner.hoursAt, owner.activity) : null;
+            const nextYaw = next && next.slot !== trip.slot ? departureYaw(world, next, kit) : null;
+            const built = buildEpisode({world, kit, owner, species, template: TEMPLATES[recipe], anchor, t0, t1, seed: `${owner.animal.id}#ep#${trip.slot}#${recipe}`, hours, yaw0, holds, nextYaw, slotEnd: trip.end});
             if (built && holds) {
                 const last = built.keys[built.keys.length - 1];
                 const end = keyPose(world, last, last.t1, built.length, built.keys[built.keys.length - 2] ?? null, yaw0);
-                const next = kit.tripAt(world, owner.profile, owner.animal, trip.end + 0.01, owner.hoursAt, owner.activity);
-                episode = {...built, endYaw: end.yaw, nextYaw: next.slot !== trip.slot ? departureYaw(world, next, kit) : null};
+                episode = {...built, endYaw: end.yaw, nextYaw};
             } else episode = built;
         }
     } else if (HERE_DOINGS.has(trip.doing) && trip.end - trip.arrive > 14 && (!trip.stay.length || trip.stay.every((b, i, all) => i === 0 || (b.x === all[0].x && b.z === all[0].z)))) {
@@ -1763,6 +1797,39 @@ function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: Trip
         if (hovering) return hovering;
     }
     return crossingPose(world, owner, trip, base, epoch) ?? base;
+}
+
+/** How much its way home from here turns it (rad): a turn on the spot if it must, then the leg's curve, summed along it. */
+function homeTurning(world: ScheduleWorld, profile: ArkBehaviourProfile, kit: ScheduleKit, from: P, yaw: number, home: P): number {
+    const block = goBlock(profile, kit, world, from, home);
+    const chord = Math.atan2(home.x - from.x, home.z - from.z);
+    const swing = wrapAngle(chord - yaw);
+    const first = Math.abs(swing) > TURN_FIRST && TURNS_FIRST.has(block.id) ? Math.abs(swing) : 0;
+    const start = first ? chord : yaw;
+    const curve = legCurve(world, block, from, home, start, null);
+    let sum = first;
+    let previous = start;
+    for (let j = 1; j <= 12; j++) {
+        const at = legAt(from, curve?.c ?? null, null, home, j / 12);
+        if (Math.hypot(at.dx, at.dz) < 1e-6) continue;
+        const a = Math.atan2(at.dx, at.dz);
+        sum += Math.abs(wrapAngle(a - previous));
+        previous = a;
+    }
+    return sum;
+}
+
+/** How much a key turns it as it is drawn (rad, its heading sampled along it). */
+function keyTurning(world: ScheduleWorld, key: Key, length: number, previous: Key | null): number {
+    const n = Math.min(Math.max(Math.ceil((key.t1 - key.t0) / 0.4), 3), 40);
+    let last = keyPose(world, key, key.t0, length, previous).yaw;
+    let sum = 0;
+    for (let j = 1; j <= n; j++) {
+        const yaw = keyPose(world, key, key.t0 + ((key.t1 - key.t0) * j) / n, length, previous).yaw;
+        sum += Math.abs(wrapAngle(yaw - last));
+        last = yaw;
+    }
+    return sum;
 }
 
 /** The way a slot sets off: its turn on the spot's heading if it starts with one, else its heading once it is on its way. */
