@@ -110,6 +110,8 @@ async function mountScenes(el: HTMLElement) {
         }
         return false;
     };
+    /** A pinned shared pose (the harness's script), with no behaviour recipe act of the trip under it. */
+    const pinPose = (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => debug().pinShared(id, fn ? (epoch: number) => ({act: null, ...fn(epoch)}) : null);
     const nowS = () => Date.now() / 1000;
     /** The camera tracks an animal (its middle, as the scene draws it) from a fixed side, every frame, until the next setup. */
     let tracking = 0;
@@ -126,7 +128,7 @@ async function mountScenes(el: HTMLElement) {
     };
     const ground = (x: number, z: number) => Math.max(heightAt(x, z), 0);
     const site = (zone: keyof typeof ZONE_SITES, dx = 0, dz = 0) => ({x: ZONE_SITES[zone].x + dx, z: ZONE_SITES[zone].z + dz});
-    const park = (prefix: string) => ids[prefix].forEach((id, i) => debug().pinShared(id, () => ({x: 400 + i * 3, z: 400 + CAST.findIndex((c) => c[0] === prefix) * 6, y: 0, moving: false, aloft: false, doing: "rest", beat: "rest"})));
+    const park = (prefix: string) => ids[prefix].forEach((id, i) => pinPose(id, () => ({x: 400 + i * 3, z: 400 + CAST.findIndex((c) => c[0] === prefix) * 6, y: 0, moving: false, aloft: false, doing: "rest", beat: "rest"})));
     const view = (x: number, z: number, distance: number, azimuth: number, polar = 1.1, lift = 0.6) => {
         debug().controls.minDistance = 0.5;
         handle.setView({target: {x, y: ground(x, z) + lift, z}, distance, polar, azimuth});
@@ -135,7 +137,7 @@ async function mountScenes(el: HTMLElement) {
     const stand = (id: string, x: number, z: number, yaw: number, doing: string, beats: Array<[string, number]>, offset: number) => {
         const total = beats.reduce((sum, [, s]) => sum + s, 0);
         debug().setHome(id, x, z);
-        debug().pinShared(id, (epoch: number) => {
+        pinPose(id, (epoch: number) => {
             let t = (((epoch + offset) % total) + total) % total;
             let beat = beats[0][0];
             for (const [name, seconds] of beats) {
@@ -157,7 +159,7 @@ async function mountScenes(el: HTMLElement) {
         debug().setHome(id, from.x, from.z);
         const yaw = Math.atan2(to.x - from.x, to.z - from.z);
         const walkYaw = Math.atan2(walkTo.x - to.x, walkTo.z - to.z);
-        debug().pinShared(id, (epoch: number) => {
+        pinPose(id, (epoch: number) => {
             const k = epoch - start;
             if (k < wait0) return {x: from.x, z: from.z, y: ground(from.x, from.z), yaw, moving: false, aloft: false, doing: "rest", beat: "rest"};
             const u = (k - wait0) / seconds;
@@ -212,7 +214,7 @@ async function mountScenes(el: HTMLElement) {
             {from: bank2, to: bank2, seconds: 6, beat: "peck", doing: "forage", water: null, moving: false}
         ];
         debug().setHome(id, bank.x, bank.z);
-        debug().pinShared(id, (epoch: number) => {
+        pinPose(id, (epoch: number) => {
             let k = Math.max(epoch - start, 0);
             let seg = segs[segs.length - 1];
             let u = 1;
@@ -286,7 +288,7 @@ async function mountScenes(el: HTMLElement) {
                 stand(id, at.x + Math.cos(a) * r, at.z + Math.sin(a) * r, ((i * 1.7) % (Math.PI * 2)) - Math.PI, "graze", [["bite", 6], ["chew", 2], ["scan", 2]], i * 1.3);
             });
             const lion = (start: number) =>
-                debug().pinShared(ids.lion[0], (epoch: number) => {
+                pinPose(ids.lion[0], (epoch: number) => {
                     const u = Math.min(Math.max((epoch - start) / 24, 0), 1);
                     const x = at.x - 40 + 70 * u;
                     const z = at.z + 9.5;
@@ -305,7 +307,7 @@ async function mountScenes(el: HTMLElement) {
                 stand(id, at.x + Math.cos(a) * r, at.z + Math.sin(a) * r, ((i * 1.7) % (Math.PI * 2)) - Math.PI, "forage", [["peck", 5], ["scan", 2]], i * 1.1);
             });
             const eagle = (start: number) =>
-                debug().pinShared(ids.meagle[0], (epoch: number) => {
+                pinPose(ids.meagle[0], (epoch: number) => {
                     // Out of sight until it comes over (parked far off, so nobody runs before it shows).
                     if (epoch < start) return {x: 400, z: 380, y: 30, yaw: 0, moving: false, aloft: true, doing: "soar", beat: "glide"};
                     const u = Math.min(Math.max((epoch - start) / 10, 0), 1);

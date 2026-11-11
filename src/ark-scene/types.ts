@@ -159,6 +159,9 @@ export type ArkSceneStats = {
     scheduled?: number;
     behaviourMs?: number;
     behaviourBuildMs?: number;
+    /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
+    behaviourBuildSlices?: number;
+    behaviourBuildLongestMs?: number;
     rigsLoaded: number;
     rigBytes: number;
 };

@@ -209,6 +209,30 @@ test("rig reactive clips: a flee runs by distance (walks while still slow), a se
     assert.equal(reactiveClip("flee", () => false, true), null);
 });
 
+test("rig recipe states: every named state of the behaviour recipes is mapped to clips or has its fallback beat, once", async () => {
+    const {ARK_RECIPE_STATES} = await import("@/ark-scene/behaviour-blocks");
+    const {RECIPE_CLIPS, RECIPE_FALLBACK, recipeClip} = await import("@/ark-scene/rig-player");
+    assert.equal(ARK_RECIPE_STATES.length, 70);
+    for (const state of ARK_RECIPE_STATES) {
+        const mapped = state in RECIPE_CLIPS;
+        const fallback = state in RECIPE_FALLBACK;
+        assert.ok(mapped !== fallback, `${state}: mapped ${mapped}, fallback ${fallback}`);
+    }
+    for (const state of [...Object.keys(RECIPE_CLIPS), ...Object.keys(RECIPE_FALLBACK)]) assert.ok(ARK_RECIPE_STATES.includes(state), `${state} is a recipe state`);
+    const duck = new Set(["idle", "walk", "graze", "scan", "enter_water", "exit_water", "shake_off", "flap", "glide", "takeoff", "land", "perch"]);
+    const has = (name: string) => duck.has(name);
+    assert.deepEqual(recipeClip("launch", has), {name: "enter_water", play: "once"});
+    assert.deepEqual(recipeClip("haul_out", has), {name: "exit_water", play: "once"});
+    assert.deepEqual(recipeClip("shake", has), {name: "shake_off", play: "once"});
+    assert.deepEqual(recipeClip("carry", has), {name: "walk", play: "distance"});
+    assert.deepEqual(recipeClip("charge", has), {name: "walk", play: "distance"}, "no run: the walk");
+    assert.deepEqual(recipeClip("peck", has), {name: "graze", play: "loop"});
+    assert.deepEqual(recipeClip("fly", has), {name: "flap", play: "loop"});
+    assert.equal(recipeClip("strike", has), null, "a fallback state: its beat plays");
+    assert.equal(recipeClip("surface", has), null, "no surface clip on a duck");
+    assert.equal(recipeClip(null, has), null);
+});
+
 test("rig beat clips: grazing beats head down, a browser's head up, scan, shake_off, into and out of the water", async () => {
     const {beatClip} = await import("@/ark-scene/rig-player");
     const deer = new Set(["idle", "walk", "graze", "browse", "scan"]);
