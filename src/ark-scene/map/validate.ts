@@ -38,7 +38,7 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, CANOPY_TAGS, mapPoints, shoreOf, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, mapPoints, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
@@ -98,6 +98,12 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
         const fail = (check: ValidatorCheck, detail: string) => failures.push({slug: animal.model_slug, check, detail, rank});
         // A body standing in a drawn rock (the asset rocks' own boxes): every place on the ground, the shore or the sea floor, and
         // every roost on the ground; on the rock itself (a ledge, a rock face, a tide pool at its foot) is the rock's surface.
+        if (place && !place.hamlet) {
+            // A tree is a climber's, a percher's or a flyer's only, and its limb must hold it (a buffalo never on a limb).
+            const treePoint = place.perch && ["limb", "canopy_hang", "branch", "bark", "leaf", "tree_hollow"].includes(place.perch.tag) && !(place.perch.tag === "leaf" && (place.perch.y - sampler.ground(place.perch.x, place.perch.z).height) < 0.3);
+            if ((place.canopy || treePoint) && !climbsTrees(animal.model_slug) && mapSpecies(animal.model_slug, animal.zone)?.move !== "crawl") failures.push({slug: animal.model_slug, check: "invalid_surface", detail: "in a tree, but it neither climbs, perches nor flies", rank});
+            if (place.canopy && massFromSize(arkStats(animal).size) > CANOPY_LIMB_LOAD) failures.push({slug: animal.model_slug, check: "invalid_surface", detail: `${massFromSize(arkStats(animal).size).toFixed(0)} kg on a canopy limb that holds ${CANOPY_LIMB_LOAD}`, rank});
+        }
         if (place && !place.canopy && !place.hamlet) {
             const length = arkBody(animal).metres;
             const onRock = place.micro || place.perch;
@@ -105,6 +111,11 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             if (!onRock && (!place.water || floorAnimal) && inRock(place.x, place.z, Math.min(Math.max(length * 0.2, 0.05), 0.6), place.ground, Math.max(length * 0.5, 0.05))) {
                 failures.push({slug: animal.model_slug, check: "inside_rock", detail: `in a drawn rock at ${place.x.toFixed(1)},${place.z.toFixed(1)}`, rank});
             }
+            // A burrow's, a den's or a hole's mouth on the ground, never inside a drawn rock (the fennec fox's).
+            const mouth = place.burrow ?? null;
+            if (mouth && inRock(mouth.x, mouth.z, 0.15)) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `its burrow's mouth in a drawn rock at ${mouth.x.toFixed(1)},${mouth.z.toFixed(1)}`, rank});
+            const hole = place.perch ?? place.micro?.attach ?? null;
+            if (hole && (hole.tag === "burrow_entrance" || hole.tag === "worm_hole") && inRock(hole.x, hole.z, Math.min(Math.max(length * 0.2, 0.05), 0.3))) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `at a ${hole.tag} in a drawn rock at ${hole.x.toFixed(1)},${hole.z.toFixed(1)}`, rank});
             const roost = place.map?.roost;
             if (rank === 0 && roost && (roost.kind === "ground") && inRock(roost.x, roost.z, Math.min(Math.max(length * 0.2, 0.05), 0.6), roost.y, Math.max(length * 0.5, 0.05))) failures.push({slug: animal.model_slug, check: "inside_rock", detail: `its roost in a drawn rock at ${roost.x.toFixed(1)},${roost.z.toFixed(1)}`, rank});
         }
@@ -220,7 +231,7 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             continue;
         }
         // The owner's rule: hangers, climbers and perchers of the trees only on a real limb.
-        if (arborealOf(species, animal.model_slug)) fail("invalid_surface", `a ${species.move}er of the trees on the ground (${map.tag})`);
+        if (arborealOf(species, animal.model_slug) && massFromSize(arkStats(animal).size) <= CANOPY_LIMB_LOAD) fail("invalid_surface", `a ${species.move}er of the trees on the ground (${map.tag})`);
         // On the ground, in the water, on the sea floor, a floe, the surface.
         const ground = sampler.ground(place.x, place.z);
         const tag = map.tag!;

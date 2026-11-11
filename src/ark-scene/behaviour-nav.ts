@@ -190,12 +190,22 @@ export class NavGrid {
     }
 
     private clear(a: NavPoint, b: NavPoint, kind: "walk" | "swim", minDepth: number, maxSlope = MAX_SLOPE): boolean {
-        const steps = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / (CELL * 0.5));
-        for (let s = 1; s < steps; s++) {
+        const span = Math.hypot(b.x - a.x, b.z - a.z);
+        const steps = Math.ceil(span / (CELL * 0.5));
+        // On foot, the ground along the line itself is never a cliff either (2026-11-11: a straight run between two
+        // gentle cells stepped 8.7 m up a cliff in between, which the cells' own slope, over 4 m, did not see): the rise
+        // between samples a metre apart, ends included, is at most half as steep again as its walk allows.
+        let last = kind === "walk" ? this.sampler.heightAt(a.x, a.z) : 0;
+        for (let s = 1; s <= steps; s++) {
             const t = s / steps;
             const x = a.x + (b.x - a.x) * t;
             const z = a.z + (b.z - a.z) * t;
-            if (kind === "walk" ? !this.walkable(x, z, maxSlope) : !this.swimmable(x, z, minDepth)) return false;
+            if (s < steps && (kind === "walk" ? !this.walkable(x, z, maxSlope) : !this.swimmable(x, z, minDepth))) return false;
+            if (kind === "walk") {
+                const h = this.sampler.heightAt(x, z);
+                if (Math.abs(h - last) > maxSlope * 1.5 * (span / steps) + 0.05) return false;
+                last = h;
+            }
         }
         return true;
     }
