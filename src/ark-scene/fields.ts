@@ -42,6 +42,20 @@ const STAGGER = 0.37;
 /** No rows this close to a field's edge (the hedge and a headland). */
 export const HEADLAND = 0.7;
 
+/**
+ * The orchard's first tree from the farm's site (`decor.ts` plants its rows from here, turned by `turn`). Home growth
+ * (2026-11-11): it moved from east of the farm's clearing (where the hamlet's streets run now) to behind the barn,
+ * between it and the wetland.
+ */
+export const ORCHARD = {x: -22, z: -18, turn: 0.05};
+/** The orchard's middle (its 6 × 4 trees' grid). */
+export function orchardMiddle(): {x: number; z: number} {
+    const farm = ZONE_SITES.farm_garden;
+    const u = 8.8;
+    const v = 5.1;
+    return {x: farm.x + ORCHARD.x + u * Math.cos(ORCHARD.turn) - v * Math.sin(ORCHARD.turn), z: farm.z + ORCHARD.z + u * Math.sin(ORCHARD.turn) + v * Math.cos(ORCHARD.turn)};
+}
+
 /** Where crops never grow: the farm's clearing, the cottage's yard, the barn, the orchard. */
 export function fieldKeepOuts(): Array<{x: number; z: number; r: number}> {
     const farm = ZONE_SITES.farm_garden;
@@ -49,7 +63,7 @@ export function fieldKeepOuts(): Array<{x: number; z: number; r: number}> {
         {x: farm.x, z: farm.z, r: farm.clearing + 2},
         {x: COTTAGE.x + 2, z: COTTAGE.z + 0.5, r: 10},
         {x: farm.x - 15, z: farm.z + 9, r: 7},
-        {x: farm.x + 24.8, z: farm.z - 0.9, r: 11}
+        {...orchardMiddle(), r: 11}
     ];
 }
 
