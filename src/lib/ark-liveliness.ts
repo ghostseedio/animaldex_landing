@@ -274,59 +274,128 @@ export function pickParent(young: {id: string; slot?: number | null; zone: strin
     return pool[hash32(young.id, "parent") % pool.length];
 }
 
-export type HeelPose = {x: number; z: number; lift: number; yaw: number; playing: boolean};
+export type HeelPose = {x: number; z: number; lift: number; yaw: number; playing: boolean; /** Moving on its own (a dash), apart from its parent's walking. */ moving: boolean};
+
+/** The fastest a young one turns (rad/s): small ones quicker, big ones slower (a foal about 2 rad/s). */
+export function youngTurnRate(length: number): number {
+    return Math.min(Math.max(2.2 / Math.sqrt(Math.max(length, 0.05)), 1), 4.5);
+}
+
+/** Play bursts: at most one in each of these windows (ms); a dash only in every `DASH_EVERY`th. */
+export const PLAY_SLOT_MS = 25_000;
+const DASH_EVERY = 4;
+
+type Burst = {slot: number; start: number; dashMs: number; end: number};
 
 /**
- * Where a young one is beside its parent: at heel (behind and to one side, a
- * seeded side), riding on its back when carried, and in a play burst
- * scampering in a loop round it with small hops. The parent's pose a moment
- * earlier is passed in (the young trail it).
+ * Young at play (owner, 2026-11-11: no going round in circles): a short dash
+ * ahead of its parent on its own side (never more than about 35 degrees off
+ * her heading, turned into at its body's turn rate), a pause with a kick or
+ * two, and then it stands there facing her way while she walks back up past
+ * it; while she hasn't, a later burst is kicks on the spot. So it never
+ * orbits her and never turns about in a burst: an out-and-back run facing
+ * its way would turn a full circle. Pure: seeded per window, and where its
+ * parent was at past moments (`parentAt`, her shared schedule).
+ */
+function playBurst(youngId: string, slot: number, play: number, dashMs: number): Burst | null {
+    const chance = Math.min(0.2 + 0.45 * play, 0.6);
+    if (play <= 0.05 || unit(youngId, "play", slot) >= chance) return null;
+    const start = slot * PLAY_SLOT_MS + 2_000 + unit(youngId, "play-at", slot) * 9_000;
+    return {slot, start, dashMs, end: start + dashMs + 1_200 + unit(youngId, "play-kick", slot) * 1_800};
+}
+
+/**
+ * Where a young one is beside its parent: at heel (behind her shoulder on its
+ * own seeded side), riding on her back when carried, and in a play burst
+ * dashing ahead, kicking and waiting for her (see `playBurst`). The parent's
+ * pose a moment earlier is passed in (the young trail it); `parentAt` gives
+ * where she was at an earlier moment (null: as now).
  */
 export function heelPose(
     youngId: string,
     parent: {x: number; z: number; yaw: number; length: number; height: number},
     follow: {distance: number; carried: boolean},
     play: number,
-    ms: number
+    ms: number,
+    parentAt: ((ms: number) => {x: number; z: number} | null) | null = null
 ): HeelPose {
+    const fx = Math.sin(parent.yaw);
+    const fz = Math.cos(parent.yaw);
+    const rx = Math.cos(parent.yaw);
+    const rz = -Math.sin(parent.yaw);
+    const at = (right: number, forward: number) => ({x: parent.x + rx * right + fx * forward, z: parent.z + rz * right + fz * forward});
     if (follow.carried) {
         // On the back, a little behind the shoulders.
-        const back = parent.length * 0.08;
-        return {x: parent.x - Math.sin(parent.yaw) * back, z: parent.z - Math.cos(parent.yaw) * back, lift: parent.height * 0.82, yaw: parent.yaw, playing: false};
+        const p = at(0, -parent.length * 0.08);
+        return {...p, lift: parent.height * 0.82, yaw: parent.yaw, playing: false, moving: false};
     }
     const side = hash32(youngId, "heel-side") % 2 ? 1 : -1;
     const d = Math.max(follow.distance, 0.4) * parent.length;
-    // Behind the shoulder: 35–60° off its tail, on its own side.
-    const angle = parent.yaw + Math.PI - side * (0.6 + 0.45 * unit(youngId, "heel-angle"));
-    let x = parent.x + Math.sin(angle) * d;
-    let z = parent.z + Math.cos(angle) * d;
-    let yaw = parent.yaw;
-    let lift = 0;
-    let playing = false;
-    // Play: bursts in 20 s windows, more the younger it is; a loop round the parent, hopping.
-    if (play > 0.05) {
-        const windowMs = 20_000;
-        const slot = Math.floor(ms / windowMs);
-        const chance = Math.min(play * 0.7, 0.75);
-        if (unit(youngId, "play", slot) < chance) {
-            const start = slot * windowMs + unit(youngId, "play-at", slot) * windowMs * 0.5;
-            const length = 4_000 + unit(youngId, "play-len", slot) * 5_000;
-            const k = (ms - start) / length;
-            if (k > 0 && k < 1) {
-                playing = true;
-                const swing = Math.sin(Math.PI * k);
-                const turn = k * Math.PI * 2 * (hash32(youngId, "play-dir", slot) % 2 ? 1 : -1);
-                const r = d * (1 + 0.9 * swing);
-                const a = angle + turn;
-                x = parent.x + Math.sin(a) * r;
-                z = parent.z + Math.cos(a) * r;
-                yaw = a + (turn >= 0 ? Math.PI / 2 : -Math.PI / 2);
-                lift = Math.abs(Math.sin(k * Math.PI * 9)) * 0.06 * parent.length * swing;
-            }
-        }
+    // At heel: behind the shoulder, 35-60 degrees off her tail, on its own side.
+    const theta = 0.6 + 0.45 * unit(youngId, "heel-angle");
+    const heel = {r: side * d * Math.sin(theta), f: -d * Math.cos(theta)};
+    // Its play spot: ahead of her shoulder on the same side (a dash within about 35 degrees of her heading).
+    const ahead = {r: heel.r + side * parent.length * 0.25 * unit(youngId, "play-out"), f: parent.length * (0.8 + 0.5 * unit(youngId, "play-ahead"))};
+    const span = Math.hypot(ahead.r - heel.r, ahead.f - heel.f);
+    const dashYaw = Math.atan2(ahead.r - heel.r, ahead.f - heel.f);
+    const youngLength = parent.length * 0.6;
+    const dashMs = (span / Math.min(Math.max(youngLength * 2.4, 1.2), 4)) * 1000;
+    const turnMs = (Math.abs(dashYaw) / youngTurnRate(youngLength)) * 1000;
+    const here = (k: number) => at(heel.r + (ahead.r - heel.r) * k, heel.f + (ahead.f - heel.f) * k);
+
+    // A dash can start only in every fourth window (one chance a 100 s); the bursts between are kicks on the spot. So where
+    // it is depends only on its latest dash and how far she has walked since: no chain of earlier bursts to agree on.
+    const now = Math.floor(ms / PLAY_SLOT_MS);
+    let lastDash: Burst | null = null;
+    for (let slot = now - (((now % DASH_EVERY) + DASH_EVERY) % DASH_EVERY); slot >= now - 2 * DASH_EVERY && !lastDash; slot -= DASH_EVERY) {
+        const b = playBurst(youngId, slot, play, dashMs);
+        if (b && b.start <= ms) lastDash = b;
     }
-    return {x, z, lift, yaw, playing};
+    let kick: Burst | null = null;
+    for (let slot = now; slot >= now - 1 && !kick; slot--) {
+        if (((slot % DASH_EVERY) + DASH_EVERY) % DASH_EVERY === 0) continue;
+        const b = playBurst(youngId, slot, play, dashMs);
+        if (b && b.start <= ms && ms < b.end) kick = b;
+    }
+    // How far it has come back to heel after a dash: as far as she has walked up (her shared schedule), and in any case
+    // creeping back between 50 and 80 s after (before the next dash can start).
+    const backAfter = (b: Burst) => {
+        let walked = Infinity;
+        if (parentAt) {
+            const then = parentAt(b.end);
+            walked = then ? Math.hypot(parent.x - then.x, parent.z - then.z) : Infinity;
+        }
+        const creep = Math.min(Math.max((ms - b.end - 50_000) / 30_000, 0), 1);
+        return Math.min(Math.max(walked / span, creep * creep * (3 - 2 * creep)), 1);
+    };
+    const turnTo = (target: number, sinceMs: number) => target * Math.min(Math.max(sinceMs / Math.max(turnMs, 1), 0), 1);
+    const kicks = (sinceMs: number, lengthMs: number) => {
+        const k = Math.min(Math.max(sinceMs / lengthMs, 0), 1);
+        // One or two kicks: a quick hop each.
+        const hops = 1 + (hash32(youngId, "hops", now) % 2);
+        return Math.max(Math.sin(Math.PI * k * hops), 0) * 0.07 * parent.length * Math.sin(Math.PI * k);
+    };
+    if (lastDash && ms < lastDash.end) {
+        const b = lastDash;
+        const t = ms - b.start;
+        if (t < b.dashMs) {
+            // The dash: turned into at its rate, eased off at the end; facing the way it goes.
+            const k = t / b.dashMs;
+            const p = here(k * k * (3 - 2 * k));
+            return {...p, lift: 0, yaw: parent.yaw + turnTo(dashYaw, t), playing: true, moving: true};
+        }
+        // The kick, turning back to her heading at its rate.
+        const since = t - b.dashMs;
+        const p = here(1);
+        return {...p, lift: kicks(since, b.end - b.start - b.dashMs), yaw: parent.yaw + dashYaw - turnTo(dashYaw, since), playing: true, moving: false};
+    }
+    // Ahead of her after a dash, facing her way, until she walks up past it (or it creeps back); kicks on the spot meanwhile.
+    const back = lastDash ? backAfter(lastDash) : 1;
+    const p = here(1 - back);
+    const lift = kick ? kicks(ms - kick.start, kick.end - kick.start) : 0;
+    return {...p, lift, yaw: parent.yaw, playing: Boolean(kick), moving: false};
 }
+
 
 /** How long the young trail their parent (s): a moment, so they follow its turns rather than mirror them. */
 export const HEEL_LAG_SECONDS = 0.6;
