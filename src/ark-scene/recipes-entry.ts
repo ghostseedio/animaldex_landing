@@ -1,15 +1,17 @@
 /**
  * The behaviour recipes' clip page (development only; `scripts/ark-recipe-clips.mjs` builds it into
  * `.ark-golden/recipes/` and serves it, nothing deploys it). The live scene with a cast-only snapshot for one
- * clip (`?clip=kingfisher|stags|murmuration|nest|heron|osprey`), at a pinned hour. It finds the moment with the
+ * clip (`?clip=kingfisher|stags|murmuration|nest|heron|osprey`; the chases: `pounce|heron_strike|osprey_dive|dolphin_chase|
+ * swallow_hawk|meal_chase`), at a pinned hour. It finds the moment with the
  * engine's own pure functions (a world built the same as the scene's, the scene's own wired animals), then
  * `window.__clip` steps a controlled clock frame by frame so a one-second dive gets every frame.
  */
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
+import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import {forgetSchedules, roostOf, scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
-import {microMurmuration, nestStageAt, pairWindows, setFallbackNests, setNestSource, sexLook, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {microMurmuration, nestStageAt, pairWindows, setFallbackNests, setNestSource, sexLook, type Episode, type Key, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {heightAt} from "@/ark-scene/world";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -32,12 +34,17 @@ const SPECIES: Record<string, Species> = {
     // (Staged in the grassland for the clips: lone acacias, so the roost and the stream are seen against the sky, not in a crown.)
     "kuhls-pipistrelle-bat": {id: "015d256f-f9c3-45b4-bdfc-88c9b56c1ea9", name: "Kuhl's Pipistrelle", zone: "grassland", activity: "nocturnal", sociality: "group"},
     "large-flying-fox": {id: "b4cc55f6-a237-4578-96db-267844168da4", name: "Large Flying Fox", zone: "grassland", activity: "nocturnal", sociality: "group"},
-    mallard: {id: "85fd945d-1452-4b1d-b3e8-3d737b2eac6c", name: "Mallard", zone: "river_lake", activity: "any", sociality: "group"}
+    mallard: {id: "85fd945d-1452-4b1d-b3e8-3d737b2eac6c", name: "Mallard", zone: "river_lake", activity: "any", sociality: "group"},
+    // The chases (motion pass, L7).
+    serval: {id: "656dc11e-271e-41d9-ac6a-ae6fbfa69fe2", name: "Serval", zone: "grassland", activity: "diurnal", sociality: null},
+    "spinner-dolphin": {id: "0000c0de-0000-4000-8000-00000000d01f", name: "Spinner Dolphin", zone: "coral_reef", activity: "any", sociality: "group"},
+    "african-lion": {id: "7e7080ec-9c17-4a75-9d85-5a4f6a38e430", name: "African Lion", zone: "grassland", activity: "diurnal", sociality: "group"},
+    "plains-zebra": {id: "c77f8bc4-c073-4a77-ad24-788b76fbbbda", name: "Plains Zebra", zone: "grassland", activity: "diurnal", sociality: "group"}
 };
 
-type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null};
+type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null; /** A replay to play from the start (a meal's chase). */ play?: ArkAct[]};
 type Clip = {cast: Array<[string, string, number]>; hours: number; date: number; find: (ctx: Context) => Moment | null};
-type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null}>; micro: Array<{id: string; slug: string; at: {x: number; y: number; z: number}}>; hoursAt: (epoch: number) => number; date: number};
+type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null; place: {x: number; z: number}; zone: string}>; micro: Array<{id: string; slug: string; at: {x: number; y: number; z: number}}>; hoursAt: (epoch: number) => number; date: number};
 
 const view = (x: number, y: number, z: number, distance: number, polar = 1.15, azimuth = 0.6): ArkCameraView => ({target: {x, y, z}, distance, polar, azimuth});
 
@@ -214,8 +221,83 @@ const CLIPS: Record<string, Clip> = {
             }
             return null;
         }
+    },
+    // MARK: The chases (motion pass, lane L7): visual hunts of ambient prey, and a meal's chase.
+    pounce: {
+        cast: [["sv", "serval", 2]],
+        hours: 9,
+        date: Date.UTC(2026, 10, 12, 9) / 1000,
+        find: (ctx) => huntMoment(ctx, "pounce", "leap", (k, ep) => {
+            const from = ep.keys[ep.keys.indexOf(k) - 1] ?? k;
+            const side = Math.atan2(k.to.x - from.from.x, k.to.z - from.from.z) + Math.PI / 2;
+            return {before: 7, after: 3, step: 1 / 48, view: view((from.from.x + k.to.x) / 2, k.to.y + 0.3, (from.from.z + k.to.z) / 2, 3.6, 1.32, side)};
+        })
+    },
+    heron_strike: {
+        cast: [["he", "grey-heron", 2]],
+        hours: 9,
+        date: Date.UTC(2026, 10, 12, 9) / 1000,
+        find: (ctx) => huntMoment(ctx, "wade_spear", "strike", (k) => ({before: 6, after: 2.5, step: 1 / 30, view: view(k.from.x + Math.sin(k.yaw) * 0.6, k.from.y + 0.2, k.from.z + Math.cos(k.yaw) * 0.6, 2.4, 1.0, k.yaw + Math.PI / 2)}))
+    },
+    osprey_dive: {
+        cast: [["os", "osprey", 2]],
+        hours: 10,
+        date: Date.UTC(2026, 10, 12, 10) / 1000,
+        find: (ctx) => huntMoment(ctx, "talon_grab", "dive_feet", (k) => ({before: 3.5, after: 3, step: 1 / 40, view: view(k.to.x, 2.2, k.to.z, 10, 1.38, Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2)}))
+    },
+    dolphin_chase: {
+        cast: [["dl", "spinner-dolphin", 3]],
+        hours: 11,
+        date: Date.UTC(2026, 10, 12, 11) / 1000,
+        find: (ctx) => huntMoment(ctx, "chase_fish", "strike", (k, ep) => {
+            const swim = ep.keys[ep.keys.indexOf(k) - 1] ?? k;
+            const side = Math.atan2(k.to.x - swim.from.x, k.to.z - swim.from.z) + Math.PI / 2;
+            return {before: Math.min(k.t0 - swim.t0 + 1.5, 6), after: 2.5, step: 1 / 40, view: view((swim.from.x + k.to.x) / 2, Math.min(k.to.y, -0.3), (swim.from.z + k.to.z) / 2, 6.5, 1.5, side)};
+        })
+    },
+    swallow_hawk: {
+        cast: [["sw", "barn-swallow", 2]],
+        hours: 11,
+        date: Date.UTC(2026, 10, 12, 11) / 1000,
+        find: (ctx) => huntMoment(ctx, "aerial_hawk", "fly", (k) => ({before: 2.5, after: 2, step: 1 / 60, view: view(k.to.x, k.to.y, k.to.z, 3.2, 1.45, Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2)}))
+    },
+    meal_chase: {
+        cast: [["li", "african-lion", 1], ["ze", "plains-zebra", 4]],
+        hours: 9,
+        date: Date.UTC(2026, 10, 12, 9) / 1000,
+        find: (ctx) => {
+            const lion = ctx.animals.find((a) => a.slug === "african-lion");
+            const zebra = ctx.animals.find((a) => a.slug === "plains-zebra");
+            if (!lion || !zebra) return null;
+            // The server's record (encounter hunting): the lion's foray waypoint 15 m from the zebra, toward its home;
+            // the zebra's home disc. The scene starts the chase from the waypoint (its home is far off).
+            const dx = lion.place.x - zebra.place.x;
+            const dz = lion.place.z - zebra.place.z;
+            const d = Math.hypot(dx, dz) || 1;
+            const encounter = {t: ctx.date + 30, predator: {x: zebra.place.x + (dx / d) * 15, z: zebra.place.z + (dz / d) * 15}, prey: {x: zebra.place.x, z: zebra.place.z, r: 3}};
+            const event = (a: Context["animals"][number]): ArkEventAnimal => ({id: a.id, species_profile_id: SPECIES[a.slug].id, name: SPECIES[a.slug].name, model_slug: a.slug, zone: a.zone as ArkEventAnimal["zone"], arrived_at: null, origin: "arrived", generation: null, slot: null, slot_rank: null, activity: null, sociality: null, status: "aboard" as ArkEventAnimal["status"]});
+            const act = {kind: "meal", at: new Date((ctx.date + 30) * 1000).toISOString(), predator: event(lion), prey: event(zebra), phrase: null, extinct: false, encounter} as ArkAct;
+            return {start: ctx.date + 30, seconds: 12, step: 1 / 30, view: view(zebra.place.x, 1, zebra.place.z, 30, 1.2, 0.6), note: `lion ${lion.id.slice(-4)} on zebra ${zebra.id.slice(-4)}: waypoint ${encounter.predator.x.toFixed(1)},${encounter.predator.z.toFixed(1)}`, play: [act]};
+        }
     }
 };
+
+/** A hunt's moment: the first of the recipe's catches of this block that comes off (`recipe-hunt.ts` draws its quarry). */
+function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key, ep: Episode) => {before: number; after: number; step: number; view: ArkCameraView}): Moment | null {
+    for (const a of ctx.animals) {
+        for (const trip of trips(ctx, a, ctx.date, 8)) {
+            if (trip.recipe !== recipe) continue;
+            const ep = tripEpisode(ctx.world, trip);
+            const k = ep?.keys.find((key) => key.block.id === block && key.catch?.ok && key.catch.kind !== "worm" && (block !== "fly" || key.t1 - key.t0 > 0.4));
+            if (!ep || !k) continue;
+            const f = frame(k, ep);
+            // (Where its quarry is through the hunt, for the record: `recipe-hunt.ts`.)
+            const q = [k.t0 - 2, k.t0, k.t1 - 0.05].map((t) => (poseOnTrip(ctx.world, trip, t) as RecipePose).act?.quarry).map((x) => (x ? `${x.look} ${x.phase} ${x.x.toFixed(2)},${x.y.toFixed(2)},${x.z.toFixed(2)}` : "none"));
+            return {start: k.t0 - f.before, seconds: f.before + (k.t1 - k.t0) + f.after, step: f.step, view: f.view, note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}; quarry ${q.join(" | ")}`};
+        }
+    }
+    return null;
+}
 
 function castId(k: number, i: number): string {
     return `0000feed-0000-4000-8000-${(k * 256 + i).toString(16).padStart(12, "0")}`;
@@ -260,13 +342,13 @@ async function main() {
     handle.setClockScale(1, clip.date * 1000);
     const until = realPerfNow() + 120_000;
     while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
-    const debug = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string; activity: ArkBehaviourProfile["activity"] | null}; place: {x: number; z: number; ground: number; micro?: unknown}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>}}).__arkDebug;
+    const debug = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string; zone: string; activity: ArkBehaviourProfile["activity"] | null}; place: {x: number; z: number; ground: number; micro?: unknown}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>}}).__arkDebug;
     const ctx: Context = {
         world: scheduleWorld(worldSampler()),
         animals: debug
             .entries()
             .filter((e) => e.sched)
-            .map((e) => ({id: e.animal.id, slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})),
+            .map((e) => ({id: e.animal.id, slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity, place: {x: e.place.x, z: e.place.z}, zone: e.animal.zone})),
         micro: debug
             .entries()
             .filter((e) => e.place.micro)
@@ -304,6 +386,11 @@ async function main() {
         const wait2 = realPerfNow() + 30_000;
         while (realPerfNow() < wait2 && handle.loading()) await wait(200);
         await wait(1500);
+        // A replay (a meal's chase) begins at the first frame.
+        if (moment.play) {
+            await api.at(moment.start);
+            handle.play(moment.play);
+        }
     }
     (window as unknown as {__clip: typeof api}).__clip = api;
 }

@@ -69,7 +69,7 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "go", label: "go there its own way (fly, swim, climb or walk: chosen by the engine)", motion: "travel", curve: "ground", states: ["walk"], beat: "walk"}),
         B({id: "follow", label: "follow (in line or beside)", motion: "travel", curve: "ground", states: ["walk"], beat: "walk"}),
         B({id: "flee", label: "flee (to cover, water or a tree)", motion: "travel", curve: "ground", states: ["run"], beat: "run"}),
-        B({id: "leap", label: "leap (a pounce, a mousing jump)", motion: "travel", curve: "leap", states: ["leap"], beat: "play", aloft: true, pitch: 0.5}),
+        B({id: "leap", label: "leap (a pounce, a mousing jump)", motion: "travel", curve: "leap", states: ["leap"], beat: "play", aloft: true, pitch: 0.5, fx: "dust", fxAt: "end"}),
         // Into and out of the water
         B({id: "dive_air", label: "dive from the air into the water", motion: "travel", curve: "plunge", states: ["plunge"], beat: "glide", aloft: true, pitch: 1.35, fx: "splash", fxAt: "end"}),
         B({id: "dive_feet", label: "drop feet-first onto the water", motion: "travel", curve: "plunge", states: ["strike_feet"], beat: "glide", aloft: true, pitch: -0.9, fx: "splash", fxAt: "end"}),

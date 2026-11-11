@@ -4,7 +4,7 @@ import table from "@/ark-scene/recipes.json";
 import full from "../../data/ark/behaviour-recipes.json";
 import {ARK_RECIPE_STATES, BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {AFTER_STYLES, ENTRY_STYLES, EXIT_STYLES, POSTURES, TEMPLATES, type PreyKind} from "@/ark-scene/recipe-templates";
-import {coatOf as _coatOf, decodeRecipeRow, emergencePoint, forgetRecipes, microMurmuration, molehillsOf, setNestSource, sexDim, swarmFlock, swarmPoint, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {swimBurst, coatOf as _coatOf, decodeRecipeRow, emergencePoint, forgetRecipes, microMurmuration, molehillsOf, setNestSource, sexDim, swarmFlock, swarmPoint, murmurationPoint, MURMURATION_HOURS, nestStageAt, pairLinksOf, PAIR_PERIOD, setRecipesEnabled, sexLook, speciesRecipes, wireRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {behaviourProfile, freeBodyLengthsPerSecond} from "@/ark-scene/behaviour-profile";
 import {basePoseOnTrip, poseOnTrip, recipeCoat, roostOf, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
@@ -156,28 +156,37 @@ test("a plunge dive never goes through the ground: a clear drop from its perch, 
     assert.ok(hovered >= 1, `none hovered (${dives} dives)`);
 });
 
-test("a recipe's legs go no faster than its clips carry it: a seal chases fish at its own swimming pace", () => {
-    // (The release's rig check: harbour seals swam their chase at 2.1 times their clip's pace, a fixed 0.3 m/s.)
+test("a recipe's legs go no faster than its clips carry it: a seal cruises at its own swimming pace and bursts at its prey", () => {
+    // (The release's rig check: harbour seals swam their chase at 2.1 times their clip's pace, a fixed 0.3 m/s. The
+    // motion pass's chases: a swim at its prey is a burst, SWIM_BURST times its cruise and at least a body length a
+    // second, its tail beating faster with the speed (the swim clip's rate follows it; L2's tail beat does).)
     forgetRecipes();
     const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
     for (const [slug, length] of [["harbor-seal", 1.6], ["emperor-penguin", 1.29], ["mallard", 0.79]] as const) {
         const a = animal(`pace-${slug}`, slug, {x: -70, z: 22}, length);
         const swim = freeBodyLengthsPerSecond(a.profile) * length * 1.4;
         let legs = 0;
+        let bursts = 0;
         for (let start = day; start < day + 24 * 3600; start += SLOT_SECONDS) {
             const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
             const episode = trip.recipe ? tripEpisode(world, trip) : null;
             if (!episode || episode.other) continue;
+            const template = TEMPLATES[episode.recipe];
             for (const k of episode.keys) {
                 if (!["swim", "dive", "surface"].includes(k.block.id) || k.toBase) continue;
                 const flat = Math.hypot(k.to.x - k.from.x, k.to.z - k.from.z);
                 if (flat < 0.05) continue;
                 legs++;
+                // A burst: a swim at its prey in a chase (the template's fast steps go to the prey).
+                const fast = Boolean(template?.steps.some((step) => step.fast && step.b === k.block.id && step.to === "prey") && k.prey);
+                if (fast) bursts++;
+                const cap = fast ? swimBurst(a.profile, length) : swim;
                 // Along its curve (at least the straight way) it takes at least as long as its swimming pace allows.
-                assert.ok(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0) <= swim * 1.001, `${slug} ${k.block.id}: ${(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0)).toFixed(2)} m/s over ${swim.toFixed(2)}`);
+                assert.ok(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0) <= cap * 1.001, `${slug} ${k.block.id}${fast ? " (burst)" : ""}: ${(Math.hypot(flat, k.to.y - k.from.y) / (k.t1 - k.t0)).toFixed(2)} m/s over ${cap.toFixed(2)}`);
             }
         }
         assert.ok(legs >= 3, `${slug}: ${legs} swimming legs`);
+        if (slug === "harbor-seal") assert.ok(bursts >= 2, `${slug}: ${bursts} bursts at its prey`);
     }
 });
 

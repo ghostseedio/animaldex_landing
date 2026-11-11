@@ -70,7 +70,7 @@ import {
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
+import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
 import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
@@ -2158,6 +2158,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 intel,
                 asleep: e.state.asleep,
                 acting: Boolean(e.act || e.moment || e.visitor) || !scheduled(e),
+                // A predator running down its prey in a meal's chase (`acts.ts`): nearby prey scatter from it.
+                chasing: Boolean(e.act?.role === "hunter" && (e.act.speed ?? 0) > Math.max(e.length, 0.3) * 1.2),
                 parentId: young.parent,
                 youngPlay: young.play,
                 headHeight: c.modelHeight * 0.8,
@@ -2165,7 +2167,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
                 watched: e.animal.id === selectedId || e.animal.id === followId,
-                shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
+                shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
         reactiveInputs = inputs.length;
@@ -4825,18 +4827,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             preyWater: inWater(prey),
             predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
         });
-        const stage: MealStage = mealStage(kind, bodyOf(predator), bodyOf(prey));
+        // The chase (L7, `acts.ts`): from the server's positions when hunting is encounter-based, with both sides' speeds,
+        // the prey's way of fleeing, and the ground or water each may cross. Each act names its partner (`with`).
+        const chaser = (entry: Entry): ActBody => ({...bodyOf(entry), speedStat: entry.stats.speed, gait: entry.sched?.profile.gait ?? null, slug: entry.animal.model_slug});
+        const encounter = mealEncounter(act);
+        const bodies = encounter ? encounterBodies(chaser(predator), chaser(prey), encounter) : {predator: chaser(predator), prey: chaser(prey)};
+        const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater: inWater(prey), preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
+        const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3));
+        const stage: MealStage = mealStage(kind, bodies.predator, bodies.prey, {seed: `${act.prey.id}#${act.at}`, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter)});
+        const partnered = (pose: ActPose | null, id: string, role: ActPose["role"]): ActPose | null => (pose ? {...pose, with: id, role} : null);
         // Both hold where they are while the camera comes.
-        prey.act = stage.prey(0);
-        if (kind !== "cutaway") predator.act = stage.predator(0);
-        const dx = prey.place.x - predator.place.x;
-        const dz = prey.place.z - predator.place.z;
+        prey.act = partnered(stage.prey(0), predator.animal.id, "quarry");
+        if (kind !== "cutaway") predator.act = partnered(stage.predator(0), prey.animal.id, "hunter");
+        const dx = bodies.prey.x - bodies.predator.x;
+        const dz = bodies.prey.z - bodies.predator.z;
         const azimuth = kind === "cutaway" ? undefined : sideOn(dx, dz);
         toFrame(stage.focus, stage.distance, stage.polar, azimuth, stage.seconds, () => {
             let turned = false;
             run.step = (t, last, now) => {
-                prey.act = stage.prey(t);
-                if (kind !== "cutaway") predator.act = stage.predator(t);
+                prey.act = partnered(stage.prey(t), predator.animal.id, "quarry");
+                if (kind !== "cutaway") predator.act = partnered(stage.predator(t), prey.animal.id, "hunter");
                 for (const puff of stage.puffs(last, t)) dust.add(puff, now);
                 if (stage.turnAt !== undefined && t >= stage.turnAt && !turned) {
                     // The cut-away: the camera turns aside, out to the sea's horizon, while it happens.

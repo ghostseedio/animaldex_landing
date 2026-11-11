@@ -54,6 +54,8 @@ export type TemplateStep = {
     drop?: boolean;
     /** Eats what it caught. */
     eat?: boolean;
+    /** A hunt's fast leg (the chase itself): a swimmer's burst, a flyer's dash, a runner's sprint (`behaviour-recipes.ts` SWIM_BURST…). */
+    fast?: boolean;
     /** Faces: the water, the sun, the other in a pair, the way it was going. */
     face?: "water" | "sun" | "other" | "away";
     /** Only if it caught something; only for species that hover; only in a pair's role ("a": the dominant or the male). */
@@ -248,11 +250,12 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             goal: "water",
             replaces: ["forage", "swim", "dive", "hunt", "wander"],
             doing: "forage",
+            // (The swims at the prey are bursts, the chase itself: the fish flees ahead and darts, `recipe-hunt.ts`.)
             steps: [
                 {b: "dive", to: "prey"},
-                {b: "swim", to: "prey", r: 4},
+                {b: "swim", to: "prey", r: 4, fast: true},
                 {b: "strike", s: [0.4, 0.7], catch: "fish", p: 0.5, carry: "mouth"},
-                {b: "swim", to: "prey", r: 4},
+                {b: "swim", to: "prey", r: 4, fast: true},
                 {b: "strike", s: [0.4, 0.7], catch: "fish", p: 0.5, carry: "mouth"},
                 {b: "surface", to: "water", near: "here", r: 2},
                 {b: "eat", s: [1.5, 3], if: "caught", eat: true}
@@ -306,11 +309,14 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             goal: "ground",
             replaces: ["forage", "stalk", "wander", "hunt"],
             doing: "forage",
+            // (Stalk, freeze, watch it, then a short dash as it hops off and the pounce: `recipe-hunt.ts` draws the
+            // grasshopper it goes after, hopping away ahead of it.)
             steps: [
                 {b: "stalk", to: "ground", r: 3},
                 {b: "freeze", s: [2, 5]},
                 {b: "scan", s: [1, 2]},
-                {b: "leap", to: "ground", near: "here", r: 1.4, catch: "insect", p: 0.3},
+                {b: "run", to: "ground", near: "here", r: 1.6, fast: true},
+                {b: "leap", to: "ground", near: "here", r: 1.4, catch: "insect", p: 0.35},
                 {b: "dig", s: [0.6, 1.2]},
                 {b: "eat", s: [0.8, 1.4], if: "caught", eat: true}
             ],
@@ -327,10 +333,27 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             steps: [
                 {b: "perch", s: [3, 8]},
                 {b: "take_off", to: "up", h: 0.4},
-                {b: "fly", to: "air", r: 4, catch: "insect", p: 0.65},
+                {b: "fly", to: "air", r: 4, catch: "insect", p: 0.65, fast: true},
                 {b: "fly", to: "anchor"},
                 {b: "beat_prey", s: [0.6, 1.2], if: "caught"},
                 {b: "eat", s: [0.5, 1], if: "caught", eat: true}
+            ],
+            loop: 0
+        }),
+        T({
+            id: "aerial_hawk",
+            label: "hawks insects on the wing in long sweeps and sudden twists, never landing (swallows, martins, swifts)",
+            kind: "stay",
+            goal: "air",
+            replaces: ["forage", "fly", "wander", "hunt", "soar"],
+            doing: "fly",
+            hours: "day",
+            // (Sweeps out, a dash at a moth or a fly, on again: the catches are `recipe-hunt.ts` fliers that jink away.)
+            steps: [
+                {b: "fly", to: "air", r: 7},
+                {b: "fly", to: "air", r: 4, catch: "insect", p: 0.6, fast: true},
+                {b: "fly", to: "air", r: 8},
+                {b: "fly", to: "air", r: 4, catch: "insect", p: 0.6, fast: true}
             ],
             loop: 0
         }),

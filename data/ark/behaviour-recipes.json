@@ -5072,7 +5072,7 @@
    },
    "recipes": [
     {
-     "id": "hawk_insects",
+     "id": "aerial_hawk",
      "weight": 6,
      "src": {
       "field": "traits",
@@ -20601,6 +20601,13 @@
    "nest": null,
    "recipes": [
     {
+     "id": "aerial_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "family Hirundinidae (hawks insects in continuous flight)"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -22392,7 +22399,7 @@
    },
    "recipes": [
     {
-     "id": "hawk_insects",
+     "id": "aerial_hawk",
      "weight": 6,
      "src": {
       "field": "traits",
@@ -54208,7 +54215,7 @@
    },
    "recipes": [
     {
-     "id": "hawk_insects",
+     "id": "aerial_hawk",
      "weight": 6,
      "src": {
       "field": "sd",
@@ -57413,6 +57420,13 @@
     ]
    },
    "recipes": [
+    {
+     "id": "aerial_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "family Hirundinidae (hawks insects in continuous flight)"
+     }
+    },
     {
      "id": "nest_build",
      "weight": 6,
@@ -68736,6 +68750,13 @@
     ]
    },
    "recipes": [
+    {
+     "id": "aerial_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "family Apodidae (hawks insects in continuous flight)"
+     }
+    },
     {
      "id": "nest_build",
      "weight": 6,
@@ -89314,6 +89335,13 @@
     ]
    },
    "recipes": [
+    {
+     "id": "aerial_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "family Apodidae (hawks insects in continuous flight)"
+     }
+    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -269896,11 +269924,10 @@
    },
    "recipes": [
     {
-     "id": "pouch_scoop",
+     "id": "aerial_hawk",
      "weight": 6,
      "src": {
-      "field": "facts",
-      "phrase": "It drinks and bathes in flight, skimming low to scoop water from the surface"
+      "rule": "family Hirundinidae (hawks insects in continuous flight)"
      }
     },
     {
@@ -275330,7 +275357,7 @@
    },
    "recipes": [
     {
-     "id": "hawk_insects",
+     "id": "aerial_hawk",
      "weight": 6,
      "src": {
       "field": "traits",
