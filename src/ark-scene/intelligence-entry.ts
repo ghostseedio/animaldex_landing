@@ -80,6 +80,8 @@ type Debug = {
     entries: () => Array<{animal: {id: string; model_slug: string}; youngOf?: {parent: string | null; play: number; at: number}; reactive?: unknown}>;
     reactive: () => {stats: {agents: number; perceptions: number; sightChecks: number; ms: number}; ms: number; tier: string | null};
     pinShared: (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => void;
+    forceLook: (id: string, look: [number, number, number] | null) => void;
+    rigState: (id: string) => {rigOn: boolean; weight: number; clip: string | null; level: string | null} | null;
     setHome: (id: string, x: number, z: number) => boolean;
     controls: {minDistance: number};
 };
@@ -223,6 +225,27 @@ async function mountScenarios(el: HTMLElement) {
             view(at.x, at.z - 2, 7, 0.2, 1.25);
             return {note: "zebras 7 m from the camera; the lion walks past 18 m beyond them from 8 s", watch: [...byPrefix.zebra.slice(0, 3), byPrefix.lion[0]], go: () => walk(byPrefix.lion[0], {x: at.x - 30, z: at.z - 18}, {x: at.x + 30, z: at.z - 18}, nowS() + 8, 30), seconds: 30};
         },
+        /**
+         * The head look drawn (problem 5), with the reactive layer's angles replaced by fixed ones: a zebra side-on at
+         * 5 m; 0-3 s none, 3-6 s yaw +0.9 (to its left), 6-9 s yaw -0.9, 9-12 s pitch -0.5 (down), 12-15 s pitch +0.35
+         * (up), then none. Each still shows whether `arkLook` reaches the drawn head.
+         */
+        look_probe: async () => {
+            const at = site("grassland", -6, -8);
+            hold("zebra", at.x, at.z, 0, "rest", 1);
+            const id = byPrefix.zebra[0];
+            // Side-on: the zebra faces -x... its yaw from hold(0) is -PI; the camera looks at it from +x.
+            view(at.x, at.z, 5, Math.PI / 2, 1.35);
+            const steps: Array<[number, [number, number, number] | null]> = [[0, null], [3, [0.9, 0, 1]], [6, [-0.9, 0, 1]], [9, [0, -0.5, 1]], [12, [0, 0.35, 1]], [15, null]];
+            return {
+                note: "forced arkLook on one zebra: none, yaw +0.9, yaw -0.9, pitch -0.5, pitch +0.35, none (3 s each)",
+                watch: [id],
+                seconds: 18,
+                go: () => {
+                    for (const [t, look] of steps) setTimeout(() => debug().forceLook(id, look), t * 1000);
+                }
+            };
+        },
         /** Curious, sharp chimpanzees come over to look at the camera; a dull animal would only glance. */
         curious_camera: async () => {
             const at = site("rainforest", 0, 0);
@@ -281,7 +304,9 @@ async function mountScenarios(el: HTMLElement) {
                 const pose = entries.find((e) => e.animal.id === id)?.sched?.pose;
                 at[id] = pose ? [Math.round(pose.x * 100) / 100, Math.round(pose.y * 100) / 100, Math.round(pose.z * 100) / 100] : null;
             }
-            return {t: Date.now() / 1000, out, at, stats: handle.reactiveStats()};
+            const rig: Record<string, unknown> = {};
+            for (const id of watch) rig[id] = debug().rigState(id);
+            return {t: Date.now() / 1000, out, at, rig, stats: handle.reactiveStats()};
         },
         measure: async (ms = 3000) => {
             const intervals: number[] = [];
