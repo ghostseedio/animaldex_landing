@@ -149,7 +149,7 @@ import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
@@ -1006,7 +1006,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
-            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), roost: mapRoostOf(place, animal.zone)},
+            // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
+            // sliced mount may have found it already, `mapRoostOf`'s memo.)
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal)}, () => mapRoostOf(place, animal.zone)),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1131,14 +1133,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The spacing being worked out, and what to do with it once it is. */
     let spacing: {build: SlicedBuild<Map<string, SpacedHome>>; apply: (spaced: Map<string, SpacedHome>) => void} | null = null;
     let spacingMs = 0;
+    /** The longest single spacing step (ms, its slice and its wiring when done): runtime's phone budget is 200 ms. */
+    let spacingLongestMs = 0;
     const stepSpacing = (budgetMs: number) => {
         if (!spacing) return;
         const now = spacing;
+        const began = performance.now();
         const spaced = now.build.step(budgetMs);
         spacingMs = now.build.spentMs;
-        if (!spaced) return;
-        spacing = null;
-        now.apply(spaced);
+        if (spaced) {
+            spacing = null;
+            now.apply(spaced);
+        }
+        spacingLongestMs = Math.max(spacingLongestMs, performance.now() - began);
     };
     /**
      * Development only (the scenario recordings, `scripts/ark-intelligence-scenarios.mjs`): a scripted shared pose for an
@@ -5320,6 +5327,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             behaviourBuildMs: Math.round(behaviourBuildMs),
             behaviourBuildSlices,
             behaviourSpacingMs: Math.round(spacingMs),
+            behaviourSpacingLongestMs: Math.round(spacingLongestMs),
             behaviourBuildLongestMs: Math.round(behaviourBuildLongestMs),
             rigsLoaded: rigs.loadedCount,
             rigBytes: rigs.bytes,

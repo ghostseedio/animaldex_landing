@@ -142,10 +142,14 @@ function nearDrawnRock(rock: DrawnRock, x: number, z: number, widen: number): bo
 }
 
 class GridIndex {
-    private readonly cells = new Map<string, AttachPoint[]>();
+    // (Numeric cell keys: the string keys were a large part of a cold schedule's cost. Same cells, same order.)
+    private readonly cells = new Map<number, AttachPoint[]>();
     constructor(private readonly cell: number) {}
+    private static key(i: number, j: number): number {
+        return (i + 32768) * 65536 + (j + 32768);
+    }
     add(point: AttachPoint) {
-        const key = `${Math.floor(point.x / this.cell)},${Math.floor(point.z / this.cell)}`;
+        const key = GridIndex.key(Math.floor(point.x / this.cell), Math.floor(point.z / this.cell));
         const list = this.cells.get(key);
         if (list) list.push(point);
         else this.cells.set(key, [point]);
@@ -157,7 +161,9 @@ class GridIndex {
         const cz = Math.floor(z / this.cell);
         for (let dx = -span; dx <= span; dx++) {
             for (let dz = -span; dz <= span; dz++) {
-                for (const p of this.cells.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(p.x - x, p.z - z) <= r) out.push(p);
+                const list = this.cells.get(GridIndex.key(cx + dx, cz + dz));
+                if (!list) continue;
+                for (const p of list) if (Math.hypot(p.x - x, p.z - z) <= r) out.push(p);
             }
         }
         return out;

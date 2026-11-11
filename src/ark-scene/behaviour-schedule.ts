@@ -458,12 +458,61 @@ function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length:
         const fits = near.filter((p) => length >= p.size[0] * 0.5 && length <= p.size[1] * 1.5);
         const list = fits.length ? fits : near;
         if (list.length) {
-            // Nearer places a little more likely: sorted by distance, a seeded pick weighted to the front (each animal its own).
-            const sorted = [...list].sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z) || a.id.localeCompare(b.id));
-            return sorted[Math.floor(roll ** 1.4 * sorted.length)];
+            // Nearer places a little more likely: by distance (then id), a seeded pick weighted to the front (each animal
+            // its own). The pick is the k-th in that order, found without sorting the whole list (`kthNearest`).
+            return kthNearest(list, centre, Math.floor(roll ** 1.4 * list.length));
         }
     }
     return null;
+}
+
+/**
+ * The k-th of these points by distance from a centre, then by id: what sorting them all and taking the k-th gives (the
+ * same distances, `Math.hypot`, and the same tie-break), by selection in linear time. (2026-11-11: a cold schedule's
+ * goal searches sorted every leaf in a canopy's 40 m, the main cost of the runtime's resting query at 9,420 animals.)
+ */
+export function kthNearest<T extends {x: number; z: number; id: string}>(list: readonly T[], centre: {x: number; z: number}, k: number): T {
+    const n = list.length;
+    const d = new Float64Array(n);
+    const order = new Array<number>(n);
+    for (let i = 0; i < n; i++) {
+        d[i] = Math.hypot(list[i].x - centre.x, list[i].z - centre.z);
+        order[i] = i;
+    }
+    const before = (a: number, b: number) => d[a] - d[b] || list[a].id.localeCompare(list[b].id);
+    let lo = 0;
+    let hi = n - 1;
+    const want = Math.min(Math.max(k, 0), n - 1);
+    while (lo < hi) {
+        // Median of three as the pivot, then a three-way split round it.
+        const mid = (lo + hi) >> 1;
+        const a = order[lo];
+        const b = order[mid];
+        const c = order[hi];
+        const pivot = before(a, b) < 0 ? (before(b, c) < 0 ? b : before(a, c) < 0 ? c : a) : before(a, c) < 0 ? a : before(b, c) < 0 ? c : b;
+        let lt = lo;
+        let gt = hi;
+        let i = lo;
+        while (i <= gt) {
+            const cmp = before(order[i], pivot);
+            if (cmp < 0) {
+                const t = order[lt];
+                order[lt] = order[i];
+                order[i] = t;
+                lt++;
+                i++;
+            } else if (cmp > 0) {
+                const t = order[gt];
+                order[gt] = order[i];
+                order[i] = t;
+                gt--;
+            } else i++;
+        }
+        if (want < lt) hi = lt - 1;
+        else if (want > gt) lo = gt + 1;
+        else return list[order[want]];
+    }
+    return list[order[want]];
 }
 
 /** How steep it walks: a mountain animal takes the slopes. */
@@ -557,12 +606,17 @@ function leaderIntentAt(world: ScheduleWorld, group: ScheduleGroup, epoch: numbe
     return intent(world, group.profile, group.leader, group.activity, slotOf(group.leader, epoch), hoursAt);
 }
 
-/** The group's middle for a member's slot: where its leader is halfway through it. */
+/**
+ * The group's middle for a member's slot: the place its leader is at halfway through it (its slot's goal), not where
+ * the leader's own steps there have walked it by then. (2026-11-11, five lions in a row: each member's slot is offset
+ * from the leader's, so each took a different moment of the leader's forage, a line of forward steps, as its middle,
+ * and the members near their middles stood along that line.)
+ */
 function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): {x: number; z: number} | null {
     const group = animal.group;
     if (!group) return null;
-    const at = leaderAt(world, group, slotStart(animal, slot) + SLOT_SECONDS / 2, hoursAt);
-    return {x: at.x, z: at.z};
+    const trip = tripAt(world, group.profile, group.leader, slotStart(animal, slot) + SLOT_SECONDS / 2, hoursAt, group.activity);
+    return {x: trip.to.x, z: trip.to.z};
 }
 
 // MARK: The slot
@@ -656,14 +710,19 @@ function intent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sche
 
 function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     const placed = placedIntent(world, profile, animal, activity, slot, hoursAt);
-    if (!placed.to || placed.follow) return placed;
+    // (One that never walks its goals, a flyer or a swimmer that stays in the water, goes as planned: its walk chain
+    // would keep every goal, so it is not worked out.)
+    if (!placed.to || placed.follow || !walksGoals(profile)) return placed;
     // Which goals it walks to is worked out in order through its slots (where each leaves it decides the next), from a
     // start WALK_LEAD blocks of slots back: never chained back through every slot, and the same for every caller. (The
     // lead is where two chains, a block apart, come to agree where it is.)
     const start = (Math.floor(slot / WALK_BLOCK) - WALK_LEAD) * WALK_BLOCK;
-    const to = walkChain(world, profile, animal, activity, start, hoursAt)[slot - start];
+    // (Whether it walks there, as a flag: not by comparing goal objects, which a planned intent worked out again after
+    // the memo let it go is not, so the answer turned on the order things were asked in, a school's leader's swim read
+    // as a walk and its school no longer following. 2026-11-11.)
+    const here = walkChain(world, profile, animal, activity, start, hoursAt)[slot - start];
     // (A prey animal watching a predator it cannot walk off from by a plain way watches it from where it is: still facing it.)
-    return to === placed.to ? placed : {...placed, to, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
+    return here === null ? placed : {...placed, to: here, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
 }
 
 /** Slots in a block of the walk chain (`walkChain`), and the blocks it runs before the block it decides. */
@@ -676,6 +735,7 @@ const WALK_LEAD = 2;
  * planned goals before `start` leave it.
  */
 function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, start: number, hoursAt: HoursAt): Array<Spot | null> {
+    // (Each slot's entry: null where it goes as planned; where it does not, the spot it stays at instead.)
     return remember(memoOf(world, hoursAt, animal).chains, start, () => {
         // Where it starts: its last planned goal before the chain, and where its beats there left it.
         let goal: Spot | null = null;
@@ -695,15 +755,16 @@ function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             if (placed.follow) {
                 goal = null;
                 at = null;
-                out.push(placed.to);
+                out.push(null);
                 continue;
             }
             if (!placed.to) {
                 out.push(null);
                 continue;
             }
-            const to = walkable(world, profile, animal, placed, at) ? placed.to : {...(at ?? groundSpot(world, animal.home.x, animal.home.z)), yaw: undefined};
-            out.push(to);
+            const goes = walkable(world, profile, animal, placed, at);
+            const to = goes ? placed.to : {...(at ?? groundSpot(world, animal.home.x, animal.home.z)), yaw: undefined};
+            out.push(goes ? null : to);
             at = endOf(world, profile, animal, k, placed, to, goal);
             goal = to;
         }
@@ -735,9 +796,7 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
 function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent, before: Spot | null): boolean {
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
-    // (A flyer flies there; a swimmer that never leaves the water swims.)
-    const walker = profile.move !== "fly" && !profile.seabed && (profile.move !== "swim" || amphibious(profile));
-    if (!to || placed.follow || !walker || (placed.mode !== "ground" && placed.mode !== "water")) return true;
+    if (!to || placed.follow || !walksGoals(profile) || (placed.mode !== "ground" && placed.mode !== "water")) return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
     let from = before ?? groundSpot(world, animal.home.x, animal.home.z);
@@ -783,6 +842,11 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     };
     if (retreat) return turnsOn(0.05) < Math.PI * 2;
     return pathLength(path) <= straight * 1.3 + 2 && turnsOn(0.3) <= 2.2;
+}
+
+/** Whether it walks to its goals (a flyer flies there; a swimmer that never leaves the water swims). */
+function walksGoals(profile: ArkBehaviourProfile): boolean {
+    return profile.move !== "fly" && !profile.seabed && (profile.move !== "swim" || amphibious(profile));
 }
 
 /**
@@ -1024,8 +1088,10 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const onGround = !raised(world, at) && !wet(world, at);
     for (const beat of beats) {
         if (beat.at > seconds) break;
-        // A scan is a look round (the head and its clip): its body shifts a little and comes back, never turns it round.
-        const glance = beat.beat === "scan" ? (beat.turn ?? 0) * 0.3 : 0;
+        // A scan is a look round with the head (its clip and the look chain: `head-look.ts`); the body stays as it stands.
+        // (2026-11-11: the body's small glance with each scan, and the arrival turn, added up to over a turn a minute in
+        // a grey heron's watch.)
+        const glance = 0;
         if (beat.beat !== "scan") yaw += beat.turn ?? 0;
         let dur: number | undefined;
         if ((beat.dx || beat.dz) && onGround) {
@@ -1759,10 +1825,34 @@ export function wireThreats(list: Array<{slug: string; animal: ScheduleAnimal; p
     const hunters = slugs.filter((p) => slugs.some((q) => q !== p && eats(p, q)));
     const top = new Set(hunters.filter((p) => !slugs.some((q) => q !== p && eats(q, p))));
     const tops = list.filter((i) => top.has(i.slug));
+    // (Worked out once a kind, not once an animal: who threatens an animal depends only on its kind. The same lists.)
+    const ofKind = new Map<string, ScheduleThreat[] | null>();
     for (const i of list) {
-        const threats = tops.filter((p) => p !== i && p.slug !== i.slug && eats(p.slug, i.slug)).map((p) => ({animal: p.animal, profile: p.profile, activity: p.activity}));
-        i.animal.threats = threats.length ? threats : null;
+        let threats = ofKind.get(i.slug);
+        if (threats === undefined) {
+            const found = tops.filter((p) => p.slug !== i.slug && eats(p.slug, i.slug)).map((p) => ({animal: p.animal, profile: p.profile, activity: p.activity}));
+            ofKind.set(i.slug, (threats = found.length ? found : null));
+        }
+        i.animal.threats = threats;
     }
+}
+
+/**
+ * Its fixed roost (the map's: `scheduleRoost`) worked out the first time anything asks for it, not when its schedule is
+ * made: the same spot, the cost (a den's search among the rocks) moved out of the mount to its first step, which the
+ * scene spreads over frames. (Runtime's phone profile, 2026-11-11: 0.87 s of the mount at 3,137 animals.)
+ */
+export function withLazyRoost(animal: Omit<ScheduleAnimal, "roost">, find: () => Spot | null): ScheduleAnimal {
+    let roost: Spot | null | undefined;
+    Object.defineProperty(animal, "roost", {
+        get: () => (roost === undefined ? (roost = find()) : roost),
+        set: (value: Spot | null | undefined) => {
+            roost = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    return animal as ScheduleAnimal;
 }
 
 /** The least a predator is kept from an animal it eats (or that eats it), beyond both their reaches: 20 m (owner's problem 6). */
@@ -1831,11 +1921,21 @@ export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, p
         return found.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
     };
     const GRID = 12;
-    const tasks: BuildTask[] = sorted.map((predator) => once(() => {
+    // Each predator a task that resumes (2026-11-11: a predator's whole search, 40 rings of 24 spots, each a habitat
+    // test, was one 0.44 s task on the phone): its setup, then one ring of its search a call, then its ending. The same
+    // steps in the same order as all at once.
+    const tasks: BuildTask[] = sorted.map((predator) => {
+        let resume: (() => boolean) | null = null;
+        return () => {
+            if (!resume) resume = predatorSearch(predator);
+            return resume();
+        };
+    });
+    function predatorSearch(predator: HomeInput): () => boolean {
         const itsPrey = preyKinds(predator.slug);
-        if (!itsPrey.length) return;
+        if (!itsPrey.length) return () => true;
         const prey = ofKinds(itsPrey, predator);
-        if (!prey.length) return;
+        if (!prey.length) return () => true;
         const enemies = ofKinds(enemyKinds(predator.slug), predator);
         const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
@@ -1895,25 +1995,33 @@ export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, p
         };
         const start = home.get(predator.id)!;
         let best = {x: start.x, z: start.z, c: clearance(start.x, start.z)};
-        if (best.c < 0) {
-            const mx = prey.reduce((sum, p) => sum + home.get(p.id)!.x, 0) / prey.length;
-            const mz = prey.reduce((sum, p) => sum + home.get(p.id)!.z, 0) / prey.length;
-            const away = Math.atan2(start.x - mx, start.z - mz);
-            let found = false;
-            for (let d = 3; d <= 120 && !found; d += 3) {
-                for (let k = 0; k < 24 && !found; k++) {
-                    const a = away + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.27;
-                    const x = start.x + Math.sin(a) * d;
-                    const z = start.z + Math.cos(a) * d;
-                    // (Its walkable test only where it could matter: a spot no better than the best and not clear
-                    // changes nothing, walkable or not.)
-                    const c = clearance(x, z, best.c);
-                    if (c <= best.c && c < 0) continue;
-                    if (!predator.walkable(x, z)) continue;
-                    if (c > best.c) best = {x, z, c};
-                    if (c >= 0) found = true;
-                }
+        let found = false;
+        let d = 3;
+        const mx = best.c < 0 ? prey.reduce((sum, p) => sum + home.get(p.id)!.x, 0) / prey.length : 0;
+        const mz = best.c < 0 ? prey.reduce((sum, p) => sum + home.get(p.id)!.z, 0) / prey.length : 0;
+        const away = Math.atan2(start.x - mx, start.z - mz);
+        /** One ring of its search; true once the search is over. */
+        const ring = (): boolean => {
+            if (d > 120 || found) return true;
+            for (let k = 0; k < 24 && !found; k++) {
+                const a = away + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.27;
+                const x = start.x + Math.sin(a) * d;
+                const z = start.z + Math.cos(a) * d;
+                // (Its walkable test only where it could matter: a spot no better than the best and not clear
+                // changes nothing, walkable or not.)
+                const c = clearance(x, z, best.c);
+                if (c <= best.c && c < 0) continue;
+                if (!predator.walkable(x, z)) continue;
+                if (c > best.c) best = {x, z, c};
+                if (c >= 0) found = true;
             }
+            d += 3;
+            return d > 120 || found;
+        };
+        const searched = best.c < 0;
+        /** After the search (if it needed one): its home, the shrinking where nowhere was clear, and its result. */
+        const ending = () => {
+        if (searched) {
             home.set(predator.id, {x: best.x, z: best.z});
             if (!found) {
                 // Nowhere clear: both ranges shrink until they keep the distance (half a metre at least).
@@ -1935,7 +2043,13 @@ export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, p
         const nearest = [...prey].sort((a, b) => Math.hypot(home.get(a.id)!.x - at.x, home.get(a.id)!.z - at.z) - Math.hypot(home.get(b.id)!.x - at.x, home.get(b.id)!.z - at.z))[0];
         const shrunk = reach.get(predator.id)! < reachOf(predator.id) - 1e-9;
         out.set(predator.id, {home: {...at}, range: shrunk ? reach.get(predator.id)! : out.get(predator.id)?.range ?? null, prey: {...home.get(nearest.id)!}});
-    }));
+        };
+        return () => {
+            if (searched && !ring()) return false;
+            ending();
+            return true;
+        };
+    }
     return {tasks, finish: () => out};
 }
 
