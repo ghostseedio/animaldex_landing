@@ -2028,7 +2028,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (moved > 3) moved = 0;
         state.last = (state.last ?? new Vector3()).copy(rigHere);
         if (state.weight <= 0) return null;
-        const speed = dt > 0 ? moved / dt : 0;
+        // Its pace for choosing the clip, eased over about a fifth of a second (the clip's phase still follows the real distance).
+        if (dt > 0) state.pace += (moved / dt - state.pace) * Math.min(dt * 5, 1);
+        const speed = state.pace;
         const clip = (name: string) => rigs.clip(slug, name);
         const moving = (move: RigClipData | null): move is RigClipData => Boolean(move?.ground_speed) && speed > move!.ground_speed! * (state.now.name === move!.name ? 0.12 : 0.3);
         let want: string | null = null;

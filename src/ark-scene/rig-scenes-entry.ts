@@ -306,6 +306,8 @@ async function mountScenes(el: HTMLElement) {
             });
             const eagle = (start: number) =>
                 debug().pinShared(ids.meagle[0], (epoch: number) => {
+                    // Out of sight until it comes over (parked far off, so nobody runs before it shows).
+                    if (epoch < start) return {x: 400, z: 380, y: 30, yaw: 0, moving: false, aloft: true, doing: "soar", beat: "glide"};
                     const u = Math.min(Math.max((epoch - start) / 10, 0), 1);
                     const x = at.x + 60 - 100 * u;
                     return {x, z: at.z + 3, y: ground(x, at.z) + 12, yaw: -Math.PI / 2, moving: true, aloft: true, doing: "soar", beat: "glide"};
