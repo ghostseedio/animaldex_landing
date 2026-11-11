@@ -88,6 +88,7 @@ import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
+import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -406,6 +407,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     renderer.localClippingEnabled = true;
     layersScene.clip([landscape.ground.material as MeshStandardMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
     const PLANKTON = planktonClouds();
+    // Scenery modules outside this file (`scene-modules.ts`: the props lane's nests, homes and area details), built below.
+    let modules: ArkSceneModule[] = [];
 
     const camera = new PerspectiveCamera(FOV, 1, 0.4, 9000);
     const controls = new OrbitControls(camera, canvas);
@@ -446,6 +449,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         post.setTier(tier);
         ARK_GROUND_LITE.value = tier === "low" ? 1 : 0;
+        for (const sceneModule of modules) {
+            sceneModule.setTier(tier, liteOn());
+            sceneModule.setShadows(settings.shadows > 0);
+        }
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
         renderer.setPixelRatio(pixelRatio);
         motes.points.visible = !reducedMotion && !liteOn();
@@ -768,6 +775,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: entry.place.x + Math.cos(entry.place.yaw) * side, z: entry.place.z - Math.sin(entry.place.yaw) * side, size: Math.min(Math.max(entry.length * 0.35, 0.18), 0.6)};
         });
         layersScene.setBurrows(burrows, molehills, mouths);
+        for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
         // A school or a flock keeps to its first one.
         for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
         applyHours();
@@ -2160,6 +2168,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         onScreen = seen?.isIntersecting ?? true;
     });
     visibility.observe(el);
+    modules = ARK_SCENE_MODULES.map((create) => create({
+        scene,
+        renderer,
+        tier,
+        snapshot: options.snapshot,
+        hours: hoursNow(),
+        placeOf: (id) => placedAll.get(id) ?? null,
+        planOf: (slug) => library.get(slug)?.behaviour?.plan,
+        reducedMotion
+    }));
+    if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
     applyTier(tier);
 
     // MARK: First view
@@ -2422,6 +2441,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const setLight = () => {
         lighting.setHours(hoursNow(), fog);
         micro.setNight(lighting.daylight.night);
+        for (const sceneModule of modules) sceneModule.setHours(hoursNow());
         applyHours();
     };
 
@@ -2851,6 +2871,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepLayers(elapsed);
         foldTrees(elapsed);
         micro.step(camera.position);
+        for (const sceneModule of modules) sceneModule.step(elapsed, camera, controls.target);
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
         if (now - lastClock > 60 && !replay) {
@@ -2968,9 +2989,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Fewer (or more) of each herd drawn one by one.
             if (herds.length) setSnapshot(current, false);
         },
+        setProps: (on) => {
+            for (const sceneModule of modules) sceneModule.setEnabled(on);
+        },
         setReducedMotion: (reduced) => {
             if (reduced === reducedMotion) return;
             reducedMotion = reduced;
+            for (const sceneModule of modules) sceneModule.setReducedMotion(reduced);
             motes.points.visible = !reducedMotion && !liteOn();
             if (reduced) {
                 flight = null;
@@ -3125,6 +3150,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             landscape.dispose();
             vegetation.dispose();
             micro.dispose();
+            for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();
             lighting.dispose();
             post.dispose();
