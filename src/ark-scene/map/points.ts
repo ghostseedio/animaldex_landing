@@ -230,10 +230,17 @@ export class MapPoints {
     }
 
     /** The list a zone's animal of this tag uses: its own zone's (`own`), else the nearest zone's that has some. */
-    partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean} {
+    partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean; borrowers?: ArkZone[]} {
         const partitions = this.partitions(tag, wet);
         const own = partitions.get(zone);
         if (own?.length) return {list: own, own: true};
+        const best = this.nearestPartition(partitions, zone);
+        // The zones that borrow the same list (each zone with none of the tag's cells borrows the nearest zone's), in a fixed order.
+        const borrowers = ARK_ZONES.filter((other) => !partitions.get(other)?.length && this.nearestPartition(partitions, other) === best);
+        return {list: best, own: false, borrowers};
+    }
+
+    private nearestPartition(partitions: Map<ArkZone, SpawnPoint[]>, zone: ArkZone): SpawnPoint[] {
         const site = ZONE_SITES[zone] ?? ZONE_SITES.farm_garden;
         let best: SpawnPoint[] = [];
         let distance = Infinity;
@@ -245,7 +252,7 @@ export class MapPoints {
                 best = list;
             }
         }
-        return {list: best, own: false};
+        return best;
     }
 
     /**
@@ -281,13 +288,21 @@ export class MapPoints {
      * cell k mod n, lap k div n; a borrowing zone's from the list's end,
      * half a cell over. One-to-one: no two clusters share a spot.
      */
-    pick(list: SpawnPoint[], own: boolean, zone: ArkZone, slot: number): SlotPick {
+    pick(list: SpawnPoint[], own: boolean, zone: ArkZone, slot: number, borrowers: readonly ArkZone[] = ARK_ZONES): SlotPick {
         const n = list.length;
-        const key = own ? slot : slot * ARK_ZONES.length + Math.max(ARK_ZONES.indexOf(zone), 0);
+        // A borrowing zone's slots interleave only with the other zones that borrow this list (not all twelve: fewer laps).
+        const key = own ? slot : slot * Math.max(borrowers.length, 1) + Math.max(borrowers.indexOf(zone), 0);
         const lap = Math.floor(key / n);
         const point = own ? list[key % n] : list[n - 1 - (key % n)];
-        // (Past four laps, more clusters than four a cell, the laps come round again.)
-        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap % 4];
+        // Past four laps (more clusters than four a cell, a zone far over its ground): each further lap its own spot in the cell, on a
+        // low-discrepancy sequence (R2), so nothing ever stands on another's spot, however full.
+        if (lap >= 4) {
+            const k = lap - 4 + (own ? 0 : 1000);
+            const ox = ((0.5 + k * 0.7548776662) % 1) * GRID;
+            const oz = ((0.5 + k * 0.5698402910) % 1) * GRID;
+            return {point, level: own ? lap : lap + 1, x: point.x + ox - GRID / 2, z: point.z + oz - GRID / 2};
+        }
+        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap];
         return {point, level: own ? lap : lap + 1, x: point.x + ox, z: point.z + oz};
     }
 

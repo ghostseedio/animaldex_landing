@@ -368,8 +368,9 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         // cover where it has it); past its kind's cells, the plain ones.
         // (A cover slot past the covered cells takes the edge's, then looks for cover round it.)
         const order: SlotKind[] = kind === "cover" ? ["cover", "edge", "plain"] : kind === "plain" ? ["plain"] : [kind, "plain"];
-        let pick = all.pick(all.kindOf(partition.list, order[0]), partition.own, zone, slot);
-        for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
+        // (A zone borrowing another's cells takes the whole list: its keys spread over every cell, never lapping one kind's few.)
+        let pick = all.pick(partition.own ? all.kindOf(partition.list, order[0]) : partition.list, partition.own, zone, slot, partition.borrowers);
+        if (partition.own) for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
         const choice: Choice = {tag, wet, pick, ok: okFor(tag, wet)};
         first ??= choice;
         // Free: its cell, or the cell's first lap (half a cell over), so it keeps to the place its text names first.

@@ -129,8 +129,10 @@ function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null 
     let lo = Infinity;
     let hi = -Infinity;
     let crops = 0;
-    for (let lx = land.x0; lx <= land.x1 + 1e-9; lx += 2) {
-        for (let lz = land.z0; lz <= land.z1 + 1e-9; lz += 2) {
+    // Every 2 m across its ground and a metre round it, its edges included.
+    const span = (a: number, b: number) => Array.from({length: Math.ceil((b - a + 2) / 2) + 1}, (_, i) => Math.min(a - 1 + i * 2, b + 1));
+    for (const lx of span(land.x0, land.x1)) {
+        for (const lz of span(land.z0, land.z1)) {
             const w = frame.toWorld(lx, lz);
             const g = sampleGround(w.x, w.z);
             if (g.land < 0.9 || g.height < 0.4 || riverDistance(w.x, w.z) < 3) return null;
@@ -169,7 +171,9 @@ export function planHamletSlots(): HomePlot[] {
                 if (Math.hypot(x - middle.x, z - middle.z) > REACH || Math.hypot(x - middle.x, z - middle.z) < 6) continue;
                 const facing = Math.atan2(middle.x - x, middle.z - z);
                 for (const turn of TURNS) {
-                    const plot: HomePlot = {id: "candidate", kind, x, z, rotation: Math.round((facing + turn) * 1000) / 1000, ...(kind === "smallholding" ? {barn: true} : {})};
+                    // (Each candidate its own id: the props cache a plot's paddock by its id.)
+                    const rotation = Math.round((facing + turn) * 1000) / 1000;
+                    const plot: HomePlot = {id: `candidate:${kind}:${x}:${z}:${rotation}`, kind, x, z, rotation, ...(kind === "smallholding" ? {barn: true} : {})};
                     const score = fitness(plot, middle);
                     if (score !== null) list.push({plot, score});
                 }
@@ -182,10 +186,10 @@ export function planHamletSlots(): HomePlot[] {
     const counts = {house: 0, smallholding: 0};
     for (const kind of SLOT_ORDER) {
         for (const {plot} of candidates.get(kind)!) {
-            const id = `${kind}-${counts[kind] + 1}`;
-            const placed: HomePlot = {...plot, id};
-            const footprint = plotFootprint(placed);
+            // (Its footprint by its candidate id: the props cache a paddock by the plot's id.)
+            const footprint = plotFootprint(plot);
             if (taken.some((other) => overlap(footprint, other, 1))) continue;
+            const placed: HomePlot = {...plot, id: `${kind}-${counts[kind] + 1}`};
             taken.push(footprint);
             counts[kind]++;
             out.push(placed);

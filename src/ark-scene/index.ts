@@ -94,6 +94,8 @@ import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {gripPoint} from "@/ark-scene/map/grip";
+import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident} from "@/ark-scene/map/hamlet";
+import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -110,7 +112,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {attachSway, type ArkEnvironment} from "@/ark-scene/sampler";
+import {attachSway, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -1056,6 +1058,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
     };
 
+    // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second).
+    let hamletPlotsKey = "";
+    let hamletResidents: HamletResident[] = [];
+    let hamletNow: {at: number; state: ReturnType<typeof hamletState>} | null = null;
+    const hamletAt = () => {
+        const epoch = worldMs() / 1000;
+        if (!hamletNow || Math.abs(epoch - hamletNow.at) >= 0.5) hamletNow = {at: epoch, state: hamletState(hamletResidents, epoch, scheduleHours)};
+        return hamletNow.state;
+    };
+    /** A resident out of doors now, or walking a door beat (else it is indoors: not drawn). */
+    const hamletOutside = (entry: Entry) => {
+        const state = hamletAt();
+        return state.out.has(entry.animal.id) || state.beats.has(entry.animal.id);
+    };
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
@@ -1063,8 +1079,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
+            // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
+            const plots = hamletPlotsFor(snapshot.animals);
+            const plotsKey = plots.map((plot) => plot.id).join(",");
+            if (plotsKey !== hamletPlotsKey) {
+                hamletPlotsKey = plotsKey;
+                setAttachHomePlots(plots);
+                for (const sceneModule of modules) (sceneModule as Partial<{setHomePlots: (list: HomePlot[]) => void}>).setHomePlots?.(plots);
+            }
             placedAll = placeAnimals(snapshot.animals);
             placedFor = snapshot;
+            hamletResidents = snapshot.animals.flatMap((animal) => {
+                const plot = placedAll.get(animal.id)?.hamlet?.plot;
+                return plot ? [{id: animal.id, slug: animal.model_slug, length: arkBody(animal).metres, plot}] : [];
+            });
         }
         const places = placedAll;
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
@@ -1655,6 +1683,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = momentAt(entry, model, modelHeight, time);
             if (at) return at;
         }
+        if (place.hamlet && !entry.visitor) {
+            // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
+            const state = hamletAt();
+            const beat = state.beats.get(entry.animal.id);
+            const out = state.out.get(entry.animal.id);
+            const door = plotSpots(place.hamlet.plot).door;
+            const at = beat ? {x: beat.from.x + (beat.to.x - beat.from.x) * beat.t, z: beat.from.z + (beat.to.z - beat.from.z) * beat.t} : out ? out.at : door;
+            const yaw = beat ? Math.atan2(beat.to.x - beat.from.x, beat.to.z - beat.from.z) : out ? place.hamlet.plot.rotation + (((hamletHash(entry.animal.id) >>> 5) % 628) / 100) : place.hamlet.plot.rotation;
+            return {x: at.x, z: at.z, base: Math.max(heightAt(at.x, at.z), 0), yaw, pitch: 0, roll: 0, afloat: false};
+        }
         if (place.host && !entry.visitor) {
             // A partner on its host (map section 6): on its back, under a shark, at a grazer's feet, beside it, as the host moves now.
             const host = findEntry(place.host.id);
@@ -2066,7 +2104,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const atSea = atSeaOf(entry) || entry.depth?.water === "salt";
             // The deep's are hidden from above while they are down there (an air-breather of the deep shows when it comes up).
             const down = entry.depth ? entry.depth.band === "deep" && where.base < -2.5 : entry.layer.layer === "deep";
-            if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen))) {
+            if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen) || (entry.place.hamlet && !hamletOutside(entry)))) {
                 entry.middle = null;
                 continue;
             }
