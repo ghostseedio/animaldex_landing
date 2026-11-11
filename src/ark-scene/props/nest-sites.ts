@@ -14,6 +14,7 @@
 import {allAttachPoints, surfaceAt, type AttachPoint} from "@/ark-scene/sampler";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
+import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import type {Placement} from "@/ark-scene/placement";
 import {ZONE_SITES, hashString, seeded} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -171,7 +172,8 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
                 // `leaf` point of each nearby tree (on the crown's outside), the nest settled into the leaves.
                 const tops = new Map<string, AttachPoint>();
                 for (const point of pointsTagged("leaf")) {
-                    if (!TREE_KINDS.has(point.hostKind) || point.normal.y < 0.6 || dist(point.position, from) > 70) continue;
+                    // `open` (the attach lane's: how much of the sky the point sees) keeps it off leaves buried in the crown.
+                    if (!TREE_KINDS.has(point.hostKind) || point.normal.y < 0.6 || ((point as {open?: number}).open ?? 1) < 0.3 || dist(point.position, from) > 70) continue;
                     const top = tops.get(point.host);
                     if (!top || point.position.y > top.position.y) tops.set(point.host, point);
                 }
@@ -229,7 +231,8 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
             break;
         }
         case "eaves": {
-            const eaves = propsPoints("house_eave", {x: COTTAGE.x, z: COTTAGE.z, radius: 12});
+            // The back and side eaves first: the front's is over the porch roof, where nothing would be seen.
+            const eaves = propsPoints("house_eave", {x: COTTAGE.x, z: COTTAGE.z, radius: 12}).sort((a, b) => Number(a.z - COTTAGE.z > COTTAGE.depth / 2 - 0.2 + COTTAGE.overhang * 0.3) - Number(b.z - COTTAGE.z > COTTAGE.depth / 2 - 0.2 + COTTAGE.overhang * 0.3) || a.id.localeCompare(b.id));
             for (const point of eaves) {
                 for (let n = 0; n < 3 && out.length < count; n++) {
                     // Tucked in at the top of the wall, its back to it; a colony spaced along the eave.
@@ -239,7 +242,13 @@ export function nestSpots(plan: NestPlan, radius: number, placeOf: (id: string) 
                     const back = COTTAGE.overhang * 0.6 - 0.015;
                     const x = point.x + Math.cos(wall) * along - Math.sin(wall) * back;
                     const z = point.z - Math.sin(wall) * along - Math.cos(wall) * back;
-                    take(`${point.id}:${n}`, {x, y: point.y - radius * (plan.profile.form === "ball" ? 2.0 : 1.05), z, turn: wall});
+                    // Under the roof: on the long walls the roof slopes down past the wall's top, so the nest's top
+                    // stays under the roof's underside at the nest's outer edge (micro.ts roofHeight, the drawn roof).
+                    const tall = radius * (plan.profile.form === "ball" ? 1.9 : plan.profile.closed ? 1.25 : 1.0);
+                    const reach = radius * (plan.profile.form === "ball" ? 1.3 : 0.95);
+                    const longWall = Math.abs(Math.cos(wall)) > 0.5;
+                    const top = longWall ? COTTAGE.floor + roofHeight(COTTAGE.depth / 2 + reach) - ROOF_THICKNESS - 0.02 : point.y;
+                    take(`${point.id}:${n}`, {x, y: Math.min(top, point.y) - tall, z, turn: wall});
                 }
                 if (out.length >= count) break;
             }

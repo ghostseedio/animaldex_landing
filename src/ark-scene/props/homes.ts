@@ -25,7 +25,7 @@ import {LodBatch, merge, paint, propMaterial, type PropInstance, type PropsTier}
 import type {Presence} from "@/ark-scene/props/presence";
 import {eggLength, eggLook, nestRadius, type NestForm, type NestProfile, type NestSite} from "@/ark-scene/props/nest-kinds";
 import {buildOf, nestStage, registerNestSites, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
-import {nestFarGeometry, nestGeometry} from "@/ark-scene/props/nest-shapes";
+import {eggGeometry, nestFarGeometry, nestGeometry} from "@/ark-scene/props/nest-shapes";
 import {nestSpots} from "@/ark-scene/props/nest-sites";
 import {arkBody} from "@/ark-scene/stats";
 import {groundAt, namedPlace, propRandom, propsPoints, type PropsPoint} from "@/ark-scene/props/sampler";
@@ -252,6 +252,9 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     }
     registerNestSites(nestSites);
     const nestMaterial = propMaterial({texture: 1, textureScale: 5, textureStrength: 0.3, roughness: 0.95, growth: true, doubleSide: true});
+    // Eggs: a faint sheen, no ground texture.
+    const eggMaterial = propMaterial({roughness: 0.55});
+    extraMaterials.push(eggMaterial);
     extraMaterials.push(nestMaterial);
     const nestBatches: Array<{batch: LodBatch; sites: NestSiteInfo[]}> = [];
     let seed = 0;
@@ -262,7 +265,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     });
     if (hollows.length) add(new LodBatch("nest-hole", hollows, shapes.hollow(0.15), null, warm, {cap: 16, reach: 0.9}));
     if (burrowMouths.length) add(new LodBatch("nest-burrow", burrowMouths, shapes.warrenMouth(0.28), null, decal, {cap: 16, reach: 0.9}));
-    if (eggs.length) add(new LodBatch("eggs", eggs, shapes.egg(0.06), null, warm, {cap: 60, reach: 0.6, fine: false}));
+    if (eggs.length) add(new LodBatch("eggs", eggs, eggGeometry(0.06), null, eggMaterial, {cap: 60, reach: 0.6, fine: false}));
     const stageCache = new Map<NestSiteInfo, number>();
     const setNestStages = (t: number | null): boolean => {
         let changed = false;
@@ -513,7 +516,7 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             }
         });
         add(new LodBatch("turtle-nests", nests, shapes.turtleNest(0.65), null, sand, {cap: 6, reach: 1}));
-        if (eggsHere.length) add(new LodBatch("turtle-eggs", eggsHere, shapes.egg(0.06), null, warm, {cap: 40, reach: 0.5}));
+        if (eggsHere.length) add(new LodBatch("turtle-eggs", eggsHere, eggGeometry(0.06), null, warm, {cap: 40, reach: 0.5}));
         add(new LodBatch("turtle-tracks", [{x: 0, y: 0, z: 0, turn: 0, scale: 1}], merge(tracks), null, decal, {cap: 1, reach: 100}));
         batches[batches.length - 1].setCentre(new Vector3(beach.x, beach.y, beach.z));
     }

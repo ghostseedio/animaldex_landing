@@ -100,7 +100,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_heronry": {
             const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 6 + 3, 0.85, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: look(nest, nest.radius * 12 + 8, 0.35, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
@@ -110,12 +110,12 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_growing": {
             const nest = growingNest(stats);
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 5 + 2, 0.8, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, nest.radius * 10 + 6, 0.35, 0.9, 0.05), hours: 10.5, weather: null, environment: calm, anchor: `growing ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_eaves": {
             const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
             if (!nest) return null;
-            return {view: look(nest, 1.7, 1.78, nestTurn(nest), 0.05), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
+            return {view: look(nest, 2.4, 1.52, nestTurn(nest) + 0.35, -0.15), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_grebe": {
             const nest = stats.nests.find((n) => n.form === "floating");

@@ -12,7 +12,7 @@
  * z = 0). Vertex coloured, non-indexed, pure and seeded.
  */
 
-import {BufferAttribute, BufferGeometry, Color, IcosahedronGeometry, Vector3} from "three";
+import {BufferAttribute, BufferGeometry, Color, IcosahedronGeometry, SphereGeometry, Vector3} from "three";
 import {seeded} from "@/ark-scene/world";
 import type {NestForm, NestProfile} from "@/ark-scene/props/nest-kinds";
 
@@ -24,7 +24,7 @@ const WEATHERED = hex("#6b5a48", "#7d6a55", "#5b4a3a", "#8a8378", "#6f6458", "#9
 const DRY_GRASS = hex("#a58f63", "#8c7a55", "#b49f71", "#9b8a62", "#7f7150");
 const FRESH_GRASS = hex("#8ea158", "#9fae66", "#b8a46a", "#7f9450", "#a9a066");
 const MOSS = hex("#6d7a3c", "#5e6b33", "#7b8546", "#86804e");
-const DOWN = hex("#a89c8c", "#8f8476", "#c2b8aa", "#7d7366", "#b3a998");
+const DOWN = hex("#8a7f70", "#9d9182", "#7a6f62", "#a99f90", "#6f6558");
 const FEATHERS = hex("#ece7dd", "#d9d2c4", "#f4f0e8");
 const LEAVES = hex("#5b6b2e", "#6b7a34", "#7c6a3a", "#4d5a28");
 const MUD = hex("#7a644a", "#6a5640", "#857057", "#5e4c38", "#8f7a5f");
@@ -39,6 +39,7 @@ class Weave {
     private readonly positions: number[] = [];
     private readonly colours: number[] = [];
     private readonly builds: number[] = [];
+    private readonly normals: number[] = [];
     constructor(readonly random: () => number) {}
 
     pick(palette: Palette, shade = 1): Color {
@@ -47,16 +48,19 @@ class Weave {
         return a.clone().lerp(b, this.random()).multiplyScalar(shade * (0.84 + this.random() * 0.3));
     }
 
-    private vertex(v: Vector3, colour: Color, build: number) {
+    private vertex(v: Vector3, n: Vector3, colour: Color, build: number) {
         this.positions.push(v.x, v.y, v.z);
+        this.normals.push(n.x, n.y, n.z);
         this.colours.push(colour.r, colour.g, colour.b);
         this.builds.push(build);
     }
 
-    tri(a: Vector3, b: Vector3, c: Vector3, colour: Color, build: number, shade: [number, number, number] = [1, 1, 1]) {
-        this.vertex(a, colour.clone().multiplyScalar(shade[0]), build);
-        this.vertex(b, colour.clone().multiplyScalar(shade[1]), build);
-        this.vertex(c, colour.clone().multiplyScalar(shade[2]), build);
+    /** A triangle; its normals are the face's unless given (a soft lump's are its own, out from its middle). */
+    tri(a: Vector3, b: Vector3, c: Vector3, colour: Color, build: number, shade: [number, number, number] = [1, 1, 1], normals?: [Vector3, Vector3, Vector3]) {
+        const face = normals ? null : new Vector3().subVectors(c, b).cross(new Vector3().subVectors(a, b)).normalize();
+        this.vertex(a, normals?.[0] ?? face!, colour.clone().multiplyScalar(shade[0]), build);
+        this.vertex(b, normals?.[1] ?? face!, colour.clone().multiplyScalar(shade[1]), build);
+        this.vertex(c, normals?.[2] ?? face!, colour.clone().multiplyScalar(shade[2]), build);
     }
 
     /** A strand (twig, blade, reed): a three-sided tube along `points`, `width` thick, tapering a little at its ends. */
@@ -108,7 +112,9 @@ class Weave {
         }
         for (let i = 0; i < corners.length; i += 3) {
             const shade = 0.82 + 0.3 * ((corners[i].y + corners[i + 1].y + corners[i + 2].y) / 3 - at.y + radius) / (2 * radius * squash[1] || 1);
-            this.tri(corners[i], corners[i + 1], corners[i + 2], colour, build, [shade, shade, shade]);
+            // Soft: each corner's normal points out from the lump's middle (squashed the same way), so a down tuft or a mud pellet reads round.
+            const soft = [0, 1, 2].map((k) => new Vector3().subVectors(corners[i + k], at).divide(new Vector3(squash[0] * squash[0], squash[1] * squash[1], squash[2] * squash[2])).normalize()) as [Vector3, Vector3, Vector3];
+            this.tri(corners[i], corners[i + 1], corners[i + 2], colour, build, [shade, shade, shade], soft);
         }
         geometry.dispose();
     }
@@ -139,7 +145,7 @@ class Weave {
         geometry.setAttribute("position", new BufferAttribute(new Float32Array(this.positions), 3));
         geometry.setAttribute("color", new BufferAttribute(new Float32Array(this.colours), 3));
         geometry.setAttribute("aBuild", new BufferAttribute(new Float32Array(this.builds), 1));
-        geometry.computeVertexNormals();
+        geometry.setAttribute("normal", new BufferAttribute(new Float32Array(this.normals), 3));
         return geometry;
     }
 }
@@ -228,9 +234,9 @@ function sticks(w: Weave, lining: NestProfile["lining"], deep: boolean) {
         ? [[0, 0], [0.5, 0], [0.76, 0.3], [0.8, 0.6], [0.7, 0.74]]
         : [[0, 0], [0.5, 0], [0.76, 0.18], [0.74, 0.36], [0.6, 0.41]];
     const cupPart: Array<[number, number]> = deep ? [[0.7, 0.74], [0.5, 0.69], [0.26, 0.65], [0, 0.64]] : [[0.6, 0.41], [0.46, 0.37], [0.22, 0.34], [0, 0.33]];
-    w.lathe(outer, 12, () => w.pick(WEATHERED, 0.78), 0.32, 0.08);
+    w.lathe(outer, 12, () => w.pick(TWIGS, 0.55), 0.32, 0.08);
     w.lathe(cupPart, 12, () => w.pick(liningPalette(lining), 0.8), 0.88, 0.04);
-    const count = deep ? 220 : 130;
+    const count = deep ? 300 : 170;
     for (let k = 0; k < count; k++) {
         const f = k / count;
         const y = 0.02 + f * (h - 0.04) + (w.random() - 0.5) * 0.04;
@@ -243,7 +249,21 @@ function sticks(w: Weave, lining: NestProfile["lining"], deep: boolean) {
         const dx = Math.cos(a) * length / 2;
         const dz = Math.sin(a) * length / 2;
         const kink = new Vector3((w.random() - 0.5) * 0.1, (w.random() - 0.3) * 0.06, (w.random() - 0.5) * 0.1);
-        w.strand([new Vector3(cx - dx, y - 0.02 + (w.random() - 0.5) * 0.04, cz - dz), new Vector3(cx, y, cz).add(kink), new Vector3(cx + dx, y + (w.random() - 0.5) * 0.08, cz + dz)], (deep ? 0.016 : 0.014) + w.random() * (deep ? 0.016 : 0.012), w.pick(WEATHERED), 0.02 + 0.84 * f);
+        const thick = (deep ? 0.016 : 0.014) + w.random() * (deep ? 0.016 : 0.012);
+        if (k % 5 < 3) {
+            // Laid round the wall: a chord across the heap's side, its ends a little proud.
+            const at = w.random() * Math.PI * 2;
+            const span = 0.5 + w.random() * 0.6;
+            const r = radiusAt(outer, y) * 1.06;
+            const lift = (w.random() - 0.5) * 0.1;
+            w.strand([
+                new Vector3(Math.sin(at) * r * 1.04, y - lift, Math.cos(at) * r * 1.04),
+                new Vector3(Math.sin(at + span / 2) * r * Math.cos(span / 2) * 1.02, y + kink.y, Math.cos(at + span / 2) * r * Math.cos(span / 2) * 1.02),
+                new Vector3(Math.sin(at + span) * r * 1.06, y + lift, Math.cos(at + span) * r * 1.06)
+            ], thick, w.pick(WEATHERED), 0.02 + 0.84 * f);
+            continue;
+        }
+        w.strand([new Vector3(cx - dx * 0.75, y - 0.02 + (w.random() - 0.5) * 0.04, cz - dz * 0.75), new Vector3(cx, y, cz).add(kink), new Vector3(cx + dx * 0.75, y + (w.random() - 0.5) * 0.08, cz + dz * 0.75)], thick, w.pick(WEATHERED), 0.02 + 0.84 * f);
     }
     // The lining: green sprigs (eagles bring them all season), soft grass, or nothing for a pigeon's flimsy platform.
     if (lining !== "none") {
@@ -554,4 +574,33 @@ export function nestFarGeometry(form: NestForm): BufferGeometry | null {
     const h = form === "eyrie" ? 0.75 : form === "platform" ? 0.42 : 0.5;
     w.lathe([[0, 0], [0.7, 0], [0.95, h * 0.5], [0.7, h], [0, h * 0.9]], 8, () => w.pick(form === "megapode" ? LITTER : form === "mound" ? REEDS : WEATHERED, 0.6), 0.3, 0.1);
     return w.geometry();
+}
+
+/**
+ * An egg `size` long, smooth-shaded (a faceted egg reads as a pebble), standing on y = 0, a little pointed at its
+ * top; its colour is the instance's tint over a faint mottle.
+ */
+export function eggGeometry(size: number): BufferGeometry {
+    const geometry = new SphereGeometry(size / 2, 14, 10);
+    const position = geometry.getAttribute("position");
+    for (let i = 0; i < position.count; i++) {
+        const y = position.getY(i) / (size / 2);
+        // Narrower toward the top: an egg, not a ball.
+        const narrow = 0.78 * (1 - 0.12 * Math.max(y, 0));
+        position.setXYZ(i, position.getX(i) * narrow, position.getY(i) + size / 2, position.getZ(i) * narrow);
+    }
+    geometry.computeVertexNormals();
+    const flat = geometry.toNonIndexed();
+    geometry.dispose();
+    flat.deleteAttribute("uv");
+    const count = flat.getAttribute("position").count;
+    const colours = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+        const mottle = 0.9 + 0.1 * Math.sin(i * 12.9898) * Math.sin(i * 4.1414);
+        colours[i * 3] = mottle;
+        colours[i * 3 + 1] = mottle;
+        colours[i * 3 + 2] = mottle;
+    }
+    flat.setAttribute("color", new BufferAttribute(colours, 3));
+    return flat;
 }
