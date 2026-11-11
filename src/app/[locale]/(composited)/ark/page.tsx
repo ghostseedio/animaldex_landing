@@ -55,10 +55,10 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
- * server's `public_story` flag would. `&founders=1` (with any `?fixture=`)
- * answers as the server does with its `founder_names` switch on: one animal
- * with a named founder and a shared story, one named without a story
- * (`src/lib/ark-founders-fixture.ts`).
+ * server's `public_story` flag would. Every `?fixture=` answers as the server
+ * does with names on (owner, 2026-11-11): bringers as their @usernames
+ * (@mayachen with a shared story, @lendawg, …; two stay Voyagers), and
+ * `&founders=0` as a server that names nobody (`src/lib/ark-founders-fixture.ts`).
  *
  * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
@@ -198,7 +198,7 @@ async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) 
     // Captures + thrive: with the frozen contract's `thrive`, `area` and `source` laid on (`lib/ark-thrive-fixture`).
     const {withArkThriveFixture} = await import("@/lib/ark-thrive-fixture");
     const base = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
-    // Founders (`&founders=1`): the same answer as names-on writes it.
+    // Founders (on unless `&founders=0`): the same answer as names-on writes it.
     const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
         const edge = await import("@/ark-scene/fixtures/edge");
@@ -463,7 +463,8 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
-    const fixtureFounders = Boolean(mode) && development && searchParams.founders === "1";
+    // Names are on by default (owner, 2026-11-11: every bringer with a handle shows as their @username); `&founders=0`: a server that names nobody.
+    const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
     const [{words, talk, language}, data] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
         mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))

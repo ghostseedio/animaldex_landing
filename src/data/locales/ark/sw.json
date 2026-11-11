@@ -29,7 +29,6 @@
         "howTitle": "Jinsi mnyama anavyopanda Ark",
         "howBody": "Mpige picha mnyama kwa AnimalDex na mmoja wa aina yake anapanda Ark, hadi jozi moja kwa kila mtu. Kisha ongea naye kuhusu jambo halisi katika maisha yako: kila hatua anayopendekeza ikifanikiwa, huwafanya wanyama wako wa aina hiyo waendelee kustawi.",
         "howCta": "Ongea na mnyama",
-        "founderNote": "Waanzilishi hawajulikani majina: kila mmoja huonyeshwa kama namba ya Voyager.",
         "formerVoyager": "Voyager wa zamani",
         "zones": {
             "coral_reef": "Miamba ya matumbawe",
@@ -124,7 +123,6 @@
             "hideStory": "Ficha hadithi ya maisha",
             "follow": "Fuata",
             "followHint": "Buruta ili kuacha kufuata",
-            "anonymous": "Waanzilishi hawajulikani majina: kila mmoja ni namba ya Voyager.",
             "hatchedAboard": "Alianguliwa ndani ya Ark",
             "hatched": "Alianguliwa",
             "placeholder": "Umbo lake la 3D bado linatengenezwa: kwa sasa kibadala kinaonyeshwa.",
@@ -319,12 +317,7 @@
                 "title": "Onyesha jina langu kwenye wanyama wangu wa Ark",
                 "note": "Jina lako, @handle na picha yako huonekana kwenye wanyama unaowaleta kwenye Ark. Zima hili ili uonekane kama namba ya Voyager.",
                 "under18": "Unaonekana kama namba ya Voyager ukiwa chini ya miaka 18.",
-                "private": "Unaonekana kama namba ya Voyager wakati wasifu wako ni wa faragha.",
-                "noHandle": "Ongeza @handle kwenye wasifu wako ili jina lako lionekane.",
-                "earlier": "Wanyama uliowaleta kabla majina hayajaonyeshwa bado wanaonyesha Voyager.",
-                "nameEarlier": "Onyesha jina langu kwao pia",
-                "confirmAdult": "Kuwasha hili kunathibitisha kuwa una umri wa miaka 18 au zaidi.",
-                "confirmYes": "Ndiyo, nina miaka 18 au zaidi"
+                "noHandle": "Ongeza @handle kwenye wasifu wako ili jina lako lionekane."
             },
             "share": {
                 "ask": "Ungependa kushiriki kwenye Ark jinsi hili lilivyofanikiwa?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Haikuwezekana kukagua sasa hivi. Jaribu tena.",
                 "remove": "Ondoa kwenye Ark",
                 "removed": "Imeondolewa kwenye Ark",
-                "askShort": "Ungependa kushiriki jinsi hili lilivyofanikiwa?",
                 "confirmShare": "Nina miaka 18 au zaidi, shiriki"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Jinsi wanyama wao walivyopanda Ark",
                 "noStories": "Bado hakuna hadithi zilizoshirikiwa."
-            },
-            "name": {
-                "ask": "Onyesha jina lako kwenye Ark?",
-                "adult": "Nina umri wa miaka 18 au zaidi",
-                "yes": "Ndiyo, onyesha jina langu",
-                "shown": "Jina lako linaonekana kwenye Ark"
             },
             "error": {
                 "needsAdult": "Thibitisha kwanza kuwa una umri wa miaka 18 au zaidi."
@@ -453,12 +439,6 @@
                 "history": "Kilichobadilika"
             },
             "founders": {
-                "name": {
-                    "ask": "Onyesha jina lako kwenye Ark?",
-                    "adult": "Nina umri wa miaka 18 au zaidi",
-                    "yes": "Ndiyo, onyesha jina langu",
-                    "shown": "Jina lako linaonekana kwenye Ark"
-                },
                 "share": {
                     "ask": "Ungependa kushiriki kwenye Ark jinsi hili lilivyofanikiwa?",
                     "stepLabel": "Ulichofanya",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Haikuwezekana kukagua sasa hivi. Jaribu tena.",
                     "remove": "Ondoa kwenye Ark",
                     "removed": "Imeondolewa kwenye Ark",
-                    "askShort": "Ungependa kushiriki jinsi hili lilivyofanikiwa?",
                     "confirmShare": "Nina miaka 18 au zaidi, shiriki"
                 },
                 "error": {

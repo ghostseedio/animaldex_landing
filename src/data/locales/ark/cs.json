@@ -29,7 +29,6 @@
         "howTitle": "Jak zvíře nastoupí na palubu",
         "howBody": "Ulov zvíře v AnimalDex a jedno zvíře jeho druhu nastoupí na palubu, nejvýš pár na každého člověka. Pak si s ním promluv o něčem skutečném ve svém životě: každý krok, který navrhne a který funguje, pomáhá tvým zvířatům toho druhu prosperovat.",
         "howCta": "Mluvit se zvířetem",
-        "founderNote": "Zakladatelé jsou anonymní: každý se zobrazuje jako číslo Voyager.",
         "formerVoyager": "Bývalý voyager",
         "zones": {
             "coral_reef": "Korálový útes",
@@ -124,7 +123,6 @@
             "hideStory": "Skrýt životní příběh",
             "follow": "Sledovat",
             "followHint": "Tažením přestaneš sledovat",
-            "anonymous": "Zakladatelé zůstávají anonymní: každý je číslo Voyager.",
             "hatchedAboard": "Vylíhnut v Ark",
             "hatched": "Vylíhnutí",
             "placeholder": "Jeho 3D postava se ještě připravuje: zatím ji zastupuje náhradní.",
@@ -319,12 +317,7 @@
                 "title": "Zobrazovat mé jméno u mých zvířat v Ark",
                 "note": "Tvoje jméno, @handle a fotka se zobrazují u zvířat, která přivedeš do Ark. Vypni to a zobrazíš se jako číslo Voyager.",
                 "under18": "Dokud ti není 18, zobrazuješ se jako číslo Voyager.",
-                "private": "Dokud je tvůj profil soukromý, zobrazuješ se jako číslo Voyager.",
-                "noHandle": "Přidej si do profilu @handle, aby se zobrazilo tvoje jméno.",
-                "earlier": "U zvířat, která jsi přivedl(a) dřív, než se jména zobrazovala, je pořád Voyager.",
-                "nameEarlier": "Zobrazit mé jméno i u nich",
-                "confirmAdult": "Zapnutím potvrzuješ, že ti je 18 nebo víc.",
-                "confirmYes": "Ano, je mi 18 nebo víc"
+                "noHandle": "Přidej si do profilu @handle, aby se zobrazilo tvoje jméno."
             },
             "share": {
                 "ask": "Sdílet v Ark, jak to fungovalo?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Teď se to nepodařilo ověřit. Zkus to znovu.",
                 "remove": "Odebrat z Ark",
                 "removed": "Odebráno z Ark",
-                "askShort": "Sdílet, jak to fungovalo?",
                 "confirmShare": "Je mi 18 nebo víc, sdílet"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Jak se jejich zvířata dostala na palubu",
                 "noStories": "Zatím žádné sdílené příběhy."
-            },
-            "name": {
-                "ask": "Zobrazit tvoje jméno v Ark?",
-                "adult": "Je mi 18 nebo víc",
-                "yes": "Ano, zobrazit mé jméno",
-                "shown": "Tvoje jméno se zobrazuje v Ark"
             },
             "error": {
                 "needsAdult": "Nejdřív potvrď, že ti je 18 nebo víc."
@@ -453,12 +439,6 @@
                 "history": "Co se změnilo"
             },
             "founders": {
-                "name": {
-                    "ask": "Zobrazit tvoje jméno v Ark?",
-                    "adult": "Je mi 18 nebo víc",
-                    "yes": "Ano, zobrazit mé jméno",
-                    "shown": "Tvoje jméno se zobrazuje v Ark"
-                },
                 "share": {
                     "ask": "Sdílet v Ark, jak to fungovalo?",
                     "stepLabel": "Co jsi udělal(a)",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Teď se to nepodařilo ověřit. Zkus to znovu.",
                     "remove": "Odebrat z Ark",
                     "removed": "Odebráno z Ark",
-                    "askShort": "Sdílet, jak to fungovalo?",
                     "confirmShare": "Je mi 18 nebo víc, sdílet"
                 },
                 "error": {

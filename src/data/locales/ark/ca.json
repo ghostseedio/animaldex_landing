@@ -29,7 +29,6 @@
         "howTitle": "Com puja a bord un animal",
         "howBody": "Captura un animal amb AnimalDex i un de la seva espècie puja a bord, fins a una parella per persona. Després parla-hi d'alguna cosa real de la teva vida: cada pas que et proposa i que funciona fa prosperar els teus animals d'aquesta espècie.",
         "howCta": "Parla amb un animal",
-        "founderNote": "Els fundadors són anònims: cadascun es mostra com un número Voyager.",
         "formerVoyager": "Antic voyager",
         "zones": {
             "coral_reef": "Escull de corall",
@@ -124,7 +123,6 @@
             "hideStory": "Amaga la història de vida",
             "follow": "Segueix",
             "followHint": "Arrossega per deixar de seguir",
-            "anonymous": "Els fundadors són anònims: cadascun és un número Voyager.",
             "hatchedAboard": "Sortit de l'ou a l'Ark",
             "hatched": "Eclosió",
             "placeholder": "La seva figura 3D encara s'està fent: de moment la substitueix una figura provisional.",
@@ -319,12 +317,7 @@
                 "title": "Mostra el meu nom als meus animals de l'Ark",
                 "note": "El teu nom, el teu @handle i la teva foto apareixen als animals que portes a l'Ark. Desactiva-ho per aparèixer com un número Voyager.",
                 "under18": "Apareixes com un número Voyager mentre tinguis menys de 18 anys.",
-                "private": "Apareixes com un número Voyager mentre el teu perfil sigui privat.",
-                "noHandle": "Afegeix un @handle al teu perfil per mostrar el teu nom.",
-                "earlier": "Els animals que vas portar abans que es mostressin els noms encara diuen Voyager.",
-                "nameEarlier": "Mostra el meu nom també en aquests",
-                "confirmAdult": "Si ho actives, confirmes que tens 18 anys o més.",
-                "confirmYes": "Sí, tinc 18 anys o més"
+                "noHandle": "Afegeix un @handle al teu perfil per mostrar el teu nom."
             },
             "share": {
                 "ask": "Vols compartir a l'Ark com va funcionar?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Ara mateix no s'ha pogut comprovar. Torna-ho a provar.",
                 "remove": "Treu de l'Ark",
                 "removed": "Tret de l'Ark",
-                "askShort": "Vols compartir com va funcionar?",
                 "confirmShare": "Tinc 18 o més, comparteix"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Com van pujar a bord els seus animals",
                 "noStories": "Encara no s'ha compartit cap història."
-            },
-            "name": {
-                "ask": "Vols mostrar el teu nom a l'Ark?",
-                "adult": "Tinc 18 anys o més",
-                "yes": "Sí, mostra el meu nom",
-                "shown": "El teu nom es mostra a l'Ark"
             },
             "error": {
                 "needsAdult": "Primer confirma que tens 18 anys o més."
@@ -453,12 +439,6 @@
                 "history": "Què ha canviat"
             },
             "founders": {
-                "name": {
-                    "ask": "Vols mostrar el teu nom a l'Ark?",
-                    "adult": "Tinc 18 anys o més",
-                    "yes": "Sí, mostra el meu nom",
-                    "shown": "El teu nom es mostra a l'Ark"
-                },
                 "share": {
                     "ask": "Vols compartir a l'Ark com va funcionar?",
                     "stepLabel": "El que vas fer",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Ara mateix no s'ha pogut comprovar. Torna-ho a provar.",
                     "remove": "Treu de l'Ark",
                     "removed": "Tret de l'Ark",
-                    "askShort": "Vols compartir com va funcionar?",
                     "confirmShare": "Tinc 18 o més, comparteix"
                 },
                 "error": {

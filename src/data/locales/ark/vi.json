@@ -29,7 +29,6 @@
         "howTitle": "Cách một con vật lên Ark",
         "howBody": "Chụp một con vật bằng AnimalDex và một con cùng loài sẽ lên Ark, mỗi người tối đa một cặp. Sau đó trò chuyện với nó về điều có thật trong cuộc sống của bạn: mỗi bước nó gợi ý mà thành công sẽ giúp các con vật cùng loài đó của bạn luôn phát triển tốt.",
         "howCta": "Trò chuyện với một con vật",
-        "founderNote": "Người sáng lập được ẩn danh: mỗi người hiện dưới dạng một số Voyager.",
         "formerVoyager": "Cựu voyager",
         "zones": {
             "coral_reef": "Rạn san hô",
@@ -124,7 +123,6 @@
             "hideStory": "Ẩn câu chuyện cuộc đời",
             "follow": "Theo dõi",
             "followHint": "Kéo để ngừng theo dõi",
-            "anonymous": "Người sáng lập luôn ẩn danh: mỗi người là một số Voyager.",
             "hatchedAboard": "Nở trên Ark",
             "hatched": "Nở",
             "placeholder": "Hình 3D của nó vẫn đang được làm: tạm thời có một hình thay thế.",
@@ -319,12 +317,7 @@
                 "title": "Hiện tên tôi trên các con vật của tôi trên Ark",
                 "note": "Tên, @handle và ảnh của bạn hiện trên các con vật bạn mang lên Ark. Tắt mục này để hiện dưới dạng một số Voyager.",
                 "under18": "Bạn hiện dưới dạng một số Voyager khi bạn chưa đủ 18 tuổi.",
-                "private": "Bạn hiện dưới dạng một số Voyager khi hồ sơ của bạn ở chế độ riêng tư.",
-                "noHandle": "Thêm một @handle vào hồ sơ để hiện tên của bạn.",
-                "earlier": "Các con vật bạn mang đến trước khi tên được hiển thị vẫn ghi Voyager.",
-                "nameEarlier": "Hiện tên tôi trên chúng nữa",
-                "confirmAdult": "Bật mục này nghĩa là bạn xác nhận mình đủ 18 tuổi trở lên.",
-                "confirmYes": "Có, tôi đủ 18 tuổi trở lên"
+                "noHandle": "Thêm một @handle vào hồ sơ để hiện tên của bạn."
             },
             "share": {
                 "ask": "Chia sẻ trên Ark cách việc này đã thành công?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Chưa kiểm tra được lúc này. Hãy thử lại.",
                 "remove": "Xóa khỏi Ark",
                 "removed": "Đã xóa khỏi Ark",
-                "askShort": "Chia sẻ cách việc này đã thành công?",
                 "confirmShare": "Tôi đủ 18 tuổi, chia sẻ"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Cách các con vật của họ lên Ark",
                 "noStories": "Chưa có câu chuyện nào được chia sẻ."
-            },
-            "name": {
-                "ask": "Hiện tên bạn trên Ark?",
-                "adult": "Tôi đủ 18 tuổi trở lên",
-                "yes": "Có, hiện tên tôi",
-                "shown": "Tên bạn đang hiện trên Ark"
             },
             "error": {
                 "needsAdult": "Hãy xác nhận trước rằng bạn đủ 18 tuổi trở lên."
@@ -453,12 +439,6 @@
                 "history": "Những gì đã thay đổi"
             },
             "founders": {
-                "name": {
-                    "ask": "Hiện tên bạn trên Ark?",
-                    "adult": "Tôi đủ 18 tuổi trở lên",
-                    "yes": "Có, hiện tên tôi",
-                    "shown": "Tên bạn đang hiện trên Ark"
-                },
                 "share": {
                     "ask": "Chia sẻ trên Ark cách việc này đã thành công?",
                     "stepLabel": "Việc bạn đã làm",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Chưa kiểm tra được lúc này. Hãy thử lại.",
                     "remove": "Xóa khỏi Ark",
                     "removed": "Đã xóa khỏi Ark",
-                    "askShort": "Chia sẻ cách việc này đã thành công?",
                     "confirmShare": "Tôi đủ 18 tuổi, chia sẻ"
                 },
                 "error": {

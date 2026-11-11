@@ -29,7 +29,6 @@
         "howTitle": "Så kommer ett djur ombord",
         "howBody": "Fånga ett djur med AnimalDex så kommer ett av dess art ombord, upp till ett par per person. Prata sedan med det om något verkligt i ditt liv: varje steg det föreslår som fungerar får dina djur av den arten att trivas.",
         "howCta": "Prata med ett djur",
-        "founderNote": "Grundarna är anonyma: var och en visas som ett Voyager-nummer.",
         "formerVoyager": "Tidigare voyager",
         "zones": {
             "coral_reef": "Korallrev",
@@ -124,7 +123,6 @@
             "hideStory": "Dölj livshistoria",
             "follow": "Följ",
             "followHint": "Dra för att sluta följa",
-            "anonymous": "Grundarna är anonyma: var och en är ett Voyager-nummer.",
             "hatchedAboard": "Kläckt i Ark",
             "hatched": "Kläckt",
             "placeholder": "Dess 3D-figur skapas fortfarande: en tillfällig figur visas så länge.",
@@ -319,12 +317,7 @@
                 "title": "Visa mitt namn på mina djur i Ark",
                 "note": "Ditt namn, @handle och foto visas på djuren du tar med till Ark. Stäng av det för att visas som ett Voyager-nummer.",
                 "under18": "Du visas som ett Voyager-nummer så länge du är under 18.",
-                "private": "Du visas som ett Voyager-nummer så länge din profil är privat.",
-                "noHandle": "Lägg till ett @handle i din profil för att visa ditt namn.",
-                "earlier": "Djur du tog med innan namn visades står fortfarande som Voyager.",
-                "nameEarlier": "Visa mitt namn på dem också",
-                "confirmAdult": "När du slår på det här bekräftar du att du har fyllt 18.",
-                "confirmYes": "Ja, jag har fyllt 18"
+                "noHandle": "Lägg till ett @handle i din profil för att visa ditt namn."
             },
             "share": {
                 "ask": "Dela i Ark hur det fungerade?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Det gick inte att kontrollera just nu. Försök igen.",
                 "remove": "Ta bort från Ark",
                 "removed": "Borttaget från Ark",
-                "askShort": "Dela hur det fungerade?",
                 "confirmShare": "Jag har fyllt 18, dela"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Så kom deras djur ombord",
                 "noStories": "Inga berättelser delade än."
-            },
-            "name": {
-                "ask": "Visa ditt namn i Ark?",
-                "adult": "Jag har fyllt 18",
-                "yes": "Ja, visa mitt namn",
-                "shown": "Ditt namn visas i Ark"
             },
             "error": {
                 "needsAdult": "Bekräfta först att du har fyllt 18."
@@ -453,12 +439,6 @@
                 "history": "Vad som ändrades"
             },
             "founders": {
-                "name": {
-                    "ask": "Visa ditt namn i Ark?",
-                    "adult": "Jag har fyllt 18",
-                    "yes": "Ja, visa mitt namn",
-                    "shown": "Ditt namn visas i Ark"
-                },
                 "share": {
                     "ask": "Dela i Ark hur det fungerade?",
                     "stepLabel": "Det du gjorde",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Det gick inte att kontrollera just nu. Försök igen.",
                     "remove": "Ta bort från Ark",
                     "removed": "Borttaget från Ark",
-                    "askShort": "Dela hur det fungerade?",
                     "confirmShare": "Jag har fyllt 18, dela"
                 },
                 "error": {

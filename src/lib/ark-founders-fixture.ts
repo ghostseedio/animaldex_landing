@@ -1,11 +1,15 @@
 /**
- * Development's founders (`/ark?fixture=1&founders=1`, `/u/{handle}/ark?fixture=founder`,
- * the chat's `?arkfounder=1`): the fixture Ark as the server answers it with
- * its `founder_names` switch on. Made-up people, no production data.
+ * Development's founders (`/ark?fixture=1`, on by default; `&founders=0` for
+ * a server that names nobody; `/u/{handle}/ark?fixture=founder`, the chat's
+ * `?arkfounder=1`): the fixture Ark as the server answers it with names on.
+ * Made-up people, no production data.
  *
- * Voyager 1 becomes "Maya Chen" (@mayachen, with a photo), who shared how her
- * African Lion got aboard; Voyager 4 becomes "Jonas Berg" (@jonasberg, no
- * photo), who shared nothing. Everyone else stays a Voyager (`founder: null`).
+ * Owner, 2026-11-11: every bringer with a handle is named, shown as their
+ * @username. Voyager 1 becomes "Maya Chen" (@mayachen, with a photo), who
+ * shared how her African Lion got aboard; Voyager 4 "Jonas Berg" (@jonasberg),
+ * who shared nothing; Voyager 17 "Len" (@lendawg); and so on. Voyager 7 and
+ * Voyager 13 stay Voyagers (`founder: null`), as a stored under-18 or an
+ * account with no handle would.
  */
 
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
@@ -13,9 +17,27 @@ import type {ArkFounderPage, ArkStoryDraft} from "@/lib/ark-founders";
 
 type Raw = Record<string, unknown>;
 
+/**
+ * Made-up people (owner, 2026-11-11: every bringer with a handle shows as their @username). Voyager 7 and
+ * Voyager 13 stay Voyagers: stand-ins for a stored under-18 and an account with no handle. Some display names
+ * are just the handle again, so the card shows "@kai" alone; others show "Ana Ríos · @ana.rios".
+ */
+const FIXTURE_PEOPLE: Array<[number, string, string]> = [
+    [2, "Ana Ríos", "ana.rios"], [3, "Kofi Mensah", "kofi.mensah"], [5, "Priya K", "priya_k"], [6, "Tomasz W", "tomasz.w"],
+    [8, "Léa Martin", "lea.martin"], [9, "Hiro T", "hiro.t"], [10, "Sofia", "sofia.ark"], [11, "Ben Okafor", "ben_okafor"],
+    [12, "Nadia H", "nadia.h"], [14, "Marco V", "marco.v"], [15, "aiko", "aiko"], [16, "Sam Reed", "sam.reed"],
+    [18, "Inês F", "ines.f"], [19, "David L", "david.l"], [20, "yara", "yara"], [21, "Oskar N", "oskar.n"],
+    [22, "Mei Lin", "mei.lin"], [23, "Lucas P", "lucas.p"], [24, "Zara Q", "zara.q"], [25, "Omar S", "omar.s"],
+    [26, "Elena R", "elena.r"], [27, "kai", "kai"], [28, "Noor", "noor"], [29, "Felix B", "felix.b"],
+    [30, "Rosa M", "rosa.m"], [31, "Ivo", "ivo"], [32, "Theo G", "theo.g"], [33, "Amara", "amara"],
+    [34, "Jin Park", "jin.park"], [35, "Lina K", "lina.k"], [36, "Pablo D", "pablo.d"], [37, "freya", "freya"], [38, "Ravi S", "ravi.s"]
+];
+
 export const ARK_FIXTURE_FOUNDERS: Record<string, {display_name: string; handle: string; avatar_url: string | null}> = {
     "Voyager 1": {display_name: "Maya Chen", handle: "mayachen", avatar_url: getSpeciesArtworkUrl("red-fox")},
-    "Voyager 4": {display_name: "Jonas Berg", handle: "jonasberg", avatar_url: null}
+    "Voyager 4": {display_name: "Jonas Berg", handle: "jonasberg", avatar_url: null},
+    "Voyager 17": {display_name: "Len", handle: "lendawg", avatar_url: getSpeciesArtworkUrl("komodo-dragon")},
+    ...Object.fromEntries(FIXTURE_PEOPLE.map(([n, display_name, handle]) => [`Voyager ${n}`, {display_name, handle, avatar_url: null}]))
 };
 
 /** The fixture's African Lion (Voyager 1's): its founder shared how it got aboard. */

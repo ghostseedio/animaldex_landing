@@ -6,11 +6,11 @@ import {ARK_FIXTURE_FOUNDERS} from "@/lib/ark-founders-fixture";
 import {getArkWords} from "@/loaders/ark-words";
 
 /**
- * DEV ONLY: "Show my name on my Ark animals" (founders contract, section 3)
- * in its states, drawn by the real settings component from fixture answers,
- * since /app/settings needs a session. Turning a switch on here only shows the
- * inline 18+ confirmation; "Yes" would call the real route (and fail without a
- * session). 404s in production.
+ * DEV ONLY: "Show my name on my Ark animals" (founders contract, section 3;
+ * owner, 2026-11-11: an opt-out, on by default, no 18+ step) in its states,
+ * drawn by the real settings component from fixture answers, since
+ * /app/settings needs a session. Toggling here calls the real route (and fails
+ * without a session, so it springs back). 404s in production.
  *
  *   /dev/ark/founders
  */
@@ -18,19 +18,28 @@ import {getArkWords} from "@/loaders/ark-words";
 export const metadata: Metadata = {title: "Ark founders settings", robots: {index: false, follow: false}};
 
 const MAYA = ARK_FIXTURE_FOUNDERS["Voyager 1"];
+const LEN = ARK_FIXTURE_FOUNDERS["Voyager 17"];
 
 const STATES: Array<{label: string; settings: ArkFounderSettings}> = [
     {
-        label: "No stored year, not answered yet (most people): off, switching on asks the 18+ tap",
-        settings: {enabled: true, show_name: false, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: true, ask_name: true, earlier_anonymous: 0, founder: null}
+        label: "Most people (a handle, never chose): on by default, shown as their @username, no 18+ step",
+        settings: {enabled: true, show_name: true, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: LEN}
     },
     {
-        label: "Stored adult who never chose: on by default, older animals still Voyager",
-        settings: {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA}
+        label: "On, with a photo",
+        settings: {enabled: true, show_name: true, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: MAYA}
     },
     {
-        label: "Blocked: a private profile",
-        settings: {enabled: true, show_name: true, chosen: false, blocked: "private_profile", adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: null}
+        label: "Turned off (opted out): a Voyager number",
+        settings: {enabled: true, show_name: false, chosen: true, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: LEN}
+    },
+    {
+        label: "Blocked: a stored under-18 year",
+        settings: {enabled: true, show_name: false, chosen: false, blocked: "under_18", adult: "teen", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: null}
+    },
+    {
+        label: "Blocked: no @handle",
+        settings: {enabled: true, show_name: false, chosen: false, blocked: "no_handle", adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 0, founder: null}
     }
 ];
 
@@ -46,7 +55,7 @@ export default async function ArkFoundersSettingsGalleryPage({params}: {params: 
                     <ArkFounderNameSection
                         initial={state.settings}
                         title={words.eyebrow}
-                        words={{...words.founders.settings, notNow: words.founders.share.notNow}}
+                        words={words.founders.settings}
                         broughtBy={words.founders.card.broughtBy}
                     />
                 </div>

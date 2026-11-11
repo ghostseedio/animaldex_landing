@@ -451,12 +451,6 @@ export const ARK_COPY = {
      * from `companions`.
      */
     founders: {
-        name: {
-            ask: "Show your name on the Ark?",
-            adult: "I'm 18 or over",
-            yes: "Yes, show my name",
-            shown: "Your name shows on the Ark"
-        },
         share: {
             ask: "Share how this worked on the Ark?",
             stepLabel: "What you did",
@@ -470,7 +464,6 @@ export const ARK_COPY = {
             couldNotCheck: "Couldn't check that just now. Try again.",
             remove: "Remove from the Ark",
             removed: "Removed from the Ark",
-            askShort: "Share how this worked?",
             confirmShare: "I'm 18 or over, share"
         },
         error: {

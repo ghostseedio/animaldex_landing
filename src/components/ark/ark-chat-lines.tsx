@@ -16,8 +16,8 @@
  * - under that line (D6, owner 2026-11-11: the founders' story moment moved
  *   from the arrival to the step that worked), when the reader may share it
  *   (founders contract, section 4): one calm moment, in place, never a window:
- *   the name question first when the server says to ask it, then "Share how
- *   this worked?", prefilled with that step's own words and never the problem;
+ *   "Share how this worked?" (no name question since 2026-11-11: names show
+ *   by default), prefilled with that step's own words and never the problem;
  *   the story attaches to their animal of the step's kind;
  * - history: under a reply whose step brought an animal aboard (before
  *   captures did), the animal, with its icon; "See it in the Ark" opens the
@@ -34,10 +34,8 @@ import {useArkFounderShare} from "@/components/ark/use-ark-chat";
 
 /** The line's words under an arrival (`companions.ark.founders`): the name question, the story, and the 18+ error. */
 export type ArkFounderShareWords = {
-    name: {ask: string; adult: string; yes: string; shown: string};
     share: {
         ask: string;
-        askShort: string;
         stepLabel: string;
         problemPlaceholder: string;
         share: string;
@@ -198,33 +196,17 @@ export function ArkFounderShareLine({animalId, species, words, stepId = null, st
     stepId?: string | null;
     stepText?: string | null;
 }) {
-    const {state, nameYes, nameNotNow, share, edit, notNow, remove, setStep, setProblem} = useArkFounderShare({animalId, species, enabled: true, stepId, stepText});
-    if (state.phase === "loading") return null;
-    const shownNote = state.nameShown ? (
-        <p className="mb-2.5 flex items-center gap-1.5 text-[12px] font-semibold leading-4 text-primary-200" role="status" data-testid="ark-name-shown"><Tick />{words.name.shown}</p>
-    ) : null;
-    // "Not now" to the story after a yes to the name: the name's line stays, the rest goes.
-    if (state.phase === "hidden") return shownNote ? <div className="mt-3 border-t border-white/10 pt-3">{shownNote}</div> : null;
+    const {state, share, edit, notNow, remove, setStep, setProblem} = useArkFounderShare({animalId, species, enabled: true, stepId, stepText});
+    if (state.phase === "loading" || state.phase === "hidden") return null;
     const w = words.share;
     const error = state.error === "not_public" ? w.notPublic : state.error === "needs_adult" ? words.error.needsAdult : state.error === "could_not_check" ? w.couldNotCheck : null;
     const errorLine = error ? <p className="mt-2 text-[12px] font-semibold leading-4 text-[#ffb4a8]" role="alert" data-testid="ark-share-error">{error}</p> : null;
     const shareLabel = state.needsAdult ? w.confirmShare : w.share;
     return (
         <div className="mt-3 border-t border-white/10 pt-3" data-testid={`ark-share-${state.phase}`}>
-            {state.phase === "name" ? (
+            {state.phase === "collapsed" ? (
                 <>
-                    <p className="text-[13px] font-semibold leading-5 text-white">{words.name.ask}</p>
-                    <p className="mt-0.5 text-[12px] leading-4 text-ink-300">{words.name.adult}</p>
-                    <div className="mt-2.5 flex flex-wrap gap-2">
-                        <button type="button" onClick={() => void nameYes()} disabled={state.busy} className={CHIP_PRIMARY} data-testid="ark-name-yes">{words.name.yes}</button>
-                        <button type="button" onClick={nameNotNow} disabled={state.busy} className={CHIP_QUIET} data-testid="ark-name-not-now">{w.notNow}</button>
-                    </div>
-                    {errorLine}
-                </>
-            ) : state.phase === "collapsed" ? (
-                <>
-                    {shownNote}
-                    <p className="text-[13px] font-semibold leading-5 text-white">{state.nameAsked ? w.askShort : w.ask}</p>
+                    <p className="text-[13px] font-semibold leading-5 text-white">{w.ask}</p>
                     {state.step ? <p className="mt-0.5 truncate text-[12px] leading-4 text-ink-300" data-testid="ark-share-preview">{state.step}</p> : null}
                     <div className="mt-2.5 flex flex-wrap gap-2">
                         <button type="button" onClick={() => void share()} disabled={state.busy} className={CHIP_PRIMARY} data-testid="ark-share-share">{shareLabel}</button>
@@ -240,7 +222,6 @@ export function ArkFounderShareLine({animalId, species, words, stepId = null, st
                         void share();
                     }}
                 >
-                    {shownNote}
                     <label className="block text-[12px] font-semibold leading-4 text-ink-300" htmlFor={`ark-share-step-${animalId}`}>{w.stepLabel}</label>
                     <textarea
                         id={`ark-share-step-${animalId}`}
@@ -270,7 +251,6 @@ export function ArkFounderShareLine({animalId, species, words, stepId = null, st
                 </form>
             ) : state.phase === "shared" ? (
                 <>
-                    {shownNote}
                     <p className="flex items-center gap-1.5 text-[13px] font-semibold leading-5 text-primary-200"><Tick />{w.shared}</p>
                     {state.story ? <p className="mt-0.5 line-clamp-2 text-[12px] leading-4 text-ink-300">{state.story.step}</p> : null}
                     <div className="mt-2.5 flex flex-wrap gap-2">
@@ -281,7 +261,6 @@ export function ArkFounderShareLine({animalId, species, words, stepId = null, st
                 </>
             ) : (
                 <>
-                    {shownNote}
                     <p className="text-[12px] font-semibold leading-4 text-ink-300" role="status">{w.removed}</p>
                 </>
             )}

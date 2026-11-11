@@ -61,7 +61,6 @@ function animal(raw: unknown): ArkAnimal | null {
     if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
-    if (row.area === "house" || row.area === "farm") life.area = row.area;
     if (bringers.length) life.bringers = bringers;
     // The species' stats and stored length, when the server sends them (else the scene reads the catalogue's).
     const statsRow = row.stats && typeof row.stats === "object" ? row.stats as Record<string, unknown> : {};

@@ -29,7 +29,6 @@
         "howTitle": "动物如何登上 Ark",
         "howBody": "用 AnimalDex 拍摄一只动物，同种的一只就会登船，每人每种最多一对。然后和它聊聊你生活中真实的事：它建议的每一步只要奏效，都会让你这一种的动物茁壮成长。",
         "howCta": "与动物对话",
-        "founderNote": "创始人是匿名的：每位都以 Voyager 编号显示。",
         "formerVoyager": "前 Voyager",
         "zones": {
             "coral_reef": "珊瑚礁",
@@ -124,7 +123,6 @@
             "hideStory": "隐藏生平故事",
             "follow": "跟随",
             "followHint": "拖动即可停止跟随",
-            "anonymous": "创始人保持匿名：每位都是一个 Voyager 编号。",
             "hatchedAboard": "在 Ark 孵化",
             "hatched": "孵化",
             "placeholder": "它的 3D 形象还在制作中：目前先用替身显示。",
@@ -319,12 +317,7 @@
                 "title": "在我的 Ark 动物上显示我的名字",
                 "note": "你的名字、@handle 和照片会显示在你带到 Ark 的动物上。关闭后将显示为 Voyager 编号。",
                 "under18": "你未满 18 岁期间，会显示为 Voyager 编号。",
-                "private": "你的个人资料设为私密期间，会显示为 Voyager 编号。",
-                "noHandle": "在个人资料中添加 @handle 即可显示你的名字。",
-                "earlier": "在显示名字之前你带来的动物仍显示 Voyager。",
-                "nameEarlier": "也在它们上面显示我的名字",
-                "confirmAdult": "开启即表示你确认已年满 18 岁。",
-                "confirmYes": "是的，我已年满 18 岁"
+                "noHandle": "在个人资料中添加 @handle 即可显示你的名字。"
             },
             "share": {
                 "ask": "在 Ark 上分享这一步是怎么奏效的？",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "暂时无法检查，请重试。",
                 "remove": "从 Ark 移除",
                 "removed": "已从 Ark 移除",
-                "askShort": "分享这一步是怎么奏效的？",
                 "confirmShare": "我已满 18 岁，分享"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "这些动物是如何登船的",
                 "noStories": "还没有分享的故事。"
-            },
-            "name": {
-                "ask": "在 Ark 上显示你的名字？",
-                "adult": "我已年满 18 岁",
-                "yes": "好，显示我的名字",
-                "shown": "你的名字已在 Ark 上显示"
             },
             "error": {
                 "needsAdult": "请先确认你已年满 18 岁。"
@@ -453,12 +439,6 @@
                 "history": "变更记录"
             },
             "founders": {
-                "name": {
-                    "ask": "在 Ark 上显示你的名字？",
-                    "adult": "我已年满 18 岁",
-                    "yes": "好，显示我的名字",
-                    "shown": "你的名字已在 Ark 上显示"
-                },
                 "share": {
                     "ask": "在 Ark 上分享这一步是怎么奏效的？",
                     "stepLabel": "你做了什么",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "暂时无法检查，请重试。",
                     "remove": "从 Ark 移除",
                     "removed": "已从 Ark 移除",
-                    "askShort": "分享这一步是怎么奏效的？",
                     "confirmShare": "我已满 18 岁，分享"
                 },
                 "error": {

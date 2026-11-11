@@ -29,7 +29,6 @@
         "howTitle": "Miten eläin nousee kyytiin",
         "howBody": "Kuvaa eläin AnimalDexillä, niin yksi saman lajin eläin nousee kyytiin, enintään pari jokaista ihmistä kohden. Puhu sitten sen kanssa jostain todellisesta elämässäsi: jokainen sen ehdottama askel, joka toimii, saa sen lajin eläimesi voimaan hyvin.",
         "howCta": "Puhu eläimen kanssa",
-        "founderNote": "Perustajat ovat nimettömiä: jokainen näkyy Voyager-numerona.",
         "formerVoyager": "Entinen voyager",
         "zones": {
             "coral_reef": "Koralliriutta",
@@ -124,7 +123,6 @@
             "hideStory": "Piilota elämäntarina",
             "follow": "Seuraa",
             "followHint": "Lopeta seuraaminen vetämällä",
-            "anonymous": "Perustajat pysyvät nimettöminä: jokainen on Voyager-numero.",
             "hatchedAboard": "Kuoriutunut Arkissa",
             "hatched": "Kuoriutui",
             "placeholder": "Sen 3D-hahmoa tehdään vielä: toistaiseksi näkyy sijaishahmo.",
@@ -319,12 +317,7 @@
                 "title": "Näytä nimeni Ark-eläimissäni",
                 "note": "Nimesi, @handle ja kuvasi näkyvät eläimissä, jotka tuot Arkiin. Poista tämä käytöstä, niin näyt Voyager-numerona.",
                 "under18": "Näyt Voyager-numerona, kunnes täytät 18.",
-                "private": "Näyt Voyager-numerona niin kauan kuin profiilisi on yksityinen.",
-                "noHandle": "Lisää profiiliisi @handle, niin nimesi näkyy.",
-                "earlier": "Eläimissä, jotka toit ennen kuin nimiä näytettiin, lukee yhä Voyager.",
-                "nameEarlier": "Näytä nimeni myös niissä",
-                "confirmAdult": "Kun otat tämän käyttöön, vahvistat olevasi vähintään 18-vuotias.",
-                "confirmYes": "Kyllä, olen vähintään 18-vuotias"
+                "noHandle": "Lisää profiiliisi @handle, niin nimesi näkyy."
             },
             "share": {
                 "ask": "Jaetaanko Arkissa, miten tämä toimi?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Tarkistus ei onnistunut juuri nyt. Yritä uudelleen.",
                 "remove": "Poista Arkista",
                 "removed": "Poistettu Arkista",
-                "askShort": "Jaetaanko, miten tämä toimi?",
                 "confirmShare": "Olen vähintään 18, jaa"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Miten hänen eläimensä nousivat kyytiin",
                 "noStories": "Tarinoita ei ole vielä jaettu."
-            },
-            "name": {
-                "ask": "Näytetäänkö nimesi Arkissa?",
-                "adult": "Olen vähintään 18-vuotias",
-                "yes": "Kyllä, näytä nimeni",
-                "shown": "Nimesi näkyy Arkissa"
             },
             "error": {
                 "needsAdult": "Vahvista ensin, että olet vähintään 18-vuotias."
@@ -453,12 +439,6 @@
                 "history": "Mitä muuttui"
             },
             "founders": {
-                "name": {
-                    "ask": "Näytetäänkö nimesi Arkissa?",
-                    "adult": "Olen vähintään 18-vuotias",
-                    "yes": "Kyllä, näytä nimeni",
-                    "shown": "Nimesi näkyy Arkissa"
-                },
                 "share": {
                     "ask": "Jaetaanko Arkissa, miten tämä toimi?",
                     "stepLabel": "Mitä teit",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Tarkistus ei onnistunut juuri nyt. Yritä uudelleen.",
                     "remove": "Poista Arkista",
                     "removed": "Poistettu Arkista",
-                    "askShort": "Jaetaanko, miten tämä toimi?",
                     "confirmShare": "Olen vähintään 18, jaa"
                 },
                 "error": {

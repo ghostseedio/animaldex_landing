@@ -369,11 +369,12 @@ export function useArkStepResults({enabled, species, messages, onDone}: {
 // MARK: - Founders: one calm moment under an arrival (founders contract, section 4)
 
 /**
- * `name`: "Show your name on the Ark? I'm 18 or over" (only when the server
- * says to ask); then the story: `collapsed` (Share / Edit / Not now),
- * `editing` (in place), `shared`, or `removed`. One line, in this order.
+ * The story: `collapsed` (Share / Edit / Not now), `editing` (in place),
+ * `shared`, or `removed`. No name question any more (owner, 2026-11-11: every
+ * bringer with a handle shows as their @username; "Show my name" is an opt-out
+ * in Settings, with no 18+ step). Sharing a story keeps its 18+ confirmation.
  */
-export type ArkFounderSharePhase = "loading" | "hidden" | "name" | "collapsed" | "editing" | "shared" | "removed";
+export type ArkFounderSharePhase = "loading" | "hidden" | "collapsed" | "editing" | "shared" | "removed";
 
 export type ArkFounderShareState = {
     phase: ArkFounderSharePhase;
@@ -382,10 +383,6 @@ export type ArkFounderShareState = {
     problem: string;
     story: ArkFounderStory | null;
     busy: boolean;
-    /** The name question was asked in this line: the story question is then the shorter one. */
-    nameAsked: boolean;
-    /** They said yes to the name here: "Your name shows on the Ark". */
-    nameShown: boolean;
     /** A share still needs the one-tap 18+ confirmation: its button reads "I'm 18 or over, share". */
     needsAdult: boolean;
     /** The last failure, said inline: other words (`not_public`), 18+ first (`needs_adult`), or try again. */
@@ -393,7 +390,6 @@ export type ArkFounderShareState = {
 };
 
 const NOT_NOW_KEY = "ark.founderShare.notNow.";
-const NAME_NOT_NOW_KEY = "ark.founderName.notNow.";
 
 function remember(key: string) {
     try {
@@ -417,8 +413,6 @@ async function readDraft(animalId: string, species: string | null, stepId: strin
         const {fixtureArkStoryDraft} = await import("@/lib/ark-founders-fixture");
         const draft = fixtureArkStoryDraft(animalId, species, stepText);
         if (fixture === "shared") return {...draft, story: {step: draft.step ?? "", problem: "I kept putting off the hard conversation with my brother", shared_at: new Date().toISOString()}};
-        // `name`: no stored adult year and no answer yet (most people): the name question first, the 18+ tap needed to share.
-        if (fixture === "name") return {...draft, ask_name: true, needs_adult_confirm: true};
         // `adult`: they said "Not now" to the name: sharing still needs the 18+ tap.
         if (fixture === "adult" || fixture === "needsadult") return {...draft, needs_adult_confirm: true};
         return draft;
@@ -463,27 +457,6 @@ async function postStory(animalId: string, step: string, problem: string, confir
     }
 }
 
-/** "Yes, show my name": the setter with the one-tap 18+ confirmation. */
-async function showName(): Promise<"ok" | "under_18" | "failed"> {
-    if (devParam("arkfounder")) {
-        await new Promise((resolve) => window.setTimeout(resolve, 400));
-        return "ok";
-    }
-    try {
-        const response = await fetch("/api/ark/founder-settings", {
-            method: "POST",
-            headers: {"Content-Type": "application/json", Accept: "application/json"},
-            body: JSON.stringify({show: true, confirm_adult: true}),
-            cache: "no-store"
-        });
-        const body = await response.json().catch(() => null) as {settings?: unknown; error?: unknown} | null;
-        if (response.ok && decodeArkFounderSettings(body?.settings)) return "ok";
-        return body?.error === "under_18" ? "under_18" : "failed";
-    } catch {
-        return "failed";
-    }
-}
-
 async function deleteStory(animalId: string): Promise<boolean> {
     if (devParam("arkfounder")) return true;
     try {
@@ -501,20 +474,17 @@ async function deleteStory(animalId: string): Promise<boolean> {
  * says it may be shared. D6 (owner, 2026-11-11): it sits under the thrive
  * line of the step that worked (`stepId`), prefilled with that step's own
  * words (the server's, else `stepText`), never the problem; the story attaches
- * to the reader's animal of the step's kind (`animalId`). The name question first when the server says to
- * ask it; either answer moves the same line on to the story. Nothing is sent
- * without a tap. Development: `?arkfounder=1` (a prefilled step, nothing
- * sent), `=name` (the name question first), `=adult` (sharing needs the 18+
- * tap), `=needsadult` (the server asks for it), `=shared`, `=notpublic`.
+ * to the reader's animal of the step's kind (`animalId`). No name question
+ * (owner, 2026-11-11). Nothing is sent without a tap. Development:
+ * `?arkfounder=1` (a prefilled step, nothing sent), `=adult` (sharing needs
+ * the 18+ tap), `=needsadult` (the server asks for it), `=shared`, `=notpublic`.
  */
 export function useArkFounderShare({animalId, species, enabled, stepId = null, stepText = null}: {animalId: string | null; species: string | null; enabled: boolean; stepId?: string | null; stepText?: string | null}) {
-    const [state, setState] = useState<ArkFounderShareState>({phase: "loading", step: "", problem: "", story: null, busy: false, nameAsked: false, nameShown: false, needsAdult: false, error: null});
+    const [state, setState] = useState<ArkFounderShareState>({phase: "loading", step: "", problem: "", story: null, busy: false, needsAdult: false, error: null});
     const stateRef = useRef(state);
     stateRef.current = state;
     /** Where "Not now" goes back to from the editor. */
     const before = useRef<ArkFounderSharePhase>("collapsed");
-    /** Where the story starts once the name question is answered. */
-    const storyPhase = useRef<ArkFounderSharePhase>("collapsed");
 
     useEffect(() => {
         if (!enabled || !animalId || !/^[0-9a-f-]{36}$/i.test(animalId)) {
@@ -529,16 +499,12 @@ export function useArkFounderShare({animalId, species, enabled, stepId = null, s
                 return;
             }
             const story = draft.story;
-            storyPhase.current = story ? "shared" : remembered(`${NOT_NOW_KEY}${animalId}`) ? "hidden" : "collapsed";
-            const askName = draft.ask_name && !remembered(`${NAME_NOT_NOW_KEY}${animalId}`);
             setState({
-                phase: askName ? "name" : storyPhase.current,
+                phase: story ? "shared" : remembered(`${NOT_NOW_KEY}${animalId}`) ? "hidden" : "collapsed",
                 step: story?.step ?? draft.step ?? stepText ?? "",
                 problem: story?.problem ?? "",
                 story,
                 busy: false,
-                nameAsked: askName,
-                nameShown: false,
                 needsAdult: draft.needs_adult_confirm,
                 error: null
             });
@@ -549,25 +515,6 @@ export function useArkFounderShare({animalId, species, enabled, stepId = null, s
         // `species` only names the fixture's animal; `stepText` is the prefill's fallback for the same step.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [animalId, enabled, stepId]);
-
-    /** "Yes, show my name" (with the 18+ confirmation it states), then on to the story in the same line. */
-    const nameYes = useCallback(async () => {
-        if (!animalId || stateRef.current.busy) return;
-        setState((current) => ({...current, busy: true, error: null}));
-        const result = await showName();
-        setState((current) => {
-            if (result === "ok") return {...current, busy: false, phase: storyPhase.current, nameShown: true, needsAdult: false};
-            // A stored teen year: they stay a Voyager; nothing more to ask.
-            if (result === "under_18") return {...current, busy: false, phase: "hidden"};
-            return {...current, busy: false, error: "could_not_check"};
-        });
-    }, [animalId]);
-
-    /** "Not now" to the name: nothing is sent, they stay Voyager, and this arrival never asks again. */
-    const nameNotNow = useCallback(() => {
-        if (animalId) remember(`${NAME_NOT_NOW_KEY}${animalId}`);
-        setState((current) => ({...current, phase: storyPhase.current, error: null}));
-    }, [animalId]);
 
     const share = useCallback(async () => {
         const words = stateRef.current;
@@ -614,5 +561,5 @@ export function useArkFounderShare({animalId, species, enabled, stepId = null, s
     const setStep = useCallback((step: string) => setState((current) => ({...current, step, error: null})), []);
     const setProblem = useCallback((problem: string) => setState((current) => ({...current, problem, error: null})), []);
 
-    return {state, nameYes, nameNotNow, share, edit, notNow, remove, setStep, setProblem};
+    return {state, share, edit, notNow, remove, setStep, setProblem};
 }

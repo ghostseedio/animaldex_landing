@@ -96,7 +96,11 @@ export type ArkAnimal = {
     source?: ArkArrivalSource | null;
     /** How well kept it is now (`thrive`); absent from an older server, which the scene reads as ordinary. */
     thrive?: ArkThrive | null;
-    /** The house or the farm, for a pet or a farm animal (`area`, placement only); null or absent: its zone. */
+    /**
+     * The house or the farm, for a pet or a farm animal (`area`, the server's `voyage_animals.area` from the capture's
+     * setting; placement only): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`). Null or
+     * absent: its zone, placed by the map.
+     */
     area?: ArkArea | null;
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
@@ -105,8 +109,6 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
-    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
-    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**

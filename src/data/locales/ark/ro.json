@@ -29,7 +29,6 @@
         "howTitle": "Cum urcă un animal la bord",
         "howBody": "Capturează un animal cu AnimalDex și unul de felul lui urcă la bord, cel mult o pereche pentru fiecare persoană. Apoi vorbește cu el despre ceva real din viața ta: fiecare pas pe care ți-l sugerează și care merge îți ajută animalele de acel fel să prospere.",
         "howCta": "Vorbește cu un animal",
-        "founderNote": "Fondatorii sunt anonimi: fiecare apare ca un număr Voyager.",
         "formerVoyager": "Fost voyager",
         "zones": {
             "coral_reef": "Recif de corali",
@@ -124,7 +123,6 @@
             "hideStory": "Ascunde povestea vieții",
             "follow": "Urmărește",
             "followHint": "Trage ca să nu mai urmărești",
-            "anonymous": "Fondatorii rămân anonimi: fiecare e un număr Voyager.",
             "hatchedAboard": "Ieșit din ou în Ark",
             "hatched": "Ieșit din ou",
             "placeholder": "Figura lui 3D e încă în lucru: deocamdată îl arată un înlocuitor.",
@@ -319,12 +317,7 @@
                 "title": "Arată-mi numele pe animalele mele din Ark",
                 "note": "Numele tău, @handle și fotografia ta apar pe animalele pe care le aduci în Ark. Dezactivează pentru a apărea ca număr Voyager.",
                 "under18": "Apari ca număr Voyager cât timp ai sub 18 ani.",
-                "private": "Apari ca număr Voyager cât timp profilul tău e privat.",
-                "noHandle": "Adaugă un @handle în profil ca să-ți arăți numele.",
-                "earlier": "Animalele aduse înainte să fie afișate numele arată tot Voyager.",
-                "nameEarlier": "Arată-mi numele și pe ele",
-                "confirmAdult": "Activând asta, confirmi că ai împlinit 18 ani.",
-                "confirmYes": "Da, am împlinit 18 ani"
+                "noHandle": "Adaugă un @handle în profil ca să-ți arăți numele."
             },
             "share": {
                 "ask": "Împărtășești în Ark cum a mers?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Nu am putut verifica acum. Încearcă din nou.",
                 "remove": "Scoate din Ark",
                 "removed": "Scos din Ark",
-                "askShort": "Împărtășești cum a mers?",
                 "confirmShare": "Am împlinit 18 ani, distribuie"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Cum au urcat la bord animalele sale",
                 "noStories": "Nicio poveste împărtășită încă."
-            },
-            "name": {
-                "ask": "Îți arătăm numele în Ark?",
-                "adult": "Am împlinit 18 ani",
-                "yes": "Da, arată-mi numele",
-                "shown": "Numele tău apare în Ark"
             },
             "error": {
                 "needsAdult": "Mai întâi confirmă că ai împlinit 18 ani."
@@ -453,12 +439,6 @@
                 "history": "Ce s-a schimbat"
             },
             "founders": {
-                "name": {
-                    "ask": "Îți arătăm numele în Ark?",
-                    "adult": "Am împlinit 18 ani",
-                    "yes": "Da, arată-mi numele",
-                    "shown": "Numele tău apare în Ark"
-                },
                 "share": {
                     "ask": "Împărtășești în Ark cum a mers?",
                     "stepLabel": "Ce ai făcut",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Nu am putut verifica acum. Încearcă din nou.",
                     "remove": "Scoate din Ark",
                     "removed": "Scos din Ark",
-                    "askShort": "Împărtășești cum a mers?",
                     "confirmShare": "Am împlinit 18 ani, distribuie"
                 },
                 "error": {

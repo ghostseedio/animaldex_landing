@@ -29,7 +29,6 @@
         "howTitle": "Come sale a bordo un animale",
         "howBody": "Cattura un animale con AnimalDex e uno della sua specie sale a bordo, fino a una coppia per persona. Poi parlaci di qualcosa di reale nella tua vita: ogni passo che ti suggerisce e che funziona fa prosperare i tuoi animali di quella specie.",
         "howCta": "Parla con un animale",
-        "founderNote": "I fondatori sono anonimi: ognuno appare come un numero Voyager.",
         "formerVoyager": "Ex voyager",
         "zones": {
             "coral_reef": "Barriera corallina",
@@ -124,7 +123,6 @@
             "hideStory": "Nascondi la storia della sua vita",
             "follow": "Segui",
             "followHint": "Trascina per smettere di seguire",
-            "anonymous": "I fondatori restano anonimi: ognuno è un numero Voyager.",
             "hatchedAboard": "Schiuso nell'Ark",
             "hatched": "Schiusa",
             "placeholder": "La sua figura 3D è ancora in lavorazione: per ora la sostituisce una figura provvisoria.",
@@ -319,12 +317,7 @@
                 "title": "Mostra il mio nome sui miei animali dell'Ark",
                 "note": "Il tuo nome, il tuo @handle e la tua foto compaiono sugli animali che porti nell'Ark. Disattiva l'opzione per comparire come numero Voyager.",
                 "under18": "Compari come numero Voyager finché hai meno di 18 anni.",
-                "private": "Compari come numero Voyager finché il tuo profilo è privato.",
-                "noHandle": "Aggiungi un @handle al tuo profilo per mostrare il tuo nome.",
-                "earlier": "Gli animali che hai portato prima che venissero mostrati i nomi indicano ancora Voyager.",
-                "nameEarlier": "Mostra il mio nome anche su quelli",
-                "confirmAdult": "Attivando questa opzione confermi di avere 18 anni o più.",
-                "confirmYes": "Sì, ho 18 anni o più"
+                "noHandle": "Aggiungi un @handle al tuo profilo per mostrare il tuo nome."
             },
             "share": {
                 "ask": "Condividere nell'Ark come ha funzionato?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Non è stato possibile verificarlo ora. Riprova.",
                 "remove": "Rimuovi dall'Ark",
                 "removed": "Rimosso dall'Ark",
-                "askShort": "Condividere come ha funzionato?",
                 "confirmShare": "Ho 18 anni o più, condividi"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Come i suoi animali sono saliti a bordo",
                 "noStories": "Ancora nessuna storia condivisa."
-            },
-            "name": {
-                "ask": "Mostrare il tuo nome nell'Ark?",
-                "adult": "Ho 18 anni o più",
-                "yes": "Sì, mostra il mio nome",
-                "shown": "Il tuo nome compare nell'Ark"
             },
             "error": {
                 "needsAdult": "Prima conferma di avere 18 anni o più."
@@ -453,12 +439,6 @@
                 "history": "Cosa è cambiato"
             },
             "founders": {
-                "name": {
-                    "ask": "Mostrare il tuo nome nell'Ark?",
-                    "adult": "Ho 18 anni o più",
-                    "yes": "Sì, mostra il mio nome",
-                    "shown": "Il tuo nome compare nell'Ark"
-                },
                 "share": {
                     "ask": "Condividere nell'Ark come ha funzionato?",
                     "stepLabel": "Cosa hai fatto",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Non è stato possibile verificarlo ora. Riprova.",
                     "remove": "Rimuovi dall'Ark",
                     "removed": "Rimosso dall'Ark",
-                    "askShort": "Condividere come ha funzionato?",
                     "confirmShare": "Ho 18 anni o più, condividi"
                 },
                 "error": {

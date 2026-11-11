@@ -29,7 +29,6 @@
         "howTitle": "Kako se životinja ukrcava",
         "howBody": "Ulovi životinju u aplikaciji AnimalDex i jedna životinja te vrste ukrcava se, najviše par po osobi. Zatim razgovaraj s njom o nečemu stvarnom u svom životu: svaki korak koji predloži, a koji uspije, pomaže tvojim životinjama te vrste da napreduju.",
         "howCta": "Razgovaraj sa životinjom",
-        "founderNote": "Osnivači su anonimni: svaki se prikazuje kao broj Voyager.",
         "formerVoyager": "Bivši voyager",
         "zones": {
             "coral_reef": "Koraljni greben",
@@ -124,7 +123,6 @@
             "hideStory": "Sakrij životnu priču",
             "follow": "Prati",
             "followHint": "Povuci da prestaneš pratiti",
-            "anonymous": "Osnivači ostaju anonimni: svaki je broj Voyager.",
             "hatchedAboard": "Izlegnut u Arku",
             "hatched": "Izlijeganje",
             "placeholder": "Njezin 3D lik još se izrađuje: zasad je prikazuje zamjenski.",
@@ -319,12 +317,7 @@
                 "title": "Prikaži moje ime na mojim životinjama u Arku",
                 "note": "Tvoje ime, @handle i fotografija prikazuju se na životinjama koje dovedeš u Ark. Isključi to i prikazivat ćeš se kao broj Voyager.",
                 "under18": "Dok ne napuniš 18 godina, prikazuješ se kao broj Voyager.",
-                "private": "Dok je tvoj profil privatan, prikazuješ se kao broj Voyager.",
-                "noHandle": "Dodaj @handle u svoj profil kako bi se prikazalo tvoje ime.",
-                "earlier": "Na životinjama koje si doveo/la prije nego što su se prikazivala imena još piše Voyager.",
-                "nameEarlier": "Prikaži moje ime i na njima",
-                "confirmAdult": "Uključivanjem potvrđuješ da imaš 18 ili više godina.",
-                "confirmYes": "Da, imam 18 ili više godina"
+                "noHandle": "Dodaj @handle u svoj profil kako bi se prikazalo tvoje ime."
             },
             "share": {
                 "ask": "Podijeliti u Arku kako je uspjelo?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Trenutačno to nije bilo moguće provjeriti. Pokušaj ponovno.",
                 "remove": "Ukloni iz Arka",
                 "removed": "Uklonjeno iz Arka",
-                "askShort": "Podijeliti kako je uspjelo?",
                 "confirmShare": "Imam 18 ili više, podijeli"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Kako su se njihove životinje ukrcale",
                 "noStories": "Još nema podijeljenih priča."
-            },
-            "name": {
-                "ask": "Prikazati tvoje ime u Arku?",
-                "adult": "Imam 18 ili više godina",
-                "yes": "Da, prikaži moje ime",
-                "shown": "Tvoje ime prikazuje se u Arku"
             },
             "error": {
                 "needsAdult": "Najprije potvrdi da imaš 18 ili više godina."
@@ -453,12 +439,6 @@
                 "history": "Što se promijenilo"
             },
             "founders": {
-                "name": {
-                    "ask": "Prikazati tvoje ime u Arku?",
-                    "adult": "Imam 18 ili više godina",
-                    "yes": "Da, prikaži moje ime",
-                    "shown": "Tvoje ime prikazuje se u Arku"
-                },
                 "share": {
                     "ask": "Podijeliti u Arku kako je uspjelo?",
                     "stepLabel": "Što si napravio/la",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Trenutačno to nije bilo moguće provjeriti. Pokušaj ponovno.",
                     "remove": "Ukloni iz Arka",
                     "removed": "Uklonjeno iz Arka",
-                    "askShort": "Podijeliti kako je uspjelo?",
                     "confirmShare": "Imam 18 ili više, podijeli"
                 },
                 "error": {

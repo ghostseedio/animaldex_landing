@@ -29,7 +29,6 @@
         "howTitle": "Hogyan száll fel egy állat",
         "howBody": "Kapj el egy állatot az AnimalDexszel, és egy a fajtájából felszáll a fedélzetre, személyenként legfeljebb egy pár. Aztán beszélgess vele valamiről, ami valóban jelen van az életedben: minden javasolt lépés, amely beválik, jó formában tartja az ilyen fajtájú állataidat.",
         "howCta": "Beszélgess egy állattal",
-        "founderNote": "Az alapítók névtelenek: mindegyiküket egy Voyager-szám jelöli.",
         "formerVoyager": "Egykori voyager",
         "zones": {
             "coral_reef": "Korallzátony",
@@ -124,7 +123,6 @@
             "hideStory": "Élettörténet elrejtése",
             "follow": "Követés",
             "followHint": "Húzd el a követés leállításához",
-            "anonymous": "Az alapítók névtelenek maradnak: mindegyik egy Voyager-szám.",
             "hatchedAboard": "Az Arkon kelt ki",
             "hatched": "Kikelt",
             "placeholder": "A 3D-alakja még készül: addig egy helyettesítő mutatja.",
@@ -319,12 +317,7 @@
                 "title": "Mutasd a nevem az Ark-állataimon",
                 "note": "A neved, @handle és fotód megjelenik az állatokon, amelyeket az Arkra hozol. Kapcsold ki, és Voyager-számként jelensz meg.",
                 "under18": "Amíg nem vagy 18 éves, Voyager-számként jelensz meg.",
-                "private": "Amíg a profilod privát, Voyager-számként jelensz meg.",
-                "noHandle": "Adj meg egy @handle azonosítót a profilodban, hogy a neved látszódjon.",
-                "earlier": "Azokon az állatokon, amelyeket a nevek megjelenítése előtt hoztál, még mindig Voyager áll.",
-                "nameEarlier": "Rajtuk is mutasd a nevem",
-                "confirmAdult": "A bekapcsolással megerősíted, hogy elmúltál 18 éves.",
-                "confirmYes": "Igen, elmúltam 18 éves"
+                "noHandle": "Adj meg egy @handle azonosítót a profilodban, hogy a neved látszódjon."
             },
             "share": {
                 "ask": "Megosztod az Arkon, hogyan vált be?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Most nem sikerült ellenőrizni. Próbáld újra.",
                 "remove": "Eltávolítás az Arkról",
                 "removed": "Eltávolítva az Arkról",
-                "askShort": "Megosztod, hogyan vált be?",
                 "confirmShare": "Elmúltam 18, megosztom"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Hogyan szálltak fel az állatai",
                 "noStories": "Még nincs megosztott történet."
-            },
-            "name": {
-                "ask": "Megjelenjen a neved az Arkon?",
-                "adult": "Elmúltam 18 éves",
-                "yes": "Igen, mutasd a nevem",
-                "shown": "A neved megjelenik az Arkon"
             },
             "error": {
                 "needsAdult": "Előbb erősítsd meg, hogy elmúltál 18 éves."
@@ -453,12 +439,6 @@
                 "history": "Mi változott"
             },
             "founders": {
-                "name": {
-                    "ask": "Megjelenjen a neved az Arkon?",
-                    "adult": "Elmúltam 18 éves",
-                    "yes": "Igen, mutasd a nevem",
-                    "shown": "A neved megjelenik az Arkon"
-                },
                 "share": {
                     "ask": "Megosztod az Arkon, hogyan vált be?",
                     "stepLabel": "Amit tettél",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Most nem sikerült ellenőrizni. Próbáld újra.",
                     "remove": "Eltávolítás az Arkról",
                     "removed": "Eltávolítva az Arkról",
-                    "askShort": "Megosztod, hogyan vált be?",
                     "confirmShare": "Elmúltam 18, megosztom"
                 },
                 "error": {

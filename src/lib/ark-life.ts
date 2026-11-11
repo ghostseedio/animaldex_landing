@@ -20,7 +20,7 @@ import {ARK_ZONES} from "@/ark-scene/types";
 import {arkActivity, type ArkActivity} from "@/lib/ark-daylight";
 import {decodeArkStory, type ArkAnimalStory} from "@/lib/ark-story";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
-import {arkLabelHasFounderKey, decodeArkFounder, decodeArkFounderStory, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
+import {arkLabelHasFounderKey, arkLabelText, decodeArkFounder, decodeArkFounderStory, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
 
 /**
  * The log's kinds. `starved`: a predator dead of long hunger (owner decision
@@ -76,6 +76,8 @@ export type ArkEvent = {
     /** A birth's parents (animal ids) and the young's born-to labels; empty otherwise. */
     parents: string[];
     bringers: string[];
+    /** The named bringers behind `bringers` (null for a Voyager), for their @username links. */
+    bringer_founders?: Array<ArkFounder | null>;
     /** A birth that hatched from an egg (`payload.from_egg`). */
     from_egg: boolean;
     /** A `laid` row's clutch: how many eggs (`payload.eggs`), when the server says. */
@@ -108,14 +110,23 @@ function record(value: unknown): Record<string, unknown> | null {
     return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
-/** `[{label, named}]` → the labels (never a user id: the server sends only labels). */
+/**
+ * `[{label, named, founder?}]` → the labels as the reader reads them (never a user id: the server sends only
+ * labels): a named bringer's @username (owner, 2026-11-11), else the label ("Voyager 5").
+ */
 function labels(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
-    return value.map((item) => text(record(item)?.label, 60)).filter((label): label is string => Boolean(label)).slice(0, 4);
+    return value.map((item) => arkLabelText(item)).filter((label): label is string => Boolean(label)).slice(0, 4);
 }
 
 function label(value: unknown): string | null {
-    return text(record(value)?.label, 60);
+    return arkLabelText(value);
+}
+
+/** The named bringers behind `labels` (null for a Voyager), in the same order, for links. */
+function labelFounders(value: unknown): Array<ArkFounder | null> {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item) => Boolean(arkLabelText(item))).slice(0, 4).map((item) => decodeArkFounder(record(item)?.founder));
 }
 
 function status(value: unknown): ArkAnimalStatus | null {
@@ -190,6 +201,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             phrase: text(row.phrase, 160),
             parents: Array.from(new Set(parents)).slice(0, 2),
             bringers: labels(row.bringers),
+            bringer_founders: labelFounders(row.bringers),
             from_egg: payload.from_egg === true || row.from_egg === true,
             eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
             thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
@@ -207,7 +219,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
 export type ArkAct =
     | {kind: "arrival"; at: string; animal: ArkEventAnimal}
     /** `fromEgg`: the young hatch from a nest or clutch (A9), the one laid earlier in the replay when it is in it. */
-    | {kind: "birth"; at: string; young: ArkEventAnimal[]; parents: string[]; bringers: string[]; fromEgg: boolean}
+    | {kind: "birth"; at: string; young: ArkEventAnimal[]; parents: string[]; bringers: string[]; /** The named ones behind `bringers`, for links. */ bringerFounders?: Array<ArkFounder | null>; fromEgg: boolean}
     /** An egg-layer laid a clutch (A9): a nest or clutch appears beside it. `eggs` when the server counts them. */
     | {kind: "laid"; at: string; animal: ArkEventAnimal; eggs: number | null; nest: string; parents: string[]}
     | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean}
@@ -258,7 +270,7 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
                 const litter = births.get(key);
                 if (litter) litter.young.push(event.animal);
                 else {
-                    const act = {kind: "birth" as const, at: event.at, young: [event.animal], parents: event.parents, bringers: event.bringers, fromEgg: event.from_egg};
+                    const act = {kind: "birth" as const, at: event.at, young: [event.animal], parents: event.parents, bringers: event.bringers, bringerFounders: event.bringer_founders, fromEgg: event.from_egg};
                     births.set(key, act);
                     acts.push(act);
                 }

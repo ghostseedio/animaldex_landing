@@ -2972,12 +2972,6 @@
         "history": "Yang berubah"
       },
       "founders": {
-        "name": {
-          "ask": "Tampilkan namamu di Ark?",
-          "adult": "Aku berusia 18 tahun ke atas",
-          "yes": "Ya, tampilkan namaku",
-          "shown": "Namamu tampil di Ark"
-        },
         "share": {
           "ask": "Bagikan di Ark bagaimana ini berhasil?",
           "stepLabel": "Yang kamu lakukan",
@@ -2991,7 +2985,6 @@
           "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
           "remove": "Hapus dari Ark",
           "removed": "Dihapus dari Ark",
-          "askShort": "Bagikan bagaimana ini berhasil?",
           "confirmShare": "Aku sudah 18 tahun, bagikan"
         },
         "error": {
@@ -4044,7 +4037,6 @@
     "howTitle": "Bagaimana hewan naik ke Ark",
     "howBody": "Tangkap seekor hewan dengan AnimalDex, dan satu dari jenisnya naik ke Ark, sampai sepasang untuk setiap orang. Lalu bicaralah dengannya tentang sesuatu yang nyata dalam hidupmu: setiap langkah yang ia sarankan dan berhasil membuat hewan-hewanmu dari jenis itu berkembang.",
     "howCta": "Bicara dengan hewan",
-    "founderNote": "Para pendiri tetap anonim: masing-masing ditampilkan sebagai nomor Voyager.",
     "formerVoyager": "Mantan voyager",
     "zones": {
       "coral_reef": "Terumbu karang",
@@ -4139,7 +4131,6 @@
       "hideStory": "Sembunyikan kisah hidup",
       "follow": "Ikuti",
       "followHint": "Seret untuk berhenti mengikuti",
-      "anonymous": "Para pendiri tetap anonim: masing-masing nomor Voyager.",
       "hatchedAboard": "Menetas di Ark",
       "hatched": "Menetas",
       "placeholder": "Figur 3D-nya masih dibuat: untuk sementara ditampilkan dengan figur pengganti.",
@@ -4334,12 +4325,7 @@
         "title": "Tampilkan namaku di hewan Ark-ku",
         "note": "Nama, @handle, dan fotomu tampil di hewan yang kamu bawa ke Ark. Matikan ini untuk tampil sebagai nomor Voyager.",
         "under18": "Kamu tampil sebagai nomor Voyager selama usiamu di bawah 18 tahun.",
-        "private": "Kamu tampil sebagai nomor Voyager selama profilmu privat.",
-        "noHandle": "Tambahkan @handle ke profilmu untuk menampilkan namamu.",
-        "earlier": "Hewan yang kamu bawa sebelum nama ditampilkan masih bertuliskan Voyager.",
-        "nameEarlier": "Tampilkan namaku di hewan-hewan itu juga",
-        "confirmAdult": "Dengan menyalakan ini, kamu mengonfirmasi bahwa usiamu 18 tahun ke atas.",
-        "confirmYes": "Ya, aku berusia 18 tahun ke atas"
+        "noHandle": "Tambahkan @handle ke profilmu untuk menampilkan namamu."
       },
       "share": {
         "ask": "Bagikan di Ark bagaimana ini berhasil?",
@@ -4354,7 +4340,6 @@
         "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
         "remove": "Hapus dari Ark",
         "removed": "Dihapus dari Ark",
-        "askShort": "Bagikan bagaimana ini berhasil?",
         "confirmShare": "Aku sudah 18 tahun, bagikan"
       },
       "card": {
@@ -4365,12 +4350,6 @@
       "founder": {
         "storiesTitle": "Bagaimana hewan-hewannya naik ke Ark",
         "noStories": "Belum ada cerita yang dibagikan."
-      },
-      "name": {
-        "ask": "Tampilkan namamu di Ark?",
-        "adult": "Aku berusia 18 tahun ke atas",
-        "yes": "Ya, tampilkan namaku",
-        "shown": "Namamu tampil di Ark"
       },
       "error": {
         "needsAdult": "Konfirmasi dulu bahwa usiamu 18 tahun ke atas."

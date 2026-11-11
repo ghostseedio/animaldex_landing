@@ -29,7 +29,6 @@
         "howTitle": "Slik kommer et dyr om bord",
         "howBody": "Fang et dyr med AnimalDex, så kommer ett av samme art om bord, opptil et par per person. Snakk så med det om noe ekte i livet ditt: hvert steg det foreslår som fungerer, får dyrene dine av den arten til å trives.",
         "howCta": "Snakk med et dyr",
-        "founderNote": "Grunnleggerne er anonyme: hver vises som et Voyager-nummer.",
         "formerVoyager": "Tidligere voyager",
         "zones": {
             "coral_reef": "Korallrev",
@@ -124,7 +123,6 @@
             "hideStory": "Skjul livshistorie",
             "follow": "Følg",
             "followHint": "Dra for å slutte å følge",
-            "anonymous": "Grunnleggerne forblir anonyme: hver er et Voyager-nummer.",
             "hatchedAboard": "Klekket i Ark",
             "hatched": "Klekket",
             "placeholder": "3D-figuren lages fortsatt: en midlertidig figur viser den inntil videre.",
@@ -319,12 +317,7 @@
                 "title": "Vis navnet mitt på dyrene mine i Ark",
                 "note": "Navnet ditt, @handle og bildet ditt vises på dyrene du tar med til Ark. Slå dette av for å vises som et Voyager-nummer.",
                 "under18": "Du vises som et Voyager-nummer så lenge du er under 18.",
-                "private": "Du vises som et Voyager-nummer så lenge profilen din er privat.",
-                "noHandle": "Legg til et @handle i profilen din for å vise navnet ditt.",
-                "earlier": "Dyr du tok med før navn ble vist, står fortsatt som Voyager.",
-                "nameEarlier": "Vis navnet mitt på dem også",
-                "confirmAdult": "Når du slår på dette, bekrefter du at du har fylt 18.",
-                "confirmYes": "Ja, jeg har fylt 18"
+                "noHandle": "Legg til et @handle i profilen din for å vise navnet ditt."
             },
             "share": {
                 "ask": "Dele i Ark hvordan det fungerte?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Kunne ikke sjekke det akkurat nå. Prøv igjen.",
                 "remove": "Fjern fra Ark",
                 "removed": "Fjernet fra Ark",
-                "askShort": "Dele hvordan det fungerte?",
                 "confirmShare": "Jeg har fylt 18, del"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Slik kom dyrene deres om bord",
                 "noStories": "Ingen historier delt ennå."
-            },
-            "name": {
-                "ask": "Vise navnet ditt i Ark?",
-                "adult": "Jeg har fylt 18",
-                "yes": "Ja, vis navnet mitt",
-                "shown": "Navnet ditt vises i Ark"
             },
             "error": {
                 "needsAdult": "Bekreft først at du har fylt 18."
@@ -453,12 +439,6 @@
                 "history": "Hva som endret seg"
             },
             "founders": {
-                "name": {
-                    "ask": "Vise navnet ditt i Ark?",
-                    "adult": "Jeg har fylt 18",
-                    "yes": "Ja, vis navnet mitt",
-                    "shown": "Navnet ditt vises i Ark"
-                },
                 "share": {
                     "ask": "Dele i Ark hvordan det fungerte?",
                     "stepLabel": "Det du gjorde",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Kunne ikke sjekke det akkurat nå. Prøv igjen.",
                     "remove": "Fjern fra Ark",
                     "removed": "Fjernet fra Ark",
-                    "askShort": "Dele hvordan det fungerte?",
                     "confirmShare": "Jeg har fylt 18, del"
                 },
                 "error": {

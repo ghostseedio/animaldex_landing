@@ -29,7 +29,6 @@
         "howTitle": "Wie ein Tier an Bord kommt",
         "howBody": "Nimm ein Tier mit AnimalDex auf, und eins seiner Art kommt an Bord, bis zu einem Paar pro Person. Dann sprich mit ihm über etwas Echtes aus deinem Leben: Jeder Schritt, den es vorschlägt und der klappt, lässt deine Tiere dieser Art gedeihen.",
         "howCta": "Sprich mit einem Tier",
-        "founderNote": "Gründer sind anonym: Jeder wird als Voyager-Nummer angezeigt.",
         "formerVoyager": "Ehemaliger Voyager",
         "zones": {
             "coral_reef": "Korallenriff",
@@ -124,7 +123,6 @@
             "hideStory": "Lebensgeschichte ausblenden",
             "follow": "Folgen",
             "followHint": "Zieh, um nicht mehr zu folgen",
-            "anonymous": "Gründer bleiben anonym: Jeder ist eine Voyager-Nummer.",
             "hatchedAboard": "In der Ark geschlüpft",
             "hatched": "Geschlüpft",
             "placeholder": "Seine 3D-Figur entsteht noch: Bis dahin zeigt es ein Platzhalter.",
@@ -319,12 +317,7 @@
                 "title": "Meinen Namen bei meinen Ark-Tieren zeigen",
                 "note": "Dein Name, dein @handle und dein Foto erscheinen bei den Tieren, die du in die Ark bringst. Schalte das aus, um als Voyager-Nummer zu erscheinen.",
                 "under18": "Solange du unter 18 bist, erscheinst du als Voyager-Nummer.",
-                "private": "Solange dein Profil privat ist, erscheinst du als Voyager-Nummer.",
-                "noHandle": "Füge deinem Profil ein @handle hinzu, um deinen Namen zu zeigen.",
-                "earlier": "Bei Tieren, die du gebracht hast, bevor Namen gezeigt wurden, steht noch Voyager.",
-                "nameEarlier": "Meinen Namen auch dort zeigen",
-                "confirmAdult": "Wenn du das einschaltest, bestätigst du, dass du 18 oder älter bist.",
-                "confirmYes": "Ja, ich bin 18 oder älter"
+                "noHandle": "Füge deinem Profil ein @handle hinzu, um deinen Namen zu zeigen."
             },
             "share": {
                 "ask": "In der Ark teilen, wie es geklappt hat?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Das konnte gerade nicht geprüft werden. Versuch es noch einmal.",
                 "remove": "Aus der Ark entfernen",
                 "removed": "Aus der Ark entfernt",
-                "askShort": "Teilen, wie es geklappt hat?",
                 "confirmShare": "Ich bin 18 oder älter, teilen"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Wie ihre Tiere an Bord kamen",
                 "noStories": "Noch keine Geschichten geteilt."
-            },
-            "name": {
-                "ask": "Deinen Namen in der Ark zeigen?",
-                "adult": "Ich bin 18 oder älter",
-                "yes": "Ja, meinen Namen zeigen",
-                "shown": "Dein Name wird in der Ark gezeigt"
             },
             "error": {
                 "needsAdult": "Bestätige zuerst, dass du 18 oder älter bist."
@@ -453,12 +439,6 @@
                 "history": "Was sich geändert hat"
             },
             "founders": {
-                "name": {
-                    "ask": "Deinen Namen in der Ark zeigen?",
-                    "adult": "Ich bin 18 oder älter",
-                    "yes": "Ja, meinen Namen zeigen",
-                    "shown": "Dein Name wird in der Ark gezeigt"
-                },
                 "share": {
                     "ask": "In der Ark teilen, wie es geklappt hat?",
                     "stepLabel": "Was du gemacht hast",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Das konnte gerade nicht geprüft werden. Versuch es noch einmal.",
                     "remove": "Aus der Ark entfernen",
                     "removed": "Aus der Ark entfernt",
-                    "askShort": "Teilen, wie es geklappt hat?",
                     "confirmShare": "Ich bin 18 oder älter, teilen"
                 },
                 "error": {

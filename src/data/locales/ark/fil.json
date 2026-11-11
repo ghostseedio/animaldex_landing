@@ -29,7 +29,6 @@
         "howTitle": "Paano sumasakay ang isang hayop",
         "howBody": "Kunan ang isang hayop sa AnimalDex at sasakay ang isa sa uri nito, hanggang isang pares bawat tao. Saka ito kausapin tungkol sa isang totoong bagay sa buhay mo: bawat hakbang na imumungkahi nito na gagana ay magpapanatiling masigla sa mga hayop mo ng ganoong uri.",
         "howCta": "Kausapin ang isang hayop",
-        "founderNote": "Hindi nagpapakilala ang mga tagapagtatag: ipinapakita ang bawat isa bilang numero ng Voyager.",
         "formerVoyager": "Dating voyager",
         "zones": {
             "coral_reef": "Bahura",
@@ -88,7 +87,7 @@
         "life": {
             "bornAboard": "Ipinanganak sa Ark",
             "bornTo": "Anak ng",
-            "bornToValue": "pares na dinala ng {bringers}",
+            "bornToValue": "pares na dinala ni {bringers}",
             "born": "Ipinanganak",
             "generation": "Henerasyon",
             "generationArrived": "0: sumakay",
@@ -124,7 +123,6 @@
             "hideStory": "Itago ang kuwento ng buhay",
             "follow": "Sundan",
             "followHint": "I-drag para tumigil sa pagsunod",
-            "anonymous": "Hindi nagpapakilala ang mga tagapagtatag: numero ng Voyager ang bawat isa.",
             "hatchedAboard": "Napisa sa Ark",
             "hatched": "Napisa",
             "placeholder": "Ginagawa pa ang 3D na anyo nito: may pansamantalang kapalit muna.",
@@ -149,8 +147,8 @@
             "skip": "Laktawan",
             "progress": "{n} sa {total}",
             "arrival": "{aAnimal} ang sumakay",
-            "birthOne": "{aAnimal} ang ipinanganak sa pares na dinala ng {bringers}",
-            "birthOther": "{count} anak ng {animal} ang ipinanganak sa pares na dinala ng {bringers}",
+            "birthOne": "{aAnimal} ang ipinanganak sa pares na dinala ni {bringers}",
+            "birthOther": "{count} anak ng {animal} ang ipinanganak sa pares na dinala ni {bringers}",
             "meal": "Kinain ng {predator} ang {aPrey}",
             "mealPhrase": "ayon sa diyeta nito “{phrase}”",
             "death": "Namatay sa katandaan ang {animal}",
@@ -180,8 +178,8 @@
             "laidOne": "{aAnimal} ang nangitlog ng isang itlog",
             "laidOther": "{aAnimal} ang nangitlog ng {count} itlog",
             "laidSome": "{aAnimal} ang nangitlog ng ilang itlog",
-            "hatchedOne": "{aAnimal} ang napisa, sa pares na dinala ng {bringers}",
-            "hatchedOther": "{count} anak ng {animal} ang napisa, sa pares na dinala ng {bringers}",
+            "hatchedOne": "{aAnimal} ang napisa, sa pares na dinala ni {bringers}",
+            "hatchedOther": "{count} anak ng {animal} ang napisa, sa pares na dinala ni {bringers}",
             "laidCountOne": "1 pugad ng itlog",
             "laidCountOther": "{count} pugad ng itlog",
             "hatchedCountOne": "1 napisa",
@@ -319,12 +317,7 @@
                 "title": "Ipakita ang pangalan ko sa mga hayop ko sa Ark",
                 "note": "Lumalabas ang pangalan, @handle at larawan mo sa mga hayop na dinadala mo sa Ark. I-off ito para lumabas bilang numero ng Voyager.",
                 "under18": "Lumalabas ka bilang numero ng Voyager habang wala ka pang 18.",
-                "private": "Lumalabas ka bilang numero ng Voyager habang pribado ang profile mo.",
-                "noHandle": "Magdagdag ng @handle sa profile mo para maipakita ang pangalan mo.",
-                "earlier": "Voyager pa rin ang nakalagay sa mga hayop na dinala mo bago ipinakita ang mga pangalan.",
-                "nameEarlier": "Ipakita rin ang pangalan ko sa mga iyon",
-                "confirmAdult": "Sa pag-on nito, kinukumpirma mong edad 18 pataas ka.",
-                "confirmYes": "Oo, edad 18 pataas ako"
+                "noHandle": "Magdagdag ng @handle sa profile mo para maipakita ang pangalan mo."
             },
             "share": {
                 "ask": "Ibahagi sa Ark kung paano ito gumana?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Hindi ito ma-check ngayon. Subukan ulit.",
                 "remove": "Alisin sa Ark",
                 "removed": "Inalis sa Ark",
-                "askShort": "Ibahagi kung paano ito gumana?",
                 "confirmShare": "Edad 18 pataas ako, ibahagi"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Paano sumakay ang mga hayop nila",
                 "noStories": "Wala pang naibahaging kuwento."
-            },
-            "name": {
-                "ask": "Ipakita ang pangalan mo sa Ark?",
-                "adult": "Edad 18 pataas ako",
-                "yes": "Oo, ipakita ang pangalan ko",
-                "shown": "Nakikita na ang pangalan mo sa Ark"
             },
             "error": {
                 "needsAdult": "Kumpirmahin muna na edad 18 pataas ka."
@@ -453,12 +439,6 @@
                 "history": "Ano ang nagbago"
             },
             "founders": {
-                "name": {
-                    "ask": "Ipakita ang pangalan mo sa Ark?",
-                    "adult": "Edad 18 pataas ako",
-                    "yes": "Oo, ipakita ang pangalan ko",
-                    "shown": "Nakikita na ang pangalan mo sa Ark"
-                },
                 "share": {
                     "ask": "Ibahagi sa Ark kung paano ito gumana?",
                     "stepLabel": "Ang ginawa mo",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Hindi ito ma-check ngayon. Subukan ulit.",
                     "remove": "Alisin sa Ark",
                     "removed": "Inalis sa Ark",
-                    "askShort": "Ibahagi kung paano ito gumana?",
                     "confirmShare": "Edad 18 pataas ako, ibahagi"
                 },
                 "error": {

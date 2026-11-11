@@ -29,7 +29,6 @@
         "howTitle": "동물이 Ark에 탑승하는 방법",
         "howBody": "AnimalDex로 동물을 캡처하면 같은 종 한 마리가 탑승해요. 한 사람당 종마다 한 쌍까지예요. 그런 다음 내 삶의 실제 일에 대해 그 동물과 이야기해 보세요. 동물이 제안한 할 일이 효과가 있을 때마다 그 종의 내 동물들이 건강하게 지내요.",
         "howCta": "동물에게 말 걸기",
-        "founderNote": "창립자는 익명이에요. 각자 Voyager 번호로 표시돼요.",
         "formerVoyager": "전 Voyager",
         "zones": {
             "coral_reef": "산호초",
@@ -124,7 +123,6 @@
             "hideStory": "일생 이야기 숨기기",
             "follow": "팔로우",
             "followHint": "드래그하면 팔로우를 멈춰요",
-            "anonymous": "창립자는 익명으로 남아요. 각자 Voyager 번호로 표시돼요.",
             "hatchedAboard": "Ark에서 부화함",
             "hatched": "부화",
             "placeholder": "3D 모습을 아직 만드는 중이에요. 지금은 임시 모습으로 보여 드려요.",
@@ -319,12 +317,7 @@
                 "title": "Ark의 내 동물에 내 이름 표시",
                 "note": "내 이름, @handle, 사진이 Ark에 데려온 동물에 표시돼요. 끄면 Voyager 번호로 표시돼요.",
                 "under18": "18세 미만인 동안에는 Voyager 번호로 표시돼요.",
-                "private": "프로필이 비공개인 동안에는 Voyager 번호로 표시돼요.",
-                "noHandle": "이름을 표시하려면 프로필에 @handle을 추가하세요.",
-                "earlier": "이름이 표시되기 전에 데려온 동물에는 아직 Voyager로 표시돼요.",
-                "nameEarlier": "그 동물에도 내 이름 표시",
-                "confirmAdult": "켜면 만 18세 이상임을 확인하게 돼요.",
-                "confirmYes": "네, 만 18세 이상이에요"
+                "noHandle": "이름을 표시하려면 프로필에 @handle을 추가하세요."
             },
             "share": {
                 "ask": "어떻게 효과가 있었는지 Ark에 공유할까요?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "지금은 확인할 수 없었어요. 다시 시도해 주세요.",
                 "remove": "Ark에서 제거",
                 "removed": "Ark에서 제거됨",
-                "askShort": "어떻게 효과가 있었는지 공유할까요?",
                 "confirmShare": "만 18세 이상, 공유하기"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "동물들이 탑승하게 된 이야기",
                 "noStories": "아직 공유된 이야기가 없어요."
-            },
-            "name": {
-                "ask": "Ark에 이름을 표시할까요?",
-                "adult": "만 18세 이상이에요",
-                "yes": "네, 이름 표시하기",
-                "shown": "Ark에 이름이 표시돼요"
             },
             "error": {
                 "needsAdult": "먼저 만 18세 이상인지 확인해 주세요."
@@ -453,12 +439,6 @@
                 "history": "변경 기록"
             },
             "founders": {
-                "name": {
-                    "ask": "Ark에 이름을 표시할까요?",
-                    "adult": "만 18세 이상이에요",
-                    "yes": "네, 이름 표시하기",
-                    "shown": "Ark에 이름이 표시돼요"
-                },
                 "share": {
                     "ask": "어떻게 효과가 있었는지 Ark에 공유할까요?",
                     "stepLabel": "내가 한 일",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "지금은 확인할 수 없었어요. 다시 시도해 주세요.",
                     "remove": "Ark에서 제거",
                     "removed": "Ark에서 제거됨",
-                    "askShort": "어떻게 효과가 있었는지 공유할까요?",
                     "confirmShare": "만 18세 이상, 공유하기"
                 },
                 "error": {

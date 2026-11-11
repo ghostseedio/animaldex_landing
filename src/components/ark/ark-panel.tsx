@@ -546,7 +546,7 @@ function ArkChatPanel({subject, words, locale, onClose, mobile}: {subject: ArkPa
                     </div>
                 ) : null}
                 {/* D6: a capture's animal's story is of a step that keeps it thriving; one a step brought, of how it got aboard. */}
-                {named?.story ? <ArkFounderStoryBlock story={named.story} title={shown?.source === "capture" ? words.arkHowThriving : words.arkHowAboard} className="mt-2.5 pl-14" /> : null}
+                {named?.story ? <ArkFounderStoryBlock story={named.story} founder={named.brought_by} title={shown?.source === "capture" ? words.arkHowThriving : words.arkHowAboard} className="mt-2.5 pl-14" /> : null}
                 <Link href="/ark" className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/14 text-[13px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200" data-testid="ark-panel-full">
                     {words.arkOpenFull}
                     <span aria-hidden="true">→</span>

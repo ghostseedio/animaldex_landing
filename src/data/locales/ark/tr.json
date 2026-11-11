@@ -29,7 +29,6 @@
         "howTitle": "Bir hayvan gemiye nasıl biner",
         "howBody": "AnimalDex ile bir hayvanı yakala, türünden biri gemiye biner; her kişi için en fazla bir çift. Sonra onunla hayatındaki gerçek bir şey hakkında konuş: önerdiği ve işe yarayan her adım, o türden hayvanlarının serpilmesini sağlar.",
         "howCta": "Bir hayvanla konuş",
-        "founderNote": "Kurucular anonimdir: her biri bir Voyager numarasıyla gösterilir.",
         "formerVoyager": "Eski voyager",
         "zones": {
             "coral_reef": "Mercan resifi",
@@ -124,7 +123,6 @@
             "hideStory": "Hayat hikâyesini gizle",
             "follow": "Takip Et",
             "followHint": "Takibi bırakmak için sürükle",
-            "anonymous": "Kurucular anonim kalır: her biri bir Voyager numarasıdır.",
             "hatchedAboard": "Ark'ta yumurtadan çıktı",
             "hatched": "Yumurtadan çıkış",
             "placeholder": "3D figürü hâlâ hazırlanıyor: şimdilik yerine geçici bir model gösteriliyor.",
@@ -319,12 +317,7 @@
                 "title": "Ark hayvanlarımda adımı göster",
                 "note": "Adın, @handle'ın ve fotoğrafın Ark'a getirdiğin hayvanlarda görünür. Voyager numarası olarak görünmek için bunu kapat.",
                 "under18": "18 yaşından küçük olduğun sürece Voyager numarası olarak görünürsün.",
-                "private": "Profilin gizli olduğu sürece Voyager numarası olarak görünürsün.",
-                "noHandle": "Adını göstermek için profiline bir @handle ekle.",
-                "earlier": "İsimler gösterilmeden önce getirdiğin hayvanlarda hâlâ Voyager yazıyor.",
-                "nameEarlier": "Onlarda da adımı göster",
-                "confirmAdult": "Bunu açarak 18 yaş ve üzerinde olduğunu onaylarsın.",
-                "confirmYes": "Evet, 18 yaş ve üzerindeyim"
+                "noHandle": "Adını göstermek için profiline bir @handle ekle."
             },
             "share": {
                 "ask": "Bunun nasıl işe yaradığını Ark'ta paylaşmak ister misin?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Şu anda kontrol edilemedi. Tekrar dene.",
                 "remove": "Ark'tan kaldır",
                 "removed": "Ark'tan kaldırıldı",
-                "askShort": "Nasıl işe yaradığını paylaşmak ister misin?",
                 "confirmShare": "18 yaş ve üzerindeyim, paylaş"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Hayvanları gemiye nasıl bindi",
                 "noStories": "Henüz paylaşılan hikâye yok."
-            },
-            "name": {
-                "ask": "Adın Ark'ta görünsün mü?",
-                "adult": "18 yaş ve üzerindeyim",
-                "yes": "Evet, adımı göster",
-                "shown": "Adın Ark'ta görünüyor"
             },
             "error": {
                 "needsAdult": "Önce 18 yaş ve üzerinde olduğunu onayla."
@@ -453,12 +439,6 @@
                 "history": "Ne değişti"
             },
             "founders": {
-                "name": {
-                    "ask": "Adın Ark'ta görünsün mü?",
-                    "adult": "18 yaş ve üzerindeyim",
-                    "yes": "Evet, adımı göster",
-                    "shown": "Adın Ark'ta görünüyor"
-                },
                 "share": {
                     "ask": "Bunun nasıl işe yaradığını Ark'ta paylaşmak ister misin?",
                     "stepLabel": "Ne yaptın",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Şu anda kontrol edilemedi. Tekrar dene.",
                     "remove": "Ark'tan kaldır",
                     "removed": "Ark'tan kaldırıldı",
-                    "askShort": "Nasıl işe yaradığını paylaşmak ister misin?",
                     "confirmShare": "18 yaş ve üzerindeyim, paylaş"
                 },
                 "error": {

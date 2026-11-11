@@ -29,7 +29,6 @@
         "howTitle": "Hoe een dier aan boord komt",
         "howBody": "Leg een dier vast met AnimalDex en er komt er een van die soort aan boord, tot een paar per persoon. Praat er daarna mee over iets echts in je leven: elke stap die het voorstelt en die werkt, laat je dieren van die soort floreren.",
         "howCta": "Praat met een dier",
-        "founderNote": "Oprichters zijn anoniem: elk wordt getoond als een Voyager-nummer.",
         "formerVoyager": "Voormalige voyager",
         "zones": {
             "coral_reef": "Koraalrif",
@@ -124,7 +123,6 @@
             "hideStory": "Verberg levensverhaal",
             "follow": "Volgen",
             "followHint": "Sleep om te stoppen met volgen",
-            "anonymous": "Oprichters blijven anoniem: elk is een Voyager-nummer.",
             "hatchedAboard": "Uitgekomen in de Ark",
             "hatched": "Uitgekomen",
             "placeholder": "Zijn 3D-figuur wordt nog gemaakt: voorlopig staat er een tijdelijke figuur.",
@@ -319,12 +317,7 @@
                 "title": "Mijn naam tonen bij mijn Ark-dieren",
                 "note": "Je naam, @handle en foto staan bij de dieren die je naar de Ark brengt. Zet dit uit om als Voyager-nummer te verschijnen.",
                 "under18": "Je verschijnt als Voyager-nummer zolang je jonger bent dan 18.",
-                "private": "Je verschijnt als Voyager-nummer zolang je profiel privé is.",
-                "noHandle": "Voeg een @handle toe aan je profiel om je naam te tonen.",
-                "earlier": "Bij dieren die je meebracht voordat namen werden getoond, staat nog Voyager.",
-                "nameEarlier": "Mijn naam ook daarbij tonen",
-                "confirmAdult": "Door dit aan te zetten bevestig je dat je 18 of ouder bent.",
-                "confirmYes": "Ja, ik ben 18 of ouder"
+                "noHandle": "Voeg een @handle toe aan je profiel om je naam te tonen."
             },
             "share": {
                 "ask": "In de Ark delen hoe het werkte?",
@@ -339,7 +332,6 @@
                 "couldNotCheck": "Dat kon nu even niet worden gecontroleerd. Probeer het opnieuw.",
                 "remove": "Uit de Ark halen",
                 "removed": "Uit de Ark gehaald",
-                "askShort": "Delen hoe het werkte?",
                 "confirmShare": "Ik ben 18 of ouder, delen"
             },
             "card": {
@@ -350,12 +342,6 @@
             "founder": {
                 "storiesTitle": "Hoe hun dieren aan boord kwamen",
                 "noStories": "Nog geen verhalen gedeeld."
-            },
-            "name": {
-                "ask": "Je naam tonen in de Ark?",
-                "adult": "Ik ben 18 of ouder",
-                "yes": "Ja, toon mijn naam",
-                "shown": "Je naam staat in de Ark"
             },
             "error": {
                 "needsAdult": "Bevestig eerst dat je 18 of ouder bent."
@@ -453,12 +439,6 @@
                 "history": "Wat er veranderde"
             },
             "founders": {
-                "name": {
-                    "ask": "Je naam tonen in de Ark?",
-                    "adult": "Ik ben 18 of ouder",
-                    "yes": "Ja, toon mijn naam",
-                    "shown": "Je naam staat in de Ark"
-                },
                 "share": {
                     "ask": "In de Ark delen hoe het werkte?",
                     "stepLabel": "Wat je deed",
@@ -472,7 +452,6 @@
                     "couldNotCheck": "Dat kon nu even niet worden gecontroleerd. Probeer het opnieuw.",
                     "remove": "Uit de Ark halen",
                     "removed": "Uit de Ark gehaald",
-                    "askShort": "Delen hoe het werkte?",
                     "confirmShare": "Ik ben 18 of ouder, delen"
                 },
                 "error": {

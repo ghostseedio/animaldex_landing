@@ -2987,12 +2987,6 @@
         "history": "What changed"
       },
       "founders": {
-        "name": {
-          "ask": "Show your name on the Ark?",
-          "adult": "I'm 18 or over",
-          "yes": "Yes, show my name",
-          "shown": "Your name shows on the Ark"
-        },
         "share": {
           "ask": "Share how this worked on the Ark?",
           "stepLabel": "What you did",
@@ -3006,7 +3000,6 @@
           "couldNotCheck": "Couldn't check that just now. Try again.",
           "remove": "Remove from the Ark",
           "removed": "Removed from the Ark",
-          "askShort": "Share how this worked?",
           "confirmShare": "I'm 18 or over, share"
         },
         "error": {
@@ -4059,7 +4052,6 @@
     "howTitle": "How an animal comes aboard",
     "howBody": "Capture an animal with AnimalDex and one of its kind comes aboard, up to a pair for each person. Then talk with it about something real in your life: every step it suggests that works keeps your animals of that kind thriving.",
     "howCta": "Talk to an animal",
-    "founderNote": "Founders are anonymous: each is shown as a Voyager number.",
     "formerVoyager": "Former voyager",
     "zones": {
       "coral_reef": "Coral reef",
@@ -4154,7 +4146,6 @@
       "hideStory": "Hide life story",
       "follow": "Follow",
       "followHint": "Drag to stop following",
-      "anonymous": "Founders stay anonymous: each is a Voyager number.",
       "hatchedAboard": "Hatched on the Ark",
       "hatched": "Hatched",
       "placeholder": "Its 3D figure is still being made: a stand-in shows it for now.",
@@ -4349,12 +4340,7 @@
         "title": "Show my name on my Ark animals",
         "note": "Your name, @handle and photo show on the animals you bring to the Ark. Turn this off to show as a Voyager number.",
         "under18": "You show as a Voyager number while you're under 18.",
-        "private": "You show as a Voyager number while your profile is private.",
-        "noHandle": "Add an @handle to your profile to show your name.",
-        "earlier": "Animals you brought before names were shown still say Voyager.",
-        "nameEarlier": "Show my name on them too",
-        "confirmAdult": "Turning this on confirms you're 18 or over.",
-        "confirmYes": "Yes, I'm 18 or over"
+        "noHandle": "Add an @handle to your profile to show your name."
       },
       "share": {
         "ask": "Share how this worked on the Ark?",
@@ -4369,7 +4355,6 @@
         "couldNotCheck": "Couldn't check that just now. Try again.",
         "remove": "Remove from the Ark",
         "removed": "Removed from the Ark",
-        "askShort": "Share how this worked?",
         "confirmShare": "I'm 18 or over, share"
       },
       "card": {
@@ -4380,12 +4365,6 @@
       "founder": {
         "storiesTitle": "How their animals got aboard",
         "noStories": "No stories shared yet."
-      },
-      "name": {
-        "ask": "Show your name on the Ark?",
-        "adult": "I'm 18 or over",
-        "yes": "Yes, show my name",
-        "shown": "Your name shows on the Ark"
       },
       "error": {
         "needsAdult": "Confirm you're 18 or over first."
