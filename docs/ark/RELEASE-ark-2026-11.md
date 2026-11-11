@@ -11,31 +11,31 @@ owner's approval of this release as a whole. Exception already approved: the rig
 
 ## 1. What is included
 
-### Web (landing `ark-release`, round m4)
+### Web (landing `ark-release`, round m4: 877ae2c5 and on)
 Each lane's branch head as merged. "Pending" heads have newer work not yet in the release.
 
 | Lane | Branch | Merged head | What it brings |
 |---|---|---|---|
-| Graphics (terrain, water, sky) | `ark-graphics` | 79f22ee6 (pending f8a2ad0c, batch 6) | Batches 1–5: sculpted terrain and range, sky and moon, underwater light, near fade, tree lighting, asset rocks, wheat and crop fields, forest floor, still lake and river |
-| Assets | `ark-assets` | 08b35d63 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
+| Graphics (terrain, water, sky) | `ark-graphics` | fd3cb1ac | Batches 1–6: sculpted terrain and range, sky and moon, underwater light and shafts, near fade, tree and conifer lighting, asset rocks, wheat and crop fields, forest floor and litter, still lake and river, warm sand, close-range bark, the ground for the prebuild worker |
+| Assets | `ark-assets` | 2d31d846 (via graphics) | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
-| Attach points | `ark-graphics-attach` | e12d830b | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
+| Attach points | `ark-graphics-attach` | b97ef1d7 | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
 | Map | `ark-map` | a7b33484 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
-| Props | `ark-props` | ffe84d2c (via ark-map) | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop |
-| Behaviour | `ark-behaviour` | 675ed812 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness, variety, shore haul-outs, no teleports |
-| Behaviour recipes | `ark-behaviour-recipes` | 32c34631 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging), seeded sex |
+| Props | `ark-props` | 5774c2b1 | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
+| Behaviour | `ark-behaviour` | 5f985348 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
+| Behaviour recipes | `ark-behaviour-recipes` | d1568d42 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | 859b854d | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | 918e0384 | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
 | Animal look | `ark-animal-look` | fea457ce | Fur, feathers, scales, eyes, wet and dust, contact shadows, close-up skins (when uploaded) |
 | Liveliness wiring | `ark-liveliness-wiring` | 39d22ccb | WebAudio engine (tap only), weather visuals (rain, fog, lightning), sheltering, young, tide, per-instance variation, traces |
 | Ambient sound | `ark-ambient` | e0f92416 | 13 beds and 2 thunder claps (public domain and CC0) |
-| Runtime | `ark-runtime-web` | 2e63d328 | Live budget (`arkOutside`, resting first), shared clock, chunked and worker-prebuilt mount, visibility/idle/power, memory, camera, visual CI |
+| Runtime | `ark-runtime-web` | 0da735b6 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
 | Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring |
 
-Not yet in the release: `ark-thrive-web` (captures + thrive, Deliverable 2), `ark-scale-test`, graphics batch 6, recipes
-round 2, newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
+Not yet in the release: `ark-thrive-web` (captures + thrive, Deliverable 2), `ark-scale-test`, `ark-home-growth` (the bigger home
+district), newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
 
 ### Server (AnimalDex, not applied)
 | Branch | Head | What |
@@ -105,6 +105,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
    curl -fsSL https://raw.githubusercontent.com/ghostseedio/animaldex_landing/main/scripts/deploy-selfhost.sh | sudo bash -s -- <full sha>
    ```
 4. Rollback: the script prints the command; the previous known-good sha is `76a4f5d1` (and `b0e6c20c…` before it).
+5. **Check on the VM:** /ark loads the built worker files in `public/ark/` (`ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`). They are made by the `prebuild` script, which `npm run build` runs (the Dockerfile's build step does). Locally `next start` answered every URL with a 308 to itself (the site's routing, not the Ark): open /ark and the embed on the VM after the deploy to be sure.
 
 ## 5. Bucket steps (`talking-models`)
 1. **Rig `v2`** (owner-approved once checks pass): `ARK_FLIGHT_APPROVED=1 python3 publish_rig.py --prefix ark-rig/v2 --no-facing`, dry run first, then `--apply`. Inert until a web build reads it (this release reads v2 first).
@@ -130,6 +131,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 - **No entry/exit motion** at the water's edge until v2's `enter_water`/`exit_water` clips.
 - Shared-layer reaction to predators is a glance; the full reaction (alert, flee) runs only near the camera (reactive layer).
 - Golden checks: the reef's upper water reads as a flat teal band; mountain rock ledges can read as boxy slabs; `ant_bark`'s trunk is untextured grey (graphics batch 6).
+- At 3× the captures population the hamlet's crowding check fails in 5 one-metre cells (map lane; 1× passes).
 - Two puffins once shared a spot (fixed in map a7b33484); recheck after each map round.
 - Ambient beds need a human listen (forest_day repeat call, wind_trees bassy). Surf and waterfall are Public Domain Mark (not CC0). The live chat's "shore" bank credits an uploader whose Commons files were nominated for deletion; keep it out of the Ark.
 - See the integrator's latest round report for the test and audit numbers.

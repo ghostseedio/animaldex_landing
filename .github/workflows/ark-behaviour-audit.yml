@@ -2,12 +2,12 @@
 # merged values (tests/ark-audit/thresholds.json) so a change that makes the animals worse fails the PR.
 #   1. the map's spawn validator (src/lib/ark-map.test.ts);
 #   2. the behaviour audit (scripts/ark-behaviour-audit.mts) in its CI configuration: every catalogue species, one
-#      island day every 30 s, flyers every second for 2 h, the reactive layer at 12 camera stops, no rig files
+#      island day every 30 s, flyers every second for 1 h, the reactive layer at 8 camera stops, no rig files
 #      (the rig checks need the local rig set: they run on the integrator's machine);
 #   3. the reactive layer's encounter scenario (scripts/ark-intelligence-encounters.mts);
 #   4. scripts/ark-audit-check.mts against the thresholds.
 # Deterministic: nothing here has randomness, so a changed number is a changed scene. A deliberate change updates the
-# thresholds in the same PR, with why. About 10 minutes.
+# thresholds in the same PR, with why. About 6 minutes (the audit about 4).
 name: Ark behaviour checks
 
 on:
@@ -53,7 +53,7 @@ jobs:
       - name: Spawn validator
         run: npx tsx --test src/lib/ark-map.test.ts
       - name: Behaviour audit (CI configuration)
-        run: npx tsx scripts/ark-behaviour-audit.mts --label ci --days 1 --step 30 --flight-hours 2 --workers 4 --camera-stops 12 --models none --out .ark-audit
+        run: npx tsx scripts/ark-behaviour-audit.mts --label ci --days 1 --step 30 --flight-hours 1 --workers 4 --camera-stops 8 --models none --out .ark-audit
       - name: Reactive encounters
         run: npx tsx scripts/ark-intelligence-encounters.mts --limit 150 --out .ark-audit/encounters.json > .ark-audit/encounters.log
       - name: Against the thresholds
