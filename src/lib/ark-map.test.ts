@@ -25,6 +25,7 @@ import {arkBody} from "@/ark-scene/stats";
 import {validateGrips} from "@/ark-scene/map/validate-grips";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
+import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
