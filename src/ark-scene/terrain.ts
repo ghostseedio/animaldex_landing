@@ -31,7 +31,7 @@ import {
     UniformsUtils,
     Vector3,
     DoubleSide,
-    type BufferGeometry
+    BufferGeometry
 } from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
@@ -122,12 +122,61 @@ function screeLayer(heights: Float32Array, size: number, out: Float32Array) {
     }
 }
 
-function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
-    const geometry = new PlaneGeometry(TERRAIN_HALF * 2, TERRAIN_HALF * 2, SEGMENTS, SEGMENTS);
-    geometry.rotateX(-Math.PI / 2);
-    const position = geometry.getAttribute("position") as BufferAttribute;
-    const count = position.count;
+/**
+ * The ground's mesh as plain typed arrays (graphics batch 6, for the runtime lane's worker prebuild): no three.js
+ * objects in the result and no DOM, so it can be built off the main thread and handed over (`primeGround`). Laid out
+ * exactly as `PlaneGeometry(…)` rotated flat, with normals summed as three's `computeVertexNormals` does them (the same
+ * triangle order, float32 throughout), so a primed ground and one built here are identical. three's `Color` is used as
+ * plain math only. The island is the same on every tier, so `tier` does not change the result today.
+ */
+export type GroundArrays = {
+    size: number;
+    positions: Float32Array;
+    normals: Float32Array;
+    uvs: Float32Array;
+    index: Uint16Array | Uint32Array;
+    colors: Float32Array;
+    layers: Float32Array;
+    layers2: Float32Array;
+    rock: Float32Array;
+    /** The water's depth map (RGBA, size × size). */
+    depth: Uint8Array;
+};
+
+export function groundArrays(tier: "high" | "medium" | "low" = "high"): GroundArrays {
+    void tier;
     const size = SEGMENTS + 1;
+    const count = size * size;
+    const half = TERRAIN_HALF;
+    const segment = (TERRAIN_HALF * 2) / SEGMENTS;
+    // PlaneGeometry's vertices, rotated -90° about x (float32, as its attribute stores them): x across, z down the rows.
+    const positions = new Float32Array(count * 3);
+    const uvs = new Float32Array(count * 2);
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
+            const i = row * size + column;
+            positions[i * 3] = column * segment - half;
+            positions[i * 3 + 2] = row * segment - half;
+            uvs[i * 2] = column / SEGMENTS;
+            uvs[i * 2 + 1] = 1 - row / SEGMENTS;
+        }
+    }
+    const index = count > 65535 ? new Uint32Array(SEGMENTS * SEGMENTS * 6) : new Uint16Array(SEGMENTS * SEGMENTS * 6);
+    let k = 0;
+    for (let row = 0; row < SEGMENTS; row++) {
+        for (let column = 0; column < SEGMENTS; column++) {
+            const a = column + size * row;
+            const b = column + size * (row + 1);
+            const c = column + 1 + size * (row + 1);
+            const d = column + 1 + size * row;
+            index[k++] = a;
+            index[k++] = b;
+            index[k++] = d;
+            index[k++] = b;
+            index[k++] = c;
+            index[k++] = d;
+        }
+    }
     const colors = new Float32Array(count * 3);
     const layers = new Float32Array(count * 4);
     // Batch 1 (graphics): forest floor, open ground (grassland and desert: bare soil patches), wet bank (river and lake), cliff.
@@ -151,10 +200,10 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const depthPixels = new Uint8Array(count * 4);
 
     for (let i = 0; i < count; i++) {
-        const x = position.getX(i);
-        const z = position.getZ(i);
+        const x = positions[i * 3];
+        const z = positions[i * 3 + 2];
         const sample = sampleGround(x, z);
-        position.setY(i, sample.height);
+        positions[i * 3 + 1] = sample.height;
         heights[i] = sample.height;
         const w = sample.weights;
 
@@ -234,13 +283,61 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         }
     }
     screeLayer(heights, size, rockLayers);
-    geometry.computeVertexNormals();
-    geometry.setAttribute("arkRock", new BufferAttribute(rockLayers, 3));
-    geometry.setAttribute("color", new BufferAttribute(colors, 3));
-    geometry.setAttribute("arkLayers", new BufferAttribute(layers, 4));
-    geometry.setAttribute("arkLayers2", new BufferAttribute(layers2, 4));
+    screeLayer(heights, size, rockLayers);
 
-    const depth = new DataTexture(depthPixels, size, size, RGBAFormat);
+    // Normals, as three's computeVertexNormals: each triangle's (C - B) × (A - B) added to its three corners (stored as
+    // float32 after every add), then each normalised.
+    const normals = new Float32Array(count * 3);
+    for (let t = 0; t < index.length; t += 3) {
+        const vA = index[t] * 3;
+        const vB = index[t + 1] * 3;
+        const vC = index[t + 2] * 3;
+        const cbx = positions[vC] - positions[vB];
+        const cby = positions[vC + 1] - positions[vB + 1];
+        const cbz = positions[vC + 2] - positions[vB + 2];
+        const abx = positions[vA] - positions[vB];
+        const aby = positions[vA + 1] - positions[vB + 1];
+        const abz = positions[vA + 2] - positions[vB + 2];
+        const nx = cby * abz - cbz * aby;
+        const ny = cbz * abx - cbx * abz;
+        const nz = cbx * aby - cby * abx;
+        for (const v of [vA, vB, vC]) {
+            normals[v] = normals[v] + nx;
+            normals[v + 1] = normals[v + 1] + ny;
+            normals[v + 2] = normals[v + 2] + nz;
+        }
+    }
+    for (let i = 0; i < count; i++) {
+        const x = normals[i * 3];
+        const y = normals[i * 3 + 1];
+        const z = normals[i * 3 + 2];
+        const scale = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+        normals[i * 3] = x * scale;
+        normals[i * 3 + 1] = y * scale;
+        normals[i * 3 + 2] = z * scale;
+    }
+    return {size, positions, normals, uvs, index, colors, layers, layers2, rock: rockLayers, depth: depthPixels};
+}
+
+/** Arrays built elsewhere (the runtime lane's worker), used by the next ground built; null builds them here again. */
+let primedGround: GroundArrays | null = null;
+export function primeGround(arrays: GroundArrays | null): void {
+    primedGround = arrays;
+}
+
+export function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
+    const a = primedGround ?? groundArrays();
+    const geometry = new BufferGeometry();
+    geometry.setIndex(new BufferAttribute(a.index, 1));
+    geometry.setAttribute("position", new BufferAttribute(a.positions, 3));
+    geometry.setAttribute("normal", new BufferAttribute(a.normals, 3));
+    geometry.setAttribute("uv", new BufferAttribute(a.uvs, 2));
+    geometry.setAttribute("arkRock", new BufferAttribute(a.rock, 3));
+    geometry.setAttribute("color", new BufferAttribute(a.colors, 3));
+    geometry.setAttribute("arkLayers", new BufferAttribute(a.layers, 4));
+    geometry.setAttribute("arkLayers2", new BufferAttribute(a.layers2, 4));
+
+    const depth = new DataTexture(a.depth, a.size, a.size, RGBAFormat);
     depth.flipY = false;
     depth.magFilter = LinearFilter;
     depth.minFilter = LinearFilter;
