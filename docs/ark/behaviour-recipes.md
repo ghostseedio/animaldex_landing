@@ -54,7 +54,7 @@ Recipes are regenerated whenever a species' stored text changes: the rows come f
      - in: slide (penguins), slip (crocodiles, monitors, turtles, seals), dive (otters, beavers, frogs, cormorants) or launch (ducks, coots, grebes);
      - out: haul (seals) or hop (penguins).
    - After climbing out: shake (mammals; never turtles), preen (birds), bask (reptiles), dry the wings (cormorants) or nothing (hippos, elephants, amphibians).
-   - Asleep: its posture (one leg, head tucked, hanging, curled, afloat, standing, huddled) as the act's state, upside down for a hanging bat.
+   - Asleep: its posture (one leg, head tucked, hanging, curled, afloat, standing, huddled) as the act's state: head down for a hanging bat, upside down for a sloth.
 6. **Near and far.**
    - Positions and attitudes are the same function at every level of detail, so nothing jumps.
    - The far version is the block's `beat`, which the existing clips and the far shader motion already read.
@@ -307,21 +307,17 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 ## What is left
 
 **Not built:**
-- **Insect swarms.** They are extracted (29 species), but there is no ambient swarm cloud yet. The murmuration machinery would carry it: a smaller shape, insects at dusk.
-- **Mixed flocks.** 25 species say they join them; this is data only.
-- **Molehills for moles.** Moles are burrow-placed, so off the schedule; their marks need a hook in `undergroundPose`.
-- **Fish under the reef lane's schools.** The reef lane's schools don't scatter yet (their input, above), and the lake has no ambient schools of theirs, so lake fishing uses this branch's own.
+- **Insect clips in the scene's micro layer.** A house bee's swarm is drawn round its spot. The bee itself stays at its microhabitat; it does not fly in the swarm.
+- **A cluster crawling on a wall.** Clusters (firebugs, lady beetles) are drawn on the ground at the animal's spot; a wall needs the surface normal.
 
 **Needs another lane:**
 - the rig clips for the named states;
 - per-sex model variants (antlers, manes, trains): a hind is drawn from a stag's model;
-- the duller sex's colour, in the renderer;
-- the props' nests and the reef's schools wired (one line each, above).
+- the props' nests wired, with their egg counts (`nestSourceFromProps`, one line).
 
 **Data:**
 - Shaking off, bathing and rolling have no phrases; they are body-plan rules or defaults.
 - 625 species have nothing but calls in their stored text: body-plan defaults, flagged.
-- The where-to-look and System Dynamics fields carry instructions and model language; the rules skip those sentences.
 
 ## What a male + female pair rule would do (harness; breeding NOT changed)
 
@@ -371,3 +367,34 @@ Medians over the 40 seeds:
 3. require them only for species with sex differences stored (2,103 species) and keep "any two" for the rest.
 
 This is a server change (ecology tick), so it needs its own migration and harness run if chosen.
+
+## Round 2 (the coordinator's list, 2026-11-11)
+
+### What each item does
+
+| Item | What it does | Where |
+|---|---|---|
+| **Insect swarms** | 30 insect species get a swarm (17 by day: bees, wasps, hornets, locusts, dragonflies; 9 at dusk: mayflies, termites, ants) or a crawling cluster (4: firebugs, boxelder bugs, lady beetles). Their ambient flock-mates are drawn near the camera only (within 35 m): 90 insects a swarm, 40 a cluster, at least a pixel or so. Positions are pure in the time and the spot. | `swarm`, `swarm_dusk`, `cluster` templates; `swarmFlock`, `swarmPoint` |
+| **Mixed flocks** | 24 species (tits, bulbuls, monkeys, impala, nilgai…) join the nearest flock, troop or herd of another species within 40 m, birds with birds. For 150 s a period, by day, a follower takes its own place at the other's side, in the air if it flies too, easing in and out over 12 s. | `mixed_follow`; `wireMixed`, `mixedPose` |
+| **Molehills** | 7 species (moles, golden moles, mole-rats, zokors; not desmans). Burrow-placed animals are off the schedule, so the mounds are pure in the mole's id, its burrow and the time: a new mound every 5 minutes, 0.6–3 m from the burrow, shrinking into the ground over 40 minutes. Drawn within 50 m. | `molehills`; `molehillsOf`; the burrow loop in `stepRecipeScene` |
+| **The duller sex** | The duller sex (185 species) is drawn greyer through the material's own dim (`arkInstance.y`, a grey-ward mix): `sexDim` = 1.1 × the saturation drop, at most 0.4. | `sexDim`; the `setXYZ` line in `index.ts` |
+| **A sitter on its nest** | With the props lane's nests wired, a sitter with eggs or chicks has every slot go to its nest. Awake it sits (the `incubate_sit` episode); asleep it sleeps there. When the eggs hatch and the chicks leave, it goes about as before. | `sitterIntent`, one hook at the top of `plannedIntent`; `nestSourceFromProps` now carries `eggs` and `chicks` |
+| **Bats hang** | Hangers (bats, sloths: posture "hang") roost under limbs, on the attach lane's `canopy_hang` points (891 on the fixture island): `recipeRoostTags`, one hook in `roostOf`. By day a bat sleeps there head down from its feet (a quarter turn nose down about the limb point); a sloth hangs level, upside down. | `world-sampler.ts` now maps `canopy_hang`, with `clearBelow` and `radius` |
+| **The dusk emergence** | From 17:21 to 18:36 a bat's roost streams with 180 ambient roost-mates, pure in the time: each leaves on its own heading with a flutter, climbs, and is gone by about 60 m. The catalogue bats leave on their schedule. | `bat_emergence`; `emergenceFlock`, `emergencePoint` |
+| **Night hunting** | Insect-eating bats sally after ambient insects at night (`bat_hawk`), and the greater bulldog bat trawls the water feet-first for fish (`bat_trawl`). Between sallies a flyer whose stay is a place in the air circles slowly (`airStay`), so a bat never hangs in mid-air. | `bat_hawk`, `bat_trawl`, `airStay` |
+| **The coat** | A wallow leaves the coat muddy (wet 0.55, dust 0.9, drying over 20 minutes); a dust bath or a roll leaves it dusty (15 minutes); a bathe, a dive or a plunge leaves it wet (6 minutes, halved by a shake). It is pure in the animal's last 16 slots. | `coatOf`, `recipeCoat`, `applyRecipeCoat` |
+| **The reef's schools** | Wired: `setFishSource(fishSchoolsNear)` at mount. | `index.ts` |
+
+### For the integrator
+- **Coat.** On release, `applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat)` must come after `look.instance(...)`, which writes `arkCoat` first. It writes the larger of the look pass's value and the recipe's, so the two add up.
+- **Sex colour.** The dim sits beside release's `arkVary` (saturation and brightness multipliers); the two compose. If the owner prefers it there, fold it into `varyOf`'s saturation and brightness instead (×0.72 and ×0.94 for the duller sex, from `sexLook`).
+- **Props' nests.** Wire them with `setNestSource(nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt}))`, with `sites` including each site's `eggs` and `chicks` (the props' `NestSiteInfo` has both). Then this branch's own nest drawing switches itself off (`fallbackNests()`).
+- **Build test.** `ark-behaviour-build.test.ts`'s reference build maps `canopy_hang` too, as `world-sampler.ts` now does.
+
+### Round-2 clips (looked at)
+- **Swarm** (`giant-burrowing-mayfly`, 17:48): a cloud of pale mayflies dancing about 1.4 m over the ground in front of a dark trunk, shifting frame to frame. The insects are pale and lit, so the swarm reads at dusk; dark specks vanished against the ground.
+- **Sitter on its nest** (`mallard`): the female, with 8 eggs in a stand-in props source, sits on her nest at the water's edge for the whole clip, settling now and then. Without eggs it went back to its day. She is drawn a little greyer than a drake: the duller-sex dim.
+- **Bats:**
+  - By day, the flying fox and the pipistrelles hang head down under the acacias' limbs, as dark folded bodies (`bats-day-crop.jpg`). A half-roll hang read as a bat lying on the limb, so bats now pitch nose down a quarter turn and sloths keep the half roll.
+  - At dusk the roost's bats stream out against the sunset sky, wings beating, up and away (`bats-sky.jpg`).
+  - Inside rainforest and woodland crowns the camera sees only leaves, so the clip is staged on the grassland's acacias.

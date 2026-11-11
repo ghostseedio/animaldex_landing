@@ -35,7 +35,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
-import {episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
 
@@ -492,7 +492,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     }
     const seed = rng(hashString(`${animal.id}#roost`))();
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
-    const tags = aquatic(profile) && !amphibious(profile) ? [] : ROOST_TAGS[profile.roost] ?? [];
+    // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < 0.02))) return spotOf(point);
@@ -644,6 +645,10 @@ function keepInWater(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
 }
 
 function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
+    // A sitter with eggs in its nest (the props lane's nests: `behaviour-recipes.ts` sitterIntent) sits on it, awake or asleep.
+    const start = slotStart(animal, slot);
+    const sitting = sitterIntent({world, profile, animal, start, awake: awakeAt(profile, activity, hoursAt(start)), kit: KIT});
+    if (sitting) return {doing: sitting.doing as ArkDoing, to: sitting.to, mode: sitting.mode, stay: [], recipe: sitting.recipe};
     const raw = rawIntent(world, profile, animal, activity, slot, hoursAt);
     if (raw.to || raw.follow) return raw;
     for (let back = 1; back <= 4; back++) {
@@ -1261,6 +1266,13 @@ export function recipeMarks(world: ScheduleWorld, profile: ArkBehaviourProfile, 
     const trips: Trip[] = [];
     for (let back = 0; back < Math.ceil(MARK_SECONDS / SLOT_SECONDS) + 1; back++) trips.push(tripAt(world, profile, animal, epochSeconds - back * SLOT_SECONDS, hoursAt, activity));
     return marksOf(world, trips, epochSeconds, KIT);
+}
+
+/** Its coat from its recent recipe acts (wet after a bathe or dive, muddy after a wallow, dusty after a dust bath): pure. */
+export function recipeCoat(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): RecipeCoat {
+    const trips: Trip[] = [];
+    for (let back = 0; back < Math.ceil(1200 / SLOT_SECONDS) + 1; back++) trips.push(tripAt(world, profile, animal, epochSeconds - back * SLOT_SECONDS, hoursAt, activity));
+    return coatOf(world, trips, epochSeconds, KIT);
 }
 
 /** An animal's nest site this season (for a builder, until the props lane's nests are wired), or null. */

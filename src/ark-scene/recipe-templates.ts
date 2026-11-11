@@ -61,13 +61,13 @@ export type TemplateStep = {
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "here";
+export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
 
 export type Template = {
     id: string;
     label: string;
-    /** stay: a goal chosen for it (or its stay where it is); pair: two animals meet; flock: its group together. */
-    kind: "stay" | "pair" | "flock";
+    /** stay: a goal chosen for it (or its stay where it is); pair: two animals meet; flock: its group together (or ambient flock-mates); mark: a trace it leaves (molehills), no steps. */
+    kind: "stay" | "pair" | "flock" | "mark";
     /** Where the schedule sends it for this (stay templates); "here": no goal, it runs in a stay where it already is. */
     goal: Goal;
     /** The schedule behaviours (or doings) it may stand in for. */
@@ -726,7 +726,56 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
         // MARK: Flocks
         T({id: "murmuration", label: "a murmuration over the roost at dusk", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "dusk", steps: [{b: "fly", s: [60, 120]}]}),
         T({id: "v_formation", label: "flies in a V or a line behind its leader", kind: "flock", goal: "here", replaces: [], doing: "fly", steps: [{b: "fly", s: [1, 1]}]}),
+        T({id: "swarm", label: "a swarm round it by day (ambient insects: bees at the hive, wasps, locusts, dragonflies)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "day", steps: []}),
+        T({id: "swarm_dusk", label: "a swarm round it at dusk (ambient insects: mayflies dancing, termites' and ants' nuptial flights)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "dusk", steps: []}),
+        T({id: "cluster", label: "a crawling cluster round it (ambient bugs gathered on a warm surface)", kind: "flock", goal: "here", replaces: [], doing: "rest", steps: []}),
+        T({id: "bat_emergence", label: "bats stream out of the roost at dusk (with ambient roost-mates)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "dusk", steps: []}),
+        T({
+            id: "mixed_follow",
+            label: "joins another species' flock or troop for a while (mixed flocks)",
+            kind: "pair",
+            goal: "here",
+            replaces: [],
+            doing: "forage",
+            hours: "day",
+            sex: "any",
+            steps: []
+        }),
+        // MARK: Bats at night
+        T({
+            id: "bat_hawk",
+            label: "hunts insects on the wing at night, in sallies and turns",
+            kind: "stay",
+            goal: "air",
+            replaces: ["forage", "fly", "wander", "hunt"],
+            doing: "fly",
+            hours: "night",
+            steps: [
+                {b: "fly", to: "air", r: 5, catch: "insect", p: 0.5},
+                {b: "fly", to: "air", r: 4},
+                {b: "fly", to: "air", r: 6, catch: "insect", p: 0.5}
+            ],
+            loop: 0
+        }),
+        T({
+            id: "bat_trawl",
+            label: "trawls the water feet-first for fish at night",
+            kind: "stay",
+            goal: "air",
+            replaces: ["forage", "fly", "hunt"],
+            doing: "fly",
+            hours: "night",
+            steps: [
+                {b: "fly", to: "over_water", h: 0.6},
+                {b: "dive_feet", to: "water", catch: "fish", p: 0.35, carry: "feet"},
+                {b: "fly", to: "air", r: 6},
+                {b: "fly", to: "air", r: 5, catch: "insect", p: 0.3}
+            ],
+            loop: 0
+        }),
         // MARK: Nests and digging
+        T({id: "incubate_sit", label: "sits on its eggs on the nest", kind: "stay", goal: "nest", replaces: [], doing: "rest", steps: [{b: "incubate", s: [60, 78]}]}),
+        T({id: "molehills", label: "pushes up molehills round its burrow (they fade)", kind: "mark", goal: "here", replaces: [], doing: "burrow", steps: []}),
         T({
             id: "nest_build",
             label: "carries material to its nest; the nest grows over the days",
