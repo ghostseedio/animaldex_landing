@@ -77,7 +77,7 @@ const COLOURS: Record<ReefKind, string[]> = {
     brain: ["#b8994f", "#9fa35a", "#c48e58", "#a8925a", "#86a06a"],
     massive: ["#c6a874", "#b49466", "#bc946a", "#a07f86"],
     // The cover on the reef's framework between the heads: turf, encrusting corals, pink and purple coralline algae.
-    encrusting: ["#7d7350", "#86704e", "#6e7552", "#8f6a78", "#a07a7c", "#7a6a5a"],
+    encrusting: ["#76704c", "#80694a", "#6c7350", "#7a6b4e", "#8a6870", "#70664e"],
     // Gorgonians and sea whips: deep purple, red, orange-yellow.
     fan: ["#7e2f56", "#a63d2c", "#c08f2f", "#8a3a6e", "#b4532e"],
     anemone: ["#c9b48a", "#9fb05a", "#c98a8a", "#b8c08a"],
@@ -116,7 +116,7 @@ const SIZE: Record<ReefKind, [number, number]> = {
     table: [0.55, 1.3],
     brain: [0.4, 1.05],
     massive: [0.45, 1.15],
-    encrusting: [0.7, 1.5],
+    encrusting: [0.6, 1.2],
     fan: [0.6, 1.25],
     anemone: [0.6, 1.1],
     barrel_sponge: [0.55, 1.15],
@@ -257,7 +257,7 @@ export function reefGrowth(): ReefItem[] {
         items.push({
             kind,
             // Column corals are the rarer boulders.
-            variant: kind === "massive" ? (roll < 0.75 ? 0 : 1) : Math.floor(roll * REEF_VARIANTS[kind]) % REEF_VARIANTS[kind],
+            variant: kind === "massive" ? (roll < 0.75 ? 0 : 1) : kind === "branching" ? (roll < 0.6 ? 0 : 1) : Math.floor(roll * REEF_VARIANTS[kind]) % REEF_VARIANTS[kind],
             x,
             y: bed.height,
             z,
