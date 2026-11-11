@@ -23,7 +23,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Map | `ark-map` | 4f3f63ea | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 3d3ecc22 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
-| Behaviour recipes | `ark-behaviour-recipes` | a9da6ee1 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
+| Behaviour recipes | `ark-behaviour-recipes` | 164ed408 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
@@ -33,7 +33,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Runtime | `ark-runtime-web` | 5a3598f8 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
 | Captures + thrive (web) | `ark-thrive-web` | ab82aa0c | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
-| Home growth | `ark-home-growth` | b95b0026 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
+| Home growth | `ark-home-growth` | 7588a2e8 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
 | Sleep | `ark-sleep` | f23db564 | Sleep postures from data for 2,555 species, lying down and getting up, closed eyes (`arkInstance.w`), breathing and stirs, social sleep with a night watch, waking in the reactive layer, den sleepers in burrows, the rest status in 45 languages |
 | Live HUD | `ark-hud-live` | a83dd61e | Species and region bars (log scale, changes), the Live log of real events and seen behaviour (tap to fly there), `mated` events, arrival notices for real arrivals only, the embed's `?hud=` and `?insetTop`/`?insetBottom` safe areas |
 | Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring |
@@ -132,15 +132,13 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 7. Flags the owner chooses, one at a time.
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` f7db6716 (2,228/2,232):**
-  - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second). Behaviour lane, fixing.
-  - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22). Behaviour lane.
-  - "a kingfisher fishes from a perch by the water": the dive's midpoint is not aloft since the home growth moved the land. Recipes or home growth.
-  - "every animal stands on its map tag's ground, apart from the others": fennec fox and meerkat share a spot after the map 4f3f63ea + home growth merge. Map / home growth.
-- **Default view** (corrected check, f7db6716): backwards 1.3%, ground turns 0.6 a minute (median). Circling: a meerkat at 34 turns a minute (forage) and a plains zebra at 5 a minute (wander, watch, play). Pace over 1.5×: a harbour seal at 2.1×. Earlier rounds also showed a grey heron (wade_spear) at 3–5× and alpine ibex at 2.4–3.2×.
-- **Backfill view (1×):** the pets are spread over the plots. One herd badge of 48 house flies (wild, zone farm_garden) stands by the first cottage.
-- **House_fields at night** (0f4e76b5): a golden retriever stands in the garden pond's water inside its stone ring. Home growth / props. (The lamp halos' dark square frames are fixed by graphics 642cff4e.)
-- **The rock hyrax's den** (golden den_rock) sits on a surf boulder at the waterline: its roost is placed there.
+- **Red tests on `ark-release` ece63768 (2,234/2,236), both behaviour's, fixes coming:**
+  - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second).
+  - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22).
+- **Default view** (corrected check, ece63768): backwards 2.3% (a house sparrow 5 s backwards), ground turns 0 a minute (median), pace ratio median 1.22, nothing over 1.6×. Circling: an Atlantic puffin at 6.7 a minute (forage), zebras and a dog at 2–3.
+- **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
+- **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
+- **The rock hyrax's den** (golden den_rock) sits on a surf boulder at the waterline: its roost is placed there (map lane).
 - **Flight and grazing clips** need rig `v2`: with v1 no flight clip and no graze clip passes (wings closed in the air, no head-down graze).
 - **No entry/exit motion** at the water's edge until v2's `enter_water`/`exit_water` clips.
 - Shared-layer reaction to predators is a glance; the full reaction (alert, flee) runs only near the camera (reactive layer).
