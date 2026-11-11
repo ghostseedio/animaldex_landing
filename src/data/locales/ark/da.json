@@ -279,6 +279,39 @@
             "eatenBy": "Ædes af",
             "see": "Se {animal} i Ark",
             "seeArk": "Se Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Vis mit navn på mine dyr i Ark",
+                "note": "Dit navn, @handle og foto vises på de dyr, du bringer til Ark. Slå det fra for at blive vist som et Voyager-nummer.",
+                "under18": "Du vises som et Voyager-nummer, så længe du er under 18.",
+                "private": "Du vises som et Voyager-nummer, så længe din profil er privat.",
+                "noHandle": "Tilføj et @handle til din profil for at vise dit navn.",
+                "earlier": "Dyr, du bragte, før navne blev vist, siger stadig Voyager.",
+                "nameEarlier": "Vis også mit navn på dem"
+            },
+            "share": {
+                "ask": "Del i Ark, hvordan det virkede?",
+                "stepLabel": "Det, du gjorde",
+                "problemPlaceholder": "Én linje om problemet, med dine egne ord (valgfrit)",
+                "share": "Del",
+                "edit": "Rediger",
+                "notNow": "Ikke nu",
+                "shared": "Delt i Ark",
+                "publicNote": "Alle, der besøger Ark, kan læse dette.",
+                "notPublic": "Det kan ikke vises offentligt. Prøv andre ord.",
+                "couldNotCheck": "Det kunne ikke tjekkes lige nu. Prøv igen.",
+                "remove": "Fjern fra Ark",
+                "removed": "Fjernet fra Ark"
+            },
+            "card": {
+                "howAboard": "Sådan kom den om bord",
+                "broughtBy": "Bragt af {name}"
+            },
+            "founder": {
+                "storiesTitle": "Sådan kom deres dyr om bord",
+                "noStories": "Ingen historier delt endnu."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark kunne ikke indlæses lige nu.",
         "arkFormerVoyager": "Tidligere voyager",
         "animalTitleA": "Tal med {animal}",
-        "animalTitleAn": "Tal med {animal}"
+        "animalTitleAn": "Tal med {animal}",
+        "arkHowAboard": "Sådan kom den om bord"
     }
 }

@@ -279,6 +279,39 @@
             "eatenBy": "Mangiato da",
             "see": "Vedi la specie {animal} nell'Ark",
             "seeArk": "Vedi l'Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mostra il mio nome sui miei animali dell'Ark",
+                "note": "Il tuo nome, il tuo @handle e la tua foto compaiono sugli animali che porti nell'Ark. Disattiva l'opzione per comparire come numero Voyager.",
+                "under18": "Compari come numero Voyager finché hai meno di 18 anni.",
+                "private": "Compari come numero Voyager finché il tuo profilo è privato.",
+                "noHandle": "Aggiungi un @handle al tuo profilo per mostrare il tuo nome.",
+                "earlier": "Gli animali che hai portato prima che venissero mostrati i nomi indicano ancora Voyager.",
+                "nameEarlier": "Mostra il mio nome anche su quelli"
+            },
+            "share": {
+                "ask": "Condividere nell'Ark come ha funzionato?",
+                "stepLabel": "Cosa hai fatto",
+                "problemPlaceholder": "Una riga sul problema, con parole tue (facoltativo)",
+                "share": "Condividi",
+                "edit": "Modifica",
+                "notNow": "Non ora",
+                "shared": "Condiviso nell'Ark",
+                "publicNote": "Chiunque visiti l'Ark può leggerlo.",
+                "notPublic": "Questo testo non può essere mostrato pubblicamente. Prova con altre parole.",
+                "couldNotCheck": "Non è stato possibile verificarlo ora. Riprova.",
+                "remove": "Rimuovi dall'Ark",
+                "removed": "Rimosso dall'Ark"
+            },
+            "card": {
+                "howAboard": "Come è salito a bordo",
+                "broughtBy": "Portato da {name}"
+            },
+            "founder": {
+                "storiesTitle": "Come i suoi animali sono saliti a bordo",
+                "noStories": "Ancora nessuna storia condivisa."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Al momento non è stato possibile caricare l'Ark.",
         "arkFormerVoyager": "Ex voyager",
         "animalTitleA": "Parla con {animal}",
-        "animalTitleAn": "Parla con {animal}"
+        "animalTitleAn": "Parla con {animal}",
+        "arkHowAboard": "Come è salito a bordo"
     }
 }

@@ -35,6 +35,9 @@ import {AppRequestError} from "@/lib/user-facing-error";
 import {askSessionStore} from "@/components/ask-animaldex/ask-session-store";
 import {forgetAllTalkThreads} from "@/components/ask-animaldex/ask-thread-meta";
 import {useUserFacingError} from "@/app/[locale]/(authenticated)/app/_components/app-shell-chrome";
+import {arkFounderSwitch, decodeArkFounderSettings, type ArkFounderSettings} from "@/lib/ark-founders";
+import type {ArkFoundersWords} from "@/lib/ark-words";
+import {ArkBroughtByFounder} from "@/components/ark/ark-founder-bits";
 
 async function postSetting(body: Record<string, unknown>) {
     const response = await fetch("/api/app/settings", {
@@ -113,6 +116,87 @@ export function DebateRosterSection({initial, words}: {initial: boolean | null; 
                     });
                 }}
             />
+        </SettingsSection>
+    );
+}
+
+async function saveArkFounderName(show: boolean): Promise<ArkFounderSettings | null> {
+    try {
+        const response = await fetch("/api/ark/founder-settings", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", Accept: "application/json"},
+            body: JSON.stringify({show}),
+            cache: "no-store"
+        });
+        if (!response.ok) return null;
+        return decodeArkFounderSettings((await response.json() as {settings?: unknown}).settings);
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * "Show my name on my Ark animals" (founders contract, section 3): shown only
+ * while the server names founders (`enabled`). Blocked (under 18, a private
+ * profile, no @handle): off and disabled, with the reason. Animals from
+ * before names shipped that still say Voyager (never chosen): a note and the
+ * "Show my name on them too" chip, which turns it on for all of them.
+ */
+export function ArkFounderNameSection({initial, title, words, broughtBy}: {initial: ArkFounderSettings; title: string; words: ArkFoundersWords["settings"]; broughtBy: string}) {
+    const [settings, setSettings] = useState(initial);
+    const [saving, setSaving] = useState(false);
+    const [failed, setFailed] = useState(false);
+    const describeError = useUserFacingError();
+    const {checked, disabled} = arkFounderSwitch(settings);
+    const blockedNote = settings.blocked === "under_18" ? words.under18 : settings.blocked === "private_profile" ? words.private : settings.blocked === "no_handle" ? words.noHandle : null;
+    const save = (show: boolean) => {
+        const previous = settings;
+        setSettings({...settings, show_name: show, chosen: true});
+        setSaving(true);
+        setFailed(false);
+        void saveArkFounderName(show).then((next) => {
+            setSaving(false);
+            if (next) setSettings(next);
+            else {
+                setSettings(previous);
+                setFailed(true);
+            }
+        });
+    };
+    return (
+        <SettingsSection title={title.toUpperCase()} footer={failed ? describeError(new Error("ark_founder_name")) : undefined}>
+            <SettingsToggleRow
+                icon={SettingsIcons.person}
+                title={words.title}
+                subtitle={blockedNote ?? words.note}
+                checked={checked}
+                disabled={disabled || saving}
+                onChange={save}
+            />
+            {checked && settings.founder ? (
+                <>
+                    <SettingsDivider />
+                    <div className="flex min-h-11 items-center px-4 py-2.5 pl-[54px] text-[13px]" data-testid="ark-founder-preview">
+                        <ArkBroughtByFounder template={broughtBy} founder={settings.founder} textClassName="text-white/45" />
+                    </div>
+                </>
+            ) : null}
+            {settings.earlier_anonymous > 0 && !settings.blocked ? (
+                <>
+                    <SettingsDivider />
+                    <div className="flex flex-col items-start gap-2 px-4 py-3 pl-[54px]" data-testid="ark-founder-earlier">
+                        <p className="text-[12px] leading-4 text-white/55">{words.earlier}</p>
+                        <button
+                            type="button"
+                            onClick={() => save(true)}
+                            disabled={saving}
+                            className="rounded-full border border-white/14 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200 disabled:opacity-60"
+                        >
+                            {words.nameEarlier}
+                        </button>
+                    </div>
+                </>
+            ) : null}
         </SettingsSection>
     );
 }

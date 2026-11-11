@@ -279,6 +279,39 @@
             "eatenBy": "Onu yiyenler",
             "see": "Ark'ta gör: {animal}",
             "seeArk": "Ark'ı gör"
+        },
+        "founders": {
+            "settings": {
+                "title": "Ark hayvanlarımda adımı göster",
+                "note": "Adın, @handle'ın ve fotoğrafın Ark'a getirdiğin hayvanlarda görünür. Voyager numarası olarak görünmek için bunu kapat.",
+                "under18": "18 yaşından küçük olduğun sürece Voyager numarası olarak görünürsün.",
+                "private": "Profilin gizli olduğu sürece Voyager numarası olarak görünürsün.",
+                "noHandle": "Adını göstermek için profiline bir @handle ekle.",
+                "earlier": "İsimler gösterilmeden önce getirdiğin hayvanlarda hâlâ Voyager yazıyor.",
+                "nameEarlier": "Onlarda da adımı göster"
+            },
+            "share": {
+                "ask": "Bunun nasıl işe yaradığını Ark'ta paylaşmak ister misin?",
+                "stepLabel": "Ne yaptın",
+                "problemPlaceholder": "Sorun hakkında kendi sözlerinle bir satır (isteğe bağlı)",
+                "share": "Paylaş",
+                "edit": "Düzenle",
+                "notNow": "Şimdi değil",
+                "shared": "Ark'ta paylaşıldı",
+                "publicNote": "Ark'ı ziyaret eden herkes bunu okuyabilir.",
+                "notPublic": "Bu herkese açık gösterilemez. Başka kelimeler dene.",
+                "couldNotCheck": "Şu anda kontrol edilemedi. Tekrar dene.",
+                "remove": "Ark'tan kaldır",
+                "removed": "Ark'tan kaldırıldı"
+            },
+            "card": {
+                "howAboard": "Gemiye nasıl bindi",
+                "broughtBy": "Getiren: {name}"
+            },
+            "founder": {
+                "storiesTitle": "Hayvanları gemiye nasıl bindi",
+                "noStories": "Henüz paylaşılan hikâye yok."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark şu anda yüklenemedi.",
         "arkFormerVoyager": "Eski voyager",
         "animalTitleA": "{animal} ile konuş",
-        "animalTitleAn": "{animal} ile konuş"
+        "animalTitleAn": "{animal} ile konuş",
+        "arkHowAboard": "Gemiye nasıl bindi"
     }
 }

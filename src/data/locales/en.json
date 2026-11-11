@@ -2989,6 +2989,20 @@
         "makePublic": "Make public",
         "changeFailed": "That didn't go through. Try again in a moment.",
         "history": "What changed"
+      },
+      "founderShare": {
+        "ask": "Share how this worked on the Ark?",
+        "stepLabel": "What you did",
+        "problemPlaceholder": "One line about the problem, in your words (optional)",
+        "share": "Share",
+        "edit": "Edit",
+        "notNow": "Not now",
+        "shared": "Shared on the Ark",
+        "publicNote": "Everyone who visits the Ark can read this.",
+        "notPublic": "This can't be shown publicly. Try other words.",
+        "couldNotCheck": "Couldn't check that just now. Try again.",
+        "remove": "Remove from the Ark",
+        "removed": "Removed from the Ark"
       }
     },
     "displayName": "{nickname} the {animal}",
@@ -3372,7 +3386,8 @@
     "arkOpenFull": "Open the full Ark",
     "arkLoading": "Bringing the Ark into view",
     "arkUnavailable": "The Ark couldn't load just now.",
-    "arkFormerVoyager": "Former voyager"
+    "arkFormerVoyager": "Former voyager",
+    "arkHowAboard": "How it got aboard"
   },
   "talkFrontDoor": {
     "placeholder": "What's on your mind?",
@@ -4271,6 +4286,39 @@
       "eatenBy": "Eaten by",
       "see": "See the {animal} in the Ark",
       "seeArk": "See the Ark"
+    },
+    "founders": {
+      "settings": {
+        "title": "Show my name on my Ark animals",
+        "note": "Your name, @handle and photo show on the animals you bring to the Ark. Turn this off to show as a Voyager number.",
+        "under18": "You show as a Voyager number while you're under 18.",
+        "private": "You show as a Voyager number while your profile is private.",
+        "noHandle": "Add an @handle to your profile to show your name.",
+        "earlier": "Animals you brought before names were shown still say Voyager.",
+        "nameEarlier": "Show my name on them too"
+      },
+      "share": {
+        "ask": "Share how this worked on the Ark?",
+        "stepLabel": "What you did",
+        "problemPlaceholder": "One line about the problem, in your words (optional)",
+        "share": "Share",
+        "edit": "Edit",
+        "notNow": "Not now",
+        "shared": "Shared on the Ark",
+        "publicNote": "Everyone who visits the Ark can read this.",
+        "notPublic": "This can't be shown publicly. Try other words.",
+        "couldNotCheck": "Couldn't check that just now. Try again.",
+        "remove": "Remove from the Ark",
+        "removed": "Removed from the Ark"
+      },
+      "card": {
+        "howAboard": "How it got aboard",
+        "broughtBy": "Brought by {name}"
+      },
+      "founder": {
+        "storiesTitle": "How their animals got aboard",
+        "noStories": "No stories shared yet."
+      }
     }
   }
 }

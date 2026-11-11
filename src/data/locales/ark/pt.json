@@ -279,6 +279,39 @@
             "eatenBy": "É comido por",
             "see": "Ver {animal} na Ark",
             "seeArk": "Ver a Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mostrar meu nome nos meus animais da Ark",
+                "note": "Seu nome, seu @handle e sua foto aparecem nos animais que você traz para a Ark. Desative para aparecer como um número de Voyager.",
+                "under18": "Você aparece como um número de Voyager enquanto tiver menos de 18 anos.",
+                "private": "Você aparece como um número de Voyager enquanto seu perfil for privado.",
+                "noHandle": "Adicione um @handle ao seu perfil para mostrar seu nome.",
+                "earlier": "Os animais que você trouxe antes de os nomes aparecerem ainda mostram Voyager.",
+                "nameEarlier": "Mostrar meu nome neles também"
+            },
+            "share": {
+                "ask": "Compartilhar na Ark como funcionou?",
+                "stepLabel": "O que você fez",
+                "problemPlaceholder": "Uma linha sobre o problema, com suas palavras (opcional)",
+                "share": "Compartilhar",
+                "edit": "Editar",
+                "notNow": "Agora não",
+                "shared": "Compartilhado na Ark",
+                "publicNote": "Todos que visitam a Ark podem ler isto.",
+                "notPublic": "Isto não pode ser mostrado publicamente. Tente outras palavras.",
+                "couldNotCheck": "Não deu para verificar agora. Tente de novo.",
+                "remove": "Remover da Ark",
+                "removed": "Removido da Ark"
+            },
+            "card": {
+                "howAboard": "Como embarcou",
+                "broughtBy": "Trazido por {name}"
+            },
+            "founder": {
+                "storiesTitle": "Como os animais dessa pessoa embarcaram",
+                "noStories": "Nenhuma história compartilhada ainda."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Não foi possível carregar a Ark agora.",
         "arkFormerVoyager": "Ex-voyager",
         "animalTitleA": "Falar com {animal}",
-        "animalTitleAn": "Falar com {animal}"
+        "animalTitleAn": "Falar com {animal}",
+        "arkHowAboard": "Como embarcou"
     }
 }

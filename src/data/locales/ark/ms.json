@@ -279,6 +279,39 @@
             "eatenBy": "Dimakan oleh",
             "see": "Lihat {animal} di Ark",
             "seeArk": "Lihat Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Tunjukkan nama saya pada haiwan Ark saya",
+                "note": "Nama, @handle dan foto anda ditunjukkan pada haiwan yang anda bawa ke Ark. Matikan ini untuk ditunjukkan sebagai nombor Voyager.",
+                "under18": "Anda ditunjukkan sebagai nombor Voyager selagi anda berumur bawah 18 tahun.",
+                "private": "Anda ditunjukkan sebagai nombor Voyager selagi profil anda peribadi.",
+                "noHandle": "Tambah @handle pada profil anda untuk menunjukkan nama anda.",
+                "earlier": "Haiwan yang anda bawa sebelum nama ditunjukkan masih tertulis Voyager.",
+                "nameEarlier": "Tunjukkan nama saya pada haiwan itu juga"
+            },
+            "share": {
+                "ask": "Kongsi di Ark bagaimana ini berjaya?",
+                "stepLabel": "Apa yang anda lakukan",
+                "problemPlaceholder": "Satu baris tentang masalah itu, dengan kata-kata anda (pilihan)",
+                "share": "Kongsi",
+                "edit": "Edit",
+                "notNow": "Bukan sekarang",
+                "shared": "Dikongsi di Ark",
+                "publicNote": "Semua yang melawat Ark boleh membaca ini.",
+                "notPublic": "Ini tidak boleh ditunjukkan secara umum. Cuba perkataan lain.",
+                "couldNotCheck": "Tidak dapat menyemak sekarang. Cuba lagi.",
+                "remove": "Buang dari Ark",
+                "removed": "Dibuang dari Ark"
+            },
+            "card": {
+                "howAboard": "Bagaimana ia naik ke Ark",
+                "broughtBy": "Dibawa oleh {name}"
+            },
+            "founder": {
+                "storiesTitle": "Bagaimana haiwan mereka naik ke Ark",
+                "noStories": "Belum ada cerita dikongsi."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark tidak dapat dimuatkan sekarang.",
         "arkFormerVoyager": "Bekas voyager",
         "animalTitleA": "Bercakap dengan {animal}",
-        "animalTitleAn": "Bercakap dengan {animal}"
+        "animalTitleAn": "Bercakap dengan {animal}",
+        "arkHowAboard": "Bagaimana ia naik ke Ark"
     }
 }

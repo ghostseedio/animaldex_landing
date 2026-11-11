@@ -279,6 +279,39 @@
             "eatenBy": "تفترسه",
             "see": "شاهد {animal} في Ark",
             "seeArk": "شاهد Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "أظهر اسمي على حيواناتي في Ark",
+                "note": "يظهر اسمك ومعرّفك @handle وصورتك على الحيوانات التي تُحضرها إلى Ark. أوقف هذا الخيار لتظهر برقم Voyager.",
+                "under18": "تظهر برقم Voyager ما دمت دون 18 عامًا.",
+                "private": "تظهر برقم Voyager ما دام ملفك الشخصي خاصًا.",
+                "noHandle": "أضف معرّف @handle إلى ملفك الشخصي ليظهر اسمك.",
+                "earlier": "الحيوانات التي أحضرتها قبل إظهار الأسماء لا تزال تحمل Voyager.",
+                "nameEarlier": "أظهر اسمي عليها أيضًا"
+            },
+            "share": {
+                "ask": "هل تشارك في Ark كيف نجح هذا؟",
+                "stepLabel": "ما فعلته",
+                "problemPlaceholder": "سطر واحد عن المشكلة، بكلماتك (اختياري)",
+                "share": "مشاركة",
+                "edit": "تعديل",
+                "notNow": "ليس الآن",
+                "shared": "تمت المشاركة في Ark",
+                "publicNote": "يمكن لكل من يزور Ark قراءة هذا.",
+                "notPublic": "لا يمكن عرض هذا للعامة. جرّب كلمات أخرى.",
+                "couldNotCheck": "تعذّر التحقق الآن. حاول مرة أخرى.",
+                "remove": "إزالة من Ark",
+                "removed": "أُزيل من Ark"
+            },
+            "card": {
+                "howAboard": "كيف صعد على المتن",
+                "broughtBy": "أحضره {name}"
+            },
+            "founder": {
+                "storiesTitle": "كيف صعدت حيواناته على المتن",
+                "noStories": "لا توجد قصص مشتركة بعد."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "تعذّر تحميل Ark الآن.",
         "arkFormerVoyager": "voyager سابق",
         "animalTitleA": "تحدّث إلى {animal}",
-        "animalTitleAn": "تحدّث إلى {animal}"
+        "animalTitleAn": "تحدّث إلى {animal}",
+        "arkHowAboard": "كيف صعد على المتن"
     }
 }

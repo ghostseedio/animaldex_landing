@@ -279,6 +279,39 @@
             "eatenBy": "Gefressen von",
             "see": "{animal} in der Ark ansehen",
             "seeArk": "Die Ark ansehen"
+        },
+        "founders": {
+            "settings": {
+                "title": "Meinen Namen bei meinen Ark-Tieren zeigen",
+                "note": "Dein Name, dein @handle und dein Foto erscheinen bei den Tieren, die du in die Ark bringst. Schalte das aus, um als Voyager-Nummer zu erscheinen.",
+                "under18": "Solange du unter 18 bist, erscheinst du als Voyager-Nummer.",
+                "private": "Solange dein Profil privat ist, erscheinst du als Voyager-Nummer.",
+                "noHandle": "Füge deinem Profil ein @handle hinzu, um deinen Namen zu zeigen.",
+                "earlier": "Bei Tieren, die du gebracht hast, bevor Namen gezeigt wurden, steht noch Voyager.",
+                "nameEarlier": "Meinen Namen auch dort zeigen"
+            },
+            "share": {
+                "ask": "In der Ark teilen, wie es geklappt hat?",
+                "stepLabel": "Was du gemacht hast",
+                "problemPlaceholder": "Eine Zeile zum Problem, in deinen Worten (optional)",
+                "share": "Teilen",
+                "edit": "Bearbeiten",
+                "notNow": "Nicht jetzt",
+                "shared": "In der Ark geteilt",
+                "publicNote": "Alle, die die Ark besuchen, können das lesen.",
+                "notPublic": "Das kann nicht öffentlich gezeigt werden. Versuch es mit anderen Worten.",
+                "couldNotCheck": "Das konnte gerade nicht geprüft werden. Versuch es noch einmal.",
+                "remove": "Aus der Ark entfernen",
+                "removed": "Aus der Ark entfernt"
+            },
+            "card": {
+                "howAboard": "Wie es an Bord kam",
+                "broughtBy": "Gebracht von {name}"
+            },
+            "founder": {
+                "storiesTitle": "Wie ihre Tiere an Bord kamen",
+                "noStories": "Noch keine Geschichten geteilt."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Die Ark konnte gerade nicht geladen werden.",
         "arkFormerVoyager": "Ehemaliger Voyager",
         "animalTitleA": "Sprich mit {animal}",
-        "animalTitleAn": "Sprich mit {animal}"
+        "animalTitleAn": "Sprich mit {animal}",
+        "arkHowAboard": "Wie es an Bord kam"
     }
 }

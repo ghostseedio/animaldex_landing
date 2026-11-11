@@ -279,6 +279,39 @@
             "eatenBy": "נטרף על ידי",
             "see": "ראה את {animal} ב-Ark",
             "seeArk": "ראה את Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "הצג את השם שלי על החיות שלי ב-Ark",
+                "note": "השם שלך, ה-@handle והתמונה שלך מופיעים על החיות שאתה מביא ל-Ark. כבה את זה כדי להופיע כמספר Voyager.",
+                "under18": "אתה מופיע כמספר Voyager כל עוד אתה מתחת לגיל 18.",
+                "private": "אתה מופיע כמספר Voyager כל עוד הפרופיל שלך פרטי.",
+                "noHandle": "הוסף @handle לפרופיל שלך כדי שהשם שלך יופיע.",
+                "earlier": "על חיות שהבאת לפני שהשמות הוצגו עדיין כתוב Voyager.",
+                "nameEarlier": "הצג את השם שלי גם עליהן"
+            },
+            "share": {
+                "ask": "לשתף ב-Ark איך זה הצליח?",
+                "stepLabel": "מה עשית",
+                "problemPlaceholder": "שורה אחת על הבעיה, במילים שלך (לא חובה)",
+                "share": "שתף",
+                "edit": "ערוך",
+                "notNow": "לא עכשיו",
+                "shared": "שותף ב-Ark",
+                "publicNote": "כל מי שמבקר ב-Ark יכול לקרוא את זה.",
+                "notPublic": "אי אפשר להציג את זה בפומבי. נסה מילים אחרות.",
+                "couldNotCheck": "לא הצלחנו לבדוק את זה כרגע. נסה שוב.",
+                "remove": "הסר מ-Ark",
+                "removed": "הוסר מ-Ark"
+            },
+            "card": {
+                "howAboard": "איך עלה לסיפון",
+                "broughtBy": "הובא על ידי {name}"
+            },
+            "founder": {
+                "storiesTitle": "איך החיות שלהם עלו לסיפון",
+                "noStories": "עדיין לא שותפו סיפורים."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "לא ניתן היה לטעון את Ark כרגע.",
         "arkFormerVoyager": "voyager לשעבר",
         "animalTitleA": "דבר עם {animal}",
-        "animalTitleAn": "דבר עם {animal}"
+        "animalTitleAn": "דבר עם {animal}",
+        "arkHowAboard": "איך עלה לסיפון"
     }
 }

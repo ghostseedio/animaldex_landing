@@ -279,6 +279,39 @@
             "eatenBy": "Zjadane przez",
             "see": "Zobacz w Ark: {animal}",
             "seeArk": "Zobacz Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Pokazuj moje imię przy moich zwierzętach w Ark",
+                "note": "Twoje imię, @handle i zdjęcie widać przy zwierzętach, które przywozisz do Ark. Wyłącz to, a pokażemy cię jako numer Voyager.",
+                "under18": "Dopóki masz mniej niż 18 lat, widać cię jako numer Voyager.",
+                "private": "Dopóki twój profil jest prywatny, widać cię jako numer Voyager.",
+                "noHandle": "Dodaj @handle do profilu, aby pokazać swoje imię.",
+                "earlier": "Przy zwierzętach przywiezionych, zanim pokazywano imiona, nadal widnieje Voyager.",
+                "nameEarlier": "Pokaż moje imię także przy nich"
+            },
+            "share": {
+                "ask": "Udostępnić w Ark, jak to zadziałało?",
+                "stepLabel": "Twój krok",
+                "problemPlaceholder": "Jedno zdanie o problemie, twoimi słowami (opcjonalnie)",
+                "share": "Udostępnij",
+                "edit": "Edytuj",
+                "notNow": "Nie teraz",
+                "shared": "Udostępniono w Ark",
+                "publicNote": "Każdy, kto odwiedza Ark, może to przeczytać.",
+                "notPublic": "Tego nie można pokazać publicznie. Spróbuj innych słów.",
+                "couldNotCheck": "Nie udało się teraz tego sprawdzić. Spróbuj ponownie.",
+                "remove": "Usuń z Ark",
+                "removed": "Usunięto z Ark"
+            },
+            "card": {
+                "howAboard": "Jak trafiło na pokład",
+                "broughtBy": "Przywiezione przez {name}"
+            },
+            "founder": {
+                "storiesTitle": "Jak ich zwierzęta trafiły na pokład",
+                "noStories": "Brak udostępnionych historii."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Nie udało się teraz wczytać Ark.",
         "arkFormerVoyager": "Były voyager",
         "animalTitleA": "Porozmawiaj: {animal}",
-        "animalTitleAn": "Porozmawiaj: {animal}"
+        "animalTitleAn": "Porozmawiaj: {animal}",
+        "arkHowAboard": "Jak trafiło na pokład"
     }
 }

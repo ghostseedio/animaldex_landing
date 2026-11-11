@@ -279,6 +279,39 @@
             "eatenBy": "Pradă pentru",
             "see": "Vezi {animal} în Ark",
             "seeArk": "Vezi Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Arată-mi numele pe animalele mele din Ark",
+                "note": "Numele tău, @handle și fotografia ta apar pe animalele pe care le aduci în Ark. Dezactivează pentru a apărea ca număr Voyager.",
+                "under18": "Apari ca număr Voyager cât timp ai sub 18 ani.",
+                "private": "Apari ca număr Voyager cât timp profilul tău e privat.",
+                "noHandle": "Adaugă un @handle în profil ca să-ți arăți numele.",
+                "earlier": "Animalele aduse înainte să fie afișate numele arată tot Voyager.",
+                "nameEarlier": "Arată-mi numele și pe ele"
+            },
+            "share": {
+                "ask": "Împărtășești în Ark cum a mers?",
+                "stepLabel": "Ce ai făcut",
+                "problemPlaceholder": "Un rând despre problemă, în cuvintele tale (opțional)",
+                "share": "Distribuie",
+                "edit": "Editează",
+                "notNow": "Nu acum",
+                "shared": "Distribuit în Ark",
+                "publicNote": "Oricine vizitează Ark poate citi asta.",
+                "notPublic": "Asta nu poate fi afișat public. Încearcă alte cuvinte.",
+                "couldNotCheck": "Nu am putut verifica acum. Încearcă din nou.",
+                "remove": "Scoate din Ark",
+                "removed": "Scos din Ark"
+            },
+            "card": {
+                "howAboard": "Cum a urcat la bord",
+                "broughtBy": "Adus de {name}"
+            },
+            "founder": {
+                "storiesTitle": "Cum au urcat la bord animalele sale",
+                "noStories": "Nicio poveste împărtășită încă."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark nu s-a putut încărca acum.",
         "arkFormerVoyager": "Fost voyager",
         "animalTitleA": "Vorbește cu {animal}",
-        "animalTitleAn": "Vorbește cu {animal}"
+        "animalTitleAn": "Vorbește cu {animal}",
+        "arkHowAboard": "Cum a urcat la bord"
     }
 }

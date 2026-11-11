@@ -237,6 +237,31 @@ export type ArkCaptureWords = {
     seeArk: string;
 };
 
+/**
+ * Founders (founders contract, section 6): the tap card's "Brought by {name}"
+ * and "How it got aboard", a founder's page, the share line under an arrival
+ * in the chat and the "Show my name on my Ark animals" setting.
+ */
+export type ArkFoundersWords = {
+    settings: {title: string; note: string; under18: string; private: string; noHandle: string; earlier: string; nameEarlier: string};
+    share: {
+        ask: string;
+        stepLabel: string;
+        problemPlaceholder: string;
+        share: string;
+        edit: string;
+        notNow: string;
+        shared: string;
+        publicNote: string;
+        notPublic: string;
+        couldNotCheck: string;
+        remove: string;
+        removed: string;
+    };
+    card: {howAboard: string; broughtBy: string};
+    founder: {storiesTitle: string; noStories: string};
+};
+
 export type ArkWords = {
     metaTitle: string;
     metaDescription: string;
@@ -284,6 +309,7 @@ export type ArkWords = {
     share: ArkShareWords;
     seo: ArkSeoWords;
     species: ArkSpeciesWords;
+    founders: ArkFoundersWords;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

@@ -279,6 +279,39 @@
             "eatenBy": "天敌",
             "see": "在 Ark 中查看{animal}",
             "seeArk": "查看 Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "在我的 Ark 动物上显示我的名字",
+                "note": "你的名字、@handle 和照片会显示在你带到 Ark 的动物上。关闭后将显示为 Voyager 编号。",
+                "under18": "你未满 18 岁期间，会显示为 Voyager 编号。",
+                "private": "你的个人资料设为私密期间，会显示为 Voyager 编号。",
+                "noHandle": "在个人资料中添加 @handle 即可显示你的名字。",
+                "earlier": "在显示名字之前你带来的动物仍显示 Voyager。",
+                "nameEarlier": "也在它们上面显示我的名字"
+            },
+            "share": {
+                "ask": "在 Ark 上分享这一步是怎么奏效的？",
+                "stepLabel": "你做了什么",
+                "problemPlaceholder": "用你自己的话，写一行关于这个问题的内容（可选）",
+                "share": "分享",
+                "edit": "编辑",
+                "notNow": "暂不",
+                "shared": "已在 Ark 上分享",
+                "publicNote": "所有来访 Ark 的人都能看到这段内容。",
+                "notPublic": "这段内容无法公开显示。换个说法试试。",
+                "couldNotCheck": "暂时无法检查，请重试。",
+                "remove": "从 Ark 移除",
+                "removed": "已从 Ark 移除"
+            },
+            "card": {
+                "howAboard": "它是如何登船的",
+                "broughtBy": "由{name}带来"
+            },
+            "founder": {
+                "storiesTitle": "这些动物是如何登船的",
+                "noStories": "还没有分享的故事。"
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark 暂时无法加载。",
         "arkFormerVoyager": "前 Voyager",
         "animalTitleA": "与{animal}对话",
-        "animalTitleAn": "与{animal}对话"
+        "animalTitleAn": "与{animal}对话",
+        "arkHowAboard": "它是如何登船的"
     }
 }

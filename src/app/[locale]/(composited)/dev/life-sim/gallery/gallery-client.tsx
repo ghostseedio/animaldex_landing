@@ -287,7 +287,7 @@ function LiveStep({words, money, locale, reveal, earnsPower, offer = null, arriv
                         money={money}
                         locale={locale}
                     />
-                    {arrives ? <ArkArrivalLine key={`arrival-${run}`} species="Komodo Dragon" slug="komodo-dragon" fresh words={words.ark} locale={locale} onSee={() => undefined} /> : null}
+                    {arrives ? <ArkArrivalLine key={`arrival-${run}`} species="Komodo Dragon" slug="komodo-dragon" animalId="f29d1d93-e6b2-45f4-a6fa-2ce36215ba03" fresh words={words.ark} locale={locale} onSee={() => undefined} /> : null}
                 </>
             ) : null}
             {state !== "live" ? (

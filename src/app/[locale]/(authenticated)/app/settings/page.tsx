@@ -1,5 +1,5 @@
 import {redirect} from "next/navigation";
-import {ChatHistorySection, DebateRosterSection, InstagramRow, SoundEffectsRow} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-client";
+import {ArkFounderNameSection, ChatHistorySection, DebateRosterSection, InstagramRow, SoundEffectsRow} from "@/app/[locale]/(authenticated)/app/settings/_components/settings-client";
 import {
     SettingsDivider,
     SettingsIcons,
@@ -9,6 +9,8 @@ import {
 import {getSettingsOverview} from "@/data/account-settings";
 import {loadDebatesEnabled, readRosterOptIn} from "@/data/debates";
 import {getCompanionWords} from "@/loaders/companion-words";
+import {getArkWords} from "@/loaders/ark-words";
+import {readArkFounderSettings} from "@/data/ark-founders";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {accountStandingValue, currencySelectionLabel, locationVisibilityTitle, recordPrivacySummary} from "@/lib/account-settings";
 import {getLocalePath} from "@/lib/site";
@@ -34,7 +36,13 @@ export default async function SettingsPage({params}: {params: {locale: string}})
     if (!overview) redirect(getLocalePath(params.locale, "/account"));
     // 3.2 Debates: the public roster opt-in, while the server has Debates on.
     const supabase = createSupabaseServerClient();
-    const [debatesEnabled, words] = await Promise.all([loadDebatesEnabled(), getCompanionWords(params.locale)]);
+    // Ark founders: "Show my name on my Ark animals", only while the server names founders (its switch on).
+    const [debatesEnabled, words, founderSettings, {words: arkWords}] = await Promise.all([
+        loadDebatesEnabled(),
+        getCompanionWords(params.locale),
+        readArkFounderSettings(),
+        getArkWords(params.locale)
+    ]);
     const optedIn = debatesEnabled && supabase ? await readRosterOptIn(supabase) : null;
 
     const anyPush = Object.values(overview.push).some(Boolean);
@@ -97,6 +105,10 @@ export default async function SettingsPage({params}: {params: {locale: string}})
             </SettingsSection>
 
             {debatesEnabled ? <DebateRosterSection initial={optedIn} words={words} /> : null}
+
+            {founderSettings?.enabled ? (
+                <ArkFounderNameSection initial={founderSettings} title={arkWords.eyebrow} words={arkWords.founders.settings} broughtBy={arkWords.founders.card.broughtBy} />
+            ) : null}
 
             <SettingsSection title="PRIVACY & DATA">
                 <SettingsNavigationRow href="/app/settings/location-privacy" icon={SettingsIcons.location} title="Location privacy" value={locationVisibilityTitle(overview.locationVisibility)} />

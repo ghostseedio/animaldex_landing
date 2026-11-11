@@ -2974,6 +2974,20 @@
         "makePublic": "Jadikan publik",
         "changeFailed": "Belum berhasil. Coba lagi sebentar lagi.",
         "history": "Yang berubah"
+      },
+      "founderShare": {
+        "ask": "Bagikan di Ark bagaimana ini berhasil?",
+        "stepLabel": "Yang kamu lakukan",
+        "problemPlaceholder": "Satu baris tentang masalahnya, dengan kata-katamu sendiri (opsional)",
+        "share": "Bagikan",
+        "edit": "Edit",
+        "notNow": "Nanti saja",
+        "shared": "Dibagikan di Ark",
+        "publicNote": "Semua yang mengunjungi Ark bisa membaca ini.",
+        "notPublic": "Ini tidak bisa ditampilkan secara publik. Coba kata-kata lain.",
+        "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
+        "remove": "Hapus dari Ark",
+        "removed": "Dihapus dari Ark"
       }
     },
     "displayName": "{nickname} sang {animal}",
@@ -3357,7 +3371,8 @@
     "arkOpenFull": "Buka Ark lengkap",
     "arkLoading": "Menampilkan Ark",
     "arkUnavailable": "Ark tidak bisa dimuat saat ini.",
-    "arkFormerVoyager": "Mantan voyager"
+    "arkFormerVoyager": "Mantan voyager",
+    "arkHowAboard": "Bagaimana ia naik ke Ark"
   },
   "talkFrontDoor": {
     "placeholder": "Apa yang ada di pikiranmu?",
@@ -4256,6 +4271,39 @@
       "arkLine": "Seluruh Ark: {animals} dari {species}, dibawa oleh {founders}.",
       "openArk": "Buka Ark",
       "back": "Kembali ke profil"
+    },
+    "founders": {
+      "settings": {
+        "title": "Tampilkan namaku di hewan Ark-ku",
+        "note": "Nama, @handle, dan fotomu tampil di hewan yang kamu bawa ke Ark. Matikan ini untuk tampil sebagai nomor Voyager.",
+        "under18": "Kamu tampil sebagai nomor Voyager selama usiamu di bawah 18 tahun.",
+        "private": "Kamu tampil sebagai nomor Voyager selama profilmu privat.",
+        "noHandle": "Tambahkan @handle ke profilmu untuk menampilkan namamu.",
+        "earlier": "Hewan yang kamu bawa sebelum nama ditampilkan masih bertuliskan Voyager.",
+        "nameEarlier": "Tampilkan namaku di hewan-hewan itu juga"
+      },
+      "share": {
+        "ask": "Bagikan di Ark bagaimana ini berhasil?",
+        "stepLabel": "Yang kamu lakukan",
+        "problemPlaceholder": "Satu baris tentang masalahnya, dengan kata-katamu sendiri (opsional)",
+        "share": "Bagikan",
+        "edit": "Edit",
+        "notNow": "Nanti saja",
+        "shared": "Dibagikan di Ark",
+        "publicNote": "Semua yang mengunjungi Ark bisa membaca ini.",
+        "notPublic": "Ini tidak bisa ditampilkan secara publik. Coba kata-kata lain.",
+        "couldNotCheck": "Belum bisa memeriksanya sekarang. Coba lagi.",
+        "remove": "Hapus dari Ark",
+        "removed": "Dihapus dari Ark"
+      },
+      "card": {
+        "howAboard": "Bagaimana ia naik ke Ark",
+        "broughtBy": "Dibawa oleh {name}"
+      },
+      "founder": {
+        "storiesTitle": "Bagaimana hewan-hewannya naik ke Ark",
+        "noStories": "Belum ada cerita yang dibagikan."
+      }
     }
   }
 }

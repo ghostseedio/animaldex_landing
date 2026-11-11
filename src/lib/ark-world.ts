@@ -339,12 +339,20 @@ type PersonAnimal = SnapshotAnimal & {brought_by: {label: string; named: boolean
  * with the label others see; someone else's lists theirs only when they are
  * named; anyone else is anonymous. Born young are counted with the bringer
  * the server names on them.
+ *
+ * Founders (founders contract): with names on, a named label is the
+ * founder's display name, not their username; `founderHandle` (from the
+ * founders beside the snapshot) ties an animal to its founder's @handle.
  */
-export function arkPersonView(animals: readonly PersonAnimal[], person: {isSelf: boolean; username: string}): ArkPersonView {
+export function arkPersonView(animals: readonly PersonAnimal[], person: {isSelf: boolean; username: string; founderHandle?: (animal: PersonAnimal) => string | null}): ArkPersonView {
     const handle = person.username.trim().toLowerCase();
     const theirs = person.isSelf
         ? animals.filter((animal) => animal.mine)
-        : animals.filter((animal) => animal.brought_by.named && animal.brought_by.label.trim().toLowerCase() === handle);
+        : animals.filter((animal) => {
+            const founder = person.founderHandle?.(animal)?.trim().toLowerCase() ?? null;
+            if (founder) return founder === handle;
+            return animal.brought_by.named && animal.brought_by.label.trim().toLowerCase() === handle;
+        });
     if (!person.isSelf && theirs.length === 0) return {kind: "anonymous"};
     const bySpecies = new Map<string, ArkPersonSpecies>();
     for (const animal of theirs) {

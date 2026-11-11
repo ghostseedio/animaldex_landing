@@ -279,6 +279,39 @@
             "eatenBy": "Kinakain ng",
             "see": "Tingnan ang {animal} sa Ark",
             "seeArk": "Tingnan ang Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Ipakita ang pangalan ko sa mga hayop ko sa Ark",
+                "note": "Lumalabas ang pangalan, @handle at larawan mo sa mga hayop na dinadala mo sa Ark. I-off ito para lumabas bilang numero ng Voyager.",
+                "under18": "Lumalabas ka bilang numero ng Voyager habang wala ka pang 18.",
+                "private": "Lumalabas ka bilang numero ng Voyager habang pribado ang profile mo.",
+                "noHandle": "Magdagdag ng @handle sa profile mo para maipakita ang pangalan mo.",
+                "earlier": "Voyager pa rin ang nakalagay sa mga hayop na dinala mo bago ipinakita ang mga pangalan.",
+                "nameEarlier": "Ipakita rin ang pangalan ko sa mga iyon"
+            },
+            "share": {
+                "ask": "Ibahagi sa Ark kung paano ito gumana?",
+                "stepLabel": "Ang ginawa mo",
+                "problemPlaceholder": "Isang linya tungkol sa problema, sa sarili mong salita (opsyonal)",
+                "share": "Ibahagi",
+                "edit": "I-edit",
+                "notNow": "Hindi muna",
+                "shared": "Naibahagi sa Ark",
+                "publicNote": "Mababasa ito ng lahat ng bumibisita sa Ark.",
+                "notPublic": "Hindi ito maipapakita sa publiko. Subukan ang ibang salita.",
+                "couldNotCheck": "Hindi ito ma-check ngayon. Subukan ulit.",
+                "remove": "Alisin sa Ark",
+                "removed": "Inalis sa Ark"
+            },
+            "card": {
+                "howAboard": "Paano ito sumakay",
+                "broughtBy": "Dinala ni {name}"
+            },
+            "founder": {
+                "storiesTitle": "Paano sumakay ang mga hayop nila",
+                "noStories": "Wala pang naibahaging kuwento."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Hindi ma-load ang Ark ngayon.",
         "arkFormerVoyager": "Dating voyager",
         "animalTitleA": "Kausapin ang {animal}",
-        "animalTitleAn": "Kausapin ang {animal}"
+        "animalTitleAn": "Kausapin ang {animal}",
+        "arkHowAboard": "Paano ito sumakay"
     }
 }

@@ -279,6 +279,39 @@
             "eatenBy": "Sitä syövät",
             "see": "Näytä Arkissa: {animal}",
             "seeArk": "Näytä Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Näytä nimeni Ark-eläimissäni",
+                "note": "Nimesi, @handle ja kuvasi näkyvät eläimissä, jotka tuot Arkiin. Poista tämä käytöstä, niin näyt Voyager-numerona.",
+                "under18": "Näyt Voyager-numerona, kunnes täytät 18.",
+                "private": "Näyt Voyager-numerona niin kauan kuin profiilisi on yksityinen.",
+                "noHandle": "Lisää profiiliisi @handle, niin nimesi näkyy.",
+                "earlier": "Eläimissä, jotka toit ennen kuin nimiä näytettiin, lukee yhä Voyager.",
+                "nameEarlier": "Näytä nimeni myös niissä"
+            },
+            "share": {
+                "ask": "Jaetaanko Arkissa, miten tämä toimi?",
+                "stepLabel": "Mitä teit",
+                "problemPlaceholder": "Yksi rivi ongelmasta omin sanoin (valinnainen)",
+                "share": "Jaa",
+                "edit": "Muokkaa",
+                "notNow": "Ei nyt",
+                "shared": "Jaettu Arkissa",
+                "publicNote": "Kaikki Arkissa vierailevat voivat lukea tämän.",
+                "notPublic": "Tätä ei voi näyttää julkisesti. Kokeile muita sanoja.",
+                "couldNotCheck": "Tarkistus ei onnistunut juuri nyt. Yritä uudelleen.",
+                "remove": "Poista Arkista",
+                "removed": "Poistettu Arkista"
+            },
+            "card": {
+                "howAboard": "Miten se nousi kyytiin",
+                "broughtBy": "Tuojana {name}"
+            },
+            "founder": {
+                "storiesTitle": "Miten hänen eläimensä nousivat kyytiin",
+                "noStories": "Tarinoita ei ole vielä jaettu."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Arkia ei voitu ladata juuri nyt.",
         "arkFormerVoyager": "Entinen voyager",
         "animalTitleA": "Puhu: {animal}",
-        "animalTitleAn": "Puhu: {animal}"
+        "animalTitleAn": "Puhu: {animal}",
+        "arkHowAboard": "Miten se nousi kyytiin"
     }
 }

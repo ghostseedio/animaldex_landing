@@ -279,6 +279,39 @@
             "eatenBy": "Mangé par",
             "see": "Voir l'espèce {animal} dans l'Ark",
             "seeArk": "Voir l'Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Afficher mon nom sur mes animaux de l'Ark",
+                "note": "Votre nom, votre @handle et votre photo apparaissent sur les animaux que vous amenez dans l'Ark. Désactivez cette option pour apparaître sous un numéro Voyager.",
+                "under18": "Vous apparaissez sous un numéro Voyager tant que vous avez moins de 18 ans.",
+                "private": "Vous apparaissez sous un numéro Voyager tant que votre profil est privé.",
+                "noHandle": "Ajoutez un @handle à votre profil pour afficher votre nom.",
+                "earlier": "Les animaux amenés avant l'affichage des noms indiquent toujours Voyager.",
+                "nameEarlier": "Afficher aussi mon nom sur eux"
+            },
+            "share": {
+                "ask": "Partager dans l'Ark comment ça a marché ?",
+                "stepLabel": "Ce que vous avez fait",
+                "problemPlaceholder": "Une ligne sur le problème, avec vos mots (facultatif)",
+                "share": "Partager",
+                "edit": "Modifier",
+                "notNow": "Pas maintenant",
+                "shared": "Partagé dans l'Ark",
+                "publicNote": "Tous ceux qui visitent l'Ark peuvent lire ceci.",
+                "notPublic": "Ce texte ne peut pas être affiché publiquement. Essayez d'autres mots.",
+                "couldNotCheck": "Impossible de vérifier pour le moment. Réessayez.",
+                "remove": "Retirer de l'Ark",
+                "removed": "Retiré de l'Ark"
+            },
+            "card": {
+                "howAboard": "Comment il est monté à bord",
+                "broughtBy": "Amené par {name}"
+            },
+            "founder": {
+                "storiesTitle": "Comment ses animaux sont montés à bord",
+                "noStories": "Aucune histoire partagée pour l'instant."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "L'Ark n'a pas pu se charger pour le moment.",
         "arkFormerVoyager": "Ancien voyager",
         "animalTitleA": "Parler à {animal}",
-        "animalTitleAn": "Parler à {animal}"
+        "animalTitleAn": "Parler à {animal}",
+        "arkHowAboard": "Comment il est monté à bord"
     }
 }

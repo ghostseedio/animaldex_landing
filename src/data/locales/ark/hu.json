@@ -279,6 +279,39 @@
             "eatenBy": "Ragadozói",
             "see": "{animal} megtekintése az Arkon",
             "seeArk": "Nézd meg az Arkot"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mutasd a nevem az Ark-állataimon",
+                "note": "A neved, @handle és fotód megjelenik az állatokon, amelyeket az Arkra hozol. Kapcsold ki, és Voyager-számként jelensz meg.",
+                "under18": "Amíg nem vagy 18 éves, Voyager-számként jelensz meg.",
+                "private": "Amíg a profilod privát, Voyager-számként jelensz meg.",
+                "noHandle": "Adj meg egy @handle azonosítót a profilodban, hogy a neved látszódjon.",
+                "earlier": "Azokon az állatokon, amelyeket a nevek megjelenítése előtt hoztál, még mindig Voyager áll.",
+                "nameEarlier": "Rajtuk is mutasd a nevem"
+            },
+            "share": {
+                "ask": "Megosztod az Arkon, hogyan vált be?",
+                "stepLabel": "Amit tettél",
+                "problemPlaceholder": "Egy sor a problémáról, a saját szavaiddal (nem kötelező)",
+                "share": "Megosztás",
+                "edit": "Szerkesztés",
+                "notNow": "Most nem",
+                "shared": "Megosztva az Arkon",
+                "publicNote": "Mindenki elolvashatja, aki meglátogatja az Arkot.",
+                "notPublic": "Ez nem jeleníthető meg nyilvánosan. Próbáld más szavakkal.",
+                "couldNotCheck": "Most nem sikerült ellenőrizni. Próbáld újra.",
+                "remove": "Eltávolítás az Arkról",
+                "removed": "Eltávolítva az Arkról"
+            },
+            "card": {
+                "howAboard": "Hogyan szállt fel",
+                "broughtBy": "Hozta: {name}"
+            },
+            "founder": {
+                "storiesTitle": "Hogyan szálltak fel az állatai",
+                "noStories": "Még nincs megosztott történet."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Az Ark most nem tölthető be.",
         "arkFormerVoyager": "Egykori voyager",
         "animalTitleA": "Beszélj vele: {animal}",
-        "animalTitleAn": "Beszélj vele: {animal}"
+        "animalTitleAn": "Beszélj vele: {animal}",
+        "arkHowAboard": "Hogyan szállt fel"
     }
 }

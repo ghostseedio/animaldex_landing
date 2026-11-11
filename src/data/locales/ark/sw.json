@@ -279,6 +279,39 @@
             "eatenBy": "Huliwa na",
             "see": "Mwone {animal} ndani ya Ark",
             "seeArk": "Tazama Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Onyesha jina langu kwenye wanyama wangu wa Ark",
+                "note": "Jina lako, @handle na picha yako huonekana kwenye wanyama unaowaleta kwenye Ark. Zima hili ili uonekane kama namba ya Voyager.",
+                "under18": "Unaonekana kama namba ya Voyager ukiwa chini ya miaka 18.",
+                "private": "Unaonekana kama namba ya Voyager wakati wasifu wako ni wa faragha.",
+                "noHandle": "Ongeza @handle kwenye wasifu wako ili jina lako lionekane.",
+                "earlier": "Wanyama uliowaleta kabla majina hayajaonyeshwa bado wanaonyesha Voyager.",
+                "nameEarlier": "Onyesha jina langu kwao pia"
+            },
+            "share": {
+                "ask": "Ungependa kushiriki kwenye Ark jinsi hili lilivyofanikiwa?",
+                "stepLabel": "Ulichofanya",
+                "problemPlaceholder": "Mstari mmoja kuhusu tatizo, kwa maneno yako (si lazima)",
+                "share": "Shiriki",
+                "edit": "Hariri",
+                "notNow": "Si sasa",
+                "shared": "Imeshirikiwa kwenye Ark",
+                "publicNote": "Kila anayetembelea Ark anaweza kusoma hili.",
+                "notPublic": "Hili haliwezi kuonyeshwa hadharani. Jaribu maneno mengine.",
+                "couldNotCheck": "Haikuwezekana kukagua sasa hivi. Jaribu tena.",
+                "remove": "Ondoa kwenye Ark",
+                "removed": "Imeondolewa kwenye Ark"
+            },
+            "card": {
+                "howAboard": "Jinsi alivyopanda Ark",
+                "broughtBy": "Aliletwa na {name}"
+            },
+            "founder": {
+                "storiesTitle": "Jinsi wanyama wao walivyopanda Ark",
+                "noStories": "Bado hakuna hadithi zilizoshirikiwa."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark haikuweza kupakia kwa sasa.",
         "arkFormerVoyager": "Voyager wa zamani",
         "animalTitleA": "Ongea na {animal}",
-        "animalTitleAn": "Ongea na {animal}"
+        "animalTitleAn": "Ongea na {animal}",
+        "arkHowAboard": "Jinsi alivyopanda Ark"
     }
 }

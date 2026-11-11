@@ -279,6 +279,39 @@
             "eatenBy": "Wordt gegeten door",
             "see": "Bekijk de {animal} in de Ark",
             "seeArk": "Bekijk de Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mijn naam tonen bij mijn Ark-dieren",
+                "note": "Je naam, @handle en foto staan bij de dieren die je naar de Ark brengt. Zet dit uit om als Voyager-nummer te verschijnen.",
+                "under18": "Je verschijnt als Voyager-nummer zolang je jonger bent dan 18.",
+                "private": "Je verschijnt als Voyager-nummer zolang je profiel privé is.",
+                "noHandle": "Voeg een @handle toe aan je profiel om je naam te tonen.",
+                "earlier": "Bij dieren die je meebracht voordat namen werden getoond, staat nog Voyager.",
+                "nameEarlier": "Mijn naam ook daarbij tonen"
+            },
+            "share": {
+                "ask": "In de Ark delen hoe het werkte?",
+                "stepLabel": "Wat je deed",
+                "problemPlaceholder": "Eén regel over het probleem, in je eigen woorden (optioneel)",
+                "share": "Delen",
+                "edit": "Bewerken",
+                "notNow": "Niet nu",
+                "shared": "Gedeeld in de Ark",
+                "publicNote": "Iedereen die de Ark bezoekt, kan dit lezen.",
+                "notPublic": "Dit kan niet openbaar worden getoond. Probeer andere woorden.",
+                "couldNotCheck": "Dat kon nu even niet worden gecontroleerd. Probeer het opnieuw.",
+                "remove": "Uit de Ark halen",
+                "removed": "Uit de Ark gehaald"
+            },
+            "card": {
+                "howAboard": "Hoe het aan boord kwam",
+                "broughtBy": "Meegebracht door {name}"
+            },
+            "founder": {
+                "storiesTitle": "Hoe hun dieren aan boord kwamen",
+                "noStories": "Nog geen verhalen gedeeld."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "De Ark kon nu niet laden.",
         "arkFormerVoyager": "Voormalige voyager",
         "animalTitleA": "Praat met een {animal}",
-        "animalTitleAn": "Praat met een {animal}"
+        "animalTitleAn": "Praat met een {animal}",
+        "arkHowAboard": "Hoe het aan boord kwam"
     }
 }

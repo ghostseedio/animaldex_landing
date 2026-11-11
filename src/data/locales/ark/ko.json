@@ -279,6 +279,39 @@
             "eatenBy": "천적",
             "see": "Ark에서 {animal} 보기",
             "seeArk": "Ark 보기"
+        },
+        "founders": {
+            "settings": {
+                "title": "Ark의 내 동물에 내 이름 표시",
+                "note": "내 이름, @handle, 사진이 Ark에 데려온 동물에 표시돼요. 끄면 Voyager 번호로 표시돼요.",
+                "under18": "18세 미만인 동안에는 Voyager 번호로 표시돼요.",
+                "private": "프로필이 비공개인 동안에는 Voyager 번호로 표시돼요.",
+                "noHandle": "이름을 표시하려면 프로필에 @handle을 추가하세요.",
+                "earlier": "이름이 표시되기 전에 데려온 동물에는 아직 Voyager로 표시돼요.",
+                "nameEarlier": "그 동물에도 내 이름 표시"
+            },
+            "share": {
+                "ask": "어떻게 효과가 있었는지 Ark에 공유할까요?",
+                "stepLabel": "내가 한 일",
+                "problemPlaceholder": "문제에 대해 내 말로 한 줄 (선택)",
+                "share": "공유",
+                "edit": "수정",
+                "notNow": "나중에",
+                "shared": "Ark에 공유됨",
+                "publicNote": "Ark를 방문하는 누구나 읽을 수 있어요.",
+                "notPublic": "공개적으로 보여 줄 수 없는 내용이에요. 다른 말로 써 보세요.",
+                "couldNotCheck": "지금은 확인할 수 없었어요. 다시 시도해 주세요.",
+                "remove": "Ark에서 제거",
+                "removed": "Ark에서 제거됨"
+            },
+            "card": {
+                "howAboard": "탑승하게 된 이야기",
+                "broughtBy": "데려온 사람: {name}"
+            },
+            "founder": {
+                "storiesTitle": "동물들이 탑승하게 된 이야기",
+                "noStories": "아직 공유된 이야기가 없어요."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "지금은 Ark를 불러올 수 없었어요.",
         "arkFormerVoyager": "전 Voyager",
         "animalTitleA": "{animal}에게 말 걸기",
-        "animalTitleAn": "{animal}에게 말 걸기"
+        "animalTitleAn": "{animal}에게 말 걸기",
+        "arkHowAboard": "탑승하게 된 이야기"
     }
 }

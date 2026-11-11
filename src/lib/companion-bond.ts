@@ -424,6 +424,26 @@ export const ARK_COPY = {
         makePublic: "Make public",
         changeFailed: "That didn't go through. Try again in a moment.",
         history: "What changed"
+    },
+    /**
+     * Founders (founders contract, section 4): the share line under an
+     * arrival, "Share how this worked on the Ark?". The same words as the
+     * Ark's own `ark.founders.share`, here because the chat reads its labels
+     * from `companions`.
+     */
+    founderShare: {
+        ask: "Share how this worked on the Ark?",
+        stepLabel: "What you did",
+        problemPlaceholder: "One line about the problem, in your words (optional)",
+        share: "Share",
+        edit: "Edit",
+        notNow: "Not now",
+        shared: "Shared on the Ark",
+        publicNote: "Everyone who visits the Ark can read this.",
+        notPublic: "This can't be shown publicly. Try other words.",
+        couldNotCheck: "Couldn't check that just now. Try again.",
+        remove: "Remove from the Ark",
+        removed: "Removed from the Ark"
     }
 } as const;
 

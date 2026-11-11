@@ -279,6 +279,39 @@
             "eatenBy": "És presa de",
             "see": "Mira {animal} a l'Ark",
             "seeArk": "Mira l'Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mostra el meu nom als meus animals de l'Ark",
+                "note": "El teu nom, el teu @handle i la teva foto apareixen als animals que portes a l'Ark. Desactiva-ho per aparèixer com un número Voyager.",
+                "under18": "Apareixes com un número Voyager mentre tinguis menys de 18 anys.",
+                "private": "Apareixes com un número Voyager mentre el teu perfil sigui privat.",
+                "noHandle": "Afegeix un @handle al teu perfil per mostrar el teu nom.",
+                "earlier": "Els animals que vas portar abans que es mostressin els noms encara diuen Voyager.",
+                "nameEarlier": "Mostra el meu nom també en aquests"
+            },
+            "share": {
+                "ask": "Vols compartir a l'Ark com va funcionar?",
+                "stepLabel": "El que vas fer",
+                "problemPlaceholder": "Una línia sobre el problema, amb les teves paraules (opcional)",
+                "share": "Comparteix",
+                "edit": "Edita",
+                "notNow": "Ara no",
+                "shared": "Compartit a l'Ark",
+                "publicNote": "Tothom qui visita l'Ark pot llegir això.",
+                "notPublic": "Això no es pot mostrar públicament. Prova amb altres paraules.",
+                "couldNotCheck": "Ara mateix no s'ha pogut comprovar. Torna-ho a provar.",
+                "remove": "Treu de l'Ark",
+                "removed": "Tret de l'Ark"
+            },
+            "card": {
+                "howAboard": "Com va pujar a bord",
+                "broughtBy": "Portat per {name}"
+            },
+            "founder": {
+                "storiesTitle": "Com van pujar a bord els seus animals",
+                "noStories": "Encara no s'ha compartit cap història."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ara mateix no s'ha pogut carregar l'Ark.",
         "arkFormerVoyager": "Antic voyager",
         "animalTitleA": "Parla amb {animal}",
-        "animalTitleAn": "Parla amb {animal}"
+        "animalTitleAn": "Parla amb {animal}",
+        "arkHowAboard": "Com va pujar a bord"
     }
 }

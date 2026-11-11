@@ -279,6 +279,39 @@
             "eatenBy": "Loví ho",
             "see": "Zobrazit druh {animal} v Ark",
             "seeArk": "Zobrazit Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Zobrazovat mé jméno u mých zvířat v Ark",
+                "note": "Tvoje jméno, @handle a fotka se zobrazují u zvířat, která přivedeš do Ark. Vypni to a zobrazíš se jako číslo Voyager.",
+                "under18": "Dokud ti není 18, zobrazuješ se jako číslo Voyager.",
+                "private": "Dokud je tvůj profil soukromý, zobrazuješ se jako číslo Voyager.",
+                "noHandle": "Přidej si do profilu @handle, aby se zobrazilo tvoje jméno.",
+                "earlier": "U zvířat, která jsi přivedl(a) dřív, než se jména zobrazovala, je pořád Voyager.",
+                "nameEarlier": "Zobrazit mé jméno i u nich"
+            },
+            "share": {
+                "ask": "Sdílet v Ark, jak to fungovalo?",
+                "stepLabel": "Co jsi udělal(a)",
+                "problemPlaceholder": "Jeden řádek o problému, tvými slovy (nepovinné)",
+                "share": "Sdílet",
+                "edit": "Upravit",
+                "notNow": "Teď ne",
+                "shared": "Sdíleno v Ark",
+                "publicNote": "Kdokoli, kdo navštíví Ark, si to může přečíst.",
+                "notPublic": "Tohle nelze zobrazit veřejně. Zkus jiná slova.",
+                "couldNotCheck": "Teď se to nepodařilo ověřit. Zkus to znovu.",
+                "remove": "Odebrat z Ark",
+                "removed": "Odebráno z Ark"
+            },
+            "card": {
+                "howAboard": "Jak se dostalo na palubu",
+                "broughtBy": "Přivedl(a) {name}"
+            },
+            "founder": {
+                "storiesTitle": "Jak se jejich zvířata dostala na palubu",
+                "noStories": "Zatím žádné sdílené příběhy."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +330,7 @@
         "arkUnavailable": "Ark se teď nepodařilo načíst.",
         "arkFormerVoyager": "Bývalý voyager",
         "animalTitleA": "Mluvit: {animal}",
-        "animalTitleAn": "Mluvit: {animal}"
+        "animalTitleAn": "Mluvit: {animal}",
+        "arkHowAboard": "Jak se dostalo na palubu"
     }
 }
