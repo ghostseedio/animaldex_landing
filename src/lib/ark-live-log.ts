@@ -194,8 +194,9 @@ export function arkSeenItems(now: ArkSeenNow, memory: ArkSeenMemory): ArkLiveIte
         memory.add(id);
         items.push({id, kind, source: "seen", key: `${kind}:${act.speciesId}`, animal: act.name, other: null, count: 1, eggs: null, focus: {animalId: act.id, speciesId: act.speciesId, zone: act.zone}});
     }
+    // An alarm: once a minute at most for one caller and one threat (a herd keeps calling while the danger stays).
     for (const call of now.alarms) {
-        const id = `seen:alarm:${call.id}:${Math.round(call.at * 10)}`;
+        const id = `seen:alarm:${call.id}:${call.threat ?? ""}:${Math.floor(call.at / 60)}`;
         if (memory.has(id)) continue;
         memory.add(id);
         items.push({id, kind: "alarm", source: "seen", key: `alarm:${call.speciesId}`, animal: call.name, other: null, count: 1, eggs: null, focus: {animalId: call.id, speciesId: call.speciesId, zone: call.zone}});
@@ -222,7 +223,7 @@ export type ArkLiveLogOptions = {
     maxQueue: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 6_000, seenStale: 4_000, maxQueue: 6};
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
 const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, more: 8};

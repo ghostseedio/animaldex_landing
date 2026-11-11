@@ -62,7 +62,7 @@ export function arkBars(population: Pick<ArkPopulation, "regions">): ArkBars {
 export type ArkTrend = {delta: number; at: number};
 
 /** How long the arrow and the bar's flash stay after a change (ms). */
-export const ARK_TREND_MS = 2600;
+export const ARK_TREND_MS = 3500;
 
 /**
  * The counts that changed between two readings (key → delta). A key that is new counts from 0; one that is

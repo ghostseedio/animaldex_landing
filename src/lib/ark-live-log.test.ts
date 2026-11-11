@@ -84,7 +84,8 @@ test("seen: an episode is said once, only at its characteristic part; fishing on
     assert.equal(arkSeenItems({acts: [{...heron, fish: true}], alarms: []}, memory)[0].kind, "fishing");
     const alarm = {id: "m1", name: "Meerkat", speciesId: "meerkat", zone: "desert" as const, at: 12.34, threat: "lion"};
     assert.equal(arkSeenItems({acts: [], alarms: [alarm, alarm]}, memory).length, 1);
-    assert.equal(arkSeenItems({acts: [], alarms: [{...alarm, at: 30}]}, memory).length, 1, "a new call later is a new line");
+    assert.equal(arkSeenItems({acts: [], alarms: [{...alarm, at: 30}]}, memory).length, 0, "the same caller at the same threat within the minute: not again");
+    assert.equal(arkSeenItems({acts: [], alarms: [{...alarm, at: 75}]}, memory).length, 1, "a call a minute later is a new line");
 });
 
 test("the log: repeats fold into one line, bursts end in +N more, seen lines wait their turn and go stale", () => {
@@ -116,13 +117,18 @@ test("the log: repeats fold into one line, bursts end in +N more, seen lines wai
     log.step(now);
     assert.equal(log.lines.length, 0);
     // Seen: one at a time, a gap between them, stale ones dropped.
-    log.push([item({id: "s1", key: "courting:crane", kind: "courting", source: "seen"}), item({id: "s2", key: "nest:sparrow", kind: "nest", source: "seen"})], now);
+    log.push([item({id: "s1", key: "courting:crane", kind: "courting", source: "seen"}), item({id: "s2", key: "nest:sparrow", kind: "nest", source: "seen"}), item({id: "s3", key: "alarm:meerkat", kind: "alarm", source: "seen"})], now);
     log.step(now);
     assert.equal(log.lines.length, 1);
-    now += ARK_LIVE_LOG_DEFAULTS.seenStale + 1;
+    now += ARK_LIVE_LOG_DEFAULTS.seenGap - 1;
     log.step(now);
-    assert.equal(log.lines.length, 1, "the second waited past its moment and is dropped");
-    assert.equal(log.waiting, 0);
+    assert.equal(log.lines.length, 1, "seen lines keep their gap");
+    now += 1;
+    log.step(now);
+    assert.equal(log.lines.length, 2, "the next seen line after the gap");
+    now += ARK_LIVE_LOG_DEFAULTS.seenStale;
+    log.step(now);
+    assert.equal(log.waiting, 0, "the third waited past its moment and is dropped");
 });
 
 test("newcomers stand in for the event log: arrivals and births, from the snapshot", () => {
