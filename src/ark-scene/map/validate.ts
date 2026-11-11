@@ -42,7 +42,7 @@ import {arborealOf, mapPoints, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {mapSlugs, mapSpecies, mapSpeciesStored} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
-import {waterSuits} from "@/ark-scene/map/water";
+import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
 import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {depthSeed, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion} from "@/ark-scene/sea-depth";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
@@ -148,6 +148,8 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             if (!waterSuits(sampler, map.water, place.x, place.z)) fail("wrong_depth_band", `${depth.band} (${map.water}) in ${g.depth.toFixed(1)} m of ${g.water ?? "no"} water`);
             if (!map.tag || !g.tags.includes(map.tag) || !(SEA_TAGS.has(map.tag) || FRESH_TAGS.has(map.tag))) fail("invalid_surface", `${map.tag} (not water) at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
             if (Math.abs(place.ground - g.height) > 0.05) fail("floats_or_sinks", `its floor at ${place.ground.toFixed(2)}, the ground at ${g.height.toFixed(2)}`);
+            // The reef lane's coral heads: a floor animal never inside one (the reef's landmarks, `reef.ts`).
+            if (onFloor(depth) && map.water !== "lake" && inCoral(place.x, place.z, 0)) fail("inside_scenery", `on the floor inside a coral head at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
             const motion = waterMotion(depth);
             const radius = safeLoopRadius(place.x, place.z, waterLoopRadius(motion, depthSeed(animal.id), length));
             for (let k = 0; k < 8; k++) {

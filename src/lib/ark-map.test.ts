@@ -11,6 +11,9 @@ import {eats} from "@/ark-scene/food-links";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
 import {sceneSampler} from "@/ark-scene/world-sampler";
+import {reefLandmarks} from "@/ark-scene/reef";
+import {inCoral, onFloor} from "@/ark-scene/map/water";
+import {speciesDepth} from "@/ark-scene/sea-depth";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
 import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
@@ -188,4 +191,21 @@ test("map + behaviour spawn spacing: every predator at least 20 m from its prey 
         }
         assert.ok(predators >= 15, `${predators} predators`);
     }
+});
+
+test("map + reef: no floor animal (a crab, a star, an octopus in its hole) stands inside one of the reef lane's coral heads", () => {
+    const marks = reefLandmarks();
+    assert.ok(marks.heads.length >= 3, `${marks.heads.length} coral heads`);
+    // The check sees a head and the cleaning station's coral.
+    assert.ok(inCoral(marks.heads[0].x, marks.heads[0].z, 0) && inCoral(marks.cleaning.x, marks.cleaning.z, 0));
+    const {placed} = validated();
+    let floor = 0;
+    for (const animal of validatorAnimals()) {
+        const place = placed.get(animal.id);
+        const depth = speciesDepth(animal.model_slug, animal.zone);
+        if (!place?.map?.water || !depth || !onFloor(depth) || place.map.water === "lake") continue;
+        floor++;
+        assert.ok(!inCoral(place.x, place.z, 0), `${animal.model_slug} in a coral head`);
+    }
+    assert.ok(floor > 80, `${floor} floor animals`);
 });

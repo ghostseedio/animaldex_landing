@@ -22,7 +22,8 @@
  * Deterministic: a function of the terrain, the zone, the slot and the rank.
  */
 
-import {inHomeWater, waterHomeSpot, type DepthBand, type SpeciesDepth} from "@/ark-scene/sea-depth";
+import {reefLandmarks} from "@/ark-scene/reef";
+import {inHomeWater, waterHomeSpot, waterMotion, type DepthBand, type SpeciesDepth} from "@/ark-scene/sea-depth";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
@@ -83,6 +84,24 @@ export function waterSuits(sampler: ArkMapSampler, cls: WaterClass, x: number, z
         case "deep": return g.depth >= 7.5 && g.tags.includes("deep_water");
         default: return g.depth >= 3 && g.tags.some((tag) => tag === "open_ocean" || tag === "sea_surface");
     }
+}
+
+/**
+ * Inside the coral the reef lane draws on the floor (`reef.ts`
+ * reefLandmarks: its big coral heads and the cleaning station's), with
+ * `margin` round it: a floor-walker or a hole-dweller there would be drawn
+ * inside the coral (the floor under it is the sand's).
+ */
+export function inCoral(x: number, z: number, margin: number): boolean {
+    const marks = reefLandmarks();
+    if (Math.hypot(x - marks.cleaning.x, z - marks.cleaning.z) < marks.cleaning.radius + margin) return true;
+    return marks.heads.some((head) => Math.hypot(x - head.x, z - head.z) < head.radius + margin);
+}
+
+/** On the floor (a crab, a star, a flatfish; an octopus or a moray in its hole): it must stand clear of the coral. */
+export function onFloor(depth: SpeciesDepth): boolean {
+    const motion = waterMotion(depth);
+    return motion === "walk" || motion === "hole";
 }
 
 /** The tag a spot stands for: the first of its class's tags that holds there. */
@@ -185,11 +204,24 @@ export function waterSpot(cells: WaterCells, depth: SpeciesDepth, zone: ArkZone,
     const lap = Math.floor(slot / n);
     const cell = own ? list[slot % n] : list[n - 1 - ((slot * ARK_ZONES.length + Math.max(ARK_ZONES.indexOf(zone), 0)) % n)];
     const [ox, oz] = LAPS[(own ? lap : lap + 4) % LAPS.length];
+    // A floor animal clear of the reef lane's coral heads (half its body round them).
+    const floor = onFloor(depth);
+    const suits = (x: number, z: number) => waterSuits(sampler, cls, x, z) && !(floor && inCoral(x, z, length / 2));
     let cx = cell.x + ox;
     let cz = cell.z + oz;
-    if (!waterSuits(sampler, cls, cx, cz)) {
+    if (!suits(cx, cz)) {
         cx = cell.x;
         cz = cell.z;
+        // Its cell's middle in coral too: the nearest clear spot round it (within 4 m).
+        for (let k = 1; k < 60 && !suits(cx, cz); k++) {
+            const r = 0.5 * Math.sqrt(k);
+            const tx = cell.x + Math.cos(k * 2.39996) * r;
+            const tz = cell.z + Math.sin(k * 2.39996) * r;
+            if (suits(tx, tz)) {
+                cx = tx;
+                cz = tz;
+            }
+        }
     }
     if (rank <= 0) return {x: cx, z: cz, cls};
     // The cluster's others: the rank-th suitable cell of a hexagonal lattice about its spot, turned by the slot.
@@ -204,7 +236,7 @@ export function waterSpot(cells: WaterCells, depth: SpeciesDepth, zone: ArkZone,
                 const lz = gap * (j * Math.sqrt(3) / 2);
                 const x = cx + lx * Math.cos(turn) - lz * Math.sin(turn);
                 const z = cz + lx * Math.sin(turn) + lz * Math.cos(turn);
-                if (waterSuits(sampler, cls, x, z) && ++seen === rank) return {x, z, cls};
+                if (suits(x, z) && ++seen === rank) return {x, z, cls};
                 i += di;
                 j += dj;
             }
