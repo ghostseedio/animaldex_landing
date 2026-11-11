@@ -22,9 +22,11 @@ export type StreamTier = {
 };
 
 export const ARK_STREAM_TIERS: Record<StreamTierName, StreamTier> = {
-    high: {renderDistance: 960, hysteresis: 40, hazeStart: 0.7, memory: {heapMB: 512, gpuMB: 640}},
-    medium: {renderDistance: 640, hysteresis: 32, hazeStart: 0.7, memory: {heapMB: 320, gpuMB: 320}},
-    low: {renderDistance: 440, hysteresis: 26, hazeStart: 0.7, memory: {heapMB: 200, gpuMB: 160}}
+    // Budgets: about twice the peaks measured on the real Ark (3,137 animals, docs/ark/streaming.md §7), so today's
+    // island never pulls its distance in; a bigger island reaches them only where it holds more than this one does.
+    high: {renderDistance: 960, hysteresis: 40, hazeStart: 0.7, memory: {heapMB: 768, gpuMB: 512}},
+    medium: {renderDistance: 640, hysteresis: 32, hazeStart: 0.7, memory: {heapMB: 512, gpuMB: 320}},
+    low: {renderDistance: 440, hysteresis: 26, hazeStart: 0.7, memory: {heapMB: 384, gpuMB: 192}}
 };
 
 /** The camera this far (m) or more from what it looks at is the map view: beyond the render distance is drawn as the map. */

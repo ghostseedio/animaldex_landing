@@ -170,7 +170,7 @@ test("streaming: the tier from what the device says", () => {
 test("streaming: memory pressure pulls the distance in, to a floor, then asks for a lower tier; calm lets it out", () => {
     const tier = ARK_STREAM_TIERS.medium;
     let state = {scale: 1, calmFor: 0, drop: false};
-    state = stepRenderScale(state.scale, {heapMB: 400, gpuMB: 10}, tier, 0);
+    state = stepRenderScale(state.scale, {heapMB: 600, gpuMB: 10}, tier, 0);
     assert.ok(Math.abs(state.scale - 0.85) < 1e-9);
     for (let i = 0; i < 5; i++) state = stepRenderScale(state.scale, {heapMB: 10, gpuMB: 400}, tier, 0);
     assert.equal(state.scale, MIN_RENDER_SCALE);

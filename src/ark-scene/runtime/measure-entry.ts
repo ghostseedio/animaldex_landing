@@ -171,6 +171,12 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 heapMB: heap === null ? null : round(heap / 2 ** 20),
                 peakHeapMB: peakHeap ? round(peakHeap / 2 ** 20) : null,
                 peakGpuMB: round(peakGpu / 2 ** 20),
+                heapLimitMB: (() => {
+                    const limit = (performance as Performance & {memory?: {jsHeapSizeLimit?: number}}).memory?.jsHeapSizeLimit;
+                    return typeof limit === "number" ? round(limit / 2 ** 20) : null;
+                })(),
+                deviceMemoryGB: (navigator as Navigator & {deviceMemory?: number}).deviceMemory ?? null,
+                cores: navigator.hardwareConcurrency ?? null,
                 inViewRequests,
                 streaming: stats.streaming ?? null,
                 library: (() => {
