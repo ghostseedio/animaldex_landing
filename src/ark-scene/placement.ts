@@ -405,6 +405,14 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
             spot = clusterSpot(zoneKey, site, centreIndex, centre, gap, rank, slotHash) ?? centre;
         }
         const chosen = placementAt(site, spot.x, spot.z, slotHash);
+        // A salt-water species whose zone spot is not open sea (the carved river mouth, a shallow inlet): the sea off its zone's coast.
+        if (depth && depth.water === "salt") {
+            const here = sampleGround(chosen.x, chosen.z);
+            if (here.inland >= 0 || here.height > -1) {
+                const alt = waterHomeSpot({...depth, home: "coast"}, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal));
+                if (alt) Object.assign(chosen, {x: alt.x, z: alt.z, ground: sampleGround(alt.x, alt.z).height, water: true});
+            }
+        }
         // A cluster faces much the same way, each a little turned; a lone one as its slot says.
         if (rank > 0 && site.kind !== "sea") chosen.yaw += (((ownHash >>> 20) % 100) / 100 - 0.5) * 0.9;
         if (kind === "cover" && rank === 0 && obstacles.covers(spot.x, spot.z)) chosen.covered = true;
