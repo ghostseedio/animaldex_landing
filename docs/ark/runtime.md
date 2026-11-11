@@ -48,6 +48,8 @@ The animals are what grows with the Ark: per species a near and a far model, eac
 - **Idle**: no input for 5 s and nothing moving on its own (flight, follow, replay, talking, opening, an arrival, a wheel glide): 30 fps; 2 min: 20 fps; reduced motion and nothing moving: 4 fps. Input brings the full rate back on the same frame. The tier check measures frames only at the full rate (a capped frame is not a slow device).
 - **Power**: battery saver or heat `serious` → at most 30 fps and the low tier; heat `critical` → 20 fps. When the cap lets go, the tier from before comes back. From the apps (`ark:power`), else the Battery API (≤ 20 % and not charging), else CPU pressure (`critical` for 20 s counts as `serious`; a busy machine reads `serious` without being hot, so that alone changes nothing). A recording ignores the browser's hints; a tier pinned for measuring stays pinned.
 
+Checked in the browser (desktop Chromium, the measurement page, the bridge messages through `handle.receive`): touched, 120 frames in 2 s; left alone, 30 fps; `ark:visible` false, 0 frames drawn and none even skipped (the loop sleeps); visible again, 30 fps; `ark:power` saver, the low tier and 30 fps even while touched; heat `critical`, 20 fps; `nominal`, the high tier back. A reset after a drag: the button showed, flew home, and hid (`scratchpad/runtime/ui/*.png` in the lane's report).
+
 ## 4. Camera
 
 `camera.ts`:
