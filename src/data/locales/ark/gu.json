@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} સવાર",
             "closed": "કાર્ડ બંધ થયું",
             "motionReduced": "ગતિ ઓછી કરેલી છે: જે થયું તે ચલાવવાને બદલે અહીં કહેવાયું છે.",
-            "skipToList": "કોણ સવાર છે ત્યાં જાઓ"
+            "skipToList": "કોણ સવાર છે ત્યાં જાઓ",
+            "resetView": "આખા Ark પર પાછા જાઓ"
         },
         "person": {
             "metaTitle": "Ark માં {name} નાં પ્રાણીઓ",

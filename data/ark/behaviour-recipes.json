@@ -13814,6 +13814,14 @@
       "field": "facts",
       "phrase": "It is the original host of the Varroa mite; workers groom the mites off one another and remove infested brood"
      }
+    },
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "offspring",
+      "phrase": "New colonies form by swarming"
+     }
     }
    ],
    "defaults": [],
@@ -14170,6 +14178,13 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "chase_fish",
+     "weight": 6,
+     "src": {
+      "rule": "family Mustelidae (hunts fish underwater)"
+     }
+    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -17677,6 +17692,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Males look similar but lack the baskets and often gather in swarms outside nests; the egg-laying queen is larger, with a swollen abdomen"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -19128,6 +19151,14 @@
     ]
    },
    "recipes": [
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "evidence",
+      "phrase": "When the nest is disturbed or threatened, bald-faced hornets exhibit highly aggressive defensive behavior, swarming and repeatedly stinging intruders"
+     }
+    },
     {
      "id": "nest_build",
      "weight": 6,
@@ -22539,6 +22570,13 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "dabble",
+     "weight": 4,
+     "src": {
+      "rule": "family Anatidae on the water (ducks, swans, geese)"
+     }
+    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -27880,6 +27918,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "It is often reported travelling with the mixed feeding flocks of other birds that move through Sri Lankan forest"
+     }
+    },
+    {
      "id": "nest_build",
      "weight": 6,
      "src": {
@@ -29114,6 +29160,14 @@
      "src": {
       "field": "sleep",
       "phrase": "In the evening birds fly in long lines to roost communally on open water such as reservoirs"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "look",
+      "phrase": "In winter the smallest, most restless gulls in a mixed flock are usually this species"
      }
     },
     {
@@ -36175,6 +36229,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "In winter it often joins mixed flocks with other tits, moving through woodland together"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -39393,6 +39455,14 @@
      "src": {
       "field": "facts",
       "phrase": "Loud nasal whistles and chattering calls often reveal a group before any bird is seen"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sleep",
+      "phrase": "Active by day, moving through the canopy in small noisy groups, often with mixed flocks of other birds"
      }
     },
     {
@@ -49434,6 +49504,13 @@
      }
     },
     {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Chrysochloridae (pushes up mounds of earth)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -50843,6 +50920,14 @@
     {
      "id": "court_display",
      "weight": 4,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Workers are female and bimorphic as minors and big-headed majors; winged males and queens appear at circa-semiannual nuptial flights"
+     }
+    },
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
      "src": {
       "field": "sexdiff",
       "phrase": "Workers are female and bimorphic as minors and big-headed majors; winged males and queens appear at circa-semiannual nuptial flights"
@@ -54340,6 +54425,13 @@
      "src": {
       "field": "facts",
       "phrase": "The pant-hoot, a loud call that builds to a scream, carries a kilometre or more through forest, and each animal's version is recognisably its own"
+     }
+    },
+    {
+     "id": "allogroom",
+     "weight": 4,
+     "src": {
+      "rule": "plan primate, social group (grooms others)"
      }
     },
     {
@@ -58011,6 +58103,14 @@
      "src": {
       "field": "spotlight",
       "phrase": "Coal Tit turns tiny size into storage strategy, caching food and moving through conifers with quick decisions that prepare for leaner moments"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "In winter it often travels with goldcrests and other tits in mixed flocks moving through conifers"
      }
     },
     {
@@ -62417,6 +62517,14 @@
      "src": {
       "field": "facts",
       "phrase": "Pairs keep in touch with a loud, rattling trill, often given in flight between trees"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "It often travels in pairs or family parties and sometimes joins mixed flocks of other birds moving through the trees"
      }
     },
     {
@@ -69292,6 +69400,13 @@
      }
     },
     {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
      "id": "stretch_yawn",
      "weight": 2,
      "src": {
@@ -72627,6 +72742,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "facts",
+      "phrase": "In northern Europe the common species Tipula paludosa emerges in large numbers in late summer and early autumn"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -73036,6 +73159,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Pairs have been reported joining mixed feeding flocks with other high-altitude birds"
+     }
+    },
     {
      "id": "preen_stretch",
      "weight": 2,
@@ -76608,6 +76739,13 @@
      }
     },
     {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Bathyergidae (pushes up mounds of earth)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -79120,6 +79258,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "sleep",
+      "phrase": "Swarms fly by day"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -80128,6 +80274,14 @@
      "weight": 4,
      "src": {
       "rule": "plan primate, social group (grooms others)"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sd",
+      "phrase": "and other monkeys such as red colobus often travel with them in mixed-species groups"
      }
     },
     {
@@ -83488,6 +83642,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Outside the breeding season it often travels in mixed flocks with chickadees and nuthatches"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -84016,6 +84178,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "story",
+      "phrase": "The swarming driver ant"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -86386,6 +86556,14 @@
      "src": {
       "field": "sleep",
       "phrase": "Feeds and basks in sunshine through the day"
+     }
+    },
+    {
+     "id": "cluster",
+     "weight": 6,
+     "src": {
+      "field": "sd",
+      "phrase": "and it gathers into dense aggregations on warm south-facing walls before pushing into cavities and window frames"
      }
     },
     {
@@ -88933,6 +89111,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "facts",
+      "phrase": "Antbirds and other birds follow the swarms to catch insects fleeing ahead of the ants, and some depend on them almost entirely"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -89405,6 +89591,13 @@
      "src": {
       "field": "facts",
       "phrase": "Experiments suggest pups learn their calls from the colony around them, a rare case of vocal learning in mammals"
+     }
+    },
+    {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
      }
     },
     {
@@ -91984,6 +92177,14 @@
      "src": {
       "field": "spotlight",
       "phrase": "Branch movement, shared infant carrying, food calls, and social grooming turn small power into group strength"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "evidence",
+      "phrase": "Emperor tamarins habitually move in mixed parties with a smaller tamarin species that forages lower in the same trees"
      }
     },
     {
@@ -102195,6 +102396,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "cluster",
+     "weight": 6,
+     "src": {
+      "field": "evidence",
+      "phrase": "Firebugs are frequently observed forming dense aggregations"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -106694,6 +106903,13 @@
      }
     },
     {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -109880,6 +110096,14 @@
      }
     },
     {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "sexdiff",
+      "phrase": "Males often form mating swarms and may have enlarged eyes or mating adaptations, while females carry eggs"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -112195,6 +112419,13 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "chase_fish",
+     "weight": 6,
+     "src": {
+      "rule": "family Mustelidae (hunts fish underwater)"
+     }
+    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -117474,6 +117705,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "sd",
+      "phrase": "Scattered insects become marching bands and then swarms covering hundreds of square kilometres"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -119037,6 +119276,14 @@
      "src": {
       "field": "diet",
       "phrase": "The adult diet is where the defence and the courtship pheromone both come from"
+     }
+    },
+    {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "sleep",
+      "phrase": "Active by day and roosts overnight in vegetation, gathering in sheltered communal roosts through the dry season"
      }
     },
     {
@@ -122375,6 +122622,20 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
+     "id": "bat_trawl",
+     "weight": 6,
+     "src": {
+      "rule": "a fishing bat (its stored diet: fish, taken from the water)"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 2,
@@ -131815,6 +132076,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "returns to the same communal roost each night"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -134909,6 +135178,13 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 2,
@@ -139270,13 +139546,6 @@
    "zone": "grassland",
    "excluded": null,
    "behaviours": {
-    "pounce": [
-     {
-      "field": "traits",
-      "phrase": "Elastic leaping: high jumps and sharp turns disrupt predators",
-      "match": "high jumps and"
-     }
-    ],
     "herd": [
      {
       "field": "offspring",
@@ -139353,14 +139622,6 @@
    "nest": null,
    "recipes": [
     {
-     "id": "pounce",
-     "weight": 6,
-     "src": {
-      "field": "traits",
-      "phrase": "Elastic leaping: high jumps and sharp turns disrupt predators"
-     }
-    },
-    {
      "id": "horn_clash",
      "weight": 6,
      "src": {
@@ -139374,6 +139635,14 @@
      "src": {
       "field": "sexdiff",
       "phrase": "The herd’s escape rhythm is shared, but male display and contest shape the breeding season"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "traits",
+      "phrase": "Mixed feeding: grazing and browsing let the animal adjust to seasonal food"
      }
     },
     {
@@ -143788,6 +144057,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "In rice fields it sometimes feeds in mixed flocks with Scaly-breasted Munias"
+     }
+    },
+    {
      "id": "nest_build",
      "weight": 6,
      "src": {
@@ -145751,6 +146028,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "facts",
+      "phrase": "Adults are also called May beetles or June bugs, after the months when they swarm to lights"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -147509,6 +147794,14 @@
      "src": {
       "field": "facts",
       "phrase": "Each male displays at his own court in a dense vine tangle in the forest mid-storey, usually within earshot of rival males"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Outside display it sometimes forages in mixed-species flocks with other fruit- and insect-eating birds"
      }
     },
     {
@@ -149569,6 +149862,20 @@
      }
     },
     {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
+     "id": "bat_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat that eats insects (hawks them at night)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -151598,6 +151905,13 @@
      }
     },
     {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
      "id": "stretch_yawn",
      "weight": 2,
      "src": {
@@ -152466,6 +152780,14 @@
     {
      "id": "court_display",
      "weight": 4,
+     "src": {
+      "field": "offspring",
+      "phrase": "Winged queens mate with several males on a nuptial flight early in the rainy season"
+     }
+    },
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
      "src": {
       "field": "offspring",
       "phrase": "Winged queens mate with several males on a nuptial flight early in the rainy season"
@@ -156241,6 +156563,14 @@
      "src": {
       "field": "diet",
       "phrase": "It usually hunts alone in shallow water, walking slowly or standing still with the neck stretched and the bill angled down, then stabbing quickly"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sd",
+      "phrase": "from the egrets, and studies have found juveniles feeding in mixed flocks achieving higher capture rates than they do alone and benefiting from"
      }
     },
     {
@@ -160952,6 +161282,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "offspring",
+      "phrase": "Winged males and females leave the mound in swarming flights, typically early in the wet season"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -166942,6 +167280,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sd",
+      "phrase": "and they stay on it through the winter when most woodland tits are roaming in mixed flocks"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -168028,6 +168374,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "evidence",
+      "phrase": "Mass emergence can also overwhelm predators (predator satiation), increasing individual survival rates and mating opportunities"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -169882,6 +170236,14 @@
    },
    "recipes": [
     {
+     "id": "cluster",
+     "weight": 6,
+     "src": {
+      "field": "sd",
+      "phrase": "that is neither colony life nor solitary overwintering but a dense aggregation of animals that will each found a nest"
+     }
+    },
+    {
      "id": "nest_build",
      "weight": 6,
      "src": {
@@ -170001,6 +170363,13 @@
      "src": {
       "field": "offspring",
       "phrase": "and the young disperse to dig their own tunnels after a few months"
+     }
+    },
+    {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Spalacidae (pushes up mounds of earth)"
      }
     },
     {
@@ -170161,6 +170530,14 @@
      "src": {
       "field": "sleep",
       "phrase": "Active by day, basking in morning sun to warm up before feeding"
+     }
+    },
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "sleep",
+      "phrase": "At night it roosts on grass stems and shrubs; solitary adults often migrate after dark, whereas swarms fly by day"
      }
     },
     {
@@ -173648,6 +174025,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "basis",
+      "phrase": "These termites synchronize their swarming with specific weather conditions to maximize survival and colonization success"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -175729,6 +176114,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "look",
+      "phrase": "In autumn, scan sunny, pale walls, window frames and cliff faces for gathering swarms, and watch overwintering clusters without disturbing them"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -176467,6 +176860,13 @@
      "src": {
       "field": "traits",
       "phrase": "Large digging teeth that work outside the lips"
+     }
+    },
+    {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Bathyergidae (pushes up mounds of earth)"
      }
     },
     {
@@ -178700,6 +179100,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "traits",
+      "phrase": "Mixed feeding: browsing and grazing make open-country life flexible"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 2,
@@ -182643,6 +183051,14 @@
      "src": {
       "field": "look",
       "phrase": "Flocks often perch together on wires and low bushes; at close range listen for a short, repeated 'kit-teet' contact call"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "It often joins mixed flocks with other munia species where their ranges overlap"
      }
     },
     {
@@ -186991,6 +187407,14 @@
     {
      "id": "call_bout",
      "weight": 3,
+     "src": {
+      "field": "spotlight",
+      "phrase": "It is rarely seen alone: small parties move through foliage together, calling constantly, and often join other small birds in mixed feeding flocks"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
      "src": {
       "field": "spotlight",
       "phrase": "It is rarely seen alone: small parties move through foliage together, calling constantly, and often join other small birds in mixed feeding flocks"
@@ -191737,6 +192161,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "facts",
+      "phrase": "Many tropical paper wasps of the tribe Epiponini found new nests in swarms of many queens and workers, and wrap their combs in a paper envelope"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -192319,6 +192751,14 @@
      "src": {
       "field": "facts",
       "phrase": "Its calls are thin, high-pitched notes, often given in a quick series"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sleep",
+      "phrase": "Active by day, travelling with mixed-species flocks through the canopy"
      }
     },
     {
@@ -196894,6 +197334,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "facts",
+      "phrase": "The white wing-tips flash as it moves, which is how you pick it out of a mixed skimmer flock"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -199250,6 +199698,13 @@
      }
     },
     {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Spalacidae (pushes up mounds of earth)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -201020,6 +201475,14 @@
      "src": {
       "field": "story",
       "phrase": "and court females that wear the pattern of their own region in preference to others"
+     }
+    },
+    {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "sd",
+      "phrase": "and live for months, both learn fixed flower circuits, both roost communally, and both are genuinely distasteful"
      }
     },
     {
@@ -209205,6 +209668,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "sd",
+      "phrase": "months in large mixed flocks"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -210697,6 +211168,14 @@
      "src": {
       "field": "sexdiff",
       "phrase": "Workers are sterile females, queens are reproductive females, and males are produced mainly for mating flights"
+     }
+    },
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "traits",
+      "phrase": "Workers swarm up any object that disturbs the mound"
      }
     },
     {
@@ -228916,6 +229395,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "shell_tool",
+     "weight": 7,
+     "src": {
+      "field": "traits",
+      "phrase": "Uses stones and other hard objects to break open shellfish"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 4,
      "src": {
@@ -230668,6 +231155,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "cluster",
+     "weight": 6,
+     "src": {
+      "field": "sleep",
+      "phrase": "Active by day on vegetation, sheltering low in leaf litter or bark crevices at night, and many species overwinter as adults in dense aggregations"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -246243,6 +246738,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Troops often forage alongside capuchin monkeys, an association that may help both in finding food and in spotting predators"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -246697,6 +247200,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "look",
+      "phrase": "On warm days from late April into May, scan sunny hedge tops, tall grass and woodland rides for swarms of black flies"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -247162,6 +247673,13 @@
      "src": {
       "field": "traits",
       "phrase": "Broad, outward-turned forefeet with strong digging claws"
+     }
+    },
+    {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Talpidae (pushes up mounds of earth)"
      }
     },
     {
@@ -249934,6 +250452,13 @@
      "src": {
       "field": "traits",
       "phrase": "Strong digging claws on the forefeet"
+     }
+    },
+    {
+     "id": "molehills",
+     "weight": 5,
+     "src": {
+      "rule": "family Spalacidae (pushes up mounds of earth)"
      }
     },
     {
@@ -255395,6 +255920,20 @@
    "nest": null,
    "recipes": [
     {
+     "id": "bat_emergence",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat (streams out of its roost at dusk)"
+     }
+    },
+    {
+     "id": "bat_hawk",
+     "weight": 6,
+     "src": {
+      "rule": "plan bat that eats insects (hawks them at night)"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 2,
      "src": {
@@ -255634,6 +256173,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm_dusk",
+     "weight": 6,
+     "src": {
+      "field": "traits",
+      "phrase": "Winged alates emerging in brief rainy-season swarms"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,
@@ -263871,6 +264418,14 @@
      }
     },
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "facts",
+      "phrase": "Autumn swarms can appear far from any breeding pond, including over the ocean and high mountain passes"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -267288,6 +267843,14 @@
      "src": {
       "field": "facts",
       "phrase": "It breeds in temporary rainwater pools, which is why it can colonise puddles, tyre ruts and rooftop tanks nothing else has reached yet"
+     }
+    },
+    {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "sleep",
+      "phrase": "though migrating swarms will keep moving into dusk when the wind is favourable"
      }
     },
     {
@@ -271858,6 +272421,14 @@
    "nest": null,
    "recipes": [
     {
+     "id": "swarm",
+     "weight": 6,
+     "src": {
+      "field": "spotlight",
+      "phrase": "Split eyes, spinning movement, surface skating, and group swarms show how navigation improves when one body reads above and below at once"
+     }
+    },
+    {
      "id": "groom_self",
      "weight": 1,
      "src": {
@@ -272529,6 +273100,14 @@
      }
     },
     {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "It often joins mixed flocks of small insect-eating birds moving through the trees, taking insects that the others disturb"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -272673,6 +273252,14 @@
      "src": {
       "field": "spotlight",
       "phrase": "One bird starts to chuckle, and within seconds the whole flock joins in an outburst of loud, cackling laughter that swells and then dies away"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Flocks often travel with other laughingthrush species in mixed feeding parties"
      }
     },
     {
@@ -276053,6 +276640,14 @@
      "src": {
       "field": "traits",
       "phrase": "Nasal, drawn-out 'tchay tchay tchay' call"
+     }
+    },
+    {
+     "id": "mixed_follow",
+     "weight": 5,
+     "src": {
+      "field": "facts",
+      "phrase": "Pairs usually hold the same territory all year, joining mixed flocks of other tits in winter"
      }
     },
     {
@@ -283167,6 +283762,14 @@
    },
    "nest": null,
    "recipes": [
+    {
+     "id": "swarm",
+     "weight": 4,
+     "src": {
+      "field": "sleep",
+      "phrase": "Zebra Longwings are diurnal and often roost communally at night"
+     }
+    },
     {
      "id": "groom_self",
      "weight": 1,

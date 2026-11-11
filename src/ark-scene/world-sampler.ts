@@ -18,6 +18,8 @@
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
+import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {floorObstacles} from "@/ark-scene/floor-assets";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -42,7 +44,14 @@ export const ATTACH_TAGS = [
     "cliff_ledge",
     "cave_mouth",
     "reeds",
-    "shade"
+    "shade",
+    // (2026-11-11, from the graphics lane's new points: the drawn hollows in tree trunks; fence posts and roof edges.)
+    "tree_hollow",
+    "post",
+    // (Graphics batch 6: the top of a fallen log, where a small animal basks, perches or runs along.)
+    "log_top",
+    // (Behaviour recipes: the hanging points under thick limbs, where bats and sloths hang.)
+    "canopy_hang"
 ] as const;
 export type AttachTag = (typeof ATTACH_TAGS)[number];
 
@@ -61,6 +70,9 @@ export type AttachPoint = {
     /** The body lengths (m) it suits. */
     size: [number, number];
     zone: ArkZone;
+    /** Under a limb (`canopy_hang`): the clear drop below it (m), and the limb's radius there. */
+    clearBelow?: number;
+    radius?: number;
 };
 
 export interface ArkWorldSampler {
@@ -78,7 +90,7 @@ export interface ArkWorldSampler {
     blocked(x: number, z: number, clearance: number): boolean;
 }
 
-/** The scenery's tags as the behaviour system uses them (the hanging points under limbs are for hangers only, not used yet). */
+/** The scenery's tags as the behaviour system uses them (the hanging points under limbs: hangers only, `recipeRoostTags`). */
 const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     leaf: "leaf",
     branch: "branch",
@@ -95,7 +107,15 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
     leaf_litter: "leaf_litter",
     worm_hole: "worm_hole",
     burrow: "burrow_entrance",
-    pond_surface: "pond_surface"
+    pond_surface: "pond_surface",
+    // (2026-11-11.) Shelves on cliffs and rocks are ledges; a thick limb is a branch (its size range says who it bears);
+    // fence posts and roof edges are posts to perch on; the hanging points under limbs are where bats and sloths hang.
+    ledge: "cliff_ledge",
+    limb: "branch",
+    tree_hollow: "tree_hollow",
+    fence_post: "post",
+    roof_edge: "post",
+    canopy_hang: "canopy_hang"
 };
 
 class GridIndex {
@@ -193,7 +213,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const p = scenery[i];
         const tag = FROM_SCENERY[p.tag];
         if (!tag) return;
-        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone});
+        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {})});
     }));
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
@@ -227,6 +247,43 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     }));
     tasks.push(once(() => {
         obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+    }));
+    // The fallen logs (graphics batch 6, `floor-assets.ts` floorObstacles: circles along each log): walkers go round them;
+    // a small animal (up to 0.8 m) may climb onto one, its top a place to bask, perch or run along.
+    let logs: Array<{x: number; z: number; radius: number}> = [];
+    tasks.push(once(() => {
+        logs = floorObstacles();
+    }));
+    tasks.push(chunked(() => logs.length, 60, (k) => {
+        const log = logs[k];
+        // (0.9 m more than the log, as for a fence: the walk grid's 2 m cells, whose centres are tested, never step through it.)
+        obstacles.push([log.x, log.z, log.radius + 0.9]);
+        const s = surface(log.x, log.z);
+        if (s.waterDepth > 0) return;
+        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
+    }));
+    // The hamlet's plots (`setBehaviourHomePlots`, the map lane's homePlots): their houses, barns and coops, and the
+    // props' picket and paddock fences, so a wild walker's path goes round them. Doors are outside the walls and the
+    // fences' gates are gaps, so a resident's door beat (the map's, off the schedule) passes.
+    const plots = behaviourPlots;
+    const solids: PlotSolid[] = [];
+    const fences: FenceRun[] = [];
+    tasks.push(chunked(() => (plots ? plots.length : 0), 1, (k) => {
+        const plot = plots![k];
+        const frame = plotFrame(plot);
+        if (plot.kind === "house") {
+            solids.push({frame, x0: -COTTAGE.width / 2, x1: COTTAGE.width / 2, z0: -COTTAGE.depth / 2, z1: COTTAGE.depth / 2});
+            for (const [ax, az, bx, bz] of picketRuns()) fences.push({a: frame.toWorld(ax, az), b: frame.toWorld(bx, bz)});
+        } else {
+            if (plot.barn) solids.push({frame, x0: -3.2, x1: 3.2, z0: -2.2, z1: 2.2});
+            const coop = coopSpot(plot);
+            const c = Math.cos(coop.turn);
+            const sn = Math.sin(coop.turn);
+            // The coop (about 1.6 by 1.2 m), turned in the plot's frame: its corners' box.
+            const corners = [[-0.8, -0.6], [0.8, -0.6], [0.8, 0.6], [-0.8, 0.6]].map(([lx, lz]) => ({x: coop.x + lx * c + lz * sn, z: coop.z - lx * sn + lz * c}));
+            solids.push({frame, x0: Math.min(...corners.map((p) => p.x)), x1: Math.max(...corners.map((p) => p.x)), z0: Math.min(...corners.map((p) => p.z)), z1: Math.max(...corners.map((p) => p.z))});
+            for (const segment of paddockSegments(paddockRect(plot))) if (!segment.gate) fences.push({a: frame.toWorld(segment.a.x, segment.a.z), b: frame.toWorld(segment.b.x, segment.b.z)});
+        }
     }));
 
     // Water edges: just dry ground at the lake, along the river, round the garden pond, walked out from the water.
@@ -293,8 +350,21 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             obstacleIndex.set(key, list);
         }
         const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
+        // (The plots are in the version: a new plot rebuilds the walk grid.)
+        const plotKey = plots ? `:${plots.map((p) => `${p.id}@${p.x.toFixed(2)},${p.z.toFixed(2)},${p.rotation.toFixed(3)}`).join(";")}` : "";
+        // A building keeps walkers 0.8 m off its walls and a fence 0.9 m off its line, so the walk grid's 2 m cells (whose
+        // centres are tested) never cut a corner nor step between a fence's posts; the gaps of gates stay what they are.
+        const solidAt = (x: number, z: number, clearance: number) => {
+            const margin = 0.8 + clearance;
+            for (const solid of solids) {
+                const local = solid.frame.toLocal(x, z);
+                if (local.x > solid.x0 - margin && local.x < solid.x1 + margin && local.z > solid.z0 - margin && local.z < solid.z1 + margin) return true;
+            }
+            for (const fence of fences) if (segmentDistance(x, z, fence.a, fence.b) < 0.9 + clearance) return true;
+            return false;
+        };
         return {
-            version: `scene:${items.length}:${scenery.length}:${counts}`,
+            version: `scene:${items.length}:${scenery.length}:${counts}${plotKey}`,
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
             isWater: (x, z) => surface(x, z).waterDepth > 0,
@@ -308,11 +378,40 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 const cx = Math.floor(x / 6);
                 const cz = Math.floor(z / 6);
                 for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
-                return false;
+                return solids.length || fences.length ? solidAt(x, z, clearance) : false;
             }
         };
     };
     return {tasks, finish};
+}
+
+/** A building's footprint in its plot's frame (local x0..x1, z0..z1); a fence run (world). */
+type PlotSolid = {frame: ReturnType<typeof plotFrame>; x0: number; x1: number; z0: number; z1: number};
+type FenceRun = {a: {x: number; z: number}; b: {x: number; z: number}};
+
+function segmentDistance(x: number, z: number, a: {x: number; z: number}, b: {x: number; z: number}): number {
+    const vx = b.x - a.x;
+    const vz = b.z - a.z;
+    const length = vx * vx + vz * vz;
+    const t = length > 0 ? Math.min(Math.max(((x - a.x) * vx + (z - a.z) * vz) / length, 0), 1) : 0;
+    return Math.hypot(x - (a.x + vx * t), z - (a.z + vz * t));
+}
+
+/** The hamlet's plots the behaviour world keeps walkers out of (null: none beyond today's cottage and barn). */
+let behaviourPlots: HomePlot[] | null = null;
+let behaviourPlotsKey = "";
+
+/**
+ * Give the behaviour world the hamlet's plots (the map lane's `hamletPlotsFor`, set beside `setAttachHomePlots`).
+ * Returns true when they changed: the shared sampler is dropped, and the scene builds its world again (sliced).
+ */
+export function setBehaviourHomePlots(plots: HomePlot[] | null): boolean {
+    const key = plots ? plots.map((p) => `${p.id}@${p.x},${p.z},${p.rotation},${p.kind},${p.barn ? 1 : 0}`).join(";") : "";
+    if (key === behaviourPlotsKey) return false;
+    behaviourPlotsKey = key;
+    behaviourPlots = plots ? plots.map((p) => ({...p})) : null;
+    resetWorldSampler();
+    return true;
 }
 
 let shared: ArkWorldSampler | null = null;

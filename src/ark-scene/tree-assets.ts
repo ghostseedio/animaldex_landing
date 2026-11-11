@@ -158,7 +158,7 @@ export const TREE_CLOSE = 2.5;
 
 type Vec3 = {x: number; y: number; z: number};
 
-export type TreeAttachTag = "leaf" | "bark" | "branch" | "tree_hollow";
+export type TreeAttachTag = "leaf" | "bark" | "branch" | "tree_hollow" | "limb" | "canopy_hang";
 
 /** The weights the tree shader sways a point by (the asset's COLOR_1 there), and where it sits on its tree. */
 export type TreeWind = {
@@ -190,11 +190,20 @@ export type TreeAttach = {
     leaf?: "blade" | "clump";
     /** Hollows: how deep the hole runs into the trunk (m). */
     depth?: number;
+    /** Limbs and hang points: the limb's radius (m), the clear room above it (to wood) and below it (to anything of the tree), scaled. */
+    radius?: number;
+    clearAbove?: number;
+    clearBelow?: number;
     wind: TreeWind;
 };
 
-type Row = [TreeAttachTag, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
+type Row = [TreeAttachTag, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number];
 const ATTACH = (attachData as unknown as {assets: Record<string, Row[]>}).assets;
+
+/** A fallen log's tops on its drawn lod0 surface (asset space): [p×3, up×3, forward×3, sizeMin, sizeMax] (graphics batch 6's floor). */
+export function floorLogTops(id: string): ReadonlyArray<readonly number[]> {
+    return (attachData as unknown as {logs?: Record<string, number[][]>}).logs?.[id] ?? [];
+}
 
 /** The asset's own attach points (asset space), by tag. */
 export function assetAttachRows(id: string): readonly Row[] {
@@ -211,7 +220,7 @@ export function treeAttachPoints(item: Placeable): TreeAttach[] {
     const root = {x: placed.x, y: placed.y, z: placed.z};
     const seen: Record<string, number> = {};
     return assetAttachRows(placed.id).map((row) => {
-        const [tag, px, py, pz, nx, ny, nz, fx, fy, fz, s0, s1, w0, w1, w2, w3, open, , blade, depth] = row;
+        const [tag, px, py, pz, nx, ny, nz, fx, fy, fz, s0, s1, w0, w1, w2, w3, open, , blade, depth, radius, above, below] = row;
         const p = turn(px * placed.scale, py * placed.scale, pz * placed.scale);
         const n = seen[tag] ?? 0;
         seen[tag] = n + 1;
@@ -226,6 +235,7 @@ export function treeAttachPoints(item: Placeable): TreeAttach[] {
             open,
             ...(tag === "leaf" ? {leaf: blade ? ("blade" as const) : ("clump" as const)} : {}),
             ...(tag === "tree_hollow" ? {depth: depth * placed.scale} : {}),
+            ...(tag === "limb" || tag === "canopy_hang" ? {radius: radius * placed.scale, clearAbove: above * placed.scale, clearBelow: below * placed.scale} : {}),
             wind: {weights: [w0, w1, w2, w3], local: {x: px, y: py, z: pz}, root, rotation: placed.rotation, scale: placed.scale}
         };
     });
@@ -243,15 +253,16 @@ export function treeSway(wind: TreeWind, time: number, windVector: {x: number; y
     const az = windVector.y / Math.max(gust, 1e-3);
     const [sway, limbPhase, flutter, leafPhase] = wind.weights;
     const phase = limbPhase * 6.2831853;
-    const wave = Math.sin(time * 1.25 + phase + wind.root.x * 0.19 + wind.root.z * 0.15) + 0.4 * Math.sin(time * 2.6 + phase * 1.7 + wind.root.x * 0.4);
+    // The frequencies are whole cycles in the shared 600 s clock window (graphics batch 6), as the shader's.
+    const wave = Math.sin(time * 1.24617 + phase + wind.root.x * 0.19 + wind.root.z * 0.15) + 0.4 * Math.sin(time * 2.59705 + phase * 1.7 + wind.root.x * 0.4);
     const bend = sway * (0.25 + 0.06 * Math.max(wind.local.y, 0));
     const k = (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     const leaf = leafPhase * 6.2831853;
     const f = flutter * 0.025 * (0.4 + gust);
     // In the asset's own space (the shader moves `transformed` before the instance matrix), then turned and scaled.
     const lx = ax * k + Math.sin(time * 7.1 + leaf) * f;
-    const ly = 0.6 * Math.sin(time * 6.3 + leaf * 1.3) * f;
-    const lz = az * k + Math.cos(time * 6.7 + leaf) * f;
+    const ly = 0.6 * Math.sin(time * 6.30413 + leaf * 1.3) * f;
+    const lz = az * k + Math.cos(time * 6.70206 + leaf) * f;
     const c = Math.cos(wind.rotation);
     const s = Math.sin(wind.rotation);
     return {x: (lx * c + lz * s) * wind.scale, y: ly * wind.scale, z: (-lx * s + lz * c) * wind.scale};

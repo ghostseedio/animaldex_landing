@@ -4270,7 +4270,8 @@
       "herdSelected": "{animal}: {count} di Ark",
       "closed": "Kartu ditutup",
       "motionReduced": "Gerakan dikurangi: apa yang terjadi diceritakan di sini, bukan diputar.",
-      "skipToList": "Langsung ke daftar siapa saja di Ark"
+      "skipToList": "Langsung ke daftar siapa saja di Ark",
+      "resetView": "Kembali ke seluruh Ark"
     },
     "person": {
       "metaTitle": "Hewan milik {name} di Ark",

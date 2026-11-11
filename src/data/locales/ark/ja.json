@@ -217,7 +217,8 @@
             "herdSelected": "{animal}：{count}匹が乗船中",
             "closed": "カードを閉じました",
             "motionReduced": "動きを減らす設定がオンです。出来事は再生せず、ここで文章でお伝えします。",
-            "skipToList": "乗船中の動物へスキップ"
+            "skipToList": "乗船中の動物へスキップ",
+            "resetView": "Ark 全体に戻る"
         },
         "person": {
             "metaTitle": "Arkにいる{name}さんの動物",

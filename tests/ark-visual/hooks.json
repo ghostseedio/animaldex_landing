@@ -1,0 +1,19 @@
+{
+  "about": "Other Ark checks the visual CI runs after the golden shots (docs/ark/visual-ci.md#hooks). A hook runs only when every file in `requires` exists, so a lane adds its entry here and it switches on when its code lands. A hook fails the job when its command exits non-zero; `artifacts` are uploaded with the shots. The behaviour audit (problems 1-7), the reactive encounters and the spawn validator run in their own job: .github/workflows/ark-behaviour-audit.yml, thresholds in tests/ark-audit/thresholds.json.",
+  "hooks": [
+    {
+      "name": "map spawn validator",
+      "lane": "ark-map",
+      "requires": ["src/lib/ark-map.test.ts"],
+      "command": "npx tsx --test src/lib/ark-map.test.ts"
+    },
+    {
+      "name": "intelligence scenarios (key frames, page errors)",
+      "lane": "ark-intelligence-web",
+      "requires": ["scripts/ark-intelligence-scenarios.mjs", "src/ark-scene/intelligence-entry.ts"],
+      "command": "node scripts/ark-intelligence-scenarios.mjs --out .ark-golden/ci/intel --seconds 6",
+      "artifacts": ".ark-golden/ci/intel",
+      "browser": true
+    }
+  ]
+}

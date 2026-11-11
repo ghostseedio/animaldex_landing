@@ -144,6 +144,7 @@ Missing from the sample (not aboard or excluded): none.
 
 | Recipe | Weight | Source |
 |---|---|---|
+| shell_tool | 7 | "Uses stones and other hard objects to break open shellfish" (traits) |
 | groom_self | 4 | "Diurnal and flexible, alternating feeding, grooming, resting, and pup care across the day and sometimes night" (sleep) |
 | stretch_yawn | 2 | **default**: class Mammalia: stretches and yawns |
 
@@ -455,6 +456,7 @@ Missing from the sample (not aboard or excluded): none.
 |---|---|---|
 | stick_tool | 3 | "They make and use tools: stripped stems to fish termites from mounds, stone and wooden hammers to crack nuts, chewed leaves to sponge up water" (spotlight) |
 | call_bout | 3 | "The pant-hoot, a loud call that builds to a scream, carries a kilometre or more through forest, and each animal's version is recognisably its own" (facts) |
+| allogroom | 4 | rule: plan primate, social group (grooms others) |
 | nest_build | 6 | "Chimpanzees are diurnal, feeding and traveling by day before building tree nests each night with learned forest skill" (sleep) |
 | groom_self | 2 | **default**: class Mammalia: grooms |
 | stretch_yawn | 2 | **default**: class Mammalia: stretches and yawns |

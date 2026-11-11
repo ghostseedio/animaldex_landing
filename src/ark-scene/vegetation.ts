@@ -398,10 +398,20 @@ function lily(): BufferGeometry {
 // `reef-render.ts` draws them (real shapes, near and far versions, the shared surge). The decor's old coral domes and
 // kelp cards are no longer drawn.
 
-function barn(): BufferGeometry {
-    const wall = new Color("#9b4b36");
-    const roof = new Color("#4d4440");
-    const trim = new Color("#efe6d6");
+/** A barn's look: its colours and its size against today's (length, height, width). */
+export type BarnStyle = {wall: string; roof: string; trim: string; size: [number, number, number]};
+
+/** Today's barn (the decor's `barn`). */
+export const BARN_STYLE: BarnStyle = {wall: "#9b4b36", roof: "#4d4440", trim: "#efe6d6", size: [1, 1, 1]};
+
+/**
+ * The barn's mesh, or a variant of it (the props lane's hamlet: another plot's barn or a smaller farm shed). With
+ * `BARN_STYLE` it is today's barn, byte for byte (`ark-props.test`).
+ */
+export function barnGeometry(style: BarnStyle = BARN_STYLE): BufferGeometry {
+    const wall = new Color(style.wall);
+    const roof = new Color(style.roof);
+    const trim = new Color(style.trim);
     const body = new BoxGeometry(6.4, 3.2, 4.4);
     body.translate(0, 1.6, 0);
     // The roof: a prism over the long side.
@@ -422,12 +432,19 @@ function barn(): BufferGeometry {
     door.translate(0, 1.15, 2.22);
     const doorTrim = new BoxGeometry(2.1, 2.55, 0.06);
     doorTrim.translate(0, 1.27, 2.21);
-    return mergeGeometries([
+    const merged = mergeGeometries([
         finish(body, (_, t) => 0.8 + 0.25 * t, 0, wall),
         finish(roofShape, () => 1, 0, roof),
         finish(doorTrim, () => 1, 0, trim),
         finish(door, () => 0.75, 0, wall)
     ])!;
+    const [sx, sy, sz] = style.size;
+    if (sx !== 1 || sy !== 1 || sz !== 1) merged.scale(sx, sy, sz);
+    return merged;
+}
+
+function barn(): BufferGeometry {
+    return barnGeometry();
 }
 
 function hay(): BufferGeometry {
@@ -674,12 +691,13 @@ vArkCard = arkCard;`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 {
     vec3 root = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    float sway = sin(arkTime * 1.5 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.9 + root.x * 0.53 - root.z * 0.31);
+    // Frequencies make whole cycles in the shared clock's 600 s window (runtime lane), so every viewer sees the same phase.
+    float sway = sin(arkTime * 1.49749 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.90074 + root.x * 0.53 - root.z * 0.31);
     float bend = pow(max(transformed.y, 0.0) / windHeight, 2.0) * windAmount * arkLeaf;
     transformed.xz += arkWind * sway * bend;
     // Leaves flutter on their own, faster and stronger in wind (graphics pass): trunk a little, crown more, leaves most.
     float gust = length(arkWind);
-    transformed += vec3(sin(arkTime * 6.3 + transformed.y * 3.1 + root.x), sin(arkTime * 5.1 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.7 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
+    transformed += vec3(sin(arkTime * 6.30413 + transformed.y * 3.1 + root.x), sin(arkTime * 5.09985 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.69675 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
 }`);
     };
     return material;

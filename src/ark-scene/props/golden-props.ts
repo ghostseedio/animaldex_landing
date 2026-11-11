@@ -15,6 +15,9 @@ import type {ArkAnimal, ArkCameraView, ArkNestRow, ArkSnapshot, ArkZone} from "@
 import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
 import {nestStage} from "@/ark-scene/props/nest-growth";
+import {place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
+import {homePlots} from "@/ark-scene/map/hamlet";
+import {defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -61,7 +64,7 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
     return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -70,11 +73,33 @@ export type PropsShotPlan = {view: ArkCameraView; hours: number; weather: Partia
 
 const look = (at: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number, lift = 0): ArkCameraView => ({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
 
+/**
+ * A view through something up in the air (a nest on a crown): the scene keeps its camera's target on the ground, so
+ * the target is where the line from the camera through the thing meets the ground beyond it. The camera stands
+ * `out` metres off (toward `azimuth`) and `above` metres higher than the thing.
+ */
+function lookThrough(at: {x: number; y: number; z: number}, azimuth: number, out: number, above: number): ArkCameraView {
+    const sx = Math.sin(azimuth);
+    const sz = Math.cos(azimuth);
+    let run = (out / above) * Math.max(at.y - surfaceAt(at.x, at.z).height, 0.5);
+    let ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    // Twice round, so the ground's height where the line lands is the one it meets.
+    run = (out / above) * Math.max(at.y - ground, 0.5);
+    ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    const target = {x: at.x - sx * run, y: ground, z: at.z - sz * run};
+    const camera = {x: at.x + sx * out, y: at.y + above, z: at.z + sz * out};
+    const distance = Math.hypot(camera.x - target.x, camera.y - target.y, camera.z - target.z);
+    return {target, distance, polar: Math.acos(Math.min(Math.max((camera.y - target.y) / distance, -1), 1)), azimuth};
+}
+
 /** The view, the hour and the weather of a props shot, from where the props are. */
 export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: Locate): PropsShotPlan | null {
     const props = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
     // Every shot but the growing nest's sees the nests as the fixture's day has them.
     props?.setArkDay(null);
+    // The hamlet's shots: the hamlet at 1× (the dry run's population: 7 houses, 3 smallholdings); every other shot today's two plots.
+    const withPlots = (globalThis as {__arkPropsModule?: {setHomePlots: (plots: HomePlot[]) => void}}).__arkPropsModule;
+    withPlots?.setHomePlots(shot.startsWith("hamlet") ? homePlots(7 * 130, 3 * 50) : defaultHomePlots());
     const plan = framed(shot, marks, stats, locate);
     if (shot === "nest_growing" && plan) props?.setArkDay(growingDay(stats));
     // Every shot in its own weather: dry and still unless it says otherwise (whatever the island clock says today).
@@ -98,9 +123,10 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_heronry": {
-            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
+            // The lowest crown-top platform (the heronry's, on the wetland's trees), from above its crown.
+            const nest = stats.nests.filter((n) => n.form === "platform" && n.site === "tree_top").sort((a, b) => a.y - b.y)[0];
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 12 + 8, 0.35, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: lookThrough(nest, 0.9, nest.radius * 6 + 3, nest.radius * 3 + 1.5), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
@@ -115,7 +141,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_eaves": {
             const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
             if (!nest) return null;
-            return {view: look(nest, 2.4, 1.52, nestTurn(nest) + 0.35, -0.15), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
+            // Along the wall at the eave's height (the camera cannot look up from below): the cups seated under the roof,
+            // backs to the wall, seen in profile.
+            return {view: look(nest, 2.2, 1.36, nestTurn(nest) + 1.2, -0.25), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_grebe": {
             const nest = stats.nests.find((n) => n.form === "floating");
@@ -140,7 +168,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const hollow = spots.beesHollow;
             if (!hollow) return null;
             const facing = spots.beesFacing ?? {x: 0, y: 0, z: 1};
-            return {view: look(hollow, 1.5, 1.45, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
+            return {view: look(hollow, 1.0, 1.36, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
         }
         case "house_night": {
             const chimney = spots.chimney;
@@ -163,9 +191,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         }
         case "cave_roost": {
             const cave = marks.cave;
-            // From just outside the mouth, looking in and a little up at the ceiling.
-            const inside = {x: cave.x - Math.sin(cave.facing) * 2.2, y: cave.y + 2.1, z: cave.z - Math.cos(cave.facing) * 2.2};
-            return {view: look(inside, 6.5, 1.36, cave.facing + 0.2), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave mouth", minDistance: 0.3};
+            // From just outside the mouth, looking in at the roost: the guano heaped on the floor, the stained ceiling above it.
+            const under = {x: cave.roost.x, y: cave.y + 1.1, z: cave.roost.z};
+            return {view: look(under, 5.2, 1.3, cave.facing + 0.12), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave roost", minDistance: 0.3};
         }
         case "turtle_nest": {
             const nest = spots.turtleNest;
@@ -173,6 +201,43 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             // From up the beach, looking down the crawl tracks to the sea.
             const facing = (nest as {facing?: number}).facing ?? Math.atan2(nest.x, nest.z);
             return {view: look(nest, 5.5, 0.95, facing + Math.PI + 0.35), hours: 7.4, weather: null, environment: calm, anchor: "turtle nest + tracks", minDistance: 0.3};
+        }
+        case "mist_dawn": {
+            // Mist lying over the lake at a still dawn, from up the bank.
+            const lake = namedPlace("lake");
+            return {view: look({x: lake.x, y: 0, z: lake.z}, lake.radius * 1.6 + 18, 0.95, 2.4), hours: 6.3, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "mist over the lake at dawn"};
+        }
+        case "mist_meadow": {
+            // At an animal's height in the barn owl's meadow (the farm's mist), where a flat sheet used to read as a band.
+            const owl = stats.nests.find((n) => n.form === "barn");
+            const at = owl?.sitter ? locate(owl.sitter) : null;
+            const spot = at ?? spots.farm;
+            if (!spot) return null;
+            return {view: look(spot, 5, 1.32, 0.6, 0.3), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: at ? "barn owl's meadow, misty dawn" : "farm, misty dawn"};
+        }
+        case "mist_shore": {
+            // Low on the lake's shore (the fox's), looking along the bank through the mist.
+            const lake = namedPlace("lake");
+            const a = 2.2;
+            const shore = {x: lake.x + Math.sin(a) * (lake.radius + 1.5), y: 0, z: lake.z + Math.cos(a) * (lake.radius + 1.5)};
+            return {view: look(shore, 6, 1.3, a + 0.9, 0.4), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "lake shore, misty dawn"};
+        }
+        case "hamlet_day":
+        case "hamlet_night": {
+            // The whole hamlet from above its middle.
+            const plots = homePlots(7 * 130, 3 * 50);
+            const middle = {x: plots.reduce((sum, p) => sum + p.x, 0) / plots.length, z: plots.reduce((sum, p) => sum + p.z, 0) / plots.length};
+            const night = shot === "hamlet_night";
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 82, 0.85, -0.5), hours: night ? 21.5 : 11, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: `hamlet 1x: ${plots.filter((p) => p.kind === "house").length} houses, ${plots.filter((p) => p.kind === "smallholding").length} smallholdings`};
+        }
+        case "hamlet_close_day":
+        case "hamlet_close_night": {
+            // Two of the new cottages and a new smallholding, closer.
+            const plots = homePlots(7 * 130, 3 * 50);
+            const chosen = plots.filter((p) => ["house-3", "house-4", "smallholding-2"].includes(p.id));
+            const middle = {x: chosen.reduce((sum, p) => sum + p.x, 0) / chosen.length, z: chosen.reduce((sum, p) => sum + p.z, 0) / chosen.length};
+            const night = shot === "hamlet_close_night";
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 34, 1.0, 0.4), hours: night ? 21.5 : 15.5, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: "hamlet: house-3, house-4, smallholding-2"};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;

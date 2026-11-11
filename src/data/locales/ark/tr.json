@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: gemide {count}",
             "closed": "Kart kapatıldı",
             "motionReduced": "Hareket azaltıldı: olanlar oynatılmak yerine burada anlatılıyor.",
-            "skipToList": "Gemidekilere geç"
+            "skipToList": "Gemidekilere geç",
+            "resetView": "Tüm Ark'a dön"
         },
         "person": {
             "metaTitle": "{name} kullanıcısının Ark'taki hayvanları",

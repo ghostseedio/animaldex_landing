@@ -20,6 +20,7 @@ import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {reservedAt} from "@/ark-scene/map/hamlet";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
@@ -34,7 +35,14 @@ const SIZES: Record<AttachTag, {min: number; max: number}> = {
     porch_light: {min: 0.003, max: 0.1},
     house_eave: {min: 0.002, max: 0.2},
     worm_hole: {min: 0.005, max: 0.35},
-    burrow_entrance: {min: 0.03, max: 0.6}
+    burrow_entrance: {min: 0.03, max: 0.6},
+    // (The stub draws none of these: the scenery interface's own sizes come with its points.)
+    limb: {min: 0.15, max: 1.6},
+    canopy_hang: {min: 0.05, max: 1.2},
+    fence_post: {min: 0.01, max: 0.5},
+    roof_edge: {min: 0.01, max: 0.6},
+    ledge: {min: 0.02, max: 1},
+    tree_hollow: {min: 0.02, max: 0.5}
 };
 
 function slope(x: number, z: number): number {
@@ -96,6 +104,11 @@ class WorldSampler implements ArkMapSampler {
     covered(x: number, z: number): boolean {
         this.obstacles ??= new DecorObstacles(worldDecor());
         return this.obstacles.covers(x, z);
+    }
+
+    /** The hamlet's reserved plots (`hamlet.ts` reservedAt). */
+    reserved(x: number, z: number): boolean {
+        return reservedAt(x, z);
     }
 
     /** The behaviour lane's walk grid (`behaviour-nav.ts`, from the graphics lane's scenery): where its walkers can walk. */
@@ -304,8 +317,13 @@ class WorldSampler implements ArkMapSampler {
         for (const point of allAttachPoints()) {
             const tag = SCENERY_TAG[point.tag];
             if (!tag) continue;
+            // Nothing on the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
+            if (reservedAt(point.position.x, point.position.z)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
-            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw), size: {min: Math.min(point.size[0], 0.001), max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z)), ...(point.wind ? {source: point} : {})});
+            // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
+            const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.001);
+            const limb = point.radius !== undefined ? {radius: point.radius, load: point.load, clearAbove: point.clearAbove, clearBelow: point.clearBelow} : {};
+            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw, point.forward), size: {min, max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z)), ...(point.wind ? {source: point} : {}), ...limb});
         }
         // What the scenery interface does not offer yet: the reeds' and shrubs' tops (a reed warbler's, a dragonfly's perch).
         const decor = worldDecor();
@@ -350,20 +368,39 @@ class WorldSampler implements ArkMapSampler {
 const SCENERY_TAG: Partial<Record<SceneryTag, AttachTag>> = {
     leaf: "leaf", branch: "branch", bark: "bark", flower_head: "flower_head", rock_face: "rock_face", tide_pool: "tide_pool",
     house_wall: "house_wall", house_eave: "house_eave", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf",
-    worm_hole: "worm_hole", burrow: "burrow_entrance", canopy_perch: "branch", canopy_climb: "bark"
+    worm_hole: "worm_hole", burrow: "burrow_entrance", canopy_perch: "branch", canopy_climb: "bark",
+    limb: "limb", canopy_hang: "canopy_hang", fence_post: "fence_post", roof_edge: "roof_edge", ledge: "ledge", tree_hollow: "tree_hollow"
 };
 
-/** A heading along a surface: +z laid onto it (or +x where the surface faces along z), turned `yaw` about its normal. */
-function headingOf(n: [number, number, number], yaw: number): [number, number, number] {
-    let base: [number, number, number] = Math.abs(n[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
-    const d = base[0] * n[0] + base[1] * n[1] + base[2] * n[2];
-    base = [base[0] - d * n[0], base[1] - d * n[1], base[2] - d * n[2]];
-    const l = Math.hypot(...base) || 1;
-    const t: [number, number, number] = [base[0] / l, base[1] / l, base[2] / l];
-    const b: [number, number, number] = [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]];
-    const c = Math.cos(yaw);
-    const sn = Math.sin(yaw);
-    return [t[0] * c + b[0] * sn, t[1] * c + b[1] * sn, t[2] * c + b[2] * sn];
+/**
+ * A point's heading along its surface: its `forward` where the scenery
+ * gives one, else the sampler's own convention (graphics-interface.md: the
+ * model's quaternion is setFromUnitVectors(+y, normal) · rotationY(yaw), so
+ * its +z goes to that rotation of (sin yaw, 0, cos yaw)), laid square to
+ * the normal.
+ */
+function headingOf(n: [number, number, number], yaw: number, forward?: {x: number; y: number; z: number}): [number, number, number] {
+    let t: [number, number, number];
+    if (forward) t = [forward.x, forward.y, forward.z];
+    else {
+        // The rotation taking +y to n (axis +y × n, by the angle between them), applied to (sin yaw, 0, cos yaw).
+        const v: [number, number, number] = [Math.sin(yaw), 0, Math.cos(yaw)];
+        const axis: [number, number, number] = [n[2], 0, -n[0]];
+        const s = Math.hypot(...axis);
+        const c = n[1];
+        if (s < 1e-9) t = c > 0 ? v : [v[0], -v[1], -v[2]];
+        else {
+            const k: [number, number, number] = [axis[0] / s, axis[1] / s, axis[2] / s];
+            const dot = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
+            const cross: [number, number, number] = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]];
+            t = [0, 1, 2].map((i) => v[i] * c + cross[i] * s + k[i] * dot * (1 - c)) as [number, number, number];
+        }
+    }
+    const d = t[0] * n[0] + t[1] * n[1] + t[2] * n[2];
+    t = [t[0] - d * n[0], t[1] - d * n[1], t[2] - d * n[2]];
+    const l = Math.hypot(...t) || 1;
+    if (l < 1e-6) return Math.abs(n[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
+    return [t[0] / l, t[1] / l, t[2] / l];
 }
 
 let shared: WorldSampler | null = null;

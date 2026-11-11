@@ -300,3 +300,30 @@ The scenario script is `scenario.ts` in the lane folder. Each animal is posed ev
 - **`behaviour-nav.ts`.** `navCellTasks`, `navGridBuild`, `NavCells`, `NavGrid.cells`. `NavGrid`'s constructor takes optional prebuilt cells.
 - **`world-sampler.ts`.** `sceneSamplerTasks`, `worldSamplerBuild`, `worldSamplerReady`.
 - **`behaviour-profile.ts`.** Roost `shore`, and interaction `shore` (appended: index 20, `k` in `behaviours.json`). No existing name changed. `doing` names are unchanged (intelligence reads them). `stalk` is a shared slow walk to the edge of its own range on its prey's side (flee-envelope §6.2 relies on it); `flee` stays weight 0.
+
+## Part 5: the merged-scene audit's asks (2026-11-11, ark-release 02fbaa24)
+
+1. **Wary distance.** The release test failed because the map's placement and the 20 m spacing put the nearest threat's home 51 m off, while the prey only looked 35 m from its home.
+   - The distance was right; where it was measured from was wrong. `threatAt` now measures from anywhere in the prey's range (centre plus range radius). It still never uses the prey's own earlier slots, because that would chain back through every slot.
+   - `waryRange` follows flee-envelope §2's sight model: the prey's sight (bird 40, land 30, water 12) by its size, the hunter's size and whether it is moving, and the zone's openness (grassland 1.15, woodland 0.65, rainforest 0.5).
+     - A zebra sees a lion walking the grassland about 43 m off, and one lying still about 24 m off.
+     - `WARY_METRES` (55) is the cap.
+   - A test puts a lion's home a spaced 50 m from a zebra's: the zebra notices it now and then, and watches it from further off.
+2. **Mount.** The graphics lane's `prepareAttachPoints()` (from the merged `ark-graphics-attach`) builds the attach points about 6 ms a frame. The behaviour world's slices start once those points are ready.
+3. **Flight (problem 2).** Measured with the audit's own definition on the schedule, every second of a fixture day:
+   - Full turns per airborne minute: 1.04 → 0.38. Circling: 1.9% → 0%.
+   - Flights are bowed at most an eighth of their length, and a soar is one gentle sweep towards its goal.
+   - Flyers land on their own kinds of perch (`perchTags`). The new attach points are now places to land: ledges are cliff ledges, limbs are branches, fence posts and roof edges are `post`s, and tree hollows are roosts.
+   - A test covers it.
+4. **Variety (problem 7).** The audit's species measure on the fixture: 13.2% → 4.7% of awake moments with a whole species in one state.
+   - Each animal has its own leanings for life (each behaviour's pull ×0.65–1.35) and its own chronotype (±45 min).
+   - A swimmer feeds as `forage` and cruises as `swim`; its swim weight is 0.55.
+   - School and flock followers keep their place by the leader but have their own state.
+   - A test covers it; groups still hold together (the cohesion and row tests).
+5. **Resting at home (for the runtime lane's `arkOutside`).** `restingAtRoost(world, profile, animal, epoch, hoursAt, activity)` returns `{resting, enclosed}`: settled at its roost now, and whether that roost hides it (den, burrow, cave, tree hole, crevice).
+   - Den animals rest in their den 60% of their rest slots.
+   - Fixture day: asleep at its roost 5,976 of 5,976; den animals in the den 13% of their awake time.
+   - **Hook for the runtime lane** (their code, not done here): give `ArkLiveCandidate` an optional `resting?: boolean`, and have the scene fill it from `restingAtRoost(...).resting` for scheduled animals.
+     - In `arkOutside`, fill each kind's quota with not-resting members first, in ring order from the step's start, then resting ones.
+     - It stays the same for every viewer and nested across tiers: the order is the same everywhere, and a bigger quota only extends the list.
+     - What is hidden is then the animals at home.

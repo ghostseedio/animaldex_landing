@@ -13,6 +13,8 @@
  */
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
+import {cropsGrowAt} from "@/ark-scene/fields";
+import {hamletKeeps} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -111,6 +113,17 @@ function tone(zone: ArkZone, kind: DecorKind, r: number): string {
 }
 
 let cached: DecorItem[] | null = null;
+
+/**
+ * Runtime prebuild hook (runtime/prebuild.ts): the same seeded lists, computed in a worker before the mount, handed
+ * in so the mount does not compute them on the main thread. Identical output (deep-equal tests in ark-prebuild.test.ts).
+ */
+let primedGrass: {count: number; tufts: GrassTuft[]} | null = null;
+export function primeDecor(primed: {decor?: DecorItem[]; fill?: FillItem[]; grass?: {count: number; tufts: GrassTuft[]}}): void {
+    if (primed.decor) cached = primed.decor;
+    if (primed.fill) fillCache = primed.fill;
+    if (primed.grass) primedGrass = primed.grass;
+}
 
 export function worldDecor(): DecorItem[] {
     if (cached) return cached;
@@ -274,6 +287,11 @@ export function worldDecor(): DecorItem[] {
 export type GrassTuft = {x: number; y: number; z: number; scale: number; rotation: number; zone: ArkZone; dry: number};
 
 export function grassTufts(count: number): GrassTuft[] {
+    if (primedGrass && primedGrass.count === count) {
+        const tufts = primedGrass.tufts;
+        primedGrass = null;
+        return tufts;
+    }
     const random = seeded(77001);
     const tufts: GrassTuft[] = [];
     const meadow: Partial<Record<ArkZone, number>> = {grassland: 1, woodland: 0.75, farm_garden: 0.55, river_lake: 0.85, wetland: 0.6, rainforest: 0.45, mountains: 0.35, seashore: 0.12};
@@ -292,6 +310,16 @@ export function grassTufts(count: number): GrassTuft[] {
         if (riverDistance(x, z) < 3) continue;
         // Not through the garden pond's water or the cottage's floor.
         if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
+        // Not among the crops (graphics batch 5): meadow grass keeps to the fields' margins and the pasture. The draws
+        // a tuft would take (scale, turn, dryness) are still taken, so the grass everywhere else stays where it was.
+        // Nor on the hamlet's reserved plots: none under a house or a barn, about half on the rest of a plot
+        // (props/hamlet-land.ts; a hash, not a draw, so every other tuft stays where it was).
+        if (cropsGrowAt(x, z) || !hamletKeeps(x, z, (Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1))) {
+            random();
+            random();
+            if (zone !== "mountains") random();
+            continue;
+        }
         tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.3 + 0.45 * random() : zone === "mountains" ? 0.3 : 0.12 * random()});
     }
     return tufts;
@@ -395,13 +423,15 @@ export function forestFill(): FillItem[] {
         const rotation = random() * Math.PI * 2;
         const variant = Math.floor(random() * 3);
         const rank = random();
+        // Clumps and glades: dense where the noise is high, open where it is low. Tested first against the densest
+        // zone's density (it needs no ground sample), so most tries skip sampleGround: the same trees, 2.3× faster.
+        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
+        if (roll > 0.32 * clump * 6) continue;
         const sample = sampleGround(x, z);
         if (sample.height < 0.5 || sample.land < 0.7 || sample.cliff > 0.35) continue;
         const zone = zoneAt(sample);
         const growth = kinds[zone];
         if (!growth) continue;
-        // Clumps and glades: dense where the noise is high, open where it is low.
-        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
         if (roll > growth.density * clump * 6) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;

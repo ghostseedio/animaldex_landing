@@ -69,7 +69,8 @@ test("microhabitats: nobody moves when another small animal arrives or leaves", 
         const place = before.get(a.id)!;
         if (a.model_slug === "water-strider") assert.ok(place.water && ["pond", "lake", "stream_river"].includes(place.map!.tag!), "the strider on still water");
         else if (a.model_slug === "domestic-cat") assert.ok(["house", "garden"].includes(place.map!.tag!), "the cat round the house or in the garden");
-        else assert.ok(place.micro?.attach, `${a.model_slug} on an attach point`);
+        // A small invertebrate as a micro animal; a gecko, a lizard or a bird perched on its point (on the behaviour schedule).
+        else assert.ok(place.micro?.attach || (place.perch && place.map?.attach), `${a.model_slug} on an attach point`);
     }
     const after = placeAnimals(animals.filter((_, i) => i % 2 === 0));
     after.forEach((place, id) => assert.deepEqual(place, before.get(id)));

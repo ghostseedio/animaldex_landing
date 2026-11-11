@@ -16,7 +16,8 @@ import {mapPoints} from "@/ark-scene/map/place";
  * of anyone's (centres further apart than their half-lengths), in 3D.
  */
 function apart(p: Placement, q: Placement, lengthP: number, lengthQ: number): boolean {
-    if (!p.micro && !q.micro) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
+    // (A perched bird or lizard is on its attach point like a micro animal: its body clear of the others in 3D.)
+    if (!p.micro && !q.micro && !p.perch && !q.perch) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
     // A small one on its attach point: their bodies do not overlap (centres further apart than their half-lengths).
     return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max((lengthP + lengthQ) / 2, 0.02);
 }
@@ -47,7 +48,8 @@ test("every animal stands on its map tag's ground (the Ark map, B3), apart from 
     for (const animal of full.animals) {
         const place = places.get(animal.id)!;
         assert.ok(place.map, `${animal.name} on the map`);
-        if (place.map!.held || place.canopy || place.micro) continue;
+        // (A perched animal stands for its attach point's tags, which the validator checks.)
+        if (place.map!.held || place.canopy || place.micro || place.perch) continue;
         const ground = sampler.ground(place.x, place.z);
         assert.ok(ground.tags.includes(place.map!.tag!), `${animal.name} on ${place.map!.tag}`);
         // At sea in the sea, on land on land.

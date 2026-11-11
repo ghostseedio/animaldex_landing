@@ -3,6 +3,7 @@ import type {ArkAct} from "@/lib/ark-life";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -84,6 +85,8 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
+    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
+    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**
@@ -175,7 +178,7 @@ export type ArkSceneStats = {
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
 export type ArkHerdInfo = {key: string; slug: string; name: string; count: number; mine: number};
 
-export type ArkSceneOptions = {
+export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
     /** The ark model set's folder: `<modelBase>/manifest.json`, `<modelBase>/<slug>/<version>.near.glb`. */
     modelBase: string;
@@ -273,7 +276,7 @@ export type ArkVisitor = {slug: string; name: string; /** Its label in the scene
 /** Who is talking: the animal's id (an aboard animal's, or the visitor's), its model slug, and whether it is talking now. */
 export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
-export type ArkSceneHandle = {
+export type ArkSceneHandle = ArkRuntimeHandle & {
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;

@@ -168,11 +168,24 @@ varying vec3 vWorld;
 void main() {
     vec2 p = vWorld.xz * 0.08 + vec2(arkTime * 0.012, arkTime * 0.007);
     float n = arkFbm(p) * 0.7 + arkFbm(p * 2.3 - 4.0) * 0.3;
-    float edge = 1.0 - smoothstep(radius * 0.45, radius, length(vWorld.xz - centre.xz));
-    float a = smoothstep(0.32, 0.72, n) * edge * opacity;
+    // Soft at its edges: a wide fade to nothing, broken up by the noise so the rim is never a circle.
+    float edge = 1.0 - smoothstep(radius * 0.3, radius, length(vWorld.xz - centre.xz) * (0.85 + 0.3 * n));
+    // A sheet seen from its own height reads as a frosted band: fade it as the camera comes down to it,
+    // and wherever it is seen edge-on.
+    vec3 toEye = cameraPosition - vWorld;
+    float above = smoothstep(0.6, 4.0, toEye.y);
+    float faceOn = smoothstep(0.12, 0.45, abs(toEye.y) / max(length(toEye), 1e-3));
+    float a = smoothstep(0.32, 0.72, n) * edge * above * faceOn * opacity;
     if (a < 0.003) discard;
     gl_FragColor = vec4(tint, a * 0.55);
 }`;
+
+/** The mist's height over the ground (or the water) at a point: the highest ground within a metre, never below the water. */
+function mistFloor(x: number, z: number): number {
+    let high = -Infinity;
+    for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) high = Math.max(high, sampleGround(x + dx, z + dz).height);
+    return Math.max(high, 0);
+}
 
 export type Effects = {
     setTier: (particles: number) => void;
@@ -259,9 +272,14 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
     ];
     for (const at of mistAt) {
         for (const layer of [0, 1]) {
-            const ground = Math.max(sampleGround(at.x, at.z).height, 0);
-            const plane = new PlaneGeometry(at.r * 2, at.r * 2, 1, 1);
+            // Draped over the ground and the water (every couple of metres), lying low: it never slices through a slope.
+            const segments = Math.min(Math.max(Math.round((at.r * 2) / 2.2), 8), 36);
+            const plane = new PlaneGeometry(at.r * 2, at.r * 2, segments, segments);
             plane.rotateX(-Math.PI / 2);
+            const lift = 0.25 + layer * 0.75 + Math.min(at.y, 0.7) * 0.3;
+            const position = plane.getAttribute("position");
+            for (let i = 0; i < position.count; i++) position.setY(i, mistFloor(at.x + position.getX(i), at.z + position.getZ(i)) + lift);
+            position.needsUpdate = true;
             const material = new ShaderMaterial({
                 vertexShader: MIST_VERTEX,
                 fragmentShader: MIST_FRAGMENT,
@@ -270,7 +288,7 @@ export function buildEffects(group: Group, chimney: Vector3): Effects {
                 depthWrite: false
             });
             const mesh = new Mesh(plane, material);
-            mesh.position.set(at.x, ground + at.y + 0.6 + layer * 0.9, at.z);
+            mesh.position.set(at.x, 0, at.z);
             mesh.renderOrder = 9;
             mesh.visible = false;
             mesh.name = "props:mist";

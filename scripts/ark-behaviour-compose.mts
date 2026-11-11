@@ -136,6 +136,22 @@ export function composeRecipes(s: SpeciesText, b: Record<string, Hit[]>, ctx: {s
     if (has(b, "v_formation")) phrase("v_formation", "v_formation", 6);
     else if (bird && (fam(s, "Gruidae", "Pelecanidae") || (fam(s, "Anatidae") && named(s, /goose|swan/i)) || (fam(s, "Threskiornithidae") && named(s, /ibis/i)))) rule("v_formation", `family ${s.family} (flies in V or lines)`, 5);
 
+    // MARK: Swarms, bats, mixed flocks, molehills (round 2)
+    const insect = s.plan === "insect" || s.plan === "flying_insect";
+    if (insect && has(b, "swarm")) {
+        const clumps = b.swarm.every((h) => /aggregation|gather|cluster|clump|huddl/i.test(h.phrase) && !/swarm/i.test(h.phrase));
+        const dusk = /^(Ephemeroptera|Blattodea|Isoptera)$/.test(s.order ?? "") || fam(s, "Formicidae", "Termitidae", "Rhinotermitidae", "Chironomidae", "Culicidae");
+        phrase(clumps ? "cluster" : dusk ? "swarm_dusk" : "swarm", "swarm", 6);
+    } else if (insect && has(b, "flock")) phrase("swarm", "flock", 4);
+    if (s.plan === "bat") {
+        rule("bat_emergence", "plan bat (streams out of its roost at dusk)", 6);
+        if (/\bfish/i.test(s.text.diet ?? "") && /\b(fishing|trawl|catch\w* fish|fish (from|at) the (surface|water))/i.test(Object.values(s.text).join(" "))) rule("bat_trawl", "a fishing bat (its stored diet: fish, taken from the water)", 6);
+        else if (s.diet === "insects" || /\binsects?\b|\bmoths?\b/i.test(s.text.diet ?? "")) rule("bat_hawk", "plan bat that eats insects (hawks them at night)", 6);
+    }
+    if (has(b, "mixed_flock") && (bird || s.plan === "primate" || s.plan === "quadruped")) phrase("mixed_follow", "mixed_flock", 5);
+    const molePhrase = Object.values(s.text).join(" ").match(/\bmole-?hills?\b/i);
+    if ((fam(s, "Talpidae", "Chrysochloridae", "Bathyergidae", "Spalacidae") && !named(s, /desman/i)) || molePhrase) molePhrase ? add("molehills", 5, {field: "facts", phrase: molePhrase[0]}) : rule("molehills", `family ${s.family} (pushes up mounds of earth)`, 5);
+
     // MARK: Nests
     let nesting = ctx.nesting.months;
     let nestingSrc: RecipeSource | null = ctx.nesting.src ? {field: ctx.nesting.src.field, phrase: ctx.nesting.src.phrase} : null;

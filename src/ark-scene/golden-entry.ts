@@ -14,18 +14,20 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {GOLDEN_MICRO, GOLDEN_PLACES, GOLDEN_TIMES, GOLDEN_WEATHER, goldenView, type GoldenPlace, type GoldenTime, type GoldenWorld} from "@/ark-scene/golden-shots";
+import * as arkSampler from "@/ark-scene/sampler";
 import {attachPointAt, attachPoints, place, type AttachPoint} from "@/ark-scene/sampler";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, bodyAxisExtent} from "@/ark-scene/stats";
 import {microDrawnLength} from "@/ark-scene/micro";
 import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
-import {Box3, Group, Quaternion, Raycaster, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
+import {Box3, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Raycaster, SphereGeometry, Vector3, type InstancedMesh, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {kelpStandSpot, reefCloseupSpot} from "@/ark-scene/reef";
-import {pinSeaClock} from "@/ark-scene/fish-schools";
+import {fishSchoolAt, fishSchools, pinSeaClock, type FishChaser} from "@/ark-scene/fish-schools";
+import {setFishChasers} from "@/ark-scene/fish-render";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
@@ -225,7 +227,14 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         }
         // Pale bark (birch, beech) in the sun, about chest height, so a black ant shows on it.
         if (shot.tag === "bark") return broadleaf + (/^birch/.test(asset) ? 0 : /^beech/.test(asset) ? 4 : 12) + (1 - (point.open ?? 0)) * 30 - lit(point) * 10 + Math.abs(p.y - heightAt(p.x, p.z) - 1.3) * 2 + Math.hypot(p.x - near.x, p.z - near.z) * 0.02;
-        if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
+        if (shot.tag === "house_wall") {
+            // Off the side windows (micro-scene.ts: centred 0.4 m off the middle, 1.4 m up, 0.8 × 0.7 m), with a margin:
+            // a gecko half hidden by a window frame is no shot (graphics batch 5).
+            const side = Math.sign(p.x - COTTAGE.x);
+            const windowZ = COTTAGE.z + (side > 0 ? 0.4 : -0.4);
+            const onWindow = Math.abs(p.z - windowZ) < 0.75 && Math.abs(p.y - (COTTAGE.floor + 1.4)) < 0.65;
+            return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4)) + (onWindow ? 20 : 0);
+        }
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
             const seaward = (point.normal.x * p.x + point.normal.z * p.z) / (Math.hypot(p.x, p.z) || 1);
@@ -264,7 +273,9 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
             debug.controls.minDistance = holder.minDistance;
             handle.setView(view);
             await nextFrames(3);
-            const blocked = clearSight(debug, view, candidate, holder.current);
+            // The camera above the ground (graphics batch 5: a rock's face can look up a beach, into the sand).
+            const eye = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(new Vector3(view.target.x, view.target.y, view.target.z));
+            const blocked = eye.y < heightAt(eye.x, eye.z) + 0.15 ? "ground" : clearSight(debug, view, candidate, holder.current);
             if (blocked) {
                 blockers.push(blocked);
                 continue;
@@ -394,10 +405,17 @@ async function mountGolden(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const decoded = decodeArkSnapshot(fixture);
+    // Scale runs (scripts/ark-scale-run.mjs): ?population=<file> loads a synthetic snapshot instead of the fixture.
+    const population = params.get("population");
+    const fetchStarted = performance.now();
+    const raw = population ? await (await fetch(population)).json() : fixture;
+    const decodeStarted = performance.now();
+    const decoded = decodeArkSnapshot(raw);
     if (!decoded) throw new Error("fixture did not decode");
     // The props lane's close-ups (`?props=1`): the props' species aboard, in the breeding season, clutches in.
     const snapshot = params.get("props") ? propsFixture(decoded) : decoded;
+    const timing: Record<string, number> = {fetchMs: decodeStarted - fetchStarted, decodeMs: performance.now() - decodeStarted};
+    const mountStarted = performance.now();
     let ready = false;
     const handle = mountArk(el, {
         snapshot,
@@ -410,13 +428,16 @@ async function mountGolden(el: HTMLElement) {
         closeUpBase: params.get("closeup") || undefined,
         onReady: () => {
             ready = true;
+            timing.readyMs = performance.now() - mountStarted;
         }
     });
+    timing.mountMs = performance.now() - mountStarted;
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
     handle.setEnvironment(CALM_SHOT);
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: Holder = {current: null, minDistance: 0.3, stop: null, chosen: new Map()};
+    let chaserBody: ThreeMesh | null = null;
 
     const settle = async (quietMs: number, maxMs = 90_000) => {
         const until = performance.now() + maxMs;
@@ -457,6 +478,31 @@ async function mountGolden(el: HTMLElement) {
         handle,
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
+        /**
+         * The attach points' build as the scene's mount pays for it (the decor already built): the synchronous build's
+         * one long task, and (where the sampler offers it) the sliced build's longest slice. Each from a fresh start.
+         */
+        attachTiming: async () => {
+            const sampler = arkSampler as unknown as {resetAttachPoints: () => void; allAttachPoints: () => unknown[]; prepareAttachPoints?: (sliceMs?: number) => Promise<unknown[]>; attachBuildSlices?: () => number[]};
+            const runs: number[] = [];
+            for (let i = 0; i < 3; i++) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                sampler.allAttachPoints();
+                runs.push(Math.round((performance.now() - started) * 10) / 10);
+            }
+            let sliced: {total: number; longest: number; slices: number} | null = null;
+            if (sampler.prepareAttachPoints && sampler.attachBuildSlices) {
+                sampler.resetAttachPoints();
+                await nextFrame();
+                const started = performance.now();
+                await sampler.prepareAttachPoints(6);
+                const slices = sampler.attachBuildSlices();
+                sliced = {total: Math.round((performance.now() - started) * 10) / 10, longest: Math.round(Math.max(...slices) * 10) / 10, slices: slices.length};
+            }
+            return {syncMs: runs, points: sampler.allAttachPoints().length, sliced};
+        },
         /** Every species' models in, before the first shot (so nothing pops in). */
         prepare: async () => {
             await settle(200);
@@ -480,6 +526,8 @@ async function mountGolden(el: HTMLElement) {
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             pinSeaClock(GOLDEN_SEA_EPOCH);
+            // A golden-only camera (graphics batch 5): the shot's own limits, for this shot only.
+            (window as unknown as {__arkGoldenCamera?: unknown}).__arkGoldenCamera = "camera" in shot ? (shot as {camera?: unknown}).camera : undefined;
             const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
             const hold = () => {
                 if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;
@@ -549,6 +597,46 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /** Clips (development): hold the camera on this view. */
+        setView: (view: ArkCameraView) => handle.setView(view),
+        /** Clips (development): run the sea's clock from this epoch second. */
+        pinSea: (epochSeconds: number) => pinSeaClock(epochSeconds),
+        /** Clips: a school now (by id), at the sea's clock. */
+        school: (id: string) => {
+            const school = fishSchools().find((each) => each.id === id);
+            return school ? fishSchoolAt(school) : null;
+        },
+        /**
+         * Clips: one chaser the fish split round (`setFishChasers`), drawn as a plain dark body `length` long heading
+         * `yaw`; null clears it. Stands in for the recipes lane's hunters.
+         */
+        setChaser: (chaser: (FishChaser & {length: number; yaw: number}) | null) => {
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (!chaser) {
+                setFishChasers(null);
+                if (chaserBody && debug) debug.scene.remove(chaserBody);
+                return;
+            }
+            const list: FishChaser[] = [{x: chaser.x, y: chaser.y, z: chaser.z, r: chaser.r}];
+            setFishChasers(() => list);
+            if (!chaserBody) {
+                const body = new SphereGeometry(0.5, 18, 10);
+                body.scale(0.32, 0.3, 1);
+                chaserBody = new ThreeMesh(body, new MeshStandardMaterial({color: "#4a4844", roughness: 0.45}));
+            }
+            chaserBody.scale.setScalar(chaser.length);
+            chaserBody.position.set(chaser.x, chaser.y, chaser.z);
+            chaserBody.rotation.set(0, chaser.yaw, 0);
+            if (debug && !chaserBody.parent) debug.scene.add(chaserBody);
+        },
+        /** Scale runs: the load timings, the animals given, and the JS heap. */
+        timing: () => ({...timing, animals: snapshot.animals.length, heapMb: Math.round(((performance as unknown as {memory?: {usedJSHeapSize: number}}).memory?.usedJSHeapSize ?? 0) / 1048576)}),
+        /** Scale runs: resolves once nothing is loading for quietMs (or after maxMs), with the time it took. */
+        settle: async (quietMs = 1500, maxMs = 120_000) => {
+            const started = performance.now();
+            const settled = await settle(quietMs, maxMs);
+            return {settled, ms: Math.round(performance.now() - started)};
+        },
         /**
          * The animal-look pass's close-ups (docs/ark/animal-look.md): one animal of the species, face to face from
          * three-quarters in front, as close as a viewer can come (the scene's 4 m floor; a small animal's own close
@@ -595,12 +683,22 @@ async function mountGolden(el: HTMLElement) {
             const polarFor = (at: NonNullable<ReturnType<typeof handle.locate>>) => (at.y < -0.3 ? 1.52 : 1.3);
             // Its middle where it is now (`ground` is its home spot's, not where a walk has taken it).
             const targetOf = (at: NonNullable<ReturnType<typeof handle.locate>>) => ({x: at.x, y: at.y - at.height * 0.05, z: at.z});
-            /** Nothing between the camera and the animal: no other animal's body, and the ground below the line. */
+            // The trunks, lamps and buildings the golden cameras stand clear of (`golden-world.ts`), near this species.
+            const firstAt = handle.locate(kin[0].id);
+            const trunks = goldenObstacles().filter((o) => !firstAt || Math.hypot(o.x - firstAt.x, o.z - firstAt.z) < 40);
+            /** Nothing between the camera and the animal: no trunk or wall, no other animal's body, the ground below the line. */
             const clear = (id: string, at: NonNullable<ReturnType<typeof handle.locate>>, azimuth: number) => {
                 const target = targetOf(at);
                 const distance = distanceFor(sizeOf(at));
                 const polar = polarFor(at);
                 const camera = {x: target.x + distance * Math.sin(polar) * Math.sin(azimuth), y: target.y + distance * Math.cos(polar), z: target.z + distance * Math.sin(polar) * Math.cos(azimuth)};
+                // The whole sight line (a trunk anywhere on it hides the animal), with a margin at the lens.
+                for (let t = 0; t < 0.97; t += 0.04) {
+                    const x = camera.x + (target.x - camera.x) * t;
+                    const z = camera.z + (target.z - camera.z) * t;
+                    const margin = t < 0.15 ? 0.35 : 0.05;
+                    for (const o of trunks) if (Math.hypot(o.x - x, o.z - z) < o.radius + margin) return false;
+                }
                 for (let t = 0.1; t < 0.95; t += 0.1) {
                     const x = camera.x + (target.x - camera.x) * t;
                     const z = camera.z + (target.z - camera.z) * t;
@@ -621,7 +719,7 @@ async function mountGolden(el: HTMLElement) {
                 }
                 return true;
             };
-            const turns = options.turn !== undefined ? [options.turn] : [0.55, -0.55, 0.95, -0.95, 0.2, -0.2, 1.4, -1.4];
+            const turns = options.turn !== undefined ? [options.turn] : [0.55, -0.55, 0.95, -0.95, 0.2, -0.2, 1.4, -1.4, 1.9, -1.9, 2.5, -2.5];
             let chosen: {id: string; turn: number} | null = null;
             for (const turn of turns) {
                 for (const row of kin) {

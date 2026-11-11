@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} a bordo",
             "closed": "Tarjeta cerrada",
             "motionReduced": "Movimiento reducido: lo que pasó se cuenta aquí en lugar de reproducirse.",
-            "skipToList": "Saltar a quién va a bordo"
+            "skipToList": "Saltar a quién va a bordo",
+            "resetView": "Volver a todo el Ark"
         },
         "person": {
             "metaTitle": "Los animales de {name} en el Ark",

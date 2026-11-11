@@ -217,7 +217,8 @@
             "herdSelected": "{animal}: {count} con trên tàu",
             "closed": "Đã đóng thẻ",
             "motionReduced": "Chuyển động đang được giảm: những gì đã xảy ra được kể ở đây thay vì phát lại.",
-            "skipToList": "Chuyển đến danh sách trên tàu"
+            "skipToList": "Chuyển đến danh sách trên tàu",
+            "resetView": "Quay lại toàn cảnh Ark"
         },
         "person": {
             "metaTitle": "Các con vật của {name} trên Ark",

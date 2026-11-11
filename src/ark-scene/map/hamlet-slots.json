@@ -1,0 +1,71 @@
+{
+ "about": "The hamlet's reserved plots past today's cottage and barn, in their fixed order (scripts/ark-map-hamlet.mts, map/hamlet.ts planHamletSlots). Append-only: homePlots() takes them in this order.",
+ "plots": [
+  {
+   "id": "smallholding-1",
+   "kind": "smallholding",
+   "x": 16,
+   "z": 37,
+   "rotation": -0.151,
+   "barn": true
+  },
+  {
+   "id": "house-1",
+   "kind": "house",
+   "x": 37,
+   "z": 40,
+   "rotation": -2.944
+  },
+  {
+   "id": "house-2",
+   "kind": "house",
+   "x": -2,
+   "z": 61,
+   "rotation": 4.434
+  },
+  {
+   "id": "house-3",
+   "kind": "house",
+   "x": 28,
+   "z": -17,
+   "rotation": -1.957
+  },
+  {
+   "id": "smallholding-2",
+   "kind": "smallholding",
+   "x": 31,
+   "z": -2,
+   "rotation": -0.934,
+   "barn": true
+  },
+  {
+   "id": "house-4",
+   "kind": "house",
+   "x": 46,
+   "z": 7,
+   "rotation": 0.738
+  },
+  {
+   "id": "house-5",
+   "kind": "house",
+   "x": 49,
+   "z": 34,
+   "rotation": 0.27
+  },
+  {
+   "id": "house-6",
+   "kind": "house",
+   "x": 52,
+   "z": -26,
+   "rotation": 0.199
+  },
+  {
+   "id": "smallholding-3",
+   "kind": "smallholding",
+   "x": 64,
+   "z": 28,
+   "rotation": -2.844,
+   "barn": true
+  }
+ ]
+}
