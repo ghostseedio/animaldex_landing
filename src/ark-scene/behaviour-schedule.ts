@@ -27,8 +27,9 @@
  */
 
 import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
-import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
-import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
+import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
+import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import type {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
@@ -147,7 +148,12 @@ export type ScheduleAnimal = {
     /** For a predator: its nearest prey's home, which it may stalk towards (never past its own range). */
     prey?: {x: number; z: number} | null;
     group?: ScheduleGroup | null;
+    /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
+    threats?: ScheduleThreat[] | null;
 };
+
+/** A predator as its prey sees it: its own schedule animal, profile and activity. */
+export type ScheduleThreat = {animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null | undefined};
 
 /** The hour (0–24) at a world time: the island clock, or a pinned hour. */
 export type HoursAt = (epochSeconds: number) => number;
@@ -245,7 +251,9 @@ const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
     wall: ["house_wall"],
     nest: ["branch", "shade"],
     attached: [],
-    open: []
+    open: [],
+    // Hauled out where the water meets the land (seals, sea lions, the walrus, penguins).
+    shore: ["water_edge", "rock_top"]
 };
 
 const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
@@ -266,13 +274,14 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     burrow_mouth: ["burrow_entrance"],
     reeds: ["reeds"],
     shade: ["shade"],
-    water_surface: ["pond_surface"]
+    water_surface: ["pond_surface"],
+    shore: ["water_edge"]
 };
 
 /** Which places each behaviour goes to (the first of its interactions that has one near home). */
 const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     drink: ["drink_edge"],
-    bask: ["bask_rock"],
+    bask: ["bask_rock", "shore"],
     graze: ["graze_grass"],
     forage: ["leaf_litter", "dig_soil", "graze_grass", "tide_pool", "flower", "bark", "wall", "water_surface"],
     perch: ["perch_branch", "perch_rock", "cliff_ledge"],
@@ -281,12 +290,61 @@ const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     hide: ["shade", "burrow_mouth", "reeds"],
     visit_flowers: ["flower"],
     circle_light: ["porch_light"],
-    rest: ["shade"]
+    rest: ["shore", "shade"]
 };
 
 export type ScheduleWorld = {sampler: ArkWorldSampler; nav: NavGrid};
 export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
     return {sampler, nav: navGrid(sampler)};
+}
+
+/**
+ * The shared schedule world (`worldSampler`'s places, then the walk grid) built a few milliseconds at a time between
+ * frames (`behaviour-build.ts`): the same world, to the bit, as `scheduleWorld(worldSampler())` all at once. `step`
+ * works for about its budget and returns the world once it is built; `spentMs` is the main-thread time it took.
+ */
+export class ScheduleWorldBuild {
+    private sampler: SlicedBuild<ArkWorldSampler> | null = worldSamplerBuild();
+    private nav: SlicedBuild<NavGrid> | null = null;
+    private world: ScheduleWorld | null = null;
+    spentMs = 0;
+    slices = 0;
+    /** The longest single slice (ms): the graphics lane's `allAttachPoints`, one task, sets it unless it was built already. */
+    longestMs = 0;
+
+    get done(): boolean {
+        return this.world !== null;
+    }
+
+    step(budgetMs: number): ScheduleWorld | null {
+        if (this.world) return this.world;
+        const started = typeof performance !== "undefined" ? performance.now() : Date.now();
+        const left = () => budgetMs - ((typeof performance !== "undefined" ? performance.now() : Date.now()) - started);
+        this.slices++;
+        if (this.sampler) {
+            const sampler = this.sampler.step(budgetMs);
+            if (sampler) {
+                this.sampler = null;
+                this.nav = navGridBuild(sampler);
+            }
+        }
+        if (this.nav && (left() > 0 || this.nav.done)) {
+            const nav = this.nav.step(Math.max(left(), 0));
+            if (nav) this.world = {sampler: worldSampler(), nav};
+        }
+        const took = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
+        this.spentMs += took;
+        this.longestMs = Math.max(this.longestMs, took);
+        return this.world;
+    }
+
+    /** Everything left, now. */
+    run(): ScheduleWorld {
+        for (;;) {
+            const world = this.step(Infinity);
+            if (world) return world;
+        }
+    }
 }
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
@@ -394,7 +452,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
         }
     }
     const seed = rng(hashString(`${animal.id}#roost`))();
-    const tags = ROOST_TAGS[profile.roost] ?? [];
+    // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < 0.02))) return spotOf(point);
@@ -440,7 +499,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 
@@ -587,6 +646,17 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
     const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), (group.leader.range ?? Infinity) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;
+    // Shared wariness (visual only; flee-envelope.md §6.3.3): a predator it can see at its slot's start, awake, from the
+    // predator's own schedule (the same for every viewer), sends it to the far side of its range to watch it. Near the
+    // camera the local layer (`reactive.ts`) adds the look, the alarm and any dash on top. (Its own seeded stream: an
+    // animal with no predator in sight chooses exactly as before.)
+    const threat = threatAt(world, animal, start, hoursAt, centre);
+    if (threat) {
+        const wary = rng(hashString(`${animal.id}#wary#${slot}`));
+        const away = {x: centre.x + ((centre.x - threat.x) / threat.d) * radius * 0.7, z: centre.z + ((centre.z - threat.z) / threat.d) * radius * 0.7};
+        const spot = rangeSpot(world, profile, groupAnimal, away, Math.max(radius * 0.25, 0.5), wary);
+        return {doing: "watch", to: spot, mode: aquatic(profile) ? "water" : profile.move === "fly" ? "air" : "ground", stay: stayBeats("watch", wary, null), face: Math.atan2(threat.x - spot.x, threat.z - spot.z)};
+    }
     if (watchTurn) {
         // At the group's edge, facing out.
         const spot = rangeSpot(world, profile, groupAnimal, centre, radius * 0.9, random);
@@ -623,7 +693,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const placeKinds = doing === "browse" ? (["shade", "perch_branch"] as ArkInteraction[]) : BEHAVIOUR_PLACES[behaviour];
     if (placeKinds) {
         for (const place of placeKinds) {
-            if (!profile.interactions.includes(place) && behaviour !== "rest" && doing !== "browse") continue;
+            // Anyone may rest in the shade; every other place is the animal's own (a seal's shore, a lizard's rock).
+            if (!profile.interactions.includes(place) && !(behaviour === "rest" && place === "shade") && doing !== "browse") continue;
             const tags = INTERACTION_TAGS[place] ?? [];
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
@@ -631,15 +702,18 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
             const point = placeNear(world, centre, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * 1.4, cap), random());
             if (point) {
                 const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
-                // A patch of ground (grass, shade, the water's edge, the litter): each animal stands its own place in it,
-                // so a herd spreads over the grass instead of stacking on one point.
-                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "water_edge" ? 0.9 : 0;
+                // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
+                // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
+                // point or standing in the ledges' even row.
+                const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "cliff_ledge" ? 1.8 : point.tag === "rock_top" ? 1 : point.tag === "water_edge" ? 0.9 : 0;
                 if (spread && !up) {
                     const a = random() * Math.PI * 2;
                     const r = spread * (0.25 + 0.75 * Math.sqrt(random())) * Math.max(Math.min(animal.length, 2), 0.3);
                     const x = point.x + Math.cos(a) * r;
                     const z = point.z + Math.sin(a) * r;
-                    if (world.nav.walkable(x, z, maxSlopeOf(animal)) && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
+                    // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
+                    const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
+                    if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
                         return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(doing, random, null)};
                     }
                 }
@@ -746,7 +820,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
  */
 function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, now: Intent): {beats: StayBeat[]; finish: Spot} | null {
     if (!now.to) return null;
-    const yaw = rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
+    const yaw = now.face ?? rng(hashString(`${animal.id}#yaw#${slot}`))() * Math.PI * 2;
     return placeStay(world, profile, animal, now.to, yaw, now.stay, Infinity);
 }
 
@@ -849,6 +923,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const mid = alongPath(path, 0.4 + random() * 0.2);
             const midSpot = groundSpot(world, mid.x, mid.z);
             const firstPath = world.nav.path(a, midSpot, "walk", 0.5, 400, maxSlopeOf(animal));
+            // Each half ends where it is going even when the grid can't reach it (from the water, say): it used to stop
+            // short and take no time at all, and the animal jumped to the pause.
+            if (Math.hypot(firstPath[firstPath.length - 1].x - midSpot.x, firstPath[firstPath.length - 1].z - midSpot.z) > 0.01) firstPath.push({x: midSpot.x, z: midSpot.z});
             const secondPath = world.nav.path(midSpot, b, "walk", 0.5, 400, maxSlopeOf(animal));
             if (Math.hypot(secondPath[secondPath.length - 1].x - b.x, secondPath[secondPath.length - 1].z - b.z) > 0.01) secondPath.push({x: b.x, z: b.z});
             const l1 = pathLength(firstPath);
@@ -880,7 +957,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const toWet = wet(world, to);
             if (amphibious(profile) && fromWet !== toWet) {
                 // Into the water at an edge, or out of it at one: walk to the edge, slide in (or swim to it, climb out).
-                const edge = edgeNear(toWet ? from : to);
+                const edge = edgeNear(toWet ? from : to) ?? edgeNear(toWet ? to : from);
                 if (edge) {
                     const out = {x: edge.x + Math.sin(edgeYaw(world, edge)) * Math.max(animal.length, 0.6), z: edge.z + Math.cos(edgeYaw(world, edge)) * Math.max(animal.length, 0.6)};
                     const offshore = waterSpot(world, profile, animal, out.x, out.z, () => 0.3);
@@ -897,7 +974,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                     break;
                 }
             }
-            if (mode === "water" || (fromWet && toWet)) water(from, to);
+            // Over land it walks, in the water it swims: one that does both (a seal, a penguin) goes by the ground under it.
+            if ((mode === "water" && !amphibious(profile)) || (fromWet && toWet)) water(from, to);
             else ground(from, to);
             break;
         }
@@ -1158,13 +1236,51 @@ export function airborneDoing(doing: ArkDoing): boolean {
 
 // MARK: Predators and prey
 
+/** How far a prey animal notices a predator in the shared layer (about the reactive layer's sight for a walking hunter by day). */
+export const WARY_METRES = 35;
+
+/**
+ * The nearest of its predators it can see at a moment (awake, within `WARY_METRES` of where it is about), or null.
+ * Pure: the predator's own schedule, which never depends on its prey's.
+ */
+export function threatAt(world: ScheduleWorld, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, near: {x: number; z: number} = animal.home): {x: number; z: number; d: number} | null {
+    if (!animal.threats?.length) return null;
+    let best: {x: number; z: number; d: number} | null = null;
+    for (const threat of animal.threats) {
+        const trip = tripAt(world, threat.profile, threat.animal, epochSeconds, hoursAt, threat.activity);
+        if (trip.doing === "sleep" || trip.doing === "to_roost") continue;
+        const at = poseOnTrip(world, trip, epochSeconds);
+        const d = Math.hypot(at.x - near.x, at.z - near.z);
+        if (d < WARY_METRES && d > 0.01 && (!best || d < best.d)) best = {x: at.x, z: at.z, d};
+    }
+    return best;
+}
+
+/**
+ * Each animal's predators (`ScheduleAnimal.threats`), from the food links: only top predators (ones nothing aboard
+ * eats), so no schedule ever waits on one that waits on it. Call after the homes are spaced; then `forgetSchedules`.
+ */
+export function wireThreats(list: Array<{slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null | undefined}>, eats: (predator: string, prey: string) => boolean) {
+    const slugs = Array.from(new Set(list.map((i) => i.slug)));
+    const hunters = slugs.filter((p) => slugs.some((q) => q !== p && eats(p, q)));
+    const top = new Set(hunters.filter((p) => !slugs.some((q) => q !== p && eats(q, p))));
+    const tops = list.filter((i) => top.has(i.slug));
+    for (const i of list) {
+        const threats = tops.filter((p) => p !== i && p.slug !== i.slug && eats(p.slug, i.slug)).map((p) => ({animal: p.animal, profile: p.profile, activity: p.activity}));
+        i.animal.threats = threats.length ? threats : null;
+    }
+}
+
+/** The least a predator is kept from an animal it eats (or that eats it), beyond both their reaches: 20 m (owner's problem 6). */
+export const SAFE_METRES = 20;
+
 export type HomeInput = {id: string; slug: string; home: {x: number; z: number}; length: number; walkable: (x: number, z: number) => boolean};
 export type SpacedHome = {home: {x: number; z: number}; range: number | null; prey: {x: number; z: number} | null};
 
 /**
  * Predators' home ranges kept a safe distance from their prey's (visual only; the server decides every meal).
  * `reachOf(id)` is how far an animal (a leader with its group round it) can get from its home. A predator whose reach
- * comes within the safe distance (6 body lengths, at least 10 m) of the reach of an animal it eats (or of one that
+ * comes within the safe distance (6 body lengths, at least `SAFE_METRES`) of the reach of an animal it eats (or of one that
  * eats it) is moved to the nearest clear walkable spot, searching outward to 120 m; where none is clear, it goes to
  * the clearest spot found and both ranges shrink until they keep the distance. Biggest predators first. Returns the
  * moved homes and range caps (prey whose range shrank are in it too, with their own home).
@@ -1178,7 +1294,7 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
         const prey = animals.filter((other) => other.id !== predator.id && eats(predator.slug, other.slug));
         if (!prey.length) continue;
         const enemies = animals.filter((other) => other.id !== predator.id && (eats(predator.slug, other.slug) || eats(other.slug, predator.slug)));
-        const safeTo = (other: HomeInput) => Math.max(10, Math.max(predator.length, other.length) * 6);
+        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
         const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
         const start = home.get(predator.id)!;
