@@ -636,3 +636,26 @@ test("the garden pond: a land animal drinks at its edge, never stands in it nor 
     }
     assert.ok(near > 0 && drinks > 0, `near ${near}, drinks ${drinks}`);
 });
+
+test("on the ground nothing moves backwards: never 5 s in a row going more than 90 degrees off the way it faces", () => {
+    // (The default view's house sparrow went backwards for 5 s: a flock member sliding to its slot's finish, and a slow
+    // walker facing round a corner of its path while it still walked to it.)
+    const angle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const backwards: string[] = [];
+    let moving = 0;
+    for (const i of animals) {
+        let run = 0;
+        let prev = poseOf(i, DAY + 6 * 3600);
+        for (let s = 1; s < 3 * 3600; s++) {
+            const p = poseOf(i, DAY + 6 * 3600 + s);
+            const d = Math.hypot(p.x - prev.x, p.z - prev.z);
+            const onGround = !p.aloft && !prev.aloft && p.y >= -0.01 && d > 0.03;
+            if (onGround) moving++;
+            run = onGround && Math.abs(angle(Math.atan2(p.x - prev.x, p.z - prev.z) - p.yaw)) > Math.PI / 2 ? run + 1 : 0;
+            if (run === 5) backwards.push(`${i.a.model_slug} at ${s} s (${p.beat})`);
+            prev = p;
+        }
+    }
+    assert.ok(moving > 10000, `moving ${moving}`);
+    assert.deepEqual(backwards.slice(0, 8), [], `${backwards.length} backwards runs`);
+});

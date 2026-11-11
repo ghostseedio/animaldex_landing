@@ -283,6 +283,62 @@ export class NavGrid {
     heightAt(x: number, z: number): number {
         return this.sampler.heightAt(x, z);
     }
+
+    /** Each walk cell's connected stretch of ground (no steeper than the slope), worked out once per slope. */
+    private readonly regions = new Map<number, Int32Array>();
+
+    /**
+     * Which connected stretch of walkable ground a point is on, for a walker that takes slopes up to `maxSlope` (cells
+     * joined as the path search joins them: the 8 round each): -1 off any. A point on a blocked cell (a drinking spot by
+     * the pond, the foot of a rock) is on its walkable neighbours' stretch (the lowest number of them). Anything on one
+     * stretch can walk to anything else on it.
+     */
+    region(x: number, z: number, maxSlope = MAX_SLOPE): number {
+        let ids = this.regions.get(maxSlope);
+        if (!ids) {
+            ids = new Int32Array(SIZE * SIZE).fill(-1);
+            const ok = (k: number) => this.walk[k] === 1 && this.steep[k] <= maxSlope;
+            const stack: number[] = [];
+            let next = 0;
+            for (let k0 = 0; k0 < SIZE * SIZE; k0++) {
+                if (ids[k0] >= 0 || !ok(k0)) continue;
+                ids[k0] = next;
+                stack.push(k0);
+                while (stack.length) {
+                    const k = stack.pop()!;
+                    const i = k % SIZE;
+                    const j = (k - i) / SIZE;
+                    for (let dj = -1; dj <= 1; dj++) {
+                        for (let di = -1; di <= 1; di++) {
+                            const ni = i + di;
+                            const nj = j + dj;
+                            if ((!di && !dj) || ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
+                            const nk = nj * SIZE + ni;
+                            if (ids[nk] >= 0 || !ok(nk)) continue;
+                            ids[nk] = next;
+                            stack.push(nk);
+                        }
+                    }
+                }
+                next++;
+            }
+            this.regions.set(maxSlope, ids);
+        }
+        const [ci, cj] = this.cellOf(x, z);
+        const own = ids[cj * SIZE + ci];
+        if (own >= 0) return own;
+        let best = -1;
+        for (let dj = -1; dj <= 1; dj++) {
+            for (let di = -1; di <= 1; di++) {
+                const i = ci + di;
+                const j = cj + dj;
+                if (i < 0 || j < 0 || i >= SIZE || j >= SIZE) continue;
+                const id = ids[j * SIZE + i];
+                if (id >= 0 && (best < 0 || id < best)) best = id;
+            }
+        }
+        return best;
+    }
 }
 
 let grid: NavGrid | null = null;
