@@ -199,7 +199,8 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     wall: ["house_wall"],
     burrow_mouth: ["burrow_entrance"],
     reeds: ["reeds"],
-    shade: ["shade"]
+    shade: ["shade"],
+    water_surface: ["pond_surface"]
 };
 
 /** Which places each behaviour goes to (the first of its interactions that has one near home). */
@@ -207,7 +208,7 @@ const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     drink: ["drink_edge"],
     bask: ["bask_rock"],
     graze: ["graze_grass"],
-    forage: ["leaf_litter", "dig_soil", "graze_grass", "tide_pool", "flower", "bark", "wall"],
+    forage: ["leaf_litter", "dig_soil", "graze_grass", "tide_pool", "flower", "bark", "wall", "water_surface"],
     perch: ["perch_branch", "perch_rock", "cliff_ledge"],
     climb: ["perch_branch", "bark"],
     burrow: ["burrow_mouth", "dig_soil"],

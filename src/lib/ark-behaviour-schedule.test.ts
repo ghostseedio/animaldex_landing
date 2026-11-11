@@ -4,12 +4,12 @@ import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow} from "@/ark-scene/behaviour-profile";
 import {awakeAt, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, SLOT_SECONDS, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
-import {stubSampler} from "@/ark-scene/world-sampler";
+import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
 
-const world = scheduleWorld(stubSampler());
+const world = scheduleWorld(sceneSampler());
 const snapshot = decodeArkSnapshot(fixtureV2)!;
 const places = placeAnimals(snapshot.animals);
 const SEA = new Set(["coral_reef", "open_ocean"]);
@@ -33,7 +33,7 @@ test("every profile row decodes to known behaviours and places", () => {
 });
 
 test("deterministic: the same time and id give the same trip, from a freshly built world too", () => {
-    const again = scheduleWorld(stubSampler());
+    const again = scheduleWorld(sceneSampler());
     for (const {animal, profile, a} of animals.slice(0, 40)) {
         for (const h of [2, 7.5, 13, 19]) {
             const t = DAY + h * 3600 + 17;
@@ -114,7 +114,7 @@ test("walkers stay on walkable ground, swimmers in the water, flyers in their he
             if (profile.altitude && pose.aloft && (trip.doing === "fly" || trip.doing === "soar")) bands[profile.altitude].push(pose.y - Math.max(world.sampler.heightAt(pose.x, pose.z), 0));
         }
     }
-    assert.ok(walking > 200 && off.length / walking < 0.03, `${off.length} of ${walking} walking samples off the grid: ${[...new Set(off)].join(", ")}`);
+    assert.ok(walking > 200 && off.length / walking < 0.03, `${off.length} of ${walking} walking samples off the grid: ${Array.from(new Set(off)).join(", ")}`);
     const median = (v: number[]) => [...v].sort((x, y) => x - y)[Math.floor(v.length / 2)] ?? 0;
     if (bands.mid.length && bands.high.length) assert.ok(median(bands.high) > median(bands.mid), `high ${median(bands.high)} vs mid ${median(bands.mid)}`);
 });
