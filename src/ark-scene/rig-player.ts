@@ -84,8 +84,6 @@ export type RigModel = {
     flightOpen: boolean;
     /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
     look: RigLookChain | null;
-    /** Its neck (the look chain's neck bone and rest joint), for the material's look; null without one. */
-    neck: {bone: number; pivot: [number, number, number]} | null;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
 };
@@ -250,6 +248,16 @@ export class RigLibrary {
     /** The sets read (folder, version, flight, how many species), for the debug overlay and tests. */
     get setSummary(): {base: string; version: number; flight: boolean; species: number}[] {
         return this.sets.map((set) => ({base: set.base, version: set.version, flight: set.flight, species: Object.keys(set.index).length}));
+    }
+
+    /**
+     * Whether this species' rig may fly (and so is worth drawing in the air): a loaded rig that flies, or, before
+     * it loads, a species whose first set publishes flight.
+     */
+    mayFly(slug: string): boolean {
+        const model = this.models.get(slug);
+        if (model) return rigFlies(model);
+        return !this.failed.has(slug) && Boolean(this.choices?.get(slug)?.[0]?.flight);
     }
 
     /** Whether a set lists a rig for this species (one that has not failed to load from every set). */
@@ -426,7 +434,6 @@ export class RigLibrary {
             flight,
             flightOpen: entry.flight_fallback_open === true,
             look,
-            neck: look && look.neck >= 0 ? {bone: look.neck, pivot: look.neckPivot} : null,
             usedAt: 0
         });
         this.onLoad(slug);
@@ -442,10 +449,6 @@ export class RigLibrary {
         this.models.clear();
     }
 }
-
-/** The head-look's bones: the v1 rigs name them `neck` and `head` (the rigging lane's manifest will name the chain). */
-const NECK_NAMES = ["neck", "neck0", "neck_0"];
-const HEAD_NAMES = ["head", "head0", "head_0"];
 
 /**
  * The skinned mesh in its rest pose, in the model's space (what the bone
@@ -475,10 +478,6 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
     const normals = new Float32Array(count * 3);
     const joints = new Uint8Array(count * 4);
     const weights = new Float32Array(count * 4);
-    // How much each vertex turns with the head look: all of the head, most of the neck.
-    const headShare = new Float32Array(count);
-    const headBone = boneNames.findIndex((name) => HEAD_NAMES.includes(name.toLowerCase()));
-    const neckBone = boneNames.findIndex((name) => NECK_NAMES.includes(name.toLowerCase()));
     for (let i = 0; i < count; i++) {
         blended.set(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         let total = 0;
@@ -487,8 +486,6 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
             const j = skinIndex.getComponent(i, k);
             joints[i * 4 + k] = remap[j] ?? 0;
             weights[i * 4 + k] = w;
-            if (remap[j] === headBone && headBone >= 0) headShare[i] += w;
-            else if (remap[j] === neckBone && neckBone >= 0) headShare[i] += w * 0.6;
             total += w;
             if (w <= 0 || !jointMatrices[j]) continue;
             weighted.copy(jointMatrices[j]);
@@ -498,7 +495,6 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
         }
         if (total > 0 && Math.abs(total - 1) > 1e-3) {
             for (let k = 0; k < 4; k++) weights[i * 4 + k] /= total;
-            headShare[i] /= total;
             const out = blended.elements;
             for (let m = 0; m < 16; m++) out[m] /= total;
         }
@@ -529,7 +525,6 @@ function restGeometry(mesh: SkinnedMesh, boneNames: string[]): BufferGeometry {
     }
     geometry.setAttribute("arkJoints", new BufferAttribute(joints, 4));
     geometry.setAttribute("arkWeights", new BufferAttribute(weights, 4));
-    geometry.setAttribute("arkHead", new BufferAttribute(headShare, 1));
     const index = source.getIndex();
     if (index) geometry.setIndex(new BufferAttribute(index.array.slice(0), 1));
     if (!normal) geometry.computeVertexNormals();
@@ -550,12 +545,18 @@ export type RigState = {
     from: RigPlay | null;
     fade: number;
     last: Vector3 | null;
+    /** In the air on its rig (from its take-off until its landing has played). */
+    flying: boolean;
+    /** Its path's climb angle (radians, + up) and turn rate (radians a second, + left), eased; its last heading. */
+    climb: number;
+    turn: number;
+    yaw: number | null;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */
@@ -596,7 +597,7 @@ export function cyclesFor(clip: RigClip, distance: number): number {
  * rest mesh's middle. A leap carries its body forward in the clip; the scene
  * already moves it along its path, so it takes this off.
  */
-export function rootOffset(model: RigModel, clip: RigClipData, phase: number, out: Vector3): Vector3 {
+export function rootOffset(model: RigModel, clip: RigClipData, phase: number, out: Vector3, fromRest = false): Vector3 {
     const [r0, r1, t] = clipRows(clip, phase);
     const c = model.centre;
     const at = (row: number, axis: number) => {
@@ -607,13 +608,28 @@ export function rootOffset(model: RigModel, clip: RigClipData, phase: number, ou
     const first = clip.row;
     for (let axis = 0; axis < 3; axis++) {
         const value = at(r0, axis) * (1 - t) + at(r1, axis) * t;
-        // From where the clip began (its first frame), so a clip that starts in place adds nothing then.
-        const start = at(first, axis);
+        // From where the clip began (its first frame), so a clip that starts in place adds nothing then; or from the
+        // rest pose (a landing or a climb out of the water ends there, it does not start there).
+        const start = fromRest ? (axis === 0 ? c.x : axis === 1 ? c.y : c.z) : at(first, axis);
         if (axis === 0) out.x = value - start;
         else if (axis === 1) out.y = value - start;
         else out.z = value - start;
     }
     return out;
+}
+
+/**
+ * Clips whose own root motion the scene's path already makes: take-off and
+ * landing rise and come down on the path, and the bank's way into and out
+ * of the water goes where the schedule (and the depth band) puts it. The
+ * scene takes the clip's body offset from the rest pose off, so the body
+ * keeps to its path while the clip moves its legs, wings and back.
+ */
+export const PATH_CARRIED_CLIPS: ReadonlySet<string> = new Set(["takeoff", "land", "enter_water", "exit_water"]);
+
+/** Whether a loaded rig flies: its flight is approved and it has a flap or an open-wing clip to fly with. */
+export function rigFlies(model: Pick<RigModel, "flight" | "clips">): boolean {
+    return model.flight && (Boolean(model.clips.flap) || OPEN_WING_CLIPS.some((name) => Boolean(model.clips[name])));
 }
 
 // MARK: Choosing clips
