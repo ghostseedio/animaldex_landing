@@ -30,7 +30,8 @@ import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropI
 import {caveSite, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
-import {chimneyTop, coopSpot, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {barnBase, buildHamletBuildings, type HamletBuildings} from "@/ark-scene/props/hamlet-buildings";
+import {barnStyle, chimneyTop, cottageStyle, coopSpot, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -43,6 +44,8 @@ export type Areas = {
     chimney: Vector3;
     /** The troughs' and the paddock's middle (for shots). */
     farm: Vector3;
+    /** The hamlet's buildings past today's cottage and barn (`hamlet-buildings.ts`): their windows light up at night. */
+    buildings: HamletBuildings;
     /** Where things are (for the golden shots): the highest outcrop with scree below it. */
     marks: Record<string, {x: number; y: number; z: number}>;
     dispose: () => void;
@@ -78,6 +81,11 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
     const random = plot.id === "house-0" ? propRandom("garden") : frame.random("garden");
     const house = (x: number, y: number, z: number) => new Vector3(x, frame.floor + y, z);
     const G = (x: number, z: number) => frame.ground(x, z);
+    // What hangs on the house (gutters, downpipe, moss, the bird box) is built in the house's own frame (y over its
+    // floor) and scaled with the plot's cottage (home-layout.ts cottageStyle: 0.9–1 of today's).
+    const k = cottageStyle(plot).scale;
+    const attached: BufferGeometry[] = [];
+    const onHouse = (x: number, y: number, z: number) => new Vector3(x, y, z);
     const parts: BufferGeometry[] = [];
     const farParts: BufferGeometry[] = [];
 
@@ -87,25 +95,25 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
         const gutter = new CylinderGeometry(0.07, 0.07, C.width + C.overhang * 2, 8, 1, true, 0, Math.PI);
         gutter.rotateZ(Math.PI / 2);
         gutter.rotateX(Math.PI);
-        const at = house(0, eaveY, side * (halfD + C.overhang + 0.04));
-        parts.push(paint(place(gutter, at.x, at.y, at.z), "#5b5f63", () => 0.9));
+        const at = onHouse(0, eaveY, side * (halfD + C.overhang + 0.04));
+        attached.push(paint(place(gutter, at.x, at.y, at.z), "#5b5f63", () => 0.9));
     }
-    const pipeTop = house(halfW - 0.1, eaveY - 0.05, halfD + 0.09);
+    const pipeTop = onHouse(halfW - 0.1, eaveY - 0.05, halfD + 0.09);
     const pipe = new CylinderGeometry(0.04, 0.04, eaveY + 0.1, 8);
-    parts.push(paint(place(pipe, pipeTop.x, frame.floor + (eaveY - 0.1) / 2 - 0.05, pipeTop.z), "#5b5f63"));
+    attached.push(paint(place(pipe, pipeTop.x, (eaveY - 0.1) / 2 - 0.05, pipeTop.z), "#5b5f63"));
     const elbow = new CylinderGeometry(0.04, 0.04, C.overhang + 0.05, 8);
     elbow.rotateX(Math.PI / 2);
-    parts.push(paint(place(elbow, pipeTop.x, pipeTop.y, pipeTop.z + C.overhang / 2), "#5b5f63"));
+    attached.push(paint(place(elbow, pipeTop.x, pipeTop.y, pipeTop.z + C.overhang / 2), "#5b5f63"));
     const butt = new CylinderGeometry(0.32, 0.3, 0.85, 14);
-    const buttAt = house(halfW + 0.3, 0, halfD + 0.25);
+    const buttAt = house((halfW + 0.3) * k, 0, (halfD + 0.25) * k);
     parts.push(paint(place(butt, buttAt.x, G(buttAt.x, buttAt.z) + 0.42, buttAt.z), "#3d5a3e", (y) => 0.8 + 0.3 * (y + 0.4)));
 
     // Weathering: rain streaks under the front windows, moss along the plinth, moss cushions on the roof.
     for (const [sx, sz, length, turn] of [[0, halfD, C.width, 0], [0, -halfD, C.width, 0], [halfW, 0, C.depth, Math.PI / 2], [-halfW, 0, C.depth, Math.PI / 2]] as const) {
         const moss = new BoxGeometry(length + 0.14, 0.12, 0.03);
         moss.rotateY(turn);
-        const at = house(sx + Math.sign(sx) * 0.07, 0.02, sz + Math.sign(sz) * 0.07);
-        parts.push(paint(place(moss, at.x, at.y, at.z), "#5e7a3a", (_, i) => 0.7 + ((i * 7) % 9) / 30));
+        const at = onHouse(sx + Math.sign(sx) * 0.07, 0.02, sz + Math.sign(sz) * 0.07);
+        attached.push(paint(place(moss, at.x, at.y, at.z), "#5e7a3a", (_, i) => 0.7 + ((i * 7) % 9) / 30));
     }
     // Moss cushions on the roof: low clumps of small lumps in the lower, damper half, dark olive with lighter tips.
     const mossTones = ["#4f6430", "#5d7334", "#6e7f3c", "#56602f"];
@@ -122,17 +130,18 @@ function garden(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; chi
             lump.rotateX(side * slope);
             const dx = (random() - 0.5) * 0.22;
             const dr = (random() - 0.5) * 0.18;
-            const at = house(x + dx, roofHeight(fromRidge + dr) + ROOF_THICKNESS - 0.01, side * (fromRidge + dr));
+            const at = onHouse(x + dx, roofHeight(fromRidge + dr) + ROOF_THICKNESS - 0.01, side * (fromRidge + dr));
             const tone = mossTones[Math.floor(random() * mossTones.length)];
-            parts.push(paint(place(lump, at.x, at.y, at.z), tone, (y) => 0.8 + 0.25 * Math.min(Math.max((y - at.y) * 12 + 0.5, 0), 1)));
+            attached.push(paint(place(lump, at.x, at.y, at.z), tone, (y) => 0.8 + 0.25 * Math.min(Math.max((y - at.y) * 12 + 0.5, 0), 1)));
         }
     }
 
     // The bird box on the east wall, facing out.
     const box = shapes.birdBox();
     box.rotateY(Math.PI / 2);
-    const boxAt = house(halfW + 0.005, 1.95, -0.9);
-    parts.push(place(box, boxAt.x, boxAt.y, boxAt.z));
+    const boxAt = onHouse(halfW + 0.005, 1.95, -0.9);
+    attached.push(place(box, boxAt.x, boxAt.y, boxAt.z));
+    parts.push(merge(attached).scale(k, k, k).translate(0, frame.floor, 0));
 
     // The path: flagstones from the porch to the gate.
     const pathFrom = halfD + C.porch.depth + 0.25;
@@ -303,18 +312,21 @@ function farm(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; centr
     farParts.push(paint(place(new BoxGeometry(3.4, 1.4, 4), shelter.x, sg + 0.7, shelter.z, turn), "#c9a95e"));
 
     // The barn's loft door, open on its east gable, hay spilling from it.
-    if (plot.barn) {
-        const loft = at(3.24, 0);
-        const bg = b.y;
+    // (A farm shed has no loft; another plot's barn has its own size and colour: home-layout.ts barnStyle.)
+    const look = barnStyle(plot);
+    if (plot.barn && !look.shed) {
+        const [sx, sy] = look.size;
+        const loft = at(3.24 * sx, 0);
+        const bg = plot.id === "smallholding-0" ? b.y : barnBase(plot, look.size);
         const dark = new BoxGeometry(0.06, 0.9, 1.1);
-        parts.push(paint(place(dark, loft.x, bg + 3.75, loft.z, turn), "#1b140e"));
+        parts.push(paint(place(dark, loft.x, bg + 3.75 * sy, loft.z, turn), "#1b140e"));
         const hayLip = new BoxGeometry(0.3, 0.25, 1.0, 2, 2, 2);
         lumpy(hayLip, 0.2, random);
-        const lip = at(3.36, 0);
-        parts.push(paint(place(hayLip, lip.x, bg + 3.35, lip.z, turn), "#d9b765", (_, i) => 0.85 + ((i * 5) % 7) / 40));
+        const lip = at(3.36 * sx, 0);
+        parts.push(paint(place(hayLip, lip.x, bg + 3.35 * sy, lip.z, turn), "#d9b765", (_, i) => 0.85 + ((i * 5) % 7) / 40));
         const door = new BoxGeometry(0.05, 0.9, 0.55);
-        const doorAt = at(3.3, 0.85);
-        parts.push(wood(place(door, doorAt.x, bg + 3.75, doorAt.z, turn + 0.9), "#9b4b36"));
+        const doorAt = at(3.3 * sx, 0.85 * sx);
+        parts.push(wood(place(door, doorAt.x, bg + 3.75 * sy, doorAt.z, turn + 0.9), look.wall));
     }
 
     // The paddock: beside the barn, post and rail, a gate gap toward the yard (home-layout.ts: the same posts the sampler lists).
@@ -526,6 +538,9 @@ export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots
     addBatch(new LodBatch("mud", farms.flatMap(({built}) => built.mud), shapes.heap(0.9, 0.025, "#4f3c2b", 61, 0.05), null, mudMaterial, {cap: 20 * Math.max(farms.length, 1), reach: 1.1}));
     const puddles = addBatch(new LodBatch("puddles", [...gardens.flatMap(({built}) => built.puddles), ...farms.flatMap(({built}) => built.puddles)], shapes.puddle(1), null, puddleMaterial, {cap: 16, reach: 1.2}));
     puddles.hidden = true;
+    // The other plots' cottages and barns (today's two are the graphics lane's).
+    const buildings = buildHamletBuildings(plots);
+    group.add(buildings.group);
     const firstGarden = gardens[0]?.built;
     const firstFarm = farms[0]?.built;
 
@@ -549,6 +564,7 @@ export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots
         group,
         batches,
         pieces,
+        buildings,
         chimney: firstGarden?.chimney ?? new Vector3(0, -100, 0),
         farm: firstFarm?.centre ?? new Vector3(0, -100, 0),
         marks: {...(firstGarden ? {chimney: firstGarden.chimney} : {}), ...(firstFarm ? {farm: firstFarm.centre, coop: new Vector3(firstFarm.coop.x, firstFarm.coop.y, firstFarm.coop.z)} : {}), ...barnMark(), ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
@@ -565,6 +581,7 @@ export function buildAreas(tier: PropsTier, plots: HomePlot[] = defaultHomePlots
         dispose: () => {
             for (const batch of batches) batch.dispose();
             for (const piece of pieces) piece.dispose();
+            buildings.dispose();
             for (const material of [warm, cold, snow, foliage, water, puddleMaterial, mudMaterial]) material.dispose();
             void GARDEN_POND;
         }

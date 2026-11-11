@@ -34,7 +34,7 @@
 
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import {coopSpot, defaultHomePlots, GARDEN, homeObstacles, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
-import {cropAt} from "@/ark-scene/fields";
+import {fieldCropAt} from "@/ark-scene/fields";
 import {bodyOf} from "@/ark-scene/map/species";
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -138,7 +138,7 @@ function fitness(plot: HomePlot, middle: {x: number; z: number}): number | null 
             if (g.land < 0.9 || g.height < 0.4 || riverDistance(w.x, w.z) < 3) return null;
             lo = Math.min(lo, g.height);
             hi = Math.max(hi, g.height);
-            if (cropAt(w.x, w.z)) crops++;
+            if (fieldCropAt(w.x, w.z)) crops++;
         }
     }
     if (hi - lo > (plot.kind === "house" ? 2.5 : 3.5)) return null;

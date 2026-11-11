@@ -398,10 +398,20 @@ function lily(): BufferGeometry {
 // `reef-render.ts` draws them (real shapes, near and far versions, the shared surge). The decor's old coral domes and
 // kelp cards are no longer drawn.
 
-function barn(): BufferGeometry {
-    const wall = new Color("#9b4b36");
-    const roof = new Color("#4d4440");
-    const trim = new Color("#efe6d6");
+/** A barn's look: its colours and its size against today's (length, height, width). */
+export type BarnStyle = {wall: string; roof: string; trim: string; size: [number, number, number]};
+
+/** Today's barn (the decor's `barn`). */
+export const BARN_STYLE: BarnStyle = {wall: "#9b4b36", roof: "#4d4440", trim: "#efe6d6", size: [1, 1, 1]};
+
+/**
+ * The barn's mesh, or a variant of it (the props lane's hamlet: another plot's barn or a smaller farm shed). With
+ * `BARN_STYLE` it is today's barn, byte for byte (`ark-props.test`).
+ */
+export function barnGeometry(style: BarnStyle = BARN_STYLE): BufferGeometry {
+    const wall = new Color(style.wall);
+    const roof = new Color(style.roof);
+    const trim = new Color(style.trim);
     const body = new BoxGeometry(6.4, 3.2, 4.4);
     body.translate(0, 1.6, 0);
     // The roof: a prism over the long side.
@@ -422,12 +432,19 @@ function barn(): BufferGeometry {
     door.translate(0, 1.15, 2.22);
     const doorTrim = new BoxGeometry(2.1, 2.55, 0.06);
     doorTrim.translate(0, 1.27, 2.21);
-    return mergeGeometries([
+    const merged = mergeGeometries([
         finish(body, (_, t) => 0.8 + 0.25 * t, 0, wall),
         finish(roofShape, () => 1, 0, roof),
         finish(doorTrim, () => 1, 0, trim),
         finish(door, () => 0.75, 0, wall)
     ])!;
+    const [sx, sy, sz] = style.size;
+    if (sx !== 1 || sy !== 1 || sz !== 1) merged.scale(sx, sy, sz);
+    return merged;
+}
+
+function barn(): BufferGeometry {
+    return barnGeometry();
 }
 
 function hay(): BufferGeometry {

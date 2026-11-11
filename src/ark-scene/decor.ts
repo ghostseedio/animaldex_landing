@@ -14,6 +14,7 @@
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {cropsGrowAt} from "@/ark-scene/fields";
+import {hamletKeeps} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -311,7 +312,9 @@ export function grassTufts(count: number): GrassTuft[] {
         if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
         // Not among the crops (graphics batch 5): meadow grass keeps to the fields' margins and the pasture. The draws
         // a tuft would take (scale, turn, dryness) are still taken, so the grass everywhere else stays where it was.
-        if (cropsGrowAt(x, z)) {
+        // Nor on the hamlet's reserved plots: none under a house or a barn, about half on the rest of a plot
+        // (props/hamlet-land.ts; a hash, not a draw, so every other tuft stays where it was).
+        if (cropsGrowAt(x, z) || !hamletKeeps(x, z, (Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1))) {
             random();
             random();
             if (zone !== "mountains") random();

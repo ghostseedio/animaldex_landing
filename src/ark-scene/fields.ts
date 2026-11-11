@@ -16,6 +16,7 @@
 
 import {sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
 import {COTTAGE} from "@/ark-scene/micro-decor";
+import {hamletLotAt, hamletLotsGlsl} from "@/ark-scene/props/hamlet-land";
 
 export const CROPS = ["pasture", "tilled", "sprouts", "cabbage", "cereal", "maize"] as const;
 export type Crop = typeof CROPS[number];
@@ -118,8 +119,14 @@ export function fieldCentre(cell: [number, number]): {x: number; z: number} {
     return {x: (u * ACROSS.z - v * ALONG.z) / det, z: (v * ALONG.x - u * ACROSS.x) / det};
 }
 
-/** The crop growing at a point, or null (grass: a field whose middle is in a keep-out, or the headland). */
+/** The crop growing at a point, or null (grass: a field whose middle is in a keep-out, the headland, or the hamlet's reserved plots, `props/hamlet-land.ts`). */
 export function cropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
+    if (hamletLotAt(x, z)) return null;
+    return fieldCropAt(x, z);
+}
+
+/** The field's own crop at a point, whatever the hamlet reserves there (the props' paddock placement asks this). */
+export function fieldCropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
     const field = fieldAt(x, z);
     const middle = fieldCentre(field.cell);
     for (const out of fieldKeepOuts()) if (Math.hypot(middle.x - out.x, middle.z - out.z) < out.r) return null;
@@ -169,6 +176,7 @@ export function fieldsGlsl(): string {
     const shares = SHARES.map((s) => s.toFixed(4));
     const spacings = CROPS.map((c) => (CROP_ROWS[c].spacing || 1).toFixed(3));
     return `
+${hamletLotsGlsl()}
 uint arkFieldHash(ivec2 c) {
     uint h = (uint(c.x + 1000) * 0x8da6b343u) ^ (uint(c.y + 1000) * 0xd8163841u);
     h ^= h >> 15u;
@@ -197,7 +205,7 @@ int arkField(vec2 p, out float row, out float along, out float edge, out vec2 ce
     float mu = (cell.x + 0.5 - cell.y * ${STAGGER}) * ${FIELD_SIZE.along.toFixed(1)};
     float mv = (cell.y + 0.5) * ${FIELD_SIZE.across.toFixed(1)};
     vec2 middle = vec2(mu * ${ACROSS.z} - mv * ${ALONG.z}, mv * ${ALONG.x} - mu * ${ACROSS.x}) / ${det.toFixed(6)};
-    bool inside = false;
+    bool inside = arkHamletLot(p);
 ${keep}
     return inside ? 0 : crop;
 }

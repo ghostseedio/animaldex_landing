@@ -17,9 +17,11 @@
  */
 
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {cropAt} from "@/ark-scene/fields";
+import {fieldCropAt} from "@/ark-scene/fields";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import {hashString, riverDistance, sampleGround, seeded} from "@/ark-scene/world";
+import type {CottageStyle} from "@/ark-scene/micro-scene";
+import type {BarnStyle} from "@/ark-scene/vegetation";
 
 export type HomePlotKind = "house" | "smallholding";
 
@@ -83,13 +85,60 @@ export function plotFrame(plot: HomePlot): PlotFrame {
     return {plot, toWorld, toLocal, ground, floor, random: (detail) => seeded(hashString(`${plot.id}:${detail}`))};
 }
 
-/** The house's chimney top in the world (micro-scene.ts: the stack on the back slope), for its smoke. */
+// MARK: - The buildings' looks, per plot
+
+/** A plot's own draw from its id, 0…1 (stable across viewers and sessions). */
+function draw(plot: HomePlot, what: string): number {
+    return (hashString(`${plot.id}:${what}`) % 100000) / 100000;
+}
+
+const pick = <T,>(list: readonly T[], u: number): T => list[Math.min(Math.floor(u * list.length), list.length - 1)];
+
+/** Today's cottage's look (micro-scene.ts COTTAGE_STYLE): the first house plot keeps it. */
+const TODAYS_COTTAGE: CottageStyle = {wall: "#e3d5bb", tile: "#9c5a3c", wood: "#6f4f36", chimney: 1, porch: true};
+
+/**
+ * A house plot's cottage: limewash, tiles and woodwork, the chimney's side, a porch or not, and its size (`scale`,
+ * 0.9–1 of today's, the garden's house-hung details scaled with it), all from its id, so the hamlet is not one
+ * cottage cloned. The first plot ("house-0") is today's.
+ */
+export function cottageStyle(plot: HomePlot): CottageStyle & {scale: number} {
+    if (plot.id === "house-0") return {...TODAYS_COTTAGE, scale: 1};
+    return {
+        wall: pick(["#e3d5bb", "#eadfc8", "#d9cbb0", "#e9dccb", "#d8d3c6", "#efe3cf", "#e4cdb2"], draw(plot, "wall")),
+        tile: pick(["#9c5a3c", "#7d4a36", "#5f5a55", "#8a6a4a", "#6d4038", "#4f5560", "#a8664a"], draw(plot, "tile")),
+        wood: pick(["#6f4f36", "#4c5b4a", "#5a4a3e", "#3f4f5f", "#7a3b30", "#55606a"], draw(plot, "wood")),
+        chimney: draw(plot, "chimney") < 0.5 ? 1 : -1,
+        porch: draw(plot, "porch") > 0.3,
+        scale: 0.9 + 0.1 * draw(plot, "size")
+    };
+}
+
+/** Today's barn's look (vegetation.ts BARN_STYLE). */
+const TODAYS_BARN: BarnStyle = {wall: "#9b4b36", roof: "#4d4440", trim: "#efe6d6", size: [1, 1, 1]};
+
+/** A smallholding's barn, or a smaller farm shed, its colours and size from its id. The first ("smallholding-0") is today's. */
+export function barnStyle(plot: HomePlot): BarnStyle & {shed: boolean} {
+    if (plot.id === "smallholding-0") return {...TODAYS_BARN, shed: false};
+    const shed = draw(plot, "shed") < 0.4;
+    const k = 0.9 + 0.12 * draw(plot, "size");
+    return {
+        wall: pick(["#9b4b36", "#8a5a3a", "#6b5a48", "#5c6a5a", "#a35a40", "#7a4a3a"], draw(plot, "wall")),
+        roof: pick(["#4d4440", "#5a524a", "#3f4a52", "#62574d"], draw(plot, "roof")),
+        trim: pick(["#efe6d6", "#e2d8c4", "#f3eee4"], draw(plot, "trim")),
+        size: shed ? [0.62, 0.72, 0.7] : [k, k, k],
+        shed
+    };
+}
+
+/** The house's chimney top in the world (micro-scene.ts: the stack on the back slope, on its style's side), for its smoke. */
 export function chimneyTop(plot: HomePlot): Vec3 {
     const frame = plotFrame(plot);
+    const style = cottageStyle(plot);
     const halfD = COTTAGE.depth / 2;
     const roof = (fromRidge: number) => COTTAGE.wall + COTTAGE.ridge * (1 - fromRidge / halfD);
-    const w = frame.toWorld(-1.4, -0.9);
-    return {x: w.x, y: frame.floor + roof(0.9) + 0.6 + 0.78, z: w.z};
+    const w = frame.toWorld(-1.4 * style.chimney * style.scale, -0.9 * style.scale);
+    return {x: w.x, y: frame.floor + (roof(0.9) + 0.6 + 0.78) * style.scale, z: w.z};
 }
 
 // MARK: - The house's garden
@@ -169,7 +218,7 @@ export function paddockRect(plot: HomePlot): PaddockRect {
                 for (let gx = 0; gx < 4; gx++) {
                     for (let gz = 0; gz < 3; gz++) {
                         const p = frame.toWorld(rect.x0 + ((gx + 0.5) / 4) * width, rect.z0 + ((gz + 0.5) / 3) * depth);
-                        if (cropAt(p.x, p.z)) score += 4;
+                        if (fieldCropAt(p.x, p.z)) score += 4;
                     }
                 }
                 for (const o of near) {
