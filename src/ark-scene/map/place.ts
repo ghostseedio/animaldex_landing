@@ -23,11 +23,14 @@
 
 import {canopyPlace, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
 import type {MicroPlace, MicroSpot} from "@/ark-scene/micro";
-import {borrowedKey, clusterKey, MapPoints, pointIndex} from "@/ark-scene/map/points";
+import {borrowedKey, clusterKey, MapPoints, pointIndex, type SlotKind, type SlotPick} from "@/ark-scene/map/points";
+import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {attachFits, type ArkMapSampler, type AttachPoint, type AttachTag} from "@/ark-scene/map/sampler";
 import {isHeldOnMap, mapSpecies, type MapSpecies} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-scene/map/tags";
+import {waterSpot, waterTagAt, type WaterClass} from "@/ark-scene/map/water";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
+import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
 import {hashString, VISITOR_LANDING} from "@/ark-scene/world";
 
@@ -54,6 +57,8 @@ export type MapPlace = {
     sea: boolean;
     /** On a scenery attach point (a small animal). */
     attach?: AttachPoint;
+    /** A water species (`water.ts`): placed by its depth band's water, never by a land tag. */
+    water?: WaterClass;
     roost: MapRoost | null;
     /** Its cluster's key (zone and slot) and its point's level (0: on the point). */
     key: number;
@@ -94,7 +99,7 @@ const HEX_SPIRAL: Array<[number, number]> = (() => {
 })();
 const SPOT_OF: Record<AttachTag, MicroSpot> = {
     leaf: "leaf_litter", branch: "bark", bark: "bark", flower_head: "flowers", rock_face: "rocks", tide_pool: "pond_surface",
-    house_wall: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter"
+    house_wall: "house", house_eave: "house", porch_light: "lamp", worm_hole: "leaf_litter", burrow_entrance: "leaf_litter"
 };
 
 let enabled = true;
@@ -126,6 +131,22 @@ export function wetOf(species: MapSpecies, tag: MapTag): boolean {
     return ["water", "floor", "surface", "ice", "anemone", "station", "fixed"].includes(species.attach);
 }
 
+const CANOPY_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["canopy", "leaves", "trunks_bark", "bamboo", "host_nests"]);
+
+/**
+ * Lives on a canopy tree's limbs (not small, not a water species): its table
+ * says a limb or a trunk; or it hangs or leaps (a sloth, a gibbon); or it is
+ * of the canopy layer (`layers.json`) and climbs or perches, its text naming
+ * the trees (a tree kangaroo, an orangutan, a fish eagle over the lake).
+ */
+export function arborealOf(species: MapSpecies, slug: string): boolean {
+    if (species.small) return species.attach === "limb" || species.attach === "trunk";
+    if (species.attach === "limb" || species.attach === "trunk" || species.move === "hang" || species.move === "leap") return true;
+    if (species.move !== "climb" && species.move !== "perch") return false;
+    // (Trees only as its roost, a cormorant's or a heron's: it lives at the water by day and sleeps in a tree, `roostOf`.)
+    return speciesLayer(slug).layer === "canopy" && Array.from(species.allowed).some((tag) => CANOPY_TAGS.has(tag) && tag !== species.roost);
+}
+
 /** The tags to try, its spawn tag first. */
 function tagsToTry(species: MapSpecies): MapTag[] {
     return [species.spawn, ...Array.from(species.allowed).filter((tag) => tag !== species.spawn && tag !== species.roost)];
@@ -138,7 +159,7 @@ function canopyMode(species: MapSpecies): LayerMode {
 /** The heading a small animal takes on its point, and its rank's offset, as `micro.ts` does. */
 function attachPlace(point: AttachPoint, key: number, level: number, rank: number, length: number): MicroPlace {
     const hash = hashString(`${point.id}#${key}`);
-    const clinger = point.tag === "house_wall" || point.tag === "bark";
+    const clinger = point.tag === "house_wall" || point.tag === "house_eave" || point.tag === "bark";
     const heading = clinger ? ((hash & 1) ? 0 : Math.PI) + (((hash >>> 3) % 100) / 100 - 0.5) * 1.2 : ((hash >>> 3) % 360) / 180 * Math.PI;
     const gap = Math.max(length * 3.2, 0.035);
     // A second cluster on the point a few body lengths along; a cluster's members in a small spiral.
@@ -157,6 +178,15 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     const key = clusterKey(zone, slot);
     const ownHash = hashString(animal.id);
     if (isHeldOnMap(animal.model_slug)) {
+        const depth = speciesDepth(animal.model_slug, zone);
+        if (depth) {
+            // A held water species waits in the water: the sea off the landing's shore (or the lake), never on the beach.
+            const spot = waterHomeSpot(depth.water === "fresh" ? depth : {...depth, home: "coast"}, depth.water === "fresh" ? zone : "seashore", 400 + (key % 400), rank, length);
+            if (spot) {
+                const ground = mapPoints().sampler.ground(spot.x, spot.z);
+                return {x: spot.x, z: spot.z, ground: ground.height, yaw: (((ownHash >>> 4) % 1000) / 1000) * Math.PI * 2, water: true, map: {species: null, tag: null, area: null, held: true, sea: depth.water === "salt", roost: null, key, level: 0}};
+            }
+        }
         // Waiting at the landing (the jetty's foot), in a row along the beach.
         const foot = VISITOR_LANDING.foot;
         const along = 1.6 + (key % 7) * 1.4 + rank * 0.9;
@@ -172,6 +202,33 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     const sampler = all.sampler;
     const tags = tagsToTry(species);
 
+    // A water species (its depth band, `sea-depth.ts`): in its band's water, never on a land tag.
+    const depth = speciesDepth(animal.model_slug, zone);
+    if (depth) {
+        // A small one of the rocky shore's floor (a limpet, a shore crab): a tide pool, salt water at the foot of the shore's rocks.
+        if (species.small && depth.water === "salt" && (depth.band === "seabed" || depth.band === "reef") && species.allowed.has("rocky_shore") && species.move !== "swim") {
+            const found = all.attachOf("rocky_shore", trueLength, zone, true);
+            const pools = found.list.filter((point) => point.tag === "tide_pool");
+            if (pools.length) {
+                const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), pools.length);
+                const point = pools[index];
+                return {
+                    x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tangent[0], point.tangent[2]), water: true, micro: attachPlace(point, key, level, rank, trueLength),
+                    map: {species, tag: "rocky_shore", area: TAG_AREA.rocky_shore, held: false, sea: true, attach: point, roost: null, key, level}
+                };
+            }
+        }
+        const spot = waterSpot(all.water, depth, zone, slot, rank, length);
+        if (spot) {
+            const ground = sampler.ground(spot.x, spot.z);
+            const tag = waterTagAt(sampler, spot.cls, spot.x, spot.z);
+            return {
+                x: spot.x, z: spot.z, ground: ground.height, yaw: (((ownHash >>> 4) % 1000) / 1000) * Math.PI * 2, water: true,
+                map: {species, tag, area: tag ? TAG_AREA[tag] : null, held: false, sea: spot.cls !== "lake", water: spot.cls, roost: null, key, level: 0}
+            };
+        }
+    }
+
     // A small animal: on an attach point.
     const watery = ["water", "floor", "surface", "fixed", "air", "station", "anemone", "ice"].includes(species.attach);
     if (species.small && !watery) {
@@ -183,7 +240,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         for (const tag of order) {
             const found = all.attachOf(tag, trueLength, zone, holes);
             // A bird on bark only where its own text names bark (woodpeckers, nuthatches, treecreepers).
-            const list = species.move === "fly" && tag !== "trunks_bark" ? found.list.filter((point) => point.tag !== "bark") : found.list;
+            // Upside down under the eaves: crawlers only (geckos, spiders), never a bird or a moth at rest.
+            const list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb"));
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
@@ -222,9 +280,10 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
     }
 
-    // A canopy animal: a limb (or the trunk) of a canopy tree.
-    if (species.attach === "limb" || species.attach === "trunk") {
-        const canopyTag = tags.find((tag) => tag === "canopy" || tag === "leaves" || tag === "trunks_bark" || tag === "bamboo" || tag === "host_nests");
+    // A canopy animal: a limb (or the trunk) of a canopy tree. The owner's rule (2026-11-11): hangers, leapers, and the canopy layer's
+    // climbers and perchers (`layers.json`) grip a real limb, never the ground under it.
+    if (arborealOf(species, animal.model_slug)) {
+        const canopyTag = tags.find((tag) => CANOPY_TAGS.has(tag)) ?? (species.move === "hang" || species.move === "leap" ? "canopy" : undefined);
         if (canopyTag) {
             const hostZone = canopyTrees(zone)[0]?.zone ?? zone;
             const place = canopyPlace(hostZone, key, rank, canopyMode(species), length);
@@ -239,124 +298,137 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
     }
 
-    // Everyone else: a launch point of its tag, in the water or on dry ground.
-    let overflow = false;
-    for (let tagIndex = 0; tagIndex < tags.length; tagIndex++) {
-        const tag = tags[tagIndex];
+    // Everyone else: a cell of its tag (`points.ts`), in the water or on dry ground, its cluster's own. Its tags in its text's
+    // order: the first whose list has a cell for its slot (its first lap) it can stand on; else its spawn tag's, a lap round.
+    const radius = Math.min(Math.max(trueLength * 0.2, 0.1), 0.6);
+    // The behaviour lane's walk grid: steep ground is a mountain animal's only (`behaviour-schedule.ts` maxSlopeOf).
+    const maxSlope = zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE;
+    // (Flyers, perchers and climbers may stand on a cliff's steep ground; walkers, crawlers, hoppers and diggers walk off their spot.)
+    const walker = ["walk", "crawl", "slither", "hop", "burrow"].includes(species.move);
+    const okOn = (wet: boolean, holds: (tags: readonly MapTag[]) => boolean) => (x: number, z: number) => {
+        const g = sampler.ground(x, z);
+        if (!holds(g.tags) || (g.water !== null) !== wet) return false;
+        if (wet) return g.depth >= (species.attach === "water" ? 0.5 : 0.05);
+        if (sampler.blocked(x, z, radius)) return false;
+        return !walker || !sampler.walkable || sampler.walkable(x, z, maxSlope);
+    };
+    const okFor = (tag: MapTag, wet: boolean) => okOn(wet, (tags) => tags.includes(tag));
+    type Choice = {tag: MapTag; wet: boolean; pick: SlotPick; ok: (x: number, z: number) => boolean};
+    /** Where it can stand for a pick: its lap's spot, else the nearest within a metre that suits it, else the same round its cell's middle. */
+    const settle = ({pick, ok}: Choice): {x: number; z: number} | null => {
+        for (const [bx, bz] of [[pick.x, pick.z], [pick.point.x, pick.point.z]]) {
+            if (ok(bx, bz)) return {x: bx, z: bz};
+            for (let k = 1; k < 30; k++) {
+                const r = 0.22 * Math.sqrt(k);
+                const tx = bx + Math.cos(k * GOLDEN) * r;
+                const tz = bz + Math.sin(k * GOLDEN) * r;
+                if (ok(tx, tz)) return {x: tx, z: tz};
+            }
+        }
+        return null;
+    };
+    let chosen: (Choice & {at: {x: number; z: number}}) | null = null;
+    let fallback: (Choice & {at: {x: number; z: number}}) | null = null;
+    let first: Choice | null = null;
+    for (const tag of tags) {
         const wet = wetOf(species, tag);
-        const lastTag = tagIndex === tags.length - 1;
-        // The stats (docs/ark-next.md, stats addendum): a dominant kind at the partition's middle, a rare one at its edge.
         const partition = all.partitionOf(tag, wet, zone);
-        const list = all.kindOf(partition.list, kind);
-        if (!list.length) continue;
-        const pick = pointIndex(partition.own ? slot : borrowedKey(zone, slot), list.length);
-        const {index} = pick;
-        // A borrowed partition's second cluster rounds the point as an own one's would.
-        const level = partition.own ? pick.level : 1 + (pick.level % 7);
-        const point = list[index];
-        // Its own tag's ground, in its medium, deep enough to swim, clear of trunks, rocks and buildings.
-        const radius = Math.min(Math.max(trueLength * 0.2, 0.1), 0.6);
-        const ok = (x: number, z: number) => {
-            const g = sampler.ground(x, z);
-            if (!g.tags.includes(tag) || (g.water !== null) !== wet) return false;
-            if (wet) return g.depth >= (species.attach === "water" ? 0.5 : 0.05);
-            return !sampler.blocked(x, z, radius);
-        };
-        let cx = point.x;
-        let cz = point.z;
-        if (!ok(cx, cz)) {
-            // The point is too tight for this body: the nearest spot round it that is not.
-            for (let k = 1 + (key % 11); k < 80; k++) {
-                const r = 0.4 * Math.sqrt(k);
-                const x = point.x + Math.cos(k * GOLDEN) * r;
-                const z = point.z + Math.sin(k * GOLDEN) * r;
-                if (ok(x, z)) {
-                    cx = x;
-                    cz = z;
-                    break;
-                }
+        if (!partition.list.length) continue;
+        // The stats (docs/ark-next.md, stats addendum): a dominant kind at the list's middle, a rare one at its edge (behind
+        // cover where it has it); past its kind's cells, the plain ones.
+        // (A cover slot past the covered cells takes the edge's, then looks for cover round it.)
+        const order: SlotKind[] = kind === "cover" ? ["cover", "edge", "plain"] : kind === "plain" ? ["plain"] : [kind, "plain"];
+        let pick = all.pick(all.kindOf(partition.list, order[0]), partition.own, zone, slot);
+        for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
+        const choice: Choice = {tag, wet, pick, ok: okFor(tag, wet)};
+        first ??= choice;
+        // Free: its cell, or the cell's first lap (half a cell over), so it keeps to the place its text names first.
+        const free = pick.level <= 1;
+        const at: {x: number; z: number} | null = free || !fallback ? settle(choice) : null;
+        if (at && free) {
+            chosen = {...choice, at};
+            break;
+        }
+        if (at) fallback ??= {...choice, at};
+    }
+    chosen ??= fallback;
+    if (!chosen && !first) return null;
+    const {tag, wet, pick, ok} = chosen ?? first!;
+    const point = pick.point;
+    let cx = chosen ? chosen.at.x : pick.x;
+    let cz = chosen ? chosen.at.z : pick.z;
+    // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within 5 m (never by another point).
+    if (kind === "cover" && !wet && sampler.covered && !sampler.covered(cx, cz)) {
+        for (let k = 1; k < 100; k++) {
+            const r = 0.5 * Math.sqrt(k);
+            const tx = cx + Math.cos(k * GOLDEN) * r;
+            const tz = cz + Math.sin(k * GOLDEN) * r;
+            if (sampler.covered(tx, tz) && ok(tx, tz) && !all.nearLaunch(tx, tz, 2.4, point)) {
+                cx = tx;
+                cz = tz;
+                break;
             }
         }
-        if (level > 0) {
-            // Another cluster on this point (more clusters than points): the level-th of the point's satellites, the nearest cells of
-            // its tag a herd's width apart (`points.ts`), so two clusters never share a spot.
-            // (In the overflow round, when every tag is full: the zone's overflow cells of the tag, its slot picking one.)
-            // One cell per level (or slot): never skipping to the next, so two clusters never take the same one; a body too big for the
-            // cell's own spot moves a little within it.
-            const satellites = overflow ? all.overflow(tag, wet, zone) : all.satellites(point, wet, 2.6);
-            const k = overflow ? (partition.own ? slot : slot + 37 * Math.max(ARK_ZONES.indexOf(zone), 0)) % Math.max(satellites.length, 1) : level - 1;
-            let found = false;
-            if (k < satellites.length) {
-                const cell = satellites[k];
-                for (let n = 0; n < 12 && !found; n++) {
-                    const r = n ? 0.35 * Math.sqrt(n) : 0;
-                    const tx = cell.x + Math.cos(n * GOLDEN) * r;
-                    const tz = cell.z + Math.sin(n * GOLDEN) * r;
-                    if (ok(tx, tz)) {
-                        cx = tx;
-                        cz = tz;
-                        found = true;
-                    }
-                }
-            }
-            // This tag's ground is full (more clusters than it has room for): its next tag's (its text names more than one place);
-            // past the last, round again from the first with the nearest cells, whoever's.
-            if (!found && !lastTag) continue;
-            if (!found && !overflow) {
-                overflow = true;
-                tagIndex = -1;
-                continue;
-            }
-        }
-        // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within about 8 m.
-        if (kind === "cover" && !wet && sampler.covered && !sampler.covered(cx, cz)) {
-            for (let k = 1; k < 240; k++) {
-                const r = 0.5 * Math.sqrt(k);
-                const tx = cx + Math.cos(k * GOLDEN) * r;
-                const tz = cz + Math.sin(k * GOLDEN) * r;
-                if (sampler.covered(tx, tz) && ok(tx, tz)) {
-                    cx = tx;
-                    cz = tz;
-                    break;
-                }
-            }
-        }
-        let x = cx;
-        let z = cz;
-        if (rank > 0) {
-            // A cluster's members on a hexagonal lattice about its spot, `gap` apart (so no two ever share a spot): the rank-th cell, in rings
-            // outward, of those on its own ground (the lattice turned by the slot, so neighbouring clusters do not line up).
-            const gap = Math.max(1.1, length * 0.85);
-            const turn = ((hashString(`${zone}#${slot}`) >>> 12) % 360) / 180 * Math.PI;
+    }
+    let x = cx;
+    let z = cz;
+    if (rank > 0) {
+        // A cluster's members on a hexagonal lattice about its spot, `gap` apart (so no two ever share a spot): the rank-th cell, in rings
+        // outward, of those on its own ground (the lattice turned by the slot, so neighbouring clusters do not line up).
+        const gap = Math.max(1.1, length * 0.85);
+        const turn = ((hashString(`${zone}#${slot}`) >>> 12) % 360) / 180 * Math.PI;
+        // On its own tag's ground; where that runs out (a small patch by a rock), on any ground its text names.
+        const spill = okOn(wet, (here) => here.some((t) => species.allowed.has(t)));
+        for (const fits of [ok, spill]) {
             let seen = 0;
+            let found = false;
             for (const [i, j] of HEX_SPIRAL) {
                 const lx = gap * (i + j / 2);
                 const lz = gap * (j * Math.sqrt(3) / 2);
                 const tx = cx + lx * Math.cos(turn) - lz * Math.sin(turn);
                 const tz = cz + lx * Math.sin(turn) + lz * Math.cos(turn);
-                if (!ok(tx, tz)) continue;
+                // Never on another cluster's launch point.
+                if (!fits(tx, tz) || all.nearLaunch(tx, tz, 1.2, point)) continue;
                 if (++seen === rank) {
                     x = tx;
                     z = tz;
+                    found = true;
                     break;
                 }
             }
+            if (found) break;
         }
-        const ground = sampler.ground(x, z);
-        const turn = ((ownHash >>> 4) % 1000) / 1000;
-        const yaw = wet ? turn * Math.PI * 2 : ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn);
-        const sea = wet && ground.water === "sea" && SEA_TAGS.has(tag);
-        let base = ground.height;
-        if (species.attach === "ice") base = 0.25;
-        if (species.attach === "surface") base = 0;
-        const placement: MapPlacement = {
-            x, z, ground: base, yaw, water: wet && species.attach !== "ice", covered: kind === "cover" && rank === 0 && !wet && Boolean(sampler.covered?.(x, z)),
-            map: {species, tag, area: TAG_AREA[tag], held: false, sea, roost: roostOf(species, all, x, z, trueLength, key, ownHash, null), key, level}
-        };
-        if (species.attach === "burrow" && !wet) placement.burrow = burrowAt(x, z, ground.height, `${zone}#${slot}#${rank}`, length);
-        return placement;
     }
-    return null;
+    // The tag it stands for where it is (a member spilt onto its other ground stands for that).
+    const here = sampler.ground(x, z).tags;
+    const standsFor = here.includes(tag) ? tag : (tags.find((t) => here.includes(t)) ?? tag);
+    const ground = sampler.ground(x, z);
+    const turn = ((ownHash >>> 4) % 1000) / 1000;
+    const yaw = wet ? turn * Math.PI * 2 : ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn);
+    const sea = wet && ground.water === "sea" && SEA_TAGS.has(tag);
+    let base = ground.height;
+    if (species.attach === "ice") base = 0.25;
+    if (species.attach === "surface") base = 0;
+    const placement: MapPlacement = {
+        x, z, ground: base, yaw, water: wet && species.attach !== "ice", covered: kind === "cover" && rank === 0 && !wet && Boolean(sampler.covered?.(x, z)),
+        map: {species, tag: standsFor, area: TAG_AREA[standsFor], held: false, sea, roost: roostOf(species, all, x, z, trueLength, key, ownHash, null), key, level: pick.level}
+    };
+    if (species.attach === "burrow" && !wet) placement.burrow = burrowAt(x, z, ground.height, `${zone}#${slot}#${rank}`, length);
+    return placement;
+}
+
+/**
+ * Can this animal's home be here, by the map (behaviour's spawn spacing,
+ * `spaceHomes`, moves a predator's home away from its prey and asks this of
+ * every spot it tries): on ground one of its tags names. Always true with
+ * the map off, for a species the map does not place, and for a water
+ * species (its water is its band's, which the swim test already asks).
+ */
+export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: number, z: number): boolean {
+    if (!enabled || isHeldOnMap(animal.model_slug) || speciesDepth(animal.model_slug, animal.zone)) return true;
+    const species = mapSpecies(animal.model_slug, animal.zone);
+    if (!species) return true;
+    return mapPoints().sampler.ground(x, z).tags.some((tag) => species.allowed.has(tag));
 }
 
 /** How far it goes to sleep, by how it moves (m). */

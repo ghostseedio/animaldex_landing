@@ -94,6 +94,8 @@ import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
 import {ARK_SCENE_MODULES, type ArkSceneModule} from "@/ark-scene/scene-modules";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
+import {gripPoint} from "@/ark-scene/map/grip";
+import {mapHabitatAt} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
@@ -108,7 +110,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {arkDayAt, islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {groundNormal, type ArkEnvironment} from "@/ark-scene/sampler";
+import {attachSway, groundNormal, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -733,6 +735,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The hour's sun, which says who is asleep (from the species' activity only; none known: awake by day). */
     let sunElevation = lighting.daylight.elevation;
+    /**
+     * At sea: the map's place says (`map/place.ts`: a sea tag, in the sea's water), else its zone's kind (the map off).
+     * The sea's swimmers loop about their spot; a crab of a reef zone the map put on a rocky shore stays on its rocks.
+     */
+    const atSeaOf = (entry: {place: Placement; animal: ArkAnimal}) => entry.place.sea ?? ZONE_SITES[entry.animal.zone]?.kind === "sea";
     /** A bird of the air over land: it flies while awake. */
     const fliesOver = (animal: ArkAnimal) => (FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea") || Boolean(heldOffWater(animal.model_slug));
 
@@ -845,7 +852,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         const spaced = spaceHomes(
-            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z))})),
+            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -1439,6 +1446,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             turn = crawled.turn;
         }
         const point = surfacePoint(micro, entry.animal.zone, along);
+        // On a leaf, bark or a branch of a tree in the wind: moved with it as the tree's shader moves it (graphics' `attachSway`).
+        const swaying = micro.attach?.source;
+        if (swaying && !reducedMotion) {
+            const sway = attachSway(swaying, ARK_TIME.value, ARK_WIND_VECTOR.value);
+            point.x += sway.x;
+            point.y += sway.y;
+            point.z += sway.z;
+        }
         if (turn) {
             // Turn the heading about the normal: t cos + (n × t) sin.
             const c = Math.cos(turn);
@@ -1883,6 +1898,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = momentAt(entry, model, modelHeight, time);
             if (at) return at;
         }
+        if (place.host && !entry.visitor) {
+            // A partner on its host (map section 6): on its back, under a shark, at a grazer's feet, beside it, as the host moves now.
+            const host = findEntry(place.host.id);
+            if (host?.middle && !host.held) {
+                const rider = place.host.role === "rider";
+                const yaw = host.yawNow ?? place.yaw;
+                const base = rider ? (host.place.water ? host.middle.y - host.drawnHeight * 0.55 : host.middle.y + host.drawnHeight * 0.45) : heightAt(host.middle.x + place.host.dx, host.middle.z + place.host.dz);
+                return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
+            }
+        }
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
         if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
         // (A bird of the air flies from its perch, and comes back to it to rest.)
@@ -1892,6 +1917,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A water species (`sea-depth.ts`): in its depth band, its whole body under the surface (a floater on it, a
         // bottom-dweller on the floor, an octopus in its hole), an air-breather up for air when its state says so.
         if (entry.depth && !entry.visitor && entry.air <= 0.001) return waterPose(entry, entry.depth, modelHeight, time);
+        // The reef's and the sea's bottom-dwellers (crabs, octopus, stars): on the sea floor.
+        if (!entry.depth && atSeaOf(entry) && entry.layer.mode === "floor") {
+            const sway = reducedMotion ? 0 : Math.sin(time * 0.25 + entry.phase * 9) * 0.25 * (1 - entry.rest);
+            return {x: place.x + Math.cos(place.yaw) * sway, z: place.z - Math.sin(place.yaw) * sway, base: place.ground, yaw: place.yaw, pitch: 0, roll: 0, afloat: true};
+        }
         const t = reducedMotion ? 0 : time;
         const site = ZONE_SITES[entry.animal.zone];
         // The visitor: at the jetty's foot, or a swimmer floating off its end.
@@ -1948,7 +1978,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** On its own feet on land: where a rigged animal may walk about its spot. */
     const onFoot = (entry: Entry) =>
         !scheduled(entry) &&
-        !entry.visitor && !entry.place.micro && !entry.place.canopy && !entry.place.burrow && !entry.place.water && ZONE_SITES[entry.animal.zone]?.kind !== "sea" && entry.air <= 0.001 && !entry.act && !entry.moment;
+        !entry.visitor && !entry.place.micro && !entry.place.canopy && !entry.place.burrow && !entry.place.water && !atSeaOf(entry) && entry.air <= 0.001 && !entry.act && !entry.moment;
     /** A number in [0, 1) for this animal and this count (the same every visit). */
     const wanderRandom = (entry: Entry, n: number) => {
         const x = Math.sin(entry.phase * 12.9898 * 1000 + n * 78.233) * 43758.5453;
@@ -2031,6 +2061,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const rigLift = new Vector3();
     /** The reactive layer's actions that have an animal watching something: it stops feeding and lifts its head to look. */
     const WATCHING_ACTIONS: ReadonlySet<string> = new Set(["scan", "watch_camera", "investigate_camera", "back_off_camera", "sentinel", "alert", "freeze", "threat_display", "watch_prey", "startle", "look_kin", "shield_young"]);
+    const rigGrip = new Vector3();
     /**
      * An animal's rig this frame, when it has one ready and is close enough:
      * fades it in or out (never in the middle of a peek out of its burrow),
@@ -2221,7 +2252,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Standing water with no band (an anaconda in the wetland's pool): it swims where it lies.
             want = clip("swim") ? "swim" : "slither";
             rate = 0.6;
-        } else if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
+        } else if (atSeaOf(entry) && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
             const swim = clip("swim");
             if (swim) {
                 want = "swim";
@@ -2387,6 +2418,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const pace = 1 - 0.85 * entry.rest;
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
             if (entry.depth) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace * waterPace(waterMotion(entry.depth));
+            else if (atSeaOf(entry) && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace;
             else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace * entry.pace;
             // A flyer comes down to its roost to sleep and takes to the air again awake (an act flies its own path).
             if (fliesOver(entry.animal) && !entry.act && !scheduled(entry)) entry.air += (targets.air - entry.air) * 0.02;
@@ -2412,7 +2444,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
             // the underground only in the cutaway (or peeking out of its burrow).
             const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
-            const atSea = ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.depth?.water === "salt";
+            const atSea = atSeaOf(entry) || entry.depth?.water === "salt";
             // The deep's are hidden from above while they are down there (an air-breather of the deep shows when it comes up).
             const down = entry.depth ? entry.depth.band === "deep" && where.base < -2.5 : entry.layer.layer === "deep";
             if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen))) {
@@ -2663,6 +2695,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
             }
             const state = rig ? entry.rig : null;
+            if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, clipRows(rig.clips[state.now.name], state.now.phase), rigGrip)) {
+                // On a branch, a trunk, a ledge or a wall: its grip (the rig's feet, hands, claws) on the surface, not its underside (`map/grip.ts`).
+                rigGrip.multiplyScalar(s).applyQuaternion(rotation);
+                position.set(where.x - rigGrip.x, where.base - rigGrip.y, where.z - rigGrip.z);
+            }
             if (rig && state) {
                 // A leap's clip carries the body forward itself: take that off the path's own motion.
                 const leap = state.now.name === "leap" ? rig.clips.leap : undefined;
@@ -3279,7 +3316,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             // A swimmer under the surface: the camera dives to it, level with it (underwater).
-            const swimming = ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.depth?.home === "coast" ? middleNow(entry) : null;
+            const swimming = atSeaOf(entry) || entry.depth?.home === "coast" ? middleNow(entry) : null;
             if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
@@ -3763,7 +3800,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let replay: Running | null = null;
 
     const elapsedNow = () => (performance.now() - started) / 1000;
-    const inWater = (entry: Entry) => ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.place.water;
+    const inWater = (entry: Entry) => atSeaOf(entry) || entry.place.water;
 
     /** Where an entry is now and how big, as the acts take it. */
     const bodyOf = (entry: Entry): ActBody => {

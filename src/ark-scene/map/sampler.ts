@@ -15,14 +15,17 @@
  * - `attachPoints()`: where small animals sit (the owner, 2026-11-11): a
  *   position, the surface's normal, a heading along it, a microhabitat tag
  *   (leaf, branch, bark, flower head, rock face, tide pool, house wall,
- *   porch light, worm hole, burrow entrance) and the body lengths it fits.
+ *   porch light, worm hole, burrow entrance; the eaves, upside down) and the
+ *   body lengths it fits. The stub takes them from the graphics lane's
+ *   scenery interface (`src/ark-scene/sampler.ts` attachPoints).
  */
 
 import type {ArkZone} from "@/ark-scene/types";
 import type {MapTag} from "@/ark-scene/map/tags";
+import type {AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 
 /** The graphics lane's attach-point tags (owner, 2026-11-11). */
-export const ATTACH_TAGS = ["leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "porch_light", "worm_hole", "burrow_entrance"] as const;
+export const ATTACH_TAGS = ["leaf", "branch", "bark", "flower_head", "rock_face", "tide_pool", "house_wall", "house_eave", "porch_light", "worm_hole", "burrow_entrance"] as const;
 export type AttachTag = typeof ATTACH_TAGS[number];
 
 export type AttachPoint = {
@@ -40,6 +43,8 @@ export type AttachPoint = {
     size: {min: number; max: number};
     /** The zone it is in (for spreading a zone's animals over its own points). */
     zone: ArkZone;
+    /** The scenery interface's own point, when it sways with its tree (a leaf, bark, a branch): the scene moves the animal with it (`attachSway`). */
+    source?: SceneryPoint;
 };
 
 export type GroundSurface = {
@@ -77,6 +82,8 @@ export interface ArkMapSampler {
     blocked(x: number, z: number, radius: number): boolean;
     /** Optional: something tall (a tree, a shrub, a big rock) stands just in front of this spot from the default camera (the south). */
     covered?(x: number, z: number): boolean;
+    /** Optional: on the behaviour lane's walk grid here, no steeper than `maxSlope` (so a walker placed here can walk away from it). */
+    walkable?(x: number, z: number, maxSlope: number): boolean;
     anchors(): readonly MapAnchor[];
     attachPoints(): readonly AttachPoint[];
 }
@@ -96,6 +103,8 @@ export const ATTACH_MEANS: Record<AttachTag, {own: readonly MapTag[]; context: r
     rock_face: {own: ["rocks_boulders"], context: ["cliffs", "sea_cliffs", "caves", "mountain_alpine", "desert_sand", "rocky_shore", "tundra", "snow_ice", "garden", "grassland", "scrub", "stream_river", "waterfall_rapids"]},
     tide_pool: {own: ["rocky_shore"], context: ["coastal_shallows", "seabed", "kelp", "sea_cliffs"]},
     house_wall: {own: ["house"], context: ["garden", "farm_barn", "town_park"]},
+    /** Under the eaves and the porch roof: a ceiling, for clingers upside down (geckos, spiders). */
+    house_eave: {own: ["house"], context: []},
     porch_light: {own: ["house"], context: []},
     worm_hole: {own: ["soil"], context: ["garden", "grassland", "forest_floor", "farm_barn", "compost", "flower_meadow", "town_park", "marsh_reeds", "scrub", "logs_deadwood"]},
     burrow_entrance: {own: ["burrows", "soil"], context: ["grassland", "desert_sand", "scrub", "forest_floor", "mountain_alpine", "tundra", "sandy_beach", "termite_ant_mounds", "garden", "farm_barn", "mudflat", "marsh_reeds", "stream_river", "lake", "rocks_boulders", "sea_cliffs"]}

@@ -3,7 +3,7 @@
  * The Ark map's species table (docs/ark/map-plan.md, B3/B4; the owner's
  * decisions of 2026-11-11, "just do whatever you recommend"):
  *
- *   npx tsx scripts/ark-map.mts <B1 microhabitats.json> <B1 catalogue.json>
+ *   npx tsx scripts/ark-map.mts <B1 microhabitats.json> <B1 catalogue.json> [rig plans.json]
  *
  * Inputs are the B1 inventory (`scratchpad/ark-map/microhabitats.json`: every
  * species' microhabitats with the verbatim phrase, forest resolved to canopy
@@ -32,13 +32,15 @@
  * 5. No text: a zone fallback for those with a voyage zone; the rest held.
  * 6. About 480 launch points, by primary share, at least 8 an area.
  */
-import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {FRESH_TAGS, MAP_AREAS, MAP_ATTACHMENTS, MAP_MOVES, MAP_TAGS, SEA_TAGS, TAG_AREA, type HostGroup, type MapArea, type MapAttachment, type MapMove, type MapRole, type MapTag} from "../src/ark-scene/map/tags.ts";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const [inventoryPath, cataloguePath] = process.argv.slice(2);
+const [inventoryPath, cataloguePath, plansArg] = process.argv.slice(2);
+/** The rig body plans (every Ark model's plan and taxonomy): for the models the inventory does not list (breeds, A1). */
+const plansPath = plansArg ?? join(process.env.HOME ?? "", "animaldex-talking-models/rig/plans.json");
 if (!inventoryPath || !cataloguePath) throw new Error("usage: ark-map.mts <microhabitats.json> <catalogue.json>");
 
 type Hit = {type: string; role: "primary" | "secondary"; field: string; phrase: string; match?: string | null; power_voice?: boolean};
@@ -54,6 +56,8 @@ const inventory = (JSON.parse(readFileSync(inventoryPath, "utf8")) as {species: 
 const catalogue = new Map(((JSON.parse(readFileSync(cataloguePath, "utf8")) as {rows: Row[]}).rows).map((row) => [row.id, row]));
 const layers = (JSON.parse(readFileSync(join(root, "src/ark-scene/layers.json"), "utf8")) as {species: Record<string, [string, string, string, string?]>}).species;
 
+type Plan = {name: string; plan: string | null; zone: string | null; taxonomy?: {class_name?: string | null; order_name?: string | null; family_name?: string | null}; has_ark_model?: boolean};
+const plans = existsSync(plansPath) ? (JSON.parse(readFileSync(plansPath, "utf8")) as {species: Record<string, Plan>}).species : {};
 const isTag = (value: string): value is MapTag => (MAP_TAGS as readonly string[]).includes(value);
 const clean = (text: unknown) => (Array.isArray(text) ? text.join(" ") : typeof text === "string" ? text : "").replace(/^\s*Native range keys:[^.]*\.\s*/i, "").trim();
 /** A phrase as stored: the match and a few words either side (verbatim). */
@@ -272,7 +276,7 @@ type Entry = {
     move: MapMove; moveReason: string; attach: MapAttachment; attachReason: string;
     roost: MapTag | null; roostReason: string | null; role: MapRole | null; host: HostGroup | null; roleReason: string | null;
     colony: null | {kind: string; nest: MapTag; reason: string; nestReason: string};
-    flags: string; small: boolean; activity: string | null; size: number | null;
+    flags: string; small: boolean; activity: string | null; size: number | null; fish: boolean;
 };
 const held: Array<{slug: string | null; name: string; reason: string}> = [];
 const excluded: Array<{slug: string | null; name: string; reason: string}> = [];
@@ -304,7 +308,9 @@ for (const s of inventory) {
     const layerMode = layer?.[1] ?? "";
     let spawn: MapTag;
     let spawnReason: string;
-    const spawnTags = s.spawn.filter(isTag).filter((tag) => tag !== "forest_general");
+    // A fish lives in water: its text's land places (a sea cave, the tundra round its lake) are not where it can be.
+    const isFish = (s.plan ?? plans[s.slug]?.plan) === "fish";
+    const spawnTags = s.spawn.filter(isTag).filter((tag) => tag !== "forest_general" && (!isFish || SEA_TAGS.has(tag) || FRESH_TAGS.has(tag)));
     const fallback = !spawnTags.length;
     if (fallback) {
         spawn = zoneFallback(s.zone, s);
@@ -415,9 +421,46 @@ for (const s of inventory) {
         slug: s.slug, name: s.name, zone: s.zone, spawn, spawnReason, allowed: Array.from(allowed),
         move, moveReason, attach, attachReason,
         roost: roost && roost.tag !== spawn ? roost.tag : null, roostReason: roost ? `sleep_pattern: "${roost.phrase}"` : null,
-        role, host, roleReason, colony, flags: flagString, small, activity: s.activity, size: s.size
+        role, host, roleReason, colony, flags: flagString, small, activity: s.activity, size: s.size, fish: (s.plan ?? plans[s.slug]?.plan) === "fish"
     });
 }
+
+// Every other Ark model (breeds and the like, A1; species added since B1): its zone's fallback (decision 5), its movement from its rig body plan.
+const listed = new Set([...entries.map((e) => e.slug), ...held.map((h) => h.slug), ...excluded.map((x) => x.slug)]);
+let unlisted = 0;
+for (const [slug, plan] of Object.entries(plans)) {
+    if (listed.has(slug) || !plan.zone || plan.has_ark_model === false) continue;
+    if (ANTARCTIC.has(slug) || HOST_ABSENT.has(slug)) continue;
+    const pseudo = {id: "", num: 0, name: plan.name, slug, zone: plan.zone, size: null, class: plan.taxonomy?.class_name ?? null, order: plan.taxonomy?.order_name ?? null, family: plan.taxonomy?.family_name ?? null, phylum: null, plan: plan.plan, realm: null, activity: null, sociality: null, microhabitats: [], spawn: [], flags: [], has_text: false, template_habitat_text: false, none_reason: "not in the B1 inventory (a breed, or added since)"} as Species;
+    const spawn = zoneFallback(plan.zone, pseudo);
+    const {move, reason: moveReason} = movement(pseudo, layers[slug]?.[1] ?? "", spawn);
+    entries.push({
+        slug, name: plan.name, zone: plan.zone, spawn, spawnReason: `zone fallback (decision 5): not in the B1 inventory; voyage zone ${plan.zone}, body plan ${plan.plan}`, allowed: [spawn],
+        move, moveReason, attach: attachment(spawn, move, false), attachReason: `spawn ${spawn}, ${move}`,
+        roost: null, roostReason: null, role: null, host: null, roleReason: null, colony: null, flags: "z", small: false, activity: null, size: null, fish: plan.plan === "fish"
+    });
+    unlisted++;
+}
+// The breeds (A1: a breed counts as its kind): every other Ark model of the voyage's habitats, as its parent species by its name.
+const habitatsPath = join(process.env.HOME ?? "", "animaldex-talking-models/habitats.json");
+const habitats = existsSync(habitatsPath) ? (JSON.parse(readFileSync(habitatsPath, "utf8")) as Record<string, string>) : {};
+const BREEDS: Array<[RegExp, string]> = [
+    [/cattle|holstein|wagyu/, "cow"], [/chicken/, "domestic-chicken"], [/duck/, "domestic-duck"], [/goat/, "domestic-goat"], [/pig$|-hog$/, "domestic-pig"],
+    [/sheep/, "domestic-sheep"], [/rabbit|lop$/, "domestic-rabbit"], [/koi$/, "koi"], [/guppy$/, "guppy"], [/betta$/, "siamese-fighting-fish"],
+    [/-cat$|^(?:maine-coon|persian|ragdoll|sphynx|british-shorthair|scottish-fold|calico|orange-tabby|siamese)-cat$|^british-shorthair$/, "domestic-cat"]
+];
+const listedNow = new Set([...entries.map((e) => e.slug), ...held.map((h) => h.slug), ...excluded.map((x) => x.slug)]);
+let breeds = 0;
+for (const [slug, zone] of Object.entries(habitats)) {
+    if (listedNow.has(slug)) continue;
+    // Dog breeds have no common word; every other breed here does. A model of another zone is not a breed: left to the scene's zone fallback.
+    const parentSlug = BREEDS.find(([pattern]) => pattern.test(slug))?.[1] ?? (zone === "farm_garden" ? "domestic-dog" : null);
+    const parent = parentSlug ? entries.find((e) => e.slug === parentSlug) : null;
+    if (!parent) continue;
+    entries.push({...parent, slug, name: slug, zone, spawnReason: `A1 breed of ${parent.name} (by its name: ${slug}); as its kind: ${parent.spawnReason}`, flags: parent.flags.replace("z", "") + "b"});
+    breeds++;
+}
+console.log(`${unlisted} Ark models not in the inventory placed by their zone; ${breeds} breeds as their kind`);
 
 // Host groups: species ids (breeds count as their kind, A1) and slugs.
 const idOf = (slug: string) => bySlug.get(slug)?.id;
@@ -516,7 +559,7 @@ for (const entry of entries) {
         entry.roost ? tagIndex(entry.roost) : -1,
         entry.role ?? "",
         entry.host ?? "",
-        entry.flags + (entry.colony ? "c" : "") + (entry.small ? "s" : ""),
+        entry.flags + (entry.colony ? "c" : "") + (entry.small ? "s" : "") + (entry.fish ? "f" : ""),
         // Its voyage zone and stored activity (for the validator; the scene has the server's).
         ["coral_reef", "open_ocean", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar", "farm_garden"].indexOf(entry.zone),
         entry.activity ?? ""
@@ -524,7 +567,7 @@ for (const entry of entries) {
 }
 const hostTable = Object.fromEntries(Object.entries(hostGroups).map(([group, list]) => [group, {ids: list.map((s) => s.id), slugs: list.map((s) => s.slug)}]));
 const out = {
-    about: "Generated by scripts/ark-map.mts from the B1 inventory (docs/ark/map-inventory.md). Rows: [spawn tag, allowed tags, move, attach, roost tag or -1, role, host group, flags, voyage zone (ARK_ZONES index), stored activity]; tags, moves and attachments are indices into src/ark-scene/map/tags.ts. Flags: z zone fallback, t template text, d domestic, g group entry, c colony, s small. Reasons: docs/ark-map/species.json.",
+    about: "Generated by scripts/ark-map.mts from the B1 inventory (docs/ark/map-inventory.md). Rows: [spawn tag, allowed tags, move, attach, roost tag or -1, role, host group, flags, voyage zone (ARK_ZONES index), stored activity]; tags, moves and attachments are indices into src/ark-scene/map/tags.ts. Flags: z zone fallback, t template text, d domestic, g group entry, b a breed (as its kind), c colony, s small, f a fish (always in water). Reasons: docs/ark-map/species.json.",
     held: held.filter((h) => h.slug).map((h) => h.slug),
     hosts: hostTable,
     points: tagPoints,

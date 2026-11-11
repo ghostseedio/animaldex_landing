@@ -28,7 +28,8 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
-import {mapPlace, type MapPlace} from "@/ark-scene/map/place";
+import {mapPlace, mapPoints, type MapPlace} from "@/ark-scene/map/place";
+import {isHost} from "@/ark-scene/map/species";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
@@ -64,6 +65,13 @@ export type Placement = {
     sea?: boolean;
     /** Its place on the Ark map (`map/place.ts`): the tag it stands for, its roost, its partner role; absent when placed by its zone. */
     map?: MapPlace;
+    /**
+     * A partner with its host aboard (section 6): a rider on its back (the
+     * oxpecker on a buffalo, the remora under a shark), one at its feet (the
+     * egrets), a parasite beside it (never harming it). `x`, `z`, `ground`
+     * are then on or by the host's spot; its own spot is its fallback.
+     */
+    host?: {id: string; role: "rider" | "beside" | "parasite"; dx: number; dz: number; lift: number};
 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -453,5 +461,56 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         }
         placed.set(animal.id, chosen);
     }
+    attachToHosts(animals, placed);
     return placed;
+}
+
+/**
+ * Partners on their hosts (decision 4): each rider, follower and parasite
+ * takes the host of its group that stands nearest its own spot (ties by id),
+ * if one is aboard; else it stays on its own spot (its fallback). Visual
+ * only, and a function of who is aboard: a rider moves off when its host
+ * leaves, and back to its own spot.
+ */
+function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
+    const partners = animals.filter((animal) => {
+        const role = placed.get(animal.id)?.map?.species?.role;
+        return role === "rider" || role === "beside" || role === "parasite";
+    });
+    if (!partners.length) return;
+    for (const animal of partners) {
+        const place = placed.get(animal.id)!;
+        const species = place.map!.species!;
+        if (!species.host) continue;
+        let best: {animal: ArkAnimal; place: Placement; d: number} | null = null;
+        for (const other of animals) {
+            if (other.id === animal.id || !isHost(species.host, other.model_slug, other.kind_species_profile_id, other.species_profile_id)) continue;
+            const there = placed.get(other.id);
+            if (!there || there.map?.held) continue;
+            const d = Math.hypot(there.x - place.x, there.z - place.z);
+            if (!best || d < best.d || (d === best.d && other.id < best.animal.id)) best = {animal: other, place: there, d};
+        }
+        if (!best) continue;
+        const role = species.role as "rider" | "beside" | "parasite";
+        const hostLength = displayLength(best.animal);
+        const hash = hashString(`${animal.id}#host`);
+        const side = (hash & 1 ? 1 : -1) * (role === "rider" ? 0 : role === "beside" ? hostLength * 0.55 + 0.5 : hostLength * 0.35 + 0.15);
+        const along = role === "rider" ? hostLength * 0.08 : ((hash >>> 3) % 100 / 100 - 0.5) * hostLength * 0.6;
+        // Across and along the host's heading (yaw 0 faces +z).
+        const c = Math.cos(best.place.yaw);
+        const sn = Math.sin(best.place.yaw);
+        const dx = side * c + along * sn;
+        const dz = -side * sn + along * c;
+        // A rider on its back (the host's drawn height, about half its length for a grazer); a remora just under a shark's belly.
+        const lift = role === "rider" ? (best.place.water ? -0.25 * hostLength : 0.42 * hostLength) : 0;
+        place.host = {id: best.animal.id, role, dx, dz, lift};
+        place.x = best.place.x + dx;
+        place.z = best.place.z + dz;
+        place.ground = role === "rider" || best.place.water ? best.place.ground + lift : mapPoints().sampler.ground(place.x, place.z).height;
+        place.yaw = best.place.yaw;
+        place.water = best.place.water;
+        place.sea = best.place.sea;
+        delete place.micro;
+        delete place.canopy;
+    }
 }
