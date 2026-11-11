@@ -95,6 +95,8 @@ export function loadSpecies(speciesPath: string, extraPath: string, intelPath: s
             diet: (profile.diet as string) ?? null,
             roost: (profile.roost as string) ?? null,
             activityValue: (profile.activity as string) ?? null,
+            size: (profile.size as number) ?? null,
+            interactions: (profile.interactions as string[]) ?? [],
             seasonValue: Array.isArray(seasonValue) ? seasonValue : null,
             text
         });

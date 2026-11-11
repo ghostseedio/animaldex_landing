@@ -71,6 +71,9 @@ export type SpeciesText = {
     diet: string | null;
     roost: string | null;
     activityValue: string | null;
+    /** The size stat (0–100) and the places it uses (the profiles'). */
+    size: number | null;
+    interactions: string[];
     /** voyage_species_traits.season (the breeding season, where stored). */
     seasonValue: string[] | null;
     text: Partial<Record<TextField, string>>;
@@ -342,7 +345,7 @@ export function sexOf(s: SpeciesText): SexInfo {
     for (const [field, sentence] of all) {
         let m: RegExpExecArray | null;
         // Not about this species' sexes: a comparison ("unlike pond snails, which are hermaphrodites"), its name, a captive record.
-        if (/\bunlike\b|\bname\b|captiv\w*|(has|have) been (recorded|shown|reported)|separate sexes|relatives\b/i.test(sentence)) continue;
+        if (/\bunlike\b|\bname\b|captiv\w*|(has|have) been (recorded|shown|reported)|(?<!no )separate sexes|relatives\b|\b(can|may|occasionally|sometimes|facultative\w*|also)\b[^.]{0,50}(parthenogen\w*|without mating)/i.test(sentence)) continue;
         if ((m = /\b(hermaphrodit\w*|both (male and female|sexes) (organs|reproductive)|simultaneous hermaphrodit\w*)\b/i.exec(sentence)) && !NEGATED.test(sentence.slice(0, m.index))) {
             out.system = /\b(changes? sex|sequential|protandr\w*|protogyn\w*)\b/i.test(sentence) ? "changes" : "hermaphrodite";
             hit(field, sentence, m);
