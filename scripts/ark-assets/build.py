@@ -225,6 +225,7 @@ def main():
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--no-pack", action="store_true")
     ap.add_argument("--shots", default="", help="only render these tiles (e.g. card); keeps the others")
+    ap.add_argument("--variants", default="", help="only these variant letters (e.g. a)")
     ap.add_argument("--work", default=os.environ.get("ARK_ASSETS_WORK", "/tmp/ark-assets-work"))
     args = ap.parse_args(argv)
     only = [s for s in args.only.split(",") if s]
@@ -246,6 +247,8 @@ def main():
     for make in factories:
         t0 = time.time()
         asset = make()
+        if args.variants and asset.variant not in args.variants:
+            continue
         aid = asset.id
         files = []
         levels = [(f"lod{i}", m) for i, m in enumerate(asset.lods)]

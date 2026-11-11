@@ -461,6 +461,90 @@ def mesh_card(spec, tree, rng):
     return out
 
 
+# MARK: - Leaf clumps
+
+def make_clumps(spec, rng, tree):
+    """Foliage masses: cupped, leafy-edged fans at the twig ends, facing out of the crown. They carry
+    most of the crown's coverage per triangle; real leaf blades sit among them near the camera."""
+    CL = spec.get("clumps")
+    tree.clumps = []
+    if not CL or not tree.leaves:
+        return
+    allp = np.array([l["p"] for l in tree.leaves])
+    centre = allp.mean(0)
+    centre[1] = np.percentile(allp[:, 1], 40)
+    cols = spec["leaves"]["colors"]
+    for limb in tree.limbs:
+        if limb.level not in CL["levels"] or limb.broken or getattr(limb, "root", False) or getattr(limb, "liana", False):
+            continue
+        n = int(rng.integers(CL["per_limb"][0], CL["per_limb"][1] + 1))
+        if CL.get("per_m"):
+            n = max(1, int(round(CL["per_m"] * limb.length * rng.uniform(0.8, 1.2))))
+        for k in range(n):
+            t = rng.uniform(*CL.get("t", (0.55, 1.0)))
+            p, d, r = limb.at(t)
+            out = p - centre
+            out[1] *= 0.6
+            out = norm(out + rng.normal(0, 0.25, 3))
+            nrm = norm(out * (1 - CL.get("face_up", 0.5)) + UP * CL.get("face_up", 0.5) + rng.normal(0, CL.get("tilt", 0.2), 3))
+            R = rng.uniform(*CL["r"])
+            tree.clumps.append(dict(p=p + nrm * R * 0.15, n=nrm, d=d, R=R,
+                                    color=jitter(cols[int(rng.integers(len(cols)))], rng, 0.07, 0.02),
+                                    sway=float(limb.sway(t)), phase=limb.phase, lphase=rng.uniform()))
+
+
+def clump_geo(R, n_pts, notch, aspect, cup, rng):
+    """Local frame: +Y the clump's normal, +Z along its twig. Centre raised, edge alternating
+    leaf tips and notches, drooping a little."""
+    a0 = rng.uniform(0, 2 * math.pi)
+    P = [[0, cup * R, 0]]
+    tip = [0.0]
+    for i in range(n_pts):
+        a = a0 + 2 * math.pi * i / n_pts + rng.uniform(-0.12, 0.12)
+        out = i % 2 == 0
+        r = R * (1.0 if out else notch) * rng.uniform(0.85, 1.1)
+        P.append([math.cos(a) * r, -0.18 * R * (r / R) ** 2, math.sin(a) * r * aspect])
+        tip.append(1.0 if out else 0.6)
+    F = [[0, 1 + (i + 1) % n_pts, 1 + i] for i in range(n_pts)]
+    return np.array(P), np.array(F), np.array(tip)
+
+
+def mesh_clumps(spec, tree, detail, out, rng, target_tris):
+    CL = spec.get("clumps")
+    clumps = getattr(tree, "clumps", [])
+    if not CL or not clumps or target_tris <= 0:
+        return
+    pts_n = [CL.get("points", 10), max(6, CL.get("points", 10) - 2), 6][detail]
+    keep = max(6, min(len(clumps), int(target_tris / pts_n)))
+    order = np.random.default_rng(11).permutation(len(clumps))
+    chosen = [clumps[i] for i in order[:keep]]
+    grow = min(2.6, max(1.0, math.sqrt(len(clumps) / keep) * 0.95))
+    allp = np.array([c["p"] for c in clumps])
+    centre = allp.mean(0)
+    centre[1] = np.percentile(allp[:, 1], 40)
+    spread = np.percentile(np.linalg.norm(allp - centre, axis=1), 92) + 1e-3
+    ymin, ymax = allp[:, 1].min(), allp[:, 1].max()
+    Ps, Fs, Ns, Cs, Ws = [], [], [], [], []
+    off = 0
+    for c in chosen:
+        P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng)
+        Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
+        radial = norm(Pw - centre)
+        Nw = norm(radial * 0.6 + y * 0.4)
+        depth = np.clip(np.linalg.norm(Pw - centre, axis=1) / spread, 0, 1.15)
+        ao = (0.45 + 0.55 * depth ** 0.8) * (0.8 + 0.2 * (Pw[:, 1] - ymin) / max(ymax - ymin, 1e-3))
+        col = np.tile(c["color"], (len(P), 1))
+        tipc = np.asarray(spec["leaves"].get("tip", c["color"] * np.array([1.12, 1.12, 0.9, 1])))
+        col = mix(col, np.tile(tipc, (len(P), 1)), (tip - 0.6).clip(0) * 0.6)
+        col[0, :3] *= 1.08
+        col[:, :3] *= ao[:, None]
+        W = np.stack([np.full(len(P), min(1.0, c["sway"] + 0.12)), np.full(len(P), c["phase"]), tip * 0.6,
+                      np.full(len(P), c["lphase"])], 1)
+        Ps.append(Pw); Fs.append(F + off); Ns.append(Nw); Cs.append(np.clip(col, 0, 1)); Ws.append(W)
+        off += len(P)
+    out.add(np.concatenate(Ps), np.concatenate(Fs), np.concatenate(Ns), np.concatenate(Cs), np.concatenate(Ws))
+
+
 # MARK: - Attach points
 
 def tree_attach(spec, tree, rng):
@@ -539,9 +623,9 @@ def fruit_parts(tree, spec, rng, detail, out, kind="fruit"):
     F_ = spec.get(kind) or dict(radius=spec.get("palm", {}).get("nut_radius", 0.1))
     rings, sides = [(5, 7), (3, 5), (2, 4)][detail]
     for i, fr in enumerate(tree.fruits):
-        if detail == 2 and i % 3:
+        if detail == 2 and i % (10 if kind == "blossom" else 3):
             continue
-        if detail == 1 and i % 2:
+        if detail == 1 and i % (3 if kind == "blossom" else 2):
             continue
         if kind == "fruit":
             P, F = uv_sphere(rings, sides)
@@ -775,6 +859,7 @@ G = lambda *h: [hexc(x) for x in h]
 
 SPECIES = {
     "oak": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.45, 0.7), points=10, notch=0.7, cup=0.35, face_up=0.45),
         H=8.5, trunk=dict(length=6.2, radius=0.36, taper=0.42, wobble=0.07, lean=0.06, flare=0.55),
         levels=[dict(count=(6, 8), t=(0.32, 0.98), angle=58, angle_var=14, ratio=0.62, shape="hemi", rratio=0.55,
                      bend=0.25, wobble=0.18, taper=0.3),
@@ -786,6 +871,7 @@ SPECIES = {
                   moss=dict(color=hexc("#5e7a2e"), lo=0.45, hi=0.95, top=4.0)),
         holes=1, card_lobes=7, n_branch=20),
     "beech": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.4, 0.6), points=10, notch=0.72, cup=0.3, face_up=0.55),
         H=11, trunk=dict(length=9.0, radius=0.3, taper=0.35, wobble=0.03, lean=0.03, flare=0.35),
         levels=[dict(count=(8, 10), t=(0.35, 0.98), angle=38, angle_var=10, ratio=0.5, shape="ovoid", rratio=0.5,
                      bend=0.45, wobble=0.1),
@@ -795,6 +881,8 @@ SPECIES = {
                     tip=hexc("#a6c656"), fold=0.25, curl=0.08, angle=70, tilt=0.3),
         bark=dict(color=hexc("#9a9a8e"), dark=hexc("#6c6c62"), fx=2, fy=0.6, contrast=0.6), n_branch=20),
     "pine": dict(
+        clumps=dict(levels=[1, 2, 3], per_limb=(2, 3), r=(0.5, 0.75), points=14, notch=0.45, cup=0.3, face_up=0.7, aspect=1.2,
+                    share=(0.8, 0.95, 1.0)), wood_share=(0.32, 0.3, 0.28),
         H=13, trunk=dict(length=12.0, radius=0.26, taper=0.25, wobble=0.035, lean=0.07, flare=0.25),
         levels=[dict(count=(12, 16), t=(0.55, 0.99), angle=78, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
                      bend=0.5, wobble=0.12, abs_length=3.4),
@@ -806,6 +894,7 @@ SPECIES = {
                   marks=dict(color=hexc("#4f4038"), lo=-0.2, hi=0.3, foot=hexc("#3b2f28"))),
         bark_top=0.55, card_lobes=8),
     "spruce": dict(
+        clumps=dict(levels=[1, 2], per_limb=(1, 1), per_m=1.6, t=(0.15, 1.0), r=(0.3, 0.45), points=12, notch=0.5, cup=0.15, face_up=0.85, aspect=1.7),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
                      rratio=0.35, bend=0.25, wobble=0.06, abs_length=3.3),
@@ -823,6 +912,7 @@ SPECIES = {
                   rings=dict(freq=4.5, depth=0.35)), trunk_sides=[10, 6, 5], bark_top=0.85, card_style="fronds",
         card_ribbons=1),
     "acacia": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.45, 0.75), points=12, notch=0.75, cup=0.12, face_up=0.9, tilt=0.08),
         H=6.5, trunk=dict(length=2.4, radius=0.22, taper=0.6, wobble=0.08, lean=0.12, flare=0.3),
         levels=[dict(count=(4, 5), t=(0.75, 1.0), angle=38, angle_var=12, ratio=1.25, shape="uniform", rratio=0.7,
                      bend=0.6, wobble=0.15, abs_length=3.4),
@@ -844,6 +934,7 @@ SPECIES = {
         bark=dict(color=hexc("#6a5c4a"), dark=hexc("#3a3028"), fx=5, fy=0.8, contrast=1.4, rough=0.06),
         bark_top=0.9, card_lobes=7, n_branch=16),
     "birch": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 1), r=(0.3, 0.45), points=10, notch=0.72, cup=0.25, face_up=0.35),
         H=10, trunk=dict(length=9.4, radius=0.15, taper=0.35, wobble=0.04, lean=0.06, flare=0.2),
         levels=[dict(count=(9, 12), t=(0.35, 0.98), angle=40, angle_var=12, ratio=0.38, shape="ovoid", rratio=0.45,
                      bend=0.35, wobble=0.12),
@@ -855,6 +946,7 @@ SPECIES = {
                   marks=dict(color=hexc("#2a2622"), lo=0.28, hi=0.4, foot=hexc("#3a3430"))),
         min_r=[0.0, 0.012, 0.03], n_branch=16),
     "apple": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.32, 0.48), points=10, notch=0.7, cup=0.35, face_up=0.5),
         H=5.0, trunk=dict(length=2.0, radius=0.16, taper=0.6, wobble=0.1, lean=0.1, flare=0.3),
         levels=[dict(count=(4, 5), t=(0.6, 1.0), angle=48, angle_var=12, ratio=1.1, shape="uniform", rratio=0.7,
                      bend=0.35, wobble=0.22, abs_length=2.4),
@@ -866,6 +958,7 @@ SPECIES = {
         fruit=dict(count=34, radius=0.045, colors=G("#c0302a", "#d24a2a", "#b8382c", "#c8a030")),
         bark_top=0.9, n_branch=18),
     "mangrove": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.35, 0.55), points=10, notch=0.7, cup=0.3, face_up=0.5),
         H=6.5, trunk=dict(base=[0, 1.1, 0], length=3.0, radius=0.18, taper=0.6, wobble=0.07, lean=0.05, flare=0.0),
         levels=[dict(count=(5, 6), t=(0.5, 1.0), angle=48, angle_var=12, ratio=0.9, shape="uniform", rratio=0.6,
                      bend=0.3, wobble=0.18, abs_length=2.4),
@@ -876,6 +969,7 @@ SPECIES = {
         bark=dict(color=hexc("#7a6a58"), dark=hexc("#4a3e32"), fx=3, fy=1.0, contrast=0.9),
         roots=dict(count=11, **{"from": (1.2, 2.6)}, reach=(1.4, 2.6), radius=0.045), bark_top=0.6, n_branch=16),
     "emergent": dict(
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.8, 1.25), points=10, notch=0.7, cup=0.3, face_up=0.6),
         H=24, trunk=dict(length=19.0, radius=0.55, taper=0.45, wobble=0.02, lean=0.02, flare=0.0),
         levels=[dict(count=(7, 8), t=(0.8, 1.0), angle=72, angle_var=10, ratio=0.4, shape="inverse", rratio=0.5,
                      bend=0.15, wobble=0.12, abs_length=9.0),
@@ -917,7 +1011,7 @@ VARIANTS = {
               (83, {"H": 11.5, "trunk.length": 10.8, "leaves.colors": G("#c8b03a", "#d8bc42", "#b89a30")})],
     "apple": [(91, {}), (92, {"fruit.colors": G("#8ab038", "#9ab840", "#c8b040"), "fruit.count": 26}),
               (93, {"fruit": None, "blossom": dict(count=240, colors=G("#f6e4ea", "#f2cfd8", "#fbf2f2")),
-                    "leaves.per_m": 22})],
+                    "leaves.per_m": 22, "leaves.colors": G("#f4b8cc", "#eeaac2", "#6a9a3a", "#f8d2de", "#5a8a32")})],
     "mangrove": [(101, {}), (102, {"trunk.length": 2.4, "roots.count": 14, "roots.reach": (1.6, 3.0)})],
     "emergent": [(111, {}), (112, {"H": 20, "trunk.length": 15.5, "levels.0.abs_length": 6.0, "lianas": 6})],
     "snag": [(121, {}), (122, {"H": 5, "trunk.length": 4.2, "levels.0.count": (3, 4), "holes": 2}),
@@ -967,6 +1061,7 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
         bromeliads(tree, spec, rng)
     for i in range(spec.get("holes", 0)):
         add_hole(tree, spec, rng.uniform(0.25, 0.7), rng, rng.uniform(0.05, 0.08))
+    make_clumps(spec, np.random.default_rng(seed + 77), tree)
     if spec.get("fruit"):
         add_fruits(tree, spec, rng, "fruit")
     if spec.get("blossom"):
@@ -974,10 +1069,12 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
     lods = []
     budget = spec.get("budget", BUDGET)
     for detail in range(3):
+        wood_share = (spec.get("wood_share", (0.42, 0.38, 0.32))[detail] if spec.get("clumps") else 0.62) \
+            if tree.leaves else 0.95
         for min_r in (0.0, 0.006, 0.009, 0.012, 0.016, 0.022, 0.03, 0.045, 0.07):
             m = Mesh()
             mesh_wood(spec, tree, detail, m, min_r)
-            if m.tris <= budget[detail] * (0.62 if tree.leaves else 0.95):
+            if m.tris <= budget[detail] * wood_share:
                 break
         mesh_holes(tree, m, detail)
         mesh_rosettes(tree, m, detail, rng)
@@ -990,8 +1087,13 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
             LV = spec["leaves"]
             per = (LV.get("needles", 7) if detail == 0 else 4) if LV.get("kind") == "needles" else \
                 {0: 2, 1: 4, 2: 8}[LV.get("segs", 0) if detail == 0 else 0]
-            mesh_leaves(spec, tree, detail, m, np.random.default_rng(seed + detail),
-                        target=max(budget[detail] * 0.3, budget[detail] - wood) / per)
+            avail = max(budget[detail] * 0.3, budget[detail] - wood)
+            if spec.get("clumps"):
+                share = spec["clumps"].get("share", (0.72, 0.9, 1.0))[detail]
+                mesh_clumps(spec, tree, detail, m, np.random.default_rng(seed + 50 + detail), avail * share)
+                avail = budget[detail] - m.tris
+            if avail >= per * 8:
+                mesh_leaves(spec, tree, detail, m, np.random.default_rng(seed + detail), target=avail / per)
         lods.append(m)
         tree.wood_tris = getattr(tree, "wood_tris", []) + [wood]
     card = mesh_card(spec, tree, np.random.default_rng(seed))
