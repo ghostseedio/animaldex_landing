@@ -8,13 +8,13 @@
  * the numbers (and the test files' results), and writes one table: `<out>/summary.md` and `summary.json` (and the job summary in CI). It fails when
  * a check's command fails, a number is missing, or a number passes its limit.
  *
- *   npx tsx scripts/ark-motion-ci.mts [--out .ark-golden/ci/motion] [--only name,name] [--no-run]
+ *   npx tsx scripts/ark-motion-ci.mts [--out .ark-golden/ci/motion] [--only name,name] [--no-run] [--registry <json>]
  *
  * `--no-run` reads the JSON files the commands already wrote (for a quick re-read). Local files only.
  */
 
 import {spawnSync} from "node:child_process";
-import {appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
+import {appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
@@ -22,8 +22,9 @@ type Metric = {id: string; label: string; path: string; op?: "length" | "sum"; m
 /**
  * A check: a `command` that writes `output` (the lane's JSON) and/or `tests` (node test files, run with the TAP
  * reporter: one row per test whose name matches `metricTests`, default "metric", and one row for the whole set).
- * Every command and test sees `ARK_MOTION_METRICS_DIR` (this run's out folder), where a lane's test may write the
- * numbers it measured as JSON for `output` + `metrics` to read.
+ * Every command and test sees `ARK_MOTION_METRICS_DIR` (this run's out folder): a lane's test records the numbers it
+ * measured there with `recordMotionMetric` (`src/lib/ark-motion-metrics.ts`), read back with
+ * `"output": "$ARK_MOTION_METRICS_DIR/<lane>.jsonl"` and `metrics` (path = the recorded id).
  */
 type Check = {name: string; lane: string; requires: string[]; command?: string; tests?: string[]; metricTests?: string; output?: string; metrics?: Metric[]; enabled?: boolean};
 type Row = {check: string; lane: string; id: string; label: string; before: number | string | null; value: number | null; limit: string; pass: boolean; note?: string};
@@ -55,7 +56,7 @@ function readMetric(json: unknown, metric: Pick<Metric, "path" | "op">): number 
     return typeof at === "number" && Number.isFinite(at) ? at : null;
 }
 
-const {checks} = JSON.parse(readFileSync(path.join(root, "tests", "ark-motion", "metrics.json"), "utf8")) as {checks: Check[]};
+const {checks} = JSON.parse(readFileSync(path.resolve(root, arg("registry", path.join("tests", "ark-motion", "metrics.json"))), "utf8")) as {checks: Check[]};
 const rows: Row[] = [];
 const skipped: string[] = [];
 for (const check of checks) {
@@ -67,6 +68,9 @@ for (const check of checks) {
         continue;
     }
     const env = {...process.env, ARK_MOTION_METRICS_DIR: out};
+    const outputFile = check.output ? path.resolve(root, check.output.replace("$ARK_MOTION_METRICS_DIR", out)) : null;
+    // A recorded file (`src/lib/ark-motion-metrics.ts`) starts empty each run, so no number is left from an old run.
+    if (run && outputFile?.endsWith(".jsonl")) rmSync(outputFile, {force: true});
     if (run && check.tests?.length) {
         log(`test  ${check.name}: ${check.tests.join(" ")}`);
         const result = spawnSync("npx", ["tsx", "--test", "--test-reporter=tap", ...check.tests], {cwd: root, env, encoding: "utf8", maxBuffer: 64 << 20});
@@ -90,10 +94,14 @@ for (const check of checks) {
             continue;
         }
     }
-    if (!check.output || !check.metrics?.length) continue;
+    if (!outputFile || !check.metrics?.length) continue;
     let json: unknown = null;
     try {
-        json = JSON.parse(readFileSync(path.resolve(root, check.output.replace("$ARK_MOTION_METRICS_DIR", out)), "utf8"));
+        const text = readFileSync(outputFile, "utf8");
+        // JSON lines (`recordMotionMetric`): {id: value}, the last value recorded wins.
+        json = outputFile.endsWith(".jsonl")
+            ? Object.fromEntries(text.split("\n").filter(Boolean).map((line) => JSON.parse(line) as {id: string; value: number}).map((m) => [m.id, m.value]))
+            : JSON.parse(text);
     } catch {
         rows.push({check: check.name, lane: check.lane, id: "output", label: `its output ${check.output}`, before: null, value: null, limit: "present", pass: false});
         continue;
