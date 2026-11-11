@@ -60,6 +60,11 @@ export type RigClip = {
     mode?: string;
     /** enter_water, exit_water: the body ends (enter) or starts (exit) this many mesh heights below the bank. */
     depth_h?: number;
+    /** v6 (contract 8.1): the base pose a loop is held in (lying, side, leaning), a transition's start and end, the posture. */
+    base?: string;
+    starts?: string;
+    ends?: string;
+    posture?: string;
 };
 
 /** One bone of the look chain, in the rig's rest pose (glTF space: +y up, the animal faces +z, its left is +x). */
@@ -98,6 +103,8 @@ export type RigEntry = {
     flight_fallback_open?: boolean;
     /** v2: the head and neck chain for look-at; absent in v1. */
     look?: RigLook | null;
+    /** v6: a clip this species was meant to have that failed, and the clip that stands in for it (`{"sleep": "sleep_stand"}`). */
+    alias?: Record<string, string> | null;
 };
 
 /** A rig set's manifest as the rules read it: `flight` is the set-wide switch (v2; absent or false: no flight anywhere). */
@@ -106,7 +113,7 @@ export type RigManifest = {flight?: boolean; species: Record<string, RigEntry | 
 /** Flight clips: played only when the set and the species' entry both say flight is approved. */
 export const FLIGHT_CLIPS: ReadonlySet<string> = new Set(["flap", "glide", "soar", "bank_l", "bank_r", "hover", "takeoff", "land"]);
 /** Clips that move the animal along (water clips included): held on a sitting rig, with the flight clips. */
-export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "climb", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water"]);
+export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "climb", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water", "dive", "paddle"]);
 /** What the rig pipeline holds on a sitting rest pose (contract section 4: the moving clips and every flight clip). */
 const SIT_HELD: ReadonlySet<string> = new Set(Array.from(MOVING_CLIPS).concat(Array.from(FLIGHT_CLIPS)));
 

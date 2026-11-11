@@ -44,59 +44,81 @@ Take-off, landing and the water clips have their own body offset taken off (`PAT
 
 ## Behaviour recipe states: mapped vs fallback
 
-The recipes lane's 70 named states (`ARK_RECIPE_STATES`, `docs/ark/behaviour-recipes.md`). A test (`src/lib/ark-rig.test.ts`) holds every state to exactly one of the two lists.
+The recipes lane's 70 named states (`ARK_RECIPE_STATES`, `docs/ark/behaviour-recipes.md`), mapped to the rig contract's clips: v5 (sections 3–4) and the v6 clips (section 8 on AnimalDex `ark-rigging-v6`).
 
-### Mapped: a clip expresses it (`RECIPE_CLIPS`, 32 states)
+- A test (`src/lib/ark-rig.test.ts`) holds every state to exactly one of `RECIPE_CLIPS` and `RECIPE_FALLBACK`.
+- A mapped state whose clip a rig doesn't have (a v1 or v5 file, or another species) plays its block's beat, as a fallback state does.
+- v6 clips with a `base` (lying, side, leaning) are entered and left only through their transitions (`baseStep`): `lie_down` / `get_up` (`get_up_fast` when startled), `side_down` / `side_up`, `drop` / `rise`.
+- Aliases (`alias`) play the stand-in under the missing clip's name.
+
+### Mapped (`RECIPE_CLIPS`, 63 states)
 
 | State(s) | Clip (first the rig has) | Plays |
 |---|---|---|
 | walk | walk, slither, hop | by distance |
-| run, charge, clash | run, walk | by distance |
-| stalk, crawl, wade, carry, push | walk (crawl: or slither) | by distance |
+| run, charge | run, walk | by distance |
+| clash | run, walk while it charges; `clash` where they meet (v6) | by distance, then once |
+| stalk, crawl, carry, push | walk (crawl: or slither) | by distance |
+| wade | walk, paddle (v6) | by distance |
 | climb | climb | by distance |
-| swim | swim, slither | loop |
+| swim | swim, slither (loop), paddle (v6, by distance) | |
 | leap | leap | once |
-| fly | flap, glide | loop (the flight machine when it is in the air on its rig) |
-| glide | glide, soar | loop |
-| hover | hover | loop |
+| fly | flap, glide (the flight machine when it is in the air on its rig) | loop |
+| glide / hover | glide, soar / hover | loop |
 | takeoff, land | takeoff, land | once |
+| plunge | `plunge` (v6), also in the air | loop |
 | slide, slip_in, dive_in, launch | enter_water | once |
 | haul_out, hop_out | exit_water | once |
 | surface | surface | once |
+| dive | `dive` (v6), then the swim's paddle | once |
+| upend | `upend` (v6) | loop |
 | scan | scan | loop |
 | peck, eat, pick_up, place | graze (head down) | loop |
 | perch | perch | loop |
 | shake, bathe | shake_off | once |
+| sleep | sleep_one_leg, sleep_tuck, sleep_hang, sleep_curl, sleep_float, sleep_stand, sleep_side, sleep (v6) | loop |
+| rest, incubate | lie, bask, rest_one_leg (v6) | loop |
+| bask | bask, lie (v6) | loop |
+| float_back | sleep_float (v6) | loop |
+| groom, groom_other, wing_dry | groom (v6) | loop |
+| call | call (v6) | loop |
+| pushup | display, call (v6) | loop |
+| display, dance | display (v6) | loop |
+| strike, swipe, scoop, beat_prey, pull, probe, tool | strike (v6) | once |
+| fight, box, rear | fight (v6) | loop |
+| dig, mark, bury | dig (v6) | loop |
+| dust_bathe, wallow, roll | dust_bathe, wallow, roll (v6) | loop |
 
-### Fallback: no clip yet, so the block's beat plays (`RECIPE_FALLBACK`, 38 states)
+### Fallback: no clip in v5 or v6 (`RECIPE_FALLBACK`, 7 states)
 
-| State | Fallback beat | What plays today |
+| State | Fallback beat | What plays |
 |---|---|---|
-| strike, swipe, scoop, upend, pull, beat_prey, tool | bite | graze (head down) |
-| sweep, probe, drum, dig, mark | peck | graze (head down) |
-| display, pushup, call | scan | scan |
-| dance, fight, rear, box | play | idle |
-| groom, groom_other, wing_dry | preen | idle |
-| bury, roll, dust_bathe, wallow, bask, stretch, yawn, float_back, rest, incubate | rest | idle |
-| sleep | sleep | idle, slowed (and the material's droop) |
+| sweep, drum | peck | graze (head down) |
 | crouch, freeze | pause | idle (with the reactive crouch) |
-| plunge, strike_feet | glide | glide on a flying rig, else the procedural flight |
-| dive | swim | the water branch's swim or idle |
+| stretch, yawn | rest | idle |
+| strike_feet | glide | glide on a flying rig, else the procedural flight |
 
-### Clips that would add the most (for the rigging lane)
+### Clips that would still add the most (for the rigging lane)
 
-Ordered by the recipes' use (`behaviour-recipes.md`, "States with the most use"). The first items are the biggest gains:
+- **`stretch` and `yawn`:** short one-shots on standing and lying bases.
+- **`sweep`:** the bill side to side, for spoonbills and avocets.
+- **`drum`:** hammering, for woodpeckers.
+- **`strike_feet`:** an osprey's feet-first drop.
+- **A crouch:** for ambush and freeze.
 
-1. **groom** (a preen: the head to the flank or back). It also serves `groom_other` and `wing_dry` (with the wings half open).
-2. **call** (the head up, the bill or mouth open). `display` and `pushup` can use a variant of it.
-3. **strike** (a fast lunge of the head). `scoop`, `swipe` and `beat_prey` are close relatives.
-4. **fight / clash** (the heads down and pushing: the stags' rut).
-5. **display** (the posture: the wings, crest or tail spread).
-6. **dig** (the forepaws scraping). `mark` is a scrape too.
-7. **dust_bathe, wallow, roll** (lying down and rolling).
-8. **upend** (dabbling: the head under, the tail up) and **dive** (from the surface).
-9. **plunge** (wings folded, nose down; the recipe already gives the attitude).
-10. **bask, sleep** (lying flat, and the head tucked).
+### Asleep (the scene's state, not a recipe)
+
+An animal asleep plays its rig's own sleep posture:
+- `sleep_hang` when it hangs from the canopy, `sleep_float` on the water;
+- else the first of sleep_one_leg, sleep_tuck, sleep_curl, sleep_stand and sleep that the file has (only its species' postures are in it), lying down first where the posture lies.
+
+Without one, its idle, slowed. The `ark-sleep` lane codes against the same names.
+
+### Sitting rigs
+
+A rig whose entry has `pose` (54 species: meerkats, hares, kangaroos, squirrels, gibbons…) has no bone look at all, and the shader's turn is off for it too. Its chain runs through an upright trunk, so it would turn the chest (contract section 5).
+
+Fleeing, such a rig plays `drop`, `bound` (by distance) and `rise` when its file has them (v6). Without a walk, a sitting rig isn't rigged while it moves: the cheap gait carries it.
 
 ## Recordings
 
