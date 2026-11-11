@@ -80,6 +80,8 @@ export type Template = {
     /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
      *  now-and-then thing, not every forage. */
     often?: number;
+    /** Its swims drift forward as a forager's steps do (a dabbling duck paddles on, it does not weave). */
+    drift?: boolean;
     /** Only males (a display), or the pair's sexes (pair templates: "males" both male, "mixed" a male and a female, "any"). */
     sex?: "male" | "males" | "mixed" | "any";
     steps: TemplateStep[];
@@ -194,6 +196,7 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             goal: "water",
             replaces: ["forage", "swim", "fly"],
             doing: "forage",
+            drift: true,
             hours: "day",
             steps: [
                 {b: "swim", to: "water", r: 4},
@@ -211,10 +214,12 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             goal: "water",
             replaces: ["forage", "swim", "graze"],
             doing: "forage",
+            drift: true,
             steps: [
                 {b: "swim", to: "water", r: 3},
                 {b: "upend", s: [2, 5]},
-                {b: "swim", to: "water", near: "here", r: 1.2}
+                // (A couple of metres on between up-ends, drifting forward: not a pivot on the spot after each.)
+                {b: "swim", to: "water", near: "here", r: 2.5}
             ],
             loop: 1,
             tail: [{b: "swim", to: "anchor"}]
@@ -384,10 +389,11 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             goal: "ground",
             replaces: ["forage", "graze", "wander"],
             doing: "forage",
+            // (Digging in short bouts as it goes on: a meerkat or a pig mostly walks its patch, nose down.)
             steps: [
                 {b: "walk", to: "ground", near: "here", r: 3},
-                {b: "dig", s: [4, 9]},
-                {b: "eat", s: [1, 2]}
+                {b: "dig", s: [2, 5]},
+                {b: "eat", s: [0.8, 1.5]}
             ],
             loop: 0
         }),

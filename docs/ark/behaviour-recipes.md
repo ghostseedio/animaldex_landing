@@ -486,3 +486,38 @@ Measured with the release merged: circling, every animal, 0.15% facing and 0.02%
 - **Measured** (behaviour's "an in-place activity barely turns", 13,763 minutes): 1 over, a grey heron's plain `watch` slot. It has no recipe and fails with recipes off too: behaviour's arrival turn and glances. The release had 184 minutes over.
 - **Circling**, every animal: 0.17% facing, 0.01% travel. Flyers: 0.463 turns a minute.
 - **New test:** no in-place episode turns more than once in any minute (nine species and recipes, sliding minutes, the last turn included).
+
+## Drifting forward and turns per minute of movement (release 82df2fa9)
+
+- **Forage steps drift forward**, as behaviour's grazers do. This applies to legs on foot (walk, stalk, wade, crawl, carry, leap), to swims from where it is, and to every swim of a drifting template (`drift`: dabble, pouch_scoop).
+  - Each step stays within 3° of its heading (`DRIFT_SPREAD`), and the loop plan bends it only a few degrees.
+  - A re-aim over 0.2 rad (`DRIFT_TURN`) is a turn on the spot, standing, and then it goes straight.
+  - A step from where it stands with nothing ahead stays put; there are no wide bends.
+- **Template changes:** root_dig digs in short bouts (2–5 s, eating 0.8–1.5 s), and a dabbling duck paddles 2.5 m between up-ends.
+- **Ways home:**
+  - A bird walks or wades within max(3 m, 6 body lengths), as behaviour's own rule, and flies further than that. A non-swimmer in the shallows wades.
+  - The leg home uses its template's own way home (a heron wades out); the budget's reserve uses the same way.
+  - A step home under 0.3 m (`SHUFFLE`) keeps its heading.
+  - A stay that keeps its heading comes home lined up with its next departure when that is within 60° of its way in, so its last turn is small. Every step is budgeted, even one that turns nothing.
+- **Watching the water:** a heron's body turns at most 0.35 rad (`WATCH_TURN`); its head does the rest.
+- **Pairs:**
+  - A pair's first walk starts with a turn on the spot of the same length on both sides; walks after squaring up go straight.
+  - A pair's one-sided run off turns on the spot first, and the loser retreats no further than where it started.
+  - Rivals walk up to each other and home at half their walk.
+  - A pair's leg home goes straight to where its schedule will have it as the leg ends, and turns on the spot first.
+  - Its heading blends back to the schedule pose's only on the way home.
+  - Detour arcs try gentle bows first.
+- **Measured.** These figures are this branch's (fixture) turns of the way per minute of movement:
+
+  | | Before | Now |
+  |---|---|---|
+  | domestic cat, pounce | 2.3 | 1.6 |
+  | red fox, pounce | 2.1 | 1.6 |
+  | meerkat, root_dig | 2.3 | 2.0 |
+  | grey heron, wade_spear | 18–41 in the release's default view | 3.0 |
+  | dromedary camel, wrestle | 11.4 | 4.2 (one reversal a bout: up to the rival, then back off or home) |
+  | Atlantic puffin, surface_dive | | 1.7 |
+  | mallard, dabble | | 4.1 (one homecoming turn per short stay) |
+
+  - Behaviour's "a grazer drifts forward", "an in-place activity barely turns" (0 of 13,657 minutes over), "no spinning" and the stags all pass.
+- **New tests:** a wading heron (under 3.5), a diving puffin (under 3), wrestling bulls (under 5).

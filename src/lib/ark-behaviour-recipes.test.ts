@@ -309,6 +309,79 @@ test("no in-place episode turns more than once in any minute: a dabbling duck pi
     assert.ok(stays >= 20, `stays ${stays}`);
 });
 
+/** Its way's turns per minute of movement in a recipe's episodes (the default view's measure: every 0.25 s, moving faster than 0.15 of its length a second, the way kept across its pauses). */
+function turnsPerMovingMinute(items: Array<{animal: ScheduleAnimal; profile: ReturnType<typeof behaviourProfile>}>, recipe: string, from: number, to: number, activity: "diurnal" | "crepuscular" | null): {rate: number; minutes: number} {
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let turn = 0;
+    let moving = 0;
+    for (const a of items) {
+        for (let t = from; t < to; t += 2) {
+            const trip = tripAt(world, a.profile, a.animal, t, hoursAt, activity);
+            const p = poseOnTrip(world, trip, t) as RecipePose;
+            if (p.act?.recipe !== recipe) continue;
+            // An episode: from 2 s back, through to its end.
+            const episode = p.act.episode;
+            let last = poseOnTrip(world, tripAt(world, a.profile, a.animal, t - 2, hoursAt, activity), t - 2) as RecipePose;
+            let way: number | null = null;
+            let s = t - 1.75;
+            for (; s < t + 400; s += 0.25) {
+                const q = poseOnTrip(world, tripAt(world, a.profile, a.animal, s, hoursAt, activity), s) as RecipePose;
+                if (q.act?.episode !== episode) {
+                    if (s > t) break;
+                    last = q;
+                    continue;
+                }
+                const d = Math.hypot(q.x - last.x, q.z - last.z);
+                if (d / 0.25 > Math.max(0.05, 0.15 * a.animal.length)) {
+                    const w = Math.atan2(q.x - last.x, q.z - last.z);
+                    if (way !== null) turn += Math.abs(wrap(w - way));
+                    way = w;
+                    moving += 0.25;
+                }
+                last = q;
+            }
+            t = s;
+        }
+    }
+    return {rate: turn / (Math.PI * 2) / Math.max(moving / 60, 1e-6), minutes: moving / 60};
+}
+
+test("a wading heron steps slowly forward and turns its head, not its body: under 3.5 turns a minute of movement", () => {
+    // (The release's default view: 18-41. Its wading steps drift forward; watching the water it turns its body a little
+    // at most; its one bigger turn is the turn home, on the spot.)
+    forgetRecipes();
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    const herons = [0, 1, 2].map((k) => animal(`heron-${k}`, "grey-heron", {x: -70 + k * 6, z: 22 - k * 4}, 0.95));
+    const {rate, minutes} = turnsPerMovingMinute(herons, "wade_spear", day + 5 * 3600, day + 19 * 3600, "diurnal");
+    assert.ok(minutes > 1, `moving ${minutes.toFixed(1)} min`);
+    assert.ok(rate < 3.5, `${rate.toFixed(2)} turns a minute of movement`);
+});
+
+test("a diving puffin pivots at the surface, it does not spin: under 3 turns a minute of movement", () => {
+    forgetRecipes();
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    const puffins = [0, 1, 2].map((k) => animal(`puffin-${k}`, "atlantic-puffin", {x: -70 + k * 6, z: 22 - k * 4}, 0.3));
+    const {rate, minutes} = turnsPerMovingMinute(puffins, "surface_dive", day + 5 * 3600, day + 19 * 3600, "diurnal");
+    assert.ok(minutes > 1, `moving ${minutes.toFixed(1)} min`);
+    assert.ok(rate < 3, `${rate.toFixed(2)} turns a minute of movement`);
+});
+
+test("wrestling bulls turn but never spin: they square up on the spot, walk straight, one turn home; under 5 turns a minute of movement", () => {
+    // (The release's default view: a dromedary camel's wrestle 8-20. One reversal a bout is the act itself: up to the
+    // rival, then back off or home.)
+    forgetRecipes();
+    const ids = Array.from({length: 80}, (_, i) => `camel-${i}`).filter((id) => sexLook(id, "dromedary-camel").sex === "male").slice(0, 2);
+    const a = animal(ids[0], "dromedary-camel", {x: 40, z: -60}, 3);
+    const b = animal(ids[1], "dromedary-camel", {x: 48, z: -54}, 3);
+    a.animal.zone = b.animal.zone = "desert";
+    wireRecipes([a, b]);
+    const month = speciesRecipes("dromedary-camel").mating[0] ?? 1;
+    const start = Math.floor(Date.UTC(2026, month - 1, 3) / 1000);
+    const {rate, minutes} = turnsPerMovingMinute([a, b], "wrestle", start, start + 2 * 86400, null);
+    assert.ok(minutes > 1, `moving ${minutes.toFixed(1)} min`);
+    assert.ok(rate < 5, `${rate.toFixed(2)} turns a minute of movement`);
+});
+
 test("setting off after a recipe stay it has already turned on the spot: it holds still through its schedule's turn, never turning on the move", () => {
     forgetRecipes();
     const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
