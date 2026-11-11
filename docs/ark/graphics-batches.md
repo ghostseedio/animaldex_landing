@@ -191,3 +191,24 @@ Same-conditions A/B: the same build with the sea life on and off (a temporary lo
 | waves_beach | 7.4, 8.9 | 8.8, 8.8 | 99 / 94 | 1.16 M / 1.13 M | 60 |
 
 GPU drain was within the noise. Desktop high (`reef-final2-desktop`) held 60 fps on every reef and coast shot, at 3.1–3.8 ms scene CPU and 250–360 calls. The fish placement costs about 0.2–0.3 ms a frame on the desktop CPU for the schools in view: each fish's matrix is built straight from its motion, and schools outside the view cone are skipped.
+
+## Batch 5: rocks, crops, the range, the floor, still water (b73d2b75 and on)
+
+From the coordinator's review of batch 4 ("several places still read as a demo") and the liveliness lane's tides.
+
+- **Rocks (`rock-assets.ts`, `asset-rocks.ts`):**
+  - the asset lane's rocks (merged from `ark-assets` 6f4adca4) replace the procedural ellipsoids: each decor rock keeps its place, turn and footprint, and takes a kind from where it lies (tide-pool rocks and barnacled clusters on the shore, mossy boulders in the woods and by water, boulders and clusters elsewhere);
+  - LOD-instanced and culled against the view; the material keeps the assets' colours (lifted from near black) and adds a fine grain, lichen on the dry upper faces, a wet glossy band and a salt line;
+  - `rock_face` points keep their ids and sit on the asset's own faces (attach.json, measured on the drawn lod0 surface), outward, on the outer hull, never buried in a sloping beach (0 of 684; graphics-interface.md has the rule).
+- **Fields:**
+  - cereal stands as a mass: crossed cards along the rows with a stalks-and-ears texture painted in code, built once for every cereal field (4 triangles a card), ripe or green per field, shown to 140 m, thinned by tier; single stalks only on a field's fringe;
+  - a field is crop or grass whole (decided at its middle);
+  - meadow grass keeps out of the crops (`cropsGrowAt`), on the margins and pasture.
+- **The range (`world.ts`, `terrain.ts`):**
+  - sharp horns with three arêtes each and deep cols (west 39 m, col 35, main 48, col 32, east 44) instead of smooth domes;
+  - snow whiter with a crisper edge (it read as a grey wash), a faint sheen; scree fans lighter and reaching further, visible from the far view;
+  - a golden-only camera (`window.__arkGoldenCamera`, development builds only) lets the mountain shot look up from the valley; the user's camera limits are unchanged.
+- **Forest floor (`near-detail.ts`, `windMaterial`):** litter mats (leaves, twigs, needles painted in code, along the slope), needle clusters under the conifers, more and bigger ferns, saplings, moss on the roots.
+- **Still water (`water-level.ts`, `terrain.ts`, `sampler.ts`):** the lake and the river keep a fixed level; the sea rises and falls with the tide. Two water meshes from one shader (the sea discards over fresh water); the ground and the sampler use the same rule (`waterLevelAt`).
+- **Waterfall:** skipped. The island's one river runs from the lake in the middle (level 0) to the southern coast; nothing flows out of the mountains, so no drop fits without a new stream (a map change).
+- **Close-up framing:** a micro shot takes the best point whose camera stands above the ground; the gecko keeps off the side windows. Note: reshaping the range shifted the decor indices, and so the `rock_face:decor<i>` ids and the sampler's later random points (the gecko's and the leaf's spots moved). Any map change does this.

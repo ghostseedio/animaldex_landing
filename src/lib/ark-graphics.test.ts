@@ -96,8 +96,8 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
     const rocks = worldDecor().filter((item) => item.kind === "rock");
     assert.ok(rocks.length > 100);
     const points = attachPoints({tag: "rock_face"});
-    for (const [i, item] of worldDecor().entries()) {
-        if (item.kind !== "rock") continue;
+    worldDecor().forEach((item, i) => {
+        if (item.kind !== "rock") return;
         const placed = rockAssetFor(item);
         assert.ok(placed, "every rock has an asset");
         assert.equal(placed!.x, item.x);
@@ -113,7 +113,7 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
             assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
             assert.ok(point.position.y >= heightAt(point.position.x, point.position.z) - 0.05 || point.hostKind !== "rock", "not buried in the ground");
         }
-    }
+    });
 });
 
 test("graphics: meadow grass keeps out of the standing crops (it grows on the margins and the pasture)", () => {
