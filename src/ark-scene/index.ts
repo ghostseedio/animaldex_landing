@@ -92,7 +92,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {beatClip, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -2426,7 +2426,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A jump (a new spot, an act's cut): no stride for it.
         if (moved > 3) moved = 0;
         state.last = (state.last ?? new Vector3()).copy(rigHere);
-        if (state.weight <= 0) return null;
+        if (state.weight <= 0) {
+            // Out of its rig: back on its feet (the near model's rest pose) for when it comes back.
+            state.base = "stand";
+            state.toward = null;
+            return null;
+        }
         // Its pace for choosing the clip, eased over about a fifth of a second (the clip's phase still follows the real distance).
         if (dt > 0) state.pace += (moved / dt - state.pace) * Math.min(dt * 5, 1);
         const speed = state.pace;
@@ -2468,6 +2473,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (state.flying) {
             if (oneShot("takeoff") || oneShot("land")) {
                 want = state.now.name;
+            } else if (recipeAct?.state === "plunge" && clip("plunge")) {
+                // A dive from the air: streamlined, wings closed (contract 8.4; the recipe pitches it nose down).
+                want = "plunge";
             } else {
                 const glideClip = clip("glide") ?? clip("soar");
                 want = flightClip({
@@ -2500,7 +2508,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 where.roll = where.roll * (1 - w) + ((banking ? 0 : -0.35 * into * (want === "soar" ? 1 : 0.4)) + (recipeAct?.roll ?? 0)) * w;
             }
         } else if (entry.state.asleep && !entry.act) {
-            // Asleep: its idle, slow (and the head lowered by the material's droop); never a walk.
+            // Asleep: its sleep posture where the rig has one (contract 8.2: lying down first, `baseStep`), else its
+            // idle, slow (and the head lowered by the material's droop); never a walk.
+            const posture = (place.canopy?.mode === "hang" && clip("sleep_hang") ? "sleep_hang" : null) ?? (where.water && clip("sleep_float") ? "sleep_float" : null) ?? ASLEEP_CLIPS.find((name) => Boolean(clip(name))) ?? null;
+            if (posture) want = posture;
         } else if (place.canopy && !entry.visitor) {
             const kind = place.canopy.mode;
             const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb");
@@ -2557,6 +2568,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     rate = swim.ground_speed ? Math.min(Math.max(speed / swim.ground_speed, 0.5), 1.6) : 1;
                 }
             }
+            // Moving at the surface with no swim of its own (a duck, a seal, a turtle): its paddle, by distance (contract 8.4).
+            const paddle = want ? null : clip("paddle");
+            if (moving(paddle)) {
+                want = "paddle";
+                mode = "distance";
+            }
         } else if (place.water && !entry.visitor && (clip("swim") || clip("slither"))) {
             // Standing water with no band (an anaconda in the wetland's pool): it swims where it lies.
             want = clip("swim") ? "swim" : "slither";
@@ -2607,6 +2624,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     want = move.name;
                     mode = "distance";
                     byRecipe = true;
+                } else if (fromRecipe.still) {
+                    // Where the rivals meet: the clash itself, once.
+                    want = fromRecipe.still;
+                    mode = "time";
+                    byRecipe = true;
                 }
             } else if (fromRecipe.play === "once" || !want || want === "idle") {
                 want = fromRecipe.name;
@@ -2628,6 +2650,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mode = "sync";
             sync = 0;
         }
+        // Its base pose (contract 8.3): into a lying, side or leaning clip, and out of it, only through the transitions.
+        if (state.toward && state.now.name === state.toward.clip && state.now.phase >= 1) {
+            state.base = state.toward.ends;
+            state.toward = null;
+        }
+        if (state.toward && state.now.name === state.toward.clip) {
+            want = state.toward.clip;
+            mode = "time";
+        } else {
+            state.toward = null;
+            const target = clipBase(rig.clips[want]);
+            const urgent = entry.reactive?.action === "flee" || entry.reactive?.action === "alert" || entry.reactive?.action === "startle";
+            const step = baseStep(state.base, target, (name) => Boolean(rig.clips[name]), urgent);
+            if (step) {
+                state.toward = step;
+                want = step.clip;
+                mode = "time";
+            } else if (state.base !== target && target === "stand") {
+                // No way back up in this file: stand again (the rest pose), as the rig always could.
+                state.base = "stand";
+            } else if (state.base !== target) {
+                // No way into that pose: its idle where it is.
+                want = clip("idle") ? "idle" : want;
+            }
+        }
+        // On its side by itself (contract 8.1, `sleep_side`): no recipe roll on top.
+        if (want === "sleep_side" && recipeAct?.roll) where.roll -= recipeAct.roll * state.weight;
         const playing = rig.clips[want];
         if (!playing) return null;
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
@@ -2664,6 +2713,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 animated: true,
                 rig: rig.texture,
                 lookChain: rig.look,
+                lookOff: rig.lookOff,
                 level: "near",
                 look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry)
             });

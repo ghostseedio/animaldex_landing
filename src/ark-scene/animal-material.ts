@@ -200,7 +200,8 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         vec3 pivot = vec3(0.0, mix(motionBottom, motionTop, 0.62), neckFrom);
 #ifdef ARK_RIG
         // A rig with a look chain turns its bones (RIG_SKIN), as far as the rig is in: this takes the rest.
-        if (arkLookBones.y >= 0.0) mask *= 1.0 - arkRigA.w;
+        // (-2: a rig with no look at all, a low-chained sitting one: no turn of the front of the body either.)
+        if (arkLookBones.y >= 0.0 || arkLookBones.y < -1.5) mask *= 1.0 - arkRigA.w;
 #endif
         float lookYaw = arkLook.x * arkLook.z * mask;
         float lookPitch = arkLook.y * arkLook.z * mask;
@@ -254,6 +255,8 @@ export type AnimalMaterialOptions = {
      * a head bone. (Named apart from `look`, the animal-look pass's surface.)
      */
     lookChain?: RigLookChain | null;
+    /** A rigged mesh with no look at all (`RigModel.lookOff`): the shader's turn stays off for it too. */
+    lookOff?: boolean;
     /** The animal-look pass (`animal-look.ts`): the species' surface and eyes; null draws it as before. */
     look?: SpeciesLook | null;
     /** Which level this draws: the far level keeps the pass's cheapest form. */
@@ -292,7 +295,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     if (options.rig) {
         uniforms.arkBones = {value: options.rig};
         const chain = options.lookChain ?? null;
-        uniforms.arkLookBones = {value: new Vector2(chain ? chain.neck : -1, chain ? chain.head : -1)};
+        uniforms.arkLookBones = {value: new Vector2(chain ? chain.neck : -1, chain ? chain.head : options.lookOff ? -2 : -1)};
         uniforms.arkLookNeckPivot = {value: new Vector3(...(chain?.neckPivot ?? [0, 0, 0]))};
         uniforms.arkLookHeadPivot = {value: new Vector3(...(chain?.headPivot ?? [0, 0, 0]))};
         uniforms.arkLookLimits = {value: new Vector4(chain?.yaw ?? 0, chain?.up ?? 0, chain?.down ?? 0, chain?.neckShare ?? 0)};
