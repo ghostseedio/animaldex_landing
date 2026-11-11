@@ -485,14 +485,22 @@ float arkWet = 0.0;`)
     float massif = vArkRock.y;
     // Dipping a few degrees and gently folded, so the beds cross the slopes instead of tracing their contours.
     float bedAt = world.y * 0.19 + (arkFbm(p * 0.018) - 0.5) * 1.8 + dot(p, vec2(0.011, -0.007));
-    float bedClear = 1.0 - smoothstep(0.08, 0.2, fwidth(bedAt));
+    // How big a pixel is on the ground here, in metres: the distance times the view ray's turn across one pixel. The same
+    // on every triangle (batch 6: the beds faded by fwidth(bedAt), which is constant per triangle and jumped from one to
+    // the next, so the ground's grid showed through the faces as squares and blocks, plainest on the low tier).
+    vec3 arkToEye = world - cameraPosition;
+    float arkEyeDist = max(length(arkToEye), 1e-3);
+    float arkPixel = arkEyeDist * length(fwidth(arkToEye / arkEyeDist));
+    float bedFw = 0.19 * arkPixel;
+    float bedClear = 1.0 - smoothstep(0.08, 0.2, bedFw);
     float bed = floor(bedAt);
     float within = fract(bedAt);
     float hard = step(0.42, arkHash(vec2(bed, 3.1)));
     // Each bed's own tone, drifting a little along it.
     float bedTone = clamp(arkHash(vec2(bed, 7.7)) + 0.35 * (arkFbm(p * 0.035 + bed * 1.7) - 0.5), 0.0, 1.0);
     // Thin bedding planes inside each bed, and ribs and gullies running down the steep faces.
-    float planes = (1.0 - smoothstep(0.03, 0.07, fwidth(bedAt))) * smoothstep(0.82, 0.97, fract(bedAt * 3.6 + 0.3 * arkNoise(p * 0.2)));
+    // The bedding planes are thin (a sixth of their 1.5 m spacing): only while they are well over a pixel tall.
+    float planes = (1.0 - smoothstep(0.012, 0.03, bedFw)) * smoothstep(0.82, 0.97, fract(bedAt * 3.6 + 0.3 * arkNoise(p * 0.2)));
     // Batch 6 (the owner: "dark rectangular slabs on the snowy faces"): the ribs were drawn on whichever side plane the
     // face turned to most, so they jumped where a face swung through 45° and, with the beds' level edges, cut the snow
     // into boxes. Now drawn on both planes and blended across that turn; the across-face terms fade out over it.
@@ -647,7 +655,11 @@ float arkWet = 0.0;`)
     vec3 rock = mix(rockDark, rockLight, mix(0.45, 0.12 + 0.8 * bedTone - 0.2 * hard, beds) + 0.25 * (arkFbm(p * 0.9) - 0.5) + 0.1 * (arkNoise(p * 4.0) - 0.5));
     // Some beds warmer (iron), some cooler.
     rock *= mix(vec3(1.0), mix(vec3(0.94, 0.97, 1.04), vec3(1.07, 0.99, 0.9), arkHash(vec2(bed, 1.9))), beds);
-    float runs = smoothstep(0.5, 0.85, arkNoise(vec2(faceAt.x * 1.1, faceAt.y * 0.05 + bed * 3.0))) * faceClear;
+    // Water streaks down the hard beds: continuous through the beds and fading towards each bed's top and foot (batch 6:
+    // a fresh noise row per bed cut them off square at the bed lines), and only near enough to be several pixels wide
+    // (from the island view they read as dark blocks on the faces).
+    float runs = smoothstep(0.5, 0.85, arkNoise(vec2(faceAt.x * 1.1, faceAt.y * 0.05))) * faceClear
+        * smoothstep(0.0, 0.25, within) * (1.0 - smoothstep(0.7, 1.0, within)) * (1.0 - smoothstep(0.06, 0.16, arkPixel));
     float gully = smoothstep(0.35, 0.05, rib) * massif;
     // Batch 6: the beds blend into the faces (the ledges read as boxy slabs stuck on): a faint lip and underhang.
     rock *= 1.0 - beds * (0.3 * runs * hard + 0.1 * underhang + 0.1 * planes) + beds * 0.05 * ledge;
