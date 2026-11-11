@@ -9,7 +9,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import {getCompanionWords} from "@/loaders/companion-words";
 import {getProfileViewerState} from "@/data/profile-authenticated";
 import {getPublicArkSummary, getPublicProfileCard, normalizePublicHandle} from "@/data/public-profiles";
-import {arkPersonView, arkScoreShare} from "@/lib/ark-world";
+import {arkPersonView, arkScoreShare, arkSignedChange, readArkScore} from "@/lib/ark-world";
 import {fillArkWords} from "@/lib/ark-words";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {getAbsoluteUrl, getLocalePath} from "@/lib/site";
@@ -43,6 +43,8 @@ type Props = {params: {locale: string; handle: string}; searchParams?: {fixture?
  * `mine` animals), `?fixture=named` (someone who shows their name: one
  * Voyager's animals named as them), `?fixture=anonymous`, `?fixture=founder`
  * (names on: Voyager 1's animals named as them, with their shared stories).
+ * Every fixture mode also answers the Ark Score as v3 does (`ark_points` 140,
+ * `ark_points_week` 30: captures + thrive), so the score's line can be seen.
  */
 async function fixtureRead(mode: string | undefined, username: string): Promise<{snapshot: ArkSnapshot; isSelf: boolean; founders?: ArkFounders; founderPage?: ArkFounderPage} | null> {
     if (process.env.NODE_ENV !== "development" || !mode) return null;
@@ -69,6 +71,12 @@ async function fixtureRead(mode: string | undefined, username: string): Promise<
         };
     }
     return {snapshot: {...snapshot, animals: snapshot.animals.map((animal) => ({...animal, mine: false}))}, isSelf: false};
+}
+
+function fixtureSummary(mode: string | undefined) {
+    if (process.env.NODE_ENV !== "development" || !mode) return null;
+    const score = readArkScore({ark_points: 140})!;
+    return Promise.resolve({score, arkScore: score.value, weekChange: 30, stepsTotal: 9, powersEarned: 2});
 }
 
 function arkPath(handle: string) {
@@ -104,7 +112,8 @@ export default async function PersonArkPage({params, searchParams}: Props) {
     const [viewer, live, summary, {words}, companion, fixture, founderRead] = await Promise.all([
         getProfileViewerState(profile.userId),
         readArkVoyage(),
-        getPublicArkSummary(profile.userId).catch(() => null),
+        // Development's fixtures: the score as v3 answers it (no top, never lower), without a server.
+        fixtureSummary(searchParams?.fixture) ?? getPublicArkSummary(profile.userId).catch(() => null),
         getArkWords(params.locale),
         getCompanionWords(params.locale),
         fixtureRead(searchParams?.fixture, profile.username),
@@ -144,11 +153,19 @@ export default async function PersonArkPage({params, searchParams}: Props) {
                     <p className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-white/40">{companion.ark.score}</p>
                     <p className="mt-1 flex items-baseline gap-2">
                         <span className="font-display text-[44px] font-black leading-none tabular-nums text-primary-400">{number(summary.score.value)}</span>
-                        <span className="text-sm font-semibold text-white/40">{fillArkWords(person.outOf, {max: summary.score.outOf})}</span>
+                        {/* v3 has no top: no "of 100" and no bar; an older server's 0–100 keeps both. */}
+                        {summary.score.outOf ? <span className="text-sm font-semibold text-white/40">{fillArkWords(person.outOf, {max: summary.score.outOf})}</span> : null}
+                        {summary.score.world && summary.weekChange ? (
+                            <span className="ml-auto text-[12px] font-bold tabular-nums text-primary-300" data-testid="person-ark-score-week">
+                                {fillArkWords(companion.ark.scoreWeek, {delta: arkSignedChange(summary.weekChange)})}
+                            </span>
+                        ) : null}
                     </p>
-                    <span className="mt-3 block h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
-                        <span className="block h-full rounded-full bg-primary-400" style={{width: `${arkScoreShare(summary.score)}%`}} />
-                    </span>
+                    {arkScoreShare(summary.score) !== null ? (
+                        <span className="mt-3 block h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]" aria-hidden="true">
+                            <span className="block h-full rounded-full bg-primary-400" style={{width: `${arkScoreShare(summary.score)}%`}} />
+                        </span>
+                    ) : null}
                     {summary.score.world ? <p className="mt-2 text-[12px] leading-4 text-white/50">{isSelf ? person.scoreAboutSelf : person.scoreAbout}</p> : null}
                 </section>
             ) : null}

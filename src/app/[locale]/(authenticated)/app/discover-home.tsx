@@ -280,7 +280,7 @@ function CollectorCard({collector, arkWords = ARK_COPY}: {collector: DiscoverCol
                         {collector.arkScore === null ? <p className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-white/35">{collector.scoreTierLabel}</p> : null}
                     </div>
                     {/* Life Sim (contract section 9): Ark Score in place of Overall, once the server has it. */}
-                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black" data-testid="collector-score">
+                    <span className="rounded-full bg-primary-400 px-3 py-1 text-sm font-black tabular-nums text-black" data-testid="collector-score" title={collector.arkScore !== null ? arkWords.scoreHint : undefined}>
                         {collector.arkScore !== null
                             ? arkWords.scoreShort.replace("{n}", collector.arkScore.toLocaleString())
                             : collector.collectorScore.toLocaleString()}
