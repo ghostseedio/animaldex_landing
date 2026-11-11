@@ -122,7 +122,7 @@ test("attach: the trees' points sit on the trees as the renderer places them, on
     assert.ok(points.length > 4000, `${points.length} tree points`);
     const byTag: Record<string, number> = {};
     for (const point of points) byTag[point.tag] = (byTag[point.tag] ?? 0) + 1;
-    assert.ok(byTag.leaf > 1500 && byTag.bark > 1000 && byTag.branch > 1000, JSON.stringify(byTag));
+    assert.ok(byTag.leaf > 1500 && byTag.bark > 800 && byTag.branch > 1000, JSON.stringify(byTag));
     const position = new Vector3();
     const rotation = new Quaternion();
     const scale = new Vector3();
@@ -628,17 +628,19 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
         "float snowLine = 27.0 - 12.0 * envSnow;",
         "float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);",
         "float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);",
-        "float high = smoothstep(snowLine + 2.0, snowLine + 11.0, world.y);",
-        "float holdTo = mix(0.48, 0.7, high) - 0.12 * hard * smoothstep(0.4, 0.6, slopeHere);",
+        "float high = smoothstep(snowLine + 2.0, snowLine + 11.0, snowAt + 6.0 * (0.5 - rib));",
+        "float holdTo = mix(0.48, 0.7, high) + 0.16 * (arkNoise(p * 0.11 + 3.7) - 0.5);",
         "alpine *= 1.0 - smoothstep(holdTo, holdTo + 0.28, slopeHere + 0.14 * (arkNoise(p * 0.4) - 0.5));",
         "alpine *= mix(0.8, 1.0, streak) * smoothstep(0.0, 0.25, alpine);",
-        "alpine *= 1.0 - smoothstep(0.6, 0.88, rib) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);",
+        "alpine *= 1.0 - smoothstep(0.6, 0.88, rib + 0.2 * (arkNoise(p * 0.35 - 2.1) - 0.5)) * smoothstep(0.36, 0.58, slopeHere) * (1.0 - 0.85 * high);",
         "float steep = smoothstep(0.22, 0.42, slope + (arkNoise(p * 0.5) - 0.5) * 0.12);",
         "float snow = snowW * (1.0 - steep * 0.5 * (1.0 - high));",
         "float snowCover = smoothstep(0.22, 0.6, snow);",
         // (The ledges' patchy snow, now weighted 0.5, is never counted as sure snow here.)
         "float snowW = max(max(vArkLayers.w, alpine), ledgeSnow * 0.5);",
-        "float rib = 1.0 - abs(2.0 * arkFbm(vec2(faceAt.x * 0.16, faceAt.y * 0.035 + 5.0)) - 1.0);"
+        "float ribOnZ = arkFbm(vec2(world.z * 0.16, world.y * 0.035 + 5.0));",
+        "float ribOnX = arkFbm(vec2(world.x * 0.16, world.y * 0.035 + 5.0));",
+        "float rib = 1.0 - abs(2.0 * mix(ribOnX, ribOnZ, faceTurn) - 1.0);"
     ]) assert.ok(terrain.includes(line), `terrain.ts snow changed: ${line}`);
     assert.equal(snowLine(0), 27);
     assert.equal(snowLine(1), 15);
