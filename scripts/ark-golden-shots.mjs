@@ -74,7 +74,7 @@ const animalIds = arg("ids", "") ? arg("ids", "").split(",") : [];
 const fixedDistance = arg("distance", "") ? Number(arg("distance", "")) : undefined;
 const closeUpDir = path.resolve(arg("closeup-dir", path.join(os.homedir(), "animaldex-talking-models", "ark-closeup")));
 // The props lane's close-ups (src/ark-scene/props/golden-props.ts): --props all, or --props bird_nest,cave_roost
-const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"];
+const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night", "den_dawn", "den_rock"];
 const propsShots = arg("props", "") ? (arg("props", "") === "all" ? PROPS_SHOTS : arg("props", "").split(",").filter((name) => PROPS_SHOTS.includes(name))) : [];
 
 // MARK: build + serve

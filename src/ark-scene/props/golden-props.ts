@@ -32,7 +32,9 @@ const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["giant-african-land-snail", "Giant African Land Snail", "farm_garden"],
     ["village-weaver", "Village Weaver", "grassland"],
     ["great-crested-grebe", "Great Crested Grebe", "river_lake"],
-    ["common-house-martin", "Common House Martin", "farm_garden"]
+    ["common-house-martin", "Common House Martin", "farm_garden"],
+    ["bat-eared-fox", "Bat-eared Fox", "grassland"],
+    ["rock-hyrax", "Rock Hyrax", "grassland"]
 ];
 
 /** The fixture with the props' species aboard, in the breeding season (Ark day of the year 120), and two clutches in. */
@@ -64,7 +66,7 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
     return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night", "den_dawn", "den_rock"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -238,6 +240,14 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const middle = {x: chosen.reduce((sum, p) => sum + p.x, 0) / chosen.length, z: chosen.reduce((sum, p) => sum + p.z, 0) / chosen.length};
             const night = shot === "hamlet_close_night";
             return {view: look({x: middle.x, y: 0, z: middle.z}, 34, 1.0, 0.4), hours: night ? 21.5 : 15.5, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: "hamlet: house-3, house-4, smallholding-2"};
+        }
+        case "den_dawn":
+        case "den_rock": {
+            // The bat-eared fox's burrow at dawn (its schedule's roost, burrows.ts), or the rock hyrax's crevice.
+            const slug = shot === "den_dawn" ? "bat-eared-fox" : "rock-hyrax";
+            const den = (spots[`den:${slug}`] ?? Object.entries(spots).find(([key]) => key.startsWith("den:"))?.[1]) as {x: number; y: number; z: number; facing?: number} | undefined;
+            if (!den) return null;
+            return {view: look(den, 3.2, 1.12, (den.facing ?? 0) + 0.35, 0.1), hours: 6.2, weather: {dew: 1, mist: 0.3, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: `den ${slug}`, minDistance: 0.3};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;

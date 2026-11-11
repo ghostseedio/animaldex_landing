@@ -28,6 +28,12 @@ export type ArkSceneModuleContext = {
     planOf: (slug: string) => string | null | undefined;
     /** Prefers-reduced-motion: nothing drifts or flickers. */
     reducedMotion: boolean;
+    /**
+     * Where a den, burrow, cave or crevice animal sleeps (its schedule's roost: `behaviour-schedule.ts` roostOf, the
+     * attach point it goes into, `point`), and its roost kind; null for any other animal, or before the schedule's
+     * world is built. The props lane draws the way in there.
+     */
+    roostOf?: (id: string) => {x: number; y: number; z: number; nx: number; ny: number; nz: number; point: string | null; kind: string} | null;
 };
 
 export interface ArkSceneModule {

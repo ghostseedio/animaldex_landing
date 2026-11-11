@@ -262,6 +262,9 @@ type Sched = {
     wired?: boolean;
 };
 
+/** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
+const DEN_ROOSTS: ReadonlySet<string> = new Set(["den", "burrow", "cave", "crevice"]);
+
 type Entry = {
     animal: ArkAnimal;
     place: Placement;
@@ -4153,7 +4156,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         hours: hoursNow(),
         placeOf: (id) => placedAll.get(id) ?? null,
         planOf: (slug) => library.get(slug)?.behaviour?.plan,
-        reducedMotion
+        reducedMotion,
+        // (The props lane's burrow mouths and rock dens: a den, burrow, cave or crevice sleeper's roost.)
+        roostOf: (id) => {
+            const sched = entryById.get(id)?.sched;
+            if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost)) return null;
+            return {...roostOf(world, sched.profile, sched.animal), kind: sched.profile.roost};
+        }
     }));
     if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
