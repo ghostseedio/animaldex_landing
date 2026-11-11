@@ -48,7 +48,9 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * capture page's "See it in the Ark"), the reader's own one first.
  *
  * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
- * condition, activity, sociality) with its event log and life stories
+ * condition, activity, sociality; and, captures + thrive, each animal's
+ * `thrive` band, `area`, `source` and its life story's family line,
+ * `src/lib/ark-thrive-fixture.ts`) with its event log and life stories
  * (`scripts/generate-ark-life-fixtures.mts`, in the server's shapes). `?hour=5.5` pins the light's
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
@@ -193,7 +195,9 @@ async function loadFixture(mode: FixtureMode, founders: boolean): Promise<{snaps
 
 async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const base = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    // Captures + thrive: with the frozen contract's `thrive`, `area` and `source` laid on (`lib/ark-thrive-fixture`).
+    const {withArkThriveFixture} = await import("@/lib/ark-thrive-fixture");
+    const base = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
     // Founders (`&founders=1`): the same answer as names-on writes it.
     const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
@@ -441,8 +445,10 @@ function rigOverride(searchParams: Props["searchParams"]): string | null | undef
 
 /** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
 async function loadFixtureLife(mode: FixtureMode, founders: boolean): Promise<ArkFixtureLife> {
-    const [events, read] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
-    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(read.default as unknown as Record<string, unknown>) : read.default};
+    const [events, read, thrive, snapshot] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json"), import("@/lib/ark-thrive-fixture"), import("@/ark-scene/fixtures/snapshot-v2.json")]);
+    // Captures + thrive: each life story's `thrive`, `area`, `origin.source` and `lineage`, as the contract's read answers.
+    const told = thrive.withArkThriveFixtureLives(read.default as unknown as Record<string, unknown>, thrive.withArkThriveFixture(snapshot.default));
+    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(told) : told};
     if (mode === "eggs") {
         const edge = await import("@/ark-scene/fixtures/edge");
         const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];

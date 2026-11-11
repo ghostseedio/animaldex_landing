@@ -16,6 +16,7 @@ import {fixtureArkStory} from "@/lib/ark-story";
 import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFounder, type ArkFounders, type ArkFounderStory} from "@/lib/ark-founders";
 import {ArkBringerNames, ArkBroughtByFounder, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
@@ -966,7 +967,13 @@ function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | nul
         : [{label: broughtByLabel, founder}];
     const story: ArkFounderStory | null = born ? null : fromLife ? life?.founder_story ?? null : named?.story ?? null;
     const ageDays = life?.ark_age_days ?? (arkDay !== null && typeof animal.born_ark_day === "number" ? Math.max(arkDay - animal.born_ark_day, 0) : null);
+    // Captures + thrive: how well kept it is (the life story's once read; it has none once it has died), and how it came aboard.
+    const thrive = life ? life.thrive : animal.thrive ?? null;
+    const source = life?.origin.kind === "arrived" ? life.origin.source ?? animal.source ?? null : animal.source ?? null;
     return {
+        thrive,
+        source,
+        lineage: life?.lineage ?? null,
         born,
         hatched: life?.origin.kind === "born" && life.origin.from_egg,
         bringers: arkJoinLabels(born ? parentsBy : [life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label], locale, former),
@@ -1002,7 +1009,10 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
+    // Its condition in plain words first ("In prime condition", "In good condition", "Ordinary"): the only place a band shows as text.
+    const thriveChip = facts.thrive ? arkThriveWords(facts.thrive, words.life) : null;
     const chips = [
+        thriveChip,
         facts.generation !== null && facts.generation > 0 ? fillArkWords(words.life.generationShort, {n: facts.generation}) : null,
         facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
         facts.condition ? words.life[facts.condition] : null,
@@ -1033,15 +1043,19 @@ function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: sta
                                 <div className="flex gap-1.5"><dt className="text-ink-400">{words.broughtBy}</dt><dd className="font-semibold text-ink-100">{facts.bringers}</dd></div>
                             )}
                             <div className="flex gap-1.5"><dt className="text-ink-400">{facts.hatched ? words.life.hatched : facts.born ? words.life.born : words.arrived}</dt><dd className="font-semibold text-ink-100">{arrived}</dd></div>
+                            {/* Its family line, credited to its bringers (anonymous by default): "2 young, 1 grandchild". */}
+                            {arkLineageHasAny(facts.lineage) ? (
+                                <div className="flex min-w-0 gap-1.5" data-testid="ark-card-lineage"><dt className="shrink-0 text-ink-400">{words.life.lineage}</dt><dd className="min-w-0 font-semibold text-ink-100">{arkLineageLine(facts.lineage, words.life, locale)}</dd></div>
+                            ) : null}
                         </dl>
                         {chips.length ? (
                             <p className={`mt-1.5 flex-wrap gap-1.5 ${storyOpen ? "hidden md:flex" : "flex"}`}>
                                 {chips.map((chip) => (
-                                    <span key={chip} className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${chip === words.life.hungry ? "bg-[#5a3a1e] text-[#ffd8a8]" : chip === words.life.asleep ? "bg-[#26304a] text-[#c9d6ff]" : "bg-white/[0.08] text-ink-100"}`}>{chip}</span>
+                                    <span key={chip} data-testid={chip === thriveChip ? "ark-card-thrive" : undefined} data-thrive={chip === thriveChip ? facts.thrive ?? undefined : undefined} className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${chip === thriveChip && facts.thrive !== "ordinary" ? "bg-primary-400/15 text-primary-200" : chip === words.life.hungry ? "bg-[#5a3a1e] text-[#ffd8a8]" : chip === words.life.asleep ? "bg-[#26304a] text-[#c9d6ff]" : "bg-white/[0.08] text-ink-100"}`}>{chip}</span>
                                 ))}
                             </p>
                         ) : null}
-                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} story={facts.story} words={words} />
+                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} story={facts.story} capture={facts.source === "capture"} words={words} />
                         {placeholder ? <p className="mt-1 text-[12px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                     </div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
@@ -1148,7 +1162,9 @@ function ArkLifeStory({animal, life, facts, names, words, locale}: {animal: ArkA
     const rows: Array<[string, string]> = [];
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
     if (facts.ageDays !== null) rows.push([w.age, ageText(facts.ageDays, words, locale)]);
-    if (facts.condition) rows.push([w.condition, w[facts.condition]]);
+    // "Condition" is how well kept it is (its thrive band); its hunger and age now go under "Right now".
+    if (facts.thrive) rows.push([w.condition, arkThriveWords(facts.thrive, w)]);
+    if (facts.condition) rows.push([w.now, w[facts.condition]]);
     if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : w.endedOld]);
     // A young one whose breeding the server estimated (its record gives none, or only part): said so.
     if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {
@@ -1159,7 +1175,9 @@ function ArkLifeStory({animal, life, facts, names, words, locale}: {animal: ArkA
         const detail = last ? ` · ${fillArkWords(w.lastMeal, {prey: withArticle(last.prey, words)})}${last.phrase ? ` (${fillArkWords(w.dietSays, {phrase: last.phrase})})` : ""}` : "";
         rows.push([w.meals, `${life.meals.toLocaleString(locale)}${detail}`]);
     }
-    if (life) rows.push([w.young, life.young_raised > 0 ? life.young_raised.toLocaleString(locale) : w.noYoung]);
+    // Its family line by generation when the server counts it (captures + thrive), else the young it raised.
+    if (life?.lineage) rows.push([w.lineage, arkLineageLine(life.lineage, w, locale)]);
+    else if (life) rows.push([w.young, life.young_raised > 0 ? life.young_raised.toLocaleString(locale) : w.noYoung]);
     if (life && life.milestones.count > 0) rows.push([w.milestones, fillArkWords(w.milestonesValue, {count: life.milestones.count.toLocaleString(locale)})]);
     // Its line, further back than its parents (the third generation on).
     if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) rows.push([w.line, fillArkWords(w.lineValue, {bringer: facts.ancestorFounder?.display_name ?? arkBringerLabel(life.ancestor_brought_by, words.formerVoyager)})]);
@@ -1183,12 +1201,14 @@ function ArkLifeStory({animal, life, facts, names, words, locale}: {animal: ArkA
 
 /**
  * How it got aboard: the founder's own story when they shared it (founders
- * contract); otherwise "Came aboard after a step that worked", the same for
- * everyone (or "Born on the Ark"). The public debate's problem and the way
+ * contract); otherwise "Came aboard with a capture" (captures + thrive), or
+ * "Came aboard after a step that worked" for one a step brought before
+ * captures did (or a server that doesn't say), the same for everyone (or
+ * "Born on the Ark"). Never where or when it was captured. The public debate's problem and the way
  * that worked only when the life story carries `story_public`, which the
  * server sends only while its `public_story` flag is on. Never anything private.
  */
-function ArkStoryLine({state, born, hatched, story, words}: {state: LifeState | null; born: boolean; hatched: boolean; story: ArkFounderStory | null; words: ArkWords}) {
+function ArkStoryLine({state, born, hatched, story, capture, words}: {state: LifeState | null; born: boolean; hatched: boolean; story: ArkFounderStory | null; capture: boolean; words: ArkWords}) {
     // Founders: the story its founder chose to share, in their words (shown whether or not the founder is named).
     if (story) return <ArkFounderStoryBlock story={story} title={words.founders.card.howAboard} className="rows-in mt-1.5" />;
     if (!state || state.loading) return <p aria-hidden="true" className="mt-1.5 h-[1.125rem]" />;
@@ -1197,7 +1217,7 @@ function ArkStoryLine({state, born, hatched, story, words}: {state: LifeState | 
         <p className="rows-in mt-1.5 flex items-start gap-1.5 text-[13px] leading-snug text-ink-200">
             <svg viewBox="0 0 16 16" className="mt-[3px] h-3 w-3 shrink-0 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
             <span className="min-w-0">
-                {told ? fillArkWords(words.story.debate, {problem: told.problem, animal: told.way.animal, power: told.way.power}) : hatched ? words.life.hatchedAboard : born ? words.life.bornAboard : words.story.generic}
+                {told ? fillArkWords(words.story.debate, {problem: told.problem, animal: told.way.animal, power: told.way.power}) : hatched ? words.life.hatchedAboard : born ? words.life.bornAboard : capture ? words.story.capture : words.story.generic}
                 {told?.debate_id ? (
                     <>
                         {" "}
