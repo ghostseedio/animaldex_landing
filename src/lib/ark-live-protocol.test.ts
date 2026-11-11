@@ -112,17 +112,17 @@ test("protocol: u32 stamps unwrap to the nearest full time", () => {
 });
 
 test("ticket: the contract's test vector signs to the same text the database must produce", async () => {
-    const ticket = await signTicket({user: "00000000-0000-0000-0000-000000000001", animal: "00000000-0000-0000-0000-000000000002", island: "ark", exp: 1800000000, nonce: "00000000-0000-0000-0000-000000000003"}, TEST_KEY);
-    assert.equal(ticket.split(".").pop(), "0I-cssxARS7s--E_j4I-LoM4L34Ds9fYrif0ZG9gGpA");
+    const ticket = await signTicket({user: "00000000-0000-0000-0000-000000000001", animal: "00000000-0000-0000-0000-000000000002", island: "wild", exp: 1800000000, nonce: "00000000-0000-0000-0000-000000000003"}, TEST_KEY);
+    assert.equal(ticket.split(".").pop(), "jXStsh-WFMHRRmi4rtOn3kG8pCmT4rzO-YSBQhivgoY");
     assert.deepEqual(Array.from(base64ToBytes(TEST_KEY)), Array.from({length: 32}, (_, i) => i));
     assert.equal(bytesToBase64Url(new Uint8Array([251, 255])), "-_8");
 });
 
 test("ticket: verified only with the key, before it expires, and only in its exact form", async () => {
-    const fields = {user: "00000000-0000-4000-8000-00000000000a", animal: "00000000-0000-4000-8000-0000000000f0", island: "ark" as const, exp: 2000, nonce: "00000000-0000-4000-8000-000000000001"};
+    const fields = {user: "00000000-0000-4000-8000-00000000000a", animal: "00000000-0000-4000-8000-0000000000f0", island: "wild" as const, exp: 2000, nonce: "00000000-0000-4000-8000-000000000001"};
     const ticket = await signTicket(fields, TEST_KEY);
     const good = await verifyTicket(ticket, TEST_KEY, 1900);
-    assert.ok(good.ok && good.ticket.animal === fields.animal && good.ticket.island === "ark");
+    assert.ok(good.ok && good.ticket.animal === fields.animal && good.ticket.island === "wild");
     assert.deepEqual(await verifyTicket(ticket, TEST_KEY, 2001), {ok: false, reason: "expired"});
     const otherKey = "AQECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=";
     assert.deepEqual(await verifyTicket(ticket, otherKey, 1900), {ok: false, reason: "bad_ticket"});
@@ -131,7 +131,7 @@ test("ticket: verified only with the key, before it expires, and only in its exa
     assert.deepEqual(await verifyTicket(swapped, TEST_KEY, 1900), {ok: false, reason: "bad_ticket"});
     // A later expiry under the same signature: refused.
     assert.deepEqual(await verifyTicket(ticket.replace(".2000.", ".9999."), TEST_KEY, 1900), {ok: false, reason: "bad_ticket"});
-    for (const bad of ["", "v1", "v2." + ticket.slice(3), ticket + ".x", ticket.replace(".ark.", ".mars.")]) assert.equal((await verifyTicket(bad, TEST_KEY, 1900)).ok, false, bad);
+    for (const bad of ["", "v1", "v2." + ticket.slice(3), ticket + ".x", ticket.replace(".wild.", ".mars.")]) assert.equal((await verifyTicket(bad, TEST_KEY, 1900)).ok, false, bad);
 });
 
 test("clock: the smallest-RTT sample wins, and later changes are slewed at 50 ms a second", () => {

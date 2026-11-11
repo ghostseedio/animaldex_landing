@@ -1,13 +1,14 @@
 /**
  * The Ark's islands as player control sees them (docs/ark/player-control-contract.md §1).
  *
- * Today there is one island, `ark` (DECISIONS.md #15). Part C adds `wild` and `town`; their sizes and the strait between
+ * Today there is one island, `wild` (the shared position module's default island: every key carries it, encounter
+ * lane, POSITIONS_VERSION 1; DECISIONS.md #15). Part C enlarges it and adds `town`; their sizes and the strait between
  * them are placeholders until the islands plan lands (design §12, DECISIONS.md #8).
  *
  * Pure: no Node, no DOM. Shared by `ark-live` and the page.
  */
 
-export const ISLAND_IDS = ["ark", "wild", "town"] as const;
+export const ISLAND_IDS = ["wild", "town"] as const;
 export type IslandId = (typeof ISLAND_IDS)[number];
 
 export function isIslandId(value: unknown): value is IslandId {
@@ -56,10 +57,9 @@ export type IslandConfig = {
 };
 
 export const ISLANDS: Record<IslandId, IslandConfig> = {
-    // Today's island (`world.ts` TERRAIN_HALF 132).
-    ark: {id: "ark", half: 132, unit: 0.01},
-    // Placeholders (design §12): an 800 m wild island and a 500 m town island.
-    wild: {id: "wild", half: 400, unit: 0.02},
+    // Today's island (`world.ts` TERRAIN_HALF 132). Part C's bigger wild island (placeholder 800 m) will take a 2 cm unit.
+    wild: {id: "wild", half: 132, unit: 0.01},
+    // Placeholder (design §12): a 500 m town island.
     town: {id: "town", half: 250, unit: 0.01}
 };
 

@@ -8,9 +8,10 @@ Nothing here is deployed. `ark-live` runs locally only until the owner decides h
 
 ## 1. Islands
 
-- Island ids are short lowercase words. **Today's single island is `ark`** (DECISIONS.md #15). Part C adds `wild` and
-  `town`; every table, message and atlas already carries the id.
-- On the wire an island is a byte: `0 = ark`, `1 = wild`, `2 = town` (`ISLAND_IDS` in `src/ark-live/islands.ts`).
+- Island ids are short lowercase words. **Today's single island is `wild`**, the shared position module's default island
+  (encounter lane, `_shared/ark-positions` POSITIONS_VERSION 1: every key carries it; DECISIONS.md #15). Part C enlarges
+  it and adds `town`; every table, message and atlas already carries the id.
+- On the wire an island is a byte: `0 = wild`, `1 = town` (`ISLAND_IDS` in `src/ark-live/islands.ts`).
 
 ## 2. The control ticket
 
@@ -22,10 +23,10 @@ Nothing here is deployed. `ark-live` runs locally only until the owner decides h
     with `+/` → `-_` and `=` stripped. The key is the vault secret named `ark_live_ticket_key`.
   - `ark-live`: env `ARK_LIVE_TICKET_KEY` (the same base64 text). `src/ark-live/ticket.ts` signs and verifies with WebCrypto.
 - Contract test vector (both sides must produce it): key_b64 `AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=` (bytes 0..31),
-  payload `v1.00000000-0000-0000-0000-000000000001.00000000-0000-0000-0000-000000000002.ark.1800000000.00000000-0000-0000-0000-000000000003`.
-  Expected signature: `0I-cssxARS7s--E_j4I-LoM4L34Ds9fYrif0ZG9gGpA` (also in `src/lib/ark-live-ticket.test.ts` and the SQL test).
+  payload `v1.00000000-0000-0000-0000-000000000001.00000000-0000-0000-0000-000000000002.wild.1800000000.00000000-0000-0000-0000-000000000003`.
+  Expected signature: `jXStsh-WFMHRRmi4rtOn3kG8pCmT4rzO-YSBQhivgoY` (also in `src/lib/ark-live-ticket.test.ts` and the SQL test).
 
-## 3. Database (AnimalDex migration `20261120100000_ark_player_control.sql`, with its rollback)
+## 3. Database (AnimalDex migration `20261119100000_ark_player_control.sql` (the coordinator's 20261119* range), with its rollback)
 
 Flag: `voyage_config.player_control` (off by default). Every RPC below refuses while it is off, except the reads.
 
@@ -36,7 +37,11 @@ Tables (all RLS on, no client policies unless stated):
   rejections, client, app_version, handoff jsonb)`: the private audit (D3 quotas are summed from it).
 - `voyage_control_tickets(nonce pk, user_id, animal_id, island, expires_at, redeemed_at)`: single use.
 - `voyage_animal_state(animal_id pk, island, version, released_at, release jsonb, plan jsonb, zone, stranded_from, stamina,
-  exposure, updated_at)`: the stored record (design §3.2). Public through `voyage_animal_states_v1()` (no user ids).
+  exposure, home_island, home_x, home_z, home_r, updated_at)`: the stored record (design §3.2). `home_*` is the shared
+  position module's `HomeOverride` (`homeOf(atlas, ref, override)`): null fields fall back to the formula, so a released
+  animal "continues in NPC mode from where it was released" in the scene, the encounter tick and the ecology alike
+  (`src/ark-live/release.ts` homeOverrideOf). Public through `voyage_animal_states_v1()` (no user ids), and
+  `voyage_home_overrides_v1(p_island)` gives the tick `{animal_id, island, x, z, r}`.
 - `voyage_control_trace(animal_id, step, island, x, z, y, mode, band, written_at, pk (animal_id, step))`: one sample per
   34.5 s step (design §3.4).
 
@@ -48,14 +53,15 @@ RPCs:
   `reason` one of `off`, `not_yours`, `age`, `sessile`, `cooldown`, `daily_limit`, `busy`, `other_animal`, `no_key`.
 - `ark_live_start_v1(p_ticket_nonce uuid, p_session_id uuid, p_user_id uuid, p_animal_id uuid, p_island text, p_client text,
   p_app_version text) returns jsonb` (role `ark_live` only): redeems the nonce once, takes the lock (30 s TTL), inserts the
-  session. Returns `{ok, reason?, animal: {id, slug, kind_species_profile_id, zone, area, island, enclosure_id, label, named,
-  asleep_hint}, quota: {session_limit_s, day_used_s, day_limit_s}}`.
+  session. Returns `{ok, reason?, animal: {id, slug, species_profile_id, kind_species_profile_id, zone, area, island,
+  enclosure_id, slot, slot_rank, label, named, asleep_hint}, quota: {session_limit_s, day_used_s, day_limit_s}, state}`
+  (`state`: the animal's stored record or null; slot, slot_rank and species_profile_id name its formula home, `HomeRef`).
 - `ark_live_heartbeat_v1(p_session_ids uuid[]) returns integer` (`ark_live`): extends each live lock by 30 s.
 - `ark_live_trace_v1(p_rows jsonb) returns integer` (`ark_live`): inserts trace rows; refuses a step at or before the
   tick's committed point.
 - `ark_live_end_v1(p_session_id uuid, p_reason text, p_stats jsonb, p_state jsonb) returns jsonb` (`ark_live`): ends the
   session, upserts `voyage_animal_state` (version + 1), deletes the lock.
-- `voyage_animal_states_v1(p_island text default 'ark') returns jsonb` (anon, authenticated): every stored record on that
+- `voyage_animal_states_v1(p_island text default 'wild') returns jsonb` (anon, authenticated): every stored record on that
   island, no user ids.
 - pg_cron `voyage-control-expire` each minute: sessions whose lock expired end with `end_reason = 'lost'` and a coarse
   record (`plan = {kind: 'homing', legs: []}`) at their last trace sample.

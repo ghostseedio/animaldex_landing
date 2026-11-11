@@ -138,3 +138,14 @@ test("plan-eval: evaluated between legs, null before the first, done after the l
     const source = readFileSync(new URL("../ark-live/plan-eval.ts", import.meta.url), "utf8");
     assert.ok(!/^\s*import\s/m.test(source), "plan-eval.ts has no imports (the Deno copy in _shared/ark-positions must match it byte for byte)");
 });
+
+test("release: the stored home override for the shared position module (null falls back to the formula)", async () => {
+    const {homeOverrideOf} = await import("@/ark-live/release");
+    const where = {releaseIsland: "wild", homeIsland: "wild"};
+    assert.equal(homeOverrideOf(planRelease(input("red-fox", -12, -28)), where), null, "stay: its formula home");
+    assert.equal(homeOverrideOf(planRelease(input("red-fox", 8, 0, {homeDisc: {x: -25, z: 0, r: 4}})), where), null, "homing: its formula home once the legs end");
+    const settled = homeOverrideOf(planRelease(input("dromedary-camel", 0, 40, {home: {zone: "desert", area: null}, homeDisc: {x: -400, z: -400, r: 10}})), where)!;
+    assert.equal(settled.island, "wild");
+    assert.ok(typeof settled.x === "number" && typeof settled.z === "number" && typeof settled.r === "number", "search: the disc it settled in");
+    assert.deepEqual(homeOverrideOf(planRelease(input("red-fox", -12, -28)), {releaseIsland: "town", homeIsland: "wild"}), {island: "town"}, "left on another island");
+});

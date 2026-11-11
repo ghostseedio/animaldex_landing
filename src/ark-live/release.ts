@@ -51,6 +51,25 @@ export type ReleaseInput = {
 
 export type ReleaseResult = {plan: ReleasePlan; zone: ArkZone | null; strandedFrom: number | null};
 
+/**
+ * The shared position module's `HomeOverride` (`_shared/ark-positions` homeOf's third argument, POSITIONS_VERSION 1):
+ * what replaces the formula home once the animal is back in NPC life, so the scene, the encounter tick and the ecology
+ * all continue it from where it was released. Null fields (or null) fall back to the formula.
+ *
+ * - stay, homing, enclosure, on its own island: null (its formula home; the homing legs bring it there);
+ * - search: the disc it settled in (its own home again: null);
+ * - retrace: its own island again (its formula home there);
+ * - anything left on another island: that island.
+ */
+export type HomeOverride = {island?: string; x?: number; z?: number; r?: number};
+
+export function homeOverrideOf(result: ReleaseResult, where: {releaseIsland: string; homeIsland: string}): HomeOverride | null {
+    const plan = result.plan;
+    if (plan.kind === "retrace") return plan.island && plan.island !== where.homeIsland ? {island: plan.island} : plan.island ? {island: plan.island} : null;
+    if (plan.settle) return {island: where.releaseIsland, x: plan.settle.x, z: plan.settle.z, r: plan.settle.r};
+    return where.releaseIsland !== where.homeIsland ? {island: where.releaseIsland} : null;
+}
+
 /** A small seeded generator (mulberry32 over a string hash). */
 export function seededRandom(seed: string): () => number {
     let h = 1779033703 ^ seed.length;

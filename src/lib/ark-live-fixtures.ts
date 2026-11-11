@@ -2,7 +2,7 @@
  * Test fixtures for the player-control tests (`ark-live-*.test.ts`): a small made-up island whose every cell is known,
  * a fake clock and fake links. Not used outside tests.
  *
- * The test island ("ark", 100 m square, x and z in [−50, 50]):
+ * The test island ("wild", 100 m square, x and z in [−50, 50]):
  * - land at height 0.5, grassland; desert for x < −30; polar for z > 20 (land only);
  * - the sea for x > 30, salt, getting deeper by 0.5 m a metre (to 10 m);
  * - a fresh lake round (−20, −20), radius 8, 2 m deep;
@@ -20,7 +20,7 @@ import type {ClientLink, Room} from "@/ark-live/room";
 
 export class GridTerrain implements Terrain {
     readonly half = 50;
-    constructor(readonly island: IslandId = "ark") {}
+    constructor(readonly island: IslandId = "wild") {}
 
     ground(x: number, z: number): number {
         if (x > 30) return 0 - Math.min((x - 30) * 0.5, 10);

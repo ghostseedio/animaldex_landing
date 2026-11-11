@@ -14,14 +14,14 @@ import {LAKE, ZONE_SITES} from "@/ark-scene/world";
 test("atlas: the server's baked cells and the page's agree, and survive storage byte for byte", () => {
     const sampler = worldSampler();
     const pens = {plots: defaultHomePlots()};
-    const half = ISLANDS.ark.half;
+    const half = ISLANDS.wild.half;
     // The whole island is baked; a 264 × 40 m band through its middle (sea, beach, the lake, the farm, forests) is
     // compared cell by cell with the page's view.
     const band = {j0: half - 20, j1: half + 20};
-    const lazy = new LazyTerrain("ark", half, sampler, pens);
+    const lazy = new LazyTerrain("wild", half, sampler, pens);
     let same = 0;
     let total = 0;
-    const baked = Atlas.bake("ark", half, sampler, pens);
+    const baked = Atlas.bake("wild", half, sampler, pens);
     for (let j = band.j0; j < band.j1; j++) {
         for (let i = 0; i < baked.n; i++) {
             const x = -half + i + 0.5;

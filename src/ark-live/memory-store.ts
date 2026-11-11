@@ -114,12 +114,19 @@ export class MemoryStore implements Store {
         const lock = this.locks.get(s.animalId);
         if (lock?.sessionId === sessionId) this.locks.delete(s.animalId);
         const before = this.states.get(s.animalId);
-        this.states.set(s.animalId, {animal_id: s.animalId, island: state.island, released_at: state.released_at, plan: state.plan, zone: state.zone, stamina: state.stamina, exposure: state.exposure, crossed: state.crossed ?? null, version: (before?.version ?? 0) + 1});
+        this.states.set(s.animalId, {animal_id: s.animalId, island: state.island, released_at: state.released_at, plan: state.plan, zone: state.zone, stamina: state.stamina, exposure: state.exposure, crossed: state.crossed ?? null, home: state.home ?? null, version: (before?.version ?? 0) + 1});
     }
 
     async stateOf(animalId: string): Promise<StoredState | null> {
         if (this.down) throw new Error("store down");
         return this.states.get(animalId) ?? null;
+    }
+
+    /** The tick's read (`voyage_home_overrides_v1`): every stored home override on an island. */
+    homeOverrides(island: IslandId): Array<{animal_id: string; island: string; x: number | null; z: number | null; r: number | null}> {
+        return Array.from(this.states.values())
+            .filter((s) => s.home && (s.home.island ?? s.island) === island)
+            .map((s) => ({animal_id: s.animal_id, island: s.home!.island ?? s.island, x: s.home!.x ?? null, z: s.home!.z ?? null, r: s.home!.r ?? null}));
     }
 
     /** The public read (`voyage_animal_states_v1`): every record on an island, no user ids. */

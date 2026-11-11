@@ -1,5 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {"incremental": false, "noEmit": true, "plugins": []},
-  "include": ["globals.d.ts", "src/ark-live/**/*.ts"]
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true,
+    "plugins": []
+  },
+  "include": [
+    "globals.d.ts",
+    "src/ark-live/**/*.ts",
+    "ark-live/**/*.ts",
+    "ark-live/**/*.mts",
+    "src/lib/ark-live-*.ts"
+  ]
 }

@@ -272,8 +272,20 @@ export class LazyTerrain implements Terrain {
         return c;
     }
 
+    /** The ground's height, bilinear between cell middles: exactly the atlas's, so the page and the server agree. */
     height(x: number, z: number): number {
-        return this.sampler.heightAt(x, z);
+        const fx = (x + this.half) / CELL_SIZE - 0.5;
+        const fz = (z + this.half) / CELL_SIZE - 0.5;
+        const i = Math.max(0, Math.min(this.n - 2, Math.floor(fx)));
+        const j = Math.max(0, Math.min(this.n - 2, Math.floor(fz)));
+        const u = Math.max(0, Math.min(1, fx - i));
+        const v = Math.max(0, Math.min(1, fz - j));
+        const h = (a: number, b: number) => this.cell(-this.half + (a + 0.5) * CELL_SIZE, -this.half + (b + 0.5) * CELL_SIZE)!.height;
+        const a = h(i, j);
+        const b = h(i + 1, j);
+        const c = h(i, j + 1);
+        const d = h(i + 1, j + 1);
+        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
     }
 
     size(): number {

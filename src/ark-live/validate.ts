@@ -168,12 +168,12 @@ export function validatePose(m: Motion, p: PoseMessage, now: number, ctx: Valida
     const decel = Math.max(capFor(a, last.mode, "sprint", null), capFor(a, last.mode, "run", null), 0.3) / ACCEL_TIME_S;
     cap = Math.max(cap, last.speed - decel * dt);
     if (held) cap = Math.min(cap, 0.15);
+    // (The speed cap is over the ground; climbing and diving are checked by their own rates below.)
     const vertical = p.mode === "air" || p.mode === "swim" || last.mode === "air" || last.mode === "swim";
     const d = vertical ? Math.hypot(flatD, p.y - last.y) : flatD;
     const jumpLimit = Math.max(1, topSpeed(a) * 0.25);
     if (flatD > jumpLimit) return reject("teleport");
-    // (A dive drops faster than it flies forward: the stoop's vertical part is checked below.)
-    const stepD = p.mode === "air" && p.y < last.y ? flatD : d;
+    const stepD = flatD;
     if (stepD > cap * dt * STEP_SLACK + STEP_PAD_M) return reject("speed");
     m.window = m.window.filter((w) => now - w.at < WINDOW_MS);
     const windowD = m.window.reduce((sum, w) => sum + w.d, 0) + flatD;
@@ -191,10 +191,11 @@ export function validatePose(m: Motion, p: PoseMessage, now: number, ctx: Valida
     if (p.mode === last.mode && p.mode !== "climb" && Math.abs(angleDelta(last.yaw, p.yaw)) > turnCap) return reject("turn");
     // Vertical rates.
     const dy = p.y - last.y;
-    if (p.mode === "air" && !switching) {
-        const up = a.fly * 0.5 * 1.25 + 1.2;
+    if (p.mode === "air") {
+        const up = Math.max(a.fly * 0.5, a.fly * 0.35, 0.8) * 1.25 + 1.2;
         const down = (a.diver ? 22 : a.fly * 0.7 + 1) * 1.15;
-        if (dy > up * dt + 0.1 || -dy > down * dt + 0.15) return reject("altitude");
+        // (Taking off from the water lifts it from under the surface to the flight floor in one step.)
+        if (dy > up * dt + 0.1 + (switching ? 1 : 0) || -dy > down * dt + 0.15) return reject("altitude");
     }
     if (p.mode === "swim" && !switching && Math.abs(dy) > a.swim * 0.5 * 1.3 * dt + 0.15) return reject("depth");
     if (p.mode === "climb" && Math.abs(dy) > Math.max(a.climb, 0.2) * 1.3 * dt + 0.1) return reject("speed");
@@ -239,7 +240,7 @@ export function validatePose(m: Motion, p: PoseMessage, now: number, ctx: Valida
     if (p.mode === "paddle" && !a.canSwim) {
         paddled += flatD;
         const before = terrain.cell(last.x, last.z);
-        if (paddled > paddleLimit(a) + 1 && before && cell.depth > before.depth + 0.02) return reject("depth");
+        if (paddled > paddleLimit(a) + 2 && before && cell.depth > before.depth + 0.05) return reject("depth");
     } else if (p.mode === "ground" || p.mode === "wade") {
         paddled = 0;
     }

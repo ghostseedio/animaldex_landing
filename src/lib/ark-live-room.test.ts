@@ -35,7 +35,7 @@ const homeOf = (facts: AnimalFacts, a: Abilities) => ({...(HOMES[facts.zone] ?? 
 const EPOCH_BASE = new FakeClock().ms - 5000;
 const wireT = (clock: FakeClock) => clock.ms - EPOCH_BASE;
 
-function world(extra: Partial<RoomOptions> = {}, island: IslandId = "ark") {
+function world(extra: Partial<RoomOptions> = {}, island: IslandId = "wild") {
     const clock = new FakeClock();
     const store = new MemoryStore(clock.now);
     const add = (id: string, slug: string, zone: string, owners: string[], more: Record<string, unknown> = {}) =>
@@ -53,7 +53,7 @@ function world(extra: Partial<RoomOptions> = {}, island: IslandId = "ark") {
 
 const FOX_START: StartPose = {x: -10, y: 0.5, z: -30, yaw: 0, mode: "ground"};
 
-async function control(room: Room, store: MemoryStore, user: string, animal: string, start: StartPose = FOX_START, island: IslandId = "ark", link = new FakeLink()) {
+async function control(room: Room, store: MemoryStore, user: string, animal: string, start: StartPose = FOX_START, island: IslandId = "wild", link = new FakeLink()) {
     const id = room.connect(link);
     link.room = room;
     link.clientId = id;
@@ -79,7 +79,7 @@ test("room: a ticket starts control; every viewer is told who joined and sees it
     const {clock, store, room} = world();
     const watcher = new FakeLink();
     room.connect(watcher, {tier: "high"});
-    assert.equal(watcher.last("welcome")?.island, "ark");
+    assert.equal(watcher.last("welcome")?.island, "wild");
     const {link} = await control(room, store, USER_A, ANIMAL_FOX);
     const ok = link.last("control-ok");
     assert.ok(ok, JSON.stringify(link.texts));
@@ -98,17 +98,17 @@ test("room: bad, expired, reused and wrong-island tickets are refused; so is som
     const {clock, store, room} = world();
     const link = new FakeLink();
     const id = room.connect(link);
-    const forged = await signTicket({user: USER_A, animal: ANIMAL_FOX, island: "ark", exp: Math.floor(clock.ms / 1000) + 100, nonce: "00000000-0000-4000-8000-000000000009"}, "AQECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
+    const forged = await signTicket({user: USER_A, animal: ANIMAL_FOX, island: "wild", exp: Math.floor(clock.ms / 1000) + 100, nonce: "00000000-0000-4000-8000-000000000009"}, "AQECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=");
     room.message(id, JSON.stringify({t: "control", ticket: forged, start: FOX_START}));
     await settle(10);
     assert.equal(link.last("control-denied")?.reason, "bad_ticket");
-    const minted = await store.mint(USER_A, ANIMAL_FOX, "ark", TEST_KEY);
+    const minted = await store.mint(USER_A, ANIMAL_FOX, "wild", TEST_KEY);
     clock.advance(121_000);
     room.message(id, JSON.stringify({t: "control", ticket: minted.ok ? minted.ticket : "", start: FOX_START}));
     await settle(10);
     assert.equal(link.last("control-denied")?.reason, "expired");
     const nonce = "00000000-0000-4000-8000-00000000000c";
-    const first = await store.mint(USER_A, ANIMAL_FOX2, "ark", TEST_KEY, nonce);
+    const first = await store.mint(USER_A, ANIMAL_FOX2, "wild", TEST_KEY, nonce);
     room.message(id, JSON.stringify({t: "control", ticket: first.ok ? first.ticket : "", start: FOX_START}));
     await settle(10);
     assert.ok(link.last("control-ok"));
@@ -122,12 +122,12 @@ test("room: bad, expired, reused and wrong-island tickets are refused; so is som
     await settle(10);
     assert.equal(link2.last("control-denied")?.reason, "used");
     // A ticket for another island.
-    const wild = await signTicket({user: USER_A, animal: ANIMAL_FOX, island: "wild", exp: Math.floor(clock.ms / 1000) + 100, nonce: "00000000-0000-4000-8000-00000000000d"}, TEST_KEY);
+    const wild = await signTicket({user: USER_A, animal: ANIMAL_FOX, island: "town", exp: Math.floor(clock.ms / 1000) + 100, nonce: "00000000-0000-4000-8000-00000000000d"}, TEST_KEY);
     room.message(id2, JSON.stringify({t: "control", ticket: wild, start: FOX_START}));
     await settle(10);
     assert.equal(link2.last("control-denied")?.reason, "wrong_island");
     // Not theirs: the store says no.
-    assert.deepEqual(await store.mint(USER_B, ANIMAL_FOX2, "ark", TEST_KEY), {ok: false, reason: "not_yours"});
+    assert.deepEqual(await store.mint(USER_B, ANIMAL_FOX2, "wild", TEST_KEY), {ok: false, reason: "not_yours"});
 });
 
 test("room: one controlled animal per person (D2) and one controller per animal", async () => {
@@ -170,9 +170,9 @@ test("room: a session ends at 20 minutes (released into NPC life), then a 10 min
     assert.equal(link.last("released")?.reason, "session_limit");
     assert.equal(store.locks.has(ANIMAL_FOX), false, "the lock is gone");
     assert.equal(store.states.get(ANIMAL_FOX)?.version, 1, "a stored record");
-    assert.deepEqual(await store.mint(USER_A, ANIMAL_FOX, "ark", TEST_KEY), {ok: false, reason: "cooldown"});
+    assert.deepEqual(await store.mint(USER_A, ANIMAL_FOX, "wild", TEST_KEY), {ok: false, reason: "cooldown"});
     clock.advance(10 * 60 * 1000 + 1000);
-    assert.ok((await store.mint(USER_A, ANIMAL_FOX, "ark", TEST_KEY)).ok, "after the cooldown");
+    assert.ok((await store.mint(USER_A, ANIMAL_FOX, "wild", TEST_KEY)).ok, "after the cooldown");
 });
 
 test("room: at most 60 minutes per animal per real day (D3)", async () => {
@@ -180,7 +180,7 @@ test("room: at most 60 minutes per animal per real day (D3)", async () => {
     // 59.5 minutes already used today.
     const dayStart = Math.floor(clock.ms / 86_400_000) * 86_400_000;
     clock.ms = Math.max(clock.ms, dayStart + 3 * 3600_000);
-    store.sessions.set("old", {id: "old", userId: USER_A, animalId: ANIMAL_FOX, island: "ark", startedAt: clock.ms - 3570_000, endedAt: clock.ms - 0, reason: "player", stats: null});
+    store.sessions.set("old", {id: "old", userId: USER_A, animalId: ANIMAL_FOX, island: "wild", startedAt: clock.ms - 3570_000, endedAt: clock.ms - 0, reason: "player", stats: null});
     const {link} = await control(room, store, USER_A, ANIMAL_FOX);
     assert.ok(link.last("control-ok"));
     assert.ok((link.last("control-ok")!.dayLeft as number) <= 31);
@@ -260,7 +260,7 @@ test("room: the player releases; the record is versioned and public without user
     room.message(second.id, JSON.stringify({t: "release"}));
     await settle(10);
     assert.equal(store.states.get(ANIMAL_FOX)!.version, 2);
-    const pub = JSON.stringify(store.publicStates("ark"));
+    const pub = JSON.stringify(store.publicStates("wild"));
     assert.ok(!pub.includes(USER_A) && !pub.includes(USER_B));
 });
 
@@ -279,7 +279,7 @@ test("room: each viewer gets only the nearest controlled animals (the AOI cap) a
     for (let i = 0; i < 20; i++) {
         const id = `00000000-0000-4000-8000-${String(100 + i).padStart(12, "0")}`;
         const user = `00000000-0000-4000-9000-${String(100 + i).padStart(12, "0")}`;
-        store.addAnimal({id, slug: "red-fox", zone: "grassland", area: null, island: "ark", enclosure_id: null, label: "Voyager", named: false, owners: [user]});
+        store.addAnimal({id, slug: "red-fox", zone: "grassland", area: null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: [user]});
         await control(room, store, user, id, {x: -20 + i, y: 0.5, z: -30, yaw: 0, mode: "ground"});
     }
     const low = new FakeLink();
@@ -387,6 +387,7 @@ test("crossing: an eagle flies the strait, is handed to the far island's room at
     const state = store.states.get(ANIMAL_EAGLE)!;
     assert.equal(state.plan.kind, "retrace");
     assert.equal(state.island, "wild");
+    assert.deepEqual(state.home, {island: "wild"}, "the home override sends it home to its own island");
 });
 
 test("crossing: corridor cheats are corrected (speed, the corridor's width, the height band), and no parking at sea", async () => {
@@ -455,6 +456,8 @@ test("crossing: a dropped connection mid-strait releases it on the nearer side",
     await settle(10);
     const state = store.states.get(ANIMAL_EAGLE)!;
     assert.equal(state.island, "town");
+    assert.equal(state.home?.island, "town", "left on the town island: its home override names it");
+    assert.equal(store.homeOverrides("town").length, 1);
     assert.ok(Math.abs(state.plan.legs[0][1] - 45) < 1, "at the far island's band");
 });
 

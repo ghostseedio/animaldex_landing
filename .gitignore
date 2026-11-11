@@ -59,3 +59,5 @@ next-env.d.ts
 # Local snapshots of the real Ark (real usernames: /ark?snapshot=/ark-local/...) and the scale fixtures: never committed.
 /public/ark-local
 /public/ark-scale
+ark-live/.cache/
+ark-live/dist/

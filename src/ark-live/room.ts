@@ -39,7 +39,7 @@ import {newMotion, validatePose, type Motion} from "@/ark-live/validate";
 import {drainKind, freshMeters, signals, stepMeters, type Meters} from "@/ark-live/meters";
 import {suitability, type AnimalHome} from "@/ark-live/habitat";
 import {AOI_CAP, DISCONNECT_GRACE_S, HEARTBEAT_S, isTier, MAX_CONTROLLERS_PER_ROOM, METER_HZ, SNAPSHOT_HZ, StartLimiter, timeLeft, traceStep, type Tier} from "@/ark-live/session";
-import {homeRadius, planRelease, type HomeDisc} from "@/ark-live/release";
+import {homeOverrideOf, homeRadius, planRelease, type HomeDisc, type HomeOverride} from "@/ark-live/release";
 import type {ReleasePlan} from "@/ark-live/plan-eval";
 import {arrivalPoint, corridorToIsland, crossingDone, crossingStep, preCheck, rescueStep, startCrossing, type Crossing} from "@/ark-live/crossing";
 import {ZONE_SITES} from "@/ark-scene/world";
@@ -57,7 +57,12 @@ export type StoreAnimal = {
     slug: string;
     zone: ArkZone;
     area: ArkArea | null;
+    /** The island it arrived on (its pair island; its formula home is there). */
     island: IslandId;
+    /** What names its formula home in the shared position module (`HomeRef`): its look's species id and its slot. */
+    species_profile_id?: string;
+    slot?: number | null;
+    slot_rank?: number | null;
     enclosure_id: number | null;
     label: string;
     named: boolean;
@@ -78,6 +83,8 @@ export type StoredState = {
     exposure: number;
     /** Two islands: when it last arrived by a crossing, and where it came ashore. */
     crossed?: {arrived_at: string; x: number; z: number; from: IslandId} | null;
+    /** The shared position module's `HomeOverride` (null: the formula home). */
+    home?: HomeOverride | null;
 };
 
 export type TraceRow = {animal_id: string; step: number; island: string; x: number; z: number; y: number; mode: Mode; band: string | null};
@@ -94,6 +101,8 @@ export type EndState = {
     stamina: number;
     exposure: number;
     crossed: StoredState["crossed"];
+    /** `home_island`, `home_x`, `home_z`, `home_r` in the database: the shared position module's `HomeOverride`. */
+    home: HomeOverride | null;
 };
 
 export interface Store {
@@ -104,6 +113,8 @@ export interface Store {
     /** The animal's stored record (a previous release), or null. */
     stateOf(animalId: string): Promise<StoredState | null>;
 }
+
+export type HomeLookup = (facts: AnimalFacts, a: Abilities, state: StoredState | null, ref: {island: IslandId; speciesId: string | null; slot: number | null; rank: number | null}) => HomeDisc;
 
 export type RoomOptions = {
     island: IslandId;
@@ -117,8 +128,11 @@ export type RoomOptions = {
     peers?: () => Map<IslandId, Room>;
     /** One live session per person across every room (D2). */
     userSessions?: Map<string, {island: IslandId; sessionId: string}>;
-    /** Where an animal's home disc is (a stored record's settle disc, else its zone's site). */
-    homeOf?: (facts: AnimalFacts, a: Abilities, state: StoredState | null) => HomeDisc;
+    /**
+     * Where an animal's home disc is: the shared position module's `homeOf(atlas, ref, override)` once its web copy is in
+     * (`src/ark-scene/positions/`), else a stored record's settled disc or its zone's site (`defaultHomeOf`).
+     */
+    homeOf?: HomeLookup;
     log?: (line: string) => void;
 };
 
@@ -146,6 +160,10 @@ export type Session = {
     facts: AnimalFacts;
     home: AnimalHome;
     homeDisc: HomeDisc;
+    /** The island it arrived on (its formula home's). */
+    homeIsland: IslandId;
+    /** What names its formula home (the shared position module's `HomeRef`). */
+    homeRef: {speciesId: string | null; slot: number | null; rank: number | null};
     a: Abilities;
     motion: Motion;
     meters: Meters;
@@ -183,6 +201,7 @@ const uuid = (): string => {
 
 /** The default home disc: a stored record's settle disc, else its zone's site (the scene's placement gathers it there). */
 export function defaultHomeOf(facts: AnimalFacts, a: Abilities, state: StoredState | null): HomeDisc {
+    if (state?.home && typeof state.home.x === "number" && typeof state.home.z === "number") return {x: state.home.x, z: state.home.z, r: state.home.r ?? homeRadius(a)};
     if (state?.plan.settle) return state.plan.settle;
     const zone = state?.zone ?? facts.zone;
     const site = facts.area ? ZONE_SITES.farm_garden : ZONE_SITES[zone] ?? ZONE_SITES.grassland;
@@ -202,6 +221,8 @@ export class Room {
     private lastHeartbeat = 0;
     private traceBuffer: TraceRow[] = [];
     readonly counters = {posesIn: 0, accepted: 0, corrections: 0, snapshots: 0, bytesOut: 0, bytesIn: 0, messagesOut: 0, tickMs: 0, ticks: 0, releases: 0, starts: 0, denied: 0};
+    /** Corrections by reason and species (the audit; a pattern of rejected sprints shows here). */
+    readonly correctionReasons: Record<string, number> = {};
     private readonly userSessions: Map<string, {island: IslandId; sessionId: string}>;
 
     constructor(private readonly o: RoomOptions) {
@@ -312,6 +333,8 @@ export class Room {
                 s.flags = pose.flags;
             } else if (verdict.kind === "reject") {
                 this.counters.corrections++;
+                const key = `${verdict.reason}:${s.slug}:${s.motion.last.mode}>${pose.mode}`;
+                this.correctionReasons[key] = (this.correctionReasons[key] ?? 0) + 1;
                 this.correct(client, s, verdict.reason, pose.seq);
                 if (verdict.stumble) this.sendText(client, {t: "notice", key: "stumble"});
                 if (verdict.end) this.release(s, "rejections");
@@ -435,7 +458,7 @@ export class Room {
         const a = abilitiesOf(animal.slug);
         const facts: AnimalFacts = {id: animal.id, slug: animal.slug, zone: animal.zone, area: animal.area, enclosure: animal.enclosure_id};
         const home: AnimalHome = {zone: animal.zone, area: animal.area};
-        const homeDisc = (this.o.homeOf ?? defaultHomeOf)(facts, a, state);
+        const homeDisc = (this.o.homeOf ?? defaultHomeOf)(facts, a, state, {island: animal.island, speciesId: animal.species_profile_id ?? null, slot: animal.slot ?? null, rank: animal.slot_rank ?? null});
         const startPose = this.plausibleStart(start, a, facts, homeDisc, state?.zone ?? null);
         if (!startPose) {
             await this.o.store.end(sessionId, "player", emptyStats(), this.stillState(ticket.animal, start, now, animal.zone));
@@ -451,6 +474,8 @@ export class Room {
             facts,
             home,
             homeDisc,
+            homeIsland: animal.island,
+            homeRef: {speciesId: animal.species_profile_id ?? null, slot: animal.slot ?? null, rank: animal.slot_rank ?? null},
             a,
             motion: newMotion(startPose, now),
             meters: state ? {...freshMeters(Boolean(animal.asleep_hint)), stamina: Math.min(state.stamina > 0 ? Math.max(state.stamina, 0.5) : 1, 1), exposure: Math.max(0, state.exposure - 0.2)} : freshMeters(Boolean(animal.asleep_hint)),
@@ -522,7 +547,8 @@ export class Room {
             stranded_from: null,
             stamina: 1,
             exposure: 0,
-            crossed: null
+            crossed: null,
+            home: null
         };
         void animalId;
         void zone;
@@ -576,7 +602,8 @@ export class Room {
             stranded_from: result.strandedFrom ? new Date(result.strandedFrom).toISOString() : null,
             stamina: s.meters.stamina,
             exposure: s.meters.exposure,
-            crossed: s.crossed
+            crossed: s.crossed,
+            home: homeOverrideOf(result, {releaseIsland: this.island, homeIsland: s.homeIsland})
         };
         try {
             await this.o.store.end(s.id, reason, this.statsOf(s), state);

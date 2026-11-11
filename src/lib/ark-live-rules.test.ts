@@ -30,7 +30,7 @@ test("species caps match the design's table (§4.3) from the shipped data", () =
 });
 
 test("species: who has which modes (no fish on land, no flying fox, sessile never controlled)", () => {
-    assert.deepEqual([...modesFor(abilitiesOf("atlantic-salmon"))].sort(), ["swim"]);
+    assert.deepEqual(Array.from(modesFor(abilitiesOf("atlantic-salmon"))).sort(), ["swim"]);
     assert.ok(abilitiesOf("atlantic-salmon").gills);
     const fox = modesFor(abilitiesOf("red-fox"));
     assert.ok(fox.has("ground") && fox.has("paddle") && !fox.has("air") && !fox.has("swim"), "a fox walks, wades and paddles a little, never flies or dives");

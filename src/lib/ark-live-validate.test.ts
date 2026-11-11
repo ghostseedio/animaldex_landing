@@ -275,7 +275,7 @@ test("mover: a fox wandering, running and sprinting for a minute is never correc
 test("mover: an eagle takes off, flies, glides, banks and lands without a correction", () => {
     const r = drive("golden-eagle", start(-10, -30), 40, (t) => ({...dirOf(t * 0.3), takeoff: t > 0.5 && t < 0.55, vertical: t < 8 ? 1 : t > 30 ? -1 : 0, flap: t < 10, land: t > 35}), {zone: "mountains"});
     assert.equal(r.rejects, 0);
-    assert.ok(r.modes.has("air") && r.modes.has("ground"), [...r.modes].join(","));
+    assert.ok(r.modes.has("air") && r.modes.has("ground"), Array.from(r.modes).join(","));
 });
 
 test("mover: a salmon swims the sea and turns back at the shore; a duck walks in, paddles and dives", () => {
@@ -284,7 +284,7 @@ test("mover: a salmon swims the sea and turns back at the shore; a duck walks in
     assert.ok(fish.last.x > 30, "still in the sea");
     const duck = drive("mallard", start(26, 5, "ground", 0.5, Math.PI / 2), 30, (t) => ({...dirOf(Math.PI / 2), vertical: t > 15 && t < 17 ? -1 : 0}), {zone: "river_lake"});
     assert.equal(duck.rejects, 0);
-    assert.ok(duck.modes.has("paddle"), [...duck.modes].join(","));
+    assert.ok(duck.modes.has("paddle"), Array.from(duck.modes).join(","));
 });
 
 test("mover: a mole digs in and comes up; a gibbon climbs the tree", () => {
