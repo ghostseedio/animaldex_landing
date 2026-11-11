@@ -329,10 +329,15 @@ export const ARK_COPY = {
     /** Under the headline: "of 100" (the world score); "of 500" only from a server that has not switched. */
     outOf: "of {max}",
     /**
-     * The new Ark Score (docs/ark-spec.md section 2): your contribution to
-     * the shared Ark, 0–100, moved only by your own arrivals.
+     * Ark Score v3 (captures + thrive, 2026-11-11; `ark_points`): the sum of
+     * the points each worked step earned, more for animals the Ark needs.
+     * Captures never lower it; nothing anyone else does can. It never goes down.
      */
-    scoreAbout: "Your part in the shared Ark",
+    scoreAbout: "From your steps that worked, more for animals the Ark needs. It never goes down.",
+    /** The same on someone else's profile. */
+    scoreAboutTheirs: "From their steps that worked, more for animals the Ark needs. It never goes down.",
+    /** The same, in one line, where the score is only a number (a tooltip: the weekly stats, a collector's card). */
+    scoreHint: "Ark Score: points from steps that worked, more for animals the Ark needs. It never goes down.",
     scoreWeek: "{delta} this week",
     myAnimals: "My animals in the Ark",
     theirAnimals: "Their animals in the Ark",
@@ -341,19 +346,32 @@ export const ARK_COPY = {
     /** The five bars' card (no total). */
     life: "Life",
     /** The one-time explanation band over the score (dismissed for good, per browser). */
-    explainTitle: "Ark Score has changed",
-    explainBody: "It is now your part in the shared Ark, from 0 to 100. Everyone starts at 50. It moves only when a step of yours works and brings an animal aboard: one that balances the Ark lifts it, one that crowds it lowers it. Nobody else's animals can change it. Your life bars are below, as before.",
+    explainTitle: "How your Ark Score grows",
+    explainBody: "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Captures bring animals aboard but never lower your score, and nobody else can lower it. It only ever goes up. Your life bars are below, as before.",
     explainDismiss: "Got it",
     /**
-     * Part 2 (docs/ark-next.md): one line under a live step card, by the
-     * reader's living count of that species aboard (`voyage_step_offer_state_v1`),
-     * and one line in the thread when a step that worked brought the animal
-     * aboard. UI labels, never the animal's words. "An" before a vowel in English.
+     * Captures + thrive (2026-11-11): one line under a live step card, what a
+     * step that works does for the reader's animals of that kind
+     * (`voyage_step_offer_state_v1`: `thrive`, `thrive_later`, and the band now
+     * and after). UI labels, never the animal's words.
      */
-    offerNew: "If this works, a {species} comes aboard the Ark",
-    offerNewAn: "If this works, an {species} comes aboard the Ark",
-    offerPair: "If this works, your {species} pair will be complete",
-    offerMilestone: "If this works, your {species} gain a milestone",
+    offerThrive: "If this works, your {species} will thrive",
+    offerPrime: "If this works, your {species} will be in prime condition",
+    offerStayPrime: "If this works, your {species} will stay in prime condition",
+    offerLater: "If this works, your {species} will thrive once one is aboard",
+    /**
+     * Under the reply that finished a step that worked (`voyage_step_result_v1`):
+     * what it did for them, the band it left them in and the step's locked points.
+     */
+    resultOne: "Your {species} is thriving",
+    resultOther: "Your {species} are thriving",
+    resultLater: "Your {species} will thrive once one is aboard",
+    resultPoints: "+{points} Ark Score",
+    /** The condition bands in plain words (the tap card's own words; never the number). */
+    thrivePrime: "In prime condition",
+    thriveGood: "In good condition",
+    thriveOrdinary: "Ordinary",
+    /** A step that brought an animal aboard before captures did (history only). */
     arrival: "A {species} came aboard the Ark",
     arrivalAn: "An {species} came aboard the Ark",
     arrivalSee: "See it in the Ark",

@@ -36,7 +36,8 @@ export type ArkHudWords = {
     countStatus: string;
 };
 
-export type ArkStoryWords = {generic: string; debate: string; openDebate: string};
+/** `generic`: an animal a step brought (before captures did); `capture`: one a capture brought (captures + thrive). */
+export type ArkStoryWords = {generic: string; capture: string; debate: string; openDebate: string};
 
 /** The tap card's life story (life v2). */
 export type ArkLifeWords = {
@@ -89,6 +90,21 @@ export type ArkLifeWords = {
     revised: string;
     revisedWorked: string;
     revisedNot: string;
+    /** The label of its hunger and age now (`condition`: Well-fed, Hungry, Old); "Condition" is its thrive band's. */
+    now: string;
+    /** Captures + thrive: how well kept it is (`thrive`), in plain words. */
+    thrivePrime: string;
+    thriveGood: string;
+    thriveOrdinary: string;
+    /** Its family line (`lineage`): "2 young, 1 grandchild · 2 alive now". */
+    lineage: string;
+    lineageYoungOne: string;
+    lineageYoungOther: string;
+    lineageGrandOne: string;
+    lineageGrandOther: string;
+    lineageLaterOne: string;
+    lineageLaterOther: string;
+    lineageLiving: string;
 };
 
 /** "While you were away": the replay's captions and its summary line. */
@@ -230,6 +246,10 @@ export type ArkSpeciesWords = {
     seeArk: string;
 };
 
+/**
+ * The capture page's band. The species' band (from the public snapshot): `aboardOne` … `seeArk`.
+ * Captures + thrive (`voyage_capture_state_v1`): what this capture did, `aboardTitle` … `thrive`.
+ */
 export type ArkCaptureWords = {
     aboardOne: string;
     aboardOther: string;
@@ -243,6 +263,21 @@ export type ArkCaptureWords = {
     notAboardBody: string;
     start: string;
     seeArk: string;
+    aboardTitle: string;
+    aboardBody: string;
+    aboardPair: string;
+    alreadyBody: string;
+    comingTitle: string;
+    comingBody: string;
+    waitingBody: string;
+    pairFullTitle: string;
+    pairFullBody: string;
+    wasAboardTitle: string;
+    wasAboardBody: string;
+    notOnArkTitle: string;
+    notOnArkBody: string;
+    /** "Steps with it keep your {animal} thriving." */
+    thrive: string;
 };
 
 /**
