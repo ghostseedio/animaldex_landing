@@ -84,17 +84,15 @@ test("props conditions: dew at a still dawn, none at noon or in the wind; the cl
     assert.equal(withOverride(wet, {wind: 1}).dew, 0);
 });
 
-test("props sampler: the cave's site still holds (flat, open, on land); forks, hollows and ledges exist", () => {
+test("props sampler: the cave's site still holds (flat, open, on land); ledges exist; trees are the sampler's alone", () => {
     const site = caveSite();
     assert.ok(site.y > 1, `cave at ${site.y.toFixed(1)} m`);
     for (let a = 0; a < 8; a++) assert.ok(site.y - sampleGround(CAVE_SITE.x + Math.cos(a) * 4.5, CAVE_SITE.z + Math.sin(a) * 4.5).height < 0.6, "flat round the outcrop");
     const near = [...worldDecor(), ...forestFill()].filter((item) => item.kind !== "flower" && item.kind !== "leaf" && Math.hypot(item.x - CAVE_SITE.x, item.z - CAVE_SITE.z) < 6.5);
     assert.deepEqual(near.map((item) => item.kind), []);
-    assert.ok(propsPoints("fork").length > 30);
-    assert.ok(propsPoints("hollow").length > 10);
     assert.ok(propsPoints("ledge").filter((point) => point.zone === "mountains").length > 8);
     // Deterministic.
-    assert.deepEqual(propsPoints("fork").slice(0, 3), propsPoints("fork").slice(0, 3));
+    assert.deepEqual(propsPoints("ledge").slice(0, 3), propsPoints("ledge").slice(0, 3));
 });
 
 test("props build: the areas and every gated home build, the same for every viewer, capped per tier", () => {

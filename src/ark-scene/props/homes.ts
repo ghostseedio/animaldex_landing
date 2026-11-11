@@ -138,6 +138,22 @@ function specks(points: Array<{p: Vector3; n: Vector3}>, every: number, random: 
     return out;
 }
 
+/** The decor tree under a host id (`decor12`), for its trunk's axis. */
+function treeOf(host: string): {x: number; y: number; z: number} | null {
+    const match = /^decor(\d+)$/.exec(host);
+    const item = match ? worldDecor()[Number(match[1])] : null;
+    return item ? {x: item.x, y: item.y, z: item.z} : null;
+}
+
+/**
+ * A point on a decor tree's trunk (the sampler's `bark` points, on the drawn bark), `low`…`high` metres up, facing
+ * sideways, nearest `near` (in `zone` first); its tree not already taken by another home.
+ */
+function trunkPoint(near: {x: number; z: number}, zone: ArkZone, used: Set<string>, low = 0.6, high = 6): PropsPoint | null {
+    const ok = (point: PropsPoint) => /^decor\d+$/.test(point.host) && !used.has(point.host) && Math.abs(point.normal.y) < 0.35 && point.y - groundAt(point.x, point.z) > low && point.y - groundAt(point.x, point.z) < high;
+    return propsPoints("bark", {x: near.x, z: near.z, radius: 60}, zone).find(ok) ?? propsPoints("bark", {x: near.x, z: near.z, radius: 160}).find(ok) ?? null;
+}
+
 /** Where eggs lie in each form's cup (its floor, at radius 1), and how far apart. Forms not listed hide theirs. */
 const EGG_FLOOR: Partial<Record<NestForm, number>> = {cup: 0.31, platform: 0.34, eyrie: 0.65, scrape: 0.03, down_bowl: 0.17, floating: 0.13, mound: 0.44, pebbles: 0.05};
 /** How far a nest's detail is drawn, against the tier's near radius. */
@@ -288,9 +304,11 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const ants = first("ants")!;
         const random = propRandom("ants");
         const corner = zoneCorner(ants.zone);
-        const fork = propsPoints("fork", {x: corner.x, z: corner.z, radius: 40}, ants.zone)[0] ?? propsPoints("fork", {x: corner.x, z: corner.z, radius: 120})[0] ?? null;
-        const tree = fork ? worldDecor()[Number(fork.host.replace("decor", ""))] : null;
-        const moundAt = tree ? {x: tree.x + 2.2, z: tree.z + 1.6} : {x: corner.x + 1.5, z: corner.z + 1};
+        // The tree the trail climbs: the nearest trunk (a sampler `bark` point, on the drawn bark) near the zone's corner.
+        const barkPoint = trunkPoint({x: corner.x, z: corner.z}, ants.zone, used);
+        const tree = barkPoint ? treeOf(barkPoint.host) : null;
+        const outward = barkPoint ? Math.atan2(barkPoint.normal.z, barkPoint.normal.x) : 0;
+        const moundAt = barkPoint && tree ? {x: tree.x + Math.cos(outward) * 2.6, z: tree.z + Math.sin(outward) * 2.6} : {x: corner.x + 1.5, z: corner.z + 1};
         const moundY = groundAt(moundAt.x, moundAt.z);
         marks.ants = {x: moundAt.x, y: moundY, z: moundAt.z};
         if (tree) marks.antsTree = {x: tree.x, y: tree.y, z: tree.z};
@@ -298,22 +316,23 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         add(new LodBatch("ant-mound", mounds, shapes.antMound(0.5, 0.34), shapes.heap(0.5, 0.34, "#7b5d3f", 1, 0.05), soil, {cap: 4, reach: 1.4}));
         const trails: BufferGeometry[] = [];
         const dots: PropInstance[] = [];
-        if (tree) {
-            const trunkR = 0.2 * tree.scale;
-            // Toward the trunk's side that faces the mound.
-            const ang = Math.atan2(moundAt.z - tree.z, moundAt.x - tree.x);
-            const foot = {x: tree.x + Math.cos(ang) * trunkR * 1.05, z: tree.z + Math.sin(ang) * trunkR * 1.05};
+        if (barkPoint && tree) {
+            // The trunk's radius where the bark point is (its distance from the trunk's axis), so the trail lies on the bark.
+            const trunkR = Math.max(Math.hypot(barkPoint.x - tree.x, barkPoint.z - tree.z), 0.06);
+            const ang = outward;
+            const foot = {x: tree.x + Math.cos(ang) * trunkR * 1.08, z: tree.z + Math.sin(ang) * trunkR * 1.08};
             const ground = groundPath(moundAt.x - Math.cos(ang) * 0.4, moundAt.z - Math.sin(ang) * 0.4, foot.x, foot.z, 0.25, random);
             trails.push(strip(ground, 0.1, "#b39a72", () => 0.95));
             dots.push(...specks(ground, 0.03, random));
-            // Up the trunk to the fork.
+            // Up the trunk to the bark point.
             const up: Array<{p: Vector3; n: Vector3}> = [];
-            const height = fork ? fork.y - groundAt(foot.x, foot.z) : 1.6;
+            const base = groundAt(foot.x, foot.z);
+            const height = Math.max(barkPoint.y - base, 0.8);
             for (let k = 0; k <= 12; k++) {
                 const t = k / 12;
-                const twist = ang + Math.sin(t * 3) * 0.35;
-                const r = trunkR * (1.02 - 0.4 * t * (height / 3));
-                up.push({p: new Vector3(tree.x + Math.cos(twist) * r, groundAt(foot.x, foot.z) + t * height * 0.95, tree.z + Math.sin(twist) * r), n: new Vector3(Math.cos(twist), 0, Math.sin(twist))});
+                const twist = ang + Math.sin(t * 3) * 0.3;
+                const r = trunkR * (1.04 + 0.25 * (1 - t));
+                up.push({p: new Vector3(tree.x + Math.cos(twist) * r, base + t * height, tree.z + Math.sin(twist) * r), n: new Vector3(Math.cos(twist), 0, Math.sin(twist))});
             }
             trails.push(strip(up, 0.06, "#2a1f17"));
             dots.push(...specks(up, 0.025, random));
@@ -342,11 +361,8 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
     if (has("bees")) {
         const bees = first("bees")!;
         const corner = zoneCorner(bees.zone === "farm_garden" ? "woodland" : bees.zone);
-        const decor = worldDecor();
-        // A hollow with open ground in front of it (seen, not hidden behind a neighbour).
-        const open = (p: PropsPoint) => !decor.some((item, index) => item.kind !== "flower" && item.kind !== "leaf" && `decor${index}` !== p.host && Math.hypot(item.x - (p.x + p.normal.x * 1.6), item.z - (p.z + p.normal.z * 1.6)) < 1.8);
-        const candidates = propsPoints("hollow", {x: corner.x, z: corner.z, radius: 60}).filter((p) => !used.has(p.host));
-        const hollow = candidates.find(open) ?? candidates[0] ?? propsPoints("hollow", {x: COTTAGE.x, z: COTTAGE.z, radius: 120})[0];
+        // A hollow in a trunk (a sampler `bark` point on the drawn bark), two to four metres up, facing open ground.
+        const hollow = trunkPoint({x: corner.x, z: corner.z}, bees.zone === "farm_garden" ? "woodland" : bees.zone, used, 1.6, 4);
         if (hollow) {
             used.add(hollow.host);
             const turn = Math.atan2(hollow.normal.x, hollow.normal.z);
@@ -392,13 +408,24 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
         const postZ = COTTAGE.z + halfD + COTTAGE.porch.depth - 0.1;
         // In the porch's corner, between the post and the porch roof.
         webs.push({x: postX - 0.32, y: COTTAGE.floor + 2.15, z: postZ - 0.05, facing: 0, radius: 0.34});
+        // Between two tall flowers (sampler `flower_head` points a hand to a stride apart), as garden orb weavers hang them:
+        // the web's middle a little below the heads, its face square to the line between them.
         const spiders = first("spiders")!;
-        const corner = zoneCorner(spiders.zone === "farm_garden" ? "woodland" : spiders.zone);
-        const branches = propsPoints("branch", {x: corner.x, z: corner.z, radius: 25});
+        const corner = zoneCorner(spiders.zone);
+        const heads = [...propsPoints("flower_head", {x: corner.x, z: corner.z, radius: 30}), ...propsPoints("flower_head", {x: COTTAGE.x, z: COTTAGE.z, radius: 20})];
         const random = propRandom("webs");
-        for (const branch of branches) {
-            if (webs.some((w) => Math.hypot(w.x - branch.x, w.z - branch.z) < 1.4) || webs.length >= 6) continue;
-            webs.push({x: branch.x, y: branch.y - 0.35, z: branch.z, facing: Math.atan2(branch.x - corner.x, branch.z - corner.z) + (random() - 0.5) * 0.6, radius: 0.3 + random() * 0.18});
+        for (let i = 0; i < heads.length && webs.length < 6; i++) {
+            const a = heads[i];
+            const b = heads.slice(i + 1).find((other) => {
+                const d = Math.hypot(other.x - a.x, other.z - a.z);
+                return d > 0.25 && d < 0.8 && Math.abs(other.y - a.y) < 0.25;
+            });
+            if (!b) continue;
+            const mid = {x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 0.04, z: (a.z + b.z) / 2};
+            if (webs.some((w) => Math.hypot(w.x - mid.x, w.z - mid.z) < 1.2)) continue;
+            const span = Math.hypot(b.x - a.x, b.z - a.z);
+            const radius = Math.min(span * 0.42, Math.max(mid.y - groundAt(mid.x, mid.z) - 0.04, 0.08) * 0.9);
+            webs.push({x: mid.x, y: mid.y - radius, z: mid.z, facing: Math.atan2(b.x - a.x, b.z - a.z) + Math.PI / 2 + (random() - 0.5) * 0.2, radius});
         }
         // Between two fence pickets at the garden's gate.
         webs.push({x: COTTAGE.x + 1.15, y: groundAt(COTTAGE.x + 1.15, COTTAGE.z + 8.6) + 0.55, z: COTTAGE.z + 8.6, facing: 0, radius: 0.22});

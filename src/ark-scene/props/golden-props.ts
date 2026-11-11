@@ -130,9 +130,10 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(mid, 3.6, 1.15, Math.atan2(mound.x - tree.x, mound.z - tree.z) + Math.PI / 2), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
         }
         case "web_dawn": {
-            const web = spots.webBranch ?? spots.web;
+            const web = (spots.webBranch ?? spots.web) as {x: number; y: number; z: number; facing?: number; radius?: number} | undefined;
             if (!web) return null;
-            return {view: look(web, 1.4, 1.5, Math.PI + 0.3), hours: 6.4, weather: {dew: 1, mist: 0.6, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "web", minDistance: 0.3};
+            // Square on to its face, the low sun behind the camera's shoulder.
+            return {view: look(web, (web.radius ?? 0.3) * 4 + 0.5, 1.5, (web.facing ?? 0) + 0.3), hours: 6.4, weather: {dew: 1, mist: 0.6, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "web", minDistance: 0.3};
         }
         case "beehive_hollow": {
             const hollow = spots.beesHollow;
