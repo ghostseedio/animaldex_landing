@@ -263,6 +263,13 @@ export class RigLibrary {
         return !this.failed.has(slug) && Boolean(this.choices?.get(slug)?.[0]?.flight);
     }
 
+    /** Whether its rig walks (a walk, run, hop, slither or climb): before it loads, assumed; a sitting rig with only its idle does not. */
+    walks(slug: string): boolean {
+        const model = this.models.get(slug);
+        if (!model) return true;
+        return ["walk", "run", "hop", "slither", "climb"].some((name) => Boolean(model.clips[name]));
+    }
+
     /** Whether a set lists a rig for this species (one that has not failed to load from every set). */
     available(slug: string): boolean {
         return !this.failed.has(slug) && Boolean(this.choices?.get(slug)?.length);
@@ -408,7 +415,7 @@ export class RigLibrary {
             const row = Number(clip.row);
             const clipRows = Number(clip.rows);
             if (!Number.isInteger(row) || !Number.isInteger(clipRows) || clipRows < 2 || row < 0 || row + clipRows > rows) continue;
-            clips[name] = {...clip, name, row, rows: clipRows};
+            clips[name] = withCycleSpeed({...clip, name, row, rows: clipRows}, Number(entry.version) || 1);
         }
         if (!Object.keys(clips).length) {
             geometry.dispose();
@@ -563,12 +570,16 @@ export type RigState = {
      * offset on alternate frames) never flips walk and graze, or walk and run, frame by frame.
      */
     pace: number;
+    /** A clip played by distance: how fast it moves against the clip's own ground speed (1: its natural pace). 0 otherwise. */
+    ratio: number;
+    /** Moving backwards (backing off, a step back): its walk plays in reverse. */
+    reverse: boolean;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0, ratio: 0, reverse: false};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */
@@ -578,6 +589,90 @@ export function rigSwitch(state: RigState, name: string, phase = 0) {
     state.now = {name, phase};
     state.fade = 0;
 }
+
+/**
+ * The ground clip for a pace (model units a second): the slowest whose own pace covers it within 1.5 times (a walk
+ * while it walks, a run or a hop when it goes faster), else the fastest it has; the one playing keeps a little
+ * margin (1.7 times) so it doesn't flip at the edge. Played by the distance covered, its feet stay planted.
+ */
+export function paceClip(speed: number, clips: readonly RigClipData[], current?: string | null): RigClipData | null {
+    const usable = clips.filter((c) => (c.ground_speed ?? 0) > 0).sort((a, b) => a.ground_speed! - b.ground_speed!);
+    if (!usable.length) return null;
+    return usable.find((c) => speed <= c.ground_speed! * (c.name === current ? 1.7 : 1.5)) ?? usable[usable.length - 1];
+}
+
+/**
+ * Every visible animal's gait, rigged or not: where it was drawn, how far through its step cycle (by the distance it
+ * covers: a cycle, two steps, every 0.6 body lengths), and its pace (m/s, eased over about 0.3 s so a stepped path
+ * reads as one pace). It picks which movers get a rig from the island view, and gives every mover without one a
+ * cheap gait (`gaitPose`), so nothing slides along still.
+ */
+export type Gait = {x: number; z: number; phase: number; speed: number};
+
+export function stepGait(gait: Gait | null | undefined, x: number, z: number, dt: number, length: number): Gait {
+    if (!gait) return {x, z, phase: 0, speed: 0};
+    const moved = Math.hypot(x - gait.x, z - gait.z);
+    // A jump (a new spot, an act's cut) is no step.
+    const step = moved > Math.max(length * 4, 2) ? 0 : moved;
+    gait.phase = (gait.phase + step / Math.max(0.6 * length, 0.02)) % 1000;
+    if (dt > 0) gait.speed += (step / dt - gait.speed) * Math.min(dt * 3.5, 1);
+    gait.x = x;
+    gait.z = z;
+    return gait;
+}
+
+/** Whether it moves now at a walk or more (not a shuffle in place): a fifth of its body length a second. */
+export function gaitMoving(gait: Gait | null | undefined, length: number): boolean {
+    return Boolean(gait && gait.speed > 0.2 * Math.max(length, 0.05));
+}
+
+/**
+ * The cheap gait of a mover with no rig: the body bobs up at every step and rocks a little side to side and fore and
+ * aft with its steps, as much as it moves (none standing, full from about half a body length a second).
+ */
+export function gaitPose(gait: Gait, length: number, height: number): {weight: number; bob: number; roll: number; pitch: number} {
+    const weight = Math.min(Math.max((gait.speed / Math.max(length, 0.05) - 0.1) / 0.4, 0), 1);
+    if (weight <= 0) return {weight: 0, bob: 0, roll: 0, pitch: 0};
+    const a = Math.PI * 2 * gait.phase;
+    return {
+        weight,
+        bob: weight * 0.035 * height * Math.abs(Math.sin(a)),
+        roll: weight * 0.045 * Math.sin(a),
+        pitch: weight * 0.025 * Math.sin(2 * a)
+    };
+}
+
+/**
+ * Which way its moving clip plays: backwards while the body moves back along its facing (more than half of the step
+ * against the way it faces: backing off from a threat or the camera, a step back), forwards again once the step is
+ * more forward than not. Sideways steps keep the clip forwards. A walk played forwards while the body goes back is
+ * the "going backwards" moonwalk.
+ */
+export function stepReverses(was: boolean, dx: number, dz: number, yaw: number): boolean {
+    const flat = Math.hypot(dx, dz);
+    if (flat < 1e-6) return was;
+    const forward = (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / flat;
+    return was ? forward < 0.2 : forward < -0.5;
+}
+
+/**
+ * A clip's ground speed as the scene uses it: the speed the body moves for its feet to stay planted, so that
+ * `ground_speed × seconds` is the distance a full cycle covers (`cyclesFor`).
+ *
+ * A v2 file already says so (contract section 3.2: `stride` = sweep / duty). A v1 file's `ground_speed` is the
+ * stance sweep a second (`stride` = the sweep), which understates the body's speed by 1 / duty (contract section 6):
+ * played by it, a walk's legs cycle 1.6 times too fast and a run's 2.6 times, and the feet slide (the owner's
+ * "walking animations seem weird" and the moonwalk "going backwards"). So a v1 moving clip's speed is divided by
+ * its duty (its own `duty`, else the contract's: walk 0.62, run 0.38, climb 0.72).
+ */
+export function withCycleSpeed<T extends RigClip>(clip: T & {name: string}, entryVersion: number): T & {name: string} {
+    if (entryVersion >= 2 || !clip.ground_speed) return clip;
+    const stated = Number((clip as {duty?: number}).duty);
+    const duty = stated > 0.05 && stated < 1 ? stated : V1_DUTY[clip.name];
+    if (!duty) return clip;
+    return {...clip, ground_speed: clip.ground_speed / duty};
+}
+const V1_DUTY: Record<string, number> = {walk: 0.62, run: 0.38, climb: 0.72};
 
 /**
  * The texture rows of a clip at a phase, for the shader: the frame's row,

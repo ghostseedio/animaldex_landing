@@ -37,6 +37,9 @@ export type RigClip = {
     /** Model units a second the root moves at (the feet stay planted at this speed). */
     ground_speed?: number;
     stride?: number;
+    /** walk, run, climb: the share of the cycle each foot is planted, and how far it sweeps back then (v2: `stride` = sweep / duty). */
+    duty?: number;
+    sweep?: number;
     /** Whether the clip passed its own checks (a partial rig's other clips are false or absent). */
     pass?: boolean;
     /** The clip's first row in the rig's bone texture, and how many rows (its frames plus the closing one). */

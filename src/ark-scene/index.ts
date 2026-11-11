@@ -92,7 +92,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {beatClip, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -185,6 +185,8 @@ const RIG_WITHIN = 20;
  * across the island, and the far level has no motion at all. Nothing changes for a set without flight (v1).
  */
 const FLIGHT_RIG_EXTRA = 20;
+/** A walker moving on the ground gets its rig (drawn near) from up to this far: the whole island from its home view. */
+const MOVING_RIG_WITHIN = 260;
 /** Seconds a rig takes to fade in or out against the procedural motion. */
 const RIG_BLEND_SECONDS = 0.5;
 /** Rigs not drawn for this long are let go (keeping this many). */
@@ -335,6 +337,8 @@ type Entry = {
     recipeFlock?: Flock | null;
     /** The duller sex's dim (`sexDim`), worked out once. */
     sexDim?: number;
+    /** Its gait (`rig-player.ts` stepGait): its pace and step cycle by the distance it covers, rigged or not. */
+    gait?: Gait | null;
     /** A rigged animal on the ground walks about its spot now and then (`stepWander`). */
     wander?: Wander | null;
     /** A leaper in the air: how far across (0…1), else 0. */
@@ -2328,6 +2332,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const rigHere = new Vector3();
     const rigLift = new Vector3();
+    /** Movers rigged from the island view and the cheap gait of the rest (development: `window.__arkMoverGait = false` before mounting turns both off, to compare). */
+    const moverGait = (globalThis as {__arkMoverGait?: boolean}).__arkMoverGait !== false;
     /** The reactive layer's actions that have an animal watching something: it stops feeding and lifts its head to look. */
     const WATCHING_ACTIONS: ReadonlySet<string> = new Set(["scan", "watch_camera", "investigate_camera", "back_off_camera", "sentinel", "alert", "freeze", "threat_display", "watch_prey", "startle", "look_kin", "shield_young"]);
     const rigGrip = new Vector3();
@@ -2380,6 +2386,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             while (dyaw > Math.PI) dyaw -= Math.PI * 2;
             while (dyaw < -Math.PI) dyaw += Math.PI * 2;
             const ease = Math.min(dt * 4, 1);
+            if (flat < 3) state.reverse = stepReverses(state.reverse, dx, dz, where.yaw);
             if (flat < 3) {
                 state.climb += (climbNow - state.climb) * ease;
                 state.turn += (dyaw / dt - state.turn) * ease;
@@ -2532,17 +2539,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 want = "swim";
                 mode = swim.ground_speed ? "distance" : "time";
             }
+        } else if (!flies && (entry.air > 0.001 || entry.state.airborne)) {
+            // Leaving the ground or coming down on a rig that does not fly (it fades out in the air): its idle, never a
+            // walk spun at the flight's speed.
         } else {
-            const walk = groundClip(slug);
-            const run = clip("run");
-            if (run && walk?.ground_speed && speed > walk.ground_speed * 1.6) {
-                want = "run";
-                mode = "distance";
-            } else if (moving(walk)) {
-                want = walk.name;
-                mode = "distance";
-            } else if (!walk && moving(run)) {
-                want = "run";
+            // The ground clip whose own pace fits how fast it goes (a walk, a run, a hop for a hopping bird).
+            const gaits = ["walk", "run", "hop", "slither"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
+            const pick = paceClip(speed, gaits, state.now.name);
+            if (moving(pick)) {
+                want = pick.name;
                 mode = "distance";
             }
         }
@@ -2600,9 +2605,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
         rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
         // By distance, up to 3.5 times the clip's own pace (a flee is capped at the gait's 2.5: the feet never slide).
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5);
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5) * (state.reverse ? -1 : 1);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
+        state.ratio = mode === "distance" && playing.ground_speed && dt > 0 ? moved / dt / playing.ground_speed : 0;
         if (state.from) {
             state.fade += dt / RIG_FADE_SECONDS;
             const from = rig.clips[state.from.name];
@@ -2817,6 +2823,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             position.set(where.x, where.water ? where.base : Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
             if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
+            // A walker on the move with a rig: its near model too, from the island view (it is drawn rigged, near).
+            else if (moverGait && distance < MOVING_RIG_WITHIN && !reducedMotion && entry.air <= 0.001 && gaitMoving(entry.gait, entry.length) && rigs.available(slug) && library.has(slug)) library.request(slug, "near");
             sphere.center.copy(position);
             sphere.radius = entry.length * 2 + 3;
             candidates.push({entry, distance, model, visible: frustum.intersectsSphere(sphere), pose: where, modelHeight, modelScale, skip, rig: null});
@@ -2847,8 +2855,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
+        // Every visible animal's gait (its pace by the distance it covers): which movers get a rig from far off, and
+        // the cheap gait of those that don't.
+        for (const c of candidates) if (c.visible && !c.skip) c.entry.gait = stepGait(c.entry.gait, c.pose.x, c.pose.z, dt, c.entry.length);
+        // A walker moving on the ground, seen from anywhere (the island view is ~190 m off): its rig, within the caps,
+        // so the island's movers walk on their legs rather than glide (the owner, 2026-11-11). It is drawn near for that.
+        const movingRig = (c: Candidate) =>
+            moverGait &&
+            !reducedMotion &&
+            rigs.walks(c.entry.animal.model_slug) && c.entry.air <= 0.001 && !c.entry.visitor && !c.pose.afloat && gaitMoving(c.entry.gait, c.entry.length) && rigs.available(c.entry.animal.model_slug);
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0))
+            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN))))
             .sort((a, b) => a.distance - b.distance);
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
@@ -2870,7 +2887,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const rigPriority = (entry: Entry) => (entry.animal.id === selectedId || entry.animal.id === followId ? 0 : entry.animal.mine ? 1 : 2);
         const rigWanted = rigCap
             ? candidates
-                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && (c.entry.air <= 0.001 || rigs.mayFly(c.entry.animal.model_slug)) && (c.distance < RIG_WITHIN + (c.entry.air > 0.5 || c.entry.rig?.flying ? FLIGHT_RIG_EXTRA : 0) || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
+                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && (c.entry.air <= 0.001 || rigs.mayFly(c.entry.animal.model_slug)) && (c.distance < RIG_WITHIN + (c.entry.air > 0.5 || c.entry.rig?.flying ? FLIGHT_RIG_EXTRA : 0) || rigPriority(c.entry) < 2 || movingRig(c)) && rigs.available(c.entry.animal.model_slug))
                   .sort((a, b) => rigPriority(a.entry) - rigPriority(b.entry) || a.distance - b.distance)
             : [];
         const rigSpecies = new Set<string>();
@@ -3048,6 +3065,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
 
             const rig = level === "near" ? candidate.rig : null;
+            // Moving with no rig (past the rig caps, or no rig file): a cheap gait, the body bobbing and rocking with its
+            // steps, by the distance it covers, so nothing slides along still.
+            if (moverGait && !rig && !surface && !where.afloat && entry.air <= 0.001 && entry.gait && !reducedMotion) {
+                const g = gaitPose(entry.gait, entry.length, modelHeight);
+                if (g.weight > 0) {
+                    where.base += g.bob;
+                    where.pitch += g.pitch;
+                    where.roll += g.roll;
+                }
+            }
             const meshes = species.get(animal.model_slug);
             const mesh = (level === "near" ? (rig ? meshes?.rig : meshes?.near) : meshes?.far) ?? null;
             if (!mesh || !model) continue;
