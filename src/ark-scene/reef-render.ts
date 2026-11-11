@@ -56,7 +56,7 @@ export const ARK_SEA_TIME = {value: 0};
  * Every part carries: its own colour (`arkColour`) and how much of it to use (`arkOwn`, 0 = the instance's colour),
  * a shade for the instance's colour (`arkShade`), how far it moves in the surge (`arkSway`, metres at scale 1) and a
  * surface pattern (`arkPattern`: 0 none, 1 brain meanders, 2 polyps, 3 fan lattice, 4 tentacle, 5 sponge pores,
- * 6 table plate, 7 kelp blade, 8 kelp stipe and float).
+ * 6 table plate, 7 kelp blade, 8 kelp stipe and float, 9 turf and coralline crust).
  */
 type Paint = {
     own?: (p: Vector3, n: Vector3) => [number, number, number, number] | null;
@@ -155,7 +155,7 @@ function branching(variant: number, near: boolean): BufferGeometry {
         const end = depth >= depthMax;
         const r1 = end ? radius * 0.55 : radius * 0.72;
         parts.push(part(tube(from, to, radius, r1, sides), {
-            shade: (p) => 0.62 + 0.5 * Math.min(p.y / 0.8, 1),
+            shade: (p) => 0.78 + 0.4 * Math.min(p.y / 0.8, 1),
             own: (p) => (end && p.distanceTo(to) < length * 0.45 ? [...tip, (variant === 0 ? 0.85 : 0.7) * (1 - p.distanceTo(to) / (length * 0.45))] as [number, number, number, number] : null),
             sway: () => 0,
             pattern: 2
@@ -235,14 +235,14 @@ function table(variant: number, near: boolean): BufferGeometry {
             return g;
         };
         const edge = rgb("#cdbf98");
-        parts.push(part(make(top), {shade: (p) => 0.72 + 0.12 * Math.min(Math.hypot(p.x, p.z) / radius, 1), own: (p) => {
+        parts.push(part(make(top), {shade: (p) => 0.6 + 0.12 * Math.min(Math.hypot(p.x, p.z) / radius, 1), own: (p) => {
             const k = Math.hypot(p.x, p.z) / radius;
             return k > 0.9 ? [...edge, (k - 0.9) * 4] : null;
         }, sway: () => 0, pattern: 6}));
         parts.push(part(make(bottom), {shade: () => 0.5, sway: () => 0, pattern: 2}));
         parts.push(part(make(rim), {shade: () => 0.95, own: () => [...edge, 0.45], sway: () => 0, pattern: 0}));
     };
-    const stalk = tube(new Vector3(0, 0, 0), new Vector3(0.02, 0.5, 0.01), 0.11, 0.07, near ? 7 : 4);
+    const stalk = tube(new Vector3(0, 0, 0), new Vector3(0.02, 0.5, 0.01), 0.09, 0.055, near ? 7 : 4);
     parts.push(part(stalk, {shade: (p) => 0.55 + 0.25 * p.y, sway: () => 0, pattern: 2}));
     plate(0.62, 0.5, 0.045, random() * 6);
     if (variant === 1) plate(0.36, 0.36, 0.035, random() * 6);
@@ -599,11 +599,43 @@ function seagrass(variant: number, near: boolean): BufferGeometry {
     return merge([part(g, {shade: (p) => 0.5 + 0.5 * Math.min(p.y / 0.4, 1), own: (p) => (p.y > 0.32 ? [...tipColour, Math.min((p.y - 0.32) * 4, 0.4)] : null), sway: (p) => 0.09 * Math.min(p.y / 0.4, 1) ** 1.6, pattern: 0})]);
 }
 
+/** The framework's cover: a low, lumpy, ragged patch (turf, an encrusting coral, coralline algae). */
+function encrusting(variant: number, near: boolean): BufferGeometry {
+    const random = seeded(9451 + variant);
+    const segments = near ? 14 : 7;
+    const rings = near ? 3 : 1;
+    const phase = random() * 6;
+    const outline = (a: number) => 0.6 * (1 + 0.22 * Math.sin(3 * a + phase) + 0.12 * Math.sin(5 * a + phase * 2) + 0.08 * Math.sin(9 * a));
+    const lump = (x: number, z: number) => 0.05 * (0.5 + 0.5 * Math.sin(x * 11 + phase) * Math.sin(z * 9 - phase)) + 0.03 * Math.sin(x * 23 + z * 19);
+    const points: number[] = [];
+    const at = (a: number, k: number): [number, number, number] => {
+        const r = outline(a) * k;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        // Thickest in the middle, thinning to nothing at the ragged edge (it lies on the bed, never a disc on edge).
+        return [x, (0.035 + lump(x, z)) * (1 - k * k) + 0.004, z];
+    };
+    for (let s = 0; s < segments; s++) {
+        const a0 = (s / segments) * Math.PI * 2;
+        const a1 = ((s + 1) / segments) * Math.PI * 2;
+        for (let r = 0; r < rings; r++) {
+            const k0 = r / rings;
+            const k1 = (r + 1) / rings;
+            points.push(...at(a0, k0), ...at(a1, k1), ...at(a0, k1), ...at(a0, k0), ...at(a1, k0), ...at(a1, k1));
+        }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
+    g.computeVertexNormals();
+    return merge([part(g, {shade: (p) => 0.62 + 2.5 * p.y, sway: () => 0, pattern: variant === 0 ? 2 : 9})]);
+}
+
 const BUILDERS: Record<ReefKind, (variant: number, near: boolean) => BufferGeometry> = {
     branching,
     table,
     brain,
     massive,
+    encrusting,
     fan,
     anemone,
     barrel_sponge: barrelSponge,
@@ -706,14 +738,14 @@ float reefCaustic(vec2 p, float t) {
     int kind = int(vReefPattern + 0.5);
     if (kind == 1) {
         // Brain coral: meandering ridges about 4 cm apart (the contours of a noise field), dark valleys between.
-        float v = (arkFbm(w.zy * 3.0) * nk.x + arkFbm(w.xz * 3.0) * nk.y + arkFbm(w.xy * 3.0) * nk.z) * 9.0;
+        float v = (arkFbm(w.zy * 4.6) * nk.x + arkFbm(w.xz * 4.6) * nk.y + arkFbm(w.xy * 4.6) * nk.z) * 13.0;
         float ridge = abs(fract(v) - 0.5) * 2.0;
-        c *= mix(1.0, mix(0.55, 1.1, smoothstep(0.2, 0.6, ridge)), 0.3 + 0.7 * near);
+        c *= mix(1.0, mix(0.68, 1.08, smoothstep(0.15, 0.6, ridge)), 0.3 + 0.7 * near);
     } else if (kind == 2) {
         // Polyps: fine pits (about 1 cm), and broad patches of a second tone.
         float pits = smoothstep(0.55, 0.8, arkNoise(w.zy * 60.0) * nk.x + arkNoise(w.xz * 60.0) * nk.y + arkNoise(w.xy * 60.0) * nk.z);
-        float patch = arkNoise(w.zy * 3.0) * nk.x + arkNoise(w.xz * 3.0) * nk.y + arkNoise(w.xy * 3.0) * nk.z;
-        c *= (1.0 - 0.25 * pits * near) * (0.88 + 0.24 * patch);
+        float tone2 = arkNoise(w.zy * 3.0) * nk.x + arkNoise(w.xz * 3.0) * nk.y + arkNoise(w.xy * 3.0) * nk.z;
+        c *= (1.0 - 0.16 * pits * near) * (0.92 + 0.16 * tone2);
     } else if (kind == 3) {
         // Sea fan: an open lattice of branching veins.
         vec2 q = p.xy * 34.0 + vec2(arkNoise(p.xy * 9.0), arkNoise(p.xy * 9.0 + 5.0)) * 3.0;
@@ -728,7 +760,12 @@ float reefCaustic(vec2 p, float t) {
         // Table plate: fine radial branchlets on top.
         float a = atan(p.z, p.x);
         float r = length(p.xz);
-        c *= 0.86 + 0.22 * smoothstep(0.3, 0.8, arkNoise(vec2(a * 30.0, r * 26.0))) * near;
+        c *= 0.8 + 0.3 * smoothstep(0.25, 0.8, arkNoise(vec2(a * 42.0, r * 34.0))) * (0.4 + 0.6 * near);
+    } else if (kind == 9) {
+        // Turf and coralline crust: mottled, with pale crusty specks.
+        float mottle = arkNoise(w.xz * 9.0) * 0.6 + arkNoise(w.xz * 27.0) * 0.4;
+        c *= 0.8 + 0.35 * mottle;
+        c = mix(c, vec3(0.62, 0.5, 0.55) * 0.6, smoothstep(0.8, 0.92, arkNoise(w.xz * 41.0)) * 0.5 * near);
     } else if (kind == 7) {
         // Kelp blades: mottled, and lit through when the light is behind them (they are thin and golden).
         c *= 0.9 + 0.2 * arkNoise(p.xz * 30.0 + p.y * 8.0);
@@ -766,6 +803,7 @@ const REACH: Record<ReefKind, [number, number]> = {
     table: [15, 75],
     brain: [13, 75],
     massive: [13, 80],
+    encrusting: [12, 45],
     fan: [16, 70],
     anemone: [10, 45],
     barrel_sponge: [13, 70],

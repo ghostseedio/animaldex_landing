@@ -26,7 +26,7 @@
 
 import {ZONE_SITES, coastRadius, fbm, noise, sampleGround, seeded, smoothstep, type GroundSample} from "@/ark-scene/world";
 
-export const REEF_KINDS = ["branching", "table", "brain", "massive", "fan", "anemone", "barrel_sponge", "tube_sponge", "ball_sponge", "kelp", "seagrass"] as const;
+export const REEF_KINDS = ["branching", "table", "brain", "massive", "encrusting", "fan", "anemone", "barrel_sponge", "tube_sponge", "ball_sponge", "kelp", "seagrass"] as const;
 export type ReefKind = typeof REEF_KINDS[number];
 
 /** What the sea bed is made of: the reef's own framework, bare rock, broken rubble, sand. */
@@ -59,6 +59,7 @@ export const REEF_VARIANTS: Record<ReefKind, number> = {
     table: 2,
     brain: 2,
     massive: 2,
+    encrusting: 2,
     fan: 2,
     anemone: 2,
     barrel_sponge: 1,
@@ -75,6 +76,8 @@ const COLOURS: Record<ReefKind, string[]> = {
     table: ["#a8845a", "#9c875c", "#919066", "#a57e5e"],
     brain: ["#b8994f", "#9fa35a", "#c48e58", "#a8925a", "#86a06a"],
     massive: ["#c6a874", "#b49466", "#bc946a", "#a07f86"],
+    // The cover on the reef's framework between the heads: turf, encrusting corals, pink and purple coralline algae.
+    encrusting: ["#7d7350", "#86704e", "#6e7552", "#8f6a78", "#a07a7c", "#7a6a5a"],
     // Gorgonians and sea whips: deep purple, red, orange-yellow.
     fan: ["#7e2f56", "#a63d2c", "#c08f2f", "#8a3a6e", "#b4532e"],
     anemone: ["#c9b48a", "#9fb05a", "#c98a8a", "#b8c08a"],
@@ -90,7 +93,7 @@ type Mix = Array<[ReefKind, number]>;
 /** What the reef's hard ground grows, by depth band. */
 const BANDS: Array<{to: number; mix: Mix}> = [
     // The flat and the crest.
-    {to: 3.5, mix: [["branching", 34], ["table", 18], ["brain", 15], ["massive", 15], ["anemone", 8], ["ball_sponge", 6], ["tube_sponge", 4]]},
+    {to: 3.5, mix: [["branching", 36], ["table", 12], ["brain", 17], ["massive", 13], ["anemone", 9], ["ball_sponge", 7], ["tube_sponge", 6]]},
     // The upper slope.
     {to: 6, mix: [["table", 18], ["brain", 17], ["massive", 17], ["branching", 14], ["fan", 12], ["tube_sponge", 9], ["barrel_sponge", 6], ["anemone", 7]]},
     // Deeper.
@@ -113,6 +116,7 @@ const SIZE: Record<ReefKind, [number, number]> = {
     table: [0.55, 1.3],
     brain: [0.4, 1.05],
     massive: [0.45, 1.15],
+    encrusting: [0.7, 1.5],
     fan: [0.6, 1.25],
     anemone: [0.6, 1.1],
     barrel_sponge: [0.55, 1.15],
@@ -192,6 +196,7 @@ export const REEF_HEIGHT: Record<ReefKind, number> = {
     table: 0.62,
     brain: 0.55,
     massive: 0.8,
+    encrusting: 0.09,
     fan: 1.05,
     anemone: 0.32,
     barrel_sponge: 0.95,
@@ -248,9 +253,11 @@ export function reefGrowth(): ReefItem[] {
         const own = scale ?? size(kind, random());
         const fitted = kind === "seagrass" ? own : Math.min(own, (bed.depth - 0.9) / REEF_HEIGHT[kind]);
         if (fitted < 0.3) return;
+        const roll = random();
         items.push({
             kind,
-            variant: Math.floor(random() * REEF_VARIANTS[kind]) % REEF_VARIANTS[kind],
+            // Column corals are the rarer boulders.
+            variant: kind === "massive" ? (roll < 0.75 ? 0 : 1) : Math.floor(roll * REEF_VARIANTS[kind]) % REEF_VARIANTS[kind],
             x,
             y: bed.height,
             z,
@@ -295,6 +302,12 @@ export function reefGrowth(): ReefItem[] {
                 const local = seeded(Math.floor(jx * 1e9) ^ Math.floor(jz * 7e8));
                 if (bed.substrate === "reef" || (bed.substrate === "rock" && bed.reef > 0.3)) {
                     if (bed.depth < CORAL_MIN_DEPTH || bed.depth > 10) continue;
+                    // The framework's cover between the heads (turf, encrusting corals, coralline algae).
+                    if (local() < 0.5 + 0.35 * bed.framework) {
+                        const ex = x + (local() - 0.5) * 0.4;
+                        const ez = z + (local() - 0.5) * 0.4;
+                        put("encrusting", ex, ez, bedFrom(ex, ez, sampleGround(ex, ez), slope), local);
+                    }
                     // Dense on the knolls' tops, thinner on their flanks.
                     const cover = 0.22 + 0.5 * bed.framework;
                     if (roll > cover) continue;
@@ -302,7 +315,9 @@ export function reefGrowth(): ReefItem[] {
                     put(pick(band.mix, kindRoll), x, z, bed, local);
                 } else if (bed.substrate === "rubble") {
                     // Rubble: the odd boulder coral, sponge or anemone.
-                    if (bed.depth < CORAL_MIN_DEPTH || roll > 0.06) continue;
+                    if (bed.depth < CORAL_MIN_DEPTH) continue;
+                    if (local() < 0.3) put("encrusting", x, z, bed, local);
+                    if (roll > 0.06) continue;
                     put(kindRoll < 0.45 ? "massive" : kindRoll < 0.75 ? "ball_sponge" : "anemone", x, z, bed, local);
                 } else if (bed.substrate === "sand") {
                     // The lagoon's seagrass: on sand between the reef and the shore, 1.2–3.5 m, in meadows with sand between.
