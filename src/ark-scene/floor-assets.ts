@@ -38,6 +38,11 @@ function has(id: string): boolean {
 
 let cached: FloorPlacement[] | null = null;
 
+/** Runtime prebuild hook (runtime/prebuild.ts): the same list, placed in the scenery worker before the mount. */
+export function primeFloorPlacements(items: FloorPlacement[]): void {
+    cached = items;
+}
+
 export function floorPlacements(): FloorPlacement[] {
     if (cached) return cached;
     const out: FloorPlacement[] = [];

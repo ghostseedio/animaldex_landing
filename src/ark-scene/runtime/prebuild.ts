@@ -13,6 +13,8 @@ import {primeDecor} from "@/ark-scene/decor";
 import {placeAnimals, primePlaces, type Placement} from "@/ark-scene/placement";
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
+import {primeFloorPlacements} from "@/ark-scene/floor-assets";
+import {primeWheatStands} from "@/ark-scene/near-detail";
 import type {ArkZone} from "@/ark-scene/types";
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";
@@ -21,8 +23,8 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 
 export {packGrass, unpackGrass};
 
-/** From this many animals the places are worth a worker (below, ~0.1 s on the main thread). */
-export const PLACES_IN_WORKER_FROM = 1000;
+/** From this many animals the places go to a worker: every Ark (the map's sampler is then never built in the mount). */
+export const PLACES_IN_WORKER_FROM = 0;
 
 export type ArkPrebuild = ArkSceneryPrebuild & {places: Array<[string, Placement]> | null; capacities?: Array<[ArkZone, number]> | null};
 export type ArkPrebuildInput = {grass: number; animals: ArkAnimal[] | null; tier?: QualityTier};
@@ -44,6 +46,8 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.decor && data.fill && data.grass) primeDecor({decor: data.decor, fill: data.fill, grass: {count: data.grass.count, tufts: unpackGrass(data.grass)}});
     primeGroundIfAble(data.ground);
     if (data.reef) primeReefGrowth(data.reef);
+    if (data.floor) primeFloorPlacements(data.floor);
+    if (data.wheat) primeWheatStands(data.wheat);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
     if (data.capacities) primeZoneCapacities(data.capacities);
 }

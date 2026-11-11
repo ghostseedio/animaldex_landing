@@ -308,8 +308,7 @@ export class ModelLibrary {
     }
 
     private async loadGltf(url: string, edge = 0): Promise<ModelLevel> {
-        // Runtime: the file through the page's own model cache (versioned files never change), then parsed.
-        const gltf = await this.loader.parseAsync(await cachedFile(url, this.abort.signal), url.replace(/[^/]*$/, ""));
+        const gltf = await this.loader.loadAsync(url);
         gltf.scene.updateMatrixWorld(true);
         let found: Mesh | null = null;
         let facing = 0;
@@ -476,23 +475,6 @@ export class ModelLibrary {
         textures.forEach((texture) => texture.dispose());
         this.models.clear();
     }
-}
-
-/**
- * The model files are versioned (`<slug>/<version>.near.glb`: a new model is a new name), but the bucket serves them
- * `private, no-cache`, so every visit fetched every model again (~0.5 s each). The page keeps them in its own Cache
- * Storage: a repeat visit reads them from disk. Anything that fails (no Cache API, a full quota, a private window)
- * falls back to the network, as before.
- */
-const MODEL_CACHE = "ark-models-v1";
-async function cachedFile(url: string, signal: AbortSignal): Promise<ArrayBuffer> {
-    const store = typeof caches !== "undefined" ? await caches.open(MODEL_CACHE).catch(() => null) : null;
-    const hit = store ? await store.match(url).catch(() => undefined) : undefined;
-    if (hit) return hit.arrayBuffer();
-    const response = await fetch(url, {signal});
-    if (!response.ok) throw new Error(`${response.status} ${url}`);
-    if (store) await store.put(url, response.clone()).catch(() => undefined);
-    return response.arrayBuffer();
 }
 
 function disposeLevel(level: ModelLevel) {

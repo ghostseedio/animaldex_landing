@@ -581,7 +581,19 @@ const WHEAT_FRINGE = 1.3;
  * triangles a card), so the field reads as one crop at every distance instead of a patch round the camera. Each card has
  * a rank so a tier can thin them evenly.
  */
-function wheatStands(): Array<Item & {rank: number}> {
+let wheatCache: Array<Item & {rank: number}> | null = null;
+/** Runtime prebuild hook (runtime/prebuild.ts): the same stands, placed in the scenery worker before the mount. */
+export function primeWheatStands(items: Array<Item & {rank: number}>): void {
+    wheatCache = items;
+}
+
+export function wheatStands(): Array<Item & {rank: number}> {
+    if (wheatCache) return wheatCache;
+    wheatCache = wheatStandsFresh();
+    return wheatCache;
+}
+
+function wheatStandsFresh(): Array<Item & {rank: number}> {
     const farm = ZONE_SITES.farm_garden;
     const items: Array<Item & {rank: number}> = [];
     for (let cx = Math.floor((farm.x - 46) / CELL); cx <= Math.ceil((farm.x + 46) / CELL); cx++) {

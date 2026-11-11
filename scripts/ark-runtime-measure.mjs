@@ -94,7 +94,28 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 
 const populationFile = arg("population-file", "");
 if (populationFile && !existsSync(populationFile)) throw new Error(`--population-file ${populationFile}: no such file`);
+// `--cdn-sim <dir>`: the model bucket through a local cache on disk, served `public, max-age=31536000, immutable` after
+// a CDN edge's ~25 ms: what the model files cost once the bucket's cache headers are fixed (a warm-up run fills the disk).
+const cdnDir = arg("cdn-sim", "");
+const BUCKET = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public";
+async function cdn(request, response, pathname) {
+    const rel = pathname.replace(/^\/cdn\//, "");
+    const file = path.join(cdnDir, rel);
+    if (!file.startsWith(cdnDir)) return response.writeHead(404).end();
+    if (!existsSync(file)) {
+        const upstream = await fetch(`${BUCKET}/${rel}`);
+        if (!upstream.ok) return response.writeHead(upstream.status).end();
+        mkdirSync(path.dirname(file), {recursive: true});
+        writeFileSync(file, Buffer.from(await upstream.arrayBuffer()));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    response.writeHead(200, {"Content-Type": "application/octet-stream", "Cache-Control": rel.endsWith("manifest.json") ? "public, max-age=60" : "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": "*"}).end(readFileSync(file));
+}
 const server = createServer((request, response) => {
+    if (cdnDir && request.url.startsWith("/cdn/")) {
+        void cdn(request, response, new URL(request.url, "http://localhost").pathname).catch(() => response.writeHead(502).end());
+        return;
+    }
     const url = new URL(request.url, "http://localhost");
     if (populationFile && url.pathname === "/population-file.json") {
         response.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"}).end(readFileSync(populationFile));
@@ -187,7 +208,13 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.start");
         }
         const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
-        await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}`, {waitUntil: "commit", timeout: 120_000});
+        const modelsParam = cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
+        await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}`, {waitUntil: "commit", timeout: 120_000});
+        // `--repeat`: this load only primes the page's caches; the measured one is a second visit in the same browser.
+        if (flag("repeat")) {
+            await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
+            await page.reload({waitUntil: "commit", timeout: 120_000});
+        }
         await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
         const measured = await page.evaluate(() => window.__arkMeasure);
         if (flag("profile")) {

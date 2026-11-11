@@ -183,3 +183,19 @@ Files touched outside the runtime this round: `src/ark-scene/index.ts` (the moun
 What is left in the phone's mount task (~0.95 s): the vegetation's instanced meshes and grass (~0.3 s), the props module (0.19 s), the near detail's floor and wheat (0.15 s), the effects (0.12 s); each needs the same treatment (built after `mountArk` returns, or primed from the worker). The phone's view time is the model downloads (the CDN does not cache the model files: `private, no-cache`).
 
 The visual CI was red on release 9acd9a74 itself (baselines from bd63e552, before graphics batches 4–6, props, map and look). Re-accepted at today's picture; this branch's render against the release's: 14 shots identical within tolerance, 5 with one tile changed by a looping animal (each under 1.1% of the picture), now with a looser worst-tile limit.
+
+## 10. Rounds 7–8: the rest of the mount and the starting view (real backfill)
+
+**Round 7.** The props module (homes, areas, nests, effects) is built in its own mount step; the floor's and the wheat's placements and the reef's growth come primed from the scenery worker (`primeFloorPlacements` in floor-assets.ts, `primeWheatStands` in near-detail.ts, `primeReefGrowth` in reef.ts); the first frame's shader wait is capped at 1.5 s (a program the driver never reported held the desktop's first frame 5 s); resting is asked at the rotation step's own instant, remembered per animal and step, reusing the scene's schedules, worked out ahead a few ms a frame in the minute before the step. Phone mount task 943 → 493–519 ms; desktop 248 → 142 ms.
+
+What the phone's view time was (with the CDN corrected: GETs are HITs, `public, max-age=31536000`; only HEAD says no-cache): a file costs ~0.17–0.22 s from here (time to first byte; 70 KB moves in ~15 ms); decode and parse ~10 ms a model on the throttled main thread; ~240 models on the medium tier's default view, each far model two requests (`.glb` + `.ark.json`); and the main thread was saturated drawing at 60 fps (13–17 ms of scene work a frame), so the loads were starved. Phones now drop to 30 fps while the view's models come in (no input), and the page's own model cache is gone (the HTTP cache works). Phone view complete, round 7: first visit 12–21 s; repeat visit (browser cache primed) 8.6–8.7 s; a simulated near cache (local disk, +25 ms, 4 at once) 10.1–10.3 s.
+
+**Round 8.** Six fetches at once on phones (eight on desktops); the starting view asks for its nearest 60 kinds first and the tier's full number once those are in; places go to the worker for every Ark (`PLACES_IN_WORKER_FROM = 0`), so the mount never builds the map's sampler. Phone first visit, starting view complete: **11.2 / 9.7 / 11.9 s** (3 runs, 6.7–6.9 s of it before the first frame); worst task after the first frame 67–142 ms.
+
+Still on the main thread outside the mount: `play()` places a replay's ghosts (`placeAnimals(ghostAnimals)`), which builds the map's sampler the first time (~1 s on a phone) when a replay has departed animals. It can go to the places worker when the page fetches the life events, before `play`.
+
+### Part B inputs (chunked streaming, after this release)
+
+1. **A far-model pack for the starting view.** One file per tier holding the most-seen kinds' far meshes and skins (and their `ark.json`), so the starting view is 1–3 requests instead of ~240 at ~0.2 s each. Built by the publish pipeline beside `manifest.json`; the library reads the pack first and the single files for the rest.
+2. **`ark.json` inside the GLB** (the glTF `extras`): one request per model instead of two.
+3. Then the measures to repeat: requests per starting view, time to the starting view on a first visit, on a repeat visit, and on a phone's real network.

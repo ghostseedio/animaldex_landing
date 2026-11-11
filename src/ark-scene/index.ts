@@ -954,13 +954,54 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const resting = (behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST] as undefined | ((world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean});
         if (!resting || !world || !scheduleOn) return undefined;
         const byId = new Map(snapshot.animals.map((animal) => [animal.id, animal]));
-        const epoch = worldMs() / 1000;
+        // Asked at the rotation step's own instant (the same for every viewer, whenever their page lays out), remembered
+        // per animal and step, and worked out ahead in small slices before the step comes (`prewarmResting`).
+        const step = Math.floor(worldMs() / 1000 / REST_STEP);
         return (id) => {
+            const key = `${id}|${step}`;
+            const known = restingMemo.get(key);
+            if (known !== undefined) return known;
             const animal = byId.get(id);
             const place = places.get(id);
             if (!animal || !place) return false;
-            const sched = makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
-            return sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, epoch, scheduleHours, animal.activity).resting : false;
+            const sched = entryById.get(id)?.sched ?? makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
+            const value = sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false;
+            restingMemo.set(key, value);
+            return value;
+        };
+    };
+    const REST_STEP = 300;
+    const restingMemo = new Map<string, boolean>();
+    let restingWarm: {step: number; queue: string[]} | null = null;
+    let warmIds: {snapshot: ArkSnapshot; byId: Map<string, ArkAnimal>} | null = null;
+    /** In the minute before a rotation step, the next step's resting answers a few milliseconds a frame. */
+    const prewarmResting = () => {
+        if (!world || !scheduleOn || !(behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST]) return;
+        const seconds = worldMs() / 1000;
+        const next = Math.floor(seconds / REST_STEP) + 1;
+        if (next * REST_STEP - seconds > 60) return;
+        if (!restingWarm || restingWarm.step !== next) {
+            for (const key of Array.from(restingMemo.keys())) if (!key.endsWith(`|${next - 1}`)) restingMemo.delete(key);
+            restingWarm = {step: next, queue: current.animals.map((animal) => animal.id)};
+        }
+        const ask = restingForStep(current, placedAll, next);
+        const started = performance.now();
+        while (ask && restingWarm.queue.length && performance.now() - started < 6) ask(restingWarm.queue.pop()!);
+    };
+    /** `restingFor` at a given step (the warm-up's). */
+    const restingForStep = (snapshot: ArkSnapshot, places: Map<string, Placement>, step: number) => {
+        const resting = (behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST] as undefined | ((world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean});
+        if (!resting || !world) return null;
+        if (!warmIds || warmIds.snapshot !== snapshot) warmIds = {snapshot, byId: new Map(snapshot.animals.map((animal) => [animal.id, animal]))};
+        const byId = warmIds.byId;
+        return (id: string) => {
+            const key = `${id}|${step}`;
+            if (restingMemo.has(key)) return;
+            const animal = byId.get(id);
+            const place = places.get(id);
+            if (!animal || !place) return;
+            const sched = entryById.get(id)?.sched ?? makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
+            restingMemo.set(key, sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false);
         };
     };
     const stepWorldBuild = (budgetMs: number) => {
@@ -4216,23 +4257,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         syncSound();
     });
     visibility.observe(el);
-    modules = ARK_SCENE_MODULES.map((create) => create({
-        scene,
-        renderer,
-        tier,
-        snapshot: options.snapshot,
-        hours: hoursNow(),
-        placeOf: (id) => placedAll.get(id) ?? null,
-        planOf: (slug) => library.get(slug)?.behaviour?.plan,
-        reducedMotion,
-        // (The props lane's burrow mouths and rock dens: a den, burrow, cave or crevice sleeper's roost.)
-        roostOf: (id) => {
-            const sched = entryById.get(id)?.sched;
-            if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost)) return null;
-            return {...roostOf(world, sched.profile, sched.animal), kind: sched.profile.roost};
+    // Runtime (sliced mount): the scenery modules (the props' homes, areas, nests and effects, ~0.3 s on a phone) are
+    // built after mountArk returns, in their own task before the animals are laid out; a recording builds them now.
+    const buildModules = () => {
+        modules = ARK_SCENE_MODULES.map((create) => create({
+            scene,
+            renderer,
+            tier,
+            snapshot: options.snapshot,
+            hours: hoursNow(),
+            placeOf: (id) => placedAll.get(id) ?? null,
+            planOf: (slug) => library.get(slug)?.behaviour?.plan,
+            reducedMotion,
+            // (The props lane's burrow mouths and rock dens: a den, burrow, cave or crevice sleeper's roost.)
+            roostOf: (id) => {
+                const sched = entryById.get(id)?.sched;
+                if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost)) return null;
+                return {...roostOf(world, sched.profile, sched.animal), kind: sched.profile.roost};
+            }
+        }));
+        if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
+        for (const sceneModule of modules) {
+            sceneModule.setTier(tier, liteOn());
+            sceneModule.setShadows(TIER_SETTINGS[tier].shadows > 0);
         }
-    }));
-    if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
+    };
+    if (options.recording) buildModules();
+    else runtime.mountLater([() => {
+        buildModules();
+        return true;
+    }]);
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
@@ -4269,7 +4323,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             () => {
                 const started = performance.now();
-                while (roostQueue && roostQueue.length && performance.now() - started < 30) {
+                while (roostQueue && roostQueue.length && performance.now() - started < 12) {
                     const animal = roostQueue.pop()!;
                     const place = placedAll.get(animal.id);
                     if (place && scheduleOn && onSchedule(place, animal.model_slug) && onBehaviourSchedule(animal.model_slug)) mapRoostOf(place, animal.zone);
@@ -5004,6 +5058,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepReplay(now);
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
+        else prewarmResting();
         updateInstances(elapsed);
         dust.step(now);
         liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => (world ? entries.filter((e) => Boolean(e.sched)) : []), routeOf);
