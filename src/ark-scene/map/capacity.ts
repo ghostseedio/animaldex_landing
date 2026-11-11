@@ -23,6 +23,11 @@ export const PER_CELL = 1;
 
 let table: Map<ArkZone, number> | null = null;
 
+/** Runtime prebuild hook (runtime/prebuild.ts): the same table, computed in the places worker before the mount. */
+export function primeZoneCapacities(primed: Array<[ArkZone, number]>): void {
+    table = new Map(primed);
+}
+
 /** Every zone's visible capacity (animals). */
 export function zoneCapacities(): Map<ArkZone, number> {
     if (table) return table;

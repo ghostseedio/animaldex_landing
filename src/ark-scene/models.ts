@@ -144,7 +144,7 @@ export class ModelLibrary {
     /** GPU bytes per loaded level (`runtime/memory.ts`'s estimate). */
     private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
 
-    constructor(private readonly base: string, private readonly concurrency = 3) {
+    constructor(private readonly base: string, private concurrency = 3) {
         this.loader = new GLTFLoader();
         this.loader.setMeshoptDecoder(MeshoptDecoder);
         this.manifestReady = fetch(`${base.replace(/\/+$/, "")}/manifest.json`, {signal: this.abort.signal})
@@ -200,6 +200,25 @@ export class ModelLibrary {
     /** Still loading or waiting to load something (the recorder waits for this before a shot). */
     get busy(): boolean {
         return !this.manifest || this.active > 0 || this.queue.length > 0 || this.staged.length > 0;
+    }
+
+    /** Runtime: drop queued (not yet started) levels the scene no longer wants; asked again when it does. */
+    prune(keep: (slug: string, level: Wanted) => boolean): number {
+        let dropped = 0;
+        for (let i = this.queue.length - 1; i >= 0; i--) {
+            const item = this.queue[i];
+            if (keep(item.slug, item.level)) continue;
+            this.queue.splice(i, 1);
+            this.requested.get(item.slug)?.delete(item.level);
+            dropped++;
+        }
+        return dropped;
+    }
+
+    /** Runtime: how many files load at once (more on a desktop's connection, fewer on a phone's). */
+    setConcurrency(count: number) {
+        this.concurrency = Math.max(1, Math.round(count));
+        this.pump();
     }
 
     /** Levels asked for and not yet handed to the scene (the quiet loading bar's count). */
@@ -289,7 +308,8 @@ export class ModelLibrary {
     }
 
     private async loadGltf(url: string, edge = 0): Promise<ModelLevel> {
-        const gltf = await this.loader.loadAsync(url);
+        // Runtime: the file through the page's own model cache (versioned files never change), then parsed.
+        const gltf = await this.loader.parseAsync(await cachedFile(url, this.abort.signal), url.replace(/[^/]*$/, ""));
         gltf.scene.updateMatrixWorld(true);
         let found: Mesh | null = null;
         let facing = 0;
@@ -456,6 +476,23 @@ export class ModelLibrary {
         textures.forEach((texture) => texture.dispose());
         this.models.clear();
     }
+}
+
+/**
+ * The model files are versioned (`<slug>/<version>.near.glb`: a new model is a new name), but the bucket serves them
+ * `private, no-cache`, so every visit fetched every model again (~0.5 s each). The page keeps them in its own Cache
+ * Storage: a repeat visit reads them from disk. Anything that fails (no Cache API, a full quota, a private window)
+ * falls back to the network, as before.
+ */
+const MODEL_CACHE = "ark-models-v1";
+async function cachedFile(url: string, signal: AbortSignal): Promise<ArrayBuffer> {
+    const store = typeof caches !== "undefined" ? await caches.open(MODEL_CACHE).catch(() => null) : null;
+    const hit = store ? await store.match(url).catch(() => undefined) : undefined;
+    if (hit) return hit.arrayBuffer();
+    const response = await fetch(url, {signal});
+    if (!response.ok) throw new Error(`${response.status} ${url}`);
+    if (store) await store.put(url, response.clone()).catch(() => undefined);
+    return response.arrayBuffer();
 }
 
 function disposeLevel(level: ModelLevel) {

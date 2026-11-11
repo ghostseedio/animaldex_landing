@@ -13,7 +13,7 @@
  * The contract for the apps is docs/ark/runtime-bridge.md; the numbers are in docs/ark/runtime.md.
  */
 
-import type {Camera, Mesh, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
+import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
@@ -60,6 +60,10 @@ export type ArkRuntimeStats = {
     skipped: number;
     /** Camera pushes out of scenery this session (frames). */
     collisions: number;
+    /** Every model the view draws now is in (the far models of the kinds in view, the near ones close by). */
+    viewComplete: boolean;
+    /** Queued far models dropped because the camera left their kinds. */
+    pruned: number;
 };
 
 /** What the runtime adds to the scene's handle. */
@@ -111,7 +115,14 @@ export type ArkRuntime = ReturnType<typeof createArkRuntime>;
 
 /** Far models asked for up front (the nearest kinds to the view), per tier; the rest when seen within `FAR_ON_DEMAND` m. */
 const FAR_UPFRONT: Record<QualityTier, number> = {high: 160, medium: 120, low: 80};
-const FAR_ON_DEMAND: Record<QualityTier, number> = {high: 260, medium: 160, low: 110};
+/** Kinds in view whose far models are fetched (the nearest; the scene draws its nearest 150 / 120 / 80 animals as models). */
+const FAR_IN_VIEW: Record<QualityTier, number> = {high: 150, medium: 120, low: 80};
+
+/** The shader warm-up's synchronous share per frame (ms). */
+const WARM_SLICE_MS = 30;
+
+/** Rule E applies from this many animals aboard (the snapshot's size: the same for every viewer). */
+const RULE_E_FROM = 1000;
 
 /** The layer a mesh waits on, undrawn, while its new shader compiles (the camera and the shadows draw layer 0). */
 const HELD_LAYER = 31;
@@ -132,6 +143,9 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     let firstFrameMs: number | null = null;
     let shaders: ArkRuntimeStats["shaders"] = "pending";
     let warming = false;
+    let warmQueue: Object3D[] = [];
+    let warmPending: Array<Promise<"ready" | "timeout" | "failed">> = [];
+    let warmLimit = 5000;
     let drawn = 0;
     let skipped = 0;
     let evicted = 0;
@@ -143,6 +157,10 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
+    /** The kinds the view draws as models now, the far models dropped from the queue, and the up-front list (kept). */
+    let inView: string[] = [];
+    let pruned = 0;
+    const upfront = new Set<string>();
     /** The live budget's last answer: its rotation step and budget (a new step or tier asks for the snapshot again). */
     let restAt: {step: number; budget: number} | null = null;
     /** The shaders' time on the shared clock (shared-clock.ts), brought back down only while nobody sees the scene. */
@@ -165,6 +183,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const fitFor = (tier: QualityTier) => ({near: arkBudget(tier).nearTexture, far: arkBudget(tier).farTexture});
     ctx.library.fit = fitFor(ctx.tier());
     ctx.library.paced = true;
+    // More files at once on a desktop's connection (HTTP/2 to the bucket); a phone keeps four.
+    ctx.library.setConcurrency(ctx.tier() === "high" ? 8 : 4);
     ctx.library.upload = (map) => {
         try {
             ctx.renderer.initTexture(map);
@@ -234,16 +254,29 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             // waits for the scene's shaders, compiled in parallel: the last picture stays up meanwhile, and the page
             // keeps answering. Never longer than the warm-up's own limit.
             if (shaders === "pending") {
+                // The scene's parts are handed to the compiler a few per frame (its synchronous part is ~160 ms for
+                // everything on a throttled phone), then the frame waits for the parallel compiles to finish.
                 if (!warming) {
                     warming = true;
+                    warmQueue = [...ctx.scene.children];
+                    warmPending = [];
+                    warmLimit = firstFrameMs === null ? 5000 : 1500;
+                }
+                if (warmQueue.length) {
                     const target = ctx.renderTarget();
                     const previous = ctx.renderer.getRenderTarget();
                     if (target) ctx.renderer.setRenderTarget(target);
-                    void warmShaders(ctx.renderer, ctx.scene, ctx.camera as Camera, firstFrameMs === null ? 5000 : 1500).then((how) => {
-                        shaders = how;
-                        warming = false;
-                    });
+                    const sliceStarted = performance.now();
+                    while (warmQueue.length && performance.now() - sliceStarted < WARM_SLICE_MS) {
+                        warmPending.push(warmShaders(ctx.renderer, warmQueue.shift()!, ctx.camera as Camera, warmLimit, ctx.scene));
+                    }
                     ctx.renderer.setRenderTarget(previous);
+                    if (!warmQueue.length) {
+                        void Promise.all(warmPending).then((results) => {
+                            shaders = results.includes("timeout") ? "timeout" : results.includes("failed") ? "failed" : "ready";
+                            warming = false;
+                        });
+                    }
                 }
                 skipped++;
                 return "skip";
@@ -340,7 +373,6 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         /** One animal of a species seen this frame (the load order; a far model asked for once it is in view and near enough). */
         see(slug: string, distance: number, visible: boolean) {
             planner.see(slug, distance, visible);
-            if (visible && distance < FAR_ON_DEMAND[ctx.tier()] && ctx.library.has(slug)) ctx.library.request(slug, "far");
         },
 
         /**
@@ -361,7 +393,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             }
             const resting = restingOf ? (candidate: ArkLiveCandidate) => restingOf(candidate.id) : undefined;
             // Rule E first (the map's visible capacity per zone, the same on every device), then the tier's budget.
-            const capacity = arkZoneCapacity();
+            // (From 1,000 animals aboard: a small Ark does not crowd a zone, and the table costs a second to build.)
+            const capacity = animals.length >= RULE_E_FROM ? arkZoneCapacity() : null;
             if (capacity) candidates = arkWithinCapacity(candidates, capacity, epoch, pinned, resting);
             return arkOutside(candidates, budget, epoch, pinned, resting);
         },
@@ -382,6 +415,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             const limit = FAR_UPFRONT[ctx.tier()];
             if (slugs.length <= limit) return slugs;
             const keep = new Set(always);
+            for (const slug of always) upfront.add(slug);
             const target = ctx.controls.target;
             const nearest = new Map<string, number>();
             for (const at of where) {
@@ -390,7 +424,9 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             }
             // The herds' kinds always (their figures are drawn from afar), then the nearest.
             const rest = slugs.filter((slug) => !keep.has(slug)).sort((a, b) => (nearest.get(a) ?? Infinity) - (nearest.get(b) ?? Infinity) || (a < b ? -1 : 1));
-            return [...slugs.filter((slug) => keep.has(slug)), ...rest.slice(0, Math.max(limit - keep.size, 0))];
+            const chosen = [...slugs.filter((slug) => keep.has(slug)), ...rest.slice(0, Math.max(limit - keep.size, 0))];
+            for (const slug of chosen) upfront.add(slug);
+            return chosen;
         },
 
         /** The species drawn with their near model this frame (the budget lets the others' near levels go first). */
@@ -436,6 +472,14 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             drawn++;
             lastDrawn = nowMs;
             if (firstFrameMs === null) firstFrameMs = Math.round(nowMs - started);
+            // Far models for what the view draws as models (the tier's nearest kinds in view), nearest first; the rest
+            // when the camera comes to them. A few times a second is enough.
+            if (drawn % 8 === 1) {
+                inView = planner.nearestVisible(FAR_IN_VIEW[ctx.tier()]);
+                for (const slug of inView) if (ctx.library.has(slug)) ctx.library.request(slug, "far");
+                // Queued far models of kinds the camera has left (the opening flight's path) give way to what is in view.
+                if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug));
+            }
             planner.endFrame();
             pace.begin();
             ctx.library.drain(() => pace.allows(), () => pace.ran());
@@ -484,7 +528,12 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     pending: ctx.library.pending,
                     drawn,
                     skipped,
-                    collisions
+                    collisions,
+                    viewComplete: inView.length > 0 && inView.every((slug) => {
+                        const model = ctx.library.get(slug);
+                        return Boolean(model?.far) && (planner.nearestInView(slug) > 27.5 || Boolean(model?.near));
+                    }),
+                    pruned
                 };
             }
         } satisfies ArkRuntimeHandle,

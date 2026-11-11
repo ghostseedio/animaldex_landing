@@ -130,9 +130,10 @@ export function arkOutside(candidates: readonly ArkLiveCandidate[], budget: numb
         const start = (step + (arkHash(`phase:${key}`) % ring.length)) % ring.length;
         // From the start round the ring: those not resting at their roost first, then the resting ones (asked lazily:
         // only a crowded kind's members are looked at).
+        // (Asked in ring order and only until the quota of awake ones is found: the same answer as asking everyone.)
         const awake: string[] = [];
         const settled: string[] = [];
-        for (let i = 0; i < ring.length; i++) {
+        for (let i = 0; i < ring.length && awake.length < quota; i++) {
             const member = ring[(start + i) % ring.length].member;
             const resting = member.resting ?? (isResting ? isResting(member) : false);
             (resting ? settled : awake).push(member.id);
@@ -181,13 +182,13 @@ export function arkWithinCapacity<T extends ArkLiveCandidate & {zone: string}>(c
         const start = (step + (arkHash(`zone:${zone}`) % ring.length)) % ring.length;
         const awake: T[] = [];
         const settled: T[] = [];
-        for (let i = 0; i < ring.length; i++) {
+        const room = Math.max(cap - members.filter((member) => pinned.has(member.id)).length, 0);
+        for (let i = 0; i < ring.length && awake.length < room; i++) {
             const member = ring[(start + i) % ring.length].member;
             if (pinned.has(member.id)) continue;
             const resting = member.resting ?? (isResting ? isResting(member) : false);
             (resting ? settled : awake).push(member);
         }
-        const room = Math.max(cap - members.filter((member) => pinned.has(member.id)).length, 0);
         kept.push(...members.filter((member) => pinned.has(member.id)), ...[...awake, ...settled].slice(0, room));
     });
     return kept;
