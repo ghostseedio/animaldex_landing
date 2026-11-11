@@ -11,6 +11,9 @@ import LifeSimGalleryClient from "./gallery-client";
  *   /dev/life-sim/gallery                  every state at once
  *   /dev/life-sim/gallery?currency=GBP     Money in another display currency
  *   /dev/life-sim/gallery?teen=1           the Diary of a teen (private, no public option)
+ *   /dev/life-sim/gallery?arkfounder=1     after "I've done it": the founders' story moment under the step's
+ *                                          thrive line (D6), prefilled with the step; =name the name question
+ *                                          first, =adult the 18+ tap, =shared already shared (nothing is sent)
  *   /id/dev/life-sim/gallery               in Indonesian
  */
 

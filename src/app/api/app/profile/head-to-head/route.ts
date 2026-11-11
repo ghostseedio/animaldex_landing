@@ -14,7 +14,7 @@ function toSide(row: StatsRow | undefined) {
         collectorScore: Number(row.collector_score ?? 0),
         powerSetScore: Number(row.power_set_score ?? 0),
         overallScore: Number(row.overall_score ?? 0),
-        /** Ark 3.3: the world score (`ark_world_score`, 0–100); the old `ark_score` only from a server that has not switched. */
+        /** The Ark Score: v3's points (`ark_points`, no top); v2's 0–100 or the old `ark_score` only from a server that has not switched. */
         arkScore: readArkScore(row)?.value ?? null,
         indexedSpeciesCount: Number(row.indexed_species_count ?? 0),
         wildObservationCount: Number(row.wild_observation_count ?? 0),

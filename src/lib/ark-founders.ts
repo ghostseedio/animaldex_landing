@@ -156,6 +156,31 @@ export function arkFounderPath(founder: Pick<ArkFounder, "handle">): string {
     return `/u/${encodeURIComponent(founder.handle)}`;
 }
 
+/**
+ * A bringer as the Ark shows them (owner, 2026-11-11): their @username, linked
+ * to their profile (`arkFounderPath`). The server names every person with a
+ * handle (private profiles too); only a stored under-18, no handle, or a
+ * system account stays "Voyager N".
+ */
+export function arkHandle(founder: Pick<ArkFounder, "handle">): string {
+    return `@${founder.handle}`;
+}
+
+/** The display name, when it says more than the handle ("Ada Lovelace"); null when it is the handle again. */
+export function arkFounderDisplayName(founder: Pick<ArkFounder, "display_name" | "handle">): string | null {
+    const name = founder.display_name.trim();
+    const bare = (value: string) => value.replace(/^@+/, "").toLowerCase();
+    return name && bare(name) !== bare(founder.handle) ? name : null;
+}
+
+/** A label as text: the @username when the server names the bringer, else its label ("Voyager 5"). */
+export function arkLabelText(raw: unknown): string | null {
+    const row = record(raw);
+    const founder = decodeArkFounder(row?.founder);
+    if (founder) return arkHandle(founder);
+    return text(row?.label, 60);
+}
+
 // MARK: A founder's page (`voyage_founder_v1`)
 
 export type ArkFounderAnimal = {
@@ -203,7 +228,8 @@ export function arkFounderStories(page: ArkFounderPage | null): Array<ArkFounder
 
 // MARK: The person's own controls
 
-export type ArkFounderBlocked = "under_18" | "private_profile" | "no_handle";
+/** Why the name can't show: a stored under-18 year, or no @handle (a private profile no longer blocks, 2026-11-11). */
+export type ArkFounderBlocked = "under_18" | "no_handle";
 
 /** How the server knows they are an adult: a stored birth year, their one-tap "I'm 18 or over", a stored teen year, or not at all. */
 export type ArkFounderAdult = "stored" | "confirmed" | "teen" | "unknown";
@@ -218,6 +244,11 @@ export type ArkFounderSettings = {
     needs_adult_confirm: boolean;
     /** They haven't answered the name question yet: the chat asks it under an arrival. */
     ask_name: boolean;
+    /**
+     * "Name now, ask age after" (2026-11-11): their @username shows and no birth year is stored, so ask it once,
+     * inline (`ArkAgeAsk`, the age check's words).
+     */
+    ask_age: boolean;
     earlier_anonymous: number;
     founder: ArkFounder | null;
 };
@@ -230,7 +261,7 @@ function adultOf(value: unknown): ArkFounderAdult | null {
 export function decodeArkFounderSettings(raw: unknown): ArkFounderSettings | null {
     const row = record(Array.isArray(raw) ? raw[0] : raw);
     if (!row || typeof row.enabled !== "boolean") return null;
-    const blocked = row.blocked === "under_18" || row.blocked === "private_profile" || row.blocked === "no_handle" ? row.blocked : null;
+    const blocked = row.blocked === "under_18" || row.blocked === "no_handle" ? row.blocked : null;
     const earlier = typeof row.earlier_anonymous === "number" && Number.isFinite(row.earlier_anonymous) ? Math.max(0, Math.floor(row.earlier_anonymous)) : 0;
     return {
         enabled: row.enabled,
@@ -240,6 +271,7 @@ export function decodeArkFounderSettings(raw: unknown): ArkFounderSettings | nul
         adult: adultOf(row.adult),
         needs_adult_confirm: row.needs_adult_confirm === true,
         ask_name: row.ask_name === true && blocked === null,
+        ask_age: row.ask_age === true && blocked === null,
         earlier_anonymous: earlier,
         founder: decodeArkFounder(row.founder)
     };

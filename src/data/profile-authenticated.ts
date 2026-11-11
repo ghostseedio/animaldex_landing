@@ -139,7 +139,7 @@ export type ProfileStatsWeek = {
         previousSteps: number | null;
         /** The old Life Sim sum's change (`ark_week.ark_score_change`), shown only when the world's is not sent. */
         arkScoreChange: number;
-        /** Ark 3.3: this week's change to the world score (`ark_world_week_change`); null from an older server. */
+        /** This week's Ark Score: v3's points (`ark_points_week`), else v2's change (`ark_world_week_change`); null from an older server. */
         worldChange: number | null;
         powers: number;
         previousPowers: number | null;

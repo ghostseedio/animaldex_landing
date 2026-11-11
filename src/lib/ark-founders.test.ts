@@ -6,8 +6,11 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import en from "@/data/locales/en.json";
 import id from "@/data/locales/id.json";
 import {
+    arkFounderDisplayName,
     arkFounderNameRefusal,
     arkFounderPath,
+    arkHandle,
+    arkLabelText,
     arkFounderStories,
     arkFounderSwitch,
     arkFoundersOf,
@@ -28,7 +31,7 @@ import {
     withArkFixtureFounderLives,
     withArkFixtureFounders
 } from "@/lib/ark-founders-fixture";
-import {decodeArkLife} from "@/lib/ark-life";
+import {decodeArkEvents, decodeArkLife} from "@/lib/ark-life";
 import {decodeArkStory, decodeArkStoryRead} from "@/lib/ark-story";
 import {arkPersonView} from "@/lib/ark-world";
 import {ARK_COPY} from "@/lib/companion-bond";
@@ -109,13 +112,32 @@ test("life: founders and the founder's story when the server sends them; exactly
     assert.equal(on?.founders.names, true);
     assert.deepEqual(on?.founders.brought_by, MAYA);
     assert.deepEqual(on?.founder_story, STORY);
-    assert.equal(on?.origin.kind === "arrived" ? on.origin.brought_by : null, "Maya Chen");
+    // Owner, 2026-11-11: a named bringer reads as their @username (linked where it is drawn), never their display name alone.
+    assert.equal(on?.origin.kind === "arrived" ? on.origin.brought_by : null, "@mayachen");
     // The young: both parents' bringers, in the labels' order; never a story of its own.
     const born = decodeArkLife({id: "a2", origin: {kind: "born", parents: ["p1", "p2"], born_to: [{...voyager(2), founder: null}, {label: "Maya Chen", named: true, founder: MAYA}]}, founder_story: STORY});
     assert.equal(born?.founders.names, true);
     assert.deepEqual(born?.founders.born_to, [null, MAYA]);
     assert.equal(born?.founder_story, null);
-    assert.deepEqual(born?.origin.kind === "born" ? born.origin.born_to : [], ["Voyager 2", "Maya Chen"]);
+    assert.deepEqual(born?.origin.kind === "born" ? born.origin.born_to : [], ["Voyager 2", "@mayachen"]);
+});
+
+test("bringers as @usernames (owner, 2026-11-11): the handle always, the display name only when it says more, Voyagers as they are", () => {
+    assert.equal(arkHandle(MAYA), "@mayachen");
+    assert.equal(arkFounderDisplayName(MAYA), "Maya Chen");
+    // A display name that is the handle again says nothing more: "@kai" alone.
+    assert.equal(arkFounderDisplayName({display_name: "kai", handle: "kai"}), null);
+    assert.equal(arkFounderDisplayName({display_name: "@Kai", handle: "kai"}), null);
+    assert.equal(arkLabelText({label: "Maya Chen", named: true, founder: MAYA}), "@mayachen");
+    assert.equal(arkLabelText({label: "Voyager 7", named: false, founder: null}), "Voyager 7");
+    assert.equal(arkLabelText({label: "Voyager 7", named: false}), "Voyager 7");
+    // A founder without a usable handle is no founder: the label stands.
+    assert.equal(arkLabelText({label: "Voyager 9", named: true, founder: {display_name: "X", handle: "not a handle!"}}), "Voyager 9");
+    assert.equal(arkFounderPath(MAYA), "/u/mayachen");
+    // The replay's births keep the named bringers beside their labels, for links.
+    const [birth] = decodeArkEvents({events: [{id: 1, kind: "birth", at: "2026-11-10T00:00:00Z", animal: {id: "y1", species_profile_id: "s", name: "Red Fox", model_slug: "red-fox", zone: "woodland"}, bringers: [{label: "Maya Chen", named: true, founder: MAYA}, {label: "Voyager 7", named: false, founder: null}]}]}, null);
+    assert.deepEqual(birth.bringers, ["@mayachen", "Voyager 7"]);
+    assert.deepEqual(birth.bringer_founders, [MAYA, null]);
 });
 
 test("the story read: the founder's story first, the public debate as before, anything else nothing", () => {
@@ -153,7 +175,7 @@ test("the setting: shown only when enabled; blocked is off and disabled; earlier
     assert.equal(decodeArkFounderSettings({show_name: true}), null);
     // A stored adult who never chose: on by default, no 18+ tap needed.
     const stored = decodeArkFounderSettings({enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
-    assert.deepEqual(stored, {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, earlier_anonymous: 3, founder: MAYA});
+    assert.deepEqual(stored, {enabled: true, show_name: true, chosen: false, blocked: null, adult: "stored", needs_adult_confirm: false, ask_name: false, ask_age: false, earlier_anonymous: 3, founder: MAYA});
     assert.deepEqual(arkFounderSwitch(stored!), {checked: true, disabled: false});
     // No stored year, not answered (most people): off until turned on with the 18+ tap; the chat asks the name.
     const unknown = decodeArkFounderSettings({enabled: true, show_name: false, chosen: false, blocked: null, adult: "unknown", needs_adult_confirm: true, ask_name: true, earlier_anonymous: 0, founder: null});
@@ -168,6 +190,11 @@ test("the setting: shown only when enabled; blocked is off and disabled; earlier
     // Blocked: never asked.
     assert.equal(teen?.ask_name, false);
     assert.deepEqual(arkFounderSwitch(teen!), {checked: false, disabled: true});
+    // "Name now, ask age after" (2026-11-11): no stored year while their @username shows: ask it; never when blocked;
+    // a private profile no longer blocks.
+    assert.equal(decodeArkFounderSettings({enabled: true, show_name: true, blocked: null, adult: "unknown", ask_age: true, founder: MAYA})?.ask_age, true);
+    assert.equal(decodeArkFounderSettings({enabled: true, show_name: false, blocked: "under_18", ask_age: true})?.ask_age, false);
+    assert.equal(decodeArkFounderSettings({enabled: true, blocked: "private_profile"})?.blocked, null);
     assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new", adult: "maybe"})?.adult, null);
     assert.equal(decodeArkFounderSettings({enabled: false, blocked: "something_new"})?.blocked, null);
     assert.equal(decodeArkFounderSettings({enabled: true, show_name: false})?.show_name, false);
@@ -240,10 +267,18 @@ test("the founders' words: the chat's line says what the Ark's own words say, in
     for (const locale of [en, id]) {
         const messages = locale as unknown as {ark: {founders: Founders; person: {anonymousBody: string}}; companions: {ark: {founders: Founders}}};
         const chat = messages.companions.ark.founders;
-        assert.deepEqual(chat, {name: messages.ark.founders.name, share: messages.ark.founders.share, error: messages.ark.founders.error});
+        assert.deepEqual(chat, {share: messages.ark.founders.share, error: messages.ark.founders.error});
         assert.ok(messages.ark.founders.card.broughtBy.includes("{name}"));
-        for (const key of ["askShort", "confirmShare"]) assert.ok(messages.ark.founders.share[key], key);
-        for (const key of ["confirmAdult", "confirmYes"]) assert.ok(messages.ark.founders.settings[key], key);
+        // The story share keeps its 18+ confirmation.
+        assert.ok(messages.ark.founders.share.confirmShare);
+        // Owner, 2026-11-11: no name question (chat or Settings), no 18+ step for a name, no private-profile note, no
+        // "Show my name on them too", nothing saying founders stay anonymous.
+        assert.equal("name" in messages.ark.founders || "name" in chat, false);
+        assert.equal("askShort" in messages.ark.founders.share, false);
+        for (const key of ["confirmAdult", "confirmYes", "private", "earlier", "nameEarlier"]) assert.equal(key in messages.ark.founders.settings, false, key);
+        const ark = messages.ark as unknown as {founderNote?: string; life: {anonymous?: string}};
+        assert.equal(ark.founderNote, undefined);
+        assert.equal(ark.life.anonymous, undefined);
         // Names show by default for adults now: the page no longer says names show only by choice.
         assert.equal(messages.ark.person.anonymousBody.includes("{name}"), true);
     }

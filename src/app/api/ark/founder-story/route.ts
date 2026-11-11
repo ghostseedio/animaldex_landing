@@ -11,9 +11,13 @@ export const dynamic = "force-dynamic";
  * The share line under an arrival in the chat (founders contract, section 4),
  * always as the signed-in reader:
  *
- * - GET ?animal=<id>: `voyage_founder_story_draft_v1` — the step to prefill
- *   (never the problem), the story when shared, and whether it may be shared.
- *   `{draft: null}` signed out, before the migration, or when it fails: no line.
+ * - GET ?animal=<id>[&step=<step id>]: `voyage_founder_story_draft_v1` — the
+ *   step to prefill (never the problem), the story when shared, and whether it
+ *   may be shared. D6 (captures + thrive): the moment sits under the thrive
+ *   line of a step that worked, so the step is sent (`p_step_id`) for the
+ *   server to prefill with it; a server whose function takes the animal alone
+ *   is asked again without it. `{draft: null}` signed out, before the
+ *   migration, or when it fails: no line.
  * - POST {animal_id, step, problem?, confirm_adult?}: to the edge function
  *   `voyage-founder-story` with the reader's own token (it screens the words
  *   and saves them). `confirm_adult: true` only when the reader tapped
@@ -38,7 +42,10 @@ export async function GET(request: Request) {
     if (!animal) return NextResponse.json({draft: null}, {status: 400, headers: HEADERS});
     const supabase = createSupabaseServerClient();
     if (!supabase) return NextResponse.json({draft: null}, {headers: HEADERS});
-    const {data, error} = await supabase.rpc("voyage_founder_story_draft_v1", {p_animal_id: animal});
+    const step = new URL(request.url).searchParams.get("step")?.trim() ?? "";
+    const withStep = isArkUuid(step) ? await supabase.rpc("voyage_founder_story_draft_v1", {p_animal_id: animal, p_step_id: step.toLowerCase()}) : null;
+    // No step, or a server whose function takes the animal alone (before D6): the animal alone.
+    const {data, error} = withStep && !isMissingArkFunction(withStep.error) ? withStep : await supabase.rpc("voyage_founder_story_draft_v1", {p_animal_id: animal});
     if (error) {
         if (!isMissingArkFunction(error) && !/not_authenticated/.test(error.message ?? "")) console.warn("[ark] voyage_founder_story_draft_v1 failed", error.message?.slice(0, 200));
         return NextResponse.json({draft: null}, {headers: HEADERS});

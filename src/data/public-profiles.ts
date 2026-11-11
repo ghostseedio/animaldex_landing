@@ -1008,9 +1008,10 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
  * (section 7). Read on its own, so a server without the columns answers
  * nothing here and the rest of the profile reads as before.
  *
- * Ark 3.3 (docs/ark-spec.md section 7.6): the Ark Score is the world score
- * (`ark_world_score`, 0–100, with `ark_world_week_change`); the old
- * `ark_score` (0–500) is read only from a server without the new columns.
+ * Captures + thrive (2026-11-11): the Ark Score is v3's points (`ark_points`,
+ * no top, with `ark_points_week`); v2's world score (`ark_world_score`, 0–100,
+ * with `ark_world_week_change`) and the old `ark_score` (0–500) are read only
+ * from a server without the newer columns.
  * `life` (the five bars) is read but shown only where the bars may be.
  */
 export type PublicArkSummary = {
@@ -1022,7 +1023,8 @@ export type PublicArkSummary = {
     powersEarned: number | null;
 };
 
-const ARK_SUMMARY_SELECT = "ark_world_score,ark_world_week_change,ark_score,steps_total,powers_earned";
+const ARK_SUMMARY_SELECT = "ark_points,ark_points_week,ark_world_score,ark_world_week_change,ark_score,steps_total,powers_earned";
+const ARK_SUMMARY_SELECT_BEFORE_V3 = "ark_world_score,ark_world_week_change,ark_score,steps_total,powers_earned";
 const ARK_SUMMARY_SELECT_BEFORE_3_3 = "ark_score,steps_total,powers_earned";
 
 export async function getPublicArkSummary(userId: string): Promise<PublicArkSummary | null> {
@@ -1031,8 +1033,8 @@ export async function getPublicArkSummary(userId: string): Promise<PublicArkSumm
         const [row] = await fetchRows<Record<string, unknown>>("member_profile_summaries_v1", params);
         return row ?? null;
     };
-    // A server without the 3.3 columns refuses the whole select: ask again the old way.
-    const row = await read(ARK_SUMMARY_SELECT) ?? await read(ARK_SUMMARY_SELECT_BEFORE_3_3);
+    // A server without v3's (or 3.3's) columns refuses the whole select: ask again the older way.
+    const row = await read(ARK_SUMMARY_SELECT) ?? await read(ARK_SUMMARY_SELECT_BEFORE_V3) ?? await read(ARK_SUMMARY_SELECT_BEFORE_3_3);
     if (!row) return null;
     const count = (value: unknown) => {
         const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : Number.NaN;

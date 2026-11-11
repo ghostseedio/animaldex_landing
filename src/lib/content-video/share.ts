@@ -116,7 +116,7 @@ export async function blogShareCopy(id: string, regenerate: boolean): Promise<Bl
                     `URL: ${url}`,
                     `The video opens on: "${row.plan.hookText}"`,
                     `Narration:\n${row.plan.scenes.map((scene) => scene.narration).join(" ")}`,
-                    row.source_type === "ark" ? "This video is a screen recording of the AnimalDex Ark, a shared 3D world on animaldex.app/ark where animals come aboard when someone tries an animal's advice and it works. Its 3D animal models are AI-made: say so naturally once. Use only what its captions say; never name or describe any person, and say nothing about anyone's problem or chat. Use \"See the Ark live: <url>\" where the format asks for \"Full article: <url>\"." : "",
+                    row.source_type === "ark" ? "This video is a screen recording of the AnimalDex Ark, a shared 3D world on animaldex.app/ark where animals come aboard when someone captures them and steps that work keep them thriving. Its 3D animal models are AI-made: say so naturally once. Use only what its captions say; never name or describe any person, and say nothing about anyone's problem or chat. Use \"See the Ark live: <url>\" where the format asks for \"Full article: <url>\"." : "",
                     row.plan.format === "battle" || row.plan.format === "creature" || row.plan.format === "you_vs" || row.plan.format === "would_you_rather" ? "The video is AI-generated: mention it naturally once (e.g. \"AI-imagined\")." : "",
                     source ? `\nArticle summary: ${source.description}\n\nArticle text:\n${source.text.slice(0, 6000)}` : ""
                 ].join("\n")
