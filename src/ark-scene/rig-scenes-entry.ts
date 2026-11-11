@@ -447,7 +447,7 @@ async function mountIsland(el: HTMLElement) {
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
     // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
     const view = params.get("view")?.split(",").map(Number);
-    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null; trip?: unknown} | null; reactive?: {dx: number; dz: number; action: string} | null};
     const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
     const settle = async (maxMs = 180_000) => {
         const until = performance.now() + maxMs;
@@ -472,7 +472,7 @@ async function mountIsland(el: HTMLElement) {
         },
         stats: () => handle.stats(),
         motion: async (seconds: number) => {
-            type Track = {byRecipe?: Map<string, {turn: number; moving: number}>; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            type Track = {byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
             let last = t0;
@@ -499,6 +499,15 @@ async function mountIsland(el: HTMLElement) {
                     const tr = tracks.get(e.animal.id) ?? {slug: e.animal.model_slug, last: null, moving: 0, backwards: 0, backRun: 0, backRunMax: 0, glide: 0, glideNear: 0, rigged: 0, turn: 0, dist: 0, ratios: [], clips: new Set(), levels: new Set(), doing: new Set()};
                     tracks.set(e.animal.id, tr);
                     if (e.level) tr.levels.add(e.level);
+                    // A stay's first 0.25 s (its trip just changed, or its walk just ended): the walk-in heading settling to
+                    // the stay's, counted apart as "settle" (behaviour's own tests leave it out).
+                    if (e.sched?.trip !== tr.lastTrip) {
+                        tr.lastTrip = e.sched?.trip;
+                        tr.settleUntil = now + 250;
+                    }
+                    const movingNow = Boolean(e.sched?.pose?.moving);
+                    if (tr.wasMoving && !movingNow) tr.settleUntil = now + 250;
+                    tr.wasMoving = movingNow;
                     if (e.sched?.pose?.doing) tr.doing.add(e.sched.pose.doing);
                     // The schedule's own path (before the reactive offset), to tell which one turns.
                     const sp = e.sched?.pose;
@@ -561,14 +570,14 @@ async function mountIsland(el: HTMLElement) {
                                 tr.turn += Math.abs(turn);
                                 // Whose turning: a recipe episode laid over the schedule (its pose acts), or the schedule's own steps.
                                 const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
-                                const source = act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
+                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.turn += Math.abs(turn);
                                 tr.byRecipe.set(source, by);
                             }
                             {
                                 const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
-                                const source = act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
+                                const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : "schedule";
                                 const by = (tr.byRecipe ??= new Map()).get(source) ?? {turn: 0, moving: 0};
                                 by.moving += span;
                                 tr.byRecipe.set(source, by);
