@@ -88,7 +88,48 @@ export type ArkEvent = {
     thrive: ArkThrive | null;
     /** On an `arrival`: how it came aboard (a capture, or before them a step); else null. */
     source: ArkArrivalSource | null;
+    /**
+     * On a `meal` under encounter hunting (AnimalDex docs/ark/encounter-hunting.md): where the hunter found its prey,
+     * from the server's shared position module (the events read's `encounter`, or `payload.encounter`). Absent for a
+     * pool meal: the scene then acts it out from today's places.
+     */
+    encounter?: ArkMealEncounter;
 };
+
+/** A meal's geometry (scene metres, the axes of `placement.ts`): the step's time, the hunter's waypoint, the prey's disc. */
+export type ArkMealEncounter = {
+    /** Epoch seconds of the encounter step. */
+    t?: number;
+    /** The 15-Ark-minute step (k: Ark day k / 96) and the island, when the server says. */
+    step?: number;
+    island?: string;
+    predator: {x: number; z: number};
+    prey: {x: number; z: number; r: number};
+    /** The hunter's distance from the middle of the prey's disc (m). */
+    d?: number;
+};
+
+/** `encounter` as the server writes it, checked: finite numbers only, else nothing (the scene falls back to its places). */
+export function decodeArkMealEncounter(value: unknown): ArkMealEncounter | undefined {
+    const row = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
+    const point = (v: unknown) => {
+        const p = v && typeof v === "object" && !Array.isArray(v) ? v as Record<string, unknown> : null;
+        return p && typeof p.x === "number" && Number.isFinite(p.x) && typeof p.z === "number" && Number.isFinite(p.z) ? p : null;
+    };
+    const predator = point(row?.predator);
+    const prey = point(row?.prey);
+    if (!row || !predator || !prey || typeof prey.r !== "number" || !Number.isFinite(prey.r) || prey.r < 0) return undefined;
+    const finite = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
+    const out: ArkMealEncounter = {predator: {x: predator.x as number, z: predator.z as number}, prey: {x: prey.x as number, z: prey.z as number, r: prey.r}};
+    const t = finite(row.t);
+    if (t !== undefined) out.t = t;
+    const step = finite(row.step);
+    if (step !== undefined && Number.isInteger(step) && step >= 0) out.step = step;
+    if (typeof row.island === "string" && /^[a-z][a-z0-9_]{0,23}$/.test(row.island)) out.island = row.island;
+    const d = finite(row.d);
+    if (d !== undefined && d >= 0) out.d = d;
+    return out;
+}
 
 const ZONES = new Set<string>(ARK_ZONES);
 const KINDS = new Set<string>(ARK_EVENT_KINDS);
@@ -191,6 +232,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             .map((id) => text(id, 80))
             .filter((id): id is string => Boolean(id));
         const eggs = whole(payload.eggs ?? payload.clutch ?? row.eggs);
+        const encounter = kind === "meal" ? decodeArkMealEncounter(row.encounter ?? payload.encounter) : undefined;
         events.push({
             id: serial !== null ? String(serial) : `${at}-${index}`,
             serial: serial ?? Number.MAX_SAFE_INTEGER,
@@ -207,7 +249,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             from_egg: payload.from_egg === true || row.from_egg === true,
             eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
             thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
-            source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null
+            source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null,
+            ...(encounter ? {encounter} : {})
         });
     });
     return events
@@ -224,7 +267,8 @@ export type ArkAct =
     | {kind: "birth"; at: string; young: ArkEventAnimal[]; parents: string[]; bringers: string[]; /** The named ones behind `bringers`, for links. */ bringerFounders?: Array<ArkFounder | null>; fromEgg: boolean}
     /** An egg-layer laid a clutch (A9): a nest or clutch appears beside it. `eggs` when the server counts them. */
     | {kind: "laid"; at: string; animal: ArkEventAnimal; eggs: number | null; nest: string; parents: string[]}
-    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean}
+    /** `encounter`: under encounter hunting, where the hunter found its prey (the chase runs between those places). */
+    | {kind: "meal"; at: string; predator: ArkEventAnimal; prey: ArkEventAnimal; phrase: string | null; extinct: boolean; encounter?: ArkMealEncounter}
     /** Old age, or (`starved`) long hunger: acted out quietly, it lies still and fades, never a chase. */
     | {kind: "death"; at: string; animal: ArkEventAnimal; cause: "old" | "starved"; extinct: boolean}
     | {kind: "extinction"; at: string; species: string};
@@ -289,7 +333,7 @@ export function planArkReplay(events: ArkEvent[], maxActs = ARK_REPLAY_MAX_ACTS)
             case "meal": {
                 summary.meals++;
                 if (!event.animal || !event.other) break;
-                const act = {kind: "meal" as const, at: event.at, predator: event.animal, prey: event.other, phrase: event.phrase, extinct: false};
+                const act = {kind: "meal" as const, at: event.at, predator: event.animal, prey: event.other, phrase: event.phrase, extinct: false, ...(event.encounter ? {encounter: event.encounter} : {})};
                 endedBy.set(event.other.species_profile_id || event.other.model_slug, act);
                 acts.push(act);
                 break;
