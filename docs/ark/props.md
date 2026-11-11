@@ -109,6 +109,27 @@ The hamlet grows by plots. Each house plot gets its own garden: a picket fence w
   - No decor item is moved or removed, so the decor's ids do not shift. `fieldCropAt` is the raw field; the props' paddocks and the map's slot planning keep reading it.
 - **Golden shots:** `hamlet_day`, `hamlet_night`, `hamlet_close_day` and `hamlet_close_night`, with the hamlet at 1× (7 houses, 3 smallholdings).
 
+## Mount cost (the runtime lane's measure, docs/ark/runtime.md)
+
+The scenery is built after the first frame, a few milliseconds a frame, so the props add no long task to a big Ark's mount:
+- The sampler prepares its attach points (`prepareAttachPoints`).
+- Then the areas and the homes are built by `buildAreasSteps` and `buildHomesSteps`, run by `kit.ts` `runSliced` at 6 ms a slice. Built all at once (`buildAreas`, `buildHomes`), they are the same; the test checks every step its own frame against all at once.
+- A newer build supersedes an older one, and the old stays drawn until the new is in.
+
+`nestSpots` keeps the ground height under each trunk and branch point it has asked about, and checks height only for the points it looks at, nearest first. Before, at the captures' scale, hundreds of nests sampled the same thousands of points.
+
+Phone profile (4× CPU), the 1× population (3,140 animals), the golden page, one run each on the loaded Mac:
+
+| | before (5774c2b1) | after (cd717508) |
+|---|---:|---:|
+| `nestSpots` | 5,300 ms | 232 ms |
+| homes, in all | 5,617 ms, one task | 421 ms, in 6 ms slices |
+| areas | 374 ms, one task | 441 ms, in 6 ms slices |
+| `createPropsModule` inside `mountArk` | 451 ms | 177 ms (the mist drapes with one ground sample a vertex) |
+| the props in the long tasks after the mount | 7.0 s task (homes 5.6 s) | none |
+
+What remains after the mount is not the props: behaviour's `spaceHomes` (3.4 s) and the first shader compiles (0.3 s).
+
 ## Other lanes
 
 - **Graphics / attach lane (`ark-graphics-attach`, merged here at 4873e79d):** the props use only the sampler's own tags.
