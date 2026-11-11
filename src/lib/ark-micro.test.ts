@@ -142,6 +142,11 @@ test("rig player: the rig folder beside the model set, texture rows, planted fee
     assert.equal(rigBaseFrom("https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark"), "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig/v1");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark/"), "/api/dev/ark-models/ark-rig/v1");
     assert.equal(rigBaseFrom("/somewhere/else"), null);
+    // Versioned: a re-made set (v2) beside the old one; the release moves ARK_RIG_VERSION.
+    const {ARK_RIG_VERSION} = await import("@/ark-scene/rig-clips");
+    assert.equal(ARK_RIG_VERSION, "v1");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "v2"), "/api/dev/ark-models/ark-rig/v2");
+    assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "../x"), null);
     const walk = {name: "walk", frames: 24, loop: true, seconds: 0.5, ground_speed: 0.2, pass: true, row: 49, rows: 25};
     assert.deepEqual(clipRows(walk, 0), [49, 50, 0]);
     // Looping: the phase wraps, and the last row (the first frame again) closes the cycle.

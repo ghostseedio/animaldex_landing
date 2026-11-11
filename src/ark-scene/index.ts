@@ -102,7 +102,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {islandHours, seaLevelAt, weatherAt} from "@/lib/ark-clock";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import type {ArkEnvironment} from "@/ark-scene/sampler";
+import {groundNormal, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -268,6 +268,8 @@ type Entry = {
     leapK?: number;
     /** An underground animal out of its burrow: how far through the peek (0…1), else -1. */
     peek?: number;
+    /** A small animal's crawl once its rig has driven it (`crawlStep`): where along, which way, the pause left, its half-turn, its speed (m/s). */
+    crawl?: {along: number; dir: number; pause: number; turn: number; speed: number} | null;
 };
 
 /**
@@ -1066,6 +1068,42 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * round in the pauses; asleep it keeps still. A moth at the cottage
      * circles the porch light at night, while it is awake.
      */
+    /**
+     * A small animal's crawl while its rig is in: along its surface at its
+     * walk's (or climb's) ground speed, so its feet stay planted, out to its
+     * reach and back, turning round in the pauses. It starts where the
+     * procedural crawl had it, and keeps its own state once begun (so the
+     * rig going again never makes it jump). Null: the procedural crawl.
+     */
+    const crawlStep = (entry: Entry, reach: number, along: number, turn: number): {along: number; turn: number} | null => {
+        const slug = entry.animal.model_slug;
+        const model = library.get(slug);
+        const clip = rigs.clip(slug, "walk") ?? rigs.clip(slug, "climb");
+        const rigIn = Boolean(entry.rigOn) && (entry.rig?.weight ?? 0) >= 0.999 && clip?.ground_speed && model;
+        if (!entry.crawl) {
+            if (!rigIn) return null;
+            entry.crawl = {along, dir: turn > Math.PI / 2 ? -1 : 1, pause: 0, turn, speed: 0};
+        }
+        const crawl = entry.crawl;
+        if (rigIn) crawl.speed = clip!.ground_speed! * (entry.length / model!.bodyLength);
+        const dt = frameDt;
+        const moving = entry.state.kind === "awake" && crawl.speed > 0;
+        if (crawl.pause > 0 || !moving) {
+            crawl.pause = Math.max(crawl.pause - dt, 0);
+        } else {
+            crawl.along += crawl.dir * crawl.speed * dt;
+            if (crawl.along >= reach || crawl.along <= 0) {
+                crawl.along = Math.min(Math.max(crawl.along, 0), reach);
+                crawl.dir = crawl.along >= reach ? -1 : 1;
+                crawl.pause = 2 + 4 * wanderRandom(entry, crawl.along + crawl.turn);
+            }
+        }
+        // Facing the way it goes: round in the pause (the procedural turn's half-turn about the surface's normal).
+        const want = crawl.dir < 0 ? Math.PI : 0;
+        crawl.turn += Math.min(Math.max(want - crawl.turn, -2.5 * dt), 2.5 * dt);
+        return {along: crawl.along, turn: crawl.turn};
+    };
+
     const microPose = (entry: Entry, time: number): Pose => {
         const place = entry.place;
         const micro = place.micro!;
@@ -1077,9 +1115,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Out (0–0.32), a pause, back (0.5–0.82), a pause; the turn round in each pause.
         const out = u < 0.32 ? easeInOut(u / 0.32) : u < 0.5 ? 1 : u < 0.82 ? 1 - easeInOut((u - 0.5) / 0.32) : 0;
         const awake = 1 - entry.rest;
-        const along = reducedMotion ? 0 : reach * out * awake;
+        let along = reducedMotion ? 0 : reach * out * awake;
+        let turn = reducedMotion || !reach ? 0 : Math.PI * smoothTurn(u) * awake;
+        // Its rig in (close by): it crawls at its walk's own ground speed (feet planted), out and back with pauses.
+        const crawled = reach && !reducedMotion ? crawlStep(entry, reach, along, turn) : null;
+        if (crawled) {
+            along = crawled.along;
+            turn = crawled.turn;
+        }
         const point = surfacePoint(micro, entry.animal.zone, along);
-        const turn = reducedMotion || !reach ? 0 : Math.PI * smoothTurn(u) * awake;
         if (turn) {
             // Turn the heading about the normal: t cos + (n × t) sin.
             const c = Math.cos(turn);
@@ -1262,6 +1306,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * octopus in its hole; a school keeps to its first one, a plankton feeder loops round its cloud), at its
      * band's depth from the shared clock and its seed, rising to the surface while its state is breathing.
      */
+    /**
+     * The ground under a walker, as the graphics pass's sampler sees it
+     * (`sampler.ts` groundNormal): its normal, and its heading laid onto the
+     * slope, so a crab on the seabed or a small animal on a bank stands on it.
+     */
+    const onGround = (x: number, y: number, z: number, yaw: number): SurfacePoint => {
+        const n = groundNormal(x, z);
+        const hx = Math.sin(yaw);
+        const hz = Math.cos(yaw);
+        const dot = hx * n.x + hz * n.z;
+        const tx = hx - n.x * dot;
+        const ty = -n.y * dot;
+        const tz = hz - n.z * dot;
+        const length = Math.hypot(tx, ty, tz) || 1;
+        return {x, y, z, nx: n.x, ny: n.y, nz: n.z, tx: tx / length, ty: ty / length, tz: tz / length};
+    };
+
     const waterPose = (entry: Entry, depth: SpeciesDepth, modelHeight: number, time: number): Pose => {
         const place = entry.place;
         const motion = waterMotion(depth);
@@ -1288,7 +1349,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const spec = waterSpec(depth, heightAt(x, z), entry.seed, clock, breath);
         // Tangent to the loop (model heads face +z).
         const yaw = Math.atan2(-Math.sin(angle) * direction, Math.cos(angle) * direction);
-        return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
+        const base = fitInWater(spec, modelHeight).base;
+        // A walker on the floor stands on its slope (its rig walks it there).
+        const surface = motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(x, base, z, yaw) : undefined;
+        return {x, z, base, yaw, pitch: 0, roll: 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
     };
 
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
@@ -1352,7 +1416,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Walked off its spot (its rig's walk): on the ground where it is now.
             const x = place.x + wander.x;
             const z = place.z + wander.z;
-            return {x, z, base: Math.max(heightAt(x, z), 0), yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false};
+            const ground = Math.max(heightAt(x, z), 0);
+            // A small one stands on the slope (the sampler's normal); a big one stays upright, as it always has.
+            const surface = entry.trueLength < 0.5 ? onGround(x, ground, z, wander.heading) : undefined;
+            return {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
         }
         // Asleep: a little lower at the front, as the head goes down.
         return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
@@ -1485,6 +1552,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let want: string | null = null;
         let mode: "distance" | "time" | "sync" = "time";
         let sync = 0;
+        /** A time-played clip's pace (a swim's, by how fast it goes). */
+        let rate = 1;
         const place = entry.place;
         const up = where.surface ? where.surface.ny : 1;
         if (entry.state.asleep && !entry.act) {
@@ -1527,6 +1596,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "distance";
                 }
             }
+        } else if (entry.depth && !entry.visitor) {
+            // In the water, in its depth band (`sea-depth.ts`): a seabed crab or lobster walks its slow loop on the
+            // floor (feet planted: phase by distance); a swimmer swims (or a snake or eel slithers) at the pace it goes;
+            // a floater and a hole-dweller keep their idle.
+            const motion = waterMotion(entry.depth);
+            if (motion === "walk") {
+                const move = clip("walk") ?? clip("slither") ?? clip("run");
+                if (moving(move)) {
+                    want = move.name;
+                    mode = "distance";
+                }
+            } else if (motion === "swim") {
+                const swim = clip("swim") ?? clip("slither");
+                if (swim) {
+                    want = swim.name;
+                    rate = swim.ground_speed ? Math.min(Math.max(speed / swim.ground_speed, 0.5), 1.6) : 1;
+                }
+            }
+        } else if (place.water && !entry.visitor && (clip("swim") || clip("slither"))) {
+            // Standing water with no band (an anaconda in the wetland's pool): it swims where it lies.
+            want = clip("swim") ? "swim" : "slither";
+            rate = 0.6;
         } else if (ZONE_SITES[entry.animal.zone]?.kind === "sea" && SWIMMING_PLANS.has(model.behaviour?.plan ?? "")) {
             const swim = clip("swim");
             if (swim) {
@@ -1561,7 +1652,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!playing) return null;
         if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 2.5);
         else if (mode === "sync") state.now.phase = sync;
-        else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : 1);
+        else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         if (state.from) {
             state.fade += dt / RIG_FADE_SECONDS;
             const from = rig.clips[state.from.name];
@@ -1608,11 +1699,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (rig) rig.usedAt = lastUpdate;
     };
     let lastEvict = 0;
+    /** This frame's step (s), for the poses that keep their own state (`crawlStep`). */
+    let frameDt = 0;
 
     let lastUpdate = 0;
     const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
     const updateInstances = (now: number) => {
         const dt = reducedMotion || !lastUpdate ? 0 : Math.min(now - lastUpdate, 0.1);
+        frameDt = dt;
         lastUpdate = now;
         projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
         frustum.setFromProjectionMatrix(projection);
@@ -2162,8 +2256,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const fitCloseUp = () => {
         const target = controls.target;
         const selected = selectedId ? findEntry(selectedId) : null;
-        // Looking at a small animal (flying to it, too), or with one close in front.
-        let close = Boolean(selected?.micro);
+        // Looking at a small animal (flying to it, too: at its microhabitat, or a crab on the seabed), or with one close in front.
+        let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
         if (!close) {
             for (const entry of entries) {
                 if (!entry.micro) continue;
@@ -2178,8 +2272,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const want = close ? MICRO_MIN_DISTANCE : 4;
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
-        const distance = camera.position.distanceTo(target);
-        const near = Math.min(Math.max(distance * 0.08, 0.01), 0.4);
+        let distance = camera.position.distanceTo(target);
+        let near = Math.min(Math.max(distance * 0.08, 0.01), 0.4);
+        // Close up to an animal under about 5 cm (an ant, a gecko's hatchling, a spider): the scenery around it is huge at
+        // its scale. The camera keeps above the ground it is on, and the near plane comes out to just short of the animal,
+        // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
+        const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : null;
+        if (tiny && distance < Math.max(tiny.trueLength * 40, 0.6) && !flight) {
+            const floor = heightAt(camera.position.x, camera.position.z);
+            const clear = floor + Math.max(distance * 0.3, 0.02);
+            // (On land; under water the floor is the seabed, and the camera keeps above it the same way.)
+            if (camera.position.y < clear && tiny.middle!.y < floor + 0.5) {
+                camera.position.y = clear;
+                distance = camera.position.distanceTo(target);
+            }
+            near = Math.min(Math.max(distance * 0.4, 0.002), Math.max(distance - tiny.trueLength * 1.5, 0.002));
+        }
         if (Math.abs(near - camera.near) > camera.near * 0.08) {
             camera.near = near;
             camera.updateProjectionMatrix();
@@ -2437,7 +2545,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const swimming = ZONE_SITES[entry.animal.zone]?.kind === "sea" || entry.depth?.home === "coast" ? middleNow(entry) : null;
             if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
-                fly(under(), Math.min(3 + entry.length * 2.2, 14), distance > 30 ? 2 : 1.4, 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
+                // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
+                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : Math.min(3 + entry.length * 2.2, 14);
+                if (entry.trueLength < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
+                fly(under(), away, distance > 30 ? 2 : 1.4, entry.trueLength < 0.3 ? 1.1 : 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
                 return;
             }
