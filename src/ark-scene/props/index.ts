@@ -32,7 +32,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import {ARK_DAY_MS, arkDayAt, weatherAt} from "@/lib/ark-clock";
 import {nestStage, type NestSiteInfo} from "@/ark-scene/props/nest-growth";
 import {buildAreas} from "@/ark-scene/props/areas";
-import {buildCave} from "@/ark-scene/props/cave";
+import {buildCave, CAVE_ROOST} from "@/ark-scene/props/cave";
 import {conditionsFromArkWeather, PROPS_WEATHER_LOOKS, withOverride, type PropsConditions} from "@/ark-scene/props/conditions";
 import {buildEffects} from "@/ark-scene/props/effects";
 import {buildHomes, buildWebs, type Homes} from "@/ark-scene/props/homes";
@@ -52,7 +52,7 @@ function override(): Partial<PropsConditions> | null {
 export type PropsStats = {enabled: boolean; tier: QualityTier; drawn: Record<string, number>; presence: string; nests: Homes["nests"]};
 
 /** Where the props' things are: the homes' and the areas' marks, the cave's mouth and its way out. */
-export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number}};
+export type PropsMarks = {spots: Record<string, {x: number; y: number; z: number}>; cave: {x: number; y: number; z: number; facing: number; /** Where the bats hang, in the world. */ roost: {x: number; y: number; z: number}}};
 
 /**
  * The Ark day now (fractional, as the server counts it): the snapshot's
@@ -248,7 +248,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             arkDayPin = day;
             if (homes?.setNestStages(arkDayNow(snapshot, Date.now(), arkDayPin))) moved = true;
         },
-        marks: (): PropsMarks => ({spots: {...areas.marks, ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing}}),
+        marks: (): PropsMarks => ({spots: {...areas.marks, ...(homes?.marks ?? {})}, cave: {x: cave.origin.x, y: cave.origin.y, z: cave.origin.z, facing: cave.facing, roost: (({x, y, z}) => ({x, y, z}))(cave.toWorld(CAVE_ROOST))}}),
         dispose: () => {
             context.scene.remove(root);
             areas.dispose();

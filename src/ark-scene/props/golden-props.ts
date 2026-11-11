@@ -15,6 +15,7 @@ import type {ArkAnimal, ArkCameraView, ArkNestRow, ArkSnapshot, ArkZone} from "@
 import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
 import {nestStage} from "@/ark-scene/props/nest-growth";
+import {surfaceAt} from "@/ark-scene/sampler";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -70,6 +71,25 @@ export type PropsShotPlan = {view: ArkCameraView; hours: number; weather: Partia
 
 const look = (at: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number, lift = 0): ArkCameraView => ({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
 
+/**
+ * A view through something up in the air (a nest on a crown): the scene keeps its camera's target on the ground, so
+ * the target is where the line from the camera through the thing meets the ground beyond it. The camera stands
+ * `out` metres off (toward `azimuth`) and `above` metres higher than the thing.
+ */
+function lookThrough(at: {x: number; y: number; z: number}, azimuth: number, out: number, above: number): ArkCameraView {
+    const sx = Math.sin(azimuth);
+    const sz = Math.cos(azimuth);
+    let run = (out / above) * Math.max(at.y - surfaceAt(at.x, at.z).height, 0.5);
+    let ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    // Twice round, so the ground's height where the line lands is the one it meets.
+    run = (out / above) * Math.max(at.y - ground, 0.5);
+    ground = surfaceAt(at.x - sx * run, at.z - sz * run).height;
+    const target = {x: at.x - sx * run, y: ground, z: at.z - sz * run};
+    const camera = {x: at.x + sx * out, y: at.y + above, z: at.z + sz * out};
+    const distance = Math.hypot(camera.x - target.x, camera.y - target.y, camera.z - target.z);
+    return {target, distance, polar: Math.acos(Math.min(Math.max((camera.y - target.y) / distance, -1), 1)), azimuth};
+}
+
 /** The view, the hour and the weather of a props shot, from where the props are. */
 export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: Locate): PropsShotPlan | null {
     const props = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
@@ -98,9 +118,10 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             return {view: look(nest, nest.radius * 4.5 + 1.5, 1.12, turn, nest.radius * 0.35), hours: 10, weather: null, environment: calm, anchor: `eyrie ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_heronry": {
-            const nest = stats.nests.find((n) => n.form === "platform" && n.site === "tree_top" && n.siteId.startsWith("leaf:")) ?? stats.nests.find((n) => n.form === "platform" && n.site === "tree_top");
+            // The lowest crown-top platform (the heronry's, on the wetland's trees), from above its crown.
+            const nest = stats.nests.filter((n) => n.form === "platform" && n.site === "tree_top").sort((a, b) => a.y - b.y)[0];
             if (!nest) return null;
-            return {view: look(nest, nest.radius * 12 + 8, 0.35, 0.9, 0.1), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
+            return {view: lookThrough(nest, 0.9, nest.radius * 6 + 3, nest.radius * 3 + 1.5), hours: 10.5, weather: null, environment: calm, anchor: `platform ${nest.key} r ${nest.radius.toFixed(2)}`, minDistance: 0.3};
         }
         case "nest_weavers": {
             const nest = stats.nests.find((n) => n.form === "pendant");
@@ -140,7 +161,7 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const hollow = spots.beesHollow;
             if (!hollow) return null;
             const facing = spots.beesFacing ?? {x: 0, y: 0, z: 1};
-            return {view: look(hollow, 1.5, 1.45, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
+            return {view: look(hollow, 1.0, 1.36, Math.atan2(facing.x, facing.z)), hours: 11, weather: null, environment: calm, anchor: "bees' hollow", minDistance: 0.3};
         }
         case "house_night": {
             const chimney = spots.chimney;
@@ -163,9 +184,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         }
         case "cave_roost": {
             const cave = marks.cave;
-            // From just outside the mouth, looking in and a little up at the ceiling.
-            const inside = {x: cave.x - Math.sin(cave.facing) * 2.2, y: cave.y + 2.1, z: cave.z - Math.cos(cave.facing) * 2.2};
-            return {view: look(inside, 6.5, 1.36, cave.facing + 0.2), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave mouth", minDistance: 0.3};
+            // From just outside the mouth, looking in at the roost: the guano heaped on the floor, the stained ceiling above it.
+            const under = {x: cave.roost.x, y: cave.y + 1.1, z: cave.roost.z};
+            return {view: look(under, 5.2, 1.3, cave.facing + 0.12), hours: 11, weather: {cold: 0.75}, environment: calm, anchor: "cave roost", minDistance: 0.3};
         }
         case "turtle_nest": {
             const nest = spots.turtleNest;

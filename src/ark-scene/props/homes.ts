@@ -382,8 +382,9 @@ export function buildHomes(presence: Presence, placeOf: (id: string) => Placemen
             used.add(hollow.host);
             const turn = Math.atan2(hollow.normal.x, hollow.normal.z);
             // In a drawn hole: the comb a little way in, sized to the hole; else the props' own split with its comb.
-            const scale = drawnHole ? Math.min(Math.max(hollow.size[1] / 0.3, 0.5), 1.2) : 1;
-            const inset = drawnHole ? Math.min((hollow.depth ?? 0.1) * 0.35, 0.06) : 0;
+            // In a drawn hole the comb is smaller (the asset's mouth is a hand across), its sheets' edges at the mouth.
+            const scale = drawnHole ? 0.55 : 1;
+            const inset = 0;
             const combNest = drawnHole ? shapes.comb(0.2) : merge([shapes.hollow(0.2, true), shapes.comb(0.2)]);
             add(new LodBatch("bee-hollow", [{x: hollow.x - hollow.normal.x * inset, y: hollow.y, z: hollow.z - hollow.normal.z * inset, turn, scale}], combNest, null, warm, {cap: 2, reach: 1}));
             marks.beesHollow = {x: hollow.x, y: hollow.y, z: hollow.z};
