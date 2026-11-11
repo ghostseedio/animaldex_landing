@@ -35,8 +35,10 @@ type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: str
 const view = (x: number, y: number, z: number, distance: number, polar = 1.15, azimuth = 0.6): ArkCameraView => ({target: {x, y, z}, distance, polar, azimuth});
 
 /** Slots of an animal from a time on, with their trips. */
-function* trips(ctx: Context, a: Context["animals"][number], from: number, hours: number): Generator<Trip> {
-    for (let t = from; t < from + hours * 3600; t += SLOT_SECONDS) yield tripAt(ctx.world, a.profile, a.animal, t, ctx.hoursAt, a.activity);
+function trips(ctx: Context, a: Context["animals"][number], from: number, hours: number): Trip[] {
+    const out: Trip[] = [];
+    for (let t = from; t < from + hours * 3600; t += SLOT_SECONDS) out.push(tripAt(ctx.world, a.profile, a.animal, t, ctx.hoursAt, a.activity));
+    return out;
 }
 
 const CLIPS: Record<string, Clip> = {

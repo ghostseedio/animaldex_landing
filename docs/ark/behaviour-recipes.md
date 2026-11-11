@@ -1,0 +1,241 @@
+# Ark behaviour recipes: the engine, the recipes, the specific behaviours
+
+Branch `ark-behaviour-recipes` (landing), on top of `ark-behaviour`. The brief is the owner's "rich animal behaviours from our stored data", saved at `animaldex-ark-handover-2026-11-11/ark/queued/behaviour-recipes-brief.md`. Step 1, the data, is in `docs/ark/behaviour-data-report.md`. The review sample of 40 species is in `docs/ark/recipes-review-40.md`.
+
+**Visual only:**
+- The server's ecology decides every arrival, meal, birth and death; nothing here reads or writes the server.
+- Everything that varies is seeded from ids, slots and the time, so every viewer sees the same thing.
+- No `Math.random`, no per-viewer state in the shared layer.
+
+## Files
+
+| File | What it is |
+|---|---|
+| `src/ark-scene/behaviour-blocks.ts` | the 71 building blocks: motion, named animation states, far beat, attitude, near-only detail |
+| `src/ark-scene/recipe-templates.ts` | the 48 recipe templates: block sequences as data (targets, timings, catches, carried things, when they may run), plus crossing styles and sleeping postures |
+| `src/ark-scene/behaviour-recipes.ts` | the engine (pure): species rows, seeded sex, goals for the schedule, episodes laid over the schedule's pose, pairs, murmurations, V-formations, crossings, postures, nests, marks; the other lanes' sources |
+| `src/ark-scene/recipes.json` | the compact rows the scene reads (234 KB, 2,555 species) |
+| `data/ark/behaviour-recipes.json` | the full data: every behaviour found with its phrase, and every recipe with its source |
+| `src/ark-scene/recipe-scene.ts` | the near-only detail (three.js) |
+| `scripts/ark-behaviour-recipes.mts` (+ `-text`, `-load`, `-compose`) | the generator, its validation (it stops on an unknown block, template, style or posture), `--summary`, `--review` |
+| `src/ark-scene/recipes-entry.ts`, `scripts/ark-recipe-clips.mjs` | the clip page and recorder (development only) |
+| `src/lib/ark-behaviour-recipes.test.ts` | the tests |
+
+**Regenerate** (read-only exports; the queries are in `ark-behaviour-load.mts`):
+```
+npx tsx scripts/ark-behaviour-recipes.mts species.json extra.json intel.json [--summary out.json] [--review docs/ark/recipes-review-40.md]
+```
+Recipes are regenerated whenever a species' stored text changes: the rows come from the text by rules, with no hand edits.
+
+## How it works
+
+1. **Goals.** The schedule asks for a slot's goal through one hook in `rawIntent`, `recipeIntent(…)`.
+   - A recipe may take the slot only when the schedule picked a behaviour the template `replaces`. A kingfisher's forage or perch becomes "perch_plunge"; a goose's forage becomes "dabble". So each species keeps its profile's time budget.
+   - The chance is the recipe's weight × 0.7 × its season factor, with the hour and the sex checked first.
+   - The goal is a place: a low perch with open water within reach, the water's edge, open water, bare ground, bark, a rock top, or its nest. The trip there is the schedule's own, and the stay has no steps, so where the slot ends is unchanged.
+2. **Episodes.** `poseOnTrip` is now `episodePose(basePoseOnTrip(…))`.
+   - An episode is a list of keys: block, from, to, start and end, heading, carried thing, catch, prey. It is built once per trip (memoised) from the template:
+     - targets are resolved in the world, seeded by the animal and the slot;
+     - travel times come from distance and the animal's own pace, by block;
+     - hold times are drawn in the template's bounds;
+     - steps loop while time allows, then the tail.
+   - It starts from the schedule's pose. Its last key goes to the schedule's live pose, and the last 0.6 s blend, so nothing ever snaps.
+   - A stay with no recipe goal (rest, groom, perch, bask, watch) may still run a "here" template: groom, preen and stretch, stretch and yawn, call, bask broadside to the sun, dry its wings, bury itself.
+3. **Pairs** (contests, courtship, grooming each other).
+   - `wireRecipes` pairs each male with the nearest other male of its species within 45 m (contests), a male with the nearest female (courtship), and neighbours in rank in a group (allogrooming). It is deterministic from ids and homes, and runs from the scene's `wireSchedules`.
+   - A pair meets in a window of world time: one per 10-minute period in its mating season, one in four periods when no season is stored, none out of season. The window is seeded by the pair's key, so both sides work out the same one.
+   - The keys' timings come from the pair's seed and the pair's own geometry, at the slower one's pace, so both sides stay in step: they meet, clash and part together.
+   - Roles: "a" is the dominant (the dominance stat, then the id) or the male; "b" retreats after a contest. A step for the other role is a hold of the same length.
+4. **Flocks.**
+   - A murmuration (starlings) runs over its flock leader's roost at dusk (island hours 17.45–18.25). Each bird is a point of a closed-form shape that stretches, turns and drifts, with the birds circling inside it and density waves through it. Catalogue birds use their own index; the scene adds 360 ambient flockmates from the same function near the camera.
+   - V-formation (geese, cranes, ibises): a follower in the air takes its V slot behind its leader, easing in and out over 8 s.
+5. **Crossings, after and postures.**
+   - On the schedule's enter-water and exit-water legs, the species' style replaces the plain wade:
+     - in: slide (penguins), slip (crocodiles, monitors, turtles, seals), dive (otters, beavers, frogs, cormorants) or launch (ducks, coots, grebes);
+     - out: haul (seals) or hop (penguins).
+   - After climbing out: shake (mammals; never turtles), preen (birds), bask (reptiles), dry the wings (cormorants) or nothing (hippos, elephants, amphibians).
+   - Asleep: its posture (one leg, head tucked, hanging, curled, afloat, standing, huddled) as the act's state, upside down for a hanging bat.
+6. **Near and far.**
+   - Positions and attitudes are the same function at every level of detail, so nothing jumps.
+   - The far version is the block's `beat`, which the existing clips and the far shader motion already read.
+   - Near the camera (the scene's near level, within about 45–90 m), `recipe-scene.ts` adds the carried catch or material, splashes, dirt and dust, holes, mounds and hollows (pure from its last slots, so a late viewer sees the same ones), nests growing, the ambient school it chases, insects, and a murmuration's flockmates.
+
+### Hooks in other lanes' files
+
+**`behaviour-schedule.ts`** (behaviour lane), kept small:
+- `recipe` and `owner` on intents and trips;
+- the `recipeIntent` call in `rawIntent`;
+- `poseOnTrip` wrapping the renamed `basePoseOnTrip` (internal callers use the base);
+- `forgetSchedules` also forgets recipe memos;
+- three small exports: `tripEpisode`, `recipeMarks`, `recipeNest`;
+- the `KIT` object at the end.
+
+**`index.ts`:**
+- the `RecipeScene` (made, stepped, cleared, disposed);
+- `wireRecipes` in `wireSchedules`;
+- the act's pitch and roll added to the schedule pose's (the bird models stand, so flight's 0.95 stays and a plunge adds 1.35);
+- the water band skipped while an act owns the pose (a diving seal, a wading heron);
+- the seeded sex's size on the drawn length.
+
+### Rules the code keeps
+
+- **Behaviour-only catches are ambient.** Templates can only catch `fish`, `insect`, `worm`, `shellfish`, `nut` or `seed` (`PreyKind`). The scene draws those as decoration (`recipe-scene.ts`: a small school, insects), never as catalogue animals. A test checks every template. A catalogue animal still only disappears through the server's meal event, acted out with the chase in `acts.ts` (unchanged).
+- **Contests are non-lethal.** They are all between males of one species, in its mating season where stored. The worst outcome is the loser walking away.
+- **Turned off** (`setRecipesEnabled(false)`), the schedule's pose stands exactly (tested).
+
+## The building blocks
+
+The named states are the rig player lane's to map to clips. Unmapped, a block plays its beat's clip (bite, scan, shake, enter_water…) or the shader motion. All 70 states:
+
+`bask, bathe, beat_prey, box, bury, call, carry, charge, clash, climb, crawl, crouch, dance, dig, display, dive, dive_in, drum, dust_bathe, eat, fight, float_back, fly, freeze, glide, groom, groom_other, haul_out, hop_out, hover, incubate, land, launch, leap, mark, peck, perch, pick_up, place, plunge, probe, pull, push, pushup, rear, rest, roll, run, scan, scoop, shake, sleep, slide, slip_in, stalk, stretch, strike, strike_feet, surface, sweep, swim, swipe, takeoff, tool, upend, wade, walk, wallow, wing_dry, yawn`
+
+| Block | What | Motion | States | Far / fallback beat | Near-only detail |
+|---|---|---|---|---|---|
+| `walk` | walk to | travel (ground) | walk | walk | - |
+| `run` | run to | travel (ground) | run | run | - |
+| `stalk` | stalk (low, slow) | travel (ground) | stalk | stalk | - |
+| `swim` | swim to | travel (line) | swim | swim | - |
+| `fly` | fly to | travel (arc) | fly, glide | fly | - |
+| `climb` | climb to | travel (line) | climb | climb | - |
+| `crawl` | crawl to | travel (ground) | crawl | walk | - |
+| `wade` | wade (slow steps in the shallows) | travel (ground) | wade | walk | - |
+| `take_off` | take off | travel (rise) | takeoff | fly | - |
+| `land` | land | travel (line) | land | fly | - |
+| `go` | go there its own way (fly, swim, climb or walk: chosen by the engine) | travel (ground) | walk | walk | - |
+| `follow` | follow (in line or beside) | travel (ground) | walk | walk | - |
+| `flee` | flee (to cover, water or a tree) | travel (ground) | run | run | - |
+| `leap` | leap (a pounce, a mousing jump) | travel (leap) | leap | play | - |
+| `dive_air` | dive from the air into the water | travel (plunge) | plunge | glide | splash (end) |
+| `dive_feet` | drop feet-first onto the water | travel (plunge) | strike_feet | glide | splash (end) |
+| `dive` | dive from the surface | travel (dive) | dive | swim | bubbles (start) |
+| `surface` | surface | travel (line) | surface | swim | spray (end) |
+| `slide_in` | slide in on the belly | travel (line) | slide | enter_water | splash (end) |
+| `slip_in` | slip in low and slow | travel (line) | slip_in | enter_water | - |
+| `dive_in` | dive in from the bank | travel (leap) | dive_in | enter_water | splash (end) |
+| `launch` | launch onto the water (paddling) | travel (line) | launch | enter_water | spray (during) |
+| `haul_out` | haul out | travel (line) | haul_out | exit_water | - |
+| `hop_out` | leap out onto the shore | travel (leap) | hop_out | exit_water | spray (start) |
+| `scan` | look and scan | hold | scan | scan | - |
+| `ambush` | wait in ambush (still) | hold | crouch | pause | - |
+| `hover` | hover | hold | hover | fly | - |
+| `strike` | strike (a lunge of the head or bill) | hold | strike | bite | - |
+| `swipe` | swipe with a paw | hold | swipe | bite | splash (during) |
+| `scoop` | scoop with the bill | hold | scoop | bite | splash (start) |
+| `sweep` | sweep the bill side to side | hold | sweep | peck | spray (during) |
+| `upend` | up-end (head under, tail up) | hold | upend | bite | spray (start) |
+| `probe` | probe the ground with the bill | hold | probe | peck | dirt (during) |
+| `pull` | pull (a worm from the ground) | hold | pull | bite | - |
+| `peck` | peck | hold | peck | peck | - |
+| `drum` | drum or hammer on wood | hold | drum | peck | chips (during) |
+| `eat` | swallow or eat | hold | eat | chew | - |
+| `beat_prey` | beat the catch on a branch or rock | hold | beat_prey | bite | - |
+| `pick_up` | pick up | hold | pick_up | peck | - |
+| `carry` | carry (in the mouth, bill, feet or on the back) | travel (ground) | carry | walk | - |
+| `place` | drop or place | hold | place | peck | - |
+| `dig` | dig (dirt flies; a hole or a mound) | hold | dig | peck | dirt (during); hole |
+| `push` | push or roll an object | travel (ground) | push | walk | - |
+| `tool` | use a tool (a stone, a stick) | hold | tool | bite | - |
+| `display` | display (posture, wings, crest, tail, throat) | hold | display | scan | - |
+| `pushup` | push-up display | hold | pushup | scan | - |
+| `dance` | courtship dance (bow, leap, turn) | hold | dance | play | - |
+| `call` | call | hold | call | scan | - |
+| `fight` | fight, non-lethal (clash, push, wrestle) | hold | fight | play | dust (during) |
+| `clash` | run at a rival and clash | travel (ground) | charge, clash | run | dust (end) |
+| `rear` | rear up | hold | rear | play | - |
+| `box` | box or kick standing up | hold | box | play | - |
+| `scent_mark` | scent mark (rub, scrape) | hold | mark | peck | dirt (during) |
+| `groom` | groom or preen itself | hold | groom | preen | - |
+| `groom_other` | groom another | hold | groom_other | preen | - |
+| `bathe` | bathe (splash in the shallows) | hold | bathe | shake | splash (during) |
+| `bury` | bury itself (sand, mud) | hold | bury | rest | sand (start); hollow |
+| `shake_off` | shake off water | hold | shake | shake | spray (start) |
+| `roll` | roll on the ground | hold | roll | rest | dust (during) |
+| `dust_bathe` | dust or sand bathe | hold | dust_bathe | rest | dust (during); hollow |
+| `wallow` | wallow in mud or water | hold | wallow | rest | mud (during); hollow |
+| `bask` | bask (flat, broadside to the sun) | hold | bask | rest | - |
+| `wing_dry` | spread the wings to dry | hold | wing_dry | preen | - |
+| `stretch` | stretch | hold | stretch | rest | - |
+| `yawn` | yawn | hold | yawn | rest | - |
+| `float_back` | float on the back | hold | float_back | rest | - |
+| `sleep_pose` | sleep in its posture (one leg, head tucked, hanging, curled, afloat) | hold | sleep | sleep | - |
+| `freeze` | freeze | hold | freeze | pause | - |
+| `perch` | perch | hold | perch | rest | - |
+| `rest` | rest | hold | rest | rest | - |
+| `incubate` | sit on the nest | hold | incubate | rest | - |
+
+## The recipe templates
+
+Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagged body-plan default.
+
+| Template | What | Species | Kind | Goal | Stands in for | When | Blocks |
+|---|---|---|---|---|---|---|---|
+| `perch_plunge` | plunge-dives from a perch for fish | 8 (5 phrase, 3 rule, 0 default) | stay | perch_water | forage, perch, fly, wander, hunt | day | perch → scan → take_off → dive_air → surface → take_off → fly → beat_prey → eat (repeat from step 1) |
+| `air_plunge` | plunge-dives from the air (terns, gannets, boobies, the brown pelican) | 13 (10 phrase, 3 rule, 0 default) | stay | water | forage, fly, soar, swim, wander | day | take_off → fly → hover → dive_air → surface → eat → swim (repeat from step 1) |
+| `talon_grab` | snatches fish feet-first (the osprey, fish eagles) | 8 (7 phrase, 1 rule, 0 default) | stay | perch_water | forage, perch, fly, soar, hunt | day | perch → take_off → fly → hover → dive_feet → take_off → fly → eat |
+| `wade_spear` | wades and spears fish (herons, egrets, storks) | 29 (26 phrase, 3 rule, 0 default) | stay | edge | forage, drink, wander, hunt | - | wade → ambush → strike → eat → wade → wade (repeat from step 2) |
+| `bill_sweep` | sweeps its bill through the shallows (spoonbills, avocets, flamingos) | 7 (4 phrase, 3 rule, 0 default) | stay | edge | forage, drink, wander | - | wade → sweep → wade → wade (repeat from step 2) |
+| `pouch_scoop` | scoops fish with its pouch (pelicans) | 5 (5 phrase, 0 rule, 0 default) | stay | water | forage, swim, fly | day | swim → scan → scoop → eat → swim (repeat from step 2) |
+| `dabble` | dabbles and up-ends (ducks, swans) | 53 (27 phrase, 26 rule, 0 default) | stay | water | forage, swim, graze | - | swim → upend → swim → swim (repeat from step 2) |
+| `surface_dive` | dives from the surface for fish (grebes, cormorants, loons) | 20 (9 phrase, 11 rule, 0 default) | stay | water | forage, swim, dive | - | swim → dive → surface → eat → swim → swim (repeat from step 2) |
+| `chase_fish` | chases fish underwater (penguins, seals, otters, dolphins) | 52 (25 phrase, 27 rule, 0 default) | stay | water | forage, swim, dive, hunt, wander | - | dive → swim → strike → swim → strike → surface → eat → swim (repeat from step 1) |
+| `river_fish` | fishes at the river (bears, the fishing cat) | 5 (3 phrase, 2 rule, 0 default) | stay | edge | forage, drink, hunt | - | wade → ambush → swipe → eat → wade → wade → shake_off → walk (repeat from step 2) |
+| `shell_tool` | floats on its back and cracks shellfish on a stone (sea otters) | flock or crossing | stay | water | forage, swim, dive, rest | - | dive → surface → float_back → tool → eat → float_back (repeat from step 1) |
+| `pounce` | stalks and pounces (a mousing leap) | 56 (27 phrase, 29 rule, 0 default) | stay | ground | forage, stalk, wander, hunt | - | stalk → freeze → scan → leap → dig → eat (repeat from step 1) |
+| `hawk_insects` | sallies from a perch to snap insects in the air | 74 (58 phrase, 16 rule, 0 default) | stay | perch | forage, perch, fly | day | perch → take_off → fly → fly → beat_prey → eat (repeat from step 1) |
+| `hover_drop` | hovers and drops onto prey in the grass (kestrels) | 4 (4 phrase, 0 rule, 0 default) | stay | ground | forage, fly, soar, hunt | day | take_off → fly → hover → leap → eat (repeat from step 1) |
+| `worm_pull` | runs, stops, listens and pulls worms | 16 (12 phrase, 4 rule, 0 default) | stay | ground | forage, graze | day | run → scan → probe → pull → eat (repeat from step 1) |
+| `probe_feed` | probes mud and soil with its bill | 40 (33 phrase, 7 rule, 0 default) | stay | ground | forage, graze, wander | - | walk → probe → probe (repeat from step 1) |
+| `root_dig` | digs and roots for food | 132 (126 phrase, 6 rule, 0 default) | stay | ground | forage, graze, wander | - | walk → dig → eat (repeat from step 1) |
+| `drum_bark` | drums and chisels on bark (woodpeckers) | 7 (5 phrase, 2 rule, 0 default) | stay | bark | forage, climb, perch | day | drum → scan → drum → peck (repeat from step 1) |
+| `cache_food` | buries food to come back to (squirrels, jays) | 59 (55 phrase, 4 rule, 0 default) | stay | ground | forage, wander | day | pick_up → go → dig → place → dig → scan → go (repeat from step 1) |
+| `stick_tool` | uses a stick to probe for food (crows, chimpanzees) | 10 (10 phrase, 0 rule, 0 default) | stay | bark | forage | day | pick_up → tool → eat → tool → place |
+| `groom_self` | grooms or preens | 1016 (54 phrase, 0 rule, 962 default) | stay | here | rest, groom, perch, watch | - | groom → scan → groom |
+| `preen_stretch` | preens, stretches a wing, ruffles | 680 (41 phrase, 0 rule, 639 default) | stay | here | rest, groom, perch | - | groom → stretch → groom → shake_off |
+| `stretch_yawn` | stretches and yawns | 687 (2 phrase, 0 rule, 685 default) | stay | here | rest, groom, watch | - | stretch → yawn → rest |
+| `bathe` | bathes in the shallows, then shakes and preens | 581 (0 phrase, 0 rule, 581 default) | stay | edge | drink, groom, rest | day | walk → bathe → walk → shake_off → groom |
+| `dust_bathe` | dust-bathes in a scraped hollow | 52 (4 phrase, 48 rule, 0 default) | stay | bare | groom, rest, bask | day | dig → dust_bathe → shake_off → groom |
+| `wallow` | wallows in mud at the water's edge | 47 (35 phrase, 12 rule, 0 default) | stay | edge | groom, rest, drink | - | wallow → walk → shake_off |
+| `roll` | rolls on the ground | 9 (0 phrase, 9 rule, 0 default) | stay | bare | groom, rest | day | roll → shake_off → rest |
+| `bask_sun` | basks broadside to the sun | 227 (148 phrase, 79 rule, 0 default) | stay | here | bask | day | bask |
+| `wing_dry` | spreads its wings to dry | 5 (4 phrase, 1 rule, 0 default) | stay | perch | perch, rest, bask | day | wing_dry → groom |
+| `bury_sand` | buries itself in sand or mud | 49 (49 phrase, 0 rule, 0 default) | stay | here | rest, hide | - | bury |
+| `pushup` | push-up display on a rock | 36 (10 phrase, 26 rule, 0 default) | stay | rock | bask, rest, watch | day, male | pushup → display → scan (repeat from step 1) |
+| `strut_display` | struts and displays (tail, wings, crest, pouch) | 86 (86 phrase, 0 rule, 0 default) | stay | ground | wander, forage, rest | day, mating, male | display → walk → display → call (repeat from step 1) |
+| `call_bout` | calls or sings | 699 (699 phrase, 0 rule, 0 default) | stay | here | rest, perch, watch, groom | - | call → scan → call → rest (repeat from step 1) |
+| `scent_mark` | scent-marks its ground | 25 (25 phrase, 0 rule, 0 default) | stay | ground | wander | - | walk → scent_mark → scan → walk → scent_mark |
+| `antler_clash` | stags roar, walk side by side and clash antlers (the rut) | 20 (12 phrase, 8 rule, 0 default) | pair | here | - | dawn_dusk, mating, males | walk → call → call → walk → walk → fight → fight → flee(b) → call(a) |
+| `horn_clash` | rams rear and run head-on into each other | 66 (16 phrase, 50 rule, 0 default) | pair | here | - | day, mating, males | walk → display → rear → clash → shake_off → walk → rear → clash → shake_off → flee(b) |
+| `jaw_spar` | gape and push chest to chest (hippos, elephant seals) | 5 (3 phrase, 2 rule, 0 default) | pair | here | - | mating, males | walk → display → walk → fight → display → flee(b) |
+| `box_spar` | stand up and box (kangaroos, hares) | 14 (3 phrase, 11 rule, 0 default) | pair | here | - | mating, males | walk → rear → box → flee(b) |
+| `lizard_contest` | rival males bob, show their sides and wrestle | 41 (11 phrase, 30 rule, 0 default) | pair | here | - | day, mating, males | walk → pushup → display → pushup → walk → fight → flee(b) |
+| `wrestle` | rival males grapple and push | 89 (89 phrase, 0 rule, 0 default) | pair | here | - | mating, males | walk → display → walk → fight → flee(b) |
+| `court_display` | a male displays to a female | 268 (268 phrase, 0 rule, 0 default) | pair | here | - | day, mating, mixed | walk → display(a) → scan(b) → dance(a) → rest(b) → call(a) → groom(b) |
+| `court_dance` | a pair dances together (cranes, grebes, albatrosses) | 30 (22 phrase, 8 rule, 0 default) | pair | here | - | day, mating, mixed | walk → dance → call → dance |
+| `allogroom` | two of a group groom each other | 64 (14 phrase, 50 rule, 0 default) | pair | here | - | any | walk → groom_other(a) → rest(b) → rest(a) → groom_other(b) |
+| `murmuration` | a murmuration over the roost at dusk | 9 (9 phrase, 0 rule, 0 default) | flock | here | - | dusk | fly |
+| `v_formation` | flies in a V or a line behind its leader | 43 (5 phrase, 38 rule, 0 default) | flock | here | - | - | fly |
+| `nest_build` | carries material to its nest; the nest grows over the days | 309 (309 phrase, 0 rule, 0 default) | stay | nest | forage, perch, wander, rest | day, nesting | scan → go → pick_up → go → place → incubate (repeat from step 2) |
+| `beach_nest` | hauls out at night, digs a pit in the sand and covers it | 9 (9 phrase, 0 rule, 0 default) | stay | edge | rest, swim, forage, sleep | night, nesting | crawl → dig → rest → dig → crawl |
+| `dig_burrow` | digs at its burrow, throwing out a mound of earth | 55 (35 phrase, 20 rule, 0 default) | stay | ground | burrow, forage, rest, hide | - | walk → dig → scan → dig |
+
+## Seeded sex
+
+- **Assignment.** `sexLook(id, slug)` gives each animal its sex at the stored ratio. A hermaphrodite gets none. A colony insect is a worker: female, 2% male. A parthenogenetic species is (nearly) all female.
+- **Size.** Drawn length is ×√ratio for the bigger sex and ÷√ratio for the other, so the species' mean size is unchanged. A stag at ×1.2 is about 1.1 times a hind's length, and a female hawk is bigger than the male.
+- **Colour.** The duller sex gets `saturation` 0.72 and `value` 0.94 in `sexLook`. It is not applied in the renderer yet: the liveliness wiring lane owns per-instance colour.
+- **Features** (antlers, mane, crest, dewlap, train…) are in the data for 486 species. Models are single meshes from photos, so a hind drawn from a stag's model still has its antlers. Drawing them needs per-sex model variants (assets lane).
+
+**Requiring a male and a female to breed: the harness, not changed.** See the section "What a male + female pair rule would do" below.
+
+## Measured
+
+**Cost** (Node, the fixture's 130 animals all posed every frame, the shared machine under load):
+
+| Recipes | Pose time a frame |
+|---|---|
+| off | 0.93–1.07 ms |
+| on | 1.73–2.17 ms |
+
+- About 24 animals are in an act at a time.
+- In the scene only near animals are posed every frame (far ones twice a second, icons once), so the real cost is a fraction of this.
+- Episodes are memoised per trip, pair episodes per window.

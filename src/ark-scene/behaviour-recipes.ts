@@ -45,6 +45,8 @@ export type SpeciesRecipes = {
     posture: Posture | null;
     hovers: boolean;
     defaulted: boolean;
+    /** Its recipe ids, for a quick "has it" (posing runs often). */
+    has: ReadonlySet<string>;
 };
 
 const SYSTEMS: Record<string, SexSystem> = {s: "separate", w: "workers", h: "hermaphrodite", c: "changes", p: "parthenogenetic"};
@@ -75,11 +77,12 @@ export function decodeRecipeRow(slug: string, row: string): SpeciesRecipes {
         after: (after as AfterStyle) || "shake",
         posture: (posture as Posture) || null,
         hovers: flags.includes("h"),
-        defaulted: flags.includes("d")
+        defaulted: flags.includes("d"),
+        has: new Set(recipes ? recipes.split(",").map((r) => r.split(".")[0]) : [])
     };
 }
 
-const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, defaulted: true};
+const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, defaulted: true, has: new Set()};
 
 export function speciesRecipes(slug: string): SpeciesRecipes {
     const hit = decoded.get(slug);
@@ -1131,7 +1134,7 @@ export function murmurationPoint(centre: P, seed: number, index: number, epoch: 
 /** Its murmuration now: its flock's roost and the time inside the window, or null. */
 export function murmurationOf(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): {centre: P; seed: number; t0: number; t1: number} | null {
     const species = speciesRecipes(owner.slug);
-    if (!species.recipes.some((r) => r.id === "murmuration")) return null;
+    if (!species.has.has("murmuration")) return null;
     const hours = owner.hoursAt(epoch);
     if (hours < MURMURATION_HOURS[0] || hours > MURMURATION_HOURS[1]) return null;
     const leader = owner.animal.group?.leader ?? owner.animal;
@@ -1174,7 +1177,7 @@ function formationPose(world: ScheduleWorld, owner: TripOwner, trip: Trip, base:
     const group = owner.animal.group;
     if (!group || !trip.shadow || !base.aloft) return null;
     const species = speciesRecipes(owner.slug);
-    if (!species.recipes.some((r) => r.id === "v_formation")) return null;
+    if (!species.has.has("v_formation")) return null;
     const lead = trip.shadow.trips.find((t) => epoch >= t.start && epoch < t.end) ?? trip.shadow.trips[trip.shadow.trips.length - 1];
     const leader = kit.basePose(world, lead, Math.min(epoch, lead.end - 0.001));
     if (!leader.aloft) return null;
@@ -1251,11 +1254,17 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     return crossingPose(world, owner, trip, base, epoch) ?? base;
 }
 
+const postureActs = new Map<string, RecipeAct>();
+
+/** Its sleeping posture (one shared act per posture and attitude: sleeping animals are posed often). */
 function postureOf(owner: TripOwner, base: TripPose): RecipePose {
     const posture = speciesRecipes(owner.slug).posture;
     if (!posture) return base;
     const roll = posture === "hang" || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
-    return {...base, act: {episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch: posture === "curl" ? 0.15 : 0, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}};
+    const key = `${posture}#${roll}`;
+    let act = postureActs.get(key);
+    if (!act) postureActs.set(key, (act = Object.freeze({episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch: posture === "curl" ? 0.15 : 0, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}) as RecipeAct));
+    return {...base, act};
 }
 
 /** How long a dug hole, a mound or a hollow stays (world seconds), fading. */
