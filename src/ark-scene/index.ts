@@ -128,6 +128,7 @@ import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, scheduleWorld, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
+import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
@@ -730,7 +731,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
     const makeSched = (animal: ArkAnimal, place: Placement, length: number): Sched | null => {
-        if (!scheduleOn || place.micro || place.burrow) return null;
+        // (Not one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
+        if (!scheduleOn || place.micro || place.burrow || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea},
@@ -1687,11 +1689,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const ground = own.ground;
         // In the water: where it goes is the schedule's; how deep, its own place in its species' band (`sea-depth.ts`,
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
-        if (entry.depth && ground < 0 && !at.aloft && at.y < 0.02) {
+        // (`schedule-water.ts`: in the water, the band wins over the schedule's own height.)
+        if (inDepthBand(entry.depth, at, ground)) {
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
-            const spec = waterSpec(entry.depth, ground, entry.seed, clock, breath);
-            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: 0, roll: 0, afloat: true, water: spec};
+            const {spec, base} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
+            const yaw = at.yaw + (entry.glance ?? 0);
+            // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
+            const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
+            return {x: at.x, z: at.z, base, yaw, pitch: 0, roll: 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -2024,8 +2030,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "distance";
                 }
             }
-        } else if (entry.depth && !entry.visitor) {
-            // In the water, in its depth band (`sea-depth.ts`): a seabed crab or lobster walks its slow loop on the
+        } else if (entry.depth && !entry.visitor && where.water) {
+            // In the water, in its depth band (`sea-depth.ts`; on land, a seal or a duck walks like any walker): a seabed crab or lobster walks its slow loop on the
             // floor (feet planted: phase by distance); a swimmer swims (or a snake or eel slithers) at the pace it goes;
             // a floater and a hole-dweller keep their idle.
             const motion = waterMotion(entry.depth);
