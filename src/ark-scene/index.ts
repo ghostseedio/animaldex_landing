@@ -595,8 +595,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         awayFromHome: () => {
             if (opening || replay || selectedId || followId || flight) return false;
             const home = homeView();
-            spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
-            return controls.target.distanceTo(home.target) > 12 || Math.abs(spherical.radius / home.distance - 1) > 0.25 || Math.abs(spherical.phi - home.polar) > 0.22;
+            // (Its own numbers: the shared spherical and offset belong to the flights.)
+            const distance = camera.position.distanceTo(controls.target);
+            const polar = Math.acos(Math.min(Math.max((camera.position.y - controls.target.y) / Math.max(distance, 1e-6), -1), 1));
+            return controls.target.distanceTo(home.target) > 12 || Math.abs(distance / home.distance - 1) > 0.25 || Math.abs(polar - home.polar) > 0.22;
         },
         goHome: () => {
             endFollow();
