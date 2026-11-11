@@ -70,6 +70,9 @@ void main() {
     c += vec3(-0.012, 0.0, 0.018) * (1.0 - smoothstep(0.0, 0.45, l));
     vec2 d = (vUv - 0.5) * vec2(1.15, 1.0);
     c *= mix(1.0, 1.0 - vignette, smoothstep(0.3, 0.85, length(d)));
+    // Dither (graphics pass): a sub-step of noise so sky and water gradients don't band on 8-bit screens.
+    float n = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
+    c += (n - 0.5) / 255.0;
     gl_FragColor = vec4(clamp(c, 0.0, 1.0), texel.a);
 }`
 };

@@ -19,7 +19,7 @@ import {displayLength} from "@/ark-scene/sizes";
 import {Box3, BufferGeometry, DoubleSide, Float32BufferAttribute, Group, Mesh as ThreeMesh, MeshStandardMaterial, Quaternion, Vector3, type Mesh, type Object3D, type PerspectiveCamera, type Scene} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround} from "@/ark-scene/world";
+import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -34,7 +34,7 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         groundAt: (x, z) => heightAt(x, z),
         beach: () => ZONE_SITES.seashore,
         // Rocks at the waterline on open shore, not under a sea cliff (the beach's kind of coast).
-        shoreRocks: () => worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25).map((item) => ({x: item.x, z: item.z, scale: item.scale})),
+        shoreRocks: () => worldDecor().filter((item) => item.kind === "rock" && item.y < 0.2 && item.y > -0.9 && sampleGround(item.x, item.z).cliff < 0.25 && Math.hypot(item.x - ZONE_SITES.seashore.x, item.z - ZONE_SITES.seashore.z) < 75 && zoneAt(sampleGround(item.x, item.z)) !== "polar").map((item) => ({x: item.x, z: item.z, scale: item.scale})),
         forestFloor: () => microCorner("woodland"),
         house: () => ({x: COTTAGE.x, z: COTTAGE.z}),
         fields: () => ZONE_SITES.farm_garden,
@@ -213,7 +213,7 @@ async function mountGolden(el: HTMLElement) {
         }
     });
     // Every golden shot in the same calm weather at mean tide, whatever the island clock says today.
-    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41});
+    handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35});
     const canvas = el.querySelector("canvas") as HTMLCanvasElement;
     const world = goldenWorld(handle);
     const holder: {current: Object3D | null} = {current: null};
