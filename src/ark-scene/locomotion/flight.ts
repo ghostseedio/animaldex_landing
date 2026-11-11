@@ -322,6 +322,8 @@ export type FlightRigInput = {
     dt: number;
     /** No playable flap (`flight_fallback_open`): an open-wing clip is held. */
     open?: boolean;
+    /** Its length as drawn (m), when the scene draws it at another size than its true one: the heave and the flare height scale with it. */
+    drawnLength?: number;
 };
 
 export type FlightRigFrame = {
@@ -390,7 +392,8 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     // Effort: a hard climb out of a take-off, a climb, cruise, a descent; a flare near the ground on the way down.
     const sinceTakeoff = input.clock - memory.takeoffAt;
     const descending = input.climb < -0.06;
-    const flareHeight = Math.max(1.2, spec.lengthM * 3);
+    const drawn = input.drawnLength ?? spec.lengthM;
+    const flareHeight = Math.max(1.2, drawn * 3);
     const wantFlare = descending && input.agl < flareHeight && input.agl > 0.02 ? 1 : 0;
     memory.flare += (wantFlare - memory.flare) * Math.min(dt * 6, 1);
     const burst = input.actState === "fly" || input.actState === "flee" || input.actState === "chase";
@@ -398,7 +401,7 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     if (burst) effort = Math.max(effort, BEAT_EFFORT.burst);
     effort += (BEAT_EFFORT.flare - effort) * memory.flare;
     // Hanging still: the hover (hummingbirds, kestrels, hoverflies), when it has one.
-    const bodyLengthsPerSecond = input.speed / Math.max(spec.lengthM, 0.01);
+    const bodyLengthsPerSecond = input.speed / Math.max(drawn, 0.01);
     if (has("hover") && bodyLengthsPerSecond < (memory.mode === "hover" ? 0.6 : 0.35)) {
         memory.mode = "hover";
         memory.beat = frac(memory.beat + dt * spec.hz);
@@ -431,7 +434,7 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         out.beat = memory.beat;
         out.fold = spec.fold * upstrokeFold(memory.beat, down) * (1 - 0.6 * memory.flare);
         const heaveShare = spec.heave * (1 + 1.5 * Math.max(effort - 1, 0) / 0.35);
-        out.heave = heaveShare * spec.lengthM * beatHeave(memory.beat, down);
+        out.heave = heaveShare * drawn * beatHeave(memory.beat, down);
         out.flightMode = memory.flare > 0.3 ? "flare" : "flap";
     } else if (mode === "bound") {
         // Wings closed against the body (the plunge clip, levelled, wings in), falling in its bound.
@@ -460,7 +463,7 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         }
     }
     // The bounding flight's own rise and fall about its path.
-    if (spec.style === "flap_bound" && Math.abs(input.climb) < 0.15 && memory.flare < 0.3 && sinceTakeoff > 1.6) out.heave += rhythm.lift - Math.min(1.2 * spec.lengthM, 0.35) * 0.5;
+    if (spec.style === "flap_bound" && Math.abs(input.climb) < 0.15 && memory.flare < 0.3 && sinceTakeoff > 1.6) out.heave += (rhythm.lift - Math.min(1.2 * spec.lengthM, 0.35) * 0.5) * (drawn / Math.max(spec.lengthM, 0.01));
     // The flare: the body pitched up to brake, wings spread; the bank levels out.
     out.pitch += (-0.55 - out.pitch) * memory.flare;
     out.roll *= 1 - memory.flare;

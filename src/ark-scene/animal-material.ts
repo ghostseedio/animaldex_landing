@@ -42,19 +42,53 @@ import {ARK_RIM} from "@/ark-scene/glsl";
 import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
 import {varyShader} from "@/ark-scene/ark-variation";
+import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/l2-scene";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
 
-/** `motionBody` from talking-model-renderer.ts, with the clock, gain and tail angle per instance. */
+/**
+ * `motionBody` from talking-model-renderer.ts, with the clock, gain and tail angle per instance.
+ *
+ * Motion pass lane L2 (`locomotion/swim.ts`, `locomotion/legless.ts`, `locomotion/l2-scene.ts`): a species with a swim
+ * style or a legless mode (`motionPower` > 0) bends by its own envelope h + (1 - h) s^p (an eel's whole body, a tuna's
+ * tail only, a whale's flukes up and down), with a sidewinder's lifting wave and a worm's stretch; a ray's fin waves
+ * front to back (stingrays) or flaps (mantas). Its beat comes from the per-instance body channel (`arkLook.w` ≥ 1:
+ * the phase by the distance it moved, so the tail beat follows its speed and a snake never slips), else the clock.
+ */
 const MOTION_BODY = `
 {
     vec3 mp = transformed;
     float bodyRun = max(motionStill - motionRear, 0.001);
     float along = clamp((motionStill - mp.z) / bodyRun, 0.0, 1.0);
     float beat = motionClock * motionOmega;
+    float bodyGain = 1.0;
+    if (arkLook.w >= 1.0) {
+        float whole = floor(arkLook.w);
+        beat = (arkLook.w - whole) * 6.28318;
+        bodyGain = (whole - 1.0) / 254.0;
+    }
     float height = clamp((mp.y - motionBottom) / max(motionTop - motionBottom, 0.001), 0.0, 1.0);
-    if (motionKind > 0.5 && motionKind < 1.5) {
+    if (motionPower > 0.0 && motionKind > 0.5 && motionKind < 1.5) {
+        float env = motionHead + (1.0 - motionHead) * pow(along, motionPower);
+        float wave = beat - along * motionWavesL2 * 6.28318;
+        float size = motionGain * bodyGain;
+        float bend = motionTip * size * env * sin(wave);
+        if (motionAxisL2 < 0.5) { mp.x += bend; } else { mp.y += bend; }
+        // Sidewinding: the lifting wave a quarter beat ahead of the sideways one (only the sections on the sand stay down).
+        if (motionLift > 0.0) mp.y += motionLift * size * max(sin(wave + 1.5708), 0.0);
+        // Peristalsis: each part stretches and squeezes as the wave passes (thinner where it is longer).
+        if (motionStretch > 0.0) {
+            float strain = motionStretch * size * sin(wave);
+            mp.z -= motionStretch * size * cos(wave) * bodyRun / (6.28318 * max(motionWavesL2, 0.1));
+            mp.xy *= 1.0 - 0.5 * strain;
+        }
+    } else if (motionPower > 0.0 && motionKind > 1.5 && motionKind < 2.5) {
+        float reach = clamp((abs(mp.x) - motionSpan * 0.2) / max(motionSpan * 0.8, 0.001), 0.0, 1.0);
+        float flaps = motionFin > 1.5 ? 1.0 : 0.0;
+        float lag = flaps * reach * 0.6;
+        mp.y += motionTip * motionGain * bodyGain * motionSpan * pow(reach, mix(2.0, 1.5, flaps)) * sin(beat - along * motionWavesL2 * 6.28318 - lag);
+    } else if (motionKind > 0.5 && motionKind < 1.5) {
         float bend = motionAmp * motionGain * along * along * sin(beat - along * motionWaves * 6.28318);
         if (motionAxis < 0.5) { mp.x += bend; } else { mp.y += bend; }
     } else if (motionKind > 1.5 && motionKind < 2.5) {
@@ -84,7 +118,8 @@ const MOTION_BODY = `
 `;
 
 const MOTION_DECLARATIONS = `
-attribute vec3 arkLook;
+// (x, y, z): the head look's yaw, pitch and weight; w: lane L2's body channel (0 none, >= 1 a wave's phase and gain).
+attribute vec4 arkLook;
 // The sleep packed in arkInstance.w (sleep.ts packSleep): four 6-bit fields; every divisor a power of two, so exact.
 vec4 arkSleepOf(float packed) {
     // (0: an instance never written, or a mesh drawn without its sleep: awake.)
@@ -114,6 +149,14 @@ uniform float motionMidZ;
 uniform float tailBaseX;
 uniform float tailBaseZ;
 uniform float tailLength;
+uniform float motionHead;
+uniform float motionPower;
+uniform float motionTip;
+uniform float motionLift;
+uniform float motionStretch;
+uniform float motionFin;
+uniform float motionWavesL2;
+uniform float motionAxisL2;
 `;
 
 /**
@@ -315,6 +358,8 @@ export type AnimalMaterialOptions = {
     /** A fur-shell pass of the near (or rigged) mesh (`fur-shells.ts`), and how far its outer layer stands off (model units). */
     shell?: boolean;
     shellLength?: number;
+    /** Lane L2's wave for this species (`locomotion/l2-scene.ts` l2BodyUniforms); absent: the talking model's own motion. */
+    bodyMotion?: L2BodyUniforms | null;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -341,7 +386,8 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         arkRim: ARK_RIM,
         // How far the head goes down asleep: animals with a head and neck to lower.
         arkDroop: {value: droopOf(options.behaviour?.plan)},
-        ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
+        ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}])),
+        ...Object.fromEntries(Object.entries(options.bodyMotion ?? L2_BODY_NONE).map(([key, value]) => [key, {value}]))
     };
     if (options.rig) {
         uniforms.arkBones = {value: options.rig};

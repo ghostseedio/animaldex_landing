@@ -171,7 +171,7 @@ test("L2: flight styles: a sparrow bounds, a gull flap-glides, an eagle soars wi
     const modes = new Set<string>();
     const memory = newFlightMemory();
     for (let t = 0; t < 6; t += 1 / 60) modes.add(flightRigFrame(inputFor(sparrow, {clock: 100 + t, dt: 1 / 60}), memory).flightMode);
-    assert.ok(modes.has("flap") && modes.has("bound"), `sparrow: ${[...modes]}`);
+    assert.ok(modes.has("flap") && modes.has("bound"), `sparrow: ${Array.from(modes).join(",")}`);
     const gull = bird("s0.9d", 0.6);
     const gm = newFlightMemory();
     const g1 = flightRigFrame(inputFor(gull, {clock: 200, beat: "glide"}), gm);
