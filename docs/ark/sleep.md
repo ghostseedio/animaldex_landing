@@ -165,9 +165,25 @@ node scripts/ark-sleep-clips.mjs --out <dir> --clips night,den [--at 80,200 --sc
 
 ## Cost
 
-See `scripts/ark-sleep-bench.mts` and the report's numbers.
+Measured on 2026-11-11 on the shared Mac (load about 15–25).
 
-- Asleep animals cost the reactive layer less than awake ones: no needs, choices, look or full perception, only the wake check.
-- Animals gone into their dens aren't drawn.
-- The sleep layer's own work is a few microseconds per animal per frame.
-- On the GPU, the curl, breath and stirs are near only. The lid code runs only on shut eyes.
+**Reactive layer:** `scripts/ark-sleep-bench.mts`, node, the same 130 animals. Median CPU ms per frame:
+
+| Tier | Awake by day | Asleep at night (1 in 8 up) |
+|---|---|---|
+| high | 1.33 | 0.25 |
+| medium | 0.38 | 0.11 |
+| low | 0.15 | 0.06 |
+
+**Sleep layer's own work** (`stepSleepNow`, `sleepDraw`, `lyingDrop`, `packSleep`): 0.53 µs per sleeping animal per frame, after caching the stirs once a period (0.92 before).
+
+**Phone tier in the browser:** `node scripts/ark-sleep-clips.mjs --out <dir> --perf --mul 4`. 360×800 at DPR 2, Android UA, 4× CPU throttle, medium quality, 84 animals drawn one by one, the night clip's herd view, 3 × 5 s of frames:
+
+| Hours | Near models | Frame interval (mean) | p95 |
+|---|---|---|---|
+| 01:30 (asleep) | 24 | 16.6–16.7 ms | 18.1–19.0 ms |
+| 18:00 (awake) | 18 | 16.7 ms | 18.6–19.1 ms |
+
+- **Sleeping costs less, not more.** Asleep is no worse than awake with a third more near models, all with the lids, curl, breath and stirs.
+- **Den sleepers cost nothing to draw.** An animal gone into its den isn't drawn.
+- **GPU work only where it shows.** The curl, breath and stirs run only near the camera, and the lid code only on shut eyes.
