@@ -52,12 +52,13 @@ uniform vec2 arkWind;`)
     float gust = length(arkWind);
     vec2 along = arkWind / max(gust, 1e-3);
     float phase = color_1.y * 6.2831853;
-    float wave = sin(arkTime * 1.25 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.6 + phase * 1.7 + root.x * 0.4);
+    // Whole cycles in the shared clock's 600 s window (runtime lane; tree-assets.ts treeSway must use the same numbers).
+    float wave = sin(arkTime * 1.24617 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.59705 + phase * 1.7 + root.x * 0.4);
     // Trunk a little, branches more, leaves most (the asset's sway weight), bending more the higher it is.
     float bend = color_1.x * (0.25 + 0.06 * max(transformed.y, 0.0));
     transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     float leaf = color_1.w * 6.2831853;
-    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.3 + leaf * 1.3), cos(arkTime * 6.7 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
+    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
     // Leaves flutter (broadleaf 0.36 and up, the conifers' boughs from about 0.05); wood does not (0).
     vArkLeafy = smoothstep(0.02, 0.1, color_1.z);
     vArkLocal = position;

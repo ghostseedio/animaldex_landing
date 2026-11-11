@@ -316,7 +316,8 @@ float arkCausticAt(vec2 p, float t) {
     float c = 0.0;
     vec2 q = p * 0.85;
     for (int i = 0; i < 3; i++) {
-        q += vec2(sin(q.y * 1.7 + t * 0.55 + float(i)), cos(q.x * 1.3 - t * 0.47 - float(i))) * 0.42;
+        // Whole cycles in the shared clock's 600 s window (runtime lane).
+        q += vec2(sin(q.y * 1.7 + t * 0.55501 + float(i)), cos(q.x * 1.3 - t * 0.47124 - float(i))) * 0.42;
         c += abs(sin(q.x + q.y));
     }
     return pow(1.0 - c / 3.0, 5.0) * 6.0;
@@ -481,7 +482,7 @@ float arkWet = 0.0;`)
                 soil = plant * 0.62;
                 cover = 0.55 + 0.45 * inRow;
                 coverMean = 0.8;
-                plant *= 1.0 + 0.1 * envWind * sin(dot(p, vec2(0.55, 0.83)) * 0.7 - arkTime * 1.7 + 2.0 * arkNoise(p * 0.15));
+                plant *= 1.0 + 0.1 * envWind * sin(dot(p, vec2(0.55, 0.83)) * 0.7 - arkTime * 1.69646 + 2.0 * arkNoise(p * 0.15));
             } else {
                 // Maize: dark green rows over the soil.
                 plant = ${linearVec3("#4f7d2e")} * growth;
@@ -630,7 +631,8 @@ float arkWet = 0.0;`)
         float h = world.y - envSeaLevel;
         float beachy = smoothstep(0.2, 0.7, sandW) * (1.0 - snowW) * step(-0.08, h) * (1.0 - smoothstep(1.2, 1.6, h));
         if (beachy > 0.0) {
-            float phase = arkTime * 0.42 + arkFbm(p * 0.04) * 6.2831;
+            // Whole cycles in the shared clock's 600 s window (runtime lane), as every periodic term here.
+            float phase = arkTime * 0.41888 + arkFbm(p * 0.04) * 6.2831;
             float run = 0.5 + 0.5 * sin(phase);
             float reach = (0.12 + 0.3 * run * run) * (0.8 + 0.8 * envWind);
             float film = smoothstep(reach + 0.02, reach - 0.06, h);
@@ -749,10 +751,14 @@ vec2 waves(vec2 p, float t, float calm) {
     dirs[3] = normalize(vec2(-0.9, -0.2));
     float freqs[4];
     freqs[0] = 0.42; freqs[1] = 0.67; freqs[2] = 1.13; freqs[3] = 1.71;
+    // Each wave's angular speed (0.55 · sqrt(9.8 f)), rounded to whole cycles in the shared clock's 600 s window
+    // (runtime lane), so the sea is the same on every screen.
+    float omegas[4];
+    omegas[0] = 1.12050; omegas[1] = 1.41372; omegas[2] = 1.83260; omegas[3] = 2.25147;
     for (int i = 0; i < 4; i++) {
         float f = freqs[i];
         float a = 0.05 / (1.0 + float(i)) * calm;
-        float phase = dot(dirs[i], p) * f + t * sqrt(9.8 * f) * 0.55;
+        float phase = dot(dirs[i], p) * f + t * omegas[i];
         slope += dirs[i] * cos(phase) * a * f;
     }
     // Small ripples from noise.
@@ -803,7 +809,7 @@ void main() {
 
     // Foam: lines that run up the shore and fade, broken by noise; a lacy edge where water meets land.
     float shore = 1.0 - smoothstep(0.0, 1.5, depth);
-    float lines = smoothstep(0.6, 1.0, sin(depth * 7.0 - arkTime * 1.4 + arkNoise(vWorld.xz * 0.5) * 3.0));
+    float lines = smoothstep(0.6, 1.0, sin(depth * 7.0 - arkTime * 1.40324 + arkNoise(vWorld.xz * 0.5) * 3.0));
     float lace = smoothstep(0.35, 0.75, arkNoise(vWorld.xz * 1.8 + arkTime * 0.3));
     float foam = shore * (lines * 0.55 + (1.0 - smoothstep(0.0, 0.18, depth)) * 0.9) * mix(0.55, 1.0, lace) * inside * (1.0 - fresh * 0.75);
     if (flowing > 0.01) {
