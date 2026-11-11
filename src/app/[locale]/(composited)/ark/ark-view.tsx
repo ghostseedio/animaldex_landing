@@ -16,6 +16,7 @@ import {fixtureArkStory} from "@/lib/ark-story";
 import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFounder, type ArkFounders, type ArkFounderStory} from "@/lib/ark-founders";
 import {ArkBringerNames, ArkBroughtByFounder, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
@@ -194,6 +195,11 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     const [liteChoice, setLiteChoice] = useState<boolean | null>(null);
     const [liteOn, setLiteOn] = useState(false);
     const [reducedMotion, setReducedMotion] = useState(false);
+    // Sound (liveliness): always off until a tap. A remembered "on" only means the first tap on the world turns it on.
+    const [soundOn, setSoundOn] = useState(false);
+    const soundRemembered = useRef(false);
+    const [creditsOpen, setCreditsOpen] = useState(false);
+    const [credits, setCredits] = useState<Array<{text: string; page: string | null; license: string}>>([]);
     // What a screen reader hears: arrivals, what was selected, the replay's summary.
     const [announcement, setAnnouncement] = useState("");
     // Where focus goes back to when a card opened from the keyboard (the panel's row) closes.
@@ -303,6 +309,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         reducedMotion,
                         hours,
                         onFollowEnd: () => setFollowing(false),
+                        onSoundCredits: () => setCredits(sceneRef.current?.sound().credits ?? []),
                         onReady: () => setReady(true)
                     });
                     sceneRef.current = handle;
@@ -424,6 +431,33 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         if (back && document.contains(back)) back.focus();
         else if (back) mountRef.current?.querySelector("canvas")?.focus();
     }, [selected, herd, words]);
+
+    useEffect(() => {
+        try {
+            soundRemembered.current = initialSoundPreference(window.localStorage.getItem(ARK_SOUND_STORAGE_KEY), false).remembered;
+        } catch {
+            // No storage: off, and nothing remembered.
+        }
+    }, []);
+    /** Sound on or off: only ever from this tap (the audio is made inside it). */
+    const setSound = (next: boolean) => {
+        const scene = sceneRef.current;
+        if (!scene) return;
+        const ok = scene.setSound(next);
+        setSoundOn(next && ok);
+        setCredits(scene.sound().credits);
+        if (!next) setCreditsOpen(false);
+        try {
+            window.localStorage.setItem(ARK_SOUND_STORAGE_KEY, storedSoundPreference({on: next && ok, volume: 0.7}));
+        } catch {
+            // For this visit.
+        }
+        soundRemembered.current = false;
+    };
+    /** The first tap on the world, when sound was left on last time: it comes back on with that tap. */
+    const worldTapped = () => {
+        if (soundRemembered.current && !soundOn) setSound(true);
+    };
 
     const toggleLite = () => {
         const next = !(liteChoice ?? liteOn);
@@ -654,6 +688,28 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                                 <span id="ark-lite-hint" className="sr-only">{words.lite.hint}</span>
                             </button>
                         ) : null}
+                        {snapshot ? (
+                            <button
+                                type="button"
+                                role="switch"
+                                aria-checked={soundOn}
+                                aria-describedby="ark-sound-hint"
+                                onClick={() => setSound(!soundOn)}
+                                title={words.sound.hint}
+                                className={`${pill} min-h-9 shrink-0 border px-3 text-[13px] ${soundOn ? "border-primary-400/70 text-primary-100" : "border-line-100 text-ink-200 hover:border-primary-400"}`}
+                            >
+                                <span aria-hidden="true" className={`relative inline-block h-4 w-7 rounded-full transition-colors motion-reduce:transition-none ${soundOn ? "bg-primary-400/80" : "bg-white/20"}`}>
+                                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-[left] duration-200 motion-reduce:transition-none ${soundOn ? "left-[0.875rem]" : "left-0.5"}`} />
+                                </span>
+                                {words.sound.label}
+                                <span id="ark-sound-hint" className="sr-only">{words.sound.hint}</span>
+                            </button>
+                        ) : null}
+                        {soundOn ? (
+                            <button type="button" aria-expanded={creditsOpen} aria-controls="ark-sound-credits" onClick={() => setCreditsOpen((open) => !open)} className="min-h-9 shrink-0 px-1 text-[12px] font-semibold text-ink-300 underline-offset-4 hover:text-white hover:underline">
+                                {words.sound.credits}
+                            </button>
+                        ) : null}
                         {showMineToggle ? (
                             <button
                                 type="button"
@@ -670,6 +726,19 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         ) : null}
                         </div>
                     </div>
+                    {soundOn && creditsOpen ? (
+                        <div id="ark-sound-credits" className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-line-200 bg-canvas-900/80 px-3 py-2 text-[12px] leading-relaxed text-ink-200">
+                            {credits.length ? (
+                                <ul>
+                                    {credits.map((line) => (
+                                        <li key={line.text}>{line.page ? <a href={line.page} target="_blank" rel="noreferrer noopener" className="underline-offset-2 hover:underline">{line.text}</a> : line.text}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p>{words.sound.empty}</p>
+                            )}
+                        </div>
+                    ) : null}
                     <h1 id="ark-title" className="mt-1 max-w-4xl font-display text-[1.65rem] font-extrabold leading-[1.05] tracking-tight text-white [text-wrap:balance] sm:text-3xl md:text-[2.5rem]">
                         {words.title}
                     </h1>
@@ -688,7 +757,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             {/* Band 2: the world, edge to edge, and who is aboard (beside it on a desktop, under it on a phone). */}
             <div className="w-full md:flex md:h-[max(30rem,min(calc(100svh-18.5rem),56rem))]">
             <section ref={worldRef} aria-label={words.eyebrow} className="relative h-[max(26rem,min(66svh,48rem))] w-full overflow-hidden bg-[#ecdcc4] md:h-full md:min-w-0 md:flex-1">
-                {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" /> : null}
+                {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
 
                 {snapshot && !failed && !ready ? (
                     <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#ecdcc4]">

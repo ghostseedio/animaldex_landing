@@ -203,6 +203,12 @@
             "auto": "für dieses Gerät an",
             "hint": "Weniger Details, für eine flüssigere Ark auf diesem Gerät"
         },
+        "sound": {
+            "label": "Ton",
+            "hint": "Tierrufe und die Geräusche der Insel. Aus, bis du ihn einschaltest.",
+            "credits": "Tonnachweise",
+            "empty": "Noch keine Töne gehört."
+        },
         "a11y": {
             "scene": "Die Ark in 3D. Pfeiltasten bewegen die Ansicht, Plus und Minus zoomen, Escape schließt eine Karte. Danach folgt die Liste, wer an Bord ist.",
             "list": "Alle Arten an Bord, nach Region",

@@ -12,19 +12,27 @@
  *
  * Heads turn to look (`reactive.ts`, `head-look.ts`): each near instance
  * carries `arkLook` = (yaw, pitch, weight), and the head and neck turn about
- * the neck by it. A rigged animal turns its `head` and `neck` bones'
- * vertices (their skin weights, `arkHead`) about its neck joint as the clip
- * moves it; the others the front of the body about the neck, as the sleeping
- * droop does. The limits per body plan are applied before (`head-look.ts`).
+ * the neck by it. A rigged animal with a look chain (`rig-player.ts`
+ * `RigLookChain`, the rig contract's section 5) turns its neck and head
+ * bones: a rotation in the rest pose about each bone's joint, under the
+ * clip (`M_neck · R_neck`, `M_head · R_neck · R_head`), so a grazing head
+ * turns sideways at the ground; within the chain's own limits, split by its
+ * neck share. The others turn the front of the body about the neck, as the
+ * sleeping droop does. The limits per body plan are applied before
+ * (`head-look.ts`).
  *
  * "Dim" greys an animal toward the haze ("My animals" shows the viewer's
  * own in full colour and the rest dimmed).
  */
 
-import {Color, MeshStandardMaterial, Vector3, type Texture} from "three";
+import {Color, MeshStandardMaterial, Vector2, Vector3, Vector4, type Texture} from "three";
+import type {RigLookChain} from "@/ark-scene/rig-player";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
+import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
+import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
+import {varyShader} from "@/ark-scene/ark-variation";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -100,10 +108,24 @@ attribute vec4 arkJoints;
 attribute vec4 arkWeights;
 attribute vec4 arkRigA;
 attribute vec4 arkRigB;
-attribute float arkHead;
-uniform float arkNeckBone;
-uniform vec3 arkNeckPivot;
-uniform float arkRigHead;
+// The look chain: the neck's and the head's texture index (-1: none), their joints in the rest pose, and the
+// limits (yaw, pitch up, pitch down; radians) with the neck's share of the turn.
+uniform vec2 arkLookBones;
+uniform vec3 arkLookNeckPivot;
+uniform vec3 arkLookHeadPivot;
+uniform vec4 arkLookLimits;
+mat4 arkLookNeck = mat4(1.0);
+mat4 arkLookHead = mat4(1.0);
+bool arkLooking = false;
+/** T(pivot) · Ry(yaw) · Rx(pitch) · T(-pivot): yaw toward the animal's left (+x), pitch down (+). */
+mat4 arkTurn(vec3 pivot, float yaw, float pitch) {
+    float cy = cos(yaw);
+    float sy = sin(yaw);
+    float cp = cos(pitch);
+    float sp = sin(pitch);
+    mat3 r = mat3(cy, 0.0, -sy, 0.0, 1.0, 0.0, sy, 0.0, cy) * mat3(1.0, 0.0, 0.0, 0.0, cp, sp, 0.0, -sp, cp);
+    return mat4(vec4(r[0], 0.0), vec4(r[1], 0.0), vec4(r[2], 0.0), vec4(pivot - r * pivot, 1.0));
+}
 mat4 arkBone(float row, float bone) {
     int x = int(bone + 0.5) * 3;
     int y = int(row + 0.5);
@@ -113,7 +135,12 @@ mat4 arkBone(float row, float bone) {
     return mat4(r0.x, r1.x, r2.x, 0.0, r0.y, r1.y, r2.y, 0.0, r0.z, r1.z, r2.z, 0.0, r0.w, r1.w, r2.w, 1.0);
 }
 mat4 arkBoneAt(vec3 at, float bone) {
-    return arkBone(at.x, bone) * (1.0 - at.z) + arkBone(at.y, bone) * at.z;
+    mat4 m = arkBone(at.x, bone) * (1.0 - at.z) + arkBone(at.y, bone) * at.z;
+    if (arkLooking) {
+        if (abs(bone - arkLookBones.x) < 0.5) return m * arkLookNeck;
+        if (abs(bone - arkLookBones.y) < 0.5) return m * arkLookHead;
+    }
+    return m;
 }
 mat4 arkSkinAt(vec3 at) {
     return arkBoneAt(at, arkJoints.x) * arkWeights.x + arkBoneAt(at, arkJoints.y) * arkWeights.y
@@ -123,6 +150,16 @@ mat4 arkSkinAt(vec3 at) {
 
 /** The skin matrix this frame (before the normals), then applied to the position. */
 const RIG_SKIN = `
+// The head look on the chain's bones (the reactive layer's arkLook: + yaw to its left, + pitch up), clamped to the
+// chain's limits; the neck takes its share, the head the rest and rides on the neck's turn.
+if (arkLook.z > 0.001 && arkLookBones.y >= 0.0) {
+    float lookYaw = clamp(arkLook.x, -arkLookLimits.x, arkLookLimits.x) * arkLook.z;
+    float lookPitch = clamp(-arkLook.y, -arkLookLimits.y, arkLookLimits.z) * arkLook.z;
+    float neckShare = arkLookBones.x >= 0.0 ? arkLookLimits.w : 0.0;
+    arkLookNeck = arkTurn(arkLookNeckPivot, lookYaw * neckShare, lookPitch * neckShare);
+    arkLookHead = arkLookNeck * arkTurn(arkLookHeadPivot, lookYaw * (1.0 - neckShare), lookPitch * (1.0 - neckShare));
+    arkLooking = true;
+}
 mat4 arkSkin = arkSkinAt(arkRigA.xyz);
 if (arkRigB.w > 0.001) arkSkin = arkSkin * (1.0 - arkRigB.w) + arkSkinAt(arkRigB.xyz) * arkRigB.w;
 arkSkin = mat4(1.0) * (1.0 - arkRigA.w) + arkSkin * arkRigA.w;
@@ -162,9 +199,8 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         float mask = smoothstep(neckFrom, motionStill - run * 0.12, transformed.z);
         vec3 pivot = vec3(0.0, mix(motionBottom, motionTop, 0.62), neckFrom);
 #ifdef ARK_RIG
-        float rigged = arkRigA.w * arkRigHead;
-        mask = mix(mask, arkHead, rigged);
-        pivot = mix(pivot, (arkBoneAt(arkRigA.xyz, arkNeckBone) * vec4(arkNeckPivot, 1.0)).xyz, rigged);
+        // A rig with a look chain turns its bones (RIG_SKIN), as far as the rig is in: this takes the rest.
+        if (arkLookBones.y >= 0.0) mask *= 1.0 - arkRigA.w;
 #endif
         float lookYaw = arkLook.x * arkLook.z * mask;
         float lookPitch = arkLook.y * arkLook.z * mask;
@@ -213,8 +249,18 @@ export type AnimalMaterialOptions = {
     animated: boolean;
     /** A rigged mesh: its bone texture (`rig-player.ts`). */
     rig?: Texture | null;
-    /** A rigged mesh's neck: the bone (texture index) and its joint in the rest pose, when the rig has a head and neck. */
-    neck?: {bone: number; pivot: [number, number, number]} | null;
+    /**
+     * A rigged mesh's look chain (`rig-player.ts`): its neck and head bones, their rest joints and limits; null without
+     * a head bone. (Named apart from `look`, the animal-look pass's surface.)
+     */
+    lookChain?: RigLookChain | null;
+    /** The animal-look pass (`animal-look.ts`): the species' surface and eyes; null draws it as before. */
+    look?: SpeciesLook | null;
+    /** Which level this draws: the far level keeps the pass's cheapest form. */
+    level?: "near" | "far";
+    /** A fur-shell pass of the near (or rigged) mesh (`fur-shells.ts`), and how far its outer layer stands off (model units). */
+    shell?: boolean;
+    shellLength?: number;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -245,13 +291,20 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     };
     if (options.rig) {
         uniforms.arkBones = {value: options.rig};
-        uniforms.arkNeckBone = {value: options.neck?.bone ?? 0};
-        uniforms.arkNeckPivot = {value: new Vector3(...(options.neck?.pivot ?? [0, 0, 0]))};
-        uniforms.arkRigHead = {value: options.neck ? 1 : 0};
+        const chain = options.lookChain ?? null;
+        uniforms.arkLookBones = {value: new Vector2(chain ? chain.neck : -1, chain ? chain.head : -1)};
+        uniforms.arkLookNeckPivot = {value: new Vector3(...(chain?.neckPivot ?? [0, 0, 0]))};
+        uniforms.arkLookHeadPivot = {value: new Vector3(...(chain?.headPivot ?? [0, 0, 0]))};
+        uniforms.arkLookLimits = {value: new Vector4(chain?.yaw ?? 0, chain?.up ?? 0, chain?.down ?? 0, chain?.neckShare ?? 0)};
     }
-    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {})};
+    const level = options.level ?? (options.animated ? "near" : "far");
+    Object.assign(uniforms, lookUniforms(options.look ?? null, level, options.shellLength ?? 0.01));
+    material.userData.arkLook = {look: options.look ?? null, level, shell: Boolean(options.shell)};
+    material.userData.arkOptions = options;
+    material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...lookDefines(material)};
     const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? "-rig" : ""}`;
-    material.customProgramCacheKey = () => key;
+    material.customProgramCacheKey = () => key + lookCacheKey(material);
+    if (options.look) registerLookMaterial(material);
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -259,24 +312,37 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
 attribute vec3 arkInstance;
 varying float vArkDim;
 ${MOTION_DECLARATIONS}
-${options.rig ? RIG_DECLARATIONS : ""}`)
+${options.rig ? RIG_DECLARATIONS : ""}
+${LOOK_VERTEX_DECLARATIONS}`)
             .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
 ${options.rig ? RIG_SKIN : ""}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 vArkDim = arkInstance.y;
-${IDLE}`);
+${LOOK_VERTEX}
+${IDLE}
+${SHELL_VERTEX}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
 uniform vec3 arkDimTint;
-uniform vec3 arkRim;`)
-            .replace("#include <opaque_fragment>", `// A warm rim where the surface turns away: the low sun catching fur and feathers at the edge.
-outgoingLight += arkRim * pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 3.0) * (1.0 - vArkDim);
+uniform vec3 arkRim;
+${LOOK_FRAGMENT_DECLARATIONS}`)
+            .replace("#include <map_fragment>", `#include <map_fragment>
+${LOOK_ALBEDO}`)
+            .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
+${LOOK_ROUGHNESS}`)
+            .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+${LOOK_NORMAL}`)
+            .replace("#include <lights_fragment_begin>", `#include <lights_fragment_begin>
+${LOOK_LIGHT}`)
+            .replace("#include <opaque_fragment>", `${LOOK_FINISH}
 #include <opaque_fragment>
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
     gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);
 }`);
+        // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
+        varyShader(shader, options.maxY - options.minY);
     };
     return material;
 }

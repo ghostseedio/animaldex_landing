@@ -144,16 +144,20 @@ async function record(cdp, name) {
         if (n < 2) return null;
         const fps = Math.max(Math.min((stamps.length - 1) / (stamps[stamps.length - 1] - stamps[0] || 1), 60), 4);
         const file = path.join(out, `${name}.mp4`);
-        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", fps.toFixed(2), "-i", path.join(dir, "f%05d.jpg"), "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "24", file]);
+        // Each frame held for as long as it was on screen (the screencast's own timestamps), so the video's clock is
+        // the page's: a frame that took 200 ms to draw lasts 200 ms, and "8 s in" in the note is 8 s into the video.
+        const list = stamps.map((stamp, i) => `file 'f${String(i).padStart(5, "0")}.jpg'\nduration ${Math.max((stamps[i + 1] ?? stamp + 1 / fps) - stamp, 0.001).toFixed(4)}`).join("\n");
+        writeFileSync(path.join(dir, "frames.txt"), `${list}\nfile 'f${String(stamps.length - 1).padStart(5, "0")}.jpg'\n`);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", path.join(dir, "frames.txt"), "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-fps_mode", "vfr", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "24", file]);
         rmSync(dir, {recursive: true, force: true});
-        return {file, frames: n, fps: Math.round(fps * 10) / 10};
+        return {file, frames: n, fps: Math.round(fps * 10) / 10, first: stamps[0]};
     };
 }
 
 const summary = [];
 if (!perfOnly) {
     const wanted = arg("scenarios", "");
-    for (const name of wanted ? wanted.split(",") : ["predator_herd", "pack_hunt", "squirrel_cache", "avoid_spot", "parents_shield", "storm", "curious_camera", "sentinel_raptor"]) {
+    for (const name of wanted ? wanted.split(",") : ["predator_herd", "pack_hunt", "squirrel_cache", "avoid_spot", "parents_shield", "storm", "curious_camera", "sentinel_raptor", "heads_closeup"]) {
         const {context, page, errors, cdp} = await open("desktop", "quality=high", true);
         const prepared = await page.evaluate(() => window.__arkIntel.prepare());
         log(name, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier}));
@@ -161,10 +165,13 @@ if (!perfOnly) {
         const stop = await record(cdp, name);
         const samples = [];
         const started = Date.now();
+        // (The video starts with the first screencast frame, a moment after this: `videoStartsS` below.)
         let shot = 0;
-        while (Date.now() - started < seconds * 1000) {
+        // A scenario may ask for longer (the squirrel's return comes after 20 s); --seconds sets the rest.
+        const length = arg("seconds", null) ? seconds : info.seconds ?? seconds;
+        while (Date.now() - started < length * 1000) {
             samples.push(await page.evaluate((watch) => window.__arkIntel.sample(watch), info.watch));
-            const k = Math.floor((Date.now() - started) / ((seconds * 1000) / 5));
+            const k = Math.floor((Date.now() - started) / ((length * 1000) / 5));
             if (k >= shot) {
                 await page.screenshot({path: path.join(out, `${name}-${String(shot).padStart(2, "0")}.png`)});
                 shot++;
@@ -195,6 +202,8 @@ if (!perfOnly) {
             note: info.note,
             video: video ? path.basename(video.file) : null,
             videoFps: video?.fps ?? null,
+            // Seconds from the scenario's start (its first sample) to the video's first frame: subtract it from a note's times.
+            videoStartsS: video ? Math.round((video.first - started / 1000) * 10) / 10 : null,
             animals: info.watch.length,
             actions: Object.fromEntries(Object.entries(actions).map(([id, set]) => [id.slice(-4), [...set]])),
             firstReactionS: Object.fromEntries(Object.entries(firstAt).map(([id, t]) => [id.slice(-4), t])),

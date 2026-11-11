@@ -203,6 +203,12 @@
             "auto": "activée sur cet appareil",
             "hint": "Moins de détails, pour une Ark plus fluide sur cet appareil"
         },
+        "sound": {
+            "label": "Son",
+            "hint": "Les cris des animaux et les sons de l'île. Coupé tant que vous ne l'activez pas.",
+            "credits": "Crédits sonores",
+            "empty": "Aucun son entendu pour l'instant."
+        },
         "a11y": {
             "scene": "L'Ark en 3D. Les flèches déplacent la vue, plus et moins zooment, Échap ferme une fiche. La liste de qui est à bord suit.",
             "list": "Toutes les espèces à bord, par région",

@@ -1,4 +1,4 @@
-import {readdir, readFile} from "node:fs/promises";
+import {readdir, readFile, stat} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {NextResponse} from "next/server";
@@ -17,6 +17,10 @@ import {NextResponse} from "next/server";
  *   ark-rig/v1/manifest.json                rig/publish/manifest.json  (publish_rig.py's local build:
  *   ark-rig/v1/<slug>/<version>.rig.glb     rig/publish/<slug>/<version>.rig.glb   the exact bytes it uploads;
  *   ark-rig/vN/…                            rig/publish-vN/…                        a later set, --version vN)
+ *
+ * `ARK_RIG_DEV_ROOT` (another build folder) serves a rig set from there
+ * when it has that set's folder, so a test set (a few sample rigs) can be
+ * tried without touching the shared build's.
  *
  * The fallback keeps the scene usable while the ark set is still being
  * built: those species load the full model at both levels of detail. In
@@ -48,7 +52,10 @@ export async function GET(_request: Request, {params}: {params: {path: string[]}
     const parts = params.path ?? [];
     if (parts[0] === "ark-rig" && /^v[0-9]{1,3}$/.test(parts[1] ?? "")) {
         // v1 from rig/publish, a later set from rig/publish-<version> (`publish_rig.py --version`).
-        const publish = path.join(root, "rig", parts[1] === "v1" ? "publish" : `publish-${parts[1]}`);
+        const folder = parts[1] === "v1" ? "publish" : `publish-${parts[1]}`;
+        const override = process.env.ARK_RIG_DEV_ROOT?.trim();
+        const overridden = override ? path.join(override, "rig", folder) : null;
+        const publish = overridden && (await stat(overridden).then((s) => s.isDirectory()).catch(() => false)) ? overridden : path.join(root, "rig", folder);
         if (parts.length === 3 && parts[2] === "manifest.json") return file(path.join(publish, "manifest.json"), "application/json");
         const rig = parts.length === 4 && SLUG.test(parts[2]) ? /^([0-9a-f]{12})\.rig\.glb$/.exec(parts[3]) : null;
         return rig ? file(path.join(publish, parts[2], `${rig[1]}.rig.glb`), "model/gltf-binary") : notFound();

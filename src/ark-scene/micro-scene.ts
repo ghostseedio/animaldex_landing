@@ -199,7 +199,7 @@ export function buildMicroScene(): MicroScene {
     // The glow: an additive sprite brighter than white (the frame is lit in HDR, so it survives the tone mapping and
     // feeds the bloom), not fogged, drawn after everything.
     const glowMap = glowTexture();
-    const glowMaterial = new SpriteMaterial({map: glowMap, color: new Color(3.2, 2.5, 1.5), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false});
+    const glowMaterial = new SpriteMaterial({map: glowMap, color: new Color(2.2, 1.7, 1.05), blending: AdditiveBlending, depthWrite: false, transparent: true, opacity: 0, fog: false});
     const glow = new Sprite(glowMaterial);
     glow.position.set(C.light.x, C.light.y + 0.06, C.light.z + 0.14);
     glow.scale.setScalar(2.6);
@@ -291,7 +291,8 @@ export function buildMicroScene(): MicroScene {
             for (const halo of [glow, ...lampGlows]) {
                 if (!halo.visible) continue;
                 halo.getWorldPosition(haloAt);
-                halo.scale.setScalar(Math.min(Math.max(haloAt.distanceTo(cameraAt) * 0.35, 0.25), 2.6));
+                // Graphics pass: a small halo up close (about 7° across), never a disc that floods the frame.
+                halo.scale.setScalar(Math.min(Math.max(haloAt.distanceTo(cameraAt) * 0.12, 0.18), 1.6));
             }
         },
         triangles,

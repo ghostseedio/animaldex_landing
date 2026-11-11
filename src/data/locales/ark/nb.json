@@ -203,6 +203,12 @@
             "auto": "på for denne enheten",
             "hint": "Færre detaljer for en jevnere Ark på denne enheten"
         },
+        "sound": {
+            "label": "Lyd",
+            "hint": "Dyrenes rop og lydene på øya. Av til du slår den på.",
+            "credits": "Lydkreditering",
+            "empty": "Ingen lyder hørt ennå."
+        },
         "a11y": {
             "scene": "Ark i 3D. Piltastene flytter visningen, pluss og minus zoomer, Escape lukker et kort. Deretter følger listen over hvem som er om bord.",
             "list": "Hver art om bord, etter region",

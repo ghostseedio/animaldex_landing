@@ -160,8 +160,17 @@ export type ArkSceneStats = {
     scheduled?: number;
     behaviourMs?: number;
     behaviourBuildMs?: number;
+    /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
+    behaviourBuildSlices?: number;
+    behaviourBuildLongestMs?: number;
     rigsLoaded: number;
     rigBytes: number;
+    /** The animal-look pass: on, animals in fur shells this frame, close-up skins on the GPU. */
+    animalLook?: boolean;
+    furShells?: number;
+    closeUpSkins?: number;
+    /** The liveliness wiring this frame: sheltering, young at heel, moved off the tide, rain drops, traces, sound. */
+    liveliness?: {/** Main-thread ms a frame in the wiring (mean of the last 60). */ ms: number; /** Last frame's split (ms). */ split?: {pose: number; drawn: number; step: number}; sheltering: number; young: number; tideMoved: number; drops: number; haze: number; prints: number; ripples: number; worn: number; voices: number; beds: number; soundOn: boolean};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
@@ -220,6 +229,20 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     lite?: boolean | null;
     /** The scene's own art (ground textures, sky light): `<graphicsBase>/ground-albedo-512.webp`… Default "/ark/graphics". */
     graphicsBase?: string;
+    /**
+     * The animal-look pass (`animal-look.ts`): surfaces by species, wet and dust, eyes, fur shells, close-up skins and
+     * contact shadows on the surface. Default on; false draws the animals exactly as before.
+     */
+    animalLook?: boolean;
+    /**
+     * The close-up skins' folder (`<closeUpBase>/manifest.json`, `<slug>/<version>.near.ktx2`), loaded only when the
+     * camera is close. Default: beside the model set (`…/v1/ark` → `…/v1/ark-closeup`); null: none.
+     */
+    closeUpBase?: string | null;
+    /** Where the KTX2 transcoder is (`basis_transcoder.js` / `.wasm`). Default "/ark/basis/". */
+    basisBase?: string;
+    /** The asset library (trees, plants, rocks): `<assetBase>/trees/oak-a.lod0.glb`… Default its manifest's base, "/ark/assets/v1". */
+    assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
     /**
@@ -227,6 +250,13 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * dew, mist, smoke: `src/ark-scene/props`): true on (default), false off.
      */
     props?: boolean;
+    /**
+     * The storage host the animals' sounds come from (`https://<project>.supabase.co`): the chat's
+     * `animal-chat-sounds` bucket. Default: the model set's host; null: no calls.
+     */
+    soundBase?: string | null;
+    /** The list of recordings heard changed (the Sounds panel's credits). */
+    onSoundCredits?: () => void;
 };
 
 /** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
@@ -285,13 +315,28 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     follow: (id: string | null) => void;
     /**
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
-     * island clock with null. Any field left out keeps following the clock.
+     * island clock with null. Any field left out keeps following the clock. `rain` (0–1, falling now): coats soak in it
+     * (the animal-look pass) and animals shelter from it (liveliness); a pinned `wetness` without it means no rain.
      */
-    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number; /** Rain falling, 0–1 (animals shelter above 0.45). */ rain: number; fog: number}> | null) => void;
+    /**
+     * Sound on or off (liveliness wiring, `ark-audio.ts`). Call it only from the viewer's tap (the handler itself):
+     * the audio is made there and nowhere else, so nothing sounds before a tap, on the web or in the apps.
+     * False when the device has no WebAudio.
+     */
+    setSound: (on: boolean) => boolean;
+    /** Whether sound is on now, whether it has been unlocked by a tap, and every recording heard in this visit (the Sounds panel). */
+    sound: () => {on: boolean; unlocked: boolean; credits: Array<{text: string; page: string | null; license: string}>};
+    setSoundVolume: (volume: number) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
     setClockScale: (scale: number, atMs?: number) => void;
     setHours: (hours: number | null) => void;
+    /**
+     * The animal-look pass on or off (off: every animal exactly as before). `islandMs` pins the island time its
+     * swims are timed by (who is wet from a swim), or follows the clock again with null.
+     */
+    setAnimalLook: (on: boolean, pin?: {islandMs?: number | null}) => void;
     /**
      * Act out what the server says happened ("while you were away"): each act
      * in turn, at speed, from the Ark as it is now (who arrived is held back

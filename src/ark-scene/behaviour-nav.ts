@@ -9,6 +9,7 @@
  */
 
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
+import {chunked, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {TERRAIN_HALF} from "@/ark-scene/world";
 
 export type NavPoint = {x: number; z: number};
@@ -68,6 +69,43 @@ class Heap {
     }
 }
 
+/** The grid's cells: walkable (1 dry ground with nothing in the way), steepness (rise over run), water depth, ground height. */
+export type NavCells = {version: string; size: number; walk: Uint8Array; steep: Float32Array; depth: Float32Array; height: Float32Array};
+
+/**
+ * The grid's cells as tasks, a row at a time (`behaviour-build.ts`): heights and depths first, then each inner
+ * cell's slope and whether it can be walked. The same numbers in the same order as the build all at once.
+ */
+export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cells: NavCells} {
+    const cells: NavCells = {version: sampler.version, size: SIZE, walk: new Uint8Array(SIZE * SIZE), steep: new Float32Array(SIZE * SIZE), depth: new Float32Array(SIZE * SIZE), height: new Float32Array(SIZE * SIZE)};
+    const {walk, steep, depth, height} = cells;
+    const heights = chunked(() => SIZE, 1, (j) => {
+        for (let i = 0; i < SIZE; i++) {
+            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
+            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+            const h = sampler.heightAt(x, z);
+            const k = j * SIZE + i;
+            height[k] = h;
+            depth[k] = h < 0 ? -h : 0;
+        }
+    });
+    const walkable = chunked(() => SIZE - 2, 1, (row) => {
+        const j = row + 1;
+        for (let i = 1; i < SIZE - 1; i++) {
+            const k = j * SIZE + i;
+            const h = height[k];
+            if (h <= 0.05) continue;
+            const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + SIZE] - height[k - SIZE])) / (2 * CELL);
+            steep[k] = slope;
+            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
+            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+            if (sampler.blocked(x, z, 0.2)) continue;
+            walk[k] = 1;
+        }
+    });
+    return {tasks: [heights, walkable], cells};
+}
+
 export class NavGrid {
     readonly version: string;
     /** 1 dry ground with nothing in the way, 0 not. */
@@ -78,35 +116,24 @@ export class NavGrid {
     private readonly depth: Float32Array;
     private readonly height: Float32Array;
 
-    constructor(private readonly sampler: ArkWorldSampler) {
+    /** Built now from the sampler, or from cells already worked out (`navGridBuild`, a slice at a time). */
+    constructor(private readonly sampler: ArkWorldSampler, built?: NavCells) {
+        let cells = built ?? null;
+        if (!cells) {
+            const job = navCellTasks(sampler);
+            new SlicedBuild(job.tasks, () => job.cells).run();
+            cells = job.cells;
+        }
         this.version = sampler.version;
-        this.walk = new Uint8Array(SIZE * SIZE);
-        this.steep = new Float32Array(SIZE * SIZE);
-        this.depth = new Float32Array(SIZE * SIZE);
-        this.height = new Float32Array(SIZE * SIZE);
-        for (let j = 0; j < SIZE; j++) {
-            for (let i = 0; i < SIZE; i++) {
-                const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-                const z = -TERRAIN_HALF + (j + 0.5) * CELL;
-                const h = sampler.heightAt(x, z);
-                const k = j * SIZE + i;
-                this.height[k] = h;
-                this.depth[k] = h < 0 ? -h : 0;
-            }
-        }
-        for (let j = 1; j < SIZE - 1; j++) {
-            for (let i = 1; i < SIZE - 1; i++) {
-                const k = j * SIZE + i;
-                const h = this.height[k];
-                if (h <= 0.05) continue;
-                const slope = Math.max(Math.abs(this.height[k + 1] - this.height[k - 1]), Math.abs(this.height[k + SIZE] - this.height[k - SIZE])) / (2 * CELL);
-                this.steep[k] = slope;
-                const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-                const z = -TERRAIN_HALF + (j + 0.5) * CELL;
-                if (sampler.blocked(x, z, 0.2)) continue;
-                this.walk[k] = 1;
-            }
-        }
+        this.walk = cells.walk;
+        this.steep = cells.steep;
+        this.depth = cells.depth;
+        this.height = cells.height;
+    }
+
+    /** The cells (read only: for the determinism tests and the scene stats). */
+    get cells(): NavCells {
+        return {version: this.version, size: SIZE, walk: this.walk, steep: this.steep, depth: this.depth, height: this.height};
     }
 
     private cellOf(x: number, z: number): [number, number] {
@@ -223,7 +250,11 @@ export class NavGrid {
         for (let k: number | undefined = best; k !== undefined && k !== start; k = from.get(k)) cells.push(k);
         cells.reverse();
         const raw: NavPoint[] = [a, ...cells.map((k) => this.centre(k % SIZE, Math.floor(k / SIZE)))];
-        if (best === goal) raw[raw.length - 1] = b;
+        // Reached: it ends at b itself (and still starts at a when both are in one cell: it used to lose a, and jump).
+        if (best === goal) {
+            if (raw.length > 1) raw[raw.length - 1] = b;
+            else raw.push(b);
+        }
         // Smooth: from each point, jump to the furthest one in a clear straight line.
         const out: NavPoint[] = [raw[0]];
         let at = 0;
@@ -242,10 +273,30 @@ export class NavGrid {
 }
 
 let grid: NavGrid | null = null;
+/** A grid being built a slice at a time (`navGridBuild`), finished at once if it is asked for before it is done. */
+let building: {sampler: ArkWorldSampler; build: SlicedBuild<NavGrid>} | null = null;
 /** The grid for this sampler, built once (and again when the sampler's version changes). */
 export function navGrid(sampler: ArkWorldSampler): NavGrid {
-    if (!grid || grid.version !== sampler.version) grid = new NavGrid(sampler);
+    if (!grid || grid.version !== sampler.version) grid = building && building.sampler === sampler ? building.build.run() : new NavGrid(sampler);
     return grid;
+}
+
+/** The grid for this sampler built a row at a time (`SlicedBuild.step`); it becomes `navGrid`'s once done. */
+export function navGridBuild(sampler: ArkWorldSampler): SlicedBuild<NavGrid> {
+    if (grid && grid.version === sampler.version) {
+        const built = grid;
+        return new SlicedBuild<NavGrid>([], () => built);
+    }
+    if (building && building.sampler === sampler) return building.build;
+    const job = navCellTasks(sampler);
+    const build = new SlicedBuild<NavGrid>(job.tasks, () => {
+        const made = new NavGrid(sampler, job.cells);
+        grid = made;
+        if (building?.build === build) building = null;
+        return made;
+    });
+    building = {sampler, build};
+    return build;
 }
 
 export function pathLength(path: NavPoint[]): number {

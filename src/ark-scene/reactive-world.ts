@@ -43,6 +43,20 @@ export function reactiveWorldQueries(sampler: ArkWorldSampler, samples = 6): Rea
         }
         return d;
     };
+    // The terrain's height per half-metre cell, kept (it never moves): a line of sight samples the same ground again and again.
+    const heights = new Map<number, number>();
+    const groundAt = (x: number, z: number) => {
+        const cx = Math.round(x * 2);
+        const cz = Math.round(z * 2);
+        const key = (cx + 32768) * 65536 + (cz + 32768);
+        let h = heights.get(key);
+        if (h === undefined) {
+            h = Math.max(sampler.heightAt(cx / 2, cz / 2), 0);
+            if (heights.size > 200_000) heights.clear();
+            heights.set(key, h);
+        }
+        return h;
+    };
     const queries: ReactiveWorldQueries = {
         samples,
         sight: (from, to) => {
@@ -55,7 +69,7 @@ export function reactiveWorldQueries(sampler: ArkWorldSampler, samples = 6): Rea
                 const z = from.z + (to.z - from.z) * u;
                 const y = from.y + (to.y - from.y) * u;
                 // A ridge or a bank between them: no sight.
-                if (Math.max(sampler.heightAt(x, z), 0) > y) return 0;
+                if (groundAt(x, z) > y) return 0;
                 // A trunk or a rock: most of the view; dense leaves, reeds, a thicket: some of it per sample.
                 if (sampler.blocked(x, z, 0.25)) clear *= 0.45;
                 clear *= 1 - 0.32 * densityAt(x, z);

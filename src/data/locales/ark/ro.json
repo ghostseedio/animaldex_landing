@@ -203,6 +203,12 @@
             "auto": "activată pe acest dispozitiv",
             "hint": "Mai puține detalii, pentru o Ark mai fluidă pe acest dispozitiv"
         },
+        "sound": {
+            "label": "Sunet",
+            "hint": "Strigătele animalelor și sunetele insulei. Oprit până îl pornești.",
+            "credits": "Credite pentru sunete",
+            "empty": "Încă nu s-a auzit niciun sunet."
+        },
         "a11y": {
             "scene": "Ark în 3D. Săgețile mută vederea, plus și minus fac zoom, Escape închide un card. Urmează lista celor de la bord.",
             "list": "Toate speciile de la bord, pe regiuni",

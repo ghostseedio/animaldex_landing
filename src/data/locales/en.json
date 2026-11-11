@@ -4223,6 +4223,12 @@
       "auto": "on for this device",
       "hint": "Fewer details, for a smoother Ark on this device"
     },
+    "sound": {
+      "label": "Sound",
+      "hint": "Animal calls and the sounds of the island. Off until you turn it on.",
+      "credits": "Sound credits",
+      "empty": "No sounds heard yet."
+    },
     "a11y": {
       "scene": "The Ark in 3D. Arrow keys move the view, plus and minus zoom, Escape closes a card. The list of who is aboard follows.",
       "list": "Every species aboard, by region",

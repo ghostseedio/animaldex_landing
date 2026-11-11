@@ -8,10 +8,18 @@
 <style>
   html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   #ark { position: fixed; inset: 0; }
+  /* Sound (liveliness): off until this is tapped, inside the panel (a host's message can't start audio). */
+  #ark-sound { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+  #ark-sound[hidden] { display: none; }
+  #ark-sound svg { width: 20px; height: 20px; }
+  #ark-sound .on { display: none; }
+  #ark-sound[aria-pressed="true"] .on { display: inline; }
+  #ark-sound[aria-pressed="true"] .off { display: none; }
 </style>
 </head>
 <body>
 <div id="ark"></div>
+<button id="ark-sound" type="button" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 5 6m0-6-5 6"/></svg></button>
 <script src="./ark-scene.js"></script>
 <script>
 /*
@@ -37,7 +45,9 @@
  *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
  *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
+ *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * {type: "ark:sound", on} when the viewer turns sound on or off,
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
@@ -107,7 +117,23 @@
     });
     for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
     runtimeHeld = {};
+    var button = document.getElementById("ark-sound");
+    var label = words && words.sound ? words.sound.label : "Sound";
+    button.setAttribute("aria-label", label);
+    button.title = words && words.sound ? words.sound.hint : label;
+    button.hidden = false;
   }
+
+  // Sound: nothing plays until this button is tapped (and nothing is remembered in the apps' panel).
+  var soundOn = false;
+  function setSound(on) {
+    if (!scene) return;
+    var ok = scene.setSound(on);
+    soundOn = Boolean(on && ok);
+    document.getElementById("ark-sound").setAttribute("aria-pressed", soundOn ? "true" : "false");
+    tell({type: "ark:sound", on: soundOn});
+  }
+  document.getElementById("ark-sound").addEventListener("click", function () { setSound(!soundOn); });
 
   function read() {
     return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead])
@@ -135,6 +161,7 @@
     else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);
     else if (scene && message.type === "ark:herd") scene.selectHerd(message.key || null);
     else if (scene && message.type === "ark:lite") scene.setLite(message.value === true ? true : message.value === false ? false : null);
+    else if (scene && message.type === "ark:sound" && message.value === false) setSound(false);
   }
   if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
   window.AnimalDexArkHost = {send: receive};

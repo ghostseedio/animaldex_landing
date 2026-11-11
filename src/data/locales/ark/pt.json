@@ -203,6 +203,12 @@
             "auto": "ativada neste dispositivo",
             "hint": "Menos detalhes, para uma Ark mais fluida neste dispositivo"
         },
+        "sound": {
+            "label": "Som",
+            "hint": "Os chamados dos animais e os sons da ilha. Desligado até você ativar.",
+            "credits": "Créditos de som",
+            "empty": "Nenhum som ouvido ainda."
+        },
         "a11y": {
             "scene": "A Ark em 3D. As setas movem a visão, mais e menos dão zoom, Esc fecha um cartão. Em seguida vem a lista de quem está a bordo.",
             "list": "Todas as espécies a bordo, por região",

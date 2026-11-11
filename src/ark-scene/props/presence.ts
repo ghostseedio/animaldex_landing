@@ -18,6 +18,8 @@
  */
 
 import type {ArkAnimal, ArkNestRow, ArkSnapshot, ArkZone} from "@/ark-scene/types";
+import {nestProfile, type NestProfile} from "@/ark-scene/props/nest-kinds";
+import {seasonWindow} from "@/ark-scene/props/nest-growth";
 
 export const PROP_GROUPS = [
     "birds",
@@ -38,9 +40,6 @@ export const PROP_GROUPS = [
 ] as const;
 export type PropGroup = typeof PROP_GROUPS[number];
 
-/** Where a bird nests. */
-export type NestStyle = "tree" | "cliff" | "ground" | "eaves" | "hole" | "barn" | "none";
-
 const BIRD_NOUNS = new Set([
     "sparrow", "owl", "eagle", "hawk", "heron", "mallard", "duck", "macaw", "parrot", "puffin", "penguin", "swallow", "martin", "swift", "stork", "woodpecker",
     "finch", "robin", "gull", "tern", "pigeon", "dove", "crow", "raven", "magpie", "jay", "kingfisher", "falcon", "kestrel", "kite", "vulture", "condor", "swan",
@@ -52,15 +51,6 @@ const BIRD_NOUNS = new Set([
     "goshawk", "sparrowhawk", "shrike", "wagtail", "pipit", "dipper", "kiwi", "cassowary", "hoatzin", "trogon", "quetzal", "motmot", "jacana", "stilt", "avocet",
     "curlew", "godwit", "snipe", "woodcock", "oystercatcher", "spoonbill", "bittern", "frigatebird", "tropicbird", "skua", "honeyeater", "sunbird", "drongo"
 ]);
-
-/** Nest styles by head noun (the rest by the zone). */
-const NEST_BY_NOUN: Array<[RegExp, NestStyle]> = [
-    [/^(sparrow|swallow|martin|swift|starling|wagtail)$/, "eaves"],
-    [/^(macaw|parrot|woodpecker|toucan|hornbill|kingfisher|tit|chickadee|nuthatch|cockatoo|lorikeet|parakeet|budgerigar|hoopoe|roller|trogon|quetzal|motmot|kookaburra|bee-eater)$/, "hole"],
-    [/^(eagle|falcon|kestrel|vulture|condor|raven|gull|kittiwake|guillemot|razorbill|fulmar|gannet|booby|puffin|auk|petrel|shearwater|albatross|skua|frigatebird|tropicbird|cormorant)$/, "cliff"],
-    [/^(heron|egret|stork|hawk|kite|crow|magpie|jay|pigeon|dove|robin|finch|thrush|blackbird|oriole|cardinal|tanager|weaver|osprey|buzzard|goshawk|sparrowhawk|spoonbill|ibis|pelican|hummingbird|cuckoo|honeyeater|sunbird|drongo|shrike|bunting|warbler|wren|treecreeper|hoatzin)$/, "tree"],
-    [/^(mallard|duck|goose|swan|plover|lapwing|sandpiper|ostrich|emu|rhea|quail|pheasant|grouse|peacock|peafowl|turkey|hen|chicken|rooster|flamingo|tern|crane|coot|moorhen|rail|bustard|lark|skylark|nightjar|pipit|loon|grebe|jacana|stilt|avocet|curlew|godwit|snipe|woodcock|oystercatcher|bittern|kiwi|cassowary|secretarybird|dipper)$/, "ground"]
-];
 
 /** Head nouns of each structure-making group. */
 const GROUP_NOUNS: Array<[PropGroup, RegExp]> = [
@@ -110,29 +100,6 @@ export function speciesGroups(animal: Pick<ArkAnimal, "model_slug" | "name" | "z
     return groups;
 }
 
-/** Where a bird nests: by its head noun, else by its zone. Emperor penguins keep their egg on their feet. */
-export function nestStyle(animal: Pick<ArkAnimal, "model_slug" | "name" | "zone">): NestStyle {
-    if (/emperor-penguin|king-penguin/.test(animal.model_slug)) return "none";
-    if (/barn-owl/.test(animal.model_slug)) return "barn";
-    const noun = headNoun(animal.model_slug);
-    for (const [pattern, style] of NEST_BY_NOUN) if (pattern.test(noun)) return style;
-    if (noun === "owl") return "hole";
-    switch (animal.zone) {
-        case "mountains":
-        case "seashore":
-        case "polar":
-            return "cliff";
-        case "woodland":
-        case "rainforest":
-        case "river_lake":
-            return "tree";
-        case "farm_garden":
-            return "eaves";
-        default:
-            return "ground";
-    }
-}
-
 /** The Ark's day of the year (1 Ark year = 365 Ark days, `voyage_ark_day`). */
 export function arkDayOfYear(arkDay: number | null | undefined): number | null {
     if (typeof arkDay !== "number" || !Number.isFinite(arkDay)) return null;
@@ -149,36 +116,25 @@ export function arkDayOfYear(arkDay: number | null | undefined): number | null {
 export function breedingSeason(zone: ArkZone, arkDay: number | null | undefined): number {
     const day = arkDayOfYear(arkDay);
     if (day === null) return 0;
-    const window = (from: number, to: number) => {
-        if (day < from || day > to) return 0;
-        return Math.sin((Math.PI * (day - from)) / (to - from)) ** 0.5;
-    };
-    switch (zone) {
-        case "polar":
-            return window(150, 240);
-        case "rainforest":
-        case "coral_reef":
-            return Math.max(window(90, 320), 0.35);
-        case "desert":
-        case "grassland":
-            return window(60, 200);
-        case "seashore":
-            // Seabirds and the turtles' beach: late spring through summer.
-            return window(110, 250);
-        default:
-            return window(70, 190);
-    }
+    const [from, to] = seasonWindow(zone);
+    const inWindow = day < from || day > to ? 0 : Math.sin((Math.PI * (day - from)) / (to - from)) ** 0.5;
+    // The tropics breed most of the year.
+    return zone === "rainforest" || zone === "coral_reef" ? Math.max(inWindow, 0.35) : inWindow;
 }
 
 /** How long chicks stay in the nest, in Ark days. */
 export const FLEDGE_ARK_DAYS = 24;
 
 export type NestPlan = {
-    /** The species (its kind for a breed). */
+    /** The species and zone (one nest per species per zone). */
     key: string;
+    /** The species (its kind for a breed): `nest-growth.ts`'s speciesId. */
+    speciesId: string;
     slug: string;
+    name: string;
     zone: ArkZone;
-    style: NestStyle;
+    /** What it builds and where (`nest-kinds.ts`). */
+    profile: NestProfile;
     /** The adult that sits it (its id), when one is aboard and not a youngster. */
     sitter: string | null;
     /** Eggs in it now (the server's clutch), 0 for none. */
@@ -226,14 +182,14 @@ export function propsPresence(snapshot: Pick<ArkSnapshot, "animals" | "ark_day" 
     }
     for (const [key, members] of Array.from(bySpecies.entries())) {
         const first = members[0];
-        const style = nestStyle(first);
-        if (style === "none") continue;
+        const profile = nestProfile(first);
+        if (profile.form === "none") continue;
         const clutch = clutches.get(`${first.species_profile_id}|${first.zone}`) ?? clutches.get(`${first.kind_species_profile_id ?? ""}|${first.zone}`) ?? null;
         const chicks = members.filter(young).length;
         const season = breedingSeason(first.zone, arkDay);
         if (!clutch && !chicks && season <= 0) continue;
         const sitter = members.find((member) => !young(member))?.id ?? null;
-        nests.push({key, slug: first.model_slug, zone: first.zone, style, sitter, eggs: clutch ? Math.min(Math.max(clutch.eggs ?? 3, 1), 6) : 0, chicks: Math.min(chicks, 4), season});
+        nests.push({key, speciesId: speciesKey(first), slug: first.model_slug, name: first.name, zone: first.zone, profile, sitter, eggs: clutch ? Math.min(Math.max(clutch.eggs ?? 3, 1), 6) : 0, chicks: Math.min(chicks, 4), season});
     }
     nests.sort((a, b) => a.key.localeCompare(b.key));
 
@@ -253,7 +209,7 @@ export function propsPresence(snapshot: Pick<ArkSnapshot, "animals" | "ark_day" 
 /** The groups present, as a stable string (rebuild the gated props only when it changes). */
 export function presenceKey(presence: Presence): string {
     const groups = PROP_GROUPS.filter((group) => presence.groups.has(group)).join(",");
-    const nests = presence.nests.map((nest) => `${nest.key}:${nest.style}:${nest.sitter ?? ""}:${nest.eggs}:${nest.chicks}`).join(";");
+    const nests = presence.nests.map((nest) => `${nest.key}:${nest.profile.form}:${nest.sitter ?? ""}:${nest.eggs}:${nest.chicks}`).join(";");
     const turtles = presence.turtleNests.map((nest) => `${nest.key}:${nest.eggs}`).join(";");
     return `${groups}|${nests}|${turtles}`;
 }
