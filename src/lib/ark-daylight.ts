@@ -77,7 +77,7 @@ const LOW_EVENING: Key = {at: 4, sun: "#ffad78", sunIntensity: 2.0, sky: "#b6bfd
 const LOW_MORNING: Key = {...LOW_EVENING, sun: "#ffbc90", fog: "#e2b8a6", horizon: "#e9c0ae", zenith: "#8aa0c0"};
 /** The v1 Ark's light, exactly. */
 const GOLDEN: Key = {at: 15, sun: "#ffd9a8", sunIntensity: 2.6, sky: "#c9dbe8", ground: "#6f6248", fill: 0.55, fog: "#d9c9b4", horizon: "#e3d4bf", zenith: "#7fa2c0", environment: 0.75, daylight: 1, rim: 0.22};
-const MIDDAY: Key = {at: 45, sun: "#fff3e2", sunIntensity: 2.35, sky: "#c6d8e8", ground: "#6f6248", fill: 0.5, fog: "#d2d6d2", horizon: "#dde3e2", zenith: "#6d9bc6", environment: 0.7, daylight: 1, rim: 0.1};
+const MIDDAY: Key = {at: 45, sun: "#fff3e2", sunIntensity: 2.35, sky: "#c6d8e8", ground: "#6f6248", fill: 0.5, fog: "#b9cddd", horizon: "#c4d7e6", zenith: "#5f93c4", environment: 0.7, daylight: 1, rim: 0.1};
 
 function hex(value: string): [number, number, number] {
     const n = parseInt(value.slice(1), 16);
