@@ -20,7 +20,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Assets | `ark-assets` | 874a8d84 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
 | Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
-| Map | `ark-map` | 345160a9 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
+| Map | `ark-map` | acdfe23d | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 3d3ecc22 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
 | Behaviour recipes | `ark-behaviour-recipes` | f1c88d05 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
@@ -36,7 +36,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Home growth | `ark-home-growth` | 7588a2e8 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
 | Sleep | `ark-sleep` | f23db564 | Sleep postures from data for 2,555 species, lying down and getting up, closed eyes (`arkInstance.w`), breathing and stirs, social sleep with a night watch, waking in the reactive layer, den sleepers in burrows, the rest status in 45 languages |
 | Live HUD | `ark-hud-live` | a83dd61e | Species and region bars (log scale, changes), the Live log of real events and seen behaviour (tap to fly there), `mated` events, arrival notices for real arrivals only, the embed's `?hud=` and `?insetTop`/`?insetBottom` safe areas |
-| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring |
+| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring, den entrances and going-in at the map's `map:` roosts |
 
 Not yet in the release: `ark-scale-test`, newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
 
@@ -132,13 +132,15 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 7. Flags the owner chooses, one at a time.
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` b20469d3 (2,236/2,238), both behaviour's, fixes coming:**
+- **Red tests on `ark-release` 8de9d06e (2,236/2,239):**
+  - "the spawn validator places every catalogue species": amazonian-giant-centipede `invalid_surface` (a tree climber on the forest floor). Only on release: the map branch (0 failures) lacks assets 874a8d84's emergent crowns and their attach points. Map lane.
+  - Behaviour's two, fixes coming:
   - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second).
   - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22).
 - **Default view** (corrected check, b20469d3): backwards 0.9%, nothing backwards over 1 s, ground turns 0 a minute (median), pace ratio median 1.26, nothing over 1.61×. Circling, all mild: a plains zebra at 5.9 a minute (watch, graze), two mallards at 4.9 (forage), a harbour seal at 3.2, an emperor penguin at 3.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
-- **The rock hyrax's den** (golden den_rock, d66123fd): on dry land now (map 345160a9), but in open grassland, so it reads as a burrow on grass, not a den among rocks.
+- **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
 - **Flight and grazing clips** need rig `v2`: with v1 no flight clip and no graze clip passes (wings closed in the air, no head-down graze).
 - **No entry/exit motion** at the water's edge until v2's `enter_water`/`exit_water` clips.
 - Shared-layer reaction to predators is a glance; the full reaction (alert, flee) runs only near the camera (reactive layer).
