@@ -698,3 +698,48 @@ export function heap(r: number, h: number, colour: string, seed = 22, roughness 
     lumpy(dome, roughness, seeded(6200 + seed));
     return paint(dome, new Color(colour), (y, i) => 0.72 + 0.35 * (y / h) + ((i * 7) % 9) / 50);
 }
+
+/**
+ * A hen house on legs (local: its door and ramp to +z): a weathered plank
+ * body under a pitched felt roof, a nest box on its side with a lid, a ramp
+ * with slats, a small wired run against its back. Standing on y = 0.
+ */
+export function coop(seed = 23): BufferGeometry {
+    const random = seeded(6300 + seed);
+    const parts: BufferGeometry[] = [];
+    const plank = (geometry: BufferGeometry, colour: string) => paint(geometry, colour, (_, i) => 0.82 + ((i * 7) % 9) / 45);
+    // Legs and the body.
+    for (const [x, z] of [[-0.55, -0.4], [0.55, -0.4], [-0.55, 0.4], [0.55, 0.4]] as const) parts.push(plank(place(new BoxGeometry(0.08, 0.5, 0.08), x, 0.25, z), "#6d5844"));
+    parts.push(plank(place(new BoxGeometry(1.25, 0.75, 0.9, 6, 3, 1), 0, 0.5 + 0.375, 0), "#8c4b37"));
+    // Planks: a line every 15 cm round the body.
+    for (let k = 0; k < 5; k++) for (const z of [0.452, -0.452]) parts.push(paint(place(new BoxGeometry(1.26, 0.012, 0.012), 0, 0.56 + k * 0.15, z), "#5e3326"));
+    // The roof: two slabs from a ridge along x, overhanging.
+    for (const side of [1, -1]) {
+        const slab = new BoxGeometry(1.45, 0.04, 0.62);
+        slab.rotateX(side * 0.5);
+        parts.push(paint(place(slab, 0, 1.38, side * 0.26), "#3b3a38", () => 0.9 + random() * 0.08));
+    }
+    // The pop-hole and its ramp down to the ground.
+    parts.push(paint(place(new BoxGeometry(0.22, 0.26, 0.02), 0.25, 0.68, 0.455), "#1d1510"));
+    const ramp = new BoxGeometry(0.24, 0.025, 0.75);
+    ramp.rotateX(0.72);
+    parts.push(plank(place(ramp, 0.25, 0.27, 0.72), "#7d6448"));
+    for (let k = 0; k < 4; k++) parts.push(plank(place(new BoxGeometry(0.24, 0.02, 0.02), 0.25, 0.1 + k * 0.11, 0.98 - k * 0.12), "#6a533c"));
+    // The nest box on the east side, its lid sloping.
+    parts.push(plank(place(new BoxGeometry(0.32, 0.36, 0.7), 0.78, 0.8, 0), "#8c4b37"));
+    const lid = new BoxGeometry(0.4, 0.03, 0.78);
+    lid.rotateZ(-0.35);
+    parts.push(paint(place(lid, 0.8, 1.02, 0), "#3b3a38"));
+    // A small run behind: posts and rails (wire reads as nothing at this size).
+    for (const [x, z] of [[-0.62, -0.5], [0.62, -0.5], [-0.62, -1.8], [0.62, -1.8]] as const) parts.push(plank(place(new BoxGeometry(0.05, 0.85, 0.05), x, 0.425, z), "#7d6448"));
+    for (const y of [0.05, 0.84]) {
+        parts.push(plank(place(new BoxGeometry(1.29, 0.03, 0.03), 0, y, -1.8), "#7d6448"));
+        for (const x of [-0.62, 0.62]) parts.push(plank(place(new BoxGeometry(0.03, 0.03, 1.3), x, y, -1.15), "#7d6448"));
+    }
+    return merge(parts);
+}
+
+/** The coop from afar: its body and roof. */
+export function coopFar(): BufferGeometry {
+    return merge([paint(place(new BoxGeometry(1.25, 0.75, 0.9), 0, 0.875, 0), "#8c4b37"), paint(place(new BoxGeometry(1.45, 0.3, 1.2), 0, 1.38, 0), "#3b3a38")]);
+}

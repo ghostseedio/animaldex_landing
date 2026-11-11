@@ -12,6 +12,7 @@ The props lane (branch `ark-props`) draws what animals build and what each area 
 | `props/nest-shapes.ts` | The nests, built strand by strand, each vertex carrying its build order (`aBuild`). |
 | `props/nest-growth.ts` | `nestStage(speciesId, siteId, t)`: how far built a nest is. |
 | `props/homes.ts` | Nests and eggs, ant mounds and trails, the bees' hollow and hive, the wasps' nest, termite mounds, webs, chrysalises, the warren, worm casts, dens and lairs, the turtles' nest and tracks, the beavers' lodge and dam, and slime trails. |
+| `props/home-layout.ts` | The home area by plots (pure: no sampler, no three.js). `HomePlot` {id, kind: house or smallholding, x, z, rotation, floor?, barn?}; `defaultHomePlots()` (today's cottage and barn; the map lane's `homePlots()` replaces them via the module's `setHomePlots(plots)`); `plotFrame(plot)`; `chimneyTop`, `picketRuns`/`picketPosts`, `paddockRect`/`paddockSegments`, `coopSpot`; and **`fencePostTops(plots)`**, every fence post top the props draw (`{fence: "paddock" or "picket", n, plot, position, forward}`) for the sampler's `fence_post:<fence>:<n>` points. |
 | `props/areas.ts` | Details that are always there. House and garden: gutters, a water butt, moss, the path, the fence, the vegetable patch, the bird box, puddles. Farm: hay shelter, loft door, paddock, troughs, mud. Mountain: strata outcrops, scree, drifts, icicles. Grassland: tussocks, wildflower drifts, old termite mounds. |
 | `props/cave.ts` | The cave, plus the bats' roost when bats are aboard. |
 | `props/effects.ts` | Chimney smoke, moths at the porch light, dew, mist, blowing snow and dust. The mist's sheets are draped over the ground and the water every couple of metres, 0.25–1 m up. They fade as the camera comes down to their height or sees them edge-on, and they are soft and broken at their edges, so they never cut across a slope or an animal as a band. |
@@ -91,6 +92,10 @@ These are the props' own draw calls and triangles, worst of nine named places, w
 | low (battery saver, and the golden phone profile on a loaded Mac) | 25 | 47 k |
 
 The scene's own phone numbers are 71–171 calls and 1.0–2.3 M triangles (graphics-batches.md). A nest is 1.3–6.1 k triangles at lod0, and only the nests within the tier's near radius are drawn. The test fails if medium goes over 45 calls or 400 k triangles, or low over 30 calls or 200 k.
+
+## Home plots
+
+The hamlet grows by plots. Each house plot gets its own garden: a picket fence with posts, a path, vegetable beds, compost, a water butt, gutters, moss and a bird box. Each smallholding gets its own yard: a hay shelter (the loft door only when a barn stands there), a paddock on pasture clear of trees, troughs, mud, puddles and a hens' coop. Each is laid out in the plot's frame and seeded by its id, so a new plot is the same for every viewer. The original two plots keep their old seeds.
 
 ## Other lanes
 

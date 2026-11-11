@@ -229,7 +229,7 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
         if (shot.tag === "bark") return broadleaf + (/^birch/.test(asset) ? 0 : /^beech/.test(asset) ? 4 : 12) + (1 - (point.open ?? 0)) * 30 - lit(point) * 10 + Math.abs(p.y - heightAt(p.x, p.z) - 1.3) * 2 + Math.hypot(p.x - near.x, p.z - near.z) * 0.02;
         if (shot.tag === "house_wall") {
             // Off the side windows (micro-scene.ts: centred 0.4 m off the middle, 1.4 m up, 0.8 × 0.7 m), with a margin:
-            // a gecko half hidden by a window frame is no shot (batch 5).
+            // a gecko half hidden by a window frame is no shot (graphics batch 5).
             const side = Math.sign(p.x - COTTAGE.x);
             const windowZ = COTTAGE.z + (side > 0 ? 0.4 : -0.4);
             const onWindow = Math.abs(p.z - windowZ) < 0.75 && Math.abs(p.y - (COTTAGE.floor + 1.4)) < 0.65;
@@ -273,7 +273,9 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
             debug.controls.minDistance = holder.minDistance;
             handle.setView(view);
             await nextFrames(3);
-            const blocked = clearSight(debug, view, candidate, holder.current);
+            // The camera above the ground (graphics batch 5: a rock's face can look up a beach, into the sand).
+            const eye = new Vector3().setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(new Vector3(view.target.x, view.target.y, view.target.z));
+            const blocked = eye.y < heightAt(eye.x, eye.z) + 0.15 ? "ground" : clearSight(debug, view, candidate, holder.current);
             if (blocked) {
                 blockers.push(blocked);
                 continue;
@@ -524,8 +526,8 @@ async function mountGolden(el: HTMLElement) {
             handle.setHours(GOLDEN_TIMES[time]);
             handle.setEnvironment({...CALM_SHOT, ...(GOLDEN_WEATHER[where] ?? {})});
             pinSeaClock(GOLDEN_SEA_EPOCH);
-            // A golden-only camera (batch 5): the shot's own limits, for this shot only.
-            (window as unknown as {__arkGoldenCamera?: unknown}).__arkGoldenCamera = "camera" in shot ? shot.camera : undefined;
+            // A golden-only camera (graphics batch 5): the shot's own limits, for this shot only.
+            (window as unknown as {__arkGoldenCamera?: unknown}).__arkGoldenCamera = "camera" in shot ? (shot as {camera?: unknown}).camera : undefined;
             const debugNow = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
             const hold = () => {
                 if (micro && debugNow) debugNow.controls.minDistance = holder.minDistance;

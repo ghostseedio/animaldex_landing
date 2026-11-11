@@ -316,7 +316,16 @@ test("props nest sites: through the scenery sampler, on the right ground, the sa
                 assert.ok(Math.hypot(nest.x - COTTAGE.x, nest.z - COTTAGE.z) < Math.hypot(COTTAGE.width, COTTAGE.depth), "at the cottage");
                 // Under the sampler's eave point (the drawn roof's underside: the slope on the long walls, the verge's peak on the gables).
                 assert.ok(nest.y < COTTAGE.floor + COTTAGE.wall + COTTAGE.ridge, "under the roof");
-                assert.ok(allAttachPoints().some((point) => point.tag === "house_eave" && nest.siteId.startsWith(point.id) && nest.y + nest.radius * 0.9 < point.position.y), "its top under the eave point");
+                // Wholly under the drawn roof: its top under the roof's underside at the nest's front edge.
+                {
+                    const eave = allAttachPoints().find((point) => point.tag === "house_eave" && nest.siteId.startsWith(`${point.id}:`))!;
+                    assert.ok(eave, nest.siteId);
+                    const slope = Math.hypot(eave.normal.x, eave.normal.z) / Math.abs(eave.normal.y);
+                    const out = COTTAGE.overhang * 0.6;
+                    const front = nest.radius * (nest.form === "ball" ? 1.4 : 1.02);
+                    const top = nest.y + nest.radius * (nest.form === "ball" ? 1.9 : 1.32);
+                    assert.ok(top < eave.position.y + (out - front) * slope, `${nest.siteId}: top ${top.toFixed(3)} under the roof`);
+                }
                 break;
             case "bank":
                 assert.match(nest.siteId, /^burrow:/);
@@ -387,4 +396,62 @@ test("props budget: draw calls and triangles at each tier, at the busiest places
     // The phone tiers (medium on a mid-range phone, low on battery saver): a small share of the scene's ~100–170 calls and 1–2 M triangles.
     assert.ok(worst.medium.calls <= 45 && worst.medium.tris <= 400_000, JSON.stringify(worst.medium));
     assert.ok(worst.low.calls <= 30 && worst.low.tris <= 200_000, JSON.stringify(worst.low));
+});
+
+// MARK: - Home plots and fence posts
+
+import {readFileSync} from "node:fs";
+import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+
+test("props home layout: fence post tops for the sampler, from a pure module, the same posts the areas draw", () => {
+    // Pure: no sampler (the sampler imports it), no three.js.
+    const source = readFileSync("src/ark-scene/props/home-layout.ts", "utf8");
+    assert.ok(!/from "@\/ark-scene\/sampler"/.test(source) && !/from "three"/.test(source));
+    const plots = defaultHomePlots();
+    assert.deepEqual(plots.map((plot) => plot.kind), ["house", "smallholding"]);
+    const posts = fencePostTops(plots);
+    const paddock = posts.filter((post) => post.fence === "paddock");
+    const picket = posts.filter((post) => post.fence === "picket");
+    assert.equal(paddock.length, paddockSegments(paddockRect(plots[1])).filter((segment) => !segment.gate).length);
+    assert.equal(picket.length, picketPosts().length);
+    assert.deepEqual(paddock.map((post) => post.n), paddock.map((_, i) => i));
+    for (const post of posts) {
+        const top = post.fence === "paddock" ? PADDOCK_POST_TOP : PICKET_POST_TOP;
+        assert.ok(Math.abs(post.position.y - (sampleGround(post.position.x, post.position.z).height + top)) < 1e-6, "a post's top over its ground");
+        assert.ok(Math.abs(Math.hypot(post.forward.x, post.forward.z) - 1) < 1e-6 && post.forward.y === 0, "forward along the fence, level");
+    }
+    assert.deepEqual(fencePostTops(plots), posts);
+});
+
+test("props home plots: every plot gets its own garden or yard, paddock, coop and fences, seeded by its id", () => {
+    const base = defaultHomePlots();
+    const house = base[0];
+    const yard = base[1];
+    // Two more plots of the hamlet, as the map lane would lay them (along the farm's side, turned).
+    const extra: HomePlot[] = [
+        {id: "house-1", kind: "house", x: house.x - 14, z: house.z + 4, rotation: 0.6},
+        {id: "smallholding-1", kind: "smallholding", x: yard.x + 22, z: yard.z - 6, rotation: -0.4}
+    ];
+    const plots = [...base, ...extra];
+    const areas = buildAreas(PROPS_TIERS.high, plots);
+    const names = areas.pieces.map((piece) => piece.name);
+    for (const id of ["house-0", "house-1"]) assert.ok(names.includes(`garden:${id}`), id);
+    for (const id of ["smallholding-0", "smallholding-1"]) assert.ok(names.includes(`farm:${id}`) && names.includes(`trough-water:${id}`), id);
+    assert.equal(areas.batches.find((batch) => batch.name === "coops")?.count, 2);
+    assert.equal(areas.batches.find((batch) => batch.name === "troughs")?.count, 4);
+    // Fences for every plot, numbered over the plots in order.
+    const posts = fencePostTops(plots);
+    assert.equal(new Set(posts.map((post) => post.plot)).size, 4);
+    // A plot's frame: local +z of a turned plot points along its rotation.
+    const frame = plotFrame(extra[0]);
+    const ahead = frame.toWorld(0, 1);
+    assert.ok(Math.abs(ahead.x - (extra[0].x + Math.sin(0.6))) < 1e-9 && Math.abs(ahead.z - (extra[0].z + Math.cos(0.6))) < 1e-9);
+    // Deterministic per plot id: the same plots, the same layout; the cottage's own plot as before.
+    const again = buildAreas(PROPS_TIERS.high, plots);
+    assert.deepEqual(again.pieces.map((piece) => piece.near.geometry.getAttribute("position").count), areas.pieces.map((piece) => piece.near.geometry.getAttribute("position").count));
+    const only = buildAreas(PROPS_TIERS.high, base);
+    assert.equal(only.pieces.find((piece) => piece.name === "garden:house-0")!.near.geometry.getAttribute("position").count, areas.pieces.find((piece) => piece.name === "garden:house-0")!.near.geometry.getAttribute("position").count);
+    areas.dispose();
+    again.dispose();
+    only.dispose();
 });
