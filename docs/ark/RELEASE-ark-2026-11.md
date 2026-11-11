@@ -66,7 +66,7 @@ ships OFF; while off, every read answers exactly as today.
 | `chat_mention` | off (live) | server | An animal that ate may mention it once |
 | `public_story` | off (live) | server | Public debate stories |
 | `ark_digest`, `small_steps`, `intelligence_style` | off (live) | server | 3.3 digest push, small steps, chat intelligence style |
-| `founder_names` | off (new) | server, founders migration | Founders named (18+ confirmed); off = "Voyager N" everywhere |
+| `founder_names` | off (new); **on as part of this release** (§7) | server, founders migration | Founders named (18+ confirmed); off = "Voyager N" everywhere. The owner's local view names them (`?snapshot=`), so production turns it on in the release, not later |
 | `capture_arrivals` | off (new) | server, captures+thrive | The processor takes capture rows only when on |
 | `thrive` | absent = off (new) | server, captures+thrive | The condition rules (JSON config row) |
 | `ark_score_v3` | off (new) | server, captures+thrive | Which Ark Score the reads return |
@@ -92,7 +92,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 | 5 | `20261115120000_voyage_capture_qualifies` | ark-captures-thrive | Qualifies predicate, `voyage_apply_capture_arrival`, `voyage_capture_state_v1` (no triggers) | Drop the functions |
 | 6 | `20261115130000_voyage_thrive_schema` | ark-captures-thrive | Conditions, step points, world load and commit | Previous bodies verbatim; drop tables (refuse with rows unless forced) |
 | 7 | `20261115140000_voyage_thrive_reads` | ark-captures-thrive | `thrive`, `lineage` on the public reads | Previous read bodies |
-| 8 | `20261115150000_voyage_backfill_captures` | ark-captures-thrive | The bounded backfill (×7, 500 each), only with the web release that has the live budget and chunked mount | By `backfill_run` |
+| 8 | `20261115150000_voyage_backfill_captures` | ark-captures-thrive | The bounded backfill (×7, 500 each), only with the web release that has the live budget and chunked mount. **Part of the release, not a later step:** run `voyage_backfill_captures` to completion, then `voyage_backfill_verify_v1` (§7, §7a) | By `backfill_run` |
 | 9 | flags: `thrive` on | — | After the backfill | Flip off |
 | 10 | `20261115160000_voyage_capture_triggers` | ark-captures-thrive | **The switch**: the capture triggers, last, with the owner | Drop both triggers (queued rows stay harmless) |
 | — | `20261114130000_voyage_ark_kin_activity` | ark-aware-chat | **Held** (owner decisions) | — |
@@ -126,10 +126,45 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 1. Server: founders migration (switch off) and `voyage-founder-story`; then the thrive function and migrations 3–7 (§3).
 2. Bucket: rig `v2`.
 3. Web: merge, build, deploy (§4); with it or after it, the 14 turned birds.
-4. Server: the captures backfill (needs this web build), then `thrive` on, then the capture triggers.
-5. Apps: merge and submit.
-6. Publish the privacy and terms change (`docs/ark/founders-privacy.md`).
-7. Flags the owner chooses, one at a time.
+4. Server, **part of the release** (owner, 2026-11-11: "only use real player data and animals", "the same for the production
+   too when we next deploy"): the captures backfill (needs this web build), `voyage_backfill_captures` run to completion,
+   then `voyage_backfill_verify_v1`; then `founder_names` on; then `thrive` on, then the capture triggers. Production then
+   shows what the owner sees locally with `/ark?snapshot=/ark-local/real.json` (§7a).
+5. The post-deploy check (§7a).
+6. Apps: merge and submit.
+7. Publish the privacy and terms change (`docs/ark/founders-privacy.md`), with `founder_names` on.
+8. The other flags the owner chooses, one at a time.
+
+### 7a. Real data only, and the post-deploy check
+- **Nothing made-up in production.** The page reads the live Ark; the fixture, the made-up live feed and the fixture
+  founders exist only behind development parameters (`?fixture=`, `&feed=1`, `?arkfixture=`, `?arkresult=`, …, each
+  checked against `NODE_ENV === "development"`), and the `NEXT_PUBLIC_ARK_FIXTURE` switch is gone, so no environment
+  setting can show the fixture. The embed takes `?fixture=` only in a development build of its bundle.
+- **The owner's local view** (development only): `/ark?snapshot=/ark-local/real.json`, a local snapshot built from a
+  read-only production query (the backfill's variant A and pair rule, founder names by the founders rule, Blood Parrot
+  and Flowerhorn left out). It holds real usernames: `public/ark-local/` is gitignored and the file is never committed.
+- **Expected after the backfill:** about **3,135 animals, 951 species and 645 players** (643 named), plus the 2 already
+  aboard, plus every capture since 2026-11-11 that qualifies.
+- **Post-deploy check** (read only), once the backfill is verified and `founder_names` is on:
+  ```
+  curl -s https://<site>/api/ark/voyage | jq '{counts: .snapshot.counts, named: ([.snapshot.animals[] | select(.brought_by.founder != null)] | length)}'
+  ```
+  or `select voyage_public_v2() -> 'counts';` through the read-only query path. Pass: animals ≥ 3,137 and within the
+  captures since 2026-11-11 of it, species ≥ 951, founders ≥ 645, and named bringers on most animals (none means the
+  switch is still off). Then open /ark: the header's counts match, a tapped animal's card shows "@handle" linking to
+  `/u/{handle}`, and that profile page loads (no 404).
+- **Measured at this scale** (the owner's 3,137-animal snapshot, `scripts/ark-runtime-measure.mjs --prebuild
+  --population-file <it>`, the page's own path, 2 runs each, 2026-11-11 on the shared Mac):
+
+  | Device | First frame | Mount (main thread) | In view | Frames once in view | Long tasks after the first frame | Heap | Draw calls / triangles |
+  |---|---|---|---|---|---|---|---|
+  | desktop (host GPU, high tier) | 3.2 s | 0.72 s | still loading models at 30 s (280–380 in) | 60 fps, p95 16.8 ms | 3, longest 0.74 s | 180–200 MB | 850 / 3.3 M |
+  | phone profile (4× CPU, DPR 2, low tier) | 5.5 s | 2.7 s | 19–22 s | 60 fps, p95 16.8 ms | 16–17, longest 0.65 s | 157–172 MB | 149 / 0.36 M |
+
+  Without the prebuild worker the phone's mount holds the main thread 12 s (first frame 12.8 s). What breaks first
+  on a phone is the mount: one 2.7 s main-thread task with the page frozen, then about 17 long tasks (to 0.65 s)
+  while the models stream in. Once in view it holds 60 fps on both. (Headless Chromium on the Mac's GPU: the phone
+  profile throttles the CPU, not the GPU.)
 
 ## 8. Known issues (at m5)
 - **Red tests on `ark-release` 87b551a9 (2,240/2,242), both the recipes lane's red fox, fix coming:**
