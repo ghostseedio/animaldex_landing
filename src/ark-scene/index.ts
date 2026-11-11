@@ -229,6 +229,8 @@ const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelR
     low: {shadows: 0, grass: 0, pixelRatio: 1, fill: 0.3}
 };
 const MAX_GRASS = TIER_SETTINGS.high.grass;
+/** Runtime (live budget): behaviour's resting-at-home test, looked up by name until it is in the release. */
+const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
 
 type Level = "near" | "far" | "token";
 
@@ -880,7 +882,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * `arkOutside` to sit those out first; undefined until the world is built or where behaviour lacks it.
      */
     const restingFor = (snapshot: ArkSnapshot, places: Map<string, Placement>): ((id: string) => boolean) | undefined => {
-        const resting = (behaviourSchedule as unknown as {restingAtRoost?: (world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean}}).restingAtRoost;
+        // (A computed name: the bundlers would warn about an export the release does not have yet.)
+        const resting = (behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST] as undefined | ((world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean});
         if (!resting || !world || !scheduleOn) return undefined;
         const byId = new Map(snapshot.animals.map((animal) => [animal.id, animal]));
         const epoch = worldMs() / 1000;
@@ -903,7 +906,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         worldBuild = null;
         // Runtime: who is resting at home is known now; the live budget sits them out first. (Only where behaviour has
         // restingAtRoost: otherwise laying the snapshot out again re-wires every schedule for nothing, a long task.)
-        if ((behaviourSchedule as unknown as {restingAtRoost?: unknown}).restingAtRoost) runtime.restingReady();
+        if ((behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST]) runtime.restingReady();
         // The schedules that waited start now, each where it is at this moment (wired, then posed, as at load).
         if (pendingWire) {
             const {list, arkDay} = pendingWire;
