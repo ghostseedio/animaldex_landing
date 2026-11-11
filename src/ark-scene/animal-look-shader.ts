@@ -27,22 +27,25 @@
 import {Vector4} from "three";
 import type {LookClass} from "@/ark-scene/animal-look-rules";
 
-/** Per class: detail amplitude (model units), frequency (per model unit), roughness, rim, coat, coat gloss, wrap, wet darkening. */
-export const LOOK_PARAMS: Record<LookClass, {amp: number; freq: number; rough: number; rim: number; coat: number; gloss: number; wrap: number; wetDark: number}> = {
-    fur: {amp: 0.0011, freq: 240, rough: 0.88, rim: 1.55, coat: 0, gloss: 0.3, wrap: 0.18, wetDark: 0.58},
-    feathers: {amp: 0.0013, freq: 150, rough: 0.74, rim: 1.2, coat: 0.1, gloss: 0.45, wrap: 0.06, wetDark: 0.7},
-    scales: {amp: 0.0016, freq: 120, rough: 0.5, rim: 0.65, coat: 0.42, gloss: 0.62, wrap: 0, wetDark: 0.85},
-    skin: {amp: 0.0014, freq: 80, rough: 0.66, rim: 0.6, coat: 0.1, gloss: 0.35, wrap: 0.32, wetDark: 0.8},
-    shell: {amp: 0.0024, freq: 42, rough: 0.4, rim: 0.5, coat: 0.55, gloss: 0.78, wrap: 0, wetDark: 0.85},
-    slimy: {amp: 0.0018, freq: 30, rough: 0.2, rim: 0.45, coat: 0.95, gloss: 0.9, wrap: 0.4, wetDark: 0.9}
+/**
+ * Per class: detail amplitude (model units), frequency (per model unit), roughness, rim, coat, coat gloss, wrap,
+ * wet darkening, and how much of the wet look it takes (feathers shed water: a duck on the pond is not soaked).
+ */
+export const LOOK_PARAMS: Record<LookClass, {amp: number; freq: number; rough: number; rim: number; coat: number; gloss: number; wrap: number; wetDark: number; wetTake: number}> = {
+    fur: {amp: 0.0011, freq: 240, rough: 0.88, rim: 1.55, coat: 0, gloss: 0.3, wrap: 0.18, wetDark: 0.58, wetTake: 1},
+    feathers: {amp: 0.0007, freq: 130, rough: 0.74, rim: 1.2, coat: 0.1, gloss: 0.45, wrap: 0.06, wetDark: 0.8, wetTake: 0.3},
+    scales: {amp: 0.0016, freq: 120, rough: 0.5, rim: 0.65, coat: 0.42, gloss: 0.62, wrap: 0, wetDark: 0.85, wetTake: 0.85},
+    skin: {amp: 0.0014, freq: 80, rough: 0.66, rim: 0.6, coat: 0.1, gloss: 0.35, wrap: 0.32, wetDark: 0.8, wetTake: 1},
+    shell: {amp: 0.0024, freq: 42, rough: 0.4, rim: 0.5, coat: 0.55, gloss: 0.78, wrap: 0, wetDark: 0.85, wetTake: 0.85},
+    slimy: {amp: 0.0018, freq: 30, rough: 0.2, rim: 0.45, coat: 0.95, gloss: 0.9, wrap: 0.4, wetDark: 0.9, wetTake: 1}
 };
 
 export const LOOK_CLASS_INDEX: Record<LookClass, number> = {fur: 0, feathers: 1, scales: 2, skin: 3, shell: 4, slimy: 5};
 
 /** The species' surface for the shader: `arkLookA` = (class, amp, freq, roughness), `arkLookB` = (rim, coat, gloss, wrap). */
-export function lookVectors(look: LookClass): {a: Vector4; b: Vector4; wetDark: number} {
+export function lookVectors(look: LookClass): {a: Vector4; b: Vector4; wetDark: number; wetTake: number} {
     const p = LOOK_PARAMS[look];
-    return {a: new Vector4(LOOK_CLASS_INDEX[look], p.amp, p.freq, p.rough), b: new Vector4(p.rim, p.coat, p.gloss, p.wrap), wetDark: p.wetDark};
+    return {a: new Vector4(LOOK_CLASS_INDEX[look], p.amp, p.freq, p.rough), b: new Vector4(p.rim, p.coat, p.gloss, p.wrap), wetDark: p.wetDark, wetTake: p.wetTake};
 }
 
 export const LOOK_VERTEX_DECLARATIONS = `
@@ -106,6 +109,7 @@ uniform vec4 arkLookA;
 uniform vec4 arkLookB;
 uniform vec4 arkEye;
 uniform float arkWetDark;
+uniform float arkWetTake;
 uniform vec3 arkDustColour;
 uniform float arkDaylight;
 varying vec3 vArkRest;
@@ -165,10 +169,12 @@ float arkLookHeight(vec3 p, vec3 n) {
         return (arkLookNoise(s) * 0.7 + arkLookNoise(s * 2.3 + 11.0) * 0.3) * mix(0.35, 1.0, lying);
     }
     if (cls < 1.5) {
-        // Feathers: scallops in rows down the body, and fine barbs inside each.
-        float rows = arkLookCells(q * 0.5, n);
+        // Feathers: rounded tips overlapping in rows down the body (longer along it than across, so they read as
+        // laid feathers, not cells), soft at the edges, and a fine barb grain inside each.
+        float rows = arkLookCells(vec3(q.x, q.y, q.z * 0.55) * 0.5, n);
         float barbs = arkLookNoise(vec3(q.x * 2.5, q.y * 2.5, q.z * 0.4));
-        return (1.0 - rows) * 0.75 + barbs * 0.25;
+        float tips = 1.0 - rows;
+        return tips * tips * 0.6 + barbs * 0.4;
     }
     if (cls < 2.5) return 1.0 - arkLookCells(q, n);
     if (cls < 3.5) return arkLookNoise(q) * 0.6 + arkLookNoise(q * 3.1 + 5.0) * 0.4;
@@ -196,7 +202,7 @@ float arkEyeMask(vec3 offset) {
 /** After map_fragment: wet darkens, dust lightens the low body, the eyes deepen; a shell cut to its strands. */
 export const LOOK_ALBEDO = `
 #ifdef ARK_LOOK
-float arkWet = clamp(vArkLookV.x, 0.0, 1.0);
+float arkWet = clamp(vArkLookV.x, 0.0, 1.0) * arkWetTake;
 float arkDust = clamp(vArkLookV.y, 0.0, 1.0);
 float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
 #ifdef ARK_SHELL

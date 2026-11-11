@@ -96,6 +96,7 @@ export function lookUniforms(look: SpeciesLook | null, level: "near" | "far", sh
         arkLookA: {value: vectors.a},
         arkLookB: {value: vectors.b},
         arkWetDark: {value: vectors.wetDark},
+        arkWetTake: {value: vectors.wetTake},
         arkEye: {value: eyes ? [...eyes.left, eyes.radius] : [0, 0, 0, 0]},
         arkEye2: {value: eyes ? eyes.right : [0, 0, 0]},
         arkDustColour: ARK_DUST,
@@ -347,7 +348,8 @@ export class AnimalLook {
         if (!near) return;
         const settings = this.settings();
         if (settings.closeUp && animal.distance < settings.closeUp.within * 1.6) this.closeUps.want(animal.slug, animal.distance);
-        if (settings.shells && animal.pixels > 120 && this.shelled.has(animal.slug)) {
+        // A wet coat lies flat: no shells on it.
+        if (settings.shells && wet < 0.5 && animal.pixels > 120 && this.shelled.has(animal.slug)) {
             const level = shellLevel(animal.distance, settings.shells.within);
             if (level.layers > 0 && level.reach > 0.02) this.shells.offer(mesh, index, animal.distance, level.layers, level.reach);
         }
