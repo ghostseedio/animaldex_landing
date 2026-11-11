@@ -136,3 +136,15 @@ Handover §4.1 items 3–4. Visual only: nothing here touches the server, the sn
 - **LOD:** every reef kind has a near and a far version, instanced and re-sorted round the camera in 8 m cells (when it moves 1 m, or every 30 frames). Nothing is drawn past the far reach, so far views pay nothing. The tier's fill share pulls the reaches in (high 1, medium 0.76, low 0.58) and thins the schools.
 - **Under water fix (`lighting.ts`):** `apply()` turned the sky domes back on under water, and the sky showed past the terrain's edge as a white band. They now stay hidden under water.
 - **Golden cameras:** `reef_closeup` (down among the corals at a head that fish hover over) and `kelp_forest` (mid-water in the densest stand, looking along the coast and a little up). The sea's clock is pinned per shot, so the fish are in the same place each time.
+
+Numbers. The Mac was shared with other lanes' headless runs during these: load average 50–73 on 16 cores, against about 15–20 for the 7fb87467 baseline. Only same-conditions comparisons mean anything.
+
+Same-conditions A/B: the same build with the sea life on and off (a temporary local edit), interleaved on, off, on, off, on the phone profile (360×800, DPR 2, 4× CPU, medium tier), day:
+
+| Shot | Scene CPU ms (on) | Scene CPU ms (off) | Draw calls on / off | Triangles on / off | fps |
+|---|---|---|---|---|---|
+| reef_underwater | 11.4, 11.7 | 9.0, 9.7 | 140 / 101 | 1.24 M / 0.99 M | 60 |
+| reef_closeup | 9.2, 9.2 | 9.7, 9.3 | 127 / 89 | 1.07 M / 0.88 M | 59–60 |
+| waves_beach | 7.4, 8.9 | 8.8, 8.8 | 99 / 94 | 1.16 M / 1.13 M | 60 |
+
+GPU drain was within the noise. Desktop high (`reef-final2-desktop`) held 60 fps on every reef and coast shot, at 3.1–3.8 ms scene CPU and 250–360 calls. The fish placement costs about 0.2–0.3 ms a frame on the desktop CPU for the schools in view: each fish's matrix is built straight from its motion, and schools outside the view cone are skipped.
