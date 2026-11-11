@@ -245,3 +245,17 @@ Golden sheets: `batch5-desktop-before-after.jpg`, `batch5-phone-before-after.jpg
 - **Mountain:** the rock beds blend into the faces (they read as boxy slabs): a smaller shading bend and a fainter lip and underhang; ledge snow weight 0.75 → 0.5 (the only change to the snow formula; the ice and alpine rules are as in batch 5).
 - **Bark close up:** on the trees whose crown reaches over the camera (the near bucket's material), within about 3 m: furrows, grain and cracks as colour and as a bump on the shading normal, a few lichen flecks.
 - **es5:** the graphics test no longer iterates a Map (fixed in c372c52f).
+- **Ground for the worker prebuild (`terrain.ts`):** `groundArrays(tier)` returns the ground as typed arrays with no three.js objects and no DOM. `primeGround(arrays)` hands over arrays built elsewhere, and `groundGeometry` uses them when present. The output is bit for bit the old `PlaneGeometry` (same normals), and primed and built geometry are deep-equal (test). The runtime lane wires the worker.
+
+Same-conditions A/B, batch 5 (79f22ee6 scene source) against batch 6 (f8a2ad0c), interleaved, same six places, tier pinned. The load average was 165 to 382 (other sessions' jobs), so the timings are noisy:
+
+| | interval p50 / p95 ms | scene CPU ms | GPU drain ms | draw calls | triangles |
+|---|---|---|---|---|---|
+| phone medium, batch 5 | 16.7 / 16.8 | 4.6–5.0 | 5.2–5.3 | 140.5 | 1.20 M |
+| phone medium, batch 6 | 16.7 / 16.7 | 6.2–6.7 | 5.3–6.3 | 144 | 1.21 M |
+| desktop high, batch 5 | 16.7 / 16.8 | 2.5–2.8 | 9.4–20.0 | 372–373 | 6.52–6.55 M |
+| desktop high, batch 6 | 16.7 / 16.7 | 2.2–2.8 | 10.6–20.4 | 385–387 | 6.55 M |
+
+The phone profile held 60 fps in every run, with about 4 more draw calls (the floor set) and the same triangles. Its scene CPU looks about 1.5 ms higher at 4× throttle, but under this load that is within the noise. Worth re-measuring on a quiet machine or a real phone.
+
+Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg`, `batch6-bark-closeup.png` and `batch6-buttress-before-after.png` in the handover folder's `ark/graphics/`.
