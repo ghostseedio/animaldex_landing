@@ -135,4 +135,108 @@ ARK_PACK_UPLOAD_APPROVED=1 SERVICE_KEY=<service_role key> node scripts/ark-model
 
 ## 7. Measured
 
-See §9. Per tier: peak JS heap, GPU estimate, frame rate, view complete and mount time. Measured on the desktop and phone profiles in headless Chrome, the iOS Simulator's WebView and an Android emulator's WebView, including a 2 GB AVD as the low-memory phone. Emulators are not real devices.
+**How.**
+- The real Ark: 3,137 animals, the local snapshot, never copied. The prebuild was on.
+- The model set was the public bucket's, read only, except in the pack runs.
+- `scripts/ark-runtime-measure.mjs` ran on 2026-11-12. The shared Mac carried 15+ other lanes, at a load average of **43–63 during the headless runs and 120–160 during the emulator runs**. Wall times swing a lot run to run.
+- What was measured:
+  - Peak JS heap is the largest `usedJSHeapSize` sampled every 250 ms (Chromium only).
+  - Peak GPU is the scene's own estimate (`runtime/memory.ts`).
+  - fps is over the steady part, after view complete.
+  - View complete is from the script's first line until every model the starting view draws is in.
+  - Mount is the time `mountArk` held the main thread.
+
+**Headless Chromium, the GPU on (Metal), 2 runs each.** The phone profile is 360×800 at DPR 2 with a 4× CPU throttle.
+
+| Profile / tier | Peak JS heap | Peak GPU est | fps | View complete | Mount |
+|---|---|---|---|---|---|
+| desktop high | 324–336 MB | 187–205 MB | 59 | 10.4–10.9 s | 201–220 ms |
+| desktop medium | 181–183 MB | 142–147 MB | 60 | 8.3–9.0 s | 199 ms |
+| desktop low | 200–201 MB | 77–81 MB | 60 | 5.6–9.0 s | 199–200 ms |
+| phone medium (its own tier) | 167–168 MB | 119 MB | 42–52 | 12.4–12.9 s | 787–792 ms |
+| phone low | 170–172 MB | 72 MB | 56–58 | 10.2–12.4 s | 816–942 ms |
+| phone high (forced) | 207–208 MB | 80 MB | 17 | 16.0–24.7 s | 840–970 ms |
+
+**The iOS app's own WKWebView**, in the Simulator on an iPhone SE (3rd gen).
+- This was the AnimalDex DEBUG build from main, in the Your Step gallery with the Ark panel held open (`-AnimalDexArkPanel open`). The measurement page was loaded through `-AnimalDexArkEmbedURL`, and the gallery snapshot came from the real file.
+- Memory is the WebContent process's footprint (`footprint`), sampled every 2 s from the Mac.
+- WebKit has no heap reading; the JS VM line of the footprint stands in for it.
+- 1 run each. The Simulator draws with the Mac's GPU, so this is not an iPhone.
+
+| Tier | WebContent footprint, peak | JS VM | Peak GPU est | fps | View complete | Mount |
+|---|---|---|---|---|---|---|
+| auto (picked medium: 8 cores reported, no memory figure) | 247 MB | 85 MB | 128 MB | 24 | 21.4 s | 563 ms |
+| high (forced) | 399 MB | 95 MB | 154 MB | 17 | 26.0 s | 634 ms |
+| medium | 408 MB | 96 MB | 123 MB | 34 | 19.4 s | 571 ms |
+| low | 334 MB | 84 MB | 72 MB | 45 | 37.2 s | 644 ms |
+
+(Two earlier probes at medium, on a quieter Mac: 54.8–56 fps, view complete 15.5–20.8 s, mount 327–1,293 ms.)
+
+**The low-memory Android phone: the streaming lane's own AVD, `ArkStreamingLowMem`.**
+- Android 15 (API 35, google_apis, arm64), 720×1600, Android System WebView 124.
+- **2.0 GB RAM.** The emulator raises a 2 GB AVD to 2.5 GB by itself; `-qemu -m 2048` holds it at 2,022,068 kB.
+- The page ran in a WebView with the Android app's Ark panel settings (`scripts/ark-webview-host/`, ArkHost.apk, built with the SDK's tools: JavaScript and DOM storage on, the same zoom, file and media settings). The app itself shows the Ark only after sign-in.
+- Memory is `dumpsys meminfo` PSS. **Emulators are not phones**, and this one ran at about 12 % of one Mac core: the host's load was 120–160.
+
+| Run | Tier | WebView renderer PSS, peak | App process | What happened |
+|---|---|---|---|---|
+| auto, software GL (SwiftShader) | low (picked: touch, 4 cores; the WebView reports no `deviceMemory`) | 195 MB | 78 MB | Mount 13.0 s; the scene's first frame never came within 60 s (shaders and mount steps on a starved CPU); 1.8 page fps |
+| auto, host GPU (M3 Max through the emulator's GL) | low | 203 MB | 75 MB | Mount 11.4 s; still no first frame within 60 s; the guest swapping (1.9 of 2.0 GB used, 470 MB in swap) |
+| auto, host GPU, 200 s | low | ~300 MB (`top` RES) | — | The prebuild worker timed out at 61 s (places fell back to the main thread); mount 21.1 s; no first frame in 200 s |
+
+So on the 2 GB AVD the page loads, picks the low tier on its own, and holds the renderer at about 200–300 MB with the system swapping. But on this starved emulator it does not reach a drawn frame. That is the CPU, not memory (no renderer kill, no low-memory kill). A real 2 GB phone, or this AVD on a quiet Mac, is the test that remains (§8).
+
+**Streaming itself on today's island.**
+- Every chunk is `in` on every tier from every view the tests sweep, and no animal is skipped. So these numbers are the scene's own, at the tier's budgets.
+- The tour runs (the camera down in each region and back up, phone profile): medium at its whole distance peaked at 97 MB GPU; with the distance forced to 0.4×, it peaked at 71 MB (as few as 10 of the 25 chunks in). Low was unchanged at 78 MB, because the island is small next to 176 m.
+- A fixed ground view with the distance forced to 150 m (an island about 4× this one, seen from the same place) is in §7.1.
+
+### 7.1 A short render distance
+
+This shows what the distance saves once a world outgrows it.
+- **The setup:** a fixed ground view, the camera brought down to the coast (`--focus coast`), on the phone profile at the medium tier, 2 runs each. The whole distance (640 m: all 25 chunks in) is compared with the distance forced to 150 m (as if the island were about 4× this one, seen from the same place).
+- **The haze:** on (1.0) at 150 m and whole by then, 0 at the whole distance.
+- **Frame CPU time:** within the noise, 23–31 ms either way. This view's cost is the near scene; the Mac's load was ~150.
+
+| Distance | Chunks in | Tiles hidden | Triangles (median) | Draw calls | Far models loaded | Peak GPU est | Peak JS heap |
+|---|---|---|---|---|---|---|---|
+| 640 m (the tier's) | 25 | 0 | 680–697 k | 116–135 | 181 | 73–75 MB | 167–184 MB |
+| 150 m (forced) | 14–15 | 10 | 547 k (−21 %) | 108 (−13 %) | 133–135 (−26 %) | 68–70 MB (−7 %) | 152–154 MB (−10 %) |
+
+Screenshots: `scratchpad/streaming/haze-full.png`, `haze-150.png` (the coast at night: the far fields fade into the night air) and `haze-map150.png` (the home view at 150 m: the map view draws the whole island, the ground beyond 150 m at every 4th vertex, its animals as markers; no cracks).
+
+### 7.2 The far-model pack
+
+**The setup.**
+- Both runs use the same local copy of the model set, each request answered after 180 ms (the bucket's measured time to first byte). The phone profile also has a 4G link (9 Mbit/s, 60 ms).
+- **base** is today's layout (`far.glb` + `ark.json`). **packed** is the two-part pack plus far-ark files.
+- Runs were interleaved, 2 each. "After first frame" is view complete minus the first frame.
+
+| Phone profile, 4G | Requests to the starting view | View complete | After first frame | Far models from the pack |
+|---|---|---|---|---|
+| medium, base | 143–145 | 26.1–30.6 s | 12.9–14.6 s | — |
+| medium, packed | **51–52 (−64 %)** | 26.6–30.9 s | 13.7–13.8 s | 107–112 of 231–236 |
+| low, base | 77–79 | 24.0–26.6 s | 8.0–8.4 s | — |
+| low, packed | **25–26 (−67 %)** | 22.6–24.9 s | 7.9–8.3 s | 71–72 of 118–125 |
+
+(An earlier run with one pack per tier: desktop high 157–427 → 78 requests to view.)
+
+- **Requests and bytes fall by about two thirds and one half.** The medium pack is 4.16 MB for 120 kinds, against 8.25 MB as single files.
+- **Time to the starting view did not change on this machine.** At a load average of ~120, the phone profile's 4×-throttled main thread (decoding and handing over the models, `drain`'s 4 ms a frame) is the bottleneck, not the network. In runtime.md's round 7 the cost per file (~0.2 s to first byte, 240 files) was the bottleneck.
+- **What remains to measure:** a real phone on a real network, where each request also pays radio and TLS setup. The pack's saving is in requests, so that is where it should show.
+
+## 8. What is left (Part C and the apps)
+
+- **Generation per chunk (Part C).** Today the decor, forest fill, grass, attach points and the ground's arrays are built for the whole island once (in the prebuild worker), then split by chunk. That is what keeps today's picture exact. For a much bigger island, each generator should take a chunk:
+  - the ground's arrays per tile, from the worker as the tile comes in;
+  - the decor, fill and grass seeded per chunk;
+  - `prepareAttachPoints` per chunk.
+  A new island's content can be seeded that way from the start, since Part C makes new land anyway. The streamer's `onChange` is the hook.
+- **Coarser map tiles.** A `map` tile today is every 4th vertex. A 1 km island seen whole wants every 8th or 16th, by distance.
+- **Culling to the view.** Instances are compacted by distance only. Compacting to the camera's view as well would cut more when the camera is close, but trees behind the camera still cast shadows into the view, so it needs the shadow camera's frustum too.
+- **The apps:**
+  - pass `?mem=<GB>` on the embed URL (iOS `ProcessInfo.physicalMemory`; Android `ActivityManager.MemoryInfo.totalMem`, whose WebView reports no `deviceMemory`);
+  - open the panel on a real low-memory Android phone (2–3 GB) and an older iPhone;
+  - read the WebView renderer's PSS (`dumpsys meminfo`) and the WebContent footprint as the Ark fills.
+- **The 2 GB AVD on a quiet Mac.** This lane's runs never reached a first frame on a starved emulator (§7). The same `ArkStreamingLowMem` AVD with `-gpu host -qemu -m 2048` and `scripts/ark-webview-host/` can repeat it in a few minutes once the load is down.
+- **The pack on a real network.** See §7.2.
