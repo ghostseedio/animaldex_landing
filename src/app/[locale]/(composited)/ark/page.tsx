@@ -17,6 +17,7 @@ import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
+import {arkLocalSnapshotOf, arkLocalSnapshotPath} from "@/lib/ark-local-snapshot";
 import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 /**
@@ -29,8 +30,15 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * (`ark-about`). `?focus=` pages share a card of that species but keep /ark
  * as their canonical. The scene is `src/ark-scene`, loaded in the browser only.
  *
- * Local testing before the migration is applied: `NEXT_PUBLIC_ARK_FIXTURE=1`,
- * or in development `?fixture=1` (about 120 animals), `?fixture=early` (the
+ * Real data only by default (owner, 2026-11-11: "only use real player data and animals"): the page reads the
+ * live Ark, and nothing made-up shows unless a development parameter asks for it. Production never shows a
+ * fixture (there is no environment switch for one).
+ *
+ * In development, `?snapshot=/ark-local/real.json`: a snapshot file under /public (gitignored `public/ark-local/`)
+ * read as the Ark's answer, founders and all (`src/lib/ark-local-snapshot.ts`): the real population before the
+ * captures backfill runs in production. The live log reads the real event log beside it; nothing is made up.
+ *
+ * Made-up data, development only: `?fixture=1` (about 120 animals), `?fixture=early` (the
  * two real arrivals) or `?fixture=grow` (starts small; more come aboard on
  * every refresh, to see the entrances) or `?fixture=sizes` (the v2 fixture
  * plus a ladybird, a mouse, a giraffe, a blue whale and a flamingo: the size scale's ends)
@@ -76,7 +84,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -92,7 +100,27 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
     if (development && asked === "layers") return "layers";
     if (development && asked && EDGE_MODES.has(asked as FixtureMode)) return asked as FixtureMode;
     if (development && asked && asked !== "0") return "full";
-    return process.env.NEXT_PUBLIC_ARK_FIXTURE === "1" ? "full" : null;
+    // (No environment switch: production never shows the fixture.)
+    return null;
+}
+
+/**
+ * Development's `?snapshot=<path under /public>`: that file read as the Ark's answer (`src/lib/ark-local-snapshot.ts`),
+ * or null (production, a path that is not a plain .json under /public, a file that is missing or does not decode).
+ */
+async function readLocalArk(asked: string | undefined): Promise<{snapshot: ArkSnapshot; founders: ArkFounders} | null> {
+    const local = arkLocalSnapshotPath(asked, process.env.NODE_ENV === "development");
+    if (!local) return null;
+    const [{readFile}, path] = await Promise.all([import("fs/promises"), import("path")]);
+    const root = path.join(process.cwd(), "public");
+    const file = path.join(root, local);
+    if (!file.startsWith(root + path.sep)) return null;
+    try {
+        return arkLocalSnapshotOf(JSON.parse(await readFile(file, "utf8")));
+    } catch (error) {
+        console.warn(`/ark?snapshot=${local}: not read (${(error as Error).message}); the live Ark instead`);
+        return null;
+    }
 }
 
 /** `?lang=`: the app language asked for, if any (the site locale otherwise). */
@@ -463,8 +491,10 @@ async function loadFixtureLife(mode: FixtureMode, founders: boolean): Promise<Ar
 
 export default async function ArkPage({params, searchParams}: Props) {
     const locale = pageLocale(params.locale);
-    const mode = fixtureMode(searchParams);
     const development = process.env.NODE_ENV === "development";
+    // A local snapshot (development) is real data: it takes the place of the live read, and of any fixture asked for.
+    const local = await readLocalArk(searchParams.snapshot);
+    const mode = local ? null : fixtureMode(searchParams);
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
     // Names are on by default (owner, 2026-11-11: every bringer with a handle shows as their @username); `&founders=0`: a server that names nobody.
@@ -473,9 +503,9 @@ export default async function ArkPage({params, searchParams}: Props) {
         getArkWords(locale, langOf(searchParams)),
         mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
-    const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
+    const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
-    const founders = data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
+    const founders = local?.founders ?? data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
@@ -494,6 +524,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             founders={founders}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}
+            local={Boolean(local)}
             signedIn={data.read?.signedIn ?? false}
             words={words}
             talkTitles={talk}

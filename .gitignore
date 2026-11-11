@@ -55,3 +55,7 @@ next-env.d.ts
 /public/ark/ark-prebuild-places-worker.js
 /.ark-golden
 /.ark-audit
+
+# Local snapshots of the real Ark (real usernames: /ark?snapshot=/ark-local/...) and the scale fixtures: never committed.
+/public/ark-local
+/public/ark-scale

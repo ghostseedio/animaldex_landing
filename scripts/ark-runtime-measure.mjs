@@ -13,6 +13,8 @@
  *   node scripts/ark-runtime-measure.mjs --label before [--devices desktop,phone] [--runs 3] [--seconds 20]
  *        [--network 4g|none] [--quality auto|high|medium|low] [--gpu metal|swiftshader] [--headed] [--profile]
  *        [--walk] (the camera flies animal to animal) [--budget <MB>] (a small skin ceiling, to watch the drops)
+ *        [--population 1x|3x] (a scale fixture) or [--population-file <path>] (any snapshot file, read where it is on
+ *        every request and never copied: a local snapshot of the real Ark, real usernames and all)
  *
  * The models come from the public model bucket (read only), as on the site; `--network 4g` throttles them to a
  * mid 4G link (9 Mbit/s down, 60 ms) through the DevTools protocol.
@@ -90,8 +92,14 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 </head><body><div id="ark"></div><script src="./measure.js"></script></body></html>
 `);
 
+const populationFile = arg("population-file", "");
+if (populationFile && !existsSync(populationFile)) throw new Error(`--population-file ${populationFile}: no such file`);
 const server = createServer((request, response) => {
     const url = new URL(request.url, "http://localhost");
+    if (populationFile && url.pathname === "/population-file.json") {
+        response.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"}).end(readFileSync(populationFile));
+        return;
+    }
     const fromPublic = url.pathname.startsWith("/ark/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "measure.html");
@@ -178,7 +186,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}`, {waitUntil: "commit", timeout: 120_000});
         await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
         const measured = await page.evaluate(() => window.__arkMeasure);
@@ -214,6 +222,7 @@ for (const deviceName of devices) {
             firstFrameFromNavigation: r.firstFrameFromNavigation,
             mountMs: r.mountMs,
             inViewMs: r.inViewMs,
+            frameRate: r.frameRate ?? null,
             longestTaskMs: longest,
             longTasks: tasks.length,
             longTaskMsTotal: tasks.reduce((sum, task) => sum + task.ms, 0),
@@ -236,7 +245,7 @@ for (const deviceName of devices) {
             errors: errors.filter((e) => !/Failed to load resource/.test(e)).slice(0, 8)
         };
         results.push(row);
-        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
+        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
         await context.close();
     }
 }

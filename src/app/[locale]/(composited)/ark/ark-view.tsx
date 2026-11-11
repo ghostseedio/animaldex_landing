@@ -42,6 +42,11 @@ type Props = {
     /** Development's `?fixture=grow`: the whole fixture, handed out a few at a time. */
     growFrom: ArkSnapshot | null;
     fixture: boolean;
+    /**
+     * Development's `?snapshot=`: a local file read as the Ark's answer (real data). It stays as read: the 45 s
+     * refresh from the live Ark would replace it. The live log still reads the real event log.
+     */
+    local?: boolean;
     signedIn: boolean;
     words: ArkWords;
     talkTitles: {a: string; an: string};
@@ -177,7 +182,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
+export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -570,7 +575,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     }, [observeLive]);
 
     useEffect(() => {
-        if ((fixture && !growFrom) || liveFeed) return;
+        if ((fixture && !growFrom) || liveFeed || local) return;
         let timer: ReturnType<typeof setTimeout> | null = null;
         let lastRead = Date.now();
         let stopped = false;
@@ -621,7 +626,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             if (timer) clearTimeout(timer);
             document.removeEventListener("visibilitychange", onVisible);
         };
-    }, [apply, fixture, growFrom, liveFeed]);
+    }, [apply, fixture, growFrom, liveFeed, local]);
 
     useEffect(() => {
         if (!arrival) return;

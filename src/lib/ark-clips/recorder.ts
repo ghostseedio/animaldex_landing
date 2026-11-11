@@ -164,7 +164,7 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         await page.waitForFunction(() => Boolean((window as unknown as {__arkDirector?: unknown}).__arkDirector), undefined, {timeout: 240_000, polling: 250});
 
         const info = await page.evaluate(() => (window as unknown as {__arkDirector: {info: () => ArkDirectorInfo}}).__arkDirector.info());
-        if (info.fixture !== options.fixture) throw new Error(info.fixture ? "The page served the fixture Ark (NEXT_PUBLIC_ARK_FIXTURE?) but a live clip was asked for" : "The page served the live Ark but --fixture was asked for");
+        if (info.fixture !== options.fixture) throw new Error(info.fixture ? "The page served the fixture Ark (a development server asked with ?fixture=) but a live clip was asked for" : "The page served the live Ark but --fixture was asked for");
         const snapshot = decodeArkSnapshot(info.snapshot);
         if (!snapshot) throw new Error("The page's Ark snapshot did not decode");
         const events = decodeArkEvents(info.events, snapshot);

@@ -7,7 +7,8 @@
  *   - first frame: when the scene said it drew (`onReady`);
  *   - in view: when the models asked for by then were all in (the first time `loading()` went quiet after the
  *     opening), and every 250 ms the models loaded, draw calls and the scene's memory estimate;
- *   - memory: the JS heap and the scene's GPU estimate (geometry and texture bytes, `runtime/memory.ts`).
+ *   - memory: the JS heap and the scene's GPU estimate (geometry and texture bytes, `runtime/memory.ts`);
+ *   - frames: the frame intervals once it is in view (requestAnimationFrame), as p50, p95 and frames a second.
  *
  * The long tasks are read by the driver (a PerformanceObserver installed before this script runs).
  */
@@ -74,6 +75,16 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const debug = (window as unknown as {__arkDebug?: {scene: Scene}}).__arkDebug;
         const samples: Sample[] = [];
         let inView = 0;
+        // Every frame's interval, with when it ended (from the script's first line), for the steady rate once in view.
+        const frames: Array<[number, number]> = [];
+        let frameLast = 0;
+        let framing = true;
+        const onFrame = (now: number) => {
+            if (frameLast) frames.push([now - t0, now - frameLast]);
+            frameLast = now;
+            if (framing) requestAnimationFrame(onFrame);
+        };
+        requestAnimationFrame(onFrame);
         const until = performance.now() + seconds * 1000;
         // The walk: animal after animal (one species each), flown to close up, so near levels come in and are let go.
         const bySpecies = new Map<string, string>();
@@ -96,6 +107,11 @@ const round = (value: number) => Math.round(value * 10) / 10;
             // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
             if (!inView && firstFrame && !loading && t > 5000) inView = t;
         }
+        framing = false;
+        // In view (else past the opening's 8 s): the intervals from then on.
+        const steady = frames.filter(([at]) => at > (inView || 8000)).map(([, ms]) => ms).sort((a, b) => a - b);
+        const at = (q: number) => (steady.length ? round(steady[Math.min(steady.length - 1, Math.floor(q * steady.length))]) : null);
+        const frameRate = steady.length ? {p50Ms: at(0.5), p95Ms: at(0.95), fps: round(1000 / (steady.reduce((sum, ms) => sum + ms, 0) / steady.length)), frames: steady.length, over50Ms: steady.filter((ms) => ms > 50).length} : null;
         const stats = handle.stats();
         const memory = debug ? sceneMemory(debug.scene) : null;
         const heap = (performance as Performance & {memory?: {usedJSHeapSize: number}}).memory?.usedJSHeapSize ?? null;
@@ -108,6 +124,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 firstFrameMs: firstFrame ? round(firstFrame - t0) : null,
                 firstFrameFromNavigation: firstFrame ? round(firstFrame) : null,
                 inViewMs: inView ? round(inView) : null,
+                frameRate,
                 stats,
                 memory: memory ? {geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), geometries: memory.geometries, textures: memory.textures, instances: memory.instances} : null,
                 heapMB: heap === null ? null : round(heap / 2 ** 20),

@@ -36,7 +36,8 @@
  * ?lang=<app language> (any of the apps' 44: the Ark's words from /api/ark/words, English key by key,
  * the page's lang and dir, the herds' counts), ?label=<the world's accessible name; default: the Ark's own, in ?lang>,
  * ?regions=1 (the seven regions' names drawn over the world from far, in ?lang),
- * ?lite=1|0 (the lighter view; absent: the device decides), ?fixture=1 (development: the v2 fixture).
+ * ?lite=1|0 (the lighter view; absent: the device decides), ?fixture=1 (a development build of the bundle only: the v2
+ * fixture with its made-up founders; a production bundle ignores it, so production only ever shows the real Ark).
  * ?insetTop=<px>, ?insetBottom=<px>: what the host draws over the world's top and foot (the iOS panel: insetTop=52); the
  * sound button, the bars, the log and the reset button keep clear of it, and of the safe area.
  * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
@@ -57,7 +58,10 @@
  *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
- * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * To the host: {type: "ark:selected", animal, founders}, where founders is that animal's named founders and shared story
+ * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
+ * {display_name, handle, avatar_url}; null while the server's founder_names switch is off or the animal has none), so the
+ * host's card can show "@handle" and open /u/{handle}; {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
@@ -66,12 +70,24 @@
  */
 (function () {
   var params = new URLSearchParams(location.search);
-  var snapshotUrl = params.get("snapshot") || (params.get("fixture") === "1" ? "/api/ark/voyage?fixture=1" : "/api/ark/voyage");
+  var Ark = window.AnimalDexArk;
+  // Made-up data only in a development build of the bundle (its feed is there only then); a production build ignores ?fixture=.
+  var devBuild = Boolean(Ark.ArkLiveFixtureFeed);
+  var fixtureAsked = devBuild ? params.get("fixture") : null;
+  var snapshotUrl = params.get("snapshot") || (fixtureAsked === "1" ? "/api/ark/voyage?fixture=1" : "/api/ark/voyage");
   var models = params.get("models") || "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
   var talking = params.get("talking") || models.replace(/\/ark\/?$/, "");
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
-  var Ark = window.AnimalDexArk;
   var scene = null;
+  // The named founders and shared stories beside the snapshot (the same answer's; none while founder_names is off).
+  var founders = null;
+  function foundersFrom(body, raw) {
+    if (body && body.founders && Ark.decodeArkFounders) return Ark.decodeArkFounders(body.founders);
+    return Ark.arkFoundersOf ? Ark.arkFoundersOf(raw) : null;
+  }
+  function foundersOf(animal) {
+    return animal && founders && founders.animals ? founders.animals[animal.id] || null : null;
+  }
   var lang = params.get("lang") || undefined;
   var lite = params.get("lite") === "1" ? true : params.get("lite") === "0" ? false : null;
   var motion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -83,10 +99,10 @@
   document.documentElement.style.setProperty("--ark-inset-top", insetPx("insetTop"));
   document.documentElement.style.setProperty("--ark-inset-bottom", insetPx("insetBottom"));
   // The live HUD (src/ark-scene/live): the log and the bars, opt-in; development's fixture shows both.
-  var hudAsked = params.get("hud") || (params.get("fixture") ? "1" : "0");
+  var hudAsked = params.get("hud") || (fixtureAsked ? "1" : "0");
   var hudLog = hudAsked === "1" || hudAsked === "log";
   var hudBars = hudAsked === "1" || hudAsked === "bars";
-  var feedOn = Boolean(Ark.ArkLiveFixtureFeed) && (params.get("feed") === "1" || (Boolean(params.get("fixture")) && params.get("feed") !== "0"));
+  var feedOn = devBuild && (params.get("feed") === "1" || (Boolean(fixtureAsked) && params.get("feed") !== "0"));
   var hud = null;
   var shown = null;
   var RTL = /^(ar|he|iw|fa|ur)([-_]|$)/i;
@@ -152,7 +168,7 @@
         var number = count.toLocaleString(lang);
         return words && words.herd && words.herd.badge ? fill(words.herd.badge, {count: number}) : number;
       },
-      onSelect: function (animal) { if (hud) hud.setSelected(animal ? animal.id : null); tell({type: "ark:selected", animal: animal}); },
+      onSelect: function (animal) { if (hud) hud.setSelected(animal ? animal.id : null); tell({type: "ark:selected", animal: animal, founders: foundersOf(animal)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
@@ -164,7 +180,7 @@
         scene: function () { return scene; },
         words: words,
         locale: document.documentElement.lang || lang || "en",
-        eventsUrl: params.get("fixture") || feedOn ? null : "/api/ark/events",
+        eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
         log: hudLog,
         bars: hudBars,
         reducedMotion: motion.matches
@@ -207,7 +223,12 @@
   function read() {
     if (feeding) return Promise.resolve();
     return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead])
-      .then(function (both) { var body = both[0]; show(Ark.decodeArkSnapshot(body && body.snapshot ? body.snapshot : body)); })
+      .then(function (both) {
+        var body = both[0];
+        var raw = body && body.snapshot ? body.snapshot : body;
+        founders = foundersFrom(body, raw);
+        show(Ark.decodeArkSnapshot(raw));
+      })
       .catch(function () {});
   }
 
@@ -221,7 +242,11 @@
       return;
     }
     if (scene && message.type === "ark:reset") { scene.resetView(); return; }
-    if (message.type === "ark:snapshot") { var snapshot = Ark.decodeArkSnapshot(message.snapshot); wordsRead.then(function () { show(snapshot); }); }
+    if (message.type === "ark:snapshot") {
+      var snapshot = Ark.decodeArkSnapshot(message.snapshot);
+      founders = foundersFrom(message, message.snapshot);
+      wordsRead.then(function () { show(snapshot); });
+    }
     else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
     else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
     else if (scene && message.type === "ark:region") scene.focusRegion(message.region || null);
