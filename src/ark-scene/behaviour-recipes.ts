@@ -1126,7 +1126,8 @@ export function murmurationPoint(centre: P, seed: number, index: number, epoch: 
     const s = (seed % 1000) / 1000;
     const cx = centre.x + 9 * Math.sin(t * 0.031 + s * 6) + 4 * Math.sin(t * 0.083 + s * 2);
     const cz = centre.z + 7 * Math.cos(t * 0.027 + s * 5) + 3 * Math.cos(t * 0.071 + s);
-    const cy = centre.y + 16 + 4 * Math.sin(t * 0.05 + s * 3);
+    // Over the treetops (the island's crowns reach 15–20 m).
+    const cy = centre.y + 25 + 4 * Math.sin(t * 0.05 + s * 3);
     const a = 13 + 6 * Math.sin(t * 0.07 + s);
     const b = 4.5 + 2.2 * Math.sin(t * 0.11 + 1 + s);
     const c = 8 + 5 * Math.cos(t * 0.053 + s * 4);

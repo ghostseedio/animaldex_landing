@@ -48,11 +48,22 @@ const MAX_FLOCK = MURMURATION_AMBIENT;
 const MAX_PARTICLES = 900;
 const NEST_TWIGS = 44;
 
-/** A small bird in flight: a body and two swept wings, about 1 m across (scaled to a starling's size). */
+/**
+ * A small bird in flight, about 1 m across (scaled to a starling's size): two swept wings with a little dihedral, and a
+ * body as a vertical diamond, so it has a silhouette from the side as well as from below. Nose along +z.
+ */
 function chevronGeometry(): BufferGeometry {
     const g = new BufferGeometry();
-    // Wings (two triangles) and a thin body: nose along +z.
-    const p = [0, 0, 0.5, -0.55, 0.02, -0.15, 0, 0, -0.05, 0, 0, 0.5, 0, 0, -0.05, 0.55, 0.02, -0.15, 0, 0.03, 0.45, 0, -0.03, -0.45, 0.06, 0, 0];
+    const p = [
+        // Wings
+        0, 0, 0.45, -0.55, 0.12, -0.15, 0, 0, -0.05,
+        0, 0, 0.45, 0, 0, -0.05, 0.55, 0.12, -0.15,
+        // Body (vertical diamond, both faces)
+        0, 0, 0.5, 0, 0.12, 0, 0, 0, -0.45,
+        0, 0, 0.5, 0, -0.12, 0, 0, 0, -0.45,
+        0, 0, 0.5, 0, 0, -0.45, 0, 0.12, 0,
+        0, 0, 0.5, 0, 0, -0.45, 0, -0.12, 0
+    ];
     g.setAttribute("position", new BufferAttribute(new Float32Array(p), 3));
     g.computeVertexNormals();
     return g;
@@ -251,8 +262,9 @@ export class RecipeScene {
                 const y = flock.centre.y + (p.y - flock.centre.y) * k;
                 const flap = 0.55 + 0.45 * Math.sin(now * 16 + i);
                 // A starling's size close by; far off, never smaller than a few pixels (so the flock reads as a cloud).
-                const size = Math.max(0.2, Math.hypot(p.x - camera.x, y - camera.y, p.z - camera.z) * 0.0032);
-                this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.3, size * (0.6 + 0.4 * flap), size, size);
+                const size = Math.max(0.22, Math.hypot(p.x - camera.x, y - camera.y, p.z - camera.z) * 0.0042);
+                // Banking as it turns (seen edge-on, a flat bird would vanish), the wings beating.
+                this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.8, size * (0.6 + 0.4 * flap), size * (1 + 0.6 * flap), size);
             }
         }
         for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, ...Object.values(this.marks)]) {
