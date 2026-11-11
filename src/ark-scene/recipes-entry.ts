@@ -22,9 +22,10 @@ type Raw = (typeof fixture)["animals"][number];
 type Species = {id: string; name: string; zone: string; activity: string | null; sociality: string | null};
 const SPECIES: Record<string, Species> = {
     "common-kingfisher": {id: "0d991095-9587-402c-892c-a2cbea1750cf", name: "Common Kingfisher", zone: "river_lake", activity: "diurnal", sociality: null},
-    "red-deer": {id: "9e4c04ec-46ac-4019-b396-7b9e5afb2028", name: "Red Deer", zone: "woodland", activity: "crepuscular", sociality: "group"},
+    "red-deer": {id: "9e4c04ec-46ac-4019-b396-7b9e5afb2028", name: "Red Deer", zone: "grassland", activity: "crepuscular", sociality: "group"},
     "european-starling": {id: "47097175-041c-45e3-8b17-19ecec9ad72d", name: "European Starling", zone: "farm_garden", activity: "diurnal", sociality: "group"},
     "black-billed-magpie": {id: "ddf29082-be9b-449a-9007-dbc34818102f", name: "Black-billed Magpie", zone: "woodland", activity: "diurnal", sociality: "group"},
+    "barn-swallow": {id: "389d6e31-1cd3-491e-b92d-3c23a94b2a1e", name: "Barn Swallow", zone: "farm_garden", activity: "diurnal", sociality: null},
     "grey-heron": {id: "18bed140-4543-4a6f-b741-d32f764b75ce", name: "Grey Heron", zone: "wetland", activity: "diurnal", sociality: null},
     osprey: {id: "360d1b44-2874-4312-aa80-c4f99d5e1156", name: "Osprey", zone: "seashore", activity: "diurnal", sociality: null}
 };
@@ -77,7 +78,11 @@ const CLIPS: Record<string, Clip> = {
                     for (let t = w.start; t < w.end; t += 1) {
                         const pa = poseOnTrip(ctx.world, tripAt(ctx.world, a.profile, a.animal, t, ctx.hoursAt, a.activity), t) as RecipePose;
                         if (pa.act?.block !== "fight") continue;
-                        return {start: w.start - 1, seconds: Math.min(w.end - w.start, 70), step: 1 / 8, view: view(pa.x, pa.y + 1, pa.z, 11, 1.3, Math.atan2(pa.x, pa.z) + 1), note: `${a.id} and ${w.other}: ${w.template} window ${w.start}, fighting at ${t}`};
+                        // From the side of the line between the two, so the clash is seen across, not along.
+                        const b = ctx.animals.find((x) => x.id === w.other)!;
+                        const pb = poseOnTrip(ctx.world, tripAt(ctx.world, b.profile, b.animal, t, ctx.hoursAt, b.activity), t);
+                        const across = Math.atan2(pb.z - pa.z, -(pb.x - pa.x));
+                        return {start: w.start - 1, seconds: Math.min(w.end - w.start, 70), step: 1 / 8, view: view((pa.x + pb.x) / 2, pa.y + 0.9, (pa.z + pb.z) / 2, 7.5, 1.3, across), note: `${a.id} and ${w.other}: ${w.template} window ${w.start}, fighting at ${t}`};
                     }
                 }
             }
@@ -94,11 +99,11 @@ const CLIPS: Record<string, Clip> = {
             if (!entry) return null;
             const m = microMurmuration(entry.id, entry.slug, entry.at, ctx.date + 1200, ctx.hoursAt(0), heightAt);
             const c = m?.act.flock?.centre ?? entry.at;
-            return {start: ctx.date + 1200, seconds: 30, step: 1 / 6, view: view(c.x, c.y + 16, c.z, 70, 1.38, 0.9), note: `centre ${c.x.toFixed(1)},${c.z.toFixed(1)}`};
+            return {start: ctx.date + 1200, seconds: 30, step: 1 / 6, view: view(c.x, c.y + 20, c.z, 45, 1.3, 0.9), note: `centre ${c.x.toFixed(1)},${c.z.toFixed(1)}`};
         }
     },
     nest: {
-        cast: [["mp", "black-billed-magpie", 2]],
+        cast: [["sw", "barn-swallow", 2]],
         hours: 11,
         date: Date.UTC(2026, 3, 1, 11) / 1000,
         find: (ctx) => {
@@ -111,7 +116,9 @@ const CLIPS: Record<string, Clip> = {
                 const ep = tripEpisode(ctx.world, trip);
                 const carry = ep?.keys.find((k) => k.carry?.item === "material" && k.block.motion === "travel");
                 if (!ep || !carry) continue;
-                return {start: carry.t0 - 2, seconds: 14, step: 1 / 8, view: view(site.x, site.y, site.z, 3.6, 1.33, 0.8), note: `site ${site.x.toFixed(1)},${site.y.toFixed(1)},${site.z.toFixed(1)}; stage now ${nestStageAt(a.slug, carry.t0).toFixed(2)}`};
+                // Facing the wall or ledge it is on (out along the point's normal), a little to one side.
+                const out = Math.atan2(site.nx, site.nz) + 0.35;
+                return {start: carry.t0 - 2, seconds: 14, step: 1 / 8, view: view(site.x, site.y - 0.2, site.z, 3.2, 1.25, out), note: `site ${site.x.toFixed(1)},${site.y.toFixed(1)},${site.z.toFixed(1)}; stage now ${nestStageAt(a.slug, carry.t0).toFixed(2)}`};
             }
             return null;
         }

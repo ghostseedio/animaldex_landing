@@ -239,3 +239,44 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 - About 24 animals are in an act at a time.
 - In the scene only near animals are posed every frame (far ones twice a second, icons once), so the real cost is a fraction of this.
 - Episodes are memoised per trip, pair episodes per window.
+
+## For the other lanes
+
+### Rig player (`ark-rig-publish`)
+- **Map the named states to clips.** The act's state is in `pose.act.state` for a scheduled animal, and `entry.recipeAct` for a house starling. The list is `ARK_RECIPE_STATES` (70), in the table above.
+- **What you get until a state is mapped.** `pose.beat` is already the block's fallback beat (bite, scan, shake, enter_water…), so today's clip mapping keeps working.
+- **States with the most use, in order:**
+  1. `perch`, `scan`, `groom`, `call`, `fly`, `takeoff`, `land`, `plunge`;
+  2. `wade`, `strike`, `eat`, `fight`, `display`, `dig`, `dust_bathe`, `wallow`;
+  3. `upend`, `dive`, `surface`, `slide`, `slip_in`, `dive_in`, `launch`, `haul_out`, `hop_out`.
+- **Body attitude.** The recipe already supplies it (`act.pitch`, `act.roll`, added to the schedule pose's in `fromSchedule`), so a clip needs only the limbs and head.
+
+### Props (`ark-props`): nests
+- **Wiring the props' nests.** Once the props' `nest-growth.ts` is in, add one line after the props mount in `index.ts`:
+  ```ts
+  setNestSource(nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => /* the Ark day at epoch, as props/index.ts arkDayNow */}));
+  ```
+- **What changes then.**
+  - A builder carries its material to the props' nest for it (`sitter` = its id), and builds only while that nest's stage is under 1.
+  - The fallback nest that `recipe-scene.ts` draws switches itself off (`hasNestSource()`).
+  - Eggs and chicks stay the server's (`laid`/`birth` events, `nests.ts`): nothing here lays an egg.
+- **Calendars.** The props stage runs on the Ark day (1 Ark year = 14 real days), while this branch's fallback runs on the stored nesting months of the real calendar. With the source wired, the props' calendar decides.
+
+### Reef (`ark-graphics-reef`): fish schools
+- **Wiring the schools.** Add one line when the reef lane is in:
+  ```ts
+  setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch))
+  ```
+- **What changes then.** A chase and a plunge go to the nearest school, where it will be by then. A bait ball (`mode: "mill"`) is the obvious target for dolphins and gannets. With no school near (the lake has none yet), the recipe uses its own small ambient school, drawn by `recipe-scene.ts`.
+- **Scattering (an input for their API, not done in their file).** Every frame, `recipeScene.chasers` lists where hunters are, as `{x, y, z, r}`. If `fish-render.ts` pushes each fish away from those points (as `recipe-scene.ts` does for its own school), the reef's schools will split round a seal and rejoin behind it. It stays pure: the chasers' positions are the shared schedule's.
+
+### Intelligence (`ark-intelligence-web`)
+- **Defence data.** The stored defences are extracted per species in `data/ark/behaviour-recipes.json` (`behaviours.freeze`, `flee_cover`, `flee_water`, `flee_tree`, `curl_shell`, `ink`, `stott`, each with its phrase). The flee envelope can use them to choose cover, water or a tree. Nothing here reacts to predators: that is `reactive.ts`.
+
+### Liveliness wiring
+- **Sex colour.** `sexLook(id, slug)` gives `saturation` and `value` for the duller sex (185 species), for the per-instance colour.
+- **Wet and muddy looks.** A wallow and a bathe could drive a wet or muddy look: `act.recipe` is `wallow` or `bathe`, then its trip's stay continues.
+
+### Behaviour (`ark-behaviour`)
+- **Sea otter profile.** The sea otter's profile is `move: walk` with no swim, so the schedule walks it on land. Its stored text says it floats and dives for shellfish. With the profile fixed (`move: swim`, `moves: walk`), its `shell_tool` recipe takes over.
+- **Starlings.** House starlings are micro animals (`microhabitats.json`: house), so they are off the schedule. Their murmuration is the one hook in `pose()` for micro animals.

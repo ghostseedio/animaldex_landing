@@ -1978,7 +1978,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 near = {
                     at: epoch,
                     marks: digs ? recipeMarks(world, own.profile, own.animal, epoch, scheduleHours, c.entry.animal.activity) : [],
-                    nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.7, 0.08), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null
+                    nest: site && stage > 0 ? {id: c.entry.animal.id, x: site.x, y: site.y, z: site.z, size: Math.min(Math.max(own.animal.length * 0.9, 0.12), 1.4), stage, material: species.nest?.materials[0] ?? "twigs"} : null
                 };
                 recipeNear.set(c.entry.animal.id, near);
             }

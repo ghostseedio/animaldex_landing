@@ -44,7 +44,7 @@ const MAX_ITEMS = 48;
 const MAX_FISH = 160;
 const MAX_MARKS = 96;
 const MAX_TWIGS = 600;
-const MAX_FLOCK = MURMURATION_AMBIENT * 2;
+const MAX_FLOCK = MURMURATION_AMBIENT;
 const MAX_PARTICLES = 900;
 const NEST_TWIGS = 44;
 
@@ -242,7 +242,7 @@ export class RecipeScene {
         // A murmuration's ambient flockmates, round the catalogue starlings in it (only near enough to see).
         let drawn = 0;
         for (const flock of Array.from(flocks.values())) {
-            if (Math.hypot(flock.centre.x - camera.x, flock.centre.z - camera.z) > 260) continue;
+            if (Math.hypot(flock.centre.x - camera.x, flock.centre.z - camera.z) > 320) continue;
             const k = Math.min(Math.min(epoch - flock.t0, flock.t1 - epoch) / 40, 1);
             for (let i = 0; i < MURMURATION_AMBIENT && drawn < MAX_FLOCK; i++, drawn++) {
                 const p = murmurationPoint(flock.centre, flock.seed, 1000 + i, epoch);
@@ -250,7 +250,9 @@ export class RecipeScene {
                 // In from the roost and back down to it at the window's ends.
                 const y = flock.centre.y + (p.y - flock.centre.y) * k;
                 const flap = 0.55 + 0.45 * Math.sin(now * 16 + i);
-                this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.3, 0.2 * (0.6 + 0.4 * flap), 0.2, 0.2);
+                // A starling's size close by; far off, never smaller than a few pixels (so the flock reads as a cloud).
+                const size = Math.max(0.2, Math.hypot(p.x - camera.x, y - camera.y, p.z - camera.z) * 0.0032);
+                this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.3, size * (0.6 + 0.4 * flap), size, size);
             }
         }
         for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, ...Object.values(this.marks)]) {

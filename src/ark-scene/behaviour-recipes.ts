@@ -1114,7 +1114,7 @@ function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, e
 
 /** The murmuration's window (island hours) and how many ambient flockmates fill it out near the camera. */
 export const MURMURATION_HOURS: [number, number] = [17.45, 18.25];
-export const MURMURATION_AMBIENT = 360;
+export const MURMURATION_AMBIENT = 1400;
 
 /**
  * A point of a murmuration (pure in its centre, the time and the bird's index): a shape that stretches, turns and
