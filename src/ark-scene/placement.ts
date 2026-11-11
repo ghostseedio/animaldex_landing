@@ -352,7 +352,18 @@ export function primePlaces(animals: ArkAnimal[], places: Map<string, Placement>
     primedPlaces = {animals, places};
 }
 
+/** Runtime hook: places worked out in the places worker for a list with these ids in this order (a replay's ghosts). */
+let primedKeyed: {key: string; places: Map<string, Placement>} | null = null;
+export function primePlacesFor(animals: ArkAnimal[], places: Map<string, Placement>): void {
+    primedKeyed = {key: animals.map((animal) => animal.id).join("\n"), places};
+}
+
 export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
+    if (primedKeyed && primedKeyed.key === animals.map((animal) => animal.id).join("\n")) {
+        const places = primedKeyed.places;
+        primedKeyed = null;
+        return places;
+    }
     if (primedPlaces && primedPlaces.animals === animals) {
         const places = primedPlaces.places;
         primedPlaces = null;

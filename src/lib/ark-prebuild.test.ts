@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {forestFill, grassTufts, primeDecor, worldDecor} from "@/ark-scene/decor";
-import {placeAnimals} from "@/ark-scene/placement";
+import {placeAnimals, primePlacesFor} from "@/ark-scene/placement";
 import {applyArkPrebuild, computeArkPrebuild, packGrass, unpackGrass} from "@/ark-scene/runtime/prebuild";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -43,4 +43,17 @@ test("prebuild: the ground's arrays (graphics' groundArrays, once in the release
     const reference = terrain.groundArrays("medium");
     const sent = structuredClone(computeArkPrebuild({grass: 10, animals: null, tier: "medium"}));
     assert.deepEqual(sent.ground, reference);
+});
+
+test("prebuild: a replay's ghosts placed in the worker are exactly what play would place (same ids, same order)", () => {
+    const snapshot = decodeArkSnapshot(fixture)!;
+    const ghosts = snapshot.animals.slice(0, 12).map((animal) => ({...animal}));
+    const reference = Array.from(placeAnimals(ghosts.map((animal) => ({...animal}))).entries());
+    // The worker's answer for the same list, across a structured clone, handed in for that list.
+    const sent = structuredClone(Array.from(placeAnimals(structuredClone(ghosts)).entries()));
+    primePlacesFor(ghosts, new Map(sent));
+    assert.deepEqual(Array.from(placeAnimals(ghosts).entries()), reference);
+    // Another list (other ids or order) is never given it.
+    primePlacesFor(ghosts, new Map(sent));
+    assert.equal(placeAnimals([...ghosts].reverse()).size, ghosts.length);
 });
