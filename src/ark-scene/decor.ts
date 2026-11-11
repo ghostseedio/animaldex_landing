@@ -15,7 +15,7 @@
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {cropsGrowAt} from "@/ark-scene/fields";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type DecorKind =
@@ -75,6 +75,20 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 };
 
 const MAX_DENSITY = 5;
+
+const WOODS_TREES = new Set<DecorKind>(["broadleaf", "rainforest", "conifer"]);
+
+/**
+ * How open the woods stand at a spot (graphics batch 6, owner: "the trees are too dense"): 0 in a glade (broad open
+ * patches a few tens of metres across), rising to 1 in the deep woods, with a ragged edge where the forest fades into
+ * its neighbour. 1 outside the rainforest and the woodland. Shared by the decor trees and the forest fill.
+ */
+function woodsCover(x: number, z: number, sample: GroundSample, zone: ArkZone): number {
+    if (zone !== "rainforest" && zone !== "woodland") return 1;
+    const glade = 1 - smoothstep(0.52, 0.6, fbm(x * 0.028 + 41, z * 0.028 - 17));
+    const edge = smoothstep(0.45, 0.85, (sample.weights[zone] ?? 0) + 0.3 * (fbm(x * 0.09 - 5, z * 0.09 + 9) - 0.5));
+    return glade * edge;
+}
 
 /**
  * Trees at a believable size beside the cottage (graphics pass, batch 2): its ridge is 4.3 m, so a broadleaf now
@@ -151,7 +165,11 @@ export function worldDecor(): DecorItem[] {
         if (sample.cliff > 0.4 && kind !== "rock" && sample.land < 0.8) continue;
         const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : (0.75 + 0.55 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
         const variant = Math.floor(variantRoll * 3);
-        push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll)});
+        // In a glade or past the forest's ragged edge a tree stands as an understorey shrub instead (batch 6). Decided
+        // after every skip test above and with no extra draw, so no decor index moves; the shrub keeps its spot.
+        const open = WOODS_TREES.has(kind) && variantRoll * 3 - variant > woodsCover(x, z, sample, zone);
+        const grown: DecorKind = open ? "shrub" : kind;
+        push({kind: grown, variant, x, y: sample.height, z, scale: open ? 0.75 + 0.55 * sizeRoll : scale, rotation, color: tone(zone, grown, toneRoll)});
         // Rocks come in clusters: a big one and a few smaller about it.
         if (kind === "rock") {
             const extra = 1 + Math.floor(random() * 3);
@@ -384,15 +402,19 @@ export function forestFill(): FillItem[] {
     // A coarse grid keeps trunks at least ~2.4 m apart.
     const taken = new Set<string>();
     const cell = 2.4;
+    // Graphics batch 6 (owner: "the trees are too dense"): about half the forest fill it had, so the woods read as
+    // leafy but broken up from the island view, trunks and understorey show between the crowns, and the animals in
+    // them can be seen; in the rainforest a lower canopy of broadleaves under fewer emergents.
     const kinds: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
-        rainforest: {density: 0.32, pick: (r) => (r < 0.6 ? "rainforest" : r < 0.85 ? "broadleaf" : "shrub")},
-        woodland: {density: 0.26, pick: (r) => (r < 0.55 ? "broadleaf" : r < 0.88 ? "conifer" : "shrub")},
-        mountains: {density: 0.12, pick: (r) => (r < 0.82 ? "conifer" : "shrub")},
+        rainforest: {density: 0.16, pick: (r) => (r < 0.4 ? "rainforest" : r < 0.82 ? "broadleaf" : "shrub")},
+        woodland: {density: 0.14, pick: (r) => (r < 0.55 ? "broadleaf" : r < 0.86 ? "conifer" : "shrub")},
+        mountains: {density: 0.11, pick: (r) => (r < 0.82 ? "conifer" : "shrub")},
         river_lake: {density: 0.05, pick: (r) => (r < 0.7 ? "broadleaf" : "shrub")},
         wetland: {density: 0.035, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")},
         grassland: {density: 0.012, pick: (r) => (r < 0.6 ? "acacia" : "shrub")},
         farm_garden: {density: 0.012, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")}
     };
+    const densest = Math.max(...Object.values(kinds).map((growth) => growth!.density));
     const tries = 220000;
     for (let i = 0; i < tries; i++) {
         const x = (random() * 2 - 1) * TERRAIN_HALF;
@@ -404,14 +426,17 @@ export function forestFill(): FillItem[] {
         const rotation = random() * Math.PI * 2;
         const variant = Math.floor(random() * 3);
         const rank = random();
+        // Clumps and glades: dense where the noise is high, open where it is low. Tested first against the densest
+        // zone's density (it needs no ground sample), so most tries skip sampleGround: the same trees, 2.3× faster.
+        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
+        if (roll > densest * clump * 6) continue;
         const sample = sampleGround(x, z);
         if (sample.height < 0.5 || sample.land < 0.7 || sample.cliff > 0.35) continue;
         const zone = zoneAt(sample);
         const growth = kinds[zone];
         if (!growth) continue;
-        // Clumps and glades: dense where the noise is high, open where it is low.
-        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
-        if (roll > growth.density * clump * 6) continue;
+        // The woods only (batch 6): none in the glades, fewer towards the ragged edge.
+        if (roll > growth.density * clump * 6 * woodsCover(x, z, sample, zone)) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
         if (kind === "conifer" && sample.height > 22) continue;

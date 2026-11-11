@@ -30,9 +30,9 @@ type Level = typeof LEVELS[number];
 type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number};
 
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). */
-function windMaterial(doubleSided: boolean, near = false): MeshStandardMaterial {
+function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
-    material.customProgramCacheKey = () => `ark-asset-tree-b4-${doubleSided ? 2 : 1}${near ? "-near" : ""}`;
+    material.customProgramCacheKey = () => `ark-asset-tree-b6-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
@@ -50,14 +50,15 @@ uniform vec2 arkWind;`)
     float gust = length(arkWind);
     vec2 along = arkWind / max(gust, 1e-3);
     float phase = color_1.y * 6.2831853;
-    float wave = sin(arkTime * 1.25 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.6 + phase * 1.7 + root.x * 0.4);
+    // Whole cycles in the shared clock's 600 s window (runtime lane; tree-assets.ts treeSway must use the same numbers).
+    float wave = sin(arkTime * 1.24617 + phase + root.x * 0.19 + root.z * 0.15) + 0.4 * sin(arkTime * 2.59705 + phase * 1.7 + root.x * 0.4);
     // Trunk a little, branches more, leaves most (the asset's sway weight), bending more the higher it is.
     float bend = color_1.x * (0.25 + 0.06 * max(transformed.y, 0.0));
     transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     float leaf = color_1.w * 6.2831853;
-    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.3 + leaf * 1.3), cos(arkTime * 6.7 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
-    // Leaves flutter (weight 0.36 and up); wood does not (0).
-    vArkLeafy = smoothstep(0.05, 0.3, color_1.z);
+    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
+    // Leaves flutter (broadleaf 0.36 and up, the conifers' boughs from about 0.05); wood does not (0).
+    vArkLeafy = smoothstep(0.02, 0.1, color_1.z);
     vArkLocal = position;
 }`);
         // Leaves are single sheets: lit from the side the light comes, never black on the back.
@@ -78,6 +79,12 @@ ${NOISE_GLSL}`)
     // Moss on the roots and the trunk's foot (batch 5), in patches.
     float arkMoss = arkWood * (1.0 - smoothstep(0.25, 1.1, vArkLocal.y)) * smoothstep(0.4, 0.68, arkNoise(vArkLocal.xz * 7.0 + vArkLocal.y * 4.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.115, 0.03) * (0.8 + 0.4 * arkGrain), arkMoss * 0.75);
+${conifer ? `    // Conifer needles (batch 6): the assets' deep teal read as heavy dark shapes near the camera. A natural, warmer,
+    // less saturated green.
+    vec3 arkNeedle = diffuseColor.rgb;
+    float arkGrey = dot(arkNeedle, vec3(0.3, 0.59, 0.11));
+    arkNeedle = mix(vec3(arkGrey), arkNeedle, 0.55) * vec3(1.22, 1.1, 0.68);
+    diffuseColor.rgb = mix(diffuseColor.rgb, arkNeedle * 1.35, vArkLeafy);` : ""}
 }`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
@@ -106,11 +113,52 @@ nonPerturbedNormal *= faceDirection;
     arkThrough = directionalLights[0].color * clamp(dot(-arkSeen, directionalLights[0].direction), 0.0, 1.0) * 0.25;
     #endif
     reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * vArkLeafy + 0.18 * (1.0 - vArkLeafy)) + arkThrough * vArkLeafy);
+    ${conifer ? `// Needles are many and fine: more of the sky comes through a conifer's mass, most near the camera, where it read
+    // as one dark shape (batch 6).
+    float arkNear = 1.0 - smoothstep(6.0, 22.0, length(vViewPosition));
+    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * arkSky * vec3(0.95, 1.0, 0.78) * vArkLeafy * (0.3 + 0.6 * arkDown) * (0.55 + 0.45 * arkNear);` : ""}
 }`);
         if (near) {
             shader.fragmentShader = shader.fragmentShader
                 .replace("#include <common>", `#include <common>${ARK_NEAR_FADE_PARS}`)
-                .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${ARK_NEAR_FADE_CLIP}`);
+                // After the noise helpers (inserted after <common> above).
+                .replace("#include <uv_pars_fragment>", `#include <uv_pars_fragment>
+// Close-range bark (batch 6): furrows along the trunk in its own coordinates, a few cracks across, lichen flecks.
+float arkBarkHeight(vec3 q) {
+    float around = atan(q.z, q.x);
+    float furrows = arkNoise(vec2(around * 26.0, q.y * 3.2));
+    float fine = arkNoise(vec2(around * 70.0, q.y * 11.0));
+    float cracks = smoothstep(0.82, 0.95, arkNoise(vec2(around * 9.0, q.y * 14.0)));
+    return furrows * 0.7 + fine * 0.3 - cracks * 0.5;
+}
+float arkBarkNear = 0.0;
+float arkBarkH = 0.0;`)
+                .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${ARK_NEAR_FADE_CLIP}`)
+                // Taken here, in uniform control flow, for the bump's screen derivatives below.
+                .replace("#include <color_fragment>", `{
+    arkBarkNear = (1.0 - vArkLeafy) * (1.0 - smoothstep(1.2, 3.2, length(vViewPosition)));
+    arkBarkH = arkBarkHeight(vArkLocal);
+}
+#include <color_fragment>`)
+                .replace("#include <lights_fragment_begin>", `{
+    // The bark's relief as a bump on the shading normal (three's surface-gradient method), only close up.
+    vec3 bdx = dFdx(-vViewPosition);
+    vec3 bdy = dFdy(-vViewPosition);
+    vec3 r1 = cross(bdy, normal);
+    vec3 r2 = cross(normal, bdx);
+    float det = dot(bdx, r1);
+    vec3 grad = sign(det) * (dFdx(arkBarkH) * r1 + dFdy(arkBarkH) * r2) * 0.035;
+    normal = normalize(mix(normal, normalize(abs(det) * normal - grad), arkBarkNear));
+}
+#include <lights_fragment_begin>`);
+            // The bark's colour close up: darker in the furrows, lighter on the ridges, a few grey-green lichen flecks.
+            shader.fragmentShader = shader.fragmentShader.replace("    diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);", `    diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);
+    {
+        float lichen = smoothstep(0.84, 0.93, arkNoise(vArkLocal.xz * 95.0 + vArkLocal.y * 60.0)) * smoothstep(0.4, 0.7, arkNoise(vArkLocal.xz * 6.0 + vArkLocal.y * 3.0));
+        vec3 bark = diffuseColor.rgb * (0.62 + 0.62 * clamp(arkBarkH, 0.0, 1.0));
+        bark = mix(bark, vec3(0.3, 0.34, 0.25), lichen * 0.35);
+        diffuseColor.rgb = mix(diffuseColor.rgb, bark, arkBarkNear);
+    }`);
         }
     };
     return material;
@@ -120,8 +168,10 @@ export class AssetTrees {
     readonly group = new Group();
     /** Ready once every needed tree is loaded (the procedural trees stand in until then). */
     ready = false;
-    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number}>();
+    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean}>();
     private readonly materials = {double: windMaterial(true), front: windMaterial(false), nearDouble: windMaterial(true, true), nearFront: windMaterial(false, true)};
+    /** Pines and spruces (batch 6): their own shading of the needles. */
+    private readonly coniferMaterials = {double: windMaterial(true, false, true), front: windMaterial(false, false, true), nearDouble: windMaterial(true, true, true), nearFront: windMaterial(false, true, true)};
     private reach = 1;
     private fill = 1;
     private lastAt = new Vector3(Infinity, 0, 0);
@@ -140,7 +190,7 @@ export class AssetTrees {
             let entry = this.byAsset.get(asset.id);
             if (!entry) {
                 const info = ASSETS[asset.id];
-                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height};
+                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce"};
                 this.byAsset.set(asset.id, entry);
             }
             const matrix = new Matrix4().compose(position.set(asset.x, asset.y, asset.z), rotation.setFromAxisAngle(up, asset.rotation), scale.setScalar(asset.scale));
@@ -166,7 +216,8 @@ export class AssetTrees {
                         if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
                     });
                     if (!geometry) return;
-                    const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
+                    const set = entry.conifer ? this.coniferMaterials : this.materials;
+                    const mesh = new InstancedMesh(geometry, lod.doubleSided ? set.double : set.front, entry.instances.length);
                     mesh.count = 0;
                     mesh.frustumCulled = false;
                     mesh.castShadow = lod.level !== "card" && this.shadows;
@@ -176,7 +227,7 @@ export class AssetTrees {
                     this.group.add(mesh);
                     if (lod.level === "lod0") {
                         // The same full tree for the few round the camera, with the near fade.
-                        const near = new InstancedMesh(geometry, lod.doubleSided ? this.materials.nearDouble : this.materials.nearFront, entry.instances.length);
+                        const near = new InstancedMesh(geometry, lod.doubleSided ? set.nearDouble : set.nearFront, entry.instances.length);
                         near.count = 0;
                         near.visible = false;
                         near.frustumCulled = false;
@@ -278,5 +329,6 @@ export class AssetTrees {
             entry.near?.dispose();
         });
         Object.values(this.materials).forEach((material) => material.dispose());
+        Object.values(this.coniferMaterials).forEach((material) => material.dispose());
     }
 }

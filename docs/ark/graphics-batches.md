@@ -228,6 +228,87 @@ The phone profile held 60 fps in every run. It draws about 6 more calls (rock le
 
 Golden sheets: `batch5-desktop-before-after.jpg`, `batch5-phone-before-after.jpg` and `batch5-lake-level-tides.jpg` (mean tide against spring high) in the handover folder's `ark/graphics/`.
 
+## Batch 6: the forest floor set, conifers, shared clock, underwater, sand, bark (cb58a7ce and on)
+
+- **Assets (`ark-assets` 08b35d63 merged):**
+  - the rebuilt emergent buttresses checked on high: lit mossy bark, no black slabs under GTAO;
+  - the forest floor set in the woods (`floor-assets.ts`, drawn by `AssetFloor`, the rocks' instancing generalised as `AssetInstances`): logs (fresh, mossy, rotten), twigs, pine and spruce cones, scattered by zone on gentle ground, off the clearings and clear of trunks; `floorObstacles()` gives the logs to the behaviour lane;
+  - the set's litter patches are not used: their opaque base plate reads as a square rug on our ground (the procedural litter mats cover the floor);
+  - `tree-attach.json` not regenerated here: `scripts/ark-tree-attach.mjs` is on the attach lane's branch, not this one.
+- **Conifers (`windMaterial`):** a pine and spruce variant: needles less saturated and warmer, more sky light through them, most near the camera (they read as heavy dark-teal shapes). Leaves count from a flutter weight of about 0.05 (the conifers' boughs carry small weights).
+- **Runtime lane:**
+  - its forest fill prefilter, applied: the same 508 trees (identical hash), about twice as fast;
+  - every periodic term in the graphics shaders makes whole cycles in the shared clock's 600 s window (their table). `treeSway` on the attach branch must take the same numbers as `windMaterial`.
+- **Underwater:**
+  - the water's underside has the waves' light and a ripple, darker into the distance (it read as a flat teal band over the reef);
+  - a light shaft fades out as the camera comes within about 6 m (one at the lens read as a hard-edged slab).
+  - The house fields' white haze is the props lane's old mist (fixed on their branch in 54a82ee2); none here.
+- **Sand:** warmer and darker, damp in patches, banded, shell grit close up, an ochre savanna edge, warm sand on the grassland and desert coasts (it read as white paper). The white below the range's right flank is the cold cove's ice, by design.
+- **Mountain:** the rock beds blend into the faces (they read as boxy slabs): a smaller shading bend and a fainter lip and underhang; ledge snow weight 0.75 → 0.5 (the only change to the snow formula; the ice and alpine rules are as in batch 5).
+- **Bark close up:** on the trees whose crown reaches over the camera (the near bucket's material), within about 3 m: furrows, grain and cracks as colour and as a bump on the shading normal, a few lichen flecks.
+- **es5:** the graphics test no longer iterates a Map (fixed in c372c52f).
+- **Ground for the worker prebuild (`terrain.ts`):** `groundArrays(tier)` returns the ground as typed arrays with no three.js objects and no DOM. `primeGround(arrays)` hands over arrays built elsewhere, and `groundGeometry` uses them when present. The output is bit for bit the old `PlaneGeometry` (same normals), and primed and built geometry are deep-equal (test). The runtime lane wires the worker.
+
+Same-conditions A/B, batch 5 (79f22ee6 scene source) against batch 6 (f8a2ad0c), interleaved, same six places, tier pinned. The load average was 165 to 382 (other sessions' jobs), so the timings are noisy:
+
+| | interval p50 / p95 ms | scene CPU ms | GPU drain ms | draw calls | triangles |
+|---|---|---|---|---|---|
+| phone medium, batch 5 | 16.7 / 16.8 | 4.6–5.0 | 5.2–5.3 | 140.5 | 1.20 M |
+| phone medium, batch 6 | 16.7 / 16.7 | 6.2–6.7 | 5.3–6.3 | 144 | 1.21 M |
+| desktop high, batch 5 | 16.7 / 16.8 | 2.5–2.8 | 9.4–20.0 | 372–373 | 6.52–6.55 M |
+| desktop high, batch 6 | 16.7 / 16.7 | 2.2–2.8 | 10.6–20.4 | 385–387 | 6.55 M |
+
+The phone profile held 60 fps in every run, with about 4 more draw calls (the floor set) and the same triangles. Its scene CPU looks about 1.5 ms higher at 4× throttle, but under this load that is within the noise. Worth re-measuring on a quiet machine or a real phone.
+
+Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg`, `batch6-bark-closeup.png` and `batch6-buttress-before-after.png` in the handover folder's `ark/graphics/`.
+
+## Batch 6: the forest thinned, the snowy faces (owner: "the trees are too dense"; "dark rectangular slabs on the snowy faces")
+
+- **Forest (`decor.ts`):**
+  - one rule, `woodsCover(x, z)`, for the rainforest and the woodland:
+    - 0 in a glade (broad open patches a few tens of metres across), 1 in the deep woods;
+    - a ragged edge where the forest fades into its neighbour;
+    - the map's clearings stay as they were.
+  - The forest fill:
+    - about half of what it was in the woods, with a lower canopy of broadleaves under fewer emergents in the rainforest;
+    - none in the glades, thinning towards the edge;
+    - 508 → 407 trees and shrubs.
+  - The decor trees:
+    - a tree in a glade, or past the edge by a per-tree roll, now stands as an understorey shrub (48: 29 in the rainforest, 19 in the woodland);
+    - the change is made after every skip test and with no extra random draw, so no decor id or spot moves.
+  - The canopy trees (the large climbers' limbs) are untouched.
+  - From the island view the woods read leafy but broken up: ground, shrubs and trunks show between the crown groups.
+- **Attach hosts:**
+  - `docs/ark/forest-thinning-hosts.json` lists them:
+    - decor trees now shrubs;
+    - fill hosts removed, re-kinded or added;
+    - every kept fill id's renumbering (`forestFill()` is rank-ordered).
+  - `scripts/ark-tree-attach.mjs` and the attach baseline are not on this branch.
+  - `tree-attach.json` is per tree asset and does not change.
+  - The baseline needs `ARK_ATTACH_BASELINE=update` on the release.
+- **Snow formula (`terrain.ts`), for `snow.ts` to mirror:**
+  - The ribs are drawn on both side planes and blended across the 45° turn: `faceTurn = smoothstep(0.3, 0.7, |n.x| / (|n.x| + |n.z|))`, `rib = 1 - |2·mix(fbm(x-plane), fbm(z-plane), faceTurn) - 1|`. Before, they were drawn on whichever plane the face turned to most and jumped at the turn. The across-face streaks and the rib bend fade out over the turn.
+  - `high`: was `smoothstep(snowLine + 2, snowLine + 11, world.y)`, now `smoothstep(snowLine + 2, snowLine + 11, snowAt + 6·(0.5 - rib))`. The upper reach runs down the gullies and back up the ribs; a level line capped the steep peaks like a lid.
+  - `holdTo`: was `mix(0.48, 0.7, high) - 0.12·hard·smoothstep(0.4, 0.6, slope)`, now `mix(0.48, 0.7, high) + 0.16·(noise(p·0.11 + 3.7) - 0.5)`. The hard beds' level edges no longer box the bare rock in; it shows through in irregular windows.
+  - The rib cut takes a wobble: `smoothstep(0.6, 0.88, rib + 0.2·(noise(p·0.35 - 2.1) - 0.5))`.
+  - The rock beds' tone fades by 70 % up in the snow (`beds *= 1 - 0.7·high`), so rock showing through reads as one stone.
+  - The alpine snow line, the ledge snow and the ice are unchanged.
+- **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
+
+  | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
+  |---|---|---|---|
+  | island_far | 3.53 → 3.11 M | 386 → 386 | 0.93 → 0.91 M |
+  | forest_floor | 11.37 → 8.19 M | 568 → 562 | 2.27 → 1.79 M |
+  | storm_trees | 11.14 → 7.87 M | 444 → 438 | 1.94 → 1.55 M |
+  | mountain | 5.01 → 3.87 M | 339 → 333 | 0.99 → 0.88 M |
+
+  - Every shot held 60 fps.
+  - The terrain shader runs the same number of noise stacks: one more for the second rib plane, one fewer for the rib bend.
+- **Golden sheets** (in the handover folder's `ark/graphics/`):
+  - `batch6-forest-desktop-day.jpg` and `batch6-forest-desktop-night.jpg`;
+  - `batch6-forest-phone.jpg`;
+  - `batch6-forest-overview-crop.jpg` and `batch6-mountain-slabs.jpg`.
+
 ## Batch 4, item 6: small animals on the real scenery, the leaf shot (`ark-graphics-attach`)
 
 - **Tree attach points on the drawn trees.** attach.json's points are computed before the level-of-detail cut and the leaves' fold, curl and growth: its leaf points sat a median 1–46 cm off the drawn lod0 leaves. `scripts/ark-tree-attach.mjs` moves each onto the drawn surface (a single leaf within 0.6 m first, else the leaf mass; bark and branch tops on the wood) and records the wind weights there (`src/ark-scene/tree-attach.json`, 1,011 points, 34 KB gzipped). `tree-assets.ts` places them where `asset-trees.ts` draws each tree (one shared `assetTreePlacement`); only decor trees and the fill every tier draws carry them.
