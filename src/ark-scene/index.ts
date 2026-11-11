@@ -127,6 +127,7 @@ import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
+import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
@@ -735,7 +736,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
     const makeSched = (animal: ArkAnimal, place: Placement, length: number): Sched | null => {
-        if (!scheduleOn || place.micro || place.burrow) return null;
+        // (Not one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
+        if (!scheduleOn || place.micro || place.burrow || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea},
@@ -792,10 +794,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             eats,
             (id) => radius.get(id) ?? 3
         );
+        // How far each moved one's place has to shift (its group moves with it, by the same shift).
+        const shifts = new Map<string, {dx: number; dz: number}>();
         for (const e of onIt) {
             const own = e.sched!;
             const moved = spaced.get(e.animal.id);
             if (moved) {
+                // (From its place as the snapshot set it: a later snapshot resets the place, not the home.)
+                shifts.set(e.animal.id, {dx: moved.home.x - e.place.x, dz: moved.home.z - e.place.z});
                 own.animal.home = {x: moved.home.x, y: Math.max(heightAt(moved.home.x, moved.home.z), 0), z: moved.home.z};
                 // A leader's reach is shared with its group's spread: half each.
                 own.animal.range = moved.range === null ? null : sizes.has(e) ? moved.range / 2 : moved.range;
@@ -811,6 +817,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!lead || !spaced.has(e.leader!.animal.id)) continue;
             e.sched!.animal.home = {...lead.home};
             e.sched!.animal.range = lead.range;
+            const shift = shifts.get(e.leader!.animal.id);
+            if (shift) shifts.set(e.animal.id, shift);
+        }
+        // The drawn place moves too (a copy: the placement map is shared), so whatever is posed from the place (a still
+        // view with reduced motion, the moment before its schedule runs) keeps predators the same distance from prey.
+        for (const e of onIt) {
+            const shift = shifts.get(e.animal.id);
+            if (!shift || (!shift.dx && !shift.dz) || e.place.canopy || e.place.micro || e.place.burrow) continue;
+            const x = e.place.x + shift.dx;
+            const z = e.place.z + shift.dz;
+            e.place = {...e.place, x, z, ground: heightAt(x, z)};
         }
         // Prey know the predators aboard that could eat them (they watch one they can see).
         wireThreats(onIt.map((e) => ({slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})), eats);
@@ -1958,8 +1975,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
-            // On the schedule, its world still building (the first moments): unseen until it can be where its schedule says.
-            if (!world && scheduled(entry)) {
+            // On the schedule, its world still building (the first moments): unseen until it can be where its schedule says
+            // (with reduced motion too: until the spacing is worked out, a predator's place could be among its prey).
+            if (!world && entry.sched && !entry.visitor && !entry.act && !entry.moment) {
                 entry.middle = null;
                 continue;
             }

@@ -186,6 +186,8 @@ On `ark-behaviour` the state comes from the schedule (below): asleep is the sche
 
 ## Part 4: 2026-11-11 (sliced build, profile audit, the shore, spacing, wariness)
 
+The scripts and files named "in the lane folder" below (the checks, the blind sample and its judgements, the scenario, the browser measurement) are in `/Users/lennybeadle/animaldex-ark-handover-2026-11-11/behaviour-2026-11-11/`. The profile generator's inputs are the same read-only export, rig manifest and B1 inventory as before.
+
 ### The places and walk grid, built between frames
 
 - **How.** `behaviour-build.ts` cuts a build into small tasks (`SlicedBuild`). `world-sampler.ts` `sceneSamplerTasks` and `behaviour-nav.ts` `navCellTasks` are the old builds' loops as tasks, a row or a chunk each, in the same order. `ScheduleWorldBuild` (`behaviour-schedule.ts`) runs the sampler, then the grid. The scene steps it 6 ms a frame.
@@ -270,12 +272,27 @@ The scenario script is `scenario.ts` in the lane folder. Each animal is posed ev
 ### Spacing, variety, prey that react
 
 - **Spacing.** Predators are kept at least `SAFE_METRES` = 20 m (was 10) beyond both reaches. On the fixture over a day, the closest predator to prey is 38.5 m at spawn and 29.2 m over the whole day. No sample is under 20 m.
+  - **Lions and zebras.** The animal-look lane saw lions among zebras in golden shots on ark-release, which had 10 m spacing. On this branch the closest lion to a zebra over a whole fixture day is 29.2 m, by the island clock and at the golden shots' pinned 10.5 h alike.
+  - **The drawn place moves too.** Spacing used to live only in the schedule. A moved predator's place, and its group's places by the same shift, now move with its home. A still view (reduced motion), or anything posed from the place, keeps the distance.
+  - **Until spacing is wired,** every animal that goes on the schedule stays unseen, reduced motion included.
+  - **Server acts** (a meal's chase) are not on the schedule, so they still play.
 - **Variety.** Groups of 3 or more are all doing the same thing for 5.4% of awake moments, under the 15% target. Counting a flock or colony asleep together at night it is 24.8%: herds and troops keep a night watch, flocks sleep together.
 - **Shared wariness** (`threatAt`, `wireThreats`, flee-envelope.md §6.3.3).
   - A prey animal that can see an awake predator (within `WARY_METRES` = 35 m) at its slot's start goes to the far side of its range and watches it, facing it.
   - This is decided from the predator's own schedule, so it is the same for every viewer, the livestream and the overview included.
   - Only top predators are threats (ones nothing aboard eats), so no schedule waits on one that waits on it.
   - Near the camera, the local layer adds the look, the alarm and the dash on top. The schedule never yields per viewer, as the envelope says.
+
+### Ported from ark-release (590ac94f, by hand: ark-release must not be merged into this branch)
+
+- **`behaviour-schedule.ts`.**
+  - `keepInWater`: a water-only animal's every goal is in the water, under the surface.
+  - The roost check: a water-only animal's roost point counts only under water.
+  - Both are verbatim. This branch's own guard (a water-only animal gets no land roost tags) runs before them.
+- **New files:** `src/ark-scene/schedule-water.ts` and `src/lib/ark-schedule-water.test.ts`, verbatim.
+- **`index.ts`.** `makeSched` keeps held species (the frigatebird) off the schedule. The import line is release's own.
+  - Release's pose and rig hunks use the rig player's code, which is not on this branch. They are left to merge in from release unchanged.
+- **es5.** The `[...map.keys()]` fix was already here.
 
 ### Interfaces added (other lanes)
 
