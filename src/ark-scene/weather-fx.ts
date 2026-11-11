@@ -50,7 +50,7 @@ export type WeatherFxInput = {
     underwater: boolean;
 };
 
-const TIER_DROPS: Record<QualityTier, number> = {high: 5200, medium: 3000, low: 1500};
+const TIER_DROPS: Record<QualityTier, number> = {high: 8000, medium: 4800, low: 2600};
 const TIER_RINGS: Record<QualityTier, number> = {high: 420, medium: 260, low: 140};
 const TIER_LEAVES: Record<QualityTier, number> = {high: 220, medium: 140, low: 0};
 
@@ -157,7 +157,7 @@ varying float vShown;
 void main() {
     float r = length(vUv) * 2.0;
     float edge = vAge;
-    float ring = smoothstep(0.16, 0.0, abs(r - edge)) * (1.0 - vAge) * (1.0 - vAge);
+    float ring = (1.0 - smoothstep(0.0, 0.16, abs(r - edge))) * (1.0 - vAge) * (1.0 - vAge);
     float a = ring * vShown * opacity;
     if (a < 0.004) discard;
     gl_FragColor = vec4(vec3(0.86, 0.92, 0.96) * mix(0.35, 1.0, daylight), a);
@@ -324,8 +324,8 @@ export class WeatherFx {
             (u.wind.value as Vector2).set(dirX * push, dirZ * push);
             u.amount.value = 0.12 + 0.88 * rain;
             u.fall.value = 8 + 3 * rain;
-            u.streak.value = 0.45 + 0.35 * rain;
-            u.opacity.value = 0.32 + 0.3 * rain;
+            u.streak.value = 0.5 + 0.6 * rain;
+            u.opacity.value = 0.38 + 0.34 * rain;
             // In the drawing buffer's pixels: about 1.5 CSS pixels wide on any screen, so the streaks read on a phone too.
             const ratio = renderer.getPixelRatio();
             (u.resolution.value as Vector2).set(Math.max(width * ratio, 1), Math.max(height * ratio, 1));
@@ -356,14 +356,18 @@ export class WeatherFx {
         // Haze: fog, and rain thickening the air; greyer as it closes in. (The underwater fog is the scene's own.)
         const haze = Math.min(Math.max(Math.max(input.fog, 0.55 * rain + 0.35 * input.storm), 0), 1);
         if (fog && !input.underwater) {
-            fog.near = this.fogNear + (22 - this.fogNear) * haze;
-            fog.far = this.fogFar + (210 - this.fogFar) * Math.pow(haze, 0.75);
+            // Steep at first: even a shower greys the middle distance.
+            const thick = Math.sqrt(haze);
+            fog.near = this.fogNear + (8 - this.fogNear) * thick;
+            fog.far = this.fogFar + (170 - this.fogFar) * thick;
             this.fogColour.copy(horizon).lerp(this.grey, 0.45 * haze);
             fog.color.copy(this.fogColour);
         }
         // Lightning: the whole picture flashes (no flash with reduced motion).
         const flash = this.reducedMotion ? 0 : Math.min(Math.max(input.lightning, 0), 1);
-        renderer.toneMappingExposure = this.baseExposure * (1 + 1.6 * flash);
+        // Under rain the day is duller (the sun's own dimming is the lighting's, by the cloud); a flash lights it all.
+        const dull = Math.min(0.32 * rain + 0.12 * input.storm, 0.38);
+        renderer.toneMappingExposure = this.baseExposure * (1 - dull) * (1 + 1.6 * flash);
         this.now.rain = showRain ? rain : 0;
         this.now.haze = haze;
         this.now.flash = flash;

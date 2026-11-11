@@ -103,8 +103,8 @@ void main() {
     } else {
         // A pad or a hoof: an oval, split at the front.
         float oval = 1.0 - smoothstep(0.62, 0.95, length(p * vec2(1.25, 0.9)));
-        float cleft = smoothstep(0.02, 0.1, abs(p.x)) + smoothstep(0.1, -0.2, p.y);
-        shape = oval * min(cleft, 1.0) * (0.75 + 0.25 * smoothstep(0.9, 0.2, length(p)));
+        float cleft = smoothstep(0.02, 0.1, abs(p.x)) + (1.0 - smoothstep(-0.2, 0.1, p.y));
+        shape = oval * min(cleft, 1.0) * (0.75 + 0.25 * (1.0 - smoothstep(0.2, 0.9, length(p))));
     }
     float strength = abs(vPrint.z);
     float a = shape * strength * (1.0 - smoothstep(life * 0.55, life, age)) * smoothstep(0.0, 0.25, age);
@@ -125,7 +125,7 @@ void main() {
     if (age < 0.0 || age > life) discard;
     float k = age / life;
     float r = length(vUv * 2.0 - 1.0);
-    float ring = smoothstep(0.09, 0.0, abs(r - (0.15 + 0.85 * k))) * (1.0 - k) * (1.0 - k);
+    float ring = (1.0 - smoothstep(0.0, 0.09, abs(r - (0.15 + 0.85 * k)))) * (1.0 - k) * (1.0 - k);
     float a = ring * vPrint.z;
     if (a < 0.01) discard;
     gl_FragColor = vec4(vec3(0.9, 0.95, 0.98) * mix(0.4, 1.0, daylight), a);
@@ -296,7 +296,8 @@ export class Traces {
                 const px = w.x + Math.cos(w.yaw) * across;
                 const pz = w.z - Math.sin(w.yaw) * across;
                 const footprint = Math.min(Math.max(w.length * (w.bird ? 0.16 : 0.1), 0.025), 0.32);
-                this.at.set(px, w.y + 0.012, pz);
+                // A little over the ground (the terrain mesh is coarser than its height function), the decal pulled forward too.
+                this.at.set(px, w.y + 0.035, pz);
                 this.quaternion.setFromAxisAngle(this.up, w.yaw);
                 this.size.set(footprint * (w.bird ? 1 : 0.75), 1, footprint);
                 this.matrix.compose(this.at, this.quaternion, this.size);
@@ -345,7 +346,7 @@ export class Traces {
     setWorn(patches: Array<{x: number; y: number; z: number; size: number; strength: number}>) {
         this.worn.clear();
         for (const p of patches.slice(0, this.worn.capacity)) {
-            this.at.set(p.x, p.y + 0.008, p.z);
+            this.at.set(p.x, p.y + 0.03, p.z);
             const seed = hash32(`${Math.round(p.x * 10)},${Math.round(p.z * 10)}`);
             this.quaternion.setFromAxisAngle(this.up, (seed % 628) / 100);
             this.size.set(p.size, 1, p.size);

@@ -181,29 +181,37 @@ if (only.includes("young")) {
         }, young.id);
         notes.youngAge = age;
         log("young", young.id, young.slug, JSON.stringify(age));
-        for (let i = 0; i < 16; i++) {
-            const now = (await animals()).find((a) => a.id === young.id);
-            const parent = age?.follow ? (await animals()).find((a) => a.id === age.follow.parentId) : null;
+        // The world's clock three times faster (a short time-lapse), so the parent walks while we watch.
+        await page.evaluate(() => window.__arkGolden.handle.setClockScale(3));
+        const track = [];
+        for (let i = 0; i < 20; i++) {
+            const all = await animals();
+            const now = all.find((a) => a.id === young.id);
+            const parent = age?.follow ? all.find((a) => a.id === age.follow.parentId) : null;
             const mid = parent ? {x: (now.x + parent.x) / 2, y: (now.y + parent.y) / 2, z: (now.z + parent.z) / 2} : {x: now.x, y: now.y, z: now.z};
-            await look(mid, 11, 1.2, 0.9);
-            await wait(900);
+            await look(mid, 10, 1.15, 0.9);
+            await wait(800);
+            track.push(parent ? {i, gap: Math.round(Math.hypot(now.x - parent.x, now.z - parent.z) * 100) / 100, parent: [Math.round(parent.x * 10) / 10, Math.round(parent.z * 10) / 10], young: [Math.round(now.x * 10) / 10, Math.round(now.z * 10) / 10], parentLength: Math.round(parent.length * 100) / 100, youngLength: Math.round(now.length * 100) / 100} : {i});
             await frame(String(i).padStart(2, "0"), "young");
         }
+        notes.youngTrack = track;
+        log("young track", JSON.stringify(track));
+        await page.evaluate(() => window.__arkGolden.handle.setClockScale(1));
     }
 }
 
 if (only.includes("prints")) {
     await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment({...calm, wetness: 0.4}), CALM);
-    // A walker that leaves prints: try the moving land animals until one does.
+    // A walker on sand: the desert's camels first, then the shore's and anyone else on the move.
     const list = (await animals()).filter((a) => a.sched && !a.water && a.zone !== "open_ocean");
-    const order = [...list.filter((a) => ["desert", "seashore", "polar", "wetland", "farm_garden"].includes(a.zone)), ...list];
+    const order = [...list.filter((a) => a.zone === "desert"), ...list.filter((a) => ["seashore", "polar", "wetland", "farm_garden"].includes(a.zone)), ...list];
+    await page.evaluate(() => window.__arkGolden.handle.setClockScale(2));
     let chosen = null;
     for (const a of order.slice(0, 18)) {
         const before = await page.evaluate(() => window.__arkDebug.liveliness.traces.counts.prints);
-        await page.evaluate((id) => window.__arkGolden.handle.follow(id), a.id);
         const at = (await animals()).find((x) => x.id === a.id);
-        await look({x: at.x, y: at.y, z: at.z}, 9, 1.0, 0.4);
-        await wait(7000);
+        await look({x: at.x, y: at.y, z: at.z}, 8, 0.9, 0.4);
+        await wait(6000);
         const after = await page.evaluate(() => window.__arkDebug.liveliness.traces.counts.prints);
         log("prints try", a.slug, a.zone, after - before);
         if (after - before >= 4) {
@@ -214,14 +222,14 @@ if (only.includes("prints")) {
     if (chosen) {
         notes.printsWalker = chosen.slug;
         for (let i = 0; i < 6; i++) {
-            await wait(4000);
+            await wait(3000);
             const at = (await animals()).find((x) => x.id === chosen.id);
-            await look({x: at.x, y: at.y, z: at.z}, 7 + i, 0.95, 0.4 + i * 0.15);
+            await look({x: at.x, y: at.y, z: at.z}, 5 + i * 0.6, 0.8, 0.4 + i * 0.25);
             await wait(400);
             await frame(String(i), "prints");
         }
     }
-    await page.evaluate(() => window.__arkGolden.handle.follow(null));
+    await page.evaluate(() => window.__arkGolden.handle.setClockScale(1));
 }
 
 writeFileSync(path.join(out, "notes.json"), JSON.stringify({frames, notes, errors}, null, 2));
@@ -232,7 +240,7 @@ server.close();
 // Contact sheets (Pillow) and clips (ffmpeg), where the machine has them.
 for (const [key, files] of Object.entries(frames)) {
     try {
-        execFileSync("python3", ["-I", "-c", `
+        execFileSync("python3", ["-c", `
 import sys, PIL.Image as I
 files = sys.argv[2:]
 ims = [I.open(f).convert("RGB") for f in files]

@@ -190,7 +190,9 @@ export class ArkLiveliness {
         // Shelter follows a pinned rain at once (the walk starting when it was pinned); else the clock's flips.
         const pinnedWet = pin && (pin.rain !== undefined || pin.storm !== undefined) ? env.rain > 0.45 || env.storm > 0.3 : null;
         if (pinnedWet === null) this.pinnedCover = null;
-        else if (!this.pinnedCover || this.pinnedCover.on !== pinnedWet) this.pinnedCover = {on: pinnedWet, since: nowMs, before: this.pinnedCover?.since ?? -Infinity};
+        // A first pin is how it already is (golden shots: no walk); a pin that changes starts the walk in or out.
+        else if (!this.pinnedCover) this.pinnedCover = {on: pinnedWet, since: -Infinity, before: -Infinity};
+        else if (this.pinnedCover.on !== pinnedWet) this.pinnedCover = {on: pinnedWet, since: nowMs, before: this.pinnedCover.since};
         if (this.options.voyageStartMs) this.arkDayNow = arkDayAt(nowMs, this.options.voyageStartMs);
         return env;
     }
@@ -245,7 +247,8 @@ export class ArkLiveliness {
         const known = this.shelters.get(id);
         if (known && known.kind === kind) return known;
         let spot: Shelter["spot"] = null;
-        let use = kind;
+        // Too big to stand under a crown (an elephant, a giraffe): it hunkers in the open instead.
+        let use: ShelterKind = kind === "cover" && entry.length > 2.6 ? "hunker" : kind;
         const home = {x: entry.place.x, z: entry.place.z};
         if (kind === "roost") {
             const roost = this.options.hooks.roostOf(entry);
@@ -293,7 +296,8 @@ export class ArkLiveliness {
         if (shelter.kind === "hunker" || !shelter.spot) {
             // Where it was when the rain came: it stays there, its back to the wind, until it passes.
             const at = this.anchor(entry, state.wentIn) ?? pose;
-            const k = state.going ? 1 : ease(1 - state.level);
+            // Going: it stays where it was. Coming out: from there back to where its schedule has it now.
+            const k = state.going ? 0 : ease(1 - state.level);
             const hold = state.going ? Math.min(state.level * 3, 1) : 1;
             return Object.assign({}, pose, {
                 x: at.x + (pose.x - at.x) * k,
