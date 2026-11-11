@@ -10,11 +10,18 @@
  * so a herd never moves in step. It fades out between 18 and 25 m from the
  * camera, and the far level has none, so only animals near the camera move.
  *
+ * Heads turn to look (`reactive.ts`, `head-look.ts`): each near instance
+ * carries `arkLook` = (yaw, pitch, weight), and the head and neck turn about
+ * the neck by it. A rigged animal turns its `head` and `neck` bones'
+ * vertices (their skin weights, `arkHead`) about its neck joint as the clip
+ * moves it; the others the front of the body about the neck, as the sleeping
+ * droop does. The limits per body plan are applied before (`head-look.ts`).
+ *
  * "Dim" greys an animal toward the haze ("My animals" shows the viewer's
  * own in full colour and the rest dimmed).
  */
 
-import {Color, MeshStandardMaterial, type Texture} from "three";
+import {Color, MeshStandardMaterial, Vector3, type Texture} from "three";
 import {motionUniforms, type TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {SKY} from "@/ark-scene/palettes";
 import {ARK_RIM} from "@/ark-scene/glsl";
@@ -60,6 +67,7 @@ const MOTION_BODY = `
 `;
 
 const MOTION_DECLARATIONS = `
+attribute vec3 arkLook;
 uniform float arkClock;
 uniform float arkDroop;
 uniform float motionKind;
@@ -92,6 +100,10 @@ attribute vec4 arkJoints;
 attribute vec4 arkWeights;
 attribute vec4 arkRigA;
 attribute vec4 arkRigB;
+attribute float arkHead;
+uniform float arkNeckBone;
+uniform vec3 arkNeckPivot;
+uniform float arkRigHead;
 mat4 arkBone(float row, float bone) {
     int x = int(bone + 0.5) * 3;
     int y = int(row + 0.5);
@@ -143,6 +155,28 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         transformed.y = py + dy * cd - dz * sd;
         transformed.z = headFrom + dy * sd + dz * cd;
     }
+    // Looking (the reactive layer): the head and neck turn about the neck, within the plan's limits.
+    if (arkLook.z > 0.001) {
+        float run = max(motionStill - motionRear, 0.001);
+        float neckFrom = motionStill - run * 0.3;
+        float mask = smoothstep(neckFrom, motionStill - run * 0.12, transformed.z);
+        vec3 pivot = vec3(0.0, mix(motionBottom, motionTop, 0.62), neckFrom);
+#ifdef ARK_RIG
+        float rigged = arkRigA.w * arkRigHead;
+        mask = mix(mask, arkHead, rigged);
+        pivot = mix(pivot, (arkBoneAt(arkRigA.xyz, arkNeckBone) * vec4(arkNeckPivot, 1.0)).xyz, rigged);
+#endif
+        float lookYaw = arkLook.x * arkLook.z * mask;
+        float lookPitch = arkLook.y * arkLook.z * mask;
+        vec3 q = transformed - pivot;
+        float cp = cos(lookPitch);
+        float sp = sin(lookPitch);
+        q.yz = vec2(q.y * cp + q.z * sp, -q.y * sp + q.z * cp);
+        float cy = cos(lookYaw);
+        float sy = sin(lookYaw);
+        q.xz = vec2(q.x * cy + q.z * sy, -q.x * sy + q.z * cy);
+        transformed = pivot + q;
+    }
     if (motionGain > 0.0) {
         float awake = motionGain * (1.0 - 0.9 * arkRest);
         float motionClock = arkClock + arkInstance.x * 61.0;
@@ -179,6 +213,8 @@ export type AnimalMaterialOptions = {
     animated: boolean;
     /** A rigged mesh: its bone texture (`rig-player.ts`). */
     rig?: Texture | null;
+    /** A rigged mesh's neck: the bone (texture index) and its joint in the rest pose, when the rig has a head and neck. */
+    neck?: {bone: number; pivot: [number, number, number]} | null;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -207,7 +243,12 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         arkDroop: {value: DROOPING_PLANS.has(options.behaviour?.plan ?? "") ? 0.32 : 0},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}]))
     };
-    if (options.rig) uniforms.arkBones = {value: options.rig};
+    if (options.rig) {
+        uniforms.arkBones = {value: options.rig};
+        uniforms.arkNeckBone = {value: options.neck?.bone ?? 0};
+        uniforms.arkNeckPivot = {value: new Vector3(...(options.neck?.pivot ?? [0, 0, 0]))};
+        uniforms.arkRigHead = {value: options.neck ? 1 : 0};
+    }
     material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {})};
     const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? "-rig" : ""}`;
     material.customProgramCacheKey = () => key;
