@@ -222,7 +222,7 @@
             "outOf": "av {max}",
             "summary": "{animals} ombord, {species}",
             "anonymousTitle": "Anonym ombord",
-            "anonymousBody": "{name} reser anonymt: i Ark visas deras djur som ett Voyager-nummer, aldrig med ett namn. Namn visas bara för dem som väljer att visa sitt.",
+            "anonymousBody": "{name} reser anonymt: i Ark visas deras djur som ett Voyager-nummer, aldrig med ett namn.",
             "selfPrivate": "Bara du ser den här listan. I Ark ser andra dina djur som tagna hit av {label}.",
             "selfNamed": "Ditt namn visas på dina djur i Ark.",
             "noneSelf": "Inget av dina djur är ombord än. När ett steg från ett av dina djur fungerar kommer det djuret ombord.",
@@ -279,6 +279,52 @@
             "eatenBy": "Äts av",
             "see": "Se {animal} i Ark",
             "seeArk": "Se Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Visa mitt namn på mina djur i Ark",
+                "note": "Ditt namn, @handle och foto visas på djuren du tar med till Ark. Stäng av det för att visas som ett Voyager-nummer.",
+                "under18": "Du visas som ett Voyager-nummer så länge du är under 18.",
+                "private": "Du visas som ett Voyager-nummer så länge din profil är privat.",
+                "noHandle": "Lägg till ett @handle i din profil för att visa ditt namn.",
+                "earlier": "Djur du tog med innan namn visades står fortfarande som Voyager.",
+                "nameEarlier": "Visa mitt namn på dem också",
+                "confirmAdult": "När du slår på det här bekräftar du att du har fyllt 18.",
+                "confirmYes": "Ja, jag har fyllt 18"
+            },
+            "share": {
+                "ask": "Dela i Ark hur det fungerade?",
+                "stepLabel": "Det du gjorde",
+                "problemPlaceholder": "En rad om problemet, med dina egna ord (valfritt)",
+                "share": "Dela",
+                "edit": "Redigera",
+                "notNow": "Inte nu",
+                "shared": "Delat i Ark",
+                "publicNote": "Alla som besöker Ark kan läsa det här.",
+                "notPublic": "Det här kan inte visas offentligt. Prova andra ord.",
+                "couldNotCheck": "Det gick inte att kontrollera just nu. Försök igen.",
+                "remove": "Ta bort från Ark",
+                "removed": "Borttaget från Ark",
+                "askShort": "Dela hur det fungerade?",
+                "confirmShare": "Jag har fyllt 18, dela"
+            },
+            "card": {
+                "howAboard": "Så kom det ombord",
+                "broughtBy": "Tagen hit av {name}"
+            },
+            "founder": {
+                "storiesTitle": "Så kom deras djur ombord",
+                "noStories": "Inga berättelser delade än."
+            },
+            "name": {
+                "ask": "Visa ditt namn i Ark?",
+                "adult": "Jag har fyllt 18",
+                "yes": "Ja, visa mitt namn",
+                "shown": "Ditt namn visas i Ark"
+            },
+            "error": {
+                "needsAdult": "Bekräfta först att du har fyllt 18."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "Ark kunde inte läsas in just nu.",
         "arkFormerVoyager": "Tidigare voyager",
         "animalTitleA": "Prata med {animal}",
-        "animalTitleAn": "Prata med {animal}"
+        "animalTitleAn": "Prata med {animal}",
+        "arkHowAboard": "Så kom det ombord"
     }
 }

@@ -18,6 +18,7 @@ import {ARK_ZONES} from "@/ark-scene/types";
 import {arkActivity, type ArkActivity} from "@/lib/ark-daylight";
 import {decodeArkStory, type ArkAnimalStory} from "@/lib/ark-story";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkLabelHasFounderKey, decodeArkFounder, decodeArkFounderStory, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
 
 /**
  * The log's kinds. `starved`: a predator dead of long hunger (owner decision
@@ -382,6 +383,14 @@ export type ArkLife = {
     revision: {at: string | null; worked: boolean} | null;
     /** The public debate it came from: only when the server's `public_story` flag is on. */
     story_public: ArkAnimalStory | null;
+    /**
+     * Founders (founders contract, section 2): the named founders behind the
+     * labels above, each null for a Voyager. `names` when the server sent the
+     * `founder` keys (its switch is on); all null and false before.
+     */
+    founders: {names: boolean; brought_by: ArkFounder | null; born_to: Array<ArkFounder | null>; ancestor: ArkFounder | null};
+    /** The story its founder chose to share (what they did, the problem line), or null. */
+    founder_story: ArkFounderStory | null;
 };
 
 function count(value: unknown): number {
@@ -403,6 +412,8 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
     const ageYears = number(row.ark_age_years);
     const preyName = text(meal?.prey, 120);
     const breeding = origin.breeding_source;
+    const bornTo = (Array.isArray(origin.born_to) ? origin.born_to : []).filter((item) => Boolean(text(record(item)?.label, 60))).slice(0, 4);
+    const names = arkLabelHasFounderKey(origin.brought_by) || arkLabelHasFounderKey(row.ancestor_brought_by) || bornTo.some(arkLabelHasFounderKey);
     return {
         id,
         species: text(row.species, 120),
@@ -430,7 +441,14 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         ancestor_brought_by: label(row.ancestor_brought_by),
         died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved") ? {at: text(died.at, 40), kind: died.kind} : null,
         revision: revision ? {at: text(revision.at, 40), worked: revision.worked === true} : null,
-        story_public: decodeArkStory(row.story_public)
+        story_public: decodeArkStory(row.story_public),
+        founders: {
+            names,
+            brought_by: origin.kind === "born" ? null : decodeArkFounder(record(origin.brought_by)?.founder),
+            born_to: origin.kind === "born" ? bornTo.map((item) => decodeArkFounder(record(item)?.founder)) : [],
+            ancestor: decodeArkFounder(record(row.ancestor_brought_by)?.founder)
+        },
+        founder_story: origin.kind === "born" ? null : decodeArkFounderStory(row.founder_story)
     };
 }
 

@@ -9,6 +9,7 @@
  */
 
 import type {ArkAnimal} from "@/ark-scene/types";
+import {decodeArkFounderStory, decodeArkLabel, type ArkFounderStory, type ArkLabel} from "@/lib/ark-founders";
 
 export type ArkAnimalStory = {
     kind: "public_debate";
@@ -40,6 +41,29 @@ export function decodeArkStory(raw: unknown): ArkAnimalStory | null {
     const power = text(way?.power, 80);
     if (!problem || !animal || !power) return null;
     return {kind: "public_debate", problem, way: {animal, power}, debate_id: isArkUuid(row.debate_id) ? row.debate_id : null};
+}
+
+/**
+ * Founders (founders contract, section 2): when the animal's founder shared
+ * how it got aboard, the read answers that first, as
+ * `{kind: "founder_story", step, problem, shared_at, brought_by: label}`,
+ * whether or not the founder is named (an anonymous founder's story sits
+ * under "Voyager N"). Otherwise it answers as before.
+ */
+export type ArkFounderStoryRead = ArkFounderStory & {kind: "founder_story"; brought_by: ArkLabel | null};
+
+/** Either story the read can answer. */
+export type ArkStoryRead = ArkAnimalStory | ArkFounderStoryRead;
+
+/** `voyage_animal_story_v1`'s answer, either kind, checked; null for anything else. */
+export function decodeArkStoryRead(raw: unknown): ArkStoryRead | null {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+    const row = raw as Record<string, unknown>;
+    if (row.kind === "founder_story") {
+        const story = decodeArkFounderStory(row);
+        return story ? {kind: "founder_story", ...story, brought_by: decodeArkLabel(row.brought_by)} : null;
+    }
+    return decodeArkStory(raw);
 }
 
 /** PostgREST's "no such function" (before the migration is applied): not an error worth a warning. */

@@ -222,7 +222,7 @@
             "outOf": "sur {max}",
             "summary": "{animals} à bord, {species}",
             "anonymousTitle": "Anonyme à bord",
-            "anonymousBody": "{name} voyage anonymement : dans l'Ark, ses animaux apparaissent sous un numéro Voyager, jamais sous un nom. Les noms ne s'affichent que pour les personnes qui choisissent de montrer le leur.",
+            "anonymousBody": "{name} voyage anonymement : dans l'Ark, ses animaux apparaissent sous un numéro Voyager, jamais sous un nom.",
             "selfPrivate": "Vous seul voyez cette liste. Dans l'Ark, les autres voient vos animaux comme amenés par {label}.",
             "selfNamed": "Votre nom apparaît sur vos animaux dans l'Ark.",
             "noneSelf": "Aucun de vos animaux n'est encore à bord. Quand une étape proposée par l'un de vos animaux marche, cet animal monte à bord.",
@@ -279,6 +279,52 @@
             "eatenBy": "Mangé par",
             "see": "Voir l'espèce {animal} dans l'Ark",
             "seeArk": "Voir l'Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Afficher mon nom sur mes animaux de l'Ark",
+                "note": "Votre nom, votre @handle et votre photo apparaissent sur les animaux que vous amenez dans l'Ark. Désactivez cette option pour apparaître sous un numéro Voyager.",
+                "under18": "Vous apparaissez sous un numéro Voyager tant que vous avez moins de 18 ans.",
+                "private": "Vous apparaissez sous un numéro Voyager tant que votre profil est privé.",
+                "noHandle": "Ajoutez un @handle à votre profil pour afficher votre nom.",
+                "earlier": "Les animaux amenés avant l'affichage des noms indiquent toujours Voyager.",
+                "nameEarlier": "Afficher aussi mon nom sur eux",
+                "confirmAdult": "En activant cette option, vous confirmez avoir 18 ans ou plus.",
+                "confirmYes": "Oui, j'ai 18 ans ou plus"
+            },
+            "share": {
+                "ask": "Partager dans l'Ark comment ça a marché ?",
+                "stepLabel": "Ce que vous avez fait",
+                "problemPlaceholder": "Une ligne sur le problème, avec vos mots (facultatif)",
+                "share": "Partager",
+                "edit": "Modifier",
+                "notNow": "Pas maintenant",
+                "shared": "Partagé dans l'Ark",
+                "publicNote": "Tous ceux qui visitent l'Ark peuvent lire ceci.",
+                "notPublic": "Ce texte ne peut pas être affiché publiquement. Essayez d'autres mots.",
+                "couldNotCheck": "Impossible de vérifier pour le moment. Réessayez.",
+                "remove": "Retirer de l'Ark",
+                "removed": "Retiré de l'Ark",
+                "askShort": "Partager comment ça a marché ?",
+                "confirmShare": "J'ai 18 ans ou plus, partager"
+            },
+            "card": {
+                "howAboard": "Comment il est monté à bord",
+                "broughtBy": "Amené par {name}"
+            },
+            "founder": {
+                "storiesTitle": "Comment ses animaux sont montés à bord",
+                "noStories": "Aucune histoire partagée pour l'instant."
+            },
+            "name": {
+                "ask": "Afficher votre nom dans l'Ark ?",
+                "adult": "J'ai 18 ans ou plus",
+                "yes": "Oui, afficher mon nom",
+                "shown": "Votre nom apparaît dans l'Ark"
+            },
+            "error": {
+                "needsAdult": "Confirmez d'abord que vous avez 18 ans ou plus."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "L'Ark n'a pas pu se charger pour le moment.",
         "arkFormerVoyager": "Ancien voyager",
         "animalTitleA": "Parler à {animal}",
-        "animalTitleAn": "Parler à {animal}"
+        "animalTitleAn": "Parler à {animal}",
+        "arkHowAboard": "Comment il est monté à bord"
     }
 }
