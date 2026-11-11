@@ -134,8 +134,9 @@ import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, Schedu
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
+import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
-import {ReactiveLayer, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
+import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {ageOf, speciesCare} from "@/lib/ark-age";
@@ -470,7 +471,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const weather = weatherAt(nowMs, {voyageStartMs: voyageStart, offsetHours: ISLAND_OFFSET_HOURS});
         const live = {seaLevel: seaLevelAt(nowMs, {mean: 0, springRange: 0.7}), wetness: weather.wetness, snow: weather.mountainSnowCover, wind: weather.wind, storm: weather.storm, windDirection: weather.windDirection, cloud: weather.cloud};
         const env = {...live, ...(pinnedEnvironment ?? {})};
-        reactiveWeather = {rain: pinnedEnvironment ? Math.min(env.wetness, 1) * (env.storm > 0.3 ? 1 : 0.6) : weather.rain, wind: env.wind, windDirection: env.windDirection, fog: weather.fog, storm: env.storm};
+        // Fog 0: the scene draws no weather fog yet, and animals must not see less in a fog the viewer can't see (they
+        // would seem to ignore a predator in plain view). When the graphics lane draws it, pass the drawn amount here.
+        reactiveWeather = {rain: pinnedEnvironment ? Math.min(env.wetness, 1) * (env.storm > 0.3 ? 1 : 0.6) : weather.rain, wind: env.wind, windDirection: env.windDirection, fog: 0, storm: env.storm};
         // The animal-look pass: coats soak in the rain and dry before the ground; dust only on dry ground.
         lookWeather = {wetness: env.wetness, rain: pinnedEnvironment?.rain ?? (pinnedEnvironment?.wetness !== undefined ? 0 : weather.rain), wind: env.wind};
         ARK_ENVIRONMENT.seaLevel.value = env.seaLevel;
@@ -903,6 +906,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * animal, as if its schedule said so (a predator walking past a herd at a set time). Never set in production.
      */
     const sharedPins = new Map<string, (epoch: number) => Partial<TripPose & {doing: ArkDoing}>>();
+    /** Development only (the head-look probe): a fixed `arkLook` (yaw, pitch, weight) for an animal, over the reactive layer's. */
+    const forcedLooks = new Map<string, [number, number, number]>();
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
         if (!world) return;
@@ -1725,6 +1730,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 plan: intel.plan,
                 length: e.length,
                 size: e.sched.profile.size,
+                speed: e.sched.profile.speed,
+                gait: e.sched.profile.gait,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
@@ -1734,10 +1741,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 parentId: young.parent,
                 youngPlay: young.play,
                 headHeight: c.modelHeight * 0.8,
+                // (The behaviour profile also calls the barnacle goose sessile, from its name: only the "other" plan.)
+                sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
         reactiveInputs = inputs.length;
+        // Nothing near, or the world's sampler still being built a slice at a time (`worldSamplerReady` on the behaviour
+        // lane's 67d6ddf3; asking for it now would finish the build in one stall): the layer waits a frame.
+        const samplerReady = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
+        if (!inputs.length || (samplerReady && !samplerReady())) {
+            reactiveMs = performance.now() - t0;
+            return;
+        }
         const sampler = worldSampler();
         reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
         reactiveQueries.samples = budget.sightSamples;
@@ -1760,10 +1776,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (o.dx || o.dz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
-                // A land animal is never pushed into the water: the offset shortens until it stays on land.
-                let k = 1;
-                if (onGround) for (let i = 0; i < 3 && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k); i++) k *= 0.5;
-                if (onGround && sampler.isWater(pose.x + o.dx * k, pose.z + o.dz * k)) k = 0;
+                // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
+                const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
+                // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
+                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
                 pose.x += o.dx * k;
                 pose.z += o.dz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
@@ -2734,7 +2750,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
-            if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+            const forcedLook = forcedLooks.size && level === "near" ? forcedLooks.get(entry.animal.id) : undefined;
+            if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2]);
+            else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
             if (lookAttr && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
             // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
@@ -4312,6 +4330,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
+        forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
+        rigState: (id: string) => {
+            const e = allEntries().find((x) => x.animal.id === id);
+            return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
+        },
         setHome: (id: string, x: number, z: number) => {
             const entry = findEntry(id);
             if (!entry?.sched) return false;

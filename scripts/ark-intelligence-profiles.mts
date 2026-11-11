@@ -92,15 +92,20 @@ const YOUNG = /\b(larva|larvae|larval|caterpillars?|nymphs?|naiads?|tadpoles?|gr
 /** The Power's metaphor, not the animal's life: never evidence. */
 const METAPHOR = /\b(teach(es|ing)?|shows? us|reminds? us|lesson|principle|survival tool|the right tool|strategy shows|it shows|this shows|metaphor|symbol)\b/i;
 
-/** The Power's name in a sentence ("... support Stashing because ..."): capitalised mid-sentence, then "because". */
-const POWER_NAME = /\bsupports? [A-Z][a-z]+( [A-Z][a-z]+)* because\b/;
+/**
+ * The Power's name in a sentence ("Nuts, seeds and cones support Stashing because ..."): capitalised mid-sentence,
+ * then "because". The clause from "support" on is the Power's; what comes before it is still the animal's own
+ * (its diet), so only the clause is cut, not the sentence.
+ */
+const POWER_NAME = /\s*\bsupports? [A-Z][a-z]+( [A-Z][a-z]+)* because\b.*$/;
 
 function sentences(text: string | null | undefined): string {
     if (!text) return "";
     return text
         .replace(/^Native range keys:[^.]*\.\s*/, "")
         .split(/(?<=[.;!?])\s+/)
-        .filter((s) => !YOUNG.test(s) && !METAPHOR.test(s) && !POWER_NAME.test(s))
+        .map((s) => (POWER_NAME.test(s) ? s.replace(POWER_NAME, ".") : s))
+        .filter((s) => s.length > 1 && !YOUNG.test(s) && !METAPHOR.test(s))
         .join(" ");
 }
 
@@ -211,7 +216,7 @@ const DEFENCE_RULES: Array<[RegExp, Defence]> = [
     [/\b((flee|escape|dive|retreat|slip|plunge|drop|jump|leap|dash|bolt|run)(s|es|ing)? (in|into|to|under|beneath|back into) (the )?(water|river|pond|lake|sea|stream|pool))\b/i, "flee_water"],
     [/\b((climb|flee|escape|retreat|run|scramble|scurr(y|ie)|dash|bound)(s|es|ing)? (quickly )?(up )?(in|into|up) (a |the )?(trees?|canopy|branches|trunk)|takes? refuge in (the )?trees)\b/i, "flee_tree"],
     [/\b((retreat|flee|escape|dash|bolt|run|dart|hide|disappear|scuttle|scurr(y|ie)|vanish|withdraw)(s|es|ing)? (quickly |rapidly |back )?(in|into|to|under|back into|for|down) (the |its |a |dense |thick |nearby )?(cover|burrows?|crevices?|holes?|dense|thick|vegetation|undergrowth|rocks|shelter|the reef|coral|sand|mud|leaf litter|thickets?|bushes|grass|reeds|tunnels?|den|cracks?))\b/i, "flee_cover"],
-    [/\b(freez(e|es|ing)|keeps? (very )?still|stays? (very )?still|motionless|camouflag\w*|cryptic|blends? (in|into|with)|well hidden|resembl(es|ing) (a |an )?(twig|leaf|leaves|bark|stick|stone|pebble|seaweed|bird dropping|lichen|thorn)|mimic\w*|stick-like|leaf-like|bark-like)\b/i, "freeze"],
+    [/\b(freez(e|es|ing)|keeps? (very )?still|stays? (very )?still|motionless|camouflag\w*|cryptic|blends? (in|into|with)|well hidden|resembl(es|ing) (a |an )?(twig|leaf|leaves|bark|stick|stone|pebble|seaweed|bird dropping|lichen|thorn)|mimics? (a |an )?(twig|leaf|leaves|bark|stick|stone|pebble|seaweed|bird dropping|lichen|thorn)|(twig|leaf|bark|stick|stone|seaweed|lichen)[- ](like )?mimic\w*|ghost-mimic|stick-like|leaf-like|bark-like)\b/i, "freeze"],
     [/\b(huddl\w*|bunch(es|ing)? (up|together)|close ranks|defensive (circle|ring)|forms? a (circle|ring)|mob(s|bing)? (predators|hawks|owls|intruders)?|safety in numbers|group vigilance|herd vigilance|many eyes)\b/i, "group"],
     [/\b(threat display|hiss(es|ing)?|puff(s|ing)? (itself |up)|inflat(es|ing) (itself|its)|rears? up|raises? (its |a )?(crest|hood|hackles|tail|quills|spines|frill)|spreads? (its )?(hood|frill)|eyespots?|warning colou?r\w*|aposematic|flash(es|ing)? (its|the|bright)|bluff\w*|gap(es|ing)|rattl(e|es|ing)|stamp(s|ing)?|thump(s|ing)?|snarl\w*|growl\w*|bares? (its )?teeth|charges? (at )?(intruders|predators|threats))\b/i, "threat"],
     [/\b(curls? (up )?into a (tight )?ball|rolls? (up )?into a (tight )?ball|withdraws? (into|its head|its limbs)|clos(e|es) (its|the) shell|armou?r(ed)?|bony plates|spines|quills|spiny)\b/i, "armour"],
@@ -338,7 +343,8 @@ function perceptionOf(row: Row, b: Behaviour, defaults: string[]): Perception {
         out.sight = {rule: `${fam}: a dragonfly's eyes`};
     }
     // Burrowers live by hearing and touch, not eyes.
-    if (b.roost === "burrow" && b.move !== "fly" && (b.moves.includes("burrow") || b.move === "burrow")) {
+    // (Not a day-active surface forager that sleeps in a burrow: a meerkat or a prairie dog keeps watch by eye.)
+    if (b.roost === "burrow" && b.move !== "fly" && (b.moves.includes("burrow") || b.move === "burrow") && (b.move === "burrow" || b.activity !== "diurnal")) {
         sight *= 0.5;
         hearing *= 1.3;
         out.burrow = {rule: "lives in a burrow: hearing over sight"};
@@ -416,6 +422,9 @@ function huntOf(row: Row, b: Behaviour, defaults: string[]): Entry<Hunt>[] {
     if (out.some((e) => e.src && "default" in e.src)) defaults.push("hunt");
     const mainlyCaught = (HUNTER_DIETS.has(b.diet) && b.diet !== "carrion") || (b.diet === "insects" && ["arachnid", "amphibian", "lizard", "legless"].includes(b.plan));
     if (active || !eater || !mainlyCaught) return out;
+    // A cleaner picks parasites off its clients: it hunts nothing.
+    const cleaning = reviewedHit(reviewed.cleaner, row);
+    if (cleaning && (cleaning.verdict.value ?? "cleaner") === "cleaner") return out;
     // Archetype defaults (flagged): the family's or the plan's way of hunting.
     defaults.push("hunt");
     const d = (style: Hunt, why: string) => add(style, {default: why});
@@ -447,7 +456,7 @@ function huntOf(row: Row, b: Behaviour, defaults: string[]): Entry<Hunt>[] {
     return out;
 }
 
-function forageOf(row: Row, b: Behaviour, defaults: string[]): Entry<Forage>[] {
+function forageOf(row: Row, b: Behaviour, defaults: string[], hunt: Entry<Hunt>[] = []): Entry<Forage>[] {
     const out: Entry<Forage>[] = [];
     const diets = new Set([b.diet, ...b.diets]);
     const add = (style: Forage, source: Source) => {
@@ -478,8 +487,10 @@ function forageOf(row: Row, b: Behaviour, defaults: string[]): Entry<Forage>[] {
     if (out.length) return out;
     defaults.push("forage");
     const d = (style: Forage, why: string) => add(style, {default: why});
-    if (diets.has("insects")) {
-        // Bats, swifts and dragonflies take their insects in the air (their hunt says so); fish at the surface: no default.
+    if (diets.has("insects") && hunt.some((h) => h.style === "aerial_hawk")) {
+        // Bats, swifts and dragonflies take their insects in the air (their hunt says so): nothing to glean.
+    } else if (diets.has("insects")) {
+        // Fish at the surface: no default.
         if (["flying_bird", "primate", "lizard", "insect", "arachnid", "amphibian"].includes(b.plan)) d("glean", `diet insects, plan ${b.plan}`);
         else if (["quadruped", "walking_bird", "flightless_bird"].includes(b.plan)) d("dig", `diet insects, plan ${b.plan}`);
     }
@@ -490,7 +501,7 @@ function forageOf(row: Row, b: Behaviour, defaults: string[]): Entry<Forage>[] {
     return out;
 }
 
-function defenceOf(row: Row, b: Behaviour, defaults: string[]): Entry<Defence>[] {
+function defenceOf(row: Row, b: Behaviour, defaults: string[], hunt: Entry<Hunt>[] = []): Entry<Defence>[] {
     const out: Entry<Defence>[] = [];
     const add = (style: Defence, source: Source) => {
         if (!out.some((e) => e.style === style)) out.push({style, src: source});
@@ -499,6 +510,9 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[]): Entry<Defence>[]
         const hit = find(row, DEFENCE_TEXT, pattern, style !== "freeze");
         if (!hit) continue;
         if (style === "play_dead") continue;
+        // Keeping still as a defence, not ice ("survives its body water freezing") nor a hunter's camouflage ("camouflage-based ambush").
+        if (style === "freeze" && /freez/.test(hit.match) && /\b(temperatures?|winters?|cold|ice|frost|body water|surviv\w*|toleran\w*)\b/i.test(hit.phrase)) continue;
+        if (style === "freeze" && (/ambush/i.test(hit.phrase) || (hit.field !== "predators" && /\b(prey|strikes?|feeds? when)\b/i.test(hit.phrase) && !/bird of prey|birds of prey/i.test(hit.phrase)))) continue;
         // A chemical weapon counts as defence only where the text is about its predators or its defence.
         if (style === "chemical" && hit.field !== "predators" && !/defen|predator|threat|attack|enem/i.test(hit.phrase)) continue;
         add(style, src(hit));
@@ -513,8 +527,13 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[]): Entry<Defence>[]
         // Where it runs to: from its body plan and its places (stored, not text), flagged as a default.
         defaults.push("flee");
         const d = (style: Defence, why: string) => add(style, {default: why});
-        const apex = HUNTER_DIETS.has(b.diet) && b.diet !== "carrion" && (b.size ?? 0) >= 50 && !fly;
-        if (apex) d("threat", `a large hunter (size ${b.size}): stands its ground`);
+        // A large animal that hunts (its hunt has a way of catching, not only scavenging or filtering) stands its ground;
+        // a carrion-first eater counts too when it also hunts (a Komodo dragon), a vulture does not.
+        const catches = hunt.some((h) => h.style !== "filter" && h.style !== "scavenge");
+        const apex = HUNTER_DIETS.has(b.diet) && catches && (b.size ?? 0) >= 50 && !fly;
+        // (Only the "other" plan: the behaviour profile also calls the barnacle goose sessile, from its name.)
+        if (b.move === "sessile" && b.plan === "other") d("armour", "sessile: closes up where it is");
+        else if (apex) d("threat", `a large hunter (size ${b.size}): stands its ground`);
         else if (fly && b.plan !== "flying_insect") d("fly_off", `plan ${b.plan}: takes to the air`);
         else if (b.plan === "primate" || (b.moves.includes("climb") && b.plan === "quadruped")) d("flee_tree", `plan ${b.plan}, climbs`);
         else if (["tree", "tree_hole"].includes(b.roost) && ["quadruped", "lizard", "legless", "amphibian", "insect", "arachnid"].includes(b.plan)) d("flee_tree", `roost ${b.roost}: up its tree`);
@@ -558,8 +577,8 @@ function profile(row: Row) {
     const band = bandOf(stat);
     const perception = perceptionOf(row, b, defaults);
     const hunt = huntOf(row, b, defaults);
-    const forage = forageOf(row, b, defaults);
-    const defence = defenceOf(row, b, defaults);
+    const forage = forageOf(row, b, defaults, hunt);
+    const defence = defenceOf(row, b, defaults, hunt);
     const toolHit = reviewedHit(reviewed.tools, row);
     const tools = toolHit ? [{what: toolHit.verdict.value ?? "tool use", src: toolHit.source}] : [];
     const sentinelHit = reviewedHit(reviewed.sentinel, row);
