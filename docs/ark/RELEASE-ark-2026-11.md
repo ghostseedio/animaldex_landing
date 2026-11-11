@@ -115,68 +115,52 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 1. **Rig `v2`** (owner-approved once checks pass): `ARK_FLIGHT_APPROVED=1 python3 publish_rig.py --prefix ark-rig/v2 --no-facing`, dry run first, then `--apply`. Inert until a web build reads it (this release reads v2 first).
 2. **The 14 turned birds' near/far** (`publish_ark.py`): only **with or after** the web deploy (the live web turns them itself; uploading first turns them twice). `publish_rig.py --apply` runs it first and refuses if anything else changed.
 3. **Close-up skins** (678 MiB, 2,630 species; `export_closeup.py`): **still needs the owner's approval.** Read only near the camera; 404s until uploaded.
-4. **The model files' cache header** (owner, 2026-11-11 about 22:00 WIB): §5a. In the same window as the web deploy, after it (§7 step 3a).
+4. **`immutable` on the model files** (owner, 2026-11-11 about 22:00 WIB): §5a. **Optional, recommended skip**: they are already cached a year.
 
-### 5a. Cache the versioned model files for a year (owner decision, 2026-11-11 about 22:00 WIB)
-**Why.** Every model file is served `cache-control: private, no-cache` with `cf-cache-status: DYNAMIC` today (checked
-read-only on 2026-11-11: `v1/ark/manifest.json`, `v1/ark/aardvark/dda71d1badae.far.glb`,
-`ark-rig/v2/aardvark/d6525f0276c7.rig.glb`), although the publishers sent `Cache-Control: max-age=31536000` (models) and
-`max-age=600` (manifests) with each upload. So every visit downloads every model again (about 0.5 s each; the runtime's
-Cache Storage, merged in 1ee10e02, only helps the same browser). The decision: re-upload the Ark's **versioned** model
-files with `cache-control: public, max-age=31536000, immutable`; the manifests stay on a short cache.
+### 5a. `immutable` on the versioned model files: OPTIONAL, recommended skip (pending the owner)
+The owner decided (2026-11-11 about 22:00 WIB) to re-upload the Ark's versioned model files with a year-long immutable
+cache in the deploy window. The rigging lane's check (`ark-rigging-v6` 6b1b40a9, `scripts/talking-models/recache_ark.py`)
+then showed the files are **already cached for a year**, so the step would only add `immutable`. Recommended: skip it,
+pending the owner.
 
-**What is versioned** (a changed file always gets a new path; the publishers never overwrite: `x-upsert: false`):
+**What is served today** (checked with ranged GETs, 2026-11-11):
+- All 11,889 versioned objects are stored with `max-age=31536000` (the publishers' upload header is what Storage reads),
+  and a GET answers `cache-control: public, max-age=31536000`, `cf-cache-status: HIT` once the edge has it (`MISS` on the
+  first request at a cold edge). The manifests answer `public, max-age=600`.
+- The earlier `private, no-cache` / `DYNAMIC` came from HEAD requests (`curl -sI`): Supabase's Smart CDN never caches HEAD.
+  **Check with a ranged GET, never with `-I`:** `curl -sD - -r 0-0 -o /dev/null <url>`.
+- So browsers and the CDN already keep every model for a year; `immutable` only saves the revalidation on a reload. The
+  cost: re-sending about 1.08 GB (30–45 minutes), and every object's edge copy is invalidated (refilled on the next GET).
 
-| Prefix | Files | Count (2026-11-11) | The version in the path |
+**The versioned paths** (a changed file always gets a new path; the publishers never overwrite, `x-upsert: false`):
+
+| Prefix | Files | Count | The version in the path |
 |---|---|---|---|
-| `talking-models/v1/ark/<slug>/<version>.near.glb`, `.far.glb`, `.ark.json` | the Ark model set | 2,630 species × 3 = 7,890 | first 12 hex of sha256 of the three files (`publish_ark.py`, refuses a slug whose bytes no longer match) |
-| `talking-models/ark-rig/v2/<slug>/<version>.rig.glb` | the rig set this release reads first | 2,028 | first 12 hex of sha256 of the rig file (`publish_rig.py`) |
-| `talking-models/ark-rig/v1/<slug>/<version>.rig.glb` | the fallback rig set | 1,971 | the same |
+| `talking-models/v1/ark/<slug>/<sha12>.near.glb`, `.far.glb`, `.ark.json` | the Ark model set | 7,890 (2,630 species × 3) | sha256 of the three files (`publish_ark.py`) |
+| `talking-models/ark-rig/v2/<slug>/<sha12>.rig.glb` | the rig set this release reads first | 2,028 | sha256 of the file (`publish_rig.py`) |
+| `talking-models/ark-rig/v1/<slug>/<sha12>.rig.glb` | the fallback rig set | 1,971 | the same |
 
-About 11,900 files in all (not 2k–4k: the model set alone is three files a species).
+Not versioned, never immutable: `v1/ark/manifest.json`, `ark-rig/v1/manifest.json`, `ark-rig/v2/manifest.json` (and later
+`v1/ark-closeup/manifest.json`). Out of scope: the talking models (`v1/<slug>/…`) and the species icons (`animals/<slug>.webp`).
 
-**Not versioned: stay on a short cache, never immutable.** `v1/ark/manifest.json`, `ark-rig/v1/manifest.json`,
-`ark-rig/v2/manifest.json` (re-written in place on every publish), and later `v1/ark-closeup/manifest.json`. Also out of
-scope: the talking models (`v1/<slug>/<version>.*`, the apps' too; their GLB's name is the hash of the iOS files, not of
-the GLB itself) and the species icons (`animals/<slug>.webp`, unversioned).
-
-**1. The check first** (dry run, read only). List every object under the three prefixes (Storage list API, service key)
-and sort each path into "versioned" (`^(v1/ark|ark-rig/v[0-9]+)/<slug>/[0-9a-f]{12}\.(near\.glb|far\.glb|ark\.json|rig\.glb)$`,
-and listed in its set's manifest or `published.json`) or "not versioned". Print both counts and the full list of the
-second kind (expected: only the manifests; anything else, such as an unversioned `ark/<slug>.glb`, stays on a short cache
-and is named in the report). For the rig sets, also hash a sample of 50 downloads and compare with the path's version.
-
-**2. The command.** There is no re-upload script yet: add `scripts/talking-models/recache_ark.py` on `ark-rigging` before
-the window (it follows `publish_ark.py`'s key handling, retries and headers):
+**If the owner still wants it** (the owner runs it with the service key; after the web deploy, in the same window):
 ```
-python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1            # dry run: the check above, nothing written
-python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1 --canary   # one file, then curl -sI it
-python3 scripts/talking-models/recache_ark.py --prefix v1/ark --prefix ark-rig/v2 --prefix ark-rig/v1 --apply
+python3 scripts/talking-models/recache_ark.py --dry-run                    # list, sort versioned / unversioned, check 50 rig hashes
+python3 scripts/talking-models/recache_ark.py --canary <one versioned path> # one file, then what is served (twice)
+python3 scripts/talking-models/recache_ark.py --apply --jobs 8             # every versioned file; resumable; 30–45 min
+python3 scripts/talking-models/recache_ark.py --verify --sample 20         # stored header on every file, served on a sample
 ```
-For each versioned path: download the public bytes, PUT the same bytes back to the same path with the same content type,
-`Cache-Control: public, max-age=31536000, immutable` and `x-upsert: true` (the only overwrite these paths ever get:
-same bytes, new header), 8 at a time, resumable from its own record. The manifests are not touched. **Who:** the owner
-(a production bucket change), with `SERVICE_KEY` from the environment as the other publishers. **How long:** about
-11,900 files and roughly 0.8–1 GB down and up again; at 8 in parallel and about 0.4–0.6 s a file, 10–15 minutes, longer on
-a slow uplink. **The canary matters:** the publishers already sent `max-age=31536000` and the bucket still serves
-`private, no-cache`, so confirm on one file that the new header is served before running all of them. If it is not, stop
-(the bucket or project setting is the cause, not the header) and keep everything as it is.
-
-**3. Verify after.**
+Verify by hand with ranged GETs (two each: the second shows `HIT`):
 ```
 B=https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models
-for p in v1/ark/aardvark/dda71d1badae.far.glb v1/ark/aardvark/dda71d1badae.near.glb ark-rig/v2/aardvark/d6525f0276c7.rig.glb; do
-  curl -sI "$B/$p" | grep -i 'cache-control\|cf-cache-status'; curl -sI "$B/$p" | grep -i 'cf-cache-status'
+for p in v1/ark/aardvark/dda71d1badae.far.glb ark-rig/v2/aardvark/d6525f0276c7.rig.glb; do
+  curl -sD - -r 0-0 -o /dev/null "$B/$p" | grep -i 'cache-control\|cf-cache-status'
+  curl -sD - -r 0-0 -o /dev/null "$B/$p" | grep -i 'cf-cache-status'
 done
-curl -sI "$B/v1/ark/manifest.json" | grep -i 'cache-control'     # still short: never immutable
+curl -sD - -r 0-0 -o /dev/null "$B/v1/ark/manifest.json" | grep -i 'cache-control'   # stays max-age=600
 ```
-Pass: each model file says `cache-control: public, max-age=31536000, immutable`, and its second request
-`cf-cache-status: HIT`; the manifest is unchanged. Then /ark on a second visit loads its models from cache (DevTools:
-"(disk cache)" or the CDN's HIT).
-
-**4. Rollback.** Re-upload with the old header: the same script with `--cache-control "max-age=31536000"` (what the
-publishers send; it was served `private, no-cache`). Nothing else changes: the bytes, paths and manifests stay as they
-are. A file that must change never needs this: it gets a new version path, and the manifest (short cache) points to it.
+Pass: `max-age=31536000, immutable` on the files (the gateway adds `public`), `HIT` on the second GET, the manifest
+unchanged. Rollback: `recache_ark.py --rollback` (the same re-upload with the old `max-age=31536000`).
 
 ## 6. Apps (3.3)
 - Merge `ark-founders-ios` / `ark-founders-android` (founders + the 18+ confirmation), `ark-thrive-ios` / `ark-thrive-android` (offer and arrival lines, the Ark Score explainer), and the runtime bridge branches (`ark:visible`, `ark:power`: `docs/ark/runtime-bridge.md`) into each app's main, then the owner builds and submits.
@@ -189,8 +173,8 @@ are. A file that must change never needs this: it gets a new version path, and t
 1. Server: founders migration (switch off) and `voyage-founder-story`; then the thrive function and migrations 3–7 (§3).
 2. Bucket: rig `v2`.
 3. Web: merge, build, deploy (§4); with it or after it, the 14 turned birds.
-3a. Bucket, in the same window, after the web deploy: the model files' cache header (§5a): the check, the canary, then
-    `--apply`, then the verification.
+3a. Bucket, optional (recommended skip, pending the owner): `immutable` on the model files (§5a), after the web deploy in the
+    same window: `--dry-run`, `--canary`, `--apply`, `--verify`.
 4. Server, **part of the release** (owner, 2026-11-11: "only use real player data and animals", "the same for the production
    too when we next deploy"): the captures backfill (needs this web build), `voyage_backfill_captures` run to completion,
    then `voyage_backfill_verify_v1`; then `founder_names` on; then `thrive` on, then the capture triggers. Production then
@@ -232,8 +216,9 @@ are. A file that must change never needs this: it gets a new version path, and t
   | phone profile (4× CPU, DPR 2, low tier), round 5 | 6.2–6.4 s | **2.2 s** | 16.5–18.2 s | 60 fps, p95 16.8 ms | 12, longest **0.21 s** | 134–146 MB | 45 + 31 MB (205–210 models) | |
   | phone profile, before | 5.5 s | 2.7 s | 19–22 s | 60 fps, p95 16.8 ms | 16–17, longest 0.65 s | 157–172 MB | 45 + 32 MB | 149 / 0.36 M |
 
-  Round 5 settles the desktop view in about 14 s and keeps every phone task after the first frame near 0.2 s. What is
-  left first on a phone is the mount itself: one 2.2 s main-thread task before the first frame (6.2–6.4 s in), with the
+  Round 5 settles the desktop view in about 14 s and keeps every phone task after the first frame near 0.2 s. The phone's
+  16–18 s to a complete view is not CDN misses (the model files are already served cached for a year, §5a); the runtime
+  lane is finding the real cause. What is left first on a phone is the mount itself: one 2.2 s main-thread task before the first frame (6.2–6.4 s in), with the
   page frozen. Without the prebuild worker the phone's mount holds the main thread 12 s. (Headless Chromium on the Mac's
   GPU: the phone profile throttles the CPU, not the GPU.)
 
