@@ -96,6 +96,15 @@ function diverDepth(slug: string): SpeciesDepth | null {
     return {band: "upper", water: "salt", home: "coast", breathes: true, crevice: false, deepFloor: false, glow: false, reason: "a diver that hauls out (penguin, seal, sea lion, walrus): it swims in the upper water and breathes at the surface", source: "default"};
 }
 
+/**
+ * A swimming body's lean (radians, the scene's pitch: positive tips the head
+ * forward): a penguin's model stands upright, so it lies down to swim, belly
+ * under, head first (π/2); every other body swims as its model lies (0).
+ */
+export function swimBodyPitch(slug: string): number {
+    return /(^|-)penguin($|-)/.test(slug) ? Math.PI / 2 : 0;
+}
+
 /** A species' depth band, or null when it is not a water species (it stands on land, or perches, or is small and at its microhabitat). */
 export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
     const key = `${slug}#${zone}`;

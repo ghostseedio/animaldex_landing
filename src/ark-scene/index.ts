@@ -87,7 +87,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -1602,7 +1602,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clock = clockNow();
             const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const spec = waterSpec(entry.depth, ground, entry.seed, clock, breath);
-            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: 0, roll: 0, afloat: true, water: spec};
+            return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0, roll: 0, afloat: true, water: spec};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -1668,7 +1668,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // The school swims at its first one's depth in the band (its own breath apart).
         const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
-        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along);
+        // (A penguin lies down to swim: `swimBodyPitch`.)
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
         return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined};
     };
 
