@@ -320,7 +320,8 @@ function withSmallAnimals(full: ArkSnapshot): ArkSnapshot {
  * hanging, a toucan perching in the canopy; moles and mole-rats underground;
  * crabs and an octopus on the reef floor, a glowing pineapplefish, a whale
  * shark at the plankton, the deep's lanternfish, loosejaw (glowing) and giant
- * squid; a tawny owl and a gull for the moments.
+ * squid; a tawny owl and a gull for the moments; and the depth bands' water species (trout, a catfish,
+ * a pike, koi and swans in the lake, a plaice, a moray, orcas, a narwhal, a wrasse off the beach, jellyfish).
  */
 function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
     type Zone = ArkSnapshot["animals"][number]["zone"];
@@ -347,7 +348,21 @@ function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
         ["spotted-lanternfish", "Spotted Lanternfish", "open_ocean", "any", 3],
         ["giant-squid", "Giant Squid", "open_ocean", "any"],
         ["tawny-owl", "Tawny Owl", "woodland", "nocturnal"],
-        ["herring-gull", "Herring Gull", "seashore", "diurnal"]
+        ["herring-gull", "Herring Gull", "seashore", "diurnal"],
+        // The depth bands (`sea-depth.ts`): the lake's fish in its mid-water and on its bed, a koi of the farm in the lake,
+        // a swan on it, a plaice on the seabed, a moray in its hole, an orca and a narwhal that come up to breathe,
+        // a wrasse of the shore in the sea off it, a school of jellyfish in mid-water.
+        ["rainbow-trout", "Rainbow Trout", "river_lake", "diurnal", 3],
+        ["wels-catfish", "Wels Catfish", "river_lake", "nocturnal"],
+        ["northern-pike", "Northern Pike", "river_lake", "diurnal"],
+        ["koi", "Koi", "farm_garden", "diurnal", 2],
+        ["mute-swan", "Mute Swan", "river_lake", "diurnal", 2],
+        ["european-plaice", "European Plaice", "open_ocean", "any"],
+        ["green-moray", "Green Moray", "coral_reef", "nocturnal"],
+        ["orca", "Orca", "open_ocean", "any", 2],
+        ["narwhal", "Narwhal", "polar", "any"],
+        ["ballan-wrasse", "Ballan Wrasse", "seashore", "diurnal"],
+        ["moon-jellyfish", "Moon Jellyfish", "open_ocean", "any", 3]
     ];
     const animals = [...base.animals];
     extra.forEach(([slug, name, zone, activity, many = 1], i) => {

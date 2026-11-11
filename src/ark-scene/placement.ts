@@ -28,6 +28,7 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
+import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -378,6 +379,19 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
                 placed.set(animal.id, chosen);
                 continue;
             }
+        }
+        // A water species whose zone's own place is not its water (`sea-depth.ts`): in the lake, or the sea off its zone's coast.
+        const depth = speciesDepth(animal.model_slug, zoneKey);
+        const wet = depth ? waterHomeSpot(depth, zoneKey as ArkAnimal["zone"], slotIndex, rank) : null;
+        if (wet) {
+            const chosen: Placement = {x: wet.x, z: wet.z, ground: sampleGround(wet.x, wet.z).height, yaw: ((slotHash >>> 4) % 1000) / 1000 * Math.PI * 2, water: true};
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
         }
         const kind = slotKind(animal, slotIndex);
         const centreIndex = gridIndex(layoutOf(zoneKey, site), kind, slotIndex);
