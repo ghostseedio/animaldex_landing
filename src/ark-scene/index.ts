@@ -5263,6 +5263,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
+        // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances).
+        resetTransients: () => {
+            reactive.resetAll();
+            for (const entry of allEntries()) {
+                entry.reactive = null;
+                entry.rig = null;
+                entry.glance = 0;
+            }
+        },
         // Runtime: a replay's departed animals placed in the places worker ahead of play (the map's sampler stays off
         // the main thread); play then finds them placed.
         prepareReplay: (acts: ArkAct[]) => {
