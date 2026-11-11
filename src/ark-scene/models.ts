@@ -24,6 +24,8 @@ import {parseTalkingGlb} from "@/components/ask-animaldex/voice-call/talking-mod
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {bodyAxisExtent} from "@/ark-scene/stats";
 import {placeholderGeometry} from "@/ark-scene/placeholder";
+import {fittedSize} from "@/ark-scene/runtime/budgets";
+import {geometryBytes, textureBytes} from "@/ark-scene/runtime/memory";
 
 export type ArkManifest = {
     models: Record<string, string>;
@@ -126,6 +128,17 @@ export class ModelLibrary {
     private readonly abort = new AbortController();
     /** Called whenever a level finishes loading. */
     onLoad: (slug: string) => void = () => undefined;
+    /**
+     * Runtime (`runtime/load.ts`): which queued level loads next (lower first); null keeps the order asked.
+     * `fit`: the longest skin edge per level after loading (`runtime/budgets.ts`); null keeps the file's.
+     * `paced`: finished levels wait in `staged` until `drain` hands them to the scene a few per frame.
+     */
+    priority: ((slug: string, level: Wanted) => number) | null = null;
+    fit: {near: number; far: number} | null = null;
+    paced = false;
+    private readonly staged: Array<() => void> = [];
+    /** GPU bytes per loaded level (`runtime/memory.ts`'s estimate). */
+    private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
 
     constructor(private readonly base: string, private readonly concurrency = 3) {
         this.loader = new GLTFLoader();
@@ -182,7 +195,45 @@ export class ModelLibrary {
 
     /** Still loading or waiting to load something (the recorder waits for this before a shot). */
     get busy(): boolean {
-        return !this.manifest || this.active > 0 || this.queue.length > 0;
+        return !this.manifest || this.active > 0 || this.queue.length > 0 || this.staged.length > 0;
+    }
+
+    /** Levels asked for and not yet handed to the scene (the quiet loading bar's count). */
+    get pending(): number {
+        return this.active + this.queue.length + this.staged.length;
+    }
+
+    /**
+     * Hand finished levels to the scene while `allows()` says the frame has time (paced mode); `upload` puts a skin
+     * on the GPU now, inside that budget, instead of at the first frame it is drawn in.
+     */
+    drain(allows: () => boolean, ran: () => void) {
+        while (this.staged.length && allows()) {
+            this.staged.shift()!();
+            ran();
+        }
+    }
+
+    /** Every loaded level's GPU bytes, for the budget (`runtime/budgets.ts`). */
+    levels(): Array<{slug: string; level: Wanted; geometry: number; texture: number}> {
+        return Array.from(this.levelBytes.entries()).map(([key, bytes]) => {
+            const [slug, level] = key.split("\u0000") as [string, Wanted];
+            return {slug, level, ...bytes};
+        });
+    }
+
+    /**
+     * Let a species' near level go (over the memory budget): its far level stands in until it is asked for again.
+     * Never the far level, never a fallback or placeholder (one mesh is both levels).
+     */
+    evict(slug: string, level: "near"): boolean {
+        const model = this.models.get(slug);
+        if (!model?.near || model.placeholder || !this.levelBytes.has(`${slug}\u0000${level}`) || model.near.geometry === model.far?.geometry) return false;
+        disposeLevel(model.near);
+        model.near = null;
+        this.levelBytes.delete(`${slug}\u0000${level}`);
+        this.requested.get(slug)?.delete(level);
+        return true;
     }
 
     /** Ask for a level; the far one comes first, and both come at once from a fallback. */
@@ -199,7 +250,19 @@ export class ModelLibrary {
     private pump() {
         if (!this.manifest || this.disposed) return;
         while (this.active < this.concurrency && this.queue.length) {
-            const next = this.queue.shift()!;
+            // The runtime's order (nearest in view first), else the order asked; ties keep the order asked.
+            let pick = 0;
+            if (this.priority) {
+                let best = Infinity;
+                for (let i = 0; i < this.queue.length; i++) {
+                    const rank = this.priority(this.queue[i].slug, this.queue[i].level);
+                    if (rank < best) {
+                        best = rank;
+                        pick = i;
+                    }
+                }
+            }
+            const next = this.queue.splice(pick, 1)[0];
             if (!this.has(next.slug)) continue;
             this.active++;
             this.load(next.slug, next.level)
@@ -220,7 +283,7 @@ export class ModelLibrary {
         return `${this.base.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${file}`;
     }
 
-    private async loadGltf(url: string): Promise<ModelLevel> {
+    private async loadGltf(url: string, edge = 0): Promise<ModelLevel> {
         const gltf = await this.loader.loadAsync(url);
         gltf.scene.updateMatrixWorld(true);
         let found: Mesh | null = null;
@@ -237,6 +300,7 @@ export class ModelLibrary {
         const map = material?.map ?? null;
         mesh.geometry.dispose();
         material?.dispose();
+        if (map && edge > 0) await fitTexture(map, edge);
         return {geometry, map, triangles: triangles(geometry), facing};
     }
 
@@ -265,18 +329,28 @@ export class ModelLibrary {
         if (version) {
             if (level === "far") {
                 const [far, json] = await Promise.all([
-                    this.loadGltf(this.url(slug, `${version}.far.glb`)),
+                    this.loadGltf(this.url(slug, `${version}.far.glb`), this.fit?.far ?? 0),
                     fetch(this.url(slug, `${version}.ark.json`), {signal: this.abort.signal}).then((response) => (response.ok ? response.json() : null)).catch(() => null)
                 ]);
                 if (this.disposed) return disposeLevel(far);
                 const behaviour = (json && typeof json === "object" ? (json as {behaviour?: TalkingBehaviour}).behaviour : null) ?? null;
-                this.remember(slug, behaviour, far).far = far;
+                this.hand(() => {
+                    this.remember(slug, behaviour, far).far = far;
+                    this.count(slug, "far", far);
+                    this.onLoad(slug);
+                });
             } else {
-                const near = await this.loadGltf(this.url(slug, `${version}.near.glb`));
+                const near = await this.loadGltf(this.url(slug, `${version}.near.glb`), this.fit?.near ?? 0);
                 if (this.disposed) return disposeLevel(near);
-                this.remember(slug, this.models.get(slug)?.behaviour ?? null, near).near = near;
+                this.hand(() => {
+                    // Asked again after it was let go: the newest copy wins, the older one goes.
+                    const model = this.remember(slug, this.models.get(slug)?.behaviour ?? null, near);
+                    if (model.near && model.near !== near) disposeLevel(model.near);
+                    model.near = near;
+                    this.count(slug, "near", near);
+                    this.onLoad(slug);
+                });
             }
-            this.onLoad(slug);
             return;
         }
         if (this.models.get(slug)) return;
@@ -324,6 +398,19 @@ export class ModelLibrary {
         this.onLoad(slug);
     }
 
+    /** A finished level: to the scene now, or (paced) when `drain` has time for it. */
+    private hand(apply: () => void) {
+        if (this.disposed) return;
+        if (this.paced) this.staged.push(() => {
+            if (!this.disposed) apply();
+        });
+        else apply();
+    }
+
+    private count(slug: string, level: Wanted, model: ModelLevel) {
+        this.levelBytes.set(`${slug}\u0000${level}`, {geometry: geometryBytes(model.geometry), texture: model.map ? textureBytes(model.map) : 0});
+    }
+
     /** The neutral figure for a species with no model (its own copy: each species has its own instances). */
     private placeholder(slug: string) {
         if (this.disposed) return;
@@ -347,6 +434,8 @@ export class ModelLibrary {
     dispose() {
         this.disposed = true;
         this.abort.abort();
+        this.staged.length = 0;
+        this.levelBytes.clear();
         const textures = new Set<Texture>();
         const geometries = new Set<BufferGeometry>();
         this.models.forEach((model) => {
@@ -365,4 +454,40 @@ export class ModelLibrary {
 function disposeLevel(level: ModelLevel) {
     level.geometry.dispose();
     level.map?.dispose();
+}
+
+/**
+ * Fit a skin to `edge` pixels on its longest side before it reaches the GPU (runtime budgets): off the main thread
+ * where the browser can resize an ImageBitmap, else through a canvas. Leaves it as it was if anything fails.
+ */
+async function fitTexture(map: Texture, edge: number): Promise<void> {
+    const image = map.image as (ImageBitmap | HTMLImageElement | HTMLCanvasElement) & {close?: () => void} | undefined;
+    const width = image?.width ?? 0;
+    const height = image?.height ?? 0;
+    if (!image || !width || !height) return;
+    const size = fittedSize(width, height, edge);
+    if (size.width === width && size.height === height) return;
+    let next: ImageBitmap | HTMLCanvasElement | null = null;
+    if (typeof createImageBitmap === "function") {
+        try {
+            next = await createImageBitmap(image, {resizeWidth: size.width, resizeHeight: size.height, resizeQuality: "high", premultiplyAlpha: "none", colorSpaceConversion: "none"});
+        } catch {
+            next = null;
+        }
+    }
+    if (!next && typeof document !== "undefined") {
+        const canvas = document.createElement("canvas");
+        canvas.width = size.width;
+        canvas.height = size.height;
+        const context = canvas.getContext("2d");
+        if (context) {
+            context.imageSmoothingQuality = "high";
+            context.drawImage(image, 0, 0, size.width, size.height);
+            next = canvas;
+        }
+    }
+    if (!next) return;
+    if (typeof image.close === "function") image.close();
+    map.image = next;
+    map.needsUpdate = true;
 }
