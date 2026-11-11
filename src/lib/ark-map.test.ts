@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import holds from "@/ark-scene/map/validator-holds.json";
 import table from "@/ark-scene/map/species.json";
-import {mapPlace, mapPoints, setArkMapSampler} from "@/ark-scene/map/place";
+import {mapHabitatAt, mapPlace, mapPoints, setArkMapSampler} from "@/ark-scene/map/place";
+import fixture from "@/ark-scene/fixtures/snapshot.json";
+import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {groupSpread, rangeReach, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
+import {eats} from "@/ark-scene/food-links";
+import {decodeArkSnapshot} from "@/ark-scene/snapshot";
+import {displayLength} from "@/ark-scene/sizes";
+import {sceneSampler} from "@/ark-scene/world-sampler";
 import {mapHolds, mapSlugs, mapSpecies} from "@/ark-scene/map/species";
 import {MAP_AREAS, MAP_TAGS, TAG_AREA} from "@/ark-scene/map/tags";
 import {failuresBySpecies, offLimb, validateMap, validatorAnimals} from "@/ark-scene/map/validate";
@@ -147,4 +155,37 @@ test("map: a hanger hangs under its limb and a percher sits on top, on the drawn
         assert.ok(offLimb(tree, place.canopy.limb, {...point, y: point.y - half}) > Math.min(half, 0.1) * 0.9, `${animal.model_slug}: a float would be caught`);
     }
     assert.ok(hangers >= 2, `${hangers} hangers checked`);
+});
+
+test("map + behaviour spawn spacing: every predator at least 20 m from its prey at spawn, its moved home still on its own ground", () => {
+    const world = scheduleWorld(sceneSampler());
+    for (const raw of [fixture, fixtureV2]) {
+        const snapshot = decodeArkSnapshot(raw)!;
+        const places = placeAnimals(snapshot.animals);
+        // As the scene wires it (index.ts wireSchedules): each group's leader, its reach with its group's spread round it.
+        const sizes = new Map<string, number>();
+        for (const a of snapshot.animals) {
+            const lead = places.get(a.id)!.leader;
+            if (lead && lead !== a.id) sizes.set(lead, (sizes.get(lead) ?? 1) + 1);
+        }
+        const leaders = snapshot.animals.filter((a) => !places.get(a.id)!.leader || places.get(a.id)!.leader === a.id);
+        const items = leaders.map((a) => ({a, place: places.get(a.id)!, profile: behaviourProfile(a.model_slug)}));
+        const reach = new Map(items.map((i) => [i.a.id, rangeReach(i.profile, {id: i.a.id, zone: i.a.zone, home: {x: i.place.x, y: i.place.ground, z: i.place.z}, length: displayLength(i.a), sea: false}) + (sizes.has(i.a.id) ? groupSpread(displayLength(i.a), sizes.get(i.a.id)!) : 0)]));
+        const spaced = spaceHomes(
+            items.map((i) => ({id: i.a.id, slug: i.a.model_slug, home: {x: i.place.x, z: i.place.z}, length: displayLength(i.a), walkable: (x: number, z: number) => (i.profile.move === "swim" || i.profile.seabed ? world.nav.swimmable(x, z, 0.5) : world.nav.walkable(x, z) && mapHabitatAt(i.a, x, z))})),
+            eats,
+            (id) => reach.get(id) ?? 3
+        );
+        const home = (i: (typeof items)[number]) => spaced.get(i.a.id)?.home ?? {x: i.place.x, z: i.place.z};
+        let predators = 0;
+        for (const i of items) {
+            const prey = items.filter((j) => j !== i && eats(i.a.model_slug, j.a.model_slug));
+            if (!prey.length) continue;
+            predators++;
+            const nearest = Math.min(...prey.map((j) => Math.hypot(home(i).x - home(j).x, home(i).z - home(j).z)));
+            assert.ok(nearest >= 20, `${i.a.model_slug} ${nearest.toFixed(1)} m from its prey`);
+            assert.ok(mapHabitatAt(i.a, home(i).x, home(i).z) || (home(i).x === i.place.x && home(i).z === i.place.z), `${i.a.model_slug} moved off its own ground`);
+        }
+        assert.ok(predators >= 15, `${predators} predators`);
+    }
 });

@@ -417,6 +417,20 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     return placement;
 }
 
+/**
+ * Can this animal's home be here, by the map (behaviour's spawn spacing,
+ * `spaceHomes`, moves a predator's home away from its prey and asks this of
+ * every spot it tries): on ground one of its tags names. Always true with
+ * the map off, for a species the map does not place, and for a water
+ * species (its water is its band's, which the swim test already asks).
+ */
+export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: number, z: number): boolean {
+    if (!enabled || isHeldOnMap(animal.model_slug) || speciesDepth(animal.model_slug, animal.zone)) return true;
+    const species = mapSpecies(animal.model_slug, animal.zone);
+    if (!species) return true;
+    return mapPoints().sampler.ground(x, z).tags.some((tag) => species.allowed.has(tag));
+}
+
 /** How far it goes to sleep, by how it moves (m). */
 function reachOf(species: MapSpecies): number {
     switch (species.move) {
