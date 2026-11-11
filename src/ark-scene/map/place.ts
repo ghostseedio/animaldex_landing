@@ -151,12 +151,28 @@ export const CANOPY_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["canopy", "leav
  * the trees (a tree kangaroo, an orangutan, a fish eagle over the lake).
  */
 export function arborealOf(species: MapSpecies, slug: string): boolean {
+    // Only a body that climbs, perches or flies, or lives in the canopy layer, ever goes on a limb (the table once gave an African
+    // forest buffalo "climb" and "limb": a generator slip; its behaviour profile walks).
+    if (!climbsTrees(slug)) return false;
     if (species.small) return species.attach === "limb" || species.attach === "trunk";
     if (species.attach === "limb" || species.attach === "trunk" || species.move === "hang" || species.move === "leap") return true;
     if (species.move !== "climb" && species.move !== "perch") return false;
     // (Trees only as its roost, a cormorant's or a heron's: it lives at the water by day and sleeps in a tree, `roostOf`.)
     return speciesLayer(slug).layer === "canopy" && Array.from(species.allowed).some((tag) => CANOPY_TAGS.has(tag) && tag !== species.roost);
 }
+
+/** A body that can be on a tree: its behaviour profile climbs, perches or flies, or it lives in the canopy layer (`layers.json`). */
+export function climbsTrees(slug: string): boolean {
+    const profile = behaviourProfile(slug);
+    if (profile.move === "climb" || profile.move === "perch" || profile.move === "fly" || profile.move === "cling") return true;
+    if (profile.moves.some((move) => move === "climb" || move === "perch" || move === "fly" || move === "cling")) return true;
+    return speciesLayer(slug).layer === "canopy";
+}
+
+const TREE_POINT: ReadonlySet<AttachTag> = new Set<AttachTag>(["limb", "canopy_hang", "branch", "bark", "tree_hollow"]);
+
+/** The most a canopy tree's limb (`micro-decor.ts` canopyTree, a limb 12 cm thick at its base) holds (kg). */
+export const CANOPY_LIMB_LOAD = 150;
 
 /** The tags to try, its spawn tag first. */
 function tagsToTry(species: MapSpecies): MapTag[] {
@@ -270,7 +286,12 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
             // Upside down under the eaves: crawlers only (geckos, spiders), never a bird or a moth at rest.
             // Hang points under limbs are a bat's or a hanger's; a bat takes them first where its tags allow.
             const hanger = bodyOf(animal.model_slug) === "t" || species.move === "hang";
-            let list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb") && !(point.tag === "canopy_hang" && !hanger));
+            // A tree's points (its limbs, branches, bark, hollows, the leaves up in it) are a climber's, a percher's or a flyer's only:
+            // a hedgehog or a frog that does not climb takes the ground's (a fallen leaf, a hole).
+            // (A crawler, an insect, a spider, a snail, crawls on any surface, the owner's rule: trees too.)
+            const climber = climbsTrees(animal.model_slug) || species.move === "crawl" || trueMicro(species, animal.model_slug, trueLength);
+            const inTree = (point: AttachPoint) => TREE_POINT.has(point.tag) || (point.tag === "leaf" && point.y - sampler.ground(point.x, point.z).height > 0.3);
+            let list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb") && !(point.tag === "canopy_hang" && !hanger) && (climber || !inTree(point)));
             if (hanger && list.some((point) => point.tag === "canopy_hang")) list = list.filter((point) => point.tag === "canopy_hang");
             const own = found.own;
             if (!list.length) continue;
@@ -311,7 +332,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
 
     // A large tree climber, hanger or percher: a thick limb of the real forest (the scenery's `limb` points, matched to its body by the
     // limb's fit and load and the room above it), a hanger a hang point under a limb; its perch, home and roost on the schedule.
-    if (arborealOf(species, animal.model_slug) && !species.small) {
+    const heavy = massFromSize(arkStats(animal).size) > CANOPY_LIMB_LOAD;
+    if (arborealOf(species, animal.model_slug) && !species.small && !heavy) {
         const hang = species.move === "hang";
         const mass = massFromSize(arkStats(animal).size);
         const found = all.limbsFor(hang ? "canopy_hang" : "limb", trueLength, mass, zone);
@@ -330,8 +352,8 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     }
 
     // A canopy animal: a limb (or the trunk) of a canopy tree. The owner's rule (2026-11-11): hangers, leapers, and the canopy layer's
-    // climbers and perchers (`layers.json`) grip a real limb, never the ground under it.
-    if (arborealOf(species, animal.model_slug)) {
+    // climbers and perchers (`layers.json`) grip a real limb, never the ground under it; never one too heavy for the limb.
+    if (arborealOf(species, animal.model_slug) && !heavy) {
         const canopyTag = tags.find((tag) => CANOPY_TAGS.has(tag)) ?? (species.move === "hang" || species.move === "leap" ? "canopy" : undefined);
         if (canopyTag) {
             const hostZone = canopyTrees(zone)[0]?.zone ?? zone;

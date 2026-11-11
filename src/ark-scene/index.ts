@@ -91,6 +91,7 @@ import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECO
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -231,6 +232,8 @@ type Sched = {
     pitch: number;
     /** Its home, group and range worked out (`wireSchedules`, sliced): until then it waits unseen, never beside its prey. */
     wired?: boolean;
+    /** Its schedule worked out once since it was wired (the first step is the costly one: a few a frame, `WARM_MS`). */
+    warm?: boolean;
 };
 
 type Entry = {
@@ -802,6 +805,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
+    /** Each schedule's first step after it is wired works out its last slots (where it walks from): a few a frame. */
+    const WARM_MS = 6;
+    let warmFrameMs = 0;
     let scheduledCount = 0;
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -889,7 +895,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
                 own.trip = null;
                 own.lead = null;
-                own.pose = null;
+                // (Its last pose is kept to draw until its first step: the first steps are spread over frames.)
+                own.warm = false;
             }
             // A group's members share their leader's place and range (they roost and roam round it).
             for (const e of onIt) {
@@ -915,8 +922,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             forgetSchedules();
             // Who meets whom in the behaviour recipes: rival males, a male and a female, two of a group (`behaviour-recipes.ts`).
             wireRecipes(onIt.map((e) => ({animal: e.sched!.animal, profile: e.sched!.profile, slug: e.animal.model_slug, activity: e.animal.activity})));
+            // (A recording, and reduced motion, at once; else each one's first step as the frames come, `WARM_MS`.)
             const epoch = worldMs() / 1000;
-            for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
+            if (options.recording) for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
         };
         // The spacing a slice a frame (`stepSpacing`, as the world's build: at the backfill scale it is the longest task
         // after the mount); the latest wiring asked for wins. A recording wires at once.
@@ -959,14 +967,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * Its one behaviour state now: its schedule (or the hour and its species), its breath cycle in the water, and
      * whether it is acting out a server event. Never the selection.
      */
+    /** A scheduled diver's breath from its trip (`breath-trip.ts`); null asleep (its slower breath cycle, where it sleeps). */
+    const scheduledBreath = (own: Sched): number | null => (own.pose?.doing === "sleep" ? null : own.trip ? tripBreath(own.trip, worldMs() / 1000) : 0);
     const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act"> & Partial<Pick<Entry, "sched" | "moment" | "depth" | "seed">>): ArkBehaviourState => {
         // An air-breather in the water comes up for air on its breath cycle (a floater is at the surface already).
         // (Its band and seed are the entry's own, worked out once, when it has them: this runs every frame.)
         const depth = entry.depth !== undefined ? entry.depth : speciesDepth(entry.animal.model_slug, entry.animal.zone);
-        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: entry.seed ?? depthSeed(entry.animal.id), clock: clockNow()} : null;
+        const onSchedule = entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment});
+        // (Awake on the schedule: the breath its breathe trip carries, on its way: `breath-trip.ts`.)
+        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: entry.seed ?? depthSeed(entry.animal.id), clock: clockNow(), breath: onSchedule ? scheduledBreath(entry.sched!) : null} : null;
         // One the classifier holds off the water (a frigatebird) stays aloft, asleep or not: it never comes down onto the sea.
         const aloftAlways = Boolean(heldOffWater(entry.animal.model_slug));
-        const onSchedule = entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment});
         return behaviourState({
             activity: entry.animal.activity,
             elevation: sunElevation,
@@ -1690,7 +1701,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const act = (at as RecipePose).act;
         if (entry.depth && ground < 0 && !at.aloft && at.y < 0.02 && !act?.own) {
             const clock = clockNow();
-            const breath = entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
+            // (Awake, its breath on its way there: `breath-trip.ts`.)
+            const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const spec = waterSpec(entry.depth, ground, entry.seed, clock, breath);
             return {x: at.x, z: at.z, base: fitInWater(spec, modelHeight).base, yaw: at.yaw + (entry.glance ?? 0), pitch: spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0, roll: 0, afloat: true, water: spec};
         }
@@ -2193,6 +2205,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean; rig: RigModel | null};
         const epochNow = worldMs() / 1000;
         behaviourFrameMs = 0;
+        warmFrameMs = 0;
         scheduledCount = 0;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
@@ -2209,11 +2222,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.middle = null;
                 continue;
             }
-            // Its schedule first (where it is and what it is doing now), then its one state from that.
-            if (scheduled(entry)) {
+            // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
+            // for a frame with room for it (held where it was drawn; unseen if it never was).
+            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
+                if (!entry.sched!.pose) {
+                    entry.middle = null;
+                    continue;
+                }
+            } else if (scheduled(entry)) {
                 const started = performance.now();
                 stepSchedule(entry, epochNow, dt);
-                behaviourFrameMs += performance.now() - started;
+                const spent = performance.now() - started;
+                behaviourFrameMs += spent;
+                if (!entry.sched!.warm) {
+                    warmFrameMs += spent;
+                    entry.sched!.warm = true;
+                }
                 scheduledCount++;
             }
             // Its one state (its schedule, or the hour and its species, an act it is in) sets what it does: asleep eases in,
