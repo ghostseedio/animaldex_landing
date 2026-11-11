@@ -246,7 +246,10 @@ export class NavGrid {
                     const nj = j + dj;
                     if (ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
                     const nk = nj * SIZE + ni;
-                    if (!ok(nk) && nk !== goal) continue;
+                    // (The goal's cell may be blocked, a drinking spot by a pond, a rock's top: it is entered from open
+                    // ground, never straight from a blocked start, across whatever blocks them both: a dog crossed the
+                    // garden pond from one drinking spot to the next.)
+                    if (!ok(nk) && (nk !== goal || (k === start && !ok(start)))) continue;
                     const climb = kind === "walk" ? Math.max(this.height[nk] - this.height[k], 0) * 2 : 0;
                     const cost = (g.get(k) ?? 0) + Math.hypot(di, dj) + climb;
                     if (cost >= (g.get(nk) ?? Infinity)) continue;

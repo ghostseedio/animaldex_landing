@@ -704,17 +704,33 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
 function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent, before: Spot | null): boolean {
     const to = placed.to;
     // (Off from a predator it has seen, it goes: the shared wariness, never undone here.)
-    if (!to || placed.follow || placed.face !== undefined || placed.mode !== "ground" || profile.move === "fly" || profile.move === "swim" || profile.seabed) return true;
+    // (A flyer flies there; a swimmer that never leaves the water swims.)
+    const walker = profile.move !== "fly" && !profile.seabed && (profile.move !== "swim" || amphibious(profile));
+    if (!to || placed.follow || placed.face !== undefined || !walker || (placed.mode !== "ground" && placed.mode !== "water")) return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
-    const from = before ?? groundSpot(world, animal.home.x, animal.home.z);
-    if (wet(world, from) || wet(world, to) || raised(world, from) || raised(world, to)) return true;
-    const straight = Math.hypot(to.x - from.x, to.z - from.z);
+    let from = before ?? groundSpot(world, animal.home.x, animal.home.z);
+    let goal = to;
+    if (raised(world, from) || raised(world, to)) return true;
+    const fromWet = wet(world, from);
+    const toWet = wet(world, to);
+    if (fromWet && toWet) return true;
+    if (fromWet !== toWet) {
+        // Out of the water or into it (a seal, a polar bear): the walk is the part on land, from or to the edge it
+        // crosses at, as its trip takes it (the home-growth lane's polar bear climbed out at a cliff's foot and walked
+        // straight up it to a goal on top).
+        if (!amphibious(profile)) return true;
+        const edge = waterEdgeNear(world, profile, animal, toWet ? from : to) ?? waterEdgeNear(world, profile, animal, toWet ? to : from);
+        if (!edge) return true;
+        if (toWet) goal = edge;
+        else from = edge;
+    }
+    const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
     if (straight < 0.5) return true;
     // (The search its trip makes: `tripFor`'s ground.)
-    const path = world.nav.path(from, to, "walk", 0.5, 900, maxSlopeOf(animal));
+    const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal));
     const end = path[path.length - 1];
-    const reached = Math.hypot(end.x - to.x, end.z - to.z) < 0.01;
+    const reached = Math.hypot(end.x - goal.x, end.z - goal.z) < 0.01;
     if (!reached) return false;
     if (straight > 25 || home) return true;
     // Its turns on the way (the corners' headings, summed): a slalom through a rock field turns it round as surely as a
@@ -1135,12 +1151,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         legs.push({mode: "water", from: a, to: b, path, length, seconds: length / (freeSpeed * 1.4), beat: "swim"});
     };
     /** The water's edge to cross at: the drinking and shore points nearest a spot. */
-    const edgeNear = (p: Spot): Spot | null => {
-        const near = world.sampler.attachPoints("water_edge", {x: p.x, z: p.z, r: Math.max(homeRadius(profile, animal) * 2, 12)});
-        if (!near.length) return null;
-        const best = [...near].sort((m, n) => Math.hypot(m.x - p.x, m.z - p.z) - Math.hypot(n.x - p.x, n.z - p.z) || m.id.localeCompare(n.id))[0];
-        return spotOf(best);
-    };
+    const edgeNear = (p: Spot): Spot | null => waterEdgeNear(world, profile, animal, p);
     let after: ArkBeat | null = null;
     switch (mode) {
         case "ground":
@@ -1270,6 +1281,14 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         length: legs.reduce((sum, leg) => sum + leg.length, 0),
         running
     };
+}
+
+/** The water's edge to cross at: the drinking and shore points nearest a spot. */
+function waterEdgeNear(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, p: Spot): Spot | null {
+    const near = world.sampler.attachPoints("water_edge", {x: p.x, z: p.z, r: Math.max(homeRadius(profile, animal) * 2, 12)});
+    if (!near.length) return null;
+    const best = [...near].sort((m, n) => Math.hypot(m.x - p.x, m.z - p.z) - Math.hypot(n.x - p.x, n.z - p.z) || m.id.localeCompare(n.id))[0];
+    return spotOf(best);
 }
 
 /** Which way the water is from an edge point (its own heading faces the water). */

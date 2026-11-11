@@ -123,6 +123,9 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
  */
 export const ROCK_MARGIN = 1.25;
 
+/** How far the garden pond's ring of stones reaches past its water (m: `micro-scene.ts` stones at radius + 0.05, up to 0.3 across). */
+export const POND_STONES = 0.3;
+
 /** Is (x, z) within `widen` of a drawn rock's box (the test `inRock` makes, in the rock's own frame)? */
 function nearDrawnRock(rock: DrawnRock, x: number, z: number, widen: number): boolean {
     const dx = x - rock.x;
@@ -328,9 +331,14 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI);
         }
     }));
+    // The garden pond (drawn water over dry ground, so `surfaceAt` has no water there): where to drink is just outside
+    // its ring of stones, facing the water (2026-11-11: a dog drank standing in it, from points 0.8 m inside).
     tasks.push(chunked(() => 6, 6, (k) => {
         const a = (k / 6) * Math.PI * 2;
-        edge(GARDEN_POND.x + Math.cos(a) * GARDEN_POND.radius * 0.6, GARDEN_POND.z + Math.sin(a) * GARDEN_POND.radius * 0.6, a, "farm_garden");
+        const r = GARDEN_POND.radius + POND_STONES + 0.25;
+        const x = GARDEN_POND.x + Math.cos(a) * r;
+        const z = GARDEN_POND.z + Math.sin(a) * r;
+        add({tag: "water_edge", x, y: surface(x, z).height, z, ...UP, yaw: Math.atan2(-Math.cos(a), -Math.sin(a)), size: [0.02, 2.5], zone: "farm_garden"});
     }));
     // The sea's shore: just dry ground at the waterline all round the island (where seals, penguins and turtles go in and out).
     tasks.push(chunked(() => 120, 12, (k) => {
@@ -420,6 +428,9 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 const cz = Math.floor(z / 6);
                 for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const [ox, oz, r] of obstacleIndex.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(x - ox, z - oz) < r + clearance) return true;
                 if (rockAt(x, z, clearance)) return true;
+                // The garden pond and its stones, kept as clear as a rock (no walkable cell holds any of it): a land
+                // animal drinks at its edge, never walks in.
+                if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + POND_STONES + ROCK_MARGIN + clearance) return true;
                 return solids.length || fences.length ? solidAt(x, z, clearance) : false;
             }
         };

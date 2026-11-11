@@ -4,7 +4,7 @@ import test from "node:test";
 import {NavGrid, navGridBuild, type NavCells} from "@/ark-scene/behaviour-nav";
 import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
-import {ATTACH_TAGS, ROCK_MARGIN, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {ATTACH_TAGS, POND_STONES, ROCK_MARGIN, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {homePlots} from "@/ark-scene/map/hamlet";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {drawnRocks, inRock} from "@/ark-scene/map/rocks";
@@ -125,7 +125,11 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
     }
     for (let k = 0; k < 6; k++) {
         const a = (k / 6) * Math.PI * 2;
-        edge(GARDEN_POND.x + Math.cos(a) * GARDEN_POND.radius * 0.6, GARDEN_POND.z + Math.sin(a) * GARDEN_POND.radius * 0.6, a, "farm_garden");
+        // (Since 2026-11-11 just outside the pond's stones, facing the water, here as there.)
+        const r = GARDEN_POND.radius + POND_STONES + 0.25;
+        const x = GARDEN_POND.x + Math.cos(a) * r;
+        const z = GARDEN_POND.z + Math.sin(a) * r;
+        add({tag: "water_edge", x, y: surface(x, z).height, z, ...UP, yaw: Math.atan2(-Math.cos(a), -Math.sin(a)), size: [0.02, 2.5], zone: "farm_garden"});
     }
     for (let k = 0; k < 120; k++) {
         const theta = (k / 120) * Math.PI * 2;
@@ -346,5 +350,31 @@ test("the drawn rocks: the map's shapes (drawnRocks, inRock), walkers never insi
         const top = tops.find((t) => t.x === rock.x && t.z === rock.z);
         assert.ok(top, "every drawn rock has a top");
         assert.equal(top!.y, rock.y1, "a rock's top is its drawn top");
+    }
+});
+
+test("the garden pond: walkers never step in it or on its stones; they drink just outside, facing the water", () => {
+    const grid = new NavGrid(allAtOnce);
+    const reach = GARDEN_POND.radius + POND_STONES;
+    let points = 0;
+    for (let r = 0; r <= reach; r += 0.2) {
+        for (let k = 0; k < 24; k++) {
+            const a = (k / 24) * Math.PI * 2;
+            const x = GARDEN_POND.x + Math.cos(a) * r;
+            const z = GARDEN_POND.z + Math.sin(a) * r;
+            assert.ok(allAtOnce.blocked(x, z, 0.2), `the pond at ${r.toFixed(1)} m is not blocked`);
+            assert.ok(!grid.walkable(x, z, 9), `the walk grid crosses the pond at ${r.toFixed(1)} m`);
+            points++;
+        }
+    }
+    assert.ok(points > 100);
+    const edges = allAtOnce.attachPoints("water_edge", {x: GARDEN_POND.x, z: GARDEN_POND.z, r: 4});
+    assert.equal(edges.length, 6);
+    for (const e of edges) {
+        const d = Math.hypot(e.x - GARDEN_POND.x, e.z - GARDEN_POND.z);
+        assert.ok(d > reach && d < reach + 0.5, `a drinking spot ${d.toFixed(2)} m from the pond's middle`);
+        // Facing the water: its heading points at the pond's middle.
+        const toward = Math.atan2(GARDEN_POND.x - e.x, GARDEN_POND.z - e.z);
+        assert.ok(Math.abs(Math.atan2(Math.sin(toward - e.yaw), Math.cos(toward - e.yaw))) < 1e-6);
     }
 });

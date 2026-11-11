@@ -8,6 +8,7 @@ import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {hashString} from "@/ark-scene/world";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
+import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
@@ -609,4 +610,29 @@ test("nobody goes round in circles: in any 20 s, under 1% of moving animals turn
     assert.ok(moving > 5000, `moving windows ${moving}`);
     assert.ok(facing / moving < 0.01, `${((facing / moving) * 100).toFixed(1)}% turn their facing a full circle in 20 s`);
     assert.ok(travel / moving < 0.01, `${((travel / moving) * 100).toFixed(1)}% go round a full circle in 20 s`);
+});
+
+test("the garden pond: a land animal drinks at its edge, never stands in it nor on its stones (any day, any home by it)", () => {
+    // (2026-11-11: a golden retriever stood in the water inside the pond's ring of stones at night.)
+    let near = 0;
+    let drinks = 0;
+    for (const slug of ["golden-retriever", "domestic-dog", "domestic-horse", "red-fox", "domestic-cat"]) {
+        const profile = behaviourProfile(slug);
+        for (let k = 0; k < 4; k++) {
+            const a = (k / 4) * Math.PI * 2 + 0.4;
+            const x = GARDEN_POND.x + Math.cos(a) * 5;
+            const z = GARDEN_POND.z + Math.sin(a) * 5;
+            const animal: ScheduleAnimal = {id: `pond-${slug}-${k}`, zone: "farm_garden", home: {x, y: Math.max(world.sampler.heightAt(x, z), 0), z}, length: slug === "domestic-horse" ? 2.2 : slug === "domestic-cat" ? 0.45 : 0.9, sea: false};
+            for (let s = 0; s < 24 * 3600; s += 5) {
+                const t = DAY + s;
+                const trip = tripAt(world, profile, animal, t, hoursAt, profile.activity);
+                const p = poseOnTrip(world, trip, t);
+                const d = Math.hypot(p.x - GARDEN_POND.x, p.z - GARDEN_POND.z);
+                assert.ok(d > GARDEN_POND.radius + 0.2, `${slug} at ${d.toFixed(2)} m from the pond's middle (${p.beat}, ${trip.doing})`);
+                if (d < GARDEN_POND.radius + 2) near++;
+                if (p.beat === "drink" && d < GARDEN_POND.radius + 1.5) drinks++;
+            }
+        }
+    }
+    assert.ok(near > 0 && drinks > 0, `near ${near}, drinks ${drinks}`);
 });
