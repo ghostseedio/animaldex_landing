@@ -53,6 +53,7 @@ next-env.d.ts
 /public/ark/ark-scene.js.map
 /public/ark/ark-prebuild-worker.js
 /public/ark/ark-prebuild-places-worker.js
+/public/ark/positions-atlas.json
 /.ark-golden
 /.ark-audit
 

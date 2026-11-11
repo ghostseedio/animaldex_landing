@@ -79,6 +79,8 @@
   var talking = params.get("talking") || models.replace(/\/ark\/?$/, "");
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
   var scene = null;
+  // Encounter hunting's latest read (null: the pool, or not read yet).
+  var hunting = null;
   // The named founders and shared stories beside the snapshot (the same answer's; none while founder_names is off).
   var founders = null;
   function foundersFrom(body, raw) {
@@ -175,6 +177,7 @@
     });
     for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
     runtimeHeld = {};
+    if (hunting && scene.setHunting) scene.setHunting(hunting);
     if ((hudLog || hudBars) && Ark.mountArkLiveHud) {
       hud = Ark.mountArkLiveHud(document.getElementById("ark"), {
         scene: function () { return scene; },
@@ -228,6 +231,14 @@
         var raw = body && body.snapshot ? body.snapshot : body;
         founders = foundersFrom(body, raw);
         show(Ark.decodeArkSnapshot(raw));
+        // Encounter hunting: the server's read with the live snapshot only (never a fixture or a given snapshot);
+        // kept for the scene when it is not up yet (`mount` hands it over).
+        if (Ark.fetchArkHunting && !fixtureAsked && !params.get("snapshot")) {
+          Ark.fetchArkHunting().then(function (read) {
+            hunting = read;
+            if (scene && scene.setHunting) scene.setHunting(read);
+          });
+        }
       })
       .catch(function () {});
   }

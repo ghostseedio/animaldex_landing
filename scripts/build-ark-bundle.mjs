@@ -10,6 +10,7 @@
  *
  * The output is built, not committed (.gitignore).
  */
+import {copyFileSync, statSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {build} from "esbuild";
@@ -34,6 +35,10 @@ const result = await build({
 });
 const bytes = Object.values(result.metafile.outputs).reduce((sum, output) => sum + output.bytes, 0);
 console.log(`public/ark/ark-scene.js: ${(bytes / 1024).toFixed(0)} KB`);
+// Encounter hunting's positions atlas (src/ark-scene/positions/atlas.json, pinned): a static file the scene reads only
+// when the Ark hunts by encounter (`src/ark-scene/hunting.ts`), never in the bundle.
+copyFileSync(path.join(root, "src/ark-scene/positions/atlas.json"), path.join(root, "public/ark/positions-atlas.json"));
+console.log(`public/ark/positions-atlas.json: ${(statSync(path.join(root, "public/ark/positions-atlas.json")).size / 1024).toFixed(0)} KB`);
 // The runtime's prebuild workers (src/ark-scene/runtime/prebuild.ts): the scenery (~20 KB) and a big Ark's places.
 for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
     const worker = await build({

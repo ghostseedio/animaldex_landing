@@ -1,3 +1,4 @@
+import type {ArkHunting} from "@/lib/ark-hunting";
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 import type {ArkSeenNow} from "@/lib/ark-live-log";
@@ -369,6 +370,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
     setClockScale: (scale: number, atMs?: number) => void;
     setHours: (hours: number | null) => void;
+    /**
+     * Encounter hunting (`hunting.ts`, `voyage_hunting_v1`): the server's hunting read, or null. Under the encounter
+     * mode every due, awake predator walks its forays from the shared position module; null (or the pool) is today's.
+     */
+    setHunting?: (hunting: ArkHunting | null) => void;
     /**
      * The animal-look pass on or off (off: every animal exactly as before). `islandMs` pins the island time its
      * swims are timed by (who is wet from a swim), or follows the clock again with null.
