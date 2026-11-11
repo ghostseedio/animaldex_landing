@@ -73,11 +73,12 @@ type Key = {
 const NIGHT: Key = {at: -14, sun: "#b7c9ff", sunIntensity: 2.7, sky: "#7891d0", ground: "#4a5676", fill: 1.55, fog: "#22314f", horizon: "#33466e", zenith: "#0f1b36", environment: 0.62, daylight: 0.34, rim: 0.06};
 const BLUE_EVENING: Key = {at: -5, sun: "#c9a8c8", sunIntensity: 1.6, sky: "#7d8cbc", ground: "#3a3a48", fill: 1.15, fog: "#55557a", horizon: "#6f6384", zenith: "#2d3a60", environment: 0.52, daylight: 0.46, rim: 0.08};
 const BLUE_MORNING: Key = {...BLUE_EVENING, sun: "#b8a6c8", sky: "#65739a", fog: "#5b5a78", horizon: "#7d6e8c"};
-const LOW_EVENING: Key = {at: 4, sun: "#ffad78", sunIntensity: 2.0, sky: "#b6bfd6", ground: "#5c4a3a", fill: 0.8, fog: "#dcae90", horizon: "#e6b998", zenith: "#7d92b4", environment: 0.65, daylight: 0.78, rim: 0.26};
+// Graphics pass: a warmer, stronger low sun at dusk, so sand and grass glow instead of going grey.
+const LOW_EVENING: Key = {at: 4, sun: "#ffa86c", sunIntensity: 2.9, sky: "#c4b9cf", ground: "#6a5040", fill: 0.72, fog: "#dcae90", horizon: "#e6b998", zenith: "#7d92b4", environment: 0.6, daylight: 0.8, rim: 0.3};
 const LOW_MORNING: Key = {...LOW_EVENING, sun: "#ffbc90", fog: "#e2b8a6", horizon: "#e9c0ae", zenith: "#8aa0c0"};
 /** The v1 Ark's light, exactly. */
 const GOLDEN: Key = {at: 15, sun: "#ffd9a8", sunIntensity: 2.6, sky: "#c9dbe8", ground: "#6f6248", fill: 0.55, fog: "#d9c9b4", horizon: "#e3d4bf", zenith: "#7fa2c0", environment: 0.75, daylight: 1, rim: 0.22};
-const MIDDAY: Key = {at: 45, sun: "#fff3e2", sunIntensity: 2.35, sky: "#c6d8e8", ground: "#6f6248", fill: 0.5, fog: "#d2d6d2", horizon: "#dde3e2", zenith: "#6d9bc6", environment: 0.7, daylight: 1, rim: 0.1};
+const MIDDAY: Key = {at: 45, sun: "#fff3e2", sunIntensity: 2.35, sky: "#c6d8e8", ground: "#6f6248", fill: 0.5, fog: "#b9cddd", horizon: "#c4d7e6", zenith: "#5f93c4", environment: 0.7, daylight: 1, rim: 0.1};
 
 function hex(value: string): [number, number, number] {
     const n = parseInt(value.slice(1), 16);

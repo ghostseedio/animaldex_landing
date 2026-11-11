@@ -32,7 +32,7 @@ import {
     type Material
 } from "three";
 import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {forestFill, grassTufts, worldDecor, type DecorKind} from "@/ark-scene/decor";
+import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKind} from "@/ark-scene/decor";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
@@ -66,6 +66,8 @@ function finish(geometry: BufferGeometry, shade: (y: number, t: number, i: numbe
     }
     flat.setAttribute("color", new BufferAttribute(colors, 3));
     flat.setAttribute("arkLeaf", new BufferAttribute(leaves, 1));
+    // 1 on leaf cards (they take the foliage texture), 0 on everything else (solid colour, never the texture).
+    flat.setAttribute("arkCard", new BufferAttribute(new Float32Array(position.count).fill(keepUv ? 1 : 0), 1));
     return flat;
 }
 
@@ -345,23 +347,16 @@ function cactus(): BufferGeometry {
 }
 
 export function rock(variant: number): BufferGeometry {
-    const random = seeded(551 + variant);
     let geometry: BufferGeometry = new IcosahedronGeometry(0.85, 3);
     geometry.deleteAttribute("normal");
     geometry.deleteAttribute("uv");
     geometry = mergeVertices(geometry);
     const position = geometry.getAttribute("position");
-    const bumps = Array.from({length: 6}, () => new Vector3(random() * 2 - 1, random() * 2 - 1, random() * 2 - 1).normalize());
     const v = new Vector3();
+    // The shape is decor.ts rockRadius, so the attach points (sampler.ts) sit on this very surface.
     for (let i = 0; i < position.count; i++) {
-        v.set(position.getX(i), position.getY(i), position.getZ(i));
-        const dir = v.clone().normalize();
-        let push = 0;
-        for (const bump of bumps) push += Math.max(dir.dot(bump), 0) ** 3 * 0.22;
-        // Weathered: a few flat facets and cracks over the lumps (batch 1).
-        const facet = Math.floor((dir.x * 2.3 + dir.z * 1.7 + 4) % 3) * 0.015;
-        const grain = (Math.sin(dir.x * 13.1 + variant) * Math.sin(dir.z * 11.7 + dir.y * 9.3) ) * 0.035;
-        v.multiplyScalar(0.85 + push - 0.08 * Math.abs(dir.y) + facet + grain);
+        v.set(position.getX(i), position.getY(i), position.getZ(i)).normalize();
+        v.multiplyScalar(rockRadius(variant, v.x, v.y, v.z));
         position.setXYZ(i, v.x * 1.1, v.y * 0.62, v.z * 0.95);
     }
     geometry.computeVertexNormals();
@@ -544,11 +539,35 @@ function flower(variant: number): BufferGeometry {
         eye.scale(1, 0.5, 1);
         eye.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.6, 0);
         parts.push(finish(eye, () => 1, 0, new Color("#e8b62c")));
+    } else if (variant === 1) {
+        // Graphics pass: a wild rose / cosmos: five broad, rounded petals, slightly cupped, round a golden boss.
+        for (let p = 0; p < 5; p++) {
+            const petal = new IcosahedronGeometry(head * 0.62, 1);
+            petal.scale(1, 0.14, 0.82);
+            petal.translate(head * 0.58, head * 0.08, 0);
+            petal.rotateZ(0.18);
+            petal.rotateY(p / 5 * Math.PI * 2 + 0.3);
+            petal.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.35, 0);
+            parts.push(finish(petal, (_, t) => 0.85 + 0.2 * t, 1));
+        }
+        const boss = new IcosahedronGeometry(head * 0.3, 1);
+        boss.scale(1, 0.55, 1);
+        boss.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.55, 0);
+        parts.push(finish(boss, () => 1, 0, new Color("#d9a82a")));
     } else {
-        const bloom = new IcosahedronGeometry(head, 1);
-        bloom.scale(1, FLOWER_SHAPE.squash * (variant === 2 ? 1.5 : 1), 1);
-        bloom.translate(0, stemHeight + (variant === 2 ? head * 0.2 : 0), 0);
-        parts.push(finish(bloom, (_, t) => 0.82 + 0.25 * t, 1));
+        // A cup (a tulip or poppy bud opening): six petals standing up round the middle.
+        for (let p = 0; p < 6; p++) {
+            const petal = new IcosahedronGeometry(head * 0.55, 1);
+            petal.scale(0.16, 1, 0.75);
+            petal.translate(head * 0.42, head * 0.55, 0);
+            petal.rotateZ(-0.32);
+            petal.rotateY(p / 6 * Math.PI * 2);
+            petal.translate(0, stemHeight, 0);
+            parts.push(finish(petal, (_, t) => 0.7 + 0.4 * t, 1));
+        }
+        const heart = new IcosahedronGeometry(head * 0.22, 1);
+        heart.translate(0, stemHeight + head * 0.35, 0);
+        parts.push(finish(heart, () => 1, 0, new Color("#3a2a1a")));
     }
     return mergeGeometries(parts)!;
 }
@@ -655,7 +674,7 @@ function leafTexture(): CanvasTexture | null {
         g.stroke();
     }
     g.fillStyle = "#ffffff";
-    g.fillRect(size - 12, 0, 12, 12);
+    g.fillRect(size - 48, 0, 48, 48);
     foliageTexture = new CanvasTexture(canvas);
     foliageTexture.colorSpace = SRGBColorSpace;
     foliageTexture.anisotropy = 4;
@@ -671,22 +690,39 @@ function foliageMaterial(windAmount: number, windHeight: number, doubleSide = fa
     material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}-${cards ? "c" : "s"}`;
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
+        shader.fragmentShader = shader.fragmentShader
+            .replace("#include <common>", "#include <common>\nvarying float vArkCard;")
+            // Foliage is lit from its own (soft) normals on both sides: never flipped dark on a back face.
+            .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
+#ifdef DOUBLE_SIDED
+normal *= faceDirection;
+nonPerturbedNormal *= faceDirection;
+#endif`)
+            .replace("#include <map_fragment>", `#ifdef USE_MAP
+diffuseColor *= mix(vec4(1.0), texture2D(map, vMapUv), vArkCard);
+#endif`);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
 attribute vec3 arkTint;
 attribute float arkLeaf;
+attribute float arkCard;
+varying float vArkCard;
 uniform float arkTime;
 uniform vec2 arkWind;
 uniform float windAmount;
 uniform float windHeight;`)
             .replace("#include <color_vertex>", `#include <color_vertex>
-vColor.rgb *= mix(vec3(1.0), arkTint, arkLeaf);`)
+vColor.rgb *= mix(vec3(1.0), arkTint, arkLeaf);
+vArkCard = arkCard;`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 {
     vec3 root = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     float sway = sin(arkTime * 1.5 + root.x * 0.21 + root.z * 0.17) + 0.45 * sin(arkTime * 2.9 + root.x * 0.53 - root.z * 0.31);
     float bend = pow(max(transformed.y, 0.0) / windHeight, 2.0) * windAmount * arkLeaf;
     transformed.xz += arkWind * sway * bend;
+    // Leaves flutter on their own, faster and stronger in wind (graphics pass): trunk a little, crown more, leaves most.
+    float gust = length(arkWind);
+    transformed += vec3(sin(arkTime * 6.3 + transformed.y * 3.1 + root.x), sin(arkTime * 5.1 + transformed.x * 2.7 + root.z) * 0.6, cos(arkTime * 5.7 + transformed.z * 2.9)) * 0.035 * arkCard * gust;
 }`);
     };
     return material;
@@ -819,7 +855,7 @@ export function buildVegetation(maxGrass: number): Vegetation {
         mine.forEach((item, i) => {
             rotation.setFromAxisAngle(up, item.rotation);
             const s = item.scale;
-            scale.set(s, shape.kind === "rock" ? s * (0.8 + 0.4 * ((i * 7) % 5) / 5) : s, s);
+            scale.set(s, shape.kind === "rock" ? s * rockSquash(item) : s, s);
             at.set(item.x, item.y + (shape.kind === "lily" ? 0 : shape.kind === "leaf" ? LEAF_LIFT : -DECOR_SINK), item.z);
             matrix.compose(at, rotation, scale);
             mesh.setMatrixAt(i, matrix);

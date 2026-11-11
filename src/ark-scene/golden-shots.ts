@@ -16,17 +16,23 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"] as const;
+
+/** Shots in their own weather (everything else is calm, mean tide). */
+export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
+    storm_trees: {wind: 1, storm: 1, cloud: 0.95, wetness: 0.85},
+    waves_beach: {wind: 0.7, storm: 0, cloud: 0.35, wetness: 0}
+};
 
 /**
  * The small-animal close-ups (graphics pass): a real catalogue species set on an attach point of the scenery
  * (`sampler.ts`), framed close. The catalogue has no caterpillar model yet, so the leaf shot uses a small butterfly.
  */
-export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "tide_pool" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
-    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 1.3},
+export const GOLDEN_MICRO: Partial<Record<GoldenPlace, {slug: string; tag: "leaf" | "flower_head" | "rock_face" | "house_wall"; near: "forest_floor" | "house" | "tide_pools"; distance: number}>> = {
+    caterpillar_leaf: {slug: "small-cabbage-white", tag: "leaf", near: "forest_floor", distance: 0.9},
     bee_flower: {slug: "bumblebee", tag: "flower_head", near: "house", distance: 1.1},
-    limpet_tidepool: {slug: "common-limpet", tag: "tide_pool", near: "tide_pools", distance: 1.2},
-    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.4}
+    limpet_tidepool: {slug: "common-limpet", tag: "rock_face", near: "tide_pools", distance: 0.8},
+    gecko_wall: {slug: "common-house-gecko", tag: "house_wall", near: "house", distance: 1.2}
 };
 export type GoldenPlace = typeof GOLDEN_PLACES[number];
 
@@ -52,7 +58,9 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     caterpillar_leaf: "Small animal on a leaf (no caterpillar model yet: a small butterfly)",
     bee_flower: "Bee on a flower",
     limpet_tidepool: "Limpet in a tide pool",
-    gecko_wall: "Gecko on the house wall"
+    gecko_wall: "Gecko on the house wall",
+    waves_beach: "Waves running up the beach",
+    storm_trees: "Trees in a storm"
 };
 
 type XZ = {x: number; z: number};
@@ -83,6 +91,8 @@ export type GoldenWorld = {
     mountainArea: () => (XZ & {radius: number}) | null;
     /** The coral reef's middle, under the sea. */
     reef: () => XZ | null;
+    /** An open clearing inside the forest (a site's own ground), to look out at the trees from. */
+    forestClearing?: () => XZ | null;
 };
 
 export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
@@ -178,6 +188,27 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
         case "gecko_wall":
             // Framed by the page itself once the animal is placed (golden-entry.ts `microShot`).
             return fallback("micro shot: framed on its attach point");
+
+        case "waves_beach": {
+            const beach = world.beach();
+            if (!beach) return fallback("no beach");
+            // Low over the wet sand at the water's edge, looking along the shore.
+            const out = outward(beach);
+            const r = Math.hypot(beach.x, beach.z);
+            const edge = {x: beach.x + (beach.x / r) * 4.5, z: beach.z + (beach.z / r) * 4.5};
+            return {place, anchor: "beach waterline", view: {target: {x: edge.x, y: 0.3, z: edge.z}, distance: 9, polar: 1.3, azimuth: out + 1.25}};
+        }
+
+        case "storm_trees": {
+            const floor = world.forestFloor();
+            const clearing = world.forestClearing?.() ?? null;
+            if (!floor) return fallback("no forest");
+            const ground = world.groundAt(floor.x, floor.z);
+            // From inside the clearing, looking out at the trees beyond its edge.
+            const from = clearing ?? {x: floor.x, z: floor.z + 10};
+            const away = bearing(floor, from);
+            return {place, anchor: "forest edge from the clearing", view: {target: {x: floor.x, y: ground + 3.5, z: floor.z}, distance: 10, polar: 1.42, azimuth: away}};
+        }
 
         case "reef_underwater": {
             const reef = world.reef();
