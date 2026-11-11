@@ -2217,6 +2217,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         reactiveMs = performance.now() - t0;
     };
 
+    /** Lane L2's per-animal motion (`locomotion/l2-scene.ts`), made on first use. */
+    const l2Of = (entry: Entry, plan?: string | null) => (entry.l2 ??= newL2Motion(entry.animal.model_slug, plan ?? null, entry.phase));
+
     /** Nose down going downhill, up going uphill: the ground's slope along its heading over its length (so its feet meet the slope). */
     const slopePitch = (x: number, z: number, yaw: number, length: number) => {
         const half = Math.max(length * 0.4, 0.05);
@@ -2240,7 +2243,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
             const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
             // (Under the surface where the tide has it now: `tideFit`.)
-            const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+            const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+            // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
+            const base = spec.motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, 0, ARK_ENVIRONMENT.seaLevel.value) : fitted;
             const yaw = at.yaw + (entry.glance ?? 0);
             // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
             const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
@@ -2339,7 +2344,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
         // (A penguin lies down to swim: `swimBodyPitch`.)
         const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
-        const base = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+        const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+        // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
+        const base = motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch - (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0), ARK_ENVIRONMENT.seaLevel.value) : fitted;
         // A walker on the floor stands on its slope (its rig walks it there). (A walker's swim pitch is 0.)
         const surface = motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(x, base, z, yaw) : undefined;
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
@@ -2655,7 +2662,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Lane L2 (`locomotion/flight.ts`): the beat by its size and effort (hard flaps out of a take-off, a flare to
             // land), the downstroke the fuller stroke, its family's rhythm (bounding, flap-gliding, soaring with trims), the
             // bank of a coordinated turn and a heave in time with the beat. Species with no flight style keep `flightClip`.
-            const l2 = (entry.l2 ??= newL2Motion(slug, model.behaviour?.plan, entry.phase));
+            const l2 = l2Of(entry, model.behaviour?.plan);
             const frame = l2FlightFrame(l2, entry.trueLength, {
                 has: (name) => Boolean(clip(name)),
                 clipHz: (name) => clip(name)?.flap_hz ?? null,
@@ -2783,7 +2790,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const swim = clip("swim") ?? clip("slither");
                 if (swim) {
                     want = swim.name;
-                    rate = swim.ground_speed ? Math.min(Math.max(speed / swim.ground_speed, 0.5), 1.6) : 1;
+                    // (Lane L2: at the tail-beat rate its speed asks for, `tailBeatHz`; the clip's own pace otherwise.)
+                    rate = l2SwimRate(l2Of(entry, model.behaviour?.plan), speed / Math.max(entry.length / Math.max(modelScale, 1e-6), 1e-3), swim.seconds) ?? (swim.ground_speed ? Math.min(Math.max(speed / swim.ground_speed, 0.5), 1.6) : 1);
                 }
             }
             // Moving at the surface with no swim of its own (a duck, a seal, a turtle): its paddle, by distance (contract 8.4).
@@ -3440,6 +3448,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, slept.legs, slept.roll) * s;
             }
             if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
+            // (Lane L2: a sidewinder's body lies across its way while it moves, `l2Sidewind`.)
+            if (entry.l2 && !where.water && !act) where.yaw += l2Sidewind(entry.l2, entry.phase);
             if (surface) {
                 // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
                 basisY.set(surface.nx, surface.ny, surface.nz).normalize();
@@ -3522,7 +3532,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 lookAttr.setXYZ(index, (looked?.headYaw ?? 0) * awakeW + yaw * hw, (looked?.headPitch ?? 0) * awakeW + pitch * hw, 1);
             } else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Lane L2's body channel (w): a swimmer's or a crawler's wave by the distance it moved (near only).
-            if (lookAttr) lookAttr.setW(index, level === "near" && !reducedMotion ? l2BodyChannel((entry.l2 ??= newL2Motion(animal.model_slug, model.behaviour?.plan, entry.phase)), where.x, where.base, where.z, frameDt, entry.length, Boolean(where.water) || (where.afloat && where.base < 0)) : 0);
+            if (lookAttr) lookAttr.setW(index, level === "near" && !reducedMotion ? l2BodyChannel(l2Of(entry, model.behaviour?.plan), where.x, where.base, where.z, frameDt, entry.length, Boolean(where.water) || (where.afloat && where.base < 0)) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
             if (lookAttr && !forcedLook && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
             // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.

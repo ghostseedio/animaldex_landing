@@ -20,6 +20,9 @@ export const MOTION_L2_THRESHOLDS = {
     insectStrokeMin: 0.05,
     /** Rigs: a snake chain's mean sideways slip against its front's track, as a share of its swing. */
     rigSlipMax: 0.2,
-    /** Rigs: a chain driver's pose (ms, this machine; the layer's budget is 0.1 ms an animal for L1's whole pose). */
-    poseMsMax: 0.1
+    /**
+     * Rigs: a chain driver's pose (ms). A guard against a pathological regression only: CI machines and a shared Mac
+     * under load vary several-fold (measured 0.01-0.03 ms on the M3 idle; L1's budget is 0.1 ms an animal for its whole pose).
+     */
+    poseMsMax: 0.5
 } as const;

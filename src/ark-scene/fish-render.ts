@@ -15,7 +15,33 @@
 import {BufferAttribute, BufferGeometry, Color, InstancedBufferAttribute, InstancedMesh, MeshStandardMaterial, Vector3} from "three";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {ARK_ENV} from "@/ark-scene/glsl";
+import {SWIM_DISPLAY_HZ, tailBeatHz} from "@/ark-scene/locomotion/swim";
+import type {SwimStyle} from "@/ark-scene/locomotion/styles";
 import {FISH_KINDS, FISH_LOOKS, fishSchoolAt, fishSchools, fleeFrom, placeFish, schoolFrame, schoolTime, seaEpochSeconds, surgeDirection, type FishChaser, type FishKind, type FishLook, type SchoolFrame, type Vec3} from "@/ark-scene/fish-schools";
+
+// MARK: - The tail beat (motion pass lane L2, `locomotion/swim.ts`)
+
+/** Each kind's swimming mode: reef fish row with their fins (a slow tail), the silver schoolers beat the rear third. */
+export const FISH_SWIM: Readonly<Record<FishKind, SwimStyle>> = {
+    blue_damsel: "labriform",
+    orange_anthias: "labriform",
+    yellow_tang: "labriform",
+    kelp_perch: "labriform",
+    striped_grunt: "subcarangiform",
+    silver_baitfish: "carangiform",
+    silver_jack: "carangiform",
+    sand_fry: "carangiform"
+};
+
+/**
+ * A school's cruising tail beat (Hz): the rate its swimming mode beats at the school's own pace (`tailBeatHz`:
+ * hold + speed over the stride), at most the shown cap. Closed form on the shared clock, so the same for every
+ * viewer; a fleeing fish adds beats for the speed of its flight (`FishView`, near the camera only).
+ */
+export function schoolBeatHz(kind: FishKind, schoolSpeed: number): number {
+    const look = FISH_LOOKS[kind];
+    return Math.min(tailBeatHz(schoolSpeed / Math.max(look.length, 0.01), FISH_SWIM[kind]), SWIM_DISPLAY_HZ);
+}
 
 // MARK: - Chasers (optional input)
 
@@ -188,6 +214,9 @@ export class FishView {
     private readonly fleeOffset: Vec3 = {x: 0, y: 0, z: 0};
     private readonly fleeVelocity: Vec3 = {x: 0, y: 0, z: 0};
     private readonly nearChasers: FishChaser[] = [];
+    /** Per school, per fish: the extra tail beats (radians) its flights from hunters added (visual only, per viewer). */
+    private readonly fled = new Map<string, Float32Array>();
+    private lastEpoch: number | null = null;
 
     constructor() {
         const capacity = new Map<FishKind, number>();
@@ -235,6 +264,8 @@ export class FishView {
      */
     update(camera: Vector3, view?: Vector3) {
         const epoch = seaEpochSeconds();
+        const dt = this.lastEpoch === null ? 0 : Math.min(Math.max(epoch - this.lastEpoch, 0), 0.1);
+        this.lastEpoch = epoch;
         const seaLevel = ARK_ENV.seaLevel.value;
         const under = camera.y < seaLevel;
         this.kinds.forEach((entry) => {
@@ -286,6 +317,9 @@ export class FishView {
                     if (cx * cx + cy * cy + cz * cz < reach * reach) hunted.push(c);
                 }
             }
+            const cruiseHz = schoolBeatHz(school.kind, school.speed);
+            let fled = this.fled.get(school.id);
+            if (hunted.length && !fled) this.fled.set(school.id, (fled = new Float32Array(slots.length)));
             for (let i = 0; i < slots.length; i++) {
                 // A low-discrepancy share of the school (golden-ratio steps): thinned evenly, not from one side.
                 if (this.share < 1 && ((i * 0.618034) % 1) > this.share) continue;
@@ -295,6 +329,7 @@ export class FishView {
                 let vy = this.velocity.y;
                 let vz = this.velocity.z;
                 let fright = 0;
+                let fleeSpeed = 0;
                 if (hunted.length) {
                     const o = this.fleeOffset;
                     const f = this.fleeVelocity;
@@ -308,6 +343,7 @@ export class FishView {
                         vx += f.x;
                         vy += f.y;
                         vz += f.z;
+                        fleeSpeed = Math.sqrt(f.x * f.x + f.y * f.y + f.z * f.z);
                     }
                 }
                 const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
@@ -360,10 +396,13 @@ export class FishView {
                 matrices[o + 13] = p.y;
                 matrices[o + 14] = p.z;
                 matrices[o + 15] = 1;
-                // The tail beat: a steady rhythm per fish (continuous on the shared clock), stronger when it swims fast.
-                const frequency = look.beat * (0.8 + 0.4 * slot.rate);
-                beats[index * 2] = ((t * frequency) % 1) * Math.PI * 2;
-                beats[index * 2 + 1] = 0.45 + Math.min(speed / Math.max(look.length * 4, 0.1), 1.2);
+                // The tail beat (lane L2): its school's cruising rate for its swimming mode, each fish a little its own
+                // (continuous on the shared clock); a flight from a hunter adds beats for its speed (the beat follows the
+                // speed, the swing grows only a little: Bainbridge).
+                const frequency = cruiseHz * (0.85 + 0.3 * slot.rate);
+                if (fled && fleeSpeed > 0) fled[i] = (fled[i] + 2 * Math.PI * Math.min(fleeSpeed / Math.max(look.length * 0.6, 0.01), SWIM_DISPLAY_HZ) * dt) % (Math.PI * 2);
+                beats[index * 2] = ((((t * frequency) % 1) * Math.PI * 2 + (fled ? fled[i] : 0)) % (Math.PI * 2));
+                beats[index * 2 + 1] = 0.6 + 0.4 * Math.min(speed / Math.max(look.length * 3, 0.1), 1) + 0.25 * fright;
             }
         }
         let triangles = 0;
