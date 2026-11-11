@@ -396,7 +396,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     const seed = rng(hashString(`${animal.id}#roost`))();
     const tags = ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
-    if (point) return spotOf(point);
+    // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
+    if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < 0.02))) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
@@ -523,6 +524,28 @@ function intent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sche
 }
 
 function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
+    return keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt));
+}
+
+/** In the water and under its surface: where a water-only animal may be sent. */
+const underSurface = (world: ScheduleWorld, spot: Spot) => wet(world, spot) && spot.y < 0.02;
+
+/**
+ * A water-only animal (a fish, a seabed walker: `aquatic`, not `amphibious`) is never sent onto land, nor onto a rock
+ * above the surface (release integration, 2026-11-11: a reef fish slept on a shore rock, a pacu in a tree, from their
+ * roost and rest tags). The scene draws it in its sea-depth band only while it is in the water. Such a goal goes to the
+ * water nearest it instead (seeded by the goal, so the same goal always gives the same spot), else by its home.
+ */
+function keepInWater(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, planned: Intent): Intent {
+    const to = planned.to;
+    if (!to || !aquatic(profile) || amphibious(profile) || underSurface(world, to)) return planned;
+    const random = rng(hashString(`${animal.id}#water#${Math.round(to.x * 2)}#${Math.round(to.z * 2)}`));
+    const near = waterSpot(world, profile, animal, to.x, to.z, random);
+    const spot = underSurface(world, near) ? near : waterSpot(world, profile, animal, animal.home.x, animal.home.z, random);
+    return {...planned, to: spot, mode: planned.mode === "stay" ? "stay" : "water"};
+}
+
+function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     const raw = rawIntent(world, profile, animal, activity, slot, hoursAt);
     if (raw.to || raw.follow) return raw;
     for (let back = 1; back <= 4; back++) {
@@ -771,7 +794,7 @@ function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
     map.set(slot, value);
     if (map.size > 32) {
         // Drop the slots furthest from this one.
-        const far = [...map.keys()].sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
+        const far = Array.from(map.keys()).sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
         for (const key of far) map.delete(key);
     }
     return value;

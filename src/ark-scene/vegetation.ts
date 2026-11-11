@@ -35,6 +35,7 @@ import {mergeGeometries, mergeVertices} from "three/examples/jsm/utils/BufferGeo
 import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKind} from "@/ark-scene/decor";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
+import {withGrassPress} from "@/ark-scene/grass-press";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
@@ -878,7 +879,8 @@ export function buildVegetation(maxGrass: number): Vegetation {
     // Grass.
     const tufts = grassTufts(maxGrass);
     const grassGeometry = tuft();
-    const grassMaterial = foliageMaterial(0.35, 0.6, true);
+    // (Bent where a grazer bites or a walker steps: `grass-press.ts`, wired by the release.)
+    const grassMaterial = withGrassPress(foliageMaterial(0.35, 0.6, true));
     materials.push(grassMaterial);
     const grass = new InstancedMesh(grassGeometry, grassMaterial, Math.max(tufts.length, 1));
     const grassTints = new Float32Array(Math.max(tufts.length, 1) * 3);
