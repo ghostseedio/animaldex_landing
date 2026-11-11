@@ -147,6 +147,31 @@ export function sleepHead(spec: PostureSpec, side: 1 | -1, head: 0 | 1 | 2, post
     return {yaw: spec.headYaw * side, pitch: spec.headPitch};
 }
 
+/**
+ * The rig's sleep clips for a posture, best first (the rigging lane's v6 names, contract section 8.2): the night's
+ * posture when the rig has it (a lion on its side tonight plays `sleep_side`, through `side_down`), else its kind's
+ * plain `sleep`. The rig player's base poses take it down and up (`baseStep`: `lie_down`, `get_up`, `get_up_fast`).
+ */
+export function sleepPostureClips(posture: SleepPosture): readonly string[] {
+    return POSTURE_CLIPS[posture];
+}
+const POSTURE_CLIPS: Record<SleepPosture, readonly string[]> = {
+    sternal: ["sleep"],
+    side: ["sleep_side", "sleep"],
+    curl: ["sleep_curl", "sleep"],
+    stand: ["sleep_stand"],
+    one_leg: ["sleep_one_leg", "sleep"],
+    tuck: ["sleep_tuck", "sleep"],
+    hang: ["sleep_hang"],
+    float_back: ["sleep_float"],
+    sit: ["sleep"],
+    flat: ["sleep", "bask"],
+    bottom: [],
+    hover: [],
+    bottle: [],
+    still: []
+};
+
 // MARK: Lying down and getting up
 
 /** How long it takes to lie down (s): bigger animals take longer (a mouse 1.1 s, a deer 2 s, an elephant 3.5). */
@@ -385,7 +410,8 @@ export function sleepDraw(now: SleepNow, input: {id: string; slug: string; lengt
         eyes: style.eyes ? stages.eyes * (1 - 0.7 * lift) : 0,
         curl: spec.curl * now.side * stages.roll * k,
         flick: stir.flick * settled,
-        breath: spec.breath > 0 ? breathRate(input.length, style.breath) : 0
+        // (A rig's sleep clip breathes itself: `breath_hz`, one breath a loop.)
+        breath: spec.breath > 0 && k > 0.5 ? breathRate(input.length, style.breath) : 0
     };
 }
 

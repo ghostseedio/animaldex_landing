@@ -15,7 +15,9 @@ import {
     packSleep,
     restStatus,
     roostOffset,
+    sleepDraw,
     sleepHead,
+    sleepPostureClips,
     sleepPostureFor,
     sleepSpacing,
     sleepStages,
@@ -23,7 +25,6 @@ import {
     sleepStyle,
     stepSleep
 } from "@/ark-scene/sleep";
-import {sleepClip, type SleepClipRig} from "@/ark-scene/rig-player";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {NIGHT_WATCH_SLOTS, SLOT_SECONDS, roostOf, scheduleWorld, slotStart, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
@@ -214,26 +215,24 @@ test("what the tap card says: plain words for where and how it rests", () => {
     assert.equal(restStatus({asleep: false, doing: "graze"}), null);
 });
 
-// MARK: The rig's clips (the rigging lane's v6 names)
+// MARK: The rig's clips (the rigging lane's v6 names, contract 8.2)
 
-test("the rig's sleep clips win when it has them: lie_down, then sleep (or lie), get_up on the way out; none: procedural", () => {
-    const rig = (names: Record<string, {base?: string; posture?: string; loop?: boolean}>): SleepClipRig => ({clip: (name) => (names[name] ? {loop: names[name].loop ?? (name !== "lie_down" && name !== "get_up"), base: names[name].base, posture: names[name].posture} : null)});
-    const full = rig({lie_down: {}, get_up: {}, lie: {base: "lying"}, sleep: {base: "lying", posture: "lying"}});
-    // Going down: lie_down follows the body's stage; then the sleep loop; coming up: get_up follows it back.
-    assert.deepEqual(sleepClip(full, "sternal", 0.3, true), {name: "lie_down", play: "sync", phase: sleepStages(0.3).body, lying: true});
-    assert.deepEqual(sleepClip(full, "sternal", 1, true), {name: "sleep", play: "loop", phase: 0, lying: true});
-    assert.deepEqual(sleepClip(full, "sternal", 0.6, false), {name: "get_up", play: "sync", phase: 1 - sleepStages(0.6).body, lying: true});
-    // Only the lying loop: it lies there.
-    const lieOnly = rig({lie_down: {}, get_up: {}, lie: {base: "lying"}});
-    assert.equal(sleepClip(lieOnly, "curl", 1, true)?.name, "lie");
-    // A wader's sleep is on one leg (not lying): played as the loop while it sleeps standing.
-    const wader = rig({sleep: {posture: "one_leg"}});
-    assert.deepEqual(sleepClip(wader, "one_leg", 1, true), {name: "sleep", play: "loop", phase: 0, lying: false});
-    // A lying posture on a rig without its way down and up: procedural (null); a standing sleeper with no clip: null.
-    assert.equal(sleepClip(rig({sleep: {base: "lying"}}), "sternal", 1, true), null);
-    assert.equal(sleepClip(rig({}), "stand", 1, true), null);
-    // A standing sleeper never plays the lying chain.
-    assert.equal(sleepClip(full, "stand", 1, true), null);
+test("each posture asks the rig for its own v6 sleep clip first, then its kind's plain sleep", () => {
+    const CONTRACT = new Set(["sleep", "sleep_side", "sleep_curl", "sleep_stand", "sleep_one_leg", "sleep_tuck", "sleep_float", "sleep_hang", "bask"]);
+    for (const posture of SLEEP_POSTURES) for (const name of sleepPostureClips(posture)) assert.ok(CONTRACT.has(name), `${posture}: ${name}`);
+    assert.deepEqual(sleepPostureClips("side"), ["sleep_side", "sleep"]);
+    assert.deepEqual(sleepPostureClips("stand"), ["sleep_stand"]);
+    assert.deepEqual(sleepPostureClips("one_leg")[0], "sleep_one_leg");
+    assert.deepEqual(sleepPostureClips("hover"), []);
+    // With a clip drawing it, the procedural body, head and breath give way (the eyes stay: the clips have no lids).
+    const now = {t: 1, posture: "side" as const, side: 1 as const, head: 0 as const, spec: POSTURE_SPECS.side, down: true, startled: false};
+    const own = sleepDraw(now, {id: "x", slug: "african-lion", length: 2, epoch: 1000, procedural: 1, reduced: true});
+    const clipped = sleepDraw(now, {id: "x", slug: "african-lion", length: 2, epoch: 1000, procedural: 0, reduced: true});
+    assert.ok(own.legs > 0 && own.breath > 0 && own.headWeight > 0);
+    assert.equal(clipped.legs, 0);
+    assert.equal(clipped.headWeight, 0);
+    assert.equal(clipped.breath, 0);
+    assert.equal(clipped.eyes, own.eyes);
 });
 
 // MARK: Waking (the reactive layer)

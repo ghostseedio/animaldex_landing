@@ -172,6 +172,12 @@ export function picketPosts(): Array<{x: number; z: number; along: {x: number; z
 /** The picket fence's post height (its top over the ground). */
 export const PICKET_POST_TOP = 0.95;
 
+/** The vegetable patch west of the house (local): ridged beds `pitch` apart from `x0`, `width` wide, running z0…z1; the bean wigwam at the last row's end. */
+export const GARDEN_BEDS = {x0: -7.6, rows: 4, pitch: 0.95, width: 0.6, z0: -1.6, z1: 2.4, wigwam: {z: 0.4, r: 0.5}} as const;
+
+/** The compost bin behind the house (local): its middle and half its size. */
+export const COMPOST = {x: 3.4, z: -COTTAGE.depth / 2 - 2.2, half: 0.75} as const;
+
 // MARK: - The smallholding's paddock
 
 /** Trees, rocks and buildings a fence or a coop must not run through (the decor's and the forest fill's). */
@@ -333,4 +339,54 @@ export function fencePostTops(plots: HomePlot[] = defaultHomePlots()): FencePost
         }
     }
     return out;
+}
+
+// MARK: - Where no animal stands
+
+/** Something the props lay on a plot that an animal should not stand on: a rectangle in the plot's frame. */
+export type PlotKeepOut = {what: "beds" | "compost" | "water_butt" | "hay_shelter" | "hay" | "trough" | "coop"; x0: number; x1: number; z0: number; z1: number};
+
+/**
+ * What the props lay on a plot that no animal should stand on (in the plot's frame, `plotFrame`): a house plot's
+ * vegetable beds and bean wigwam, compost bin and water butt; a smallholding's hay shelter, loose hay, troughs and the
+ * coop's house (its run is the hens' and stays open). Lawns, paths, the paddock's grass, mud and puddles are walked on.
+ * The same numbers `props/areas.ts` draws from.
+ */
+export function plotKeepOuts(plot: HomePlot): PlotKeepOut[] {
+    if (plot.kind === "house") {
+        const k = cottageStyle(plot).scale;
+        const bedsX1 = GARDEN_BEDS.x0 + (GARDEN_BEDS.rows - 1) * GARDEN_BEDS.pitch + GARDEN_BEDS.wigwam.r;
+        return [
+            {what: "beds", x0: GARDEN_BEDS.x0 - GARDEN_BEDS.width / 2, x1: bedsX1, z0: GARDEN_BEDS.z0, z1: GARDEN_BEDS.z1},
+            {what: "compost", x0: COMPOST.x - COMPOST.half, x1: COMPOST.x + COMPOST.half, z0: COMPOST.z - COMPOST.half, z1: COMPOST.z + COMPOST.half},
+            {what: "water_butt", x0: (COTTAGE.width / 2 + 0.3) * k - 0.4, x1: (COTTAGE.width / 2 + 0.3) * k + 0.4, z0: (COTTAGE.depth / 2 + 0.25) * k - 0.4, z1: (COTTAGE.depth / 2 + 0.25) * k + 0.4}
+        ];
+    }
+    const out: PlotKeepOut[] = [
+        {what: "hay_shelter", x0: -6.7, x1: -3.5, z0: -1.9, z1: 1.9},
+        {what: "hay", x0: -4.3, x1: -2.5, z0: -0.3, z1: 1.5}
+    ];
+    for (const trough of troughSpots(plot)) out.push({what: "trough", x0: trough.x - trough.length / 2 - 0.1, x1: trough.x + trough.length / 2 + 0.1, z0: trough.z - 0.35, z1: trough.z + 0.35});
+    const coop = coopSpot(plot);
+    out.push({what: "coop", x0: coop.x - 0.8, x1: coop.x + 0.8, z0: coop.z - 0.55, z1: coop.z + 1.1});
+    return out;
+}
+
+/** A smallholding's troughs (local): one in the paddock, one by the barn's door; `length` along the plot's x. */
+export function troughSpots(plot: HomePlot): Array<{x: number; z: number; length: number}> {
+    const paddock = paddockRect(plot);
+    return [
+        {x: paddock.x0 + (paddock.x1 - paddock.x0) * 0.75, z: paddock.z0 + (paddock.z1 - paddock.z0) * 0.38, length: 2.2},
+        {x: 1.2, z: 3.0, length: 1.6}
+    ];
+}
+
+/** Is a world point on something an animal should not stand on, on any of these plots (with `margin` m round it)? */
+export function onHomeKeepOut(x: number, z: number, plots: HomePlot[] = defaultHomePlots(), margin = 0.3): PlotKeepOut | null {
+    for (const plot of plots) {
+        if (Math.abs(x - plot.x) > 30 || Math.abs(z - plot.z) > 30) continue;
+        const local = plotFrame(plot).toLocal(x, z);
+        for (const out of plotKeepOuts(plot)) if (local.x > out.x0 - margin && local.x < out.x1 + margin && local.z > out.z0 - margin && local.z < out.z1 + margin) return out;
+    }
+    return null;
 }

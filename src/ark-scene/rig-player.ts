@@ -59,7 +59,6 @@ import {
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
 import {gripBones} from "@/ark-scene/map/grip";
-import {POSTURE_SPECS, sleepStages, type SleepPosture} from "@/ark-scene/sleep";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -86,6 +85,8 @@ export type RigModel = {
     flightOpen: boolean;
     /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
     look: RigLookChain | null;
+    /** No look at all on this rig (a sitting rig whose chain is too low to turn a head): the shader's turn stays off too. */
+    lookOff: boolean;
     /** The bones that grip (feet, hands, claws: `map/grip.ts`), each with its rest position (model units). */
     grips: Array<{bone: number; rest: {x: number; y: number; z: number}}>;
     /** Last time it was drawn (seconds), for letting it go. */
@@ -147,6 +148,20 @@ export function rigLookChain(entry: RigEntry, slug: string, boneNames: readonly 
     const {limits_deg, neck: neckShare} = rigLookLimits(entry.plan, slug);
     if (limits_deg.yaw <= 0 && limits_deg.pitch_up <= 0 && limits_deg.pitch_down <= 0) return null;
     return {neck, head, neckPivot: neckPivot ?? [0, 0, 0], headPivot, yaw: limits_deg.yaw * DEG, up: limits_deg.pitch_up * DEG, down: limits_deg.pitch_down * DEG, neckShare: neck >= 0 ? neckShare : 0};
+}
+
+/**
+ * A sitting rig's look (the meerkat's): its chain sits at mid-body, so turning it turns the chest. A rig with a
+ * sitting rest pose has no look (`off`: the shader's turn of the front of the body stays off too); any other keeps
+ * its chain.
+ */
+export function sittingLook(look: RigLookChain | null, pose: string | null, minY: number, maxY: number): {look: RigLookChain | null; off: boolean} {
+    void minY;
+    void maxY;
+    // Every sitting rig (`pose` set): no look at all (the rigging lane, contract 5: 27 of 38 sitting rigs' head pivots
+    // sit below 0.8 of the body's height, the meerkat's at 0.65, the gibbons' at 0.21 and 0.30), the shader's turn off too.
+    if (pose) return {look: null, off: true};
+    return {look, off: false};
 }
 
 /** A rig set as the library reads it: its folder, and its manifest. */
@@ -262,6 +277,13 @@ export class RigLibrary {
         const model = this.models.get(slug);
         if (model) return rigFlies(model);
         return !this.failed.has(slug) && Boolean(this.choices?.get(slug)?.[0]?.flight);
+    }
+
+    /** Whether its rig walks (a walk, run, hop, slither or climb): before it loads, assumed; a sitting rig with only its idle does not. */
+    walks(slug: string): boolean {
+        const model = this.models.get(slug);
+        if (!model) return true;
+        return ["walk", "run", "hop", "slither", "climb"].some((name) => Boolean(model.clips[name]));
     }
 
     /** Whether a set lists a rig for this species (one that has not failed to load from every set). */
@@ -391,7 +413,9 @@ export class RigLibrary {
             const at = new Vector3().setFromMatrixPosition(bone.matrixWorld);
             return [at.x, at.y, at.z];
         };
-        const look = rigLookChain(entry, slug, extras.bones, restPivot);
+        const box = geometry.boundingBox!;
+        const sitting = sittingLook(rigLookChain(entry, slug, extras.bones, restPivot), entry.pose ?? null, box.min.y, box.max.y);
+        const look = sitting.look;
         const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         material.forEach((m) => m.dispose());
         mesh.geometry.dispose();
@@ -409,7 +433,11 @@ export class RigLibrary {
             const row = Number(clip.row);
             const clipRows = Number(clip.rows);
             if (!Number.isInteger(row) || !Number.isInteger(clipRows) || clipRows < 2 || row < 0 || row + clipRows > rows) continue;
-            clips[name] = {...clip, name, row, rows: clipRows};
+            clips[name] = withCycleSpeed({...clip, name, row, rows: clipRows}, Number(entry.version) || 1);
+        }
+        // v6 aliases (contract 8.1): a clip that failed plays its stand-in under its own name.
+        for (const [missing, standIn] of Object.entries(entry.alias && typeof entry.alias === "object" ? entry.alias : {})) {
+            if (!clips[missing] && clips[standIn]) clips[missing] = {...clips[standIn], name: missing};
         }
         if (!Object.keys(clips).length) {
             geometry.dispose();
@@ -439,6 +467,7 @@ export class RigLibrary {
             flight,
             flightOpen: entry.flight_fallback_open === true,
             look,
+            lookOff: sitting.off,
             grips,
             usedAt: 0
         });
@@ -564,12 +593,19 @@ export type RigState = {
      * offset on alternate frames) never flips walk and graze, or walk and run, frame by frame.
      */
     pace: number;
+    /** A clip played by distance: how fast it moves against the clip's own ground speed (1: its natural pace). 0 otherwise. */
+    ratio: number;
+    /** Moving backwards (backing off, a step back): its walk plays in reverse. */
+    reverse: boolean;
+    /** Its base pose now (contract 8.3), and the transition playing toward another, if any. */
+    base: RigBase;
+    toward: {clip: string; ends: RigBase} | null;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0, ratio: 0, reverse: false, base: "stand", toward: null};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */
@@ -579,6 +615,98 @@ export function rigSwitch(state: RigState, name: string, phase = 0) {
     state.now = {name, phase};
     state.fade = 0;
 }
+
+/**
+ * The ground clip for a pace (model units a second), from the clips in order of preference (walk, run, hop,
+ * slither): the first while its own pace covers the speed within 1.5 times (1.7 while it plays, so it doesn't flip
+ * at the edge); faster than that, the faster gait whose own pace is nearest the speed (a run, or a bird's hop when
+ * it is the quicker). A bird whose hop is slower than its walk keeps walking. Played by the distance covered, its
+ * feet stay planted.
+ */
+export function paceClip(speed: number, clips: readonly RigClipData[], current?: string | null): RigClipData | null {
+    const usable = clips.filter((c) => (c.ground_speed ?? 0) > 0);
+    if (!usable.length) return null;
+    const first = usable[0];
+    const covers = (c: RigClipData) => speed <= c.ground_speed! * (c.name === current ? 1.7 : 1.5);
+    if (covers(first)) return first;
+    const faster = usable.filter((c) => c.ground_speed! > first.ground_speed!);
+    if (!faster.length) return first;
+    const off = (c: RigClipData) => Math.abs(Math.log(Math.max(speed, 1e-6) / c.ground_speed!));
+    return faster.reduce((best, c) => (off(c) < off(best) ? c : best));
+}
+
+/**
+ * Every visible animal's gait, rigged or not: where it was drawn, how far through its step cycle (by the distance it
+ * covers: a cycle, two steps, every 0.6 body lengths), and its pace (m/s, eased over about 0.3 s so a stepped path
+ * reads as one pace). It picks which movers get a rig from the island view, and gives every mover without one a
+ * cheap gait (`gaitPose`), so nothing slides along still.
+ */
+export type Gait = {x: number; z: number; phase: number; speed: number};
+
+export function stepGait(gait: Gait | null | undefined, x: number, z: number, dt: number, length: number): Gait {
+    if (!gait) return {x, z, phase: 0, speed: 0};
+    const moved = Math.hypot(x - gait.x, z - gait.z);
+    // A jump (a new spot, an act's cut) is no step.
+    const step = moved > Math.max(length * 4, 2) ? 0 : moved;
+    gait.phase = (gait.phase + step / Math.max(0.6 * length, 0.02)) % 1000;
+    if (dt > 0) gait.speed += (step / dt - gait.speed) * Math.min(dt * 3.5, 1);
+    gait.x = x;
+    gait.z = z;
+    return gait;
+}
+
+/** Whether it moves now at a walk or more (not a shuffle in place): a fifth of its body length a second. */
+export function gaitMoving(gait: Gait | null | undefined, length: number): boolean {
+    return Boolean(gait && gait.speed > 0.2 * Math.max(length, 0.05));
+}
+
+/**
+ * The cheap gait of a mover with no rig: the body bobs up at every step and rocks a little side to side and fore and
+ * aft with its steps, as much as it moves (none standing, full from about half a body length a second).
+ */
+export function gaitPose(gait: Gait, length: number, height: number): {weight: number; bob: number; roll: number; pitch: number} {
+    const weight = Math.min(Math.max((gait.speed / Math.max(length, 0.05) - 0.1) / 0.4, 0), 1);
+    if (weight <= 0) return {weight: 0, bob: 0, roll: 0, pitch: 0};
+    const a = Math.PI * 2 * gait.phase;
+    return {
+        weight,
+        bob: weight * 0.035 * height * Math.abs(Math.sin(a)),
+        roll: weight * 0.045 * Math.sin(a),
+        pitch: weight * 0.025 * Math.sin(2 * a)
+    };
+}
+
+/**
+ * Which way its moving clip plays: backwards while the body moves back along its facing (more than half of the step
+ * against the way it faces: backing off from a threat or the camera, a step back), forwards again once the step is
+ * more forward than not. Sideways steps keep the clip forwards. A walk played forwards while the body goes back is
+ * the "going backwards" moonwalk.
+ */
+export function stepReverses(was: boolean, dx: number, dz: number, yaw: number): boolean {
+    const flat = Math.hypot(dx, dz);
+    if (flat < 1e-6) return was;
+    const forward = (dx * Math.sin(yaw) + dz * Math.cos(yaw)) / flat;
+    return was ? forward < 0.2 : forward < -0.5;
+}
+
+/**
+ * A clip's ground speed as the scene uses it: the speed the body moves for its feet to stay planted, so that
+ * `ground_speed × seconds` is the distance a full cycle covers (`cyclesFor`).
+ *
+ * A v2 file already says so (contract section 3.2: `stride` = sweep / duty). A v1 file's `ground_speed` is the
+ * stance sweep a second (`stride` = the sweep), which understates the body's speed by 1 / duty (contract section 6):
+ * played by it, a walk's legs cycle 1.6 times too fast and a run's 2.6 times, and the feet slide (the owner's
+ * "walking animations seem weird" and the moonwalk "going backwards"). So a v1 moving clip's speed is divided by
+ * its duty (its own `duty`, else the contract's: walk 0.62, run 0.38, climb 0.72).
+ */
+export function withCycleSpeed<T extends RigClip>(clip: T & {name: string}, entryVersion: number): T & {name: string} {
+    if (entryVersion >= 2 || !clip.ground_speed) return clip;
+    const stated = Number((clip as {duty?: number}).duty);
+    const duty = stated > 0.05 && stated < 1 ? stated : V1_DUTY[clip.name];
+    if (!duty) return clip;
+    return {...clip, ground_speed: clip.ground_speed / duty};
+}
+const V1_DUTY: Record<string, number> = {walk: 0.62, run: 0.38, climb: 0.72};
 
 /**
  * The texture rows of a clip at a phase, for the shader: the frame's row,
@@ -716,25 +844,28 @@ export function flightClip(input: FlightClipInput): string | null {
  * a rig clip expresses: the clips to try in order, and how they play (by the distance covered, as a loop, or once
  * from the start). The table of what is mapped and what falls back is in docs/ark/rig-player.md.
  */
-export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop" | "once"};
+export type RecipeClipRule = {clips: readonly string[]; play: "distance" | "loop" | "once"; playFor?: Readonly<Record<string, "distance" | "loop" | "once">>; still?: string};
+const SLEEP_POSTURES = ["sleep_one_leg", "sleep_tuck", "sleep_hang", "sleep_curl", "sleep_float", "sleep_stand", "sleep_side", "sleep"] as const;
 export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     walk: {clips: ["walk", "slither", "hop"], play: "distance"},
     run: {clips: ["run", "walk"], play: "distance"},
     stalk: {clips: ["walk"], play: "distance"},
     crawl: {clips: ["walk", "slither"], play: "distance"},
-    wade: {clips: ["walk"], play: "distance"},
+    wade: {clips: ["walk", "paddle"], play: "distance"},
     carry: {clips: ["walk"], play: "distance"},
     push: {clips: ["walk"], play: "distance"},
     charge: {clips: ["run", "walk"], play: "distance"},
-    clash: {clips: ["run", "walk"], play: "distance"},
+    // A run at the rival, then the clash itself where they meet (contract 8.4: after the run).
+    clash: {clips: ["run", "walk"], play: "distance", still: "clash"},
     climb: {clips: ["climb"], play: "distance"},
-    swim: {clips: ["swim", "slither"], play: "loop"},
+    swim: {clips: ["swim", "slither", "paddle"], play: "loop", playFor: {paddle: "distance"}},
     leap: {clips: ["leap"], play: "once"},
     fly: {clips: ["flap", "glide"], play: "loop"},
     glide: {clips: ["glide", "soar"], play: "loop"},
     hover: {clips: ["hover"], play: "loop"},
     takeoff: {clips: ["takeoff"], play: "once"},
     land: {clips: ["land"], play: "once"},
+    plunge: {clips: ["plunge"], play: "loop"},
     slide: {clips: ["enter_water"], play: "once"},
     slip_in: {clips: ["enter_water"], play: "once"},
     dive_in: {clips: ["enter_water"], play: "once"},
@@ -742,6 +873,8 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     haul_out: {clips: ["exit_water"], play: "once"},
     hop_out: {clips: ["exit_water"], play: "once"},
     surface: {clips: ["surface"], play: "once"},
+    dive: {clips: ["dive"], play: "once"},
+    upend: {clips: ["upend"], play: "loop"},
     scan: {clips: ["scan"], play: "loop"},
     peck: {clips: ["graze"], play: "loop"},
     eat: {clips: ["graze"], play: "loop"},
@@ -749,61 +882,96 @@ export const RECIPE_CLIPS: Readonly<Record<string, RecipeClipRule>> = {
     place: {clips: ["graze"], play: "loop"},
     perch: {clips: ["perch"], play: "loop"},
     shake: {clips: ["shake_off"], play: "once"},
-    bathe: {clips: ["shake_off"], play: "once"}
+    bathe: {clips: ["shake_off"], play: "once"},
+    // v6 (contract 8.5): the sleep and rest postures, and the behaviour clips.
+    sleep: {clips: SLEEP_POSTURES, play: "loop"},
+    rest: {clips: ["lie", "bask", "rest_one_leg"], play: "loop"},
+    incubate: {clips: ["lie", "bask", "rest_one_leg"], play: "loop"},
+    bask: {clips: ["bask", "lie"], play: "loop"},
+    float_back: {clips: ["sleep_float"], play: "loop"},
+    groom: {clips: ["groom"], play: "loop"},
+    groom_other: {clips: ["groom"], play: "loop"},
+    wing_dry: {clips: ["groom"], play: "loop"},
+    call: {clips: ["call"], play: "loop"},
+    pushup: {clips: ["display", "call"], play: "loop"},
+    display: {clips: ["display"], play: "loop"},
+    dance: {clips: ["display"], play: "loop"},
+    strike: {clips: ["strike"], play: "once"},
+    swipe: {clips: ["strike"], play: "once"},
+    scoop: {clips: ["strike"], play: "once"},
+    beat_prey: {clips: ["strike"], play: "once"},
+    pull: {clips: ["strike"], play: "once"},
+    probe: {clips: ["strike"], play: "once"},
+    tool: {clips: ["strike"], play: "once"},
+    fight: {clips: ["fight"], play: "loop"},
+    box: {clips: ["fight"], play: "loop"},
+    rear: {clips: ["fight"], play: "loop"},
+    dig: {clips: ["dig"], play: "loop"},
+    mark: {clips: ["dig"], play: "loop"},
+    bury: {clips: ["dig"], play: "loop"},
+    dust_bathe: {clips: ["dust_bathe"], play: "loop"},
+    wallow: {clips: ["wallow"], play: "loop"},
+    roll: {clips: ["roll"], play: "loop"}
 };
 
 /**
- * The states no clip expresses yet, and the block's fallback beat each plays meanwhile (`beatClip`: bite, chew, peck
- * and drink graze; scan scans; the rest keep the idle or the scene's own motion). The rigging lane's list of clips
- * that would add the most.
+ * The states no clip expresses (neither v5 nor v6), and the block's fallback beat each plays (`beatClip`: peck
+ * grazes; the rest keep the idle). A v6 state on a rig without its clip falls back to its block's beat the same way.
  */
 export const RECIPE_FALLBACK: Readonly<Record<string, string>> = {
     crouch: "pause",
-    strike: "bite",
-    swipe: "bite",
-    scoop: "bite",
     sweep: "peck",
-    upend: "bite",
-    probe: "peck",
-    pull: "bite",
     drum: "peck",
-    beat_prey: "bite",
-    dig: "peck",
-    tool: "bite",
-    display: "scan",
-    pushup: "scan",
-    dance: "play",
-    call: "scan",
-    fight: "play",
-    rear: "play",
-    box: "play",
-    mark: "peck",
-    groom: "preen",
-    groom_other: "preen",
-    bury: "rest",
-    roll: "rest",
-    dust_bathe: "rest",
-    wallow: "rest",
-    bask: "rest",
-    wing_dry: "preen",
     stretch: "rest",
     yawn: "rest",
-    float_back: "rest",
-    sleep: "sleep",
     freeze: "pause",
-    rest: "rest",
-    incubate: "rest",
-    plunge: "glide",
-    strike_feet: "glide",
-    dive: "swim"
+    strike_feet: "glide"
 };
 
+/** The sleep postures to try for an animal asleep (contract 8.2), the rig's own first: only its species' are in its file. */
+export const ASLEEP_CLIPS: readonly string[] = ["sleep_one_leg", "sleep_tuck", "sleep_curl", "sleep_stand", "sleep"];
+
 /** A recipe state's clip on this rig (the first of its rule's clips it has), or null: the block's beat plays (`beatClip`). */
-export function recipeClip(state: string | null | undefined, has: (name: string) => boolean): {name: string; play: RecipeClipRule["play"]} | null {
+export function recipeClip(state: string | null | undefined, has: (name: string) => boolean): {name: string; play: RecipeClipRule["play"]; still?: string} | null {
     const rule = state ? RECIPE_CLIPS[state] : undefined;
     if (!rule) return null;
     const name = rule.clips.find((clip) => has(clip));
-    return name ? {name, play: rule.play} : null;
+    if (!name) return null;
+    const still = rule.still && has(rule.still) ? rule.still : undefined;
+    return {name, play: rule.playFor?.[name] ?? rule.play, ...(still ? {still} : {})};
+}
+
+/** A rig's base pose (contract 8.3): standing (the rest pose), lying, on its side, or a sitting rig leaning forward. */
+export type RigBase = "stand" | "lying" | "side" | "leaning";
+
+/** The base pose a clip is held in: its `base`, else standing. */
+export function clipBase(clip: {base?: string} | null | undefined): RigBase {
+    const base = clip?.base;
+    return base === "lying" || base === "side" || base === "leaning" ? base : "stand";
+}
+
+/**
+ * The one-shot that takes a rig from its base pose toward another (contract 8.3): standing → lying (`lie_down`),
+ * lying → standing (`get_up`, or `get_up_fast` when startled), lying → side (`side_down`), side → lying
+ * (`side_up`), standing → leaning (`drop`), leaning → standing (`rise`); to go further it chains (side → standing is
+ * side_up, then get_up). Null: it is there, or it has no way (then it stays as it is).
+ */
+export function baseStep(from: RigBase, to: RigBase, has: (name: string) => boolean, urgent = false): {clip: string; ends: RigBase} | null {
+    if (from === to) return null;
+    const step = (clip: string, ends: RigBase) => (has(clip) ? {clip, ends} : null);
+    switch (from) {
+        case "stand":
+            return to === "leaning" ? step("drop", "leaning") : step("lie_down", "lying");
+        case "lying":
+            if (to === "side") return step("side_down", "side");
+            return (urgent ? step("get_up_fast", "stand") : null) ?? step("get_up", "stand");
+        case "side":
+            return step("side_up", "lying");
+        case "leaning":
+            return step("rise", "stand");
+        default:
+            return null;
+    }
 }
 
 /**
@@ -815,6 +983,8 @@ export function recipeClip(state: string | null | undefined, has: (name: string)
 export function reactiveClip(action: string | null | undefined, has: (name: string) => boolean, fast: boolean): {name: string; byDistance: boolean} | null {
     switch (action) {
         case "flee": {
+            // A sitting rig (a meerkat): its bound, leaning forward (it drops into it and rises after: `baseStep`).
+            if (!has("walk") && !has("run") && has("bound")) return {name: "bound", byDistance: true};
             const walk = has("walk") ? "walk" : has("slither") ? "slither" : has("hop") ? "hop" : null;
             const name = has("run") && (fast || !walk) ? "run" : walk;
             return name ? {name, byDistance: true} : null;
@@ -827,30 +997,6 @@ export function reactiveClip(action: string | null | undefined, has: (name: stri
         default:
             return null;
     }
-}
-
-/** What `sleepClip` needs of a rig: its playable clip of a name (its loop, and its v6 base and posture), or null. */
-export type SleepClipRig = {clip: (name: string) => {loop: boolean; base?: string; posture?: string} | null};
-
-/**
- * Asleep, lying down or getting up on its rig (`sleep.ts`; the rigging lane's v6 clips, contract section 8). A lying
- * posture (on its chest, its side, curled, flat; a bird sitting down to sleep) plays `lie_down` in step with its
- * body going down (`sleepStages(t).body`), then its lying sleep loop (`sleep` with base "lying", else `lie`), and
- * `get_up` in step with the body coming up; only when the rig has all three (a lying clip needs its way in and out).
- * A standing sleeper (on one leg, a primate hunched) plays a `sleep` that is not lying. Null: it is procedural
- * (`sleep.ts` POSTURE_SPECS on the near model and the rig's idle). `down`: going to sleep (else waking up).
- */
-export function sleepClip(rig: SleepClipRig, posture: SleepPosture, t: number, down: boolean): {name: string; play: "sync" | "loop"; phase: number; lying: boolean} | null {
-    const sleep = rig.clip("sleep");
-    if (POSTURE_SPECS[posture].lying || posture === "tuck") {
-        const loop = sleep && sleep.base === "lying" ? "sleep" : rig.clip("lie") ? "lie" : null;
-        if (!rig.clip("lie_down") || !rig.clip("get_up") || !loop) return null;
-        if (t >= 1) return {name: loop, play: "loop", phase: 0, lying: true};
-        const body = sleepStages(t).body;
-        return down ? {name: "lie_down", play: "sync", phase: body, lying: true} : {name: "get_up", play: "sync", phase: 1 - body, lying: true};
-    }
-    if (!sleep || sleep.base === "lying" || (posture === "one_leg") !== (sleep.posture === "one_leg")) return null;
-    return {name: "sleep", play: "loop", phase: 0, lying: false};
 }
 
 /**

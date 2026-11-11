@@ -168,6 +168,8 @@ export type ArkSceneStats = {
     /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
     behaviourBuildSlices?: number;
     behaviourBuildLongestMs?: number;
+    /** The main-thread time the last predator-prey spacing took, sliced (ms). */
+    behaviourSpacingMs?: number;
     rigsLoaded: number;
     rigBytes: number;
     /** The animal-look pass: on, animals in fur shells this frame, close-up skins on the GPU. */

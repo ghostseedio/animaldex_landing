@@ -423,9 +423,173 @@ async function mountScenes(el: HTMLElement) {
     };
 }
 
-const el = document.getElementById("ark");
+const el = new URLSearchParams(location.search).get("island") ? null : document.getElementById("ark");
 if (el) {
     mountScenes(el)
         .then((api) => ((window as unknown as {__arkRig: unknown}).__arkRig = api))
         .catch((error) => ((window as unknown as {__arkRigError: string}).__arkRigError = String(error instanceof Error ? error.stack || error.message : error)));
+}
+
+/**
+ * `?island=1`: the owner's view (`/ark?fixture=1`): the whole v2 fixture, the default island camera, live models and
+ * rigs, nothing pinned. `window.__arkIsland.motion(seconds)` samples every animal every frame: where it is drawn
+ * (`locate`), which way it faces, its level and its rig (clip, weight, pace ratio), and sums per animal the time it
+ * moves facing more than 90 degrees from its way, the time it moves without a rig (gliding), and how much its way turns.
+ */
+async function mountIsland(el: HTMLElement) {
+    const params = new URLSearchParams(location.search);
+    const quality = params.get("quality");
+    if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
+    if (params.get("moverGait") === "0") (globalThis as {__arkMoverGait?: boolean}).__arkMoverGait = false;
+    const snapshot = decodeArkSnapshot(fixture);
+    if (!snapshot) throw new Error("fixture did not decode");
+    let ready = false;
+    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
+    // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
+    const view = params.get("view")?.split(",").map(Number);
+    type E = {animal: {id: string; model_slug: string}; level?: string; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number} | null} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
+    const settle = async (maxMs = 180_000) => {
+        const until = performance.now() + maxMs;
+        let quiet = 0;
+        while (performance.now() < until) {
+            await wait(100);
+            if (!ready || handle.loading()) quiet = 0;
+            else if (!quiet) quiet = performance.now();
+            else if (performance.now() - quiet > 2000) return true;
+        }
+        return false;
+    };
+    return {
+        prepare: async () => {
+            const settled = await settle();
+            if (view && view.length === 5 && view.every(Number.isFinite)) {
+                handle.setView({target: {x: view[0], y: 0.5, z: view[1]}, distance: view[2], polar: view[3], azimuth: view[4]});
+                await wait(4000);
+                await settle(60_000);
+            }
+            return {settled, stats: handle.stats()};
+        },
+        stats: () => handle.stats(),
+        motion: async (seconds: number) => {
+            type Track = {schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            const tracks = new Map<string, Track>();
+            const t0 = performance.now();
+            let last = t0;
+            while (performance.now() - t0 < seconds * 1000) {
+                await nextFrame();
+                const now = performance.now();
+                const dt = (now - last) / 1000;
+                last = now;
+                for (const e of entries()) {
+                    const at = handle.locate(e.animal.id);
+                    if (!at) continue;
+                    const tr = tracks.get(e.animal.id) ?? {slug: e.animal.model_slug, last: null, moving: 0, backwards: 0, backRun: 0, backRunMax: 0, glide: 0, glideNear: 0, rigged: 0, turn: 0, dist: 0, ratios: [], clips: new Set(), levels: new Set(), doing: new Set()};
+                    tracks.set(e.animal.id, tr);
+                    if (e.level) tr.levels.add(e.level);
+                    if (e.sched?.pose?.doing) tr.doing.add(e.sched.pose.doing);
+                    // The schedule's own path (before the reactive offset), to tell which one turns.
+                    const sp = e.sched?.pose;
+                    if (sp && (now - (tr.last?.t ?? now)) / 1000 >= 0.25) {
+                        if (tr.schedLast) {
+                            const sdx = sp.x - tr.schedLast.x;
+                            const sdz = sp.z - tr.schedLast.z;
+                            const sd = Math.hypot(sdx, sdz);
+                            if (sd > 0.02) {
+                                const sway = Math.atan2(sdx, sdz);
+                                if (tr.schedLast.way !== undefined) {
+                                    let st = sway - tr.schedLast.way;
+                                    while (st > Math.PI) st -= Math.PI * 2;
+                                    while (st < -Math.PI) st += Math.PI * 2;
+                                    tr.schedTurn = (tr.schedTurn ?? 0) + Math.abs(st);
+                                }
+                                tr.schedDist = (tr.schedDist ?? 0) + sd;
+                                tr.schedLast = {x: sp.x, z: sp.z, way: sway};
+                            }
+                        } else tr.schedLast = {x: sp.x, z: sp.z};
+                    }
+                    if (e.reactive) {
+                        tr.offsetMax = Math.max(tr.offsetMax ?? 0, Math.hypot(e.reactive.dx, e.reactive.dz));
+                        (tr.actions ??= new Set()).add(e.reactive.action);
+                    }
+                    // Its way: over at least 0.25 s, so a frame's jitter is no heading.
+                    if (!tr.last) tr.last = {x: at.x, z: at.z, t: now};
+                    const span = (now - tr.last.t) / 1000;
+                    if (span >= 0.25) {
+                        const dx = at.x - tr.last.x;
+                        const dz = at.z - tr.last.z;
+                        const d = Math.hypot(dx, dz);
+                        const speed = d / span;
+                        if (speed > Math.max(0.05, 0.15 * at.length) && e.air < 0.5) {
+                            tr.moving += span;
+                            tr.dist += d;
+                            const way = Math.atan2(dx, dz);
+                            let off = way - (e.yawNow ?? at.yaw);
+                            while (off > Math.PI) off -= Math.PI * 2;
+                            while (off < -Math.PI) off += Math.PI * 2;
+                            if (Math.abs(off) > Math.PI / 2) {
+                                tr.backwards += span;
+                                tr.backRun += span;
+                                tr.backRunMax = Math.max(tr.backRunMax, tr.backRun);
+                            } else tr.backRun = 0;
+                            const rigged = (e.rig?.weight ?? 0) > 0.5;
+                            if (rigged) {
+                                tr.rigged += span;
+                                if (e.rig?.now) tr.clips.add(e.rig.now.name);
+                                if (e.rig?.ratio) tr.ratios.push(e.rig.ratio);
+                            } else {
+                                tr.glide += span;
+                                if (e.level === "near") tr.glideNear += span;
+                            }
+                            const prevWay = (tr as Track & {way?: number}).way;
+                            if (prevWay !== undefined) {
+                                let turn = way - prevWay;
+                                while (turn > Math.PI) turn -= Math.PI * 2;
+                                while (turn < -Math.PI) turn += Math.PI * 2;
+                                tr.turn += Math.abs(turn);
+                            }
+                            (tr as Track & {way?: number}).way = way;
+                        } else tr.backRun = 0;
+                        tr.last = {x: at.x, z: at.z, t: now};
+                    }
+                }
+                void dt;
+            }
+            const rows = Array.from(tracks.entries()).map(([id, t]) => {
+                const sorted = t.ratios.slice().sort((a, b) => a - b);
+                return {
+                    id: id.slice(-6),
+                    slug: t.slug,
+                    levels: Array.from(t.levels).join(","),
+                    doing: Array.from(t.doing).join(","),
+                    moving: Math.round(t.moving * 10) / 10,
+                    backwards: Math.round(t.backwards * 10) / 10,
+                    backRunMax: Math.round(t.backRunMax * 10) / 10,
+                    glide: Math.round(t.glide * 10) / 10,
+                    glideNear: Math.round(t.glideNear * 10) / 10,
+                    rigged: Math.round(t.rigged * 10) / 10,
+                    clips: Array.from(t.clips).join(","),
+                    ratioMedian: sorted.length ? Math.round(sorted[Math.floor(sorted.length / 2)] * 100) / 100 : null,
+                    ratioMax: sorted.length ? Math.round(sorted[sorted.length - 1] * 100) / 100 : null,
+                    turnsPerMinute: t.moving > 0 ? Math.round(((t.turn / (Math.PI * 2)) / t.moving) * 60 * 10) / 10 : 0,
+                    turnPerMetre: t.dist > 0 ? Math.round((t.turn / t.dist) * 100) / 100 : 0,
+                    schedTurnPerMetre: t.schedDist ? Math.round(((t.schedTurn ?? 0) / t.schedDist) * 100) / 100 : null,
+                    schedDist: Math.round((t.schedDist ?? 0) * 10) / 10,
+                    drawnDist: Math.round(t.dist * 10) / 10,
+                    reactiveOffsetMax: Math.round((t.offsetMax ?? 0) * 100) / 100,
+                    actions: Array.from(t.actions ?? []).join(",")
+                };
+            });
+            return {rows, stats: handle.stats()};
+        }
+    };
+}
+
+if (new URLSearchParams(location.search).get("island")) {
+    const island = document.getElementById("ark");
+    if (island) {
+        mountIsland(island)
+            .then((api) => ((window as unknown as {__arkIsland: unknown}).__arkIsland = api))
+            .catch((error) => ((window as unknown as {__arkRigError: string}).__arkRigError = String(error instanceof Error ? error.stack || error.message : error)));
+    }
 }

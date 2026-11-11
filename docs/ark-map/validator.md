@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 4995 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 4306 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -18,27 +18,27 @@
 
 | Area | Animals placed there |
 |---|---:|
-| open_water | 290 |
+| open_water | 286 |
 | reef | 204 |
-| shallows | 222 |
-| rocky_shore | 50 |
-| beach | 24 |
+| shallows | 216 |
+| rocky_shore | 48 |
+| beach | 28 |
 | estuary | 38 |
-| cold_cove | 42 |
+| cold_cove | 40 |
 | river | 126 |
-| lake_marsh | 624 |
+| lake_marsh | 622 |
 | grassland | 482 |
 | scrub | 196 |
 | canopy | 1136 |
 | forest_floor | 514 |
-| underground | 85 |
+| underground | 87 |
 | desert | 184 |
-| mountain | 365 |
+| mountain | 375 |
 | homestead | 644 |
 
 | Where | Animals |
 |---|---:|
-| on the ground | 3228 |
+| on the ground | 3240 |
 | attach point: leaf | 335 |
 | in the water by its depth band (lake) | 250 |
 | in the water by its depth band (reef) | 196 |
@@ -47,7 +47,7 @@
 | in fresh water (no band) | 120 |
 | in the water by its depth band (mid) | 90 |
 | in the water by its depth band (upper) | 88 |
-| in the sea (no band) | 76 |
+| in the sea (no band) | 64 |
 | in the water by its depth band (coast) | 56 |
 | attach point: rock_face | 50 |
 | attach point: worm_hole | 49 |
@@ -71,7 +71,7 @@
 | attach point: house_eave | 3 |
 | attach point: ledge | 2 |
 
-Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 363.
+Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pattern`) resolved within reach: 358.
 
 ## Failures by species
 
