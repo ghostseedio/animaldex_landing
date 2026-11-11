@@ -43,7 +43,7 @@ import {ARK_RIM} from "@/ark-scene/glsl";
 import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type SpeciesLook} from "@/ark-scene/animal-look";
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
 import {varyShader} from "@/ark-scene/ark-variation";
-import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/l2-scene";
+import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};

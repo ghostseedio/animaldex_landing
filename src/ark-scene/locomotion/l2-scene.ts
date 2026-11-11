@@ -17,14 +17,19 @@ import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
 import {flightRigFrame, flightSpecOf, newFlightMemory, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {LEGLESS, leglessCycles, leglessMode, newLeglessMemory, sidewindYaw, type LeglessMemory} from "@/ark-scene/locomotion/legless";
 import {locoStyle, type LocoStyle} from "@/ark-scene/locomotion/styles";
-import {newSwimMemory, SWIM, swimCycles, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
+import {newSwimMemory, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
+import {chainDriver, flightDriver, OPEN_WING_RIGS} from "@/ark-scene/locomotion/l2-drivers";
+import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
+
+// Lane L2's drivers go before L1's legged one (their `takes` never overlap it: in the air, or a chain rig's slither
+// and swim).
+registerLocoDriver(chainDriver);
+registerLocoDriver(flightDriver);
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-/** The L2 uniforms the near material takes (0 power: the talking model's own motion, as before). */
-export type L2BodyUniforms = {motionHead: number; motionPower: number; motionTip: number; motionLift: number; motionStretch: number; motionFin: number; motionWavesL2: number; motionAxisL2: number};
-
-export const L2_BODY_NONE: L2BodyUniforms = {motionHead: 0, motionPower: 0, motionTip: 0, motionLift: 0, motionStretch: 0, motionFin: 0, motionWavesL2: 0, motionAxisL2: 0};
+export type {L2BodyUniforms} from "@/ark-scene/locomotion/swim";
+export {L2_BODY_NONE} from "@/ark-scene/locomotion/swim";
 
 /**
  * A species' wave for the shader: its swim style (a water species), else its legless mode; a coiled model (its width
@@ -51,6 +56,7 @@ export function l2BodyUniforms(slug: string, behaviour: TalkingBehaviour | null 
 
 /** Per animal (per viewer): its flight beat, its swim and crawl cycles, where it was last drawn. */
 export type L2Motion = {
+    slug: string;
     style: LocoStyle;
     flight: FlightMemory | null;
     flightSpec: FlightSpec | null;
@@ -62,7 +68,7 @@ export type L2Motion = {
 
 export function newL2Motion(slug: string, plan: string | null | undefined, seed: number): L2Motion {
     const style = locoStyle(slug, plan ?? null);
-    return {style, flight: null, flightSpec: null, flightLength: 0, swim: style.swim ? newSwimMemory(seed) : null, legless: style.legless ? newLeglessMemory(seed) : null, last: null};
+    return {slug, style, flight: null, flightSpec: null, flightLength: 0, swim: style.swim ? newSwimMemory(seed) : null, legless: style.legless ? newLeglessMemory(seed) : null, last: null};
 }
 
 /**
@@ -135,5 +141,6 @@ export function l2FlightFrame(motion: L2Motion, trueLength: number, input: Omit<
     }
     if (!motion.flightSpec) return null;
     motion.flight ??= newFlightMemory();
+    if (input.open || !input.has("flap")) OPEN_WING_RIGS.add(motion.slug);
     return flightRigFrame({...input, spec: motion.flightSpec}, motion.flight);
 }

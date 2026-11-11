@@ -13,5 +13,13 @@ export const MOTION_L2_THRESHOLDS = {
     /** Lateral undulation: mean sideways slip against the head's track, as a share of the swing. */
     leglessSlipMax: 0.02,
     /** Up-and-down swimmers whose flukes break the surface at the top of their band, not breathing (after the guard). */
-    surfaceBreachesMax: 0
+    surfaceBreachesMax: 0,
+    /** Rigs: the hand's span at mid-upstroke over mid-downstroke (the published flap: 1.0). */
+    upstrokeSpanRatioMax: 0.85,
+    /** Rigs: an open-winged insect's wing-tip rise and fall (model units) once the driver beats it (the held glide: 0). */
+    insectStrokeMin: 0.05,
+    /** Rigs: a snake chain's mean sideways slip against its front's track, as a share of its swing. */
+    rigSlipMax: 0.2,
+    /** Rigs: a chain driver's pose (ms, this machine; the layer's budget is 0.1 ms an animal for L1's whole pose). */
+    poseMsMax: 0.1
 } as const;

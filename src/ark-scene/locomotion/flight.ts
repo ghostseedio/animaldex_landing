@@ -133,7 +133,7 @@ export function flightSpecOf(row: FlightStyleRow | null, lengthM: number): Fligh
     const glideShare =
         row.style === "soar" ? 0.85 : row.style === "flap_glide" ? clamp(0.25 + 0.3 * big, 0.2, 0.6) : row.style === "flutter" ? (lengthM > 0.06 ? 0.3 : 0.1) : row.style === "flap_bound" ? 0.35 : 0;
     // The hand's flex on the upstroke: strong in small birds' and bats' slow flight, little in big soarers'.
-    const fold = insect ? 0 : row.kind === "bat" ? 1 : row.style === "soar" ? 0.4 : row.style === "hover" ? 0 : 0.85 - 0.35 * big;
+    const fold = insect ? 0 : row.kind === "bat" ? 1 : row.style === "soar" ? 0.6 : row.style === "hover" ? 0 : 0.95 - 0.3 * big;
     return {
         style: row.style,
         kind: row.kind,
@@ -384,9 +384,16 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         return out;
     }
     if (input.open || !has("flap")) {
-        // No flap of its own: open wings held (never the closed rest pose), banked by the instance.
+        // No flap of its own: open wings held (never the closed rest pose), banked by the instance. An insect's wings
+        // are beaten on them by the wing driver (`l2-drivers.ts`) on the shared clock; its body heaves in time.
         const clip = input.soaring && has("soar") ? "soar" : (["glide", "soar", "bank_l", "bank_r", "hover"].find((n) => has(n)) ?? (has("takeoff") ? "takeoff" : "glide"));
         Object.assign(out, {clip, mode: clip === "takeoff" ? "sync" : "time", phase: clip === "takeoff" ? 1 : 0, flightMode: "glide"});
+        if (spec.kind === "insect") {
+            const beat = frac(input.clock * spec.hz + input.seed * 7);
+            out.beat = beat;
+            out.heave = spec.heave * (input.drawnLength ?? spec.lengthM) * beatHeave(beat, spec.downstroke);
+            out.flightMode = "flap";
+        }
         return out;
     }
     // Effort: a hard climb out of a take-off, a climb, cruise, a descent; a flare near the ground on the way down.

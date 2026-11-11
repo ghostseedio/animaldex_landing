@@ -36,7 +36,7 @@ export type LeglessParams = {
 };
 
 export const LEGLESS: Readonly<Record<LeglessMode, LeglessParams>> = {
-    lateral: {waves: 1.6, side: 0.09, head: 0.55, lift: 0, liftLead: 0, stretch: 0, advance: 1 / 1.6, across: 0},
+    lateral: {waves: 1.6, side: 0.09, head: 0.85, lift: 0, liftLead: 0, stretch: 0, advance: 1 / 1.6, across: 0},
     sidewind: {waves: 1.3, side: 0.12, head: 0.7, lift: 0.045, liftLead: 0.25, stretch: 0, advance: 0.45, across: 0.95},
     rectilinear: {waves: 3, side: 0, head: 1, lift: 0.008, liftLead: 0, stretch: 0.03, advance: 0.1, across: 0},
     peristaltic: {waves: 2, side: 0.01, head: 1, lift: 0.004, liftLead: 0, stretch: 0.09, advance: 0.12, across: 0},

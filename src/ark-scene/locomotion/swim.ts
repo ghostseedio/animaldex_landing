@@ -174,3 +174,8 @@ export function swimSurfaceGuard(base: number, height: number, length: number, s
     const limit = sea - SWIM_SURFACE_CLEAR;
     return top > limit ? base - (top - limit) : base;
 }
+
+/** The L2 uniforms the near material takes (0 power: the talking model's own motion, as before). */
+export type L2BodyUniforms = {motionHead: number; motionPower: number; motionTip: number; motionLift: number; motionStretch: number; motionFin: number; motionWavesL2: number; motionAxisL2: number};
+
+export const L2_BODY_NONE: L2BodyUniforms = {motionHead: 0, motionPower: 0, motionTip: 0, motionLift: 0, motionStretch: 0, motionFin: 0, motionWavesL2: 0, motionAxisL2: 0};
