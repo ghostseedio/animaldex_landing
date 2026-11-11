@@ -150,6 +150,8 @@ export type ScheduleAnimal = {
     group?: ScheduleGroup | null;
     /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
     threats?: ScheduleThreat[] | null;
+    /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
+    roost?: Spot | null;
 };
 
 /** A predator as its prey sees it: its own schedule animal, profile and activity. */
@@ -459,6 +461,7 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 
 /** Its roost: the same place every night (seeded by its id), from its profile's roost kind; a group's members by their leader's. */
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    if (animal.roost) return animal.roost;
     const group = animal.group;
     if (group && !FLOCKING.has(profile.social)) {
         // The group sleeps together: round its leader's roost, each a little apart.

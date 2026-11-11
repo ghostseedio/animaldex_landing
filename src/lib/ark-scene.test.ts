@@ -8,16 +8,18 @@ import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {ARK_ZONES, type ArkSnapshot} from "@/ark-scene/types";
 import type {Placement} from "@/ark-scene/placement";
 import {arkBody} from "@/ark-scene/stats";
-import {sampleGround, ZONE_SITES} from "@/ark-scene/world";
+import {mapPoints} from "@/ark-scene/map/place";
 
 /**
- * Apart: on the ground 0.9 m between any two; a small animal at its
- * microhabitat (`micro.ts`, a gecko on a wall, a beetle on a trunk) at
- * least a body length from anyone, in 3D.
+ * Apart: on the ground 0.9 m between any two; a small animal on its
+ * attach point (a gecko on a wall, a beetle on a trunk) with its body clear
+ * of anyone's (centres further apart than their half-lengths), in 3D.
  */
 function apart(p: Placement, q: Placement, lengthP: number, lengthQ: number): boolean {
-    if (!p.micro && !q.micro) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
-    return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max(lengthP, lengthQ, 0.02);
+    // (A perched bird or lizard is on its attach point like a micro animal: its body clear of the others in 3D.)
+    if (!p.micro && !q.micro && !p.perch && !q.perch) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
+    // A small one on its attach point: their bodies do not overlap (centres further apart than their half-lengths).
+    return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max((lengthP + lengthQ) / 2, 0.02);
 }
 
 const full = decodeArkSnapshot(fixture)!;
@@ -40,18 +42,19 @@ test("a malformed animal is dropped, an unknown zone goes Home, never the whole 
     assert.equal(decodeArkSnapshot(null), null);
 });
 
-test("every animal stands on its zone's kind of ground, apart from the others", () => {
+test("every animal stands on its map tag's ground (the Ark map, B3), apart from the others", () => {
     const places = placeAnimals(full.animals);
+    const sampler = mapPoints().sampler;
     for (const animal of full.animals) {
         const place = places.get(animal.id)!;
-        const height = sampleGround(place.x, place.z).height;
-        if (ZONE_SITES[animal.zone].kind === "sea") assert.ok(height < -1.2, `${animal.name} at sea`);
-        if (ZONE_SITES[animal.zone].kind === "land") assert.ok(height > 0.25, `${animal.name} on land`);
-        if (ZONE_SITES[animal.zone].kind === "shore") {
-            // On the beach: dry, and still within the sand strip by the water.
-            const ground = sampleGround(place.x, place.z);
-            assert.ok(ground.height > 0.1 && ground.land < 0.995, `${animal.name} on the beach`);
-        }
+        assert.ok(place.map, `${animal.name} on the map`);
+        // (A perched animal stands for its attach point's tags, which the validator checks.)
+        if (place.map!.held || place.canopy || place.micro || place.perch) continue;
+        const ground = sampler.ground(place.x, place.z);
+        assert.ok(ground.tags.includes(place.map!.tag!), `${animal.name} on ${place.map!.tag}`);
+        // At sea in the sea, on land on land.
+        if (place.sea) assert.equal(ground.water, "sea", `${animal.name} at sea`);
+        if (!place.water) assert.ok(ground.water === null || place.ground > 0.2, `${animal.name} on dry ground`);
     }
     for (let i = 0; i < full.animals.length; i++) {
         for (let j = i + 1; j < full.animals.length; j++) {

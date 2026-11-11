@@ -28,6 +28,10 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
+import {mapPlace, mapPoints, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
+import {hamletPlotsFor, plotOf, plotSpots} from "@/ark-scene/map/hamlet";
+import type {HomePlot} from "@/ark-scene/props/home-layout";
+import {isHost} from "@/ark-scene/map/species";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
@@ -59,6 +63,21 @@ export type Placement = {
     canopy?: CanopyPlace;
     /** An underground animal: its burrow (the entrance at its spot, the tunnel and the chamber below). */
     burrow?: Burrow;
+    /** At sea: the sea's swimmers loop about their spot (the map's sea tags, else a sea zone). */
+    sea?: boolean;
+    /** Its place on the Ark map (`map/place.ts`): the tag it stands for, its roost, its partner role; absent when placed by its zone. */
+    map?: MapPlace;
+    /** A small bird, bat or other vertebrate on its attach point (`map/place.ts` MapPerch): its home and roost on the behaviour schedule. */
+    perch?: MapPerch;
+    /** A hamlet resident (a captured pet or farm animal, `map/hamlet.ts`): its plot; `x`, `z`, `ground` are its door (indoors). */
+    hamlet?: {plot: HomePlot};
+    /**
+     * A partner with its host aboard (section 6): a rider on its back (the
+     * oxpecker on a buffalo, the remora under a shark), one at its feet (the
+     * egrets), a parasite beside it (never harming it). `x`, `z`, `ground`
+     * are then on or by the host's spot; its own spot is its fallback.
+     */
+    host?: {id: string; role: "rider" | "beside" | "parasite"; dx: number; dz: number; lift: number};
 };
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -331,6 +350,8 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
     obstacles ??= new DecorObstacles(worldDecor());
     const places = allocateArkPlaces(animals);
     const placed = new Map<string, Placement>();
+    // The hamlet's plots for this snapshot's residents (append-only as they grow).
+    const hamletPlots = hamletPlotsFor(animals);
     /** Per zone and slot: the lowest-ranked member here, and how many are here. */
     const clusters = new Map<string, {leader: string; rank: number; count: number}>();
     for (const animal of animals) {
@@ -351,6 +372,36 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         const key = `${zoneKey}#${slotIndex}`;
         const slotHash = hashString(key);
         const ownHash = hashString(animal.id);
+        // A hamlet resident (a captured pet or farm animal): its plot, indoors at its door; the hamlet's rotation brings it out.
+        const plot = plotOf(animal, hamletPlots);
+        if (plot) {
+            const door = plotSpots(plot).door;
+            placed.set(animal.id, {x: door.x, z: door.z, ground: door.y, yaw: plot.rotation, water: false, sea: false, hamlet: {plot}});
+            continue;
+        }
+        // The Ark map (B3): its spawn tag's place on the terrain, from the same zone, slot and rank.
+        const mapped = mapPlace(animal, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal), arkBody(animal).metres, slotKind(animal, slotIndex));
+        if (mapped) {
+            const chosen: Placement = {x: mapped.x, z: mapped.z, ground: mapped.ground, yaw: mapped.yaw, water: mapped.water, sea: mapped.map.sea, map: mapped.map};
+            if (mapped.covered) chosen.covered = true;
+            if (mapped.micro) {
+                const point = surfacePoint(mapped.micro, zoneKey as ArkAnimal["zone"]);
+                Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), micro: mapped.micro});
+            }
+            if (mapped.canopy) {
+                const point = canopyPoint(zoneKey as ArkAnimal["zone"], mapped.canopy);
+                Object.assign(chosen, {x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tx, point.tz), canopy: mapped.canopy});
+            }
+            if (mapped.burrow) chosen.burrow = mapped.burrow;
+            if (mapped.perch) chosen.perch = mapped.perch;
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
+        }
         // A small animal lives at its microhabitat: its slot's point on its spot's surfaces, its rank a step about it.
         const small = microPlace(animal.model_slug, zoneKey as ArkAnimal["zone"], slotIndex, rank, arkBody(animal).metres);
         if (small) {
@@ -405,6 +456,7 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
             spot = clusterSpot(zoneKey, site, centreIndex, centre, gap, rank, slotHash) ?? centre;
         }
         const chosen = placementAt(site, spot.x, spot.z, slotHash);
+        chosen.sea = site.kind === "sea";
         // A cluster faces much the same way, each a little turned; a lone one as its slot says.
         if (rank > 0 && site.kind !== "sea") chosen.yaw += (((ownHash >>> 20) % 100) / 100 - 0.5) * 0.9;
         if (kind === "cover" && rank === 0 && obstacles.covers(spot.x, spot.z)) chosen.covered = true;
@@ -417,5 +469,57 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         }
         placed.set(animal.id, chosen);
     }
+    attachToHosts(animals, placed);
     return placed;
+}
+
+/**
+ * Partners on their hosts (decision 4): each rider, follower and parasite
+ * takes the host of its group that stands nearest its own spot (ties by id),
+ * if one is aboard; else it stays on its own spot (its fallback). Visual
+ * only, and a function of who is aboard: a rider moves off when its host
+ * leaves, and back to its own spot.
+ */
+function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
+    const partners = animals.filter((animal) => {
+        const role = placed.get(animal.id)?.map?.species?.role;
+        return role === "rider" || role === "beside" || role === "parasite";
+    });
+    if (!partners.length) return;
+    for (const animal of partners) {
+        const place = placed.get(animal.id)!;
+        const species = place.map!.species!;
+        if (!species.host) continue;
+        let best: {animal: ArkAnimal; place: Placement; d: number} | null = null;
+        for (const other of animals) {
+            if (other.id === animal.id || !isHost(species.host, other.model_slug, other.kind_species_profile_id, other.species_profile_id)) continue;
+            const there = placed.get(other.id);
+            if (!there || there.map?.held) continue;
+            const d = Math.hypot(there.x - place.x, there.z - place.z);
+            if (!best || d < best.d || (d === best.d && other.id < best.animal.id)) best = {animal: other, place: there, d};
+        }
+        if (!best) continue;
+        const role = species.role as "rider" | "beside" | "parasite";
+        const hostLength = displayLength(best.animal);
+        const hash = hashString(`${animal.id}#host`);
+        const side = (hash & 1 ? 1 : -1) * (role === "rider" ? 0 : role === "beside" ? hostLength * 0.55 + 0.5 : hostLength * 0.35 + 0.15);
+        const along = role === "rider" ? hostLength * 0.08 : ((hash >>> 3) % 100 / 100 - 0.5) * hostLength * 0.6;
+        // Across and along the host's heading (yaw 0 faces +z).
+        const c = Math.cos(best.place.yaw);
+        const sn = Math.sin(best.place.yaw);
+        const dx = side * c + along * sn;
+        const dz = -side * sn + along * c;
+        // A rider on its back (the host's drawn height, about half its length for a grazer); a remora just under a shark's belly.
+        const lift = role === "rider" ? (best.place.water ? -0.25 * hostLength : 0.42 * hostLength) : 0;
+        place.host = {id: best.animal.id, role, dx, dz, lift};
+        place.x = best.place.x + dx;
+        place.z = best.place.z + dz;
+        place.ground = role === "rider" || best.place.water ? best.place.ground + lift : mapPoints().sampler.ground(place.x, place.z).height;
+        place.yaw = best.place.yaw;
+        place.water = best.place.water;
+        place.sea = best.place.sea;
+        delete place.micro;
+        delete place.canopy;
+        delete place.perch;
+    }
 }

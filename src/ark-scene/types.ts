@@ -84,6 +84,8 @@ export type ArkAnimal = {
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
+    /** A capture's setting (the server's `voyage_animals.area`): a pet's house or a farm animal's smallholding in the hamlet (`map/hamlet.ts`); absent or null: placed by the map. */
+    area?: "house" | "farm" | null;
     /** Who brought it, or (for the young) both parents' bringers: labels only, anonymous unless named. */
     bringers?: Array<{label: string; named: boolean}>;
     /**
@@ -103,6 +105,23 @@ export type ArkAnimal = {
     length_phrase?: string | null;
 };
 
+/**
+ * A clutch on the Ark (`voyage_public_v2`'s top-level `nests`, migration
+ * 20261113140000, A9): one per species and zone while its eggs are in.
+ * Visual only (the props' eggs in a nest, a turtle's nest on the beach).
+ */
+export type ArkNestRow = {
+    species_profile_id: string;
+    name: string;
+    model_slug: string | null;
+    zone: ArkZone;
+    status: "egg";
+    eggs: number | null;
+    laid_ark_day: number | null;
+    hatch_ark_day: number | null;
+    mine: boolean;
+};
+
 export type ArkSnapshot = {
     voyage: {slug: string; name: string; started_at: string | null};
     counts: {animals: number; species: number; founders: number};
@@ -111,6 +130,8 @@ export type ArkSnapshot = {
     as_of: string | null;
     /** The Ark's own day (v2's `voyage.ark_day`): 1 Ark year = 14 real days, counted by the server. */
     ark_day?: number | null;
+    /** The clutches in (v2's `nests`, A9); absent from a v1 answer or before the eggs migration. */
+    nests?: ArkNestRow[];
 };
 
 export type ArkSceneStats = {
@@ -205,6 +226,11 @@ export type ArkSceneOptions = {
     assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
+    /**
+     * The scenery's extra detail (nests, hives, webs, the garden's and the farm's things, the cave,
+     * dew, mist, smoke: `src/ark-scene/props`): true on (default), false off.
+     */
+    props?: boolean;
 };
 
 /** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
@@ -253,6 +279,8 @@ export type ArkSceneHandle = {
     selectHerd: (key: string | null) => boolean;
     /** The lighter view: true on, false off, null decided by the device. */
     setLite: (lite: boolean | null) => void;
+    /** The scenery's extra detail (`ArkSceneOptions.props`) on or off. */
+    setProps: (on: boolean) => void;
     /** Reduced motion turned on or off (prefers-reduced-motion changed): no flights, no idles, everything still. */
     setReducedMotion: (reduced: boolean) => void;
     /** Fly to a region, or back to the whole world with null. */
