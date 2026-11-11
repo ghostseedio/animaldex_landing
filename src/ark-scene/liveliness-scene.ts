@@ -219,6 +219,11 @@ export class ArkLiveliness {
         this.young.clear();
     }
 
+    /** A young one's parent (the scene's seeded pick), or null. */
+    parentOf(id: string): string | null {
+        return this.parents.get(id) ?? null;
+    }
+
     /** Its age now (young, adult, old), worked out again now and then. */
     ageOf(entry: LiveAnimal): ArkAge | null {
         const animal = entry.animal;
@@ -399,11 +404,6 @@ export class ArkLiveliness {
             this.audioAnimals.push({id: entry.animal.id, speciesProfileId: entry.animal.species_profile_id, kindSpeciesProfileId: entry.animal.kind_species_profile_id ?? null, x: at.x, y: at.base + entry.drawnHeight * 0.6, z: at.z, mood});
             if (info.called) this.alarms.push(entry.animal.id);
         }
-    }
-
-    /** Pressed-grass points (walkers on grass near the camera) for `grass-press.ts`, nearest first. */
-    grassPoints(): Array<{x: number; y: number; z: number; radius: number}> {
-        return this.traces.grassPoints();
     }
 
     // MARK: Once a frame

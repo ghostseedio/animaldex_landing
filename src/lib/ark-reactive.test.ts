@@ -1,0 +1,418 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
+import {HEAD_LIMITS, clampLook, headLimits, lookAngles, stepHead} from "@/ark-scene/head-look";
+import {ReactiveLayer, minGap, perceive, reactiveEnvelope, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
+
+// MARK: Helpers
+
+function animal(id: string, slug: string, x: number, z: number, extra: Omit<Partial<ReactiveInput>, "shared"> & {shared?: Partial<SharedPose>} = {}): ReactiveInput {
+    const b = behaviourProfile(slug);
+    const length = extra.length ?? Math.min(Math.max(0.35 * Math.cbrt(Math.max(b.size ?? 20, 1)) ** 1.4, 0.2), 3);
+    const {shared, ...rest} = extra;
+    return {
+        id,
+        slug,
+        plan: extra.plan ?? intelProfile(slug).plan,
+        length,
+        size: b.size,
+        dominance: b.dominance,
+        social: b.social,
+        diet: b.diet,
+        intel: intelProfile(slug),
+        asleep: false,
+        acting: false,
+        ...rest,
+        shared: {x, y: 0, z, yaw: 0, moving: false, aloft: false, doing: "forage", ...(shared ?? {})}
+    };
+}
+
+function world(now: number, extra: Partial<ReactiveWorld> = {}): ReactiveWorld {
+    return {now, dt: 1 / 30, hours: 10, night: 0, weather: {rain: 0, wind: 0.2, windDirection: 0, fog: 0, storm: 0}, camera: {x: 0, y: 2, z: -20}, ...extra};
+}
+
+type Frame = {t: number; out: Map<string, ReactiveOut>; inputs: ReactiveInput[]};
+/** Runs the layer for `seconds` at 30 fps; `move` updates the shared poses each frame (the shared layer). */
+function run(layer: ReactiveLayer, inputs: ReactiveInput[], seconds: number, opts: {start?: number; move?: (inputs: ReactiveInput[], t: number) => void; world?: (t: number) => Partial<ReactiveWorld>} = {}): Frame[] {
+    const frames: Frame[] = [];
+    const start = opts.start ?? 1000;
+    for (let k = 0; k < seconds * 30; k++) {
+        const t = start + k / 30;
+        opts.move?.(inputs, t);
+        const out = layer.step(inputs, world(t, opts.world?.(t)));
+        frames.push({t, out, inputs: inputs.map((i) => ({...i, shared: {...i.shared}}))});
+    }
+    return frames;
+}
+const drawn = (i: ReactiveInput, o: ReactiveOut | undefined) => ({x: i.shared.x + (o?.dx ?? 0), z: i.shared.z + (o?.dz ?? 0)});
+
+// MARK: Profiles
+
+test("the profiles cover the Ark and the food links say who eats whom", () => {
+    for (const slug of ["red-deer", "eurasian-wolf", "meerkat", "red-squirrel", "chimpanzee", "bateleur"]) assert.ok(hasIntelProfile(slug), slug);
+    assert.ok(canEat(intelProfile("eurasian-wolf"), intelProfile("red-deer"), 46, 58), "a wolf can eat a red deer (named in its diet)");
+    assert.ok(!canEat(intelProfile("red-deer"), intelProfile("eurasian-wolf"), 58, 46), "a deer eats no wolf");
+    assert.ok(intelProfile("meerkat").sentinel, "meerkats keep a sentinel (stored text)");
+    assert.ok(intelProfile("chimpanzee").tools, "chimpanzees use tools (stored text)");
+    assert.ok(!intelProfile("red-deer").tools, "no tool use without stored text");
+    assert.ok(intelProfile("red-squirrel").forage.includes("cache"), "red squirrels cache (stored text)");
+    const unknown = intelProfile("not-a-species", "flying_bird", 50);
+    assert.ok(unknown.fallback && unknown.defence.includes("fly_off"));
+});
+
+// MARK: Heads
+
+test("heads turn within their body plan's limits, and never further", () => {
+    for (const [plan, limits] of Object.entries(HEAD_LIMITS)) {
+        for (let a = -Math.PI; a <= Math.PI; a += 0.1) {
+            const look = clampLook({yaw: a, pitch: a / 2}, limits);
+            assert.ok(Math.abs(look.yaw) <= limits.yaw + 1e-9, plan);
+            assert.ok(look.pitch <= limits.up + 1e-9 && look.pitch >= -limits.down - 1e-9, plan);
+            let head = {yaw: 0, pitch: 0};
+            for (let k = 0; k < 60; k++) head = stepHead(head, {yaw: a, pitch: a}, 1 / 30, limits);
+            assert.ok(Math.abs(head.yaw) <= limits.yaw + 1e-9 && head.pitch <= limits.up + 1e-9 && head.pitch >= -limits.down - 1e-9, plan);
+        }
+    }
+    assert.equal(headLimits("fish").yaw < 0.2, true, "a fish barely turns its head");
+    assert.ok(headLimits("flying_bird", "barn-owl").yaw > headLimits("flying_bird", "house-sparrow").yaw, "an owl turns further");
+    // Facing +z, a point to the right (+x) is a positive yaw.
+    assert.ok(lookAngles({x: 0, y: 1, z: 0}, 0, {x: 5, y: 1, z: 0}).yaw > 1.5);
+});
+
+test("a head turns at its own rate: no snap", () => {
+    const limits = headLimits("quadruped");
+    const next = stepHead({yaw: 0, pitch: 0}, {yaw: 1, pitch: 0}, 1 / 30, limits);
+    assert.ok(next.yaw > 0 && next.yaw <= limits.rate / 30 + 1e-9);
+});
+
+// MARK: Perception
+
+test("perception: sight in the open, not through a hill; hearing a moving animal; night shortens a day animal's sight", () => {
+    const deer = animal("deer", "red-deer", 0, 0);
+    const wolfStill = animal("wolf", "eurasian-wolf", 0, 18, {shared: {moving: false}});
+    assert.equal(perceive(deer, wolfStill, world(0)), "sight");
+    assert.equal(perceive(deer, wolfStill, world(0, {sight: () => 0})), null, "a still wolf behind a ridge is neither seen nor heard");
+    const wolfMoving = animal("wolf", "eurasian-wolf", 0, 18, {shared: {moving: true}});
+    assert.equal(perceive(deer, wolfMoving, world(0, {sight: () => 0})), "hearing", "a moving wolf is heard");
+    const chimp = animal("chimp", "chimpanzee", 0, 0);
+    const far = animal("wolf", "eurasian-wolf", 0, 30, {shared: {moving: false}});
+    assert.equal(perceive(chimp, far, world(0)), "sight");
+    assert.equal(perceive(chimp, far, world(0, {night: 1})), null, "at night a day animal does not see as far");
+});
+
+// MARK: Scenario 1: a predator passes a herd
+
+test("a predator passes a herd: the first to notice calls, the alarm runs through the herd, and they run to the herd and away", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const herd = Array.from({length: 7}, (_, i) => animal(`deer${i}`, "red-deer", (i % 4) * 2.2, Math.floor(i / 4) * 2.4, {shared: {doing: "graze", yaw: (i * 0.9) % 6}}));
+    const wolf = animal("wolf", "eurasian-wolf", -35, 4, {shared: {moving: true, doing: "wander", yaw: Math.PI / 2}});
+    const inputs = [...herd, wolf];
+    const frames = run(layer, inputs, 14, {move: (list, t) => {
+        const w = list.find((i) => i.id === "wolf")!;
+        w.shared.x = -35 + (t - 1000) * 3.2;
+    }});
+    const calls = frames.flatMap((f) => Array.from(f.out.entries()).filter(([, o]) => o.called).map(([id]) => ({id, t: f.t})));
+    assert.ok(calls.length >= 1, "someone calls the alarm");
+    const reactedAt = new Map<string, number>();
+    for (const f of frames) for (const d of herd) {
+        const o = f.out.get(d.id);
+        if (o && (o.action === "flee" || o.action === "alert" || o.action === "freeze") && !reactedAt.has(d.id)) reactedAt.set(d.id, f.t);
+    }
+    assert.equal(reactedAt.size, herd.length, "every deer reacts");
+    const times = Array.from(reactedAt.values()).sort();
+    assert.ok(times[times.length - 1] - times[0] > 0.05, "the reaction spreads (not all on one frame)");
+    const fled = herd.filter((d) => frames.some((f) => f.out.get(d.id)?.action === "flee"));
+    assert.ok(fled.length >= 5, `most of the herd runs (${fled.length})`);
+    // Running away: at the moment of their flight, offsets point away from the wolf.
+    for (const d of fled) {
+        const f = frames.find((fr) => fr.out.get(d.id)?.action === "flee" && Math.hypot(fr.out.get(d.id)!.dx, fr.out.get(d.id)!.dz) > 0.8)!;
+        if (!f) continue;
+        const o = f.out.get(d.id)!;
+        const w = f.inputs.find((i) => i.id === "wolf")!;
+        const away = (d.shared.x - w.shared.x) * o.dx + (d.shared.z - w.shared.z) * o.dz;
+        assert.ok(away > 0, `${d.id} runs away from the wolf`);
+    }
+    // Heads up and toward the wolf when alert.
+    const alert = frames.flatMap((f) => Array.from(f.out.entries()).filter(([id, o]) => id !== "wolf" && o.looking === "wolf"));
+    assert.ok(alert.length > 0, "they look at the wolf");
+});
+
+// MARK: Scenario 2: a pack acts out a hunt (the pack mates not in the act stalk and stop short)
+
+test("a pack not acting out a meal stalks, fans out and never closes on the prey", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const deer = animal("deer", "red-deer", 0, 0, {shared: {doing: "graze"}});
+    const wolves = [0, 1, 2].map((i) => animal(`wolf${i}`, "eurasian-wolf", -10 + i * 1.5, -8 - i, {shared: {doing: "wander", yaw: 0.6}}));
+    const inputs = [deer, ...wolves];
+    const frames = run(layer, inputs, 12);
+    let stalked = 0;
+    for (const f of frames) for (const w of wolves) {
+        const o = f.out.get(w.id);
+        if (o?.action === "stalk") stalked++;
+        const a = drawn(w, o);
+        const b = drawn(deer, f.out.get("deer"));
+        const shared = Math.hypot(w.shared.x - deer.shared.x, w.shared.z - deer.shared.z);
+        assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= Math.min(minGap(w, deer), shared) - 1e-6, "never nearer than the gap");
+    }
+    assert.ok(stalked > 0, "the wolves stalk");
+    const last = frames[frames.length - 1].out;
+    const sides = wolves.map((w) => Math.sign((last.get(w.id)?.dx ?? 0) * 1 - (last.get(w.id)?.dz ?? 0) * 0));
+    assert.ok(new Set(wolves.map((w) => Math.round((last.get(w.id)?.dx ?? 0) * 10))).size > 1 || new Set(sides).size > 1, "they fan out");
+    // An acting predator (a server meal) is left entirely to the act.
+    const acting = new ReactiveLayer();
+    const out = acting.step([deer, {...wolves[0], acting: true}], world(1));
+    assert.deepEqual([out.get(wolves[0].id)!.dx, out.get(wolves[0].id)!.dz, out.get(wolves[0].id)!.headYaw], [0, 0, 0]);
+});
+
+// MARK: Scenario 3: a squirrel caches and returns
+
+test("a squirrel buries food and comes back to it", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const squirrel = animal("sq", "red-squirrel", 0, 0, {shared: {doing: "forage"}});
+    const frames = run(layer, [squirrel], 90);
+    const actions = frames.map((f) => f.out.get("sq")!.action);
+    const buried = actions.indexOf("cache_bury");
+    assert.ok(buried >= 0, "it buries");
+    const cache = layer.memoryOf("sq")?.spots.cache;
+    const returned = actions.indexOf("cache_return");
+    assert.ok(returned > buried, "it comes back later");
+    if (cache) {
+        const at = frames.slice(returned).find((f) => {
+            const o = f.out.get("sq")!;
+            return Math.hypot(o.dx - (cache.x - squirrel.shared.x), o.dz - (cache.z - squirrel.shared.z)) < 0.3;
+        });
+        assert.ok(at, "and reaches the cache");
+    }
+});
+
+// MARK: Scenario 4: avoiding a spot after a predator, and learning
+
+test("after a predator, an animal remembers the spot, keeps away from it and reacts faster the second time", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const deer = animal("deer", "red-deer", 0, 0, {shared: {doing: "graze"}});
+    const wolf = animal("wolf", "eurasian-wolf", 9, 0, {shared: {doing: "wander", moving: true}});
+    const first = run(layer, [deer, wolf], 4);
+    const firstFlee = first.findIndex((f) => f.out.get("deer")!.action === "flee");
+    assert.ok(firstFlee >= 0);
+    // The wolf goes; the deer calms down but keeps away from where it was.
+    const after = run(layer, [deer], 40, {start: 1004});
+    const mem = layer.memoryOf("deer")!;
+    assert.ok(mem.predators.some((m) => m.slug === "eurasian-wolf"), "it remembers the wolf there");
+    const mid = after[Math.floor(after.length / 3)].out.get("deer")!;
+    assert.ok(mid.dx < 0, "it keeps to the far side from the wolf's spot");
+    const calm = after[after.length - 1].out.get("deer")!;
+    assert.ok(!["flee", "alert", "freeze"].includes(calm.action), "and calms down");
+    const second = run(layer, [deer, wolf], 4, {start: 1044});
+    const secondFlee = second.findIndex((f) => f.out.get("deer")!.action === "flee");
+    assert.ok(secondFlee >= 0 && secondFlee < firstFlee, `faster the second time (${secondFlee} < ${firstFlee} frames)`);
+});
+
+// MARK: Scenario 5: parents shield young
+
+test("a parent puts itself between its young and a predator; the young hides behind", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const mother = animal("mother", "red-deer", 0, 0, {shared: {doing: "graze"}});
+    const calf = animal("calf", "red-deer", 1.2, 0.5, {parentId: "mother", length: 0.7, shared: {doing: "graze"}});
+    const wolf = animal("wolf", "eurasian-wolf", 0, 14, {shared: {doing: "wander", moving: true, yaw: Math.PI}});
+    const frames = run(layer, [mother, calf, wolf], 5);
+    const shielded = frames.filter((f) => ["shield_young", "threat_display"].includes(f.out.get("mother")!.action));
+    assert.ok(shielded.length > 0, "the mother shields");
+    const f = shielded[shielded.length - 1];
+    const m = drawn(mother, f.out.get("mother"));
+    const c = drawn(calf, f.out.get("calf"));
+    assert.ok(Math.hypot(m.x - wolf.shared.x, m.z - wolf.shared.z) < Math.hypot(c.x - wolf.shared.x, c.z - wolf.shared.z), "she is nearer the wolf than her calf");
+    assert.ok(frames.some((fr) => fr.out.get("calf")!.action === "hide_behind_parent"), "the calf keeps behind her");
+});
+
+// MARK: Scenario 6: storm behaviour
+
+test("in a storm, animals go to shelter and keep low", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const herd = Array.from({length: 6}, (_, i) => animal(`z${i}`, "plains-zebra", i * 3, 0, {shared: {doing: "graze"}}));
+    const shade = {x: 6, z: 2};
+    const frames = run(layer, herd, 30, {world: () => ({weather: {rain: 1, wind: 0.9, windDirection: 1, fog: 0.3, storm: 1}, refuge: (x: number, z: number, kind) => (kind === "shade" || kind === "cover" ? shade : null)})});
+    const sheltering = herd.filter((h) => frames.slice(-60).some((f) => f.out.get(h.id)?.action === "shelter"));
+    assert.ok(sheltering.length >= 4, `most shelter (${sheltering.length})`);
+    const low = frames[frames.length - 1].out;
+    assert.ok(Array.from(low.values()).filter((o) => o.action === "shelter").every((o) => o.crouch > 0.3), "keeping low");
+    const calm = run(new ReactiveLayer(), herd.map((h) => ({...h, shared: {...h.shared}})), 30);
+    assert.ok(!calm.some((f) => Array.from(f.out.values()).some((o) => o.action === "shelter")), "not in fine weather");
+});
+
+// MARK: Scenario 7: a curious, sharp animal investigates the camera
+
+test("a curious, sharp animal comes to look at the camera; a dull one does not", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const ids = Array.from({length: 8}, (_, i) => `chimp${i}`);
+    const chimps = ids.map((id, i) => animal(id, "chimpanzee", -8 + i * 2.2, -12, {shared: {doing: "rest", yaw: Math.PI}}));
+    const frames = run(layer, chimps, 40, {world: () => ({camera: {x: 0, y: 1.6, z: -18}})});
+    const investigating = chimps.filter((c) => frames.some((f) => f.out.get(c.id)!.action === "investigate_camera"));
+    assert.ok(investigating.length >= 1, "at least one comes to look");
+    for (const c of investigating) {
+        const f = frames.filter((fr) => fr.out.get(c.id)!.action === "investigate_camera").pop()!;
+        const o = f.out.get(c.id)!;
+        assert.equal(o.looking, "camera");
+        const before = Math.hypot(c.shared.x - 0, c.shared.z + 18);
+        const now = Math.hypot(c.shared.x + o.dx, c.shared.z + o.dz + 18);
+        assert.ok(now < before, "closer to the camera");
+        assert.ok(now >= 1.2, "never right up to it");
+    }
+    // A low-intelligence animal (a woodlouse-like instinct band) only glances.
+    const dull = {...animal("dull", "red-deer", 0, -13, {shared: {doing: "rest"}}), intel: {...intelProfile("red-deer"), stat: 8, band: "instinct" as const, repertoire: 3, curiosity: 0.1}};
+    const dullFrames = run(new ReactiveLayer(), [dull], 40, {world: () => ({camera: {x: 0, y: 1.6, z: -18}})});
+    assert.ok(!dullFrames.some((f) => f.out.get("dull")!.action === "investigate_camera"));
+});
+
+// MARK: Sentinels and many eyes
+
+test("a sentinel group keeps one on watch at a time (rotating), the rest feed; it calls first at a raptor", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const mob = Array.from({length: 6}, (_, i) => animal(`mk${i}`, "meerkat", (i % 3) * 1.2, Math.floor(i / 3) * 1.2, {shared: {doing: "forage"}}));
+    const frames = run(layer, mob, 100);
+    const watchers = new Set<string>();
+    let maxAtOnce = 0;
+    for (const f of frames) {
+        const on = mob.filter((m) => f.out.get(m.id)!.action === "sentinel");
+        on.forEach((m) => watchers.add(m.id));
+        maxAtOnce = Math.max(maxAtOnce, on.length);
+    }
+    assert.ok(watchers.size >= 2, `the duty rotates (${watchers.size})`);
+    assert.ok(maxAtOnce <= 2, "one on watch at a time (two only at a hand-over)");
+    const feeding = frames.slice(-300).reduce((n, f) => n + mob.filter((m) => f.out.get(m.id)!.action === "feed").length, 0);
+    assert.ok(feeding > 300, "the others feed");
+    // A raptor comes over: the one on watch sees it first (it looks further) and calls; the mob runs for the burrows.
+    // The martial eagle is the meerkat's main aerial predator and its stored profile swoops. (The bateleur this test
+    // used before is a carrion-first eater since the profile review, so it gets no hunting default and is no threat
+    // in the air: the fixture went stale, the logic did not.)
+    const watcher = mob.find((m) => frames[frames.length - 1].out.get(m.id)!.action === "sentinel");
+    assert.ok(watcher, "one is on watch when the raptor comes");
+    assert.ok(intelProfile("martial-eagle").hunt.includes("aerial_swoop") && !intelProfile("martial-eagle").fallback, "the raptor is a stored aerial hunter");
+    const raptor = animal("eagle", "martial-eagle", 30, 4, {shared: {aloft: true, moving: true, y: 12, doing: "soar"}});
+    const after = run(layer, [...mob, raptor], 6, {start: 1100, move: (list, t) => {
+        list.find((i) => i.id === "eagle")!.shared.x = 30 - (t - 1100) * 5;
+    }});
+    const firstCall = after.flatMap((f) => Array.from(f.out.entries()).filter(([, o]) => o.called).map(([id]) => id))[0];
+    assert.ok(firstCall, "someone calls");
+    assert.equal(firstCall, watcher!.id, "the sentinel calls first");
+    const ran = mob.filter((m) => after.some((f) => ["flee", "freeze", "alert"].includes(f.out.get(m.id)!.action)));
+    assert.equal(ran.length, mob.length, "the whole mob reacts");
+});
+
+test("many eyes: an animal alone scans more than one in a big herd", () => {
+    const scanShare = (n: number) => {
+        const layer = new ReactiveLayer({tier: "high"});
+        const herd = Array.from({length: n}, (_, i) => animal(`d${i}`, "red-deer", (i % 5) * 2, Math.floor(i / 5) * 2, {shared: {doing: "graze"}}));
+        const frames = run(layer, herd, 120);
+        let scans = 0;
+        for (const f of frames) scans += Array.from(f.out.values()).filter((o) => o.action === "scan").length;
+        return scans / (frames.length * n);
+    };
+    const alone = scanShare(1);
+    const many = scanShare(12);
+    assert.ok(alone > many * 1.3, `alone ${alone.toFixed(2)} vs herd ${many.toFixed(2)}`);
+});
+
+test("dominance: the more dominant drinks first, the other waits its turn", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const top = animal("top", "red-deer", 0, 0, {dominance: 80, shared: {doing: "drink"}});
+    const low = animal("low", "red-deer", 1.4, 0, {dominance: 20, shared: {doing: "drink"}});
+    const frames = run(layer, [top, low], 8);
+    assert.ok(frames.some((f) => f.out.get("low")!.action === "wait_turn"));
+    assert.ok(!frames.some((f) => f.out.get("top")!.action === "wait_turn"));
+});
+
+// MARK: The shared layer is a hard constraint
+
+test("the reactive layer never moves an animal outside its envelope, never wakes a sleeper, and leaves acts alone", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const animals: ReactiveInput[] = [];
+    for (let i = 0; i < 30; i++) animals.push(animal(`d${i}`, i % 3 === 0 ? "plains-zebra" : "red-deer", (i % 6) * 3, Math.floor(i / 6) * 3, {shared: {doing: ["graze", "rest", "drink", "wander"][i % 4], moving: i % 4 === 3}}));
+    for (let i = 0; i < 4; i++) animals.push(animal(`w${i}`, "eurasian-wolf", -20 + i * 2, -10, {shared: {doing: "wander", moving: true}}));
+    for (let i = 0; i < 6; i++) animals[i * 5].asleep = true;
+    animals[7].acting = true;
+    const sleepers = animals.filter((a) => a.asleep);
+    let previous = new Map<string, number>();
+    const frames = run(layer, animals, 25, {
+        move: (list, t) => {
+            const k = t - 1000;
+            for (const a of list) {
+                if (a.id.startsWith("w")) {
+                    a.shared.x = -20 + k * 2.4 + Number(a.id.slice(1)) * 2;
+                    a.shared.z = -10 + Math.sin(k * 0.3) * 8;
+                } else if (a.shared.moving) a.shared.x += 0.02;
+            }
+        }
+    });
+    for (const f of frames) {
+        for (const a of f.inputs) {
+            const o = f.out.get(a.id);
+            if (!o) continue;
+            const off = Math.hypot(o.dx, o.dz);
+            assert.ok(off <= reactiveEnvelope(a, true) + 1e-6, `${a.id} inside its envelope`);
+            if (a.acting) assert.deepEqual([o.dx, o.dz, o.headYaw, o.headPitch, o.bodyYaw], [0, 0, 0, 0, 0]);
+            if (a.asleep) {
+                assert.equal(o.action, "asleep", "asleep stays asleep");
+                assert.equal(o.called, false);
+                assert.ok(off <= (previous.get(a.id) ?? Infinity) + 1e-9, "a sleeper's offset only eases back");
+                previous.set(a.id, off);
+            }
+        }
+    }
+    assert.ok(sleepers.length === 6);
+    // Something did happen to the awake ones.
+    assert.ok(frames.some((f) => Array.from(f.out.values()).some((o) => o.action === "flee")));
+});
+
+// MARK: Variety
+
+test("variety: individuals of one herd choose differently and change at different moments", () => {
+    const layer = new ReactiveLayer({tier: "high"});
+    const herd = Array.from({length: 10}, (_, i) => animal(`d${i}`, "red-deer", (i % 5) * 2.5, Math.floor(i / 5) * 2.5, {shared: {doing: i % 2 ? "graze" : "rest", yaw: i}}));
+    const frames = run(layer, herd, 120);
+    const seqs = herd.map((h) => frames.map((f) => f.out.get(h.id)!.action).join(","));
+    assert.equal(new Set(seqs).size, herd.length, "no two the same over two minutes");
+    // Changes at different moments: rarely more than a third of the herd switches on the same frame.
+    let together = 0;
+    for (let k = 1; k < frames.length; k++) {
+        const switched = herd.filter((h) => frames[k].out.get(h.id)!.action !== frames[k - 1].out.get(h.id)!.action).length;
+        if (switched > herd.length / 3) together++;
+    }
+    assert.ok(together < 3, `switching in step ${together} times`);
+    // Heads move: every one turns its head at some point, and not in step.
+    const yaw = herd.map((h) => frames.map((f) => f.out.get(h.id)!.headYaw));
+    for (const y of yaw) assert.ok(Math.max(...y) - Math.min(...y) > 0.3, "it looks round");
+    const corr = (a: number[], b: number[]) => {
+        const ma = a.reduce((s, v) => s + v, 0) / a.length;
+        const mb = b.reduce((s, v) => s + v, 0) / b.length;
+        let num = 0, da = 0, db = 0;
+        for (let i = 0; i < a.length; i++) {
+            num += (a[i] - ma) * (b[i] - mb);
+            da += (a[i] - ma) ** 2;
+            db += (b[i] - mb) ** 2;
+        }
+        return num / Math.sqrt(da * db || 1);
+    };
+    let high = 0;
+    for (let i = 0; i < yaw.length; i++) for (let j = i + 1; j < yaw.length; j++) if (Math.abs(corr(yaw[i], yaw[j])) > 0.8) high++;
+    assert.ok(high <= 2, `heads in step: ${high} pairs`);
+});
+
+test("the same inputs give the same frames (no hidden randomness)", () => {
+    const make = () => [animal("a", "red-deer", 0, 0), animal("b", "red-deer", 2, 0), animal("w", "eurasian-wolf", 15, 0, {shared: {moving: true}})];
+    const one = run(new ReactiveLayer(), make(), 6);
+    const two = run(new ReactiveLayer(), make(), 6);
+    for (let k = 0; k < one.length; k++) for (const id of ["a", "b", "w"]) assert.deepEqual(one[k].out.get(id), two[k].out.get(id));
+});
+
+test("the budget: only the nearest animals within the tier's radius act", () => {
+    const layer = new ReactiveLayer({tier: "low"});
+    const many = Array.from({length: 200}, (_, i) => animal(`d${i}`, "red-deer", (i % 20) * 3, Math.floor(i / 20) * 3 - 20));
+    const out = layer.step(many, world(1, {camera: {x: 0, y: 2, z: -20}}));
+    assert.ok(out.size <= layer.budget.agents);
+    for (const id of Array.from(out.keys())) {
+        const a = many.find((m) => m.id === id)!;
+        assert.ok(Math.hypot(a.shared.x, a.shared.z + 20) <= layer.budget.radius);
+    }
+    assert.equal(new ReactiveLayer({tier: "lite"}).step(many, world(1)).size, 0, "lite: off");
+});

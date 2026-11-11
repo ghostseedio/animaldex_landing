@@ -1,0 +1,1199 @@
+/**
+ * The local reactive layer (visual only): what an animal near the camera
+ * does moment to moment on top of its shared behaviour. It turns its head to
+ * look round, to a sound, to another animal, to the camera; it sees or hears
+ * a predator, freezes, calls the alarm and runs for cover, the water, a tree
+ * or its herd, and the alarm runs through the group; a predator that is not
+ * acting out a server meal watches or stalks its prey and never catches
+ * anything; parents put themselves between their young and a threat; a
+ * dominant animal drinks first; a sentinel keeps watch while the rest feed;
+ * curious, sharp animals come to look at the camera; the young play; rain
+ * sends animals to shelter; a squirrel buries a nut and comes back to it.
+ *
+ * Two layers. The shared layer (`behaviour-schedule.ts`) says where each
+ * animal is and what it is broadly doing, from the time and its id, the same
+ * for every viewer and the livestream. This layer only adds to it, for the
+ * animals close to the camera, and may differ a little between viewers. It
+ * never contradicts the shared layer:
+ *   - an animal the shared layer has asleep stays asleep (no reaction, no
+ *     look, no call; any offset only eases back);
+ *   - an animal acting out a server event (an act, a moment, the visitor) is
+ *     left entirely to it;
+ *   - an animal in the air is left to its flight;
+ *   - every offset stays inside the animal's envelope round its shared
+ *     position (`reactiveEnvelope`), and eases back when the reaction ends.
+ * Nothing here decides a meal, a birth or a death, and nothing reaches the
+ * server: a stalking predator always stops short (`minGap`).
+ *
+ * Choices are utility scores: needs that rise and fall (energy, thirst,
+ * hunger, safety, company, curiosity, comfort) against the hour, the weather
+ * and what is around, weighted by the animal's seeded personality
+ * (`animalPersonality`), its intelligence (how many kinds of behaviour it
+ * has, `intelligence-profile.ts`) and a seeded, individually-timed noise, so
+ * no two animals of a herd do the same thing at the same moment.
+ *
+ * Pure apart from the state it keeps per animal: given the same inputs and
+ * the same frames it does the same thing (the tests rely on it).
+ */
+
+import {canEat, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
+import {clampLook, headLimits, lookAngles, stepHead, wrapAngle, type HeadLimits} from "@/ark-scene/head-look";
+import {animalPersonality, unit, type ArkPersonality} from "@/lib/ark-clock";
+import {alarmLevel} from "@/lib/ark-sound";
+
+export type Vec3 = {x: number; y: number; z: number};
+
+// MARK: Inputs
+
+/** What the shared layer says now (its pose and its doing). */
+export type SharedPose = {
+    x: number;
+    y: number;
+    z: number;
+    yaw: number;
+    moving: boolean;
+    aloft: boolean;
+    doing: string;
+    /** The place (attach point id) its trip goes to, when it has one: a water edge, a flower, a perch. */
+    spot?: string | null;
+};
+
+export type ReactiveInput = {
+    id: string;
+    slug: string;
+    plan: string;
+    /** Drawn length (m). */
+    length: number;
+    /** The size and dominance stats (0–100). */
+    size: number | null;
+    dominance: number | null;
+    social: string;
+    diet: string;
+    intel: ArkIntelProfile;
+    shared: SharedPose;
+    /** The shared layer has it asleep. */
+    asleep: boolean;
+    /** Acting out a server event (an act, a moment, the visitor): the reactive layer leaves it alone. */
+    acting: boolean;
+    /** A young one's parent (`ark-age.ts` follow), when it keeps to one. */
+    parentId?: string | null;
+    /** 0–1 how much it plays (`ark-age.ts`), on top of its species'. */
+    youngPlay?: number;
+    /** Its head's height above its feet (m). */
+    headHeight?: number;
+};
+
+export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
+
+export type ReactiveWorld = {
+    /** Seconds (world time). */
+    now: number;
+    dt: number;
+    /** The island's hour (0–24). */
+    hours: number;
+    /** 0 day … 1 full night. */
+    night: number;
+    weather: ReactiveWeather;
+    camera: Vec3 | null;
+    /** 0 blocked … 1 clear: terrain and dense vegetation between two points (eye heights). */
+    sight?: (from: Vec3, to: Vec3) => number;
+    /** The nearest refuge of a kind within r of a point, or null. */
+    refuge?: (x: number, z: number, kind: RefugeKind, r: number) => {x: number; z: number} | null;
+};
+
+export type RefugeKind = "cover" | "water" | "tree" | "shade";
+
+// MARK: Outputs
+
+export type ReactiveAction =
+    | "off"
+    | "asleep"
+    | "aloft"
+    | "scan"
+    | "feed"
+    | "drink"
+    | "look_kin"
+    | "approach_kin"
+    | "groom"
+    | "doze"
+    | "watch_camera"
+    | "investigate_camera"
+    | "back_off_camera"
+    | "play"
+    | "shelter"
+    | "use_tool"
+    | "cache_bury"
+    | "cache_return"
+    | "follow_mixed"
+    | "wait_turn"
+    | "sentinel"
+    | "alert"
+    | "freeze"
+    | "flee"
+    | "threat_display"
+    | "play_dead"
+    | "shield_young"
+    | "hide_behind_parent"
+    | "stalk"
+    | "watch_prey"
+    | "recover"
+    | "startle";
+
+export type ReactiveOut = {
+    /** The offset from the shared position (m, world x and z). */
+    dx: number;
+    dz: number;
+    /** Extra body yaw on top of the shared yaw (radians). */
+    bodyYaw: number;
+    /** The head's yaw and pitch relative to the body (radians), and how much of it to draw (0 none … 1). */
+    headYaw: number;
+    headPitch: number;
+    headWeight: number;
+    /** 0 standing … 1 low (freezing, sheltering, stalking). */
+    crouch: number;
+    action: ReactiveAction;
+    /** It calls the alarm this frame (the sound scheduler's `alarm` mood starts now). */
+    called: boolean;
+    /** 0–1 how alarmed it is now (the sound scheduler's alarm mood while > 0.3). */
+    alarmed: number;
+    /** What it is looking at: an animal's id, "camera", "sound", "spot", or null (scanning). */
+    looking: string | null;
+};
+
+const ZERO_OUT: ReactiveOut = Object.freeze({dx: 0, dz: 0, bodyYaw: 0, headYaw: 0, headPitch: 0, headWeight: 0, crouch: 0, action: "off", called: false, alarmed: 0, looking: null}) as ReactiveOut;
+
+// MARK: The budget per quality tier
+
+export type ReactiveTier = "high" | "medium" | "low" | "lite";
+export type ReactiveBudget = {
+    /** Only animals this close to the camera (m) get the layer. */
+    radius: number;
+    /** At most this many of them (the nearest). */
+    agents: number;
+    /** Each re-perceives once every this many frames (staggered by id). */
+    perceiveEvery: number;
+    /** Samples along a line of sight. */
+    sightSamples: number;
+    /** How far it looks for others (m): the longest sight it may use. */
+    reach: number;
+};
+export const REACTIVE_BUDGET: Record<ReactiveTier, ReactiveBudget> = {
+    high: {radius: 70, agents: 90, perceiveEvery: 2, sightSamples: 8, reach: 90},
+    medium: {radius: 50, agents: 48, perceiveEvery: 3, sightSamples: 6, reach: 70},
+    low: {radius: 32, agents: 20, perceiveEvery: 4, sightSamples: 4, reach: 50},
+    lite: {radius: 0, agents: 0, perceiveEvery: 8, sightSamples: 0, reach: 0}
+};
+
+// MARK: The envelope
+
+/**
+ * How far the reactive layer may move an animal from its shared position (m): a small step for its own business,
+ * more to get away from a predator. The behaviour lane owns the number (it can replace this function: the scene
+ * passes `envelope` to the layer); it is never more than a few body lengths, and the animal always comes back.
+ */
+export type EnvelopeFn = (input: ReactiveInput, fleeing: boolean) => number;
+export const reactiveEnvelope: EnvelopeFn = (input, fleeing) => {
+    if (input.acting || input.shared.aloft) return 0;
+    const base = Math.min(Math.max(0.8 * input.length + 0.4, 0.5), 2.5);
+    if (!fleeing) return base;
+    return Math.min(Math.max(3.5 * input.length + 1.5, 2), 9);
+};
+
+/** How close a stalking predator ever gets to its prey (m): never close enough to catch it. */
+export function minGap(predator: ReactiveInput, prey: ReactiveInput): number {
+    return Math.max(1.6 * (predator.length + prey.length), prey.intel.flight * 0.6, 1.2);
+}
+
+// MARK: Perception
+
+export type Perceived = {id: string; how: "sight" | "hearing" | "smell"; distance: number; x: number; z: number; threat: boolean; prey: boolean};
+
+const LOUD_PLANS = new Set(["quadruped", "primate", "walking_bird", "flightless_bird"]);
+
+/**
+ * Whether `me` could perceive `other` now (sight in range, in front enough, with a clear line; or hearing; or smell
+ * with the wind from it). Night shortens sight by the species' night vision; rain dulls hearing; fog shortens sight.
+ */
+export function perceive(me: ReactiveInput, other: ReactiveInput, world: ReactiveWorld, sentinelBoost = 1, samples = 6, clearLine?: (eye: Vec3, target: Vec3) => number): Perceived["how"] | null {
+    const dx = other.shared.x - me.shared.x;
+    const dz = other.shared.z - me.shared.z;
+    const d = Math.hypot(dx, dz);
+    const p = me.intel;
+    const nightFactor = 1 - world.night * (1 - p.night);
+    const fog = 1 - 0.6 * world.weather.fog;
+    // Moving things stand out; a stalking or still one less; bigger ones more.
+    const conspicuous = (other.shared.moving ? 1.25 : 0.7) * (0.7 + Math.min(other.length, 3) * 0.15) * (other.shared.aloft ? 1.2 : 1);
+    const sightRange = p.sight * nightFactor * fog * conspicuous * sentinelBoost;
+    if (d < sightRange) {
+        // Prey see nearly all round; a hunter's eyes face forward.
+        const hunter = p.hunt.length > 0 && !p.hunt.every((h) => h === "filter" || h === "scavenge");
+        const ahead = Math.abs(wrapAngle(Math.atan2(dx, dz) - me.shared.yaw));
+        const fov = hunter ? 1.6 : 2.7;
+        if (ahead <= fov || d < me.length * 2) {
+            const eye = {x: me.shared.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z};
+            const target = {x: other.shared.x, y: other.shared.y + other.length * 0.4, z: other.shared.z};
+            const line = clearLine ?? world.sight;
+            const clear = line && samples > 0 ? line(eye, target) : 1;
+            if (clear > 0.45) return "sight";
+        }
+    }
+    const loud = other.shared.moving ? (LOUD_PLANS.has(other.plan) ? 1 : 0.6) * (1 + Math.min(other.length, 3) * 0.2) : 0.25;
+    const hearingRange = p.hearing * loud * (1 - 0.5 * world.weather.rain) * (1 - 0.3 * world.weather.wind);
+    if (d < hearingRange) return "hearing";
+    if (d < p.smell * (0.5 + world.weather.wind) && d > 0.01) {
+        // The wind blows from it to me: its direction (toward which it blows) points from other to me.
+        const toMe = {x: -dx / d, z: -dz / d};
+        const along = Math.cos(world.weather.windDirection) * toMe.x + Math.sin(world.weather.windDirection) * toMe.z;
+        if (along > 0.3) return "smell";
+    }
+    return null;
+}
+
+// MARK: State per animal
+
+type Needs = {energy: number; thirst: number; hunger: number; safety: number; social: number; curiosity: number; comfort: number};
+type Memory = {
+    /** Predators seen: where, when, how strongly remembered (grows with each sighting, by how fast it learns). */
+    predators: Array<{slug: string; x: number; z: number; t: number; strength: number}>;
+    /** Where something startled it (the camera too close, a thunderclap). */
+    disturbances: Array<{x: number; z: number; t: number}>;
+    /** Its good spots: water, food, its roost, and a cache it made. */
+    spots: {water?: {x: number; z: number}; food?: {x: number; z: number}; roost?: {x: number; z: number}; cache?: {x: number; z: number; t: number}};
+};
+
+type Agent = {
+    id: string;
+    personality: ArkPersonality;
+    offset: {x: number; z: number};
+    head: {yaw: number; pitch: number};
+    bodyYaw: number;
+    crouch: number;
+    needs: Needs;
+    memory: Memory;
+    /** The threat it is reacting to (id, where it was last perceived, when), and when it first noticed it. */
+    threat: {id: string; slug: string; x: number; z: number; seen: number; noticed: number} | null;
+    /** When it last heard an alarm (and where from), and when it reacts to it. */
+    heard: {x: number; z: number; tx: number; tz: number; at: number; reactAt: number; caller: string} | null;
+    /** The prey it is watching or stalking. */
+    prey: {id: string; x: number; z: number; seen: number} | null;
+    /** The last time it reacted (alarm level counts from here) and called. */
+    reactedAt: number;
+    calledAt: number;
+    /** Its current calm choice, until when, and its own look target. */
+    choice: ReactiveAction;
+    choiceUntil: number;
+    lookAt: Vec3 | null;
+    lookLabel: string | null;
+    scanUntil: number;
+    scanIndex: number;
+    /** Perception result, kept between its perception frames. */
+    perceived: Perceived[];
+    nextPerceive: number;
+    lastSeenAt: number;
+    mode: ReactiveAction;
+    /** On sentinel duty now (its group's turn). */
+    onWatch: boolean;
+};
+
+function newAgent(id: string, now: number): Agent {
+    const u = (k: string) => unit(id, k);
+    return {
+        id,
+        personality: animalPersonality(id),
+        offset: {x: 0, z: 0},
+        head: {yaw: 0, pitch: 0},
+        bodyYaw: 0,
+        crouch: 0,
+        // Each starts somewhere different on its needs, so a herd is not in step.
+        needs: {energy: 0.5 + 0.5 * u("energy"), thirst: 0.5 * u("thirst"), hunger: 0.6 * u("hunger"), safety: 1, social: 0.3 * u("social"), curiosity: 0.6 * u("curious"), comfort: 1},
+        memory: {predators: [], disturbances: [], spots: {}},
+        threat: null,
+        heard: null,
+        prey: null,
+        reactedAt: -1e9,
+        calledAt: -1e9,
+        choice: "scan",
+        choiceUntil: now + 1 + 4 * u("first"),
+        lookAt: null,
+        lookLabel: null,
+        scanUntil: now,
+        scanIndex: Math.floor(u("scan") * 1000),
+        perceived: [],
+        nextPerceive: 0,
+        lastSeenAt: now,
+        mode: "scan",
+        onWatch: false
+    };
+}
+
+// MARK: The layer
+
+export type ReactiveStats = {agents: number; perceptions: number; sightChecks: number; ms: number; alarms: number};
+
+/** A call: who, where it called from, where the threat it saw was, when. */
+export type AlarmCall = {caller: string; slug: string; x: number; z: number; tx: number; tz: number; at: number; threat: string};
+
+export type ReactiveOptions = {tier?: ReactiveTier; envelope?: EnvelopeFn; budget?: Partial<ReactiveBudget>};
+
+const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
+const FEEDING = new Set(["forage", "graze", "visit_flowers", "drink"]);
+const RESTING = new Set(["rest", "idle", "groom", "bask", "perch", "hide"]);
+
+export class ReactiveLayer {
+    private agents = new Map<string, Agent>();
+    private frame = 0;
+    private alarms: AlarmCall[] = [];
+    /** Who could eat whom, per species pair (the food links don't change). */
+    private eatsCache = new Map<string, Map<string, boolean>>();
+    /** Lines of sight per pair, kept half a second (the terrain doesn't move; an animal walks a step). */
+    private sightCache = new Map<string, {t: number; v: number}>();
+    private around: (x: number, z: number, r: number) => ReactiveInput[] = () => [];
+    budget: ReactiveBudget;
+    private envelope: EnvelopeFn;
+    stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
+
+    constructor(options: ReactiveOptions = {}) {
+        this.budget = {...REACTIVE_BUDGET[options.tier ?? "high"], ...(options.budget ?? {})};
+        this.envelope = options.envelope ?? reactiveEnvelope;
+    }
+
+    setTier(tier: ReactiveTier) {
+        this.budget = {...REACTIVE_BUDGET[tier]};
+    }
+
+    /** The calls made in the last few seconds (for the sound scheduler and tests). */
+    recentAlarms(): readonly AlarmCall[] {
+        return this.alarms;
+    }
+
+    /** Its memory, for tests and the tap card's debug line. */
+    memoryOf(id: string): Memory | null {
+        return this.agents.get(id)?.memory ?? null;
+    }
+
+    /**
+     * One frame. `inputs` are the animals near the camera and the ones that could be seen from there (the scene
+     * passes everything within the budget's radius plus its reach); only the nearest `agents` within `radius` of the
+     * camera act. Returns an output for every input (the rest get none: zero).
+     */
+    step(inputs: ReactiveInput[], world: ReactiveWorld): Map<string, ReactiveOut> {
+        const t0 = typeof performance !== "undefined" ? performance.now() : Date.now();
+        this.frame++;
+        const out = new Map<string, ReactiveOut>();
+        const stats: ReactiveStats = {agents: 0, perceptions: 0, sightChecks: 0, ms: 0, alarms: 0};
+        const cam = world.camera;
+        const byId = new Map(inputs.map((i) => [i.id, i]));
+        const near = cam
+            ? inputs
+                  .map((i) => ({i, d: Math.hypot(i.shared.x - cam.x, i.shared.z - cam.z)}))
+                  .filter((c) => c.d <= this.budget.radius)
+                  .sort((a, b) => a.d - b.d || (a.i.id < b.i.id ? -1 : 1))
+                  .slice(0, this.budget.agents)
+                  .map((c) => c.i)
+            : [];
+        // A coarse grid of every input (numeric keys), for "who is near me".
+        const cell = 8;
+        const key = (cx: number, cz: number) => (cx + 4096) * 8192 + (cz + 4096);
+        const grid = new Map<number, ReactiveInput[]>();
+        for (const i of inputs) {
+            const k = key(Math.floor(i.shared.x / cell), Math.floor(i.shared.z / cell));
+            const list = grid.get(k);
+            if (list) list.push(i);
+            else grid.set(k, [i]);
+        }
+        const around = (x: number, z: number, r: number): ReactiveInput[] => {
+            const found: ReactiveInput[] = [];
+            const span = Math.ceil(r / cell);
+            const cx = Math.floor(x / cell);
+            const cz = Math.floor(z / cell);
+            const r2 = r * r;
+            for (let a = -span; a <= span; a++) {
+                for (let b = -span; b <= span; b++) {
+                    const list = grid.get(key(cx + a, cz + b));
+                    if (!list) continue;
+                    for (const i of list) {
+                        const dx = i.shared.x - x;
+                        const dz = i.shared.z - z;
+                        if (dx * dx + dz * dz <= r2) found.push(i);
+                    }
+                }
+            }
+            return found;
+        };
+        this.around = around;
+        if (this.frame % 30 === 0) this.sightCache.forEach((v, k) => {
+            if (world.now - v.t > 1) this.sightCache.delete(k);
+        });
+        // Young by parent, for shielding.
+        const youngOf = new Map<string, ReactiveInput[]>();
+        for (const i of inputs) if (i.parentId) youngOf.set(i.parentId, [...(youngOf.get(i.parentId) ?? []), i]);
+        // Forget old calls.
+        this.alarms = this.alarms.filter((a) => world.now - a.at < 6);
+        const active = new Set(near.map((i) => i.id));
+        // Agents that left the active set are dropped after a while (their memory with them).
+        this.agents.forEach((agent, id) => {
+            if (!active.has(id) && world.now - agent.lastSeenAt > 60) this.agents.delete(id);
+        });
+
+        const sight = world.sight
+            ? (a: Vec3, b: Vec3) => {
+                  stats.sightChecks++;
+                  return world.sight!(a, b);
+              }
+            : undefined;
+        const view: ReactiveWorld = {...world, sight};
+
+        for (const me of near) {
+            stats.agents++;
+            let agent = this.agents.get(me.id);
+            if (!agent) {
+                agent = newAgent(me.id, world.now);
+                this.agents.set(me.id, agent);
+            }
+            agent.lastSeenAt = world.now;
+            const result = this.stepAgent(me, agent, view, around, byId, youngOf, stats);
+            out.set(me.id, result);
+        }
+        // Ones that just left the active set ease back rather than jump.
+        for (const i of inputs) {
+            if (active.has(i.id)) continue;
+            const agent = this.agents.get(i.id);
+            if (!agent || (Math.hypot(agent.offset.x, agent.offset.z) < 1e-3 && Math.abs(agent.head.yaw) + Math.abs(agent.head.pitch) < 1e-3)) continue;
+            this.relax(agent, i, Math.min(world.dt, 0.1), headLimits(i.plan, i.slug));
+            agent.threat = null;
+            out.set(i.id, this.output(agent, i, "off", false, 0, null, false));
+        }
+        stats.alarms = this.alarms.length;
+        stats.ms = (typeof performance !== "undefined" ? performance.now() : Date.now()) - t0;
+        this.stats = stats;
+        return out;
+    }
+
+    private stepAgent(
+        me: ReactiveInput,
+        agent: Agent,
+        world: ReactiveWorld,
+        around: (x: number, z: number, r: number) => ReactiveInput[],
+        byId: Map<string, ReactiveInput>,
+        youngOf: Map<string, ReactiveInput[]>,
+        stats: ReactiveStats
+    ): ReactiveOut {
+        const dt = Math.min(Math.max(world.dt, 0), 0.1);
+        const limits = headLimits(me.plan, me.slug);
+        // The shared layer first: acting is left alone (zero), asleep only eases back, aloft is the flight's.
+        if (me.acting) {
+            this.reset(agent);
+            return ZERO_OUT;
+        }
+        if (me.asleep || me.shared.aloft) {
+            agent.threat = null;
+            agent.heard = null;
+            agent.prey = null;
+            this.relax(agent, me, dt, limits);
+            return this.output(agent, me, me.asleep ? "asleep" : "aloft", false, 0, null, false);
+        }
+        const p = me.intel;
+        const person = agent.personality;
+        this.updateNeeds(agent, me, world, dt);
+
+        // Perception, staggered by id so not everyone looks on the same frame.
+        const stagger = Math.floor(unit(me.id, "perceive") * this.budget.perceiveEvery);
+        if ((this.frame + stagger) % this.budget.perceiveEvery === 0 || !agent.perceived.length) {
+            stats.perceptions++;
+            const reach = Math.min(this.budget.reach, Math.max(p.sight * 1.7, p.hearing * 1.6, p.smell * 1.5));
+            const sentinelNow = this.onWatch(me, around, world);
+            agent.onWatch = sentinelNow;
+            agent.perceived = [];
+            const hunts = p.hunt.some((h) => h !== "filter" && h !== "scavenge");
+            for (const other of around(me.shared.x, me.shared.z, reach)) {
+                if (other.id === me.id) continue;
+                // Only what matters to it is looked for: what could eat it, and (a hunter) what it could eat.
+                const threat = !other.asleep && this.eats(other, me) && !(other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"));
+                const prey = hunts && !other.shared.aloft && this.eats(me, other);
+                if (!threat && !prey) continue;
+                const pair = `${me.id}|${other.id}`;
+                const line = world.sight
+                    ? (eye: Vec3, target: Vec3) => {
+                          const hit = this.sightCache.get(pair);
+                          if (hit && world.now - hit.t < 0.5) return hit.v;
+                          const v = world.sight!(eye, target);
+                          this.sightCache.set(pair, {t: world.now, v});
+                          return v;
+                      }
+                    : undefined;
+                const how = perceive(me, other, world, sentinelNow ? 1.3 : 1, this.budget.sightSamples, line);
+                if (how) agent.perceived.push({id: other.id, how, distance: Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z), x: other.shared.x, z: other.shared.z, threat, prey});
+            }
+        }
+
+        // Threats: the nearest perceived animal that could eat it (awake; a raptor in the air counts).
+        let threat: {input: ReactiveInput; seen: Perceived} | null = null;
+        let prey: {input: ReactiveInput; seen: Perceived} | null = null;
+        let kin: ReactiveInput[] = [];
+        for (const seen of agent.perceived) {
+            const other = byId.get(seen.id);
+            if (!other) continue;
+            if (seen.threat && !other.asleep) {
+                if (!threat || seen.distance < threat.seen.distance) threat = {input: other, seen};
+            }
+            if (seen.prey && !other.shared.aloft) {
+                if (!prey || seen.distance < prey.seen.distance) prey = {input: other, seen};
+            }
+        }
+        kin = around(me.shared.x, me.shared.z, Math.max(12, me.length * 8)).filter((o) => o.id !== me.id && o.slug === me.slug && !o.asleep);
+
+        // Memory: a predator seen is remembered there; the more it learns, the stronger and longer.
+        if (threat) {
+            const mem = agent.memory.predators.find((m) => m.slug === threat!.input.slug && Math.hypot(m.x - threat!.seen.x, m.z - threat!.seen.z) < 15);
+            if (mem) {
+                mem.x = threat.seen.x;
+                mem.z = threat.seen.z;
+                if (world.now - mem.t > 4) mem.strength = Math.min(mem.strength + 0.4 * p.learning + 0.1, 3);
+                mem.t = world.now;
+            } else agent.memory.predators.push({slug: threat.input.slug, x: threat.seen.x, z: threat.seen.z, t: world.now, strength: 0.4 + 0.4 * p.learning});
+            if (agent.memory.predators.length > 6) agent.memory.predators.shift();
+        }
+        const remember = 25 + 90 * p.learning;
+        agent.memory.predators = agent.memory.predators.filter((m) => world.now - m.t < remember * Math.max(m.strength, 0.5));
+        agent.memory.disturbances = agent.memory.disturbances.filter((d) => world.now - d.t < remember);
+
+        // Alarms heard: from its own kind and any group animal (eavesdropping), with a delay that grows with distance.
+        for (const call of this.alarms) {
+            if (call.caller === me.id || (agent.heard && agent.heard.at >= call.at)) continue;
+            const d = Math.hypot(call.x - me.shared.x, call.z - me.shared.z);
+            const hears = d < p.hearing * 1.6 * (1 - 0.4 * world.weather.rain);
+            if (!hears) continue;
+            const own = call.slug === me.slug;
+            if (!own && !GROUPED.has(me.social) && !p.mixed && p.alarm === false) continue;
+            // Another kind's alarm only matters when what it saw could eat this one too (a lion doesn't run from the zebras' alarm at itself).
+            const caused = byId.get(call.threat);
+            if (!own && (!caused || caused.id === me.id || !this.eats(caused, me))) continue;
+            if (call.threat === me.id) continue;
+            const delay = d * 0.09 + 0.08 + unit(me.id, "alarm", Math.floor(call.at * 10)) * 0.22 + (own ? 0 : 0.25) + Math.max(person.fleeDelay - 0.35, 0);
+            agent.heard = {x: call.x, z: call.z, tx: call.tx, tz: call.tz, at: call.at, reactAt: call.at + delay, caller: call.caller};
+        }
+        // Silent spread: one of its group running from a threat sets it off too (a herd runs together), a moment later.
+        if (!agent.heard || world.now - agent.heard.at > 10) {
+            for (const k of kin) {
+                const other = this.agents.get(k.id);
+                if (!other || other.mode !== "flee" || !other.threat) continue;
+                const d = Math.hypot(k.shared.x - me.shared.x, k.shared.z - me.shared.z);
+                const at = world.now;
+                agent.heard = {x: k.shared.x, z: k.shared.z, tx: other.threat.x, tz: other.threat.z, at, reactAt: at + 0.15 + d * 0.06 + unit(me.id, "follow-flight", Math.floor(at)) * 0.25, caller: k.id};
+                break;
+            }
+        }
+
+        // MARK: Danger
+        let action: ReactiveAction = agent.choice;
+        let called = false;
+        let target: {x: number; z: number} = {x: 0, z: 0};
+        let speed = 1.2 * Math.max(me.length, 0.3);
+        let crouchWant = 0;
+        let look: Vec3 | null = null;
+        let lookLabel: string | null = null;
+        let faceYaw: number | null = null;
+
+        if (threat) {
+            if (!agent.threat || agent.threat.id !== threat.input.id) {
+                // Sharper (and warier, and already burnt) animals notice sooner.
+                const burnt = agent.memory.predators.find((m) => m.slug === threat!.input.slug)?.strength ?? 0;
+                // The one on watch is looking for exactly this: it is quickest of all.
+                const delay = Math.max(0.05, person.fleeDelay * (1.2 - p.learning * 0.5) * (agent.onWatch ? 0.35 : 1) - 0.12 * burnt);
+                agent.threat = {id: threat.input.id, slug: threat.input.slug, x: threat.seen.x, z: threat.seen.z, seen: world.now, noticed: world.now + delay};
+            } else {
+                agent.threat.x = threat.seen.x;
+                agent.threat.z = threat.seen.z;
+                agent.threat.seen = world.now;
+            }
+        } else if (agent.threat && world.now - agent.threat.seen > 3) {
+            agent.threat = null;
+        }
+        const heardNow = agent.heard && world.now >= agent.heard.reactAt && world.now - agent.heard.reactAt < 10 ? agent.heard : null;
+        const danger = agent.threat && world.now >= agent.threat.noticed ? agent.threat : null;
+
+        // Parents: a young one near and a threat (or an alarm): between it and the threat.
+        const young = (youngOf.get(me.id) ?? []).filter((y) => Math.hypot(y.shared.x - me.shared.x, y.shared.z - me.shared.z) < Math.max(6 * me.length, 4));
+        const parent = me.parentId ? byId.get(me.parentId) ?? null : null;
+        const parentOut = parent ? this.agents.get(parent.id) : undefined;
+
+        if (danger || heardNow) {
+            const from = danger ? {x: danger.x, z: danger.z} : {x: heardNow!.tx, z: heardNow!.tz};
+            const dx = me.shared.x - from.x;
+            const dz = me.shared.z - from.z;
+            const d = Math.hypot(dx, dz) || 1e-3;
+            const flightDistance = p.flight * person.fleeDistance * (1 + 0.25 * Math.min(agent.memory.predators.length, 2));
+            if (agent.mode !== "alert" && agent.mode !== "freeze" && agent.mode !== "flee" && agent.mode !== "shield_young" && agent.mode !== "threat_display" && agent.mode !== "hide_behind_parent" && agent.mode !== "play_dead") agent.reactedAt = world.now;
+            // It calls the alarm once at the start (a sentinel, an alarm-caller, a group animal), never more than every 8 s.
+            if ((p.alarm || p.sentinel) && world.now - agent.calledAt > 8 && danger) {
+                called = true;
+                agent.calledAt = world.now;
+                this.alarms.push({caller: me.id, slug: me.slug, x: me.shared.x, z: me.shared.z, tx: danger.x, tz: danger.z, at: world.now, threat: danger.id});
+            }
+            // It looks at the threat; on an alarm, first toward the caller, then where the caller looked.
+            const heardFirst = !danger && heardNow && world.now - heardNow.reactAt < 0.6;
+            look = heardFirst ? {x: heardNow!.x, y: me.shared.y + me.length * 0.5, z: heardNow!.z} : {x: from.x, y: me.shared.y + me.length * 0.5, z: from.z};
+            lookLabel = danger ? danger.id : "sound";
+            const close = d < flightDistance;
+            const veryClose = d < flightDistance * 0.4;
+            const sinceReact = world.now - agent.reactedAt;
+            if (young.length && danger) {
+                // Shield: between the nearest young and the threat, a body length from the young.
+                const y = young.sort((a, b) => Math.hypot(a.shared.x - from.x, a.shared.z - from.z) - Math.hypot(b.shared.x - from.x, b.shared.z - from.z))[0];
+                const ux = from.x - y.shared.x;
+                const uz = from.z - y.shared.z;
+                const ul = Math.hypot(ux, uz) || 1;
+                target = {x: y.shared.x + (ux / ul) * me.length * 1.1 - me.shared.x, z: y.shared.z + (uz / ul) * me.length * 1.1 - me.shared.z};
+                action = p.defence.includes("threat") && veryClose ? "threat_display" : "shield_young";
+                speed = 3 * Math.max(me.length, 0.4);
+                faceYaw = Math.atan2(from.x - me.shared.x, from.z - me.shared.z);
+            } else if (parent && parentOut && (parentOut.mode === "shield_young" || parentOut.mode === "threat_display" || parentOut.mode === "flee")) {
+                // A young one: behind its parent, away from the threat.
+                const ux = parent.shared.x - from.x;
+                const uz = parent.shared.z - from.z;
+                const ul = Math.hypot(ux, uz) || 1;
+                target = {x: parent.shared.x + parentOut.offset.x + (ux / ul) * parent.length * 0.9 - me.shared.x, z: parent.shared.z + parentOut.offset.z + (uz / ul) * parent.length * 0.9 - me.shared.z};
+                action = "hide_behind_parent";
+                speed = 3 * Math.max(me.length, 0.3);
+                crouchWant = 0.5;
+            } else if (sinceReact < 0.35 + 0.4 * (1 - p.learning)) {
+                // First it looks.
+                action = "alert";
+                target = {...agent.offset};
+            } else if (p.defence.includes("play_dead") && veryClose && danger) {
+                action = "play_dead";
+                target = {...agent.offset};
+                crouchWant = 1;
+            } else if (p.defence.includes("freeze") && !me.shared.moving && !veryClose && sinceReact < 2.5 + 2 * unit(me.id, "freeze")) {
+                // Cryptic and still: it holds still a while before it runs (or instead, if the threat goes by).
+                action = "freeze";
+                target = {...agent.offset};
+                crouchWant = 0.6;
+            } else if (close || heardNow) {
+                action = "flee";
+                const away = {x: dx / d, z: dz / d};
+                const dir = this.fleeDirection(me, agent, away, world, kin);
+                const reach = this.envelope(me, true);
+                target = {x: dir.x * reach, z: dir.z * reach};
+                speed = Math.min(Math.max(me.length, 0.3) * 4.5, 8);
+                faceYaw = Math.atan2(dir.x, dir.z);
+                crouchWant = p.defence.includes("flee_cover") ? 0.2 : 0;
+            } else if (p.defence.includes("threat") && veryClose) {
+                action = "threat_display";
+                target = {...agent.offset};
+                faceYaw = Math.atan2(from.x - me.shared.x, from.z - me.shared.z);
+            } else {
+                // Watching it from a safe distance: head up, still.
+                action = "alert";
+                target = {...agent.offset};
+            }
+        } else if (agent.mode === "flee" || agent.mode === "alert" || agent.mode === "freeze" || agent.mode === "shield_young" || agent.mode === "hide_behind_parent" || agent.mode === "threat_display" || agent.mode === "play_dead" || agent.mode === "recover") {
+            // It calms down: still watchful a while (the alarm level), then back to its business at a walk.
+            const level = alarmLevel((world.now - agent.reactedAt) * 1000, 12000 * (1.4 - p.learning * 0.6));
+            if (level > 0.05) {
+                action = "recover";
+                target = {x: agent.offset.x * 0.995, z: agent.offset.z * 0.995};
+                const remembered = agent.memory.predators[agent.memory.predators.length - 1];
+                if (remembered) {
+                    look = {x: remembered.x, y: me.shared.y + 1, z: remembered.z};
+                    lookLabel = "spot";
+                }
+            } else {
+                agent.mode = "scan";
+                agent.choice = "scan";
+                agent.choiceUntil = world.now;
+            }
+        }
+
+        // MARK: Hunting (visual only, never a catch)
+        const dangerous = action === "flee" || action === "alert" || action === "freeze" || action === "shield_young" || action === "hide_behind_parent" || action === "threat_display" || action === "play_dead" || action === "recover";
+        if (!dangerous && prey && agent.needs.hunger > 0.25) {
+            const other = prey.input;
+            const style = p.hunt;
+            look = {x: other.shared.x, y: other.shared.y + other.length * 0.4, z: other.shared.z};
+            lookLabel = other.id;
+            if (style.includes("stalk") || style.includes("pack") || style.includes("pursuit")) {
+                action = "stalk";
+                crouchWant = style.includes("stalk") ? 0.55 : 0.25;
+                const ux = other.shared.x - me.shared.x;
+                const uz = other.shared.z - me.shared.z;
+                const ul = Math.hypot(ux, uz) || 1;
+                // Pack mates fan out, each to its own side.
+                const side = style.includes("pack") ? (unit(me.id, "pack-side") - 0.5) * 2 : 0;
+                const reach = this.envelope(me, false);
+                target = {x: (ux / ul) * reach + (-uz / ul) * side * reach * 0.6, z: (uz / ul) * reach + (ux / ul) * side * reach * 0.6};
+                speed = 0.5 * Math.max(me.length, 0.3);
+                faceYaw = Math.atan2(ux, uz);
+            } else {
+                action = "watch_prey";
+                target = {...agent.offset};
+                crouchWant = style.includes("ambush") ? 0.4 : 0;
+            }
+        }
+
+        // MARK: Calm choices (utility)
+        if (!dangerous && action !== "stalk" && action !== "watch_prey") {
+            if (world.now >= agent.choiceUntil) {
+                const choice = this.choose(me, agent, world, kin, byId);
+                agent.choice = choice;
+                // Each holds its choice for its own time (seeded), so a herd's members change at different moments.
+                const hold = 2.5 + 6 * unit(me.id, "hold", Math.floor(world.now / 3));
+                agent.choiceUntil = world.now + hold * (choice === "sentinel" ? 3 : 1);
+                agent.lookAt = null;
+            }
+            action = agent.choice;
+            const calm = this.calmAction(me, agent, action, world, kin, byId);
+            target = calm.target;
+            speed = calm.speed;
+            crouchWant = calm.crouch;
+            look = calm.look;
+            lookLabel = calm.label;
+            faceYaw = calm.face;
+        }
+
+        // MARK: Keep to the shared layer: inside the envelope, and never onto prey.
+        const reach = this.envelope(me, action === "flee" || action === "shield_young" || action === "hide_behind_parent");
+        const tl = Math.hypot(target.x, target.z);
+        if (tl > reach) {
+            target = {x: (target.x / tl) * reach, z: (target.z / tl) * reach};
+        }
+        // Away from a remembered predator spot (it avoids where it saw one), within the envelope.
+        const fresh = agent.memory.predators.find((m) => world.now - m.t < 20 + 40 * p.learning && Math.hypot(m.x - me.shared.x, m.z - me.shared.z) < 12);
+        if (fresh && action !== "flee") {
+            const ux = me.shared.x - fresh.x;
+            const uz = me.shared.z - fresh.z;
+            const ul = Math.hypot(ux, uz) || 1;
+            const push = reach * 0.5 * Math.min(fresh.strength, 1);
+            target = {x: target.x + (ux / ul) * push, z: target.z + (uz / ul) * push};
+            const l2 = Math.hypot(target.x, target.z);
+            if (l2 > reach) target = {x: (target.x / l2) * reach, z: (target.z / l2) * reach};
+        }
+        this.moveOffset(agent, target, speed, dt, reach);
+        if (action === "stalk" && prey) this.keepShort(me, agent, prey.input);
+
+        agent.mode = action;
+        if (look) {
+            agent.lookAt = look;
+            agent.lookLabel = lookLabel;
+        }
+        const scan = !look && (action === "scan" || action === "sentinel" || action === "alert");
+        this.stepLook(me, agent, look, scan, world, dt, limits, faceYaw, action);
+        agent.crouch += (crouchWant - agent.crouch) * Math.min(dt * 4, 1);
+        const alarmed = agent.threat || heardNow ? 1 : action === "recover" ? alarmLevel((world.now - agent.reactedAt) * 1000) : 0;
+        return this.output(agent, me, action, called, alarmed, look ? lookLabel : null, true);
+    }
+
+    /** Whether `a` could eat `b` (cached per species pair). */
+    private eats(a: ReactiveInput, b: ReactiveInput): boolean {
+        let row = this.eatsCache.get(a.slug);
+        if (!row) {
+            row = new Map();
+            this.eatsCache.set(a.slug, row);
+        }
+        let v = row.get(b.slug);
+        if (v === undefined) {
+            v = canEat(a.intel, b.intel, a.size, b.size);
+            row.set(b.slug, v);
+        }
+        return v;
+    }
+
+    /** A sentinel species' group has one on watch at a time, the duty rotating every 40 s (seeded by the ids and the time). */
+    private onWatch(me: ReactiveInput, around: (x: number, z: number, r: number) => ReactiveInput[], world: ReactiveWorld): boolean {
+        if (!me.intel.sentinel) return false;
+        const group = around(me.shared.x, me.shared.z, 15).filter((o) => o.slug === me.slug && !o.asleep);
+        if (group.length < 2) return false;
+        const shift = Math.floor(world.now / 40);
+        let best = me;
+        let bestScore = unit(me.id, "watch", shift);
+        for (const o of group) {
+            const s = unit(o.id, "watch", shift);
+            if (s < bestScore || (s === bestScore && o.id < best.id)) {
+                best = o;
+                bestScore = s;
+            }
+        }
+        return best.id === me.id;
+    }
+
+    private fleeDirection(me: ReactiveInput, agent: Agent, away: {x: number; z: number}, world: ReactiveWorld, kin: ReactiveInput[]): {x: number; z: number} {
+        const p = me.intel;
+        const reach = this.envelope(me, true) * 3;
+        const pick = (kind: RefugeKind) => (world.refuge ? world.refuge(me.shared.x, me.shared.z, kind, reach) : null);
+        let goal: {x: number; z: number} | null = null;
+        for (const d of p.defence) {
+            if (d === "flee_water") goal = pick("water");
+            else if (d === "flee_tree") goal = pick("tree");
+            else if (d === "flee_cover" || d === "burrow") goal = pick("cover") ?? (agent.memory.spots.roost ? agent.memory.spots.roost : null);
+            else if (d === "group" && kin.length) {
+                const cx = kin.reduce((s, k) => s + k.shared.x, 0) / kin.length;
+                const cz = kin.reduce((s, k) => s + k.shared.z, 0) / kin.length;
+                goal = {x: cx, z: cz};
+            }
+            if (goal) break;
+        }
+        if (!goal) return away;
+        const gx = goal.x - me.shared.x;
+        const gz = goal.z - me.shared.z;
+        const gl = Math.hypot(gx, gz);
+        if (gl < 0.2) return away;
+        // Toward the refuge, unless that means running at the threat: then away, bent toward it.
+        const toward = {x: gx / gl, z: gz / gl};
+        const dot = toward.x * away.x + toward.z * away.z;
+        const mix = dot < -0.2 ? 0.25 : 0.7;
+        const x = away.x * (1 - mix) + toward.x * mix;
+        const z = away.z * (1 - mix) + toward.z * mix;
+        const l = Math.hypot(x, z) || 1;
+        return {x: x / l, z: z / l};
+    }
+
+    private updateNeeds(agent: Agent, me: ReactiveInput, world: ReactiveWorld, dt: number) {
+        const n = agent.needs;
+        const doing = me.shared.doing;
+        const resting = RESTING.has(doing);
+        n.energy = clamp01(n.energy + dt * (resting ? 0.01 : me.shared.moving ? -0.006 : -0.002));
+        n.thirst = doing === "drink" ? clamp01(n.thirst - dt * 0.08) : clamp01(n.thirst + dt * 0.003);
+        n.hunger = FEEDING.has(doing) && doing !== "drink" ? clamp01(n.hunger - dt * 0.03) : clamp01(n.hunger + dt * 0.004);
+        // Comfort: rain, a storm, the midday heat in the open.
+        const heat = Math.max(0, Math.exp(-(((world.hours - 13.5) / 2.2) ** 2)) - 0.3) * (1 - world.weather.rain) * (world.night < 0.2 ? 1 : 0);
+        const wet = world.weather.rain * 0.7 + world.weather.storm * 0.6;
+        n.comfort = clamp01(1 - wet - heat * 0.6);
+        n.curiosity = clamp01(n.curiosity + dt * 0.02 * (0.5 + me.intel.curiosity) * (agent.choice === "investigate_camera" || agent.choice === "watch_camera" ? -4 : 1));
+        n.safety = agent.threat ? 0 : clamp01(n.safety + dt * 0.05);
+    }
+
+    /** The calm choice with the best score now: needs × what it is doing × who it is, plus its own seeded noise. */
+    private choose(me: ReactiveInput, agent: Agent, world: ReactiveWorld, kin: ReactiveInput[], byId: Map<string, ReactiveInput>): ReactiveAction {
+        const p = me.intel;
+        const n = agent.needs;
+        const person = agent.personality;
+        const doing = me.shared.doing;
+        const scores: Array<[ReactiveAction, number]> = [];
+        const noise = (k: string) => 0.35 * unit(me.id, k, Math.floor((world.now + 7 * unit(me.id, "noise-offset")) / 5));
+        const add = (a: ReactiveAction, s: number, minRepertoire = 0) => {
+            if (p.repertoire >= minRepertoire && s > 0) scores.push([a, s + noise(a) + (a === agent.choice ? 0.12 : 0)]);
+        };
+        const groupSize = kin.length + 1;
+        // Vigilance: alone it looks up a lot; in a herd less ("many eyes"); a sentinel group leaves it to the sentinel.
+        const sentinelGroup = p.sentinel && groupSize > 1;
+        const vigilance = (0.55 + 0.4 * (1 - n.safety) + (agent.memory.predators.length ? 0.3 : 0)) / Math.sqrt(p.manyEyes ? groupSize : 1) * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2);
+        add("scan", vigilance);
+        if (sentinelGroup && this.isSentinel(me, kin, world)) add("sentinel", 2);
+        if (FEEDING.has(doing)) add(doing === "drink" ? "drink" : "feed", 0.6 + (doing === "drink" ? n.thirst : n.hunger));
+        if (RESTING.has(doing) && n.energy < 0.6) add("doze", 0.5 + (0.6 - n.energy));
+        if (kin.length) {
+            add("look_kin", 0.25 + 0.3 * n.social);
+            const nearest = Math.min(...kin.map((k) => Math.hypot(k.shared.x - me.shared.x, k.shared.z - me.shared.z)));
+            if (nearest > me.length * 4 * person.personalSpace) add("approach_kin", 0.3 + 0.5 * n.social, 5);
+        }
+        if (["quadruped", "primate", "flying_bird", "walking_bird", "bat", "flightless_bird"].includes(me.plan) && RESTING.has(doing)) add("groom", 0.25 + 0.2 * (1 - n.comfort), 5);
+        if (n.comfort < 0.6) add("shelter", 0.5 + (0.6 - n.comfort) * 1.6);
+        const cam = world.camera;
+        if (cam) {
+            const d = Math.hypot(cam.x - me.shared.x, cam.z - me.shared.z);
+            const within = Math.min(p.sight * 0.5, 14);
+            if (d < within) {
+                const interest = n.curiosity * (0.3 + p.curiosity) * (0.6 + person.curiosity) * person.glanceRate;
+                add("watch_camera", 0.2 + interest * 0.6, 4);
+                // The sharp and the bold come closer to look; the rest watch from where they are.
+                if (person.boldness > -0.3) add("investigate_camera", 0.1 + interest * 1.3 + 0.5 * p.curiosity * (p.repertoire >= 9 ? 1 : 0.5), 7);
+                if (person.boldness < -0.3 && d < p.flight * 0.6) add("back_off_camera", 1 + (0.6 - person.boldness), 0);
+            }
+        }
+        const play = Math.max(p.play * (p.repertoire >= 9 ? 1 : 0.4), me.youngPlay ?? 0);
+        if (play > 0.2 && n.energy > 0.5 && (kin.length || me.youngPlay)) add("play", play * 0.9, 0);
+        if (p.tools && FEEDING.has(doing) && doing !== "drink") add("use_tool", 0.7 + 0.3 * n.hunger, 7);
+        if (p.forage.includes("cache") && FEEDING.has(doing) && doing !== "drink") {
+            const cache = agent.memory.spots.cache;
+            if (!cache) add("cache_bury", 0.9 + 0.3 * (1 - n.hunger), 0);
+            else if (world.now - cache.t > 20 && Math.hypot(cache.x - me.shared.x, cache.z - me.shared.z) < this.envelope(me, false) + 2) add("cache_return", 1.1 + n.hunger, 0);
+            else add("cache_bury", 0.4, 0);
+        }
+        if (p.mixed && FEEDING.has(doing)) add("follow_mixed", 0.7, 0);
+        // A more dominant one at the same water or food spot: wait its turn (a grazing herd spread over the grass does not queue).
+        if ((doing === "drink" || me.shared.spot) && this.dominantAt(me, byId)) add("wait_turn", 2.2);
+        if (!scores.length) return "scan";
+        scores.sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
+        return scores[0][0];
+    }
+
+    private isSentinel(me: ReactiveInput, kin: ReactiveInput[], world: ReactiveWorld): boolean {
+        const shift = Math.floor(world.now / 40);
+        const mine = unit(me.id, "watch", shift);
+        return kin.every((k) => unit(k.id, "watch", shift) > mine || (unit(k.id, "watch", shift) === mine && k.id > me.id));
+    }
+
+    /** A more dominant animal (any species) doing the same thing within reach: the dominance stat, then size, then id. */
+    private dominantAt(me: ReactiveInput, byId: Map<string, ReactiveInput>): ReactiveInput | null {
+        let found: ReactiveInput | null = null;
+        void byId;
+        for (const other of this.around(me.shared.x, me.shared.z, Math.max(me.length * 2.2 + 3, 5))) {
+            if (other.id === me.id || other.asleep || other.shared.doing !== me.shared.doing) continue;
+            const d = Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z);
+            const sameSpot = me.shared.spot ? other.shared.spot === me.shared.spot : me.shared.doing === "drink";
+            if (!sameSpot || d > Math.max(me.length, other.length) * 2.2) continue;
+            const a = [other.dominance ?? 0, other.size ?? 0];
+            const b = [me.dominance ?? 0, me.size ?? 0];
+            const higher = a[0] !== b[0] ? a[0] > b[0] : a[1] !== b[1] ? a[1] > b[1] : other.id < me.id;
+            if (higher && (!found || d < Math.hypot(found.shared.x - me.shared.x, found.shared.z - me.shared.z))) found = other;
+        }
+        return found;
+    }
+
+    private calmAction(me: ReactiveInput, agent: Agent, action: ReactiveAction, world: ReactiveWorld, kin: ReactiveInput[], byId: Map<string, ReactiveInput>) {
+        const reach = this.envelope(me, false);
+        const walk = 0.8 * Math.max(me.length, 0.3);
+        const res = {target: {x: agent.offset.x * 0.98, z: agent.offset.z * 0.98}, speed: walk, crouch: 0, look: null as Vec3 | null, label: null as string | null, face: null as number | null};
+        const ahead = (dist: number, down: number) => ({x: me.shared.x + Math.sin(me.shared.yaw) * dist, y: me.shared.y + down, z: me.shared.z + Math.cos(me.shared.yaw) * dist});
+        switch (action) {
+            case "feed":
+            case "drink":
+                // Head down to the food or the water, a little to one side now and then.
+                res.look = ahead(me.length * 0.9, 0);
+                res.label = "spot";
+                agent.memory.spots[action === "drink" ? "water" : "food"] = {x: me.shared.x, z: me.shared.z};
+                break;
+            case "doze":
+                res.look = ahead(me.length * 2, me.length * 0.1);
+                res.crouch = 0.3;
+                break;
+            case "look_kin":
+            case "approach_kin": {
+                const k = kin.slice().sort((a, b) => unit(me.id, a.id) - unit(me.id, b.id))[0];
+                if (k) {
+                    res.look = {x: k.shared.x, y: k.shared.y + k.length * 0.5, z: k.shared.z};
+                    res.label = k.id;
+                    if (action === "approach_kin") {
+                        const ux = k.shared.x - me.shared.x;
+                        const uz = k.shared.z - me.shared.z;
+                        const ul = Math.hypot(ux, uz) || 1;
+                        res.target = {x: (ux / ul) * reach, z: (uz / ul) * reach};
+                    }
+                }
+                break;
+            }
+            case "groom":
+                // A turn of the head to its flank and back.
+                res.look = {x: me.shared.x - Math.sin(me.shared.yaw) * me.length * 0.4 + Math.cos(me.shared.yaw) * me.length * 0.3 * Math.sin(world.now * 1.3 + unit(me.id, "groom") * 6), y: me.shared.y + me.length * 0.25, z: me.shared.z - Math.cos(me.shared.yaw) * me.length * 0.4};
+                break;
+            case "watch_camera":
+            case "investigate_camera":
+            case "back_off_camera": {
+                const cam = world.camera;
+                if (!cam) break;
+                res.look = {x: cam.x, y: cam.y, z: cam.z};
+                res.label = "camera";
+                const ux = cam.x - me.shared.x;
+                const uz = cam.z - me.shared.z;
+                const ul = Math.hypot(ux, uz) || 1;
+                if (action === "investigate_camera") {
+                    // A few careful steps closer, never right up to it.
+                    const stop = Math.max(ul - Math.max(me.length * 2.5, 1.5), 0);
+                    const step = Math.min(stop, reach);
+                    res.target = {x: (ux / ul) * step, z: (uz / ul) * step};
+                    res.speed = walk * 0.6;
+                    res.face = Math.atan2(ux, uz);
+                } else if (action === "back_off_camera") {
+                    res.target = {x: (-ux / ul) * reach, z: (-uz / ul) * reach};
+                    res.speed = walk * 1.6;
+                    if (!agent.memory.disturbances.some((d) => world.now - d.t < 5)) agent.memory.disturbances.push({x: cam.x, z: cam.z, t: world.now});
+                }
+                break;
+            }
+            case "play": {
+                // Little hops and turns round its spot, its own rhythm.
+                const phase = world.now * (1.6 + unit(me.id, "play-rate")) + unit(me.id, "play") * 6.28;
+                res.target = {x: Math.sin(phase) * reach * 0.6, z: Math.cos(phase * 1.3) * reach * 0.6};
+                res.speed = walk * 2.5;
+                const k = kin[0];
+                if (k) {
+                    res.look = {x: k.shared.x, y: k.shared.y + k.length * 0.4, z: k.shared.z};
+                    res.label = k.id;
+                }
+                break;
+            }
+            case "shelter": {
+                const spot = world.refuge?.(me.shared.x, me.shared.z, "shade", reach * 4) ?? world.refuge?.(me.shared.x, me.shared.z, "cover", reach * 4) ?? null;
+                if (spot) res.target = {x: spot.x - me.shared.x, z: spot.z - me.shared.z};
+                res.crouch = 0.45;
+                res.look = ahead(me.length * 1.5, -me.length * 0.1);
+                // Back to the wind and rain.
+                res.face = world.weather.windDirection + Math.PI / 2;
+                break;
+            }
+            case "use_tool":
+                // Head down and working: the strikes of a stone or a stick (its own beat).
+                res.look = ahead(me.length * 0.7, me.length * 0.1 * Math.sin(world.now * 6 + unit(me.id, "tool") * 6));
+                res.label = "spot";
+                break;
+            case "cache_bury": {
+                // Off a step to a spot of its own, head down to dig; the spot is remembered.
+                const a = unit(me.id, "cache-dir", Math.floor(world.now / 30)) * Math.PI * 2;
+                res.target = {x: Math.sin(a) * reach * 0.8, z: Math.cos(a) * reach * 0.8};
+                res.look = {x: me.shared.x + res.target.x + Math.sin(a) * me.length * 0.6, y: me.shared.y, z: me.shared.z + res.target.z + Math.cos(a) * me.length * 0.6};
+                res.label = "spot";
+                const there = Math.hypot(agent.offset.x - res.target.x, agent.offset.z - res.target.z) < me.length * 0.5;
+                if (there && !agent.memory.spots.cache) agent.memory.spots.cache = {x: me.shared.x + agent.offset.x, z: me.shared.z + agent.offset.z, t: world.now};
+                break;
+            }
+            case "cache_return": {
+                const c = agent.memory.spots.cache;
+                if (!c) {
+                    agent.choiceUntil = world.now;
+                    break;
+                }
+                res.target = {x: c.x - me.shared.x, z: c.z - me.shared.z};
+                res.look = {x: c.x, y: me.shared.y, z: c.z};
+                res.label = "spot";
+                if (Math.hypot(me.shared.x + agent.offset.x - c.x, me.shared.z + agent.offset.z - c.z) < me.length * 0.6) {
+                    // Found and eaten: the next one is buried somewhere else.
+                    agent.needs.hunger = Math.max(agent.needs.hunger - 0.4, 0);
+                    if (world.now - c.t > 26) agent.memory.spots.cache = undefined;
+                }
+                break;
+            }
+            case "follow_mixed": {
+                // Behind a grazer of another species, picking at what it stirs up.
+                let host: ReactiveInput | null = null;
+                for (const o of this.around(me.shared.x, me.shared.z, 10)) {
+                    if (o.slug === me.slug || o.asleep || !(o.diet === "grazer" || o.diet === "browser")) continue;
+                    const d = Math.hypot(o.shared.x - me.shared.x, o.shared.z - me.shared.z);
+                    if (d < 10 && (!host || d < Math.hypot(host.shared.x - me.shared.x, host.shared.z - me.shared.z))) host = o;
+                }
+                if (host) {
+                    const bx = host.shared.x - Math.sin(host.shared.yaw) * host.length * 1.2 - me.shared.x;
+                    const bz = host.shared.z - Math.cos(host.shared.yaw) * host.length * 1.2 - me.shared.z;
+                    res.target = {x: bx, z: bz};
+                    res.look = {x: host.shared.x, y: me.shared.y, z: host.shared.z};
+                    res.label = host.id;
+                }
+                break;
+            }
+            case "wait_turn": {
+                const top = this.dominantAt(me, byId);
+                if (top) {
+                    const ux = me.shared.x - top.shared.x;
+                    const uz = me.shared.z - top.shared.z;
+                    const ul = Math.hypot(ux, uz) || 1;
+                    res.target = {x: (ux / ul) * reach, z: (uz / ul) * reach};
+                    res.look = {x: top.shared.x, y: top.shared.y + top.length * 0.5, z: top.shared.z};
+                    res.label = top.id;
+                } else agent.choiceUntil = world.now;
+                break;
+            }
+            case "sentinel":
+                // Up and still, scanning wide (the scan in stepLook), a little higher than usual.
+                res.crouch = -0.2;
+                break;
+            default:
+                break;
+        }
+        return res;
+    }
+
+    private moveOffset(agent: Agent, target: {x: number; z: number}, speed: number, dt: number, reach: number) {
+        const dx = target.x - agent.offset.x;
+        const dz = target.z - agent.offset.z;
+        const d = Math.hypot(dx, dz);
+        const step = Math.min(d, speed * dt);
+        if (d > 1e-6) {
+            agent.offset.x += (dx / d) * step;
+            agent.offset.z += (dz / d) * step;
+        }
+        const l = Math.hypot(agent.offset.x, agent.offset.z);
+        if (l > reach && l > 0) {
+            // Over the edge (the envelope narrowed as the flight ended): back in at the animal's walk, never a jump.
+            const back = Math.max(l - Math.max(speed, 0.6) * dt, reach);
+            agent.offset.x *= back / l;
+            agent.offset.z *= back / l;
+        }
+    }
+
+    /** A stalking predator stops short of its prey (where the prey is drawn, its own offset included). */
+    private keepShort(me: ReactiveInput, agent: Agent, prey: ReactiveInput) {
+        const preyOffset = this.agents.get(prey.id)?.offset ?? {x: 0, z: 0};
+        const px = prey.shared.x + preyOffset.x;
+        const pz = prey.shared.z + preyOffset.z;
+        const mx = me.shared.x + agent.offset.x;
+        const mz = me.shared.z + agent.offset.z;
+        const gap = minGap(me, prey);
+        const d = Math.hypot(mx - px, mz - pz);
+        if (d >= gap) return;
+        // Back along the line from the prey to the gap (or, if the shared layer itself has them closer, no nearer than that).
+        const sharedD = Math.hypot(me.shared.x - px, me.shared.z - pz);
+        const want = Math.min(gap, sharedD);
+        if (d >= want) return;
+        const ux = d > 1e-6 ? (mx - px) / d : 1;
+        const uz = d > 1e-6 ? (mz - pz) / d : 0;
+        agent.offset.x = px + ux * want - me.shared.x;
+        agent.offset.z = pz + uz * want - me.shared.z;
+    }
+
+    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction) {
+        const head = {x: me.shared.x + agent.offset.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z + agent.offset.z};
+        const bodyNow = me.shared.yaw + agent.bodyYaw;
+        let want: {yaw: number; pitch: number};
+        if (look) want = lookAngles(head, bodyNow, look);
+        else if (scan) {
+            // Idle scanning: a seeded sweep of looks, each held its own time; a sentinel looks wider and higher.
+            if (world.now >= agent.scanUntil) {
+                agent.scanIndex++;
+                agent.scanUntil = world.now + 0.8 + 2.4 * unit(me.id, "scan-hold", agent.scanIndex);
+            }
+            const wide = action === "sentinel" ? 1 : action === "alert" ? 0.9 : 0.7;
+            want = {yaw: (unit(me.id, "scan-yaw", agent.scanIndex) * 2 - 1) * limits.yaw * wide, pitch: (unit(me.id, "scan-pitch", agent.scanIndex) - 0.35) * 0.3 + (action === "sentinel" ? 0.12 : 0)};
+        } else want = {yaw: 0, pitch: action === "feed" || action === "drink" ? -limits.down : 0};
+        const clamped = clampLook(want, limits);
+        // The body turns when it must (a threat behind it, fleeing, facing the camera to investigate), at its own pace.
+        let bodyWant = clamped.body;
+        if (faceYaw !== null) bodyWant = wrapAngle(faceYaw - me.shared.yaw);
+        const maxBody = action === "flee" ? 1.2 : 0.9;
+        bodyWant = Math.min(Math.max(bodyWant, -maxBody), maxBody);
+        agent.bodyYaw += wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (action === "flee" ? 6 : 2.5), 1);
+        const relative = look ? lookAngles(head, me.shared.yaw + agent.bodyYaw, look) : want;
+        agent.head = stepHead(agent.head, relative, dt, limits);
+    }
+
+    /** Asleep or aloft: no reaction; the offset, the head and the body turn ease back (never a jump). */
+    private relax(agent: Agent, me: ReactiveInput, dt: number, limits: HeadLimits) {
+        agent.mode = me.asleep ? "asleep" : "aloft";
+        const walk = Math.max(me.length, 0.3) * 0.8;
+        this.moveOffset(agent, {x: 0, z: 0}, walk, dt, this.envelope(me, false));
+        agent.head = stepHead(agent.head, {yaw: 0, pitch: 0}, dt, limits);
+        agent.bodyYaw += -agent.bodyYaw * Math.min(dt * 2, 1);
+        agent.crouch += -agent.crouch * Math.min(dt * 3, 1);
+    }
+
+    private reset(agent: Agent) {
+        agent.offset = {x: 0, z: 0};
+        agent.head = {yaw: 0, pitch: 0};
+        agent.bodyYaw = 0;
+        agent.crouch = 0;
+        agent.mode = "off";
+        agent.threat = null;
+        agent.heard = null;
+        agent.prey = null;
+    }
+
+    private output(agent: Agent, me: ReactiveInput, action: ReactiveAction, called: boolean, alarmed: number, looking: string | null, awake: boolean): ReactiveOut {
+        const limits = headLimits(me.plan, me.slug);
+        const weight = limits.yaw > 0 ? 1 : 0;
+        return {
+            dx: agent.offset.x,
+            dz: agent.offset.z,
+            bodyYaw: agent.bodyYaw,
+            headYaw: agent.head.yaw,
+            headPitch: agent.head.pitch,
+            headWeight: awake ? weight : weight * Math.min(Math.hypot(agent.head.yaw, agent.head.pitch) * 4, 1),
+            crouch: Math.max(agent.crouch, 0),
+            action,
+            called,
+            alarmed,
+            looking
+        };
+    }
+}
+
+function clamp01(v: number): number {
+    return Math.min(Math.max(v, 0), 1);
+}

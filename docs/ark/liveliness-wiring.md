@@ -13,7 +13,7 @@ Everything that varies is shared and deterministic: a pure function of the world
 | `src/ark-scene/ark-audio.ts` | The WebAudio player: one AudioContext made on the tap only, master gain, per-call gain and stereo pan, voice cap (alarms take the quietest calm voice's place), looped beds crossfaded, muffled under water, suspended when off or hidden, credits for the Sounds panel. Nothing is fetched before the tap; held banks and banks without credits never play. |
 | `src/ark-scene/ambient-beds-stub.ts` | A stand-in for the ambient lane's `selectAmbientBeds` (same signature), on the published habitat banks with their credits. Replace the import in `liveliness-scene.ts` with `@/ark-scene/ambient-beds` when it lands. |
 | `src/ark-scene/weather-fx.ts` | Rain streaks (a fixed screen width, so they read on a phone), rain rings on the water, rain haze and fog, a duller exposure in rain, the storm's lightning flash, leaves on a strong wind. All moved in shaders from `ARK_TIME`. |
-| `src/ark-scene/traces.ts` | Footprints by surface (sand, wet sand, mud, snow, soil, forest floor; paw/hoof or bird), rings where an animal wades or goes in, dust off dry bare ground at a run, pressed-grass points, worn-path patches. One ring buffer of instances each, near the camera only. |
+| `src/ark-scene/traces.ts` | Footprints by surface (sand, wet sand, mud, snow, soil, forest floor; paw/hoof or bird), rings where an animal wades or goes in, dust off dry bare ground at a run, worn-path patches. (Grass bending under walkers is the scene's own `setGrassPress`, from behaviour.) One ring buffer of instances each, near the camera only. |
 | `src/ark-scene/ark-variation.ts` | Each animal's seeded size, hue, saturation, brightness and mottling (`arkVary` per instance), from `animalVariation(id)`. |
 | `src/ark-scene/liveliness-scene.ts` | The controller `index.ts` holds: clock and pins, young and parents, the shared pose (heel, shelter, tide), per drawn animal (traces, sound), per frame (weather, beds, worn paths), stats. |
 | `scripts/ark-liveliness-clips.mjs` | Look-at-it harness: rain, tide, young, prints and sound scenarios on the golden entry, frames + contact sheets + clips. |
@@ -40,4 +40,4 @@ Everything that varies is shared and deterministic: a pure function of the world
 
 ## Known gaps and notes
 
-See the lane report. Cross-lane items: the lake shares the sea's water plane, so it is tidal (graphics); `arkLook` is declared by both the intelligence lane (vec3 head look) and the animal-look lane (vec2 wet/dust): the merged shader won't compile until one is renamed; `grassPoints()` is ready for `grass-press.ts` once behaviour's newest head is in `ark-release`.
+See the lane report. Cross-lane items: the lake shares the sea's water plane, so it is tidal (graphics); `arkLook` is declared by both the intelligence lane (vec3 head look) and the animal-look lane (vec2 wet/dust): the merged shader won't compile until one is renamed.

@@ -1,9 +1,9 @@
 /**
  * What animals leave behind (liveliness wiring): footprints in sand, mud,
  * snow and soil; rings on the water where one wades or swims at the
- * surface; dust kicked up running on dry ground; the grass pressed where one
- * walks (points for `grass-press.ts`); and worn paths where the schedule
- * keeps sending animals the same way.
+ * surface; dust kicked up running on dry ground; and worn paths where the
+ * schedule keeps sending animals the same way. (The grass bending under
+ * walkers is the scene's own, `grass-press.ts`.)
  *
  * Cheap and close: only animals near the camera leave traces (the scene
  * passes those), each kind is one draw call from a fixed ring of instances,
@@ -215,8 +215,6 @@ export class Traces {
     private worn: Ring;
     private readonly dust = new DustPuffs();
     private readonly walkers = new Map<string, Walker>();
-    private grass: Array<{x: number; y: number; z: number; radius: number; d: number}> = [];
-    private grassNext: Array<{x: number; y: number; z: number; radius: number; d: number}> = [];
     private tier: QualityTier;
     private reducedMotion = false;
     private readonly matrix = new Matrix4();
@@ -314,15 +312,6 @@ export class Traces {
                     this.counts.dust++;
                 }
             }
-            // Pressed grass where it walks.
-            if (w.distance < 25) {
-                surface ??= surfaceAt(w.x, w.z, environment);
-                if ((surface.weights.grass ?? 0) > 0.35) this.grassNext.push({x: w.x, y: w.y, z: w.z, radius: Math.max(w.length * 0.32, 0.1), d: w.distance});
-            }
-        } else if (w.onGround && w.distance < 25) {
-            // Standing in the grass presses it too.
-            const surface = surfaceAt(w.x, w.z, environment);
-            if ((surface.weights.grass ?? 0) > 0.35) this.grassNext.push({x: w.x, y: w.y, z: w.z, radius: Math.max(w.length * 0.28, 0.08), d: w.distance});
         }
         // Rings on the water: as it moves at the surface, and a bigger one as it goes in.
         if (w.atSurface) {
@@ -356,17 +345,10 @@ export class Traces {
         }
     }
 
-    /** Last frame's pressed-grass points, nearest the camera first. */
-    grassPoints(): Array<{x: number; y: number; z: number; radius: number}> {
-        return this.grass;
-    }
-
     /** After the frame's animals: the clocks, the dust, and the walkers not seen for a while let go. */
     step(elapsed: number) {
         this.time.value = elapsed;
         this.dust.step(elapsed);
-        this.grass = this.grassNext.sort((a, b) => a.d - b.d);
-        this.grassNext = [];
         if (this.walkers.size > 200) {
             this.walkers.forEach((memo, id) => {
                 if (elapsed - memo.seen > 5) this.walkers.delete(id);

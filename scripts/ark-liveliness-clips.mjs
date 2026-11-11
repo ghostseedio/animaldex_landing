@@ -260,6 +260,33 @@ if (only.includes("printtest")) {
     }, [sand.x, sand.z]);
     await wait(1200);
     notes.printtest = await frame("probe", "printtest");
+    // What the print mesh holds, and the same view with depth testing off (a depth problem or a shader problem).
+    notes.printDebug = await page.evaluate(() => {
+        const prints = window.__arkDebug.liveliness.traces.prints;
+        const m = prints.mesh;
+        const first = Array.from(m.instanceMatrix.array.slice(0, 16)).map((v) => Math.round(v * 1000) / 1000);
+        const attr = Array.from(prints.attribute.array.slice(0, 8)).map((v) => Math.round(v * 1000) / 1000);
+        m.material.depthTest = false;
+        return {count: m.count, visible: m.visible, inScene: Boolean(m.parent?.parent?.parent), now: m.material.uniforms.now.value, first, attr, camera: window.__arkDebug.camera.position.toArray().map((v) => Math.round(v * 100) / 100)};
+    });
+    log("print debug", JSON.stringify(notes.printDebug));
+    await wait(500);
+    await frame("probe-nodepth", "printtest");
+    // Bisect: the fragment as solid red (does the geometry reach the screen at all?).
+    await page.evaluate(() => {
+        const material = window.__arkDebug.liveliness.traces.prints.mesh.material;
+        material.userData.fragment = material.fragmentShader;
+        material.fragmentShader = "varying vec4 vPrint; uniform float now; void main() { gl_FragColor = vec4(clamp(vPrint.x / 30.0, 0.0, 1.0), clamp(vPrint.y / 200.0, 0.0, 1.0), clamp(now / 30.0, 0.0, 1.0), 1.0); }";
+        material.needsUpdate = true;
+    });
+    await wait(600);
+    await frame("probe-red", "printtest");
+    await page.evaluate(() => {
+        const material = window.__arkDebug.liveliness.traces.prints.mesh.material;
+        material.fragmentShader = material.userData.fragment;
+        material.depthTest = true;
+        material.needsUpdate = true;
+    });
 }
 
 if (only.includes("sound")) {

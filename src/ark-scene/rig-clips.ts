@@ -80,13 +80,22 @@ export function rigPlayable(manifest: RigManifest | null | undefined, slug: stri
 }
 
 /**
+ * The rig set the scene reads: `ark-rig/<version>/`. A re-made set (new
+ * strides, more clips) goes up under a new version beside the old one
+ * (`publish_rig.py --version v2`), and the release that is made for it moves
+ * this, so a web build never reads a set it was not made for.
+ */
+export const ARK_RIG_VERSION = "v1";
+
+/**
  * The rig folder for a model folder: `…/talking-models/v1/ark` →
- * `…/talking-models/ark-rig/v1` (the dev route's `/api/dev/ark-models/v1/ark`
+ * `…/talking-models/ark-rig/<version>` (the dev route's `/api/dev/ark-models/v1/ark`
  * likewise). Null when the model folder has another shape.
  */
-export function rigBaseFrom(modelBase: string): string | null {
+export function rigBaseFrom(modelBase: string, version: string = ARK_RIG_VERSION): string | null {
     const trimmed = modelBase.replace(/\/+$/, "");
-    return /\/v1\/ark$/.test(trimmed) ? trimmed.replace(/\/v1\/ark$/, "/ark-rig/v1") : null;
+    if (!/^v[0-9]{1,3}$/.test(version)) return null;
+    return /\/v1\/ark$/.test(trimmed) ? trimmed.replace(/\/v1\/ark$/, `/ark-rig/${version}`) : null;
 }
 
 /** The published manifest: each species' rig file version (`<rigBase>/<slug>/<version>.rig.glb`). */

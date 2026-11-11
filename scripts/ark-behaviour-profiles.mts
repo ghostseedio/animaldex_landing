@@ -27,7 +27,13 @@
  *   3. the map lane's microhabitat inventory (B1, `microhabitats.json`): spawn tags with their phrases;
  *   4. the scene's `src/ark-scene/layers.json` and `microhabitats.json` (already generated from the same data).
  *
- *   npx tsx scripts/ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json
+ *   npx tsx scripts/ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json [food.json]
+ *
+ *   food.json (optional, for `src/ark-scene/food-links.json`), read-only from the same repo:
+ *        supabase db query --linked -o json "select pv.model_slug predator, string_agg(distinct yv.model_slug, ',' order by yv.model_slug) prey
+ *          from voyage_food_links l join voyage_species pv on pv.species_profile_id=l.predator join voyage_species yv on yv.species_profile_id=l.prey
+ *          where coalesce(l.realm_ok,true) and coalesce(l.size_ok,true) and pv.excluded_reason is null and yv.excluded_reason is null
+ *          and pv.model_slug<>yv.model_slug group by pv.model_slug"
  *
  * Outputs:
  *   - `data/ark/behaviour-profiles.json`: the full profiles, every field with its source phrase;
@@ -74,7 +80,7 @@ type Row = {
 type Rig = {plan: string; state: string; clips_pass: string[]; flight_fallback?: boolean; pose?: unknown; clips?: Record<string, {pass?: boolean; ground_speed?: number}>};
 type B1 = {id: string; slug: string; plan: string | null; spawn: string[]; microhabitats: Array<{type: string; field: string; phrase: string}>};
 
-const [exportPath, manifestPath, b1Path] = process.argv.slice(2);
+const [exportPath, manifestPath, b1Path, foodPath] = process.argv.slice(2);
 if (!exportPath || !manifestPath || !b1Path) {
     console.error("usage: ark-behaviour-profiles.mts export.json manifest.json b1-microhabitats.json");
     process.exit(1);
@@ -139,7 +145,7 @@ function clause(text: string, index: number, length: number): string {
  * The words before a match that make it about something else: a prey's colony, an insect's nest, three pairs of eyes,
  * a negation ("little gliding"), new colonies started by people.
  */
-const NOT_ITS_OWN = /\b(weaver|weavers'?|ant|ants'?|termite|termites'?|bee|bees'?|wasp|wasps'?|insect|insects'?|bird|birds'?|seabird|prey|new|introduced|three|four|two|eight|six|little|no|rarely|seldom|without|not|never)\s+$/i;
+const NOT_ITS_OWN = /\b(weaver|weavers'?|ant|ants'?|termite|termites'?|bee|bees'?|wasp|wasps'?|insect|insects'?|bird|birds'?|seabird|prey|new|introduced|three|four|two|eight|six|little|no|rarely|seldom|without|not|never|cannot|can't|unable to|too heavy to)\s+$/i;
 
 /** The first field (in order) whose text matches, with its phrase (a match about something else is passed over). */
 function find(row: Row, fields: TextField[], pattern: RegExp): {field: TextField; phrase: string; match: string} | null {
@@ -228,11 +234,11 @@ const ROOST_RULES: Array<[RegExp, Roost]> = [
     [/\b(among (the )?(coral|tentacles)|anemone|reef crevice|in the reef|on the reef)\b/i, "reef"],
     [/\b(undersides? of (a )?leaf|undersides? of leaves|on (a )?leaf|on leaves|among leaves|in (the )?foliage)\b/i, "leaf"],
     [/\b(bark|trunks?)\b/i, "bark"],
-    [/\b(walls?|on buildings|in buildings|houses|eaves|roof spaces?)\b/i, "wall"],
     [/\b(reeds?|reedbeds?|marsh vegetation)\b/i, "reeds"],
     [/\b(on (the )?water|on or (beside|near) (the )?water|at sea|on the sea|rafts?|floating|afloat|on open water|on the surface)\b/i, "water"],
     [/\b(rocks|boulders|lava|wrecks|stones)\b/i, "rocks"],
     [/\b(in trees|in a tree|roosts? (high )?in (trees|a tree|the canopy)|branches|treetops?|canopy|perch(es)? (in|on) (trees|branches))\b/i, "tree"],
+    [/\b(walls?|on buildings|in buildings|houses|eaves|roof spaces?)\b/i, "wall"],
     [/\b(on the ground|ground roost|scrapes?|in (dense |thick |tall )?(grass|cover|undergrowth|tussocks?|vegetation|thickets?|shrubs?|bushes|bamboo)|under (cover|bushes|shrubs))\b/i, "ground_cover"],
     [/\b(sleeping nests?|nests?)\b/i, "nest"]
 ];
@@ -282,8 +288,8 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Giraffidae: {social: "herd", diet: "browser"},
     Elephantidae: {social: "herd", diet: "browser"},
     Leporidae: {social: "group", diet: "grazer", roost: "burrow"},
-    Suidae: {social: "group", diet: "omnivore", extra: ["burrow"]},
-    Felidae: {diet: "meat", also: ["climb"]},
+    Suidae: {social: "group", diet: "omnivore"},
+    Felidae: {diet: "meat"},
     Canidae: {diet: "meat", roost: "den"},
     Mustelidae: {diet: "meat", roost: "den"},
     Picidae: {also: ["climb"]},
@@ -292,7 +298,7 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Anatidae: {social: "flock", move: "swim", also: ["fly", "walk"], roost: "water"},
     Gaviidae: {move: "swim", also: ["fly"], roost: "water", extra: ["dive"]},
     Podicipedidae: {move: "swim", also: ["fly"], roost: "water", extra: ["dive"]},
-    Phasianidae: {social: "flock", diet: "seeds", move: "walk", also: ["fly"], roost: "ground_cover", extra: ["burrow"]},
+    Phasianidae: {social: "flock", diet: "seeds", move: "walk", also: ["fly"], roost: "ground_cover"},
     Numididae: {social: "flock", diet: "seeds", move: "walk", also: ["fly"]},
     Odontophoridae: {social: "flock", diet: "seeds", move: "walk", also: ["fly"]},
     Megapodiidae: {move: "walk", also: ["fly"], extra: ["burrow"]},
@@ -307,7 +313,7 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Engraulidae: {social: "school"}
 };
 const ORDER_PRIORS: Record<string, Prior> = {
-    Galliformes: {social: "flock", move: "walk", also: ["fly"], extra: ["burrow"]},
+    Galliformes: {social: "flock", move: "walk", also: ["fly"]},
     Anseriformes: {social: "flock", move: "swim", also: ["fly", "walk"], roost: "water"},
     Sphenisciformes: {social: "colony", move: "swim", also: ["walk"], extra: ["dive"]},
     Cetacea: {social: "group"},
@@ -337,7 +343,7 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
     if (SESSILE.test(slug)) {
         primary = "sessile";
         src.move = {rule: `slug names a sessile animal (${SESSILE.exec(slug)![1]})`};
-    } else if (CRAWLER.test(slug)) {
+    } else if (CRAWLER.test(slug) && !["legless", "lizard", "fish"].includes(plan)) {
         primary = "crawl";
         src.move = {rule: `slug names a crawler (${CRAWLER.exec(slug)![1]})`};
     } else
@@ -371,8 +377,9 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
                 src.move = {rule: `plan primate, layer ${layer}`};
                 break;
             case "legless":
-                primary = "slither";
-                src.move = {rule: "plan legless"};
+                // An eel is a fish however it looks; a slow-worm or a snake slithers.
+                primary = /Actinopterygii|Chondrichthyes|Elasmobranchii|Teleostei/.test(row.class_name ?? "") || /Anguilliformes|Gymnotiformes|Synbranchiformes/.test(row.order_name ?? "") ? "swim" : "slither";
+                src.move = {rule: primary === "swim" ? `plan legless, class ${row.class_name ?? row.order_name}: a fish` : "plan legless"};
                 break;
             case "other":
                 primary = sea ? "swim" : "crawl";
@@ -382,6 +389,21 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
                 primary = layer === "underground" ? "burrow" : layer === "canopy" && (mode === "climb" || mode === "hang" || mode === "leap") ? "climb" : "walk";
                 src.move = {rule: `plan ${plan}, layer ${layer}${mode ? ` (${mode})` : ""}`};
         }
+    // Seals, sea lions and walruses swim first and haul out.
+    if (/^(Phocidae|Otariidae|Odobenidae)$/.test(row.family_name ?? "")) {
+        also.add("walk");
+        primary = "swim";
+        src.move = {rule: `family ${row.family_name}: swims, hauls out`};
+    }
+    // An arboreal mammal its text puts in the trees climbs first.
+    if (primary === "walk" && plan === "quadruped") {
+        const trees = find(row, ["habitat", "sleep", "look", "traits"], /\b(arboreal|lives in trees|tree-dwelling|spends? (most of its|nearly all its) (life|time) in (the )?trees|in the canopy)\b/i);
+        if (trees) {
+            also.add("walk");
+            primary = "climb";
+            src.move = {field: trees.field, phrase: trees.phrase};
+        }
+    }
     // Its family's way of moving where the plan can't see it: ducks and loons on the water, fowl on the ground.
     const prior = priorOf(row);
     if (prior?.prior.move && primary !== "sessile" && prior.prior.move !== primary) {
@@ -413,7 +435,7 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         also.add("climb");
         src.climb = {field: climb.field, phrase: climb.phrase};
     }
-    const dig = find(row, BEHAVIOUR_TEXT, /\b(dig(s|ging)?|burrow(s|ing)?|excavat\w+|fossorial)\b/i);
+    const dig = find(row, BEHAVIOUR_TEXT, /\b(dig(s|ging)?(?! (a |its |their )?nests?)|burrow(s|ing)?|excavat\w+|fossorial)\b/i);
     if (dig && primary !== "burrow" && primary !== "sessile" && primary !== "fly") {
         also.add("burrow");
         src.burrow = {field: dig.field, phrase: dig.phrase};
@@ -429,7 +451,7 @@ const GROUP_WORDS: Array<[RegExp, Social]> = [
     [/\bflocks?\b|\bflocking\b/i, "flock"],
     [/\b(schools?|schooling|shoals?|shoaling)\b/i, "school"],
     [/\bcolon(y|ies|ial)\b/i, "colony"],
-    [/\bpacks?\b/i, "pack"],
+    [/\bpacks?\b(?! ice)/i, "pack"],
     [/\btroops?\b/i, "troop"],
     [/\bswarm(s|ing)?\b/i, "swarm"]
 ];
@@ -458,6 +480,9 @@ function socialOf(row: Row, plan: string): {value: Social; src: Source} {
         const kind = kindFromText(group.phrase);
         if (kind) return {value: kind.kind, src: {field: group.field, phrase: group.phrase}};
     }
+    // Insects and others gathering in numbers (the lanternfly's "large numbers"): a swarm.
+    const crowd = find(row, BEHAVIOUR_TEXT, /\b(aggregat\w+|in large numbers|in (huge |great )?numbers|gather(s|ing)? in (groups|numbers|masses))\b/i);
+    if (crowd) return {value: ["insect", "flying_insect", "arachnid", "crustacean", "other"].includes(plan) ? "swarm" : "group", src: {field: crowd.field, phrase: crowd.phrase}};
     const alone = find(row, BEHAVIOUR_TEXT, /\b(solitary|alone|singly|territorial)\b/i);
     if (alone) return {value: "solitary", src: {field: alone.field, phrase: alone.phrase}};
     const pair = find(row, BEHAVIOUR_TEXT, /\b(in pairs|pairs|mated pair|with its mate)\b/i);
@@ -473,7 +498,7 @@ const DIET_WORDS: Array<[RegExp, Diet]> = [
     [/\b(leaves|foliage|browse\w*|shoots|twigs|bark|buds|leafy|sap|plant juices)\b/i, "browser"],
     [/\b(seeds?|grains?|nuts?|acorns?)\b/i, "seeds"],
     [/\b(fruits?|berries|figs)\b/i, "fruit"],
-    [/\b(nectar|pollen|flowers?)\b/i, "nectar"],
+    [/\b(nectar|pollen|feeds? (at|on) flowers)\b/i, "nectar"],
     [/\b(insects?|caterpillars?|beetles?|ants|termites|larvae|grubs|spiders?|invertebrates?|worms?|bugs|aphids|flies)\b/i, "insects"],
     [/\b(fish|fishes|squid)\b/i, "fish"],
     [/\b(meat|prey|mammals|rodents?|rabbits?|birds|lizards?|snakes?|frogs?|deer|antelopes?|hunt\w*|vertebrates)\b/i, "meat"],
@@ -601,7 +626,8 @@ function profile(row: Row): Profile {
     add("rest", mobile ? 0.25 : 1);
     if (mobile) add("wander", moves.primary === "fly" ? 0.15 : 0.3);
     if (mobile) add("forage", 0.5);
-    if (diet.value === "grazer" || diet.also.includes("grazer")) add("graze", 0.7, src.diet as Source);
+    // Grazing only for a plant-eater whose food is grass (not a meat eater's "grassland rodents").
+    if (diet.value === "grazer" || (diet.also.includes("grazer") && ["browser", "seeds", "omnivore"].includes(diet.value) && !all.has("fly"))) add("graze", 0.7, src.diet as Source);
     if (all.has("fly")) add("fly", plan === "flying_insect" ? 0.6 : 0.5);
     if (all.has("perch")) add("perch", 0.45);
     if (all.has("swim")) add("swim", moves.primary === "swim" ? 0.9 : 0.3);
@@ -610,8 +636,9 @@ function profile(row: Row): Profile {
     const land = !SEA_ZONES.has(zone) && moves.primary !== "swim" && mobile;
     const drinker = land && ["quadruped", "primate", "walking_bird", "flightless_bird", "flying_bird", "bat", "lizard", "turtle"].includes(plan);
     if (drinker) add("drink", 0.15, textHit(/\b(drink\w*|waterholes?|water holes?)\b/i) ?? undefined);
-    const soarText = textHit(/\b(soar\w*|thermals?|glid\w+|circl\w+ (high|overhead)|high overhead)\b/i);
-    if (all.has("fly") && plan === "flying_bird" && (soarText || (size ?? 0) >= 30)) add("soar", soarText ? 0.6 : 0.35, soarText ?? {default: `a large flying bird (size ${size})`});
+    const soarText = textHit(/\b(soar\w*|thermals?|circl\w+ (high|overhead)|high overhead)\b/i);
+    const SOARERS = /^(Accipitridae|Cathartidae|Pandionidae|Sagittariidae|Ciconiidae|Pelecanidae|Diomedeidae|Fregatidae|Gruidae|Procellariidae)$/;
+    if (all.has("fly") && plan === "flying_bird" && (soarText || SOARERS.test(row.family_name ?? ""))) add("soar", soarText ? 0.6 : 0.35, soarText ?? {rule: `family ${row.family_name}: soars`});
     const diveText = textHit(/\b(plunge[- ]div\w*|dives? (into|for|from)|diving (for|into))\b/i);
     if (diveText && all.has("fly")) add("dive", 0.3, diveText);
     const baskText = textHit(/\b(bask\w*|sunn(ing|y rocks?)|in the sun|sun itself|warms? (up )?in)\b/i);
@@ -623,7 +650,7 @@ function profile(row: Row): Profile {
     const hideText = textHit(/\b(hid(e|es|ing)|camouflag\w*|cryptic|freez(e|es|ing)|motionless|keeps? still)\b/i);
     if (hideText || prey) add("hide", hideText ? 0.3 : 0.15, hideText ?? {default: `small (size ${size}) and not a hunter`});
     if (prey && mobile) add("flee", 0.2);
-    if (["herd", "flock", "school", "colony", "pack", "troop", "swarm", "group"].includes(social.value)) add("flock", 0.6, src.social as Source);
+    if (["herd", "flock", "school", "colony", "pack", "troop", "swarm", "group"].includes(social.value) && mobile) add("flock", 0.6, src.social as Source);
     const nectarText = textHit(/\b(nectar|pollen|visits? flowers|flower visitor|feeds? at flowers|on flowers)\b/i, ["diet", "look", "traits", "facts", "sleep"]);
     const nectar = Boolean(nectarText) && (diet.value === "nectar" || diet.also.includes("nectar") || plan === "flying_insect");
     if (nectar && all.has("fly")) add("visit_flowers", diet.value === "nectar" ? 0.6 : 0.35, nectarText!);
@@ -645,7 +672,7 @@ function profile(row: Row): Profile {
     if (b.burrow) it.add("dig_soil");
     if (roost.value === "burrow" || roost.value === "den" || (b.burrow && moves.primary !== "fly")) it.add("burrow_mouth");
     const smallGround = ["insect", "arachnid", "amphibian", "lizard", "legless", "other", "crustacean"].includes(plan) || (plan === "quadruped" && (size ?? 99) <= 15) || moves.primary === "crawl" || (plan === "walking_bird" || moves.primary === "walk" && /Aves/.test(row.class_name ?? ""));
-    if ((spawn.has("leaves") || spawn.has("forest_floor") || spawn.has("logs_deadwood")) && smallGround && !SEA_ZONES.has(zone)) it.add("leaf_litter");
+    if ((spawn.has("leaves") || spawn.has("forest_floor") || spawn.has("logs_deadwood")) && smallGround && !SEA_ZONES.has(zone) && layer !== "canopy" && moves.primary !== "climb") it.add("leaf_litter");
     if (b.visit_flowers) it.add("flower");
     if (b.circle_light) it.add("porch_light");
     if (roost.value === "cave" || spawn.has("caves")) if (all.has("fly")) it.add("cave_mouth");
@@ -656,20 +683,24 @@ function profile(row: Row): Profile {
     if (all.has("climb") && all.has("fly")) it.add("bark");
 
     // The owner's additions (2026-11-11): altitude bands, surface crawlers, air-breathers, seabed walkers.
-    const altitude: Profile["altitude"] = !all.has("fly") ? null : plan === "flying_insect" || (plan === "bat" && (size ?? 0) < 20) ? "low" : b.soar ? "high" : plan === "bat" ? "mid" : (size ?? 0) >= 35 ? "high" : "mid";
+    // Low: insects, small bats, ground birds and nightjars; high: the soarers; mid: the rest.
+    const groundBird = /^(Galliformes|Caprimulgiformes|Tinamiformes|Otidiformes)$/.test(row.order_name ?? "") || /^(Phasianidae|Caprimulgidae|Anatidae)$/.test(row.family_name ?? "") && !b.soar;
+    const altitude: Profile["altitude"] = !all.has("fly") ? null : plan === "flying_insect" || (plan === "bat" && (size ?? 0) < 20) || groundBird ? "low" : b.soar ? "high" : "mid";
     if (altitude) src.altitude = b.soar ? (src["b.soar"] as Source) ?? {rule: "soars"} : {rule: `plan ${plan}, size ${size}`};
     const UPSIDE_FAMILIES = /^(Gekkonidae|Phyllodactylidae|Sphaerodactylidae|Diplodactylidae|Eublepharidae|Carphodactylidae)$/;
     const crawler = ["insect", "arachnid"].includes(plan) || moves.primary === "crawl" || (plan === "lizard" && (size ?? 99) <= 12) || /(?:^|-)(caterpillar|ant|beetle|snail|slug|gecko|spider)(?:-|$)/.test(slug);
-    const upside = UPSIDE_FAMILIES.test(row.family_name ?? "") || /(?:^|-)gecko(?:-|$)/.test(slug) || plan === "arachnid";
+    const spider = /Araneae/.test(row.order_name ?? "") && !/^(Theraphosidae|Ctenizidae|Atypidae|Hexathelidae|Atracidae)$/.test(row.family_name ?? "");
+    const upside = UPSIDE_FAMILIES.test(row.family_name ?? "") || /(?:^|-)gecko(?:-|$)/.test(slug) || spider;
     const surface: Profile["surface"] = moves.primary === "sessile" || SEA_ZONES.has(zone) ? null : upside && crawler ? "upside" : crawler ? "any" : null;
     if (surface) src.surface = {rule: upside ? `${row.family_name ?? plan}: clings upside down` : `plan ${plan}, small crawler`};
-    const swimmer = all.has("swim") && (moves.primary === "swim" || SEA_ZONES.has(zone));
+    const swimmer = all.has("swim") && (moves.primary === "swim" || SEA_ZONES.has(zone) || ["turtle", "lizard", "legless"].includes(plan) || /^(Phocidae|Otariidae|Odobenidae|Lutrinae|Mustelidae)$/.test(row.family_name ?? ""));
     const airClass = /Mammalia|Reptilia|Aves/.test(row.class_name ?? "") || ["turtle", "quadruped", "flightless_bird"].includes(plan) || /(?:^|-)(whale|dolphin|porpoise|orca|seal|sea-lion|walrus|manatee|dugong|otter|sea-turtle|turtle|penguin|sea-snake)(?:-|$)/.test(slug) && !/(?:^|-)(shark|icefish)(?:-|$)/.test(slug);
     // Birds on the water only count when they dive (penguins, loons, grebes); a duck just floats.
     const breathes = swimmer && airClass && (plan !== "fish" || /Mammalia|Reptilia/.test(row.class_name ?? "")) && (!/Aves/.test(row.class_name ?? "") || Boolean(b.dive) || plan === "flightless_bird");
     if (breathes) src.breathes = {rule: `${row.class_name ?? plan} swimmer`};
-    const seabed = SEA_ZONES.has(zone) && (plan === "crustacean" || moves.primary === "crawl" || layer === "reef" && mode === "floor" || /(?:^|-)(crab|lobster|starfish|sea-star|urchin|sea-cucumber|octopus)(?:-|$)/.test(slug));
-    if (seabed) src.seabed = {rule: layer === "reef" && mode === "floor" ? "layers.json floor" : `plan ${plan} in ${zone}`};
+    const bottomText = ["fish", "crustacean", "other", "cephalopod_jelly"].includes(plan) ? textHit(/\b(sea ?floor|seabed|sea bed|bottom[- ]dwell\w*|on the bottom|benthic|stream ?bed|river ?bed|lake ?bed)\b/i, ["habitat", "look", "sleep", "traits"]) : null;
+    const seabed = (SEA_ZONES.has(zone) && (plan === "crustacean" || moves.primary === "crawl" || layer === "reef" && mode === "floor" || /(?:^|-)(crab|lobster|starfish|sea-star|urchin|sea-cucumber|octopus)(?:-|$)/.test(slug))) || (Boolean(bottomText) && moves.primary !== "fly") || (plan === "crustacean" && WATER_ZONES.has(zone) && all.has("swim"));
+    if (seabed) src.seabed = bottomText ?? {rule: layer === "reef" && mode === "floor" ? "layers.json floor" : `plan ${plan} in ${zone}`};
     if (roost.value === "wall" || spawn.has("house")) if (["insect", "arachnid", "lizard", "flying_insect", "other"].includes(plan)) it.add("wall");
     const reedText = textHit(/\breed(s|beds?)?\b/i, ["habitat", "look", "sleep"]);
     if (roost.value === "reeds" || (reedText && ["walking_bird", "flying_bird", "amphibian", "flying_insect"].includes(plan))) it.add("reeds");
@@ -759,3 +790,30 @@ console.log("defaults per field (live)", defaultsPer, "profiles with any default
 const inter: Record<string, number> = {};
 for (const p of live) for (const i of p.interactions) inter[i] = (inter[i] ?? 0) + 1;
 console.log("interactions", inter);
+
+// The food links the scene keeps predators' ranges apart by (visual only): vertebrate predators of size 15 and up,
+// and the vertebrate prey from 0.15 to 1.2 of their size (what a viewer would read as a hunter and its quarry).
+if (foodPath) {
+    const food: Array<{predator: string; prey: string}> = (JSON.parse(fs.readFileSync(foodPath, "utf8")) as {rows: Array<{predator: string; prey: string}>}).rows;
+    const bySlug = new Map(rows.map((r) => [r.slug!, r]));
+    const sizeOf = (slug: string) => bySlug.get(slug)?.size ?? bySlug.get(slug)?.stats?.size ?? 0;
+    const vertebrate = (slug: string) => {
+        const r = bySlug.get(slug);
+        return Boolean(r && (/Mammalia|Aves|Reptilia|Amphibia/.test(r.class_name ?? "") || (!r.class_name && r.family_name)));
+    };
+    const links: Record<string, string[]> = {};
+    for (const f of food) {
+        const ps = sizeOf(f.predator);
+        if (ps < 15 || !vertebrate(f.predator)) continue;
+        const prey = f.prey.split(",").filter((y) => vertebrate(y) && sizeOf(y) >= 0.15 * ps && sizeOf(y) <= 1.2 * ps);
+        if (prey.length) links[f.predator] = prey;
+    }
+    const slugs = [...new Set([...Object.keys(links), ...Object.values(links).flat()])].sort();
+    const index = new Map(slugs.map((slug, i) => [slug, i]));
+    const compactLinks = Object.fromEntries(Object.entries(links).sort(([a], [b]) => a.localeCompare(b)).map(([p, prey]) => [p, prey.map((y) => index.get(y)!.toString(36)).join(",")]));
+    fs.writeFileSync(
+        path.join(root, "src/ark-scene/food-links.json"),
+        `${JSON.stringify({about: "Generated by scripts/ark-behaviour-profiles.mts from voyage_food_links (read-only): predator slug -> its prey (indices into slugs, base 36). Vertebrate predators of size 15+, vertebrate prey of 0.15-1.2 their size. Used only to keep predators' ranges apart from their prey's in the scene (visual only).", slugs, links: compactLinks})}\n`
+    );
+    console.log(`food links: ${Object.keys(links).length} predators, ${Object.values(links).reduce((n, v) => n + v.length, 0)} links`);
+}
