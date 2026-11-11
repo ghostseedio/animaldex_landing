@@ -829,8 +829,15 @@ void main() {
     if (cameraPosition.y < seaLevel - 0.02) {
         vec3 up = normalize(vec3(-slope.x * 2.5, -1.0, -slope.y * 2.5));
         float straight = max(dot(-view, -up), 0.0);
-        float window = smoothstep(0.62, 0.8, straight);
+        float window = smoothstep(0.58, 0.82, straight);
         vec3 below = mix(vec3(0.04, 0.2, 0.24), vec3(0.08, 0.3, 0.32), daylight) * mix(0.35, 1.0, daylight);
+        // Batch 6: the underside is not one flat teal: the waves' slopes catch the light coming down, a ripple shimmers,
+        // and it darkens into the distance, where it mirrors the deep (it read as a flat band over the reef).
+        vec3 tilted = normalize(vec3(-slope.x * 7.0, 1.0, -slope.y * 7.0));
+        float catchLight = pow(max(dot(tilted, sunDirection), 0.0), 6.0);
+        float ripple = smoothstep(0.45, 0.85, arkNoise(vWorld.xz * 0.9 + vec2(arkTime * 0.21, -arkTime * 0.17)));
+        below *= 0.78 + (0.55 * catchLight + 0.22 * ripple) * daylight;
+        below = mix(below, below * 0.55, smoothstep(8.0, 45.0, distanceToEye));
         vec3 through = mix(skyHorizon, skyZenith, 0.4) * (0.9 + 0.6 * pow(max(dot(-view, sunDirection), 0.0), 40.0)) * mix(0.25, 1.1, daylight);
         colour = mix(below, through, window);
         alpha = 1.0;
