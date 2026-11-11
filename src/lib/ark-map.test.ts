@@ -250,7 +250,7 @@ test("map + behaviour: every bird, bat and grazer is on the behaviour schedule (
     assert.ok(birds > 1200 && grazers > 400 && perched > 800, `${birds} birds and bats, ${grazers} grazers, ${perched} perched`);
 });
 
-test("map: penguins and seals stand on their shore (the penguins on the cold cove's ice and rocks), held Antarctic ones too; in the water they swim under it", () => {
+test("map: penguins and seals stand on their shore (the polar penguins on the cold cove's ice, the warm-water ones on their warm rocks and beach), held Antarctic ones too; in the water they swim under it", () => {
     const sampler = mapPoints().sampler;
     const cove = scenePlace("cold_cove");
     const penguins = ["african-penguin", "humboldt-penguin", "magellanic-penguin", "galapagos-penguin", "emperor-penguin", "adelie-penguin", "king-penguin", "gentoo-penguin", "macaroni-penguin", "southern-rockhopper-penguin"];
@@ -265,7 +265,12 @@ test("map: penguins and seals stand on their shore (the penguins on the cold cov
         let sea = false;
         for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= 9 && !sea; r++) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
         assert.ok(sea, `${animal.model_slug} by the sea`);
-        if (penguins.includes(animal.model_slug)) assert.ok(Math.hypot(place.x - cove.x, place.z - cove.z) < 36, `${animal.model_slug} on the cold cove`);
+        // The Antarctic and sub-Antarctic penguins on the cold cove; the warm-water ones on their own warm shore, far from the ice.
+        const warm = ["african-penguin", "humboldt-penguin", "magellanic-penguin", "galapagos-penguin"].includes(animal.model_slug);
+        if (penguins.includes(animal.model_slug)) {
+            if (warm) assert.ok(place.map!.shore === "coast" && Math.hypot(place.x - cove.x, place.z - cove.z) > 40 && g.tags.some((t) => ["rocky_shore", "sandy_beach", "sea_cliffs", "rocks_boulders"].includes(t)), `${animal.model_slug} on its warm shore`);
+            else assert.ok(place.map!.shore === "cove" && Math.hypot(place.x - cove.x, place.z - cove.z) < 36, `${animal.model_slug} on the cold cove`);
+        }
         assert.equal(shoreOf(animal.model_slug, animal.zone) === "cove", place.map!.shore === "cove");
         // In the water (when its schedule takes it swimming): under the surface in the upper water, up only to breathe.
         const depth = speciesDepth(animal.model_slug, animal.zone)!;

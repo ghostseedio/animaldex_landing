@@ -4,7 +4,7 @@
  * ocean"): builds the golden page (`src/ark-scene/golden-entry.ts`, the v2 fixture) as the graphics lane's harness does
  * (`scripts/ark-golden-shots.mjs`), lets every model load, then frames the animals whose slug matches and saves PNGs.
  *
- *   node scripts/ark-map-cove-shot.mjs --out <dir> [--match penguin] [--hour 11]
+ *   node scripts/ark-map-cove-shot.mjs --out <dir> [--match penguin] [--hour 11] [--add african-penguin:seashore:5] [--name warm] [--time day|dusk|night]
  */
 
 import {createServer} from "node:http";
@@ -22,6 +22,13 @@ const arg = (name, fallback) => {
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "map-shots")));
 const match = new RegExp(arg("match", "penguin"));
 const hour = Number(arg("hour", "11"));
+// Extra animals for the shot (`--add african-penguin:seashore:5`): a colony of that species in that zone, on a slot of its own.
+const adds = arg("add", "").split(",").filter(Boolean).map((spec) => {
+    const [slug, zone, count] = spec.split(":");
+    return {slug, zone, count: Number(count || 1)};
+});
+const name = arg("name", "cove");
+const time = arg("time", "day");
 
 const site = path.join(root, ".ark-golden", "site-map");
 mkdirSync(site, {recursive: true});
@@ -36,7 +43,24 @@ await build({
     minify: true,
     tsconfig: path.join(root, "tsconfig.json"),
     define: {"process.env.NODE_ENV": JSON.stringify("development")},
-    logLevel: "warning"
+    logLevel: "warning",
+    plugins: adds.length ? [{
+        name: "ark-map-shot-fixture",
+        setup(builder) {
+            // The golden page's v2 fixture with the extra colonies (the page's own file is not touched).
+            builder.onLoad({filter: /fixtures[\/]snapshot-v2\.json$/}, (args) => {
+                const fixture = JSON.parse(readFileSync(args.path, "utf8"));
+                const template = fixture.animals[0];
+                for (const add of adds) {
+                    const slot = 1 + Math.max(-1, ...fixture.animals.filter((a) => a.zone === add.zone).map((a) => a.slot ?? 0));
+                    for (let rank = 0; rank < add.count; rank++) {
+                        fixture.animals.push({...template, id: `00000000-0000-4000-8000-${String(slot * 100 + rank).padStart(12, "0")}`, species_profile_id: `shot-${add.slug}`, name: add.slug, scientific_name: null, model_slug: add.slug, zone: add.zone, slot, slot_rank: rank, sociality: "group", activity: "diurnal", mine: false});
+                    }
+                }
+                return {contents: JSON.stringify(fixture), loader: "json"};
+            });
+        }
+    }] : []
 });
 writeFileSync(path.join(site, "golden.html"), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ark map shot</title>
 <style>html,body{margin:0;height:100%;background:#ecdcc4;overflow:hidden}#ark{position:fixed;inset:0}</style></head>
@@ -81,7 +105,9 @@ try {
     if (error) throw new Error(error);
     console.log("prepare", JSON.stringify(await page.evaluate(() => window.__arkGolden.prepare().then((r) => r.settled))));
     // A golden shot first (pins the calm weather, the sea's clock and the light), then the hour asked for.
-    await page.evaluate(() => window.__arkGolden.shoot("coast_rocks", "day"));
+    await page.evaluate((when) => window.__arkGolden.shoot("coast_rocks", when), time);
+    // A few seconds for the animals' schedules to settle at that hour (a colony walks home to rest at dusk).
+    for (let i = 0; i < 240; i++) await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
     const found = await page.evaluate(({source, hour}) => {
         const re = new RegExp(source);
         const debug = window.__arkDebug;
@@ -90,10 +116,13 @@ try {
     }, {source: match.source, hour});
     console.log(JSON.stringify(found));
     if (!found.animals.length) throw new Error(`no animal matches ${match}`);
-    const cx = found.animals.reduce((s, a) => s + a.x, 0) / found.animals.length;
-    const cz = found.animals.reduce((s, a) => s + a.z, 0) / found.animals.length;
-    const cy = found.animals.reduce((s, a) => s + a.y, 0) / found.animals.length;
-    for (const [name, distance, height, turn] of [["close", 7, 3, 0.6], ["wide", 22, 10, 0.9]]) {
+    // Where they are drawn now (their schedule may have them out swimming or walking), else their places.
+    const now = found.animals.filter((a) => a.middle).map((a) => ({x: a.middle.x, y: a.middle.y, z: a.middle.z}));
+    const at = now.length ? now : found.animals.map((a) => ({x: a.x, y: a.y, z: a.z}));
+    const cx = at.reduce((s, a) => s + a.x, 0) / at.length;
+    const cz = at.reduce((s, a) => s + a.z, 0) / at.length;
+    const cy = Math.max(at.reduce((s, a) => s + a.y, 0) / at.length, 0);
+    for (const [shot, distance, height, turn] of [["close", 7, 3, 0.6], ["wide", 22, 10, 0.9]]) {
         await page.evaluate(({cx, cy, cz, distance, height, turn}) => {
             const {camera, controls} = window.__arkDebug;
             controls.target.set(cx, cy + 0.5, cz);
@@ -102,7 +131,7 @@ try {
             controls.update?.();
         }, {cx, cy, cz, distance, height, turn});
         for (let i = 0; i < 90; i++) await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
-        const file = path.join(out, `cove-${name}.png`);
+        const file = path.join(out, `${name}-${shot}.png`);
         await page.screenshot({path: file});
         console.log("saved", file);
     }

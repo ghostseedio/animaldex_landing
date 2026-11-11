@@ -560,15 +560,22 @@ const SHORE_TAGS: readonly MapTag[] = ["snow_ice", "tundra", "rocky_shore", "san
 
 /**
  * A diver that hauls out stands on a shore, never floats on the sea (the
- * owner, 2026-11-11: "penguins floating in the ocean"): every penguin and the
- * polar seals and walrus on the cold cove (its ice runs down to the sea, the
- * owner's choice; its rocky shore beside it), the other seals and sea lions on
- * their own coast's rocks and beaches. A held Antarctic species (decision 2,
+ * owner, 2026-11-11: "penguins floating in the ocean"): the Antarctic and
+ * sub-Antarctic penguins and the polar seals and walrus on the cold cove (its
+ * ice runs down to the sea, the owner's choice; its rocky shore beside it),
+ * the warm-water penguins and the other seals and sea lions on their own
+ * coast's rocks and beaches. A held Antarctic species (decision 2,
  * not a water species) waits on the cove. Null for everyone else.
  */
 export function shoreOf(slug: string, zone: ArkZone): "cove" | ArkZone | null {
     if (ANTARCTIC.has(slug) && !(speciesDepth(slug, zone) && !PENGUIN.test(slug) && !PINNIPED.test(slug))) return "cove";
-    if (PENGUIN.test(slug)) return "cove";
+    // A penguin of temperate or tropical rocky coasts (African, Humboldt, Galápagos, Magellanic: the coordinator's UX call,
+    // 2026-11-11) on its own warm shore's rocks and beach; an Antarctic or sub-Antarctic one, or one whose text names the ice, on the cove.
+    if (PENGUIN.test(slug)) {
+        const species = mapSpecies(slug, zone);
+        const polar = zone === "polar" || Boolean(species && POLAR_TAGS.some((tag) => species.allowed.has(tag)));
+        return polar ? "cove" : ZONE_SITES[zone]?.kind === "sea" ? "seashore" : zone;
+    }
     // The auks that the table puts at sea (murres, guillemots, auklets, murrelets): home on their cliffs and rocks by the sea (they
     // raft on the water and dive from it on their schedule; the puffins already stand on their ledges).
     // (Not an auk sea-depth's table gives a band of its own: that one is the table's water species.)
