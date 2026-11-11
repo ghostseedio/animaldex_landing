@@ -2240,8 +2240,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
                 const length = model.length * candidate.modelScale * sizeUp * 1.0;
                 if (surface) {
-                    // On a wall, a leaf, a flower or a stone: its own size, on that surface where it touches it.
-                    shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 1.1, length: length * 1.05, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz});
+                    // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
+                    // touches it, long the way it crawls.
+                    shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
                 } else {
                     // On the ground: on its slope (near ones, with the pass on), a little under the body's middle.
                     const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;

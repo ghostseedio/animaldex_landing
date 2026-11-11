@@ -39,7 +39,22 @@ function radialTexture(stops: Array<[number, number]> = [[0, 1], [0.45, 0.65], [
  * pass): the shadow lies on the slope, or on the wall, leaf or stone a small
  * animal clings to, instead of flat on the ground below.
  */
-export type Shadow = {x: number; y: number; z: number; width: number; length: number; yaw: number; strength: number; nx?: number; ny?: number; nz?: number};
+export type Shadow = {
+    x: number;
+    y: number;
+    z: number;
+    width: number;
+    length: number;
+    yaw: number;
+    strength: number;
+    nx?: number;
+    ny?: number;
+    nz?: number;
+    /** On a surface: the way the animal heads along it (its length lies that way; `yaw` means nothing on a wall). */
+    tx?: number;
+    ty?: number;
+    tz?: number;
+};
 
 export class ContactShadows {
     readonly mesh: InstancedMesh;
@@ -93,13 +108,16 @@ export class ContactShadows {
             if (shadow.ny !== undefined && shadow.nx !== undefined && shadow.nz !== undefined) {
                 // On its surface: the quad's up is the surface's normal, its length along the animal's heading in that plane.
                 this.up.set(shadow.nx, shadow.ny, shadow.nz).normalize();
-                this.along.set(Math.sin(shadow.yaw), 0, Math.cos(shadow.yaw));
+                if (shadow.tx !== undefined && shadow.ty !== undefined && shadow.tz !== undefined) this.along.set(shadow.tx, shadow.ty, shadow.tz);
+                else this.along.set(Math.sin(shadow.yaw), 0, Math.cos(shadow.yaw));
                 this.along.addScaledVector(this.up, -this.along.dot(this.up));
                 if (this.along.lengthSq() < 1e-6) this.along.set(0, 0, 1).addScaledVector(this.up, -this.up.z);
                 this.along.normalize();
                 this.across.crossVectors(this.up, this.along);
                 this.matrix.makeBasis(this.across.multiplyScalar(width), this.up, this.along.multiplyScalar(length));
-                const lift = Math.min(0.05, 0.02 + 0.04 * Math.min(width, length));
+                // Off the surface by a little of the animal's own size (the polygon offset does the rest): a fixed lift
+                // floats a small one's shadow beside it on a wall seen from the side.
+                const lift = Math.min(0.05, Math.max(0.0015, 0.06 * Math.min(width, length)));
                 this.matrix.setPosition(shadow.x + this.up.x * lift, shadow.y + this.up.y * lift, shadow.z + this.up.z * lift);
             } else {
                 this.matrix.makeScale(width, 1, length);
