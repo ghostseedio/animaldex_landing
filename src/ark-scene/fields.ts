@@ -14,8 +14,9 @@
  * Pure: no three.js.
  */
 
-import {sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
+import {HAMLET_LANES, LANE_WIDTH, laneDistance, sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
 import {COTTAGE} from "@/ark-scene/micro-decor";
+import {hamletLotAt, hamletLotsGlsl} from "@/ark-scene/props/hamlet-land";
 
 export const CROPS = ["pasture", "tilled", "sprouts", "cabbage", "cereal", "maize"] as const;
 export type Crop = typeof CROPS[number];
@@ -41,6 +42,51 @@ const STAGGER = 0.37;
 /** No rows this close to a field's edge (the hedge and a headland). */
 export const HEADLAND = 0.7;
 
+/**
+ * The orchard's first tree from the farm's site (`decor.ts` plants its rows from here, turned by `turn`). Home growth
+ * (2026-11-11): it moved from east of the farm's clearing (where the hamlet's streets run now) to behind the barn,
+ * between it and the wetland.
+ */
+export const ORCHARD = {x: -22, z: -18, turn: 0.05};
+/** The orchard's middle (its 6 × 4 trees' grid). */
+export function orchardMiddle(): {x: number; z: number} {
+    const farm = ZONE_SITES.farm_garden;
+    const u = 8.8;
+    const v = 5.1;
+    return {x: farm.x + ORCHARD.x + u * Math.cos(ORCHARD.turn) - v * Math.sin(ORCHARD.turn), z: farm.z + ORCHARD.z + u * Math.sin(ORCHARD.turn) + v * Math.cos(ORCHARD.turn)};
+}
+
+/** A field whose middle is this near a lane is grass (the village's greens and paddocks round its gardens). */
+export const VILLAGE_GREEN = 16;
+/** No crops this near a lane's middle (the lane and a verge each side). */
+export const LANE_CLEAR = LANE_WIDTH / 2 + 0.8;
+
+/**
+ * The hamlet's lanes for the shaders (home growth): `arkLaneDistance(p)`, metres from p (world x, z) to the nearest
+ * lane's middle line, the twin of world.ts `laneDistance`. The ground paints the lanes with it (`terrain.ts`), and
+ * the fields keep their crops off them.
+ */
+export function lanesGlsl(): string {
+    const segments: string[] = [];
+    for (const {points} of HAMLET_LANES) for (let i = 1; i < points.length; i++) segments.push(`    d = min(d, arkSegment(p, vec2(${points[i - 1][0].toFixed(2)}, ${points[i - 1][1].toFixed(2)}), vec2(${points[i][0].toFixed(2)}, ${points[i][1].toFixed(2)})));`);
+    const xs = HAMLET_LANES.flatMap((lane) => lane.points.map((q) => q[0]));
+    const zs = HAMLET_LANES.flatMap((lane) => lane.points.map((q) => q[1]));
+    const box = xs.length ? [Math.min(...xs) - 6, Math.max(...xs) + 6, Math.min(...zs) - 6, Math.max(...zs) + 6] : [0, 0, 0, 0];
+    return `
+float arkSegment(vec2 p, vec2 a, vec2 b) {
+    vec2 ab = b - a;
+    float t = clamp(dot(p - a, ab) / dot(ab, ab), 0.0, 1.0);
+    return length(p - a - ab * t);
+}
+float arkLaneDistance(vec2 p) {
+    if (p.x < ${box[0].toFixed(1)} || p.x > ${box[1].toFixed(1)} || p.y < ${box[2].toFixed(1)} || p.y > ${box[3].toFixed(1)}) return 1e4;
+    float d = 1e4;
+${segments.join("\n")}
+    return d;
+}
+`;
+}
+
 /** Where crops never grow: the farm's clearing, the cottage's yard, the barn, the orchard. */
 export function fieldKeepOuts(): Array<{x: number; z: number; r: number}> {
     const farm = ZONE_SITES.farm_garden;
@@ -48,7 +94,7 @@ export function fieldKeepOuts(): Array<{x: number; z: number; r: number}> {
         {x: farm.x, z: farm.z, r: farm.clearing + 2},
         {x: COTTAGE.x + 2, z: COTTAGE.z + 0.5, r: 10},
         {x: farm.x - 15, z: farm.z + 9, r: 7},
-        {x: farm.x + 24.8, z: farm.z - 0.9, r: 11}
+        {...orchardMiddle(), r: 11}
     ];
 }
 
@@ -118,11 +164,21 @@ export function fieldCentre(cell: [number, number]): {x: number; z: number} {
     return {x: (u * ACROSS.z - v * ALONG.z) / det, z: (v * ALONG.x - u * ACROSS.x) / det};
 }
 
-/** The crop growing at a point, or null (grass: a field whose middle is in a keep-out, or the headland). */
+/** The crop growing at a point, or null (grass: a field whose middle is in a keep-out, the headland, or the hamlet's reserved plots, `props/hamlet-land.ts`). */
 export function cropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
+    if (hamletLotAt(x, z)) return null;
+    return fieldCropAt(x, z);
+}
+
+/** The field's own crop at a point, whatever the hamlet reserves there (the props' paddock placement asks this). */
+export function fieldCropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
+    // (Home growth: no crop on the hamlet's lanes or their verges.)
+    if (laneDistance(x, z) < LANE_CLEAR) return null;
     const field = fieldAt(x, z);
     const middle = fieldCentre(field.cell);
     for (const out of fieldKeepOuts()) if (Math.hypot(middle.x - out.x, middle.z - out.z) < out.r) return null;
+    // The village's own fields, along its lanes, are grass whole (the gardens and greens between the cottages).
+    if (laneDistance(middle.x, middle.z) < VILLAGE_GREEN) return null;
     if (field.crop === "pasture" || field.edge < HEADLAND) return null;
     return field as FieldPoint & {crop: Exclude<Crop, "pasture">};
 }
@@ -169,6 +225,8 @@ export function fieldsGlsl(): string {
     const shares = SHARES.map((s) => s.toFixed(4));
     const spacings = CROPS.map((c) => (CROP_ROWS[c].spacing || 1).toFixed(3));
     return `
+${hamletLotsGlsl()}
+${lanesGlsl()}
 uint arkFieldHash(ivec2 c) {
     uint h = (uint(c.x + 1000) * 0x8da6b343u) ^ (uint(c.y + 1000) * 0xd8163841u);
     h ^= h >> 15u;
@@ -197,7 +255,8 @@ int arkField(vec2 p, out float row, out float along, out float edge, out vec2 ce
     float mu = (cell.x + 0.5 - cell.y * ${STAGGER}) * ${FIELD_SIZE.along.toFixed(1)};
     float mv = (cell.y + 0.5) * ${FIELD_SIZE.across.toFixed(1)};
     vec2 middle = vec2(mu * ${ACROSS.z} - mv * ${ALONG.z}, mv * ${ALONG.x} - mu * ${ACROSS.x}) / ${det.toFixed(6)};
-    bool inside = false;
+    bool inside = arkHamletLot(p) || arkLaneDistance(p) < ${LANE_CLEAR.toFixed(2)};
+    if (arkLaneDistance(middle) < ${VILLAGE_GREEN.toFixed(1)}) inside = true;
 ${keep}
     return inside ? 0 : crop;
 }

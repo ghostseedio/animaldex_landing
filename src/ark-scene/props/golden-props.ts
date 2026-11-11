@@ -16,6 +16,8 @@ import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
 import {nestStage} from "@/ark-scene/props/nest-growth";
 import {place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
+import {homePlots} from "@/ark-scene/map/hamlet";
+import {defaultHomePlots, type HomePlot} from "@/ark-scene/props/home-layout";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -62,7 +64,7 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
     return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -95,6 +97,10 @@ export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats,
     const props = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
     // Every shot but the growing nest's sees the nests as the fixture's day has them.
     props?.setArkDay(null);
+    // The hamlet's shots: the whole hamlet at its cap (home growth: 16 houses, 6 smallholdings), the close ones at 1× (the
+    // dry run's population: 9 houses, 3 smallholdings); every other shot today's two plots.
+    const withPlots = (globalThis as {__arkPropsModule?: {setHomePlots: (plots: HomePlot[]) => void}}).__arkPropsModule;
+    withPlots?.setHomePlots(shot === "hamlet_day" || shot === "hamlet_night" ? homePlots(16 * 130, 6 * 50) : shot.startsWith("hamlet") ? homePlots(1053, 145) : defaultHomePlots());
     const plan = framed(shot, marks, stats, locate);
     if (shot === "nest_growing" && plan) props?.setArkDay(growingDay(stats));
     // Every shot in its own weather: dry and still unless it says otherwise (whatever the island clock says today).
@@ -216,6 +222,23 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const a = 2.2;
             const shore = {x: lake.x + Math.sin(a) * (lake.radius + 1.5), y: 0, z: lake.z + Math.cos(a) * (lake.radius + 1.5)};
             return {view: look(shore, 6, 1.3, a + 0.9, 0.4), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "lake shore, misty dawn"};
+        }
+        case "hamlet_day":
+        case "hamlet_night": {
+            // The whole hamlet at its cap from above its middle (home growth: it spans about 110 m).
+            const plots = homePlots(16 * 130, 6 * 50);
+            const middle = {x: plots.reduce((sum, p) => sum + p.x, 0) / plots.length, z: plots.reduce((sum, p) => sum + p.z, 0) / plots.length};
+            const night = shot === "hamlet_night";
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 128, 0.85, -0.35), hours: night ? 21.5 : 11, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: `hamlet at its cap: ${plots.filter((p) => p.kind === "house").length} houses, ${plots.filter((p) => p.kind === "smallholding").length} smallholdings`};
+        }
+        case "hamlet_close_day":
+        case "hamlet_close_night": {
+            // Two of the new cottages and a new smallholding, closer (the village street by today's cottage, at 1×).
+            const plots = homePlots(1053, 145);
+            const chosen = plots.filter((p) => ["house-1", "house-3", "smallholding-1"].includes(p.id));
+            const middle = {x: chosen.reduce((sum, p) => sum + p.x, 0) / chosen.length, z: chosen.reduce((sum, p) => sum + p.z, 0) / chosen.length};
+            const night = shot === "hamlet_close_night";
+            return {view: look({x: middle.x, y: 0, z: middle.z}, 44, 1.0, 0.4), hours: night ? 21.5 : 15.5, weather: {cold: 0.3, wind: 0.2}, environment: calm, anchor: "hamlet: house-1, house-3, smallholding-1"};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;

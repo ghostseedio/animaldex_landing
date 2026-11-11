@@ -2691,10 +2691,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const vertical = FOV * Math.PI / 180;
         const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
         const fit = Math.min(vertical, horizontal);
-        const radius = aspect < 0.8 ? 84 : 82;
+        // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
+        // view centres a little south-east of the lake and fits a wider circle.
+        const radius = aspect < 0.8 ? 114 : 96;
         const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
         // Low enough to see the horizon over the island's far shore.
-        return {target: new Vector3(0, 0, aspect < 0.8 ? 12 : 2), distance: distance * 0.94, polar: 1.06, azimuth: 0};
+        return {target: new Vector3(aspect < 0.8 ? 16 : 12, 0, aspect < 0.8 ? 24 : 14), distance: distance * 0.94, polar: 1.06, azimuth: 0};
     };
 
     // Keep the view over the world and above the ground.

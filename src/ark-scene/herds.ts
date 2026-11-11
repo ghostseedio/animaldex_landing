@@ -55,7 +55,7 @@ export type ArkRepresentatives = {
 /** Which species are herds (more than `from` aboard). */
 export function arkHerdKeys(animals: ArkAnimal[], from = ARK_HERD_FROM): Set<string> {
     const counts = new Map<string, number>();
-    for (const animal of animals) counts.set(herdKey(animal), (counts.get(herdKey(animal)) ?? 0) + 1);
+    for (const animal of animals) if (animal.area !== "house" && animal.area !== "farm") counts.set(herdKey(animal), (counts.get(herdKey(animal)) ?? 0) + 1);
     return new Set(Array.from(counts.entries()).filter(([, n]) => n > from).map(([key]) => key));
 }
 
@@ -64,13 +64,19 @@ export function arkRepresentatives(animals: ArkAnimal[], options: {pinned?: Read
     const cap = Math.max(options.live ?? ARK_HERD_LIVE, 1);
     const pinned = options.pinned ?? new Set<string>();
     const bySpecies = new Map<string, ArkAnimal[]>();
+    const live = new Set<string>();
     for (const animal of animals) {
+        // A hamlet resident (a captured pet or farm animal, `map/hamlet.ts`) is never massed into a herd: it lives on its
+        // plot, and the hamlet's rotation decides who of them is out of doors.
+        if (animal.area === "house" || animal.area === "farm") {
+            live.add(animal.id);
+            continue;
+        }
         const key = herdKey(animal);
         const list = bySpecies.get(key);
         if (list) list.push(animal);
         else bySpecies.set(key, [animal]);
     }
-    const live = new Set<string>();
     const herds = new Map<string, ArkHerd>();
     bySpecies.forEach((members, key) => {
         if (members.length <= from) {

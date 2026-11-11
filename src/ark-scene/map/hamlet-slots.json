@@ -4,68 +4,147 @@
   {
    "id": "smallholding-1",
    "kind": "smallholding",
-   "x": 16,
-   "z": 37,
-   "rotation": -0.151,
+   "x": 40.292,
+   "z": 71.5,
+   "rotation": -2.678,
    "barn": true
   },
   {
    "id": "house-1",
    "kind": "house",
-   "x": 37,
-   "z": 40,
-   "rotation": -2.944
+   "x": 12.255,
+   "z": 74.097,
+   "rotation": -3.117
   },
   {
    "id": "house-2",
    "kind": "house",
-   "x": -2,
-   "z": 61,
-   "rotation": 4.434
+   "x": -1.849,
+   "z": 74.661,
+   "rotation": -3.083
   },
   {
    "id": "house-3",
    "kind": "house",
-   "x": 28,
-   "z": -17,
-   "rotation": -1.957
+   "x": 25.549,
+   "z": 50.652,
+   "rotation": 0.036
   },
   {
    "id": "smallholding-2",
    "kind": "smallholding",
-   "x": 31,
-   "z": -2,
-   "rotation": -0.934,
+   "x": 37.819,
+   "z": 0.944,
+   "rotation": 0.464,
    "barn": true
   },
   {
    "id": "house-4",
    "kind": "house",
-   "x": 46,
-   "z": 7,
-   "rotation": 0.738
+   "x": 9.261,
+   "z": 86.063,
+   "rotation": 0.185
   },
   {
    "id": "house-5",
    "kind": "house",
-   "x": 49,
-   "z": 34,
-   "rotation": 0.27
+   "x": -5.989,
+   "z": 86.242,
+   "rotation": 0.036
   },
   {
    "id": "house-6",
    "kind": "house",
-   "x": 52,
-   "z": -26,
-   "rotation": 0.199
+   "x": 46.285,
+   "z": 41,
+   "rotation": 0.464
   },
   {
    "id": "smallholding-3",
    "kind": "smallholding",
-   "x": 64,
-   "z": 28,
-   "rotation": -2.844,
+   "x": 51.683,
+   "z": -5.988,
+   "rotation": 0.464,
    "barn": true
+  },
+  {
+   "id": "house-7",
+   "kind": "house",
+   "x": 29.143,
+   "z": 32.786,
+   "rotation": -2.678
+  },
+  {
+   "id": "house-8",
+   "kind": "house",
+   "x": 53.888,
+   "z": 62.914,
+   "rotation": -2.678
+  },
+  {
+   "id": "house-9",
+   "kind": "house",
+   "x": 41.665,
+   "z": 26.525,
+   "rotation": -2.678
+  },
+  {
+   "id": "smallholding-4",
+   "kind": "smallholding",
+   "x": 62.123,
+   "z": -27.075,
+   "rotation": 1.385,
+   "barn": true
+  },
+  {
+   "id": "house-10",
+   "kind": "house",
+   "x": 58.807,
+   "z": 34.739,
+   "rotation": 0.464
+  },
+  {
+   "id": "house-11",
+   "kind": "house",
+   "x": 54.187,
+   "z": 20.264,
+   "rotation": -2.678
+  },
+  {
+   "id": "house-12",
+   "kind": "house",
+   "x": 66.41,
+   "z": 56.653,
+   "rotation": -2.678
+  },
+  {
+   "id": "smallholding-5",
+   "kind": "smallholding",
+   "x": 89.397,
+   "z": 17.656,
+   "rotation": 0.464,
+   "barn": true
+  },
+  {
+   "id": "house-13",
+   "kind": "house",
+   "x": 66.709,
+   "z": 14.003,
+   "rotation": -2.678
+  },
+  {
+   "id": "house-14",
+   "kind": "house",
+   "x": 78.932,
+   "z": 50.392,
+   "rotation": -2.678
+  },
+  {
+   "id": "house-15",
+   "kind": "house",
+   "x": 79.231,
+   "z": 7.742,
+   "rotation": -2.678
   }
  ]
 }

@@ -637,6 +637,20 @@ float arkWet = 0.0;`)
         field = mix(field, hedgeTone * (0.75 + 0.5 * arkNoise(p * 3.0)), hedge * (0.6 + 0.4 * arkNoise(p * 1.1)));
         ground = mix(ground, field, farm * 0.94);
     }
+    // The hamlet's lanes (home growth, fields.ts lanesGlsl): packed earth with two wheel ruts and a grass crown, a
+    // ragged grassy verge; wetter in the ruts after rain.
+    {
+        float laneD = arkLaneDistance(p);
+        if (laneD < 3.2) {
+            float lane = 1.0 - smoothstep(1.25, 1.85, laneD + (arkNoise(p * 1.7) - 0.5) * 0.35);
+            vec3 earth = mix(vec3(0.36, 0.3, 0.22), vec3(0.47, 0.4, 0.3), arkNoise(p * 2.3)) * (0.9 + 0.2 * arkNoise(p * 9.0));
+            float rut = smoothstep(0.32, 0.08, abs(laneD - 0.75)) * (0.75 + 0.25 * arkNoise(p * 4.0));
+            float crown = smoothstep(0.32, 0.12, laneD) * smoothstep(0.35, 0.7, arkNoise(p * 3.1));
+            earth = mix(earth, earth * 0.78, rut);
+            earth = mix(earth, ground, crown * 0.7);
+            ground = mix(ground, earth, lane * smoothstep(0.2, 0.6, vArkLayers.z + 0.4));
+        }
+    }
 
     // Rock wherever it is steep, in its beds (batch 4): each bed its own grey-brown, the hard ones darker and streaked
     // where water runs down them, a pale lip along each ledge and shade under each overhang.

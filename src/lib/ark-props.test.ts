@@ -401,7 +401,7 @@ test("props budget: draw calls and triangles at each tier, at the busiest places
 // MARK: - Home plots and fence posts
 
 import {readFileSync} from "node:fs";
-import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketPostsFor, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 
 test("props home layout: fence post tops for the sampler, from a pure module, the same posts the areas draw", () => {
     // Pure: no sampler (the sampler imports it), no three.js.
@@ -413,7 +413,8 @@ test("props home layout: fence post tops for the sampler, from a pure module, th
     const paddock = posts.filter((post) => post.fence === "paddock");
     const picket = posts.filter((post) => post.fence === "picket");
     assert.equal(paddock.length, paddockSegments(paddockRect(plots[1])).filter((segment) => !segment.gate).length);
-    assert.equal(picket.length, picketPosts().length);
+    assert.equal(picket.length, picketPostsFor(plots[0]).length);
+    assert.ok(picketPostsFor(plots[0]).length >= picketPosts().length - 2);
     assert.deepEqual(paddock.map((post) => post.n), paddock.map((_, i) => i));
     for (const post of posts) {
         const top = post.fence === "paddock" ? PADDOCK_POST_TOP : PICKET_POST_TOP;
@@ -454,4 +455,194 @@ test("props home plots: every plot gets its own garden or yard, paddock, coop an
     areas.dispose();
     again.dispose();
     only.dispose();
+});
+
+// MARK: - The hamlet's buildings
+
+import {createHash} from "node:crypto";
+import type {BufferGeometry as Geometry} from "three";
+import {COTTAGE_STYLE, cottageGeometry} from "@/ark-scene/micro-scene";
+import {BARN_STYLE, barnGeometry} from "@/ark-scene/vegetation";
+import {barnStyle, cottageStyle} from "@/ark-scene/props/home-layout";
+import {hamletGeometry} from "@/ark-scene/props/hamlet-buildings";
+import {homePlots} from "@/ark-scene/map/hamlet";
+
+const geometryHash = (geometry: Geometry) => {
+    const h = createHash("sha256");
+    for (const name of Object.keys(geometry.attributes).sort()) {
+        const array = geometry.getAttribute(name).array as Float32Array;
+        h.update(name);
+        h.update(Buffer.from(array.buffer, array.byteOffset, array.byteLength));
+    }
+    return h.digest("hex").slice(0, 16);
+};
+
+test("props hamlet: today's cottage and barn byte-identical from the shared builders; every other plot its own look; lit glass", () => {
+    // The hashes of today's meshes, taken before the builders were factored out (micro-scene.ts, vegetation.ts).
+    const cottage = cottageGeometry(COTTAGE_STYLE);
+    assert.equal(geometryHash(cottage.house), "c764629f617cacde");
+    assert.equal(geometryHash(cottage.glass), "c4460e6c3837436d");
+    assert.equal(geometryHash(barnGeometry(BARN_STYLE)), "1c5c96232f09e8b1");
+    assert.equal(geometryHash(barnGeometry()), "1c5c96232f09e8b1");
+    // The first plots keep today's look; the hamlet at 1× (7 houses, 3 smallholdings) is not one building cloned.
+    const plots = homePlots(7 * 130, 3 * 50);
+    assert.equal(plots.filter((plot) => plot.kind === "house").length, 7);
+    assert.equal(plots.filter((plot) => plot.kind === "smallholding").length, 3);
+    assert.deepEqual({...cottageStyle(plots[0]), scale: 1}, {...COTTAGE_STYLE, scale: 1});
+    const houses = plots.filter((plot) => plot.kind === "house" && plot.id !== "house-0").map((plot) => JSON.stringify(cottageStyle(plot)));
+    assert.equal(new Set(houses).size, houses.length, "every new cottage its own look");
+    for (const plot of plots.filter((p) => p.kind === "house")) assert.ok(cottageStyle(plot).scale >= 0.9 && cottageStyle(plot).scale <= 1);
+    const farms = plots.filter((plot) => plot.kind === "smallholding" && plot.id !== "smallholding-0").map((plot) => JSON.stringify(barnStyle(plot)));
+    assert.equal(new Set(farms).size, farms.length);
+    // Two draw calls' worth: the buildings (6 cottages, 2 barns or sheds) and the windows' glass.
+    const built = hamletGeometry(plots);
+    assert.ok(built.buildings && built.glass);
+    const tris = (geometry: Geometry) => geometry.getAttribute("position").count / 3;
+    const one = tris(cottage.house);
+    assert.ok(tris(built.buildings!) > one * 4 && tris(built.buildings!) < one * 6 + 3000, `${tris(built.buildings!)} triangles (one cottage ${one})`);
+    assert.equal(tris(built.glass!), tris(cottage.glass) * 6);
+    // Deterministic.
+    assert.equal(geometryHash(hamletGeometry(plots).buildings!), geometryHash(built.buildings!));
+});
+
+// MARK: - The decor thinned on the hamlet's reserved plots
+
+import {hamletLandAt, hamletLotAt, hamletLotsGlsl} from "@/ark-scene/props/hamlet-land";
+import footprintTable from "@/ark-scene/props/hamlet-footprints.json";
+import {plotFootprint, reservedPlots} from "@/ark-scene/map/hamlet";
+import {cropAt, fieldsGlsl} from "@/ark-scene/fields";
+import {grassTufts} from "@/ark-scene/decor";
+
+test("props hamlet land: the baked footprints are still the map's; no crops on a reserved plot, no grass under its buildings, the decor's ids untouched", () => {
+    const baked = (footprintTable as unknown as {footprints: Record<string, Array<[number, number]>>}).footprints;
+    const slots = reservedPlots().slice(2);
+    assert.equal(Object.keys(baked).length, slots.length);
+    for (const plot of slots) {
+        const live = plotFootprint(plot);
+        baked[plot.id].forEach(([x, z], i) => assert.ok(Math.abs(x - live[i].x) < 0.002 && Math.abs(z - live[i].z) < 0.002, `${plot.id} corner ${i}`));
+        assert.equal(hamletLandAt(plot.x, plot.z), "core", plot.id);
+        assert.ok(hamletLotAt(plot.x, plot.z));
+    }
+    let lots = 0;
+    for (let x = -100; x <= 100; x += 1.5) {
+        for (let z = -100; z <= 100; z += 1.5) {
+            if (!hamletLotAt(x, z)) continue;
+            lots++;
+            assert.equal(cropAt(x, z), null, `no crop at ${x}, ${z}`);
+        }
+    }
+    assert.ok(lots > 300, `${lots} samples on the lots`);
+    // The shader's twin is there (a test per footprint), and the field shader calls it.
+    assert.equal((hamletLotsGlsl().match(/return true/g) ?? []).length, slots.length);
+    assert.ok(fieldsGlsl().includes("arkHamletLot(p)"));
+    const tufts = grassTufts(30000);
+    assert.equal(tufts.filter((tuft) => hamletLandAt(tuft.x, tuft.z) === "core").length, 0);
+    // The decor's own items are not moved or removed (their ids, `decor<n>`, stay).
+    assert.equal(worldDecor().filter((item) => item.kind === "flower" && hamletLandAt(item.x, item.z)).length, 0);
+});
+
+// MARK: - Built in slices, the same as all at once
+
+import {buildAreasSteps} from "@/ark-scene/props/areas";
+import {buildHomesSteps} from "@/ark-scene/props/homes";
+import {runSliced} from "@/ark-scene/props/kit";
+
+test("props slices: the homes and the areas built a slice at a time are the same as built at once (and they do pause)", async () => {
+    const snapshot = propsFixture(decodeArkSnapshot(fixture)!);
+    const places = placeAnimals(snapshot.animals);
+    const presence = propsPresence(snapshot);
+    const placeOf = (id: string) => places.get(id) ?? null;
+    let steps = 0;
+    const counted = function* <T>(inner: Generator<void, T, void>): Generator<void, T, void> {
+        let next = inner.next();
+        while (!next.done) {
+            steps++;
+            yield;
+            next = inner.next();
+        }
+        return next.value;
+    };
+    // The smallest slices there are: every step its own frame.
+    const sliced = (await runSliced(counted(buildHomesSteps(presence, placeOf, PROPS_TIERS.medium)), 0))!;
+    assert.ok(steps > 20, `${steps} steps`);
+    const whole = buildHomes(presence, placeOf, PROPS_TIERS.medium);
+    const view = (homes: typeof whole) => ({
+        nests: homes.nests,
+        marks: homes.marks,
+        webs: homes.webs,
+        sites: homes.nestSites,
+        batches: homes.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry), batch.far ? geometryHash(batch.far.geometry) : null])
+    });
+    assert.deepEqual(view(sliced), view(whole));
+    const plots = homePlots(7 * 130, 3 * 50);
+    steps = 0;
+    const areasSliced = (await runSliced(counted(buildAreasSteps(PROPS_TIERS.medium, plots)), 0))!;
+    assert.ok(steps > 20, `${steps} area steps`);
+    const areasWhole = buildAreas(PROPS_TIERS.medium, plots);
+    const areaView = (areas: typeof areasWhole) => ({
+        marks: areas.marks,
+        pieces: areas.pieces.map((piece) => [piece.name, geometryHash(piece.near.geometry), piece.far ? geometryHash(piece.far.geometry) : null]),
+        batches: areas.batches.map((batch) => [batch.name, batch.count, geometryHash(batch.near.geometry)]),
+        buildings: areas.buildings.triangles
+    });
+    assert.deepEqual(areaView(areasSliced), areaView(areasWhole));
+    for (const built of [sliced, whole]) built.dispose();
+    for (const built of [areasSliced, areasWhole]) built.dispose();
+});
+
+// MARK: - Where no animal stands
+
+import {bedsOrigin, COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
+import {plotSpots} from "@/ark-scene/map/hamlet";
+
+test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props draw are listed for the map's spots to avoid", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        const at = (lx: number, lz: number) => frame.toWorld(lx, lz);
+        if (plot.kind === "house") {
+            // Every cabbage row and the wigwam, the compost bin: on a keep-out of this plot.
+            const beds = bedsOrigin(plot);
+            const shift = beds.z0 - GARDEN_BEDS.z0;
+            for (let row = 0; row < GARDEN_BEDS.rows; row++) for (const lz of [GARDEN_BEDS.z0 + 0.35, 0.4, GARDEN_BEDS.z1 - 0.35]) {
+                const w = at(beds.x0 + row * GARDEN_BEDS.pitch, lz + shift);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "beds", `${plot.id} bed ${row}`);
+            }
+            const bin = at(COMPOST.x, COMPOST.z);
+            assert.equal(onHomeKeepOut(bin.x, bin.z, [plot], 0)?.what, "compost");
+        } else {
+            for (const trough of troughSpots(plot)) {
+                const w = at(trough.x, trough.z);
+                assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "trough");
+            }
+            const coop = coopAt(plot);
+            const w = at(coop.x, coop.z);
+            assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "coop");
+        }
+        assert.ok(plotKeepOuts(plot).length >= 3);
+    }
+    // The map's spots today (a report for the map lane, which places on them): how many fall on a keep-out.
+    const clashes = plots.flatMap((plot) => plotSpots(plot).spots.filter((spot) => onHomeKeepOut(spot.x, spot.z, plots)).map((spot) => `${plot.id} ${spot.where} → ${onHomeKeepOut(spot.x, spot.z, plots)!.what}`));
+    console.log(`map spots on a props keep-out: ${clashes.length}${clashes.length ? `: ${clashes.join("; ")}` : ""}`);
+});
+
+// MARK: - Clear of the rocks as drawn
+
+import {inRock} from "@/ark-scene/map/rocks";
+
+test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of any plot stands in a rock as drawn (map/rocks.ts)", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    const hits: string[] = [];
+    for (const post of fencePostTops(plots)) if (inRock(post.position.x, post.position.z, 0.06)) hits.push(`${post.plot} ${post.fence} post ${post.n}`);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        for (const out of plotKeepOuts(plot)) {
+            // The keep-out's middle and corners.
+            for (const [lx, lz] of [[(out.x0 + out.x1) / 2, (out.z0 + out.z1) / 2], [out.x0, out.z0], [out.x1, out.z0], [out.x1, out.z1], [out.x0, out.z1]]) {
+                const w = frame.toWorld(lx, lz);
+                if (inRock(w.x, w.z, 0)) hits.push(`${plot.id} ${out.what}`);
+            }
+        }
+    }
+    assert.deepEqual(Array.from(new Set(hits)), []);
 });
