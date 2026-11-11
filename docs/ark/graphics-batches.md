@@ -134,7 +134,9 @@ Lane: terrain and near-camera. The reef, kelp, fish schools (`ark-graphics-reef`
 - **Fields (`fields.ts`, `terrain.ts`, `near-detail.ts`):**
   - one definition of the fields for the shader and the plants: the shader's 9 × 6.5 m grid, a crop per field (pasture, ploughed, sprouts, cabbages, cereal, maize) and its row direction from an integer hash that is exact on the CPU and the GPU, a headland at each edge; the animals' clearing, the cottage's yard, the barn and the orchard stay grass;
   - the ground paints each crop's rows (antialiased), the furrows tip the shading normal, cereal ripples as the wind passes;
-  - close up, sprouts, cabbages, wheat and maize stand on the painted rows (`snapToRow`).
+  - close up, sprouts, cabbages, wheat and maize stand on the painted rows (`snapToRow`);
+  - rows only well inside the farm: never on the beach or the lake's grass where the farm layer fades out.
+- **Sea bed (for the reef lane):** under the water the bed is coral sand and rubble (grey-brown fragments in patches, a coarse grain), matte (it was treated as wet sand and mirrored the sun, so the reef's floor read as snow), absorbed a little more with depth. Shores above the water are unchanged.
 - **Tests:** `src/lib/ark-graphics.test.ts` (fade reach, camera clearance and ground, coast anchor, fields and rows).
 - **Credits:** nothing third-party; everything is drawn in code from the existing CC0 ground textures.
 
