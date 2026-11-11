@@ -3,6 +3,9 @@ import type {ArkAct} from "@/lib/ark-life";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import type {ArkRestStatus} from "@/ark-scene/sleep";
+
+export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
 
 /**
@@ -220,6 +223,11 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * the tap card's state line reads this, the same state the scene animates, never a clock of its own.
      */
     onBehaviour?: (id: string, state: ArkBehaviourState) => void;
+    /**
+     * How the selected animal is resting now, in the tap card's plain words (`sleep.ts` restStatus: asleep in its den,
+     * on one leg, keeping watch, dozing in the sun…; null up and about), when it is selected and whenever that changes.
+     */
+    onRest?: (id: string, rest: ArkRestStatus | null) => void;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
@@ -382,6 +390,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     locate: (id: string) => ArkLocated | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
+    /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */
+    rest: (id: string) => ArkRestStatus | null;
     /** What the local reactive layer has an animal doing this frame (its action, head look, offset, alarm); null outside its budget. */
     reactive: (id: string) => ArkReactiveSnapshot | null;
     /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */

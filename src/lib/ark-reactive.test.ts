@@ -484,7 +484,7 @@ test("dominance: the more dominant drinks first, the other waits its turn", () =
 
 // MARK: The shared layer is a hard constraint
 
-test("the reactive layer never moves an animal outside its envelope, never wakes a sleeper, and leaves acts alone", () => {
+test("the reactive layer never moves an animal outside its envelope, wakes a sleeper only when something wakes it, and leaves acts alone", () => {
     const layer = new ReactiveLayer({tier: "high"});
     const animals: ReactiveInput[] = [];
     for (let i = 0; i < 30; i++) animals.push(animal(`d${i}`, i % 3 === 0 ? "plains-zebra" : "red-deer", (i % 6) * 3, Math.floor(i / 6) * 3, {shared: {doing: ["graze", "rest", "drink", "wander"][i % 4], moving: i % 4 === 3}}));
@@ -493,6 +493,7 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
     animals[7].acting = true;
     const sleepers = animals.filter((a) => a.asleep);
     let previous = new Map<string, number>();
+    const woken = new Set<string>();
     const frames = run(layer, animals, 25, {
         move: (list, t) => {
             const k = t - 1000;
@@ -511,12 +512,14 @@ test("the reactive layer never moves an animal outside its envelope, never wakes
             const off = Math.hypot(o.dx, o.dz);
             assert.ok(off <= reactiveEnvelope(a, true) + 1e-6, `${a.id} inside its envelope`);
             if (a.acting) assert.deepEqual([o.dx, o.dz, o.headYaw, o.headPitch, o.bodyYaw], [0, 0, 0, 0, 0]);
-            if (a.asleep) {
+            // (Asleep it stays asleep until something wakes it: the wolves running through, its herd fleeing, an alarm; `ark-sleep.test.ts`.)
+            if (a.asleep && !o.woke) {
                 assert.equal(o.action, "asleep", "asleep stays asleep");
                 assert.equal(o.called, false);
-                assert.ok(off <= (previous.get(a.id) ?? Infinity) + 1e-9, "a sleeper's offset only eases back");
+                if (!woken.has(a.id)) assert.ok(off <= (previous.get(a.id) ?? Infinity) + 1e-9, "a sleeper's offset only eases back");
                 previous.set(a.id, off);
             }
+            if (a.asleep && o.woke) woken.add(a.id);
         }
     }
     assert.ok(sleepers.length === 6);

@@ -65,6 +65,9 @@ export type RigClip = {
     starts?: string;
     ends?: string;
     posture?: string;
+    /** v6 (contract 8.1): how far the lying clips lower the body (mesh heights), and a sleep or rest loop's breaths a second. */
+    drop_h?: number;
+    breath_hz?: number;
 };
 
 /** One bone of the look chain, in the rig's rest pose (glTF space: +y up, the animal faces +z, its left is +x). */

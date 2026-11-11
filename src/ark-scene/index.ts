@@ -71,7 +71,9 @@ import {
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, mealStage, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
-import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
+import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
+import {headLimits} from "@/ark-scene/head-look";
+import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -358,6 +360,16 @@ type Entry = {
     peek?: number;
     /** A small animal's crawl once its rig has driven it (`crawlStep`): where along, which way, the pause left, its half-turn, its speed (m/s). */
     crawl?: {along: number; dir: number; pause: number; turn: number; speed: number} | null;
+    /** Its sleep (`sleep.ts`): how far into lying down, its posture this bout; null awake and up. */
+    sleepNow?: SleepNow | null;
+    /** Its rig plays the lying clips now (`sleepClip`): the procedural lying gives way to them as the rig fades in. */
+    sleepClipped?: boolean;
+    /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
+    denIn?: number;
+    /** Its sleep has been stepped once (its first frame is drawn as it is: no lying down on load). */
+    sleepStarted?: boolean;
+    /** Its sleeping posture's attitude (the recipes' act: a bat turned over), kept to ease it back as it wakes. */
+    sleepAct?: {pitch: number; roll: number} | null;
 };
 
 /**
@@ -1209,7 +1221,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             state,
             awake: !state.asleep,
             rest: targets.rest,
-            loop: phase * Math.PI * 2
+            loop: phase * Math.PI * 2,
+            // Asleep as it comes into the world (the page opening at night): already lying, never all lying down at once.
+            sleepNow: state.asleep ? stepSleepNow(null, {id: animal.id, slug: animal.model_slug, length: body.display, asleep: true, startled: false, epoch: worldMs() / 1000, dt: 0, reduced: true}) : null
         });
     };
     /** Its own size (seeded) and, while young, its growth (`liveliness-scene.ts`), on its species' drawn length. */
@@ -1223,9 +1237,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The selected animal's state as last told to the page (its tap card). */
     let toldState: ArkBehaviourState | null = null;
+    let toldRest: {id: string; rest: ArkRestStatus | null} | null = null;
+    /**
+     * How it rests now, in the tap card's words (`sleep.ts` restStatus): from its one state, its schedule's doing, its
+     * posture, its roost (in its den: gone in, or a den animal settled at its way in), and the sun.
+     */
+    const restOf = (entry: Entry): ArkRestStatus | null => {
+        const own = entry.sched ?? null;
+        const pose = own?.pose ?? null;
+        const style = sleepStyle(entry.animal.model_slug);
+        const asleep = entry.state.asleep && !entry.reactive?.woke;
+        const settled = Boolean(own && pose && !pose.moving && own.trip && (own.trip.doing === "sleep" || own.trip.doing === "rest" || own.trip.doing === "to_roost"));
+        const enclosed = (entry.denIn ?? 0) > 0.5 || Boolean(settled && own && goesIntoRoost(own.trip?.to.point, own.profile.roost));
+        const raised = Boolean(pose && own && pose.y > Math.max(own.ground, 0) + 0.4) || Boolean(entry.place.canopy);
+        const inWater = Boolean(entry.depth && (pose ? pose.y < 0.02 && own!.ground < 0 : true)) || Boolean(entry.place.water);
+        const sunny = lighting.daylight.night < 0.2 && reactiveWeather.rain < 0.3;
+        return restStatus({asleep, doing: entry.state.doing ?? null, atRoost: settled, enclosed, roost: own?.profile.roost ?? null, posture: entry.sleepNow?.posture ?? style.posture, social: style.social, raised, inWater, sunny});
+    };
     const tellState = () => {
         const entry = selectedId ? findEntry(selectedId) : null;
         const state = entry ? entry.state : null;
+        if (entry && options.onRest) {
+            const rest = restOf(entry);
+            if (toldRest?.id !== entry.animal.id || toldRest.rest !== rest) {
+                toldRest = {id: entry.animal.id, rest};
+                options.onRest(entry.animal.id, rest);
+            }
+        }
         if (sameBehaviour(state, toldState)) return;
         toldState = state;
         if (entry && state) options.onBehaviour?.(entry.animal.id, state);
@@ -1499,7 +1537,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         mesh = new InstancedMesh(source.geometry, material, capacity);
         mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-        const instance = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
+        // (phase, dim, rest, its sleep packed: `packSleep`)
+        const instance = new InstancedBufferAttribute(new Float32Array(capacity * 4), 4);
         instance.setUsage(DynamicDrawUsage);
         source.geometry.setAttribute("arkInstance", instance);
         // The head look (`arkLook`, the reactive layer) and the coat's wet and dust (`arkCoat`, the animal-look pass).
@@ -1911,6 +1950,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * is pushed half the overlap apart), and prey turns its head to a predator passing within a few metres. Nothing
      * here changes a schedule; it only nudges what is drawn this frame.
      */
+    /**
+     * A burrow or den sleeper goes in to sleep or rest (its schedule's roost is the way in: `goesIntoRoost`), down
+     * the hole over 1.6 s once it is settled there, and comes out as it sets off (shared: its trip and pose). Looked at
+     * or followed, it stays half in at the way in.
+     */
+    const stepDen = (entry: Entry, dt: number) => {
+        const own = entry.sched;
+        const trip = own?.trip;
+        const at = own?.pose;
+        let want = 0;
+        if (own && trip && at && scheduled(entry) && !entry.reactive?.woke && goesIntoRoost(trip.to.point, own.profile.roost)) {
+            const settled = trip.doing === "sleep" || trip.doing === "rest" || trip.doing === "to_roost";
+            if (settled && !at.moving && Math.hypot(at.x - trip.to.x, at.z - trip.to.z) < Math.max(entry.length * 2, 1.5)) want = 1;
+        }
+        if (want && (selectedId === entry.animal.id || followId === entry.animal.id)) want = 0.55;
+        const now = entry.denIn ?? 0;
+        if (!want && !now) return;
+        entry.denIn = reducedMotion ? want : now + Math.max(Math.min(want - now, dt / 1.6), -dt / 1.2);
+    };
+
+    /** Sleeping together (`sleep.ts` social: a huddle, a pile, a row, a cluster; a young mammal against the adult): bodies may touch. */
+    const sleepsTouching = (a: Entry, b: Entry) =>
+        (a.sleepNow?.t ?? 0) > 0.5 && (b.sleepNow?.t ?? 0) > 0.5 && a.animal.model_slug === b.animal.model_slug && (sleepStyle(a.animal.model_slug).social !== "apart" || Boolean(a.sched?.animal.young || b.sched?.animal.young));
+
     const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
         const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft).sort((a, b) => a.distance - b.distance).slice(0, 80);
         for (let i = 0; i < near.length; i++) {
@@ -1923,7 +1986,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const dx = b.pose.x - a.pose.x;
                 const dz = b.pose.z - a.pose.z;
                 const d = Math.hypot(dx, dz);
-                const room = (a.entry.length + b.entry.length) * 0.42;
+                const room = (a.entry.length + b.entry.length) * 0.42 * (sleepsTouching(a.entry, b.entry) ? 0.45 : 1);
                 if (j > i && d < room && d > 1e-4) {
                     const push = (room - d) / 2;
                     for (const [c, sign] of [[a, -1], [b, 1]] as const) {
@@ -2013,6 +2076,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 headHeight: c.modelHeight * 0.8,
                 // (The behaviour profile also calls the barnacle goose sessile, from its name: only the "other" plan.)
                 sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
+                // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
+                watched: e.animal.id === selectedId || e.animal.id === followId,
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
@@ -2091,14 +2156,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
+        // A sleeping posture's attitude (a bat turned over, an otter on its back) comes in as it settles and goes as it
+        // wakes (kept from its last sleeping moment, so the turn back is eased too), never at once.
+        const sleepT = entry.sleepNow?.t ?? 0;
+        if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll};
+        else if (!sleepT) entry.sleepAct = null;
+        const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
+        const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
+        const afterShare = after ? sleepStages(sleepT).roll : 0;
         return {
             x: at.x,
             z: at.z,
             base: at.y,
             yaw: at.yaw + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
-            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch : 0),
-            roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll : 0),
+            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
+            roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
         };
     };
@@ -2397,6 +2470,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
+        entry.sleepClipped = false;
         const rig = rigs.get(slug);
         const turned = (d: number) => ((Math.round(d) % 360) + 360) % 360;
         if (!rig || model.placeholder || turned(rig.facingDeg) !== turned(model.facing)) {
@@ -2521,10 +2595,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 where.pitch = where.pitch * (1 - w) + (-0.6 * state.climb + (recipeAct?.pitch ?? 0)) * w;
                 where.roll = where.roll * (1 - w) + ((banking ? 0 : -0.35 * into * (want === "soar" ? 1 : 0.4)) + (recipeAct?.roll ?? 0)) * w;
             }
-        } else if (entry.state.asleep && !entry.act) {
-            // Asleep: its sleep posture where the rig has one (contract 8.2: lying down first, `baseStep`), else its
-            // idle, slow (and the head lowered by the material's droop); never a walk.
-            const posture = (place.canopy?.mode === "hang" && clip("sleep_hang") ? "sleep_hang" : null) ?? (where.water && clip("sleep_float") ? "sleep_float" : null) ?? ASLEEP_CLIPS.find((name) => Boolean(clip(name))) ?? null;
+        } else if (entry.sleepNow?.down && !entry.act) {
+            // Asleep (`sleep.ts`; woken here by the reactive layer it is not, and gets up): its sleep posture where the
+            // rig has one (contract 8.2: lying down first, `baseStep`), the night's own posture first
+            // (`sleepPostureClips`: a lion on its side tonight plays sleep_side), else the rig's own, else its idle, slow
+            // (and the head lowered by the material's droop); never a walk.
+            const own = sleepPostureClips(entry.sleepNow.posture).find((name) => Boolean(clip(name))) ?? null;
+            const posture = own ?? (place.canopy?.mode === "hang" && clip("sleep_hang") ? "sleep_hang" : null) ?? (where.water && clip("sleep_float") ? "sleep_float" : null) ?? ASLEEP_CLIPS.find((name) => Boolean(clip(name))) ?? null;
             if (posture) want = posture;
         } else if (place.canopy && !entry.visitor) {
             const kind = place.canopy.mode;
@@ -2691,6 +2768,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // On its side by itself (contract 8.1, `sleep_side`): no recipe roll on top.
         if (want === "sleep_side" && recipeAct?.roll) where.roll -= recipeAct.roll * state.weight;
+        // A sleep posture, a lying base or the way down and up draws the posture itself (the head, the drop, the breath):
+        // the procedural one (`sleep.ts` sleepDraw) gives way to it as the rig fades in.
+        entry.sleepClipped = want.startsWith("sleep") || clipBase(rig.clips[want]) !== "stand" || want === "lie_down" || want === "get_up" || want === "get_up_fast";
         const playing = rig.clips[want];
         if (!playing) return null;
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
@@ -2740,7 +2820,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         mesh = new InstancedMesh(rig.geometry, material, capacity);
         mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-        for (const [name, size] of [["arkInstance", 3], ["arkLook", 3], ["arkRigA", 4], ["arkRigB", 4]] as const) {
+        for (const [name, size] of [["arkInstance", 4], ["arkLook", 3], ["arkRigA", 4], ["arkRigB", 4]] as const) {
             const attribute = new InstancedBufferAttribute(new Float32Array(capacity * size), size);
             attribute.setUsage(DynamicDrawUsage);
             rig.geometry.setAttribute(name, attribute);
@@ -2872,7 +2952,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Grazing, drinking, pecking: the head goes down to bite (the material's droop), up again to look round.
             const beat = scheduled(entry) ? entry.sched!.pose?.beat : null;
             const headDown = beat === "bite" || beat === "drink" || beat === "peck" ? 0.6 : beat === "chew" ? 0.3 : 0;
-            if (!reducedMotion) entry.rest += (Math.max(targets.rest, headDown) - entry.rest) * Math.min(dt * (headDown ? 3 : 1.5), 1);
+            // Woken here by the reactive layer (a threat, an alarm, the camera close: `reactive.ts`), it is up though the
+            // shared layer has it asleep; then it lies down again (`sleep.ts`: the posture, the way down and up).
+            const woke = Boolean(entry.reactive?.woke);
+            const restWant = woke ? 0 : targets.rest;
+            if (!reducedMotion) entry.rest += (Math.max(restWant, headDown) - entry.rest) * Math.min(dt * (headDown ? 3 : woke ? 4 : 1.5), 1);
+            // (Its first frame with its schedule: as it is now, already lying if asleep; it never lies down on load.)
+            entry.sleepNow = stepSleepNow(entry.sleepNow ?? null, {id: entry.animal.id, slug, length: entry.length, asleep: entry.state.asleep && !woke && !entry.act && !entry.visitor && !entry.moment, startled: Boolean(entry.reactive?.startled), epoch: epochNow, dt, reduced: reducedMotion || !entry.sleepStarted});
+            entry.sleepStarted = true;
+            stepDen(entry, dt);
             // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
             const plan = model?.behaviour?.plan ?? "";
             const pace = 1 - 0.85 * entry.rest;
@@ -2907,7 +2995,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const atSea = atSeaOf(entry) || entry.depth?.water === "salt";
             // The deep's are hidden from above while they are down there (an air-breather of the deep shows when it comes up).
             const down = entry.depth ? entry.depth.band === "deep" && where.base < -2.5 : entry.layer.layer === "deep";
-            if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen) || (entry.place.hamlet && !hamletOutside(entry)))) {
+            if (!own && !entry.moment && ((underwater && !atSea) || (!underwater && down) || (entry.place.burrow && entry.buried && !cutawayOpen) || (entry.place.hamlet && !hamletOutside(entry)) || (entry.denIn ?? 0) >= 0.999)) {
                 entry.middle = null;
                 continue;
             }
@@ -3017,6 +3105,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
 
         look.begin(lookWeather, worldMs());
+        // Development: the sleep clips' page draws the same frame with the eyes open, to compare (`sleep-entry.ts`).
+        const eyesOpenForDev = process.env.NODE_ENV !== "production" && Boolean((globalThis as {__arkEyesOpen?: boolean}).__arkEyesOpen);
         const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
@@ -3180,6 +3270,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             else counts.far++;
             const act = entry.act;
             const s = candidate.modelScale * sizeUp * grow * (act ? Math.max(act.scale, 0.001) : 1);
+            // Asleep (`sleep.ts`): its posture's body (lowered until its torso meets the ground, rolled onto a side, nosed
+            // down, on a new heading after a stir) and gone down into its burrow; its eyes, curl, breath and head go to the
+            // shader below. The same near and far (only the fine parts fade with distance), so a level change never pops.
+            const sn = entry.sleepNow ?? null;
+            const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
+            const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
+            if (slept) {
+                where.yaw += slept.yaw;
+                where.pitch += slept.pitch;
+                where.roll += slept.roll;
+                const box = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry.boundingBox ?? null;
+                if (where.water) {
+                    // On the bottom: down to the floor under it as it settles.
+                    if (sn!.posture === "bottom") where.base += (where.water.floorY + modelHeight * 0.05 - where.base) * sleepStages(sn!.t).body;
+                } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, slept.legs, slept.roll) * s;
+            }
+            if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
             if (surface) {
                 // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
                 basisY.set(surface.nx, surface.ny, surface.nz).normalize();
@@ -3232,14 +3339,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mesh.setMatrixAt(index, matrix);
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZ(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest);
+            // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0));
             setVary(mesh.geometry, index, animal.id);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
             const forcedLook = forcedLooks.size && level === "near" ? forcedLooks.get(entry.animal.id) : undefined;
             if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2]);
-            else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+            else if (lookAttr && slept && slept.headWeight > 0.001 && level === "near") {
+                // Asleep: its posture's head (back to its flank, down, sunk), within its plan's limits, allowing for the
+                // material's own droop; a waking head goes over to the reactive layer's look.
+                const limits = headLimits(intelProfile(animal.model_slug, null, entry.stats.intelligence).plan, animal.model_slug);
+                const hw = slept.headWeight;
+                const awakeW = looked ? looked.headWeight * (1 - entry.rest) * (1 - hw) : 0;
+                const yaw = Math.min(Math.max(slept.headYaw, -limits.yaw), limits.yaw);
+                const pitch = Math.min(Math.max(slept.headPitch + droopOf(model.behaviour?.plan) * entry.rest, -limits.down), limits.up);
+                lookAttr.setXYZ(index, (looked?.headYaw ?? 0) * awakeW + yaw * hw, (looked?.headPitch ?? 0) * awakeW + pitch * hw, 1);
+            } else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
             if (lookAttr && !forcedLook && rig && state && (state.now.name === "graze" || state.now.name === "browse")) lookAttr.setY(index, 0);
             // The animal-look pass: wet (rain, a swim, in the water) and dust per animal; the near ones offered fur shells and their close-up skin.
@@ -3318,7 +3435,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (k < herd.figures && mesh && target && instance && model) {
                     const at = index * 16;
                     for (let j = 0; j < 16; j++) target[at + j] = herd.figureMatrices[i * 16 + j];
-                    instance.setXYZ(index, member.phase, dim, member.awake ? 0 : 1);
+                    instance.setXYZW(index, member.phase, dim, member.awake ? 0 : 1, packSleep(member.awake ? 0 : 1, 0, 0, 0));
                     look.figure(mesh, index);
                     setVary(mesh.geometry, index, member.id);
                     index++;
@@ -5007,6 +5124,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
+        rest: (id) => {
+            const entry = findEntry(id);
+            return entry ? restOf(entry) : null;
+        },
         reactive: (id) => {
             const r = findEntry(id)?.reactive;
             return r ? {...r} : null;
