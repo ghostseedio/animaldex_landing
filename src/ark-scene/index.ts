@@ -1273,6 +1273,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
     };
 
+    let modulesFor: ArkSnapshot | null = null;
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
@@ -1327,7 +1328,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return {x: entry.place.x + Math.cos(entry.place.yaw) * side, z: entry.place.z - Math.sin(entry.place.yaw) * side, size: Math.min(Math.max(entry.length * 0.35, 0.18), 0.6)};
         });
         layersScene.setBurrows(burrows, molehills, mouths);
-        for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
+        // Runtime: the scenery modules (the props' homes and nests) depend on the snapshot only: not rebuilt when the same
+        // one is laid out again (a tier change, the resting rotation), which cost seconds at the captures scale.
+        if (modulesFor !== snapshot && modules.length) {
+            modulesFor = snapshot;
+            for (const sceneModule of modules) sceneModule.setSnapshot(snapshot);
+        }
         // A school or a flock keeps to its first one.
         for (const entry of next) entry.leader = entry.place.leader && entry.place.leader !== entry.animal.id ? nextById.get(entry.place.leader) ?? null : null;
         wireSchedules(next, snapshot.ark_day ?? null);

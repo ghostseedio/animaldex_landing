@@ -137,6 +137,16 @@ Measured (`node scripts/ark-runtime-measure.mjs --population 1x|3x [--prebuild]`
 
 Not yet at the ~200 ms target: the ground (below) and the rest of the scene's setup stay in the mount, and with the prebuild the phone profile also showed one 2.6–2.7 s task a few seconds after the first frame (without it, 0.2–0.3 s), not yet attributed (a tier change's rebuild is the first suspect).
 
+**Round 3 (attributed and measured, the prebuild on, load 35–140).** The long task a few seconds after the first frame was the tier change laying the snapshot out again, which rebuilt the props' homes and nests (`rebuildHomes` → `nestSpots`, 2.3 s at 1× on the phone profile) and, before the guard, the resting relayout re-wiring every schedule; the scenery modules now get a snapshot only when it is a new one, and the relayout only runs where behaviour has `restingAtRoost`. At 1× phone the worst task after the first frame went 4,709 → 315 ms. The workers: the scenery worker is 20 KB without the ground (332 KB once graphics' `groundArrays` is in the release: terrain.ts brings three.js); a big Ark's places worker is 1.1 MB, asked for only from 1,000 animals. /ark loads the same built files as the embed (`/ark/ark-prebuild-worker.js`); in `next build` + `next start` (13.5.11) the embed loaded and ran the worker and drew; /ark itself could not be opened locally (every URL answers 308 to itself under `next start` here, the site's routing, not the Ark).
+
+| Mount task (ms), prebuild on | Desktop | Phone profile |
+|---|---|---|
+| Fixture | 1,729 | 5,973 |
+| 1× | 2,124 | 7,875 |
+| 3× | 2,444 | 9,075 |
+
+Still far from ~200 ms on the phone. In the 1× phone mount (8.1 s profiled): the props' homes 4.7 s (`createPropsModule` → `buildHomes`/`nestSpots`, `surfaceAt` per nest), the ground 0.9 s (primed once graphics' arrays land), the areas 0.7 s.
+
 **What is left of the mount.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
 1. **The ground (graphics).** `terrain.ts` `groundGeometry` samples the ground at every vertex (~2 s of the phone profile's remaining mount). The hook it needs: move its per-vertex loop into a pure `groundArrays()` returning the typed arrays (heights, colours, layers, the depth map), which the prebuild worker computes and `primeGround(arrays)` hands in; the geometry is then built from them. Transferred as typed arrays, no copy. (The behaviour world already builds in 6 ms slices, and the attach points too.)
 2. **A progressive mount.** `mountArk` builds in slices under 50 ms (the ground, the water, each vegetation kind, the micro scene, the layers, the animals in batches), yielding between them, and draws the first frame from the ground and the sky while the rest comes in behind the quiet loading bar; the handle works from the first call (calls queue until the animals are in).
@@ -146,6 +156,7 @@ Not yet at the ~200 ms target: the ground (below) and the rest of the scene's se
 
 - **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (14.8 s → 6.4 s side by side in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `docs/ark/runtime/graphics-forestfill-prefilter.patch` (applies to ark-release a92a19b9), verified identical with a deep-equal test of the old and new lists.
 - **Graphics / props / scene**: round the shader frequencies in graphics-interface.md's "shared clock" table.
+- **Props**: the homes and nests (`buildHomes`/`nestSpots`) are now the largest part of the mount at the captures scale (4.7 s at 1× on the phone profile): build them in slices after the first frame, or in the prebuild worker (`prebuild-scenery.ts` takes a third part with a `primeHomes` hook like decor's).
 - **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned; drive the resting rotation (`arkOutside`) from dens, roosts and burrows when ready.
 - **Map**: the live budget's pure rotation is the hook for "resting out of sight" per area (home 240 / 120 / 60 in the dry run's proposal).
 - **Map / owner** (seen in the 3× shots, `docs/ark/scale/`): the live budget bounds the animals drawn one by one, not the herds' figures. At 3× the house area shows about 900 herd figures (cats and dogs ×921, ×786 round the cottage). The same rotation can rest a share of each herd (`arkOutside` over herd members, or the home area's own budget); that is a look decision for the owner.
