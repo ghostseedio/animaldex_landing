@@ -13,7 +13,7 @@
  * The contract for the apps is docs/ark/runtime-bridge.md; the numbers are in docs/ark/runtime.md.
  */
 
-import type {Camera, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
+import type {Camera, Mesh, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
@@ -106,6 +106,9 @@ export function arkGrassBuild(tier: QualityTier): number {
 export {arkCaps};
 
 export type ArkRuntime = ReturnType<typeof createArkRuntime>;
+
+/** The layer a mesh waits on, undrawn, while its new shader compiles (the camera and the shadows draw layer 0). */
+const HELD_LAYER = 31;
 
 /** A let-go near level comes back when an animal of its species is in view this close (the scene's near distance and its hysteresis). */
 const NEAR_AGAIN_WITHIN = 27.5;
@@ -314,6 +317,26 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         /** The instance caps for the tier (the lighter view's are the low tier's). */
         caps(tier: QualityTier, lite: boolean): ArkCaps {
             return arkCaps(lite ? "low" : tier);
+        },
+
+        /**
+         * A mesh the scene just added (a species' instances, a rig's): if its material's shader is new, it is not drawn
+         * (another layer) until the shader is compiled in parallel, instead of the frame that first draws it stalling
+         * on the compile (seconds on a slow phone). A material whose program is already in use is drawn at once.
+         */
+        prepare(mesh: Mesh) {
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            const ready = materials.every((material) => (ctx.renderer.properties.get(material) as {currentProgram?: {isReady?: () => boolean}}).currentProgram?.isReady?.() === true);
+            if (ready) return;
+            const layers = mesh.layers.mask;
+            mesh.layers.set(HELD_LAYER);
+            const target = ctx.renderTarget();
+            const previous = ctx.renderer.getRenderTarget();
+            if (target) ctx.renderer.setRenderTarget(target);
+            void warmShaders(ctx.renderer, mesh, ctx.camera as Camera, 3000, ctx.scene).then(() => {
+                mesh.layers.mask = layers;
+            });
+            ctx.renderer.setRenderTarget(previous);
         },
 
         /** The tier changed: skins loaded from now on are fitted to it; its new shader variants are compiled before the next draw. */

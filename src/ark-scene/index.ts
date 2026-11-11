@@ -1198,6 +1198,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mesh.receiveShadow = true;
         mesh.count = 0;
         scene.add(mesh);
+        runtime.prepare(mesh);
         if (level === "near") meshes.near = mesh;
         else meshes.far = mesh;
         return mesh;
@@ -2179,6 +2180,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mesh.receiveShadow = true;
         mesh.count = 0;
         scene.add(mesh);
+        runtime.prepare(mesh);
         meshes.rig = mesh;
         return mesh;
     };

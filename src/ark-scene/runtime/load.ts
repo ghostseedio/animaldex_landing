@@ -68,7 +68,7 @@ export class LoadPlanner {
  * resolve when they are ready or after `timeoutMs` (a driver without the extension: the first frame compiles the
  * rest, as before). Never rejects.
  */
-export function warmShaders(renderer: WebGLRenderer, scene: Object3D, camera: Camera, timeoutMs = 5000): Promise<"ready" | "timeout" | "failed"> {
+export function warmShaders(renderer: WebGLRenderer, scene: Object3D, camera: Camera, timeoutMs = 5000, lightsFrom: Object3D | null = null): Promise<"ready" | "timeout" | "failed"> {
     return new Promise((resolve) => {
         let settled = false;
         const finish = (how: "ready" | "timeout" | "failed") => {
@@ -78,13 +78,13 @@ export function warmShaders(renderer: WebGLRenderer, scene: Object3D, camera: Ca
         };
         const timer = setTimeout(() => finish("timeout"), timeoutMs);
         try {
-            const compile = (renderer as WebGLRenderer & {compileAsync?: (scene: Object3D, camera: Camera) => Promise<unknown>}).compileAsync;
+            const compile = (renderer as WebGLRenderer & {compileAsync?: (scene: Object3D, camera: Camera, target?: Object3D | null) => Promise<unknown>}).compileAsync;
             if (typeof compile !== "function") {
                 clearTimeout(timer);
                 finish("failed");
                 return;
             }
-            compile.call(renderer, scene, camera).then(() => {
+            compile.call(renderer, scene, camera, lightsFrom).then(() => {
                 clearTimeout(timer);
                 finish("ready");
             }, () => {
