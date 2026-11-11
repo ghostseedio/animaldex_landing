@@ -273,8 +273,15 @@ async function mountScenarios(el: HTMLElement) {
         },
         sample: (watch: string[]) => {
             const out: Record<string, unknown> = {};
-            for (const id of watch) out[id] = handle.reactive(id);
-            return {t: Date.now() / 1000, out, stats: handle.reactiveStats()};
+            // Where the shared layer has each one (x, y, z), beside the reactive state, so a reaction can be checked against the distance.
+            const at: Record<string, [number, number, number] | null> = {};
+            const entries = debug().entries() as unknown as Array<{animal: {id: string}; sched?: {pose?: {x: number; y: number; z: number} | null} | null}>;
+            for (const id of watch) {
+                out[id] = handle.reactive(id);
+                const pose = entries.find((e) => e.animal.id === id)?.sched?.pose;
+                at[id] = pose ? [Math.round(pose.x * 100) / 100, Math.round(pose.y * 100) / 100, Math.round(pose.z * 100) / 100] : null;
+            }
+            return {t: Date.now() / 1000, out, at, stats: handle.reactiveStats()};
         },
         measure: async (ms = 3000) => {
             const intervals: number[] = [];

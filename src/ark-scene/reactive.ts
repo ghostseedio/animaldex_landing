@@ -247,7 +247,7 @@ const LOUD_PLANS = new Set(["quadruped", "primate", "walking_bird", "flightless_
  * Whether `me` could perceive `other` now (sight in range, in front enough, with a clear line; or hearing; or smell
  * with the wind from it). Night shortens sight by the species' night vision; rain dulls hearing; fog shortens sight.
  */
-export function perceive(me: ReactiveInput, other: ReactiveInput, world: ReactiveWorld, sentinelBoost = 1, samples = 6, clearLine?: (eye: Vec3, target: Vec3) => number): Perceived["how"] | null {
+export function perceive(me: ReactiveInput, other: ReactiveInput, world: ReactiveWorld, sentinelBoost = 1, samples = 6, clearLine?: (eye: Vec3, target: Vec3) => number, allRound = false): Perceived["how"] | null {
     const dx = other.shared.x - me.shared.x;
     const dz = other.shared.z - me.shared.z;
     const d = Math.hypot(dx, dz);
@@ -262,7 +262,8 @@ export function perceive(me: ReactiveInput, other: ReactiveInput, world: Reactiv
         const hunter = p.hunt.length > 0 && !p.hunt.every((h) => h === "filter" || h === "scavenge");
         const ahead = Math.abs(wrapAngle(Math.atan2(dx, dz) - me.shared.yaw));
         const fov = hunter ? 1.6 : 2.7;
-        if (ahead <= fov || d < me.length * 2) {
+        // (The one on sentinel watch sweeps its head all round: no blind side.)
+        if (allRound || ahead <= fov || d < me.length * 2) {
             const eye = {x: me.shared.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z};
             const target = {x: other.shared.x, y: other.shared.y + other.length * 0.4, z: other.shared.z};
             const line = clearLine ?? world.sight;
@@ -559,7 +560,7 @@ export class ReactiveLayer {
                           return v;
                       }
                     : undefined;
-                const how = perceive(me, other, world, sentinelNow ? SENTINEL_SIGHT : 1, this.budget.sightSamples, line);
+                const how = perceive(me, other, world, sentinelNow ? SENTINEL_SIGHT : 1, this.budget.sightSamples, line, sentinelNow);
                 if (how) agent.perceived.push({id: other.id, how, distance: Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z), x: other.shared.x, z: other.shared.z, threat, prey});
             }
         }
