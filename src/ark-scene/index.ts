@@ -154,6 +154,10 @@ import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipe
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
+// Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
+import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
+import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
@@ -1212,8 +1216,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
             const onLand = !at.aloft && own.ground > 0.02 && Math.abs(at.y - own.ground) < 0.05;
-            // Close by, walkers lean to the slope; far away nobody can see it.
-            own.pitch = onLand && entry.level !== "far" ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0;
+            // Close by, walkers lean to the slope; far away nobody can see it. (Grounding leans every level to the drawn
+            // slope where it draws it: `groundedStand`.)
+            own.pitch = onLand && entry.level !== "far" && groundingRules() === "legacy" ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0;
         }
         const target = own.pose.aloft ? 1 : 0;
         entry.air += (target - entry.air) * Math.min(dt * 6, 1);
@@ -1731,7 +1736,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
                     else if (member.water) base = Math.max(member.ground, -0.3);
                     herdRotation.setFromAxisAngle(up, member.yaw);
-                    herdPosition.set(member.x, base - model.minY * s, member.z);
+                    // (Grounding: on land, the far level's true base on the drawn ground.)
+                    const onLand = !herdDepth && !member.water && groundingRules() === "grounded";
+                    herdPosition.set(member.x, onLand ? drawnGroundHeight(member.x, member.z) - groundedLevelBase(herd.slug, "far", model.minY) * s : base - model.minY * s, member.z);
                     herdMatrix.compose(herdPosition, herdRotation, herdScale.set(s, s, s));
                     herdMatrix.toArray(herd.figureMatrices, i * 16);
                     // The speck: a generic figure the member's size (a four-legged one, or an oval on a bird or a swimmer's body).
@@ -2252,6 +2259,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
         const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
         const afterShare = after ? sleepStages(sleepT).roll : 0;
+        // Grounding: held on a raised point (a branch, a limb, bark, a wall), drawn on it: its back along the surface's
+        // normal, up a trunk, swaying with its tree (`scheduledPerch`).
+        const trip = own.trip;
+        const perch = groundingRules() === "grounded" && !act ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
+        if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         return {
             x: at.x,
             z: at.z,
@@ -3248,6 +3260,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
+            // (Grounding: the pose's own base before the offsets below, an idle's lift, a sleeper's drop, a den, a gait's bob.)
+            const poseBase = where.base;
             const level = entry.level;
             const animal = entry.animal;
             const dim = mineOnly && !animal.mine ? 1 : 0;
@@ -3399,6 +3413,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, slept.legs, slept.roll) * s;
             }
             if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
+            let stand: Stand | null = null;
             if (surface) {
                 // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
                 basisY.set(surface.nx, surface.ny, surface.nz).normalize();
@@ -3406,16 +3421,27 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 basisZ.addScaledVector(basisY, -basisZ.dot(basisY)).normalize();
                 basisX.crossVectors(basisY, basisZ);
                 rotation.setFromRotationMatrix(basisMatrix.makeBasis(basisX, basisY, basisZ));
-                const up = -model.minY * s + (1 - Math.min(grow, 1)) * -modelHeight * 0.3;
+                const up = -groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s + (1 - Math.min(grow, 1)) * -modelHeight * 0.3;
                 position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
             } else {
+                // Grounding: its true base on the drawn ground, leaning to the slope (the pose's own offsets carried over).
+                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z))
+                    ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight})
+                    : null;
+                if (stand) {
+                    where.pitch += stand.pitch;
+                    where.roll += stand.roll;
+                }
                 euler.set(where.pitch, where.yaw, where.roll);
                 rotation.setFromEuler(euler);
-                position.set(where.x, where.base + lift - model.minY * s - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
+                const standY = stand ? stand.rootY + where.base - poseBase : where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
+                position.set(where.x, standY + lift - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
             }
             const state = rig ? entry.rig : null;
             if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, clipRows(rig.clips[state.now.name], state.now.phase), rigGrip)) {
                 // On a branch, a trunk, a ledge or a wall: its grip (the rig's feet, hands, claws) on the surface, not its underside (`map/grip.ts`).
+                // (Grounding: the soles, not the grip bones' pivots: a percher's toes on the branch, not its ankles in it.)
+                if (groundingRules() === "grounded") rigGrip.y -= gripSoleDrop(animal.model_slug);
                 rigGrip.multiplyScalar(s).applyQuaternion(rotation);
                 position.set(where.x - rigGrip.x, where.base - rigGrip.y, where.z - rigGrip.z);
             }
@@ -3446,6 +3472,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else {
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
                 }
+            }
+            // Grounding's runtime check (development, `?grounding=1`): its contacts against what it stands on.
+            if (groundingCheck.on && !slept && !act && !where.water && entry.air <= 0.001) {
+                if (stand) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s) ?? 0, modelHeight);
+                else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
+                else if (!surface && !where.afloat && heightAt(where.x, where.z) > 0.02) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s) ?? 0, modelHeight);
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);
@@ -5175,6 +5207,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
+        grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
         rigState: (id: string) => {
