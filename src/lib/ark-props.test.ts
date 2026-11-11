@@ -679,3 +679,36 @@ test("props outcrops: below the snow, on slopes a slab can sit on, sunk and tilt
     }
     areas.dispose();
 });
+
+// MARK: - Burrows and dens
+
+import {burrowMouth, entranceInstances, entranceStyle, mouthRadius, rockDen, type DenEntrance} from "@/ark-scene/props/burrows";
+
+test("props den entrances: a burrow mouth or a rock den at the sleep lane's ways in, sized to the animal, seated on the slope, one per roost", () => {
+    assert.equal(entranceStyle("burrow_entrance:burrow12,-40:0", "burrow"), "burrow");
+    assert.equal(entranceStyle("burrow:ground:42", "den"), "burrow");
+    assert.equal(entranceStyle("cave_mouth:decor12:0", "den"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "crevice"), "rock");
+    assert.equal(entranceStyle("rock_face:decor3:1", "den"), null);
+    assert.equal(entranceStyle("branch:decor1:0", "burrow"), null);
+    assert.equal(entranceStyle(null, "burrow"), null);
+    // Sized to the body: a meerkat's hole is small, an aardvark's big, both bounded.
+    assert.ok(mouthRadius(0.4) < mouthRadius(1.6));
+    assert.ok(mouthRadius(0.05) >= 0.07 && mouthRadius(9) <= 0.85);
+    const base = {nx: 0.2, ny: 0.97, nz: 0.1, kind: "den"};
+    const list: DenEntrance[] = [
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.8, slug: "bat-eared-fox"},
+        {...base, point: "burrow_entrance:b1:0", x: 1, y: 2, z: 3, length: 0.9, slug: "bat-eared-fox"},
+        {...base, point: "cave_mouth:decor7:0", x: 5, y: 1, z: 5, length: 0.5, slug: "rock-hyrax", kind: "den"},
+        {...base, point: "leaf:decor1:0", x: 0, y: 0, z: 0, length: 0.5, slug: "x"}
+    ];
+    const built = entranceInstances(list);
+    assert.equal(built.burrows.length, 1, "one entrance a roost");
+    assert.equal(built.burrows[0].scale, mouthRadius(0.9), "sized to the biggest that uses it");
+    assert.ok(built.burrows[0].up!.y < 0.999 && built.burrows[0].up!.x > 0, "tilted to the slope");
+    assert.equal(built.rocks.length, 1);
+    assert.ok(built.marks["den:bat-eared-fox"] && built.marks["den:rock-hyrax"]);
+    assert.deepEqual(entranceInstances([...list].reverse()).burrows.map((b) => [b.x, b.z, b.scale]), built.burrows.map((b) => [b.x, b.z, b.scale]), "the same whatever the order");
+    // Small: a few hundred triangles each.
+    for (const geometry of [burrowMouth(), rockDen()]) assert.ok(geometry.getAttribute("position").count / 3 < 1500);
+});

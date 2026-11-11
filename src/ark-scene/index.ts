@@ -132,7 +132,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, roostOf, ScheduleWorldBuild, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -223,6 +223,9 @@ type Sched = {
     ground: number;
     pitch: number;
 };
+
+/** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
+const DEN_ROOSTS: ReadonlySet<string> = new Set(["den", "burrow", "cave", "crevice"]);
 
 type Entry = {
     animal: ArkAnimal;
@@ -3097,7 +3100,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         hours: hoursNow(),
         placeOf: (id) => placedAll.get(id) ?? null,
         planOf: (slug) => library.get(slug)?.behaviour?.plan,
-        reducedMotion
+        reducedMotion,
+        // (The props lane's burrow mouths and rock dens: a den, burrow, cave or crevice sleeper's roost.)
+        roostOf: (id) => {
+            const sched = entryById.get(id)?.sched;
+            if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost)) return null;
+            return {...roostOf(world, sched.profile, sched.animal), kind: sched.profile.roost};
+        }
     }));
     if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
     applyTier(tier);

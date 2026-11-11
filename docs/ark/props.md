@@ -116,6 +116,21 @@ The hamlet grows by plots. Each house plot gets its own garden: a picket fence w
 
 `onHomeKeepOut(x, z, plots, margin = 0.3)` checks a world point against every plot. `props/areas.ts` draws from the same constants (`GARDEN_BEDS`, `COMPOST`, `troughSpots`, `coopSpot`), so the map lane's yard and lawn spots can avoid them. Today two of the map's coop-run spots fall on a hay shelter (smallholding-1 and smallholding-2; the test logs them).
 
+## Burrows and dens (`props/burrows.ts`)
+
+The sleep lane walks a den, burrow or cave animal into its roost's entrance and sinks it in (`sleep.ts` `goesIntoRoost`). The props draw that entrance:
+- **A burrow mouth** at a `burrow:` or `burrow_entrance:` roost: a dark hole with its throat running down into the slope, a lip of turned earth, and paler spoil thrown out downhill.
+- **A rock den** at a `cave_mouth:` roost, or at a crevice sleeper's `rock_face:` point: a dark slot between two leaning slabs and a capstone, with fallen stones in front.
+
+How they are placed:
+- **Size:** each is sized to the animal's drawn body (`mouthRadius`: 0.26 × length, between 0.07 and 0.85 m). Several animals sharing one roost get one entrance, sized to the biggest.
+- **Seating:** a burrow faces downhill and tilts to the ground; a rock den stands upright, facing out of the rock.
+- **Who:** only animals aboard get one.
+- **Where:** from the scene's schedule. `scene-modules.ts` `roostOf(id)` is a one-line hook in `index.ts` onto `behaviour-schedule.ts` `roostOf`, for the den, burrow, cave and crevice roost kinds. The props ask it every 3 s for a minute after each snapshot, because the schedule's world comes in behind the mount.
+- **Cost:** two draw calls near and none far; each entrance is a few hundred triangles.
+
+Golden shots: `den_dawn` (the bat-eared fox's burrow at dawn) and `den_rock` (the rock hyrax's crevice).
+
 ## Mount cost (the runtime lane's measure, docs/ark/runtime.md)
 
 The scenery is built after the first frame, a few milliseconds a frame, so the props add no long task to a big Ark's mount:
