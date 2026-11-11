@@ -86,9 +86,9 @@ These are the props' own draw calls and triangles, worst of nine named places, w
 
 | Tier | Draw calls (worst) | Triangles (worst) |
 |---|---|---|
-| high (desktop) | 45 | 334 k |
-| medium (mid-range phone) | 41 | 207 k |
-| low (battery saver) | 25 | 47 k |
+| high (desktop) | 45 | 369 k |
+| medium (mid-range phone) | 41 | 225 k |
+| low (battery saver, and the golden phone profile on a loaded Mac) | 25 | 47 k |
 
 The scene's own phone numbers are 71–171 calls and 1.0–2.3 M triangles (graphics-batches.md). A nest is 1.3–6.1 k triangles at lod0, and only the nests within the tier's near radius are drawn. The test fails if medium goes over 45 calls or 400 k triangles, or low over 30 calls or 200 k.
 
