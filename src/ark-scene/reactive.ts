@@ -206,11 +206,14 @@ export const reactiveEnvelope: EnvelopeFn = (input, fleeing) => {
 
 /**
  * How fast it runs from a threat (m/s): its speed stat in body lengths a second (1.5 for the slowest … 5.5 for the
- * fastest), so a tortoise doesn't dash like a deer. Never more than 8 m/s.
+ * fastest), so a tortoise doesn't dash like a deer; small animals cover more of their own lengths a second than big
+ * ones (×1/√length, 0.8–2.2: a mouse bolts, an elephant lumbers). Never more than 8 m/s.
  */
 export function fleeSpeed(input: ReactiveInput): number {
     const stat = Math.min(Math.max(input.speed ?? 50, 0), 100);
-    return Math.min(Math.max(input.length, 0.3) * (1.5 + 4 * (stat / 100)), 8);
+    const length = Math.max(input.length, 0.3);
+    const small = Math.min(Math.max(1 / Math.sqrt(Math.max(input.length, 0.2)), 0.8), 2.2);
+    return Math.min(length * (1.5 + 4 * (stat / 100)) * small, 8);
 }
 
 /**
