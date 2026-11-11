@@ -16,7 +16,7 @@
 
 import type {ArkCameraView} from "@/ark-scene/types";
 
-export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees"] as const;
+export const GOLDEN_PLACES = ["island_far", "coast_rocks", "forest_floor", "house_fields", "river_pond", "mountain", "reef_underwater", "caterpillar_leaf", "bee_flower", "limpet_tidepool", "gecko_wall", "waves_beach", "storm_trees", "fields_close"] as const;
 
 /** Shots in their own weather (everything else is calm, mean tide). */
 export const GOLDEN_WEATHER: Partial<Record<GoldenPlace, {wind: number; storm: number; cloud: number; wetness: number}>> = {
@@ -60,7 +60,8 @@ export const GOLDEN_LABELS: Record<GoldenPlace, string> = {
     limpet_tidepool: "Limpet in a tide pool",
     gecko_wall: "Gecko on the house wall",
     waves_beach: "Waves running up the beach",
-    storm_trees: "Trees in a storm"
+    storm_trees: "Trees in a storm",
+    fields_close: "Crop rows close up"
 };
 
 type XZ = {x: number; z: number};
@@ -95,6 +96,8 @@ export type GoldenWorld = {
     forestClearing?: () => XZ | null;
     /** Trunks, lamps and walls as circles on the ground (`golden-world.ts`): the close shots stand clear of them. */
     obstacles?: () => Array<XZ & {radius: number}>;
+    /** A field of standing crops (batch 4: the fields' close shot). */
+    cropField?: () => XZ | null;
 };
 
 export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
@@ -258,6 +261,15 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
             const r = Math.hypot(beach.x, beach.z);
             const edge = {x: beach.x + (beach.x / r) * 4.5, z: beach.z + (beach.z / r) * 4.5};
             return {place, anchor: "beach waterline", view: {target: {x: edge.x, y: 0.3, z: edge.z}, distance: 9, polar: 1.3, azimuth: out + 1.25}};
+        }
+
+        case "fields_close": {
+            const field = world.cropField?.() ?? null;
+            if (!field) return fallback("no crop field");
+            const ground = world.groundAt(field.x, field.z);
+            // Low over the field's edge, the rows running away into it, the cottage's side of the farm behind.
+            const view = {target: {x: field.x, y: ground + 0.4, z: field.z}, distance: 7, polar: 1.22, azimuth: outward(field) + 0.4};
+            return {place, anchor: "standing crops", view: clearView(view, world, 2)};
         }
 
         case "storm_trees": {

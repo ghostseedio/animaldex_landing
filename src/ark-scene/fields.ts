@@ -61,6 +61,11 @@ export function fieldHash(cx: number, cz: number): number {
     return h;
 }
 
+/** Whether a field's cereal is ripe (gold) or still green: the same bit the shader reads. */
+export function fieldRipe(cell: [number, number]): boolean {
+    return ((fieldHash(cell[0], cell[1]) >>> 17) & 1) === 1;
+}
+
 export type FieldPoint = {
     /** The field's cell. */
     cell: [number, number];
@@ -116,7 +121,7 @@ export function cropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop,
  * A point moved across its field's rows onto the nearest row's middle (where the shader paints the plants), or
  * null when no crop grows there. For the close-up plants: deterministic, so everyone's cabbage is on the same row.
  */
-export function snapToRow(x: number, z: number): {x: number; z: number; crop: Exclude<Crop, "pasture">} | null {
+export function snapToRow(x: number, z: number): {x: number; z: number; crop: Exclude<Crop, "pasture">; cell: [number, number]} | null {
     const field = cropAt(x, z);
     if (!field) return null;
     const spacing = CROP_ROWS[field.crop].spacing;
@@ -128,7 +133,7 @@ export function snapToRow(x: number, z: number): {x: number; z: number; crop: Ex
     const sz = z + across.z * shift;
     const snapped = cropAt(sx, sz);
     if (!snapped || snapped.cell[0] !== field.cell[0] || snapped.cell[1] !== field.cell[1]) return null;
-    return {x: sx, z: sz, crop: field.crop};
+    return {x: sx, z: sz, crop: field.crop, cell: field.cell};
 }
 
 /**

@@ -24,7 +24,7 @@ import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mountArtStudy, type ArtStudyHandle} from "@/ark-scene/study/art-study";
-import {goldenObstacles} from "@/ark-scene/golden-world";
+import {goldenCropField, goldenObstacles} from "@/ark-scene/golden-world";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -48,7 +48,8 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
         },
         reef: () => ZONE_SITES.coral_reef,
         forestClearing: () => ZONE_SITES.woodland,
-        obstacles: () => goldenObstacles()
+        obstacles: () => goldenObstacles(),
+        cropField: () => goldenCropField()
     };
 }
 
