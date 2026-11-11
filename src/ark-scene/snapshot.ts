@@ -9,6 +9,7 @@ import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stats";
 import {ARK_ZONES, type ArkAnimal, type ArkNestRow, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {arkActivity} from "@/lib/ark-daylight";
 import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkArea, arkArrivalSource, arkThrive} from "@/ark-scene/thrive";
 
 const ZONES = new Set<string>(ARK_ZONES);
 
@@ -50,13 +51,16 @@ function animal(raw: unknown): ArkAnimal | null {
     // v2's fields, each only when the server sent it.
     const life: Partial<ArkAnimal> = {};
     if (row.origin === "arrived" || row.origin === "born") life.origin = row.origin;
+    // Captures + thrive (frozen read contract, section 1): each only when the server sent it.
+    if ("source" in row) life.source = arkArrivalSource(row.source);
+    if ("thrive" in row) life.thrive = arkThrive(row.thrive);
+    if ("area" in row) life.area = arkArea(row.area);
     const generation = whole(row.generation);
     if (generation !== null) life.generation = generation;
     if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
     if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
-    if (row.area === "house" || row.area === "farm") life.area = row.area;
     if (bringers.length) life.bringers = bringers;
     // The species' stats and stored length, when the server sends them (else the scene reads the catalogue's).
     const statsRow = row.stats && typeof row.stats === "object" ? row.stats as Record<string, unknown> : {};

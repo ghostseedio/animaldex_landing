@@ -1,28 +1,37 @@
 /**
- * The shared Ark in the chat and the new Ark Score (AnimalDex
- * docs/ark-next.md Parts 2 and 3; docs/ark-spec.md sections 2 and 7.6;
- * the Parts 2-3 contract, sections A and B).
+ * The shared Ark in the chat and the Ark Score (AnimalDex docs/ark-next.md
+ * Parts 2 and 3; docs/ark-spec.md, "Decisions (2026-11-11, captures +
+ * thrive)"; the frozen read contract, docs/ark/captures-thrive-design.md
+ * section 0).
  *
- * - The Ark Score is the world score: 0–100, `round(100·logistic(locked/10))`,
- *   50 with no contributions, computed by the server (`ark_world_score`) and
- *   moved only by your own arrivals. The old key (`ark_score`, the Life Sim
- *   bar sum, 0–500) is read only when the new one is missing: an older
- *   server, for one deploy cycle.
+ * - The Ark Score is v3 (`ark_points`): the sum of the points each of your
+ *   steps that worked locked in, more for animals the Ark needs. It has no
+ *   top, never goes down, and captures, other people and the daily tick never
+ *   lower it. `ark_points_week` is this week's points. The v2 world score
+ *   (`ark_world_score`, 0–100) is read only from a server without
+ *   `ark_points`, and the Life Sim bar sum (`ark_score`, 0–500) only from one
+ *   older still, each for one deploy cycle.
  * - Life is the five bars, with no total (`life`).
- * - Under a step card, one line says what the step means for the Ark
- *   (`voyage_step_offer_state_v1`); when a step that worked brings an animal
- *   aboard, one line in the thread says so.
+ * - Under a step card, one line says what the step does for the reader's
+ *   animals of that kind (`voyage_step_offer_state_v1`: `thrive` or
+ *   `thrive_later`, with the band now and after). Steps no longer bring
+ *   animals; captures do.
  *
  * Pure: the routes, the chat, the profile and the tests read it. Every field
  * is read tolerantly; the server decides every number.
  */
 
+import {arkThrive} from "@/ark-scene/thrive";
+import type {ArkThrive} from "@/ark-scene/types";
+
 export type ArkScoreRead = {
     value: number;
-    /** 100 for the world score; 500 for the old Life Sim sum, read only from an older server. */
-    outOf: 100 | 500;
-    /** The world score (`ark_world_score`), not the old key. */
+    /** The top of an older score's range (100 for v2, 500 for the Life Sim sum); null for v3, which has none. */
+    outOf: 100 | 500 | null;
+    /** A score of the shared Ark (v3 or v2), not the old Life Sim sum. */
     world: boolean;
+    /** v3 (`ark_points`): points from steps that worked, no top, never lower. */
+    points: boolean;
 };
 
 export type ArkLife = {
@@ -34,17 +43,19 @@ export type ArkLife = {
     experience: number | null;
 };
 
-export type ArkStepOfferState = "new" | "pair_complete" | "milestone";
+/** `thrive`: the reader has living animals of this kind aboard; `thrive_later`: none (never captured, died, no model yet). */
+export type ArkStepOfferState = "thrive" | "thrive_later";
 
-/** `voyage_step_offer_state_v1`: what a step that works means for the Ark, for this reader and this species. */
+/** `voyage_step_offer_state_v1`: what a step that works does for this reader's animals of this kind. */
 export type ArkStepOffer = {
     state: ArkStepOfferState;
-    /** The species' display name, as the server sends it. */
+    /** The look's display name, as the server sends it. */
     species: string;
-    /** The reader's own living animals of this species aboard, capped at 2. */
+    /** The reader's own living animals of this kind aboard, 0–2. */
     livingBrought: number;
-    /** All of this species aboard, anyone's. */
-    aboard: number;
+    /** The reader's condition for the kind now, and what one more worked step would leave it at. */
+    bandNow: ArkThrive;
+    bandIfWorked: ArkThrive;
 };
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -77,28 +88,34 @@ function clamp(value: number, min: number, max: number): number {
 // MARK: - The Ark Score
 
 /**
- * A row's Ark Score: `ark_world_score` (0–100) when the server sends it,
- * else the old `ark_score` (0–500) from a server that has not switched yet.
- * Null when neither is there.
+ * A row's Ark Score: `ark_points` (v3: no top, never lower) when the server
+ * sends it; else `ark_world_score` (v2, 0–100) from a server without v3; else
+ * the old `ark_score` (0–500) from one older still. Null when none is there.
  */
 export function readArkScore(row: unknown): ArkScoreRead | null {
     const fields = record(row);
     if (!fields) return null;
+    const points = integer(fields.ark_points);
+    if (points !== null) return {value: Math.max(points, 0), outOf: null, world: true, points: true};
     const world = integer(fields.ark_world_score);
-    if (world !== null) return {value: clamp(world, 0, 100), outOf: 100, world: true};
+    if (world !== null) return {value: clamp(world, 0, 100), outOf: 100, world: true, points: false};
     const legacy = integer(fields.ark_score);
-    return legacy !== null ? {value: clamp(legacy, 0, 500), outOf: 500, world: false} : null;
+    return legacy !== null ? {value: clamp(legacy, 0, 500), outOf: 500, world: false, points: false} : null;
 }
 
 /**
- * This week's change to the world score (`ark_world_week_change`: the sum of
- * this week's locked contributions as the server works it out), top level or
- * inside `ark_week`. Null when the server does not send it.
+ * This week's change to the Ark Score, top level or inside `ark_week`:
+ * `ark_points_week` (v3: the points locked in the last 7 days, never below 0)
+ * when the server sends it, else v2's `ark_world_week_change` (which could be
+ * negative). Null when the server sends neither.
  */
 export function readArkWorldWeekChange(row: unknown): number | null {
     const fields = record(row);
     if (!fields) return null;
-    return integer(fields.ark_world_week_change) ?? integer(record(fields.ark_week)?.ark_world_week_change);
+    const week = record(fields.ark_week);
+    const points = integer(fields.ark_points_week) ?? integer(week?.ark_points_week);
+    if (points !== null) return Math.max(points, 0);
+    return integer(fields.ark_world_week_change) ?? integer(week?.ark_world_week_change);
 }
 
 /** `life`: `{money_bar, relationships, energy, reputation, experience}` (no total). Null when absent or empty. */
@@ -119,9 +136,9 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
     return Object.values(life).some((value) => value !== null) ? life : null;
 }
 
-/** Where on the 0–100 track a score sits, for its bar. */
-export function arkScoreShare(score: Pick<ArkScoreRead, "value" | "outOf">): number {
-    return clamp((score.value / score.outOf) * 100, 0, 100);
+/** Where on its track an older score sits, for its bar (0–100); null for v3, which has no top and so no bar. */
+export function arkScoreShare(score: Pick<ArkScoreRead, "value" | "outOf">): number | null {
+    return score.outOf ? clamp((score.value / score.outOf) * 100, 0, 100) : null;
 }
 
 /** "+3", "−2" (a true minus), "0". */
@@ -129,35 +146,57 @@ export function arkSignedChange(delta: number): string {
     return delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : "0";
 }
 
-/** The first-time explanation band's memory (per browser): dismissed once, never shown again. */
-export const ARK_SCORE_EXPLAINED_KEY = "animaldex:ark-world-score-explained:v1";
+/**
+ * The first-time explanation band's memory (per browser): dismissed once, never shown again.
+ * v2: the v3 score (points from steps) is explained afresh, even to readers who dismissed v2's.
+ */
+export const ARK_SCORE_EXPLAINED_KEY = "animaldex:ark-score-explained:v3";
 
-// MARK: - The step's line (Part 2)
+// MARK: - The step's line (captures + thrive)
 
+/** The contract's states, and the earlier server's (`new` | `pair_complete` | `milestone`, until its migration) read as them. */
 function offerState(value: unknown): ArkStepOfferState | null {
-    return value === "new" || value === "pair_complete" || value === "milestone" ? value : null;
+    if (value === "thrive" || value === "thrive_later") return value;
+    if (value === "new") return "thrive_later";
+    if (value === "pair_complete" || value === "milestone") return "thrive";
+    return null;
 }
 
-/** The state for a living count: 0 a new arrival, 1 completes a pair, 2 or more a milestone. */
+/** The state for a living count: none aboard, `thrive_later`; one or two, `thrive`. */
 export function arkStepOfferStateFor(livingBrought: number): ArkStepOfferState {
-    return livingBrought <= 0 ? "new" : livingBrought === 1 ? "pair_complete" : "milestone";
+    return livingBrought <= 0 ? "thrive_later" : "thrive";
 }
 
-/** `voyage_step_offer_state_v1`'s answer. Null when it is not one (an older server, a malformed answer). */
+/**
+ * The band one more worked step would leave a condition in, worked out from
+ * the band alone (for a server that sends no `band_if_worked`): a step from
+ * ordinary reaches good, and good may reach prime only from near the top, so
+ * good stays good. The server's own answer always wins.
+ */
+function nextBand(band: ArkThrive): ArkThrive {
+    return band === "ordinary" ? "good" : band;
+}
+
+/**
+ * `voyage_step_offer_state_v1`'s answer. Null for null (no line: unknown,
+ * excluded, under-13) or anything malformed.
+ */
 export function decodeArkStepOffer(raw: unknown): ArkStepOffer | null {
     const row = record(raw);
     const species = text(row?.species);
     if (!row || !species) return null;
     const livingBrought = clamp(integer(row.living_brought) ?? 0, 0, 2);
+    const bandNow = arkThrive(row.band_now) ?? "ordinary";
     return {
         state: offerState(row.state) ?? arkStepOfferStateFor(livingBrought),
         species,
         livingBrought,
-        aboard: Math.max(0, integer(row.aboard) ?? 0)
+        bandNow,
+        bandIfWorked: arkThrive(row.band_if_worked) ?? nextBand(bandNow)
     };
 }
 
-type SnapshotAnimal = {id: string; species_profile_id: string; model_slug: string; name: string; mine: boolean; arrived_at: string; origin?: "arrived" | "born"};
+type SnapshotAnimal = {id: string; species_profile_id: string; model_slug: string; name: string; mine: boolean; arrived_at: string; origin?: "arrived" | "born"; source?: "capture" | "step" | null; thrive?: ArkThrive | null};
 
 /** Whether a snapshot animal is this species (by canonical id, or by its model slug). */
 export function arkAnimalIsSpecies(animal: Pick<SnapshotAnimal, "species_profile_id" | "model_slug">, species: {speciesProfileId: string | null; slug: string | null}): boolean {
@@ -168,8 +207,9 @@ export function arkAnimalIsSpecies(animal: Pick<SnapshotAnimal, "species_profile
 /**
  * The same answer from the public snapshot (`voyage_public_v2`, read with
  * the reader's session so their own come back `mine`), for a server without
- * `voyage_step_offer_state_v1`. Born young count as the reader's only when
- * the server marks them `mine`, as the function would.
+ * `voyage_step_offer_state_v1`: the reader's own arrived animals of this
+ * species, and the band they are in (the best of theirs; ordinary when the
+ * snapshot carries none). Born young are their family line, never their pair.
  */
 export function arkStepOfferFromSnapshot(
     animals: readonly SnapshotAnimal[],
@@ -178,15 +218,18 @@ export function arkStepOfferFromSnapshot(
     const kind = animals.filter((animal) => !animal.id.startsWith("visitor:") && arkAnimalIsSpecies(animal, species));
     const name = text(species.name) ?? kind[0]?.name ?? null;
     if (!name) return null;
-    const livingBrought = Math.min(2, kind.filter((animal) => animal.mine).length);
-    return {state: arkStepOfferStateFor(livingBrought), species: name, livingBrought, aboard: kind.length};
+    const mine = kind.filter((animal) => animal.mine && animal.origin !== "born");
+    const livingBrought = Math.min(2, mine.length);
+    const bands = mine.map((animal) => arkThrive(animal.thrive) ?? "ordinary");
+    const bandNow: ArkThrive = bands.includes("prime") ? "prime" : bands.includes("good") ? "good" : "ordinary";
+    return {state: arkStepOfferStateFor(livingBrought), species: name, livingBrought, bandNow, bandIfWorked: nextBand(bandNow)};
 }
 
 export type ArkWorldWords = {
-    offerNew: string;
-    offerNewAn: string;
-    offerPair: string;
-    offerMilestone: string;
+    offerThrive: string;
+    offerPrime: string;
+    offerStayPrime: string;
+    offerLater: string;
     arrival: string;
     arrivalAn: string;
 };
@@ -196,40 +239,59 @@ export function arkTakesAn(name: string, locale: string): boolean {
     return locale.toLowerCase().startsWith("en") && /^[aeiou]/i.test(name.trim());
 }
 
-/** The step card's line: "If this works, a Red Fox comes aboard the Ark", and so on by state. */
-export function arkStepOfferLine(offer: Pick<ArkStepOffer, "state" | "species">, words: ArkWorldWords, locale: string): string {
-    const template = offer.state === "milestone"
-        ? words.offerMilestone
-        : offer.state === "pair_complete"
-            ? words.offerPair
-            : arkTakesAn(offer.species, locale) ? words.offerNewAn : words.offerNew;
-    return template.split("{species}").join(offer.species);
+/**
+ * The step card's line, by state and band: "If this works, your Komodo
+ * Dragons will thrive"; "…will be in prime condition" when one more step
+ * would get them there; "…will stay in prime condition" when they are; and,
+ * with none aboard, "…will thrive once one is aboard". `plural` names two in
+ * English ("Komodo Dragons"); other languages say the name as it is (A17).
+ */
+export function arkStepOfferLine(offer: Pick<ArkStepOffer, "state" | "species" | "livingBrought" | "bandNow" | "bandIfWorked">, words: ArkWorldWords, locale: string, plural: (name: string) => string = (name) => name): string {
+    const name = offer.livingBrought >= 2 && locale.toLowerCase().startsWith("en") ? plural(offer.species) : offer.species;
+    const template = offer.state === "thrive_later"
+        ? words.offerLater
+        : offer.bandNow === "prime"
+            ? words.offerStayPrime
+            : offer.bandIfWorked === "prime"
+                ? words.offerPrime
+                : words.offerThrive;
+    return template.split("{species}").join(name);
 }
 
-/** The thread's line when the animal came aboard: "A Red Fox came aboard the Ark". */
-export function arkArrivalLine(species: string, words: ArkWorldWords, locale: string): string {
+/** The thread's line when a step brought the animal aboard (before captures did): "A Red Fox came aboard the Ark". */
+export function arkArrivalLine(species: string, words: Pick<ArkWorldWords, "arrival" | "arrivalAn">, locale: string): string {
     return (arkTakesAn(species, locale) ? words.arrivalAn : words.arrival).split("{species}").join(species);
 }
 
 // MARK: - The arrival (Part 2)
 
-/** A reply that finished a step that worked: the only kind that brings an animal aboard. */
-export type ArkWorkedFinisher = {id: string; createdAt: string};
+/**
+ * A reply that finished a step that worked: its step (`stepDone.id`, when the
+ * server sent it) is what makes the reader's animals of that kind thrive
+ * (`voyage_step_result_v1`), and, before captures did, what brought one aboard.
+ */
+export type ArkWorkedFinisher = {id: string; createdAt: string; stepId?: string | null; /** The step's own words (`stepDone.step`): the founders' story moment prefills with it (D6), never with the problem. */ stepText?: string | null};
 
 type FinisherMessage = {
     id: string;
     role: string;
     createdAt: string;
     status?: string;
-    companionEvent?: {stepDone?: {outcome?: string} | undefined} | undefined;
+    companionEvent?: {stepDone?: {outcome?: string; id?: string; step?: string} | undefined} | undefined;
 };
+
+const STEP_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function arkWorkedFinishers(messages: readonly FinisherMessage[]): ArkWorkedFinisher[] {
     return messages
         .filter((message) => message.role === "assistant"
             && (!message.status || message.status === "complete")
             && message.companionEvent?.stepDone?.outcome === "worked")
-        .map((message) => ({id: message.id, createdAt: message.createdAt}));
+        .map((message) => {
+            const stepId = message.companionEvent?.stepDone?.id ?? null;
+            const stepText = message.companionEvent?.stepDone?.step?.replace(/\s+/g, " ").trim() || null;
+            return {id: message.id, createdAt: message.createdAt, stepId: stepId && STEP_ID.test(stepId) ? stepId.toLowerCase() : null, stepText};
+        });
 }
 
 /** How far an arrival may sit from the reply that finished its step: it arrives at the step's `done_at`, applied by the minute's outbox run. */
@@ -249,6 +311,8 @@ export function arkMatchArrivals<T extends SnapshotAnimal>(
 ): Map<string, T> {
     const candidates = animals.filter((animal) => animal.mine
         && animal.origin !== "born"
+        // A capture's animal is never a step's (captures + thrive): only a step's, or one from a server that doesn't say.
+        && animal.source !== "capture"
         && !animal.id.startsWith("visitor:")
         && arkAnimalIsSpecies(animal, species)
         && !Number.isNaN(Date.parse(animal.arrived_at)));

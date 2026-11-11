@@ -34,7 +34,7 @@ import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
-import type {ArkZone} from "@/ark-scene/types";
+import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
@@ -162,6 +162,11 @@ export type ScheduleAnimal = {
     group?: ScheduleGroup | null;
     /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
     threats?: ScheduleThreat[] | null;
+    /**
+     * How well kept it is (`thrive.ts`): the hook for energy (more active when prime, more resting when ordinary)
+     * and for who claims the best places first. Not read yet: every band is scheduled the same.
+     */
+    thrive?: ArkThrive;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
 };

@@ -69,7 +69,7 @@ const en: HowItWorksContent = {
             paragraphs: [
                 "Bring an animal you've caught something real: a decision, a habit, a conversation you keep putting off. It says which way it would go and why, from its own life, then gives you one step to try in your own world.",
                 "Do it, tap I did it and tell it how it went. The first step you finish together earns its Power, and its card shows how you earned it. Where the stakes are real, like a job or money, the step is one you can take back.",
-                "When a step works, one of that animal's kind joins the Ark: one shared animal world, open to everyone at animaldex.app/ark, where it lives, eats and raises young by rules based on its field guide."
+                "When you capture an animal, one of its kind joins the Ark: one shared animal world, open to everyone at animaldex.app/ark, where it lives, eats and raises young by rules based on its field guide. Each step with it that works keeps your animals of that kind thriving."
             ]
         },
         {

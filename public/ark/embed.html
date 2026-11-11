@@ -50,6 +50,8 @@
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  * To the host: {type: "ark:selected", animal}, {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
+ * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.

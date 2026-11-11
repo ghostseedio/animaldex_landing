@@ -48,15 +48,17 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * capture page's "See it in the Ark"), the reader's own one first.
  *
  * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
- * condition, activity, sociality) with its event log and life stories
+ * condition, activity, sociality; and, captures + thrive, each animal's
+ * `thrive` band, `area`, `source` and its life story's family line,
+ * `src/lib/ark-thrive-fixture.ts`) with its event log and life stories
  * (`scripts/generate-ark-life-fixtures.mts`, in the server's shapes). `?hour=5.5` pins the light's
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
- * server's `public_story` flag would. `&founders=1` (with any `?fixture=`)
- * answers as the server does with its `founder_names` switch on: one animal
- * with a named founder and a shared story, one named without a story
- * (`src/lib/ark-founders-fixture.ts`).
+ * server's `public_story` flag would. Every `?fixture=` answers as the server
+ * does with names on (owner, 2026-11-11): bringers as their @usernames
+ * (@mayachen with a shared story, @lendawg, …; two stay Voyagers), and
+ * `&founders=0` as a server that names nobody (`src/lib/ark-founders-fixture.ts`).
  *
  * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
@@ -193,8 +195,10 @@ async function loadFixture(mode: FixtureMode, founders: boolean): Promise<{snaps
 
 async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const base = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
-    // Founders (`&founders=1`): the same answer as names-on writes it.
+    // Captures + thrive: with the frozen contract's `thrive`, `area` and `source` laid on (`lib/ark-thrive-fixture`).
+    const {withArkThriveFixture} = await import("@/lib/ark-thrive-fixture");
+    const base = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
+    // Founders (on unless `&founders=0`): the same answer as names-on writes it.
     const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
         const edge = await import("@/ark-scene/fixtures/edge");
@@ -441,8 +445,10 @@ function rigOverride(searchParams: Props["searchParams"]): string | null | undef
 
 /** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
 async function loadFixtureLife(mode: FixtureMode, founders: boolean): Promise<ArkFixtureLife> {
-    const [events, read] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
-    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(read.default as unknown as Record<string, unknown>) : read.default};
+    const [events, read, thrive, snapshot] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json"), import("@/lib/ark-thrive-fixture"), import("@/ark-scene/fixtures/snapshot-v2.json")]);
+    // Captures + thrive: each life story's `thrive`, `area`, `origin.source` and `lineage`, as the contract's read answers.
+    const told = thrive.withArkThriveFixtureLives(read.default as unknown as Record<string, unknown>, thrive.withArkThriveFixture(snapshot.default));
+    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(told) : told};
     if (mode === "eggs") {
         const edge = await import("@/ark-scene/fixtures/edge");
         const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];
@@ -457,7 +463,8 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
-    const fixtureFounders = Boolean(mode) && development && searchParams.founders === "1";
+    // Names are on by default (owner, 2026-11-11: every bringer with a handle shows as their @username); `&founders=0`: a server that names nobody.
+    const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
     const [{words, talk, language}, data] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
         mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))

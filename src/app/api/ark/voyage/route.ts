@@ -16,12 +16,13 @@ export const dynamic = "force-dynamic";
  * server's `founder_names` switch is off or on a server without it.
  *
  * In development, `?fixture=1` answers the v2 fixture (as `/ark?fixture=1`),
- * for `/ark/embed.html?fixture=1`; with `&founders=1`, as names-on answers it.
+ * for `/ark/embed.html?fixture=1`, as names-on answers it (bringers as their
+ * @usernames, owner 2026-11-11); `&founders=0`, as a server that names nobody.
  */
 export async function GET(request: NextRequest) {
     if (process.env.NODE_ENV === "development" && request.nextUrl.searchParams.get("fixture") === "1") {
         const base = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
-        const fixture = request.nextUrl.searchParams.get("founders") === "1" ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders(base) : base;
+        const fixture = request.nextUrl.searchParams.get("founders") !== "0" ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders(base) : base;
         return NextResponse.json({available: true, snapshot: fixture, founders: arkFoundersOf(fixture)}, {headers: {"Cache-Control": "no-store"}});
     }
     const read = await readArkVoyage();
