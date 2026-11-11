@@ -24,6 +24,7 @@ import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-s
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
 import {arkAnimalClock, arkEpochSeconds, ArkShaderClock} from "@/ark-scene/shared-clock";
+import {ARK_LIVE_BUDGET, arkOutside, arkRestStep, type ArkLiveCandidate} from "@/ark-scene/live-budget";
 
 export type {ArkPower, ArkRenderMode} from "@/ark-scene/runtime/governor";
 
@@ -108,6 +109,10 @@ export {arkCaps};
 
 export type ArkRuntime = ReturnType<typeof createArkRuntime>;
 
+/** Far models asked for up front (the nearest kinds to the view), per tier; the rest when seen within `FAR_ON_DEMAND` m. */
+const FAR_UPFRONT: Record<QualityTier, number> = {high: 160, medium: 120, low: 80};
+const FAR_ON_DEMAND: Record<QualityTier, number> = {high: 260, medium: 160, low: 110};
+
 /** The layer a mesh waits on, undrawn, while its new shader compiles (the camera and the shadows draw layer 0). */
 const HELD_LAYER = 31;
 
@@ -138,6 +143,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
+    /** The live budget's last answer: its rotation step and budget (a new step or tier asks for the snapshot again). */
+    let restAt: {step: number; budget: number} | null = null;
     /** The shaders' time on the shared clock (shared-clock.ts), brought back down only while nobody sees the scene. */
     const shaderClock = new ArkShaderClock();
 
@@ -320,9 +327,51 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             follow.reset();
         },
 
-        /** One animal of a species seen this frame (the load order). */
+        /** One animal of a species seen this frame (the load order; a far model asked for once it is in view and near enough). */
         see(slug: string, distance: number, visible: boolean) {
             planner.see(slug, distance, visible);
+            if (visible && distance < FAR_ON_DEMAND[ctx.tier()] && ctx.library.has(slug)) ctx.library.request(slug, "far");
+        },
+
+        /**
+         * Who of `live` (the animals that would be drawn one by one) is outside now (`live-budget.ts`): at most the
+         * tier's budget (the lighter view's: the low tier's), the same for every viewer, the reader's own and `pins`
+         * always. Everyone else rests out of sight; the counts are untouched.
+         */
+        outside(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean): Set<string> {
+            const budget = ARK_LIVE_BUDGET[lite ? "low" : ctx.tier()];
+            const epoch = arkEpochSeconds();
+            restAt = {step: arkRestStep(epoch), budget};
+            const candidates: ArkLiveCandidate[] = [];
+            const pinned = new Set<string>(pins);
+            for (const animal of animals) {
+                if (!live.has(animal.id)) continue;
+                candidates.push({id: animal.id, group: animal.species_profile_id || `slug:${animal.model_slug}`});
+                if (animal.mine) pinned.add(animal.id);
+            }
+            return arkOutside(candidates, budget, epoch, pinned);
+        },
+
+        /** The rotation moved on (a new step on the shared clock) or the budget changed: the snapshot is to be laid out again. */
+        rotationDue(lite: boolean): boolean {
+            if (!restAt) return false;
+            return arkRestStep(arkEpochSeconds()) !== restAt.step || ARK_LIVE_BUDGET[lite ? "low" : ctx.tier()] !== restAt.budget;
+        },
+
+        /** The far models to ask for up front: all, or (a big Ark) the tier's number of kinds nearest the view. */
+        upfrontFar(slugs: string[], where: ReadonlyArray<{slug: string; x: number; z: number}>, always: readonly string[] = []): string[] {
+            const limit = FAR_UPFRONT[ctx.tier()];
+            if (slugs.length <= limit) return slugs;
+            const keep = new Set(always);
+            const target = ctx.controls.target;
+            const nearest = new Map<string, number>();
+            for (const at of where) {
+                const d = Math.hypot(at.x - target.x, at.z - target.z);
+                if (d < (nearest.get(at.slug) ?? Infinity)) nearest.set(at.slug, d);
+            }
+            // The herds' kinds always (their figures are drawn from afar), then the nearest.
+            const rest = slugs.filter((slug) => !keep.has(slug)).sort((a, b) => (nearest.get(a) ?? Infinity) - (nearest.get(b) ?? Infinity) || (a < b ? -1 : 1));
+            return [...slugs.filter((slug) => keep.has(slug)), ...rest.slice(0, Math.max(limit - keep.size, 0))];
         },
 
         /** The species drawn with their near model this frame (the budget lets the others' near levels go first). */

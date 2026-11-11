@@ -1102,10 +1102,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         const representatives = arkRepresentatives(snapshot.animals, {pinned: pins, live: liteOn() ? ARK_HERD_LIVE_LITE : ARK_HERD_LIVE, from: herdOff ? Number.POSITIVE_INFINITY : undefined});
         buildHerds(snapshot, representatives.herds, places);
+        // Runtime: a big Ark draws at most the tier's live budget one by one, the rest resting out of sight by the
+        // shared rotation (live-budget.ts); the counts and herds are untouched.
+        const outside = runtime.outside(snapshot.animals, representatives.live, pins, liteOn());
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
-            if (!representatives.live.has(animal.id)) continue;
+            if (!representatives.live.has(animal.id) || !outside.has(animal.id)) continue;
             const place = places.get(animal.id)!;
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
@@ -1146,8 +1149,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Every species' far model, nearest first, so the whole Ark fills in from where the camera is.
         // (Small animals' models wait until the camera comes close: they are not drawn from afar. Herds' far models are.)
         const byDistance = Array.from(new Set([...next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug), ...herds.map((herd) => herd.slug)]));
+        // Runtime: a big Ark asks up front only for the kinds nearest the view; the rest as they come into view.
+        const firstFar = runtime.upfrontFar(byDistance, next.map((entry) => ({slug: entry.animal.model_slug, x: entry.place.x, z: entry.place.z})), herds.map((herd) => herd.slug));
         library.ready().then(() => {
-            for (const slug of byDistance) if (library.has(slug)) library.request(slug, "far");
+            for (const slug of firstFar) if (library.has(slug)) library.request(slug, "far");
         });
     };
 
@@ -3997,6 +4002,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             setLight();
         }
         stepReplay(now);
+        // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
+        if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
         updateInstances(elapsed);
         dust.step(now);
         nests.step(now);

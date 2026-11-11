@@ -35,12 +35,12 @@ test("live budget: the same for every viewer (time and ids only), nested across 
     const all = population();
     const a = arkOutside(all, 400, T + 10);
     const b = arkOutside([...all].reverse(), 400, T + 200);
-    assert.deepEqual([...a].sort(), [...b].sort(), "same step, any order: the same animals");
+    assert.deepEqual(Array.from(a).sort(), Array.from(b).sort(), "same step, any order: the same animals");
     const low = arkOutside(all, ARK_LIVE_BUDGET.low, T);
     const medium = arkOutside(all, ARK_LIVE_BUDGET.medium, T);
     const high = arkOutside(all, ARK_LIVE_BUDGET.high, T);
-    for (const id of low) assert.ok(medium.has(id), `low ⊂ medium: ${id}`);
-    for (const id of medium) assert.ok(high.has(id), `medium ⊂ high: ${id}`);
+    low.forEach((id) => assert.ok(medium.has(id), `low ⊂ medium: ${id}`));
+    medium.forEach((id) => assert.ok(high.has(id), `medium ⊂ high: ${id}`));
     const pinned = arkOutside(all, 400, T, new Set(["a5", "a7"]));
     assert.ok(pinned.has("a5") && pinned.has("a7"));
     assert.ok(pinned.size <= 402);
@@ -57,7 +57,7 @@ test("live budget: each step one animal per crowded kind goes in to rest and the
     assert.equal(came.length, 1);
     // Over a whole turn of the ring every animal of the kind has been outside.
     const seen = new Set<string>();
-    for (let s = 0; s < 24; s++) for (const id of arkOutside(all, 400, T + s * ARK_REST_STEP_SECONDS)) seen.add(id);
+    for (let s = 0; s < 24; s++) arkOutside(all, 400, T + s * ARK_REST_STEP_SECONDS).forEach((id) => seen.add(id));
     for (const c of big) assert.ok(seen.has(c.id), c.id);
 });
 
