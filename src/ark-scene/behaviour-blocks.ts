@@ -129,6 +129,8 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "float_back", label: "float on the back", motion: "hold", states: ["float_back"], beat: "rest", roll: Math.PI, wet: true}),
         B({id: "sleep_pose", label: "sleep in its posture (one leg, head tucked, hanging, curled, afloat)", motion: "hold", states: ["sleep"], beat: "sleep"}),
         B({id: "freeze", label: "freeze", motion: "hold", states: ["freeze"], beat: "pause"}),
+        // (Its rig plays its stand, as behaviour's own turns on the spot: the "freeze" state's pause.)
+        B({id: "turn", label: "turn on the spot (before setting off the other way)", motion: "hold", states: ["freeze"], beat: "pause"}),
         B({id: "perch", label: "perch", motion: "hold", states: ["perch"], beat: "rest"}),
         B({id: "rest", label: "rest", motion: "hold", states: ["rest"], beat: "rest"}),
         B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08})
