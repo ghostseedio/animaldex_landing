@@ -165,3 +165,21 @@ Still far from ~200 ms on the phone. In the 1× phone mount (8.1 s profiled): th
 - **i18n**: done here: `ark.a11y.resetView` in all 45 languages (the lane's own translations; a native read is welcome).
 - **Apps**: post `ark:visible` and `ark:power` (docs/ark/runtime-bridge.md).
 
+
+## 9. Round 6: the sliced mount (real backfill, 3,137 animals)
+
+`mountArk` now returns before the animals are laid out: the attach points (graphics' own slices), the animals' places, the map's roosts (`scheduleRoost`, remembered per place, 30 ms at a time) and the animals' first layout run as `runtime.mountLater` steps, each in its own task (a message loop, not inside an animation frame where every lane's per-frame slices add up), before the first frame. Host calls that need the animals (`update`, `select`, `follow`) wait for them; `selectHerd` answers false until then. A recording (golden shots, the marketing recorder) lays everything out at once, as before, so the golden page is unchanged. The reef's growth (`reefGrowth`) is placed in the scenery worker (`primeReefGrowth`, a thin hook in reef.ts).
+
+Files touched outside the runtime this round: `src/ark-scene/index.ts` (the mount steps, `mapRoostOf`, `whenAnimals`), `src/ark-scene/reef.ts` (`primeReefGrowth`).
+
+| Real file, 2 runs each | before (1ee10e02) | after (fedab7a2) |
+|---|---|---|
+| Phone mount task | 2,162 / 2,163 ms | 943 / 947 ms |
+| Phone tasks over 200 ms | the mount, 0.2 s after | page script 0.3 s, the mount, a roost slice 0.25 s, the first draw 0.43 s |
+| Phone view complete | 17.8 / 15.7 s (low tier) | 22.7 / 18.8 s (medium tier this time: 120 kinds' models, not 80) |
+| Desktop mount task | 610 / 640 ms | 248 / 276 ms |
+| Desktop view complete | 12.2 / 9.7 s | 14.8 / 9.0 s |
+
+What is left in the phone's mount task (~0.95 s): the vegetation's instanced meshes and grass (~0.3 s), the props module (0.19 s), the near detail's floor and wheat (0.15 s), the effects (0.12 s); each needs the same treatment (built after `mountArk` returns, or primed from the worker). The phone's view time is the model downloads (the CDN does not cache the model files: `private, no-cache`).
+
+The visual CI was red on release 9acd9a74 itself (baselines from bd63e552, before graphics batches 4–6, props, map and look). Re-accepted at today's picture; this branch's render against the release's: 14 shots identical within tolerance, 5 with one tile changed by a looping animal (each under 1.1% of the picture), now with a looser worst-tile limit.
