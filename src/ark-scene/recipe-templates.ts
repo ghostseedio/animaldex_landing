@@ -136,7 +136,8 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             label: "snatches fish feet-first (the osprey, fish eagles)",
             kind: "stay",
             goal: "perch_water",
-            replaces: ["forage", "perch", "fly", "soar", "hunt"],
+            // (Not its flights: each fishing trip is out and back, and it fishes instead of foraging, perching or hunting.)
+            replaces: ["forage", "perch", "hunt"],
             doing: "forage",
             hours: "day",
             steps: [
@@ -790,8 +791,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "go", to: "material", r: 8},
                 {b: "pick_up", s: [1, 2], pick: "material", carry: "beak"},
                 {b: "go", to: "nest"},
-                {b: "place", s: [1.5, 3], drop: true},
-                {b: "incubate", s: [1.5, 3]}
+                // (Working it in and shaping the cup takes a while: a trip every half minute or so, not a shuttle.)
+                {b: "place", s: [3, 5], drop: true},
+                {b: "incubate", s: [6, 12]}
             ],
             loop: 1
         }),

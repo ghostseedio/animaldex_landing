@@ -398,3 +398,43 @@ This is a server change (ecology tick), so it needs its own migration and harnes
   - By day, the flying fox and the pipistrelles hang head down under the acacias' limbs, as dark folded bodies (`bats-day-crop.jpg`). A half-roll hang read as a bat lying on the limb, so bats now pitch nose down a quarter turn and sloths keep the half roll.
   - At dusk the roost's bats stream out against the sunset sky, wings beating, up and away (`bats-sky.jpg`).
   - Inside rainforest and woodland crowns the camera sees only leaves, so the clip is staged on the grassland's acacias.
+
+## No spinning (the owner's "animals moving in circles", 2026-11-11)
+
+Behaviour fixed the schedule's own circling (aa330fa8). On the merged release the remaining full turns all came from recipe episodes: 5.3% of moving windows against a limit under 1%. The causes:
+- every key snapped the heading to its leg's direction (a hold started facing north);
+- loop legs picked a spot anywhere round the anchor, so a seal chasing fish crossed a 4 m disc back and forth;
+- every homecoming turned round on the spot to face the way it first arrived, just before its schedule set off another way;
+- holds rocked big bodies 10–18 cm back and forth;
+- strikes lunged out and back;
+- a heron paced a short strip of shallows, hooking round at each end;
+- a hawk shuttled nest material every 10 s;
+- an eagle's every flight became a fishing trip;
+- a camel cached food ("humps storing fat").
+
+The rules now, all in `behaviour-recipes.ts`, pure and seeded as before:
+- **Movers face their travel direction.** A leg is a curve that leaves along the heading it came in with (a quadratic; a hook out to the turning side when the target is behind, never a fold-back). It faces along the curve, its turn summed along it.
+- **No snaps.** Each key starts from the last key's heading (`yawIn`); the first from its schedule pose's (`yaw0`). The build takes each key's exit heading from the pose function itself.
+- **Eased turns at a rate by body size**: `turnRate(length)` = 1.8 / length^0.4 rad/s, between 0.7 and 3.5. A hold turns to what it faces (the water nearest its heading, the sun, its rival) at that rate. A solo leg takes at least as long as its turn needs.
+- **Arrivals keep the heading they came in on.** A recipe stay's episode records `endYaw` and keeps it until the slot ends; the next slot turns from it as it sets off (`settingOff`). A walk to meet a rival comes in facing it. The leg home comes in along the schedule pose's heading when it arrives from behind it.
+- **Chases pass through.** Loop legs go ahead (within 0.2 rad for prey, 0.3–0.35 for foraging), bending towards one slow loop over the episode (`plan`), so it comes back round rather than out and back. At the edge of its patch it bends back on the anchor's side. A small step with nothing ahead stays put.
+- **Foraging goes mostly forward.** A hold rocks the body at most 2.5 cm (its clip does the rest); a strike lunges forward and goes on from there.
+- **Timing:**
+  - a long stay's episode ends 10 s before its slot, so the homecoming and the schedule's set-off are two turns kept apart;
+  - an episode stops while it can still get home at its own pace (pairs keep their shared reserve);
+  - a swimmer that flies swims from water to water.
+- **Data:**
+  - `talon_grab` no longer replaces flights;
+  - nest material trips come every half minute;
+  - the caching rule no longer reads "storing fat", "buried prey" or "buried food", "burying seeds", "an open larder", or "reserves, caches". 51 real cachers keep `cache_food` (squirrels, jays, nutcrackers, kangaroo rats, hamsters, tits, corvids, mustelids, lynx, wolverine, the red fox, owls and kestrels with surplus prey).
+
+Measured on this branch (fixture snapshot v2, every 20 s window of a day, as behaviour's test):
+
+| | even-indexed (the test) | every animal | recipes off, every animal |
+|---|---|---|---|
+| facing loops | 0.28% | 0.32% | 0.18% |
+| travel loops | 0.04% | 0.06% | 0.01% |
+
+Flyers' turns a minute in the air: 0.447 (limit 0.5; 0.392 with recipes off). Tests: `no spinning` (six recipe species, every 20 s of their episodes under a full turn, no 0.2 s step over 0.9 rad) and `only real cachers cache`.
+
+For behaviour: the landing at the end of a schedule flight can snap round (149° in a second, a fish eagle onto its perch). `settle` faces from home when none of the last four slots had a goal, not from where it flew in from. Behaviour's file; not changed here.
