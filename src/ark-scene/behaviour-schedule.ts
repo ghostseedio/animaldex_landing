@@ -30,7 +30,7 @@ import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type 
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
-import type {SlicedBuild} from "@/ark-scene/behaviour-build";
+import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
@@ -1375,22 +1375,124 @@ export type SpacedHome = {home: {x: number; z: number}; range: number | null; pr
  * moved homes and range caps (prey whose range shrank are in it too, with their own home).
  */
 export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): Map<string, SpacedHome> {
+    const job = spaceHomesTasks(animals, eats, reachOf);
+    return new SlicedBuild(job.tasks, job.finish).run();
+}
+
+/**
+ * `spaceHomes` as tasks, one predator each, biggest first (`behaviour-build.ts`: about 6 ms a frame), with the same
+ * result to the last digit as the loop it replaced (2026-11-11, the backfill scale: 3,140 animals took 3.4 s on a
+ * phone). The same rule, worked out more cheaply:
+ * - who eats whom once per pair of kinds, and each animal's prey and enemies from an index by kind (was every pair
+ *   of animals, for every animal: 5 million `eats` calls at 3,140 animals);
+ * - a spot's clearance (its distance to the nearest enemy's reach) from a grid of the enemies' homes, nearest cells
+ *   first, stopping where no further enemy can be nearer: the same minimum;
+ * - a candidate spot's walkable test (the map's habitat, a ground sample each) only when the spot could change
+ *   anything: better than the best so far, or clear.
+ */
+export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): {tasks: BuildTask[]; finish: () => Map<string, SpacedHome>} {
     const out = new Map<string, SpacedHome>();
     const home = new Map(animals.map((a) => [a.id, {...a.home}]));
     const reach = new Map(animals.map((a) => [a.id, reachOf(a.id)]));
     const sorted = [...animals].sort((a, b) => b.length - a.length || a.id.localeCompare(b.id));
-    for (const predator of sorted) {
-        const prey = animals.filter((other) => other.id !== predator.id && eats(predator.slug, other.slug));
-        if (!prey.length) continue;
-        const enemies = animals.filter((other) => other.id !== predator.id && (eats(predator.slug, other.slug) || eats(other.slug, predator.slug)));
+    // Each kind's animals in their given order (the order the old filters kept), and who eats whom by kind.
+    const order = new Map(animals.map((a, i) => [a.id, i]));
+    const byKind = new Map<string, HomeInput[]>();
+    for (const a of animals) {
+        const list = byKind.get(a.slug);
+        if (list) list.push(a);
+        else byKind.set(a.slug, [a]);
+    }
+    const kinds = Array.from(byKind.keys());
+    // Each kind's prey kinds and enemy kinds (it eats them, or they eat it), worked out once per kind.
+    const preyKindsOf = new Map<string, string[]>();
+    const enemyKindsOf = new Map<string, string[]>();
+    const preyKinds = (p: string) => {
+        let list = preyKindsOf.get(p);
+        if (!list) preyKindsOf.set(p, (list = kinds.filter((k) => eats(p, k))));
+        return list;
+    };
+    const enemyKinds = (p: string) => {
+        let list = enemyKindsOf.get(p);
+        if (!list) {
+            const prey = new Set(preyKinds(p));
+            enemyKindsOf.set(p, (list = kinds.filter((k) => prey.has(k) || eats(k, p))));
+        }
+        return list;
+    };
+    const ofKinds = (list: string[], not: HomeInput) => {
+        const found: HomeInput[] = [];
+        for (const kind of list) for (const a of byKind.get(kind)!) if (a.id !== not.id) found.push(a);
+        return found.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+    };
+    const GRID = 12;
+    const tasks: BuildTask[] = sorted.map((predator) => once(() => {
+        const itsPrey = preyKinds(predator.slug);
+        if (!itsPrey.length) return;
+        const prey = ofKinds(itsPrey, predator);
+        if (!prey.length) return;
+        const enemies = ofKinds(enemyKinds(predator.slug), predator);
         const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
-        const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
+        // The enemies' homes in a grid (as they are now: earlier predators may have moved), and the most any needs.
+        // (Each enemy as numbers: its home and what it needs do not change during this predator's search.)
+        const cells = new Map<number, number[]>();
+        const cellKey = (i: number, j: number) => (i + 4096) * 8192 + (j + 4096);
+        let needMax = 0;
+        let minI = Infinity;
+        let maxI = -Infinity;
+        let minJ = Infinity;
+        let maxJ = -Infinity;
+        for (const o of enemies) {
+            const at = home.get(o.id)!;
+            const i = Math.floor(at.x / GRID);
+            const j = Math.floor(at.z / GRID);
+            const key = cellKey(i, j);
+            const needs = need(o);
+            const list = cells.get(key);
+            if (list) list.push(at.x, at.z, needs);
+            else cells.set(key, [at.x, at.z, needs]);
+            needMax = Math.max(needMax, needs);
+            minI = Math.min(minI, i);
+            maxI = Math.max(maxI, i);
+            minJ = Math.min(minJ, j);
+            maxJ = Math.max(maxJ, j);
+        }
+        /**
+         * min over enemies of (distance to its home − what it needs), exactly: rings of cells outward till none can be
+         * less. With `above`, it may stop at the first value at or below it (returning that value): the search only asks
+         * whether a spot beats the best so far.
+         */
+        const clearance = (x: number, z: number, above = -Infinity) => {
+            let least = Infinity;
+            if (!enemies.length) return least;
+            const ci = Math.floor(x / GRID);
+            const cj = Math.floor(z / GRID);
+            const last = Math.max(ci - minI, maxI - ci, cj - minJ, maxJ - cj);
+            for (let r = 0; r <= last; r++) {
+                if ((r === 0 ? 0 : (r - 1) * GRID) - needMax >= least) break;
+                for (let di = -r; di <= r; di++) {
+                    const ring = Math.abs(di) === r;
+                    for (let dj = -r; dj <= r; dj += ring ? 1 : 2 * r) {
+                        const list = cells.get(cellKey(ci + di, cj + dj));
+                        if (!list) continue;
+                        for (let n = 0; n < list.length; n += 3) {
+                            const v = Math.hypot(list[n] - x, list[n + 1] - z) - list[n + 2];
+                            if (v < least) {
+                                least = v;
+                                if (least <= above) return least;
+                            }
+                        }
+                    }
+                }
+            }
+            return least;
+        };
         const start = home.get(predator.id)!;
         let best = {x: start.x, z: start.z, c: clearance(start.x, start.z)};
         if (best.c < 0) {
-            const mx = prey.reduce((s, p) => s + home.get(p.id)!.x, 0) / prey.length;
-            const mz = prey.reduce((s, p) => s + home.get(p.id)!.z, 0) / prey.length;
+            const mx = prey.reduce((sum, p) => sum + home.get(p.id)!.x, 0) / prey.length;
+            const mz = prey.reduce((sum, p) => sum + home.get(p.id)!.z, 0) / prey.length;
             const away = Math.atan2(start.x - mx, start.z - mz);
             let found = false;
             for (let d = 3; d <= 120 && !found; d += 3) {
@@ -1398,8 +1500,11 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
                     const a = away + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.27;
                     const x = start.x + Math.sin(a) * d;
                     const z = start.z + Math.cos(a) * d;
+                    // (Its walkable test only where it could matter: a spot no better than the best and not clear
+                    // changes nothing, walkable or not.)
+                    const c = clearance(x, z, best.c);
+                    if (c <= best.c && c < 0) continue;
                     if (!predator.walkable(x, z)) continue;
-                    const c = clearance(x, z);
                     if (c > best.c) best = {x, z, c};
                     if (c >= 0) found = true;
                 }
@@ -1425,6 +1530,6 @@ export function spaceHomes(animals: HomeInput[], eats: (predator: string, prey: 
         const nearest = [...prey].sort((a, b) => Math.hypot(home.get(a.id)!.x - at.x, home.get(a.id)!.z - at.z) - Math.hypot(home.get(b.id)!.x - at.x, home.get(b.id)!.z - at.z))[0];
         const shrunk = reach.get(predator.id)! < reachOf(predator.id) - 1e-9;
         out.set(predator.id, {home: {...at}, range: shrunk ? reach.get(predator.id)! : out.get(predator.id)?.range ?? null, prey: {...home.get(nearest.id)!}});
-    }
-    return out;
+    }));
+    return {tasks, finish: () => out};
 }

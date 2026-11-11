@@ -132,11 +132,12 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, ScheduleWorldBuild, spaceHomesTasks, tripAt, wireThreats, type ArkDoing, type ScheduleGroup, type SpacedHome, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
+import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
@@ -225,6 +226,8 @@ type Sched = {
     /** The ground under its pose and its pitch to the slope, worked out with the pose (not every frame). */
     ground: number;
     pitch: number;
+    /** Its home, group and range worked out (`wireSchedules`, sliced): until then it waits unseen, never beside its prey. */
+    wired?: boolean;
 };
 
 type Entry = {
@@ -830,62 +833,87 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const onIt = list.filter((e) => e.sched && !e.visitor);
         const sizes = new Map<Entry, number>();
         for (const e of onIt) if (e.leader?.sched) sizes.set(e.leader, (sizes.get(e.leader) ?? 1) + 1);
+        // (Worked out now, set when the spacing is done: until then the schedules run as they were wired before.)
+        const groups = new Map<Entry, ScheduleGroup | null>();
         for (const e of onIt) {
             const own = e.sched!;
             const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && GROUPED.has(own.profile.social) ? e.leader : null;
-            own.animal.group = leader ? {leader: leader.sched!.animal, profile: leader.sched!.profile, activity: leader.animal.activity, rank: Math.max(e.place.rank ?? 1, 1), size: sizes.get(leader) ?? 2} : null;
-            const age = arkDay !== null && typeof e.animal.born_ark_day === "number" ? arkDay - e.animal.born_ark_day : null;
-            own.animal.young = e.animal.origin === "born" && age !== null && age < 90;
+            groups.set(e, leader ? {leader: leader.sched!.animal, profile: leader.sched!.profile, activity: leader.animal.activity, rank: Math.max(e.place.rank ?? 1, 1), size: sizes.get(leader) ?? 2} : null);
         }
         const nav = scheduleWorldNow().nav;
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
-        const spaced = spaceHomes(
-            onIt.filter((e) => !e.sched!.animal.group).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
+        const job = spaceHomesTasks(
+            onIt.filter((e) => !groups.get(e)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
-        // How far each moved one's place has to shift (its group moves with it, by the same shift).
-        const shifts = new Map<string, {dx: number; dz: number}>();
-        for (const e of onIt) {
-            const own = e.sched!;
-            const moved = spaced.get(e.animal.id);
-            if (moved) {
-                // (From its place as the snapshot set it: a later snapshot resets the place, not the home.)
-                shifts.set(e.animal.id, {dx: moved.home.x - e.place.x, dz: moved.home.z - e.place.z});
-                own.animal.home = {x: moved.home.x, y: Math.max(heightAt(moved.home.x, moved.home.z), 0), z: moved.home.z};
-                // A leader's reach is shared with its group's spread: half each.
-                own.animal.range = moved.range === null ? null : sizes.has(e) ? moved.range / 2 : moved.range;
-                own.animal.prey = moved.prey;
+        const apply = (spaced: Map<string, SpacedHome>) => {
+            for (const e of onIt) {
+                const own = e.sched!;
+                own.animal.group = groups.get(e) ?? null;
+                const age = arkDay !== null && typeof e.animal.born_ark_day === "number" ? arkDay - e.animal.born_ark_day : null;
+                own.animal.young = e.animal.origin === "born" && age !== null && age < 90;
+                own.wired = true;
             }
-            own.trip = null;
-            own.lead = null;
-            own.pose = null;
-        }
-        // A group's members share their leader's place and range (they roost and roam round it).
-        for (const e of onIt) {
-            const lead = e.sched!.animal.group?.leader;
-            if (!lead || !spaced.has(e.leader!.animal.id)) continue;
-            e.sched!.animal.home = {...lead.home};
-            e.sched!.animal.range = lead.range;
-            const shift = shifts.get(e.leader!.animal.id);
-            if (shift) shifts.set(e.animal.id, shift);
-        }
-        // The drawn place moves too (a copy: the placement map is shared), so whatever is posed from the place (a still
-        // view with reduced motion, the moment before its schedule runs) keeps predators the same distance from prey.
-        for (const e of onIt) {
-            const shift = shifts.get(e.animal.id);
-            if (!shift || (!shift.dx && !shift.dz) || e.place.canopy || e.place.micro || e.place.burrow) continue;
-            const x = e.place.x + shift.dx;
-            const z = e.place.z + shift.dz;
-            e.place = {...e.place, x, z, ground: heightAt(x, z)};
-        }
-        // Prey know the predators aboard that could eat them (they watch one they can see).
-        wireThreats(onIt.map((e) => ({slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})), eats);
-        // Homes, groups and ranges changed: nothing remembered from before holds.
-        forgetSchedules();
-        const epoch = worldMs() / 1000;
-        for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
+            // How far each moved one's place has to shift (its group moves with it, by the same shift).
+            const shifts = new Map<string, {dx: number; dz: number}>();
+            for (const e of onIt) {
+                const own = e.sched!;
+                const moved = spaced.get(e.animal.id);
+                if (moved) {
+                    // (From its place as the snapshot set it: a later snapshot resets the place, not the home.)
+                    shifts.set(e.animal.id, {dx: moved.home.x - e.place.x, dz: moved.home.z - e.place.z});
+                    own.animal.home = {x: moved.home.x, y: Math.max(heightAt(moved.home.x, moved.home.z), 0), z: moved.home.z};
+                    // A leader's reach is shared with its group's spread: half each.
+                    own.animal.range = moved.range === null ? null : sizes.has(e) ? moved.range / 2 : moved.range;
+                    own.animal.prey = moved.prey;
+                }
+                own.trip = null;
+                own.lead = null;
+                own.pose = null;
+            }
+            // A group's members share their leader's place and range (they roost and roam round it).
+            for (const e of onIt) {
+                const lead = e.sched!.animal.group?.leader;
+                if (!lead || !spaced.has(e.leader!.animal.id)) continue;
+                e.sched!.animal.home = {...lead.home};
+                e.sched!.animal.range = lead.range;
+                const shift = shifts.get(e.leader!.animal.id);
+                if (shift) shifts.set(e.animal.id, shift);
+            }
+            // The drawn place moves too (a copy: the placement map is shared), so whatever is posed from the place (a still
+            // view with reduced motion, the moment before its schedule runs) keeps predators the same distance from prey.
+            for (const e of onIt) {
+                const shift = shifts.get(e.animal.id);
+                if (!shift || (!shift.dx && !shift.dz) || e.place.canopy || e.place.micro || e.place.burrow) continue;
+                const x = e.place.x + shift.dx;
+                const z = e.place.z + shift.dz;
+                e.place = {...e.place, x, z, ground: heightAt(x, z)};
+            }
+            // Prey know the predators aboard that could eat them (they watch one they can see).
+            wireThreats(onIt.map((e) => ({slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})), eats);
+            // Homes, groups and ranges changed: nothing remembered from before holds.
+            forgetSchedules();
+            const epoch = worldMs() / 1000;
+            for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
+        };
+        // The spacing a slice a frame (`stepSpacing`, as the world's build: at the backfill scale it is the longest task
+        // after the mount); the latest wiring asked for wins. A recording wires at once.
+        spacing = {build: new SlicedBuild(job.tasks, job.finish), apply};
+        if (options.recording) stepSpacing(Infinity);
+    };
+    /** The spacing being worked out, and what to do with it once it is. */
+    let spacing: {build: SlicedBuild<Map<string, SpacedHome>>; apply: (spaced: Map<string, SpacedHome>) => void} | null = null;
+    let spacingMs = 0;
+    const stepSpacing = (budgetMs: number) => {
+        if (!spacing) return;
+        const now = spacing;
+        const spaced = now.build.step(budgetMs);
+        spacingMs = now.build.spentMs;
+        if (!spaced) return;
+        spacing = null;
+        now.apply(spaced);
     };
     /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
@@ -2093,7 +2121,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // On the schedule, its world still building (the first moments): unseen until it can be where its schedule says
             // (with reduced motion too: until the spacing is worked out, a predator's place could be among its prey).
-            if (!world && entry.sched && !entry.visitor && !entry.act && !entry.moment) {
+            if ((!world || !entry.sched?.wired) && entry.sched && !entry.visitor && !entry.act && !entry.moment) {
                 entry.middle = null;
                 continue;
             }
@@ -3816,6 +3844,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const elapsed = (startedAt - started) / 1000;
         // The behaviour schedule's world, a slice a frame until it is built.
         stepWorldBuild(BUILD_SLICE_MS);
+        if (world) stepSpacing(BUILD_SLICE_MS);
         // Reduced motion: the water, the grass and the animals hold still (A18).
         if (!reducedMotion) {
             ARK_TIME.value = elapsed;
@@ -4049,7 +4078,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 tokens.ensure(slug);
             }
         },
-        loading: () => library.busy || Boolean(worldBuild),
+        loading: () => library.busy || Boolean(worldBuild) || Boolean(spacing),
         hold: (id) => {
             const entry = findEntry(id);
             if (entry) entry.held = true;
@@ -4106,6 +4135,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             behaviourMs: Math.round(mean(behaviourTimes) * 1000) / 1000,
             behaviourBuildMs: Math.round(behaviourBuildMs),
             behaviourBuildSlices,
+            behaviourSpacingMs: Math.round(spacingMs),
             behaviourBuildLongestMs: Math.round(behaviourBuildLongestMs),
             rigsLoaded: rigs.loadedCount,
             rigBytes: rigs.bytes
