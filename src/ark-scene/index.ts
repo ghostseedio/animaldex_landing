@@ -77,6 +77,7 @@ import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe
 import {hasNestSource, microMurmuration, nestSourceFromProps, nestStageAt, setFishSource, setNestSource, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
+import {setFishChasers} from "@/ark-scene/fish-render";
 import {arkDayNow} from "@/ark-scene/props";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
@@ -3688,6 +3689,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
     setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
+    // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).
+    setFishChasers(() => recipeScene.chasers);
     applyTier(tier);
 
     // MARK: First view
@@ -4734,6 +4737,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             recipeScene.dispose();
             setNestSource(null);
             setFishSource(null);
+            setFishChasers(null);
             nests.dispose();
             document.removeEventListener("visibilitychange", syncSound);
             liveliness.dispose();
