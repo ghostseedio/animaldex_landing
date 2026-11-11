@@ -2021,8 +2021,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pose = own?.pose ?? null;
         const airLeg = Boolean(pose && pose.moving && (pose.beat === "fly" || pose.beat === "glide"));
         const inAir = pose ? pose.aloft || airLeg : entry.air > 0.001;
-        // Heading up (not the last moments of a landing that has played): only then does it take off.
-        const rising = pose ? pose.aloft || state.climb > 0.01 : entry.state.airborne;
+        // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
+        const rising = pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne;
         if (flies && !state.flying && inAir && rising) {
             // Leaving the ground: a take-off, unless it comes into view already up in the air.
             state.flying = true;
@@ -2035,7 +2035,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // its schedule's leg, or its state's air has nearly eased out.
         const landing = pose ? (!pose.aloft && state.climb < -0.01) || !inAir : !entry.state.airborne && entry.air < 0.2;
         if (state.flying && landing && !oneShot("takeoff") && state.now.name !== "land" && clip("land")) rigSwitch(state, "land", 0);
-        if (state.flying && state.now.name === "land" && state.now.phase >= 1) state.flying = false;
+        if (state.flying && state.now.name === "land" && state.now.phase >= 1) {
+            state.flying = false;
+            state.landedAt = clockNow();
+        }
         if (state.flying) {
             if (oneShot("takeoff") || oneShot("land")) {
                 want = state.now.name;

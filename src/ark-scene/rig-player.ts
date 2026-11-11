@@ -551,12 +551,14 @@ export type RigState = {
     climb: number;
     turn: number;
     yaw: number | null;
+    /** When (the scene's clock, seconds) its last landing ended: no take-off on the tail of the same flight. */
+    landedAt: number;
 };
 
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */
