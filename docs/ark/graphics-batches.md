@@ -308,6 +308,13 @@ Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg
   - Now the fade uses the pixel's size on the ground, `distance × length(fwidth(view ray))`, which is the same on every triangle. The bedding planes fade once they are under a few pixels tall. The runs run continuously through the beds, fade towards each bed's top and foot, and show only near the camera.
   - The snow formula is unchanged (the ledge snow's fade now uses this pixel size, but `snow.ts` does not count ledges).
   - Checked at the island view and the mountain camera on low, medium and high (desktop), and on low and medium (phone): no grid and no blocks. The sheet is `batch6-mountain-tiers.jpg`.
+- **Low tier woods (follow-up; the integrator saw the thinned forest as tall bare trunks with small tufts from the island view on low):**
+  - On low, trees reach 0.3 of their level distances, so from the island view nearly every tree was a crossed card. The emergents' cards are a tall trunk with a few tufts, and only 0.3 of the fill (the lower canopy) was drawn.
+  - `asset-trees.ts` now uses at least the medium tier's distance for the lod2 → card change (`CARD_REACH_MIN` 0.45); the full levels keep the tier's distance.
+  - It draws at least 0.6 of the fill in the rainforest and the woodland (`WOODS_FILL`); other zones keep the tier's share.
+  - The medium and high tiers are unchanged (identical numbers).
+  - Low, before → after: desktop island_far 357 → 369 k triangles (106 → 107 calls), forest_floor 576 → 627 k, storm_trees 502 → 540 k. Phone island_far 356 → 366 k, forest_floor 538 → 588 k, storm_trees 495 → 533 k. Still under a third of medium.
+  - From the island view the low tier now reads like medium: the giants' full crowns and a lower canopy. The sheets are `batch6-low-woods-desktop.jpg` and `batch6-low-woods-phone.jpg`.
 - **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
 
   | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
