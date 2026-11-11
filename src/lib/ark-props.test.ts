@@ -401,7 +401,7 @@ test("props budget: draw calls and triangles at each tier, at the busiest places
 // MARK: - Home plots and fence posts
 
 import {readFileSync} from "node:fs";
-import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {defaultHomePlots, fencePostTops, PADDOCK_POST_TOP, paddockRect, paddockSegments, PICKET_POST_TOP, picketPosts, picketPostsFor, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 
 test("props home layout: fence post tops for the sampler, from a pure module, the same posts the areas draw", () => {
     // Pure: no sampler (the sampler imports it), no three.js.
@@ -413,7 +413,8 @@ test("props home layout: fence post tops for the sampler, from a pure module, th
     const paddock = posts.filter((post) => post.fence === "paddock");
     const picket = posts.filter((post) => post.fence === "picket");
     assert.equal(paddock.length, paddockSegments(paddockRect(plots[1])).filter((segment) => !segment.gate).length);
-    assert.equal(picket.length, picketPosts().length);
+    assert.equal(picket.length, picketPostsFor(plots[0]).length);
+    assert.ok(picketPostsFor(plots[0]).length >= picketPosts().length - 2);
     assert.deepEqual(paddock.map((post) => post.n), paddock.map((_, i) => i));
     for (const post of posts) {
         const top = post.fence === "paddock" ? PADDOCK_POST_TOP : PICKET_POST_TOP;
@@ -591,7 +592,7 @@ test("props slices: the homes and the areas built a slice at a time are the same
 
 // MARK: - Where no animal stands
 
-import {COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
+import {bedsOrigin, COMPOST, GARDEN_BEDS, onHomeKeepOut, plotKeepOuts, troughSpots, coopSpot as coopAt} from "@/ark-scene/props/home-layout";
 import {plotSpots} from "@/ark-scene/map/hamlet";
 
 test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props draw are listed for the map's spots to avoid", () => {
@@ -601,8 +602,10 @@ test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props 
         const at = (lx: number, lz: number) => frame.toWorld(lx, lz);
         if (plot.kind === "house") {
             // Every cabbage row and the wigwam, the compost bin: on a keep-out of this plot.
+            const beds = bedsOrigin(plot);
+            const shift = beds.z0 - GARDEN_BEDS.z0;
             for (let row = 0; row < GARDEN_BEDS.rows; row++) for (const lz of [GARDEN_BEDS.z0 + 0.35, 0.4, GARDEN_BEDS.z1 - 0.35]) {
-                const w = at(GARDEN_BEDS.x0 + row * GARDEN_BEDS.pitch, lz);
+                const w = at(beds.x0 + row * GARDEN_BEDS.pitch, lz + shift);
                 assert.equal(onHomeKeepOut(w.x, w.z, [plot], 0)?.what, "beds", `${plot.id} bed ${row}`);
             }
             const bin = at(COMPOST.x, COMPOST.z);
@@ -621,4 +624,25 @@ test("props keep-outs: the beds, compost, butt, hay, troughs and coop the props 
     // The map's spots today (a report for the map lane, which places on them): how many fall on a keep-out.
     const clashes = plots.flatMap((plot) => plotSpots(plot).spots.filter((spot) => onHomeKeepOut(spot.x, spot.z, plots)).map((spot) => `${plot.id} ${spot.where} → ${onHomeKeepOut(spot.x, spot.z, plots)!.what}`));
     console.log(`map spots on a props keep-out: ${clashes.length}${clashes.length ? `: ${clashes.join("; ")}` : ""}`);
+});
+
+// MARK: - Clear of the rocks as drawn
+
+import {inRock} from "@/ark-scene/map/rocks";
+
+test("props rocks: no fence post, coop, trough, hay shelter, bed or compost of any plot stands in a rock as drawn (map/rocks.ts)", () => {
+    const plots = homePlots(7 * 130, 3 * 50);
+    const hits: string[] = [];
+    for (const post of fencePostTops(plots)) if (inRock(post.position.x, post.position.z, 0.06)) hits.push(`${post.plot} ${post.fence} post ${post.n}`);
+    for (const plot of plots) {
+        const frame = plotFrame(plot);
+        for (const out of plotKeepOuts(plot)) {
+            // The keep-out's middle and corners.
+            for (const [lx, lz] of [[(out.x0 + out.x1) / 2, (out.z0 + out.z1) / 2], [out.x0, out.z0], [out.x1, out.z0], [out.x1, out.z1], [out.x0, out.z1]]) {
+                const w = frame.toWorld(lx, lz);
+                if (inRock(w.x, w.z, 0)) hits.push(`${plot.id} ${out.what}`);
+            }
+        }
+    }
+    assert.deepEqual([...new Set(hits)], []);
 });
