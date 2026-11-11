@@ -127,7 +127,8 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             const tree = spots.antsTree ?? mound;
             if (!mound) return null;
             const mid = {x: mound.x * 0.6 + tree.x * 0.4, y: Math.max(mound.y, tree.y) + 0.45, z: mound.z * 0.6 + tree.z * 0.4};
-            return {view: look(mid, 3.2, 1.2, Math.atan2(mound.x - tree.x, mound.z - tree.z) + Math.PI / 2, 0.2), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
+            // From beyond the mound, along the trail to the trunk it climbs.
+            return {view: look(mid, 4.2, 1.18, Math.atan2(mound.x - tree.x, mound.z - tree.z) + 0.35, 0.3), hours: 10.5, weather: null, environment: calm, anchor: "ant mound + trail", minDistance: 0.3};
         }
         case "web_dawn": {
             const web = (spots.webBranch ?? spots.web) as {x: number; y: number; z: number; facing?: number; radius?: number} | undefined;

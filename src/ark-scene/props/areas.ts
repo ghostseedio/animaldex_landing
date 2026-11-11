@@ -27,7 +27,7 @@ import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
 import {LodBatch, LodPiece, lumpy, merge, paint, place, propMaterial, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
-import {groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
+import {CAVE_SITE, groundAt, propRandom, propsPoints} from "@/ark-scene/props/sampler";
 import {surfaceAt} from "@/ark-scene/sampler";
 import * as shapes from "@/ark-scene/props/shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
@@ -412,7 +412,7 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         // Its back into the slope: a little uphill of the ledge point, sunk in.
         const x = ledge.x - ledge.normal.x * size * 0.3;
         const z = ledge.z - ledge.normal.z * size * 0.3;
-        outcrops.push({x, y: groundAt(x, z) - size * 0.12, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.08, 0.62 + random() * 0.12)});
+        outcrops.push({x, y: groundAt(x, z) - size * 0.3, z, turn: ledge.yaw, scale: size / 2.5, tint: new Color().setHSL(0.08, 0.06, 0.55 + random() * 0.12)});
         // A fan of scree below it, downhill.
         for (let s = 0; s < 46; s++) {
             const d = size * 0.5 + random() * random() * size * 3.5;
@@ -439,7 +439,8 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         if (zone !== "polar" && !high) continue;
         const x = item.x + Math.cos(lee - Math.PI) * item.scale * 1.2;
         const z = item.z + Math.sin(lee - Math.PI) * item.scale * 1.2;
-        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.5 + item.scale * 0.5});
+        if (zone === "polar" && Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        (zone === "polar" ? polarDrifts : drifts).push({x, y: groundAt(x, z) - 0.08, z, turn: -(lee - Math.PI) + Math.PI / 2, scale: 0.4 + item.scale * 0.35});
     }
     for (const outcrop of outcrops) {
         const ground = sampleGround(outcrop.x, outcrop.z);
@@ -454,7 +455,9 @@ function mountain(): {outcrops: PropInstance[]; scree: PropInstance[]; drifts: P
         const z = polar.z + Math.sin(a) * d;
         const ground = sampleGround(x, z);
         if (ground.land < 0.9 || zoneAt(ground) !== "polar") continue;
-        polarDrifts.push({x, y: ground.height - 0.05, z, turn: random() * 0.6, scale: 1 + random() * 1.8});
+        // Not across the cave's mouth.
+        if (Math.hypot(x - CAVE_SITE.x, z - CAVE_SITE.z) < 9) continue;
+        polarDrifts.push({x, y: ground.height - 0.08, z, turn: random() * 0.6, scale: 0.7 + random() * 1.0});
     }
     // Icicles: under the ice's rock faces.
     const icicles: PropInstance[] = [];
@@ -543,7 +546,7 @@ export function buildAreas(tier: PropsTier): Areas {
     addBatch(new LodBatch("troughs", f.troughs, shapes.trough(2), null, warm, {cap: 4, reach: 1.3}));
     const troughWater = new LodPiece("trough-water", f.centre, f.water, null, water, {near: 70, far: 0});
     addPiece(troughWater);
-    addBatch(new LodBatch("mud", f.mud, shapes.heap(0.9, 0.05, "#4f3c2b", 61, 0.12), null, mudMaterial, {cap: 20, reach: 1.1}));
+    addBatch(new LodBatch("mud", f.mud, shapes.heap(0.9, 0.025, "#4f3c2b", 61, 0.05), null, mudMaterial, {cap: 20, reach: 1.1}));
     const puddles = addBatch(new LodBatch("puddles", [...g.puddles, ...f.puddles], shapes.puddle(1), null, puddleMaterial, {cap: 16, reach: 1.2}));
     puddles.hidden = true;
 

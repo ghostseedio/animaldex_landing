@@ -422,9 +422,10 @@ export function turtlePit(r: number, seed = 12, turn = 0, ground: (x: number, z:
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
     // Dug sand is darker and damper than the dry surface round it.
-    return paint(geometry, new Color("#cdb68f"), (_, i, x, z) => {
+    return paint(geometry, new Color("#cdb68f"), (_, __, x, z) => {
         const rho = Math.hypot(x, z) / r;
-        return (rho < 1.15 ? 0.84 : 0.96) + 0.05 * Math.sin(i * 0.37);
+        // Dug sand a shade darker inside the rim, fading out over the apron; a soft mottle, no rings.
+        return 0.86 + 0.1 * smooth(0.8, 1.5, rho) + 0.03 * Math.sin(x * 6.1 + z * 2.3) * Math.cos(z * 5.7 - x * 1.9);
     });
 }
 
@@ -548,25 +549,32 @@ export function screeStone(size: number, seed = 16): BufferGeometry {
  */
 export function strataOutcrop(w: number, h: number, seed = 17): BufferGeometry {
     const random = seeded(5700 + seed);
-    const tones = ["#6f665b", "#857a6b", "#5f574e", "#948875", "#77695a"];
+    const tones = ["#6a6158", "#7b7064", "#5a534b", "#857a6a", "#706458"];
     const parts: BufferGeometry[] = [];
     const beds = 5;
     let y = 0;
+    let shift = 0;
     for (let k = 0; k < beds; k++) {
-        const thick = (h / beds) * (0.75 + random() * 0.5);
-        const width = w * (1 - 0.09 * k) * (0.85 + random() * 0.25);
-        const depth = w * 0.75 * (1 - 0.05 * k);
-        const slab = new BoxGeometry(width, thick, depth, 3, 1, 2);
-        lumpy(slab, 0.07, random);
-        // Set back or proud of the bed below; its front edge rounded off by the weather.
-        const step = (random() - 0.35) * w * 0.12;
-        const sideways = (random() - 0.5) * w * 0.1;
-        place(slab, sideways, y + thick / 2, step - depth * 0.15);
-        const tone = new Color(tones[(k + Math.floor(random() * 2)) % tones.length]);
-        parts.push(paint(slab, tone, (_, i) => 0.86 + ((i * 7) % 9) / 50));
-        y += thick * 0.96;
+        const thick = (h / beds) * (0.7 + random() * 0.6);
+        // Beds of uneven width, wandering left and right, some broken into two blocks.
+        const width = w * (0.55 + random() * 0.45) * (1 - 0.06 * k);
+        const depth = w * (0.55 + random() * 0.3);
+        shift += (random() - 0.5) * w * 0.25;
+        const pieces = random() < 0.4 ? 2 : 1;
+        for (let p = 0; p < pieces; p++) {
+            const pw = pieces === 2 ? width * (0.4 + random() * 0.15) : width;
+            const slab = new BoxGeometry(pw, thick, depth, 5, 2, 4);
+            lumpy(slab, 0.16, random);
+            slab.rotateY((random() - 0.5) * 0.25);
+            slab.rotateX((random() - 0.5) * 0.12);
+            const px = shift + (pieces === 2 ? (p ? 1 : -1) * width * 0.28 : 0);
+            place(slab, px, y + thick / 2, (random() - 0.35) * w * 0.16 - depth * 0.2);
+            const tone = new Color(tones[(k + Math.floor(random() * 3)) % tones.length]);
+            parts.push(paint(slab, tone, (_, i) => 0.84 + ((i * 7) % 9) / 45));
+        }
+        y += thick * 0.92;
     }
-    const tilt = (random() - 0.5) * 0.35;
+    const tilt = (random() - 0.5) * 0.4;
     const geometry = merge(parts);
     geometry.rotateZ(tilt);
     geometry.translate(0, -h * 0.18, 0);
