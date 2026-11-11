@@ -187,10 +187,11 @@ test("player: beds fade in, cross over and are let go; off stops new calls", asy
 test("ambient beds through the player: loop points, the seam blended once, M4A where WebM fails, thunder after its flash", async () => {
     const {selectAmbientBeds, thunderClaps, ambientCredits, AMBIENT_LOOP_START} = await import("@/ark-scene/ambient-beds");
     const {waterNear} = await import("@/ark-scene/liveliness-scene");
-    // On the beach: the sea is near, so the surf or the shore bed plays.
-    const near = waterNear(70, 0, 0);
+    // On the beach: the sea is near, so the surf or the shore bed plays. (x = 105: the home growth's east shoulder
+    // took the old beach at x = 70 inland; the east coast is now about x = 110.)
+    const near = waterNear(105, 0, 0);
     assert.ok(near.sea && typeof near.sea === "object" && near.sea.distance < 15, JSON.stringify(near.sea));
-    const beds = selectAmbientBeds({zone: "seashore", weather: {rain: 0, wind: 0.4, storm: 0, insects: 1, cold: 0.3}, hour: 12, tide: {height: 0}, cameraPos: {x: 70, y: 1, z: 0}, nearWater: near, format: "webm", nowMs: 1_000_000}).map((bed) => ({...bed, credits: ambientCredits([bed.id])}));
+    const beds = selectAmbientBeds({zone: "seashore", weather: {rain: 0, wind: 0.4, storm: 0, insects: 1, cold: 0.3}, hour: 12, tide: {height: 0}, cameraPos: {x: 105, y: 1, z: 0}, nearWater: near, format: "webm", nowMs: 1_000_000}).map((bed) => ({...bed, credits: ambientCredits([bed.id])}));
     assert.ok(beds.length > 0);
     assert.ok(beds.every((b) => b.credits.length > 0 && /\.webm$/.test(b.url) && /\.m4a$/.test(b.fallbackUrl)));
     const log: string[] = [];
