@@ -41,6 +41,20 @@ Everything that varies is shared and deterministic: a pure function of the world
 
 **Drawing note.** The scene renders into a target with an alpha channel that the output pass composites over the page, so every transparent decal and particle here blends colour normally but leaves the frame's alpha alone (`keepFrameAlpha` in `traces.ts`); with plain normal blending, footprints on sand let the page's beige through and vanished. Other lanes' transparent materials may want the same.
 
+## Performance (phone profile)
+
+Golden-shot phone profile (360×800 at DPR 2, 4× CPU throttle), forced low tier, on this Mac under heavy load (load average about 50, so whole-frame numbers swing by ±2 ms between identical runs). The wiring times its own main-thread work (`stats().liveliness.ms`, mean of 60 frames):
+
+| Case | Frame interval p50 / p95 | Scene CPU a frame | The wiring's share |
+|---|---|---|---|
+| Calm, five golden places | 16.7 / 16.7–16.8 ms | 8.1–12.4 ms | 0.13–0.19 ms |
+| Heavy rain, just pinned | 16.7 / 16.8 ms | 9.2–12.5 ms | 0.22 ms |
+| Heavy rain, 20 s on (animals walking to cover) | 16.7 / 16.7 ms | 13.5 ms | 0.39 ms |
+
+Draw calls: +0–3 (prints, rings, worn patches, rain when it rains). Against `ark-release` a92a19b9 without this lane, same profile: equal frame intervals (16.7 ms) and draw calls within 3; whole-frame CPU too noisy here to separate a sub-millisecond share. A real mid-range Android check is still owed (handover §4.1 item 8).
+
+Fixed on the way (each measured): a ground sample per drawn animal per frame for wading, and per scheduled animal at high water; the cover search running every frame (its cache keyed by the kind it fell back to); the cover search scanning every attach point. Rain itself is shader-only.
+
 ## Known gaps and notes
 
 See the lane report. Cross-lane items: the lake shares the sea's water plane, so it is tidal (graphics); `arkLook` is declared by both the intelligence lane (vec3 head look) and the animal-look lane (vec2 wet/dust): the merged shader won't compile until one is renamed.
