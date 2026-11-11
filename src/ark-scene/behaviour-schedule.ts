@@ -246,7 +246,9 @@ const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
     wall: ["house_wall"],
     nest: ["branch", "shade"],
     attached: [],
-    open: []
+    open: [],
+    // Hauled out where the water meets the land (seals, sea lions, the walrus, penguins).
+    shore: ["water_edge", "rock_top"]
 };
 
 const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
@@ -267,13 +269,14 @@ const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     burrow_mouth: ["burrow_entrance"],
     reeds: ["reeds"],
     shade: ["shade"],
-    water_surface: ["pond_surface"]
+    water_surface: ["pond_surface"],
+    shore: ["water_edge"]
 };
 
 /** Which places each behaviour goes to (the first of its interactions that has one near home). */
 const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     drink: ["drink_edge"],
-    bask: ["bask_rock"],
+    bask: ["bask_rock", "shore"],
     graze: ["graze_grass"],
     forage: ["leaf_litter", "dig_soil", "graze_grass", "tide_pool", "flower", "bark", "wall", "water_surface"],
     perch: ["perch_branch", "perch_rock", "cliff_ledge"],
@@ -282,7 +285,7 @@ const BEHAVIOUR_PLACES: Partial<Record<ArkBehaviour, ArkInteraction[]>> = {
     hide: ["shade", "burrow_mouth", "reeds"],
     visit_flowers: ["flower"],
     circle_light: ["porch_light"],
-    rest: ["shade"]
+    rest: ["shore", "shade"]
 };
 
 export type ScheduleWorld = {sampler: ArkWorldSampler; nav: NavGrid};
@@ -444,7 +447,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
         }
     }
     const seed = rng(hashString(`${animal.id}#roost`))();
-    const tags = ROOST_TAGS[profile.roost] ?? [];
+    // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
+    const tags = aquatic(profile) && !amphibious(profile) ? [] : ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
     if (point) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
@@ -650,7 +654,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const placeKinds = doing === "browse" ? (["shade", "perch_branch"] as ArkInteraction[]) : BEHAVIOUR_PLACES[behaviour];
     if (placeKinds) {
         for (const place of placeKinds) {
-            if (!profile.interactions.includes(place) && behaviour !== "rest" && doing !== "browse") continue;
+            // Anyone may rest in the shade; every other place is the animal's own (a seal's shore, a lizard's rock).
+            if (!profile.interactions.includes(place) && !(behaviour === "rest" && place === "shade") && doing !== "browse") continue;
             const tags = INTERACTION_TAGS[place] ?? [];
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
@@ -924,7 +929,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                     break;
                 }
             }
-            if (mode === "water" || (fromWet && toWet)) water(from, to);
+            // Over land it walks, in the water it swims: one that does both (a seal, a penguin) goes by the ground under it.
+            if ((mode === "water" && !amphibious(profile)) || (fromWet && toWet)) water(from, to);
             else ground(from, to);
             break;
         }

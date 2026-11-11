@@ -250,7 +250,11 @@ export class NavGrid {
         for (let k: number | undefined = best; k !== undefined && k !== start; k = from.get(k)) cells.push(k);
         cells.reverse();
         const raw: NavPoint[] = [a, ...cells.map((k) => this.centre(k % SIZE, Math.floor(k / SIZE)))];
-        if (best === goal) raw[raw.length - 1] = b;
+        // Reached: it ends at b itself (and still starts at a when both are in one cell: it used to lose a, and jump).
+        if (best === goal) {
+            if (raw.length > 1) raw[raw.length - 1] = b;
+            else raw.push(b);
+        }
         // Smooth: from each point, jump to the furthest one in a clear straight line.
         const out: NavPoint[] = [raw[0]];
         let at = 0;
