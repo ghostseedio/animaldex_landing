@@ -164,7 +164,7 @@ const NOT_ITS_OWN = /\b(weaver|weavers'?|ant|ants'?|termite|termites'?|bee|bees'
 const NOT_ITS_OWN_AFTER = /^\s+(of\s+|inside\s+|within\s+)?(\w+\s+)?(ants?|termites?|bees?|wasps?|krill|fish|baitfish|prey|plankton|copepods|insects?|trunks|logs|wood|sardines|anchov\w*|squid|locusts?)\b/i;
 
 /** The first field (in order) whose text matches, with its phrase (a match about something else is passed over). */
-function find(row: Row, fields: TextField[], pattern: RegExp): {field: TextField; phrase: string; match: string} | null {
+function find(row: Row, fields: TextField[], pattern: RegExp, veto?: (before: string) => boolean): {field: TextField; phrase: string; match: string} | null {
     const global = new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : pattern.flags + "g");
     for (const field of fields) {
         const text = FIELD_OF[field](row);
@@ -173,6 +173,7 @@ function find(row: Row, fields: TextField[], pattern: RegExp): {field: TextField
         for (let m = global.exec(text); m; m = global.exec(text)) {
             if (NOT_ITS_OWN.test(text.slice(Math.max(0, m.index - 32), m.index))) continue;
             if (NOT_ITS_OWN_AFTER.test(text.slice(m.index + m[0].length, m.index + m[0].length + 40))) continue;
+            if (veto?.(text.slice(Math.max(0, m.index - 32), m.index))) continue;
             return {field, phrase: clause(text, m.index, m[0].length), match: m[0].toLowerCase()};
         }
     }
@@ -390,11 +391,13 @@ function priorOf(row: Row): {prior: Prior; name: string} | null {
 
 type Move = "walk" | "climb" | "perch" | "fly" | "swim" | "burrow" | "crawl" | "slither" | "hop" | "sessile" | "cling";
 
+const VERTEBRATE_CLASS = /Aves|Mammalia|Reptilia|Amphibia|Actinopterygii|Chondrichthyes|Elasmobranchii|Sarcopterygii|Teleostei/;
 const SESSILE = /(?:^|-)(coral|sponge|anemone|barnacle|mussel|oyster|clam|scallop|sea-squirt|tunicate|sea-pen|sea-fan|hydroid|bryozoan|feather-star|tube-worm|fan-worm|cockle|limpet)(?:-|$)/;
 const CRAWLER = /(?:^|-)(snail|slug|worm|earthworm|leech|starfish|sea-star|urchin|sea-cucumber|nudibranch|chiton|whelk|periwinkle|conch|millipede|centipede|woodlouse|planarian|flatworm)(?:-|$)/;
 
 /** Lives in the trees: climbs first (a koala, a tree kangaroo, a sloth), not just now and then. */
 const ARBOREAL = /\b(arboreal|tree[- ]dwelling|anchored in trees|lives? in (the )?trees|spends? (most|much|nearly all|almost all) of (its|the|their) (life|lives|time) in (the )?(trees|canopy)|rarely (comes|descends) to the ground)\b/i;
+const OTTER = /(?:^|-)otters?$/;
 const WATER_SWIMMER = /(?:^|-)(shrimp|prawn|krill)(?:-|$)/;
 const WATER_WALKER = /(?:^|-)(shrimp|prawn|krill|lobster|crayfish|horseshoe-crab)(?:-|$)/;
 /** Hoofed and other big ground mammals: they never climb or roost in a tree. */
@@ -409,10 +412,12 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
     let primary: Move;
     const sea = SEA_ZONES.has(zone);
     const clips = new Set(rig?.clips_pass ?? []);
-    if (SESSILE.test(slug)) {
+    // (Slug words name invertebrates only: the barnacle goose is a goose, the snail kite a kite.)
+    const vertebrate = VERTEBRATE_CLASS.test(row.class_name ?? "");
+    if (SESSILE.test(slug) && !vertebrate) {
         primary = "sessile";
         src.move = {rule: `slug names a sessile animal (${SESSILE.exec(slug)![1]})`};
-    } else if (CRAWLER.test(slug) && !["legless", "lizard", "fish"].includes(plan)) {
+    } else if (CRAWLER.test(slug) && !vertebrate && !["legless", "lizard", "fish"].includes(plan)) {
         primary = "crawl";
         src.move = {rule: `slug names a crawler (${CRAWLER.exec(slug)![1]})`};
     } else
@@ -465,6 +470,16 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         primary = "swim";
         src.move = {rule: `a water crustacean (${WATER_SWIMMER.exec(slug)![1]}): swims`};
     }
+    // Otters swim (the sea otter first: it lives on the water and floats on its back).
+    if (OTTER.test(slug)) {
+        also.add("swim");
+        if (/^sea-/.test(slug) || SEA_ZONES.has(zone)) {
+            also.add("walk");
+            primary = "swim";
+            src.move = {rule: "a sea otter: lives on the water"};
+        }
+        src.swim = {rule: "an otter: swims"};
+    }
     // Seals, sea lions and walruses swim first and haul out.
     if (/^(Phocidae|Otariidae|Odobenidae)$/.test(row.family_name ?? "")) {
         also.add("walk");
@@ -501,7 +516,7 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         }
     }
     // The text adds what the plan can't see: a swimmer, a climber, a digger, a hopper.
-    const swim = find(row, BEHAVIOUR_TEXT, /\b(swim(s|ming)?|dives? (under|underwater|beneath|below|for fish|to the bottom)|diving (duck|bird|for fish|underwater)|paddl\w+|aquatic|semi-aquatic)\b/i);
+    const swim = find(row, BEHAVIOUR_TEXT, /\b(swim(s|ming)?|dives? (under|underwater|beneath|below|for fish|to the bottom)|diving (duck|bird|for fish|underwater)|paddl\w+|aquatic|semi-aquatic|float(s|ing)? on (its|the|their) backs?)\b/i);
     if (swim && primary !== "swim" && primary !== "sessile") {
         also.add("swim");
         src.swim = {field: swim.field, phrase: swim.phrase};
@@ -554,6 +569,21 @@ const GROUP_WORDS: Array<[RegExp, Social]> = [
     [/\bswarm(s|ing)?\b/i, "swarm"]
 ];
 
+/** Another kind's group just before a group word ("seal colonies" for a shark; not "penguin colonies" for a penguin). */
+const OTHER_KIND = /\b(seals?|sea lions?|penguins?|seabirds?|birds?|fish|prey|cattle|sheep|goats?|deer|antelopes?|wildebeest|zebras?|gazelles?|monkeys?|rodents?|bats?|ants?|termites?|bees?|wasps?|gulls?|terns?)\s+$/i;
+/** Where the group is, not whose: "near seal colonies", "around the colony", "visits herds". */
+const GROUP_PLACE = /\b(near|around|beside|outside|visit\w*|raid\w*|among)\s+(\w+\s+)?$/i;
+/** Feeding into a group is the prey's group: the blue whale "lunging open-mouthed into a swarm". */
+const FEEDING_INTO = /\b(lung\w*|charg\w*|plung\w*|div\w*|feed\w*|eat\w*|hunt\w*|attack\w*)\b[^.]{0,40}\binto\s+(a\s+|the\s+)?$/i;
+function groupVeto(row: Row): (before: string) => boolean {
+    const own = `${row.name ?? ""} ${row.slug ?? ""}`.toLowerCase();
+    return (before) => {
+        const kind = OTHER_KIND.exec(before);
+        if (kind && !own.includes(kind[1].toLowerCase().replace(/s$/, "").replace(/ lion$/, "-lion"))) return true;
+        return GROUP_PLACE.test(before) || FEEDING_INTO.test(before);
+    };
+}
+
 function socialOf(row: Row, plan: string): {value: Social; src: Source} {
     const kindFromText = (text: string | null) => {
         if (!text) return null;
@@ -569,18 +599,18 @@ function socialOf(row: Row, plan: string): {value: Social; src: Source} {
         const own = kindFromText(row.sociality_phrase);
         if (own) return {value: own.kind, src: {field: "sociality", phrase: row.sociality_phrase ?? own.phrase}};
         // (Not the diet text: its groups are the prey's, "small schooling fish".)
-        const hit = find(row, BEHAVIOUR_TEXT, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"));
+        const hit = find(row, BEHAVIOUR_TEXT, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"), groupVeto(row));
         const kind = hit ? kindFromText(hit.phrase) : null;
         if (hit && kind) return {value: kind.kind, src: {field: hit.field, phrase: hit.phrase}};
         return {value: "group", src: {field: "sociality", phrase: row.sociality_phrase ?? "group"}};
     }
-    const group = find(row, BEHAVIOUR_TEXT, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"));
+    const group = find(row, BEHAVIOUR_TEXT, new RegExp(GROUP_WORDS.map(([p]) => p.source).join("|"), "i"), groupVeto(row));
     if (group) {
         const kind = kindFromText(group.phrase);
         if (kind) return {value: kind.kind, src: {field: group.field, phrase: group.phrase}};
     }
     // Insects and others gathering in numbers (the lanternfly's "large numbers"): a swarm.
-    const crowd = find(row, BEHAVIOUR_TEXT, /\b(aggregat\w+|in large numbers|in (huge |great )?numbers|gather(s|ing)? in (groups|numbers|masses)|(several|many) (animals|individuals|adults) (often )?share|share (the same|a|one) (shelter|den|burrow|roost|nest|hollow))\b/i);
+    const crowd = find(row, BEHAVIOUR_TEXT, /\b(communit(y|ies) of|lives? in (\w+ )?communities|aggregat\w+|in large numbers|in (huge |great )?numbers|gather(s|ing)? in (groups|numbers|masses)|(several|many) (animals|individuals|adults) (often )?share|share (the same|a|one) (shelter|den|burrow|roost|nest|hollow))\b/i);
     if (crowd) return {value: ["insect", "flying_insect", "arachnid", "crustacean", "other"].includes(plan) ? "swarm" : "group", src: {field: crowd.field, phrase: crowd.phrase}};
     const alone = find(row, BEHAVIOUR_TEXT, /\b(solitary|alone|singly|territorial)\b/i);
     if (alone) return {value: "solitary", src: {field: alone.field, phrase: alone.phrase}};
@@ -636,7 +666,7 @@ function dietOf(row: Row, plan: string): {value: Diet; also: Diet[]; src: Source
     // A baleen whale's food is filtered whatever the text calls it (the gray whale's "amphipods"); a seal's or a
     // walrus's clams and crabs are caught in the water, as a fish eater's are (the diet kinds have no "invertebrates").
     const baleen = /^(Balaenidae|Balaenopteridae|Eschrichtiidae|Neobalaenidae)$/.test(row.family_name ?? "");
-    const seaHunter = /Mammalia|Aves|Reptilia/.test(row.class_name ?? "") && /^(Phocidae|Otariidae|Odobenidae|Spheniscidae|Alcidae|Delphinidae|Phocoenidae|Monodontidae|Physeteridae|Ziphiidae|Lutrinae|Enhydra)$/.test(row.family_name ?? "");
+    const seaHunter = /Mammalia|Aves|Reptilia/.test(row.class_name ?? "") && (/^(Phocidae|Otariidae|Odobenidae|Spheniscidae|Alcidae|Delphinidae|Phocoenidae|Monodontidae|Physeteridae|Ziphiidae|Lutrinae|Enhydra)$/.test(row.family_name ?? "") || OTTER.test(row.slug ?? ""));
     for (const f of found) {
         if (baleen && (f.diet === "insects" || f.diet === "fish")) f.diet = "filter";
         else if (seaHunter && f.diet === "insects") f.diet = "fish";
@@ -751,6 +781,9 @@ function profile(row: Row): Profile {
         roost = {value, src: "default" in roost.src ? {default: `lives in the water: ${value}`} : {rule: `lives in the water: its ${roost.value} is ${value}${"phrase" in roost.src ? ` ("${roost.src.phrase}")` : ""}`}};
     } else if (hauls && ("default" in roost.src || ["ground_cover", "rocks", "cliff", "open", "water"].includes(roost.value))) {
         roost = {value: "shore", src: HAULS ? {field: HAULS.field, phrase: HAULS.phrase} : {rule: `family ${row.family_name}: hauls out at the shore`}};
+    } else if (moves.primary === "swim" && !("phrase" in roost.src) && LAND_ROOSTS.includes(roost.value)) {
+        // A swimmer whose text doesn't say where it sleeps sleeps on the water (the sea otter: not its family's den).
+        roost = {value: "water", src: {rule: `swims first, no roost written: on the water (not ${roost.value})`}};
     } else if (moves.primary === "climb" && "default" in roost.src && roost.value !== "tree" && roost.value !== "tree_hole") {
         roost = {value: "tree", src: {rule: "climbs first: sleeps in the trees"}};
     } else if (BIG_GROUND.test(row.order_name ?? "") && ["tree", "tree_hole", "bark"].includes(roost.value)) {
