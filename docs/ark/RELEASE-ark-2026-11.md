@@ -23,7 +23,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Map | `ark-map` | fd384d86 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
 | Behaviour | `ark-behaviour` | 6ad9b3e8 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
-| Behaviour recipes | `ark-behaviour-recipes` | c6299edf | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
+| Behaviour recipes | `ark-behaviour-recipes` | 5adf8c29 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c78628ee | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
@@ -95,6 +95,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 | 8 | `20261115150000_voyage_backfill_captures` | ark-captures-thrive | The bounded backfill (×7, 500 each), only with the web release that has the live budget and chunked mount. **Part of the release, not a later step:** run `voyage_backfill_captures` to completion, then `voyage_backfill_verify_v1` (§7, §7a) | By `backfill_run` |
 | 9 | flags: `thrive` on | — | After the backfill | Flip off |
 | 10 | `20261115160000_voyage_capture_triggers` | ark-captures-thrive | **The switch**: the capture triggers, last, with the owner | Drop both triggers (queued rows stay harmless) |
+| 11 | `20261116100000_voyage_diet_audit` | `ark-diet-audit` db9159c1 (AnimalDex) | The diet audit: 244 diet rules and 1 group fixed, each with its stored phrase (report: AnimalDex `docs/ark/diet-audit-2026-11-11.md`). After the captures-thrive migrations, with the release, before `tick_enabled` (§7d). Rehearsed; not applied | `supabase/rollbacks/20261116100000_voyage_diet_audit.rollback.sql`, rehearsed in the ecology lane's chain (TESTS_OK, ROLLBACKS_OK) |
 | — | `20261114130000_voyage_ark_kin_activity` | ark-aware-chat | **Held** (owner decisions) | — |
 | — | Ark Score v3 migration | ark-captures-thrive | After the score review; not written yet | — |
 
@@ -194,22 +195,13 @@ are. A file that must change never needs this: it gets a new version path, and t
    too when we next deploy"): the captures backfill (needs this web build), `voyage_backfill_captures` run to completion,
    then `voyage_backfill_verify_v1`; then `founder_names` on; then `thrive` on, then the capture triggers. Production then
    shows what the owner sees locally with `/ark?snapshot=/ark-local/real.json` (§7a).
+4a. Server, the launch ecology (§7d, ecology's checklist): `voyage-world` from `ark-captures-thrive` (101fba1d or its final
+    head); the launch grace and ramp and `launch_ecology` set; the diet-audit migration (§3 row 11); then `tick_enabled`
+    on, and `voyages.clock_started_ark_day` checked.
 5. The post-deploy check (§7a).
 6. Apps: merge and submit.
 7. Publish the privacy and terms change (`docs/ark/founders-privacy.md`), with `founder_names` on.
 8. The other flags the owner chooses, one at a time.
-
-### 7b. The owner's founder decision (2026-11-11, about 21:30 WIB, confirmed again)
-- **`@username` on by default:** every bringer with a handle shows as their `@username` (linked to `/u/{handle}`) once
-  `founder_names` is on, which this release does (§7).
-- **Name now, ask age after:** a bringer is named straight away; the age question (the one-tap 18+ confirmation) comes
-  afterwards, inline, and does not hold the name back.
-- **Only the Ark switch hides a name:** the bringer's own Ark setting is the one thing that turns their name back into
-  "Voyager N". Their Play record privacy and their Diary settings do not (no Play record or Diary rule).
-- **Teens with a stored year are always Voyager:** a bringer whose stored birth year makes them under 18 is never named,
-  whatever else is set.
-- The server decides all of this (`voyage_public_v2`'s founder keys, founders contract); the web and the apps only read
-  its answer. Check the founders server branch implements exactly these four rules before `founder_names` goes on.
 
 ### 7a. Real data only, and the post-deploy check
 - **Nothing made-up in production.** The page reads the live Ark; the fixture, the made-up live feed and the fixture
@@ -245,13 +237,57 @@ are. A file that must change never needs this: it gets a new version path, and t
   page frozen. Without the prebuild worker the phone's mount holds the main thread 12 s. (Headless Chromium on the Mac's
   GPU: the phone profile throttles the CPU, not the GPU.)
 
+### 7b. The owner's founder decision (2026-11-11, about 21:30 WIB, confirmed again)
+- **`@username` on by default:** every bringer with a handle shows as their `@username` (linked to `/u/{handle}`) once
+  `founder_names` is on, which this release does (§7).
+- **Name now, ask age after:** a bringer is named straight away; the age question (the one-tap 18+ confirmation) comes
+  afterwards, inline, and does not hold the name back.
+- **Only the Ark switch hides a name:** the bringer's own Ark setting is the one thing that turns their name back into
+  "Voyager N". Their Play record privacy and their Diary settings do not (no Play record or Diary rule).
+- **Teens with a stored year are always Voyager:** a bringer whose stored birth year makes them under 18 is never named,
+  whatever else is set.
+- The server decides all of this (`voyage_public_v2`'s founder keys, founders contract); the web and the apps only read
+  its answer. Check the founders server branch implements exactly these four rules before `founder_names` goes on.
+
+### 7c. Next, right after this release
+- **Encounter-based hunting**, behind `voyage_config.hunting` (`'pool'`, today's, is the default). It turns on only when
+  the simulation meets the Part A targets (§7d). The owner's decisions (2026-11-11 about 22:15 WIB, with the 22:45
+  reversal): hungry, awake predators go out and hunt; hunger counts awake time only; **no parent guarding** (this
+  replaces "parents protect young"); keep the floor of 3. The plan: `~/animaldex-ark-handover-2026-11-11/ark/queued/encounter-hunting-plan.md`.
+
+### 7d. Launch ecology, Part A (owner approved, 2026-11-11 about 22:45 WIB)
+AnimalDex `ark-captures-thrive` 101fba1d (being finalised; deploy its final head).
+
+**The rules.**
+- A 14-day grace that spares arrived animals and Ark-born young, then a 7-day fade-in.
+- Background food at a 1,000× mass ratio.
+- A meal interval by body size (every value an estimate).
+- Prey chosen weakest first, with no parent guarding.
+- Kept animals fed.
+- Pack hunting for group-living mammals only, up to 10× their mass.
+
+**The target.** 0% of players' animals lost in the first 14 days, under 10% by day 30. The simulation gives 9.6% at 1×
+and 15.3% at 3×.
+
+**Deploy steps (ecology's checklist).**
+1. Deploy `voyage-world` from that branch.
+2. Before `tick_enabled`: set `launch_grace_real_days` = 14, `launch_ramp_real_days` = 7 and `launch_ecology` (the
+   JSON in the branch's §9.10).
+3. Apply the diet-audit migration `20261116100000` with the release (§3 row 11; its rollback is rehearsed in the chain:
+   TESTS_OK and ROLLBACKS_OK).
+4. Turn on `tick_enabled`, then check `voyages.clock_started_ark_day` is set.
+5. Days 0–14: check that no arrived animal is eaten.
+6. Keep `ark_digest` off until after day 21.
+7. Rollback: `launch_ecology` = `{}` and both grace values = 0.
+
+Note: in the chained rehearsal, migration 7's trigger rollback deadlocked with a live capture writer; Postgres aborted it
+harmlessly, but any real rollback of migration 7 runs at a quiet moment.
+
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` dd50bd5e (2,243/2,247)**, after behaviour 6ad9b3e8 put walkers on the v2 clips' pace:
-  - "groups stay together as loose clusters, never a row": five African lions in an even row at slot 275 (timing dependent). Behaviour.
-  - "an in-place activity barely turns" (behaviour's new test): 184 of 13,572 in-place minutes over one turn, all from the recipes' episodes laid over the schedule. By recipe: dabble 70 of 205 minutes (mallard, worst 1.33 turns), chase_fish 37 of 291 (harbour seal, puffin, emperor penguin, 1.50), surface_dive 33 of 150 (puffin, 1.45), wade_spear 21 of 125 (grey heron, 1.44), root_dig 12 of 98 (meerkat, 1.44), bathe 2 of 104 (1.03); without a recipe 1 of 12,145 (a grey heron watching, 1.07). Recipes.
-  - "no spinning": the red fox's pounce at 1.02 full turns in 20 s (it passed before the pace change). Recipes.
-  - "stags in the rut meet, face each other and clash antlers": head to head at 2.13 rad (it passed before the pace change). Recipes.
-- **Default view** (corrected check, eb6e6006, after intelligence c78628ee and runtime 1ee10e02, two runs): walk pace ratio median 1.06 and 1.00; backwards 0.6% and 2.5%, nothing backwards over 1 s; ground turns 1.3 and 0.7 a minute (median). Way-turns per minute of movement over 2, for animals whose activity includes watching: a goat 3.1 (watch) and 2.7 (browse, watch), a meerkat 8.1 (watch, groom), grey herons 4.7–35.6 (forage, watch; wade_spear) and 7.6 (fly, watch). The zebra watching at 15.4 is gone. Grazers still turn: plains zebras 3.6–42.6 (graze; the graze steps), an African forest buffalo 11.9 (graze, groom).
+- **Red tests on `ark-release` f51368ee (2,247/2,249), both behaviour's (both fail with the recipes off too):**
+  - "groups stay together as loose clusters, never a row": five African lions in an even row at slot 275 (timing dependent).
+  - "an in-place activity barely turns": 1 of 13,763 in-place minutes over one turn, a grey heron's plain watch slot (1.07 turns), no recipe.
+- **Default view** (corrected check, after recipes 5adf8c29, four runs; turning now split by source, `rig-scenes-entry.ts`): walk pace ratio median 0.91–1.00; backwards 0.3–1.7% (one plains zebra 2.1 s backwards in one run); ground turns 0 a minute (median). Grazers over 2 way-turns a minute of movement: plains zebras 4.2 (graze, groom; 16.5 s moving), 6.6 (graze, play) and 18.7 (rest, play, groom; 2.9 s), all from the schedule's own steps (no recipe act); one alpine ibex 28.1 (graze; 3.5 s, 14 m) under a recipes-layer act. The African forest buffalo was under 2 in all four runs. Others over 2: a grey heron 24.6 (wade_spear/wade), Atlantic puffins 3–4 (surface_dive/swim, chase_fish), a goat 6.8 (rest, watch; schedule).
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
