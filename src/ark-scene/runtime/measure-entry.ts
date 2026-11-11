@@ -20,7 +20,7 @@ import type {Scene} from "three";
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
-type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number};
+type Sample = {t: number; models: number; drawCalls: number; triangles: number; loading: boolean; tier: string; geometryMB: number; textureMB: number; modelTextureMB?: number; evicted?: number; mode?: string};
 
 declare global {
     interface Window {
@@ -38,6 +38,11 @@ const round = (value: number) => Math.round(value * 10) / 10;
     const seconds = Number(params.get("seconds") ?? "20");
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
+    // `?budget=<MB>`: a small skin ceiling, to watch the near levels being let go (runtime/budgets.ts).
+    const budget = Number(params.get("budget"));
+    if (budget > 0) (globalThis as {__arkBudgetMB?: number}).__arkBudgetMB = budget;
+    // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
+    const walk = params.get("walk") === "1";
     try {
         const snapshot = decodeArkSnapshot(fixture);
         if (!snapshot) throw new Error("fixture did not decode");
@@ -62,13 +67,24 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const samples: Sample[] = [];
         let inView = 0;
         const until = performance.now() + seconds * 1000;
+        // The walk: animal after animal (one species each), flown to close up, so near levels come in and are let go.
+        const bySpecies = new Map<string, string>();
+        for (const animal of [...snapshot.animals].sort((x, y) => x.id.localeCompare(y.id))) if (!bySpecies.has(animal.model_slug)) bySpecies.set(animal.model_slug, animal.id);
+        const tour = Array.from(bySpecies.values());
+        let nextVisit = performance.now() + 6000;
+        let visit = 0;
         while (performance.now() < until) {
             await new Promise((resolve) => setTimeout(resolve, 250));
+            if (walk && performance.now() > nextVisit) {
+                nextVisit = performance.now() + 3000;
+                handle.select(tour[visit++ % tour.length]);
+            }
             const stats = handle.stats();
             const memory = debug ? sceneMemory(debug.scene) : {geometryBytes: 0, textureBytes: 0};
             const loading = handle.loading();
             const t = performance.now() - t0;
-            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20)});
+            const run = (handle as unknown as {runtime?: () => {modelTextureMB: number; evicted: number; mode: string}}).runtime?.();
+            samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode});
             // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
             if (!inView && firstFrame && !loading && t > 5000) inView = t;
         }

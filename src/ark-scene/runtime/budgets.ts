@@ -43,6 +43,9 @@ export const ARK_BUDGETS: Record<QualityTier, ArkBudget> = {
 export const GRASS_BUILD: Record<QualityTier, number> = {high: 56000, medium: 22000, low: 22000};
 
 export function arkBudget(tier: QualityTier): ArkBudget {
+    // Development, for measuring the drops: `window.__arkBudgetMB = 8` before mounting sets every tier's skin ceiling.
+    const forced = (globalThis as {__arkBudgetMB?: unknown}).__arkBudgetMB;
+    if (typeof forced === "number" && forced > 0) return {...ARK_BUDGETS[tier], textureMB: forced};
     return ARK_BUDGETS[tier];
 }
 

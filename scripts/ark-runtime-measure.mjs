@@ -11,7 +11,8 @@
  * longest, when the models in view were in, the JS heap, the scene's GPU estimate and the model counts over time.
  *
  *   node scripts/ark-runtime-measure.mjs --label before [--devices desktop,phone] [--runs 3] [--seconds 20]
- *        [--network 4g|none] [--quality auto|high|medium|low] [--gpu metal|swiftshader] [--headed]
+ *        [--network 4g|none] [--quality auto|high|medium|low] [--gpu metal|swiftshader] [--headed] [--profile]
+ *        [--walk] (the camera flies animal to animal) [--budget <MB>] (a small skin ceiling, to watch the drops)
  *
  * The models come from the public model bucket (read only), as on the site; `--network 4g` throttles them to a
  * mid 4G link (9 Mbit/s down, 60 ms) through the DevTools protocol.
@@ -169,7 +170,8 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}`);
+        const extra = `${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}`;
+        await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}`, {waitUntil: "commit", timeout: 120_000});
         await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
         const measured = await page.evaluate(() => window.__arkMeasure);
         if (flag("profile")) {
