@@ -87,7 +87,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 import {clipRows, cyclesFor, newRigState, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, safeLoopRadius, speciesDepth, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
 import {ArkNests, nestKind} from "@/ark-scene/nests";
@@ -690,7 +690,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The hour's sun, which says who is asleep (from the species' activity only; none known: awake by day). */
     let sunElevation = lighting.daylight.elevation;
     /** A bird of the air over land: it flies while awake. */
-    const fliesOver = (animal: ArkAnimal) => FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea";
+    const fliesOver = (animal: ArkAnimal) => (FLYERS.has(animal.model_slug) && ZONE_SITES[animal.zone]?.kind !== "sea") || Boolean(heldOffWater(animal.model_slug));
 
     // MARK: The behaviour schedule (NPC-style, visual only)
 
@@ -781,6 +781,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // An air-breather in the water comes up for air on its breath cycle (a floater is at the surface already). (sea-depth)
         const depth = speciesDepth(entry.animal.model_slug, entry.animal.zone);
         const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: depthSeed(entry.animal.id), clock: clockNow()} : null;
+        // One the classifier holds off the water (a frigatebird) stays aloft, asleep or not: it never comes down onto the sea.
+        const aloftAlways = Boolean(heldOffWater(entry.animal.model_slug));
         return behaviourState({
             activity: entry.animal.activity,
             elevation: sunElevation,
@@ -789,6 +791,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             visitor: entry.visitor,
             reducedMotion,
             breather,
+            aloftAlways,
             scheduled: entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment}) ? {doing: entry.sched.pose.doing, aloft: entry.sched.pose.aloft} : null
         });
     };
@@ -1153,7 +1156,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 herd.members.forEach((member, i) => {
                     // Standing (or floating, a swimmer at sea) still at its own place, as the server placed it.
                     let base = member.ground;
-                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(member.id), 0, 0), tall).base;
+                    // One depth for the whole school (the herd's own seed), each spread on its own spot: level, side by side.
+                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(herd.slug), 0, 0), tall).base;
                     else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
                     else if (member.water) base = Math.max(member.ground, -0.3);
                     herdRotation.setFromAxisAngle(up, member.yaw);
@@ -1203,7 +1207,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
 
     /** Where an animal is this moment: its spot, or its loop in the water, or its circle in the sky. */
-    type Pose = {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean; surface?: SurfacePoint; /** In the water: where in its column, fitted again to the height it is drawn at. */ water?: WaterSpec};
+    type Pose = {
+        x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean; surface?: SurfacePoint;
+        /** In the water: where in its column, fitted again to the height it is drawn at. */
+        water?: WaterSpec;
+        /** A school's member: its first one's point, which its offset is scaled about at the size it is drawn (so a school drawn larger from afar spreads with it). */
+        school?: {x: number; z: number};
+    };
 
     /**
      * A small animal on its surface: it crawls slowly to and fro along it (its
@@ -1483,22 +1493,43 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const yaw = place.yaw + (reducedMotion ? 0 : Math.sin(time * 0.2 + entry.phase * 9) * 0.5 * (1 - entry.rest));
             return {x: place.x, z: place.z, base: fitInWater(spec, modelHeight).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
         }
-        const lead = entry.leader && !entry.leader.act && entry.leader.depth ? entry.leader : null;
-        const follower = lead ? (entry.place.rank ?? 1) : 0;
+        const lead = entry.leader && entry.leader !== entry && !entry.leader.act && entry.leader.depth ? entry.leader : null;
+        const follower = lead ? Math.max(entry.place.rank ?? 1, 1) : 0;
         const owner = lead ?? entry;
         const direction = owner.phase > 0.5 ? 1 : -1;
-        const cloud = entry.layer.mode === "filter" && motion === "swim" && ZONE_SITES[entry.animal.zone]?.kind === "sea" ? nearestCloud(place.x, place.z) : null;
-        const centre = cloud ?? (lead ? lead.place : place);
-        let radius = cloud ? cloud.radius * 0.7 + entry.phase * 2 : waterLoopRadius(motion, owner.phase, owner.length) + (follower ? ((follower % 3) - 1) * (motion === "swim" ? 0.9 : 0.3) : 0);
+        // The first one's loop (a plankton feeder's round its cloud); the others keep beside it.
+        const cloud = owner.layer.mode === "filter" && motion === "swim" && ZONE_SITES[owner.animal.zone]?.kind === "sea" ? nearestCloud(owner.place.x, owner.place.z) : null;
+        const centre = cloud ?? owner.place;
+        let radius = cloud ? cloud.radius * 0.7 + owner.phase * 2 : waterLoopRadius(motion, owner.phase, owner.length);
         // The loop stays over its water (the lake's open water; off the beach and the reef's shallows).
         radius = safeLoopRadius(centre.x, centre.z, radius);
-        const angle = lead ? lead.loop - direction * follower * (0.1 + entry.length * 0.04) : entry.loop;
-        const x = centre.x + Math.cos(angle) * radius;
-        const z = centre.z + Math.sin(angle) * radius;
-        const spec = waterSpec(depth, heightAt(x, z), entry.seed, clock, breath);
-        // Tangent to the loop (model heads face +z).
+        const angle = owner.loop;
+        const lx = centre.x + Math.cos(angle) * radius;
+        const lz = centre.z + Math.sin(angle) * radius;
+        // Level, nose along the loop (model heads face +z): forward (sin yaw, cos yaw), right (cos yaw, -sin yaw).
         const yaw = Math.atan2(-Math.sin(angle) * direction, Math.cos(angle) * direction);
-        return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
+        let x = lx;
+        let z = lz;
+        if (follower) {
+            // Beside its first one, side by side; in file behind it where the water beside is too shallow.
+            const at = schoolOffset(follower, owner.seed, owner.length);
+            let px = lx + Math.cos(yaw) * at.side - Math.sin(yaw) * at.back;
+            let pz = lz - Math.sin(yaw) * at.side - Math.cos(yaw) * at.back;
+            if (heightAt(px, pz) > -0.6) {
+                // In file instead: back along the loop itself, so it stays over the loop's water.
+                const back = schoolFile(follower, owner.seed, owner.length).back / Math.max(radius, 0.5);
+                px = centre.x + Math.cos(angle - direction * back) * radius;
+                pz = centre.z + Math.sin(angle - direction * back) * radius;
+            }
+            x = px;
+            z = pz;
+        }
+        const floorY = heightAt(x, z);
+        // The school swims at its first one's depth in the band (its own breath apart).
+        const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
+        const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
+        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along);
+        return {x, z, base: fitInWater(spec, modelHeight).base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined};
     };
 
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
@@ -2018,7 +2049,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const modelHeight = candidate.modelHeight * sizeUp;
             entry.drawnHeight = modelHeight;
             // In the water: fitted again at the height it is drawn at (from afar it is drawn larger), so its back never breaks the surface.
-            if (where.water) where.base = fitInWater(where.water, modelHeight).base;
+            if (where.water) {
+                // A school drawn larger from afar spreads with it (never touching), and its depth is fitted again.
+                if (where.school && sizeUp !== 1) {
+                    where.x = where.school.x + (where.x - where.school.x) * sizeUp;
+                    where.z = where.school.z + (where.z - where.school.z) * sizeUp;
+                    where.water = {...where.water, floorY: heightAt(where.x, where.z)};
+                }
+                where.base = fitInWater(where.water, modelHeight).base;
+            }
             if (!candidate.visible) {
                 entry.middle = null;
                 continue;
@@ -2030,10 +2069,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // The sharper it is, the more different things it does (`arkIdleBehaviour`).
                 entry.director ??= new BehaviourDirector(arkIdleBehaviour(model.behaviour, entry.stats.intelligence), IDLE_ABILITIES, BehaviourRandom.seed(animal.id));
                 const idle = entry.director.pose(now, false);
-                where.yaw += idle.yaw;
-                where.pitch += idle.pitch;
-                where.roll += idle.roll;
-                where.base += idle.lift * candidate.modelScale;
+                where.yaw += idle.yaw * (where.water ? 0.4 : 1);
+                // In the water it swims level: no idle pitch, roll or lift (its depth is its band's).
+                if (!where.water) {
+                    where.pitch += idle.pitch;
+                    where.roll += idle.roll;
+                    where.base += idle.lift * candidate.modelScale;
+                }
                 // A camera close by: now and then it glances at it, more often the sharper it is.
                 const looking = candidate.distance < GLANCE_WITHIN && !where.afloat ? glance(entry.stats.intelligence, now, entry.phase) : 0;
                 if (looking > 0) {

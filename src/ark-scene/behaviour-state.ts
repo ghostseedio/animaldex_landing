@@ -57,9 +57,12 @@ export type ArkBehaviourInput = {
     scheduled?: {doing: ArkDoing; aloft: boolean} | null;
     /** An air-breather in the water: its seed (`sea-depth.ts` `depthSeed`) and the shared clock (seconds), for its breath cycle. */
     breather?: {seed: number; clock: number} | null;
+    /** Held off the water by the depth classifier (a frigatebird over the open sea): in the air asleep too, reduced motion or not. */
+    aloftAlways?: boolean;
 };
 
 const ASLEEP: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false, breathing: false});
+const ASLEEP_ALOFT: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: true, breathing: false});
 const ASLEEP_BREATHING: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false, breathing: true});
 const FLYING: ArkBehaviourState = Object.freeze({kind: "flying", asleep: false, airborne: true, breathing: false});
 const AWAKE: ArkBehaviourState = Object.freeze({kind: "awake", asleep: false, airborne: false, breathing: false});
@@ -84,6 +87,7 @@ export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
     // Up for air on its breath cycle (not in an act, nor the visitor, nor with motion reduced).
     const breather = input.breather && !input.acting && !input.visitor && !input.reducedMotion ? input.breather : null;
     const breathing = breather ? breathAt(breather.seed, breather.clock, !awake) > 0 : false;
+    if (input.aloftAlways && !input.acting && !input.visitor) return awake ? FLYING : ASLEEP_ALOFT;
     if (!awake) return breathing ? ASLEEP_BREATHING : ASLEEP;
     if (breathing) return BREATHING;
     return input.flyer && !input.acting && !input.visitor && !input.reducedMotion ? FLYING : AWAKE;

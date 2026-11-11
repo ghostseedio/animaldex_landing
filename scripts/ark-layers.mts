@@ -208,6 +208,10 @@ if (reportPath) writeFileSync(reportPath, JSON.stringify(report, null, 1));
  * Fresh bands: pond_surface (ducks, grebes, divers, or the text), pond_bed (crayfish, snails, mussels,
  * catfish, loaches, sturgeons, or the text: bottom, riverbed, gravel...), pond_mid (the rest; default flagged).
  *
+ * The reviewed hold list (DEPTH_HOLD, and seabirds that never settle on the water): species at sea
+ * that are not water species, kept off the water with the reason (the scene flies them over their
+ * zone, awake or asleep). They are written to `held`, not given a band.
+ *
  * Flags: `b` breathes air (mammals, birds, reptiles, or a whale's or turtle's body plan) and so surfaces
  * to breathe; `c` in a crevice; `f` a deep one on the deep floor; `g` glows at night.
  * Rows: [band, water, home, flags, reason, source] (source: text, taxonomy, plan, zone or default).
@@ -217,7 +221,17 @@ type Band = "surface" | "upper" | "mid" | "seabed" | "reef" | "deep" | "pond_sur
 type Water = "salt" | "fresh";
 type Home = "zone" | "lake" | "coast";
 type Source = "text" | "taxonomy" | "plan" | "zone" | "default";
-type DepthResult = {band: Band; water: Water; home: Home; flags: string; reason: string; source: Source};
+type DepthResult = {band: Band; water: Water; home: Home; flags: string; reason: string; source: Source} | {held: string};
+
+/**
+ * The reviewed hold list: species the catalogue puts at sea that must not be drawn on or in the
+ * water, each with why (checked by hand, 2026-11-11). Fix the data, then take them off.
+ */
+const DEPTH_HOLD: Record<string, string> = {
+    "striped-albatross": "catalogue data error: the Striped Albatross is a butterfly (Appias libythea, a pierid of South and South-East Asia) zoned open_ocean; held off the sea until its zone is fixed"
+};
+/** Seabirds that never settle on the water (their plumage is not waterproof): they soar, and sleep on the wing. */
+const NEVER_ON_WATER_FAMILIES = new Set(["Fregatidae"]);
 
 const DEPTH_TEXT_FIELDS = ["habitat", "sleep", "traits_text", "facts", "spotlight", "look", "diet"] as const;
 const WATER_BOUND_PLANS = new Set(["fish", "flatfish", "cetacean", "jellyfish", "cephalopod"]);
@@ -250,6 +264,8 @@ const DEEP_STRICT = /\b(?:deep[- ]sea|deep[- ]water|deep waters|deep ocean|ocean
 const POND_SURFACE = /\b(?:floats?|floating|dabbl\w*|surface of (?:the )?water|water surface|on open water|swims? on (?:the )?(?:water|surface))\b/i;
 
 function depthBand(row: Row): DepthResult | null {
+    if (DEPTH_HOLD[row.slug]) return {held: DEPTH_HOLD[row.slug]};
+    if (SEA_ZONES.has(row.zone) && NEVER_ON_WATER_FAMILIES.has(row.family ?? "")) return {held: `taxonomy: ${row.family} (a seabird that never lands on the water: it soars, and sleeps on the wing)`};
     const talking = plans[row.slug]?.talking_plan ?? null;
     const trait = traits.get(row.spid);
     const realm = new Set(trait?.realm ?? []);
@@ -290,7 +306,7 @@ function depthBand(row: Row): DepthResult | null {
     const layer = classify(row);
     const glow = layer.flags.includes("g") || find(GLOW) !== null;
     const flags = (extra = "") => `${breathes ? "b" : ""}${extra}${glow ? "g" : ""}`;
-    const result = (band: Band, reason: string, source: Source, extra = ""): DepthResult => ({band, water, home, flags: flags(extra), reason, source});
+    const result = (band: Band, reason: string, source: Source, extra = ""): DepthResult & {band: Band} => ({band, water, home, flags: flags(extra), reason, source});
 
     if (water === "fresh") {
         if (lakeBird) return result("pond_surface", `taxonomy: ${family} (swims on the water)`, "taxonomy");
@@ -307,8 +323,8 @@ function depthBand(row: Row): DepthResult | null {
         return result("pond_mid", `default: no depth phrase (${plan ?? cls ?? "unknown"} body)`, "default");
     }
 
-    // Not a water body at all (a land animal the catalogue put at sea): kept at the surface, flagged.
-    if (!fishLike && !breathes && plan !== null && !BED_CLASSES.has(cls) && !["eel", "cephalopod", "jellyfish", "sessile", "slow_invertebrate", "arthropod"].includes(plan) && !realm.has("sea")) return result("surface", `default: a ${plan} body in zone ${row.zone} (no water realm)`, "default");
+    // Not a water body at all (a land animal the catalogue put at sea, not yet reviewed): held off the water.
+    if (!fishLike && !breathes && plan !== null && !BED_CLASSES.has(cls) && !["eel", "cephalopod", "jellyfish", "sessile", "slow_invertebrate", "arthropod"].includes(plan) && !realm.has("sea")) return {held: `unreviewed: a ${plan} body in zone ${row.zone} with no water realm (a catalogue error?)`};
     // A deep one on the deep floor: its body, or its habitat names the floor (and not the open midwater, "not on the seabed").
     const habitat = text(row.habitat);
     const onFloor = BED_CLASSES.has(cls) || RAY_ORDERS.has(ord) || (find(/\b(?:sea ?floor|sea ?bed|bottoms?|abyssal plains?|hydrothermal vents?|vent fields?)\b/i, ["habitat"], NOT_BED) !== null && !/\b(?:midwater|mid-water|mesopelagic|bathypelagic|open water|open ocean|not (?:live )?on the sea ?bed|rather than on)\b/i.test(habitat));
@@ -348,17 +364,24 @@ function depthBand(row: Row): DepthResult | null {
 }
 
 const bands: Record<string, Array<string>> = {};
+const held: Record<string, [string, string]> = {};
 const depthReport: Record<string, Array<{slug: string; name: string | null; zone: string; class: string | null; family: string | null; water: Water; home: Home; flags: string; reason: string; source: Source}>> = {};
 for (const row of rows) {
     const found = depthBand(row);
     if (!found) continue;
+    if ("held" in found) {
+        held[row.slug] = ["air", found.held];
+        continue;
+    }
     bands[row.slug] = [found.band, found.water, found.home, found.flags, found.reason, found.source];
     (depthReport[found.band] ??= []).push({slug: row.slug, name: row.name, zone: row.zone, class: row.class, family: row.family, water: found.water, home: found.home, flags: found.flags, reason: found.reason, source: found.source});
 }
 writeFileSync(join(root, "src/ark-scene/depth-bands.json"), JSON.stringify({
-    about: "Generated by scripts/ark-layers.mts (\"Depth bands\") from the live catalogue, the traits lane's realm, the rig body plans and the taxonomy. Rows: [band, water, home, flags, reason, source]; flags: b breathes air, c in a crevice, g glows at night. Species not listed are not water species.",
-    species: bands
+    about: "Generated by scripts/ark-layers.mts (\"Depth bands\") from the live catalogue, the traits lane's realm, the rig body plans and the taxonomy. Rows: [band, water, home, flags, reason, source]; flags: b breathes air, c in a crevice, f on the deep floor, g glows at night. Species not listed are not water species. held: the reviewed hold list, [show, reason]: at sea but kept off the water (flown over its zone).",
+    species: bands,
+    held
 }).replace(/\],"/g, "],\n\"") + "\n");
+console.log(JSON.stringify({held}));
 console.log(JSON.stringify(Object.fromEntries(Object.entries(depthReport).map(([key, list]) => [key, list.length]))));
 console.log(JSON.stringify({default: Object.values(depthReport).flat().filter((r) => r.source === "default").length, relocated: Object.values(depthReport).flat().filter((r) => r.home !== "zone" && !(r.home === "lake" && r.zone === "river_lake")).length}));
 if (depthReportPath) writeFileSync(depthReportPath, JSON.stringify(depthReport, null, 1));
