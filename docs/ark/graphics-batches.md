@@ -306,6 +306,11 @@ Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg
   - The medium and high tiers are unchanged (identical numbers).
   - Low, before → after: desktop island_far 357 → 369 k triangles (106 → 107 calls), forest_floor 576 → 627 k, storm_trees 502 → 540 k. Phone island_far 356 → 366 k, forest_floor 538 → 588 k, storm_trees 495 → 533 k. Still under a third of medium.
   - From the island view the low tier now reads like medium: the giants' full crowns and a lower canopy. The sheets are `batch6-low-woods-desktop.jpg` and `batch6-low-woods-phone.jpg`.
+- **Lamp halos at night, high tier (follow-up; dark square frames round the lamps):**
+  - GTAO's depth and normal pass draws every visible object with one opaque material. The glow sprites stood in it as solid squares, and the occlusion shaded a dark frame round each lamp. Only the high tier runs GTAO; medium and low were already round.
+  - `post.ts` now leaves the glows out of that pass: sprites and additive, depth-less layers such as the light shafts. The water stays in.
+  - High tier: about 2–10 fewer draw calls at these views; medium and low unchanged.
+  - Checked river_pond and house_fields at night, high and medium, desktop and phone: soft round glows and the porch glow, no frame. The sheets are `batch6-halos-desktop.jpg` and `batch6-halos-phone.jpg`.
 - **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
 
   | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
