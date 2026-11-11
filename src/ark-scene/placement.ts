@@ -28,6 +28,7 @@
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
+import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -379,6 +380,19 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
                 continue;
             }
         }
+        // A water species whose zone's own place is not its water (`sea-depth.ts`): in the lake, or the sea off its zone's coast.
+        const depth = speciesDepth(animal.model_slug, zoneKey);
+        const wet = depth ? waterHomeSpot(depth, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal)) : null;
+        if (wet) {
+            const chosen: Placement = {x: wet.x, z: wet.z, ground: sampleGround(wet.x, wet.z).height, yaw: ((slotHash >>> 4) % 1000) / 1000 * Math.PI * 2, water: true};
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
+        }
         const kind = slotKind(animal, slotIndex);
         const centreIndex = gridIndex(layoutOf(zoneKey, site), kind, slotIndex);
         const centre = gridSpot(zoneKey, site, centreIndex);
@@ -386,10 +400,19 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         if (rank > 0) {
             // A less dominant kind's herd keeps a little more apart.
             const spread = 1 + 0.35 * (1 - arkStats(animal).dominance / 100);
-            const gap = Math.max(site.spacing * 0.45, displayLength(animal) * 0.85) * spread;
+            // (In the water, a school's members at least 1.3 body lengths apart: side by side, never touching.)
+            const gap = Math.max(site.spacing * 0.45, displayLength(animal) * (depth ? 1.3 : 0.85)) * spread;
             spot = clusterSpot(zoneKey, site, centreIndex, centre, gap, rank, slotHash) ?? centre;
         }
         const chosen = placementAt(site, spot.x, spot.z, slotHash);
+        // A salt-water species whose zone spot is not open sea (the carved river mouth, a shallow inlet): the sea off its zone's coast.
+        if (depth && depth.water === "salt") {
+            const here = sampleGround(chosen.x, chosen.z);
+            if (here.inland >= 0 || here.height > -1) {
+                const alt = waterHomeSpot({...depth, home: "coast"}, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal));
+                if (alt) Object.assign(chosen, {x: alt.x, z: alt.z, ground: sampleGround(alt.x, alt.z).height, water: true});
+            }
+        }
         // A cluster faces much the same way, each a little turned; a lone one as its slot says.
         if (rank > 0 && site.kind !== "sea") chosen.yaw += (((ownHash >>> 20) % 100) / 100 - 0.5) * 0.9;
         if (kind === "cover" && rank === 0 && obstacles.covers(spot.x, spot.z)) chosen.covered = true;

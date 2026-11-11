@@ -103,6 +103,23 @@ export type ArkAnimal = {
     length_phrase?: string | null;
 };
 
+/**
+ * A clutch on the Ark (`voyage_public_v2`'s top-level `nests`, migration
+ * 20261113140000, A9): one per species and zone while its eggs are in.
+ * Visual only (the props' eggs in a nest, a turtle's nest on the beach).
+ */
+export type ArkNestRow = {
+    species_profile_id: string;
+    name: string;
+    model_slug: string | null;
+    zone: ArkZone;
+    status: "egg";
+    eggs: number | null;
+    laid_ark_day: number | null;
+    hatch_ark_day: number | null;
+    mine: boolean;
+};
+
 export type ArkSnapshot = {
     voyage: {slug: string; name: string; started_at: string | null};
     counts: {animals: number; species: number; founders: number};
@@ -111,6 +128,8 @@ export type ArkSnapshot = {
     as_of: string | null;
     /** The Ark's own day (v2's `voyage.ark_day`): 1 Ark year = 14 real days, counted by the server. */
     ark_day?: number | null;
+    /** The clutches in (v2's `nests`, A9); absent from a v1 answer or before the eggs migration. */
+    nests?: ArkNestRow[];
 };
 
 export type ArkSceneStats = {
@@ -136,6 +155,10 @@ export type ArkSceneStats = {
     lite: boolean;
     /** Animals drawn with their rig this frame, rigs loaded, and the rig bytes downloaded this session. */
     rigged: number;
+    /** The behaviour schedule: animals on it, its main-thread time per frame (ms, mean), and the time its places and walk grid took to build (ms, once). */
+    scheduled?: number;
+    behaviourMs?: number;
+    behaviourBuildMs?: number;
     rigsLoaded: number;
     rigBytes: number;
     /** The animal-look pass: on, animals in fur shells this frame, close-up skins on the GPU. */
@@ -179,6 +202,8 @@ export type ArkSceneOptions = {
     talkingBase?: string;
     /** A fixed hour (0–24) for the light and who is asleep; default: the viewer's clock, read every minute. */
     hours?: number | null;
+    /** The behaviour schedule (`behaviour-schedule.ts`): animals walk, fly, swim, sleep at their roosts and visit places by the time and their ids. Default on. */
+    behaviour?: boolean;
     /** The camera stopped following (a drag, or the animal left). */
     onFollowEnd?: () => void;
     /**
@@ -210,6 +235,11 @@ export type ArkSceneOptions = {
     basisBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
+    /**
+     * The scenery's extra detail (nests, hives, webs, the garden's and the farm's things, the cave,
+     * dew, mist, smoke: `src/ark-scene/props`): true on (default), false off.
+     */
+    props?: boolean;
 };
 
 /** A camera view: what it looks at, how far, the angle from straight down, and the bearing (radians). */
@@ -258,6 +288,8 @@ export type ArkSceneHandle = {
     selectHerd: (key: string | null) => boolean;
     /** The lighter view: true on, false off, null decided by the device. */
     setLite: (lite: boolean | null) => void;
+    /** The scenery's extra detail (`ArkSceneOptions.props`) on or off. */
+    setProps: (on: boolean) => void;
     /** Reduced motion turned on or off (prefers-reduced-motion changed): no flights, no idles, everything still. */
     setReducedMotion: (reduced: boolean) => void;
     /** Fly to a region, or back to the whole world with null. */
@@ -268,8 +300,10 @@ export type ArkSceneHandle = {
      * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
      * island clock with null. Any field left out keeps following the clock.
      */
-    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number}> | null) => void;
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
     /** Pin the hour (0–24), or back to the island's shared clock with null. */
+    /** Development: run the world's time this many times faster (a day-night recording); 1 for the clock. */
+    setClockScale: (scale: number, atMs?: number) => void;
     setHours: (hours: number | null) => void;
     /**
      * The animal-look pass on or off (off: every animal exactly as before). `islandMs` pins the island time its

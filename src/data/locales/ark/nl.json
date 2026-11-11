@@ -222,7 +222,7 @@
             "outOf": "van {max}",
             "summary": "{animals} aan boord, {species}",
             "anonymousTitle": "Anoniem aan boord",
-            "anonymousBody": "{name} reist anoniem: in de Ark staan de dieren met een Voyager-nummer, nooit met een naam. Namen staan er alleen bij mensen die ervoor kiezen hun naam te tonen.",
+            "anonymousBody": "{name} reist anoniem: in de Ark staan de dieren met een Voyager-nummer, nooit met een naam.",
             "selfPrivate": "Alleen jij ziet deze lijst. In de Ark zien anderen je dieren als meegebracht door {label}.",
             "selfNamed": "Je naam staat bij je dieren in de Ark.",
             "noneSelf": "Nog geen van je dieren is aan boord. Als een stap van een van je dieren werkt, komt dat dier aan boord.",
@@ -279,6 +279,52 @@
             "eatenBy": "Wordt gegeten door",
             "see": "Bekijk de {animal} in de Ark",
             "seeArk": "Bekijk de Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mijn naam tonen bij mijn Ark-dieren",
+                "note": "Je naam, @handle en foto staan bij de dieren die je naar de Ark brengt. Zet dit uit om als Voyager-nummer te verschijnen.",
+                "under18": "Je verschijnt als Voyager-nummer zolang je jonger bent dan 18.",
+                "private": "Je verschijnt als Voyager-nummer zolang je profiel privé is.",
+                "noHandle": "Voeg een @handle toe aan je profiel om je naam te tonen.",
+                "earlier": "Bij dieren die je meebracht voordat namen werden getoond, staat nog Voyager.",
+                "nameEarlier": "Mijn naam ook daarbij tonen",
+                "confirmAdult": "Door dit aan te zetten bevestig je dat je 18 of ouder bent.",
+                "confirmYes": "Ja, ik ben 18 of ouder"
+            },
+            "share": {
+                "ask": "In de Ark delen hoe het werkte?",
+                "stepLabel": "Wat je deed",
+                "problemPlaceholder": "Eén regel over het probleem, in je eigen woorden (optioneel)",
+                "share": "Delen",
+                "edit": "Bewerken",
+                "notNow": "Niet nu",
+                "shared": "Gedeeld in de Ark",
+                "publicNote": "Iedereen die de Ark bezoekt, kan dit lezen.",
+                "notPublic": "Dit kan niet openbaar worden getoond. Probeer andere woorden.",
+                "couldNotCheck": "Dat kon nu even niet worden gecontroleerd. Probeer het opnieuw.",
+                "remove": "Uit de Ark halen",
+                "removed": "Uit de Ark gehaald",
+                "askShort": "Delen hoe het werkte?",
+                "confirmShare": "Ik ben 18 of ouder, delen"
+            },
+            "card": {
+                "howAboard": "Hoe het aan boord kwam",
+                "broughtBy": "Meegebracht door {name}"
+            },
+            "founder": {
+                "storiesTitle": "Hoe hun dieren aan boord kwamen",
+                "noStories": "Nog geen verhalen gedeeld."
+            },
+            "name": {
+                "ask": "Je naam tonen in de Ark?",
+                "adult": "Ik ben 18 of ouder",
+                "yes": "Ja, toon mijn naam",
+                "shown": "Je naam staat in de Ark"
+            },
+            "error": {
+                "needsAdult": "Bevestig eerst dat je 18 of ouder bent."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "De Ark kon nu niet laden.",
         "arkFormerVoyager": "Voormalige voyager",
         "animalTitleA": "Praat met een {animal}",
-        "animalTitleAn": "Praat met een {animal}"
+        "animalTitleAn": "Praat met een {animal}",
+        "arkHowAboard": "Hoe het aan boord kwam"
     }
 }

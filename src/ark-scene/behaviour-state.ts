@@ -12,11 +12,18 @@
  *
  * Pure, so the same hour gives every viewer the same state, and the test can
  * hold the animation and the card to it (`lib/ark-behaviour-state.test.ts`).
+ *
+ * An air-breather in the water (a whale, a dolphin, a turtle, a seal) comes
+ * up to breathe on its breath cycle (`sea-depth.ts` `breathAt`, from the clock
+ * and its id, slower asleep): while it does, its state is "breathing" (asleep,
+ * it stays "asleep" with `breathing` set), and its pose rises to the surface.
  */
 
 import {isAwake, type ArkActivity} from "@/lib/ark-daylight";
+import type {ArkDoing} from "@/ark-scene/behaviour-schedule";
+import {breathAt} from "@/ark-scene/sea-depth";
 
-export type ArkBehaviourKind = "asleep" | "flying" | "awake";
+export type ArkBehaviourKind = "asleep" | "flying" | "awake" | "breathing";
 
 export type ArkBehaviourState = {
     kind: ArkBehaviourKind;
@@ -24,6 +31,10 @@ export type ArkBehaviourState = {
     asleep: boolean;
     /** Up in the air, on its circle (a bird of the air, awake). */
     airborne: boolean;
+    /** Up at the surface for air (an air-breather in the water), awake or asleep. */
+    breathing: boolean;
+    /** What it is doing (`behaviour-schedule.ts`), for an animal on the behaviour schedule. */
+    doing?: ArkDoing;
 };
 
 export type ArkBehaviourInput = {
@@ -39,16 +50,46 @@ export type ArkBehaviourInput = {
     visitor?: boolean;
     /** Reduced motion: nothing flies; an awake flyer waits on its spot. */
     reducedMotion?: boolean;
+    /**
+     * On the behaviour schedule: what its trip says it is doing now and whether its pose is up in the air. Then
+     * asleep is the schedule's sleep (the same hour rule, at its slot's start) and airborne its pose.
+     */
+    scheduled?: {doing: ArkDoing; aloft: boolean} | null;
+    /** An air-breather in the water: its seed (`sea-depth.ts` `depthSeed`) and the shared clock (seconds), for its breath cycle. */
+    breather?: {seed: number; clock: number} | null;
+    /** Held off the water by the depth classifier (a frigatebird over the open sea): in the air asleep too, reduced motion or not. */
+    aloftAlways?: boolean;
 };
 
-const ASLEEP: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false});
-const FLYING: ArkBehaviourState = Object.freeze({kind: "flying", asleep: false, airborne: true});
-const AWAKE: ArkBehaviourState = Object.freeze({kind: "awake", asleep: false, airborne: false});
+const ASLEEP: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false, breathing: false});
+const ASLEEP_ALOFT: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: true, breathing: false});
+const ASLEEP_BREATHING: ArkBehaviourState = Object.freeze({kind: "asleep", asleep: true, airborne: false, breathing: true});
+const FLYING: ArkBehaviourState = Object.freeze({kind: "flying", asleep: false, airborne: true, breathing: false});
+const AWAKE: ArkBehaviourState = Object.freeze({kind: "awake", asleep: false, airborne: false, breathing: false});
+const BREATHING: ArkBehaviourState = Object.freeze({kind: "breathing", asleep: false, airborne: false, breathing: true});
 
 /** The state (one shared object per kind, so it can be worked out every frame for free). */
+const SCHEDULED = new Map<string, ArkBehaviourState>();
+
 export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
+    const plan = input.scheduled;
+    if (plan && !input.acting && !input.visitor) {
+        // ark-audit merge: a scheduled air-breather still comes up on its breath cycle (sea-depth).
+        const asleepNow = plan.doing === "sleep";
+        const breathingNow = input.breather && !input.reducedMotion ? breathAt(input.breather.seed, input.breather.clock, asleepNow) > 0 : false;
+        const kind: ArkBehaviourKind = asleepNow ? "asleep" : breathingNow ? "breathing" : plan.aloft && !input.reducedMotion ? "flying" : "awake";
+        const key = `${kind}:${plan.doing}:${breathingNow ? 1 : 0}`;
+        let state = SCHEDULED.get(key);
+        if (!state) SCHEDULED.set(key, (state = Object.freeze({kind, asleep: kind === "asleep", airborne: kind === "flying", breathing: breathingNow, doing: plan.doing})));
+        return state;
+    }
     const awake = Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
-    if (!awake) return ASLEEP;
+    // Up for air on its breath cycle (not in an act, nor the visitor, nor with motion reduced).
+    const breather = input.breather && !input.acting && !input.visitor && !input.reducedMotion ? input.breather : null;
+    const breathing = breather ? breathAt(breather.seed, breather.clock, !awake) > 0 : false;
+    if (input.aloftAlways && !input.acting && !input.visitor) return awake ? FLYING : ASLEEP_ALOFT;
+    if (!awake) return breathing ? ASLEEP_BREATHING : ASLEEP;
+    if (breathing) return BREATHING;
     return input.flyer && !input.acting && !input.visitor && !input.reducedMotion ? FLYING : AWAKE;
 }
 

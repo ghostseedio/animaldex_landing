@@ -222,7 +222,7 @@
             "outOf": "מתוך {max}",
             "summary": "על הסיפון: {animals}, {species}",
             "anonymousTitle": "אנונימי על הסיפון",
-            "anonymousBody": "{name} מטייל ב-Ark באופן אנונימי: החיות מוצגות שם לפי מספר Voyager, אף פעם לא לפי שם. שמות מוצגים רק לאנשים שבוחרים להציג את שמם.",
+            "anonymousBody": "{name} מטייל ב-Ark באופן אנונימי: החיות מוצגות שם לפי מספר Voyager, אף פעם לא לפי שם.",
             "selfPrivate": "רק אתה רואה את הרשימה הזו. ב-Ark, אחרים רואים שאת החיות שלך הביא {label}.",
             "selfNamed": "השם שלך מוצג על החיות שלך ב-Ark.",
             "noneSelf": "אף אחת מהחיות שלך עדיין לא על הסיפון. כשצעד של אחת מהחיות שלך מצליח, החיה הזו עולה לסיפון.",
@@ -279,6 +279,52 @@
             "eatenBy": "נטרף על ידי",
             "see": "ראה את {animal} ב-Ark",
             "seeArk": "ראה את Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "הצג את השם שלי על החיות שלי ב-Ark",
+                "note": "השם שלך, ה-@handle והתמונה שלך מופיעים על החיות שאתה מביא ל-Ark. כבה את זה כדי להופיע כמספר Voyager.",
+                "under18": "אתה מופיע כמספר Voyager כל עוד אתה מתחת לגיל 18.",
+                "private": "אתה מופיע כמספר Voyager כל עוד הפרופיל שלך פרטי.",
+                "noHandle": "הוסף @handle לפרופיל שלך כדי שהשם שלך יופיע.",
+                "earlier": "על חיות שהבאת לפני שהשמות הוצגו עדיין כתוב Voyager.",
+                "nameEarlier": "הצג את השם שלי גם עליהן",
+                "confirmAdult": "הפעלת האפשרות הזו מאשרת שגילך 18 ומעלה.",
+                "confirmYes": "כן, גילי 18 ומעלה"
+            },
+            "share": {
+                "ask": "לשתף ב-Ark איך זה הצליח?",
+                "stepLabel": "מה עשית",
+                "problemPlaceholder": "שורה אחת על הבעיה, במילים שלך (לא חובה)",
+                "share": "שתף",
+                "edit": "ערוך",
+                "notNow": "לא עכשיו",
+                "shared": "שותף ב-Ark",
+                "publicNote": "כל מי שמבקר ב-Ark יכול לקרוא את זה.",
+                "notPublic": "אי אפשר להציג את זה בפומבי. נסה מילים אחרות.",
+                "couldNotCheck": "לא הצלחנו לבדוק את זה כרגע. נסה שוב.",
+                "remove": "הסר מ-Ark",
+                "removed": "הוסר מ-Ark",
+                "askShort": "לשתף איך זה הצליח?",
+                "confirmShare": "גילי 18 ומעלה, שתף"
+            },
+            "card": {
+                "howAboard": "איך עלה לסיפון",
+                "broughtBy": "הובא על ידי {name}"
+            },
+            "founder": {
+                "storiesTitle": "איך החיות שלהם עלו לסיפון",
+                "noStories": "עדיין לא שותפו סיפורים."
+            },
+            "name": {
+                "ask": "להציג את השם שלך ב-Ark?",
+                "adult": "גילי 18 ומעלה",
+                "yes": "כן, הצג את השם שלי",
+                "shown": "השם שלך מופיע ב-Ark"
+            },
+            "error": {
+                "needsAdult": "אשר קודם שגילך 18 ומעלה."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "לא ניתן היה לטעון את Ark כרגע.",
         "arkFormerVoyager": "voyager לשעבר",
         "animalTitleA": "דבר עם {animal}",
-        "animalTitleAn": "דבר עם {animal}"
+        "animalTitleAn": "דבר עם {animal}",
+        "arkHowAboard": "איך עלה לסיפון"
     }
 }

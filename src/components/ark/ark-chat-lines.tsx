@@ -10,11 +10,38 @@
  *   animal that came aboard, with its icon. Fresh (it landed while the chat
  *   was open), it plays in; "See it in the Ark" opens the panel beside the
  *   chat on it, when the chat has one.
+ * - under that line, when the reader may share it (founders contract,
+ *   section 4): one calm moment, in place, never a window: the name question
+ *   first when the server says to ask it, then "Share how this worked?".
  */
 
 import {AskSpecialBubble} from "@/components/ask-animaldex/ask-messenger";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {arkArrivalLine, arkStepOfferLine, type ArkStepOffer, type ArkWorldWords} from "@/lib/ark-world";
+import {ARK_STORY_PROBLEM_MAX, ARK_STORY_STEP_MAX} from "@/lib/ark-founders";
+import {useArkFounderShare} from "@/components/ark/use-ark-chat";
+
+/** The line's words under an arrival (`companions.ark.founders`): the name question, the story, and the 18+ error. */
+export type ArkFounderShareWords = {
+    name: {ask: string; adult: string; yes: string; shown: string};
+    share: {
+        ask: string;
+        askShort: string;
+        stepLabel: string;
+        problemPlaceholder: string;
+        share: string;
+        confirmShare: string;
+        edit: string;
+        notNow: string;
+        shared: string;
+        publicNote: string;
+        notPublic: string;
+        couldNotCheck: string;
+        remove: string;
+        removed: string;
+    };
+    error: {needsAdult: string};
+};
 
 export function ArkGlyph({className = "h-3.5 w-3.5"}: {className?: string}) {
     return (
@@ -38,11 +65,13 @@ export function ArkStepOfferNote({offer, words, locale}: {offer: Pick<ArkStepOff
 }
 
 /** In the thread: the animal that came aboard, with its icon. */
-export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plain = true}: {
+export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plain = true, animalId = null}: {
     species: string;
     slug: string;
     fresh: boolean;
-    words: ArkWorldWords & {arrivalSee: string};
+    words: ArkWorldWords & {arrivalSee: string; founders?: ArkFounderShareWords};
+    /** The animal that came aboard: its share line reads (as the reader) whether its story may be shared. */
+    animalId?: string | null;
     locale: string;
     /** Opens the Ark panel beside the chat on this animal; left out where the chat has none. */
     onSee?: () => void;
@@ -73,7 +102,119 @@ export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plai
                         </button>
                     ) : null}
                 </div>
+                {words.founders && animalId ? <ArkFounderShareLine animalId={animalId} species={species} words={words.founders} /> : null}
             </AskSpecialBubble>
+        </div>
+    );
+}
+
+const CHIP = "inline-flex min-h-8 items-center justify-center rounded-full px-3 text-[12px] font-semibold transition-colors disabled:opacity-60";
+const CHIP_PRIMARY = `${CHIP} bg-primary-400 text-canvas-950 hover:bg-primary-300`;
+const CHIP_PLAIN = `${CHIP} border border-white/14 text-white hover:border-primary-400 hover:text-primary-200`;
+const CHIP_QUIET = `${CHIP} text-ink-300 hover:text-white`;
+
+/** The check mark of a line that is done ("Shared on the Ark", "Your name shows on the Ark"). */
+function Tick() {
+    return <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>;
+}
+
+/**
+ * One calm moment under the arrival (founders contract, section 4), in place:
+ * first, when the server says to ask, "Show your name on the Ark? I'm 18 or
+ * over" (Yes, show my name / Not now); either answer moves the same line on to
+ * the story: collapsed (the prefilled step in one line, Share / Edit / Not
+ * now), expanded to edit, or shared (Edit / Remove from the Ark). Nothing is
+ * shared without a tap and the problem is never prefilled. While the 18+
+ * confirmation is still needed, Share reads "I'm 18 or over, share".
+ */
+export function ArkFounderShareLine({animalId, species, words}: {animalId: string; species: string | null; words: ArkFounderShareWords}) {
+    const {state, nameYes, nameNotNow, share, edit, notNow, remove, setStep, setProblem} = useArkFounderShare({animalId, species, enabled: true});
+    if (state.phase === "loading") return null;
+    const shownNote = state.nameShown ? (
+        <p className="mb-2.5 flex items-center gap-1.5 text-[12px] font-semibold leading-4 text-primary-200" role="status" data-testid="ark-name-shown"><Tick />{words.name.shown}</p>
+    ) : null;
+    // "Not now" to the story after a yes to the name: the name's line stays, the rest goes.
+    if (state.phase === "hidden") return shownNote ? <div className="mt-3 border-t border-white/10 pt-3">{shownNote}</div> : null;
+    const w = words.share;
+    const error = state.error === "not_public" ? w.notPublic : state.error === "needs_adult" ? words.error.needsAdult : state.error === "could_not_check" ? w.couldNotCheck : null;
+    const errorLine = error ? <p className="mt-2 text-[12px] font-semibold leading-4 text-[#ffb4a8]" role="alert" data-testid="ark-share-error">{error}</p> : null;
+    const shareLabel = state.needsAdult ? w.confirmShare : w.share;
+    return (
+        <div className="mt-3 border-t border-white/10 pt-3" data-testid={`ark-share-${state.phase}`}>
+            {state.phase === "name" ? (
+                <>
+                    <p className="text-[13px] font-semibold leading-5 text-white">{words.name.ask}</p>
+                    <p className="mt-0.5 text-[12px] leading-4 text-ink-300">{words.name.adult}</p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => void nameYes()} disabled={state.busy} className={CHIP_PRIMARY} data-testid="ark-name-yes">{words.name.yes}</button>
+                        <button type="button" onClick={nameNotNow} disabled={state.busy} className={CHIP_QUIET} data-testid="ark-name-not-now">{w.notNow}</button>
+                    </div>
+                    {errorLine}
+                </>
+            ) : state.phase === "collapsed" ? (
+                <>
+                    {shownNote}
+                    <p className="text-[13px] font-semibold leading-5 text-white">{state.nameAsked ? w.askShort : w.ask}</p>
+                    {state.step ? <p className="mt-0.5 truncate text-[12px] leading-4 text-ink-300" data-testid="ark-share-preview">{state.step}</p> : null}
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => void share()} disabled={state.busy} className={CHIP_PRIMARY} data-testid="ark-share-share">{shareLabel}</button>
+                        <button type="button" onClick={edit} disabled={state.busy} className={CHIP_PLAIN} data-testid="ark-share-edit">{w.edit}</button>
+                        <button type="button" onClick={notNow} disabled={state.busy} className={CHIP_QUIET} data-testid="ark-share-not-now">{w.notNow}</button>
+                    </div>
+                    {errorLine}
+                </>
+            ) : state.phase === "editing" ? (
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        void share();
+                    }}
+                >
+                    {shownNote}
+                    <label className="block text-[12px] font-semibold leading-4 text-ink-300" htmlFor={`ark-share-step-${animalId}`}>{w.stepLabel}</label>
+                    <textarea
+                        id={`ark-share-step-${animalId}`}
+                        value={state.step}
+                        onChange={(event) => setStep(event.target.value)}
+                        maxLength={ARK_STORY_STEP_MAX}
+                        rows={3}
+                        className="mt-1 w-full resize-none rounded-xl border border-white/14 bg-white/[0.04] px-3 py-2 text-[13px] leading-5 text-white outline-none placeholder:text-ink-400 focus:border-primary-400"
+                        data-testid="ark-share-step"
+                    />
+                    <input
+                        type="text"
+                        value={state.problem}
+                        onChange={(event) => setProblem(event.target.value)}
+                        maxLength={ARK_STORY_PROBLEM_MAX}
+                        placeholder={w.problemPlaceholder}
+                        aria-label={w.problemPlaceholder}
+                        className="mt-2 w-full rounded-xl border border-white/14 bg-white/[0.04] px-3 py-2 text-[13px] leading-5 text-white outline-none placeholder:text-ink-400 focus:border-primary-400"
+                        data-testid="ark-share-problem"
+                    />
+                    <p className="mt-2 text-[12px] leading-4 text-ink-400">{w.publicNote}</p>
+                    {errorLine}
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button type="submit" disabled={state.busy || state.step.trim().length < 3} className={CHIP_PRIMARY} data-testid="ark-share-share">{shareLabel}</button>
+                        <button type="button" onClick={notNow} disabled={state.busy} className={CHIP_QUIET} data-testid="ark-share-not-now">{w.notNow}</button>
+                    </div>
+                </form>
+            ) : state.phase === "shared" ? (
+                <>
+                    {shownNote}
+                    <p className="flex items-center gap-1.5 text-[13px] font-semibold leading-5 text-primary-200"><Tick />{w.shared}</p>
+                    {state.story ? <p className="mt-0.5 line-clamp-2 text-[12px] leading-4 text-ink-300">{state.story.step}</p> : null}
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button type="button" onClick={edit} disabled={state.busy} className={CHIP_PLAIN} data-testid="ark-share-edit">{w.edit}</button>
+                        <button type="button" onClick={() => void remove()} disabled={state.busy} className={CHIP_QUIET} data-testid="ark-share-remove">{w.remove}</button>
+                    </div>
+                    {errorLine}
+                </>
+            ) : (
+                <>
+                    {shownNote}
+                    <p className="text-[12px] font-semibold leading-4 text-ink-300" role="status">{w.removed}</p>
+                </>
+            )}
         </div>
     );
 }

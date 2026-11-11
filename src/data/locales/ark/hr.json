@@ -222,7 +222,7 @@
             "outOf": "od {max}",
             "summary": "Na brodu: {animals}, {species}",
             "anonymousTitle": "Anonimno na brodu",
-            "anonymousBody": "{name} putuje anonimno: u Arku se životinje te osobe prikazuju pod brojem Voyager, nikad pod imenom. Imena se prikazuju samo za osobe koje odluče pokazati svoje.",
+            "anonymousBody": "{name} putuje anonimno: u Arku se životinje te osobe prikazuju pod brojem Voyager, nikad pod imenom.",
             "selfPrivate": "Ovaj popis vidiš samo ti. U Arku drugi vide da je tvoje životinje doveo {label}.",
             "selfNamed": "Tvoje se ime prikazuje na tvojim životinjama u Arku.",
             "noneSelf": "Nijedna tvoja životinja još nije na brodu. Kad uspije korak neke od tvojih životinja, ta se životinja ukrcava.",
@@ -279,6 +279,52 @@
             "eatenBy": "Plijen je za",
             "see": "Pogledaj vrstu {animal} u Arku",
             "seeArk": "Pogledaj Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Prikaži moje ime na mojim životinjama u Arku",
+                "note": "Tvoje ime, @handle i fotografija prikazuju se na životinjama koje dovedeš u Ark. Isključi to i prikazivat ćeš se kao broj Voyager.",
+                "under18": "Dok ne napuniš 18 godina, prikazuješ se kao broj Voyager.",
+                "private": "Dok je tvoj profil privatan, prikazuješ se kao broj Voyager.",
+                "noHandle": "Dodaj @handle u svoj profil kako bi se prikazalo tvoje ime.",
+                "earlier": "Na životinjama koje si doveo/la prije nego što su se prikazivala imena još piše Voyager.",
+                "nameEarlier": "Prikaži moje ime i na njima",
+                "confirmAdult": "Uključivanjem potvrđuješ da imaš 18 ili više godina.",
+                "confirmYes": "Da, imam 18 ili više godina"
+            },
+            "share": {
+                "ask": "Podijeliti u Arku kako je uspjelo?",
+                "stepLabel": "Što si napravio/la",
+                "problemPlaceholder": "Jedan redak o problemu, tvojim riječima (neobavezno)",
+                "share": "Podijeli",
+                "edit": "Uredi",
+                "notNow": "Ne sada",
+                "shared": "Podijeljeno u Arku",
+                "publicNote": "Svi koji posjete Ark mogu ovo pročitati.",
+                "notPublic": "Ovo se ne može prikazati javno. Pokušaj drugim riječima.",
+                "couldNotCheck": "Trenutačno to nije bilo moguće provjeriti. Pokušaj ponovno.",
+                "remove": "Ukloni iz Arka",
+                "removed": "Uklonjeno iz Arka",
+                "askShort": "Podijeliti kako je uspjelo?",
+                "confirmShare": "Imam 18 ili više, podijeli"
+            },
+            "card": {
+                "howAboard": "Kako se ukrcala",
+                "broughtBy": "Doveo/la {name}"
+            },
+            "founder": {
+                "storiesTitle": "Kako su se njihove životinje ukrcale",
+                "noStories": "Još nema podijeljenih priča."
+            },
+            "name": {
+                "ask": "Prikazati tvoje ime u Arku?",
+                "adult": "Imam 18 ili više godina",
+                "yes": "Da, prikaži moje ime",
+                "shown": "Tvoje ime prikazuje se u Arku"
+            },
+            "error": {
+                "needsAdult": "Najprije potvrdi da imaš 18 ili više godina."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "Ark se trenutačno ne može učitati.",
         "arkFormerVoyager": "Bivši voyager",
         "animalTitleA": "Razgovaraj: {animal}",
-        "animalTitleAn": "Razgovaraj: {animal}"
+        "animalTitleAn": "Razgovaraj: {animal}",
+        "arkHowAboard": "Kako se ukrcala"
     }
 }

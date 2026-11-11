@@ -16,6 +16,7 @@ import {getArkWords} from "@/loaders/ark-words";
 import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
+import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
 
 /**
  * /ark: the shared Ark (Ark v1 contract, section 5). Every animal in it came
@@ -51,7 +52,10 @@ import type {ArkSnapshot} from "@/ark-scene/types";
  * hour (dawn), `?since=2026-11-08T12:00:00Z` replays "while you were away"
  * from then on (otherwise from the last visit, kept in localStorage), and
  * `?publicStory=1` lets the fixture's public-debate stories through, as the
- * server's `public_story` flag would.
+ * server's `public_story` flag would. `&founders=1` (with any `?fixture=`)
+ * answers as the server does with its `founder_names` switch on: one animal
+ * with a named founder and a shared story, one named without a story
+ * (`src/lib/ark-founders-fixture.ts`).
  *
  * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
@@ -65,7 +69,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; founders?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -180,24 +184,36 @@ function arkJsonLd(locale: string, description: string, name: string, homeName: 
     ];
 }
 
-async function loadFixture(mode: FixtureMode): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null}> {
+async function loadFixture(mode: FixtureMode, founders: boolean): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; founders: ArkFounders}> {
+    const named = founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders : null;
+    const read = await loadFixtureSnapshot(mode, named);
+    return {...read, founders: read.raw ? arkFoundersOf(read.raw) : ARK_NO_FOUNDERS};
+}
+
+async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
-    const raw = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    const base = (await import("@/ark-scene/fixtures/snapshot-v2.json")).default;
+    // Founders (`&founders=1`): the same answer as names-on writes it.
+    const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
         const edge = await import("@/ark-scene/fixtures/edge");
         const base = JSON.parse(JSON.stringify(raw)) as Parameters<typeof edge.herdFixture>[0];
         const built = mode === "herd1000" || mode === "herd5" ? edge.herdFixture(base, mode) : mode === "placeholder" ? edge.placeholderFixture(base) : edge.eggsFixture(base).snapshot;
-        return {snapshot: decodeArkSnapshot(built)!, full: null};
+        return {snapshot: decodeArkSnapshot(built)!, full: null, raw: built};
     }
     const full = decodeArkSnapshot(raw)!;
-    if (mode === "full") return {snapshot: full, full: null};
-    if (mode === "early") return {snapshot: decodeArkSnapshot((await import("@/ark-scene/fixtures/snapshot-early.json")).default)!, full: null};
-    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null};
-    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null};
-    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null};
+    if (mode === "full") return {snapshot: full, full: null, raw};
+    if (mode === "early") {
+        const earlyBase = (await import("@/ark-scene/fixtures/snapshot-early.json")).default;
+        const early = named ? named(earlyBase) : earlyBase;
+        return {snapshot: decodeArkSnapshot(early)!, full: null, raw: early};
+    }
+    if (mode === "sizes") return {snapshot: withSizeLineUp(full), full: null, raw};
+    if (mode === "micro") return {snapshot: withSmallAnimals(full), full: null, raw};
+    if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null, raw};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
-    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full};
+    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full, raw};
 }
 
 /**
@@ -320,7 +336,8 @@ function withSmallAnimals(full: ArkSnapshot): ArkSnapshot {
  * hanging, a toucan perching in the canopy; moles and mole-rats underground;
  * crabs and an octopus on the reef floor, a glowing pineapplefish, a whale
  * shark at the plankton, the deep's lanternfish, loosejaw (glowing) and giant
- * squid; a tawny owl and a gull for the moments.
+ * squid; a tawny owl and a gull for the moments; and the depth bands' water species (trout, a catfish,
+ * a pike, koi and swans in the lake, a plaice, a moray, orcas, a narwhal, a wrasse off the beach, jellyfish).
  */
 function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
     type Zone = ArkSnapshot["animals"][number]["zone"];
@@ -347,7 +364,21 @@ function withLayerAnimals(base: ArkSnapshot): ArkSnapshot {
         ["spotted-lanternfish", "Spotted Lanternfish", "open_ocean", "any", 3],
         ["giant-squid", "Giant Squid", "open_ocean", "any"],
         ["tawny-owl", "Tawny Owl", "woodland", "nocturnal"],
-        ["herring-gull", "Herring Gull", "seashore", "diurnal"]
+        ["herring-gull", "Herring Gull", "seashore", "diurnal"],
+        // The depth bands (`sea-depth.ts`): the lake's fish in its mid-water and on its bed, a koi of the farm in the lake,
+        // a swan on it, a plaice on the seabed, a moray in its hole, an orca and a narwhal that come up to breathe,
+        // a wrasse of the shore in the sea off it, a school of jellyfish in mid-water.
+        ["rainbow-trout", "Rainbow Trout", "river_lake", "diurnal", 3],
+        ["wels-catfish", "Wels Catfish", "river_lake", "nocturnal"],
+        ["northern-pike", "Northern Pike", "river_lake", "diurnal"],
+        ["koi", "Koi", "farm_garden", "diurnal", 2],
+        ["mute-swan", "Mute Swan", "river_lake", "diurnal", 2],
+        ["european-plaice", "European Plaice", "open_ocean", "any"],
+        ["green-moray", "Green Moray", "coral_reef", "nocturnal"],
+        ["orca", "Orca", "open_ocean", "any", 2],
+        ["narwhal", "Narwhal", "polar", "any"],
+        ["ballan-wrasse", "Ballan Wrasse", "seashore", "diurnal"],
+        ["moon-jellyfish", "Moon Jellyfish", "open_ocean", "any", 3]
     ];
     const animals = [...base.animals];
     extra.forEach(([slug, name, zone, activity, many = 1], i) => {
@@ -397,8 +428,9 @@ function rigOverride(searchParams: Props["searchParams"]): string | null | undef
 }
 
 /** The fixture's event log and life stories, as the server's reads would answer (the eggs fixture: its own log). */
-async function loadFixtureLife(mode: FixtureMode): Promise<ArkFixtureLife> {
-    const [events, lives] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+async function loadFixtureLife(mode: FixtureMode, founders: boolean): Promise<ArkFixtureLife> {
+    const [events, read] = await Promise.all([import("@/ark-scene/fixtures/events.json"), import("@/ark-scene/fixtures/lives.json")]);
+    const lives = {default: founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounderLives(read.default as unknown as Record<string, unknown>) : read.default};
     if (mode === "eggs") {
         const edge = await import("@/ark-scene/fixtures/edge");
         const raw = JSON.parse(JSON.stringify((await import("@/ark-scene/fixtures/snapshot-v2.json")).default)) as Parameters<typeof edge.eggsFixture>[0];
@@ -413,12 +445,14 @@ export default async function ArkPage({params, searchParams}: Props) {
     const development = process.env.NODE_ENV === "development";
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
+    const fixtureFounders = Boolean(mode) && development && searchParams.founders === "1";
     const [{words, talk, language}, data] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
-        mode ? loadFixture(mode).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
+        mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
     ]);
     const snapshot = data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
-    const fixtureLife = mode ? await loadFixtureLife(mode) : null;
+    const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
+    const founders = data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase()} events={fixtureLife?.events ?? null} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
@@ -434,6 +468,7 @@ export default async function ArkPage({params, searchParams}: Props) {
         <ArkView
             locale={wordsLocale}
             initial={snapshot}
+            founders={founders}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}
             signedIn={data.read?.signedIn ?? false}

@@ -222,7 +222,7 @@
             "outOf": "de {max}",
             "summary": "{animals} a bordo, {species}",
             "anonymousTitle": "Anónimo a bordo",
-            "anonymousBody": "{name} viaja de forma anónima: en el Ark sus animales aparecen con un número de Voyager, nunca con un nombre. Solo se muestran los nombres de quienes eligen mostrar el suyo.",
+            "anonymousBody": "{name} viaja de forma anónima: en el Ark sus animales aparecen con un número de Voyager, nunca con un nombre.",
             "selfPrivate": "Solo tú ves esta lista. En el Ark, los demás ven tus animales como traídos por {label}.",
             "selfNamed": "Tu nombre aparece en tus animales del Ark.",
             "noneSelf": "Ninguno de tus animales está a bordo todavía. Cuando un paso de uno de tus animales funcione, ese animal subirá a bordo.",
@@ -279,6 +279,52 @@
             "eatenBy": "Es presa de",
             "see": "Ver {animal} en el Ark",
             "seeArk": "Ver el Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "Mostrar mi nombre en mis animales del Ark",
+                "note": "Tu nombre, tu @handle y tu foto aparecen en los animales que traes al Ark. Desactívalo para aparecer como un número de Voyager.",
+                "under18": "Apareces como un número de Voyager mientras tengas menos de 18 años.",
+                "private": "Apareces como un número de Voyager mientras tu perfil sea privado.",
+                "noHandle": "Añade un @handle a tu perfil para mostrar tu nombre.",
+                "earlier": "Los animales que trajiste antes de que se mostraran los nombres siguen diciendo Voyager.",
+                "nameEarlier": "Mostrar mi nombre también en ellos",
+                "confirmAdult": "Al activarlo, confirmas que tienes 18 años o más.",
+                "confirmYes": "Sí, tengo 18 años o más"
+            },
+            "share": {
+                "ask": "¿Compartir en el Ark cómo funcionó?",
+                "stepLabel": "Lo que hiciste",
+                "problemPlaceholder": "Una línea sobre el problema, con tus palabras (opcional)",
+                "share": "Compartir",
+                "edit": "Editar",
+                "notNow": "Ahora no",
+                "shared": "Compartido en el Ark",
+                "publicNote": "Todos los que visitan el Ark pueden leer esto.",
+                "notPublic": "Esto no se puede mostrar públicamente. Prueba con otras palabras.",
+                "couldNotCheck": "No se pudo comprobar ahora mismo. Inténtalo de nuevo.",
+                "remove": "Quitar del Ark",
+                "removed": "Quitado del Ark",
+                "askShort": "¿Compartir cómo funcionó?",
+                "confirmShare": "Tengo 18 o más, compartir"
+            },
+            "card": {
+                "howAboard": "Cómo subió a bordo",
+                "broughtBy": "Traído por {name}"
+            },
+            "founder": {
+                "storiesTitle": "Cómo subieron a bordo sus animales",
+                "noStories": "Aún no hay historias compartidas."
+            },
+            "name": {
+                "ask": "¿Mostrar tu nombre en el Ark?",
+                "adult": "Tengo 18 años o más",
+                "yes": "Sí, mostrar mi nombre",
+                "shown": "Tu nombre aparece en el Ark"
+            },
+            "error": {
+                "needsAdult": "Primero confirma que tienes 18 años o más."
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "El Ark no se pudo cargar ahora mismo.",
         "arkFormerVoyager": "Antiguo voyager",
         "animalTitleA": "Habla con {animal}",
-        "animalTitleAn": "Habla con {animal}"
+        "animalTitleAn": "Habla con {animal}",
+        "arkHowAboard": "Cómo subió a bordo"
     }
 }

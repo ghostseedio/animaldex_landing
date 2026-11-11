@@ -222,7 +222,7 @@
             "outOf": "/ {max}",
             "summary": "{animals}が乗船中、{species}",
             "anonymousTitle": "匿名で乗船中",
-            "anonymousBody": "{name}さんは匿名で旅しています。Arkでは、その動物は名前ではなくVoyager番号で表示されます。名前が表示されるのは、自分の名前を表示すると選んだ人だけです。",
+            "anonymousBody": "{name}さんは匿名で旅しています。Arkでは、その動物は名前ではなくVoyager番号で表示されます。",
             "selfPrivate": "このリストはあなただけに表示されます。Arkでは、ほかの人にはあなたの動物を連れてきたのは{label}と表示されます。",
             "selfNamed": "Arkでは、あなたの動物にあなたの名前が表示されます。",
             "noneSelf": "あなたの動物はまだ乗船していません。あなたの動物から生まれたステップがうまくいくと、その動物が乗り込みます。",
@@ -279,6 +279,52 @@
             "eatenBy": "天敵",
             "see": "Arkで{animal}を見る",
             "seeArk": "Arkを見る"
+        },
+        "founders": {
+            "settings": {
+                "title": "Arkの自分の動物に名前を表示する",
+                "note": "あなたの名前、@handle、写真が、Arkに連れてきた動物に表示されます。オフにすると、Voyager番号で表示されます。",
+                "under18": "18歳未満の間は、Voyager番号で表示されます。",
+                "private": "プロフィールが非公開の間は、Voyager番号で表示されます。",
+                "noHandle": "名前を表示するには、プロフィールに@handleを追加してください。",
+                "earlier": "名前の表示が始まる前に連れてきた動物には、今もVoyagerと表示されています。",
+                "nameEarlier": "その動物にも名前を表示する",
+                "confirmAdult": "オンにすると、18歳以上であることを確認したことになります。",
+                "confirmYes": "はい、18歳以上です"
+            },
+            "share": {
+                "ask": "どううまくいったか、Arkでシェアしますか？",
+                "stepLabel": "やったこと",
+                "problemPlaceholder": "問題について、自分の言葉で1行（任意）",
+                "share": "シェア",
+                "edit": "編集",
+                "notNow": "今はしない",
+                "shared": "Arkでシェアしました",
+                "publicNote": "Arkを訪れた人は誰でもこれを読めます。",
+                "notPublic": "これは公開できません。別の言葉で試してください。",
+                "couldNotCheck": "今は確認できませんでした。もう一度お試しください。",
+                "remove": "Arkから外す",
+                "removed": "Arkから外しました",
+                "askShort": "どううまくいったか、シェアしますか？",
+                "confirmShare": "18歳以上、シェアする"
+            },
+            "card": {
+                "howAboard": "乗り込んだいきさつ",
+                "broughtBy": "連れてきた人：{name}"
+            },
+            "founder": {
+                "storiesTitle": "動物たちが乗り込んだいきさつ",
+                "noStories": "シェアされたストーリーはまだありません。"
+            },
+            "name": {
+                "ask": "Arkにあなたの名前を表示しますか？",
+                "adult": "18歳以上です",
+                "yes": "はい、名前を表示する",
+                "shown": "Arkにあなたの名前が表示されます"
+            },
+            "error": {
+                "needsAdult": "先に18歳以上であることを確認してください。"
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "今はArkを読み込めませんでした。",
         "arkFormerVoyager": "元Voyager",
         "animalTitleA": "{animal}と話す",
-        "animalTitleAn": "{animal}と話す"
+        "animalTitleAn": "{animal}と話す",
+        "arkHowAboard": "乗り込んだいきさつ"
     }
 }

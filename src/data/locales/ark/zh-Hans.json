@@ -222,7 +222,7 @@
             "outOf": "/ {max}",
             "summary": "船上共有{species}、{animals}",
             "anonymousTitle": "匿名登船",
-            "anonymousBody": "{name}以匿名身份旅行：在 Ark 上，其动物只显示为 Voyager 编号，从不显示名字。只有选择公开自己名字的人，名字才会显示。",
+            "anonymousBody": "{name}以匿名身份旅行：在 Ark 上，其动物只显示为 Voyager 编号，从不显示名字。",
             "selfPrivate": "只有你能看到这份列表。在 Ark 上，其他人看到你的动物是由{label}带来的。",
             "selfNamed": "在 Ark 中，你的动物上会显示你的名字。",
             "noneSelf": "你还没有动物登船。当你的某只动物给出的一步奏效时，那只动物就会登船。",
@@ -279,6 +279,52 @@
             "eatenBy": "天敌",
             "see": "在 Ark 中查看{animal}",
             "seeArk": "查看 Ark"
+        },
+        "founders": {
+            "settings": {
+                "title": "在我的 Ark 动物上显示我的名字",
+                "note": "你的名字、@handle 和照片会显示在你带到 Ark 的动物上。关闭后将显示为 Voyager 编号。",
+                "under18": "你未满 18 岁期间，会显示为 Voyager 编号。",
+                "private": "你的个人资料设为私密期间，会显示为 Voyager 编号。",
+                "noHandle": "在个人资料中添加 @handle 即可显示你的名字。",
+                "earlier": "在显示名字之前你带来的动物仍显示 Voyager。",
+                "nameEarlier": "也在它们上面显示我的名字",
+                "confirmAdult": "开启即表示你确认已年满 18 岁。",
+                "confirmYes": "是的，我已年满 18 岁"
+            },
+            "share": {
+                "ask": "在 Ark 上分享这一步是怎么奏效的？",
+                "stepLabel": "你做了什么",
+                "problemPlaceholder": "用你自己的话，写一行关于这个问题的内容（可选）",
+                "share": "分享",
+                "edit": "编辑",
+                "notNow": "暂不",
+                "shared": "已在 Ark 上分享",
+                "publicNote": "所有来访 Ark 的人都能看到这段内容。",
+                "notPublic": "这段内容无法公开显示。换个说法试试。",
+                "couldNotCheck": "暂时无法检查，请重试。",
+                "remove": "从 Ark 移除",
+                "removed": "已从 Ark 移除",
+                "askShort": "分享这一步是怎么奏效的？",
+                "confirmShare": "我已满 18 岁，分享"
+            },
+            "card": {
+                "howAboard": "它是如何登船的",
+                "broughtBy": "由{name}带来"
+            },
+            "founder": {
+                "storiesTitle": "这些动物是如何登船的",
+                "noStories": "还没有分享的故事。"
+            },
+            "name": {
+                "ask": "在 Ark 上显示你的名字？",
+                "adult": "我已年满 18 岁",
+                "yes": "好，显示我的名字",
+                "shown": "你的名字已在 Ark 上显示"
+            },
+            "error": {
+                "needsAdult": "请先确认你已年满 18 岁。"
+            }
         }
     },
     "talkPage": {
@@ -297,6 +343,7 @@
         "arkUnavailable": "Ark 暂时无法加载。",
         "arkFormerVoyager": "前 Voyager",
         "animalTitleA": "与{animal}对话",
-        "animalTitleAn": "与{animal}对话"
+        "animalTitleAn": "与{animal}对话",
+        "arkHowAboard": "它是如何登船的"
     }
 }
