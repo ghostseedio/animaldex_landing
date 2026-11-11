@@ -74,7 +74,7 @@ Checked in the browser (desktop Chromium, the measurement page, the bridge messa
 
 What they show:
 - **GPU memory: halved** for the same Ark (the skins fitted per tier); it grows with species at about a quarter of the old rate on the medium tier, and the budgets bound it.
-- **The long task is the mount itself**, before any frame: 4 s on the desktop, 15–18 s on the throttled phone profile, on a machine this loaded (2.5 s and 10.9 s on a quieter run earlier the same day). The runtime cannot split it from outside; it is the scenery and behaviour builds (profile, phone, ms of 12,200 in `mountArk`): `buildVegetation` 6,400 (the forest fill 4,000: 220,000 ground samples for 640 trees; the grass 1,700), `buildLandscape` 2,100, `setSnapshot` 2,000 (the behaviour schedule's places and walk grid 1,000). The runtime's part: the grass built for the tier (the phone builds 22,000 tufts, not 56,000: the phone median mount 18.5 → 14.8 s). A same-result speed-up of the forest fill is handed to the graphics lane (§7).
+- **The long task is the mount itself**, before any frame: 4 s on the desktop, 15–18 s on the throttled phone profile, on a machine this loaded (2.5 s and 10.9 s on a quieter run earlier the same day). The runtime cannot split it from outside; it is the scenery and behaviour builds (profile, phone, ms of 12,200 in `mountArk`): `buildVegetation` 6,400 (the forest fill 4,000: 220,000 ground samples for 640 trees; the grass 1,700), `buildLandscape` 2,100, `setSnapshot` 2,000 (the behaviour schedule's places and walk grid 1,000). The runtime's part: the grass built for the tier (the phone builds 22,000 tufts, not 56,000: the phone median mount 18.5 → 14.8 s). A same-result speed-up of the forest fill is handed to the graphics lane (§8).
 - **The first frame after the mount**: before, its first use of every shader compiled them on the main thread (`onFirstUse`, 3.4 s in a desktop profile); now the scene's shaders compile in parallel before it, in a 263 ms task plus a ~500 ms first draw on the phone profile (the post chain's and the shadow pass's own shaders still compile at first use).
 - **In view** (every model asked for by then in) is within the noise; the desktop's later time comes from the load order now starting with what the camera sees after the opening (the old order was the snapshot's).
 - The walk with a 6 MB skin ceiling (an impossible one: the far levels alone are 16 MB) let 74 near levels go in 30 s, never one drawn near, and loaded them again only when the camera came back within the near distance; no errors.
@@ -90,7 +90,7 @@ Desktop Chrome with the phone profile is a proxy: it throttles the CPU but not t
 3. **Both**: the bridge's states (`docs/ark/runtime-bridge.md` §Testing): covered, background, Low Power Mode / battery saver, a heat override; the reset button and the loading bar at the panel's size; a WebGL context loss (Safari's "Lose context" in the inspector's Canvas tab) to see the page's fallback.
 4. If a device loses the context or jetsams at its tier: lower that tier's `textureMB` in `budgets.ts`, or move the device class down a tier in `post.ts` `tierFor`.
 
-## 8. At the captures scale (~3,100 animals at launch, ~9,400 in a year)
+## 7. At the captures scale (~3,100 animals at launch, ~9,400 in a year)
 
 The owner's decision that captures bring animals aboard (AnimalDex `docs/ark/captures-backfill-dry-run.md`) puts the Ark at 25–70× today's fixture. The dry run measured what breaks: the mount's single task, then CPU per frame linear in the animals drawn one by one, then downloads and memory; not the GPU.
 
@@ -119,14 +119,17 @@ The phone profile ran on the low tier in both builds (the scene drops a tier und
 **What is left: the mount itself.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
 1. **A worker prebuild.** Before `mountArk`, a worker computes the seeded, pure data: `worldDecor`, `forestFill`, `grassTufts(tier)`, the ground's height grid, `placeAnimals(snapshot)` and `scheduleWorld(worldSampler())`, and hands them over as typed arrays. Each builder takes a primed cache (one `prime…` export per module: decor.ts, terrain.ts, placement.ts, behaviour-schedule.ts). The worker file is built by `scripts/build-ark-bundle.mjs` into `public/ark/ark-worker.js` (the apps' embed) and loaded with `new Worker(new URL(...))` on the site; without workers, the same functions run on the main thread as today.
 2. **A progressive mount.** `mountArk` builds in slices under 50 ms (the ground, the water, each vegetation kind, the micro scene, the layers, the animals in batches), yielding between them, and draws the first frame from the ground and the sky while the rest comes in behind the quiet loading bar; the handle works from the first call (calls queue until the animals are in).
-3. Meanwhile the forest fill's 2.3× speed-up (§7) and the grass by tier cut the scenery's share now.
+3. Meanwhile the forest fill's 2.3× speed-up (§8) and the grass by tier cut the scenery's share now.
 
-## 7. For other lanes
+## 8. For other lanes
 
 - **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (14.8 s → 6.4 s side by side in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `docs/ark/runtime/graphics-forestfill-prefilter.patch` (applies to ark-release a92a19b9), verified identical with a deep-equal test of the old and new lists.
 - **Graphics / props / scene**: round the shader frequencies in graphics-interface.md's "shared clock" table.
 - **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned; drive the resting rotation (`arkOutside`) from dens, roosts and burrows when ready.
 - **Map**: the live budget's pure rotation is the hook for "resting out of sight" per area (home 240 / 120 / 60 in the dry run's proposal).
+- **Map / owner** (seen in the 3× shots, `docs/ark/scale/`): the live budget bounds the animals drawn one by one, not the herds' figures. At 3× the house area shows about 900 herd figures (cats and dogs ×921, ×786 round the cottage). The same rotation can rest a share of each herd (`arkOutside` over herd members, or the home area's own budget); that is a look decision for the owner.
+- **Graphics (reef)**: `fish-schools.ts` keeps its own sea clock (`seaEpochSeconds`, `pinSeaClock`, 600 s): the same window as the shared clock, so they agree; `seaEpochSeconds` can return `arkEpochSeconds()` and the golden page can pin both with `pinArkClock`.
+- **Integrator**: on ark-release 02fbaa24 itself three tests fail (behaviour "prey watch a predator they can see", props "props build…" and "props nest sites…"); the same three fail on this branch after merging it, and nothing else.
 - **i18n**: `ark.a11y.resetView` in every language ("Back to the whole Ark"); the web page and the embed already pass it when present.
 - **Apps**: post `ark:visible` and `ark:power` (docs/ark/runtime-bridge.md).
 
