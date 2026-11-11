@@ -814,3 +814,44 @@ test("the same for every viewer: where an animal is never depends on what was as
     }
     assert.deepEqual(differ.slice(0, 8), [], `${differ.length} differ`);
 });
+
+test("a grazer drifts forward: its steps while grazing, browsing or foraging turn under 2 times a minute of movement", () => {
+    // (The default view's turning by source, 2026-11-11: a zebra's grazing steps 2.4-13 turns a minute of movement, an
+    // ibex's 8: each step went a little to one side and the next to the other. Measured as the check measures: every
+    // 0.25 s, moving faster than 0.15 of its length a second, its way's turns summed, the way kept across the pauses.)
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const bySlug = new Map<string, {turn: number; moving: number}>();
+    for (const i of animals.filter((x) => x.profile.move !== "fly" && x.profile.move !== "swim")) {
+        const length = Math.max(i.animal.length, 0.05);
+        let last = poseOf(i, DAY + 6 * 3600);
+        let lastTrip = tripOf(i, DAY + 6 * 3600);
+        let way: number | null = null;
+        for (let k = 1; k < 6 * 3600 * 4; k++) {
+            const t = DAY + 6 * 3600 + k * 0.25;
+            const trip = tripOf(i, t);
+            const p = poseOf(i, t);
+            // (Its steps there: from a quarter second after it arrives, so the walk in is not one of them; the turn it
+            // makes where it stands on arriving is the stay's one bigger turn, after a pause.)
+            const feeding = trip === lastTrip && t - 0.25 >= trip.arrive && !trip.shadow && ["graze", "browse", "forage"].includes(trip.doing) && p.y >= -0.01;
+            if (!feeding) way = null;
+            else {
+                const d = Math.hypot(p.x - last.x, p.z - last.z);
+                if (d / 0.25 > Math.max(0.05, 0.15 * length)) {
+                    const w = Math.atan2(p.x - last.x, p.z - last.z);
+                    const row = bySlug.get(i.a.model_slug) ?? {turn: 0, moving: 0};
+                    if (way !== null) row.turn += Math.abs(wrap(w - way));
+                    row.moving += 0.25;
+                    bySlug.set(i.a.model_slug, row);
+                    way = w;
+                }
+            }
+            last = p;
+            lastTrip = trip;
+        }
+    }
+    // (A species judged on a minute of its steps or more: a cricket's few centimetre steps make too few samples.)
+    const rows = Array.from(bySlug.entries()).filter(([, r]) => r.moving >= 60).map(([slug, r]) => [slug, r.turn / (Math.PI * 2) / (r.moving / 60)] as const);
+    assert.ok(rows.length >= 10, `species ${rows.length}`);
+    const over = rows.filter(([, v]) => v >= 2).map(([slug, v]) => `${slug} ${v.toFixed(1)}`);
+    assert.deepEqual(over, [], "turns a minute of movement while feeding");
+});

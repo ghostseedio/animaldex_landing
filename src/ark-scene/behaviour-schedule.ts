@@ -623,19 +623,23 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
         case "graze":
         case "browse":
             for (let n = 0; n < 14; n++) {
-                add("bite", 3 + random() * 5);
+                // Now and then, head down between bites, it turns a little where it stands (26 degrees at most):
+                // the only bigger change of its way, and after a pause.
+                add("bite", 3 + random() * 5, random() < 0.08 ? {turn: (random() - 0.5) * 0.9} : {});
                 add("chew", 1.5 + random() * 2.5);
                 if (random() < 0.28) add("scan", 2 + random() * 2.5, {turn: (random() - 0.5) * 1.6});
-                // Small steps, mostly forward (a grazer moves on along the grass, it doesn't wheel about).
-                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.15 : 0.2 + random() * 0.25, dz: (random() - 0.5) * 0.08, turn: (random() - 0.5) * 0.2});
+                // Steps straight on along the way it faces, a few degrees off at most (a grazer drifts forward along the
+                // grass; 2026-11-11: a step to one side and the next to the other read as 2-13 turns a minute of movement).
+                if (random() < 0.55) add("step", 1.4, {dx: doing === "browse" ? 0.3 + random() * 0.15 : 0.45 + random() * 0.3, turn: (random() - 0.5) * 0.08});
             }
             break;
         case "forage":
         case "visit_flowers":
             for (let n = 0; n < 16; n++) {
-                add("peck", 1.5 + random() * 3);
+                // (As grazing: straight on, a few degrees off; now and then a turn where it stands, 26 degrees at most.)
+                add("peck", 1.5 + random() * 3, random() < 0.08 ? {turn: (random() - 0.5) * 0.9} : {});
                 if (random() < 0.3) add("scan", 1.5 + random() * 2, {turn: (random() - 0.5) * 1.4});
-                if (random() < 0.6) add("step", 1, {dx: 0.3 + random() * 0.4, dz: (random() - 0.5) * 0.12, turn: (random() - 0.5) * 0.35});
+                if (random() < 0.6) add("step", 1, {dx: 0.5 + random() * 0.4, turn: (random() - 0.5) * 0.08});
             }
             break;
         case "drink":
