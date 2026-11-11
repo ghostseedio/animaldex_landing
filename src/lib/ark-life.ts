@@ -13,7 +13,9 @@
  *   server's flag lets it through.
  */
 
-import type {ArkSnapshot, ArkSociality, ArkZone} from "@/ark-scene/types";
+import type {ArkArea, ArkArrivalSource, ArkSnapshot, ArkSociality, ArkThrive, ArkZone} from "@/ark-scene/types";
+import {arkArea, arkArrivalSource} from "@/ark-scene/thrive";
+import {decodeArkLineage, decodeArkThriveField, type ArkLineage} from "@/lib/ark-thrive";
 import {ARK_ZONES} from "@/ark-scene/types";
 import {arkActivity, type ArkActivity} from "@/lib/ark-daylight";
 import {decodeArkStory, type ArkAnimalStory} from "@/lib/ark-story";
@@ -53,6 +55,9 @@ export type ArkEventAnimal = {
     sociality: ArkSociality | null;
     /** As it is now (an eaten one is `eaten`). */
     status: ArkAnimalStatus | null;
+    /** Captures + thrive: how well kept it is now, and its area (placement only); null from an older server (absent where it is made by hand). */
+    thrive?: ArkThrive | null;
+    area?: ArkArea | null;
 };
 
 export type ArkEvent = {
@@ -75,6 +80,10 @@ export type ArkEvent = {
     from_egg: boolean;
     /** A `laid` row's clutch: how many eggs (`payload.eggs`), when the server says. */
     eggs: number | null;
+    /** On a `milestone` (a worked step): the band the step left the person's animals in; else null. */
+    thrive: ArkThrive | null;
+    /** On an `arrival`: how it came aboard (a capture, or before them a step); else null. */
+    source: ArkArrivalSource | null;
 };
 
 const ZONES = new Set<string>(ARK_ZONES);
@@ -138,7 +147,9 @@ function eventAnimal(value: unknown, aboard: Map<string, ArkSnapshot["animals"][
         slot_rank: whole(row.slot_rank),
         activity: arkActivity(row.activity),
         sociality: sociality === "solitary" || sociality === "pair" || sociality === "group" ? sociality : null,
-        status: status(row.status)
+        status: status(row.status),
+        thrive: decodeArkThriveField(row.thrive),
+        area: arkArea(row.area)
     };
 }
 
@@ -180,7 +191,9 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             parents: Array.from(new Set(parents)).slice(0, 2),
             bringers: labels(row.bringers),
             from_egg: payload.from_egg === true || row.from_egg === true,
-            eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null
+            eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
+            thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
+            source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null
         });
     });
     return events
@@ -363,7 +376,8 @@ export type ArkLife = {
     model_slug: string | null;
     status: ArkAnimalStatus;
     origin:
-        | {kind: "arrived"; at: string | null; brought_by: string | null}
+        /** `source`: a capture brought it, or (before captures did) a step; null from an older server. */
+        | {kind: "arrived"; at: string | null; brought_by: string | null; source: ArkArrivalSource | null}
         | {kind: "born"; at: string | null; parents: string[]; born_to: string[]; breeding_source: ArkBreedingSource | null; /** Hatched from an egg (A9). */ from_egg: boolean};
     generation: number;
     born_ark_day: number | null;
@@ -391,6 +405,12 @@ export type ArkLife = {
     founders: {names: boolean; brought_by: ArkFounder | null; born_to: Array<ArkFounder | null>; ancestor: ArkFounder | null};
     /** The story its founder chose to share (what they did, the problem line), or null. */
     founder_story: ArkFounderStory | null;
+    /** Captures + thrive: how well kept it is now (null once it has died, or from an older server). */
+    thrive: ArkThrive | null;
+    /** The house or the farm (placement only), or null: its zone. */
+    area: ArkArea | null;
+    /** Its descendants ever born, by generation, and how many live (null from an older server). */
+    lineage: ArkLineage | null;
 };
 
 function count(value: unknown): number {
@@ -428,7 +448,7 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
                 breeding_source: breeding === "stored" || breeding === "partial" || breeding === "estimate" ? breeding : null,
                 from_egg: origin.from_egg === true || record(origin.payload)?.from_egg === true
             }
-            : {kind: "arrived", at: text(origin.at, 40), brought_by: label(origin.brought_by)},
+            : {kind: "arrived", at: text(origin.at, 40), brought_by: label(origin.brought_by), source: arkArrivalSource(origin.source ?? row.source)},
         generation: count(row.generation),
         born_ark_day: number(row.born_ark_day),
         ark_age_days: ageDays !== null && ageDays >= 0 ? ageDays : null,
@@ -448,7 +468,11 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
             born_to: origin.kind === "born" ? bornTo.map((item) => decodeArkFounder(record(item)?.founder)) : [],
             ancestor: decodeArkFounder(record(row.ancestor_brought_by)?.founder)
         },
-        founder_story: origin.kind === "born" ? null : decodeArkFounderStory(row.founder_story)
+        founder_story: origin.kind === "born" ? null : decodeArkFounderStory(row.founder_story),
+        // Once it has died it has no condition (the contract's null); the read's band otherwise.
+        thrive: died ? null : decodeArkThriveField(row.thrive),
+        area: arkArea(row.area),
+        lineage: decodeArkLineage(row.lineage)
     };
 }
 

@@ -133,8 +133,10 @@ import {
     type ArkSceneStats,
     type ArkSnapshot,
     type ArkTalking,
+    type ArkThrive,
     type ArkVisitor
 } from "@/ark-scene/types";
+import {arkThriveOf} from "@/ark-scene/thrive";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -150,6 +152,7 @@ import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 
 export * from "@/ark-scene/types";
+export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
 export {decodeArkSnapshot} from "@/ark-scene/snapshot";
 
 /** Near level within this distance (m), far beyond it. */
@@ -247,6 +250,11 @@ type Entry = {
     length: number;
     /** The species' stats: looks and behaviour only. */
     stats: ArkStats;
+    /**
+     * How well kept it is (`thrive.ts`, the server's band; ordinary when it sent none): the hook for its coat and
+     * energy and its claim on the best places. Refreshed with every snapshot. Not drawn yet; never a glow or a badge.
+     */
+    thrive: ArkThrive;
     /** At the size floor: drawn with a marker so it can be found. */
     floor: boolean;
     /** Its usual drawn length (m, the floor and the cap applied); `length` is what it is drawn at this frame. */
@@ -845,7 +853,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!scheduleOn || place.micro || place.burrow || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
-            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea},
+            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal)},
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1045,6 +1053,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone),
             seed: depthSeed(animal.id),
             stats: arkStats(animal),
+            thrive: arkThriveOf(animal),
             floor: body.floor,
             pace: loopPace(animal),
             arrivedAt,
@@ -1221,7 +1230,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
-                ? ownSize(Object.assign(before, {animal, place, length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
+                ? ownSize(Object.assign(before, {animal, place, thrive: arkThriveOf(animal), length: body.display * sexScale(animal), full: body.display * sexScale(animal), trueLength: body.metres, micro: place.micro ? microSpecies(animal.model_slug) : null, layer: speciesLayer(animal.model_slug), depth: place.micro ? null : speciesDepth(animal.model_slug, animal.zone), floor: body.floor, stats: arkStats(animal), pace: loopPace(animal)}))
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
@@ -3793,6 +3802,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             depth: null,
             seed: 0,
             stats: arkStats({model_slug: next.slug}),
+            // The chat's visitor is never one of the Ark's: ordinary, always.
+            thrive: "ordinary",
             floor: arkBody({model_slug: next.slug}).floor,
             pace: loopPace({model_slug: next.slug}),
             arrivedAt: (performance.now() - started) / 1000,
