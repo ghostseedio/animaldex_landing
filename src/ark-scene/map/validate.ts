@@ -38,7 +38,7 @@ import {canopyTree, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
 import {surfacePoint} from "@/ark-scene/micro";
 import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
-import {arborealOf, CANOPY_TAGS, mapPoints, wetOf} from "@/ark-scene/map/place";
+import {arborealOf, CANOPY_TAGS, mapPoints, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
 import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
@@ -181,6 +181,8 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             let sea = false;
             for (let k = 0; k < 16 && !sea; k++) for (let r = 1; r <= SHORE_REACH + 2 && !sea; r += 1) sea = sampler.ground(place.x + Math.sin(k * Math.PI / 8) * r, place.z + Math.cos(k * Math.PI / 8) * r).water === "sea";
             if (!sea) fail("invalid_surface", `not by the sea at ${place.x.toFixed(1)},${place.z.toFixed(1)}`);
+            // On its own shore: the cove's ice for the polar ones, its warm coast for the others (a Galápagos penguin never on the ice).
+            if ((shoreOf(animal.model_slug, animal.zone) === "cove") !== (map.shore === "cove")) fail("invalid_surface", `a ${map.shore} diver whose shore is ${shoreOf(animal.model_slug, animal.zone)}`);
             continue;
         }
         // A small flyer with no perch that fits it in reach lands on its ground or its water (section 2: "only at valid perches, the ground or the water").
