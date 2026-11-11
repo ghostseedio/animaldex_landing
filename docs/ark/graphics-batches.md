@@ -291,6 +291,14 @@ Golden sheets: `batch6-desktop-before-after.jpg`, `batch6-phone-before-after.jpg
   - The rib cut takes a wobble: `smoothstep(0.6, 0.88, rib + 0.2·(noise(p·0.35 - 2.1) - 0.5))`.
   - The rock beds' tone fades by 70 % up in the snow (`beds *= 1 - 0.7·high`), so rock showing through reads as one stone.
   - The alpine snow line, the ledge snow and the ice are unchanged.
+- **Dark blocks on every tier (follow-up; the integrator saw them at the island view on the low tier):**
+  - Two causes, both in the rock's tone, not the snow:
+    - the beds' fade used `fwidth(bedAt)`, which is constant per triangle and jumps from one to the next, so the ground's 1.1 m grid showed through the faces as squares;
+    - the water runs on the hard beds took a fresh noise row per bed, so they were cut off square at the bed lines: dark blocks from afar.
+  - The low tier shows these plainly because it has no tilt-shift blur; medium and high had them too, softened.
+  - Now the fade uses the pixel's size on the ground, `distance × length(fwidth(view ray))`, which is the same on every triangle. The bedding planes fade once they are under a few pixels tall. The runs run continuously through the beds, fade towards each bed's top and foot, and show only near the camera.
+  - The snow formula is unchanged (the ledge snow's fade now uses this pixel size, but `snow.ts` does not count ledges).
+  - Checked at the island view and the mountain camera on low, medium and high (desktop), and on low and medium (phone): no grid and no blocks. The sheet is `batch6-mountain-tiers.jpg`.
 - **Numbers.** Golden shots, same conditions, before (fd3cb1ac) and after:
 
   | shot | desktop high triangles | desktop high draw calls | phone medium triangles |
