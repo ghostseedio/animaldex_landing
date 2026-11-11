@@ -14,6 +14,7 @@
  *   node scripts/ark-golden-shots.mjs --study natural,toon,real --label studies
  *   node scripts/ark-golden-shots.mjs --animals red-fox,mallard --label animal-look     (the animal-look pass:
  *            each species close up, the pass off ("before") then on ("after"); --wet adds a rain shot;
+ *            --rigged red-fox,... adds a moving shot of those (the rig playing: the look on a skinned mesh);
  *            --measure-animals measures each; the close-up skins come from the local build,
  *            ~/animaldex-talking-models/ark-closeup, or --closeup-dir)
  *   options: --out <dir>  --devices desktop,phone  --places coast_rocks,...  --times day,night
@@ -65,6 +66,7 @@ const gpu = arg("gpu", "metal");
 const measureMs = Number(arg("measure", "3000"));
 const studies = arg("study", "") ? arg("study", "").split(",") : [];
 const animals = arg("animals", "") ? arg("animals", "").split(",") : [];
+const rigged = new Set(arg("rigged", "") ? arg("rigged", "").split(",") : []);
 const closeUpDir = path.resolve(arg("closeup-dir", path.join(os.homedir(), "animaldex-talking-models", "ark-closeup")));
 
 // MARK: build + serve
@@ -189,12 +191,12 @@ if (animals.length) {
         const gpuName = await renderer(page);
         const prepared = await page.evaluate(() => window.__arkGolden.prepare());
         log(deviceName, "prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, models: prepared.stats.modelsLoaded}));
-        const variants = [{wetness: 0, suffix: ""}, ...(flag("wet") ? [{wetness: 1, suffix: "-wet"}] : [])];
+        const variants = [{wetness: 0, suffix: "", moving: false}, ...(flag("wet") ? [{wetness: 1, suffix: "-wet", moving: false}] : [])];
         for (const time of times) {
             for (const slug of animals) {
-                for (const variant of variants) {
+                for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true}] : [])]) {
                     for (const look of [false, true]) {
-                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !flag("moving")}]);
+                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving"))}]);
                         if (!shot.found) {
                             log(deviceName, slug, "not in the fixture");
                             break;
@@ -202,8 +204,8 @@ if (animals.length) {
                         const file = `${deviceName}-${slug}-${time}${variant.suffix}-${look ? "after" : "before"}.png`;
                         await page.screenshot({path: path.join(out, file)});
                         const numbers = flag("measure-animals") ? await page.evaluate((ms) => window.__arkGolden.measure(ms), measureMs) : {};
-                        results.push({device: deviceName, gpu, gpuName, place: slug, time: `${time}${variant.suffix} ${look ? "after" : "before"}`, file, closeUpSkins: shot.closeUpSkins, furShells: shot.furShells, rigged: shot.rigged, ...numbers});
-                        log(deviceName, slug, time + variant.suffix, look ? "after" : "before", JSON.stringify({closeUp: shot.closeUpSkins, shells: shot.furShells, rigged: shot.rigged, ...numbers}));
+                        results.push({device: deviceName, gpu, gpuName, place: slug, time: `${time}${variant.suffix} ${look ? "after" : "before"}`, file, clear: shot.clear, closeUpSkins: shot.closeUpSkins, furShells: shot.furShells, rigged: shot.rigged, ...numbers});
+                        log(deviceName, slug, time + variant.suffix, look ? "after" : "before", JSON.stringify({clear: shot.clear, closeUp: shot.closeUpSkins, shells: shot.furShells, rigged: shot.rigged, ...numbers}));
                     }
                 }
             }

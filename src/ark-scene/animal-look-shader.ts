@@ -78,8 +78,16 @@ export const LOOK_VERTEX = `
     arkModelView = modelViewMatrix * instanceMatrix;
 #endif
     vArkScale = length(arkModelView[0].xyz);
-    vArkEyeL = (arkModelView * vec4(position - arkEye.xyz, 0.0)).xyz;
-    vArkEyeR = (arkModelView * vec4(position - arkEye2, 0.0)).xyz;
+    vec3 arkToEyeL = position - arkEye.xyz;
+    vec3 arkToEyeR = position - arkEye2;
+#ifdef ARK_RIG
+    // A rigged head turns (look-at, a clip): the offsets turn with the bones round the eye, so the dome and its
+    // catchlight stay on the eye. The mask is a length, the same either way.
+    arkToEyeL = mat3(arkSkin) * arkToEyeL;
+    arkToEyeR = mat3(arkSkin) * arkToEyeR;
+#endif
+    vArkEyeL = (arkModelView * vec4(arkToEyeL, 0.0)).xyz;
+    vArkEyeR = (arkModelView * vec4(arkToEyeR, 0.0)).xyz;
 }
 #endif
 `;
@@ -149,10 +157,12 @@ float arkLookHeight(vec3 p, vec3 n) {
     float cls = arkLookA.x;
     vec3 q = p * arkLookA.z;
     if (cls < 0.5) {
-        // Fur: strands combed from the head (+z) back and down, so the noise is long along that way.
+        // Fur: strands combed from the head (+z) back and down, so the noise is long along that way. Where the hair
+        // points at the viewer (a face, a chest: the surface faces along the comb) it lies short and reads flatter.
         vec3 along = normalize(vec3(0.0, -0.45, -1.0));
         vec3 s = q - along * dot(q, along) * 0.82;
-        return arkLookNoise(s) * 0.7 + arkLookNoise(s * 2.3 + 11.0) * 0.3;
+        float lying = 1.0 - abs(dot(normalize(n), along));
+        return (arkLookNoise(s) * 0.7 + arkLookNoise(s * 2.3 + 11.0) * 0.3) * mix(0.35, 1.0, lying);
     }
     if (cls < 1.5) {
         // Feathers: scallops in rows down the body, and fine barbs inside each.
@@ -274,7 +284,16 @@ export const LOOK_FINISH = `
 {
     float facing = saturate(dot(normal, normalize(vViewPosition)));
     vec3 tint = mix(vec3(1.0), diffuseColor.rgb * 2.4, arkLookA.x < 1.5 ? 0.6 : 0.2);
-    outgoingLight += arkRim * tint * pow(1.0 - facing, 3.0) * arkLookB.x * (1.0 - vArkDim) * (1.0 - 0.5 * arkWet);
+    float rimShape = pow(1.0 - facing, 3.0);
+#if ARK_LOOK_TIER > 0
+    if (arkLookA.x < 0.5) {
+        // Fur's cheap version (every animal without shells, and every phone): the rim broken into strands, so the
+        // coat's edge glints hair by hair instead of as one smooth line. No extra draw.
+        float strands = arkLookNoise(vArkRest * arkLookA.z * vec3(0.9, 0.9, 0.35));
+        rimShape *= 0.45 + 1.1 * strands;
+    }
+#endif
+    outgoingLight += arkRim * tint * rimShape * arkLookB.x * (1.0 - vArkDim) * (1.0 - 0.5 * arkWet);
     if (arkEyeAmount > 0.001) {
         // A catchlight: the sky's light up and to the left of the camera, mirrored in the eye's dome.
         vec3 r = reflect(-normalize(vViewPosition), normal);
