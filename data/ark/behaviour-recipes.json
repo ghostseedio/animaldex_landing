@@ -32901,10 +32901,18 @@
      "src": {
       "default": "plan flying_bird: preens and stretches"
      }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
     }
    ],
    "defaults": [
-    "preen_stretch"
+    "preen_stretch",
+    "bathe"
    ],
    "crossing": {
     "entry": "wade",
@@ -142376,10 +142384,18 @@
      "src": {
       "default": "plan flying_bird: preens and stretches"
      }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
     }
    ],
    "defaults": [
-    "preen_stretch"
+    "preen_stretch",
+    "bathe"
    ],
    "crossing": {
     "entry": "wade",
@@ -162900,10 +162916,18 @@
      "src": {
       "default": "plan flying_bird: preens and stretches"
      }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
     }
    ],
    "defaults": [
-    "preen_stretch"
+    "preen_stretch",
+    "bathe"
    ],
    "crossing": {
     "entry": "wade",
@@ -224746,10 +224770,18 @@
      "src": {
       "default": "plan flying_bird: preens and stretches"
      }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
     }
    ],
    "defaults": [
-    "preen_stretch"
+    "preen_stretch",
+    "bathe"
    ],
    "crossing": {
     "entry": "wade",
@@ -280046,10 +280078,18 @@
      "src": {
       "default": "plan flying_bird: preens and stretches"
      }
+    },
+    {
+     "id": "bathe",
+     "weight": 2,
+     "src": {
+      "default": "plan flying_bird: bathes at the water's edge"
+     }
     }
    ],
    "defaults": [
-    "preen_stretch"
+    "preen_stretch",
+    "bathe"
    ],
    "crossing": {
     "entry": "wade",
