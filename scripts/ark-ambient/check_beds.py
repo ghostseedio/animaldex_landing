@@ -28,6 +28,7 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True  # no __pycache__ beside the scripts
 spec = importlib.util.spec_from_file_location("make_beds", os.path.join(HERE, "make_beds.py"))
 mb = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
 spec.loader.exec_module(mb)  # type: ignore[union-attr]
