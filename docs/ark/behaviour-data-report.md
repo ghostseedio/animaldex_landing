@@ -7,7 +7,7 @@ Branch `ark-behaviour-recipes` (landing). Written before the recipe engine was b
 ## Headline
 
 - **2,555 species are aboard** (2,626 with a model; 71 excluded), the same set as the behaviour lane's profiles.
-- **The text is rich for some species and thin for most.** The median species has **one** behaviour beyond calls in its stored text. **624 species (24%) have nothing but calls**; they get body-plan defaults, flagged (list by plan below).
+- **The text is rich for some species and thin for most.** The median species has **one** behaviour beyond calls in its stored text. **625 species (24%) have nothing but calls**; they get body-plan defaults, flagged (list by plan below).
 - **What the brief's specific behaviours can draw on:**
   - Fishing birds: plunge-diving 21, talons-first 7, wading 29, spearing 21, scooping 5. Kingfishers, gannets, terns, the osprey, herons and pelicans are all covered, by phrase or by taxon rule.
   - Other fishing: underwater chases 33 and dives 23 (penguins, cormorants, seals, puffins). River fishing (bears, the fishing cat) is only 3 by phrase.
@@ -138,7 +138,7 @@ Species aboard with at least one phrase, the top body plans, the fields the firs
 | `worm_pull` | pulling worms from the ground | 14 | flying_bird 14 | diet 11, facts 2, basis 1 | american-robin: "Earthworms, insects, berries, and fruit" (diet) |
 | `drumming` | drumming or hammering on wood | 19 | quadruped 7, flying_bird 6, insect 4 | facts 7, sleep 4, sexdiff 3 | banner-tailed-kangaroo-rat: "It drums its hind feet on the ground in rhythmic bursts, and studies suggest neighbours can recognise one anot" (facts) |
 | `tool_use` | tool use | 21 | flying_bird 11, primate 6, cephalopod_jelly 1 | facts 7, sd 3, basis 3 | abyssinian-ground-hornbill: "small mammals and carrion with a heavy bill used as a tool rather than a trap" (sd) |
-| `caching` | food caching and hoarding | 70 | quadruped 33, flying_bird 24, insect 4 | facts 13, diet 12, sd 9 | acorn-woodpecker: "Acorn Woodpecker feeds on acorns, insects, sap, fruit, and cached nuts from drilled holes" (diet) |
+| `caching` | food caching and hoarding | 67 | quadruped 33, flying_bird 23, insect 4 | diet 11, facts 11, sd 9 | acorn-woodpecker: "Acorn Woodpecker feeds on acorns, insects, sap, fruit, and cached nuts from drilled holes" (diet) |
 | `graze_rumination` | chewing the cud | 36 | quadruped 36 | sleep 32, sd 2, facts 2 | african-forest-buffalo: "Through the heat of the day the herd lies up in shade, ruminating" (sd) |
 | `bask` | basking in the sun | 148 | lizard 70, turtle 23, flying_insect 15 | sleep 101, sd 13, facts 9 | ackie-monitor: "Ackie Monitors are diurnal, basking before hunting and retreating into rock when risk or temperature demands i" (sleep) |
 | `wing_dry` | spreading wings to dry or sun | 4 | flying_bird 4 | traits 2, spotlight 2 | anhinga: "Wing drying: the return to air is part of the method" (traits) |
@@ -178,7 +178,7 @@ Species aboard with at least one phrase, the top body plans, the fields the firs
 | `display` | displays (posture, crest, wings, tail, throat) | 393 | flying_bird 158, quadruped 52, lizard 36 | sexdiff 95, sleep 52, facts 49 | aardwolf: "Mane raised in defensive display" (traits) |
 | `male_combat` | male combat, rut or rivals' contests | 134 | quadruped 58, flying_insect 14, insect 12 | facts 42, sexdiff 26, sd 25 | african-lion: "Coalitions of two or more males (often brothers) jointly take over and defend prides and territories against r" (evidence) |
 | `scent_mark` | scent marking | 25 | quadruped 19, primate 6 | facts 7, traits 4, sd 4 | african-civet: "Scent-marking glands used to communicate presence and territory" (traits) |
-| `freeze` | freezing when alarmed | 218 | quadruped 58, flying_bird 32, fish 32 | sd 63, predators 57, sleep 24 | acorn-barnacle: "Experiments have shown it can survive part of its body water freezing during winter low tides" (facts) |
+| `freeze` | freezing when alarmed | 218 | quadruped 58, flying_bird 32, fish 32 | sd 63, predators 57, sleep 24 | african-pygmy-kingfisher: "A threatened bird keeps still on a shaded perch or darts into thick cover" (predators) |
 | `flee_cover` | fleeing to cover | 41 | quadruped 14, fish 10, walking_bird 4 | predators 26, sd 6, spotlight 3 | australasian-swamphen: "Groups mob a harrier noisily, and a frightened bird runs for cover, taking flight only when pressed" (predators) |
 | `flee_water` | fleeing into water | 16 | turtle 5, quadruped 4, lizard 3 | sd 3, story 3, predators 2 | annam-pond-turtle: "A disturbed turtle drops into the water and hides on the bottom" (predators) |
 | `flee_tree` | fleeing up a tree | 13 | quadruped 9, lizard 3, primate 1 | predators 8, evidence 2, facts 2 | asian-water-monitor: "They are excellent swimmers, climb trees, and move effectively on land, often escaping into water when threate" (evidence) |
@@ -262,7 +262,7 @@ Species aboard with at least one phrase, the top body plans, the fields the firs
 
 ## 8. Species with nothing: body-plan defaults (flagged)
 
-624 species have no behaviour beyond calls.
+625 species have no behaviour beyond calls (a plan table from the run before the last rule fixes, within one species).
 
 | Plan | Species |
 |---|---|

@@ -292,7 +292,7 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 |---|---|
 | **Kingfisher plunge-dive** (`common-kingfisher`, river_lake, 10:00) | Perched on a low branch on the bank, about 3.6 m over the water. It scans, takes off, and drops body-vertical, nose down (the plunge pitch on the standing model), into the water about 5.6 m out. It comes up with a fish crossways in its bill, flies back low with it, beats it on the branch and swallows. |
 | **Stags clashing** (`red-deer`, 8 cast, 6 of them males by seeded sex; 6 October, 06:24, in the rut) | Two stags of the group leave it, walk to each other, roar and walk side by side. Then they turn head to head, antlers locked and heads down, pushing for about 8 s. They part, the loser walks off and the other roars. The clip is staged in the grassland for an open view (red deer live in the woodland zone, where trunks hid it). |
-| **Murmuration** (`european-starling`, house starlings, 17:48) | Over the cottage at dusk, 1,400 ambient flockmates and the catalogue starlings swirl in one stretching, turning cloud. |
+| **Murmuration** (`european-starling`, house starlings, 17:48) | Over the trees behind the cottage at dusk, 1,400 ambient flockmates and the catalogue starlings make one dense cloud. Over 30 s it changes shape: a long band at +5 s, a wide drifting cloud at +17 s, turned again at +28 s, with density waves through it. Seen from 90 m against the sunset. |
 | **Nest growing** (`barn-swallow`, from 1 April, its nesting months) | The swallow flies in with mud, lands on its nest, places it and flies off. Stills on days 0.3, 1, 2, 3, 4 and 5.5 show the nest from a few pieces to a full ring with walls. Here it was on a rock: no house wall was within 12 m of its home. This drawing is the fallback until the props lane's nests are wired. |
 | **Heron fishing** (`grey-heron`, wetland, 09:00) | It wades into the shallows, feet on the bottom, and stands still with small fish under the water round its legs. It strikes, and the school splits away from its bill. It holds a fish crossways, swallows, then wades on. |
 
@@ -302,4 +302,23 @@ Species counts are of the 2,555 aboard: by phrase, by taxon rule, or as a flagge
 - Perches by the water were 13 m up; they are now low first.
 - The fish school popped in only at the strike; it is now there while the hunter waits. The fish were too big and above the surface; they are now sized to the hunter and kept under the surface.
 - Nests were deep in tree crowns; they are now on low branches first.
-- The murmuration was too sparse to read; it now has 1,400 birds, each at least a few pixels on screen.
+- The murmuration was too sparse to read, and its flat birds vanished edge-on. It now has 1,400 birds, each with a body silhouette from the side, banking, at least a few pixels on screen, and the flock is over the treetops.
+
+## What is left
+
+**Not built:**
+- **Insect swarms.** They are extracted (29 species), but there is no ambient swarm cloud yet. The murmuration machinery would carry it: a smaller shape, insects at dusk.
+- **Mixed flocks.** 25 species say they join them; this is data only.
+- **Molehills for moles.** Moles are burrow-placed, so off the schedule; their marks need a hook in `undergroundPose`.
+- **Fish under the reef lane's schools.** The reef lane's schools don't scatter yet (their input, above), and the lake has no ambient schools of theirs, so lake fishing uses this branch's own.
+
+**Needs another lane:**
+- the rig clips for the named states;
+- per-sex model variants (antlers, manes, trains): a hind is drawn from a stag's model;
+- the duller sex's colour, in the renderer;
+- the props' nests and the reef's schools wired (one line each, above).
+
+**Data:**
+- Shaking off, bathing and rolling have no phrases; they are body-plan rules or defaults.
+- 625 species have nothing but calls in their stored text: body-plan defaults, flagged.
+- The where-to-look and System Dynamics fields carry instructions and model language; the rules skip those sentences.
