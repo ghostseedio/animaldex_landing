@@ -2,7 +2,7 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 7179 ms.
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 8407 ms.
 - **Failures:** 0 (0 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
@@ -24,18 +24,18 @@
 | shallows | 214 |
 | rocky_shore | 50 |
 | beach | 44 |
-| estuary | 48 |
+| estuary | 46 |
 | cold_cove | 38 |
 | river | 128 |
-| lake_marsh | 616 |
+| lake_marsh | 618 |
 | grassland | 476 |
-| scrub | 196 |
+| scrub | 197 |
 | canopy | 1076 |
 | forest_floor | 548 |
 | underground | 80 |
 | desert | 188 |
-| mountain | 340 |
-| homestead | 696 |
+| mountain | 342 |
+| homestead | 693 |
 
 | Where | Animals |
 |---|---:|
