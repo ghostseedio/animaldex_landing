@@ -426,6 +426,12 @@ export type ReactiveOptions = {tier?: ReactiveTier; envelope?: EnvelopeFn; budge
 
 /** An alarm call about a ground threat sends a listener running when the threat is within this many of its flight distances (a zebra lets a lion walk past 30 m off, watching). */
 const ALARM_FLIGHT = 1.3;
+/**
+ * The deliberate back-steps: backing off from the camera, giving way at the water. They go backwards (facing what they
+ * back away from), and never faster than `BACK_STEP_SPEED`. Every other move faces the way it goes.
+ */
+const BACK_STEPS = new Set<ReactiveAction>(["back_off_camera", "wait_turn"]);
+const BACK_STEP_SPEED = 0.28;
 /** How much further the one on sentinel watch sees: it is looking for exactly this. */
 const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -918,8 +924,26 @@ export class ReactiveLayer {
             const l2 = Math.hypot(target.x, target.z);
             if (l2 > reach) target = {x: (target.x / l2) * reach, z: (target.z / l2) * reach};
         }
+        // It faces the way it goes (a full turn if need be), and turns on the spot before it sets off; only a deliberate
+        // back-step goes backwards, slowly. (Before, a play hop or a flee whose way lay behind it ran it backwards.)
+        const backStep = BACK_STEPS.has(action);
+        if (backStep) speed = Math.min(speed, BACK_STEP_SPEED);
+        const wx = target.x - agent.offset.x;
+        const wz = target.z - agent.offset.z;
+        const wl = Math.hypot(wx, wz);
+        let moveFace: number | null = null;
+        if (!backStep && wl > 1e-4 && dt > 0 && Math.min(wl / dt, speed) > BACK_STEP_SPEED) {
+            const dir = Math.atan2(wx, wz);
+            moveFace = dir;
+            if (Math.abs(wrapAngle(dir - (me.shared.yaw + agent.bodyYaw))) > 1.2) speed = Math.min(speed, BACK_STEP_SPEED);
+        }
+        const before = {x: agent.offset.x, z: agent.offset.z};
         this.moveOffset(agent, target, speed, dt, reach);
         if (action === "stalk" && prey) this.keepShort(me, agent, prey.input);
+        // Its actual step this frame (the envelope pulling it in, keeping short of prey) decides the facing when it is a move.
+        const sx = agent.offset.x - before.x;
+        const sz = agent.offset.z - before.z;
+        if (!backStep && dt > 0 && Math.hypot(sx, sz) / dt > BACK_STEP_SPEED) moveFace = Math.atan2(sx, sz);
 
         agent.mode = action;
         if (look) {
@@ -927,7 +951,7 @@ export class ReactiveLayer {
             agent.lookLabel = lookLabel;
         }
         const scan = !look && (action === "scan" || action === "sentinel" || action === "alert");
-        this.stepLook(me, agent, look, scan, world, dt, limits, faceYaw, action);
+        this.stepLook(me, agent, look, scan, world, dt, limits, moveFace ?? faceYaw, action, moveFace !== null);
         agent.crouch += (crouchWant - agent.crouch) * Math.min(dt * 4, 1);
         const alarmed = agent.threat || heardNow ? 1 : action === "recover" ? alarmLevel((world.now - agent.reactedAt) * 1000) : 0;
         return this.output(agent, me, action, called, alarmed, look ? lookLabel : null, true);
@@ -1200,11 +1224,21 @@ export class ReactiveLayer {
                 break;
             }
             case "play": {
-                // Little hops and turns round its spot, its own rhythm.
-                const phase = world.now * (1.6 + unit(me.id, "play-rate")) + unit(me.id, "play") * 6.28;
-                res.target = {x: Math.sin(phase) * reach * 0.6, z: Math.cos(phase * 1.3) * reach * 0.6};
-                res.speed = walk * 2.5;
+                // Play in bursts, its own rhythm (seeded beats of 0.9–1.4 s): a short dash to a new spot near its own,
+                // a pause, a play-bow (down at the front: drawn as a crouch) facing its playmate. It faces the way it dashes.
+                const beat = 0.9 + 0.5 * unit(me.id, "play-beat");
+                const n = Math.floor((world.now + 10 * unit(me.id, "play-phase")) / beat);
+                const kind = unit(me.id, "play-kind", n);
                 const k = kin[0];
+                if (kind < 0.45) {
+                    const a = unit(me.id, "play-dir", n) * Math.PI * 2;
+                    const r = reach * (0.25 + 0.35 * unit(me.id, "play-r", n));
+                    res.target = {x: Math.sin(a) * r, z: Math.cos(a) * r};
+                    res.speed = walk * 2.5;
+                } else if (kind > 0.8 && k) {
+                    res.crouch = 0.7;
+                    res.face = Math.atan2(k.shared.x - me.shared.x - agent.offset.x, k.shared.z - me.shared.z - agent.offset.z);
+                }
                 if (k) {
                     res.look = {x: k.shared.x, y: k.shared.y + k.length * 0.4, z: k.shared.z};
                     res.label = k.id;
@@ -1302,7 +1336,7 @@ export class ReactiveLayer {
         const l = Math.hypot(agent.offset.x, agent.offset.z);
         if (l > reach && l > 0) {
             // Over the edge (the envelope narrowed as the flight ended): back in at the animal's walk, never a jump.
-            const back = Math.max(l - Math.max(speed, 0.6) * dt, reach);
+            const back = Math.max(l - Math.max(speed, 0.25) * dt, reach);
             agent.offset.x *= back / l;
             agent.offset.z *= back / l;
         }
@@ -1328,7 +1362,7 @@ export class ReactiveLayer {
         agent.offset.z = pz + uz * want - me.shared.z;
     }
 
-    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction) {
+    private stepLook(me: ReactiveInput, agent: Agent, look: Vec3 | null, scan: boolean, world: ReactiveWorld, dt: number, limits: HeadLimits, faceYaw: number | null, action: ReactiveAction, moving = false) {
         const head = {x: me.shared.x + agent.offset.x, y: me.shared.y + (me.headHeight ?? me.length * 0.5), z: me.shared.z + agent.offset.z};
         const bodyNow = me.shared.yaw + agent.bodyYaw;
         let want: {yaw: number; pitch: number};
@@ -1346,9 +1380,10 @@ export class ReactiveLayer {
         // The body turns when it must (a threat behind it, fleeing, facing the camera to investigate), at its own pace.
         let bodyWant = clamped.body;
         if (faceYaw !== null) bodyWant = wrapAngle(faceYaw - me.shared.yaw);
-        const maxBody = action === "flee" ? 1.2 : 0.9;
+        // Moving, it turns right round if it must (the way it goes may lie behind the shared heading); standing, a little.
+        const maxBody = moving ? Math.PI : action === "flee" ? 1.2 : 0.9;
         bodyWant = Math.min(Math.max(bodyWant, -maxBody), maxBody);
-        agent.bodyYaw += wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (action === "flee" ? 6 : 2.5), 1);
+        agent.bodyYaw = wrapAngle(agent.bodyYaw + wrapAngle(bodyWant - agent.bodyYaw) * Math.min(dt * (moving || action === "flee" ? 6 : 2.5), 1));
         const relative = look ? lookAngles(head, me.shared.yaw + agent.bodyYaw, look) : want;
         agent.head = stepHead(agent.head, relative, dt, limits);
     }
