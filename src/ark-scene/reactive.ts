@@ -534,8 +534,9 @@ export class ReactiveLayer {
         const stagger = Math.floor(unit(me.id, "perceive") * this.budget.perceiveEvery);
         if ((this.frame + stagger) % this.budget.perceiveEvery === 0 || !agent.perceived.length) {
             stats.perceptions++;
-            const reach = Math.min(this.budget.reach, Math.max(p.sight * 1.7, p.hearing * 1.6, p.smell * 1.5));
             const sentinelNow = this.onWatch(me, around, world);
+            // As far as it could see anything: a big animal moving (1.7x), a bird on the sky (2.6x), the sentinel further.
+            const reach = Math.min(this.budget.reach, Math.max(p.sight * 2.6 * (sentinelNow ? SENTINEL_SIGHT : 1), p.hearing * 1.6, p.smell * 1.5));
             agent.onWatch = sentinelNow;
             agent.perceived = [];
             const hunts = p.hunt.some((h) => h !== "filter" && h !== "scavenge");

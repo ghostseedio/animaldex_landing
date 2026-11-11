@@ -236,14 +236,15 @@ async function mountScenarios(el: HTMLElement) {
             hold("meerkat", at.x, at.z, 2.2, "forage");
             const eagle = (start: number) =>
                 debug().pinShared(byPrefix.eagle[0], (epoch: number) => {
-                    const u = Math.min(Math.max((epoch - start) / 10, 0), 1);
-                    const x = at.x + 60 - 100 * u;
+                    // From 120 m off (out of anyone's sight while it waits) across the mob and away, at 10 m/s.
+                    const u = Math.min(Math.max((epoch - start) / 16, 0), 1);
+                    const x = at.x + 120 - 160 * u;
                     return {x, z: at.z + 3, y: Math.max(heightAt(x, at.z), 0) + 8, yaw: -Math.PI / 2, moving: true, aloft: true, doing: "soar"};
                 });
             eagle(nowS() + 1e6);
             // Low and looking along the eagle's line, so the sky it comes in from is in the frame.
             view(at.x + 1, at.z, 10, -Math.PI / 2 + 0.35, 1.38);
-            return {note: "the martial eagle comes over from the right 8 s in, 8 m up", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 8), seconds: 24};
+            return {note: "the martial eagle comes in from 120 m off on the right from 4 s, 8 m up, at 10 m/s (over the mob at 16 s)", watch: [...byPrefix.meerkat, ...byPrefix.eagle], go: () => eagle(nowS() + 4), seconds: 26};
         }
     };
 
