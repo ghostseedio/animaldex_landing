@@ -20,6 +20,7 @@ import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {reservedAt} from "@/ark-scene/map/hamlet";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
@@ -103,6 +104,11 @@ class WorldSampler implements ArkMapSampler {
     covered(x: number, z: number): boolean {
         this.obstacles ??= new DecorObstacles(worldDecor());
         return this.obstacles.covers(x, z);
+    }
+
+    /** The hamlet's reserved plots (`hamlet.ts` reservedAt). */
+    reserved(x: number, z: number): boolean {
+        return reservedAt(x, z);
     }
 
     /** The behaviour lane's walk grid (`behaviour-nav.ts`, from the graphics lane's scenery): where its walkers can walk. */
@@ -311,6 +317,8 @@ class WorldSampler implements ArkMapSampler {
         for (const point of allAttachPoints()) {
             const tag = SCENERY_TAG[point.tag];
             if (!tag) continue;
+            // Nothing on the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
+            if (reservedAt(point.position.x, point.position.z)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
             // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
             const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.001);

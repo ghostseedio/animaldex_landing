@@ -468,8 +468,9 @@ export function mapHabitatAt(animal: Pick<ArkAnimal, "model_slug" | "zone">, x: 
  * attach point is scheduled from its perch; a wombat or a badger from its
  * burrow's entrance.
  */
-export function onSchedule(place: {micro?: unknown; burrow?: unknown}, slug: string): boolean {
-    if (place.micro) return false;
+export function onSchedule(place: {micro?: unknown; burrow?: unknown; hamlet?: unknown}, slug: string): boolean {
+    // (A hamlet resident: the hamlet's rotation brings it out of its door and back, `hamlet.ts`.)
+    if (place.micro || place.hamlet) return false;
     if (place.burrow) return speciesLayer(slug).layer !== "underground" || (behaviourProfile(slug).weights.graze ?? 0) > 0;
     return true;
 }

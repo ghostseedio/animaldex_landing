@@ -96,6 +96,8 @@ export class MapPoints {
                 const wet = ground.water !== null;
                 if (!ground.tags.length) continue;
                 if (wet ? ground.depth < 0.5 : this.sampler.blocked(x, z, 0.5)) continue;
+                // The hamlet's reserved plots are the residents' alone (`hamlet.ts`): no wild animal is ever placed there.
+                if (!wet && this.sampler.reserved?.(x, z)) continue;
                 cells.push({x, z, zone: ground.zone, tags: ground.tags, wet, depth: ground.depth});
             }
         }

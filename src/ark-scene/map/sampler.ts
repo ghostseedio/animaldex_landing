@@ -94,6 +94,8 @@ export interface ArkMapSampler {
     blocked(x: number, z: number, radius: number): boolean;
     /** Optional: something tall (a tree, a shrub, a big rock) stands just in front of this spot from the default camera (the south). */
     covered?(x: number, z: number): boolean;
+    /** Optional: the hamlet's reserved land (its plots past today's cottage and barn): no wild animal is placed there. */
+    reserved?(x: number, z: number): boolean;
     /** Optional: on the behaviour lane's walk grid here, no steeper than `maxSlope` (so a walker placed here can walk away from it). */
     walkable?(x: number, z: number, maxSlope: number): boolean;
     anchors(): readonly MapAnchor[];
