@@ -107,6 +107,8 @@ export class ArkAudio {
     private scheduledTo = 0;
     private plannedAt = 0;
     private readonly heard = new Set<ArkSoundManifest>();
+    /** Each animal's latest call: when it starts (shared ms) and how long it lasts (ms), for its head to come up with it. */
+    private readonly calling = new Map<string, {at: number; ms: number}>();
     private readonly bedCredits = new Map<string, ArkSoundCredit[]>();
     private disposed = false;
     /** How many calls and beds have started (for the page's tests and the perf numbers). */
@@ -410,6 +412,8 @@ export class ArkAudio {
             }
         };
         this.voices.add(voice);
+        this.calling.set(call.animalId, {at: call.at, ms: (length / Math.max(call.rate, 0.5)) * 1000});
+        if (this.calling.size > 64) this.calling.delete(this.calling.keys().next().value as string);
         if (!this.heard.has(manifest)) {
             this.heard.add(manifest);
             this.options.onCredits?.();
@@ -514,6 +518,11 @@ export class ArkAudio {
     creditsFor(speciesProfileId: string, kindSpeciesProfileId?: string | null): Array<{text: string; page: string | null; license: string}> {
         const voice = callVoice({species_profile_id: speciesProfileId, kind_species_profile_id: kindSpeciesProfileId}, (id) => this.manifests.get(id) ?? null);
         return voice ? soundCreditLines([this.manifests.get(voice.speciesProfileId)]) : [];
+    }
+
+    /** An animal's latest call heard (shared ms and length), or null. */
+    callOf(animalId: string): {at: number; ms: number} | null {
+        return this.calling.get(animalId) ?? null;
     }
 
     /** Voices sounding now and beds playing (for stats). */

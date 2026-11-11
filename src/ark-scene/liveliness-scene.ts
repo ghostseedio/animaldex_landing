@@ -25,6 +25,7 @@ import {arkDayAt, lightningAt, seaLevelAt, shoreAt, tideAt, weatherAt, type ArkS
 import {
     aboveTide,
     backToWindYaw,
+    callLift,
     coverSpot,
     ease,
     HEEL_LAG_SECONDS,
@@ -406,10 +407,18 @@ export class ArkLiveliness {
         }
     }
 
+    /** 0…1 how far its head is up in a call now (sound on: the call it was heard making). */
+    callLiftOf(animalId: string): number {
+        const call = this.audio.playing ? this.audio.callOf(animalId) : null;
+        return call ? callLift(this.nowMs - call.at, call.ms) : 0;
+    }
+
     // MARK: Once a frame
 
     /** After the animals: the weather drawn, the traces' clocks, the sound, the worn paths. */
-    step(elapsed: number, camera: PerspectiveCamera, target: Vector3, fog: Fog | null, horizon: Color, width: number, height: number, hours: number, scheduled: () => LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
+    step(elapsed: number, nowMs: number, camera: PerspectiveCamera, target: Vector3, fog: Fog | null, horizon: Color, width: number, height: number, hours: number, scheduled: () => LiveAnimal[], routeOf: (entry: LiveAnimal, fromS: number, toS: number, stepS: number) => Array<{x: number; z: number}>) {
+        // The world's moment this frame (the environment itself is read every 2 s; calls need the moment now).
+        this.nowMs = nowMs;
         const underwater = camera.position.y < this.seaLevel - 0.02;
         const lightning = lightningAt(this.nowMs, this.environment.storm);
         this.horizon.copy(horizon);

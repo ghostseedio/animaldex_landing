@@ -2451,6 +2451,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.roll += idle.roll;
                     where.base += idle.lift * candidate.modelScale;
                 }
+                // Calling (sound on): its head comes up for the call it is heard making (`liveliness-scene.ts`).
+                if (!where.water) where.pitch -= 0.16 * liveliness.callLiftOf(animal.id);
                 // A camera close by: now and then it glances at it, more often the sharper it is.
                 // (With the reactive layer the head looks at the camera instead: `watch_camera`, `investigate_camera`.)
                 const looking = candidate.distance < GLANCE_WITHIN && !where.afloat && !entry.reactive ? glance(entry.stats.intelligence, now, entry.phase) : 0;
@@ -4018,7 +4020,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepReplay(now);
         updateInstances(elapsed);
         dust.step(now);
-        liveliness.step(elapsed, camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
+        liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => entries.filter((e) => Boolean(e.sched)), routeOf);
         nests.step(now);
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
         const followed = followId ? findEntry(followId) : null;
