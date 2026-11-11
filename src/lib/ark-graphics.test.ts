@@ -5,8 +5,8 @@ import {goldenObstacles} from "@/ark-scene/golden-world";
 import {nearFadeEnd, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
 import {attachPoints} from "@/ark-scene/sampler";
-import {CROPS, cropAt, fieldAt, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
-import {worldDecor} from "@/ark-scene/decor";
+import {CROPS, cropAt, cropsGrowAt, fieldAt, fieldCentre, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
+import {grassTufts, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
 import {LAKE, RIVER, ZONE_SITES, heightAt, regionCentre, sampleGround, zoneAt} from "@/ark-scene/world";
 
@@ -81,7 +81,9 @@ test("graphics: Home's fields: every crop grows somewhere, plants sit on the pai
             assert.equal(at.crop, plant.crop);
             assert.ok(Math.abs(at.row - Math.round(at.row)) < 1e-6, "on a row's middle");
             assert.ok(at.edge >= HEADLAND, "not on the headland");
-            for (const out of fieldKeepOuts()) assert.ok(Math.hypot(plant.x - out.x, plant.z - out.z) >= out.r, "not in the yard, the clearing, the barn or the orchard");
+            // Fields are crop or grass whole, decided at their middle: never a field whose middle is in a keep-out.
+            const middle = fieldCentre(at.cell);
+            for (const out of fieldKeepOuts()) assert.ok(Math.hypot(middle.x - out.x, middle.z - out.z) >= out.r, "not in the yard, the clearing, the barn or the orchard");
         }
     }
     assert.ok(planted > 1000, `${planted} plants`);
@@ -110,4 +112,12 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
             assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
         }
     }
+});
+
+test("graphics: meadow grass keeps out of the standing crops (it grows on the margins and the pasture)", () => {
+    const tufts = grassTufts(60000);
+    assert.ok(tufts.length > 1000);
+    assert.equal(tufts.filter((tuft) => cropsGrowAt(tuft.x, tuft.z)).length, 0);
+    // The margins still have grass: tufts in Home's zone, off the crops.
+    assert.ok(tufts.some((tuft) => tuft.zone === "farm_garden"));
 });
