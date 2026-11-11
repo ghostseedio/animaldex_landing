@@ -2235,12 +2235,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (scheduleOn && !reducedMotion) {
             const started = performance.now();
             keepApart(candidates, dt);
-            // The muzzles of the grazers biting nearest the camera, for the grass to bend at (`grass-press.ts`).
+            // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
+            const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             setGrassPress(
                 candidates
-                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && (c.entry.sched.pose?.beat === "bite" || c.entry.sched.pose?.beat === "chew") && !c.entry.sched.pose?.aloft)
+                    .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving))
                     .sort((a, b) => a.distance - b.distance)
-                    .map((c) => ({x: c.pose.x + Math.sin(c.pose.yaw) * c.entry.length * 0.5, y: c.pose.base, z: c.pose.z + Math.cos(c.pose.yaw) * c.entry.length * 0.5, radius: Math.max(c.entry.length * 0.18, 0.08)}))
+                    .map((c) =>
+                        biting(c)
+                            ? {x: c.pose.x + Math.sin(c.pose.yaw) * c.entry.length * 0.5, y: c.pose.base, z: c.pose.z + Math.cos(c.pose.yaw) * c.entry.length * 0.5, radius: Math.max(c.entry.length * 0.18, 0.08)}
+                            : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * 0.35, 0.1)}
+                    )
             );
             behaviourFrameMs += performance.now() - started;
         }
