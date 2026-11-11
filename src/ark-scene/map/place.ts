@@ -206,11 +206,19 @@ function attachPlace(point: AttachPoint, key: number, level: number, rank: numbe
 export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain" = "plain"): MapPlacement | null {
     const placed = mapPlaceOn(animal, zone, slot, rank, length, trueLength, kind);
     if (placed) placed.map.who = {slug: animal.model_slug, length};
-    if (placed && !placed.water && !placed.canopy && !placed.micro && !placed.map.held && !placed.map.shore && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !rockInReach(placed.map, placed.perch ?? null, placed.x, placed.z)) {
+    // (A tree's climber stays in its tree, a centipede on its limb: its den is a rock in reach, else its perch.)
+    if (placed && !placed.water && !placed.canopy && !placed.micro && !placed.map.held && !placed.map.shore && !inTheTrees(placed, animal.model_slug) && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !rockInReach(placed.map, placed.perch ?? null, placed.x, placed.z)) {
         const moved = toTheRocks(placed, zone, slot, rank, length);
         if (moved) return moved;
     }
     return placed;
+}
+
+/** Does it live in the trees: a climber, hanger or percher of the trees (`arborealOf`), or perched on a tree's point? */
+export function inTheTrees(place: {perch?: MapPerch; canopy?: unknown; map?: MapPlace}, slug: string): boolean {
+    if (place.canopy) return true;
+    if (place.perch && TREE_POINT.has(place.perch.tag)) return true;
+    return Boolean(place.map?.species && arborealOf(place.map.species, slug));
 }
 
 /**
