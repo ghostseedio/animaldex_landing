@@ -48,14 +48,19 @@ test("mated: a pair that bred is one line, before its young; folded pairs counte
     const items = arkLiveServerItems(decodeArkEvents([
         {id: 10, kind: "mated", at: "2026-11-11T10:00:00Z", animal: zebra("p1"), other: zebra("p2"), payload: {parents: ["p1", "p2"]}},
         {id: 11, kind: "birth", at: "2026-11-11T10:00:00Z", animal: zebra("y1"), parents: ["p1", "p2"]},
+        // The server's shape (AnimalDex 568af01b): the first parent as `animal`, the second as `other`, `parents` and the pair's `bringers` at the top.
+        {id: 13, kind: "mated", at: "2026-11-11T10:02:00Z", species_profile_id: "z", species: "Plains Zebra", animal: {...zebra("q1"), thrive: "thriving", area: "wild"}, other: {...zebra("q2"), thrive: "doing_well", area: "wild"}, parents: ["q1", "q2"], bringers: [{label: "Voyager 9", named: false}, {label: "Voyager 4", named: false}]},
         // A server that sends only the species and the parents' ids still gets its line.
         {id: 12, kind: "mated", at: "2026-11-11T10:05:00Z", species_profile_id: "c", species: "Mallard", payload: {parents: ["m1", "m2"]}}
     ], null));
-    assert.deepEqual(items.map((i) => i.kind), ["mated", "birth", "mated"]);
+    assert.deepEqual(items.map((i) => i.kind), ["mated", "birth", "mated", "mated"]);
     assert.equal(items[0].focus.animalId, "p1");
     assert.equal(arkLiveLineText(items[0], english, "en"), "Two Plains Zebras mated");
-    assert.equal(arkLiveLineText(items[2], english, "en"), "Two Mallards mated");
-    assert.equal(items[2].focus.animalId, "m1");
+    assert.equal(arkLiveLineText(items[2], english, "en"), "Two Plains Zebras mated", "the server's shape");
+    assert.deepEqual(items[2].focus, {animalId: "q1", speciesId: "z", zone: "grassland"}, "the first parent, its zone from animal.zone");
+    assert.ok(!arkLiveLineText(items[2], english, "en").includes("Voyager"), "the pair's bringers are never said");
+    assert.equal(arkLiveLineText(items[3], english, "en"), "Two Mallards mated");
+    assert.equal(items[3].focus.animalId, "m1");
     assert.equal(arkLiveLineText({...items[0], count: 3}, english, "en"), "3 pairs of Plains Zebras mated");
     const log = new ArkLiveLog();
     log.push(items.slice(0, 2), 0);

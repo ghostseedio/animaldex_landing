@@ -79,11 +79,13 @@ export class ArkBarsView {
         Object.assign(root.style, {
             position: "absolute",
             insetInlineStart: "10px",
-            top: "calc(10px + env(safe-area-inset-top, 0px))",
+            // Clear of the top of the screen: the safe area and what the host draws there (`--ark-inset-top`, the
+            // embed's `?insetTop=`: the iOS panel's close button and title).
+            top: "calc(10px + env(safe-area-inset-top, 0px) + var(--ark-inset-top, 0px))",
             zIndex: "2",
             width: "min(17.5rem, calc(100% - 66px))",
             // Clear of the log at the foot of the world (its chip and a few lines).
-            maxHeight: "calc(100% - 210px)",
+            maxHeight: "calc(100% - 210px - env(safe-area-inset-top, 0px) - var(--ark-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--ark-inset-bottom, 0px))",
             display: "flex",
             flexDirection: "column",
             borderRadius: "14px",

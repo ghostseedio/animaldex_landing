@@ -10,6 +10,12 @@
  * Neither is shown in a recording (marketing clips, golden shots).
  */
 
+/**
+ * The button's foot with nothing over the world: clear of the safe area (an iPhone's home indicator) and of what
+ * the host covers there (`--ark-inset-bottom`, the embed's `?insetBottom=`); both 0 on /ark.
+ */
+const RESET_BOTTOM = "calc(12px + env(safe-area-inset-bottom, 0px) + var(--ark-inset-bottom, 0px))";
+
 const RESET_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>`;
 
 export type RuntimeUiOptions = {
@@ -57,7 +63,7 @@ export class RuntimeUi {
             Object.assign(button.style, {
                 position: "absolute",
                 insetInlineEnd: "12px",
-                bottom: "12px",
+                bottom: RESET_BOTTOM,
                 width: "40px",
                 height: "40px",
                 borderRadius: "999px",
@@ -108,7 +114,8 @@ export class RuntimeUi {
         const next = Math.round(pixels);
         if (next === this.inset) return;
         this.inset = next;
-        if (this.button) this.button.style.bottom = `${12 + next}px`;
+        // Over a tap band, the band keeps the safe area; without one, the button keeps clear of it itself.
+        if (this.button) this.button.style.bottom = next > 0 ? `${12 + next}px` : RESET_BOTTOM;
         if (this.bar) this.bar.style.bottom = `${next}px`;
     }
 

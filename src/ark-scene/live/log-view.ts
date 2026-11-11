@@ -13,6 +13,12 @@ import type {ArkLiveLine} from "@/lib/ark-live-log";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 
+/**
+ * Clear of the foot of the screen: the safe area (an iPhone's home indicator) and what the host covers there
+ * (`--ark-inset-bottom`, the embed's `?insetBottom=`); both 0 on /ark.
+ */
+export const ARK_BOTTOM_CLEAR = "calc(12px + env(safe-area-inset-bottom, 0px) + var(--ark-inset-bottom, 0px))";
+
 /** A line's dot, by kind (the record), in the page's palette. */
 const DOT: Record<string, string> = {
     arrival: "#8fd694",
@@ -69,7 +75,7 @@ export class ArkLiveLogView {
         Object.assign(root.style, {
             position: "absolute",
             insetInlineStart: "12px",
-            bottom: "12px",
+            bottom: ARK_BOTTOM_CLEAR,
             zIndex: "2",
             display: "flex",
             flexDirection: "column",

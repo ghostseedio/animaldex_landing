@@ -8,10 +8,13 @@
 <style>
   html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   #ark { position: fixed; inset: 0; }
+  /* What the host draws over the world's top and foot (?insetTop=, ?insetBottom= in px; the iOS panel's close button
+     and title: insetTop=52): every corner overlay keeps clear of it, as of the safe area. */
+  :root { --ark-inset-top: 0px; --ark-inset-bottom: 0px; }
   /* Sound (liveliness): off until this is tapped, inside the panel (a host's message can't start audio). */
   /* The end side (right in left-to-right, left in Arabic, Hebrew, Persian, Urdu), clear of the app's close button,
      which sits at the start side. */
-  #ark-sound { position: fixed; inset-inline-end: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
+  #ark-sound { position: fixed; inset-inline-end: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top) + var(--ark-inset-top, 0px)); width: 36px; height: 36px; border: 0; border-radius: 18px; background: rgba(20, 24, 22, 0.55); color: #fff; display: flex; align-items: center; justify-content: center; padding: 0; -webkit-tap-highlight-color: transparent; }
   [dir="rtl"] #ark-sound { inset-inline-end: calc(10px + env(safe-area-inset-left)); }
   #ark-sound[hidden] { display: none; }
   #ark-sound svg { width: 20px; height: 20px; }
@@ -34,6 +37,8 @@
  * the page's lang and dir, the herds' counts), ?label=<the world's accessible name; default: the Ark's own, in ?lang>,
  * ?regions=1 (the seven regions' names drawn over the world from far, in ?lang),
  * ?lite=1|0 (the lighter view; absent: the device decides), ?fixture=1 (development: the v2 fixture).
+ * ?insetTop=<px>, ?insetBottom=<px>: what the host draws over the world's top and foot (the iOS panel: insetTop=52); the
+ * sound button, the bars, the log and the reset button keep clear of it, and of the safe area.
  * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
  * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
  * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
@@ -70,6 +75,13 @@
   var lang = params.get("lang") || undefined;
   var lite = params.get("lite") === "1" ? true : params.get("lite") === "0" ? false : null;
   var motion = matchMedia("(prefers-reduced-motion: reduce)");
+  // The host's covered strips (?insetTop=52 from the iOS panel): whole pixels, 0 to 400, anything else 0.
+  function insetPx(name) {
+    var value = Math.round(Number(params.get(name)));
+    return value > 0 ? Math.min(value, 400) + "px" : "0px";
+  }
+  document.documentElement.style.setProperty("--ark-inset-top", insetPx("insetTop"));
+  document.documentElement.style.setProperty("--ark-inset-bottom", insetPx("insetBottom"));
   // The live HUD (src/ark-scene/live): the log and the bars, opt-in; development's fixture shows both.
   var hudAsked = params.get("hud") || (params.get("fixture") ? "1" : "0");
   var hudLog = hudAsked === "1" || hudAsked === "log";

@@ -110,9 +110,12 @@ export class ArkLiveFixtureFeed {
         return {id: ++this.serial, kind, at, ark_day: this.current.ark_day ?? null, species_profile_id: animal?.species_profile_id ?? null, species: animal?.name ?? null, animal: animal ? eventAnimal(animal) : null, other: null, phrase: null, parents: [], bringers: [], ...extra};
     }
 
-    /** A pair bred (`mated`), written before its litter or clutch: one parent as `animal`, the other as `other`. */
+    /**
+     * A pair bred (`mated`, the server's shape: AnimalDex `captures-thrive-design.md` §0), written before its
+     * litter or clutch: the first parent as `animal`, the second as `other`, `parents` [both], the pair's `bringers`.
+     */
     private mated(at: string, pa: ArkAnimal, pb: ArkAnimal): Record<string, unknown> {
-        return {...this.row("mated", at, pa, {payload: {parents: [pa.id, pb.id]}}), other: eventAnimal(pb)};
+        return {...this.row("mated", at, pa, {parents: [pa.id, pb.id], bringers: [pa.brought_by, pb.brought_by]}), other: eventAnimal(pb)};
     }
 
     /** One more of a kind already aboard (or a new kind): at its kin's place, the next rank. */
