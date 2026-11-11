@@ -117,6 +117,8 @@ export type ArkRuntime = ReturnType<typeof createArkRuntime>;
 const FAR_UPFRONT: Record<QualityTier, number> = {high: 160, medium: 120, low: 80};
 /** Kinds in view whose far models are fetched (the nearest; the scene draws its nearest 150 / 120 / 80 animals as models). */
 const FAR_IN_VIEW: Record<QualityTier, number> = {high: 150, medium: 120, low: 80};
+/** The starting view's kinds fetched first (then the tier's full number once those are in). */
+const FIRST_VIEW_KINDS = 60;
 
 /** The mount's steps' share per frame (ms) before the first frame. */
 const MOUNT_SLICE_MS = 25;
@@ -164,6 +166,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const lastNear = new Map<string, number>();
     /** The kinds the view draws as models now, the far models dropped from the queue, and the up-front list (kept). */
     let inView: string[] = [];
+    /** The first view's models are all in (then the tier's full number of kinds is fetched). */
+    let viewSettled = false;
+    /** Every model the view draws now is in (the far models of the kinds in view, the near ones close by). */
+    const viewIsComplete = () => inView.length > 0 && inView.every((slug) => {
+        const model = ctx.library.get(slug);
+        return Boolean(model?.far) && (planner.nearestInView(slug) > 27.5 || Boolean(model?.near));
+    });
     let pruned = 0;
     const upfront = new Set<string>();
     /** The live budget's last answer: its rotation step and budget (a new step or tier asks for the snapshot again). */
@@ -189,7 +198,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     ctx.library.fit = fitFor(ctx.tier());
     ctx.library.paced = true;
     // More files at once on a desktop's connection (HTTP/2 to the bucket); a phone keeps four.
-    ctx.library.setConcurrency(ctx.tier() === "high" ? 8 : 4);
+    ctx.library.setConcurrency(ctx.tier() === "high" ? 8 : 6);
     ctx.library.upload = (map) => {
         try {
             ctx.renderer.initTexture(map);
@@ -516,7 +525,9 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             // Far models for what the view draws as models (the tier's nearest kinds in view), nearest first; the rest
             // when the camera comes to them. A few times a second is enough.
             if (drawn % 8 === 1) {
-                inView = planner.nearestVisible(FAR_IN_VIEW[ctx.tier()]);
+                if (!viewSettled && viewIsComplete()) viewSettled = true;
+                // The starting view asks for its nearest 60 kinds first; once those are in, the tier's full number.
+                inView = planner.nearestVisible(viewSettled ? FAR_IN_VIEW[ctx.tier()] : Math.min(FIRST_VIEW_KINDS, FAR_IN_VIEW[ctx.tier()]));
                 for (const slug of inView) if (ctx.library.has(slug)) ctx.library.request(slug, "far");
                 // Queued far models of kinds the camera has left (the opening flight's path) give way to what is in view.
                 if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug));
@@ -570,10 +581,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     drawn,
                     skipped,
                     collisions,
-                    viewComplete: inView.length > 0 && inView.every((slug) => {
-                        const model = ctx.library.get(slug);
-                        return Boolean(model?.far) && (planner.nearestInView(slug) > 27.5 || Boolean(model?.near));
-                    }),
+                    viewComplete: viewIsComplete(),
                     pruned
                 };
             }

@@ -23,8 +23,8 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 
 export {packGrass, unpackGrass};
 
-/** From this many animals the places are worth a worker (below, ~0.1 s on the main thread). */
-export const PLACES_IN_WORKER_FROM = 1000;
+/** From this many animals the places go to a worker: every Ark (the map's sampler is then never built in the mount). */
+export const PLACES_IN_WORKER_FROM = 0;
 
 export type ArkPrebuild = ArkSceneryPrebuild & {places: Array<[string, Placement]> | null; capacities?: Array<[ArkZone, number]> | null};
 export type ArkPrebuildInput = {grass: number; animals: ArkAnimal[] | null; tier?: QualityTier};
