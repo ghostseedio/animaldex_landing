@@ -88,11 +88,44 @@ Desktop Chrome with the phone profile is a proxy: it throttles the CPU but not t
 3. **Both**: the bridge's states (`docs/ark/runtime-bridge.md` §Testing): covered, background, Low Power Mode / battery saver, a heat override; the reset button and the loading bar at the panel's size; a WebGL context loss (Safari's "Lose context" in the inspector's Canvas tab) to see the page's fallback.
 4. If a device loses the context or jetsams at its tier: lower that tier's `textureMB` in `budgets.ts`, or move the device class down a tier in `post.ts` `tierFor`.
 
+## 8. At the captures scale (~3,100 animals at launch, ~9,400 in a year)
+
+The owner's decision that captures bring animals aboard (AnimalDex `docs/ark/captures-backfill-dry-run.md`) puts the Ark at 25–70× today's fixture. The dry run measured what breaks: the mount's single task, then CPU per frame linear in the animals drawn one by one, then downloads and memory; not the GPU.
+
+**The live budget** (`src/ark-scene/live-budget.ts`, wired in `setSnapshot`): at most **1,200 / 400 / 200** animals (high / medium / low and the lighter view) are drawn one by one; everyone else is **resting out of sight** by a rotation that is the same for every viewer:
+- it depends only on the shared clock (5-minute steps of epoch seconds), the animals' ids and the budget, never on the camera; `arkOutside(candidates, budget, epochSeconds, pinned)` is pure, so the map and behaviour lanes can drive it (dens, burrows, roosts, the indoor/outdoor rule) without touching the scene;
+- every kind keeps at least one outside when the budget allows (953 kinds at 1×: on the medium and low budgets the kinds themselves take turns, one each out), the rest of the budget by the kind's size;
+- each step, one animal of each crowded kind goes in to rest and the next comes out (an entrance: it grows in); everyone takes a turn;
+- nested across tiers: whoever a phone shows, a desktop shows too;
+- the reader's own animals, a selected, followed or replayed one, are always out on top; selecting a resting animal from the HUD brings it out, as a herd member already did;
+- the snapshot, the HUD's counts and the herds are untouched: the Ark holds everyone.
+
+**Far models by budget and distance:** a big Ark asks up front only for the herds' kinds and the tier's 160 / 120 / 80 kinds nearest the view; the rest are asked for when an animal of the kind is in view within 260 / 160 / 110 m, in the load order of §1 (an animal without its model is drawn as its icon meanwhile).
+
+**Measured** (scripts/ark-scale-fixture.mts and ark-scale-run.mjs from `ark-scale-test`, the same devices and populations; the release build re-run alongside on the same machine for a same-conditions comparison, below):
+
+| | Desktop 1× | Desktop 3× | Phone profile 1× | Phone profile 3× |
+|---|---|---|---|---|
+| Mount, one task (ms), dry run → now | 6,753 → 3,489 | 17,870 → 4,095 | 28,226 → 14,339 | 63,214 → 9,772 |
+| Ready (ms) | 7,717 → 4,092 | 18,617 → 4,744 | 29,028 → 15,440 | 64,204 → 10,343 |
+| Scene CPU per frame (ms), the three views | 21–34 → 16–22 | 56–75 → 17–23 | 76–120 → 13–17 | 229–304 → 16–24 |
+| Drawn one by one | 2,447 → 1,195 | 6,225 → 1,179 | 2,339 → 200 | 5,697 → 200 |
+| Load to quiet (s) | 182 → 112 | 125 → 77 | 215 → 40 | 347 (not quiet) → 28 |
+| JS heap (MB) | 95 → 52 | 78 → 123 | 167 → 47 | 269 → 45 |
+
+The phone profile ran on the low tier both times (the scene drops a tier under the 4× throttle on this loaded Mac): budget 200; on a phone that holds the medium tier it is 400. Per-frame CPU no longer grows with the population: at 3× it is what 1× was. Full tables: `docs/ark/scale/runtime-budget-v1.md` (and `.json`).
+
+**What is left: the mount itself.** With the budget, the population's part of the mount is bounded (placing 9,420 animals is ~0.5 s); the rest is the scenery and the behaviour schedule, the same as for 130 animals: 3.5–4 s on the desktop and 10–14 s on the phone profile under this load. No single task under 50 ms needs it split, and the pieces are other lanes' builders, so this is the plan rather than the change:
+1. **A worker prebuild.** Before `mountArk`, a worker computes the seeded, pure data: `worldDecor`, `forestFill`, `grassTufts(tier)`, the ground's height grid, `placeAnimals(snapshot)` and `scheduleWorld(worldSampler())`, and hands them over as typed arrays. Each builder takes a primed cache (one `prime…` export per module: decor.ts, terrain.ts, placement.ts, behaviour-schedule.ts). The worker file is built by `scripts/build-ark-bundle.mjs` into `public/ark/ark-worker.js` (the apps' embed) and loaded with `new Worker(new URL(...))` on the site; without workers, the same functions run on the main thread as today.
+2. **A progressive mount.** `mountArk` builds in slices under 50 ms (the ground, the water, each vegetation kind, the micro scene, the layers, the animals in batches), yielding between them, and draws the first frame from the ground and the sky while the rest comes in behind the quiet loading bar; the handle works from the first call (calls queue until the animals are in).
+3. Meanwhile the forest fill's 2.3× speed-up (§7) and the grass by tier cut the scenery's share now.
+
 ## 7. For other lanes
 
 - **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (14.8 s → 6.4 s side by side in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `docs/ark/runtime/graphics-forestfill-prefilter.patch` (applies to ark-release a92a19b9), verified identical with a deep-equal test of the old and new lists.
 - **Graphics / props / scene**: round the shader frequencies in graphics-interface.md's "shared clock" table.
-- **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned.
+- **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned; drive the resting rotation (`arkOutside`) from dens, roosts and burrows when ready.
+- **Map**: the live budget's pure rotation is the hook for "resting out of sight" per area (home 240 / 120 / 60 in the dry run's proposal).
 - **i18n**: `ark.a11y.resetView` in every language ("Back to the whole Ark"); the web page and the embed already pass it when present.
 - **Apps**: post `ark:visible` and `ark:power` (docs/ark/runtime-bridge.md).
 
