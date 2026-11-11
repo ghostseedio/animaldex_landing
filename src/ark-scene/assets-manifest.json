@@ -131,7 +131,7 @@
   "rocks": {
    "attach": "rocks/attach.json",
    "assets": 21,
-   "bytes": 1758195,
+   "bytes": 1186227,
    "lod0_tris_max": 6440
   },
   "trees": {
@@ -4413,8 +4413,8 @@
      "level": "lod1",
      "file": "rocks/boulder-a.lod1.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 11368,
+     "verts": 162,
+     "bytes": 4300,
      "doubleSided": false,
      "morph": false
     },
@@ -4422,8 +4422,8 @@
      "level": "lod2",
      "file": "rocks/boulder-a.lod2.glb",
      "tris": 80,
-     "verts": 240,
-     "bytes": 5036,
+     "verts": 42,
+     "bytes": 2816,
      "doubleSided": false,
      "morph": false
     }
@@ -4467,8 +4467,8 @@
      "level": "lod1",
      "file": "rocks/boulder-b.lod1.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 10688,
+     "verts": 162,
+     "bytes": 4296,
      "doubleSided": false,
      "morph": false
     },
@@ -4476,8 +4476,8 @@
      "level": "lod2",
      "file": "rocks/boulder-b.lod2.glb",
      "tris": 80,
-     "verts": 240,
-     "bytes": 4812,
+     "verts": 42,
+     "bytes": 2800,
      "doubleSided": false,
      "morph": false
     }
@@ -4521,8 +4521,8 @@
      "level": "lod1",
      "file": "rocks/boulder-cluster-a.lod1.glb",
      "tris": 1280,
-     "verts": 3840,
-     "bytes": 34560,
+     "verts": 648,
+     "bytes": 9748,
      "doubleSided": false,
      "morph": false
     },
@@ -4530,8 +4530,8 @@
      "level": "lod2",
      "file": "rocks/boulder-cluster-a.lod2.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 12316,
+     "verts": 168,
+     "bytes": 4436,
      "doubleSided": false,
      "morph": false
     }
@@ -4575,8 +4575,8 @@
      "level": "lod1",
      "file": "rocks/boulder-cluster-b.lod1.glb",
      "tris": 1920,
-     "verts": 5760,
-     "bytes": 49024,
+     "verts": 972,
+     "bytes": 13352,
      "doubleSided": false,
      "morph": false
     },
@@ -4584,8 +4584,8 @@
      "level": "lod2",
      "file": "rocks/boulder-cluster-b.lod2.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 11904,
+     "verts": 168,
+     "bytes": 4388,
      "doubleSided": false,
      "morph": false
     }
@@ -4629,8 +4629,8 @@
      "level": "lod1",
      "file": "rocks/boulder-cluster-barnacle-a.lod1.glb",
      "tris": 1280,
-     "verts": 3840,
-     "bytes": 33004,
+     "verts": 648,
+     "bytes": 9724,
      "doubleSided": false,
      "morph": false
     },
@@ -4638,8 +4638,8 @@
      "level": "lod2",
      "file": "rocks/boulder-cluster-barnacle-a.lod2.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 11732,
+     "verts": 168,
+     "bytes": 4344,
      "doubleSided": false,
      "morph": false
     }
@@ -4684,8 +4684,8 @@
      "level": "lod1",
      "file": "rocks/boulder-cluster-barnacle-b.lod1.glb",
      "tris": 1920,
-     "verts": 5760,
-     "bytes": 45776,
+     "verts": 972,
+     "bytes": 13044,
      "doubleSided": false,
      "morph": false
     },
@@ -4693,8 +4693,8 @@
      "level": "lod2",
      "file": "rocks/boulder-cluster-barnacle-b.lod2.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 11744,
+     "verts": 168,
+     "bytes": 4304,
      "doubleSided": false,
      "morph": false
     }
@@ -4731,7 +4731,7 @@
      "file": "rocks/boulder-cluster-mossy-a.lod0.glb",
      "tris": 2560,
      "verts": 7680,
-     "bytes": 60840,
+     "bytes": 60068,
      "doubleSided": false,
      "morph": false
     },
@@ -4739,8 +4739,8 @@
      "level": "lod1",
      "file": "rocks/boulder-cluster-mossy-a.lod1.glb",
      "tris": 1600,
-     "verts": 4800,
-     "bytes": 42700,
+     "verts": 810,
+     "bytes": 11560,
      "doubleSided": false,
      "morph": false
     },
@@ -4748,8 +4748,8 @@
      "level": "lod2",
      "file": "rocks/boulder-cluster-mossy-a.lod2.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 12112,
+     "verts": 168,
+     "bytes": 4440,
      "doubleSided": false,
      "morph": false
     }
@@ -4785,7 +4785,7 @@
      "file": "rocks/boulder-mossy-a.lod0.glb",
      "tris": 1280,
      "verts": 3840,
-     "bytes": 26888,
+     "bytes": 26468,
      "doubleSided": false,
      "morph": false
     },
@@ -4793,8 +4793,8 @@
      "level": "lod1",
      "file": "rocks/boulder-mossy-a.lod1.glb",
      "tris": 320,
-     "verts": 960,
-     "bytes": 10512,
+     "verts": 162,
+     "bytes": 4328,
      "doubleSided": false,
      "morph": false
     },
@@ -4802,8 +4802,8 @@
      "level": "lod2",
      "file": "rocks/boulder-mossy-a.lod2.glb",
      "tris": 80,
-     "verts": 240,
-     "bytes": 4696,
+     "verts": 42,
+     "bytes": 2804,
      "doubleSided": false,
      "morph": false
     }
@@ -4839,7 +4839,7 @@
      "file": "rocks/cave-mouth-a.lod0.glb",
      "tris": 2992,
      "verts": 8804,
-     "bytes": 75348,
+     "bytes": 75420,
      "doubleSided": false,
      "morph": false
     },
@@ -4847,8 +4847,8 @@
      "level": "lod1",
      "file": "rocks/cave-mouth-a.lod1.glb",
      "tris": 504,
-     "verts": 1444,
-     "bytes": 15076,
+     "verts": 344,
+     "bytes": 5912,
      "doubleSided": false,
      "morph": false
     },
@@ -4856,8 +4856,8 @@
      "level": "lod2",
      "file": "rocks/cave-mouth-a.lod2.glb",
      "tris": 128,
-     "verts": 356,
-     "bytes": 5776,
+     "verts": 110,
+     "bytes": 3508,
      "doubleSided": false,
      "morph": false
     }
@@ -4895,7 +4895,7 @@
      "file": "rocks/cave-mouth-b.lod0.glb",
      "tris": 2992,
      "verts": 8804,
-     "bytes": 71936,
+     "bytes": 71492,
      "doubleSided": false,
      "morph": false
     },
@@ -4903,8 +4903,8 @@
      "level": "lod1",
      "file": "rocks/cave-mouth-b.lod1.glb",
      "tris": 504,
-     "verts": 1444,
-     "bytes": 14864,
+     "verts": 344,
+     "bytes": 5892,
      "doubleSided": false,
      "morph": false
     },
@@ -4912,8 +4912,8 @@
      "level": "lod2",
      "file": "rocks/cave-mouth-b.lod2.glb",
      "tris": 128,
-     "verts": 356,
-     "bytes": 5676,
+     "verts": 110,
+     "bytes": 3508,
      "doubleSided": false,
      "morph": false
     }
@@ -4950,8 +4950,8 @@
      "level": "lod0",
      "file": "rocks/cliff-face-a.lod0.glb",
      "tris": 4928,
-     "verts": 14784,
-     "bytes": 116248,
+     "verts": 2565,
+     "bytes": 28348,
      "doubleSided": false,
      "morph": false
     },
@@ -4959,8 +4959,8 @@
      "level": "lod1",
      "file": "rocks/cliff-face-a.lod1.glb",
      "tris": 1120,
-     "verts": 3360,
-     "bytes": 29364,
+     "verts": 609,
+     "bytes": 8844,
      "doubleSided": false,
      "morph": false
     },
@@ -4968,8 +4968,8 @@
      "level": "lod2",
      "file": "rocks/cliff-face-a.lod2.glb",
      "tris": 216,
-     "verts": 648,
-     "bytes": 8256,
+     "verts": 130,
+     "bytes": 3832,
      "doubleSided": false,
      "morph": false
     }
@@ -5006,8 +5006,8 @@
      "level": "lod0",
      "file": "rocks/cliff-face-b.lod0.glb",
      "tris": 4928,
-     "verts": 14784,
-     "bytes": 119680,
+     "verts": 2565,
+     "bytes": 28672,
      "doubleSided": false,
      "morph": false
     },
@@ -5015,8 +5015,8 @@
      "level": "lod1",
      "file": "rocks/cliff-face-b.lod1.glb",
      "tris": 1120,
-     "verts": 3360,
-     "bytes": 30060,
+     "verts": 609,
+     "bytes": 8964,
      "doubleSided": false,
      "morph": false
     },
@@ -5024,8 +5024,8 @@
      "level": "lod2",
      "file": "rocks/cliff-face-b.lod2.glb",
      "tris": 216,
-     "verts": 648,
-     "bytes": 8132,
+     "verts": 130,
+     "bytes": 3852,
      "doubleSided": false,
      "morph": false
     }
@@ -5062,8 +5062,8 @@
      "level": "lod0",
      "file": "rocks/cliff-face-c.lod0.glb",
      "tris": 6368,
-     "verts": 15824,
-     "bytes": 122824,
+     "verts": 3605,
+     "bytes": 38388,
      "doubleSided": false,
      "morph": false
     },
@@ -5071,8 +5071,8 @@
      "level": "lod1",
      "file": "rocks/cliff-face-c.lod1.glb",
      "tris": 1120,
-     "verts": 3360,
-     "bytes": 28224,
+     "verts": 609,
+     "bytes": 8456,
      "doubleSided": false,
      "morph": false
     },
@@ -5080,8 +5080,8 @@
      "level": "lod2",
      "file": "rocks/cliff-face-c.lod2.glb",
      "tris": 216,
-     "verts": 648,
-     "bytes": 7780,
+     "verts": 130,
+     "bytes": 3736,
      "doubleSided": false,
      "morph": false
     }
@@ -5390,7 +5390,7 @@
      "file": "rocks/stalagmites-a.lod0.glb",
      "tris": 3184,
      "verts": 1713,
-     "bytes": 20280,
+     "bytes": 21024,
      "doubleSided": false,
      "morph": false
     },
@@ -5399,7 +5399,7 @@
      "file": "rocks/stalagmites-a.lod1.glb",
      "tris": 1024,
      "verts": 594,
-     "bytes": 9020,
+     "bytes": 9200,
      "doubleSided": false,
      "morph": false
     },
@@ -5408,7 +5408,7 @@
      "file": "rocks/stalagmites-a.lod2.glb",
      "tris": 192,
      "verts": 126,
-     "bytes": 3788,
+     "bytes": 3808,
      "doubleSided": false,
      "morph": false
     }
@@ -7868,5 +7868,5 @@
    ]
   }
  },
- "totalBytes": 8871343
+ "totalBytes": 8299375
 }

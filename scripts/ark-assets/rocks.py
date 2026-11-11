@@ -21,7 +21,7 @@ PALETTES = {
     "limestone": dict(a=hexc("#c2bcae"), b=hexc("#9a948a"), top=hexc("#d8d2c4"), crack=hexc("#6a645a")),
     "shore": dict(a=hexc("#7a766e"), b=hexc("#56524c"), top=hexc("#9a958a"), crack=hexc("#34302c")),
 }
-MOSS = hexc("#5a7a2a")
+MOSS = hexc("#455e26")
 LICHEN = hexc("#c8a83a")
 BARNACLE = hexc("#d8d2c0")
 WET = hexc("#2e2a26")
@@ -67,6 +67,15 @@ def facet(P, F, N, C, k=0.6):
     return Pf, np.arange(len(Pf)).reshape(-1, 3), Nf, Cf
 
 
+def shaded(P, F, N, C, k, detail):
+    """Faceted near (lod0, where the crisp facets read), welded and smooth at lod1/lod2 (at that
+    distance the facets don't show, and unwelding triples the vertices). Returns P, F, N, C, W."""
+    if detail == 0:
+        Pf, Ff, Nf, Cf = facet(P, F, N, C, k)
+        return Pf, Ff, Nf, Cf, np.zeros((len(Pf), 4))
+    return P, F, N, C, np.zeros((len(P), 4))
+
+
 def rock_colors(P, N, cavity, pal, seed, moss=0.0, lichen=0.0, barnacle_band=None, strata=None):
     p = PALETTES[pal]
     n = fbm(P * 1.7 + seed, 3)
@@ -91,7 +100,7 @@ def rock_colors(P, N, cavity, pal, seed, moss=0.0, lichen=0.0, barnacle_band=Non
     if moss:
         m = fbm(P * 2.2 + seed + 5, 3)
         cover = smoothstep(0.35, 0.75, N[:, 1] * 0.8 + m * 1.2 + (moss - 0.5)) * smoothstep(-0.1, 0.2, P[:, 1])
-        mc = mix(MOSS, hexc("#7a9a34"), np.clip(0.5 + m * 2, 0, 1))
+        mc = mix(MOSS, hexc("#5e7632"), np.clip(0.5 + m * 2, 0, 1))
         C = mix(C, mc, cover)
     if lichen:
         l = fbm(P * 6 + seed + 9, 2)
@@ -176,7 +185,7 @@ def boulders(kind, variant, seed, n, pal, moss=0.0, barnacle=False, lichen=0.3, 
             N = vertex_normals(P, F)
             C = rock_colors(P, N, cav, pal, seed + k, moss=moss, lichen=lichen, barnacle_band=band,
                             strata=9.0 if pal == "sandstone" else None)
-            m.add(*facet(P, F, N, C, 0.55 if detail < 2 else 0.3), np.zeros((len(F) * 3, 4)))
+            m.add(*shaded(P, F, N, C, 0.55, detail))
             if detail == 0:
                 pts += rock_attach(P, N, np.random.default_rng(st["seed"]), float(st["size"].max()), count=3)
                 if barnacle:
@@ -253,8 +262,10 @@ def cliff(variant, seed):
                         strata=2 * math.pi / 0.9 if variant == "a" else None,
                         barnacle_band=(0.0, 1.1) if variant == "c" else None)
         # Grass on the top, a damp foot.
-        C = mix(C, hexc("#5a7a32"), smoothstep(0.8, 0.86, Vf) * 0.85)
-        m = Mesh().add(*facet(P, F, N, C, 0.35 if detail == 0 else 0.2), np.zeros((len(F) * 3, 4)))
+        C = mix(C, hexc("#55703a"), smoothstep(0.8, 0.86, Vf) * 0.8)
+        # Smooth (welded) at every LOD: the strata and cracks carry the detail, and the faceting was
+        # faint here while it tripled the vertices of the biggest rock asset.
+        m = Mesh().add(P, F, N, C, np.zeros((len(P), 4)))
         if detail == 0:
             if variant == "c":
                 barnacles(m, P, N, (0.0, 1.0), rng, 80, 1.6)
@@ -546,8 +557,8 @@ def cave_mouth(variant, seed):
         Cout = rock_colors(Pout * 0.7, Nout, np.zeros(len(Pout)), pal, seed, moss=0.45 if variant == "b" else 0.25,
                            lichen=0.3)
         m = Mesh()
-        m.add(*facet(Pin, Fin, Nin, Cin, 0.25), np.zeros((len(Fin) * 3, 4)))
-        m.add(*facet(Pout, Fout, Nout, Cout, 0.4 if detail < 2 else 0.2), np.zeros((len(Fout) * 3, 4)))
+        m.add(*shaded(Pin, Fin, Nin, Cin, 0.25, detail))
+        m.add(*shaded(Pout, Fout, Nout, Cout, 0.4, detail))
         # Rim: the front ring of the shell to the front ring of the tunnel.
         ri, ro = Pin[: na + 1], Pout[: na + 1]
         R = np.concatenate([ro, ri])
@@ -560,7 +571,7 @@ def cave_mouth(variant, seed):
             Fr = Fr[:, [0, 2, 1]]
             Nr = -Nr
         Cr = rock_colors(R, Nr, np.full(len(R), 0.2), pal, seed + 2)
-        m.add(*facet(R, Fr, Nr, Cr, 0.5), np.zeros((len(Fr) * 3, 4)))
+        m.add(*shaded(R, Fr, Nr, Cr, 0.5, detail))
         # Back of the tunnel: dark.
         last = Pin[-(na + 1):]
         EP = np.concatenate([last, [last.mean(0) - np.array([0, 0, 0.4])]])
@@ -609,7 +620,10 @@ def stalactites(variant, seed):
         # The slab (ceiling or floor) they grow from.
         P, F, cav = rock_shape([3, 2, 1][detail], seed, np.array([1.6, 0.18, 1.6]), 0.4, 3, 0.15, 0.0)
         P[:, 1] -= P[:, 1].max() if hang else 0
-        P[:, 1] = P[:, 1] if hang else np.minimum(P[:, 1], 0.12)
+        if not hang:
+            # Flatten the top by scaling it down (clamping folded its triangles over: a black rim).
+            top = max(float(P[:, 1].max()), 1e-3)
+            P[:, 1] = np.where(P[:, 1] > 0, P[:, 1] * (0.12 / top), P[:, 1])
         N = vertex_normals(P, F)
         m.add(P, F, N, rock_colors(P + UP * 0.8, N, cav * 0.5, "limestone", seed), np.zeros((len(P), 4)))
         for k, it in enumerate(items):
