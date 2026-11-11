@@ -206,6 +206,12 @@ for (const id of Object.keys(attach).sort()) {
     const geometry = await lod0(id);
     if (!geometry) continue;
     const {tris, leaves, W, N, wood} = build(geometry);
+    const leafy = tris.filter((t) => t.leafy);
+    // The wind weights of the drawn surface nearest the (rounded) point: where two pieces meet, the one it is on.
+    const windAt = (list, point) => {
+        const under = closestOn(list, point);
+        return interpolate(W, under.t, under.point, 4);
+    };
     const rows = [];
     const used = new Set();
     const counts = {leaf: [0, 0], bark: [0, 0], branch: [0, 0]};
@@ -232,9 +238,9 @@ for (const id of Object.keys(attach).sort()) {
             // Its top surface over its middle (a folded blade: the ridge of its midrib).
             const from = leaf.blade ? leaf.base.clone().lerp(leaf.tip, 0.45) : leaf.centroid.clone();
             const hit = rayHit(leaf.list, from.clone().addScaledVector(leaf.up, 0.5), leaf.up.clone().negate(), 1) ?? closestOn(leaf.list, from);
-            const weights = interpolate(W, hit.t, hit.point, 4);
             const forward = leaf.blade ? along(leaf.tip.clone().sub(leaf.base).toArray(), leaf.up) : along(row.f, leaf.up);
-            const position = hit.point.clone().addScaledVector(leaf.up, 0.002);
+            const position = new Vector3(...hit.point.clone().addScaledVector(leaf.up, 0.002).toArray().map(r3));
+            const weights = windAt(leafy, position);
             const open = openness(tris, position, leaf.up, new Set(leaf.list));
             const maxSize = leaf.blade ? 0.6 * leaf.length : 0.45 * leaf.length;
             rows.push(["leaf", ...position.toArray().map(r3), ...leaf.up.toArray().map(r3), ...forward.toArray().map(r3), 0.002, r3(maxSize), ...weights.map(r4), r3(open), source]);
@@ -258,8 +264,8 @@ for (const id of Object.keys(attach).sort()) {
         if (hit.d > far + (row.tag === "branch" ? 0.15 : 0)) return;
         if (row.tag === "branch" && normal.y < 0.55) return;
         if (row.tag === "bark" && normal.dot(new Vector3(...row.n)) < 0) normal.negate();
-        const weights = interpolate(W, hit.t, hit.point, 4);
-        const position = hit.point.clone().addScaledVector(normal, 0.002);
+        const position = new Vector3(...hit.point.clone().addScaledVector(normal, 0.002).toArray().map(r3));
+        const weights = windAt(wood, position);
         const forward = along(row.f, normal);
         const open = row.tag === "bark" ? openness(tris, position, normal, new Set([hit.t])) : 0;
         rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source]);
