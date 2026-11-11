@@ -90,7 +90,7 @@ Desktop Chrome with the phone profile is a proxy: it throttles the CPU but not t
 
 ## 7. For other lanes
 
-- **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (11.8 s → 6.4 s in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `docs/ark/runtime/graphics-forestfill-prefilter.patch` (applies to ark-release a92a19b9), verified identical with a deep-equal test of the old and new lists.
+- **Graphics** (`decor.ts` forestFill): test the clump noise before sampling the ground, against the densest zone's density (0.32): the same 639 trees, 2.3× faster (14.8 s → 6.4 s side by side in node on the loaded Mac; ~1.5 s of the phone profile's mount). Patch: `docs/ark/runtime/graphics-forestfill-prefilter.patch` (applies to ark-release a92a19b9), verified identical with a deep-equal test of the old and new lists.
 - **Graphics / props / scene**: round the shader frequencies in graphics-interface.md's "shared clock" table.
 - **Behaviour**: the schedule's places and walk grid (1 s of the phone profile's mount) to a worker or chunks, as planned.
 - **i18n**: `ark.a11y.resetView` in every language ("Back to the whole Ark"); the web page and the embed already pass it when present.
