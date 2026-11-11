@@ -362,6 +362,18 @@ export function nestSiteOf(world: ScheduleWorld, profile: ArkBehaviourProfile, a
     const key = `${animal.id}#${nestYear(species, epochSeconds)}`;
     if (nestSites.has(key)) return nestSites.get(key)!;
     const kind = species.nest.kind;
+    // A low branch first (most stick and cup nests are within a few metres of the ground, and can be seen there).
+    if (kit.flies(profile) && ["cup", "dome", "platform", "other"].includes(kind)) {
+        const low = world.sampler
+            .attachPoints("branch", {x: animal.home.x, z: animal.home.z, r: 14})
+            .filter((p) => p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) < 5 && p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) > 1.2)
+            .sort((a, b) => a.id.localeCompare(b.id));
+        if (low.length) {
+            const spot = kit.spotOf(low[Math.floor(rng(hashString(key))() * low.length)]);
+            nestSites.set(key, spot);
+            return spot;
+        }
+    }
     const tags: AttachTag[] =
         kind === "mud" ? ["house_wall", "cliff_ledge", "rock_face", "branch"] : kind === "floating" || kind === "bubble" ? ["reeds", "water_edge"] : kind === "cavity" ? ["bark", "branch"] : kind === "scrape" || kind === "mound" || kind === "burrow" ? ["shade", "grass"] : kit.flies(profile) ? ["branch", "reeds", "shade"] : ["shade", "grass"];
     const roll = rng(hashString(key))();
@@ -754,6 +766,11 @@ function buildEpisode(ctx: BuildContext): Episode | null {
     }
     if (template.tail) sequence(template.tail);
     if (!keys.length) return null;
+    // The prey is there while it waits for it: a wait, a scan or a hover before a catch shows the school or swarm it watches.
+    for (let i = keys.length - 2; i >= 0; i--) {
+        const next = keys[i + 1].prey;
+        if (next && !keys[i].prey && WATCHING.has(keys[i].block.id)) keys[i] = {...keys[i], prey: next};
+    }
     // Back to its schedule's pose (where it began, for a stay; where its schedule has it by then, for a pair), its own way:
     // this last key goes to the live pose, so it never snaps. It ends inside the window (sped up if it must).
     const home = ctx.anchor;
@@ -773,6 +790,8 @@ function waterFace(world: ScheduleWorld, at: P, length: number): P | null {
 function defaultCarry(profile: ArkBehaviourProfile): CarryAt {
     return profile.move === "fly" || profile.moves.includes("fly") ? "beak" : "mouth";
 }
+
+const WATCHING = new Set(["ambush", "scan", "freeze", "hover", "perch", "stalk"]);
 
 // MARK: The pose
 
@@ -1144,6 +1163,28 @@ export function murmurationOf(world: ScheduleWorld, owner: TripOwner, kit: Sched
     const t0 = epoch - (hours - MURMURATION_HOURS[0]) * 3600;
     const t1 = t0 + (MURMURATION_HOURS[1] - MURMURATION_HOURS[0]) * 3600;
     return {centre: {x: roost.x, y: Math.max(world.sampler.heightAt(roost.x, roost.z), 0), z: roost.z}, seed: hashString(leader.id), t0, t1};
+}
+
+/**
+ * A small animal at its microhabitat (off the schedule: house starlings) in its flock's murmuration at dusk: the
+ * flock is everyone of its species round the same spot (a 40 m cell), over that spot. Pure in (its place, the time).
+ */
+export function microMurmuration(id: string, slug: string, at: {x: number; y: number; z: number}, epoch: number, hours: number, heightAt: (x: number, z: number) => number): (P & {yaw: number; pitch: number; roll: number; act: RecipeAct}) | null {
+    if (!enabled || !speciesRecipes(slug).has.has("murmuration")) return null;
+    if (hours < MURMURATION_HOURS[0] || hours > MURMURATION_HOURS[1]) return null;
+    const cx = (Math.floor(at.x / 40) + 0.5) * 40;
+    const cz = (Math.floor(at.z / 40) + 0.5) * 40;
+    const centre = {x: cx, y: Math.max(heightAt(cx, cz), 0), z: cz};
+    const seed = hashString(`${slug}#${cx}#${cz}`);
+    const t0 = epoch - (hours - MURMURATION_HOURS[0]) * 3600;
+    const t1 = t0 + (MURMURATION_HOURS[1] - MURMURATION_HOURS[0]) * 3600;
+    const index = hashString(id) % 997;
+    const p = murmurationPoint(centre, seed, index, epoch);
+    const ahead = murmurationPoint(centre, seed, index, epoch + 0.2);
+    const k = ease(Math.min(Math.min(epoch - t0, t1 - epoch) / 40, 1));
+    const climb = Math.atan2(ahead.y - p.y, Math.hypot(ahead.x - p.x, ahead.z - p.z) || 1e-3);
+    const act: RecipeAct = {episode: `murmuration#${seed}#${Math.floor(t0)}`, recipe: "murmuration", block: "fly", state: "fly", u: (epoch - t0) / (t1 - t0), pitch: -climb * k, roll: -0.4 * k * Math.sin(epoch * 0.9 + index), own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: TEMPLATES.murmuration.label, flock: {centre, seed, t0, t1}};
+    return {x: at.x + (p.x - at.x) * k, y: at.y + (p.y - at.y) * k, z: at.z + (p.z - at.z) * k, yaw: Math.atan2(ahead.x - p.x, ahead.z - p.z), pitch: act.pitch, roll: act.roll, act};
 }
 
 function murmurationPose(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, base: TripPose, epoch: number): RecipePose | null {

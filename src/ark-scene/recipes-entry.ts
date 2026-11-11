@@ -9,7 +9,8 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
-import {nestStageAt, pairWindows, sexLook, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {microMurmuration, nestStageAt, pairWindows, sexLook, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {heightAt} from "@/ark-scene/world";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -30,7 +31,7 @@ const SPECIES: Record<string, Species> = {
 
 type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null};
 type Clip = {cast: Array<[string, string, number]>; hours: number; date: number; find: (ctx: Context) => Moment | null};
-type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null}>; hoursAt: (epoch: number) => number; date: number};
+type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null}>; micro: Array<{id: string; slug: string; at: {x: number; y: number; z: number}}>; hoursAt: (epoch: number) => number; date: number};
 
 const view = (x: number, y: number, z: number, distance: number, polar = 1.15, azimuth = 0.6): ArkCameraView => ({target: {x, y, z}, distance, polar, azimuth});
 
@@ -66,7 +67,8 @@ const CLIPS: Record<string, Clip> = {
     },
     stags: {
         cast: [["deer", "red-deer", 8]],
-        hours: 7.5,
+        // Crepuscular deer are up while the sun is under 22°: an early morning.
+        hours: 6.4,
         date: Date.UTC(2026, 9, 6, 7) / 1000,
         find: (ctx) => {
             // Only inside the pairs' meeting windows (pure, from each pair's key): the first with a fight in it.
@@ -87,9 +89,11 @@ const CLIPS: Record<string, Clip> = {
         hours: 17.8,
         date: Date.UTC(2026, 10, 11, 17) / 1000,
         find: (ctx) => {
-            const a = ctx.animals[0];
-            const p = poseOnTrip(ctx.world, tripAt(ctx.world, a.profile, a.animal, ctx.date + 1200, ctx.hoursAt, a.activity), ctx.date + 1200) as RecipePose;
-            const c = p.act?.flock?.centre ?? {x: p.x, y: p.y, z: p.z};
+            // House starlings (micro animals, off the schedule): their flock's murmuration is over their spot.
+            const entry = ctx.micro[0];
+            if (!entry) return null;
+            const m = microMurmuration(entry.id, entry.slug, entry.at, ctx.date + 1200, ctx.hoursAt(0), heightAt);
+            const c = m?.act.flock?.centre ?? entry.at;
             return {start: ctx.date + 1200, seconds: 30, step: 1 / 6, view: view(c.x, c.y + 16, c.z, 70, 1.38, 0.9), note: `centre ${c.x.toFixed(1)},${c.z.toFixed(1)}`};
         }
     },
@@ -107,7 +111,7 @@ const CLIPS: Record<string, Clip> = {
                 const ep = tripEpisode(ctx.world, trip);
                 const carry = ep?.keys.find((k) => k.carry?.item === "material" && k.block.motion === "travel");
                 if (!ep || !carry) continue;
-                return {start: carry.t0 - 2, seconds: 14, step: 1 / 8, view: view(site.x, site.y + 0.3, site.z, 5, 1.2, 0.8), note: `site ${site.x.toFixed(1)},${site.y.toFixed(1)},${site.z.toFixed(1)}; stage now ${nestStageAt(a.slug, carry.t0).toFixed(2)}`};
+                return {start: carry.t0 - 2, seconds: 14, step: 1 / 8, view: view(site.x, site.y, site.z, 3.6, 1.33, 0.8), note: `site ${site.x.toFixed(1)},${site.y.toFixed(1)},${site.z.toFixed(1)}; stage now ${nestStageAt(a.slug, carry.t0).toFixed(2)}`};
             }
             return null;
         }
@@ -191,13 +195,17 @@ async function main() {
     handle.setClockScale(1, clip.date * 1000);
     const until = realPerfNow() + 120_000;
     while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
-    const debug = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string; activity: ArkBehaviourProfile["activity"] | null}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>}}).__arkDebug;
+    const debug = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string; activity: ArkBehaviourProfile["activity"] | null}; place: {x: number; z: number; ground: number; micro?: unknown}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>}}).__arkDebug;
     const ctx: Context = {
         world: scheduleWorld(worldSampler()),
         animals: debug
             .entries()
             .filter((e) => e.sched)
             .map((e) => ({id: e.animal.id, slug: e.animal.model_slug, animal: e.sched!.animal, profile: e.sched!.profile, activity: e.animal.activity})),
+        micro: debug
+            .entries()
+            .filter((e) => e.place.micro)
+            .map((e) => ({id: e.animal.id, slug: e.animal.model_slug, at: {x: e.place.x, y: e.place.ground, z: e.place.z}})),
         hoursAt: () => clip.hours,
         date: clip.date
     };

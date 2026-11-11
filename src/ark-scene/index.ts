@@ -73,7 +73,7 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chase
 import {animalMaterial, ARK_CLOCK} from "@/ark-scene/animal-material";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {hasNestSource, nestStageAt, sexLook, speciesRecipes, wireRecipes, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {hasNestSource, microMurmuration, nestStageAt, sexLook, speciesRecipes, wireRecipes, type RecipeAct, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {HerdSpecks, textureColour, type SpeckShape} from "@/ark-scene/herd-specks";
 import {ARK_HERD_LIVE, ARK_HERD_LIVE_LITE, arkRepresentatives, HERD_FIGURE_BUDGET, HERD_SPECK_BELOW_PIXELS, type ArkHerd} from "@/ark-scene/herds";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -291,6 +291,8 @@ type Entry = {
     sched?: Sched | null;
     /** Turned to look at a predator passing (visual only), eased. */
     glance?: number;
+    /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
+    recipeAct?: RecipeAct | null;
     /** A rigged animal on the ground walks about its spot now and then (`stepWander`). */
     wander?: Wander | null;
     /** A leaper in the air: how far across (0…1), else 0. */
@@ -1630,7 +1632,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (at) return at;
         }
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
-        if (place.micro && !entry.visitor) return microPose(entry, reducedMotion ? 0 : time);
+        if (place.micro && !entry.visitor) {
+            // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
+            const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
+            entry.recipeAct = flock?.act ?? null;
+            if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
+            return microPose(entry, reducedMotion ? 0 : time);
+        }
         // (A bird of the air flies from its perch, and comes back to it to rest.)
         if (place.canopy && !entry.visitor && entry.air <= 0.001) return canopyPose(entry, reducedMotion ? 0 : time);
         if (place.burrow && !entry.visitor) return undergroundPose(entry, modelHeight, reducedMotion ? 0 : time);
@@ -1953,6 +1961,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const nests: RecipeNest[] = [];
         for (const c of list) {
             const own = c.entry.sched;
+            // A house starling's murmuration (its flockmates are drawn round it, far as it may be).
+            if (c.entry.recipeAct) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act: c.entry.recipeAct});
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
@@ -2044,7 +2054,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const near = cameraPosition.distanceTo(position.set(entry.place.x, entry.place.ground, entry.place.z));
                 entry.length = microDrawnLength(entry.trueLength, entry.full, near, height, FOV, MICRO_MIN_PIXELS);
                 const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
-                skip = near > MICRO_DRAW_WITHIN && !own;
+                skip = near > MICRO_DRAW_WITHIN && !own && !entry.recipeAct;
                 if (!skip && library.has(slug) && !model) library.request(slug, "far");
             }
             const modelScale = model ? entry.length / model.bodyLength : 1;

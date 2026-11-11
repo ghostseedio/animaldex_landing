@@ -170,7 +170,7 @@ export class RecipeScene {
                 if (act.prey.kind === "fish" || act.prey.kind === "shellfish") {
                     this.chasers.push({x: a.x, y: a.y, z: a.z, r: Math.max(a.length * 2.5, 0.8)});
                     const count = act.prey.kind === "fish" ? 14 : 5;
-                    const size = Math.min(Math.max(a.length * 0.22, 0.05), 0.3);
+                    const size = Math.min(Math.max(a.length * 0.12, 0.04), 0.22);
                     for (let i = 0; i < count; i++) {
                         const angle = (i / count) * Math.PI * 2 + now * (0.6 + (seed % 7) * 0.05) + (i % 3) * 0.4;
                         const ring = size * (2.2 + (i % 4) * 0.8);
@@ -186,6 +186,9 @@ export class RecipeScene {
                         x += dx * push;
                         y += dy * push * 0.5;
                         z += dz * push;
+                        // Under the surface, above the bed (the prey's point is on the bed in the shallows).
+                        y = Math.min(y, -0.04);
+                        if (p.y < -0.05) y = Math.max(y, p.y + size * 0.4);
                         if (act.prey.kind === "shellfish") y = Math.min(y, p.y);
                         this.put(this.fish, x, y, z, angle + Math.PI, 0, 0, size * 0.25, size * 0.35, size, act.prey.kind === "shellfish" ? "#6f5d6e" : undefined);
                     }
