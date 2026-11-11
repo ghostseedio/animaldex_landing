@@ -69,6 +69,9 @@ const measureMs = Number(arg("measure", "3000"));
 const studies = arg("study", "") ? arg("study", "").split(",") : [];
 const animals = arg("animals", "") ? arg("animals", "").split(",") : [];
 const rigged = new Set(arg("rigged", "") ? arg("rigged", "").split(",") : []);
+// The shadow audit's animals: one id per --animals entry ("-" for any), and a fixed camera distance (m).
+const animalIds = arg("ids", "") ? arg("ids", "").split(",") : [];
+const fixedDistance = arg("distance", "") ? Number(arg("distance", "")) : undefined;
 const closeUpDir = path.resolve(arg("closeup-dir", path.join(os.homedir(), "animaldex-talking-models", "ark-closeup")));
 // The props lane's close-ups (src/ark-scene/props/golden-props.ts): --props all, or --props bird_nest,cave_roost
 const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore", "hamlet_day", "hamlet_night", "hamlet_close_day", "hamlet_close_night"];
@@ -186,7 +189,16 @@ async function renderer(page) {
     });
 }
 
-if (animals.length) {
+if (flag("shadow-audit")) {
+    // The contact-shadow audit: animals standing on ground far from their home spot's height (where a shadow used to lie).
+    const {context, page} = await openPage(devices[0], quality === "auto" ? "" : `quality=${quality}`);
+    await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
+    await page.evaluate(() => window.__arkGolden.prepare());
+    const rows = await page.evaluate((s) => window.__arkGolden.shadowAudit(s), Number(arg("seconds", "20")));
+    writeFileSync(path.join(out, "shadow-audit.json"), JSON.stringify(rows, null, 1));
+    log("shadow audit", rows.length, "animals off their home's ground; worst:", JSON.stringify(rows.slice(0, 12).map((r) => `${r.slug} ${r.off.toFixed(2)}`)));
+    await context.close();
+} else if (animals.length) {
     for (const deviceName of devices) {
         const query = [quality === "auto" ? "" : `quality=${quality}`, `closeup=${encodeURIComponent(`${base}/ark-closeup`)}`].filter(Boolean).join("&");
         const {context, page, errors} = await openPage(deviceName, query);
@@ -205,7 +217,7 @@ if (animals.length) {
             for (const slug of animals) {
                 for (const variant of [...variants, ...(rigged.has(slug) ? [{wetness: 0, suffix: "-moving", moving: true, detail: false}] : [])]) {
                     for (const look of [false, true]) {
-                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving")), detail: variant.detail}]);
+                        const shot = await page.evaluate(([s, t, o]) => window.__arkGolden.animal(s, t, o), [slug, time, {look, wetness: variant.wetness, still: !(variant.moving || flag("moving")), detail: variant.detail, ...(animalIds[animals.indexOf(slug)] && animalIds[animals.indexOf(slug)] !== "-" ? {id: animalIds[animals.indexOf(slug)]} : {}), ...(fixedDistance ? {distance: fixedDistance} : {})}]);
                         if (!shot.found) {
                             log(deviceName, slug, "not in the fixture");
                             break;
