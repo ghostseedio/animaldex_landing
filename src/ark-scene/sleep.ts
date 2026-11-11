@@ -417,9 +417,12 @@ export function packSleep(eyes: number, curl: number, flick: number, breath: num
     return q(eyes * 63, 0, 63) * 262144 + q(curl * 25 + 31, 0, 63) * 4096 + q(flick * 63, 0, 63) * 64 + q(breath * 50, 0, 63);
 }
 
-/** Roosts it goes into to sleep (its schedule's roost is the entrance): a burrow's or a den's mouth on the ground. */
-const INTO = ["burrow_entrance", "cave_mouth"];
-/** Whether its roost spot is a way in (the attach point's tag: `<tag>:<host>:<n>`). */
+/**
+ * Roosts it goes into to sleep (its schedule's roost is the entrance): a burrow's or a den's mouth on the ground. The
+ * id keeps the tag it was made with: the graphics sampler's `burrow:<host>:<n>`, or `burrow_entrance:` / `cave_mouth:`.
+ */
+const INTO = ["burrow", "burrow_entrance", "cave_mouth"];
+/** Whether its roost spot is a way in (the attach point's id: `<tag>:<host>:<n>`). */
 export function goesIntoRoost(point: string | null | undefined, roost: string | null | undefined): boolean {
     return Boolean(point && roost && ["den", "burrow", "cave"].includes(roost) && INTO.some((tag) => point.startsWith(`${tag}:`)));
 }

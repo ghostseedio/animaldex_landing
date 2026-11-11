@@ -10,6 +10,7 @@ import {
     breathRate,
     decodeSleepRow,
     getUpSeconds,
+    goesIntoRoost,
     lieDownSeconds,
     packSleep,
     restStatus,
@@ -188,6 +189,7 @@ test("huddles, piles, rows and clusters sleep close; a young mammal sleeps again
     assert.ok(Math.sign(a.dx) !== Math.sign(b.dx));
     assert.ok(Math.abs(a.dx) > 0.08 && Math.abs(a.dx) < 0.2 && Math.abs(a.dz) < 1e-9);
     assert.equal(roostOffset("plains-zebra", 1, 2, 0), null);
+    assert.ok(goesIntoRoost("burrow:ground:96", "den") && goesIntoRoost("cave_mouth:12", "cave") && !goesIntoRoost("limb:oak-a:3", "den") && !goesIntoRoost("burrow:ground:96", "tree"));
     const c = roostOffset("egyptian-fruit-bat", 3, 0.16, 0)!;
     assert.ok(Math.hypot(c.dx, c.dz) < 0.2);
 });

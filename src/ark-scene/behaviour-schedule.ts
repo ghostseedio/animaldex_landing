@@ -39,6 +39,8 @@ import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
+/** The raised perches a group sleeps along in a row or a cluster (sleep lane). */
+const RAISED_TAGS: AttachTag[] = ["branch", "canopy_hang", "cliff_ledge", "post", "rock_top", "tree_hollow"];
 /** A night watch stands this many slots (sleep lane: about five minutes). */
 export const NIGHT_WATCH_SLOTS = 4;
 
@@ -487,8 +489,8 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
         // against the adult, touching (`sleepSpacing`); on a raised perch in a row along it or a bat's cluster.
         const lead = roostOf(world, group.profile, group.leader);
         if (lead.point && raised(world, lead) && together) {
-            const tag = lead.point.split(":")[0] as AttachTag;
-            const at = world.sampler.attachPoints(tag, {x: lead.x, z: lead.z, r: 0.3}).find((p) => p.id === lead.point);
+            // (The point's id keeps the tag it was made with, not always the schedule's: a limb is a branch.)
+            const at = RAISED_TAGS.map((tag) => world.sampler.attachPoints(tag, {x: lead.x, z: lead.z, r: 0.3}).find((p) => p.id === lead.point)).find(Boolean);
             const off = roostOffset(profile.slug, group.rank, Math.max(animal.length, group.leader.length), at?.yaw ?? 0);
             if (off) return {...lead, x: lead.x + off.dx, y: lead.y + off.dy, z: lead.z + off.dz};
         }

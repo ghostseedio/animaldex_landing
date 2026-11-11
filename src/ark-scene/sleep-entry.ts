@@ -220,9 +220,9 @@ async function main() {
             handle.setView(v);
             await setAt(script!.start + s);
             // What the animals in view are doing (development: the sleep, the reactive layer's wake).
-            const near = (debug.entries() as unknown as Array<{animal: {id: string; model_slug: string}; middle: {x: number; z: number} | null; sleepNow?: {t: number; posture: string} | null; reactive?: {action: string; woke?: boolean} | null; state: {kind: string; doing?: string}}>)
+            const near = (debug.entries() as unknown as Array<{animal: {id: string; model_slug: string}; middle: {x: number; z: number} | null; sleepNow?: {t: number; posture: string} | null; denIn?: number; reactive?: {action: string; woke?: boolean} | null; state: {kind: string; doing?: string}}>)
                 .filter((e) => e.middle && Math.hypot(e.middle.x - v.target.x, e.middle.z - v.target.z) < 9)
-                .map((e) => `${e.animal.model_slug.split("-")[0]}${e.animal.id.slice(-2)} ${e.state.doing ?? e.state.kind} ${e.sleepNow ? `${e.sleepNow.posture} ${e.sleepNow.t.toFixed(2)}` : "up"}${e.reactive ? ` ${e.reactive.action}${e.reactive.woke ? " WOKE" : ""}` : ""}`)
+                .map((e) => `${e.animal.model_slug.split("-")[0]}${e.animal.id.slice(-2)} ${e.state.doing ?? e.state.kind} ${e.sleepNow ? `${e.sleepNow.posture} ${e.sleepNow.t.toFixed(2)}` : "up"}${e.denIn ? ` in its den ${e.denIn.toFixed(2)}` : ""}${e.reactive ? ` ${e.reactive.action}${e.reactive.woke ? " WOKE" : ""}` : ""}`)
                 .slice(0, 8);
             return `${shot.label}   +${s.toFixed(1)} s\n${near.join("\n")}`;
         }
