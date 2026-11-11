@@ -234,13 +234,14 @@ export class ArkLighting {
 
         this.sky.material.uniforms.sunPosition.value.copy(sunDirection);
         this.skyCopy.material.uniforms.sunPosition.value.copy(sunDirection);
-        this.sky.visible = day.night < 0.995;
+        // Under water the domes stay hidden (setUnderwater): else the sky shows past the terrain's edge as a white band.
+        this.sky.visible = day.night < 0.995 && !this.underwater;
         this.nightMaterial.uniforms.horizon.value.set(day.horizon);
         this.nightMaterial.uniforms.zenith.value.set(day.zenith);
         this.nightMaterial.uniforms.night.value = day.night;
-        this.nightDome.visible = day.night > 0.005;
-        this.nightCopy.visible = this.nightDome.visible;
-        this.skyCopy.visible = this.sky.visible;
+        this.nightDome.visible = day.night > 0.005 && !this.underwater;
+        this.nightCopy.visible = day.night > 0.005;
+        this.skyCopy.visible = day.night < 0.995;
 
         this.sun.color.set(day.light.color);
         this.sun.intensity = day.light.intensity * (1 - 0.35 * ARK_ENV.cloud.value) * (this.underwater ? 0.5 : 1);
