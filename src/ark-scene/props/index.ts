@@ -80,6 +80,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     nestSites: () => Array<NestSiteInfo & {stage: number}>;
     /** Pin the Ark day the nests are built to (null follows the clock). */
     setArkDay: (day: number | null) => void;
+    /** The home area's plots (the map lane's `homePlots()`; default: today's cottage and barn). */
+    setHomePlots: (plots: HomePlot[]) => void;
 } {
     const root = new Group();
     root.name = "props";
@@ -96,7 +98,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
     let areas: Areas | null = null;
     let disposed = false;
     let shadows = true;
-    const homePlots: HomePlot[] = defaultHomePlots();
+    let homePlots: HomePlot[] = defaultHomePlots();
     const cave = buildCave(tier);
     root.add(cave.group);
     const effectsGroup = new Group();
@@ -192,6 +194,18 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
             shadows = on;
             for (const batch of batches()) batch.setShadows(on);
             for (const piece of pieces()) piece.setShadows(on);
+        },
+        /** The home area's plots (the map lane's `homePlots()`): each gets its own garden or yard, paddock, coop and fences. */
+        setHomePlots: (plots: HomePlot[]) => {
+            homePlots = plots;
+            if (!areas) return;
+            root.remove(areas.group);
+            areas.dispose();
+            areas = buildAreas(tier, homePlots);
+            root.add(areas.group);
+            for (const batch of areas.batches) batch.setShadows(shadows);
+            for (const piece of areas.pieces) piece.setShadows(shadows);
+            moved = true;
         },
         setSnapshot: (next: ArkSnapshot) => {
             snapshot = next;
