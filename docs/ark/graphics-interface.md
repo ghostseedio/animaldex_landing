@@ -13,7 +13,9 @@ The graphics pass owns the terrain and scenery (branch `ark-graphics`). Other la
 
 ## Named places
 
-`place(name) → {x, y, z, radius}`. Available names: `island_middle, beach, shore_rocks, tide_pools, visitor_landing, forest_floor, rainforest, woodland, house, house_porch_light, garden_pond, fields, lake, river_source, river_mouth, wetland, grassland, desert, mountain, mountain_peak, cold_cove, reef, open_ocean`.
+`place(name) → {x, y, z, radius, facing?}`. Available names: `island_middle, beach, shore_rocks, tide_pools, visitor_landing, forest_floor, rainforest, woodland, house, house_porch_light, garden_pond, fields, lake, river_source, river_mouth, wetland, grassland, desert, mountain, mountain_peak, cold_cove, reef, open_ocean, cave`.
+
+- `cave` (added 2026-11-11): the props lane's cave site (`CAVE_SITE`), a rock outcrop on flat open ground at the ice's edge below the mountain. `y` is its floor; `facing` is the way out of its mouth (radians about y, three's convention: local +z → (sin, cos)), toward the island's middle. The test checks the site stays flat (within 0.3 m over 4.5 m) and clear of decor and forest fill (6.5 m).
 
 The map build keeps these names and moves their positions. Golden shots and spawn rules use names, never coordinates.
 
@@ -33,11 +35,12 @@ Each point has:
 - `host`: what the point sits on;
 - `hostKind`: the host's decor kind (`broadleaf`, `rock`, …), `house`, `lamp`, `pond`, `lake` or `ground`.
 
-Tree points (`leaf`, `bark`, `branch`) also carry, all optional (added 2026-11-11, `ark-graphics-attach`):
+Tree points (`leaf`, `bark`, `branch`, `tree_hollow`) also carry, all optional (added 2026-11-11, `ark-graphics-attach`):
 - `asset`: the asset tree they are on (`oak-a`);
 - `forward`: along the surface (a leaf's midrib base → tip, up the trunk, along the branch);
 - `open`: 0–1, the share of sight lines within 40° of out-and-up that leave the tree unblocked (how visible the point is from outside the tree);
 - `leaf`: `blade` (a single leaf) or `clump` (the crown's leaf mass), on leaves;
+- `depth`: how deep the hole runs into the trunk (m), on hollows;
 - `wind`: how the tree's wind moves the point (see below).
 
 Points are seeded, so every viewer gets the same ones.
@@ -47,15 +50,17 @@ Points are seeded, so every viewer gets the same ones.
 | `leaf` | canopy | on the drawn leaves of each asset tree (lod0), on top of the leaf over its middle, facing along its midrib |
 | `branch` | canopy | on top of the drawn branches' wood, where it faces the sky |
 | `bark` | bark | on the drawn trunk's wood, facing out, forward up the trunk |
+| `tree_hollow` | bark | the middle of the mouth of each hole drawn in the oaks' and snags' trunks (from attach.json), facing out of the hole, with its `depth`: parrots, owls, a bees' hollow (added 2026-11-11) |
 | `canopy_perch`, `canopy_hang`, `canopy_climb` | canopy | the canopy trees' limbs (on top, under) and trunk |
 | `flower_head` | flowers | the top of each flower |
 | `rock_face` | rocks | round every rock, 2 mm off the flat faces vegetation.ts draws (`drawnRockPoint`), facing out |
 | `tide_pool` | rocks | at the foot of the shore's low rocks |
-| `house_wall`, `house_eave` | house | the cottage's four walls and its eaves |
+| `house_wall`, `house_eave` | house | the cottage's four walls; under its eaves, 4 mm below the drawn roof (the long walls under the slope, 0.21 m out; the gable ends under the verge's peak) |
 | `porch_light`, `lamp` | lamp | the porch light and each zone's lamp post |
 | `pond_surface` | pond_surface | the garden pond and the lake's margin |
 | `leaf_litter` | leaf_litter | the forest floor |
 | `worm_hole`, `burrow` | burrow | soft open ground, and banks |
+| `ledge` | rocks | cliff and rock shelves where a bird nests or perches (added 2026-11-11): steep ground on the sea cliffs, the mountain and the ice (`ledge:ground:N`, the props lane's search and seed, so its ids are unchanged), and the flat tops of the big shore, mountain and ice rocks (`ledge:decorN:0`). The normal is up (the animal stands on the shelf); `forward` and the yaw face out of the slope, or away from the island's middle on a rock. A nest prop on a cliff ledge turns by `forward`, not the normal. |
 
 ### Trees: on the real geometry (2026-11-11)
 
@@ -64,7 +69,7 @@ Points are seeded, so every viewer gets the same ones.
 - **Which trees.** Every decor tree, and the forest fill up to rank `EVERY_TIER_FILL` (0.3, the share the low tier draws), so an animal on a tree never floats where a lighter tier leaves its tree out. Per tree: up to 12 leaves, 6 bark and 8 branch points (pines and snags have no leaf points: needles and bare wood).
 - **Detail.** A tree is drawn at lod0 whenever the camera is within 2.5 m of its bounds (`treeLodDistance`, `TREE_CLOSE`), so the leaf under a close-up is always the one the point is on.
 - **Leaf size.** A leaf point takes animals up to 12 cm, whatever the leaf.
-- **Every other point** (the house, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before. Rock points keep their ids but moved by millimetres to a few centimetres, from the smooth rock shape onto the flat faces actually drawn (they had floated about 8 mm off the rock, or sat up to 5 cm inside it).
+- **Every other point** (the house walls, lamps, ponds, the ground, the canopy trees) keeps the id and position it had before. The four eave points keep their ids but moved under the drawn roof (they sat above it on the long walls and in mid-air at the gables). Rock points keep their ids but moved by millimetres to a few centimetres, from the smooth rock shape onto the flat faces actually drawn (they had floated about 8 mm off the rock, or sat up to 5 cm inside it).
 
 ### Wind: an animal on a leaf moves with the leaf
 
