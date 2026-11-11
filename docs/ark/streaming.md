@@ -22,8 +22,8 @@ Branch `ark-streaming` (landing). This is the groundwork for Part C, which makes
 | Asset trees and rocks (`asset-trees.ts`, `asset-rocks.ts`) | instances | yes | yes | no |
 | Forest floor (`AssetFloor`) | instances | yes | no | no |
 | Props: homes, nests, areas, effects (`cull.ts`) | objects whose bounds centre falls in it | yes | no | no |
-| Animals (`index.ts` updateInstances) | its pose now (its schedule's position) | modelled, stepped, rigged | a 5 px marker | nothing, and its schedule is not stepped |
-| Herds (`planHerds`) | whole herd sphere | figures and specks | badge only | badge only |
+| Animals (`index.ts` updateInstances) | its pose now (its schedule's position) | modelled, stepped, rigged | its model while ≥ 6 px on screen (true scale: a whale), else a 5 px marker | nothing, and its schedule is not stepped |
+| Herds (`planHerds`) | whole herd sphere | figures and specks | figures while ≥ 6 px on screen, else badge only | badge only |
 | Attach points (`sampler.ts`) | data only, never drawn | — | — | — |
 
 The badges, labels, HUD counts and population are data and are always there.
@@ -45,21 +45,23 @@ The badges, labels, HUD counts and population are data and are always there.
 
 | Tier | Render distance | Hysteresis | Haze (radial distance → depth) | JS heap budget | GPU budget |
 |---|---|---|---|---|---|
-| high | 960 m | 40 m | 0.7 → 1.0 of the distance | 512 MB | 640 MB |
-| medium | 640 m | 32 m | 0.7 → 1.0 | 320 MB | 320 MB |
-| low (and the lighter view) | 440 m | 26 m | 0.7 → 1.0 | 200 MB | 160 MB |
+| high | 960 m | 40 m | 0.7 → 1.0 of the distance | 768 MB | 512 MB |
+| medium | 640 m | 32 m | 0.7 → 1.0 | 512 MB | 320 MB |
+| low (and the lighter view) | 440 m | 26 m | 0.7 → 1.0 | 384 MB | 192 MB |
+
+The budgets are about twice the peaks measured on the real Ark (§7), so today's island never pulls its distance in.
 
 - **Sized for Part C.** On today's island (land within about 112 m of the middle, and an eye at most about 460 m out), every chunk is `in` from every view the camera can take on medium and high. The test sweeps targets, distances, polar angles and azimuths. The low tier's 440 m covers both home views: the phone's far shore is about 415 m off. So **the default view is unchanged on every tier**, and the visual CI is unchanged.
 - **The haze is the scene's own fog, pulled in** (`haze.ts`). The fog's `near` and `far` become accessors: whoever sets them (the scene, the weather) sets the base, and three reads the nearer of the base and the haze.
   - The haze is on only while some chunk with content (land, plants, an animal's home) lies past the distance. It ramps up over the last 25 m and eases in over 0.6 s. It is never on in the map view.
-  - With it off, the fog is exactly its base: `max(f, 0) = f`.
+  - With it off, the accessors return the base unchanged, so the fog is exactly what it was.
   - Chunks are culled by radial distance, but three's fog is by depth, so the haze is whole at the distance × cos(the view's half diagonal). A chunk just past the distance at a corner of the picture is already fully fogged.
   - It fades into the horizon colour, the same colour the sky meets the sea in.
 - **Map view.** The camera is 150 m or more from its target (it leaves below 135 m). Today's home views are 220–320 m. In the map view, past the distance the world is drawn as a map:
   - the ground at every 4th vertex;
   - the trees and plants;
   - no grass, forest floor or props;
-  - each animal as a small marker.
+  - each animal as a small marker, unless it is at least 6 px long on screen, when it keeps its model (true scale, below).
   So a Part C island can be seen whole from above at little cost.
 - **Memory pressure.** Every 2 s the streamer reads the JS heap (where the browser gives it) and the scene's GPU estimate (`runtime/memory.ts`, walked at most every 10 s). If either is over the tier's budget, the distance pulls in by 15 %, down to 60 % of the tier's. If memory is still over at 60 %, the tier drops. When both are under 70 % for 30 s, the distance steps back out. The heap budget is never more than half the heap's own limit.
 - **Development overrides:** `window.__arkRenderDistance = <m>` or `window.__arkRenderScale = <share>` before mounting. The measurement page takes `?render=<m>` and `?renderScale=<share>`.
@@ -84,6 +86,14 @@ The badges, labels, HUD counts and population are data and are always there.
 ## 5. Beyond the distance: markers and data
 
 - **Markers.** In the map view, an animal in a `map` chunk is a 5 px marker at its last worked-out place (the `FindDots` the scene already uses for tiny animals). Outside the map view, nothing is drawn: the haze has hidden it.
+- **True scale (lane L4, `ark-true-scale`).** What is drawn goes by size on screen, not distance alone.
+  - Inside the distance, L4's own rules apply: the model cap goes to the animals largest on screen, and those under 10 px past the cap are find-dots.
+  - Past the distance in the map view, an animal (or a herd) at least `MAP_MODEL_PIXELS` = 6 px long on screen keeps its model; smaller ones are markers.
+  - In a ground view nothing past the distance is drawn, big or small: the haze is whole there, like the land the animal stands on.
+  - On a phone held upright (800 CSS px tall, 38°):
+    - **A 25 m whale** is 66 px at low's 440 m, 45 px at medium's 640 m and 30 px at high's 960 m. It keeps its model from the map view out to about 4.8 km, so across any Part C island.
+    - **A 7.5 mm beetle** is 6 px at 1.45 m and under 1 px past 9 m. It is a model only right up close (inside the distance, L4's cap and dots decide, and as before not past 42 m), and a marker past the distance in the map view.
+  - The two branches merge cleanly (checked); the test is `ark-streaming.test.ts` "true scale past the render distance".
 - **Data.** The snapshot holds every animal, so the following come from data and are not changed by distance:
   - the HUD's counts and live bars;
   - the zone and population labels;
