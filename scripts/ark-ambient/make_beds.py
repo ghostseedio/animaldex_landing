@@ -225,12 +225,15 @@ def padded(loop: np.ndarray) -> np.ndarray:
 def encode_one(loop: np.ndarray, work: str, path: str, fmt: str, kbps: int, gain_db: float = 0.0, pad: bool = True) -> None:
     wav = os.path.join(work, f"_encode-{fmt}.wav")
     write_wav(wav, (padded(loop) if pad else loop) * 10 ** (gain_db / 20))
+    # Both encoders must code the loop's end and its start alike, or the loop point is heard (measured with
+    # tools like the band error along the file): libopus in its default "audio" mode codes the first ~17 s
+    # differently (SILK/hybrid, then CELT), so it runs CELT-only ("lowdelay"); ffmpeg's own AAC encoder drifts
+    # ~2 dB over its first ~10 s, so the M4A comes from Apple's AudioToolbox, steady from the first frame (and
+    # what Safari decodes). Constrained VBR / CBR keep each file within its size.
     if fmt == "webm":
-        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "libopus", "-b:a", f"{kbps}k", "-vbr", "on", "-compression_level", "10", "-application", "audio", "-map_metadata", "-1", path])
+        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "libopus", "-b:a", f"{kbps}k", "-vbr", "constrained", "-compression_level", "10", "-application", "lowdelay", "-map_metadata", "-1", path])
     else:
-        # Apple's AudioToolbox AAC: ffmpeg's own AAC encoder drifts over its first ~10 s (about 2 dB of band level),
-        # which shows at the loop point; AudioToolbox is steady from the first frame (and is what Safari decodes).
-        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "aac_at", "-aac_at_mode", "cvbr", "-b:a", f"{kbps}k", "-map_metadata", "-1", "-movflags", "+faststart", path])
+        run([FFMPEG, "-v", "error", "-y", "-i", wav, "-c:a", "aac_at", "-aac_at_mode", "cbr", "-b:a", f"{kbps}k", "-map_metadata", "-1", "-movflags", "+faststart", path])
 
 
 def offset_of(reference: np.ndarray, y: np.ndarray) -> int:
@@ -282,10 +285,10 @@ def make_bed(recipe: dict, downloads: str, work: str, out_dir: str) -> dict:
     final = loudness(loop)
     loop_wav = os.path.join(work, f"{bed}-loop.wav")
     write_wav(loop_wav, loop)
-    # Bitrates within ~145 KB a file: Opus 28k and AAC 32k unless the loop is long.
+    # Bitrates: as high as ~145 KB a file allows (Opus up to 40k, AAC up to 48k).
     seconds = len(loop) / SR + 2 * PAD
     budget = int(145 * 1024 * 8 / 1000 / seconds) - 1
-    kbps = {"webm": min(recipe.get("opus_kbps", 28), budget), "m4a": min(recipe.get("aac_kbps", 32), budget)}
+    kbps = {"webm": min(recipe.get("opus_kbps", 40), budget), "m4a": min(recipe.get("aac_kbps", 48), budget)}
     n = len(loop)
     p = int(PAD * SR)
     decoded = {}

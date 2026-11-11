@@ -65,7 +65,7 @@ Rain, the night beds (crickets, frogs), the dawn chorus, thunder (inside the sto
 
 ### Ambient beds (the Ark's own files)
 
-Looping beds in `public/ark/sound/ambient/<id>.webm` (Opus) and `<id>.m4a` (AAC), chosen by `selectAmbientBeds` in `src/ark-scene/ambient-beds.ts` from the table in `ambient-beds.json`. Each is a cut of one real recording (night insects mixes two), made by `scripts/ark-ambient/make_beds.py` from `scripts/ark-ambient/beds.recipe.json`: crossfaded loop, loudness-normalised, mono. Every licence was checked on its source page on 2026-11-11, before download. Downloads went to their own folder and nothing in them was run.
+Looping beds (and two thunder one-shots, `thunderClaps`) in `public/ark/sound/ambient/<id>.webm` (Opus) and `<id>.m4a` (AAC), chosen by `selectAmbientBeds` in `src/ark-scene/ambient-beds.ts` from the table in `ambient-beds.json`. Each is a cut of one real recording (night insects mixes two), made by `scripts/ark-ambient/make_beds.py` from `scripts/ark-ambient/beds.recipe.json`: crossfaded loop, loudness-normalised, mono. Every licence was checked on its source page on 2026-11-11, before download. Downloads went to their own folder and nothing in them was run.
 
 Only public domain (US National Park Service; pdsounds.org authors' public domain releases; a recordist's own Public Domain Mark) and CC0. Nothing needs attribution, and we credit everyone anyway: `ambientCredits()` gives the Sounds panel one line per recordist, from the same table.
 
@@ -85,6 +85,7 @@ Only public domain (US National Park Service; pdsounds.org authors' public domai
 | rapids | Stream soundscape from the Black Canyon Trail, Rocky Mountain NP, 25 May 2016 | J. Job, National Park Service | Public domain (US government work) | https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm |
 | waterfall | Siklawica waterfall, Tatra Mountains, Zakopane, Poland, 4 November 2025 | alas23/sala (radio aporee ::: maps) | Public Domain Mark 1.0, set by the recordist | https://archive.org/details/aporee_70170_81768 |
 | pond | Dawn wetland soundscape, Moraine Park, Rocky Mountain NP, 18 May 2016 | J. Job, National Park Service | Public domain (US government work) | https://www.nps.gov/romo/learn/photosmultimedia/sounds-ambient-soundscapes.htm |
+| thunder_near, thunder_far (one-shots after lightning) | Thunder, NPS Natural Sounds and Night Skies Division | National Park Service | Public domain (US government work) | https://www.nps.gov/subjects/sound/sounds-thunder.htm |
 
 **Where each licence is stated:**
 - **NPS:** "The files are in the public domain and may be downloaded" (Sound Gallery, https://www.nps.gov/subjects/sound/gallery.htm); "The recordings found here are in the public domain and may be downloaded and used without limitation; however, please credit the National Park Service" (Rocky Mountain library, https://www.nps.gov/romo/learn/photosmultimedia/soundlibrary.htm); "The files available here were recorded in the park and are in the public domain" (Yellowstone library, https://www.nps.gov/yell/learn/photosmultimedia/soundlibrary.htm). Yellowstone recordings co-credited to MSU's Acoustic Atlas were left out, because MSU is not the federal government.
