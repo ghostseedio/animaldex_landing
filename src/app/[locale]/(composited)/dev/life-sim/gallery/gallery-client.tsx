@@ -405,7 +405,7 @@ export default function LifeSimGalleryClient({words, locale, currency, teen}: {w
                                 previousCaptures: 2,
                                 previousNewSpecies: 0,
                                 daily: [],
-                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, worldChange: 5, powers: 1, previousPowers: null}
+                                ark: {steps: 3, previousSteps: null, arkScoreChange: -2, worldChange: 30, powers: 1, previousPowers: null}
                             }}
                         />
                     </div>
