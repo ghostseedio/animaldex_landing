@@ -2,14 +2,14 @@
 
 `scripts/ark-map-validate.mts` on terrain `world-stub-1`, 2026-11-11. CI runs the same checks (`src/lib/ark-map.test.ts`, workflow `ark-map-validator`).
 
-- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 7395 ms.
-- **Failures:** 0 (0 species).
+- **Species placed:** 2615 (every catalogue species with an Ark model, and the breeds as their kind), 5230 animals (each its own cluster, a lone one and a cluster's third member, all aboard at once), in 8874 ms.
+- **Failures:** 1 (1 species).
   - `floats_or_sinks`: 0
   - `inside_scenery`: 0
   - `wrong_medium`: 0
   - `wrong_depth_band`: 0
   - `wrong_water`: 0
-  - `invalid_surface`: 0
+  - `invalid_surface`: 1
   - `wrong_facing`: 0
   - `small_not_on_attach_point`: 0
   - `roost_invalid`: 0
@@ -24,18 +24,18 @@
 | shallows | 214 |
 | rocky_shore | 50 |
 | beach | 44 |
-| estuary | 48 |
+| estuary | 46 |
 | cold_cove | 38 |
 | river | 128 |
-| lake_marsh | 616 |
-| grassland | 476 |
+| lake_marsh | 618 |
+| grassland | 477 |
 | scrub | 196 |
-| canopy | 1076 |
-| forest_floor | 549 |
+| canopy | 1075 |
+| forest_floor | 550 |
 | underground | 80 |
 | desert | 188 |
 | mountain | 339 |
-| homestead | 696 |
+| homestead | 695 |
 
 | Where | Animals |
 |---|---:|
@@ -74,8 +74,7 @@ Partners on a host aboard: 28. Species with a roost of their own (from `sleep_pa
 
 ## Failures by species
 
-None.
-
+- **amazonian-giant-centipede**: `invalid_surface` a climber of the trees on the ground (forest_floor)
 ## Reviewed holds (not placed; they wait at the landing)
 
 | Species | Why |

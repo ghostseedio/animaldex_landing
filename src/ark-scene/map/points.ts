@@ -351,10 +351,15 @@ export class MapPoints {
     private seaNear = new Map<string, boolean>();
 
     /** Is the sea within `reach` of a spot (16 bearings, every 3 m or nearer out to the reach: a narrow inlet too)? */
-    seaWithin(x: number, z: number, reach: number): boolean {
-        const key = `${Math.round(x * 2)},${Math.round(z * 2)},${reach}`;
+    seaWithin(x0: number, z0: number, reach: number): boolean {
+        // (Worked out at the half-metre grid's point, not the first caller's: the same answer whichever spot asks first.)
+        const gx = Math.round(x0 * 2);
+        const gz = Math.round(z0 * 2);
+        const key = `${gx},${gz},${reach}`;
         const known = this.seaNear.get(key);
         if (known !== undefined) return known;
+        const x = gx / 2;
+        const z = gz / 2;
         let found = this.sampler.ground(x, z).water === "sea";
         const steps = Math.max(2, Math.ceil(reach / 3));
         for (let n = 1; n <= steps && !found; n++) {
