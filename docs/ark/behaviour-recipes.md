@@ -418,7 +418,7 @@ The rules now, all in `behaviour-recipes.ts`, pure and seeded as before:
 - **Eased turns at a rate by body size**: `turnRate(length)` = 1.8 / length^0.4 rad/s, between 0.7 and 3.5. A hold turns to what it faces (the water nearest its heading, the sun, its rival) at that rate. A solo leg takes at least as long as its turn needs.
 - **Arrivals keep the heading they came in on.** A recipe stay's episode records `endYaw` and keeps it until the slot ends; the next slot turns from it as it sets off (`settingOff`). A walk to meet a rival comes in facing it. The leg home comes in along the schedule pose's heading when it arrives from behind it.
 - **Chases pass through.** Loop legs go ahead (within 0.2 rad for prey, 0.3–0.35 for foraging), bending towards one slow loop over the episode (`plan`), so it comes back round rather than out and back. At the edge of its patch it bends back on the anchor's side. A small step with nothing ahead stays put.
-- **Foraging goes mostly forward.** A hold rocks the body at most 2.5 cm (its clip does the rest); a strike lunges forward and goes on from there.
+- **Foraging goes mostly forward.** On the spot the body holds still: a dig, a peck, a sweep or a scrape is the head's and the clip's, and a dust bath is the roll's. (Rocking the body, even by 2.5 cm, turned a foraging meerkat's movement direction 33 times a minute; it is now 0.6.) It only bobs, and a strike lunges forward and goes on from there.
 - **Timing:**
   - a long stay's episode ends 10 s before its slot, so the homecoming and the schedule's set-off are two turns kept apart;
   - an episode stops while it can still get home at its own pace (pairs keep their shared reserve);

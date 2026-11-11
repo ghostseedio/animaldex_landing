@@ -243,6 +243,30 @@ test("no spinning (behaviour's rule): a chase or a forage goes on forward and tu
     }
 });
 
+test("on the spot the body holds still: a dig, a peck or a scrape is the head's and the clip's, not the body shuffling", () => {
+    // (A foraging meerkat's way turned 22-36 times a minute: its digs shuffled its body back and forth twice a second.)
+    forgetRecipes();
+    const a = animal("still-meerkat", "meerkat", {x: 40, z: -60}, 0.3);
+    a.animal.zone = "desert";
+    const day = Math.floor(Date.UTC(2026, 6, 14, 0) / 1000);
+    let holds = 0;
+    for (let start = day; start < day + 24 * 3600; start += SLOT_SECONDS) {
+        const trip = tripAt(world, a.profile, a.animal, start, hoursAt, null);
+        const episode = trip.recipe ? tripEpisode(world, trip) : null;
+        if (!episode) continue;
+        for (const k of episode.keys) {
+            if (k.block.motion !== "hold" || k.block.id === "strike" || k.t1 - k.t0 < 1) continue;
+            holds++;
+            const first = poseOnTrip(world, trip, k.t0 + 0.05);
+            for (let t = k.t0 + 0.3; t < k.t1 - 0.05; t += 0.25) {
+                const p = poseOnTrip(world, trip, t);
+                assert.ok(Math.hypot(p.x - first.x, p.z - first.z) < 1e-6, `${k.block.id} moved ${Math.hypot(p.x - first.x, p.z - first.z).toFixed(3)} m`);
+            }
+        }
+    }
+    assert.ok(holds >= 3, `holds ${holds}`);
+});
+
 test("only real cachers cache: squirrels, jays, nutcrackers, hoarding rodents, mustelids; not a camel's fat or a wader's buried prey", () => {
     for (const slug of ["red-squirrel", "eurasian-jay", "clarks-nutcracker", "merriams-kangaroo-rat", "stoat"]) assert.ok(speciesRecipes(slug).recipes.some((r) => r.id === "cache_food"), slug);
     for (const slug of ["dromedary-camel", "african-sacred-ibis", "short-billed-dowitcher", "himalayan-monal", "black-rat", "javan-myna", "red-river-hog", "fat-tailed-dunnart"]) {
