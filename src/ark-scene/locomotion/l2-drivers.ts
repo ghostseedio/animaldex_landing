@@ -125,7 +125,7 @@ export function beatWing(rig: LocoRig, world: Matrix4[], wing: readonly number[]
 export const flightDriver: LocoDriver = {
     name: "l2-flight",
     takes(rig, input) {
-        return (globalThis as {__arkL2?: boolean}).__arkL2 !== false && !input.grounded && rig.wings.left.length >= 1 && rig.wings.right.length >= 1 && FLIGHT_DRIVER_CLIPS.has(input.clipNow);
+        return (globalThis as {__arkL2Motion?: boolean}).__arkL2Motion !== false && !input.grounded && rig.wings.left.length >= 1 && rig.wings.right.length >= 1 && FLIGHT_DRIVER_CLIPS.has(input.clipNow);
     },
     init(): FlightState {
         return {spec: null, length: 0, track: newTrack(), stroke: 0};
@@ -243,7 +243,7 @@ export function laidOnTrack(rest: readonly Vector3[], front: number, amp: number
 export const chainDriver: LocoDriver = {
     name: "l2-chain",
     takes(rig, input) {
-        if ((globalThis as {__arkL2?: boolean}).__arkL2 === false || rig.chain.length < 3 || !CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
+        if ((globalThis as {__arkL2Motion?: boolean}).__arkL2Motion === false || rig.chain.length < 3 || !CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
         const style = locoStyle(rig.slug, rig.plan);
         return Boolean(style.swim || style.legless);
     },

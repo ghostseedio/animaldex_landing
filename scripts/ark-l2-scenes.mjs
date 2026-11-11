@@ -8,7 +8,7 @@
  *
  *   node scripts/ark-l2-scenes.mjs --set <publish dir> --out <dir> [--scenes a,b] [--seconds 16] [--every 0.25] [--device desktop|phone] [--before] [--perf]
  *
- * `--before`: lane L2 switched off in the page (`__arkL2 = false`: every L2 hook falls back to the scene as it was).
+ * `--before`: lane L2 switched off in the page (`__arkL2Motion = false`: every L2 hook falls back to the scene as it was).
  *
  * Nothing is uploaded; the models come read-only from the live model set.
  */

@@ -75,8 +75,11 @@ const smooth = (k: number) => {
 async function mountScenes(el: HTMLElement) {
     const params = new URLSearchParams(location.search);
     const rigBase = params.get("norig") ? null : params.get("rig") ? new URL(params.get("rig")!, location.href).href.replace(/\/+$/, "") : undefined;
+    // The harness's camera goes where it is told (the golden shots' switch: the target is not pulled toward the ground
+    // when it is more than 6 m off, so a flyer high up stays in the middle; it may look up from below).
+    (window as unknown as {__arkGoldenCamera?: {free?: boolean; maxPolar?: number}}).__arkGoldenCamera = {free: true, maxPolar: 1.85};
     // `?before=1`: lane L2 off (the scene as it was before it), for the before/after recordings.
-    if (params.get("before")) (globalThis as {__arkL2?: boolean}).__arkL2 = false;
+    if (params.get("before")) (globalThis as {__arkL2Motion?: boolean}).__arkL2Motion = false;
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     const cast = castAnimals();
@@ -219,8 +222,8 @@ async function mountScenes(el: HTMLElement) {
                 return {x, z, y: 15.8 + (s > 2 && s < 4 ? (s - 2) * 0.9 : s >= 4 ? 1.8 : 0), beat: s > 2 && s < 4 ? "fly" : "glide", doing: s > 2 && s < 4 ? "fly" : "soar"};
             };
             fly(id, nowS() + 1e6, path, 1e6);
-            // From behind and a little above, the sea under it.
-            track(id, 7, 1.2, (yaw) => yaw + Math.PI + 0.7, 0);
+            // From a little below, against the sky.
+            track(id, 7, 1.7, (yaw) => yaw + Math.PI + 0.7, 0);
             return {note: "12 s of circling (r 12 m, 6 m/s), then a straight glide with a 2 s climb", watch: [id], go: () => fly(id, nowS(), path, 1e6)};
         },
         /**
@@ -257,7 +260,7 @@ async function mountScenes(el: HTMLElement) {
                     return {x: a.x, z: a.z, y: a.y, yaw: yawOf(b.x - a.x, b.z - a.z), moving: true, aloft: true, doing: a.doing, beat: a.beat, act};
                 });
             pin(nowS() + 1e6);
-            track(id, 9, 1.3, 1.45, 0);
+            track(id, 10, 1.45, 1.45, 0);
             return {note: `glide 3 s, a ${dive} s stoop (the API's dive pace ${paces.dive.toFixed(0)} m/s at true scale), pull-out and climb`, watch: [id], go: () => pin(nowS())};
         },
         /** A house sparrow flies straight 2 m up (flap-bounding), comes down, and hops about. */

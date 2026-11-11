@@ -27,11 +27,11 @@ registerLocoDriver(chainDriver);
 registerLocoDriver(flightDriver);
 
 /**
- * Lane L2 on (the default). Development only: `globalThis.__arkL2 = false` before mounting turns every L2 hook back to
+ * Lane L2 on (the default). Development only: `globalThis.__arkL2Motion = false` before mounting turns every L2 hook back to
  * what the scene did before it (the before/after recordings, `scripts/ark-l2-scenes.mjs --before`).
  */
 export function l2On(): boolean {
-    return (globalThis as {__arkL2?: boolean}).__arkL2 !== false;
+    return (globalThis as {__arkL2Motion?: boolean}).__arkL2Motion !== false;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
