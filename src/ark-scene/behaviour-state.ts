@@ -17,6 +17,8 @@
  * up to breathe on its breath cycle (`sea-depth.ts` `breathAt`, from the clock
  * and its id, slower asleep): while it does, its state is "breathing" (asleep,
  * it stays "asleep" with `breathing` set), and its pose rises to the surface.
+ * Awake on the behaviour schedule it breathes on its breathe trip instead, on
+ * its way (`breath-trip.ts`), never where it holds still.
  */
 
 import {isAwake, type ArkActivity} from "@/lib/ark-daylight";
@@ -55,8 +57,11 @@ export type ArkBehaviourInput = {
      * asleep is the schedule's sleep (the same hour rule, at its slot's start) and airborne its pose.
      */
     scheduled?: {doing: ArkDoing; aloft: boolean} | null;
-    /** An air-breather in the water: its seed (`sea-depth.ts` `depthSeed`) and the shared clock (seconds), for its breath cycle. */
-    breather?: {seed: number; clock: number} | null;
+    /**
+     * An air-breather in the water: its seed (`sea-depth.ts` `depthSeed`) and the shared clock (seconds), for its breath
+     * cycle; or, awake on the schedule, `breath`, the breath its trip carries (`breath-trip.ts`: on its way, 0 between).
+     */
+    breather?: {seed: number; clock: number; breath?: number | null} | null;
     /** Held off the water by the depth classifier (a frigatebird over the open sea): in the air asleep too, reduced motion or not. */
     aloftAlways?: boolean;
 };
@@ -76,7 +81,7 @@ export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
     const awake = plan ? plan.doing !== "sleep" : Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
     // Up for air on its breath cycle (not in an act, nor the visitor, nor with motion reduced).
     const breather = input.breather && !input.acting && !input.visitor && !input.reducedMotion ? input.breather : null;
-    const breathing = breather ? breathAt(breather.seed, breather.clock, !awake) > 0 : false;
+    const breathing = breather ? (breather.breath ?? breathAt(breather.seed, breather.clock, !awake)) > 0 : false;
     if (plan && !input.acting && !input.visitor) {
         // On the behaviour schedule: asleep is its sleep, flying its pose in the air, breathing its breath cycle.
         const kind: ArkBehaviourKind = plan.doing === "sleep" ? "asleep" : plan.aloft && !input.reducedMotion ? "flying" : breathing ? "breathing" : "awake";
