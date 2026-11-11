@@ -143,7 +143,7 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 33,
-   "bytes": 4948004,
+   "bytes": 4948012,
    "lod0_tris_max": 9500
   }
  },
@@ -7129,14 +7129,14 @@
    "variant": "a",
    "bounds": {
     "min": [
-     -13.101,
+     -11.842,
      -0.041,
-     -12.95
+     -14.553
     ],
     "max": [
-     10.575,
-     26.54,
-     9.697
+     16.524,
+     27.98,
+     16.473
     ]
    },
    "lods": [
@@ -7144,8 +7144,8 @@
      "level": "lod0",
      "file": "trees/emergent-a.lod0.glb",
      "tris": 9500,
-     "verts": 9590,
-     "bytes": 112404,
+     "verts": 10085,
+     "bytes": 119900,
      "doubleSided": true,
      "morph": false
     },
@@ -7153,44 +7153,44 @@
      "level": "lod1",
      "file": "trees/emergent-a.lod1.glb",
      "tris": 2800,
-     "verts": 2606,
-     "bytes": 33248,
+     "verts": 2686,
+     "bytes": 34600,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/emergent-a.lod2.glb",
-     "tris": 798,
-     "verts": 771,
-     "bytes": 12272,
+     "tris": 799,
+     "verts": 911,
+     "bytes": 14056,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "card",
      "file": "trees/emergent-a.card.glb",
-     "tris": 288,
-     "verts": 348,
-     "bytes": 5288,
+     "tris": 148,
+     "verts": 168,
+     "bytes": 3948,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 51,
    "wood_tris": [
-    4156,
-    1316,
-    276
+    4134,
+    1424,
+    303
    ],
-   "leaves": 12792,
-   "height": 26.54,
-   "crown_radius": 13.1,
+   "leaves": 26281,
+   "height": 27.98,
+   "crown_radius": 16.52,
    "trunk_radius": 0.55,
    "lod_distances": [
-    66.3,
-    159.2,
-    371.6
+    70.0,
+    167.9,
+    391.7
    ]
   },
   "emergent-b": {
@@ -7199,14 +7199,14 @@
    "variant": "b",
    "bounds": {
     "min": [
-     -6.987,
+     -6.539,
      -0.044,
-     -6.085
+     -8.598
     ],
     "max": [
-     7.596,
-     19.58,
-     4.421
+     9.517,
+     21.777,
+     8.106
     ]
    },
    "lods": [
@@ -7214,53 +7214,53 @@
      "level": "lod0",
      "file": "trees/emergent-b.lod0.glb",
      "tris": 9500,
-     "verts": 11412,
-     "bytes": 138188,
+     "verts": 10416,
+     "bytes": 124124,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/emergent-b.lod1.glb",
-     "tris": 2799,
-     "verts": 2746,
-     "bytes": 34936,
+     "tris": 2800,
+     "verts": 2953,
+     "bytes": 38308,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/emergent-b.lod2.glb",
-     "tris": 798,
-     "verts": 815,
-     "bytes": 12628,
+     "tris": 799,
+     "verts": 998,
+     "bytes": 15472,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "card",
      "file": "trees/emergent-b.card.glb",
-     "tris": 288,
-     "verts": 348,
-     "bytes": 5308,
+     "tris": 148,
+     "verts": 168,
+     "bytes": 3912,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 51,
    "wood_tris": [
-    4044,
-    1141,
-    210
+    4090,
+    1166,
+    225
    ],
-   "leaves": 3311,
-   "height": 19.58,
-   "crown_radius": 7.6,
+   "leaves": 5040,
+   "height": 21.78,
+   "crown_radius": 9.52,
    "trunk_radius": 0.55,
    "lod_distances": [
-    48.9,
-    117.5,
-    274.1
+    54.4,
+    130.7,
+    304.9
    ]
   },
   "mangrove-a": {
@@ -8594,5 +8594,5 @@
    ]
   }
  },
- "totalBytes": 8652118
+ "totalBytes": 8652126
 }
