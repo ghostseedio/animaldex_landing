@@ -16,7 +16,7 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 
 | Lane | Branch | Merged head | What it brings |
 |---|---|---|---|
-| Graphics (terrain, water, sky) | `ark-graphics` | 86c1c7dc | Batches 1–6: sculpted terrain and range, sky and moon, underwater light and shafts, near fade, tree and conifer lighting, asset rocks, wheat and crop fields, forest floor and litter, still lake and river, warm sand, close-range bark, the ground for the prebuild worker |
+| Graphics (terrain, water, sky) | `ark-graphics` | 642cff4e | Batches 1–6: sculpted terrain and range, sky and moon, underwater light and shafts, near fade, tree and conifer lighting, asset rocks, wheat and crop fields, forest floor and litter, still lake and river, warm sand, close-range bark, the ground for the prebuild worker |
 | Assets | `ark-assets` | 874a8d84 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
 | Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
@@ -139,7 +139,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
   - "every animal stands on its map tag's ground, apart from the others": fennec fox and meerkat share a spot after the map 4f3f63ea + home growth merge. Map / home growth.
 - **Default view** (corrected check, f7db6716): backwards 1.3%, ground turns 0.6 a minute (median). Circling: a meerkat at 34 turns a minute (forage) and a plains zebra at 5 a minute (wander, watch, play). Pace over 1.5×: a harbour seal at 2.1×. Earlier rounds also showed a grey heron (wade_spear) at 3–5× and alpine ibex at 2.4–3.2×.
 - **Backfill view (1×):** the pets are spread over the plots. One herd badge of 48 house flies (wild, zone farm_garden) stands by the first cottage.
-- **Lamp halos** (high tier, night) draw as a dark square frame round the glow from a distance (river_pond, house_fields, the sleep clip). Graphics lane (lamp halos, `post.ts`).
+- **House_fields at night** (0f4e76b5): a golden retriever stands in the garden pond's water inside its stone ring. Home growth / props. (The lamp halos' dark square frames are fixed by graphics 642cff4e.)
 - **The rock hyrax's den** (golden den_rock) sits on a surf boulder at the waterline: its roost is placed there.
 - **Flight and grazing clips** need rig `v2`: with v1 no flight clip and no graze clip passes (wings closed in the air, no head-down graze).
 - **No entry/exit motion** at the water's edge until v2's `enter_water`/`exit_water` clips.
