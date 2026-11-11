@@ -513,7 +513,8 @@ function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
         for (const other of animals) {
             if (other.id === animal.id || !isHost(species.host, other.model_slug, other.kind_species_profile_id, other.species_profile_id)) continue;
             const there = placed.get(other.id);
-            if (!there || there.map?.held) continue;
+            // (Not a hamlet resident: it is indoors most of the day, and its plot is its household's alone.)
+            if (!there || there.map?.held || there.hamlet) continue;
             const d = Math.hypot(there.x - place.x, there.z - place.z);
             if (!best || d < best.d || (d === best.d && other.id < best.animal.id)) best = {animal: other, place: there, d};
         }

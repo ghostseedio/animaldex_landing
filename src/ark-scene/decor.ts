@@ -13,10 +13,10 @@
  */
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
-import {cropsGrowAt} from "@/ark-scene/fields";
-import {hamletKeeps} from "@/ark-scene/props/hamlet-land";
+import {cropsGrowAt, ORCHARD} from "@/ark-scene/fields";
+import {hamletKeeps, hamletLotAt} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type DecorKind =
@@ -76,6 +76,20 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 };
 
 const MAX_DENSITY = 5;
+
+/**
+ * Where nothing of the decor grows outside the forests (home growth): on the hamlet's lanes and their verges, and on
+ * its reserved plots and a couple of metres round them (`props/hamlet-land.ts`, the baked footprints): the gardens,
+ * yards and paddocks are the props' and the residents'. Trees stand between the plots and in the fields round them.
+ */
+function inVillage(x: number, z: number): boolean {
+    if (laneDistance(x, z) < LANE_WIDTH / 2 + 2) return true;
+    for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (hamletLotAt(x + dx, z + dz)) return true;
+    return false;
+}
+
+/** The forests and the high ground keep every tree, even near the hamlet's lanes (the river's far bank). */
+const FOREST_ZONES: ReadonlySet<ArkZone> = new Set<ArkZone>(["rainforest", "woodland", "mountains", "polar"]);
 
 const WOODS_TREES = new Set<DecorKind>(["broadleaf", "rainforest", "conifer"]);
 
@@ -166,6 +180,8 @@ export function worldDecor(): DecorItem[] {
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
         if (riverDistance(x, z) < 4) continue;
+        // The hamlet's village (home growth): nothing grows on its lanes and the plots along them.
+        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
@@ -261,16 +277,19 @@ export function worldDecor(): DecorItem[] {
     if (onFarm(barn.x, barn.z)) push({kind: "barn", variant: 0, x: barn.x, y: sampleGround(barn.x, barn.z).height, z: barn.z, scale: 1, rotation: 0.35, color: "#9a4a36"});
     for (let row = 0; row < 4; row++) {
         for (let col = 0; col < 6; col++) {
-            const x = farm.x + 16 + col * 3.2 + (row % 2) * 1.6;
-            const z = farm.z - 6 + row * 3.4;
-            if (!onFarm(x, z)) continue;
+            const u = col * 3.2 + (row % 2) * 1.6;
+            const v = row * 3.4;
+            const x = farm.x + ORCHARD.x + u * Math.cos(ORCHARD.turn) - v * Math.sin(ORCHARD.turn);
+            const z = farm.z + ORCHARD.z + u * Math.sin(ORCHARD.turn) + v * Math.cos(ORCHARD.turn);
+            if (!onFarm(x, z) || laneDistance(x, z) < LANE_WIDTH / 2 + 1.5) continue;
             push({kind: "orchard", variant: (row + col) % 3, x, y: sampleGround(x, z).height, z, scale: 0.85 + random() * 0.25, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#5f8a3a" : "#6b9440"});
         }
     }
     for (let i = 0; i < 60; i++) {
         const x = farm.x + (random() * 2 - 1) * 30;
         const z = farm.z + (random() * 2 - 1) * 24;
-        if (!onFarm(x, z) || noise(x * 0.12, z * 0.12) < 0.5) continue;
+        // (Not in the hamlet's village: its lanes and the plots along them.)
+        if (!onFarm(x, z) || noise(x * 0.12, z * 0.12) < 0.5 || laneDistance(x, z) < VILLAGE_REACH) continue;
         push({kind: "hay", variant: 0, x, y: sampleGround(x, z).height, z, scale: 0.9 + random() * 0.2, rotation: random() * Math.PI, color: "#d8b45c"});
     }
     // Fences: lines of posts and rails along the field boundaries (the fields' own grid, turned as the shader turns them).
@@ -465,6 +484,7 @@ export function forestFill(): FillItem[] {
         if (riverDistance(x, z) < 5) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
         if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
+        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
         if (taken.has(key)) continue;
         taken.add(key);

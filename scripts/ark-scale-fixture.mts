@@ -50,7 +50,9 @@ for (const [scale, {animals}] of Object.entries(population.scales)) {
         return {
             id: fakeId(scale, index), species_profile_id: s.look, name: s.name, scientific_name: s.scientific_name, model_slug: s.look_slug,
             zone, arrived_at: arrived, brought_by: voyager, mine: false, origin: "arrived", generation: 0, condition: "well_fed",
-            born_ark_day: 0, activity: s.activity, sociality: s.sociality, bringers: [voyager]
+            born_ark_day: 0, activity: s.activity, sociality: s.sociality, bringers: [voyager],
+            // (A pet or a farm animal's own area, so the hamlet spreads them over its plots: one house took 307 cats without it.)
+            area: s.area === "house" || s.area === "farm" ? s.area : null
         } as unknown as ArkAnimal;
     });
     const places = allocateArkPlaces(list);

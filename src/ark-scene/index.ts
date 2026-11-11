@@ -164,6 +164,8 @@ import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {arkOutside} from "@/ark-scene/live-budget";
+import * as liveBudget from "@/ark-scene/live-budget";
+import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 
 export * from "@/ark-scene/types";
@@ -3586,10 +3588,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const vertical = FOV * Math.PI / 180;
         const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
         const fit = Math.min(vertical, horizontal);
-        const radius = aspect < 0.8 ? 84 : 82;
+        // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
+        // view centres a little south-east of the lake and fits a wider circle.
+        const radius = aspect < 0.8 ? 114 : 96;
         const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
         // Low enough to see the horizon over the island's far shore.
-        return {target: new Vector3(0, 0, aspect < 0.8 ? 12 : 2), distance: distance * 0.94, polar: 1.06, azimuth: 0};
+        return {target: new Vector3(aspect < 0.8 ? 16 : 12, 0, aspect < 0.8 ? 24 : 14), distance: distance * 0.94, polar: 1.06, azimuth: 0};
     };
 
     // Keep the view over the world and above the ground.
@@ -4185,6 +4189,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (options.props === false) for (const sceneModule of modules) sceneModule.setEnabled(false);
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
+    // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
+    wireZoneCapacity(liveBudget);
     setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
     setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).
