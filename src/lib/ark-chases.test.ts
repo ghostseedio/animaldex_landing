@@ -144,9 +144,18 @@ test("swallows, martins and swifts hawk on the wing (never from a perch), with f
     assert.ok(t.steps.every((s) => s.b === "fly") && t.steps.some((s) => s.fast && s.catch === "insect"));
     const list = hunts("barn-swallow", 0.18, "farm_garden", {x: 40, z: -60}, "diurnal", 20).filter((h) => h.episode.recipe === "aerial_hawk");
     assert.ok(list.length >= 5);
+    let samples = 0;
+    let clear = 0;
     for (const {trip, episode} of list) {
-        for (let at = episode.t0 + 1; at < episode.t1 - 2; at += 0.5) assert.ok((poseOnTrip(world, trip, at) as RecipePose).aloft, "in the air throughout");
+        for (let at = episode.t0 + 1; at < episode.t1 - 2; at += 0.5) {
+            const p = poseOnTrip(world, trip, at) as RecipePose;
+            assert.ok(p.aloft, "in the air throughout");
+            // Its sweeps keep clear of the trees' crowns (no trunk within a crown's reach under it).
+            samples++;
+            if (!world.sampler.blocked(p.x, p.z, 2.2)) clear++;
+        }
     }
+    assert.ok(clear >= samples * 0.97, `in open air (${clear} of ${samples})`);
 });
 
 // MARK: The meal's chase

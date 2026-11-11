@@ -32,7 +32,7 @@ import {
     Vector3
 } from "three";
 import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
-import type {QuarryNow} from "@/ark-scene/recipe-hunt";
+import {quarrySize, type QuarryNow} from "@/ark-scene/recipe-hunt";
 import {hashString} from "@/ark-scene/world";
 
 export type RecipeActor = {id: string; x: number; y: number; z: number; yaw: number; pitch: number; length: number; height: number; act: RecipeAct};
@@ -144,7 +144,8 @@ export class RecipeScene {
         (this.bats.material as MeshStandardMaterial).side = 2;
         // A grasshopper: a long body, nose along +z (scaled to its length); a moth or fly: a tiny chevron with its wings
         // beating; a fish: a long silvery body.
-        this.hoppers = make(new SphereGeometry(0.5, 8, 5), "#7b8a3c", MAX_QUARRY, 0.8);
+        this.hoppers = make(new SphereGeometry(0.5, 8, 5), "#93b44c", MAX_QUARRY, 0.7);
+        (this.hoppers.material as MeshStandardMaterial).emissive.set("#2a3412");
         this.fliers = make(chevronGeometry(), "#d9cfb4", MAX_QUARRY, 0.7);
         (this.fliers.material as MeshStandardMaterial).side = 2;
         (this.fliers.material as MeshStandardMaterial).emissive.set("#3d3a32");
@@ -206,7 +207,11 @@ export class RecipeScene {
                 const y = a.y + a.height * up - Math.sin(a.pitch) * a.length * reach;
                 const l = a.length;
                 const wiggle = kind === "fish" || kind === "worm" ? Math.sin(now * 14 + hashString(a.id)) * 0.35 : 0;
-                if (kind === "fish") this.put(this.items.fish, x, y, z, a.yaw + Math.PI / 2 + wiggle, 0, 0, Math.min(Math.max(l * 0.09, 0.012), 0.12), Math.min(Math.max(l * 0.12, 0.016), 0.16), Math.min(Math.max(l * 0.38, 0.05), 0.6));
+                // (The fish it caught, at the quarry's own size: `quarrySize`.)
+                if (kind === "fish") {
+                    const f = quarrySize("fish", l);
+                    this.put(this.items.fish, x, y, z, a.yaw + Math.PI / 2 + wiggle, 0, 0, f * 0.22, f * 0.3, f);
+                }
                 else if (kind === "twig" || kind === "grass") this.put(this.items[kind], x, y, z, a.yaw + Math.PI / 2 + 0.3, 0.2, 0, Math.max(l * 0.025, 0.004), Math.max(l * 0.025, 0.004), Math.min(Math.max(l * 0.7, 0.08), 1.2), colour);
                 else if (kind === "worm") this.put(this.items.worm, x, y - l * 0.06, z, a.yaw + wiggle, 1.1, 0, Math.max(l * 0.02, 0.004), Math.max(l * 0.02, 0.004), Math.max(l * 0.35, 0.05));
                 // (An insect at its own size, a grasshopper's or a moth's, crossways in the mouth or bill: not scaled to the hunter.)

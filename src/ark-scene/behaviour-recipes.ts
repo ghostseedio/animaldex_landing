@@ -354,12 +354,17 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         case "nest":
             return nestSiteOf(world, profile, animal, input.slug, kit, input.start);
         case "air": {
-            // A place in the air over open ground or water near its range (a bat's beat): 3–6 m up.
-            const a = random() * Math.PI * 2;
-            const r = radius * (0.3 + 0.7 * random());
-            const x = centre.x + Math.sin(a) * r;
-            const z = centre.z + Math.cos(a) * r;
-            return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+            // A place in the air over open ground or water near its range (a bat's beat, a swallow's): 3–6 m up, clear of
+            // the trees' crowns (`openAir`).
+            for (let k = 0; k < 8; k++) {
+                const a = random() * Math.PI * 2;
+                const r = radius * (0.3 + 0.7 * random());
+                const x = centre.x + Math.sin(a) * r;
+                const z = centre.z + Math.cos(a) * r;
+                if (k < 7 && !openAir(world, x, z)) continue;
+                return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+            }
+            return null;
         }
         default:
             return null;
@@ -916,6 +921,15 @@ function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: 
     return true;
 }
 
+/**
+ * Open air for a low flyer's sweeps (under the treetops): no trunk, rock, shrub or building within a crown's reach.
+ * (The sampler keeps trunks as obstacles of 0.35 × the tree's scale; its crown spreads about four times that.)
+ */
+const CROWN_CLEARANCE = 2.4;
+function openAir(world: ScheduleWorld, x: number, z: number): boolean {
+    return !world.sampler.blocked(x, z, CROWN_CLEARANCE);
+}
+
 /** A ground way: the walk grid's cells and the colliders between them. */
 function groundWay(world: ScheduleWorld, from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P): boolean {
     return wayClear(from, c, c2, to, (x, z) => walkableAt(world, x, z), true);
@@ -1037,12 +1051,20 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             return null;
         }
         case "air": {
-            const ahead = aheadSpot(ctx, step, pos, heading, within(step.r ?? 3), 0.35, random, (x, z) => ({x, y: origin.y + (random() - 0.3) * 1.2, z}), t);
+            // (Open air: a hawking swallow or bat sweeps clear of the trees' crowns, the house and the rocks, there and
+            // on its way: `openAir`.)
+            const open = (x: number, z: number) => openAir(world, x, z) && wayClear(pos, null, null, {x, y: 0, z}, (px, pz) => openAir(world, px, pz));
+            const ahead = aheadSpot(ctx, step, pos, heading, within(step.r ?? 3), 0.35, random, (x, z) => (open(x, z) ? {x, y: origin.y + (random() - 0.3) * 1.2, z} : null), t);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
-            const a = random() * Math.PI * 2;
-            const r = (step.r ?? 3) * (0.5 + 0.5 * random());
-            return {x: origin.x + Math.sin(a) * r, y: origin.y + (random() - 0.3) * 1.2, z: origin.z + Math.cos(a) * r};
+            for (let k = 0; k < 8; k++) {
+                const a = random() * Math.PI * 2;
+                const r = (step.r ?? 3) * (0.5 + 0.5 * random());
+                const x = origin.x + Math.sin(a) * r;
+                const z = origin.z + Math.cos(a) * r;
+                if (open(x, z)) return {x, y: origin.y + (random() - 0.3) * 1.2, z};
+            }
+            return null;
         }
         case "nest": {
             const nest = nestOrigin(ctx);
@@ -1493,7 +1515,6 @@ const CATCH_AT_HOLD = 0.7;
 /** What leads up to a catch: it is watching its quarry through these (the quarry is there from the first of them). */
 const LEAD_UP = new Set(["stalk", "freeze", "scan", "ambush", "hover", "perch", "run", "turn", "take_off", "wade", "swim", "dive", "fly"]);
 const quarryMemo = new WeakMap<Episode, QuarryTrack[]>();
-const NO_TRACKS: QuarryTrack[] = [];
 
 /** Its pose inside an episode at a time (the keys only: catches are never in the last blend home). */
 function episodeKeyPose(world: ScheduleWorld, episode: Episode, epoch: number) {
@@ -1571,9 +1592,7 @@ function quarryNow(world: ScheduleWorld, episode: Episode, epoch: number): Quarr
     let near = false;
     for (const k of episode.keys) if (k.catch && epoch >= k.t0 - 16 && epoch < k.t1 + 3) near = true;
     if (!near) return null;
-    const tracks = quarriesOf(world, episode);
-    if (tracks === NO_TRACKS) return null;
-    for (const track of tracks) {
+    for (const track of quarriesOf(world, episode)) {
         if (epoch < track.tv || epoch >= track.te) continue;
         const now = quarryAt(track, epoch, (x, z) => world.sampler.heightAt(x, z));
         if (now) return now;

@@ -725,7 +725,6 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
         const s = sampleAt(list, t);
         return {x: s.x, z: s.z, base: s.y, yaw: s.yaw, pitch: s.pitch, roll: 0, scale: s.scale ?? 1, dim: s.dim ?? 0, hidden: Boolean(s.hidden), state: s.state, speed: s.v};
     };
-    void still;
     return {
         kind,
         seconds: run.seconds,
