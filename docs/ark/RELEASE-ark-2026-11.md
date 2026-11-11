@@ -3,7 +3,7 @@
 Handover §6.3. **Nothing in this document is deployed.** Every server, bucket, web and app step below waits for the
 owner's approval of this release as a whole. Exception already approved: the rig `v2` upload, once its checks pass.
 
-- **Web release branch:** landing `ark-release`. Its head is in §1; it is merged round by round (m1–m4 so far).
+- **Web release branch:** landing `ark-release`. Its head is in §1; it is merged round by round (m1–m5 so far).
 - **Live today:** web landing main `76a4f5d1` (rollback sha `b0e6c20c463911969725fa001170e6add313483b`); server
   migrations up to `20261113160000` plus `20261111140000/160000/170000` and `20261110130000_web_ark_events`; functions
   voyage-world v1, dispatch-ark-digest-push v1, delete-account v64, generate-applied-insight v143; bucket
@@ -11,32 +11,34 @@ owner's approval of this release as a whole. Exception already approved: the rig
 
 ## 1. What is included
 
-### Web (landing `ark-release`, round m4: 877ae2c5 and on)
+### Web (landing `ark-release`, round m5: f7db6716 and on)
 Each lane's branch head as merged. "Pending" heads have newer work not yet in the release.
 
 | Lane | Branch | Merged head | What it brings |
 |---|---|---|---|
-| Graphics (terrain, water, sky) | `ark-graphics` | fd3cb1ac | Batches 1–6: sculpted terrain and range, sky and moon, underwater light and shafts, near fade, tree and conifer lighting, asset rocks, wheat and crop fields, forest floor and litter, still lake and river, warm sand, close-range bark, the ground for the prebuild worker |
-| Assets | `ark-assets` | 2d31d846 (via graphics) | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
+| Graphics (terrain, water, sky) | `ark-graphics` | 86c1c7dc | Batches 1–6: sculpted terrain and range, sky and moon, underwater light and shafts, near fade, tree and conifer lighting, asset rocks, wheat and crop fields, forest floor and litter, still lake and river, warm sand, close-range bark, the ground for the prebuild worker |
+| Assets | `ark-assets` | 874a8d84 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
-| Attach points | `ark-graphics-attach` | b97ef1d7 | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
-| Map | `ark-map` | a7b33484 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
-| Props | `ark-props` | 5774c2b1 | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
-| Behaviour | `ark-behaviour` | 5f985348 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
-| Behaviour recipes | `ark-behaviour-recipes` | d1568d42 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
-| Intelligence | `ark-intelligence-web` | 859b854d | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
-| Rig player | `ark-rig-publish` | 918e0384 | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
+| Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
+| Map | `ark-map` | 4f3f63ea | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
+| Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
+| Behaviour | `ark-behaviour` | 3d3ecc22 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
+| Behaviour recipes | `ark-behaviour-recipes` | a9da6ee1 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
+| Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
+| Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
 | Sea depth | `ark-sea-depth` | 8e859a65 | Depth bands for 449 water species, breathing |
-| Animal look | `ark-animal-look` | fea457ce | Fur, feathers, scales, eyes, wet and dust, contact shadows, close-up skins (when uploaded) |
-| Liveliness wiring | `ark-liveliness-wiring` | 39d22ccb | WebAudio engine (tap only), weather visuals (rain, fog, lightning), sheltering, young, tide, per-instance variation, traces |
+| Animal look | `ark-animal-look` | a20f2e8d | Fur, feathers, scales, eyes, wet and dust, contact shadows, close-up skins (when uploaded) |
+| Liveliness wiring | `ark-liveliness-wiring` | 36b4d8e6 | WebAudio engine (tap only), weather visuals (rain, fog, lightning), sheltering, young, tide, per-instance variation, traces |
 | Ambient sound | `ark-ambient` | e0f92416 | 13 beds and 2 thunder claps (public domain and CC0) |
-| Runtime | `ark-runtime-web` | 0da735b6 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
+| Runtime | `ark-runtime-web` | 5a3598f8 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
-| Captures + thrive (web) | `ark-thrive-web` | addf6c37 | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
-| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring |
+| Captures + thrive (web) | `ark-thrive-web` | ab82aa0c | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
+| Home growth | `ark-home-growth` | b95b0026 | The bigger home area (a south lobe and east shoulder, +41% dry land), a two-street hamlet with lanes, 15 houses and 5 smallholdings planned, pets out by day, residents never herded, rule-E zone capacity (`map/capacity.ts`, wired to the runtime's `setArkZoneCapacity`) |
+| Sleep | `ark-sleep` | f23db564 | Sleep postures from data for 2,555 species, lying down and getting up, closed eyes (`arkInstance.w`), breathing and stirs, social sleep with a night watch, waking in the reactive layer, den sleepers in burrows, the rest status in 45 languages |
+| Live HUD | `ark-hud-live` | a83dd61e | Species and region bars (log scale, changes), the Live log of real events and seen behaviour (tap to fly there), `mated` events, arrival notices for real arrivals only, the embed's `?hud=` and `?insetTop`/`?insetBottom` safe areas |
+| Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring; m5: the hang-point drop rechecked from the recorded point (`ark-tree-attach.mjs`), worn paths wait for the schedule's world, the motion check skips undrawn frames, the scale fixture's `area`, the zone-capacity wiring |
 
-Not yet in the release: `ark-scale-test`, `ark-home-growth` (the bigger home
-district), newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
+Not yet in the release: `ark-scale-test`, newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
 
 ### Server (AnimalDex, not applied)
 | Branch | Head | What |
@@ -129,15 +131,22 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 6. Publish the privacy and terms change (`docs/ark/founders-privacy.md`).
 7. Flags the owner chooses, one at a time.
 
-## 8. Known issues (at m4)
+## 8. Known issues (at m5)
+- **Red tests on `ark-release` f7db6716 (2,228/2,232):**
+  - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second). Behaviour lane, fixing.
+  - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22). Behaviour lane.
+  - "a kingfisher fishes from a perch by the water": the dive's midpoint is not aloft since the home growth moved the land. Recipes or home growth.
+  - "every animal stands on its map tag's ground, apart from the others": fennec fox and meerkat share a spot after the map 4f3f63ea + home growth merge. Map / home growth.
+- **Default view** (corrected check, f7db6716): backwards 1.3%, ground turns 0.6 a minute (median). Circling: a meerkat at 34 turns a minute (forage) and a plains zebra at 5 a minute (wander, watch, play). Pace over 1.5×: a harbour seal at 2.1×. Earlier rounds also showed a grey heron (wade_spear) at 3–5× and alpine ibex at 2.4–3.2×.
+- **Backfill view (1×):** the pets are spread over the plots. One herd badge of 48 house flies (wild, zone farm_garden) stands by the first cottage.
+- **Lamp halos** (high tier, night) draw as a dark square frame round the glow from a distance (river_pond, house_fields, the sleep clip). Graphics lane (lamp halos, `post.ts`).
+- **The rock hyrax's den** (golden den_rock) sits on a surf boulder at the waterline: its roost is placed there.
 - **Flight and grazing clips** need rig `v2`: with v1 no flight clip and no graze clip passes (wings closed in the air, no head-down graze).
 - **No entry/exit motion** at the water's edge until v2's `enter_water`/`exit_water` clips.
 - Shared-layer reaction to predators is a glance; the full reaction (alert, flee) runs only near the camera (reactive layer).
-- Golden checks: the reef's upper water reads as a flat teal band; mountain rock ledges can read as boxy slabs; `ant_bark`'s trunk is untextured grey (graphics batch 6).
-- At 3× the captures population the hamlet's crowding check fails in 5 one-metre cells (map lane; 1× passes).
-- Two puffins once shared a spot (fixed in map a7b33484); recheck after each map round.
+- Golden checks: the reef's upper water reads as a flat teal band; `ant_bark`'s trunk is untextured grey (graphics batch 6).
+- Map scale with the home growth (f7db6716): 1× 3,140 animals, 1,198 residents on 12 plots, 11.4% out on average, no cell over the limit; 3× 9,420 animals, 3,594 residents on 22 plots, 9.8% out, no cell over the limit (the 5 crowded cells at m4 are gone), 121 wild animals resting past their zone's capacity (wetland 327/206).
 - Ambient beds need a human listen (forest_day repeat call, wind_trees bassy). Surf and waterfall are Public Domain Mark (not CC0). The live chat's "shore" bank credits an uploader whose Commons files were nominated for deletion; keep it out of the Ark.
-- See the integrator's latest round report for the test and audit numbers.
 
 ## 9. Checks (CI)
 - `ark-map-validator.yml`: the spawn validator and the placement tests.
