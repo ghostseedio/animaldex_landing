@@ -241,6 +241,11 @@ export function reefLandmarks(): ReefLandmarks {
 
 let cached: ReefItem[] | null = null;
 
+/** Runtime prebuild hook (runtime/prebuild.ts): the same list, placed in the scenery worker before the mount. */
+export function primeReefGrowth(items: ReefItem[]): void {
+    cached = items;
+}
+
 /** Everything that grows under the sea, placed once. */
 export function reefGrowth(): ReefItem[] {
     if (cached) return cached;

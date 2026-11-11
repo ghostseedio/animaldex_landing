@@ -935,6 +935,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     const scheduleWorldNow = (): ScheduleWorld => world!;
     /**
+     * Runtime (sliced mount): the map's roost for a place (`scheduleRoost`, pure per place), remembered, so the mount can
+     * look them up a slice at a time before the animals are laid out instead of all in that one task.
+     */
+    const roostMemo = new WeakMap<object, ReturnType<typeof scheduleRoost>>();
+    const mapRoostOf = (place: Placement, zone: ArkAnimal["zone"]) => {
+        if (roostMemo.has(place)) return roostMemo.get(place)!;
+        const roost = scheduleRoost(place, zone);
+        roostMemo.set(place, roost);
+        return roost;
+    };
+    /**
      * Runtime (live budget): whether an animal is settled at its roost now (behaviour's `restingAtRoost`), for
      * `arkOutside` to sit those out first; undefined until the world is built or where behaviour lacks it.
      */
@@ -995,7 +1006,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
         const sea = ZONE_SITES[animal.zone]?.kind === "sea";
         return {
-            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), roost: scheduleRoost(place, animal.zone)},
+            animal: {id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), roost: mapRoostOf(place, animal.zone)},
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1418,6 +1429,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return state.out.has(entry.animal.id) || state.beats.has(entry.animal.id);
     };
     let modulesFor: ArkSnapshot | null = null;
+    /** Runtime (sliced mount): the animals are laid out; host calls that need them wait until then. */
+    let animalsIn = false;
+    const afterAnimals: Array<() => void> = [];
+    const whenAnimals = <A extends unknown[]>(call: (...args: A) => void) => (...args: A) => {
+        if (animalsIn) call(...args);
+        else afterAnimals.push(() => call(...args));
+    };
     const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
@@ -4220,7 +4238,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: First view
 
-    setSnapshot(options.snapshot, false);
+    // Runtime (sliced mount): a recording lays the animals out now, as before; otherwise the attach points, the
+    // animals' places and their roosts are worked out a slice a frame before the first frame, and the animals laid out
+    // in their own task (host calls that need them wait: `afterAnimals`).
+    if (options.recording) {
+        setSnapshot(options.snapshot, false);
+        animalsIn = true;
+    } else {
+        const first = options.snapshot;
+        let attachDone = false;
+        let roostQueue: ArkAnimal[] | null = null;
+        runtime.mountLater([
+            () => {
+                void prepareAttachPoints().then(() => (attachDone = true));
+                return true;
+            },
+            () => attachDone,
+            () => {
+                placedAll = placeAnimals(first.animals);
+                placedFor = first;
+                roostQueue = [...first.animals];
+                return true;
+            },
+            () => {
+                const started = performance.now();
+                while (roostQueue && roostQueue.length && performance.now() - started < 30) {
+                    const animal = roostQueue.pop()!;
+                    const place = placedAll.get(animal.id);
+                    if (place && scheduleOn && onSchedule(place, animal.model_slug) && onBehaviourSchedule(animal.model_slug)) mapRoostOf(place, animal.zone);
+                }
+                return !roostQueue || roostQueue.length === 0;
+            },
+            () => {
+                setSnapshot(first, false);
+                animalsIn = true;
+                for (const call of afterAnimals.splice(0)) call();
+                return true;
+            }
+        ]);
+    }
     const home = homeView();
     // A recording (`?record=1`) starts on its first shot's view: no opening flight.
     let opening = !reducedMotion && !options.recording;
@@ -5074,16 +5130,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     return {
         ...runtime.handle,
-        update: (snapshot) => {
+        update: whenAnimals((snapshot: ArkSnapshot) => {
             // Runtime: the entrances play at the full frame rate.
             runtime.busyFor(ENTRANCE_SECONDS + 1);
             setSnapshot(snapshot, true);
-        },
+        }),
         setMineOnly: (value) => {
             mineOnly = value;
         },
-        select: (id, closeUp) => select(id, true, Boolean(closeUp)),
-        selectHerd: (key) => selectHerd(key, true),
+        select: whenAnimals((id: string | null, closeUp?: boolean) => select(id, true, Boolean(closeUp))),
+        // (Before the animals are in, a herd is not known yet: false, as for any unknown key.)
+        selectHerd: (key) => (animalsIn ? selectHerd(key, true) : false),
         setLite: (lite) => {
             liteChoice = lite;
             const want: QualityTier = lite === true ? "low" : lite === false && tier === "low" ? (forced ?? (autoTier === "low" ? "medium" : autoTier)) : lite === null ? (forced ?? autoTier) : tier;
@@ -5110,7 +5167,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 applyHours();
             }
         },
-        follow,
+        follow: whenAnimals((id: string | null) => follow(id)),
         setClockScale: (scale, atMs) => {
             // Development: the world's time runs `scale` times faster from now, or from `atMs` (a day-night recording); 1 is the clock again.
             const now = typeof atMs === "number" && Number.isFinite(atMs) ? atMs : worldMs();
