@@ -2244,12 +2244,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // touches it, long the way it crawls.
                     shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
                 } else {
-                    // On the ground: on its slope (near ones, with the pass on), a little under the body's middle.
+                    // On the ground: on its slope (near ones, with the pass on), under the body's middle (a model's origin
+                    // is not always there: a seal's is at its chest), turned with it.
                     const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;
+                    const midX = look.on ? ((box.min.x + box.max.x) / 2) * s : 0;
+                    const midZ = look.on ? ((box.min.z + box.max.z) / 2) * s : 0;
                     shadowList.push({
-                        x: where.x,
+                        x: where.x + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
                         y: rest,
-                        z: where.z,
+                        z: where.z - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
                         width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
                         length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
                         yaw: where.yaw,
