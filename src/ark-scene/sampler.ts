@@ -17,6 +17,7 @@
 import {COTTAGE, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
 import {forestFill, rockSurfacePoint, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {rockAssetFor, rockFaceToward} from "@/ark-scene/rock-assets";
+import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -66,12 +67,14 @@ export function surfaceAt(x: number, z: number, environment: ArkEnvironment = CA
     const zone = zoneAt(sample) as ArkZone;
     const slope = 1 - normal.y;
     const height = sample.height;
-    const waterDepth = Math.max(environment.seaLevel - height, 0);
+    // The lake and the river keep their own level; the sea rises and falls with the tide (batch 5: water-level.ts).
+    const level = freshFrom(sample, x, z) >= 0.5 ? FRESH_LEVEL : environment.seaLevel;
+    const waterDepth = Math.max(level - height, 0);
     const weights: Partial<Record<SurfaceKind, number>> = {};
     const put = (kind: SurfaceKind, value: number) => {
         if (value > 0.001) weights[kind] = (weights[kind] ?? 0) + value;
     };
-    if (height < environment.seaLevel - 0.05) {
+    if (height < level - 0.05) {
         const fresh = Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
         put(fresh ? "lakebed" : "seabed", 1);
     } else {

@@ -38,6 +38,7 @@ import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-sce
 import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
+import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 
 /** How rough the sea is: 1 in the usual breeze, more in wind and storms (set with the environment). */
 export const WATER_WIND = {value: 1};
@@ -81,7 +82,7 @@ function flowAngle(x: number, z: number): number {
 /**
  * Scree (batch 4): the gentler ground just below a steep rock face, where what falls off it gathers. Read from the
  * heightfield itself: for each point, the nearest steep ground above it within about 7 m, uphill, weighted by how
- * close it is. Writes `out[i * 2]`.
+ * close it is. Writes `out[i * 3]`.
  */
 function screeLayer(heights: Float32Array, size: number, out: Float32Array) {
     const cell = (TERRAIN_HALF * 2) / SEGMENTS;
@@ -116,7 +117,7 @@ function screeLayer(heights: Float32Array, size: number, out: Float32Array) {
                 }
                 if (scree > 0.8) break;
             }
-            out[i * 2] = scree * smoothstep(2.5, 6, h) * (1 - smoothstep(0.3, 0.42, slopes[i]));
+            out[i * 3] = scree * smoothstep(2.5, 6, h) * (1 - smoothstep(0.3, 0.42, slopes[i]));
         }
     }
 }
@@ -131,8 +132,9 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     const layers = new Float32Array(count * 4);
     // Batch 1 (graphics): forest floor, open ground (grassland and desert: bare soil patches), wet bank (river and lake), cliff.
     const layers2 = new Float32Array(count * 4);
-    // Batch 4 (graphics): scree at the foot of the rock faces (x) and how much a point is the mountain (y).
-    const rockLayers = new Float32Array(count * 2);
+    // Batch 4 (graphics): scree at the foot of the rock faces (x) and how much a point is the mountain (y); batch 5:
+    // fresh water (z: the lake and the river, which keep their own level whatever the tide does).
+    const rockLayers = new Float32Array(count * 3);
     const heights = new Float32Array(count);
     const color = new Color();
     const mix = new Color();
@@ -188,14 +190,15 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
         const lakeBank = smoothstep(LAKE.r + 5, LAKE.r + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z));
         layers2[i * 4 + 2] = Math.max(lakeBank, smoothstep(6.5, 2.5, sample.river) * (sample.inland > 3 ? 1 : 0)) * (1 - snow);
         layers2[i * 4 + 3] = sample.cliff;
-        rockLayers[i * 2 + 1] = Math.min(1, (w.mountains ?? 0) + smoothstep(10, 22, sample.height)) * (1 - polar);
+        rockLayers[i * 3 + 1] = Math.min(1, (w.mountains ?? 0) + smoothstep(10, 22, sample.height)) * (1 - polar);
+        rockLayers[i * 3 + 2] = freshFrom(sample, x, z);
 
         const at = i * 4;
         const depth = Math.max(-sample.height, 0);
         depthPixels[at] = Math.min(255, Math.round(depth / 12 * 255));
         depthPixels[at + 1] = Math.round(sample.reef * 255);
-        const fresh = smoothstep(LAKE.r + 4, LAKE.r, Math.hypot(x - LAKE.x, z - LAKE.z)) + (sample.river < 5 && sample.inland > 4 ? 1 : 0);
-        depthPixels[at + 2] = Math.round(Math.min(fresh, 1) * 255);
+        // Fresh water: the lake and the river (water-level.ts, the one rule the sampler uses too).
+        depthPixels[at + 2] = Math.round(freshFrom(sample, x, z) * 255);
         // The river's flow (graphics pass): its direction downstream as an angle in 0.5…1 (0 = still water).
         depthPixels[at + 3] = sample.river < 5 && sample.inland > 3 && Math.hypot(x - LAKE.x, z - LAKE.z) > LAKE.r + 2 ? Math.round((0.5 + flowAngle(x, z) / (Math.PI * 2)) * 255) : 0;
     }
@@ -226,7 +229,7 @@ function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
     }
     screeLayer(heights, size, rockLayers);
     geometry.computeVertexNormals();
-    geometry.setAttribute("arkRock", new BufferAttribute(rockLayers, 2));
+    geometry.setAttribute("arkRock", new BufferAttribute(rockLayers, 3));
     geometry.setAttribute("color", new BufferAttribute(colors, 3));
     geometry.setAttribute("arkLayers", new BufferAttribute(layers, 4));
     geometry.setAttribute("arkLayers2", new BufferAttribute(layers2, 4));
@@ -277,10 +280,10 @@ function groundMaterial(): MeshStandardMaterial {
             .replace("#include <common>", `#include <common>
 attribute vec4 arkLayers;
 attribute vec4 arkLayers2;
-attribute vec2 arkRock;
+attribute vec3 arkRock;
 varying vec4 vArkLayers;
 varying vec4 vArkLayers2;
-varying vec2 vArkRock;
+varying vec3 vArkRock;
 varying vec3 vArkWorld;
 varying vec3 vArkNormal;`)
             .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
@@ -293,7 +296,7 @@ vArkRock = arkRock;`);
             .replace("#include <common>", `#include <common>
 varying vec4 vArkLayers;
 varying vec4 vArkLayers2;
-varying vec2 vArkRock;
+varying vec3 vArkRock;
 varying vec3 vArkWorld;
 varying vec3 vArkNormal;
 uniform vec3 rockDark;
@@ -644,7 +647,8 @@ float arkWet = 0.0;`)
     // The sea bed (batch 4): under water the beach sand turns to coral sand and rubble (grey-brown fragments in
     // patches, a coarse grain), much darker than a dry beach, so what grows on the reef stands out from its floor.
     {
-        float bedDepth = envSeaLevel - world.y;
+        // Under the lake and the river, their own fixed level; elsewhere the sea's, with the tide (batch 5).
+        float bedDepth = mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - world.y;
         if (bedDepth > 0.02) {
             float bedW = smoothstep(0.02, 0.6, bedDepth) * smoothstep(0.1, 0.6, sandW);
             float rubble = smoothstep(0.48, 0.72, arkFbm(p * 0.32 + 3.0));
@@ -662,21 +666,21 @@ float arkWet = 0.0;`)
     diffuseColor.rgb = ground * arkCloudShade(world);
     // Under water (graphics pass): the light that reaches the bed is absorbed with depth, red first, so the sand turns
     // blue-green and darker the deeper it lies (never blown out white), with sand ripples on the bed.
-    float depthBelow = envSeaLevel - world.y;
+    float depthBelow = mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - world.y;
     if (depthBelow > 0.0) {
         vec3 absorb = exp(-depthBelow * vec3(0.45, 0.15, 0.1)) * mix(1.0, 0.8, smoothstep(0.0, 2.0, depthBelow));
         float bedRipple = sin(dot(p, vec2(0.6, 0.8)) * 5.5 + arkNoise(p * 0.7) * 4.0) * 0.5 + 0.5;
         diffuseColor.rgb *= absorb * (0.92 + 0.12 * bedRipple * (1.0 - smoothstep(-2.0, 0.0, -depthBelow + 2.0) * 0.0));
     }
     // The sun's caustics on the sea floor, fading with depth.
-    if (world.y < envSeaLevel - 0.05 && arkCaustics > 0.0) {
+    if (depthBelow > 0.05 && arkCaustics > 0.0) {
         float under = smoothstep(0.05, 0.6, depthBelow) * (1.0 - smoothstep(4.0, 11.0, depthBelow));
         diffuseColor.rgb += vec3(0.6, 0.9, 0.85) * min(arkCausticAt(world.xz, arkTime), 1.5) * under * arkCaustics * 0.1 * exp(-depthBelow * 0.15);
     }
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 // Wet ground shines; a bed under the water does not (batch 4: the reef's sand mirrored the sun and read as snow).
-roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, envSeaLevel - vArkWorld.y)));
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - vArkWorld.y)));
 // Snow has a faint sheen (batch 5).
 roughnessFactor = mix(roughnessFactor, 0.6, arkSnowy);`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
@@ -729,6 +733,8 @@ uniform vec3 foamColor;
 uniform float daylight;
 uniform float seaLevel;
 uniform float windStrength;
+// Batch 5: +1 the lake and river's own surface (drawn only over fresh water), -1 the sea's (drawn everywhere else).
+uniform float freshMode;
 varying vec3 vWorld;
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
@@ -767,6 +773,8 @@ void main() {
     float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
     float reefy = at.g * inside;
     float fresh = at.b * inside;
+    // The lake and the river keep their own level; the sea, with the tide, is drawn everywhere else.
+    if (freshMode * (fresh - 0.5) < 0.0) discard;
     float distanceToEye = distance(cameraPosition, vWorld);
 
     // Fresh water is calmer; far away the waves fade before they shimmer.
@@ -828,7 +836,10 @@ void main() {
 }
 `;
 
-function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
+/** The lake and the river's water: the same shader at their fixed level, over a plane that covers them (batch 5). */
+const FRESH_AREA = {minX: -36, maxX: 14, minZ: -22, maxZ: 96};
+
+function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: ShaderMaterial} {
     const material = new ShaderMaterial({
         vertexShader: WATER_VERTEX,
         fragmentShader: WATER_FRAGMENT,
@@ -851,7 +862,8 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
                 arkWind: {value: null},
                 daylight: {value: 1},
                 seaLevel: {value: 0},
-                windStrength: {value: 1}
+                windStrength: {value: 1},
+                freshMode: {value: fresh ? 1 : -1}
             }
         ]),
         transparent: true,
@@ -869,10 +881,11 @@ function waterMesh(depth: DataTexture): {mesh: Mesh; material: ShaderMaterial} {
     material.uniforms.skyZenith = ARK_SKY_ZENITH;
     material.uniforms.sunColor = ARK_GLINT;
     material.uniforms.daylight = ARK_DAYLIGHT;
-    material.uniforms.seaLevel = ARK_ENV.seaLevel;
+    material.uniforms.seaLevel = fresh ? {value: FRESH_LEVEL} : ARK_ENV.seaLevel;
     material.uniforms.windStrength = WATER_WIND;
-    const geometry = new PlaneGeometry(4000, 4000, 1, 1);
+    const geometry = fresh ? new PlaneGeometry(FRESH_AREA.maxX - FRESH_AREA.minX, FRESH_AREA.maxZ - FRESH_AREA.minZ, 1, 1) : new PlaneGeometry(4000, 4000, 1, 1);
     geometry.rotateX(-Math.PI / 2);
+    if (fresh) geometry.translate((FRESH_AREA.minX + FRESH_AREA.maxX) / 2, FRESH_LEVEL, (FRESH_AREA.minZ + FRESH_AREA.maxZ) / 2);
     const mesh = new Mesh(geometry, material);
     mesh.renderOrder = 2;
     return {mesh, material};
@@ -893,6 +906,10 @@ export function buildLandscape(): Landscape {
     ground.receiveShadow = true;
     ground.castShadow = true;
     const water = waterMesh(depth);
+    // The lake and the river (batch 5): their own water at a fixed level, riding with the (static) ground.
+    const freshWater = waterMesh(depth, true);
+    freshWater.mesh.name = "ark-fresh-water";
+    ground.add(freshWater.mesh);
     return {
         ground,
         water: water.mesh,
@@ -902,6 +919,8 @@ export function buildLandscape(): Landscape {
             depth.dispose();
             water.mesh.geometry.dispose();
             water.material.dispose();
+            freshWater.mesh.geometry.dispose();
+            freshWater.material.dispose();
         }
     };
 }

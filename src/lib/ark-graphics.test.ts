@@ -4,7 +4,8 @@ import {goldenClearance, goldenEye, goldenView, type GoldenPlace, type GoldenWor
 import {goldenObstacles} from "@/ark-scene/golden-world";
 import {nearFadeEnd, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
-import {attachPoints} from "@/ark-scene/sampler";
+import {attachPoints, surfaceAt} from "@/ark-scene/sampler";
+import {FRESH_LEVEL, waterLevelAt} from "@/ark-scene/water-level";
 import {CROPS, cropAt, cropsGrowAt, fieldAt, fieldCentre, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
 import {grassTufts, worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
@@ -121,4 +122,15 @@ test("graphics: meadow grass keeps out of the standing crops (it grows on the ma
     assert.equal(tufts.filter((tuft) => cropsGrowAt(tuft.x, tuft.z)).length, 0);
     // The margins still have grass: tufts in Home's zone, off the crops.
     assert.ok(tufts.some((tuft) => tuft.zone === "farm_garden"));
+});
+
+test("graphics: the lake and the river keep their own level whatever the tide does; the sea follows the tide", () => {
+    for (const sea of [-0.35, 0, 0.35]) {
+        assert.equal(waterLevelAt(LAKE.x, LAKE.z, sea), FRESH_LEVEL, "the lake");
+        assert.equal(waterLevelAt(RIVER[2][0], RIVER[2][1], sea), FRESH_LEVEL, "the river");
+        assert.equal(waterLevelAt(ZONE_SITES.coral_reef.x, ZONE_SITES.coral_reef.z, sea), sea, "the sea");
+        // The sampler measures depth from the same surface.
+        const lake = surfaceAt(LAKE.x, LAKE.z, {seaLevel: sea, wetness: 0, snow: 0, wind: 0.35, storm: 0});
+        assert.ok(Math.abs(lake.waterDepth + heightAt(LAKE.x, LAKE.z) - FRESH_LEVEL) < 1e-9, "lake depth from its own level");
+    }
 });
