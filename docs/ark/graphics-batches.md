@@ -112,6 +112,49 @@ Known gaps:
 - caterpillar_leaf needs the asset trees' leaf points wired into the sampler.
 - Kelp and seagrass, the house and fields (props lane), and fish schools are with other lanes.
 
+## Batch 4: terrain and near-camera (f04ebfb4 and on)
+
+Lane: terrain and near-camera. The reef, kelp, fish schools (`ark-graphics-reef`) and the leaf/bark attach points (`ark-graphics-attach`) are separate lanes.
+
+- **Near-camera fade (`near-fade.ts`):**
+  - a tree that passes beside the lens dissolves in a fine screen-space dither instead of cutting a dark shard across the picture;
+  - the fade ends at 0.45 × the camera's distance to its target (at most 2.2 m), so a close-up's subject (a flower at 1.1 m, a leaf at 0.55 m, bark at 0.12 m) is never touched;
+  - only on the leaf-card trees (`foliageMaterial`, which cut out already) and on the asset trees whose crown reaches over the camera (a separate "near" bucket in `asset-trees.ts` with a fading copy of `windMaterial`): everything else keeps the GPU's early depth test.
+- **Trees never black (`windMaterial`):** light comes through the leaves from the sky (most where seen from below) and from the sun behind them; shaded bark keeps a little sky bounce; dark bark is lifted and given a grain. All from the scene's own sky, image light and sun, so night stays night. The wind maths is unchanged.
+- **Golden cameras:**
+  - `golden-world.ts` lists the map's trunks, canopy limbs, lamps and buildings; `forest_floor` and `coast_rocks` turn to the nearest bearing whose camera (and the near part of its sight line) stands clear of them, never inside a hill;
+  - `coast_rocks` picks a rock cluster on a real shore (a steep bank behind counts against it) and looks along it from the shallows;
+  - new `fields_close`: low over standing crops well inside the farm.
+- **Mountain (`terrain.ts`):**
+  - rock beds about 5 m thick, dipping a few degrees and folded, hard (dark cliff bands, streaked, shade under their foot) or soft (ledges with a pale lip), thin bedding planes inside, and the ledges bend the shading normal; contrast fades where a bed is a few pixels tall. This replaces the `sin(y + fbm)` swirl that read as a fingerprint;
+  - ribs and gullies down the steep faces (bare ribs through the snow, darker gullies in the rock);
+  - two-scale triplanar rock: the 5 m detail only within ~90 m, a greyed 27 m layer under it out to ~700 m;
+  - scree: a per-vertex layer from the heightfield (gentle ground within ~7 m below steep rock);
+  - snow: the upper third holds snow on all but the steepest hard faces, broken patches on gentle ledges below the line, blue in shade, dimmer at night.
+- **Fields (`fields.ts`, `terrain.ts`, `near-detail.ts`):**
+  - one definition of the fields for the shader and the plants: the shader's 9 × 6.5 m grid, a crop per field (pasture, ploughed, sprouts, cabbages, cereal, maize) and its row direction from an integer hash that is exact on the CPU and the GPU, a headland at each edge; the animals' clearing, the cottage's yard, the barn and the orchard stay grass;
+  - the ground paints each crop's rows (antialiased), the furrows tip the shading normal, cereal ripples as the wind passes;
+  - close up, sprouts, cabbages, wheat and maize stand on the painted rows (`snapToRow`);
+  - rows only well inside the farm: never on the beach or the lake's grass where the farm layer fades out.
+- **Sea bed (for the reef lane):** under the water the bed is coral sand and rubble (grey-brown fragments in patches, a coarse grain), matte (it was treated as wet sand and mirrored the sun, so the reef's floor read as snow), absorbed a little more with depth. Shores above the water are unchanged.
+- **Tests:** `src/lib/ark-graphics.test.ts` (fade reach, camera clearance and ground, coast anchor, fields and rows).
+- **Credits:** nothing third-party; everything is drawn in code from the existing CC0 ground textures.
+
+Same-conditions A/B, baseline (7fb87467 scene source) against batch 4 with the reef lane merged (97cb85ed). The runs were interleaved A, B, A, B on six places whose cameras did not change (island far, mountain, house and fields, storm trees, river and pond, waves on the beach), in day light, with the tier pinned. The Mac's load average was 50 to 60 throughout:
+
+| | interval p50 / p95 ms | scene CPU ms | GPU drain ms | draw calls | triangles |
+|---|---|---|---|---|---|
+| phone medium, baseline | 16.7 / 16.7 | 8.5–9.9 | 5.5–6.1 | 131.5 | 1.22 M |
+| phone medium, batch 4 | 16.7 / 16.7–16.8 | 9.9–10.2 | 6.4–7.2 | 136 | 1.24 M |
+| desktop high, baseline | 16.7 / 16.8–33.4 | 3.1–3.3 | 13.1–28.8 | 345 | 5.9 M |
+| desktop high, batch 4 | 16.7 / 16.8–25.0 | 3.1–3.5 | 16.0–20.6 | 353 | 6.0 M |
+
+The phone profile held 60 fps in every run. GPU drain is about 1 ms higher (the mountain's beds and the near-tree bucket; the merged sea life is in these numbers too). On desktop the swings between runs of the same code are bigger than the difference. The SwiftShader proxy was not run: under this load it measures the Mac, not the shader. A real mid-range phone is still unmeasured.
+
+Golden shots: the before/after sheets are `batch4-desktop-before-after.jpg`, `batch4-desktop-closeups-reef.jpg` and `batch4-phone-before-after.jpg` in the handover folder's `ark/graphics/`. Pin the tier for comparisons (`--quality high` on desktop, `--quality medium` on phone): under load the auto tier drops while the page prepares, and the shots then differ in more than the change.
+
+Seen while checking, not this lane's: the props lane's mist (`props/effects.ts` on `ark-release`) is flat horizontal sheets 0.6 to 1.5 m above the ground at each patch's middle. On sloping woodland and farm ground a sheet cuts through the land and the animals, and seen nearly edge-on it reads as a frosted band with straight edges (the animal-look lane's barn owl and fox shots). Over the lake it makes the shore's grass look as if it were under the water. A fix: give each sheet segments and drape it over the ground (`sampleGround` per vertex plus the offset), and fade it as the camera comes within about 2 m of its height.
+
 ## Batch 4, reef and coast water (branch `ark-graphics-reef`, cut from `ark-graphics` 7fb87467)
 
 Handover §4.1 items 3–4. Visual only: nothing here touches the server, the snapshot, the stats or the ecology.
