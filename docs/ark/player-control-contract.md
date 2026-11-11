@@ -66,6 +66,8 @@ granted to `authenticator`), never the service role.
 ## 4. App bridge (page ↔ the apps' WebView, `public/ark/embed.html`)
 
 Page → host:
+- `{type: "ark:live", available: boolean}`: whether exploring can start now (a live server is configured and reachable).
+  The host shows its card's Control button on the viewer's own animals only while this is true.
 - `{type: "ark:control-request", animal_id}`: the viewer pressed Control on one of their animals in the page; the host
   mints a ticket and answers with `ark:control-ticket`.
 - `{type: "ark:control", active: boolean, animal_id}`: control started or ended. While active the host turns off its own
