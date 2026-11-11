@@ -208,6 +208,9 @@ async function mountGolden(el: HTMLElement) {
         iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
         recording: true,
         hours: GOLDEN_TIMES.day,
+        // The animal-look pass: `?look=0` starts with it off; `?closeup=<url>` serves the close-up skins (the harness's local build).
+        animalLook: params.get("look") !== "0",
+        closeUpBase: params.get("closeup") || undefined,
         onReady: () => {
             ready = true;
         }
@@ -278,7 +281,48 @@ async function mountGolden(el: HTMLElement) {
                 modelsLoaded: stats.modelsLoaded
             };
         },
-        stats: () => handle.stats()
+        stats: () => handle.stats(),
+        /**
+         * The animal-look pass's close-ups (docs/ark/animal-look.md): one animal of the species, still (reduced
+         * motion, so before and after are the same pose), face to face from three-quarters in front, in the named
+         * light, the pass on or off, dry or wet (rain). Resolves once its close-up skin is in and the frame is quiet.
+         */
+        animal: async (slug: string, time: GoldenTime, options: {look: boolean; wetness?: number; still?: boolean; distance?: number; turn?: number}) => {
+            const animal = snapshot.animals.find((row) => row.model_slug === slug);
+            if (!animal) return {found: false as const};
+            const debug = (window as unknown as {__arkDebug?: Debug}).__arkDebug;
+            if (debug) debug.controls.minDistance = 0.3;
+            handle.setReducedMotion(options.still !== false);
+            // Swims timed by a fixed island moment, so the same animals are wet from a swim in every run.
+            handle.setAnimalLook(options.look, {islandMs: Date.UTC(2026, 10, 11, 10, 7)});
+            handle.setEnvironment({seaLevel: 0, wetness: options.wetness ?? 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41});
+            handle.setHours(GOLDEN_TIMES[time]);
+            let at = handle.locate(animal.id);
+            if (!at) return {found: false as const};
+            const frame = () => {
+                at = handle.locate(animal.id) ?? at;
+                const located = at!;
+                const distance = options.distance ?? Math.max(0.9, located.length * 1.9 + 0.35);
+                const view: ArkCameraView = {target: {x: located.x, y: located.ground + located.height * 0.45, z: located.z}, distance, polar: 1.3, azimuth: located.yaw + (options.turn ?? 0.55)};
+                handle.setView(view);
+                return view;
+            };
+            let view = frame();
+            for (let i = 0; i < 24; i++) {
+                await nextFrame();
+                if (i < 8) view = frame();
+            }
+            // The close-up skin (when served) and any new shader in before the shot.
+            const until = performance.now() + 8000;
+            while (performance.now() < until) {
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                const stats = handle.stats();
+                if (!options.look || (stats.closeUpSkins ?? 0) > 0 || !params.get("closeup")) break;
+            }
+            await settle(500, 20_000);
+            const stats = handle.stats();
+            return {found: true as const, id: animal.id, view, located: at, closeUpSkins: stats.closeUpSkins ?? 0, furShells: stats.furShells ?? 0, rigged: stats.rigged};
+        }
     };
 }
 
