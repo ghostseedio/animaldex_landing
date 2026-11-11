@@ -92,12 +92,15 @@ const YOUNG = /\b(larva|larvae|larval|caterpillars?|nymphs?|naiads?|tadpoles?|gr
 /** The Power's metaphor, not the animal's life: never evidence. */
 const METAPHOR = /\b(teach(es|ing)?|shows? us|reminds? us|lesson|principle|survival tool|the right tool|strategy shows|it shows|this shows|metaphor|symbol)\b/i;
 
+/** The Power's name in a sentence ("... support Stashing because ..."): capitalised mid-sentence, then "because". */
+const POWER_NAME = /\bsupports? [A-Z][a-z]+( [A-Z][a-z]+)* because\b/;
+
 function sentences(text: string | null | undefined): string {
     if (!text) return "";
     return text
         .replace(/^Native range keys:[^.]*\.\s*/, "")
         .split(/(?<=[.;!?])\s+/)
-        .filter((s) => !YOUNG.test(s) && !METAPHOR.test(s))
+        .filter((s) => !YOUNG.test(s) && !METAPHOR.test(s) && !POWER_NAME.test(s))
         .join(" ");
 }
 
@@ -178,7 +181,8 @@ const HUNT_RULES: Array<[RegExp, Hunt]> = [
     [/\b(ambush\w*|lies? in wait|lying in wait|sit[- ]and[- ]wait|waits? (motionless|patiently|still|in hiding|hidden|for (prey|passing|fish|insects|a))|lurk\w*|lures? (prey|fish)|strikes? (at )?(passing|prey that)|waits? at (the )?water)\b/i, "ambush"],
     [/\b(in packs?|pack[- ]hunt\w*|hunts? (together|cooperatively|in (groups|teams|pods|packs))|cooperative(ly)? (hunt\w*|herd\w*)|herd(s|ing)? (fish|prey|shoals)|work(s|ing)? together to (catch|hunt|herd)|coordinated (hunt|attack))\b/i, "pack"],
     [/\b(stalk\w*|creeps? (up|close|toward)|sneaks? up)\b/i, "stalk"],
-    [/\b(chas(e|es|ing)|pursu(e|es|it|ing)|runs? (down|after)|sprint\w*|outrun\w*|high-speed (chase|pursuit))\b/i, "pursuit"],
+    // Its own chase, with what it chases (a "client may chase the cleaner" or "the chase is not worth it" are not).
+    [/\b(chas(es|ing) (down )?(its )?(prey|fish|insects|birds|mammals|rodents|lizards|hares|rabbits|squid|deer|antelope|gazelles|shoals?)|pursu(es|ing) (its )?(prey|fish|insects|birds|squid)|pursuit (div\w+|hunt\w*|predator)|runs? (prey )?down|sprint\w*|outrun\w*|high-speed (chases?|pursuits?)|fast (chases?|pursuits?))\b/i, "pursuit"],
     [/\b(swoop\w*|stoop\w*|plunge[- ]?div\w*|plung(e|es|ing) (into|onto|down)|dives? (on|onto|down on|from (a |the )?(air|height|above)|into the water for)|drops? (on|onto|down on)|snatch(es|ing)? (fish|prey|it) from|talons|hovers? (and|before|then) (drop|dive|pounce))\b/i, "aerial_swoop"],
     [/\b(hawk(s|ing)? (for )?(insects|flies|prey)|catch(es|ing)? (insects|prey|flies|moths)( \w+)? (in flight|on the wing|in the air|in mid-?air)|(in flight|on the wing|in mid-?air)[^.]{0,30}(catch\w*|snap\w*|insects)|echolocat\w+ (to find|to catch|insects|prey))\b/i, "aerial_hawk"],
     [/\b(from (a|an|its) (perch|branch|post|wire|vantage point|lookout)|perch(es|ed)? (and|to) (watch|scan|wait)|sall(y|ies|ying)|watch(es|ing)? (for prey )?from (a|an) (perch|branch)|pounces? from (a )?(perch|branch))\b/i, "perch_wait"],
@@ -211,7 +215,7 @@ const DEFENCE_RULES: Array<[RegExp, Defence]> = [
     [/\b(huddl\w*|bunch(es|ing)? (up|together)|close ranks|defensive (circle|ring)|forms? a (circle|ring)|mob(s|bing)? (predators|hawks|owls|intruders)?|safety in numbers|group vigilance|herd vigilance|many eyes)\b/i, "group"],
     [/\b(threat display|hiss(es|ing)?|puff(s|ing)? (itself |up)|inflat(es|ing) (itself|its)|rears? up|raises? (its |a )?(crest|hood|hackles|tail|quills|spines|frill)|spreads? (its )?(hood|frill)|eyespots?|warning colou?r\w*|aposematic|flash(es|ing)? (its|the|bright)|bluff\w*|gap(es|ing)|rattl(e|es|ing)|stamp(s|ing)?|thump(s|ing)?|snarl\w*|growl\w*|bares? (its )?teeth|charges? (at )?(intruders|predators|threats))\b/i, "threat"],
     [/\b(curls? (up )?into a (tight )?ball|rolls? (up )?into a (tight )?ball|withdraws? (into|its head|its limbs)|clos(e|es) (its|the) shell|armou?r(ed)?|bony plates|spines|quills|spiny)\b/i, "armour"],
-    [/\b(sprays?|squirts?|ink|toxic|toxins?|poison(ous)?|noxious|foul[- ](smelling|tasting)|distasteful|bad-tasting|musk|secret(es|ions?)|venom(ous)? (spines|sting)|stings?)\b/i, "chemical"],
+    [/\b(sprays? (musk|fluid|a foul|acid|chemicals?)|squirts? (blood|ink|fluid)|ink|toxic|toxins?|poison(ous)?|noxious|foul[- ](smelling|tasting)|distasteful|bad-tasting|unpalatable|musk|secret(es|ions?)|venom(ous)? (spines|sting)|stings?)\b/i, "chemical"],
     [/\b(dig(s|ging)? (itself|themselves) in|burrows? (quickly|rapidly) into|buries itself)\b/i, "burrow"]
 ];
 
@@ -410,7 +414,7 @@ function huntOf(row: Row, b: Behaviour, defaults: string[]): Entry<Hunt>[] {
     const active = out.some((e) => e.style !== "filter" && e.style !== "scavenge");
     // A default only for an animal whose main food is caught (an insect-digger with some meat on the side forages instead).
     if (out.some((e) => e.src && "default" in e.src)) defaults.push("hunt");
-    const mainlyCaught = HUNTER_DIETS.has(b.diet) || (b.diet === "insects" && ["arachnid", "amphibian", "lizard", "legless"].includes(b.plan));
+    const mainlyCaught = (HUNTER_DIETS.has(b.diet) && b.diet !== "carrion") || (b.diet === "insects" && ["arachnid", "amphibian", "lizard", "legless"].includes(b.plan));
     if (active || !eater || !mainlyCaught) return out;
     // Archetype defaults (flagged): the family's or the plan's way of hunting.
     defaults.push("hunt");
@@ -474,7 +478,11 @@ function forageOf(row: Row, b: Behaviour, defaults: string[]): Entry<Forage>[] {
     if (out.length) return out;
     defaults.push("forage");
     const d = (style: Forage, why: string) => add(style, {default: why});
-    if (diets.has("insects")) d(["flying_bird", "primate", "lizard", "insect", "arachnid"].includes(b.plan) ? "glean" : "dig", `diet insects, plan ${b.plan}`);
+    if (diets.has("insects")) {
+        // Bats, swifts and dragonflies take their insects in the air (their hunt says so); fish at the surface: no default.
+        if (["flying_bird", "primate", "lizard", "insect", "arachnid", "amphibian"].includes(b.plan)) d("glean", `diet insects, plan ${b.plan}`);
+        else if (["quadruped", "walking_bird", "flightless_bird"].includes(b.plan)) d("dig", `diet insects, plan ${b.plan}`);
+    }
     else if (diets.has("seeds")) d("seed_pick", "diet seeds");
     else if (diets.has("fruit")) d("fruit", "diet fruit");
     else if (diets.has("algae") || diets.has("detritus")) d("scrape", `diet ${b.diet}`);
@@ -491,8 +499,8 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[]): Entry<Defence>[]
         const hit = find(row, DEFENCE_TEXT, pattern, style !== "freeze");
         if (!hit) continue;
         if (style === "play_dead") continue;
-        // A predator's chemical weapon (venom to kill prey) is not a defence; only stings and sprays read in the predators text or as defence.
-        if (style === "chemical" && /venom/i.test(hit.match) && hit.field !== "predators") continue;
+        // A chemical weapon counts as defence only where the text is about its predators or its defence.
+        if (style === "chemical" && hit.field !== "predators" && !/defen|predator|threat|attack|enem/i.test(hit.phrase)) continue;
         add(style, src(hit));
     }
     const dead = reviewedHit(reviewed.play_dead, row);
@@ -505,7 +513,9 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[]): Entry<Defence>[]
         // Where it runs to: from its body plan and its places (stored, not text), flagged as a default.
         defaults.push("flee");
         const d = (style: Defence, why: string) => add(style, {default: why});
-        if (fly && b.plan !== "flying_insect") d("fly_off", `plan ${b.plan}: takes to the air`);
+        const apex = HUNTER_DIETS.has(b.diet) && b.diet !== "carrion" && (b.size ?? 0) >= 50 && !fly;
+        if (apex) d("threat", `a large hunter (size ${b.size}): stands its ground`);
+        else if (fly && b.plan !== "flying_insect") d("fly_off", `plan ${b.plan}: takes to the air`);
         else if (b.plan === "primate" || (b.moves.includes("climb") && b.plan === "quadruped")) d("flee_tree", `plan ${b.plan}, climbs`);
         else if (["tree", "tree_hole"].includes(b.roost) && ["quadruped", "lizard", "legless", "amphibian", "insect", "arachnid"].includes(b.plan)) d("flee_tree", `roost ${b.roost}: up its tree`);
         else if (b.plan === "flightless_bird" && (b.move === "swim" || b.moves.includes("swim"))) d("flee_water", "plan flightless_bird, swims");
@@ -532,10 +542,10 @@ function reviewedHit(table: Record<string, Verdict>, row: Row): {source: Source;
 
 const ALARM = /\b(alarm (calls?|barks?|whistles?|signals?|notes?|cries?)|warning (calls?|barks?|whistles?|cries?)|barks? (a )?(warning|alarm)|whistles? (a )?(warning|alarm)|alerts? (the )?(group|others|herd|colony|troop|flock))\b/i;
 /** Problem solving only where the text says so (experiments, puzzles, opening things). */
-const SOLVER = /\b(problem[- ]solv\w*|solv(e|es|ed|ing) (problems|puzzles)|puzzles?|open(s|ing)? (containers|jars|latches|lids)|figures? out|in experiments)\b/i;
-const PLAY = /\b(play(s|ing|ful)?|frolic\w*|slid(e|es|ing) (down|on)|tumbl\w*)\b/i;
+const SOLVER = /\b(problem[- ]solv\w*|solv(e|es|ed|ing) (problems|puzzles)|puzzles?|open(s|ing)? (containers|jars|latches|lids)|figures? out)\b/i;
+const PLAY = /\b(play(s|ful)?(?! dead)|playing(?! dead)|frolic\w*|slid(e|es|ing) (down|on)|tumbl\w*)\b/i;
 const LEADER = /\b(led by|leads? the (herd|group|troop|pack|flock|pod|family)|matriarch\w*|dominant (male|female|pair|bull|stag)|alpha|harem|herd (bull|stallion)|lead (mare|female))\b/i;
-const CURIOUS = /\b(curious|inquisitive|investigat\w+|explor(e|es|ing) (new|objects)|approach(es)? (divers|people|boats|humans)|bold|unafraid|confiding)\b/i;
+const CURIOUS = /\b(curious|inquisitive|investigat\w+|explor(es|ing) (new|novel|objects)|approach(es)? (divers|people|boats|humans|observers)|unafraid of (people|humans)|confiding|tame)\b/i;
 const SHY = /\b(shy|wary|timid|skittish|nervous|secretive|elusive|easily (disturbed|startled)|flees? at the slightest|retiring)\b/i;
 const LEARN = /\b(learn\w*|memor\w+|remembers?|problem[- ]solv\w*|intelligen\w+|clever|puzzles?|recogni[sz]es? (faces|individuals|people))\b/i;
 
@@ -557,15 +567,18 @@ function profile(row: Row) {
     const mixedHit = reviewedHit(reviewed.mixed, row);
     const cleanerHit = reviewedHit(reviewed.cleaner, row);
     const solver = find(row, ["facts", "traits", "spotlight", "diet", "offspring"], SOLVER);
-    const play = find(row, OWN.concat(["offspring"]), PLAY);
+    // Not the observer's advice ("look": "Explore the forest...") nor the young's own learning (offspring) for the adult's mind.
+    const MIND: Field[] = ["diet", "facts", "traits", "sleep", "spotlight", "story"];
+    const play = find(row, MIND.concat(["offspring"]), PLAY);
     const leader = find(row, OWN.concat(["sociality", "offspring"]), LEADER);
-    const curious = find(row, OWN, CURIOUS);
+    const curious = find(row, MIND, CURIOUS);
     const shy = find(row, OWN.concat(["predators"]), SHY);
-    const learn = find(row, OWN.concat(["offspring"]), LEARN);
+    const learn = find(row, MIND, LEARN);
     const grouped = ["herd", "flock", "school", "troop", "colony", "group", "pack", "swarm"].includes(b.social);
+    const bigHunter = hunt.some((h) => !["filter", "scavenge"].includes(h.style)) && (b.size ?? 0) >= 45;
     const social = {
         sentinel: sentinelHit ? sentinelHit.source : null,
-        alarm: alarm ? src(alarm) : grouped && ["quadruped", "primate", "flying_bird", "walking_bird"].includes(b.plan) ? ({default: `social ${b.social}, plan ${b.plan}: warns its group`} as Source) : null,
+        alarm: alarm ? src(alarm) : grouped && !bigHunter && ["quadruped", "primate", "flying_bird", "walking_bird"].includes(b.plan) ? ({default: `social ${b.social}, plan ${b.plan}: warns its group`} as Source) : null,
         leader: leader ? src(leader) : ["herd", "troop", "pack", "flock", "school"].includes(b.social) ? ({rule: `social ${b.social}: the scene's leader and followers`} as Source) : null,
         manyEyes: grouped,
         mixed: mixedHit ? {with: mixedHit.verdict.value ?? null, src: mixedHit.source} : null,

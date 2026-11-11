@@ -896,7 +896,7 @@ export class ReactiveLayer {
                 const interest = n.curiosity * (0.3 + p.curiosity) * (0.6 + person.curiosity) * person.glanceRate;
                 add("watch_camera", 0.2 + interest * 0.6, 4);
                 // The sharp and the bold come closer to look; the rest watch from where they are.
-                if (person.boldness > -0.3) add("investigate_camera", 0.1 + interest * 1.3, 7);
+                if (person.boldness > -0.3) add("investigate_camera", 0.1 + interest * 1.3 + 0.5 * p.curiosity * (p.repertoire >= 9 ? 1 : 0.5), 7);
                 if (person.boldness < -0.3 && d < p.flight * 0.6) add("back_off_camera", 1 + (0.6 - person.boldness), 0);
             }
         }

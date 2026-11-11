@@ -91,7 +91,8 @@ async function mountScenarios(el: HTMLElement) {
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     const cast = castAnimals();
-    const snapshot = decodeArkSnapshot({...fixture, animals: [...fixture.animals, ...cast]});
+    // Only the cast: the fixture's own predators (crocodiles at the pond, lions) would set the herds off before the scenario starts.
+    const snapshot = decodeArkSnapshot({...fixture, animals: cast});
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 10, onReady: () => (ready = true)});
@@ -112,12 +113,19 @@ async function mountScenarios(el: HTMLElement) {
     const clearPins = () => {
         for (const [prefix] of CAST) for (const id of byPrefix[prefix]) debug().pinShared(id, null);
     };
-    /** Puts a group at a point (as the shared layer would, its homes), in a loose cluster. */
-    const place = (prefix: string, x: number, z: number, spread: number) => {
-        byPrefix[prefix].forEach((id, i) => {
-            const a = (i / Math.max(byPrefix[prefix].length, 1)) * Math.PI * 2 + i * 0.7;
-            const r = i === 0 ? 0 : spread * (0.6 + 0.4 * ((i * 37) % 10) / 10);
-            debug().setHome(id, x + Math.cos(a) * r, z + Math.sin(a) * r);
+    /**
+     * Holds a group still at a point, grazing or resting (the harness standing in for a shared layer that has them at
+     * their spots this minute), so what the reactive layer adds is plain to see.
+     */
+    const hold = (prefix: string, x: number, z: number, spread: number, doing: string, count = byPrefix[prefix].length) => {
+        byPrefix[prefix].slice(0, count).forEach((id, i) => {
+            const a = i * 2.39996;
+            const r = i === 0 ? 0 : spread * Math.sqrt(i / count);
+            const px = x + Math.cos(a) * r;
+            const pz = z + Math.sin(a) * r;
+            const yaw = ((i * 1.7) % (Math.PI * 2)) - Math.PI;
+            debug().setHome(id, px, pz);
+            debug().pinShared(id, () => ({x: px, z: pz, y: Math.max(heightAt(px, pz), 0), yaw, moving: false, aloft: false, doing, nx: 0, ny: 1, nz: 0}));
         });
     };
     /** Parks a group far off (out of the scene's way) so it doesn't wander into another scenario. */
@@ -144,7 +152,7 @@ async function mountScenarios(el: HTMLElement) {
         /** A lion walks past a zebra herd: the first to notice calls, the alarm runs through, they bunch and run. */
         predator_herd: async () => {
             const at = site("grassland", 6, 4);
-            place("zebra", at.x, at.z, 4.5);
+            hold("zebra", at.x, at.z, 5, "graze");
             walk(byPrefix.lion[0], {x: at.x - 40, z: at.z + 9}, {x: at.x + 30, z: at.z + 10}, nowS() + 1e6, 24);
             view(at.x - 4, at.z + 2, 20, -0.35, 1.1);
             return {note: "the lion walks past from the left 3 s in", watch: [...byPrefix.zebra, ...byPrefix.lion], go: () => walk(byPrefix.lion[0], {x: at.x - 40, z: at.z + 9}, {x: at.x + 30, z: at.z + 10}, nowS() + 3, 24)};
@@ -152,7 +160,7 @@ async function mountScenarios(el: HTMLElement) {
         /** Wolves not acting out a meal stalk a deer group visually and stop short; the deer watch, then move off. */
         pack_hunt: async () => {
             const at = site("woodland", -4, 6);
-            place("deer", at.x, at.z, 3);
+            hold("deer", at.x, at.z, 3.5, "graze");
             const wolves = (start: number) => byPrefix.wolf.forEach((id, i) => walk(id, {x: at.x - 24 + i * 2, z: at.z - 16 - i * 1.5}, {x: at.x - 10 + i * 2.5, z: at.z - 7 - i}, start, 12));
             wolves(nowS() + 1e6);
             view(at.x - 6, at.z - 4, 18, -0.9, 1.1);
@@ -161,14 +169,14 @@ async function mountScenarios(el: HTMLElement) {
         /** A squirrel buries food, goes about its business, and comes back to dig it up. */
         squirrel_cache: async () => {
             const at = site("woodland", 8, -6);
-            place("squirrel", at.x, at.z, 5);
-            view(at.x, at.z, 5, 0.6, 1.0);
+            hold("squirrel", at.x, at.z, 3, "forage");
+            view(at.x + 1, at.z, 6, 0.6, 1.05);
             return {note: "forage slots: bury, then return after 20 s", watch: byPrefix.squirrel};
         },
         /** After the lion has gone, the zebras keep away from where it was and stay watchful; a second pass, quicker. */
         avoid_spot: async () => {
             const at = site("grassland", 6, 4);
-            place("zebra", at.x, at.z, 4.5);
+            hold("zebra", at.x, at.z, 5, "graze");
             walk(byPrefix.lion[0], {x: at.x - 70, z: at.z + 2}, {x: at.x - 70, z: at.z + 2}, nowS(), 1);
             view(at.x - 4, at.z, 22, -0.4, 1.1);
             return {
@@ -188,7 +196,7 @@ async function mountScenarios(el: HTMLElement) {
         /** A zebra mare puts herself between her foal and a lion. */
         parents_shield: async () => {
             const at = site("grassland", -10, 12);
-            place("zebra", at.x, at.z, 3);
+            hold("zebra", at.x, at.z, 3, "graze", 2);
             // The harness makes zebra1 the young of zebra0 (the scene takes this from the log's births: `ark-age.ts`).
             const foal = debug().entries().find((e) => e.animal.id === byPrefix.zebra[1]);
             if (foal) foal.youngOf = {parent: byPrefix.zebra[0], play: 0.5, at: nowS() + 1e6};
@@ -199,7 +207,7 @@ async function mountScenarios(el: HTMLElement) {
         /** A storm: the herd goes to shelter and keeps low, back to the wind. */
         storm: async () => {
             const at = site("grassland", 6, 4);
-            place("zebra", at.x, at.z, 4.5);
+            hold("zebra", at.x, at.z, 5, "graze");
             handle.setEnvironment({seaLevel: 0, wetness: 1, snow: 0, wind: 1, storm: 1, windDirection: 1.2});
             view(at.x, at.z, 24, 0.4);
             return {note: "storm 1, rain 1, wind 1", watch: byPrefix.zebra};
@@ -207,14 +215,14 @@ async function mountScenarios(el: HTMLElement) {
         /** Curious, sharp chimpanzees come over to look at the camera; a dull animal would only glance. */
         curious_camera: async () => {
             const at = site("rainforest", 0, 0);
-            place("chimp", at.x, at.z, 3);
+            hold("chimp", at.x, at.z, 3, "rest");
             view(at.x, at.z - 1, 7, Math.PI, 1.2);
             return {note: "the camera 7 m from the group", watch: byPrefix.chimp};
         },
         /** Meerkats with one on watch; a bateleur comes over: the sentinel calls first and the mob runs. */
         sentinel_raptor: async () => {
             const at = site("desert", 0, 0);
-            place("meerkat", at.x, at.z, 2);
+            hold("meerkat", at.x, at.z, 2.2, "forage");
             const eagle = (start: number) =>
                 debug().pinShared(byPrefix.eagle[0], (epoch: number) => {
                     const u = Math.min(Math.max((epoch - start) / 10, 0), 1);
@@ -243,8 +251,6 @@ async function mountScenarios(el: HTMLElement) {
             if (!run) throw new Error(`no scenario ${name}`);
             // Unpark the cast this scenario uses (its own setup pins or homes them).
             const result = await run();
-            const used = new Set(result.watch);
-            for (const [prefix] of CAST) for (const id of byPrefix[prefix]) if (used.has(id) && !(prefix === "lion" || prefix === "wolf" || prefix === "eagle")) debug().pinShared(id, null);
             for (let i = 0; i < 20; i++) await nextFrame();
             await settle(20_000);
             // Let the herd settle into its calm business before anything happens.
