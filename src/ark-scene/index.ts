@@ -1477,7 +1477,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 parentId: young.parent,
                 youngPlay: young.play,
                 headHeight: c.modelHeight * 0.8,
-                sessile: e.sched.profile.move === "sessile",
+                // (The behaviour profile also calls the barnacle goose sessile, from its name: only the "other" plan.)
+                sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving), aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
