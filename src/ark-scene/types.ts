@@ -190,6 +190,10 @@ export type ArkSceneOptions = {
     canvasLabel?: string;
     /** The lighter view (A18): true on, false off, null or absent decided by the device's tier. */
     lite?: boolean | null;
+    /** The scene's own art (ground textures, sky light): `<graphicsBase>/ground-albedo-512.webp`… Default "/ark/graphics". */
+    graphicsBase?: string;
+    /** The asset library (trees, plants, rocks): `<assetBase>/trees/oak-a.lod0.glb`… Default its manifest's base, "/ark/assets/v1". */
+    assetBase?: string;
     /** The quality tier changed (the lighter view follows it unless the reader chose). */
     onTier?: (tier: "high" | "medium" | "low", lite: boolean) => void;
 };
@@ -246,7 +250,12 @@ export type ArkSceneHandle = {
     focusRegion: (region: ArkRegion | null) => void;
     /** The camera follows this animal until any drag (or null to stop). */
     follow: (id: string | null) => void;
-    /** Pin the hour (0–24), or back to the viewer's clock with null. */
+    /**
+     * Pin the weather and tide (sea level in m; wetness, snow, wind, storm 0–1; windDirection radians), or follow the
+     * island clock with null. Any field left out keeps following the clock.
+     */
+    setEnvironment: (environment: Partial<{seaLevel: number; wetness: number; snow: number; wind: number; storm: number; windDirection: number; cloud: number}> | null) => void;
+    /** Pin the hour (0–24), or back to the island's shared clock with null. */
     setHours: (hours: number | null) => void;
     /**
      * Act out what the server says happened ("while you were away"): each act

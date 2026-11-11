@@ -75,6 +75,13 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 
 const MAX_DENSITY = 5;
 
+/**
+ * Trees at a believable size beside the cottage (graphics pass, batch 2): its ridge is 4.3 m, so a broadleaf now
+ * stands 5–9 m and a rainforest tree 9–15 m. Everything that reads a tree's size (bark animals, obstacles, attach
+ * points) takes it from the item's scale, so they follow.
+ */
+const TREE_SIZE: Partial<Record<DecorKind, number>> = {broadleaf: 1.5, rainforest: 1.45, conifer: 1.6, acacia: 1.35, palm: 1.3, orchard: 1.15};
+
 function tone(zone: ArkZone, kind: DecorKind, r: number): string {
     const palette = ZONE_PALETTES[zone];
     switch (kind) {
@@ -137,11 +144,11 @@ export function worldDecor(): DecorItem[] {
         if (!kind) continue;
         // Reeds keep to the water's edge; trees thin out up the mountain; palms keep to the sand.
         if (kind === "reed" && sample.height > 1.3) continue;
-        if (kind === "conifer" && sample.height > 24) continue;
+        if (kind === "conifer" && sample.height > 36) continue;
         if (kind === "broadleaf" && zone === "mountains") continue;
         if (kind === "palm" && sample.land > 0.97) continue;
         if (sample.cliff > 0.4 && kind !== "rock" && sample.land < 0.8) continue;
-        const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : 0.75 + 0.55 * sizeRoll;
+        const scale = kind === "rock" ? 0.5 + 1.3 * sizeRoll * sizeRoll : (0.75 + 0.55 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
         const variant = Math.floor(variantRoll * 3);
         push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll)});
         // Rocks come in clusters: a big one and a few smaller about it.
@@ -192,7 +199,8 @@ export function worldDecor(): DecorItem[] {
 
     // The reef: coral heads and fans on the shallow floor, kelp swaying a little deeper.
     const reef = ZONE_SITES.coral_reef;
-    const corals = ["#ef8a76", "#f0b25f", "#e0708f", "#c68fd6", "#f6c98d", "#ff9f6e"];
+    // Muted, believable coral colours (graphics pass), not candy.
+    const corals = ["#c8735d", "#c99a58", "#b06a78", "#8f7aa6", "#cfae86", "#c4805a"];
     for (let i = 0; i < 520; i++) {
         const angle = random() * Math.PI * 2;
         const radius = 3 + 30 * Math.sqrt(random());
@@ -206,7 +214,9 @@ export function worldDecor(): DecorItem[] {
             if (scale < 0.35) continue;
             push({kind: "kelp", variant: Math.floor(random() * 3), x, y: height, z, scale, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#6f7a2e" : "#8a8a35"});
         } else {
-            push({kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]});
+            const coral: DecorItem = {kind: "coral", variant: Math.floor(random() * 3), x, y: height, z, scale: 0.5 + random() * 0.9, rotation: random() * Math.PI * 2, color: corals[Math.floor(random() * corals.length)]};
+            // Out of the beach's clear shallows (the same random draws either way, so nothing after moves).
+            if (height < -1.9) push(coral);
         }
     }
 
@@ -282,7 +292,7 @@ export function grassTufts(count: number): GrassTuft[] {
         if (riverDistance(x, z) < 3) continue;
         // Not through the garden pond's water or the cottage's floor.
         if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
-        tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.75 + 0.25 * random() : zone === "mountains" ? 0.4 : 0.15 * random()});
+        tufts.push({x, y: s.height, z, scale: 0.45 + random() * 0.4, rotation: random() * Math.PI * 2, zone, dry: zone === "grassland" ? 0.3 + 0.45 * random() : zone === "mountains" ? 0.3 : 0.12 * random()});
     }
     return tufts;
 }
@@ -343,3 +353,133 @@ export class DecorObstacles {
         return false;
     }
 }
+
+// MARK: - Graphics pass: the forest fill
+
+/**
+ * More trees (graphics pass, batch 1): the forests filled in, 5–10× the
+ * decor's own trees, in natural clumps and glades. Visual only: they are not
+ * obstacles and not perches (the decor's own trees keep those jobs), and they
+ * keep out of every site's clearing, the river, the lake, the farm and the
+ * cottage, so no animal stands in one. `rank` (0…1) orders them for the
+ * tiers: a tier draws the ones under its fraction.
+ */
+export type FillItem = DecorItem & {rank: number};
+
+let fillCache: FillItem[] | null = null;
+
+export function forestFill(): FillItem[] {
+    if (fillCache) return fillCache;
+    const random = seeded(20261111);
+    const items: FillItem[] = [];
+    // A coarse grid keeps trunks at least ~2.4 m apart.
+    const taken = new Set<string>();
+    const cell = 2.4;
+    const kinds: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
+        rainforest: {density: 0.32, pick: (r) => (r < 0.6 ? "rainforest" : r < 0.85 ? "broadleaf" : "shrub")},
+        woodland: {density: 0.26, pick: (r) => (r < 0.55 ? "broadleaf" : r < 0.88 ? "conifer" : "shrub")},
+        mountains: {density: 0.12, pick: (r) => (r < 0.82 ? "conifer" : "shrub")},
+        river_lake: {density: 0.05, pick: (r) => (r < 0.7 ? "broadleaf" : "shrub")},
+        wetland: {density: 0.035, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")},
+        grassland: {density: 0.012, pick: (r) => (r < 0.6 ? "acacia" : "shrub")},
+        farm_garden: {density: 0.012, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")}
+    };
+    const tries = 220000;
+    for (let i = 0; i < tries; i++) {
+        const x = (random() * 2 - 1) * TERRAIN_HALF;
+        const z = (random() * 2 - 1) * TERRAIN_HALF;
+        const roll = random();
+        const pickRoll = random();
+        const sizeRoll = random();
+        const toneRoll = random();
+        const rotation = random() * Math.PI * 2;
+        const variant = Math.floor(random() * 3);
+        const rank = random();
+        const sample = sampleGround(x, z);
+        if (sample.height < 0.5 || sample.land < 0.7 || sample.cliff > 0.35) continue;
+        const zone = zoneAt(sample);
+        const growth = kinds[zone];
+        if (!growth) continue;
+        // Clumps and glades: dense where the noise is high, open where it is low.
+        const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
+        if (roll > growth.density * clump * 6) continue;
+        const kind = growth.pick(pickRoll);
+        if (!kind) continue;
+        if (kind === "conifer" && sample.height > 22) continue;
+        if (sample.height > 8 && Math.hypot(sampleGround(x + 1.5, z).height - sampleGround(x - 1.5, z).height, sampleGround(x, z + 1.5).height - sampleGround(x, z - 1.5).height) / 3 > 0.75) continue;
+        const site = ZONE_SITES[zone];
+        if (Math.hypot(x - site.x, z - site.z) < site.clearing + 2) continue;
+        if (riverDistance(x, z) < 5) continue;
+        if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
+        if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
+        const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+        if (taken.has(key)) continue;
+        taken.add(key);
+        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
+        items.push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank});
+    }
+    items.sort((a, b) => a.rank - b.rank);
+    fillCache = items;
+    return items;
+}
+
+// MARK: - Rock shape (shared by vegetation.ts, which draws it, and sampler.ts, which puts attach points on it)
+
+const rockBumps = new Map<number, Array<[number, number, number]>>();
+
+/** The rock shape's radius along a unit direction (before its 1.1 × 0.62 × 0.95 squash and 0.18 lift), per variant. */
+export function rockRadius(variant: number, dx: number, dy: number, dz: number): number {
+    let bumps = rockBumps.get(variant);
+    if (!bumps) {
+        const random = seeded(551 + variant);
+        bumps = Array.from({length: 6}, () => {
+            const x = random() * 2 - 1;
+            const y = random() * 2 - 1;
+            const z = random() * 2 - 1;
+            const l = Math.hypot(x, y, z) || 1;
+            return [x / l, y / l, z / l] as [number, number, number];
+        });
+        rockBumps.set(variant, bumps);
+    }
+    let push = 0;
+    for (const [bx, by, bz] of bumps) push += Math.max(dx * bx + dy * by + dz * bz, 0) ** 3 * 0.22;
+    const facet = Math.floor((dx * 2.3 + dz * 1.7 + 4) % 3) * 0.015;
+    const grain = Math.sin(dx * 13.1 + variant) * Math.sin(dz * 11.7 + dy * 9.3) * 0.035;
+    return 0.85 * (0.85 + push - 0.08 * Math.abs(dy) + facet + grain);
+}
+
+/** A rock's own height squash (0.8–1.2), from where it lies, so every viewer and the attach points agree. */
+export function rockSquash(item: {x: number; z: number}): number {
+    const h = Math.sin(item.x * 12.9898 + item.z * 78.233) * 43758.5453;
+    return 0.8 + 0.4 * (h - Math.floor(h));
+}
+
+/** A point on a rock's surface in the world, along a direction in its own frame (y up), and the surface's rough normal. */
+export function rockSurfacePoint(item: DecorItem, variants: number, dx: number, dy: number, dz: number): {x: number; y: number; z: number; nx: number; ny: number; nz: number} {
+    const l = Math.hypot(dx, dy, dz) || 1;
+    const ux = dx / l;
+    const uy = dy / l;
+    const uz = dz / l;
+    const r = rockRadius(item.variant % variants, ux, uy, uz);
+    const squash = rockSquash(item);
+    const lx = ux * r * 1.1 * item.scale;
+    const ly = (uy * r * 0.62 + 0.18) * item.scale * squash;
+    const lz = uz * r * 0.95 * item.scale;
+    const c = Math.cos(item.rotation);
+    const sn = Math.sin(item.rotation);
+    // three's rotation about y: x' = x cos + z sin, z' = -x sin + z cos.
+    const x = item.x + lx * c + lz * sn;
+    const z = item.z - lx * sn + lz * c;
+    // The ellipsoid's normal: the direction divided by the squash, turned the same way.
+    let nx = ux / 1.1;
+    let ny = uy / (0.62 * squash);
+    let nz = uz / 0.95;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    nx /= nl;
+    ny /= nl;
+    nz /= nl;
+    return {x, y: item.y - DECOR_SINK_ROCK + ly, z, nx: nx * c + nz * sn, ny, nz: -nx * sn + nz * c};
+}
+
+/** How far the instanced decor is sunk (micro-decor.ts DECOR_SINK), repeated here to keep this module free of cycles. */
+const DECOR_SINK_ROCK = 0.08;

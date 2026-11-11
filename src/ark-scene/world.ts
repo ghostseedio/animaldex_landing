@@ -242,6 +242,11 @@ export function riverDistance(x: number, z: number): number {
     return best;
 }
 
+/** Rolling hills (graphics pass, batch 2): broad rises 0…1, for the forests and the grassland. */
+function hills(x: number, z: number): number {
+    return smoothstep(0.32, 0.82, fbm(x * 0.017 + 40, z * 0.017 - 12));
+}
+
 /** How each land zone shapes its ground. */
 function zoneHeight(zone: LandZone, x: number, z: number): number {
     const n = fbm(x * 0.045, z * 0.045);
@@ -255,11 +260,11 @@ function zoneHeight(zone: LandZone, x: number, z: number): number {
         case "wetland":
             return 0.12 + 0.9 * (fbm(x * 0.09, z * 0.09) - 0.5);
         case "rainforest":
-            return 1.4 + 2.4 * n;
+            return 1.4 + 2.4 * n + 7.5 * hills(x, z);
         case "woodland":
-            return 1.6 + 3 * n;
+            return 1.6 + 3 * n + 9 * hills(x, z);
         case "grassland":
-            return 1 + 1.6 * n;
+            return 1 + 1.6 * n + 4.5 * hills(x, z);
         case "desert": {
             const dune = Math.abs(Math.sin((x * 0.75 + z * 0.62) * 0.22 + 3 * fbm(x * 0.03, z * 0.03)));
             return 1.1 + 1.6 * dune * dune + 0.6 * n;
@@ -277,7 +282,14 @@ function zoneHeight(zone: LandZone, x: number, z: number): number {
             }
             ridge /= 1.6;
             const back = smoothstep(-25, -75, z);
-            return 2.5 + 36 * ridge * (0.4 + 0.8 * back) + 2 * n;
+            // Graphics pass, batch 2: a massif along an east-west spine (not a lone cone), its crest broken into
+            // peaks and cols, ridges running down from it and gullies cut between them, deeper higher up.
+            const spine = distanceToSegment(x, z, -44, -66, 16, -61);
+            const massif = Math.pow(smoothstep(48, 0, spine), 1.3);
+            const peaks = 1 - Math.abs(2 * fbm(x * 0.021 + 1.3, z * 0.021 + 2.1) - 1);
+            const gully = 1 - Math.abs(2 * fbm(x * 0.075 + 9, z * 0.075 - 4) - 1);
+            const base = 2.5 + (13 * massif + 17 * ridge * (0.35 + 0.65 * massif) + 6 * peaks * massif) * (0.45 + 0.75 * back) + 2 * n;
+            return base - 3.4 * gully * gully * smoothstep(6, 24, base);
         }
         case "polar":
             return 1.8 + 2.2 * n;
@@ -315,6 +327,26 @@ export function sampleGround(x: number, z: number): GroundSample {
     for (const zone of LAND_ZONES) {
         if (weights[zone] > 0.002) height += weights[zone] * zoneHeight(zone, x, z);
     }
+    // The mountain's foothills and second peaks (graphics pass, batch 3): the massif reaches past the mountain zone into
+    // its neighbours, so from far it reads as a broad, many-peaked range, not a lone spike.
+    {
+        const spine = distanceToSegment(x, z, -46, -66, 6, -62);
+        const inlandHere = coastRadius(Math.atan2(z, x)) - Math.hypot(x, z);
+        const reach = Math.pow(smoothstep(46, 0, spine), 1.6) * smoothstep(0, 14, inlandHere);
+        if (reach > 0) {
+            const bump = (cx: number, cz: number, r: number, h: number) => h * Math.exp(-((x - cx) ** 2 + (z - cz) ** 2) / (r * r));
+            // Flanking summits nearly as high as the main one: a range, many-peaked against the sky.
+            const peaks = bump(-34, -68, 13, 11) + bump(2, -64, 12, 10) + bump(-21, -73, 10, 7);
+            const rough = 1 - Math.abs(2 * fbm(x * 0.05 + 21, z * 0.05 - 8) - 1);
+            height += (1 - (weights.mountains ?? 0) * 0.7) * reach * (5 + 4 * rough) + peaks * smoothstep(0, 18, inlandHere);
+        }
+    }
+    // The river runs in a valley (graphics pass): the land falls toward it over 16 m either side.
+    {
+        const along = riverDistance(x, z);
+        const inlandHere = coastRadius(Math.atan2(z, x)) - Math.hypot(x, z);
+        height -= 1.6 * smoothstep(16, 4, along) * smoothstep(2, 12, inlandHere) * Math.max(height - 0.6, 0) / Math.max(height, 0.6);
+    }
     // Each site's clearing is gentle ground, so the animals stand on a meadow and not a cliff.
     for (const zone of LAND_ZONES) {
         const site = ZONE_SITES[zone];
@@ -344,9 +376,11 @@ export function sampleGround(x: number, z: number): GroundSample {
         height = height + (depth - height) * smoothstep(lakeEdge + 4, lakeEdge - 1, lakeDistance);
     }
     const river = riverDistance(x, z);
-    if (river < 5 && inland > -6) {
+    if (river < 6 && inland > -6) {
         const width = 2 + 1.2 * smoothstep(-4, 90, z);
-        height = height + (-1.3 - height) * smoothstep(width + 2.5, width * 0.4, river);
+        // A U-shaped bed, deepest in the middle, with a low bank (graphics pass).
+        const bed = -1.1 - 0.6 * (1 - Math.min(river / Math.max(width, 0.1), 1) ** 2);
+        height = height + (bed - height) * smoothstep(width + 2.2, width * 0.55, river);
     }
 
     return {height, weights, land, inland, river, reef, cliff};

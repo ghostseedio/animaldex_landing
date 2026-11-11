@@ -363,8 +363,9 @@ export function buildLayersScene(): LayersScene {
             underside.visible = under;
             // The light's shafts by day only.
             shafts.visible = under && daylight > 0.45;
-            shaftMaterial.opacity = Math.min(Math.max((daylight - 0.45) / 0.4, 0), 1) * 0.7;
-            undersideMaterial.opacity = 0.25 + 0.3 * Math.min(Math.max(daylight, 0), 1);
+            // Graphics pass: softer shafts, and the water's own underside (terrain.ts: Snell's window) shows through.
+            shaftMaterial.opacity = Math.min(Math.max((daylight - 0.45) / 0.4, 0), 1) * 0.32;
+            undersideMaterial.opacity = 0.06 + 0.06 * Math.min(Math.max(daylight, 0), 1);
             cameraAt = cameraPosition;
             underside.position.x = cameraPosition.x;
             underside.position.z = cameraPosition.z;

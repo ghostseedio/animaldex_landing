@@ -51,3 +51,4 @@ next-env.d.ts
 # The Ark scene bundle (npm run build:ark, scripts/build-ark-bundle.mjs)
 /public/ark/ark-scene.js
 /public/ark/ark-scene.js.map
+/.ark-golden
