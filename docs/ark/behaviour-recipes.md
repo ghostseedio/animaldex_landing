@@ -424,7 +424,7 @@ The rules now, all in `behaviour-recipes.ts`, pure and seeded as before:
   - an episode stops while it can still get home at its own pace (pairs keep their shared reserve);
   - a swimmer that flies swims from water to water.
 - **Data:**
-  - `talon_grab` no longer replaces flights;
+  - `talon_grab` replaces only forage and hunt (not flights or perching), half as often (a template's `often`): each fishing trip is an out-and-back U-turn in the air;
   - nest material trips come every half minute;
   - the caching rule no longer reads "storing fat", "buried prey" or "buried food", "burying seeds", "an open larder", or "reserves, caches". 51 real cachers keep `cache_food` (squirrels, jays, nutcrackers, kangaroo rats, hamsters, tits, corvids, mustelids, lynx, wolverine, the red fox, owls and kestrels with surplus prey).
 
@@ -435,6 +435,10 @@ Measured on this branch (fixture snapshot v2, every 20 s window of a day, as beh
 | facing loops | 0.28% | 0.32% | 0.18% |
 | travel loops | 0.04% | 0.06% | 0.01% |
 
-Flyers' turns a minute in the air: 0.447 (limit 0.5; 0.392 with recipes off). Tests: `no spinning` (six recipe species, every 20 s of their episodes under a full turn, no 0.2 s step over 0.9 rad) and `only real cachers cache`.
+Flyers' turns a minute in the air: under 0.45 here (limit 0.5; 0.392 with recipes off).
+
+On `origin/ark-release` 49345ee4 with this branch merged (local only, not pushed), every animal: facing loops 0.20%, travel 0.08%. Flyers: 0.458 turns a minute (0.441 with recipes off: the release's own flights turn more than this branch's). The behaviour, recipe, water, state and build tests pass there: 55/55. The merge's only conflict is the `behaviour-schedule` import line in `index.ts`: take the release's side, which already has every name this branch adds.
+
+Tests: `no spinning` (six recipe species, every 20 s of their episodes under a full turn, no 0.2 s step over 0.9 rad) and `only real cachers cache`.
 
 For behaviour: the landing at the end of a schedule flight can snap round (149° in a second, a fish eagle onto its perch). `settle` faces from home when none of the last four slots had a goal, not from where it flew in from. Behaviour's file; not changed here.

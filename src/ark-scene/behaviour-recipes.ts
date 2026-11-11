@@ -217,7 +217,7 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say.
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
         if (id === "nest_build" && nestSource && (!building || building.stage >= 1)) continue;
-        const chance = weight * 0.7 * (building ? 1 : seasonFactor(species, template.season, input.start));
+        const chance = weight * 0.7 * (template.often ?? 1) * (building ? 1 : seasonFactor(species, template.season, input.start));
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;

@@ -77,6 +77,9 @@ export type Template = {
     hours?: "day" | "night" | "dawn_dusk" | "dusk" | "any";
     /** Only in its mating or nesting season (where the data has one). */
     season?: "mating" | "nesting";
+    /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
+     *  now-and-then thing, not every forage. */
+    often?: number;
     /** Only males (a display), or the pair's sexes (pair templates: "males" both male, "mixed" a male and a female, "any"). */
     sex?: "male" | "males" | "mixed" | "any";
     steps: TemplateStep[];
@@ -136,10 +139,11 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             label: "snatches fish feet-first (the osprey, fish eagles)",
             kind: "stay",
             goal: "perch_water",
-            // (Not its flights: each fishing trip is out and back, and it fishes instead of foraging, perching or hunting.)
-            replaces: ["forage", "perch", "hunt"],
+            // (Not its flights or its perching: each fishing trip is out and back, so it fishes instead of foraging or hunting.)
+            replaces: ["forage", "hunt"],
             doing: "forage",
             hours: "day",
+            often: 0.5,
             steps: [
                 {b: "perch", s: [4, 9], face: "water"},
                 {b: "take_off", to: "up", h: 1.2},
