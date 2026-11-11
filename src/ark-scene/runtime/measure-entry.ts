@@ -58,6 +58,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
             }
         });
         const mountMs = performance.now() - mountStart;
+        // For the probes (scratch scripts drive the handle: visibility, power).
+        (window as unknown as {__arkMeasureHandle?: unknown}).__arkMeasureHandle = handle;
         // The Mac running the harness is busy with other work: its CPU pressure is not the phone's. Power as a calm
         // device unless the page asks (`?power=saver|serious|critical`).
         const power = params.get("power");
