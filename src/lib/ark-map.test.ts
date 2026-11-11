@@ -27,6 +27,7 @@ import {worldSampler} from "@/ark-scene/map/world-sampler";
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
+import {drawnRocks, inRock, ROCK_CELL, touchesRock} from "@/ark-scene/map/rocks";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
 const REVIEWED = holds as unknown as {species: Record<string, string>; grips: Record<string, string>};
@@ -287,4 +288,52 @@ test("map: penguins and seals stand on their shore (the polar penguins on the co
             assert.ok(d > 0.9 && d < 4, `${slug} ${i} and ${j} ${d.toFixed(2)} m apart`);
         }
     }
+});
+
+test("inRock finds a rock just over a cell edge: a body at the edge of a cell next to a rock listed only in the next", () => {
+    // The index lists each rock in the cells its own reach covers; a body with a radius reaches past them. For every rock,
+    // a body of 0.4 m just across each edge of its listed cells, 0.1-0.3 m off its footprint, and a body at random near
+    // it: inRock agrees with every rock checked one by one.
+    const rocks = drawnRocks();
+    assert.ok(rocks.length > 20, `${rocks.length} drawn rocks`);
+    const brute = (x: number, z: number, radius: number) => rocks.some((rock) => touchesRock(rock, x, z, radius));
+    const listed = (rock: (typeof rocks)[number], x: number, z: number) => {
+        const i = Math.floor(x / ROCK_CELL);
+        const j = Math.floor(z / ROCK_CELL);
+        return i >= Math.floor((rock.x - rock.reach) / ROCK_CELL) && i <= Math.floor((rock.x + rock.reach) / ROCK_CELL) && j >= Math.floor((rock.z - rock.reach) / ROCK_CELL) && j <= Math.floor((rock.z + rock.reach) / ROCK_CELL);
+    };
+    let edgeCases = 0;
+    const wrong: string[] = [];
+    for (const rock of rocks) {
+        // Its footprint's farthest extent along each world axis (the box's corners, turned).
+        const corners = [[rock.hx0, rock.hz0], [rock.hx0, rock.hz1], [rock.hx1, rock.hz0], [rock.hx1, rock.hz1]].map(([lx, lz]) => ({x: rock.x + lx * rock.cos + lz * rock.sin, z: rock.z - lx * rock.sin + lz * rock.cos}));
+        const east = Math.max(...corners.map((c) => c.x));
+        const west = Math.min(...corners.map((c) => c.x));
+        const north = Math.max(...corners.map((c) => c.z));
+        const south = Math.min(...corners.map((c) => c.z));
+        const along = [
+            {x: (Math.floor((rock.x + rock.reach) / ROCK_CELL) + 1) * ROCK_CELL + 0.01, z: rock.z, edge: east},
+            {x: Math.floor((rock.x - rock.reach) / ROCK_CELL) * ROCK_CELL - 0.01, z: rock.z, edge: west},
+            {x: rock.x, z: (Math.floor((rock.z + rock.reach) / ROCK_CELL) + 1) * ROCK_CELL + 0.01, edge: north},
+            {x: rock.x, z: Math.floor((rock.z - rock.reach) / ROCK_CELL) * ROCK_CELL - 0.01, edge: south}
+        ];
+        for (const [k, at] of along.entries()) {
+            // The body's radius: from the footprint's edge to just past the cell edge, plus a little (at least 0.4 m).
+            const gap = k === 0 ? at.x - at.edge : k === 1 ? at.edge - at.x : k === 2 ? at.z - at.edge : at.edge - at.z;
+            const radius = Math.max(gap + 0.1 + 0.2 * ((k + rocks.indexOf(rock)) % 2), 0.4);
+            if (!listed(rock, at.x, at.z) && touchesRock(rock, at.x, at.z, radius)) edgeCases++;
+            if (inRock(at.x, at.z, radius) !== brute(at.x, at.z, radius)) wrong.push(`rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)} side ${k}: body r ${radius.toFixed(2)} at ${at.x.toFixed(2)},${at.z.toFixed(2)}`);
+        }
+        for (let n = 0; n < 12; n++) {
+            const a = (n / 12) * Math.PI * 2 + rock.x;
+            const d = rock.reach + 0.2 + (n % 4) * 0.35;
+            const x = rock.x + Math.cos(a) * d;
+            const z = rock.z + Math.sin(a) * d;
+            const radius = 0.3 + (n % 3) * 0.4;
+            if (inRock(x, z, radius) !== brute(x, z, radius)) wrong.push(`rock at ${rock.x.toFixed(1)},${rock.z.toFixed(1)}: body r ${radius.toFixed(2)} at ${x.toFixed(2)},${z.toFixed(2)}`);
+        }
+    }
+    // The case the old lookup missed is really tested: bodies touching a rock from a cell it is not listed in.
+    assert.ok(edgeCases > 20, `${edgeCases} bodies touch a rock from a cell it is not listed in`);
+    assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} bodies where inRock disagrees with the rocks checked one by one`);
 });
