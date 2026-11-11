@@ -296,6 +296,7 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
     grow = D["grow"] * LV.get("grow_scale", [1, 1, 1])[detail]
     if target is not None:
         grow = max(1.0, math.sqrt(len(leaves) / keep) * 0.92) * LV.get("grow_scale", [1, 1, 1])[detail]
+        grow = min(grow, LV.get("grow_max", 99.0))
     segs = LV.get("segs", 0) if detail == 0 else 0
     kind = LV.get("kind", "blade")
     Ps, Fs, Ns, Cs, Ws = [], [], [], [], []
@@ -367,7 +368,12 @@ def mesh_card(spec, tree, rng):
             side = norm(np.cross(T, nrm[None].repeat(len(T), 0)))
             side[np.linalg.norm(side, axis=1) < 1e-6] = axis
             P = np.concatenate([pts - side * rad[:, None], pts + side * rad[:, None]])
-            P -= nrm * (P @ nrm)[:, None]
+            if spec.get("card_true_trunk"):
+                # Keep the ribbon on the limb's own line (both planes then share one trunk, even
+                # when it leans), only its width lying in the plane.
+                pass
+            else:
+                P -= nrm * (P @ nrm)[:, None]
             k = len(pts)
             F = []
             for i in range(k - 1):
@@ -559,9 +565,9 @@ def make_clumps(spec, rng, tree):
     tree.clumps = [c for _, cs in tree.clump_sets for c in cs]
 
 
-def clump_geo(R, n_pts, notch, aspect, cup, rng):
+def clump_geo(R, n_pts, notch, aspect, cup, rng, droop=0.18):
     """Local frame: +Y the clump's normal, +Z along its twig. Centre raised, edge alternating
-    leaf tips and notches, drooping a little."""
+    leaf tips and notches, drooping a little (a dome when `droop` is large)."""
     a0 = rng.uniform(0, 2 * math.pi)
     P = [[0, cup * R, 0]]
     tip = [0.0]
@@ -569,7 +575,7 @@ def clump_geo(R, n_pts, notch, aspect, cup, rng):
         a = a0 + 2 * math.pi * i / n_pts + rng.uniform(-0.12, 0.12)
         out = i % 2 == 0
         r = R * (1.0 if out else notch) * rng.uniform(0.85, 1.1)
-        P.append([math.cos(a) * r, -0.18 * R * (r / R) ** 2, math.sin(a) * r * aspect])
+        P.append([math.cos(a) * r, -droop * R * (r / R) ** 2, math.sin(a) * r * aspect])
         tip.append(1.0 if out else 0.6)
     F = [[0, 1 + (i + 1) % n_pts, 1 + i] for i in range(n_pts)]
     return np.array(P), np.array(F), np.array(tip)
@@ -589,6 +595,42 @@ def tuft_geo(R, n_pts, notch, cup, spikes, rng):
         c = np.array([0.0, cup * R * 0.6, 0.0])
         P += [c - side, c + side, c + d * R * rng.uniform(0.75, 0.95)]
         tip += [0.3, 0.3, 1.0]
+        F.append([base, base + 1, base + 2])
+    return np.array(P, float), np.array(F), np.array(tip)
+
+
+def cone_geo(L, n_pts, notch, spread, rng):
+    """A pine shoot: needles round the shoot tip as one continuous cone opening outward (a spiky
+    rosette seen end-on, a brush from the side). Local frame: +Z out along the shoot, +Y up."""
+    P, tip = [[0.0, 0.0, -0.15 * L]], [0.0]
+    a0 = rng.uniform(0, 2 * math.pi)
+    for i in range(n_pts):
+        a = a0 + 2 * math.pi * i / n_pts + rng.uniform(-0.1, 0.1)
+        out = i % 2 == 0
+        ln = L * (1.0 if out else notch) * rng.uniform(0.85, 1.1)
+        sp = spread * (1.0 if out else 0.8) * rng.uniform(0.85, 1.15)
+        P.append([math.cos(a) * math.sin(sp) * ln, math.sin(a) * math.sin(sp) * ln, math.cos(sp) * ln])
+        tip.append(1.0 if out else 0.55)
+    F = [[0, 1 + i, 1 + (i + 1) % n_pts] for i in range(n_pts)]
+    return np.array(P, float), np.array(F), np.array(tip)
+
+
+def bristle_geo(R, n_pts, notch, cup, droop, spikes, spike_len, spike_w, rng):
+    """A pine needle cloud: a near-round dome of needles with a bristly rim (narrow needle spikes
+    radiating round it, alternately lying flat and standing on edge, so the rim bristles from the
+    side and from above). Local frame: +Y out of the dome, +Z along the twig."""
+    P, F, tip = clump_geo(R, n_pts, notch, 1.0, cup, rng, droop)
+    P, F, tip = list(P), [list(f) for f in F], list(tip)
+    a0 = rng.uniform(0, 2 * math.pi)
+    for i in range(spikes):
+        a = a0 + 2 * math.pi * (i + rng.uniform(-0.3, 0.3)) / max(spikes, 1)
+        d = norm(np.array([math.cos(a), rng.uniform(-0.25, 0.3), math.sin(a)]))
+        c = np.array([math.cos(a) * R * 0.6, -droop * R * 0.3, math.sin(a) * R * 0.6])
+        side = norm(np.cross(d, UP)) if i % 2 == 0 else norm(np.cross(d, np.cross(d, UP)))
+        w = R * spike_w
+        base = len(P)
+        P += [c - side * w, c + side * w, c + d * R * spike_len * rng.uniform(0.75, 1.1)]
+        tip += [0.6, 0.6, 1.0]
         F.append([base, base + 1, base + 2])
     return np.array(P, float), np.array(F), np.array(tip)
 
@@ -686,9 +728,9 @@ def bough_geo(limb, W, segs, roof, rng, t0=0.06, fringe=0.0):
     return P, np.array(F), tip, np.array(tt * 5)
 
 
-def bough_segs(CL, detail, length, longest):
+def bough_segs(CL, detail, length, longest, scale=1.0):
     segs = CL.get("segs", [8, 4, 2])[detail]
-    return max(1, min(segs, int(math.ceil(segs * length / max(0.55 * longest, 1e-3)))))
+    return max(1, min(segs, int(math.ceil(segs * scale * length / max(0.55 * longest, 1e-3)))))
 
 
 def crown_core(spec, tree, detail, out):
@@ -747,6 +789,10 @@ def group_tris(CL, detail):
         return [CL.get("points", 7), 4, 2][detail] * 2
     if kind == "sheet":
         return CL.get("segs", [5, 3, 2])[detail] * 4
+    if kind == "bristle":
+        return [CL.get("points", 12), max(8, CL.get("points", 12) - 4), 6][detail] + CL.get("spikes", [10, 6, 3])[detail]
+    if kind == "cone":
+        return [CL.get("points", 14), max(8, CL.get("points", 14) - 4), 6][detail]
     if kind == "tuft":
         return [CL.get("points", 14), max(8, CL.get("points", 14) - 4), 6][detail] + CL.get("spikes", [4, 2, 0])[detail]
     if kind == "bough":
@@ -773,14 +819,19 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
     kind = CL.get("kind", "fan")
     pts_n = group_tris(CL, detail)
     keep = max(6, min(len(clumps), int(target_tris / pts_n)))
+    seg_scale = 1.0
     if kind == "bough":
         keep = len(clumps)
+        per_seg = 8 if CL.get("fringe", [0, 0, 0])[detail] > 0 else 4
+        longest0 = max(c["R"] for c in clumps)
+        need = sum(bough_segs(CL, detail, c["limb"].length, longest0) * per_seg for c in clumps)
+        seg_scale = min(1.0, target_tris / max(need, 1))
     order = np.random.default_rng(11).permutation(len(clumps))
     chosen = [clumps[i] for i in order[:keep]]
     grow = min(CL.get("grow_max", 2.6), max(1.0, math.sqrt(len(clumps) / keep) * 0.95))
     allp = np.array([c["p"] for c in clumps])
     centre = getattr(tree, "crown_centre", None)
-    if centre is None or kind not in ("bough", "sheet", "tuft"):
+    if centre is None or kind not in ("bough", "sheet", "tuft", "cone", "bristle"):
         centre = allp.mean(0)
         centre[1] = np.percentile(allp[:, 1], 40)
     spread = np.percentile(np.linalg.norm(allp - centre, axis=1), 92) + 1e-3
@@ -809,26 +860,39 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
             facing = c["out"] * np.array([1, 0, 1])
             facing = norm(facing) if np.linalg.norm(facing) > 1e-3 else perp(fwd)
             Pw, x, y, z = place_frame(P, c["p"], fwd, norm(facing + UP * CL.get("face_up", 0.3)))
+        elif kind == "bristle":
+            sp = CL.get("spikes", [10, 6, 3])[detail]
+            P, F, tip = bristle_geo(c["R"] * grow, pts_n - sp, CL.get("notch", 0.8), CL.get("cup", 0.3),
+                                    CL.get("droop", 0.45), sp, CL.get("spike_len", 1.35), CL.get("spike_w", 0.07), rng)
+            Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
+        elif kind == "cone":
+            P, F, tip = cone_geo(c["R"] * min(grow, CL.get("grow_max", 2.0)), pts_n, CL.get("notch", 0.55),
+                                 math.radians(CL.get("spread", 50)), rng)
+            fwd = norm(c["d"] * (1 - CL.get("lift", 0.5)) + c["n"] * CL.get("lift", 0.5))
+            Pw, x, y, z = place_frame(P, c["p"], fwd, c["n"] if abs(c["n"] @ fwd) < 0.95 else perp(fwd))
+            y = np.tile(fwd, (len(Pw), 1))
         elif kind == "tuft":
             P, F, tip = tuft_geo(c["R"] * min(grow, CL.get("grow_max", 2.0)), pts_n - CL.get("spikes", [4, 2, 0])[detail],
                                  CL.get("notch", 0.45), CL.get("cup", 0.25), CL.get("spikes", [4, 2, 0])[detail], rng)
             Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
         elif kind == "bough":
-            segs = bough_segs(CL, detail, c["limb"].length, longest)
+            segs = bough_segs(CL, detail, c["limb"].length, longest, seg_scale)
             roof = CL.get("roof", 30)
             roof = roof[detail] if isinstance(roof, (list, tuple)) else roof
             Pw, F, tip, tl = bough_geo(c["limb"], c["R"] * CL.get("width", 0.3) * CL.get("lod_width", [1, 1.15, 1.3])[detail],
-                                       segs, math.radians(roof), rng, fringe=CL.get("fringe", [0, 0, 0])[detail])
+                                       segs, math.radians(roof), rng, t0=CL.get("t0", 0.06),
+                                       fringe=CL.get("fringe", [0, 0, 0])[detail])
             y = np.tile(UP, (len(Pw), 1))
             sway = c["limb"].sway(tl)
         else:
-            P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng)
+            P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng,
+                                  CL.get("droop", 0.18))
             Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
         radial = norm(Pw - centre)
         Nw = norm(radial * 0.6 + y * 0.4)
         depth = np.clip(np.linalg.norm(Pw - centre, axis=1) / spread, 0, 1.15)
         ao = (0.45 + 0.55 * depth ** 0.8) * (0.8 + 0.2 * (Pw[:, 1] - ymin) / max(ymax - ymin, 1e-3))
-        if kind in ("bough", "sheet", "tuft"):
+        if kind in ("bough", "sheet", "tuft", "cone", "bristle") or "under" in CL:
             # Conifers: the underside and the inside of each tier sit in shade.
             under = np.clip(Nw[:, 1] * 0.5 + 0.5, 0, 1)
             ao = ao * (CL.get("under", 0.7) + (1 - CL.get("under", 0.7)) * under)
@@ -1180,30 +1244,34 @@ SPECIES = {
                     tip=hexc("#a6c656"), fold=0.25, curl=0.08, angle=70, tilt=0.3),
         bark=dict(color=hexc("#9a9a8e"), dark=hexc("#6c6c62"), fx=2, fy=0.6, contrast=0.6), n_branch=20),
     "pine": dict(
-        # Needle foliage only: spiky, cupped needle tufts massed at the shoot ends (no leaf-shaped
-        # fans), thin needle stars among them near the camera.
-        clumps=dict(kind="tuft", levels=[2, 3], per_limb=(2, 3), t=(0.5, 1.0), r=(0.3, 0.42), points=14, notch=0.42,
-                    cup=0.3, spikes=[4, 2, 0], face_up=0.55, tilt=0.25, grow_max=2.2, under=0.65,
-                    share=(0.85, 1.0, 1.0)), wood_share=(0.26, 0.24, 0.22),
+        # Scots pine: a tall bare trunk, near-level main branches, and needles massed in flat, layered
+        # clouds at the branch ends: a ragged pad along the outer part of each main branch (its edge a
+        # fringe of hanging needles) with fringed needle domes on the shoots above it. Dark
+        # blue-green needles, lit on top, shaded below; thin needle stars among them near the camera.
+        clumps=[dict(kind="bough", levels=[1], t0=0.4, width=0.55, roof=[10, 12, 16], segs=[6, 3, 2],
+                     fringe=[0.45, 0.4, 0.3], lod_width=[1, 1.15, 1.4], under=0.6, tip_mix=0.8,
+                     weight=(0.4, 0.5, 0.55), share=(0.88, 1.0, 1.0)),
+                dict(kind="fan", levels=[2, 3], per_limb=(1, 2), t=(0.5, 1.0), r=(0.42, 0.58), points=22, notch=0.76,
+                     cup=0.25, droop=0.35, face_up=0.92, tilt=0.12, grow_max=2.4, under=0.6, tip_mix=0.8,
+                     weight=(0.6, 0.5, 0.45))],
+        wood_share=(0.26, 0.24, 0.22),
         H=13, trunk=dict(length=12.0, radius=0.26, taper=0.25, wobble=0.035, lean=0.07, flare=0.25),
-        levels=[dict(count=(12, 16), t=(0.55, 0.99), angle=78, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
-                     bend=0.5, wobble=0.12, abs_length=3.4),
-                dict(per_m=3.2, t=(0.2, 1.0), angle=45, ratio=0.42, rratio=0.5, bend=0.4, wobble=0.15),
-                dict(per_m=2.0, t=(0.3, 1.0), angle=40, ratio=0.4, rratio=0.5, bend=0.5, wobble=0.15)],
+        levels=[dict(count=(16, 20), t=(0.5, 0.99), angle=86, angle_var=12, ratio=0.3, shape="flame", rratio=0.4,
+                     bend=0.15, wobble=0.15, abs_length=3.0),
+                dict(per_m=3.0, t=(0.4, 1.0), angle=55, ratio=0.38, rratio=0.5, bend=0.15, wobble=0.15, planar=0.8),
+                dict(per_m=2.5, t=(0.3, 1.0), angle=45, ratio=0.4, rratio=0.5, bend=0.3, wobble=0.15, planar=0.6)],
         leaves=dict(kind="needles", per_m=16, length=0.3, width=0.02, needles=9, levels=[2, 3], t0=0.45, angle=12,
-                    spread=(0.35, 1.3), colors=G("#36583a", "#3f6440", "#2f5034", "#48703f"), tip=hexc("#7a9a5a"),
+                    spread=(0.35, 1.3), colors=G("#2c4836", "#33503c", "#284232", "#3a5a40"), tip=hexc("#5e7c58"),
                     keep_scale=[1, 1.3, 1.6]),
         bark=dict(color=hexc("#b8683a"), dark=hexc("#4a3428"), fx=3, fy=1.5, contrast=1.0,
                   marks=dict(color=hexc("#4f4038"), lo=-0.2, hi=0.3, foot=hexc("#3b2f28"))),
-        bark_top=0.55, card_style="tiers", card_tiers=dict(n=5, apex=0.45, ragged=0.35), card_ribbons=3),
+        bark_top=0.55, card_style="tiers", card_tiers=dict(n=5, apex=0.6, ragged=0.35), card_ribbons=1, card_true_trunk=True),
     "spruce": dict(
         # Needle foliage only: a ragged, roof-shaped bough along every main branch, tier on tier, and
         # sprays hanging from the side branches like curtains.
-        clumps=[dict(kind="bough", levels=[1], width=0.34, roof=30, segs=[8, 4, 2], lod_width=[1, 1.15, 1.35],
-                     weight=(0.45, 0.5, 1.0), under=0.6, share=(0.9, 1.0, 1.0)),
-                dict(kind="sheet", levels=[2], per_m=1.4, t=(0.3, 1.0), r=(0.35, 0.55), width=0.13, segs=[4, 2, 1],
-                     droop=0.4, hang=0.55, face_up=0.25, tilt=0.1, grow_max=2.0, under=0.7, weight=(0.55, 0.5, 0.0))],
-        wood_share=(0.3, 0.28, 0.25),
+        clumps=dict(kind="bough", levels=[1], width=0.4, roof=[28, 30, 40], segs=[7, 4, 2], fringe=[0.7, 0.6, 0.0],
+                    lod_width=[1, 1.12, 1.35], under=0.6, tip_mix=1.2, share=(0.9, 1.0, 1.0)),
+        wood_share=(0.28, 0.26, 0.22), min_r=[0.0, 0.018, 0.09], core=dict(scale=0.62, pct=70, color=hexc("#1a2c26"), sides=[10, 7, 6], rings=[9, 6, 4]),
         H=12, trunk=dict(length=11.5, radius=0.24, taper=0.12, wobble=0.015, lean=0.015, flare=0.3),
         levels=[dict(count=(40, 48), whorl=4, t=(0.08, 0.98), angle=100, angle_var=8, ratio=0.4, shape="conical",
                      rratio=0.35, bend=0.25, wobble=0.06, abs_length=3.3),
