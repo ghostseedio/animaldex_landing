@@ -40,13 +40,18 @@ what's happening e.g. any animals getting eaten, any mating happening etc."
   in a development bundle (`node scripts/build-ark-bundle.mjs --dev`), on by default with `?fixture=`:
   `/ark/embed.html?fixture=1`, `/ark/embed.html?snapshot=/ark-scale/population-1x.json&hud=1&feed=1`
   (copy `population-1x.json` from `scripts/ark-scale-fixture.mts` into `public/ark-scale/`, not committed).
+- `?insetTop=<px>` / `?insetBottom=<px>` (whole px, 0 to 400): what the host draws over the world's top and foot (the
+  iOS panel's close button and title: `insetTop=52`). The embed sets `--ark-inset-top` / `--ark-inset-bottom`; the
+  sound button and the bars panel keep clear of the top one plus `env(safe-area-inset-top)`, the log and the reset
+  button of the bottom one plus `env(safe-area-inset-bottom)` (both 0 on /ark). Test: `src/lib/ark-embed-insets.test.ts`.
 - The apps do not pass `hud` yet: showing it in the app panel is one query item (`hud=1` or `hud=log`) in
   `ArkPanelViews.swift` `ArkEmbed.url` and its Android twin, an owner decision.
 
-## Mating (web ready; server lane adds the event)
-The coordinator's call (2026-11-11): the server lane adds one `kind: "mated"` event per pair that breeds, in
-`breeding()` (`_shared/ark-ecology/tick.ts`), written before its litter's `birth` rows or its clutch's `laid` row,
-with `parents: [id, id]` in the payload, plus the kind in the `voyage_events` kind check. The web reads it now:
+## Mating
+The server writes one `kind: "mated"` event per pair that breeds (AnimalDex `ark-captures-thrive` 568af01b,
+`docs/ark/captures-thrive-design.md` §0), just before its litter's `birth` rows or its clutch's `laid` row:
+`animal` = the first parent, `other` = the second (each with `zone`, `thrive`, `area`), `parents: [uuid, uuid]`,
+`bringers` (never said in the log), `species_profile_id`, `species`; the zone is `animal.zone`. The web reads it:
 `"mated"` is in `ARK_EVENT_KINDS` (`lib/ark-life.ts`; the replay ignores it), the log says "Two Plains Zebras mated"
 (record style, `ark.live.matedOne` / `matedOther` in all 45 languages) just before the young or eggs line, the
 tap goes to the first parent, and the dev feed writes a `mated` row before every litter and clutch. A server that
