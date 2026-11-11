@@ -344,7 +344,7 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         first ??= choice;
         // Free: its cell, or the cell's first lap (half a cell over), so it keeps to the place its text names first.
         const free = pick.level <= 1;
-        const at = free || !fallback ? settle(choice) : null;
+        const at: {x: number; z: number} | null = free || !fallback ? settle(choice) : null;
         if (at && free) {
             chosen = {...choice, at};
             break;
