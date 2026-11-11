@@ -124,7 +124,7 @@ import {
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {groupSpread, homeRadius, rangeReach, poseOnTrip, scheduleWorld, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, scheduleWorld, spaceHomes, tripAt, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -783,14 +783,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             e.sched!.animal.home = {...lead.home};
             e.sched!.animal.range = lead.range;
         }
+        // Homes, groups and ranges changed: nothing remembered from before holds.
+        forgetSchedules();
         const epoch = worldMs() / 1000;
         for (const e of onIt) if (!reducedMotion) stepSchedule(e, epoch, 1);
     };
-    /** Its schedule's pose, worked out again now (every frame close by; twice a second far away: the same function, so nothing jumps). */
+    /** Its schedule's pose, worked out again now (every frame close by; less often further off: the same function, so nothing jumps). */
     const stepSchedule = (entry: Entry, epoch: number, dt: number) => {
         const own = entry.sched!;
         const watched = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
-        if (!own.pose || entry.level !== "far" || watched || epoch - own.at > 0.5 || epoch < own.at) {
+        // Every frame close by (its near model, or the one looked at); twice a second as a far model; once a second as an icon.
+        const every = entry.level === "near" || watched ? 0 : entry.level === "far" ? 0.5 : 1;
+        if (!own.pose || epoch - own.at >= every || epoch < own.at) {
             const at = (own.pose = schedulePose(entry, epoch));
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
@@ -807,10 +811,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * Its one behaviour state now: its schedule (or the hour and its species), its breath cycle in the water, and
      * whether it is acting out a server event. Never the selection.
      */
-    const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act"> & Partial<Pick<Entry, "sched" | "moment">>): ArkBehaviourState => {
+    const stateOf = (entry: Pick<Entry, "animal" | "visitor" | "act"> & Partial<Pick<Entry, "sched" | "moment" | "depth" | "seed">>): ArkBehaviourState => {
         // An air-breather in the water comes up for air on its breath cycle (a floater is at the surface already).
-        const depth = speciesDepth(entry.animal.model_slug, entry.animal.zone);
-        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: depthSeed(entry.animal.id), clock: clockNow()} : null;
+        // (Its band and seed are the entry's own, worked out once, when it has them: this runs every frame.)
+        const depth = entry.depth !== undefined ? entry.depth : speciesDepth(entry.animal.model_slug, entry.animal.zone);
+        const breather = depth?.breathes && waterMotion(depth) !== "float" ? {seed: entry.seed ?? depthSeed(entry.animal.id), clock: clockNow()} : null;
         // One the classifier holds off the water (a frigatebird) stays aloft, asleep or not: it never comes down onto the sea.
         const aloftAlways = Boolean(heldOffWater(entry.animal.model_slug));
         const onSchedule = entry.sched?.pose && scheduled({sched: entry.sched, visitor: entry.visitor, act: entry.act, moment: entry.moment});

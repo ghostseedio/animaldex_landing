@@ -519,6 +519,10 @@ function stayBeats(doing: ArkDoing, random: () => number, after: ArkBeat | null)
  * more than the four slots before it, and every caller works it out the same way.
  */
 function intent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
+    return remember(memoOf(world, hoursAt, animal).intents, slot, () => workIntent(world, profile, animal, activity, slot, hoursAt));
+}
+
+function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     const raw = rawIntent(world, profile, animal, activity, slot, hoursAt);
     if (raw.to || raw.follow) return raw;
     for (let back = 1; back <= 4; back++) {
@@ -736,8 +740,44 @@ function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
 /** The trip an animal is on at a world time (pure: the same for every viewer). */
 export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null, previous?: Trip | null): Trip {
     const slot = slotOf(animal, epochSeconds);
-    const now = intent(world, profile, animal, activity, slot, hoursAt);
-    return tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+    return remember(memoOf(world, hoursAt, animal).trips, slot, () => {
+        const now = intent(world, profile, animal, activity, slot, hoursAt);
+        return tripFor(world, profile, animal, activity, slot, hoursAt, now, previous && previous.slot === slot - 1 ? previous.finish : null);
+    });
+}
+
+// MARK: Memo
+
+/**
+ * Intents and trips, remembered per world, clock and animal for the last few dozen slots: a group's members, its
+ * leader's flock and a predator's spacing all ask for the same leader's slot many times. Pure results, so this
+ * changes nothing but the time taken. `forgetSchedules` after an animal's home, group or range changes.
+ */
+type Memo = {intents: Map<number, Intent>; trips: Map<number, Trip>};
+let memos = new WeakMap<ScheduleWorld, WeakMap<HoursAt, WeakMap<ScheduleAnimal, Memo>>>();
+function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal): Memo {
+    let byClock = memos.get(world);
+    if (!byClock) memos.set(world, (byClock = new WeakMap()));
+    let byAnimal = byClock.get(hoursAt);
+    if (!byAnimal) byClock.set(hoursAt, (byAnimal = new WeakMap()));
+    let memo = byAnimal.get(animal);
+    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), trips: new Map()}));
+    return memo;
+}
+function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
+    const hit = map.get(slot);
+    if (hit !== undefined) return hit;
+    const value = make();
+    map.set(slot, value);
+    if (map.size > 32) {
+        // Drop the slots furthest from this one.
+        const far = [...map.keys()].sort((a, b) => Math.abs(b - slot) - Math.abs(a - slot)).slice(0, map.size - 24);
+        for (const key of far) map.delete(key);
+    }
+    return value;
+}
+export function forgetSchedules() {
+    memos = new WeakMap();
 }
 
 function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, now: Intent, knownFrom: Spot | null): Trip {
