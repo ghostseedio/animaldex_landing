@@ -598,7 +598,12 @@ async function mountGolden(el: HTMLElement) {
         },
         stats: () => handle.stats(),
         /** The visual CI (scripts/ark-visual.mts): forget transient state when its clock freezes. */
-        resetTransients: () => handle.resetTransients?.(),
+        resetTransients: () => {
+            handle.resetTransients?.();
+            // The sea's clock runs from its pin on the page's clock: pinned again at the frozen instant, so the fish too
+            // are a function of the shot's time.
+            pinSeaClock(GOLDEN_SEA_EPOCH);
+        },
         /**
          * The contact-shadow audit (development): the scene running, every drawn animal whose home spot's ground (where
          * its shadow used to lie) is off the ground under it now by more than 25 cm, worst first. The schedule walks
