@@ -129,6 +129,29 @@ test("1,000 over five species: five herds of 200", () => {
     assert.equal(arkRepresentatives(small).herds.size, 0);
 });
 
+test("no herd of tiny animals or of the hamlet's residents: a swarm of flies and a village of cats are no count badges; the panel still counts them", () => {
+    const snapshot = decodeArkSnapshot(herdFixture(raw(), "herd1000"))!;
+    const zebra = snapshot.animals.find((a) => a.model_slug === "plains-zebra")!;
+    const as = (slug: string, n: number, extra: Partial<typeof zebra> = {}) => Array.from({length: n}, (_, i) => ({...zebra, id: `${slug}-${i}`, model_slug: slug, species_profile_id: `kind-${slug}`, name: slug, zone: "farm_garden" as const, mine: false, ...extra}));
+    const flies = as("house-fly", 48);
+    const spiders = as("daddy-long-legs-spider", 30);
+    const cats = as("domestic-cat", 307, {area: "house"});
+    const sparrows = as("house-sparrow", 40);
+    const animals = [...snapshot.animals, ...flies, ...spiders, ...cats, ...sparrows];
+    const reps = arkRepresentatives(animals);
+    const keys = arkHerdKeys(animals);
+    for (const kind of ["kind-house-fly", "kind-daddy-long-legs-spider", "kind-domestic-cat"]) {
+        assert.ok(!reps.herds.has(kind) && !keys.has(kind), kind);
+    }
+    for (const animal of [...flies, ...spiders, ...cats]) assert.ok(reps.live.has(animal.id), animal.id);
+    // A small bird is no micro animal: 40 sparrows are still a herd; the zebras too.
+    assert.ok(reps.herds.has("kind-house-sparrow") && reps.herds.has(zebra.species_profile_id));
+    // The panel's bars count every one of them.
+    const rows = arkPopulation({...snapshot, animals}).regions.flatMap((g) => g.species);
+    assert.equal(rows.find((r) => r.name === "house-fly")?.count, 48);
+    assert.equal(rows.find((r) => r.name === "domestic-cat")?.count, 307);
+});
+
 // MARK: A17, every Ark word in Indonesian
 
 function flat(value: unknown, prefix = ""): string[] {

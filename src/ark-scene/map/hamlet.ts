@@ -32,7 +32,7 @@
  * same hamlet for every viewer. Visual only.
  */
 
-import {COTTAGE} from "@/ark-scene/micro-decor";
+import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {barnStyle, coopSpot, cottageStyle, defaultHomePlots, GARDEN, onHomeKeepOut, paddockRect, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {cropAt, fieldCropAt} from "@/ark-scene/fields";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
@@ -433,10 +433,18 @@ export const SMALLHOLDING_SPOT_COUNT = {paddock: 12, yard: 6, run: 6} as const;
 
 /**
  * A spot no resident may take: on something the props lay on a plot (beds, compost, a water butt, hay, a trough, the
- * coop's house: `onHomeKeepOut`, any plot's), on a growing crop, or on a lane.
+ * coop's house: `onHomeKeepOut`, any plot's), on a growing crop, on a lane, or in water (the garden pond and its
+ * stones, the river, the sea).
  */
 function spotBlocked(x: number, z: number): boolean {
-    return onHomeKeepOut(x, z, reservedPlots(), 0.3) !== null || cropAt(x, z) !== null || laneDistance(x, z) < LANE_WIDTH / 2 + 0.3;
+    return onHomeKeepOut(x, z, reservedPlots(), 0.3) !== null || cropAt(x, z) !== null || laneDistance(x, z) < LANE_WIDTH / 2 + 0.3 || inWater(x, z);
+}
+
+/** In or at the edge of water: the garden pond and its ring of stones (a body's half-length clear of them), the river, the sea. */
+export const POND_CLEAR = 1.1;
+function inWater(x: number, z: number): boolean {
+    if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + POND_CLEAR) return true;
+    return sampleGround(x, z).height < 0.3 || riverDistance(x, z) < 3;
 }
 
 /**
