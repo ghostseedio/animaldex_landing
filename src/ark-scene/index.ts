@@ -146,6 +146,7 @@ import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-
 import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, spaceHomes, tripAt, wireThreats, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
+import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
@@ -875,9 +876,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourBuildLongestMs = worldBuild.longestMs;
         worldBuild = null;
     }
+    // The graphics lane's attach points first, a slice a frame on their own (`prepareAttachPoints`, about 6 ms each): the
+    // places start from them, so this build waits for them rather than building them in one task itself.
+    let attachReady = !worldBuild;
+    if (worldBuild) void prepareAttachPoints().then(() => (attachReady = true));
     const scheduleWorldNow = (): ScheduleWorld => world!;
     const stepWorldBuild = (budgetMs: number) => {
-        if (world || !worldBuild) return;
+        if (world || !worldBuild || !attachReady) return;
         const built = worldBuild.step(budgetMs);
         behaviourBuildMs = worldBuild.spentMs;
         behaviourBuildSlices = worldBuild.slices;

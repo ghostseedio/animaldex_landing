@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {sceneSampler} from "@/ark-scene/world-sampler";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -344,7 +344,7 @@ test("prey watch a predator they can see: off to the far side of their range, fa
             if (!awakeAt(i.profile, i.a.activity, hoursAt(start)) || i.profile.move === "sessile") continue;
             moments++;
             const centre = i.animal.home;
-            const threat = threatAt(world, i.animal, start, hoursAt, centre);
+            const threat = threatAt(world, i.profile, i.animal, start, hoursAt, centre, homeRadius(i.profile, i.animal));
             if (!threat || trip.shadow || trip.doing === "breathe") continue;
             seen++;
             assert.equal(trip.doing, "watch", `${i.a.model_slug} ignores a predator ${threat.d.toFixed(0)} m off (${trip.doing})`);
@@ -358,7 +358,120 @@ test("prey watch a predator they can see: off to the far side of their range, fa
         }
     }
     assert.ok(moments > 100, `moments ${moments}`);
-    assert.ok(seen > 0, "no prey ever saw a predator");
     assert.ok(WARY_METRES > SAFE_METRES);
     console.log(`prey awake slots ${moments}, with a predator in sight ${seen}`);
+});
+
+test("a zebra sees a lion walk the grassland 40-odd metres off, and watches it; still, or in a forest, it sees it nearer", () => {
+    const zebra = behaviourProfile("plains-zebra");
+    assert.ok(waryRange(zebra, "grassland", 1.8, true) > 38 && waryRange(zebra, "grassland", 1.8, true) <= WARY_METRES);
+    assert.ok(waryRange(zebra, "grassland", 1.8, false) < waryRange(zebra, "grassland", 1.8, true) * 0.65);
+    assert.ok(waryRange(zebra, "rainforest", 1.8, true) < waryRange(zebra, "grassland", 1.8, true) * 0.5);
+    // A lion and a zebra, homes a spaced 50 m apart on the grassland (as the release fixture has them): the zebra notices
+    // the lion now and then from its range, and then watches it from the far side, facing it.
+    const ground = world.nav.nearest(-40, 40, "walk", 0.5, 30)!;
+    const lionHome = world.nav.nearest(ground.x + 50, ground.z, "walk", 0.5, 30)!;
+    const lion = {id: "test-lion", zone: "grassland" as const, home: {x: lionHome.x, y: Math.max(world.sampler.heightAt(lionHome.x, lionHome.z), 0), z: lionHome.z}, length: 1.8, sea: false};
+    const z: ScheduleAnimal = {id: "test-zebra", zone: "grassland", home: {x: ground.x, y: Math.max(world.sampler.heightAt(ground.x, ground.z), 0), z: ground.z}, length: 1.7, sea: false, threats: [{animal: lion, profile: behaviourProfile("african-lion"), activity: "diurnal"}]};
+    let watched = 0;
+    for (let k = 0; k < 24 * 45; k++) {
+        const trip = tripAt(world, zebra, z, DAY + k * SLOT_SECONDS, hoursAt, "diurnal");
+        const start = slotStart(z, trip.slot);
+        const threat = threatAt(world, zebra, z, start, hoursAt, z.home, homeRadius(zebra, z));
+        if (!threat || !awakeAt(zebra, "diurnal", hoursAt(start))) continue;
+        assert.equal(trip.doing, "watch");
+        assert.ok(Math.hypot(trip.to.x - threat.x, trip.to.z - threat.z) >= threat.d - 0.5, "it watches from further off, not nearer");
+        watched++;
+    }
+    assert.ok(watched > 0, "the zebra never noticed the lion");
+});
+
+test("flyers fly to places, not round in circles: under half a full turn a minute in the air (the audit's measure)", () => {
+    // ark-audit metrics.ts: second by second while aloft, the heading change of where it goes, summed; circling is a full
+    // turn or more inside 20 m in the last minute. (Problem 2: 1.04 turns a minute, from bowed hops and looping soars.)
+    const TAU = Math.PI * 2;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let air = 0;
+    let turn = 0;
+    let circling = 0;
+    for (const i of animals.filter((x) => x.profile.move === "fly" || x.profile.moves.includes("fly"))) {
+        let last: {x: number; z: number} | null = null;
+        let heading: number | null = null;
+        const window: Array<{x: number; z: number; turn: number}> = [];
+        for (let s = 0; s < 6 * 3600; s += 1) {
+            const p = poseOf(i, DAY + 6 * 3600 + s);
+            if (!p.aloft) {
+                last = null;
+                heading = null;
+                window.length = 0;
+                continue;
+            }
+            air++;
+            if (last && Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
+                const h = Math.atan2(p.x - last.x, p.z - last.z);
+                const tn = heading === null ? 0 : Math.abs(wrap(h - heading));
+                turn += tn;
+                heading = h;
+                window.push({x: p.x, z: p.z, turn: tn});
+                if (window.length > 60) window.shift();
+                if (window.length >= 30) {
+                    const cx = window.reduce((a, w) => a + w.x, 0) / window.length;
+                    const cz = window.reduce((a, w) => a + w.z, 0) / window.length;
+                    if (window.reduce((a, w) => a + w.turn, 0) >= TAU && Math.max(...window.map((w) => Math.hypot(w.x - cx, w.z - cz))) <= 20) circling++;
+                }
+            }
+            last = {x: p.x, z: p.z};
+        }
+    }
+    assert.ok(air > 3600, `air seconds ${air}`);
+    const perMinute = turn / TAU / (air / 60);
+    assert.ok(perMinute < 0.5, `${perMinute.toFixed(2)} full turns a minute in the air`);
+    assert.ok(circling / air < 0.1, `circling ${((circling / air) * 100).toFixed(1)}% of air time`);
+});
+
+test("a kind is not all doing one thing: every species of 3+ awake together shares one state rarely (the audit's measure)", () => {
+    // ark-audit metrics.ts: per species with 3+ aboard, at moments all are awake, whether all have the same doing.
+    // (Problem 7. 13.2% before: a swimmer's every state read "swim", a school's members took their leader's.)
+    const bySpecies = new Map<string, Item[]>();
+    for (const i of animals) bySpecies.set(i.a.model_slug, [...(bySpecies.get(i.a.model_slug) ?? []), i]);
+    let awake = 0;
+    let same = 0;
+    for (const members of Array.from(bySpecies.values())) {
+        if (members.length < 3) continue;
+        for (let s = 0; s < 24 * 3600; s += 30) {
+            const doings = members.map((m) => tripOf(m, DAY + s).doing);
+            if (doings.some((d) => d === "sleep" || d === "to_roost")) continue;
+            awake++;
+            if (new Set(doings).size === 1) same++;
+        }
+    }
+    assert.ok(awake > 10000, `awake moments ${awake}`);
+    assert.ok(same / awake < 0.08, `${((same / awake) * 100).toFixed(1)}% of awake moments a whole species in one state`);
+});
+
+test("resting at home: asleep at its roost by night, and a den animal often in its den by day (for the runtime's rotation)", () => {
+    let night = 0;
+    let nightAtRoost = 0;
+    let dayDen = 0;
+    let dens = 0;
+    for (const i of animals.filter((x) => x.profile.move !== "sessile")) {
+        for (let k = 0; k < 24 * 45; k += 7) {
+            const t = DAY + k * SLOT_SECONDS + 70;
+            const trip = tripOf(i, t);
+            const at = restingAtRoost(world, i.profile, i.animal, t, hoursAt, i.a.activity);
+            if (trip.doing === "sleep" && !i.animal.group) {
+                night++;
+                if (at.resting) nightAtRoost++;
+            }
+            if (["den", "burrow", "cave", "tree_hole", "crevice"].includes(i.profile.roost) && awakeAt(i.profile, i.a.activity, hoursAt(t))) {
+                dens++;
+                if (at.enclosed) dayDen++;
+            }
+            // Never "at home" while it is out and about.
+            if (at.resting) assert.ok(["sleep", "to_roost", "rest"].includes(trip.doing), `${i.a.model_slug} resting while ${trip.doing}`);
+        }
+    }
+    assert.ok(night > 200 && nightAtRoost / night > 0.9, `asleep at its roost ${nightAtRoost} of ${night}`);
+    assert.ok(dens > 100 && dayDen / dens > 0.05, `den animals in the den while awake ${dayDen} of ${dens}`);
+    console.log(`asleep at roost ${nightAtRoost}/${night}; den animals in the den while awake ${dayDen}/${dens}`);
 });
