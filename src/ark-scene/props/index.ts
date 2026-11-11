@@ -192,6 +192,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
         },
         setShadows: (on: boolean) => {
             shadows = on;
+            areas?.buildings.setShadows(on);
             for (const batch of batches()) batch.setShadows(on);
             for (const piece of pieces()) piece.setShadows(on);
         },
@@ -235,6 +236,7 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 // Frost at a cold dawn (and in the cold's small hours), lying snow on the cold props.
                 PROPS_WEATHER.frost.value = Math.max(0, (conditions.cold - 0.45) * 2) * Math.max(conditions.dawn, conditions.night * 0.6, conditions.cold > 0.8 ? 0.5 : 0);
                 PROPS_WEATHER.snow.value = Math.max(0, conditions.snowCover - 0.3) * Math.min(1, conditions.cold * 1.4);
+                areas?.buildings.setNight(conditions.night);
                 if (areas?.setWeather({puddles: conditions.puddles, snowCover: conditions.snowCover, cold: conditions.cold})) moved = true;
                 cave.setIcicles(conditions.cold > 0.55 ? conditions.cold : 0);
                 // A slime trail glints when wet and in a low, raking light.
