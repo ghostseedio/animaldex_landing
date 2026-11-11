@@ -14,7 +14,7 @@ The props lane (branch `ark-props`) draws what animals build and what each area 
 | `props/homes.ts` | Nests and eggs, ant mounds and trails, the bees' hollow and hive, the wasps' nest, termite mounds, webs, chrysalises, the warren, worm casts, dens and lairs, the turtles' nest and tracks, the beavers' lodge and dam, and slime trails. |
 | `props/areas.ts` | Details that are always there. House and garden: gutters, a water butt, moss, the path, the fence, the vegetable patch, the bird box, puddles. Farm: hay shelter, loft door, paddock, troughs, mud. Mountain: strata outcrops, scree, drifts, icicles. Grassland: tussocks, wildflower drifts, old termite mounds. |
 | `props/cave.ts` | The cave, plus the bats' roost when bats are aboard. |
-| `props/effects.ts` | Chimney smoke, moths at the porch light, dew, mist, blowing snow and dust. |
+| `props/effects.ts` | Chimney smoke, moths at the porch light, dew, mist, blowing snow and dust. The mist's sheets are draped over the ground and the water every couple of metres, 0.25–1 m up. They fade as the camera comes down to their height or sees them edge-on, and they are soft and broken at their edges, so they never cut across a slope or an animal as a band. |
 | `props/conditions.ts` | The island clock's weather as the props read it. |
 | `props/kit.ts` | Shared pieces: the instanced near/far `LodBatch`, `LodPiece`, the per-tier caps (`PROPS_TIERS`), and the weather-aware material (`propMaterial`, which takes the `growth` option for nests). |
 | `props/golden-props.ts` | The props' close-up golden shots. |
@@ -78,7 +78,7 @@ The props module also has `nestSites()` (the same list, each with its `stage` no
 
 `node scripts/ark-golden-shots.mjs --props all [--devices desktop,phone]` (or `--props nest_eyrie,web_dawn`). The page is the v2 fixture, plus one of each species whose home shows only when it is aboard, plus a village weaver, a great crested grebe and a house martin, on Ark day 120 of the year with clutches in for the mallard, the heron and the green turtle.
 
-Shots: `bird_nest` (mallard's down bowl), `nest_eyrie`, `nest_heronry`, `nest_weavers`, `nest_growing` (pinned to the day the heron's platform is 55% built), `nest_eaves`, `nest_grebe`, `ants_trunk`, `web_dawn`, `beehive_hollow`, `house_night`, `farm`, `mountain_scree`, `cave_roost`, `turtle_nest`, `snail_trail`.
+Shots: `bird_nest` (mallard's down bowl), `nest_eyrie`, `nest_heronry`, `nest_weavers`, `nest_growing` (pinned to the day the heron's platform is 55% built), `nest_eaves`, `nest_grebe`, `ants_trunk`, `web_dawn`, `beehive_hollow`, `house_night`, `farm`, `mountain_scree`, `cave_roost`, `turtle_nest`, `snail_trail`, `mist_dawn` (mist over the lake), `mist_meadow` (at an animal's height in the barn owl's meadow), `mist_shore` (low on the lake's shore).
 
 ## Budget
 

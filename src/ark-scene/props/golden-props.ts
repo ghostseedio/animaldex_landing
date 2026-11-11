@@ -15,7 +15,7 @@ import type {ArkAnimal, ArkCameraView, ArkNestRow, ArkSnapshot, ArkZone} from "@
 import type {PropsConditions} from "@/ark-scene/props/conditions";
 import type {PropsMarks, PropsStats} from "@/ark-scene/props";
 import {nestStage} from "@/ark-scene/props/nest-growth";
-import {surfaceAt} from "@/ark-scene/sampler";
+import {place as namedPlace, surfaceAt} from "@/ark-scene/sampler";
 
 const EXTRA: Array<[slug: string, name: string, zone: ArkZone]> = [
     ["black-ant", "Black Ant", "woodland"],
@@ -62,7 +62,7 @@ export function propsFixture(snapshot: ArkSnapshot): ArkSnapshot {
     return {...snapshot, animals: [...snapshot.animals, ...animals], ark_day: arkDay, as_of: new Date().toISOString(), nests};
 }
 
-export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail"] as const;
+export const PROPS_SHOTS = ["bird_nest", "nest_eyrie", "nest_heronry", "nest_weavers", "nest_growing", "nest_eaves", "nest_grebe", "ants_trunk", "web_dawn", "beehive_hollow", "house_night", "farm", "mountain_scree", "cave_roost", "turtle_nest", "snail_trail", "mist_dawn", "mist_meadow", "mist_shore"] as const;
 export type PropsShot = typeof PROPS_SHOTS[number];
 
 type Locate = (id: string) => {x: number; y: number; z: number} | null;
@@ -194,6 +194,26 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
             // From up the beach, looking down the crawl tracks to the sea.
             const facing = (nest as {facing?: number}).facing ?? Math.atan2(nest.x, nest.z);
             return {view: look(nest, 5.5, 0.95, facing + Math.PI + 0.35), hours: 7.4, weather: null, environment: calm, anchor: "turtle nest + tracks", minDistance: 0.3};
+        }
+        case "mist_dawn": {
+            // Mist lying over the lake at a still dawn, from up the bank.
+            const lake = namedPlace("lake");
+            return {view: look({x: lake.x, y: 0, z: lake.z}, lake.radius * 1.6 + 18, 0.95, 2.4), hours: 6.3, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "mist over the lake at dawn"};
+        }
+        case "mist_meadow": {
+            // At an animal's height in the barn owl's meadow (the farm's mist), where a flat sheet used to read as a band.
+            const owl = stats.nests.find((n) => n.form === "barn");
+            const at = owl?.sitter ? locate(owl.sitter) : null;
+            const spot = at ?? spots.farm;
+            if (!spot) return null;
+            return {view: look(spot, 5, 1.32, 0.6, 0.3), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: at ? "barn owl's meadow, misty dawn" : "farm, misty dawn"};
+        }
+        case "mist_shore": {
+            // Low on the lake's shore (the fox's), looking along the bank through the mist.
+            const lake = namedPlace("lake");
+            const a = 2.2;
+            const shore = {x: lake.x + Math.sin(a) * (lake.radius + 1.5), y: 0, z: lake.z + Math.cos(a) * (lake.radius + 1.5)};
+            return {view: look(shore, 6, 1.3, a + 0.9, 0.4), hours: 6.4, weather: {mist: 0.9, dew: 1, wind: 0.05}, environment: {...calm, wind: 0.05}, anchor: "lake shore, misty dawn"};
         }
         case "snail_trail": {
             const wall = spots.slimeWall ?? spots.slimeRock;
