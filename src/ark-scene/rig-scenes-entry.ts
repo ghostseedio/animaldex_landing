@@ -15,7 +15,7 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
-import {heightAt, ZONE_SITES} from "@/ark-scene/world";
+import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -179,7 +179,73 @@ async function mountScenes(el: HTMLElement) {
         });
     };
 
+    /**
+     * A duck's way into the lake and back out, as the schedule's legs make it (`behaviour-schedule.ts`: a walk to the
+     * edge, an "enter" leg of 2.2 s, a swim, an "exit" leg of 2.4 s, then a shake off): the times in seconds from `start`.
+     */
+    const waterTrip = (id: string, start: number) => {
+        const dir = (a: number, r: number) => ({x: LAKE.x + Math.cos(a) * r, z: LAKE.z + Math.sin(a) * r});
+        const a0 = 0.9;
+        const bank = dir(a0, LAKE.r + 2.6);
+        const edge = dir(a0, LAKE.r + 0.2);
+        const off = dir(a0, LAKE.r - 2.2);
+        const far = dir(a0 + 0.45, LAKE.r - 3.2);
+        const off2 = dir(a0 + 0.25, LAKE.r - 2.2);
+        const edge2 = dir(a0 + 0.25, LAKE.r + 0.2);
+        const bank2 = dir(a0 + 0.32, LAKE.r + 2.2);
+        type Seg = {from: {x: number; z: number}; to: {x: number; z: number}; seconds: number; beat: string; doing: string; water: [number, number] | null; moving: boolean};
+        const segs: Seg[] = [
+            {from: bank, to: bank, seconds: 2, beat: "rest", doing: "rest", water: null, moving: false},
+            {from: bank, to: edge, seconds: 2.5, beat: "walk", doing: "swim", water: null, moving: true},
+            {from: edge, to: off, seconds: 2.2, beat: "enter_water", doing: "swim", water: [0, 1], moving: true},
+            {from: off, to: far, seconds: 3.5, beat: "swim", doing: "swim", water: [1, 1], moving: true},
+            {from: far, to: off2, seconds: 3, beat: "swim", doing: "swim", water: [1, 1], moving: true},
+            {from: off2, to: edge2, seconds: 2.4, beat: "exit_water", doing: "rest", water: [1, 0], moving: true},
+            {from: edge2, to: edge2, seconds: 2.6, beat: "shake", doing: "rest", water: null, moving: false},
+            {from: edge2, to: bank2, seconds: 2.2, beat: "walk", doing: "rest", water: null, moving: true},
+            {from: bank2, to: bank2, seconds: 6, beat: "peck", doing: "forage", water: null, moving: false}
+        ];
+        debug().setHome(id, bank.x, bank.z);
+        debug().pinShared(id, (epoch: number) => {
+            let k = Math.max(epoch - start, 0);
+            let seg = segs[segs.length - 1];
+            let u = 1;
+            for (const s of segs) {
+                if (k < s.seconds) {
+                    seg = s;
+                    u = k / s.seconds;
+                    break;
+                }
+                k -= s.seconds;
+            }
+            const x = seg.from.x + (seg.to.x - seg.from.x) * u;
+            const z = seg.from.z + (seg.to.z - seg.from.z) * u;
+            const land = ground(x, z);
+            // On the water: at its surface (y 0); across an edge, from the bank's height to it (or back).
+            const wet = seg.water ? seg.water[0] + (seg.water[1] - seg.water[0]) * u : 0;
+            const y = seg.water ? Math.max(land, 0) * (1 - wet) : land;
+            // Standing on the bank it faces the lake.
+            const yaw = seg.from.x === seg.to.x && seg.from.z === seg.to.z ? Math.atan2(-Math.cos(a0), -Math.sin(a0)) : Math.atan2(seg.to.x - seg.from.x, seg.to.z - seg.from.z);
+            return {x, z, y, yaw, moving: seg.moving && u < 1, aloft: false, doing: seg.doing, beat: seg.beat, nx: 0, ny: 1, nz: 0};
+        });
+    };
+
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
+        /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */
+        duck_flight_far: () => {
+            const at = site("grassland", 4, 2);
+            const from = {x: at.x - 9, z: at.z};
+            const to = {x: at.x + 9, z: at.z + 1};
+            flight(ids.duck[0], from, to, nowS() + 1e6, 2, 12, 3.2, {x: to.x + 1.6, z: to.z + 0.6});
+            track(ids.duck[0], 36, 1.32, 0.35);
+            return {note: "the duck flight, the camera 36 m off", watch: ids.duck, go: () => flight(ids.duck[0], from, to, nowS(), 2, 12, 3.2, {x: to.x + 1.6, z: to.z + 0.6})};
+        },
+        /** A mallard walks from the bank into the lake, swims a little loop, climbs out, shakes off and pecks on. */
+        duck_water: () => {
+            waterTrip(ids.duck[0], nowS() + 1e6);
+            track(ids.duck[0], 4.6, 1.2, 2.2);
+            return {note: "bank 2 s, walk 2.5 s, enter 2.2 s, swim 6.5 s, exit 2.4 s, shake 2.6 s, walk 2.2 s, peck", watch: ids.duck, go: () => waterTrip(ids.duck[0], nowS())};
+        },
         /** A mallard takes off, flaps across open ground (gliding a while), banks round, lands and walks on with its wings closed. */
         duck_flight: () => {
             const at = site("grassland", 4, 2);

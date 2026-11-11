@@ -84,7 +84,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {beatClip, clipRows, cyclesFor, flightClip, newRigState, PATH_CARRIED_CLIPS, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {beatClip, clipRows, cyclesFor, flightClip, newRigState, OPEN_WINGS_HOLD, PATH_CARRIED_CLIPS, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
@@ -157,6 +157,11 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
 const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
 const RIG_WITHIN = 20;
+/**
+ * A bird in the air whose rig flies is drawn near (and rigged) this much further off: a flapping flight reads from
+ * across the island, and the far level has no motion at all. Nothing changes for a set without flight (v1).
+ */
+const FLIGHT_RIG_EXTRA = 20;
 /** Seconds a rig takes to fade in or out against the procedural motion. */
 const RIG_BLEND_SECONDS = 0.5;
 /** Rigs not drawn for this long are let go (keeping this many). */
@@ -2059,6 +2064,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     glideShare: glideClip?.glide_share,
                     open: rig.flightOpen
                 });
+                // No open-wing loop: the take-off's last frame held (wings spread), never the closed rest pose.
+                if (want === OPEN_WINGS_HOLD) {
+                    mode = "sync";
+                    sync = 1;
+                }
             }
             if (want) {
                 // The rig levels the body in flight itself: the instance keeps only its path's climb, and rolls into a
@@ -2335,7 +2345,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0))
+            .filter((c) => c.visible && !c.skip && c.model?.near && c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0))
             .sort((a, b) => a.distance - b.distance);
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
@@ -2356,7 +2366,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const rigPriority = (entry: Entry) => (entry.animal.id === selectedId || entry.animal.id === followId ? 0 : entry.animal.mine ? 1 : 2);
         const rigWanted = rigCap
             ? candidates
-                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && (c.entry.air <= 0.001 || rigs.mayFly(c.entry.animal.model_slug)) && (c.distance < RIG_WITHIN || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
+                  .filter((c) => c.visible && !c.skip && c.model && nearIds.has(c.entry.animal.id) && !c.entry.visitor && (c.entry.air <= 0.001 || rigs.mayFly(c.entry.animal.model_slug)) && (c.distance < RIG_WITHIN + (c.entry.air > 0.5 || c.entry.rig?.flying ? FLIGHT_RIG_EXTRA : 0) || rigPriority(c.entry) < 2) && rigs.available(c.entry.animal.model_slug))
                   .sort((a, b) => rigPriority(a.entry) - rigPriority(b.entry) || a.distance - b.distance)
             : [];
         const rigSpecies = new Set<string>();

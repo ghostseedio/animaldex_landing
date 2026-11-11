@@ -188,6 +188,7 @@ test("rig flight clips: flap to climb, glide down, bank into a turn, soar, hover
     const noFlap = new Set(["glide", "bank_l", "bank_r"]);
     assert.equal(flightClip({...base, has: (n) => noFlap.has(n), climb: 0.3, open: true}), "glide");
     assert.equal(flightClip({...base, has: (n) => n === "bank_r", open: true}), "bank_r");
+    assert.equal(flightClip({...base, has: (n) => n === "takeoff" || n === "land", open: true}), "takeoff", "no open-wing loop: the take-off's last frame held");
     assert.equal(flightClip({...base, has: () => false, open: true}), null, "no flight clip at all: the procedural flight");
 });
 

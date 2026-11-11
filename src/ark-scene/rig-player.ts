@@ -631,8 +631,14 @@ export const PATH_CARRIED_CLIPS: ReadonlySet<string> = new Set(["takeoff", "land
 
 /** Whether a loaded rig flies: its flight is approved and it has a flap or an open-wing clip to fly with. */
 export function rigFlies(model: Pick<RigModel, "flight" | "clips">): boolean {
-    return model.flight && (Boolean(model.clips.flap) || OPEN_WING_CLIPS.some((name) => Boolean(model.clips[name])));
+    return model.flight && (Boolean(model.clips.flap) || OPEN_WING_CLIPS.some((name) => Boolean(model.clips[name])) || Boolean(model.clips.takeoff));
 }
+
+/**
+ * The last resort for open wings (contract `flight_fallback_open`): a rig with no flap and no open-wing loop holds its
+ * take-off's last frame, wings spread (the scene's path carries the body; `PATH_CARRIED_CLIPS`).
+ */
+export const OPEN_WINGS_HOLD = "takeoff";
 
 // MARK: Choosing clips
 
@@ -676,7 +682,7 @@ export function flightClip(input: FlightClipInput): string | null {
     const current = input.current ?? null;
     if (input.open || !has("flap")) {
         if (input.soaring && has("soar")) return "soar";
-        return OPEN_WING_CLIPS.find((name) => has(name)) ?? null;
+        return OPEN_WING_CLIPS.find((name) => has(name)) ?? (has(OPEN_WINGS_HOLD) ? OPEN_WINGS_HOLD : null);
     }
     // Hanging still in the air (a hummingbird at a flower, a kestrel over a field).
     if (has("hover") && input.speed < (current === "hover" ? 0.4 : 0.25)) return "hover";
