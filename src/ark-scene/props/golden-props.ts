@@ -72,11 +72,11 @@ const look = (at: {x: number; y: number; z: number}, distance: number, polar: nu
 
 /** The view, the hour and the weather of a props shot, from where the props are. */
 export function propsShot(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: Locate): PropsShotPlan | null {
-    const module = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
+    const props = (globalThis as {__arkPropsModule?: {setArkDay: (day: number | null) => void}}).__arkPropsModule;
     // Every shot but the growing nest's sees the nests as the fixture's day has them.
-    module?.setArkDay(null);
+    props?.setArkDay(null);
     const plan = framed(shot, marks, stats, locate);
-    if (shot === "nest_growing" && plan) module?.setArkDay(growingDay(stats));
+    if (shot === "nest_growing" && plan) props?.setArkDay(growingDay(stats));
     // Every shot in its own weather: dry and still unless it says otherwise (whatever the island clock says today).
     return plan ? {...plan, weather: {rain: 0, puddles: 0, mist: 0, ...(plan.weather ?? {})}} : null;
 }
