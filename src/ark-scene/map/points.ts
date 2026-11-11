@@ -1,15 +1,29 @@
 /**
- * The Ark map's launch spawn points (decision 6: about 480, by primary
- * share, at least 8 an area) and the small animals' attach points, both
- * found on whatever terrain the sampler describes (`sampler.ts`): a grid
- * over the ground, each cell with the tags that hold there, and the
- * scenery's attach points with the tags they stand for. Deterministic: the
- * same terrain gives the same points on every device.
+ * The Ark map's spawn cells (B3/B4) on whatever terrain the sampler
+ * describes (`sampler.ts`): a 2.5 m grid over the ground, each cell with the
+ * tags that hold there, and the scenery's attach points with the tags they
+ * stand for. Deterministic: the same terrain gives the same cells on every
+ * device.
  *
- * Points of a tag are split by the zone they are in (a partition each), so
- * a zone's animals stand on their own zone's ground first (a rainforest
- * frog by the rainforest's stream); a zone with none of that tag borrows the
- * nearest zone's partition. Partitions never share a point.
+ * - **One tag per cell.** A cell where several tags hold (grassland, soil,
+ *   burrows, a flower meadow) belongs to one of them only, shared out by the
+ *   launch points each tag needs in that zone (`species.json` `points`), so
+ *   two tags' animals never stand on one cell.
+ * - **Each zone's cells of a tag, in the order its slots take them:** the
+ *   launch points first (decision 6: about 480, by primary share, spread over
+ *   the tag's ground in the zone and at least 3 m from every other tag's),
+ *   then the rest of the tag's cells, spread (6 m apart, then 4 m, then any).
+ * - **The stats' kinds** (`placement.ts` slotKind): a dominant kind's slots
+ *   at the cells nearest the partition's middle (`core`), a rare one's at its
+ *   outer quarter (`edge`), behind something tall from the default camera
+ *   when the cell has it (`cover`), everyone else between (`plain`).
+ * - A zone with none of a tag's cells borrows the nearest zone's (its
+ *   slots from the list's end, half a cell over, so never on an own one's).
+ *
+ * A cluster key (zone, slot) maps one-to-one onto (cell, lap): its own
+ * zone's slot k takes cell k mod n, lap k div n (a lap is a fixed
+ * half-cell offset), so no two clusters ever take one spot and nobody moves
+ * when another arrives or leaves.
  */
 
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
@@ -17,31 +31,119 @@ import {attachFits, attachPointTags, type ArkMapSampler, type AttachPoint} from 
 import {launchPoints} from "@/ark-scene/map/species";
 import {MAP_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {WaterCells} from "@/ark-scene/map/water";
-import {hashString, ZONE_SITES} from "@/ark-scene/world";
+import {ZONE_SITES} from "@/ark-scene/world";
 
-export type SpawnPoint = {tag: MapTag; zone: ArkZone; x: number; z: number; y: number; water: "sea" | "fresh" | null; depth: number; /** Half the distance to the nearest other point of its partition (m): room for its cluster. */ room: number};
+export type SpawnPoint = {
+    tag: MapTag;
+    zone: ArkZone;
+    x: number;
+    z: number;
+    y: number;
+    water: "sea" | "fresh" | null;
+    depth: number;
+    /** One of the tag's launch points (decision 6), the first of its zone's list. */
+    launch: boolean;
+    /** Something tall in front of it from the default camera (a rare kind's cover). */
+    covered: boolean;
+};
 
 type Cell = {x: number; z: number; zone: ArkZone; tags: readonly MapTag[]; wet: boolean; depth: number};
+export type SlotKind = "core" | "edge" | "cover" | "plain";
+/** A cluster's spot on a list: its cell, its lap round it, and where that is. */
+export type SlotPick = {point: SpawnPoint; level: number; x: number; z: number};
 
 const GRID = 2.5;
-/** No two launch points (of any tags) nearer than this (m). */
+/** No two tags' launch points nearer than this (m), where the ground allows. */
 const CLEAR = 3;
+/** The laps round a cell (under a cell, so never another cell's middle): an own zone's, and a borrowing zone's. */
+const OWN_LAPS: Array<[number, number]> = [[0, 0], [1.25, 0], [0, 1.25], [1.25, 1.25]];
+const BORROWED_LAPS: Array<[number, number]> = [[0.62, 0.62], [1.87, 0.62], [0.62, 1.87], [1.87, 1.87]];
+/** A tag no species launches at in a zone (a roost, a second tag) still has a little weight there. */
+const FLOOR_WEIGHT = 0.3;
+
+const tagKey = (tag: MapTag, wet: boolean) => `${tag}${wet ? "~w" : ""}`;
 
 export class MapPoints {
     readonly sampler: ArkMapSampler;
+    /** The sea's cells by depth band and zone (`water.ts`). */
+    readonly water: WaterCells;
     private cells: Cell[] | null = null;
-    private byTag = new Map<string, Map<ArkZone, SpawnPoint[]>>();
+    private owners: Map<string, Cell[]> | null = null;
+    private lists = new Map<string, Map<ArkZone, SpawnPoint[]>>();
+    private kinds = new Map<SpawnPoint[], Record<SlotKind, SpawnPoint[]>>();
     private cellsByTag = new Map<string, Cell[]>();
     private attachTags = new Map<AttachPoint, MapTag[]>();
     private attachLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
-    private sortedLists = new Map<SpawnPoint[], SpawnPoint[]>();
-    private satelliteLists = new Map<string, Array<{x: number; z: number}>>();
     private launched = false;
-    private overflowLists = new Map<string, Array<{x: number; z: number}>>();
-    /** Every launch point, in the order made. */
-    private launchList: SpawnPoint[] = [];
-    /** The launch points by 8 m square, for "is any near?" and "which is nearest?". */
+    /** The launch points by 8 m square, for "is any near?". */
     private launchIndex = new Map<string, SpawnPoint[]>();
+
+    constructor(sampler: ArkMapSampler) {
+        this.sampler = sampler;
+        this.water = new WaterCells(sampler);
+    }
+
+    /** The ground on a grid: each cell's zone and tags (dry cells clear of trunks, rocks and buildings; water half a metre deep). */
+    private grid(): Cell[] {
+        if (this.cells) return this.cells;
+        const cells: Cell[] = [];
+        const half = this.sampler.half;
+        for (let i = Math.ceil(-half / GRID); i * GRID <= half; i++) {
+            for (let j = Math.ceil(-half / GRID); j * GRID <= half; j++) {
+                const x = i * GRID;
+                const z = j * GRID;
+                const ground = this.sampler.ground(x, z);
+                const wet = ground.water !== null;
+                if (!ground.tags.length) continue;
+                if (wet ? ground.depth < 0.5 : this.sampler.blocked(x, z, 0.5)) continue;
+                cells.push({x, z, zone: ground.zone, tags: ground.tags, wet, depth: ground.depth});
+            }
+        }
+        this.cells = cells;
+        return cells;
+    }
+
+    /** Every grid cell where a tag holds, in the water or on dry ground (for roosts and the tests), whichever tag owns it. */
+    cellsWith(tag: MapTag, wet: boolean): Cell[] {
+        const key = tagKey(tag, wet);
+        let list = this.cellsByTag.get(key);
+        if (!list) {
+            list = this.grid().filter((cell) => cell.wet === wet && cell.tags.includes(tag));
+            this.cellsByTag.set(key, list);
+        }
+        return list;
+    }
+
+    /** Which tag owns each cell: the one of its tags furthest behind its zone's share (assigned ÷ wanted), in a fixed order. */
+    private owned(): Map<string, Cell[]> {
+        if (this.owners) return this.owners;
+        const table = launchPoints();
+        const want = (tag: MapTag, wet: boolean, zone: ArkZone) => Math.max(table[tag]?.[`${zone}${wet ? "~w" : ""}`] ?? 0, FLOOR_WEIGHT);
+        const given = new Map<string, number>();
+        const owners = new Map<string, Cell[]>();
+        // A fixed scatter of the cells (not their grid order), so each tag's share is spread over its ground.
+        const order = this.grid().map((cell, index) => ({cell, h: scatter(cell.x, cell.z), index})).sort((a, b) => a.h - b.h || a.index - b.index);
+        for (const {cell} of order) {
+            let best: MapTag | null = null;
+            let score = Infinity;
+            for (const tag of cell.tags) {
+                const key = `${tagKey(tag, cell.wet)}|${cell.zone}`;
+                const s = (given.get(key) ?? 0) / want(tag, cell.wet, cell.zone);
+                if (s < score) {
+                    score = s;
+                    best = tag;
+                }
+            }
+            if (!best) continue;
+            const key = `${tagKey(best, cell.wet)}|${cell.zone}`;
+            given.set(key, (given.get(key) ?? 0) + 1);
+            const list = owners.get(tagKey(best, cell.wet)) ?? [];
+            list.push(cell);
+            owners.set(tagKey(best, cell.wet), list);
+        }
+        this.owners = owners;
+        return owners;
+    }
 
     private indexPoint(point: SpawnPoint) {
         const key = `${Math.floor(point.x / 8)},${Math.floor(point.z / 8)}`;
@@ -67,170 +169,65 @@ export class MapPoints {
     }
 
     /**
-     * Past a partition's satellites (every point's full: more clusters than
-     * it has room for), cluster (index, level) takes an ordinal of its own
-     * among the partition's overflowing pairs, in (level, index) order, so no
-     * two ever share one; `overflowCells` are the cells it indexes.
-     */
-    overflowOrdinal(list: SpawnPoint[], wet: boolean, index: number, level: number): number {
-        const caps = list.map((point) => this.satellites(point, wet, 2.6).length);
-        let ordinal = 0;
-        for (let l = 1; l < level; l++) for (const cap of caps) if (cap < l) ordinal++;
-        for (let i = 0; i < index; i++) if (caps[i] < level) ordinal++;
-        return ordinal;
-    }
-
-    /** A partition's overflow cells: its points' own cells (nearer them than any other point) past their satellites, 1.6 m apart. */
-    overflowCells(list: SpawnPoint[], wet: boolean): Array<{x: number; z: number}> {
-        const key = `${list.map((p) => `${p.tag}@${p.x},${p.z}`).join("|")}|${wet}`;
-        let cells = this.overflowLists.get(key);
-        if (!cells) {
-            const taken = list.flatMap((point) => [{x: point.x, z: point.z}, ...this.satellites(point, wet, 2.6)]);
-            const tag = list[0]?.tag;
-            const others = (cell: Cell) => this.launchNear(cell.x, cell.z, 2);
-            cells = [];
-            if (tag) {
-                const own = this.cellsWith(tag, wet).filter((cell) => {
-                    const d = Math.min(...list.map((p) => Math.hypot(p.x - cell.x, p.z - cell.z)));
-                    return d < 40 && others(cell).every((o) => list.includes(o) || Math.hypot(o.x - cell.x, o.z - cell.z) > d) && taken.every((t) => Math.hypot(t.x - cell.x, t.z - cell.z) >= 1.3);
-                });
-                own.sort((a, b) => a.x - b.x || a.z - b.z);
-                for (const cell of own) {
-                    if (cells.length >= 400) break;
-                    if (cells.every((c) => Math.hypot(c.x - cell.x, c.z - cell.z) >= 1.6)) cells.push({x: cell.x, z: cell.z});
-                }
-            }
-            this.overflowLists.set(key, cells);
-        }
-        return cells;
-    }
-
-    /** The launch points in the squares within `rings` of a point's (8 m squares). */
-    private launchNear(x: number, z: number, rings: number): SpawnPoint[] {
-        const cx = Math.floor(x / 8);
-        const cz = Math.floor(z / 8);
-        const out: SpawnPoint[] = [];
-        for (let dx = -rings; dx <= rings; dx++) for (let dz = -rings; dz <= rings; dz++) out.push(...(this.launchIndex.get(`${cx + dx},${cz + dz}`) ?? []));
-        return out;
-    }
-
-    /** The sea's cells by depth band and zone (`water.ts`). */
-    readonly water: WaterCells;
-
-    constructor(sampler: ArkMapSampler) {
-        this.sampler = sampler;
-        this.water = new WaterCells(sampler);
-    }
-
-    /** The ground on a grid: each cell's zone and tags. */
-    private grid(): Cell[] {
-        if (this.cells) return this.cells;
-        const cells: Cell[] = [];
-        const half = this.sampler.half;
-        for (let x = -half; x <= half; x += GRID) {
-            for (let z = -half; z <= half; z += GRID) {
-                const ground = this.sampler.ground(x, z);
-                // Never inside a trunk, a rock or a building.
-                if (ground.water === null && this.sampler.blocked(x, z, 0.5)) continue;
-                if (ground.tags.length) cells.push({x, z, zone: ground.zone, tags: ground.tags, wet: ground.water !== null, depth: ground.depth});
-            }
-        }
-        this.cells = cells;
-        return cells;
-    }
-
-    /** The grid's cells with this tag, in the water or on dry ground. */
-    cellsWith(tag: MapTag, wet: boolean): Cell[] {
-        const key = `${tag}${wet ? "~w" : ""}`;
-        let list = this.cellsByTag.get(key);
-        if (!list) {
-            // In the water: deep enough to swim in (half a metre).
-            list = this.grid().filter((cell) => cell.wet === wet && cell.tags.includes(tag) && (!wet || cell.depth >= 0.5));
-            this.cellsByTag.set(key, list);
-        }
-        return list;
-    }
-
-    /**
-     * A tag's launch points, in the water (`wet`: swimmers, floaters, the sea
-     * floor's) or on dry ground (everyone else), by zone; made the first time
-     * they are asked for. The counts are the generator's (`species.json`
-     * `points`: zone, or `zone~w` for the water's).
-     */
-    partitions(tag: MapTag, wet: boolean): Map<ArkZone, SpawnPoint[]> {
-        this.launch();
-        const memo = `${tag}${wet ? "~w" : ""}`;
-        const known = this.byTag.get(memo);
-        if (known) return known;
-        // A tag nobody spawns at (a roost, a fallback): a few points anyway, clear of the launch points, so a lookup never comes back empty-handed.
-        const out = this.make(tag, wet, [["farm_garden", 3]]);
-        this.byTag.set(memo, out);
-        return out;
-    }
-
-    /**
-     * Every launch point, made at once in a fixed order (the tags' order,
-     * dry then wet), each clear of all the others (no two tags' points on one
-     * spot), so the points never depend on which animals asked first.
+     * Every tag's lists, made at once in a fixed order (the tags' order, dry
+     * then wet; a tag's zones by how many launch points they want), each
+     * zone's launch points clear of those made before, so nothing depends on
+     * which animals asked first.
      */
     private launch(): void {
         if (this.launched) return;
         this.launched = true;
+        const owners = this.owned();
+        const table = launchPoints();
         for (const tag of MAP_TAGS) {
             for (const wet of [false, true]) {
-                const want: Array<[ArkZone, number]> = [];
-                for (const [key, count] of Object.entries(launchPoints()[tag] ?? {})) {
-                    if (key.endsWith("~w") === wet) want.push([key.replace("~w", "") as ArkZone, count]);
+                const cells = owners.get(tagKey(tag, wet));
+                if (!cells?.length) continue;
+                const byZone = new Map<ArkZone, Cell[]>();
+                for (const cell of cells) {
+                    const list = byZone.get(cell.zone) ?? [];
+                    list.push(cell);
+                    byZone.set(cell.zone, list);
                 }
-                if (!want.length) continue;
-                const out = this.make(tag, wet, want);
-                this.byTag.set(`${tag}${wet ? "~w" : ""}`, out);
-                for (const list of Array.from(out.values())) {
-                    this.launchList.push(...list);
-                    list.forEach((point) => this.indexPoint(point));
+                const zones = Array.from(byZone.keys()).map((zone) => ({zone, count: table[tag]?.[`${zone}${wet ? "~w" : ""}`] ?? 0})).sort((a, b) => b.count - a.count || a.zone.localeCompare(b.zone));
+                const out = new Map<ArkZone, SpawnPoint[]>();
+                for (const {zone, count} of zones) {
+                    const pool = byZone.get(zone)!;
+                    const clear = pool.filter((cell) => !this.nearLaunch(cell.x, cell.z, CLEAR));
+                    const launchCells = spread(clear.length ? clear : pool, Math.min(Math.max(count, 1), pool.length));
+                    const taken = new Set(launchCells);
+                    const point = (cell: Cell, launch: boolean): SpawnPoint => {
+                        const ground = this.sampler.ground(cell.x, cell.z);
+                        return {tag, zone, x: cell.x, z: cell.z, y: ground.height, water: ground.water, depth: ground.depth, launch, covered: !cell.wet && Boolean(this.sampler.covered?.(cell.x, cell.z))};
+                    };
+                    const list = launchCells.map((cell) => point(cell, true));
+                    list.forEach((p) => this.indexPoint(p));
+                    // The rest of the zone's cells of the tag, nearest the launch points' middle first, spread out.
+                    const mx = list.reduce((s, p) => s + p.x, 0) / list.length;
+                    const mz = list.reduce((s, p) => s + p.z, 0) / list.length;
+                    const rest = pool.filter((cell) => !taken.has(cell)).sort((a, b) => Math.hypot(a.x - mx, a.z - mz) - Math.hypot(b.x - mx, b.z - mz) || a.x - b.x || a.z - b.z);
+                    for (const gap of [6, 4, 0]) {
+                        for (const cell of rest) {
+                            if (taken.has(cell)) continue;
+                            if (gap && list.some((p) => Math.abs(p.x - cell.x) < gap && Math.abs(p.z - cell.z) < gap && Math.hypot(p.x - cell.x, p.z - cell.z) < gap)) continue;
+                            list.push(point(cell, false));
+                            taken.add(cell);
+                        }
+                    }
+                    out.set(zone, list);
                 }
+                this.lists.set(tagKey(tag, wet), out);
             }
         }
     }
 
-    /** A tag's points for each zone's count: spread over its cells (the zone's own first), clear of every launch point made before. */
-    private make(tag: MapTag, wet: boolean, want: Array<[ArkZone, number]>): Map<ArkZone, SpawnPoint[]> {
-        const clear = (cell: Cell) => !this.nearLaunch(cell.x, cell.z, CLEAR);
-        const candidates = this.cellsWith(tag, wet).filter(clear);
-        const taken = new Set<Cell>();
-        const out = new Map<ArkZone, SpawnPoint[]>();
-        for (const [zone, count] of want.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))) {
-            let pool = candidates.filter((cell) => cell.zone === zone && !taken.has(cell));
-            if (!pool.length) pool = candidates.filter((cell) => !taken.has(cell));
-            for (const cell of spread(pool, count)) {
-                taken.add(cell);
-                const ground = this.sampler.ground(cell.x, cell.z);
-                // The point is its zone's (the zone it was given to), wherever on the island the terrain had the tag.
-                const point: SpawnPoint = {tag, zone, x: cell.x, z: cell.z, y: ground.height, water: ground.water, depth: ground.depth, room: 0};
-                const list = out.get(zone) ?? [];
-                list.push(point);
-                out.set(zone, list);
-            }
-        }
-        for (const list of Array.from(out.values())) {
-            for (const point of list) {
-                let nearest = Infinity;
-                for (const other of list) if (other !== point) nearest = Math.min(nearest, Math.hypot(other.x - point.x, other.z - point.z));
-                point.room = Number.isFinite(nearest) ? Math.min(nearest / 2, 8) : 6;
-            }
-        }
-        return out;
+    /** A tag's lists by zone (empty when no cell is that tag's). */
+    partitions(tag: MapTag, wet: boolean): Map<ArkZone, SpawnPoint[]> {
+        this.launch();
+        return this.lists.get(tagKey(tag, wet)) ?? new Map();
     }
 
-    /**
-     * The partition a zone's animal of this tag uses: its own zone's (`own`:
-     * no other zone's animal stands on it, so its slot alone picks the point),
-     * else the nearest zone's that has some.
-     */
-    partitionFor(tag: MapTag, wet: boolean, zone: ArkZone): SpawnPoint[] {
-        return this.partitionOf(tag, wet, zone).list;
-    }
-
+    /** The list a zone's animal of this tag uses: its own zone's (`own`), else the nearest zone's that has some. */
     partitionOf(tag: MapTag, wet: boolean, zone: ArkZone): {list: SpawnPoint[]; own: boolean} {
         const partitions = this.partitions(tag, wet);
         const own = partitions.get(zone);
@@ -250,71 +247,54 @@ export class MapPoints {
     }
 
     /**
-     * A partition's points for a kind of slot (the stats, `placement.ts`
-     * slotKind): `core` its three nearest its middle, `edge` its outer
-     * quarter, `plain` the rest; one list each, never sharing a point. A
-     * small partition is all plain.
+     * A list's cells for a kind of slot (the stats): `core` the inner sixth
+     * by distance from its launch points' middle, `edge` the outer quarter
+     * (`cover` the edge's cells with something tall in front, else the edge),
+     * `plain` the rest; each in the list's own order, never sharing a cell.
+     * A list under 12 cells is all plain.
      */
-    kindOf(list: SpawnPoint[], kind: "core" | "edge" | "cover" | "plain"): SpawnPoint[] {
+    kindOf(list: SpawnPoint[], kind: SlotKind): SpawnPoint[] {
         if (list.length < 12) return list;
-        let sorted = this.sortedLists.get(list);
-        if (!sorted) {
-            const cx = list.reduce((sum, p) => sum + p.x, 0) / list.length;
-            const cz = list.reduce((sum, p) => sum + p.z, 0) / list.length;
-            sorted = [...list].sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz) || a.x - b.x || a.z - b.z);
-            this.sortedLists.set(list, sorted);
+        let split = this.kinds.get(list);
+        if (!split) {
+            const launch = list.filter((p) => p.launch);
+            const from = launch.length >= 3 ? launch : list;
+            const cx = from.reduce((sum, p) => sum + p.x, 0) / from.length;
+            const cz = from.reduce((sum, p) => sum + p.z, 0) / from.length;
+            const rankOf = new Map([...list].sort((a, b) => Math.hypot(a.x - cx, a.z - cz) - Math.hypot(b.x - cx, b.z - cz) || a.x - b.x || a.z - b.z).map((p, i) => [p, i]));
+            const coreTo = Math.max(3, Math.floor(list.length / 6));
+            const edgeFrom = list.length - Math.floor(list.length / 4);
+            const core = list.filter((p) => rankOf.get(p)! < coreTo);
+            const edge = list.filter((p) => rankOf.get(p)! >= edgeFrom);
+            const covered = edge.filter((p) => p.covered);
+            const open = edge.filter((p) => !p.covered);
+            split = {core, cover: covered.length ? covered : edge, edge: covered.length && open.length ? open : edge, plain: list.filter((p) => rankOf.get(p)! >= coreTo && rankOf.get(p)! < edgeFrom)};
+            this.kinds.set(list, split);
         }
-        const edgeCount = Math.floor(sorted.length / 4);
-        if (kind === "core") return sorted.slice(0, 3);
-        if (kind === "plain") return sorted.slice(3, sorted.length - edgeCount);
-        // The edge, split: the points with something tall in front of them from the default camera are the cover's.
-        const edge = sorted.slice(sorted.length - edgeCount);
-        const covered = edge.filter((point) => point.water === null && Boolean(this.sampler.covered?.(point.x, point.z)));
-        if (kind === "cover" && covered.length) return covered;
-        const open = edge.filter((point) => !covered.includes(point));
-        return open.length ? open : edge;
+        return split[kind];
+    }
+
+    /**
+     * Where cluster (zone, slot) stands on a list: an own zone's slot k on
+     * cell k mod n, lap k div n; a borrowing zone's from the list's end,
+     * half a cell over. One-to-one: no two clusters share a spot.
+     */
+    pick(list: SpawnPoint[], own: boolean, zone: ArkZone, slot: number): SlotPick {
+        const n = list.length;
+        const key = own ? slot : slot * ARK_ZONES.length + Math.max(ARK_ZONES.indexOf(zone), 0);
+        const lap = Math.floor(key / n);
+        const point = own ? list[key % n] : list[n - 1 - (key % n)];
+        // (Past four laps, more clusters than four a cell, the laps come round again.)
+        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap % 4];
+        return {point, level: own ? lap : lap + 1, x: point.x + ox, z: point.z + oz};
     }
 
     /** Every launch point (for the report, the contact sheets and the tests). */
     all(): SpawnPoint[] {
         this.launch();
         const out: SpawnPoint[] = [];
-        for (const tag of MAP_TAGS) {
-            const counts = launchPoints()[tag];
-            if (!counts) continue;
-            const keys = Object.keys(counts);
-            if (keys.some((key) => !key.endsWith("~w"))) out.push(...Array.from(this.partitions(tag, false).values()).flat());
-            if (keys.some((key) => key.endsWith("~w"))) out.push(...Array.from(this.partitions(tag, true).values()).flat());
-        }
+        for (const zones of Array.from(this.lists.values())) for (const list of Array.from(zones.values())) out.push(...list.filter((p) => p.launch));
         return out;
-    }
-
-    /**
-     * Where further clusters on a point stand (more clusters than points):
-     * the cells of its tag and medium nearest it (of those nearer it than
-     * any other launch point of the tag), each at least `spacing` from the
-     * point and from one another (greedy, nearest first), so the
-     * L-th cluster round a point always has a spot of its own on its own
-     * ground. A function of the terrain alone.
-     */
-    satellites(point: SpawnPoint, wet: boolean, spacing: number, owned = true): Array<{x: number; z: number}> {
-        const key = `${point.tag}|${wet}|${point.x},${point.z}|${spacing}|${owned}`;
-        let list = this.satelliteLists.get(key);
-        if (!list) {
-            // Only the cells nearer this point than any other launch point of its tag (so two points' satellites never meet).
-            // (Every launch point, of every tag, and this tag's own: a cell is one point's at most.)
-            // (Satellites lie within 24 m of their point, so a nearer point is within 48 m of it: only those are asked.)
-            const others = [...this.launchNear(point.x, point.z, 6), ...Array.from(this.partitions(point.tag, wet).values()).flat()].filter((other) => other !== point && Math.hypot(other.x - point.x, other.z - point.z) < 48);
-            const mine = (cell: Cell, d: number) => others.every((other) => Math.hypot(cell.x - other.x, cell.z - other.z) > d);
-            const cells = this.cellsWith(point.tag, wet).map((cell) => ({cell, d: Math.hypot(cell.x - point.x, cell.z - point.z)})).filter(({cell, d}) => d >= spacing && d <= 24 && (!owned || mine(cell, d))).sort((a, b) => a.d - b.d || a.cell.x - b.cell.x || a.cell.z - b.cell.z);
-            list = [];
-            for (const {cell} of cells) {
-                if (list.length >= 80) break;
-                if (list.every((other) => Math.hypot(other.x - cell.x, other.z - cell.z) >= spacing)) list.push({x: cell.x, z: cell.z});
-            }
-            this.satelliteLists.set(key, list);
-        }
-        return list;
     }
 
     /** The nearest cell of a tag to a point, within `reach` (for roosts); null when none is that near. */
@@ -343,13 +323,10 @@ export class MapPoints {
 
     /**
      * The attach points a small animal can sit on: of its tag, fitting its
-     * length, in its zone first (else any zone's). Empty when the scenery has none.
+     * length, in its zone first (else any zone's), and whether the list is
+     * the zone's own (then its slot alone picks the point). Empty when the
+     * scenery has none.
      */
-    attachFor(tag: MapTag, length: number, zone: ArkZone, holes = true): AttachPoint[] {
-        return this.attachOf(tag, length, zone, holes).list;
-    }
-
-    /** As `attachFor`, and whether the list is the zone's own (then its slot alone picks the point). */
     attachOf(tag: MapTag, length: number, zone: ArkZone, holes = true): {list: AttachPoint[]; own: boolean} {
         const key = `${tag}|${length.toFixed(3)}|${zone}|${holes}`;
         let found = this.attachLists.get(key);
@@ -363,6 +340,12 @@ export class MapPoints {
         }
         return found;
     }
+}
+
+/** A fixed number in [0, 1) for a cell (the same on every device). */
+function scatter(x: number, z: number): number {
+    const v = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
+    return v - Math.floor(v);
 }
 
 /** `count` cells spread evenly over the pool: farthest-point sampling from the cell nearest its middle, then relaxed. */
@@ -382,8 +365,7 @@ function spread(pool: Cell[], count: number): Cell[] {
         chosen.push(next);
         for (let i = 0; i < pool.length; i++) distance[i] = Math.min(distance[i], Math.hypot(pool[i].x - next.x, pool[i].z - next.z));
     }
-    // Farthest-point sampling picks the pool's edges first: three rounds of moving each point to the cell nearest the middle of the
-    // cells nearest it (Lloyd's relaxation) spread them evenly through the pool instead, the edges included but not crowded.
+    // Farthest-point sampling picks the pool's edges first: three rounds of Lloyd's relaxation spread them through it instead.
     for (let round = 0; round < 3 && chosen.length > 1; round++) {
         const sums = chosen.map(() => ({x: 0, z: 0, n: 0}));
         for (const cell of pool) {
@@ -424,12 +406,20 @@ function spread(pool: Cell[], count: number): Cell[] {
     return chosen;
 }
 
+/** The cluster key of a zone's slot: unique over every zone and slot. */
+export function clusterKey(zone: ArkZone, slot: number): number {
+    return Math.max(ARK_ZONES.indexOf(zone), 0) + ARK_ZONES.length * slot;
+}
+
+/** The key on a borrowed list (another zone's): past any slot its own zone will use, distinct per zone. */
+export function borrowedKey(zone: ArkZone, slot: number): number {
+    return 100000 * (Math.max(ARK_ZONES.indexOf(zone), 0) + 1) + slot;
+}
+
 /**
- * Where cluster `key` of a list of `size` stands: an index into the list and
- * a level (how many clusters already round that point). On a zone's own
- * partition the key is its slot (dense from 0), else a key no own slot ever
- * is; the map is one-to-one, so no two clusters take the same (point,
- * level), and consecutive slots go round every point before any doubles up.
+ * Where key `key` of a list of `size` stands (attach points): an index into
+ * the list and a level (how many keys already round that point). One-to-one,
+ * and consecutive keys go round every point before any doubles up.
  */
 export function pointIndex(key: number, size: number): {index: number; level: number} {
     const usable = Math.max(size, 1);
@@ -440,14 +430,4 @@ export function pointIndex(key: number, size: number): {index: number; level: nu
 
 function gcd(a: number, b: number): number {
     return b ? gcd(b, a % b) : a;
-}
-
-/** The cluster key of a zone's slot: unique over every zone and slot. */
-export function clusterKey(zone: ArkZone, slot: number): number {
-    return Math.max(ARK_ZONES.indexOf(zone), 0) + ARK_ZONES.length * slot;
-}
-
-/** The key on a borrowed partition (another zone's): past any slot its own zone will use, distinct per zone. */
-export function borrowedKey(zone: ArkZone, slot: number): number {
-    return 100000 * (Math.max(ARK_ZONES.indexOf(zone), 0) + 1) + slot;
 }

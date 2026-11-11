@@ -23,7 +23,8 @@
 
 import {canopyPlace, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
 import type {MicroPlace, MicroSpot} from "@/ark-scene/micro";
-import {borrowedKey, clusterKey, MapPoints, pointIndex} from "@/ark-scene/map/points";
+import {borrowedKey, clusterKey, MapPoints, pointIndex, type SlotKind, type SlotPick} from "@/ark-scene/map/points";
+import {MAX_SLOPE, MOUNTAIN_SLOPE} from "@/ark-scene/behaviour-nav";
 import {attachFits, type ArkMapSampler, type AttachPoint, type AttachTag} from "@/ark-scene/map/sampler";
 import {isHeldOnMap, mapSpecies, type MapSpecies} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, TAG_AREA, type MapArea, type MapTag} from "@/ark-scene/map/tags";
@@ -279,120 +280,123 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
     }
 
-    // Everyone else: a launch point of its tag, in the water or on dry ground.
-    for (let tagIndex = 0; tagIndex < tags.length; tagIndex++) {
-        const tag = tags[tagIndex];
+    // Everyone else: a cell of its tag (`points.ts`), in the water or on dry ground, its cluster's own. Its tags in its text's
+    // order: the first whose list has a cell for its slot (its first lap) it can stand on; else its spawn tag's, a lap round.
+    const radius = Math.min(Math.max(trueLength * 0.2, 0.1), 0.6);
+    // The behaviour lane's walk grid: steep ground is a mountain animal's only (`behaviour-schedule.ts` maxSlopeOf).
+    const maxSlope = zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE;
+    // (Flyers, perchers and climbers may stand on a cliff's steep ground; walkers, crawlers, hoppers and diggers walk off their spot.)
+    const walker = ["walk", "crawl", "slither", "hop", "burrow"].includes(species.move);
+    const okOn = (wet: boolean, holds: (tags: readonly MapTag[]) => boolean) => (x: number, z: number) => {
+        const g = sampler.ground(x, z);
+        if (!holds(g.tags) || (g.water !== null) !== wet) return false;
+        if (wet) return g.depth >= (species.attach === "water" ? 0.5 : 0.05);
+        if (sampler.blocked(x, z, radius)) return false;
+        return !walker || !sampler.walkable || sampler.walkable(x, z, maxSlope);
+    };
+    const okFor = (tag: MapTag, wet: boolean) => okOn(wet, (tags) => tags.includes(tag));
+    type Choice = {tag: MapTag; wet: boolean; pick: SlotPick; ok: (x: number, z: number) => boolean};
+    /** Where it can stand for a pick: its lap's spot, else the nearest within a metre that suits it, else the same round its cell's middle. */
+    const settle = ({pick, ok}: Choice): {x: number; z: number} | null => {
+        for (const [bx, bz] of [[pick.x, pick.z], [pick.point.x, pick.point.z]]) {
+            if (ok(bx, bz)) return {x: bx, z: bz};
+            for (let k = 1; k < 30; k++) {
+                const r = 0.22 * Math.sqrt(k);
+                const tx = bx + Math.cos(k * GOLDEN) * r;
+                const tz = bz + Math.sin(k * GOLDEN) * r;
+                if (ok(tx, tz)) return {x: tx, z: tz};
+            }
+        }
+        return null;
+    };
+    let chosen: (Choice & {at: {x: number; z: number}}) | null = null;
+    let fallback: (Choice & {at: {x: number; z: number}}) | null = null;
+    let first: Choice | null = null;
+    for (const tag of tags) {
         const wet = wetOf(species, tag);
-        const lastTag = tagIndex === tags.length - 1;
-        // The stats (docs/ark-next.md, stats addendum): a dominant kind at the partition's middle, a rare one at its edge.
         const partition = all.partitionOf(tag, wet, zone);
-        const list = all.kindOf(partition.list, kind);
-        if (!list.length) continue;
-        const pick = pointIndex(partition.own ? slot : borrowedKey(zone, slot), list.length);
-        const {index} = pick;
-        // A borrowed partition's second cluster rounds the point as an own one's would.
-        const level = partition.own ? pick.level : 1 + (pick.level % 7);
-        const point = list[index];
-        // Its own tag's ground, in its medium, deep enough to swim, clear of trunks, rocks and buildings.
-        const radius = Math.min(Math.max(trueLength * 0.2, 0.1), 0.6);
-        const ok = (x: number, z: number) => {
-            const g = sampler.ground(x, z);
-            if (!g.tags.includes(tag) || (g.water !== null) !== wet) return false;
-            if (wet) return g.depth >= (species.attach === "water" ? 0.5 : 0.05);
-            return !sampler.blocked(x, z, radius);
-        };
-        let cx = point.x;
-        let cz = point.z;
-        if (!ok(cx, cz)) {
-            // The point is too tight for this body: the nearest spot round it that is not.
-            for (let k = 1 + (key % 11); k < 80; k++) {
-                const r = 0.4 * Math.sqrt(k);
-                const x = point.x + Math.cos(k * GOLDEN) * r;
-                const z = point.z + Math.sin(k * GOLDEN) * r;
-                if (ok(x, z)) {
-                    cx = x;
-                    cz = z;
-                    break;
-                }
+        if (!partition.list.length) continue;
+        // The stats (docs/ark-next.md, stats addendum): a dominant kind at the list's middle, a rare one at its edge (behind
+        // cover where it has it); past its kind's cells, the plain ones.
+        // (A cover slot past the covered cells takes the edge's, then looks for cover round it.)
+        const order: SlotKind[] = kind === "cover" ? ["cover", "edge", "plain"] : kind === "plain" ? ["plain"] : [kind, "plain"];
+        let pick = all.pick(all.kindOf(partition.list, order[0]), partition.own, zone, slot);
+        for (const next of order.slice(1)) if (pick.level > 0 && partition.list.length >= 12) pick = all.pick(all.kindOf(partition.list, next), partition.own, zone, slot);
+        const choice: Choice = {tag, wet, pick, ok: okFor(tag, wet)};
+        first ??= choice;
+        // Free: its cell, or the cell's first lap (half a cell over), so it keeps to the place its text names first.
+        const free = pick.level <= 1;
+        const at = free || !fallback ? settle(choice) : null;
+        if (at && free) {
+            chosen = {...choice, at};
+            break;
+        }
+        if (at) fallback ??= {...choice, at};
+    }
+    chosen ??= fallback;
+    if (!chosen && !first) return null;
+    const {tag, wet, pick, ok} = chosen ?? first!;
+    const point = pick.point;
+    let cx = chosen ? chosen.at.x : pick.x;
+    let cz = chosen ? chosen.at.z : pick.z;
+    // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within 5 m (never by another point).
+    if (kind === "cover" && !wet && sampler.covered && !sampler.covered(cx, cz)) {
+        for (let k = 1; k < 100; k++) {
+            const r = 0.5 * Math.sqrt(k);
+            const tx = cx + Math.cos(k * GOLDEN) * r;
+            const tz = cz + Math.sin(k * GOLDEN) * r;
+            if (sampler.covered(tx, tz) && ok(tx, tz) && !all.nearLaunch(tx, tz, 2.4, point)) {
+                cx = tx;
+                cz = tz;
+                break;
             }
         }
-        if (level > 0) {
-            // Another cluster on this point (more clusters than points): the level-th of the point's satellites, the nearest cells of
-            // its tag a herd's width apart that are nearer it than any other point (`points.ts`), so two clusters never share a spot.
-            // One cell per level: never skipping to the next; a body too big for the cell's own spot moves a little within it.
-            const satellites = all.satellites(point, wet, 2.6);
-            let cell: {x: number; z: number} | null = level - 1 < satellites.length ? satellites[level - 1] : null;
-            if (!cell) {
-                // This tag's ground is full: its next tag's (its text names more than one place); past the last, the partition's
-                // overflow cells, by an ordinal of its own.
-                if (!lastTag) continue;
-                const cells = all.overflowCells(list, wet);
-                if (cells.length) cell = cells[all.overflowOrdinal(list, wet, index, level) % cells.length];
-            }
-            if (cell) {
-                let found = false;
-                for (let n = 0; n < 12 && !found; n++) {
-                    const r = n ? 0.3 * Math.sqrt(n) : 0;
-                    const tx = cell.x + Math.cos(n * GOLDEN) * r;
-                    const tz = cell.z + Math.sin(n * GOLDEN) * r;
-                    if (ok(tx, tz)) {
-                        cx = tx;
-                        cz = tz;
-                        found = true;
-                    }
-                }
-            }
-        }
-        // A rare kind's cover (stats addendum part 4): something tall just in front of it from the default camera, within 5 m (never by another point).
-        if (kind === "cover" && !wet && sampler.covered && !sampler.covered(cx, cz)) {
-            for (let k = 1; k < 100; k++) {
-                const r = 0.5 * Math.sqrt(k);
-                const tx = cx + Math.cos(k * GOLDEN) * r;
-                const tz = cz + Math.sin(k * GOLDEN) * r;
-                if (sampler.covered(tx, tz) && ok(tx, tz) && !all.nearLaunch(tx, tz, 2.4, point)) {
-                    cx = tx;
-                    cz = tz;
-                    break;
-                }
-            }
-        }
-        let x = cx;
-        let z = cz;
-        if (rank > 0) {
-            // A cluster's members on a hexagonal lattice about its spot, `gap` apart (so no two ever share a spot): the rank-th cell, in rings
-            // outward, of those on its own ground (the lattice turned by the slot, so neighbouring clusters do not line up).
-            const gap = Math.max(1.1, length * 0.85);
-            const turn = ((hashString(`${zone}#${slot}`) >>> 12) % 360) / 180 * Math.PI;
+    }
+    let x = cx;
+    let z = cz;
+    if (rank > 0) {
+        // A cluster's members on a hexagonal lattice about its spot, `gap` apart (so no two ever share a spot): the rank-th cell, in rings
+        // outward, of those on its own ground (the lattice turned by the slot, so neighbouring clusters do not line up).
+        const gap = Math.max(1.1, length * 0.85);
+        const turn = ((hashString(`${zone}#${slot}`) >>> 12) % 360) / 180 * Math.PI;
+        // On its own tag's ground; where that runs out (a small patch by a rock), on any ground its text names.
+        const spill = okOn(wet, (here) => here.some((t) => species.allowed.has(t)));
+        for (const fits of [ok, spill]) {
             let seen = 0;
+            let found = false;
             for (const [i, j] of HEX_SPIRAL) {
                 const lx = gap * (i + j / 2);
                 const lz = gap * (j * Math.sqrt(3) / 2);
                 const tx = cx + lx * Math.cos(turn) - lz * Math.sin(turn);
                 const tz = cz + lx * Math.sin(turn) + lz * Math.cos(turn);
-                // Never on another cluster's point.
-                if (!ok(tx, tz) || all.nearLaunch(tx, tz, 1.2, point)) continue;
+                // Never on another cluster's launch point.
+                if (!fits(tx, tz) || all.nearLaunch(tx, tz, 1.2, point)) continue;
                 if (++seen === rank) {
                     x = tx;
                     z = tz;
+                    found = true;
                     break;
                 }
             }
+            if (found) break;
         }
-        const ground = sampler.ground(x, z);
-        const turn = ((ownHash >>> 4) % 1000) / 1000;
-        const yaw = wet ? turn * Math.PI * 2 : ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn);
-        const sea = wet && ground.water === "sea" && SEA_TAGS.has(tag);
-        let base = ground.height;
-        if (species.attach === "ice") base = 0.25;
-        if (species.attach === "surface") base = 0;
-        const placement: MapPlacement = {
-            x, z, ground: base, yaw, water: wet && species.attach !== "ice", covered: kind === "cover" && rank === 0 && !wet && Boolean(sampler.covered?.(x, z)),
-            map: {species, tag, area: TAG_AREA[tag], held: false, sea, roost: roostOf(species, all, x, z, trueLength, key, ownHash, null), key, level}
-        };
-        if (species.attach === "burrow" && !wet) placement.burrow = burrowAt(x, z, ground.height, `${zone}#${slot}#${rank}`, length);
-        return placement;
     }
-    return null;
+    // The tag it stands for where it is (a member spilt onto its other ground stands for that).
+    const here = sampler.ground(x, z).tags;
+    const standsFor = here.includes(tag) ? tag : (tags.find((t) => here.includes(t)) ?? tag);
+    const ground = sampler.ground(x, z);
+    const turn = ((ownHash >>> 4) % 1000) / 1000;
+    const yaw = wet ? turn * Math.PI * 2 : ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn);
+    const sea = wet && ground.water === "sea" && SEA_TAGS.has(tag);
+    let base = ground.height;
+    if (species.attach === "ice") base = 0.25;
+    if (species.attach === "surface") base = 0;
+    const placement: MapPlacement = {
+        x, z, ground: base, yaw, water: wet && species.attach !== "ice", covered: kind === "cover" && rank === 0 && !wet && Boolean(sampler.covered?.(x, z)),
+        map: {species, tag: standsFor, area: TAG_AREA[standsFor], held: false, sea, roost: roostOf(species, all, x, z, trueLength, key, ownHash, null), key, level: pick.level}
+    };
+    if (species.attach === "burrow" && !wet) placement.burrow = burrowAt(x, z, ground.height, `${zone}#${slot}#${rank}`, length);
+    return placement;
 }
 
 /** How far it goes to sleep, by how it moves (m). */

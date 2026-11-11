@@ -18,6 +18,8 @@ import {trunkOf} from "@/ark-scene/vegetation";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
+import {navGrid} from "@/ark-scene/behaviour-nav";
+import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 
 const SIZES: Record<AttachTag, {min: number; max: number}> = {
@@ -92,6 +94,11 @@ class WorldSampler implements ArkMapSampler {
     covered(x: number, z: number): boolean {
         this.obstacles ??= new DecorObstacles(worldDecor());
         return this.obstacles.covers(x, z);
+    }
+
+    /** The behaviour lane's walk grid (`behaviour-nav.ts`, from the graphics lane's scenery): where its walkers can walk. */
+    walkable(x: number, z: number, maxSlope: number): boolean {
+        return navGrid(behaviourSampler()).walkable(x, z, maxSlope);
     }
 
     /** Beside a rock (a boulder, a stone): within a couple of metres of its side. */

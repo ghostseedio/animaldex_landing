@@ -89,7 +89,12 @@ test("map: nobody moves when others leave, and the map follows the sampler (a ne
     const animals = validatorAnimals().filter((_, i) => i % 7 === 0);
     const before = placeAnimals(animals);
     const after = placeAnimals(animals.filter((_, i) => i % 3 !== 0));
-    after.forEach((place, id) => assert.deepEqual([place.x, place.z, place.ground], [before.get(id)!.x, before.get(id)!.z, before.get(id)!.ground], id));
+    after.forEach((place, id) => {
+        // (A partner whose host left goes to the next host, or back to its own spot: section 6, by design.)
+        const was = before.get(id)!;
+        if (was.host && !after.has(was.host.id)) return;
+        assert.deepEqual([place.x, place.z, place.ground], [was.x, was.z, was.ground], id);
+    });
     // A flat stand-in terrain: grassland west of x = 0, a lake east of it. The same animal lands on the new terrain's own ground.
     const flat: ArkMapSampler = {
         id: "flat-test",
