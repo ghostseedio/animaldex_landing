@@ -32,9 +32,10 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Ambient sound | `ark-ambient` | e0f92416 | 13 beds and 2 thunder claps (public domain and CC0) |
 | Runtime | `ark-runtime-web` | 0da735b6 | Live budget (`arkOutside`, resting first, rule E zone capacity), shared clock, worker prebuild (scenery, places, ground), visibility/idle/power, memory, camera, visual CI |
 | Founders (web) | `ark-founders-web` | 97fe9811 | Named founders, stories, the one-tap 18+ confirmation |
+| Captures + thrive (web) | `ark-thrive-web` | addf6c37 | The capture band, condition and family on the tap card, Ark Score v3, the chat offer and result lines; bringers shown as `@username` linked to `/u/{handle}` (owner decision); the age question inline when `ask_age` is set |
 | Release fixes | `ark-release` | — | Water animals in their depth band under the schedule (`schedule-water.ts`); grass press; attribute renames (`arkCoat`, `lookChain`); shader-compose test; tree-attach regenerated; the recipes' nest and fish wiring |
 
-Not yet in the release: `ark-thrive-web` (captures + thrive, Deliverable 2), `ark-scale-test`, `ark-home-growth` (the bigger home
+Not yet in the release: `ark-scale-test`, `ark-home-growth` (the bigger home
 district), newer rig-publish. The behaviour audit harness (`ark-audit`) is merged with its CI job (§9).
 
 ### Server (AnimalDex, not applied)
@@ -118,6 +119,8 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 - Never `gradlew --stop`. Android `DebateFlowTest` is a known load-sensitive flake.
 
 ## 7. Order on approval
+**The web build with captures + thrive ships together with the server's `capture_arrivals` flag** (captures-thrive design §10.2): the web reads the new keys, and the flag turns arrivals from captures on. Don't deploy one without the other.
+
 1. Server: founders migration (switch off) and `voyage-founder-story`; then the thrive function and migrations 3–7 (§3).
 2. Bucket: rig `v2`.
 3. Web: merge, build, deploy (§4); with it or after it, the 14 turned birds.

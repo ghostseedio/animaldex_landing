@@ -317,6 +317,34 @@ if (only.includes("sound")) {
     await page.evaluate(() => window.__arkGolden.handle.setSound(false));
 }
 
+if (only.includes("turns")) {
+    // At the default view: every zebra's drawn heading 5 times a second for 100 s; turns a minute, young and adults.
+    await page.evaluate((calm) => window.__arkGolden.handle.setEnvironment(calm), CALM);
+    await page.evaluate(() => {
+        const H = window.__arkGolden.handle;
+        H.setView(H.homeView());
+    });
+    await wait(2000);
+    const result = await page.evaluate(async () => {
+        const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+        const zebras = window.__arkDebug.entries().filter((e) => e.animal.model_slug === "plains-zebra");
+        const last = new Map();
+        const turned = new Map();
+        for (let i = 0; i < 500; i++) {
+            await new Promise((r) => setTimeout(r, 200));
+            for (const e of zebras) {
+                const y = e.yawNow;
+                if (typeof y !== "number") continue;
+                if (last.has(e.animal.id)) turned.set(e.animal.id, (turned.get(e.animal.id) ?? 0) + Math.abs(wrap(y - last.get(e.animal.id))));
+                last.set(e.animal.id, y);
+            }
+        }
+        return zebras.map((e) => ({young: e.animal.origin === "born", turnsPerMinute: Math.round(((turned.get(e.animal.id) ?? 0) / (2 * Math.PI) / (100 / 60)) * 100) / 100}));
+    });
+    notes.turns = result;
+    log("turns", JSON.stringify(result));
+}
+
 if (only.includes("perf")) {
     // The wiring's own main-thread time against the frame's, calm at five places, then in heavy rain at two.
     const rows = [];

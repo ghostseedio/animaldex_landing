@@ -118,7 +118,7 @@ try {
     if (!found.animals.length) throw new Error(`no animal matches ${match}`);
     // Where they are drawn now (their schedule may have them out swimming or walking), else their places.
     const now = found.animals.filter((a) => a.middle).map((a) => ({x: a.middle.x, y: a.middle.y, z: a.middle.z}));
-    const at = now.length ? now : found.animals.map((a) => ({x: a.x, y: a.y, z: a.z}));
+    const at = now.length === found.animals.length ? now : found.animals.map((a) => ({x: a.x, y: a.y, z: a.z}));
     const cx = at.reduce((s, a) => s + a.x, 0) / at.length;
     const cz = at.reduce((s, a) => s + a.z, 0) / at.length;
     const cy = Math.max(at.reduce((s, a) => s + a.y, 0) / at.length, 0);
