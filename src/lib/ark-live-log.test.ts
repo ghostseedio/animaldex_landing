@@ -129,6 +129,13 @@ test("the log: repeats fold into one line, bursts end in +N more, seen lines wai
     now += ARK_LIVE_LOG_DEFAULTS.seenStale;
     log.step(now);
     assert.equal(log.waiting, 0, "the third waited past its moment and is dropped");
+    // Alarms: one line, then none for a while however many call.
+    const alarms = new ArkLiveLog();
+    alarms.push([item({id: "a1", key: "alarm:horse", kind: "alarm", source: "seen"})], 0);
+    alarms.step(0);
+    alarms.push([item({id: "a2", key: "alarm:goose", kind: "alarm", source: "seen"})], ARK_LIVE_LOG_DEFAULTS.seenGap);
+    alarms.step(ARK_LIVE_LOG_DEFAULTS.seenGap);
+    assert.equal(alarms.lines.length, 1, "a second alarm so soon waits, and goes stale");
 });
 
 test("newcomers stand in for the event log: arrivals and births, from the snapshot", () => {

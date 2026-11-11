@@ -13,7 +13,7 @@
  */
 
 import {eats} from "@/ark-scene/food-links";
-import type {ArkAnimal, ArkSnapshot, ArkZone} from "@/ark-scene/types";
+import {ZONE_REGION, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {hashString} from "@/ark-scene/world";
 
 type Beat = "pair" | "birth" | "meal" | "laid" | "group" | "death" | "newKind" | "hatch" | "starved";
@@ -34,6 +34,9 @@ const NEW_KINDS: Array<{slug: string; name: string; zone: ArkZone}> = [
     {slug: "greater-flamingo", name: "Greater Flamingo", zone: "wetland"},
     {slug: "red-deer", name: "Red Deer", zone: "woodland"}
 ];
+
+/** Hunters the feed shows first, in turn (the owner's "a lion caught a zebra"); any other predator after them. */
+const HUNTERS = ["african-lion", "eurasian-wolf", "great-white-shark", "snow-leopard", "red-fox", "american-alligator", "barn-owl", "golden-eagle", "cheetah", "polar-bear"];
 
 export type ArkLiveFeedStep = {beat: Beat; snapshot: ArkSnapshot; events: unknown[]};
 
@@ -79,6 +82,7 @@ export class ArkLiveFixtureFeed {
     private step = 0;
     private serial = 900_000;
     private made = 0;
+    private meals = 0;
     private readonly clutches: Array<{parents: [ArkAnimal, ArkAnimal]; eggs: number; laidAt: string}> = [];
     private readonly pool: ArkAnimal[];
     private readonly seed: string;
@@ -213,15 +217,17 @@ export class ArkLiveFixtureFeed {
                 return done([...animals, ...young], young.map((animal) => this.row("birth", at, animal, {parents: [pa.id, pb.id], payload: {from_egg: true, parents: [pa.id, pb.id]}})));
             }
             case "meal": {
-                // A predator aboard and a prey of it aboard with more than two of its kind (the feed never ends a kind).
+                // A predator aboard and a prey of it in the same region with more than two of its kind (the feed never ends a kind).
                 const pairs: Array<[ArkAnimal, ArkAnimal]> = [];
                 for (const hunters of kinds) {
                     for (const prey of kinds) {
-                        if (prey === hunters || prey.length < 3) continue;
+                        if (prey === hunters || prey.length < 3 || ZONE_REGION[prey[0].zone] !== ZONE_REGION[hunters[0].zone]) continue;
                         if (eats(hunters[0].model_slug, prey[0].model_slug)) pairs.push([hunters[0], prey[prey.length - 1]]);
                     }
                 }
-                const pair = this.pick(pairs, "meal");
+                const rank = (slug: string) => (HUNTERS.includes(slug) ? HUNTERS.indexOf(slug) : HUNTERS.length);
+                pairs.sort((a, b) => rank(a[0].model_slug) - rank(b[0].model_slug) || a[0].name.localeCompare(b[0].name) || a[1].name.localeCompare(b[1].name));
+                const pair = pairs.length ? pairs[this.meals++ % pairs.length] : null;
                 if (!pair) return null;
                 const [predator, prey] = pair;
                 return done(animals.filter((a) => a.id !== prey.id), [

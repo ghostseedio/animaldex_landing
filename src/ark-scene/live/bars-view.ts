@@ -82,7 +82,8 @@ export class ArkBarsView {
             top: "calc(10px + env(safe-area-inset-top, 0px))",
             zIndex: "2",
             width: "min(17.5rem, calc(100% - 66px))",
-            maxHeight: "calc(100% - 110px)",
+            // Clear of the log at the foot of the world (its chip and a few lines).
+            maxHeight: "calc(100% - 210px)",
             display: "flex",
             flexDirection: "column",
             borderRadius: "14px",

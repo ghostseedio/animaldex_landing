@@ -219,11 +219,13 @@ export type ArkLiveLogOptions = {
     seenGap: number;
     /** A seen item still waiting after this long (ms) is dropped: it is no longer happening. */
     seenStale: number;
+    /** At least this long between two alarm lines (ms): where many animals are, one alarm sets off the next. */
+    alarmGap: number;
     /** Record items waiting at most; more fold into one "+N more" line. */
     maxQueue: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, maxQueue: 6};
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
 const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, more: 8};
@@ -237,6 +239,7 @@ export class ArkLiveLog {
     private queue: Array<ArkLiveItem & {queuedAt: number}> = [];
     private lastShown = -Infinity;
     private lastSeen = -Infinity;
+    private lastAlarm = -Infinity;
     private readonly options: ArkLiveLogOptions;
 
     constructor(options: Partial<ArkLiveLogOptions> = {}) {
@@ -297,7 +300,8 @@ export class ArkLiveLog {
         // The record first, oldest first; a seen item only when none of the record waits and its own gap has passed.
         let at = this.queue.findIndex((q) => q.source === "server" && q.kind !== "more");
         if (at < 0) at = this.queue.findIndex((q) => q.kind === "more");
-        if (at < 0 && now - this.lastSeen >= this.options.seenGap) at = this.queue.findIndex((q) => q.source === "seen");
+        const alarmOk = now - this.lastAlarm >= this.options.alarmGap;
+        if (at < 0 && now - this.lastSeen >= this.options.seenGap) at = this.queue.findIndex((q) => q.source === "seen" && (alarmOk || q.kind !== "alarm"));
         if (at < 0) return changed;
         const [item] = this.queue.splice(at, 1);
         const {queuedAt: _queuedAt, ...line} = item;
@@ -305,6 +309,7 @@ export class ArkLiveLog {
         if (this.lines.length > this.options.maxLines) this.lines.splice(0, this.lines.length - this.options.maxLines);
         this.lastShown = now;
         if (item.source === "seen") this.lastSeen = now;
+        if (item.kind === "alarm") this.lastAlarm = now;
         return true;
     }
 
