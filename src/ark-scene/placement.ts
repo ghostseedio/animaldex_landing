@@ -30,6 +30,7 @@ import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type Cano
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
 import {mapPlace, mapPoints, type MapPlace} from "@/ark-scene/map/place";
 import {isHost} from "@/ark-scene/map/species";
+import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {displayLength} from "@/ark-scene/sizes";
 import {arkBody, arkStats} from "@/ark-scene/stats";
 import type {ArkAnimal} from "@/ark-scene/types";
@@ -414,6 +415,19 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
                 continue;
             }
         }
+        // A water species whose zone's own place is not its water (`sea-depth.ts`): in the lake, or the sea off its zone's coast.
+        const depth = speciesDepth(animal.model_slug, zoneKey);
+        const wet = depth ? waterHomeSpot(depth, zoneKey as ArkAnimal["zone"], slotIndex, rank, displayLength(animal)) : null;
+        if (wet) {
+            const chosen: Placement = {x: wet.x, z: wet.z, ground: sampleGround(wet.x, wet.z).height, yaw: ((slotHash >>> 4) % 1000) / 1000 * Math.PI * 2, water: true};
+            const cluster = clusters.get(key)!;
+            if (cluster.count > 1) {
+                chosen.leader = cluster.leader;
+                chosen.rank = rank;
+            }
+            placed.set(animal.id, chosen);
+            continue;
+        }
         const kind = slotKind(animal, slotIndex);
         const centreIndex = gridIndex(layoutOf(zoneKey, site), kind, slotIndex);
         const centre = gridSpot(zoneKey, site, centreIndex);
@@ -421,7 +435,8 @@ export function placeAnimals(animals: ArkAnimal[]): Map<string, Placement> {
         if (rank > 0) {
             // A less dominant kind's herd keeps a little more apart.
             const spread = 1 + 0.35 * (1 - arkStats(animal).dominance / 100);
-            const gap = Math.max(site.spacing * 0.45, displayLength(animal) * 0.85) * spread;
+            // (In the water, a school's members at least 1.3 body lengths apart: side by side, never touching.)
+            const gap = Math.max(site.spacing * 0.45, displayLength(animal) * (depth ? 1.3 : 0.85)) * spread;
             spot = clusterSpot(zoneKey, site, centreIndex, centre, gap, rank, slotHash) ?? centre;
         }
         const chosen = placementAt(site, spot.x, spot.z, slotHash);
