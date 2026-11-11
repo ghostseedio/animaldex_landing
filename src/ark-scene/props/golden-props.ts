@@ -136,7 +136,9 @@ function framed(shot: PropsShot, marks: PropsMarks, stats: PropsStats, locate: L
         case "nest_eaves": {
             const nest = stats.nests.find((n) => n.form === "mud_cup") ?? stats.nests.find((n) => n.form === "ball");
             if (!nest) return null;
-            return {view: look(nest, 2.4, 1.52, nestTurn(nest) + 0.35, -0.15), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
+            // Along the wall at the eave's height (the camera cannot look up from below): the cups seated under the roof,
+            // backs to the wall, seen in profile.
+            return {view: look(nest, 2.2, 1.36, nestTurn(nest) + 1.2, -0.25), hours: 15, weather: null, environment: calm, anchor: `eaves ${nest.form} ${nest.key}`, minDistance: 0.3};
         }
         case "nest_grebe": {
             const nest = stats.nests.find((n) => n.form === "floating");
