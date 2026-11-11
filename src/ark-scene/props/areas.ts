@@ -426,7 +426,8 @@ function* mountain(): Generator<void, {outcrops: PropInstance[]; dusted: PropIns
             // hangs out over the drop; a tint close to the terrain's rock (the tones are strataOutcrop's).
             const up = new Vector3(surface.normal.x * 0.75, 1 - 0.75 + surface.normal.y * 0.75, surface.normal.z * 0.75).normalize();
             const instance: PropInstance = {x, y: surface.height - size * 0.88 * 0.6, z, turn: ledge.yaw, scale: size / 2.5, up, tint: new Color(shade, shade, shade)};
-            (surface.height > OUTCROP_DUST ? dusted : outcrops).push(instance);
+            // Dusted only high up where the terrain has patchy snow round it (snow.ts mean at a third's cover).
+            (surface.height > OUTCROP_DUST && snowCover(surface.height, slope, 0, 0.35).mean > 0.1 ? dusted : outcrops).push(instance);
         }
         // A fan of scree below it, downhill.
         for (let s = 0; s < 46; s++) {
@@ -548,7 +549,7 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     // The outcrops below the snow keep the ground's look whatever the weather's snow (the terrain draws no snow there):
     // no lying snow on them; those above OUTCROP_DUST a light dusting, as the terrain's patchy snow round them.
     const bareRock = propMaterial({flatShading: true, texture: 5, textureScale: 0.5});
-    const dustedRock = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5, dust: 0.3});
+    const dustedRock = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5, dust: 0.25});
     const snow = propMaterial({roughness: 0.75, texture: 7, textureScale: 0.35, textureStrength: 0.6});
     const foliage = propMaterial({doubleSide: true});
     const water = new MeshStandardMaterial({color: new Color("#4d5f66"), roughness: 0.04, metalness: 0.85, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -2});

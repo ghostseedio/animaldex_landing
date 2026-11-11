@@ -144,7 +144,7 @@ export const PROPS_WEATHER = {
  * colour, projected three ways in world space, so the props share the
  * ground's and the rocks' grain (until the textures are in, plain colour).
  */
-export function propMaterial(options: {cold?: boolean; roughness?: number; doubleSide?: boolean; flatShading?: boolean; texture?: number; textureScale?: number; textureStrength?: number; /** Drawn to a stage (a growing nest): vertices whose `aBuild` is past the instance's `iStage` collapse away. */ growth?: boolean; /** (cold) Snow always lying on its upward faces, at least this much (0–1): high rock. */ dust?: number} = {}): MeshStandardMaterial {
+export function propMaterial(options: {cold?: boolean; roughness?: number; doubleSide?: boolean; flatShading?: boolean; texture?: number; textureScale?: number; textureStrength?: number; /** Drawn to a stage (a growing nest): vertices whose `aBuild` is past the instance's `iStage` collapse away. */ growth?: boolean; /** (cold) A fixed dusting of snow on its upward faces (0–1) in place of the weather's lying snow: high rock by the snow line. */ dust?: number} = {}): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: options.roughness ?? 0.9, metalness: 0, flatShading: options.flatShading ?? false});
     if (options.doubleSide) material.side = 2;
     const cold = Boolean(options.cold);
@@ -189,7 +189,7 @@ ${layer >= 0 ? `if (propTexReady > 0.5) {
     diffuseColor.rgb *= mix(vec3(1.0), pd, ${(options.textureStrength ?? 0.85).toFixed(2)});
 }` : ""}
 diffuseColor.rgb *= 1.0 - 0.3 * propWet;
-${cold ? `float propWhite = clamp(propFrost * 0.65 * smoothstep(0.1, 0.8, vPropUp) + max(propSnow, ${(options.dust ?? 0).toFixed(3)}) * smoothstep(0.35, 0.8, vPropUp), 0.0, 1.0);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), propWhite);` : ""}`
+${cold ? `float propWhite = clamp(propFrost * 0.65 * smoothstep(0.1, 0.8, vPropUp) + ${options.dust ? (options.dust).toFixed(3) : "propSnow"} * smoothstep(0.35, 0.8, vPropUp), 0.0, 1.0);\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.9, 0.93, 0.97), propWhite);` : ""}`
             )
             .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, 0.22, propWet * 0.85);");
     };

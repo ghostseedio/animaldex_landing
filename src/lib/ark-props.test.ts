@@ -674,8 +674,7 @@ test("props outcrops: below the snow, on slopes a slab can sit on, sunk and tilt
             // Sunk: its base well under the ground (60% of its 0.88 × size height; scale = size / 2.5).
             const scale = Math.hypot(matrices[i * 16], matrices[i * 16 + 1], matrices[i * 16 + 2]);
             assert.ok(surface.height - y > 0.5 * 0.88 * scale * 2.5, "sunk");
-            if (batch === dusted) assert.ok(surface.height > OUTCROP_DUST);
-            else assert.ok(surface.height <= OUTCROP_DUST);
+            if (batch === dusted) assert.ok(surface.height > OUTCROP_DUST && snowCover(surface.height, 1 - surface.normal.y, 0, 0.35).mean > 0.1);
         }
     }
     areas.dispose();
