@@ -211,7 +211,10 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
         if (!hourOk(template, input.hours)) continue;
         if (template.sex === "male" && sex === "female") continue;
-        const chance = weight * 0.7 * seasonFactor(species, template.season, input.start);
+        // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say.
+        const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
+        if (id === "nest_build" && nestSource && (!building || building.stage >= 1)) continue;
+        const chance = weight * 0.7 * (building ? 1 : seasonFactor(species, template.season, input.start));
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
@@ -298,6 +301,40 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
     }
 }
 
+// MARK: Other lanes' sources (wired by the scene once those lanes are in: see docs/ark/behaviour-recipes.md)
+
+/** A nest the props lane draws for an animal (its site and how far built it is at a world time), or null. */
+export type NestSource = (animalId: string, epochSeconds: number) => {x: number; y: number; z: number; stage: number} | null;
+/** Ambient fish schools near a point at a world time (the reef lane's `fishSchoolsNear`). */
+export type FishSource = (pos: {x: number; y?: number; z: number}, radius: number, epochSeconds: number) => Array<{centre: {x: number; y: number; z: number}; radius: number; heading: {x: number; y: number; z: number}; speed: number; mode: string}>;
+let nestSource: NestSource | null = null;
+let fishSource: FishSource | null = null;
+
+/** The props lane's nests: a builder carries its material to the props' nest for it, and builds while that nest is growing. */
+export function setNestSource(source: NestSource | null) {
+    nestSource = source;
+    forgetRecipes();
+}
+/** The reef lane's ambient schools: a chase goes after the nearest school (where it will be), a plunge into it. */
+export function setFishSource(source: FishSource | null) {
+    fishSource = source;
+    forgetRecipes();
+}
+export function hasNestSource(): boolean {
+    return Boolean(nestSource);
+}
+
+/**
+ * The adapter for the props lane (`props/nest-growth.ts`): its sites (`nestSites()`, with `sitter`) and stages
+ * (`nestStage(speciesId, siteId, arkDay)`), and the Ark day at a world time. Pure, as the props' own schedule is.
+ */
+export function nestSourceFromProps(props: {sites: () => Array<{sitter: string | null; speciesId: string; siteId: string; position: {x: number; y: number; z: number}}>; stage: (speciesId: string, siteId: string, arkDay: number) => number; arkDayAt: (epochSeconds: number) => number}): NestSource {
+    return (animalId, epochSeconds) => {
+        const site = props.sites().find((s) => s.sitter === animalId);
+        return site ? {...site.position, stage: props.stage(site.speciesId, site.siteId, props.arkDayAt(epochSeconds))} : null;
+    };
+}
+
 // MARK: Nests
 
 const nestSites = new Map<string, Spot | null>();
@@ -315,6 +352,8 @@ function nestYear(species: SpeciesRecipes, epochSeconds: number): number {
  * mound; a hole in bark for a cavity. Null if it builds none.
  */
 export function nestSiteOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, slug: string, kit: ScheduleKit, epochSeconds: number): Spot | null {
+    const props = nestSource ? nestSource(animal.id, epochSeconds) : null;
+    if (props) return {x: props.x, y: props.y, z: props.z, nx: 0, ny: 1, nz: 0, point: null};
     const species = speciesRecipes(slug);
     if (!species.nest) return null;
     const key = `${animal.id}#${nestYear(species, epochSeconds)}`;
@@ -402,9 +441,11 @@ export type RecipeAct = {
     prey: Key["prey"];
     /** A catch at this step: where and whether it came off. */
     catch: Key["catch"];
-    fx: {kind: NonNullable<BlockDef["fx"]>; at: P; id: string; during: boolean} | null;
+    fx: {kind: NonNullable<BlockDef["fx"]>; at: P; id: string; during: boolean; when: "start" | "end" | "during"} | null;
     mark: {kind: NonNullable<BlockDef["mark"]>; at: P; id: string; from: number} | null;
     label: string;
+    /** A murmuration's centre and seed (the scene draws its ambient flockmates from the same function). */
+    flock?: {centre: P; seed: number; t0: number; t1: number} | null;
 };
 
 export type RecipePose = TripPose & {act?: RecipeAct | null};
@@ -504,9 +545,19 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             return anchor;
         case "up":
             return {x: pos.x, y: pos.y + (step.h ?? 1) * scaleUp, z: pos.z};
+        case "prey":
         case "water":
-        case "over_water":
-        case "prey": {
+        case "over_water": {
+            // The reef lane's schools, where wired: the nearest one, where it will be when it gets there.
+            if (fishSource && (step.to === "prey" || block.id === "dive_air" || block.id === "dive_feet")) {
+                const school = fishSource(origin, Math.max(step.r ?? 12, 8), ctx.t0)[0];
+                if (school) {
+                    const lead = Math.min(Math.hypot(school.centre.x - pos.x, school.centre.z - pos.z) / Math.max(speedOf(block, pace(owner.profile, length), 0), 0.5), 6);
+                    const x = school.centre.x + school.heading.x * school.speed * lead;
+                    const z = school.centre.z + school.heading.z * school.speed * lead;
+                    if (sampler.heightAt(x, z) < -0.25) return {x, y: step.to === "prey" ? Math.min(school.centre.y, -0.2) : -Math.max(length * 0.3, 0.06), z};
+                }
+            }
             const depth = step.to === "prey" ? Math.max(length * 1.2, 0.5) : 0.25;
             const reach = Math.max(step.r ?? Math.min(Math.max(length * 40, 4), 14), 1.5);
             const water = waterNear(world, origin.x, origin.z, reach, depth, hashString(`${ctx.seed}#${Math.floor(random() * 1e6)}`));
@@ -818,7 +869,7 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
 function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof keyPose>): RecipeAct {
     const b = key.block;
     const states = b.states;
-    const fx = b.fx ? {kind: b.fx, at: b.fxAt === "end" ? key.to : b.fxAt === "during" ? at.p : key.from, id: `${episode.id}#${index}`, during: b.fxAt === "during"} : null;
+    const fx = b.fx ? {kind: b.fx, at: b.fxAt === "end" ? key.to : b.fxAt === "during" ? at.p : key.from, id: `${episode.id}#${index}`, during: b.fxAt === "during", when: b.fxAt ?? "start"} : null;
     return {
         episode: episode.id,
         recipe: episode.recipe,
@@ -1097,7 +1148,7 @@ function murmurationPose(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKi
         moving: true,
         aloft: true,
         beat: "fly",
-        act: {episode: `murmuration#${m.seed}#${Math.floor(m.t0)}`, recipe: "murmuration", block: "fly", state: "fly", u: (epoch - m.t0) / (m.t1 - m.t0), pitch: -climb * k, roll: -0.4 * k * Math.sin(epoch * 0.9 + index), own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: TEMPLATES.murmuration.label}
+        act: {episode: `murmuration#${m.seed}#${Math.floor(m.t0)}`, recipe: "murmuration", block: "fly", state: "fly", u: (epoch - m.t0) / (m.t1 - m.t0), pitch: -climb * k, roll: -0.4 * k * Math.sin(epoch * 0.9 + index), own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: TEMPLATES.murmuration.label, flock: m}
     };
 }
 
@@ -1156,7 +1207,7 @@ function crossingPose(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: 
         ...base,
         y,
         beat: b.beat,
-        act: {episode: `cross#${trip.slot}`, recipe: "crossing", block: b.id, state: b.states[0], u, pitch: b.pitch ?? 0, roll: 0, own: false, carry: null, prey: null, catch: null, fx: b.fx ? {kind: b.fx, at: {x: base.x, y: 0, z: base.z}, id: `cross#${owner.animal.id}#${trip.slot}#${b.id}`, during: b.fxAt === "during"} : null, mark: null, label: b.label}
+        act: {episode: `cross#${trip.slot}`, recipe: "crossing", block: b.id, state: b.states[0], u, pitch: b.pitch ?? 0, roll: 0, own: false, carry: null, prey: null, catch: null, fx: b.fx ? {kind: b.fx, at: {x: base.x, y: 0, z: base.z}, id: `cross#${owner.animal.id}#${trip.slot}#${b.id}`, during: b.fxAt === "during", when: b.fxAt ?? "start"} : null, mark: null, label: b.label}
     };
 }
 
@@ -1188,6 +1239,33 @@ function postureOf(owner: TripOwner, base: TripPose): RecipePose {
     if (!posture) return base;
     const roll = posture === "hang" || (posture === "float" && base.y <= 0.02) ? Math.PI : 0;
     return {...base, act: {episode: "sleep", recipe: "posture", block: "sleep_pose", state: `sleep_${posture}`, u: 0, pitch: posture === "curl" ? 0.15 : 0, roll, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: `sleeps (${posture.replace("_", " ")})`}};
+}
+
+/** How long a dug hole, a mound or a hollow stays (world seconds), fading. */
+export const MARK_SECONDS = 20 * 60;
+
+export type RecipeMark = {id: string; kind: NonNullable<BlockDef["mark"]>; x: number; y: number; z: number; size: number; from: number; to: number};
+
+/**
+ * The marks an animal's recent episodes left (holes, mounds, hollows), still there at a time: pure in its trips, so
+ * every viewer, and one who arrives late, sees the same ones. `trips` are its trips of the last `MARK_SECONDS`.
+ */
+export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit: ScheduleKit): RecipeMark[] {
+    const out: RecipeMark[] = [];
+    for (const trip of trips) {
+        const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
+        if (!owner || trip.end < epoch - MARK_SECONDS) continue;
+        const episode = stayEpisode(world, trip, owner, kit);
+        if (!episode) continue;
+        for (let i = 0; i < episode.keys.length; i++) {
+            const key = episode.keys[i];
+            if (!key.block.mark || key.t0 > epoch) continue;
+            // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
+            const kind = episode.recipe === "dig_burrow" || (episode.recipe === "beach_nest" && i > 2) ? "mound" : key.block.mark;
+            out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
+        }
+    }
+    return out;
 }
 
 /** For the tests and the review: a stay's episode for a trip (null: none). */

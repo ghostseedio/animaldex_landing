@@ -34,7 +34,7 @@ import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
-import {episodeOfTrip, episodePose, forgetRecipes, recipeIntent, type Episode, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
 
@@ -1161,6 +1161,18 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
  */
 export function poseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: number): RecipePose {
     return episodePose(world, trip, basePoseOnTrip(world, trip, epochSeconds), epochSeconds, KIT);
+}
+
+/** The marks (holes, mounds, hollows) an animal's recent recipe episodes left, still there now (pure: its last slots' trips). */
+export function recipeMarks(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): RecipeMark[] {
+    const trips: Trip[] = [];
+    for (let back = 0; back < Math.ceil(MARK_SECONDS / SLOT_SECONDS) + 1; back++) trips.push(tripAt(world, profile, animal, epochSeconds - back * SLOT_SECONDS, hoursAt, activity));
+    return marksOf(world, trips, epochSeconds, KIT);
+}
+
+/** An animal's nest site this season (for a builder, until the props lane's nests are wired), or null. */
+export function recipeNest(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number): Spot | null {
+    return nestSiteOf(world, profile, animal, profile.slug, KIT, epochSeconds);
 }
 
 /** A trip's recipe episode at its destination, if it has one (for the tests and the review sample). */
