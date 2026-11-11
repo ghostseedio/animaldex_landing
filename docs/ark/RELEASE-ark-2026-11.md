@@ -20,9 +20,9 @@ Each lane's branch head as merged. "Pending" heads have newer work not yet in th
 | Assets | `ark-assets` | 874a8d84 | Trees (33 variants), plants (76), rocks (21), forest floor (13): all generated in-repo, CC0 |
 | Reef | `ark-graphics-reef` | 84226995 | Corals, sponges, anemones, kelp, seagrass, 15 ambient fish schools that split round hunters |
 | Attach points | `ark-graphics-attach` | 100f6f6d | Attach points on the drawn trees, rocks, ledges, hollows, eaves, limbs, fence posts; `snow.ts`; sliced `prepareAttachPoints`; true-size close-up cameras |
-| Map | `ark-map` | acdfe23d | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
+| Map | `ark-map` | fd384d86 | B3/B4 placement for every type, the spawn validator, grips, partners on hosts, the hamlet (home plots, residents, indoor/outdoor rotation) |
 | Props | `ark-props` | 657915ea | Nests by species (growing), homes, area details, home layout, fence posts, per-plot yards and gardens, the coop, hamlet buildings per plot, thinned crops under reserved plots |
-| Behaviour | `ark-behaviour` | 3d3ecc22 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
+| Behaviour | `ark-behaviour` | 16a098d1 | The shared schedule: goals, grazing beats, land↔water crossings, predator spacing (≥ 20 m), wariness by sight, variety, shore haul-outs, no teleports, resting at roost, hamlet plots in the walk grid |
 | Behaviour recipes | `ark-behaviour-recipes` | f1c88d05 | 71 blocks, recipes for 2,555 species (fishing birds, contests, nest building, murmurations, digging, swarms, mixed flocks, molehills, bats hanging and their dusk emergence), seeded sex and the duller sex, sitters on nests, coats from wallows |
 | Intelligence | `ark-intelligence-web` | c1a02c45 | The local reactive layer near the camera: head look, perception, fleeing, camera habituation, storm alarms |
 | Rig player | `ark-rig-publish` | a8cc915f | The v2 rig set first with the v1 fallback, flight gated by the manifest, flight/look/beat/recipe clips, head look on the rig's bones |
@@ -132,12 +132,10 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 7. Flags the owner chooses, one at a time.
 
 ## 8. Known issues (at m5)
-- **Red tests on `ark-release` 8de9d06e (2,236/2,239):**
-  - "the spawn validator places every catalogue species": amazonian-giant-centipede `invalid_surface` (a tree climber on the forest floor). Only on release: the map branch (0 failures) lacks assets 874a8d84's emergent crowns and their attach points. Map lane.
-  - Behaviour's two, fixes coming:
-  - "at the shore nothing jumps": a polar bear's walk leg over a cliff (`exit_water -> walk`, 10 m in a second).
-  - "divers breathe on their way" (map's breath-trip test): an orca moves backwards in the first 0.25 s of a breath, because a trip starts by turning in place while it already swims the new way. It comes with release's behaviour (the map branch lacks behaviour 3d3ecc22).
-- **Default view** (corrected check, b20469d3): backwards 0.9%, nothing backwards over 1 s, ground turns 0 a minute (median), pace ratio median 1.26, nothing over 1.61×. Circling, all mild: a plains zebra at 5.9 a minute (watch, graze), two mallards at 4.9 (forage), a harbour seal at 3.2, an emperor penguin at 3.
+- **Red tests on `ark-release` 87b551a9 (2,240/2,242), both the recipes lane's red fox, fix coming:**
+  - "no spinning": the red fox's pounce turns 1.06 full turns in 20 s.
+  - "the garden pond": a red fox comes within 1.23 m of the pond's middle while foraging (walk, forage). Behaviour blocks the pond for walks; the recipes' forage episode still crosses it.
+- **Default view** (corrected check, after behaviour 16a098d1, two runs): backwards 0.9–1.0%, ground turns 0 a minute (median). **Walk pace ratio median 0.42** (it was 1.22–1.49 in every run before): walkers grazing, grooming, resting and foraging move at about 0.4× their walk clip's own ground speed for 15–20 s at a time (zebras, goats, camels, a cheetah, an elephant, a buffalo), so the clip plays in slow motion. Behaviour lane. Circling: an African forest buffalo at 16.5 a minute (groom), an elephant at 5.7 (graze), zebras at 5–6.
 - **Backfill view (1×):** the pets are spread over the plots. Tiny animals no longer form herds (home growth 7588a2e8).
 - **House_fields at night** (0f4e76b5): a golden retriever stood in the garden pond. Home growth 7588a2e8 keeps resident spots out of water; a roaming dog's path is with behaviour.
 - **Dens** (8de9d06e): the props' entrances and the sleep lane's going-in now read the map's `map:` roost ids (they drew no den and sank no sleeper at a map roost before). Golden den_rock: the rock hyrax's den on a rock face.
