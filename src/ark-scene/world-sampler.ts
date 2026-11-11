@@ -19,6 +19,7 @@ import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
+import {floorObstacles} from "@/ark-scene/floor-assets";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -46,7 +47,9 @@ export const ATTACH_TAGS = [
     "shade",
     // (2026-11-11, from the graphics lane's new points: the drawn hollows in tree trunks; fence posts and roof edges.)
     "tree_hollow",
-    "post"
+    "post",
+    // (Graphics batch 6: the top of a fallen log, where a small animal basks, perches or runs along.)
+    "log_top"
 ] as const;
 export type AttachTag = (typeof ATTACH_TAGS)[number];
 
@@ -238,6 +241,20 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     }));
     tasks.push(once(() => {
         obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+    }));
+    // The fallen logs (graphics batch 6, `floor-assets.ts` floorObstacles: circles along each log): walkers go round them;
+    // a small animal (up to 0.8 m) may climb onto one, its top a place to bask, perch or run along.
+    let logs: Array<{x: number; z: number; radius: number}> = [];
+    tasks.push(once(() => {
+        logs = floorObstacles();
+    }));
+    tasks.push(chunked(() => logs.length, 60, (k) => {
+        const log = logs[k];
+        // (0.9 m more than the log, as for a fence: the walk grid's 2 m cells, whose centres are tested, never step through it.)
+        obstacles.push([log.x, log.z, log.radius + 0.9]);
+        const s = surface(log.x, log.z);
+        if (s.waterDepth > 0) return;
+        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
     }));
     // The hamlet's plots (`setBehaviourHomePlots`, the map lane's homePlots): their houses, barns and coops, and the
     // props' picket and paddock fences, so a wild walker's path goes round them. Doors are outside the walls and the

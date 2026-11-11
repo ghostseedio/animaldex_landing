@@ -6,6 +6,7 @@ import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule"
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {ATTACH_TAGS, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {homePlots} from "@/ark-scene/map/hamlet";
+import {floorObstacles} from "@/ark-scene/floor-assets";
 import {paddockRect, paddockSegments, picketRuns, plotFrame} from "@/ark-scene/props/home-layout";
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt} from "@/ark-scene/sampler";
@@ -93,6 +94,12 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
                 if (s.waterDepth <= 0) add({tag: "shade", x: item.x + 0.7, y: s.height, z: item.z + 0.4, ...UP, yaw: item.rotation, size: [0.02, 0.9], zone: s.zone});
             }
         }
+    }
+    // (Graphics batch 6's fallen logs: their tops, added 2026-11-11 to the build, here as there.)
+    for (const log of floorObstacles()) {
+        const s = surface(log.x, log.z);
+        if (s.waterDepth > 0) continue;
+        add({tag: "log_top", x: log.x, y: s.height + Math.max(2 * (log.radius - 0.1), 0.1), z: log.z, ...UP, yaw: 0, size: [0.02, 0.8], zone: s.zone});
     }
     const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
         for (let d = 0; d < 6; d += 0.25) {
@@ -280,4 +287,22 @@ test("the hamlet's plots: houses, barns, coops and fences block the walk grid, b
     } finally {
         setBehaviourHomePlots(null);
     }
+});
+
+test("fallen logs: walkers go round them, and their tops are a place for small animals", () => {
+    const logs = floorObstacles();
+    assert.ok(logs.length > 0, "graphics batch 6 has fallen logs");
+    const grid = new NavGrid(allAtOnce);
+    for (const log of logs) assert.ok(allAtOnce.blocked(log.x, log.z, 0.2), `a log at ${log.x.toFixed(1)},${log.z.toFixed(1)} is not an obstacle`);
+    // Every log circle on dry land has a top to stand on, raised over the ground, for animals up to 0.8 m.
+    const tops = allAtOnce.attachPoints("log_top");
+    assert.ok(tops.length > 0 && tops.length <= logs.length);
+    for (const top of tops) {
+        assert.ok(top.y > allAtOnce.heightAt(top.x, top.z), "a log's top is above the ground");
+        assert.ok(top.size[1] <= 0.8);
+    }
+    // The grid's cell under a log's middle circle (the log itself) is not walked through.
+    const middles = logs.filter((_, k) => k % 3 === 1);
+    const blockedCells = middles.filter((log) => !grid.walkable(log.x, log.z)).length;
+    assert.equal(blockedCells, middles.length, `only ${blockedCells} of ${middles.length} log middles off the grid`);
 });

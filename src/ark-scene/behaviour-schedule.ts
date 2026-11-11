@@ -29,6 +29,7 @@
 import {bodyLengthsPerSecond, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {waterLevelAt} from "@/ark-scene/water-level";
 import type {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
@@ -273,10 +274,10 @@ const ROOST_TAGS: Record<ArkRoost, AttachTag[]> = {
 
 const INTERACTION_TAGS: Partial<Record<ArkInteraction, AttachTag[]>> = {
     drink_edge: ["water_edge"],
-    bask_rock: ["rock_top"],
+    bask_rock: ["rock_top", "log_top"],
     graze_grass: ["grass"],
     perch_branch: ["branch"],
-    perch_rock: ["rock_top", "post"],
+    perch_rock: ["rock_top", "post", "log_top"],
     dig_soil: ["worm_hole", "burrow_entrance"],
     leaf_litter: ["leaf_litter"],
     flower: ["flower"],
@@ -417,6 +418,13 @@ function groundSpot(world: ScheduleWorld, x: number, z: number): Spot {
     return {x, y: Math.max(world.sampler.heightAt(x, z), 0), z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
+/**
+ * The water's surface where the schedule puts something on it (graphics batch 6, `water-level.ts`): the lake's and the
+ * river's fixed level, the sea's mean (0; the scene's depth bands follow the tide). Read when a trip is planned, not
+ * every frame (it samples the ground).
+ */
+const surfaceAt = (x: number, z: number) => waterLevelAt(x, z, 0);
+
 const raised = (world: ScheduleWorld, p: Spot) => p.y > Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.4;
 const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < 0;
 
@@ -444,8 +452,10 @@ export function maxSlopeOf(animal: ScheduleAnimal): number {
 function waterSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, x: number, z: number, random: () => number): Spot {
     const water = world.nav.nearest(x, z, "swim", Math.max(animal.length * 0.6, 0.4)) ?? world.nav.nearest(x, z, "swim", 0.2, 20) ?? {x, z};
     const floor = world.sampler.heightAt(water.x, water.z);
-    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? 0 : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(-animal.length * 0.4 - random() * Math.max(-floor - animal.length, 0), -0.2));
-    return {x: water.x, y: Math.min(y, 0), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
+    // (On the surface: the lake's and river's fixed level, the sea's mean: the scene's depth bands follow the tide.)
+    const level = surfaceAt(water.x, water.z);
+    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? level : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - random() * Math.max(-floor - animal.length, 0), level - 0.2));
+    return {x: water.x, y: Math.min(y, level), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
 /** A point to go to within a range of a centre: walkable land (or water for a swimmer). */
@@ -485,7 +495,7 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
-        const y = profile.roost === "water" && floats(profile) ? 0 : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max(-floor * 0.5, 0.4), -0.3);
+        const y = profile.roost === "water" && floats(profile) ? surfaceAt(water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max(-floor * 0.5, 0.4), -0.3);
         return {x: water.x, y, z: water.z, nx: 0, ny: 1, nz: 0, point: null};
     }
     return {...groundSpot(world, animal.home.x, animal.home.z)};
@@ -664,7 +674,7 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     // Air-breathers come up to breathe every few slots, then go back down.
     if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
         const near = world.nav.nearest(animal.home.x + (random() - 0.5) * 8, animal.home.z + (random() - 0.5) * 8, "swim", 0.6) ?? animal.home;
-        return {doing: "breathe", to: {x: near.x, y: 0, z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
+        return {doing: "breathe", to: {x: near.x, y: surfaceAt(near.x, near.z), z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
