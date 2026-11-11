@@ -273,7 +273,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     // which held the first frame back 5 s on the real backfill. The call's own task is ~160 ms on a phone.)
                     warmQueue = [ctx.scene];
                     warmPending = [];
-                    warmLimit = firstFrameMs === null ? 5000 : 1500;
+                    warmLimit = 1500; // (Some driver leaves a program unreported: the real backfill's desktop waited out 5 s for it.)
                 }
                 if (warmQueue.length) {
                     const target = ctx.renderTarget();
