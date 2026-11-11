@@ -93,7 +93,7 @@ export const TALK_WORDS_EN = {
     arkAboard: "Aboard the Ark",
     arkBroughtBy: "Brought by {founder} \u00b7 arrived {date}",
     arkVisiting: "Visiting: not aboard yet",
-    arkComesAboard: "When a step with it works, one comes aboard.",
+    arkComesAboard: "One comes aboard when someone captures it.",
     arkOpenFull: "Open the full Ark",
     arkLoading: "Bringing the Ark into view",
     arkUnavailable: "The Ark couldn't load just now.",
