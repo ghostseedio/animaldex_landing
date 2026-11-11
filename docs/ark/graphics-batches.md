@@ -55,3 +55,18 @@ Measurement caveat: from batch 2 on, other lanes ran `tsc` and Blender on the sa
 - **Trees:** scaled to the cottage (×1.15–1.6); leaves flutter; foliage lit on both sides.
 - **Flowers:** five-petal roses and open cups.
 - **Other:** muted corals, kept out of the beach's shallows; greener grass.
+
+Same-conditions A/B, batch 1 (188abb4b) against batch 2 (54f3ac3f). The runs were interleaved (A, B, A, B) on the loaded Mac, with three shots each:
+
+| | GPU drain ms (desktop) | Scene CPU ms (desktop) | GPU drain ms (phone, medium) | Scene CPU ms (phone, 4×) |
+|---|---|---|---|---|
+| batch 1 | 12.4–14.7 | 2.1–3.1 | 4.3–8.2 | 7.5–11.1 |
+| batch 2 | 13.9–16.8 (about +12%) | 2.6–3.0 (about +15%) | 4.8–8.1 (about +5%) | 8.4–11.0 (about +12%) |
+
+Every run held 60 fps. Under that load the phone profile sometimes dropped itself to the low tier when it loaded, for both batches alike.
+
+Golden shots added: `waves_beach` and `storm_trees`, each in its own pinned weather.
+
+Still open:
+- `caterpillar_leaf` needs leaf points taken from the real crown geometry. The asset lane's trees bring tagged points.
+- Kelp and seagrass are still flat cards (asset lane).

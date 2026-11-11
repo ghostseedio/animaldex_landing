@@ -91,6 +91,8 @@ export type GoldenWorld = {
     mountainArea: () => (XZ & {radius: number}) | null;
     /** The coral reef's middle, under the sea. */
     reef: () => XZ | null;
+    /** An open clearing inside the forest (a site's own ground), to look out at the trees from. */
+    forestClearing?: () => XZ | null;
 };
 
 export type GoldenView = {place: GoldenPlace; view: ArkCameraView; /** How the anchor was found (for the report). */ anchor: string};
@@ -199,9 +201,13 @@ export function goldenView(place: GoldenPlace, world: GoldenWorld): GoldenView {
 
         case "storm_trees": {
             const floor = world.forestFloor();
+            const clearing = world.forestClearing?.() ?? null;
             if (!floor) return fallback("no forest");
             const ground = world.groundAt(floor.x, floor.z);
-            return {place, anchor: "forest edge", view: {target: {x: floor.x, y: ground + 4, z: floor.z}, distance: 22, polar: 1.25, azimuth: outward(floor) + 0.2}};
+            // From inside the clearing, looking out at the trees beyond its edge.
+            const from = clearing ?? {x: floor.x, z: floor.z + 10};
+            const away = bearing(floor, from);
+            return {place, anchor: "forest edge from the clearing", view: {target: {x: floor.x, y: ground + 3.5, z: floor.z}, distance: 10, polar: 1.42, azimuth: away}};
         }
 
         case "reef_underwater": {

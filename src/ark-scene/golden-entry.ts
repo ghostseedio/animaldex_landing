@@ -45,7 +45,8 @@ function goldenWorld(handle: ArkSceneHandle): GoldenWorld {
             const site = ZONE_SITES.mountains;
             return {x: site.x, z: site.z - 6, radius: Math.max(centre.radius * 0.5, 26)};
         },
-        reef: () => ZONE_SITES.coral_reef
+        reef: () => ZONE_SITES.coral_reef,
+        forestClearing: () => ZONE_SITES.woodland
     };
 }
 
@@ -64,7 +65,8 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     // faces the sky a little (a limpet's); else the nearest.
     const score = (point: AttachPoint) => {
         const p = point.position;
-        if (shot.tag === "leaf") return p.y - Math.hypot(point.normal.x, point.normal.z) * 4 + (point.hostKind === "broadleaf" || point.hostKind === "orchard" ? 0 : 20);
+        // A leaf on top of an orchard tree's crown (its outside, in reach of a close camera).
+        if (shot.tag === "leaf") return (point.hostKind === "orchard" ? 0 : point.hostKind === "broadleaf" ? 30 : 60) - point.normal.y * 5 + p.y * 0.2;
         if (shot.tag === "house_wall") return (Math.abs(point.normal.x) > 0.5 ? 0 : 10) + Math.abs(p.y - (COTTAGE.floor + 1.4));
         if (shot.tag === "rock_face") {
             // Seaward (the camera stands in the shallows), low and wet, near the shore rocks.
@@ -109,7 +111,7 @@ async function microShot(handle: ArkSceneHandle, shot: NonNullable<(typeof GOLDE
     debug.controls.minDistance = 0.3;
     // The camera out along the surface's normal, lifted a little: it looks at the animal on its surface, from outside it.
     const out = n.clone();
-    if (shot.tag === "leaf") out.set(n.x * 3, 0.6, n.z * 3);
+    if (shot.tag === "leaf") out.set(n.x + 0.35, 1.6, n.z + 0.35);
     else out.y = Math.max(out.y, 0) * 0.55 + 0.35;
     if (Math.hypot(out.x, out.z) < 0.25) out.set(Math.sin(point.yaw + 0.6) * 0.8, out.y, Math.cos(point.yaw + 0.6) * 0.8);
     out.normalize();
