@@ -7,7 +7,9 @@ owner's approval of this release as a whole. Exception already approved: the rig
 - **Live today:** web landing main `76a4f5d1` (rollback sha `b0e6c20c463911969725fa001170e6add313483b`); server
   migrations up to `20261113160000` plus `20261111140000/160000/170000` and `20261110130000_web_ark_events`; functions
   voyage-world v1, dispatch-ark-digest-push v1, delete-account v64, generate-applied-insight v143; bucket
-  `talking-models/ark-rig/v1/` (1,971 rigs, inert until a web build reads them).
+  `talking-models`: the model set `v1/ark/` (2,630 species, manifest of 2026-11-10 07:09 GMT), the rig sets `ark-rig/v1/`
+  (1,971 species, 2026-11-10 23:38 GMT) and `ark-rig/v2/` (2,028 species, flight on, 2026-11-11 12:50 GMT); the rigs are
+  inert until a web build reads them (this release reads v2 first, v1 as the fallback).
 
 ## 1. What is included
 
@@ -43,17 +45,19 @@ Not yet in the release: `ark-scale-test`, newer rig-publish. The behaviour audit
 ### Server (AnimalDex, not applied)
 | Branch | Head | What |
 |---|---|---|
-| `ark-founders-server` | 041af963 | Migration `20261114100000_voyage_founders`, function `voyage-founder-story` |
+| `ark-founders-server` | **861b2b07** | Migration `20261114100000_voyage_founders`, function `voyage-founder-story`; names go on in the same window as the captures backfill |
 | `ark-captures-thrive` | **0ab8f4fb** (final) | Captures bring animals aboard, steps make them thrive: module, `voyage-world` routing, migrations `20261115100000`–`160000` (owner-approved design, D1–D12), and the Part A launch ecology (§7d) |
+| `ark-diet-audit` | **db9159c1** | Migration `20261116100000_voyage_diet_audit` (§3 row 11), the diet report |
 | `ark-aware-chat` | 55eb1114 | **Held** (owner decisions open): migration `20261114130000`, chat changes behind `ark_kin_activity` |
 | `ark-rigging` | dc7d9182 | Rig v5 tooling; the v2 set is produced from it (§5) |
+| `ark-rigging-v6` | 6b1b40a9 | `recache_ark.py` (the optional §5a step) |
 | `ark-closeup-textures` | a501b005 | Close-up skin tooling (the 678 MiB set is built locally) |
 
 ### Apps (3.3, not submitted)
 | App | Branches | Notes |
 |---|---|---|
-| iOS (AnimalDex repo) | `ark-founders-ios` b906ab9a, `ark-thrive-ios` 764fc681, `ark-runtime-ios` (runtime bridge, in progress) | main `3bf8a4be` already has 3.3 with the Ark panel behind `ark_panel` |
-| Android | `ark-founders-android` 5425029, `ark-thrive-android` 31075a3, `ark-runtime-android` (in progress) | main `799b928` has 3.3.0 (27) |
+| iOS (AnimalDex repo) | `ark-founders-ios` **05004008**, `ark-thrive-ios` 316354cc, `ark-runtime-ios` **82eeee05** | main `3bf8a4be` already has 3.3 with the Ark panel behind `ark_panel` |
+| Android (AnimalDex-android) | `ark-founders-android` **2ce6ee9**, `ark-thrive-android` c0c6f3d, `ark-runtime-android` **5239d59** | main `799b928` has 3.3.0 (27) |
 
 ## 2. Flags and their defaults
 Server flags live in `voyage_config` (flip with the SQL in AnimalDex `docs/ark/DEPLOY-CHECKLIST.md` §G). Every new flag
@@ -112,7 +116,7 @@ Each with `supabase/scripts/db-migrate.sh rehearse <version>` first (chained reh
 5. **Check on the VM:** /ark loads the built worker files in `public/ark/` (`ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`). They are made by the `prebuild` script, which `npm run build` runs (the Dockerfile's build step does). Locally `next start` answered every URL with a 308 to itself (the site's routing, not the Ark): open /ark and the embed on the VM after the deploy to be sure.
 
 ## 5. Bucket steps (`talking-models`)
-1. **Rig `v2`** (owner-approved once checks pass): `ARK_FLIGHT_APPROVED=1 python3 publish_rig.py --prefix ark-rig/v2 --no-facing`, dry run first, then `--apply`. Inert until a web build reads it (this release reads v2 first).
+1. **Rig `v2`**: **already in the bucket** (2,028 species, flight on, manifest 2026-11-11 12:50 GMT; owner-approved). It was published with `ARK_FLIGHT_APPROVED=1 python3 publish_rig.py --prefix ark-rig/v2 --no-facing`. Inert until a web build reads it (this release reads v2 first).
 2. **The 14 turned birds' near/far** (`publish_ark.py`): only **with or after** the web deploy (the live web turns them itself; uploading first turns them twice). `publish_rig.py --apply` runs it first and refuses if anything else changed.
 3. **Close-up skins** (678 MiB, 2,630 species; `export_closeup.py`): **still needs the owner's approval.** Read only near the camera; 404s until uploaded.
 4. **`immutable` on the model files** (owner, 2026-11-11 about 22:00 WIB): §5a. **Optional, recommended skip**: they are already cached a year.
@@ -171,7 +175,7 @@ unchanged. Rollback: `recache_ark.py --rollback` (the same re-upload with the ol
 **The web build with captures + thrive ships together with the server's `capture_arrivals` flag** (captures-thrive design §10.2): the web reads the new keys, and the flag turns arrivals from captures on. Don't deploy one without the other.
 
 1. Server: founders migration (switch off) and `voyage-founder-story`; then the thrive function and migrations 3–7 (§3).
-2. Bucket: rig `v2`.
+2. Bucket: rig `v2` is already up (§5); nothing to do.
 3. Web: merge, build, deploy (§4); with it or after it, the 14 turned birds.
 3a. Bucket, optional (recommended skip, pending the owner): `immutable` on the model files (§5a), after the web deploy in the
     same window: `--dry-run`, `--canary`, `--apply`, `--verify`.
