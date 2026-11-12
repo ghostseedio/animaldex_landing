@@ -16,6 +16,8 @@ import {ARK_ENV, ARK_TIME} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {TOWN_TEXTURES} from "@/ark-scene/islands/town/render/textures";
 import {buildTownIsland, TOWN_TIERS, type TownTier} from "@/ark-scene/islands/town/render/index";
+import {buildZooHouses} from "@/ark-scene/islands/town/render/zoo-houses";
+import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import {local} from "@/ark-scene/islands/town/geom";
@@ -117,6 +119,8 @@ export function mountTown(el: HTMLElement) {
     ARK_ENV.wetness.value = Number(params.get("wet") ?? 0);
     ARK_ENV.rain.value = Number(params.get("rain") ?? 0);
     scene.add(town.root);
+    // (Lane TB: the zoo's houses, their tanks and halls, are drawn with the zoo's day, not the scenery.)
+    town.root.add(buildZooHouses(zooLayout(launchEnclosures()).enclosures).group);
     const post = new ArkPost(renderer, scene, camera, tier);
     let clock: TownClock = {hours: hours0, day: Number(params.get("day") ?? 20406)};
     const target = new Vector3();

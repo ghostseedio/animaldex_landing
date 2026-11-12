@@ -21,6 +21,8 @@ import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
 import type {TownPrepared} from "@/ark-scene/islands/town/prebuild";
 import type {TownIsland} from "@/ark-scene/islands/town/render/index";
+import type {WaterSpec} from "@/ark-scene/sea-depth";
+import type {PetHomes} from "@/ark-scene/islands/town/render/pet-homes";
 
 export type ArkIslandScene = {
     id: "town";
@@ -43,6 +45,16 @@ export type ArkIslandScene = {
     contains: (x: number, z: number) => boolean;
     /** The ground's height in the world frame (inside its square). */
     heightAt: (x: number, z: number) => number;
+    /**
+     * Lane TB: the ground as it is drawn there (world frame): its ground tile's triangles, its decals (roads, pavements,
+     * paths, fields, the zoo's ground, bridge decks) and its floors (`islands/town/drawn-ground.ts`). Feet, the
+     * grounding stand, contact shadows and selection rings stand on it, never on the wild island's sea floor.
+     */
+    /** `near`: the body's height (its pose's base): the floor it stands on where floors are stacked (balconies). */
+    drawnHeight: (x: number, z: number, near?: number) => number;
+    drawnGround: (x: number, z: number) => {height: number; nx: number; ny: number; nz: number};
+    /** The drawn ground under a point and the water's surface over it (null on dry land), for contact shadows and rings. */
+    groundUnder: (x: number, z: number, seaLevel: number) => {height: number; water: number | null};
     /** Lives on this island (the server's `island`, else a kept area). */
     has: (animal: Pick<ArkAnimal, "island" | "area">) => boolean;
     /** Part B (its chunks in its local frame, the streamer places them at `origin`). */
@@ -72,14 +84,30 @@ export type ArkIslandScene = {
     place: (animals: ArkAnimal[]) => Map<string, Placement>;
     /** The town's facts for a placed animal (its area, home, enclosure and range; local frame). */
     townPlace: (id: string) => TownPlace | undefined;
-    /** A zoo animal's hard bound: a world pose pulled back inside its enclosure's mask. */
-    bound: (id: string, pose: {x: number; z: number}) => void;
+    /**
+     * A zoo animal's hard bound: a world pose pulled back inside its enclosure's mask. Lane TB: and any town animal's
+     * scheduled pose under the drawn ground where no water is (a drink at the canal's walled edge, a swim by its wall)
+     * stands on the ground there instead, never in it.
+     */
+    bound: (id: string, pose: {x: number; z: number; base?: number; afloat?: boolean; water?: unknown; surface?: unknown}) => void;
     /** Its behaviour world in the world frame (`islands/town/sampler.ts`): places, ground, walk grid, obstacles. */
     sampler: () => ArkWorldSampler;
     /** Its colliders in the world frame (`islands/town/colliders.ts`, through L5's `collide/` per island). */
     colliders: () => ColliderSet;
     /** On the behaviour schedule (not one kept still at a window, behind the glass or in a tank or pool). */
     scheduled: (id: string) => boolean;
+    /**
+     * Lane TB: a tank's resident's pose now (the aquarium's tanks, a home's tank, a garden pond: `islands/town/tanks.ts`),
+     * world frame, at its drawn length and height and the shared clock (s); null for anyone else.
+     */
+    tankPose: (id: string, length: number, height: number, clock: number) => {x: number; z: number; yaw: number; pitch: number; base: number; spec: WaterSpec} | null;
+    /** Lane TB: held at its place (in a cage, a vivarium, a tank, a zoo house): never walks off it. */
+    held: (id: string) => boolean;
+    /**
+     * Lane TB: where a herd's member figure stands (its lowest point, m): in its tank's water, on its display's tray or
+     * its zoo house's floor (`ground`, its place's), else on the town's drawn ground there (never the wild sea floor).
+     */
+    figureBase: (id: string, x: number, z: number, ground: number, tall: number) => number;
     /** The most its home range may reach (m): its garden, paddock or enclosure. */
     rangeOf: (id: string) => number | null;
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
@@ -159,6 +187,14 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+    const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
+    const {setIslandWater} = await import("@/ark-scene/water-level");
+    const {homeSites, tankPose} = await import("@/ark-scene/islands/town/tanks");
+    const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
+    const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
+    const {modelBase} = await import("@/ark-scene/grounding/base");
+    const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
+    const {CANAL_LEVEL} = await import("@/ark-scene/islands/town/plan");
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -189,6 +225,23 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     }
     if (sliced) await pause();
     town.root.position.set(origin.x, 0, origin.z);
+    // Lane TB: the drawn ground's grid (the prebuild's, when there is one) and its walk surfaces: every decal the town
+    // draws, the zoo's included (and, as they change, the zoo's and the displays' floors: `walkSurfacesNow`).
+    primeTownDrawnGrid(prepared?.built?.grid.heights ?? null);
+    /** The zoo houses' floors and the drawn home displays' floors (cages' trays and perches, vivaria, garden rooms). */
+    let houseFloors = new Float32Array(0);
+    let petFloors = new Float32Array(0);
+    const walkSurfacesNow = () => {
+        const sources: Float32Array[] = [houseFloors, petFloors];
+        town.root.traverse((o) => {
+            const mesh = o as Mesh;
+            if (mesh.isMesh && (mesh.name === "decal" || mesh.name === "zoo:decal")) sources.push(mesh.geometry.getAttribute("position").array as Float32Array);
+        });
+        setTownWalkSurfaces(townWalkSurfaces(sources));
+    };
+    // Lane TB: the town's water at its own level for the schedule and the depth bands (the canal's 1.15 m, not the sea's 0).
+    const inside = (x: number, z: number) => Math.abs(x - origin.x) < def.half && Math.abs(z - origin.z) < def.half;
+    setIslandWater({level: (x, z) => (inside(x, z) ? townWaterLevel(x - origin.x, z - origin.z) : null), surface: (x, z) => (inside(x, z) ? townWaterSurface(x - origin.x, z - origin.z) : null)});
     // What Part B's streamer draws, and how much of the town is shown yet as it joins (decision 153).
     let streamDrawn: ((chunk: number) => boolean) | null = null;
     let joinOpen: string[] | null = null;
@@ -227,6 +280,36 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const zooStart = performance.now();
     let zooLife = buildZooLife(zooLayout(openKey.split(",")).enclosures, townHeight);
     town.root.add(zooLife.group);
+    houseFloors = zooLife.floors;
+    walkSurfacesNow();
+    // Lane TB: the pets kept at home, in their garden rooms, on their balconies, in their ponds (`render/pet-homes.ts`).
+    let petHomes: PetHomes | null = null;
+    let petKey = "";
+    const showPetHomes = (places: Map<string, TownPlace>) => {
+        const byHousehold = new Map<string, Set<string>>();
+        places.forEach((info) => {
+            if (!info.display) return;
+            let set = byHousehold.get(info.display.household);
+            if (!set) byHousehold.set(info.display.household, (set = new Set()));
+            set.add(info.display.id);
+        });
+        const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",");
+        if (key === petKey) return;
+        petKey = key;
+        const sites = homeSites(townHouseholds());
+        const used = Array.from(byHousehold.entries()).flatMap(([household, displays]) => {
+            const site = sites.get(household);
+            return site ? [{site, displays}] : [];
+        });
+        if (petHomes) {
+            town.root.remove(petHomes.group);
+            petHomes.dispose();
+        }
+        petHomes = buildPetHomes(used);
+        town.root.add(petHomes.group);
+        petFloors = petHomes.floors;
+        walkSurfacesNow();
+    };
     counted(zooStart);
     if (sliced) await pause();
     buildStats.wallMs = performance.now() - wallStart;
@@ -235,6 +318,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
+    /** The town's animals by id (a tank resident's slug and zone for its band). */
+    const townAnimals = new Map<string, ArkAnimal>();
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     let collidersMemo: {key: string; set: ColliderSet} | null = null;
     const STILL_WHERE = new Set(["window", "indoor", "pool"]);
@@ -249,6 +334,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
+        drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
+        drawnGround: (x, z) => townDrawnGround(x - origin.x, z - origin.z),
+        groundUnder: (x, z, seaLevel) => {
+            const lx = x - origin.x;
+            const lz = z - origin.z;
+            const height = townDrawnHeight(lx, lz);
+            // (The sea and the harbour at the sea's level; the canal, the millpond and the farm pond held by the lock.)
+            const ground = sampleTownGround(lx, lz);
+            const water = ground.height < seaLevel ? seaLevel : ground.surface === "water" ? Math.max(CANAL_LEVEL, ground.height + 0.05) : null;
+            return {height, water: water !== null && water > height ? water : null};
+        },
         has,
         grid: town.grid,
         spans: town.spans,
@@ -306,14 +402,29 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 zooLife.dispose();
                 zooLife = buildZooLife(zooLayout(placed.open).enclosures, townHeight);
                 town.root.add(zooLife.group);
+                houseFloors = zooLife.floors;
+                walkSurfacesNow();
             }
             towned = placed.town;
+            showPetHomes(placed.town);
+            for (const animal of animals) townAnimals.set(animal.id, animal);
             const world = new Map<string, Placement>();
             placed.places.forEach((p, id) => world.set(id, {...p, x: p.x + origin.x, z: p.z + origin.z}));
             return world;
         },
         townPlace: (id) => towned.get(id),
         bound: (id, pose) => {
+            if (pose.base !== undefined && !pose.water && !pose.surface) {
+                const lx = pose.x - origin.x;
+                const lz = pose.z - origin.z;
+                // (Under the analytic ground the scene would draw it afloat, under the drawn one: stood on the drawn ground.)
+                const analytic = townHeight(lx, lz);
+                const water = townWaterSurface(lx, lz);
+                if (pose.base < analytic - 0.02 && (water === null || analytic >= water)) {
+                    pose.base = townDrawnHeight(lx, lz, undefined, analytic);
+                    pose.afloat = false;
+                }
+            }
             const mask = towned.get(id)?.enclosure?.mask;
             if (!mask) return;
             const lx = pose.x - origin.x;
@@ -340,6 +451,24 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         colliders: () => {
             if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
             return collidersMemo.set;
+        },
+        tankPose: (id, length, height, clock) => {
+            const info = towned.get(id);
+            const tank = info?.tank;
+            const animal = tank ? townAnimals.get(id) : undefined;
+            if (!tank || !animal) return null;
+            const pose = tankPose(tank, animal, length, height, modelBase(animal.model_slug)?.plan ?? null, clock);
+            return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
+        },
+        figureBase: (id, x, z, ground, tall) => {
+            const info = towned.get(id);
+            if (info?.tank) return Math.max(info.tank.floor + 0.05, (info.tank.floor + info.tank.top) / 2 - tall / 2);
+            if (info && (info.display || info.where === "indoor" || info.where === "window" || info.where === "pool")) return ground;
+            return townDrawnHeight(x - origin.x, z - origin.z, undefined, ground);
+        },
+        held: (id) => {
+            const info = towned.get(id);
+            return Boolean(info && (info.tank || info.display || info.where === "indoor" || info.where === "window"));
         },
         scheduled: (id) => {
             const info = towned.get(id);
@@ -377,6 +506,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         home: {x: origin.x + def.home.target[0], z: origin.z + def.home.target[2], radius: 205, radiusTall: 230},
         worldRadius: half * 0.92,
         dispose: () => {
+            setIslandWater(null);
+            setTownWalkSurfaces(null);
+            petHomes?.dispose();
             zooLife.dispose();
             town.dispose();
         }

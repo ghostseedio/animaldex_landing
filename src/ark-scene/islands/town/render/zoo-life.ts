@@ -11,6 +11,7 @@ import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import type {TownClock} from "@/ark-scene/islands/town/people";
 import {iceLeft, zooFeedingAt, type ZooFood} from "@/ark-scene/islands/town/zoo-life";
+import {buildZooHouses} from "@/ark-scene/islands/town/render/zoo-houses";
 
 const UP = new Vector3(0, 1, 0);
 const FOOD_COLOUR: Record<ZooFood, string> = {fish: "#9fb3bf", hay: "#c9b26a", meat: "#8a3b30", fruit: "#d9822b", seed: "#c8a46b", insects: "#5a4a3a", pellets: "#9c7a4f"};
@@ -75,11 +76,15 @@ function prop(what: string, x: number, y: number, z: number, seed: number): Buff
     }
 }
 
-export type ZooLife = {group: Group; update: (clock: TownClock) => void; dispose: () => void; stats: () => {feeding: number}};
+/** `floors`: the zoo houses' floors for the town's drawn ground (lane TB, `drawn-ground.ts`). */
+export type ZooLife = {group: Group; update: (clock: TownClock) => void; dispose: () => void; stats: () => {feeding: number}; floors: Float32Array};
 
 export function buildZooLife(enclosures: readonly ZooEnclosure[], groundAt: (x: number, z: number) => number): ZooLife {
     const group = new Group();
     group.name = "town:zoo-life";
+    // Lane TB: the zoo's houses (the aquarium's tanks, the halls), their walls and roofs cut away close by.
+    const houses = buildZooHouses(enclosures);
+    group.add(houses.group);
     const parts: BufferGeometry[] = [];
     enclosures.forEach((e, i) => {
         if (e.shared) return;
@@ -140,7 +145,9 @@ export function buildZooLife(enclosures: readonly ZooEnclosure[], groundAt: (x: 
         group,
         update,
         stats: () => ({feeding}),
+        floors: houses.floors,
         dispose: () => {
+            houses.dispose();
             merged?.dispose();
             material.dispose();
             foodGeometry.dispose();
