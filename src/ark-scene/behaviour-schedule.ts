@@ -692,6 +692,34 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
         }
         spot = clearOfSolid(world, profile, animal, spot, true);
     }
+    // A roost on the ground it could never walk to: off its own stretch of ground (the walk chain kept it where it was,
+    // and its sleep, a stay, jumped it there), or further than it walks in a slot (`tooFarOnFoot`). A bed on its home
+    // ground instead, the same every night, and the same for everyone who asks: the way there, its sleep, a night watch,
+    // `restingAtRoost`, the props lane's den (decision 202: at its natural pace an alligator jumped 21 m into its sleep).
+    // (A walker that swims too, a penguin, the same: its roost on land is one it climbs out to on its own ground, by an
+    // edge on it. A roost in the water it swims to.)
+    if (walksGoals(profile) && !flies(profile) && !raised(world, spot)) {
+        const fits = (to: Spot) => !wet(world, to) && onItsGround(world, profile, animal, {doing: "sleep", to, mode: "ground", stay: []});
+        if (!wet(world, spot) && (!fits(spot) || tooFarOnFoot(world, profile, animal, spot))) {
+            // (The first of a few seeded spots round its home that fits, on land; else its home's own ground.)
+            const random = rng(hashString(`${animal.id}#bed`));
+            const onLand = {...profile, move: "walk" as const, seabed: false};
+            const radius = Math.min(homeRadius(profile, animal), 2);
+            let found = false;
+            for (let k = 0; k < 8 && !found; k++) {
+                let bed = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
+                if (world.nav.colliders) bed = clearOfSolid(world, onLand, animal, bed, true);
+                if (fits(bed) && !tooFarOnFoot(world, profile, animal, bed)) {
+                    spot = bed;
+                    found = true;
+                }
+            }
+            if (!found) {
+                const home = groundSpot(world, animal.home.x, animal.home.z);
+                if (fits(home)) spot = home;
+            }
+        }
+    }
     byAnimal.set(animal, spot);
     return spot;
 }
@@ -980,6 +1008,10 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
         if (!foot) return false;
         return walkable(world, profile, animal, {...placed, to: foot, mode: wet(world, foot) ? "water" : "ground"}, from0);
     }
+    // A stay (asleep at its roost, a night watch) is where it already is: after a way there it did not take (a roost out
+    // of reach), it stays where that left it, never a jump to the roost (decision 202: at its natural pace an alligator's
+    // roost moved out of reach, and it jumped 21 m from where it had stayed into its sleep).
+    if (placed.mode === "stay") return !before || Math.hypot(before.x - to.x, before.z - to.z) < Math.max(animal.length * 2, 1.5);
     if (placed.mode !== "ground" && placed.mode !== "water") return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
@@ -1091,6 +1123,17 @@ function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     const sitting = sitterIntent({world, profile, animal, start, awake: awakeAt(profile, activity, hoursAt(start)), kit: KIT});
     if (sitting) return {doing: sitting.doing as ArkDoing, to: sitting.to, mode: sitting.mode, stay: [], recipe: sitting.recipe};
     const raw = rawIntent(world, profile, animal, activity, slot, hoursAt);
+    // (Decision 202: a goal on foot further than it can walk in a slot, at the most its pace cap allows, isn't taken: a
+    // goat's drink round its paddock's fence, a komodo's far basking rock. It goes about its home ground instead.)
+    // (Its roost is never out of reach: `roostOf`.)
+    const sleepy = raw.doing === "sleep" || raw.doing === "to_roost" || raw.doing === "watch";
+    if (raw.to && !raw.follow && !sleepy && (raw.mode === "ground" || raw.mode === "surface") && tooFarOnFoot(world, profile, animal, raw.to)) {
+        const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
+        const random = rng(hashString(`${animal.id}#near#${slot}`));
+        const near = rangeSpot(world, profile, animal, centre, Math.min(homeRadius(profile, animal), 2), random);
+        // (Anything tied to its place, a drink, a bask, it can't do here: it wanders its home ground.)
+        return {doing: "wander", to: near, mode: "ground", stay: stayBeats("wander", random, null)};
+    }
     if (raw.to || raw.follow) return raw;
     for (let back = 1; back <= 4; back++) {
         const earlier = rawIntent(world, profile, animal, activity, slot - back, hoursAt);
@@ -1099,6 +1142,24 @@ function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
     const home = rangeSpot(world, profile, animal, centre, Math.min(homeRadius(profile, animal), 2), rng(hashString(`${animal.id}#home#${slot}`)));
     return {doing: STAY_DOINGS.has(raw.doing) && raw.doing !== "sleep" ? "wander" : raw.doing, to: home, mode: aquatic(profile) ? "water" : profile.move === "fly" ? "air" : "ground", stay: raw.stay};
+}
+
+/**
+ * Whether a goal on foot is further than it can walk in a slot (decision 202): its way from its home ground, at the
+ * fastest its feet allow (1.2 of its walk's pace, or its run's when it runs), in all of the slot but 6 s, with room for
+ * starting anywhere in its home range. Straight-line first; a way round (a fence, a lake) only when it is close.
+ */
+function tooFarOnFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, to: Spot): boolean {
+    if (profile.move === "fly" || profile.move === "swim") return false;
+    const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
+    const most = 1.2 * pace * Math.max(runFactor(profile), 1) * (SLOT_SECONDS - 6) - homeRadius(profile, animal);
+    const straight = Math.hypot(to.x - animal.home.x, to.z - animal.home.z);
+    if (straight > most) return true;
+    if (straight < most / 1.6) return false;
+    const path = world.nav.path(groundSpot(world, animal.home.x, animal.home.z), to, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(to.point));
+    const end = path[path.length - 1];
+    if (!end || Math.hypot(end.x - to.x, end.z - to.z) > 0.5) return false;
+    return pathLength(path) > most;
 }
 
 function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
@@ -1691,7 +1752,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     let travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
     // A long way is a run, at its run's own pace at most (one with no run clip walks it: slowed, never sped up).
     const runs = runFactor(profile);
-    const running = mode === "ground" && travel > SLOT_SECONDS * 0.45 && runs > 1.3;
+    // (A way onto a rock or a wall goes on foot first: that part runs too when it is long. Decision 202: a komodo's
+    // 40 m round the rocks to its basking ledge walked at twice its pace.)
+    const running = (mode === "ground" || mode === "surface") && travel > SLOT_SECONDS * 0.45 && runs > 1.3;
     if (running) for (const leg of legs) if (leg.mode === "ground") {
         leg.seconds /= runs;
         leg.beat = "run";

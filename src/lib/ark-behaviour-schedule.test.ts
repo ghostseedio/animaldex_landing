@@ -665,6 +665,8 @@ test("on the ground nothing moves backwards: never 5 s in a row going more than 
 });
 
 test("walking goes at its walk clip's own pace: a pace ratio of 0.8-1.3 (running, its run clip's), never a slow-motion walk", () => {
+    // (Its walk's pace is the clip's, or for a legged rig the locomotion layer draws whose clip was reach-limited, its
+    // natural pace: `scripts/ark-walk-pace.mts`, decision 202.)
     // (The integrator's default-view check, 2026-11-11: with the v2 rigs up, walkers held to 1.5 times a v1 walk's pace
     // walked at 0.35-0.45 of their clips. Sampled as the check samples: every 0.25 s, moving faster than 0.15 of its
     // length a second on the ground.)
@@ -680,7 +682,8 @@ test("walking goes at its walk clip's own pace: a pace ratio of 0.8-1.3 (running
             const p = poseOf(i, t);
             const speed = Math.hypot(p.x - last.x, p.z - last.z) / 0.25;
             const ground = !p.aloft && !last.aloft && p.y >= -0.01 && last.y >= -0.01;
-            if (ground && speed > Math.max(0.05, 0.15 * length) && (p.beat === "walk" || p.beat === "run" || p.beat === "step")) {
+            // (Down to slow walkers too, decision 202: a 0.05 m/s floor hid a bullfrog walking at 1.8 times its clip.)
+            if (ground && speed > Math.max(0.002, 0.15 * length) && (p.beat === "walk" || p.beat === "run" || p.beat === "step")) {
                 const clip = p.beat === "run" && i.profile.runPace ? i.profile.runPace : i.profile.walkPace!;
                 const ratio = speed / length / clip;
                 ratios.push(ratio);
