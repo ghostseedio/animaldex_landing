@@ -98,6 +98,7 @@ import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
+import {waterLevelAt} from "@/ark-scene/water-level";
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
@@ -2554,6 +2555,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         edge?: {mode: "enter" | "exit"; u: number; k: number; stand: number; spec: WaterSpec};
         /** Lane MA3: over water with no band (a heron in the shallows): standing on the bed, never on the surface. */
         wading?: boolean;
+        /** Lane MA3: under the surface in a recipe's act of its own (a coot's, a cormorant's dive): it swims there, never walks. */
+        underwater?: boolean;
     };
 
     /**
@@ -3009,7 +3012,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const act = (at as RecipePose).act;
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
-        const waterTop = waterSurfaceAt(at.x, at.z);
+        // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
+        // lattice reads the sea's 0 at points by a lake's shore, and a goose sliding in sank to the sea's level.)
+        const surfaceHere = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
+        const waterTop = surfaceHere(at.x, at.z);
         // (Lane MA3: anything that swims has a band while its schedule has it in the water, a coot, an otter, a crocodile
         // as well as a duck: `swimDepth`; a water species its own band, with its kind's float line.)
         const band = (entry.swim ??= entry.place.micro ? null : swimDepth(entry.animal.model_slug, entry.animal.zone));
@@ -3020,7 +3026,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (edge && band) {
             const leg = own.trip!.legs.find((l) => l.mode === edge.mode);
             const wetEnd = leg ? (edge.mode === "enter" ? leg.to : leg.from) : at;
-            const top = waterSurfaceAt(wetEnd.x, wetEnd.z);
+            const top = surfaceHere(wetEnd.x, wetEnd.z);
             const {spec} = scheduledWater(band, Math.min(ground, top - 0.05), entry.seed, clockNow(), 0, modelHeight, top);
             const s = edge.u * edge.u * (3 - 2 * edge.u);
             const k = edge.mode === "enter" ? s : 1 - s;
@@ -3049,6 +3055,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const ride = spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : spec.motion === "float" ? floatPitch(band.kind) : 0;
             return {x: at.x, z: at.z, base, yaw, pitch: ride + (act && act.episode !== "sleep" ? act.pitch : 0), roll: act && act.episode !== "sleep" ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
         }
+        // Under the surface in its own act (a dive): where the act has it, swimming (lane MA3: it walked and hopped there).
+        const diving = Boolean(band) && Boolean(act?.own) && !at.aloft && ground < waterTop - 0.02 && at.y < waterTop - 0.06;
         // No walking on the water (lane MA3): over water with no band (a heron, an egret in the shallows), not in the air,
         // it stands on the bed, its legs in the water, never on the surface.
         if (!band && !at.aloft && !act?.own && ground < waterTop - 0.02 && at.y >= ground - 0.01 && at.y <= waterTop + 0.02) {
@@ -3077,7 +3085,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
             pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
             roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
-            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
+            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || diving,
+            ...(diving ? {underwater: true} : {})
         };
     };
 
@@ -3622,6 +3631,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "distance";
                 }
             }
+        } else if (!entry.visitor && where.underwater) {
+            // Lane MA3: under the surface in its own dive: its swim, else its paddle, by the distance it covers (its dive clip
+            // plays from the recipe below), never a walk on the bed.
+            const swim = clip("swim") ?? clip("paddle");
+            if (moving(swim)) {
+                want = swim.name;
+                mode = "distance";
+            }
         } else if (!entry.visitor && where.water) {
             // In the water, in its depth band (`sea-depth.ts`; on land, a seal or a duck walks like any walker): a seabed crab or lobster walks its slow loop on the
             // floor (feet planted: phase by distance); a swimmer swims (or a snake or eel slithers) at the pace it goes;
@@ -3723,10 +3740,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (beat && (!want || want === "idle")) want = beat;
         // (Lane MA3.) Still on the water: its paddle held slow, body level and feet under it, the float idle; and never a
         // walk, a run or a hop on the surface (the audit's coot ran on the lake).
-        const afloat = where.water && (where.water.motion === "float" || where.water.motion === "swim");
+        const afloat = (where.water && (where.water.motion === "float" || where.water.motion === "swim")) || Boolean(where.underwater);
         if (afloat && (want === "walk" || want === "run" || want === "hop")) {
             want = null;
-            floatIdle = where.water!.motion === "float";
+            floatIdle = where.water?.motion === "float";
         }
         if ((!want || want === "idle") && floatIdle && clip("paddle")) {
             want = "paddle";

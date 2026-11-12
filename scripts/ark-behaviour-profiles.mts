@@ -1046,6 +1046,12 @@ function profile(row: Row): Profile {
     if (all.has("swim") && !SEA_ZONES.has(zone) && moves.primary !== "swim") it.add("water_surface");
     if (zone === "coral_reef") it.add("reef");
     if (rhythm.value.includes("siesta")) it.add("shade");
+    // Ducks, geese and swans come out onto the bank to rest and preen (lane MA3: with no flights to land, the ones that
+    // do not graze never left the water). Its rest goes to the water's edge: it swims to the bank and walks out.
+    if (/^(Anatidae|Anhimidae|Anseranatidae)$/.test(row.family_name ?? "") && moves.primary === "swim" && !it.has("shore")) {
+        it.add("shore");
+        src["place.shore"] = {rule: `family ${row.family_name}: loafs on the bank`};
+    }
     const water = waterKindOf(row, plan, moves.primary, all);
     if (water) src.water = water.src;
 

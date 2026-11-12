@@ -141,7 +141,7 @@ export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
 const FLOAT_LINES: Readonly<Partial<Record<ArkWaterKind, number>>> = {
     dabbler: 0.36,
     diver: 0.42,
-    swan: 0.28,
+    swan: 0.24,
     goose: 0.3,
     grebe: 0.32,
     cormorant: 0.42,
