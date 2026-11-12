@@ -10,7 +10,15 @@
  */
 
 import manifest from "@/ark-scene/assets-manifest.json";
-import {noise} from "@/ark-scene/world";
+import {arkWorld, noise} from "@/ark-scene/world";
+import {allAttachPoints} from "@/ark-scene/sampler";
+import {sceneryMapPoint} from "@/ark-scene/map/scenery-points";
+import {DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, microDecor} from "@/ark-scene/micro-decor";
+import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
+import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
+import {navGrid} from "@/ark-scene/behaviour-nav";
+import {maskWalkable} from "@/ark-scene/map/walk-mask";
+import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import {assetAttachRows} from "@/ark-scene/tree-assets";
 import {rockAttachPoints} from "@/ark-scene/rock-assets";
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
@@ -51,11 +59,20 @@ class WildMapSampler implements ArkMapSampler {
         return this.obstacles;
     }
 
+    /** v2: the scenery as drawn (helper A's P3 decor, settled by the motion pass, and its drawn rocks), as today's stub reads it. */
+    private drawn: DecorObstacles | null = null;
+    private decor(): DecorObstacles {
+        this.drawn ??= new DecorObstacles(worldDecor());
+        return this.drawn;
+    }
+
     blocked(x: number, z: number, radius: number): boolean {
+        if (arkWorld() === "v2") return this.decor().blocked(x, z, radius) || inRock(x, z, radius);
         return this.obs().blocked(x, z, radius);
     }
 
     covered(x: number, z: number): boolean {
+        if (arkWorld() === "v2") return this.decor().covers(x, z);
         return this.obs().covers(x, z);
     }
 
@@ -66,13 +83,32 @@ class WildMapSampler implements ArkMapSampler {
     }
 
     walkable(x: number, z: number, maxSlope: number): boolean {
+        // v2: the behaviour lane's walk grid (`behaviour-nav.ts`, from its world over this island's square), as today's stub
+        // asks it: its prebuilt mask (`map/walk-mask.ts`), else the grid itself.
+        if (arkWorld() === "v2") return maskWalkable(x, z, maxSlope) ?? navGrid(behaviourSampler()).walkable(x, z, maxSlope);
         const s = sampleWildGround(x, z);
         if (underWater(s)) return false;
         return gridSlope(x, z) <= maxSlope && !this.blocked(x, z, 0.3);
     }
 
-    /** Beside a rock: within a couple of metres of its side. */
+    private drawnRockCells: Map<string, DrawnRock[]> | null = null;
+
+    /** Beside a rock: within a couple of metres of its side (v2: the rocks as drawn, `map/rocks.ts`, a boulder and up). */
     private byRock(x: number, z: number): boolean {
+        if (arkWorld() === "v2") {
+            if (!this.drawnRockCells) {
+                this.drawnRockCells = new Map();
+                for (const rock of drawnRocks()) {
+                    if (rock.reach < 0.45) continue;
+                    const key = `${Math.floor(rock.x / 4)},${Math.floor(rock.z / 4)}`;
+                    this.drawnRockCells.set(key, [...(this.drawnRockCells.get(key) ?? []), rock]);
+                }
+            }
+            const cx = Math.floor(x / 4);
+            const cz = Math.floor(z / 4);
+            for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (const rock of this.drawnRockCells.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(rock.x - x, rock.z - z) < rock.reach + 1.8) return true;
+            return false;
+        }
         if (!this.rockCells) {
             this.rockCells = new Map();
             for (const item of wildScenery()) {
@@ -105,7 +141,25 @@ class WildMapSampler implements ArkMapSampler {
         return false;
     }
 
+    /**
+     * The ground's answers, kept (P7: placement on the bigger island asks the same points many times over: the cells,
+     * the water's cells, the points' tags, the dens). A pure function of the point, so kept or not, the same answer.
+     */
+    private grounds = new Map<string, GroundSurface>();
+
     ground(x: number, z: number): GroundSurface {
+        if (this.building) return this.groundAt(x, z);
+        const key = `${x},${z}`;
+        let g = this.grounds.get(key);
+        if (!g) {
+            g = this.groundAt(x, z);
+            if (this.grounds.size >= GROUND_KEEP) this.grounds.clear();
+            this.grounds.set(key, g);
+        }
+        return g;
+    }
+
+    private groundAt(x: number, z: number): GroundSurface {
         const s = sampleWildGround(x, z);
         const w = s.weights;
         const tags: MapTag[] = [];
@@ -234,7 +288,34 @@ class WildMapSampler implements ArkMapSampler {
         if (this.pointList) return this.pointList;
         const points: AttachPoint[] = [];
         const zoneAt = (x: number, z: number) => landZone(sampleWildGround(x, z));
+        // On the v2 world (Part C, P4) the scenery as the scene draws it (helper A's P3: the wild island's trees, rocks,
+        // logs and ground through the motion pass's decor), the graphics lane's points read as today's island's stub reads
+        // them (`map/scenery-points.ts`): the trees' leaves, branches, bark, limbs (with their load) and hang points, the
+        // rocks' faces and ledges, the litter, the holes. A point on the ground in a big animal's range is the range's.
+        // Off v2 (the island's own workbench), its own points from its generator, below.
+        const v2 = arkWorld() === "v2";
+        if (v2) {
+            for (const scenery of allAttachPoints()) {
+                const point = sceneryMapPoint(scenery, zoneAt);
+                if (!point) continue;
+                if (point.y - sampleWildGround(point.x, point.z).height < 0.5 && inRange(point.x, point.z, 1)) continue;
+                points.push(point);
+            }
+            // The micro corners' props (`micro-decor.ts`, drawn by micro-scene): their flower heads and fallen leaves.
+            for (const [i, item] of Array.from(microDecor().entries())) {
+                if (inRange(item.x, item.z, 1)) continue;
+                if (item.kind === "flower") {
+                    const stem = FLOWER_SHAPE.stem[item.variant % 3] * item.scale;
+                    const y = item.y - DECOR_SINK + stem + FLOWER_SHAPE.head * FLOWER_SHAPE.top[item.variant % 3] * item.scale;
+                    points.push({id: `flower_head:flower${i}`, tag: "flower_head", x: item.x, y, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.rotation), 0, Math.sin(item.rotation)], size: {min: TINY, max: SIZES.flower_head.max}, zone: item.zone});
+                } else if (item.kind === "leaf" && i % 2 === 0) {
+                    points.push({id: `leaf:litter${i}`, tag: "leaf", x: item.x, y: item.y + LEAF_LIFT + 0.004, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.rotation), 0, Math.sin(item.rotation)], size: {min: TINY, max: SIZES.leaf.max}, zone: item.zone});
+                }
+            }
+        }
         for (const item of wildScenery()) {
+            // (v2: the trees' and the rocks' points are the scenery's own, above.)
+            if (v2 && (item.kind === "tree" || item.kind === "rock" || item.kind === "cave") && !item.asset?.startsWith("tide-pool")) continue;
             if (item.kind === "tree" && item.asset) {
                 // The asset tree's own points (tree-attach.json), turned and scaled as it is drawn.
                 const c = Math.cos(item.yaw);
@@ -255,6 +336,11 @@ class WildMapSampler implements ArkMapSampler {
                 });
             } else if ((item.kind === "rock" || item.kind === "cave") && item.asset) {
                 const zone = zoneAt(item.x, item.z);
+                if (v2) {
+                    // (A tide pool's rock: its faces are the scenery's, above; its pool is the map's own.)
+                    points.push({id: `pool@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "tide_pool", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [1, 0, 0], size: {min: TINY, max: SIZES.tide_pool.max}, zone});
+                    continue;
+                }
                 rockAttachPoints({id: item.asset, x: item.x, y: item.y, z: item.z, yaw: item.yaw, scale: item.scale}).forEach((point, k) => {
                     const tag = point.tag === "rock_face" || point.tag === "ledge" || point.tag === "burrow_entrance" ? (point.tag as AttachTag) : point.tag === "crevice" ? "rock_face" : null;
                     if (!tag) return;
@@ -301,6 +387,9 @@ class WildMapSampler implements ArkMapSampler {
 }
 
 const frac = (v: number) => v - Math.floor(v);
+
+/** How many grounds the sampler keeps before it starts again (each a few hundred bytes). */
+const GROUND_KEEP = 120_000;
 
 /** Decision 55: an attach point takes any body down to 0.1 mm (a fairyfly); only limbs and hang points keep a least body. */
 const TINY = 0.0001;

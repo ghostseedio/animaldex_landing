@@ -18,13 +18,18 @@
 
 import mask from "@/ark-scene/map/walk-mask.json";
 import maskNoHamlet from "@/ark-scene/map/walk-mask-no-hamlet.json";
+import maskV2 from "@/ark-scene/map/walk-mask-v2.json";
 import {noHamlet} from "@/ark-scene/no-hamlet";
-import {TERRAIN_HALF} from "@/ark-scene/world";
+import {arkWorld, TERRAIN_HALF} from "@/ark-scene/world";
 
 type MaskFile = {cell: number; size: number; half: number; version: string; slopes: Record<string, string>};
-/** Today's island's mask, and islands mode's (`no-hamlet.ts`: the wild island without its hamlet), each from its own world. */
-const FILES = {hamlet: mask as MaskFile, noHamlet: maskNoHamlet as MaskFile};
-const fileNow = (): MaskFile => (noHamlet() ? FILES.noHamlet : FILES.hamlet);
+/**
+ * Today's island's mask, and islands mode's (`no-hamlet.ts`: the wild island without its hamlet), each from its own world;
+ * and the bigger wild island's (Part C, `world.ts` arkWorld() "v2": its 528 m square).
+ */
+const FILES = {hamlet: mask as MaskFile, noHamlet: maskNoHamlet as MaskFile, v2: maskV2 as MaskFile};
+const fileKey = (): keyof typeof FILES => (arkWorld() === "v2" ? "v2" : noHamlet() ? "noHamlet" : "hamlet");
+const fileNow = (): MaskFile => FILES[fileKey()];
 
 const decoded = new Map<string, Uint8Array>();
 let enabled = true;
@@ -37,7 +42,7 @@ export function setWalkMaskEnabled(on: boolean): void {
 /** The base64 of a bit per cell (row-major, as NavGrid's cells), least significant bit first. */
 function bits(slope: number): Uint8Array | null {
     const FILE = fileNow();
-    const key = `${noHamlet() ? "n" : "h"}${slope}`;
+    const key = `${fileKey()}${slope}`;
     let out = decoded.get(key);
     if (out) return out;
     const text = FILE.slopes[String(slope)];
@@ -76,3 +81,5 @@ export function encodeMask(size: number, walkableAt: (k: number) => boolean): st
 export const WALK_MASK_VERSION = FILES.hamlet.version;
 /** Islands mode's (`no-hamlet.ts`). */
 export const WALK_MASK_NO_HAMLET_VERSION = FILES.noHamlet.version;
+/** The bigger wild island's (Part C, v2). */
+export const WALK_MASK_V2_VERSION = FILES.v2.version;

@@ -31,7 +31,7 @@
 
 import table from "@/ark-scene/depth-bands.json";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import {coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
+import {arkWorld, coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
 
 export type DepthBand = "surface" | "upper" | "mid" | "seabed" | "reef" | "deep" | "pond_surface" | "pond_mid" | "pond_bed";
 export type WaterKind = "salt" | "fresh";
@@ -317,11 +317,12 @@ export function safeLoopRadius(x: number, z: number, radius: number): number {
     const known = safeLoops.get(key);
     if (known !== undefined) return known;
     let r = radius;
+    const v2 = arkWorld() === "v2";
     for (; r > 0.3; r *= 0.8) {
         let wet = true;
         for (let k = 0; k < 16 && wet; k++) {
             const a = k / 16 * Math.PI * 2;
-            wet = sampleGround(x + Math.cos(a) * r, z + Math.sin(a) * r).height < LOOP_FLOOR;
+            wet = v2 ? waterOver(x + Math.cos(a) * r, z + Math.sin(a) * r) > -LOOP_FLOOR : sampleGround(x + Math.cos(a) * r, z + Math.sin(a) * r).height < LOOP_FLOOR;
         }
         if (wet) break;
     }
@@ -339,13 +340,34 @@ export let LAKE_SWIM_RADIUS = LAKE.r - 3;
 // (Follows the world's switch: the v2 world's lake is bigger. docs/ark/wild-island.md §Integration.)
 onArkWorld(() => {
     LAKE_SWIM_RADIUS = LAKE.r - 3;
+    // (And the spots and loops worked out on the other world's water.)
+    lakeSpots = null;
+    coastGrids.clear();
+    safeLoops.clear();
 });
 const LAKE_SPACING = 2.1;
 const COAST_SPACING = 3;
 const COAST_OUT = 12;
 
+/**
+ * Metres of water over a point on the v2 world (the bigger wild island, Part C): the sea's below its level 0, and the
+ * lake's, the river's and the pools' over their own beds, at their own level (`water-level.ts` freshLevelAt), which
+ * stands above the sea. Negative on dry ground (how far above the water it is).
+ */
+function waterOver(x: number, z: number): number {
+    return freshOver(x, z) ?? -sampleGround(x, z).height;
+}
+
+/** On v2: the fresh water's depth over a point (the lake's, the river's, a pool's), or null where it is not fresh water. */
+function freshOver(x: number, z: number): number | null {
+    const s = sampleGround(x, z) as ReturnType<typeof sampleGround> & {fresh?: number; freshLevel?: number | null};
+    return s.freshLevel !== null && s.freshLevel !== undefined && (s.fresh ?? 0) >= 0.5 && s.height < s.freshLevel ? s.freshLevel - s.height : null;
+}
+
 /** Is a point the right water for this home: deep enough sea off the coast, or the lake's open water. */
 export function inHomeWater(home: "lake" | "coast", x: number, z: number): boolean {
+    // (v2: the lake stands above the sea at its own level, so its open water is 0.9 m deep over its bed, not below 0.)
+    if (home === "lake" && arkWorld() === "v2") return Math.hypot(x - LAKE.x, z - LAKE.z) <= LAKE_SWIM_RADIUS && (freshOver(x, z) ?? 0) > 0.9;
     if (home === "lake") return Math.hypot(x - LAKE.x, z - LAKE.z) <= LAKE_SWIM_RADIUS && sampleGround(x, z).height < -0.9;
     const ground = sampleGround(x, z);
     return ground.inland < -2 && ground.height <= -1.4 && Math.hypot(x - LAKE.x, z - LAKE.z) > LAKE.r + 6;
@@ -370,7 +392,26 @@ function lakeSpot(index: number): {x: number; z: number} {
     const lap = Math.floor(index / n);
     if (!lap) return base;
     const angle = lap * 2.4;
-    return {x: LAKE.x + (base.x - LAKE.x) * Math.cos(angle) - (base.z - LAKE.z) * Math.sin(angle), z: LAKE.z + (base.x - LAKE.x) * Math.sin(angle) + (base.z - LAKE.z) * Math.cos(angle)};
+    const turned = {x: LAKE.x + (base.x - LAKE.x) * Math.cos(angle) - (base.z - LAKE.z) * Math.sin(angle), z: LAKE.z + (base.x - LAKE.x) * Math.sin(angle) + (base.z - LAKE.z) * Math.cos(angle)};
+    // (v2: the lake's shore wanders, so a spot turned about its middle may fall in its shallows or on its bank: the
+    // nearest of its open water's spots then, a lap round, so laps never stack.)
+    if (arkWorld() !== "v2" || inHomeWater("lake", turned.x, turned.z)) return turned;
+    let best = base;
+    let distance = Infinity;
+    for (const spot of lakeSpots) {
+        const d = Math.hypot(spot.x - turned.x, spot.z - turned.z);
+        if (d < distance) {
+            distance = d;
+            best = spot;
+        }
+    }
+    const r = Math.min(0.5 + 0.35 * lap, LAKE_SPACING * 0.45);
+    for (let k = 0; k < 12; k++) {
+        const x = best.x + Math.cos(lap * 2.4 + k * 0.52) * r;
+        const z = best.z + Math.sin(lap * 2.4 + k * 0.52) * r;
+        if (inHomeWater("lake", x, z)) return {x, z};
+    }
+    return best;
 }
 
 const coastGrids = new Map<string, {spots: Array<{x: number; z: number}>; next: number}>();

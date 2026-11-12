@@ -36,7 +36,8 @@ import {worldSampler} from "@/ark-scene/map/world-sampler";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {place as scenePlace} from "@/ark-scene/sampler";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
-import {hashString, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
+import {arkWorld, hashString, onArkWorld, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
+import {rangeSpot, resetWildMapV2, takesRange, wildCoveCentre} from "@/ark-scene/islands/wild/map-v2";
 import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
 
 /** Where it sleeps (when that is not where it lives). */
@@ -362,6 +363,12 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const inTree = (point: AttachPoint) => TREE_POINT.has(point.tag) || (point.tag === "leaf" && point.y - sampler.ground(point.x, point.z).height > 0.3);
             let list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb") && !(point.tag === "canopy_hang" && !hanger) && (climber || !inTree(point)));
             if (hanger && list.some((point) => point.tag === "canopy_hang")) list = list.filter((point) => point.tag === "canopy_hang");
+            // (v2: a crevice or cave dweller on a point with a rock in its den's reach, where its zone's points have one: the
+            // bigger island's forests have rocks far apart, and moving it to a rock's foot would put a frog on the ground.)
+            if (arkWorld() === "v2" && list.length && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !trueMicro(species, animal.model_slug, trueLength)) {
+                const near = list.filter((point) => rockWithin(point.x, point.z));
+                if (near.length) list = near;
+            }
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
@@ -427,9 +434,33 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         }
     }
 
+    // v2 (the bigger wild island, which has no canopy trees of today's kind, below): a large tree climber or percher no limb
+    // fits (a mamba, a crocodile monitor: longer than the trees' thickest limbs take) on a branch or the bark of its canopy
+    // tags whose size fits it, as a small one sits (its perch, home and roost on the schedule).
+    if (arkWorld() === "v2" && arborealOf(species, animal.model_slug) && !species.small && !heavy && species.move !== "hang") {
+        for (const tag of tags.filter((t) => CANOPY_TAGS.has(t))) {
+            const found = all.attachOf(tag, trueLength, zone, false);
+            const list = found.list.filter((point) => (point.tag === "branch" || point.tag === "bark") && attachFits(point, trueLength));
+            if (!list.length) continue;
+            const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), list.length);
+            const point = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            tracer()?.attach(list, found.own);
+            tracer()?.route("attach");
+            const n = point.normal;
+            const t = point.tangent;
+            return {
+                x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(t[0], t[2]), water: false,
+                perch: {x: point.x, y: point.y, z: point.z, nx: n[0], ny: n[1], nz: n[2], tx: t[0], ty: t[1], tz: t[2], tag: point.tag, id: point.id},
+                map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost: null, key, level}
+            };
+        }
+    }
+
     // A canopy animal: a limb (or the trunk) of a canopy tree. The owner's rule (2026-11-11): hangers, leapers, and the canopy layer's
     // climbers and perchers (`layers.json`) grip a real limb, never the ground under it; never one too heavy for the limb.
-    if (arborealOf(species, animal.model_slug) && !heavy) {
+    // (v2, the bigger wild island: no canopy trees of today's island's kind; its tree animals are on its trees' own limbs,
+    // hang points and branches, above.)
+    if (arborealOf(species, animal.model_slug) && !heavy && arkWorld() !== "v2") {
         const canopyTag = tags.find((tag) => CANOPY_TAGS.has(tag)) ?? (species.move === "hang" || species.move === "leap" ? "canopy" : undefined);
         if (canopyTag) {
             const hostZone = canopyTrees(zone)[0]?.zone ?? zone;
@@ -463,6 +494,28 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         return !walker || !sampler.walkable || sampler.walkable(x, z, maxSlope);
     };
     const okFor = (tag: MapTag, wet: boolean) => okOn(wet, (tags) => tags.includes(tag));
+    // v2 (decision 54): a big land walker's home is one of its zone's ranges on its own ground, kept clear of every smaller
+    // animal's cell; its ground test is everyone's but the ranges' reservation, which is its own.
+    if (arkWorld() === "v2" && !species.small && takesRange(species.move, trueLength) && !wetOf(species, species.spawn)) {
+        const fits = (x: number, z: number) => {
+            const g = sampler.ground(x, z);
+            return g.water === null && g.tags.some((t) => species.allowed.has(t)) && !sampler.blocked(x, z, radius) && (!sampler.walkable || sampler.walkable(x, z, maxSlope));
+        };
+        const spot = rangeSpot(sampler, zone, species.allowed, slot, rank, Math.max(1.1, length * 0.85), fits);
+        if (spot) {
+            const here = spot.ground.tags;
+            // (Its own tags in its text's order; the range's ground may be its roost's, which they leave out.)
+            const tag = tags.find((t) => here.includes(t)) ?? Array.from(species.allowed).find((t) => here.includes(t))!;
+            const turn = ((ownHash >>> 4) % 1000) / 1000;
+            tracer()?.route("tag");
+            const placement: MapPlacement = {
+                x: spot.x, z: spot.z, ground: spot.ground.height, yaw: ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn), water: false,
+                map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, roost: roostOf(species, all, spot.x, spot.z, trueLength, key, ownHash, null), key, level: spot.level}
+            };
+            if (species.attach === "burrow") placement.burrow = burrowAt(spot.x, spot.z, spot.ground.height, `${zone}#${slot}#${rank}`, length);
+            return placement;
+        }
+    }
     type Choice = {tag: MapTag; wet: boolean; pick: SlotPick; ok: (x: number, z: number) => boolean};
     /** Where it can stand for a pick: its lap's spot, else the nearest within a metre that suits it, else the same round its cell's middle. */
     const settle = ({pick, ok}: Choice): {x: number; z: number} | null => {
@@ -481,7 +534,11 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
     let chosen: (Choice & {at: {x: number; z: number}}) | null = null;
     let fallback: (Choice & {at: {x: number; z: number}}) | null = null;
     let first: Choice | null = null;
-    for (const tag of tags) {
+    // (v2: when nothing settles on its own tags' cells, a borrowed list on another zone's steep ground, its roost's own
+    // ground is its last choice before the search round its first pick, below. Today's island tries its tags alone.)
+    const roostTry = arkWorld() === "v2" && species.roost && species.allowed.has(species.roost) && !tags.includes(species.roost) ? [species.roost] : [];
+    for (const tag of [...tags, ...roostTry]) {
+        if (tag === species.roost && roostTry.length && (chosen || fallback)) break;
         const wet = wetOf(species, tag);
         const partition = all.partitionOf(tag, wet, zone);
         if (!partition.list.length) continue;
@@ -755,8 +812,54 @@ function footFits(x: number, z: number): boolean {
     return denIsDry(x, z) && !inRock(x, z, 0.12) && !sampler.reserved?.(x, z) && !sampler.blocked(x, z, 0.12);
 }
 
+/**
+ * Every drawn rock's dry feet at `FOOT` (12 bearings a rock, in the rocks' order), found once and kept by 8 m square:
+ * `rockFeet`'s own candidates, so a search over them finds what one over the rocks finds (P7: the bigger island's
+ * placement asks thousands of times).
+ */
+const FEET_CELL = 8;
+let feetIndex: {sampler: ArkMapSampler; all: Array<{x: number; z: number; rock: DrawnRock; order: number}>; cells: Map<string, Array<{x: number; z: number; rock: DrawnRock; order: number}>>} | null = null;
+function dryFeet(): NonNullable<typeof feetIndex> {
+    const sampler = mapPoints().sampler;
+    if (feetIndex && feetIndex.sampler === sampler) return feetIndex;
+    const all: Array<{x: number; z: number; rock: DrawnRock; order: number}> = [];
+    const cells = new Map<string, Array<{x: number; z: number; rock: DrawnRock; order: number}>>();
+    for (const rock of drawnRocks()) {
+        for (let k = 0; k < 12; k++) {
+            const foot = rockFoot(rock, (k / 12) * Math.PI * 2, FOOT);
+            if (!footFits(foot.x, foot.z)) continue;
+            const entry = {...foot, rock, order: all.length};
+            all.push(entry);
+            const key = `${Math.floor(foot.x / FEET_CELL)},${Math.floor(foot.z / FEET_CELL)}`;
+            const list = cells.get(key);
+            if (list) list.push(entry);
+            else cells.set(key, [entry]);
+        }
+    }
+    feetIndex = {sampler, all, cells};
+    return feetIndex;
+}
+
 /** Dry rock feet round the drawn rocks within `reach` of a spot, nearest first (12 bearings a rock, `out` from its side). */
 function rockFeet(x: number, z: number, reach: number, keep: (x: number, z: number, rock: DrawnRock) => boolean = () => true, out0 = FOOT): Array<{x: number; z: number; d: number}> {
+    if (out0 === FOOT) {
+        // (From the kept feet: the same ones, in the same order before the sort.)
+        const index = dryFeet();
+        let candidates = index.all;
+        if (reach < 200) {
+            candidates = [];
+            for (let i = Math.floor((x - reach) / FEET_CELL); i <= Math.floor((x + reach) / FEET_CELL); i++) {
+                for (let j = Math.floor((z - reach) / FEET_CELL); j <= Math.floor((z + reach) / FEET_CELL); j++) candidates.push(...(index.cells.get(`${i},${j}`) ?? []));
+            }
+            candidates.sort((a, b) => a.order - b.order);
+        }
+        const found: Array<{x: number; z: number; d: number}> = [];
+        for (const foot of candidates) {
+            const d = Math.hypot(foot.x - x, foot.z - z);
+            if (d <= reach && keep(foot.x, foot.z, foot.rock)) found.push({x: foot.x, z: foot.z, d});
+        }
+        return found.sort((a, b) => a.d - b.d || a.x - b.x || a.z - b.z);
+    }
     const out: Array<{x: number; z: number; d: number}> = [];
     for (const rock of drawnRocks()) {
         if (Math.hypot(rock.x - x, rock.z - z) > reach + rock.reach + out0) continue;
@@ -820,6 +923,18 @@ export function rockHomes(species: MapSpecies, zone: ArkZone, length: number): A
         rockHomeLists.set(key, list);
     }
     return list;
+}
+
+/** v2: is a dry drawn rock's foot within its den's reach of a spot (a metre to spare)? Per 2 m square, from the terrain. */
+const rockReach = new Map<string, boolean>();
+function rockWithin(x: number, z: number): boolean {
+    const key = `${Math.round(x / 2)},${Math.round(z / 2)}`;
+    let near = rockReach.get(key);
+    if (near === undefined) {
+        near = rockFeet(Math.round(x / 2) * 2, Math.round(z / 2) * 2, ROCK_DEN_REACH - 2.5).length > 0;
+        rockReach.set(key, near);
+    }
+    return near;
 }
 
 /** Has a crevice or cave dweller a rock den in reach of a home there? */
@@ -1008,15 +1123,23 @@ function lapSpots(cell: {x: number; z: number}, dry: (x: number, z: number) => b
 
 let cove: {x: number; z: number} | null = null;
 // Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
-onHamletSwitch(() => {
+const dropBuilt = () => {
     points = null;
     nearIndex = null;
     rockHomeLists.clear();
     lapSpotCache.clear();
     cove = null;
-});
+    rockReach.clear();
+    feetIndex = null;
+    resetWildMapV2();
+};
+onHamletSwitch(dropBuilt);
+// The world's switch (`world.ts` setArkWorld, Part C): built from the other world's terrain and scenery.
+onArkWorld(dropBuilt);
 /** The cold cove's middle (the graphics lane's named place). */
 function coldCove(): {x: number; z: number} {
+    // (v2: the bigger wild island's cove, its ice shelf's front in the north shore's inlet.)
+    if (arkWorld() === "v2") return wildCoveCentre();
     cove ??= (() => {
         const p = scenePlace("cold_cove");
         return {x: p.x, z: p.z};

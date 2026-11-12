@@ -24,7 +24,8 @@ import {floorObstacles} from "@/ark-scene/floor-assets";
 import {drawnRocks, type DrawnRock} from "@/ark-scene/map/rocks";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
-import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+import {arkWorld, hashString, heightAt as groundHeight, LAKE, onArkWorld, RIVER, RIVER_UPPER, TERRAIN_HALF} from "@/ark-scene/world";
+import {wildWaterDepth} from "@/ark-scene/islands/wild/map-v2";
 import {colliderDistance, ColliderSet, colliderSetFor} from "@/ark-scene/collide/colliders";
 
 /** The behaviour system's place tags. */
@@ -85,6 +86,12 @@ export interface ArkWorldSampler {
     readonly half?: number;
     /** Part C: the middle of that square in the world frame (another island across the strait); absent: (0, 0). */
     readonly centre?: {x: number; z: number};
+    /**
+     * Part C (v2, the bigger wild island): metres of water over a point, the sea's and the fresh water's (its lake and
+     * river stand above the sea at their own level). Absent: the sea's alone, below the height 0 (today's island and the
+     * town: their fresh water is at 0 too).
+     */
+    waterDepth?(x: number, z: number): number;
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
@@ -239,6 +246,9 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     };
     const surface = (x: number, z: number) => surfaceAt(x, z);
     const lattice = new HeightLattice();
+    // Part C (P4): the bigger wild island (v2), whose lake and river stand above the sea at their own level.
+    const v2 = arkWorld() === "v2";
+    const waterOver = (x: number, z: number, s: {waterDepth: number}) => (v2 ? wildWaterDepth(x, z) : s.waterDepth);
     const tasks: BuildTask[] = [];
 
     // The scenery's own points (trees, flowers, rocks, the house, lamps, ponds, the ground's holes and litter).
@@ -333,30 +343,38 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     }));
 
     // Water edges: just dry ground at the lake, along the river, round the garden pond, walked out from the water.
-    const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
-        for (let d = 0; d < 6; d += 0.25) {
+    const edge = (x: number, z: number, outward: number, zone?: ArkZone, reach = 6) => {
+        for (let d = 0; d < reach; d += 0.25) {
             const px = x + Math.cos(outward) * d;
             const pz = z + Math.sin(outward) * d;
             const s = surface(px, pz);
-            if (s.waterDepth <= 0 && s.height > 0.05) {
+            if (waterOver(px, pz, s) <= 0 && s.height > 0.05) {
                 add({tag: "water_edge", x: px, y: s.height, z: pz, ...UP, yaw: outward + Math.PI, size: [0.02, 6], zone: zone ?? s.zone});
                 return;
             }
         }
     };
-    tasks.push(chunked(() => 28, 7, (k) => {
-        const a = (k / 28) * Math.PI * 2;
-        edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
+    // (v2: the lake is 28 m across its middle with a wandering shore, so its edge is walked out to from halfway in, at
+    // as many bearings as keep the spots about 4 m apart.)
+    const lakeBearings = v2 ? Math.round((Math.PI * 2 * LAKE.r) / 4) : 28;
+    tasks.push(chunked(() => lakeBearings, 7, (k) => {
+        const a = (k / lakeBearings) * Math.PI * 2;
+        if (v2) edge(LAKE.x + Math.cos(a) * LAKE.r * 0.5, LAKE.z + Math.sin(a) * LAKE.r * 0.5, a, "river_lake", LAKE.r * 1.2);
+        else edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
     }));
-    tasks.push(chunked(() => Math.max(RIVER.length - 1, 0), 2, (seg) => {
-        const [ax, az] = RIVER[seg];
-        const [bx, bz] = RIVER[seg + 1];
-        const normal = Math.atan2(bx - ax, -(bz - az));
-        for (let t = 0.2; t < 1; t += 0.3) {
-            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal);
-            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI);
-        }
-    }));
+    // The river's banks (v2: the lower river and the upper, spring to lake; its wider reaches walked out to further).
+    const reaches = v2 ? [RIVER, RIVER_UPPER] : [RIVER];
+    for (const river of reaches) {
+        tasks.push(chunked(() => Math.max(river.length - 1, 0), 2, (seg) => {
+            const [ax, az] = river[seg];
+            const [bx, bz] = river[seg + 1];
+            const normal = Math.atan2(bx - ax, -(bz - az));
+            for (let t = 0.2; t < 1; t += 0.3) {
+                edge(ax + (bx - ax) * t, az + (bz - az) * t, normal, undefined, v2 ? 12 : 6);
+                edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI, undefined, v2 ? 12 : 6);
+            }
+        }));
+    }
     // The garden pond (drawn water over dry ground, so `surfaceAt` has no water there): where to drink is just outside
     // its ring of stones, facing the water (2026-11-11: a dog drank standing in it, from points 0.8 m inside).
     tasks.push(chunked(() => (noHamlet() ? 0 : 6), 6, (k) => {
@@ -386,7 +404,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             const px = x + ((jitter % 97) / 97 - 0.5) * step;
             const pz = z + (((jitter >> 7) % 97) / 97 - 0.5) * step;
             const s = surface(px, pz);
-            if (s.waterDepth > 0 || s.height <= 0.05) continue;
+            if (waterOver(px, pz, s) > 0 || s.height <= 0.05) continue;
             if (s.cliff > 0.45 && s.normal.y > 0.6) add({tag: "cliff_ledge", x: px, y: s.height, z: pz, ...UP, yaw: Math.atan2(-px, -pz), size: [0.1, 1.5], zone: s.zone});
             if ((s.weights.grass ?? 0) > 0.45 && s.normal.y > 0.85) add({tag: "grass", x: px, y: s.height, z: pz, ...UP, yaw: 0, size: [0.05, 6], zone: s.zone});
         }
@@ -457,10 +475,13 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         return {
             colliders,
             // (The drawn rocks are in it too: a new rock set rebuilds the walk grid; and the colliders, any change of them.)
-            version: `scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
+            version: `${v2 ? "v2:" : ""}scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
+            // Part C (P4): on v2 the walk grid covers the bigger island's own square (`behaviour-nav.ts` extentOf), and
+            // knows its fresh water, which stands above the sea.
+            ...(v2 ? {half: TERRAIN_HALF, centre: {x: 0, z: 0}, waterDepth: wildWaterDepth} : {}),
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
-            isWater: (x, z) => surface(x, z).waterDepth > 0,
+            isWater: v2 ? (x, z) => wildWaterDepth(x, z) > 0 : (x, z) => surface(x, z).waterDepth > 0,
             slope: (x, z) => {
                 const n = surface(x, z).normal;
                 return Math.sqrt(Math.max(1 - n.y * n.y, 0)) / Math.max(n.y, 0.05);
@@ -568,6 +589,12 @@ export function resetWorldSampler() {
 // Islands mode flips (`no-hamlet.ts`): the behaviour world is the other world's, its plots back to the default (the
 // mount sets its own again: none in islands mode).
 onHamletSwitch(() => {
+    behaviourPlots = null;
+    behaviourPlotsKey = "";
+    resetWorldSampler();
+});
+// The world's switch (Part C, `world.ts` setArkWorld): the behaviour world is the other world's.
+onArkWorld(() => {
     behaviourPlots = null;
     behaviourPlotsKey = "";
     resetWorldSampler();
