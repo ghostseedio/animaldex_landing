@@ -15,7 +15,7 @@ import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 import {setArkWorld} from "@/ark-scene/world";
 
 export type ArkArchipelagoOptions = ArkSceneOptions & {
-    /** Which wild island in islands mode (Part C's bigger one is `v2`; default `v1` until its gates pass). `?wild=` overrides. */
+    /** Which wild island in islands mode: Part C's bigger one (`v2`, the default since its gates passed) or today's (`v1`). `?wild=` overrides. */
     wildIsland?: "v1" | "v2";
     /** The island to open on (decision 26 is the page's: `arkOpeningIsland`); default the wild island. */
     openOn?: ArkIsland;
@@ -45,11 +45,14 @@ export type ArkArchipelagoHandle = ArkSceneHandle & {
     mounted: () => Promise<void>;
 };
 
-/** The bigger wild island asked for: `?wild=v2` (review) wins, else the `wildIsland` setting (v1 until the gates pass). */
+/**
+ * The bigger wild island, in islands mode: the default since its gates passed (P7). `?wild=v1` or `?wild=v2` (review)
+ * wins, else the `wildIsland` setting: `v1` asks for today's island, exactly as it was.
+ */
 function wildIslandAsked(setting: "v1" | "v2" | undefined): boolean {
     const url = typeof location !== "undefined" ? new URLSearchParams(location.search).get("wild") : null;
     if (url === "v2" || url === "v1") return url === "v2";
-    return setting === "v2";
+    return setting !== "v1";
 }
 
 /** A flight across the strait takes about this long (`flyToIsland`). */

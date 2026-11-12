@@ -262,14 +262,37 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 
 ### Left
 
-- **P7, the open gates (helper B, `ark-wild-map`; all sent to B with the numbers):**
-  - the fixture collide audit on v2 (`ARK_WORLD=v2 npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --wild-island kept`, then `--check <report> --thresholds tests/ark-collide/thresholds-islands.json`): 34 pass-throughs, one common vampire bat at rest 0.17 m inside `rock:decor1273` (−71.2, −98.1). The live snapshot passes;
-  - `ARK_WORLD=v2` behaviour-schedule (33 mallard 5.1 m slot jump, 42 alligator 8.5 m, 45 flyers 2.45 turns a minute, 49 3.9 % circling; 37, 50, 52 are homestead species, likely n/a), sea-depth 114–116 (v1's lake rule in the test, or placement), behaviour-build (node out of memory), grounding 73 (a tent-making bat in a crown), map 93 (a v1 terrain swap, likely n/a).
-- **The default switch (P7 step 5), once those pass:** in `islands/archipelago.ts` `wildIslandAsked`, `return setting === "v2"` becomes `return setting !== "v1"` (and the `wildIsland` option's comment: v2 by default, `v1` or `?wild=v1` for today's). The page and the apps' embed (`public/ark/embed.html` mounts the archipelago since ark-next bcb5eca9) both follow it. Then tell the coordinator, the integrator and B (P8).
-- **P8:** placement is final from B's side (f61cbaaf); after the switch the coordinator has the encounter lane regenerate `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+- **P7's gates are cleared and v2 is the default** (helper B, below): `wildIslandAsked` returns `setting !== "v1"`, so islands mode opens on the bigger wild island unless the `wildIsland` setting is `v1` or the URL says `?wild=v1`. Islands off never calls `setArkWorld`: today's island, byte for byte.
+- **P8:** placement is final (helper B, see below); the coordinator has the encounter lane regenerate `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+- **Behaviour-lane items found on v2, left to that lane** (each its own rule, the same on today's island, only hit there by v2's terrain):
+  - the schedule's `sleep` trip assumes its `to_roost` arrived; a roost the walk check then refuses (a 4 m alligator's on a rock face it cannot reach, `attachable` false) jumps it at the slot's end. Gone on `ark-next` bcb5eca9's roost beds for the fixture; the rule stands;
+  - the recipes' tests 8, 10, 12, 13 put their animals at today's island's coordinates (the kingfisher's (−70, 22)): not applicable on v2 until they take homes from a placement;
+  - breath-trip on v2: two harbor seals "move backwards in their breath" (~10 s into it). The same on cfafd7d3, before helper B's water fix: the breath leg's heading on v2's coast;
+  - map's "dens on dry land" on v1: 7 dens in the surf on cfafd7d3 itself (ark-next bcb5eca9's roost beds).
 - **Main-thread costs left on v2 (helper A's phone profile):** the ground's tiles and `freshWaterGeometry` (~200 ms of the mount task over v1's), and `world.ts` building v2's zone sites at load (~0.25 s). Under budget; worth moving to the scenery worker later.
 - **The town's join** (T3's prebuild worker): 35–102 s on this loaded Mac on both worlds, against the coordinator's ~10 s.
 - **The workbench renderer** (`islands/wild/render/index.ts`, `entry.ts`, `scripts/ark-wild.mts`, `tests/ark-visual/wild/`): kept until v2 is the default; then retire it with its baselines.
+
+### P7 gates cleared, v2 the default (helper B, 2026-11-12, on cfafd7d3)
+
+**What was wrong on v2, and the fix** (each a v2 branch or an optional field that is absent on today's island, so v1 reads as before):
+
+- **Water above the sea.** The schedule, the recipes and the scene's water fit read every water's surface at 0; v2's lake (6 m) and river stand above it. A mallard's swim spot on the lake read as a perch 2.7 m up (it flew there), a lake fish was fitted under the lake's bed. Now `ArkWorldSampler.waterSurface` (v2: `islands/wild/map-v2.ts` wildWaterSurface, a 1 m lattice of the fresh levels) and `behaviour-water.ts` (`waterSurfaceOf`, `topOf`) give every "in it, on it, above it" test its surface; `WaterSpec.surface` (only where not 0) fits the column under it and `tideFit` leaves it alone; the nav grid takes `waterDepth` (no walk cell in the lake or the river).
+- **Edges.** Water edges round the wetland's pools (an amphibian climbs out where it is, not at the river); cave mouths outside the asset rock's drawn box.
+- **Rocks for flyers.** A flyer's perch and its rock den are ledges (a rock's top), never a face: a bat flying in to roost hung inside the rock's box (the fixture's 34 pass-throughs). Flights keep above the drawn rocks' tops (`flightFloor`): an owl's leg went through a mountain rock.
+- **Crowns.** A place inside a tree's crown takes no body larger than its size (the grounding audit's own 1.05, not the schedule's 1.5): the tent-making bat, the amazon milk frog.
+- **Tests that assumed water at 0** read the world's surface (sea-depth, schedule-water, the recipes' kingfisher and plunge); behaviour-build's reference grid takes `waterDepth` too (its 70 000-cell diff on v2 ran node out of memory), and its old-places, hamlet and garden-pond tests skip on v2.
+
+| Gate | Result |
+|---|---|
+| v1 byte-identical | W1b's 22 hashes (`scratchpad/w1b-v1-hash.mts`), islands off and no-hamlet: identical to cfafd7d3; the validator's 5,230 places (1b768fff) and 7,800 schedule poses of the fixture (cab08f00) identical |
+| Map validator, v2 | synthetic 0 failures (2,615 species, 5,230 animals); live islands mode 0 (707 wild animals, 440 species); live at 3× 0 (2,121), at a year 0 (2,884) |
+| Collide audit, v2, 2 h at 4 s, `thresholds-islands.json` | fixture (CI's): pass-throughs 0, fences 0, cliffs 8, overlaps 1,061,645; live snapshot: 0, 0, 0, 14,570 |
+| Tests, v1 | map, grounding, collide, behaviour build/recipes/schedule/state, islands, town, collide-town, streaming, wild island/scenery/map/frame, sea-depth, reef, prebuild, attach, no-hamlet, schedule-water, breath-trip: 215 pass, 1 fail, 1 skipped. The one failure, map's "dens on dry land" (7 amphibians' and peccaries' dens in the surf), fails the same on cfafd7d3: ark-next bcb5eca9's post-cut round, for the behaviour lane |
+| Tests, `ARK_WORLD=v2` | sea-depth 7/7, schedule-water 4/4, grounding 6/6 (+1 skipped), behaviour-build 5/5 (+3 skipped: today's island's reference, hamlet, garden pond), behaviour-schedule 25/27 (the house sparrows' spread and the garden pond: homestead, not on the wild island in islands mode), recipes 25/29 (8, 10, 12, 13: fixed homes at today's island's coordinates), wild-map 4/5 (its "v1 stays" test runs without `ARK_WORLD`), breath-trip 1/2 (below) |
+| tsc, eslint | 0; clean on the changed files |
+| Places worker, phone profile (4× CPU, build:ark workers) | the places are worked out in `ark-prebuild-places-worker.js?world=v2` and primed: 0 ms of placement on the main thread |
+| Still | the live Ark's Asian elephant on its big-animal range in the v2 rainforest, drawn by the page: `scratchpad/wtB-probe-follow/v2-follow-eacf6b37.png` |
 
 ### P7 results (W1b, 2026-11-12, `ark-wild-island-next` a65a3db5)
 
