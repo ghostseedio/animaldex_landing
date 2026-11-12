@@ -13,7 +13,7 @@ import {GroundTiles} from "@/ark-scene/streaming/ground-tiles";
 import {STATE_IN, STATE_OUT} from "@/ark-scene/streaming/chunks";
 import {AssetInstances, type AssetPlacement} from "@/ark-scene/asset-rocks";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
-import {wildGroundArrays, type WildGround} from "@/ark-scene/islands/wild/render/ground";
+import {freshWaterGeometry, wildGroundArrays, WILD_LAKE_COLOUR, WILD_SNOW_LINE} from "@/ark-scene/islands/wild/render/ground";
 import {WildGrass} from "@/ark-scene/islands/wild/render/grass";
 import {sceneryCounts, wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 import {wildHeight} from "@/ark-scene/islands/wild/ground";
@@ -28,8 +28,7 @@ export const WILD_TIERS: Record<WildTier, {reach: number; plants: number; shadow
     low: {reach: 0.5, plants: 0.4, shadows: 0, pixelRatio: 1}
 };
 
-/** The snow line on the wild island's taller mountains (the Ark ground material's own is 27 m, for today's peaks). */
-export const WILD_SNOW_LINE = 52;
+export {WILD_SNOW_LINE};
 
 type AssetInfo = {kind: string; height: number; lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};
 const ASSETS = (manifest as unknown as {assets: Record<string, AssetInfo>}).assets;
@@ -70,26 +69,6 @@ function plainMaterial(side: typeof FrontSide | typeof DoubleSide, key: string, 
     return material;
 }
 
-/** The lake's and the river's water: the ground's quads with fresh water over them, at each vertex's own level. */
-function freshGeometry(ground: WildGround): BufferGeometry {
-    const size = ground.size;
-    const positions: number[] = [];
-    const level = (i: number) => ground.freshLevels[i];
-    for (let row = 0; row < size - 1; row++) {
-        for (let column = 0; column < size - 1; column++) {
-            const corners = [row * size + column, row * size + column + 1, (row + 1) * size + column + 1, (row + 1) * size + column];
-            const levels = corners.map(level);
-            if (levels.every((l) => Number.isNaN(l))) continue;
-            const top = Math.max(...levels.filter((l) => !Number.isNaN(l)));
-            const at = corners.map((i, k) => [ground.positions[i * 3], Number.isNaN(levels[k]) ? top : levels[k], ground.positions[i * 3 + 2]]);
-            positions.push(...at[0], ...at[3], ...at[1], ...at[3], ...at[2], ...at[1]);
-        }
-    }
-    const geometry = new BufferGeometry();
-    geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
-    return geometry;
-}
-
 export function buildWildIsland(options: {tier: WildTier; base?: string}): WildIsland {
     const tier = options.tier;
     const root = new Group();
@@ -115,10 +94,10 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
     const fresh = landscape.ground.getObjectByName("ark-fresh-water") as Mesh | undefined;
     if (fresh) {
         fresh.geometry.dispose();
-        fresh.geometry = freshGeometry(ground);
+        fresh.geometry = freshWaterGeometry(ground);
         (fresh.material as ShaderMaterial).uniforms.halfSize.value = WILD_HALF;
         // A clearer, lighter teal than today's small lake: seen from above, the island's bigger lake read as ink.
-        (fresh.material as ShaderMaterial).uniforms.lake.value = new Color(0.16, 0.42, 0.36);
+        (fresh.material as ShaderMaterial).uniforms.lake.value = WILD_LAKE_COLOUR.clone();
         fresh.frustumCulled = false;
         root.add(fresh);
     }

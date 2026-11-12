@@ -47,9 +47,6 @@ export type WildGroundSample = {
     riverHit: RiverHit;
 };
 
-/** Metres from the river's line to the far edge of its banks' easing. */
-const VALLEY = 28;
-
 export function sampleWildGround(x: number, z: number): WildGroundSample {
     const b = bearingOf(x, z);
     const {inland} = inlandOf(x, z);
@@ -82,6 +79,9 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
     }
     if (weights.grassland > 0.05) height += weights.grassland * 0.8 * (fbm(x * 0.04 + 2, z * 0.04) - 0.5);
     // The valley: land near the river eases toward a floor a metre or two above its water.
+    // (Metres from the river's line to the far edge of its banks' easing: 28, inline so the v2 world can be chosen while
+    // this module is still loading.)
+    const VALLEY = 28;
     if (river.d < VALLEY && inland > 2) {
         const floor = river.level + 1.2 + 0.05 * river.d;
         const pull = smoothstep(VALLEY, river.width + 3, river.d) * 0.9;

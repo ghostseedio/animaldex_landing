@@ -37,7 +37,8 @@ import {
 } from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
-import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
+import {arkWorld, fbm, LAKE, noise, onArkWorld, RIVER, sampleGround, smoothstep, TERRAIN_HALF, TERRAIN_SEGMENTS} from "@/ark-scene/world";
+import {freshWaterGeometry, wildGroundArrays, WILD_LAKE_COLOUR, WILD_SNOW_LINE} from "@/ark-scene/islands/wild/render/ground";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
@@ -51,8 +52,14 @@ export const WATER_WIND = {value: 1};
 export const ARK_GROUND_LITE = {value: 0};
 
 /** The ground's segments across (each ~1.1 m); the chunk grid is cut along them (`streaming/chunks.ts`). */
-export const GROUND_SEGMENTS = 240;
-const SEGMENTS = GROUND_SEGMENTS;
+export let GROUND_SEGMENTS = TERRAIN_SEGMENTS;
+let SEGMENTS = GROUND_SEGMENTS;
+// The world's switch (docs/ark/wild-island.md §Integration): the v2 world's ground is 480 segments of 1.1 m.
+onArkWorld(() => {
+    GROUND_SEGMENTS = TERRAIN_SEGMENTS;
+    SEGMENTS = GROUND_SEGMENTS;
+    primedGround = null;
+});
 
 function srgb(hex: string): Color {
     return new Color(hex);
@@ -150,6 +157,8 @@ export type GroundArrays = {
 };
 
 export function groundArrays(tier: "high" | "medium" | "low" = "high"): GroundArrays {
+    // The v2 world (the bigger wild island) builds its own arrays in this layout (its fresh water at its own levels).
+    if (arkWorld() === "v2") return wildGroundArrays();
     void tier;
     const size = SEGMENTS + 1;
     const count = size * size;
@@ -392,7 +401,8 @@ function groundMaterial(): MeshStandardMaterial {
         rockDark: {value: srgb("#5c574f")},
         arkDaylight: ARK_DAYLIGHT
     };
-    material.customProgramCacheKey = () => "ark-ground-3";
+    const snowLine = arkWorld() === "v2" ? WILD_SNOW_LINE : 27;
+    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-3" : `ark-ground-3-snow${snowLine}`);
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -536,7 +546,7 @@ float arkWet = 0.0;`)
     // Mountain snow (graphics pass): continuous above a snow line that wanders with the ground, soft-edged, combed into
     // wind streaks. Batch 4: the upper third holds snow on all but the steepest hard faces, and below the line it lies
     // in lines along the ledges. The weather's snow cover brings the line down.
-    float snowLine = 27.0 - 12.0 * envSnow;
+    float snowLine = ${snowLine.toFixed(1)} - 12.0 * envSnow;
     float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);
     float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);
     // The upper reach, by a wandering line that runs down the gullies and back up the ribs (batch 6: a level line here
@@ -1111,6 +1121,14 @@ export function buildLandscape(grid: ChunkGrid = chunkGridFor(TERRAIN_HALF, SEGM
     // The lake and the river (batch 5): their own water at a fixed level, riding with the (static) ground.
     const freshWater = waterMesh(depth, true);
     freshWater.mesh.name = "ark-fresh-water";
+    if (arkWorld() === "v2" && "freshLevels" in arrays) {
+        // The v2 world's lake and river at their own levels (the river descends from its spring): the ground's quads with
+        // fresh water over them, each vertex at its level; a lighter teal for its bigger lake.
+        freshWater.mesh.geometry.dispose();
+        freshWater.mesh.geometry = freshWaterGeometry(arrays as GroundArrays & {freshLevels: Float32Array});
+        freshWater.mesh.frustumCulled = false;
+        freshWater.material.uniforms.lake.value = WILD_LAKE_COLOUR.clone();
+    }
     ground.add(freshWater.mesh);
     return {
         ground,
