@@ -144,7 +144,7 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
 
             {/* The figure's caption, and the world's own controls: one corner, one voice. */}
             <div className="absolute inset-x-0 top-0 mx-auto flex w-full max-w-[86rem] items-start justify-between gap-3 px-4 pt-5 md:px-8 md:pt-6">
-                <p className="flex min-h-8 items-center gap-2 rounded-sm bg-black/35 px-2.5 py-1.5 text-[11px] font-bold uppercase leading-none tracking-[0.16em] text-white/85 backdrop-blur-md">
+                <p className="flex min-h-8 min-w-0 items-center gap-2 rounded-sm bg-black/35 px-2.5 py-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.14em] text-white/85 backdrop-blur-md sm:text-[11px] sm:tracking-[0.16em]">
                     {phase === "live" ? (
                         <>
                             <span aria-hidden="true" className="relative flex h-2 w-2">
@@ -162,12 +162,12 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
                         words.poster
                     )}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                     {phase === "poster" ? (
                         <button
                             type="button"
                             onClick={() => setPhase("loading")}
-                            className="inline-flex min-h-10 items-center gap-2 rounded-sm bg-white/90 px-3.5 text-sm font-bold text-[#06110b] shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-colors hover:bg-white"
+                            className="inline-flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-sm bg-white/90 px-3.5 text-sm font-bold text-[#06110b] shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-colors hover:bg-white"
                         >
                             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M8 5.5v13l10.5-6.5z" /></svg>
                             {words.seeLive}
@@ -178,7 +178,7 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
                             type="button"
                             aria-pressed={exploring}
                             onClick={() => setExploring((value) => !value)}
-                            className="inline-flex min-h-10 items-center gap-2 rounded-sm bg-white/90 px-3.5 text-sm font-bold text-[#06110b] shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-colors hover:bg-white"
+                            className="inline-flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-sm bg-white/90 px-3.5 text-sm font-bold text-[#06110b] shadow-[0_8px_30px_rgba(0,0,0,0.25)] transition-colors hover:bg-white"
                         >
                             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 {exploring ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M5 3l14 8-6 1.5L10 19z" />}

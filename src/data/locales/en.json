@@ -456,7 +456,6 @@
   },
   "landing": {
     "hero": {
-      "eyebrow": "The Ark, live",
       "taglineLead": "Catch animals in real life",
       "taglineRest": "and turn them into AI companions in a 3D world.",
       "sentence": "Animals come aboard from people's photos and live by their own field guides, in one world shared by everyone.",
@@ -502,7 +501,7 @@
       "aboardTitle": "Aboard",
       "aboardBody": "It joins the Ark and lives where its kind lives, by its field guide.",
       "aboardLabel": "Wild island, grassland. Aboard since {date}",
-      "aboardAlt": "The same Komodo dragon in the Ark, ringed, on a rock in a clearing",
+      "aboardAlt": "A Komodo dragon in the Ark, ringed, in the wild island's grassland",
       "talkTitle": "Hear its side",
       "talkBody": "Ask it anything. It answers from its own life.",
       "talkAlt": "The Komodo dragon's talking 3D model, speaking",
@@ -539,6 +538,9 @@
         "rising": "Tide rising",
         "falling": "Tide falling"
       }
+    },
+    "foodChain": {
+      "eyebrow": "Who eats whom"
     },
     "population": {
       "eyebrow": "Populations over time",

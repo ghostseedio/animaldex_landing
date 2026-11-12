@@ -98,10 +98,11 @@ function TotalChart({series, words, locale}: {series: ArkPopulationSeries; words
                     <text x={x(last) - 8} y={y(series.total[last]) - 12} textAnchor="end" className="fill-white text-[13px] font-bold [font-variant-numeric:tabular-nums]">
                         {series.total[last].toLocaleString(locale)}
                     </text>
-                    {showBurst ? (
+                    {showBurst && burst > 0 ? (
+                        // Said beside the rise, to its left (the line is still at the foot there), with a leader to its middle.
                         <g>
-                            <line x1={x(burst)} x2={x(burst)} y1={y(series.total[burst]) + 6} y2={y(max * 0.42)} className="stroke-ink-400" strokeWidth={1} />
-                            <text x={x(burst) - 6} y={y(max * 0.42) + 14} textAnchor="end" className="fill-ink-300 text-[12px]">
+                            <line x1={x(burst - 1) - 4} x2={(x(burst - 1) + x(burst)) / 2} y1={y(series.total[burst] / 2)} y2={y(series.total[burst] / 2)} className="stroke-ink-400" strokeWidth={1} />
+                            <text x={x(burst - 1) - 10} y={y(series.total[burst] / 2)} dy="0.32em" textAnchor="end" className="fill-ink-300 text-[12px]">
                                 {words.backfill}
                             </text>
                         </g>

@@ -6,6 +6,7 @@ import HomeArkDay, {type HomeArkDayFrame} from "@/app/[locale]/(composited)/(hom
 import HomeArkPopulations from "@/app/[locale]/(composited)/(home)/_components/home-ark-populations";
 import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-loop-video";
 import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
+import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import StoreLink from "@/components/store/store-link";
 import {formatAnimalCount} from "@/lib/animal-count";
@@ -44,7 +45,6 @@ const POSTER_AT = Date.UTC(2026, 10, 10, 17, 18);
 const DAY_FRAMES: Array<{key: string; hours: number}> = [
     {key: "0200", hours: 2},
     {key: "0600", hours: 6},
-    {key: "0800", hours: 8},
     {key: "1100", hours: 11},
     {key: "1400", hours: 14},
     {key: "1736", hours: 17.6},
@@ -279,6 +279,11 @@ export default async function Home({params}: HomePageProps) {
         const posterCaption = t("hero.poster", {time: islandClock(POSTER_AT, locale), date: shortDate(POSTER_AT, locale)});
         const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
         const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
+        const foodChainClass = "[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl";
+        // (Called, not mounted: an async server component as JSX fails this React's types. In development without keys
+        // S3's section has nothing to read, and the same pieces run over the local extraction instead.)
+        const foodChain = (await ArkFoodChainSection({locale, variant: "compact", limit: 6, headingLevel: 2, className: foodChainClass}))
+            ?? (await HomeFoodChainDev({locale, limit: 6, className: foodChainClass}));
 
         return (
             <>
@@ -427,19 +432,16 @@ export default async function Home({params}: HomePageProps) {
                 </div>
 
                 <div className="mx-auto w-full max-w-[86rem] px-4 md:px-8">
-                    {/* 5. Who eats whom (S3's compact explorer; its own heading, set in this page's section style). */}
-                    <div className="pt-24 md:pt-32">
-                        <p className="mb-4 flex items-center gap-3 border-t border-line-200 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">
-                            <span className="text-primary-200">03</span>
-                        </p>
-                        <ArkFoodChainSection
-                            locale={locale}
-                            variant="compact"
-                            limit={6}
-                            headingLevel={2}
-                            className="[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl"
-                        />
-                    </div>
+                    {/* 5. Who eats whom (S3's compact explorer, its own heading set in this page's section style); nothing when it can't be read. */}
+                    {foodChain ? (
+                        <div className="pt-24 md:pt-32">
+                            <p className="mb-4 flex items-center gap-3 border-t border-line-200 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">
+                                <span className="text-primary-200">03</span>
+                                <span>{t("foodChain.eyebrow")}</span>
+                            </p>
+                            {foodChain}
+                        </div>
+                    ) : null}
 
                     {/* 6. Populations over time. */}
                     <section aria-labelledby="home-population-title" className="pt-24 md:pt-32">

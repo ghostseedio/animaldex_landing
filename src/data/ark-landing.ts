@@ -36,7 +36,12 @@ const LOG_MAX_PAGES = 60;
 const SERIES_POINTS = 48;
 const SERIES_SPECIES = 6;
 const DAY_MS = 86_400_000;
-const LIVE_SITE = "https://animaldex.app";
+/**
+ * Where the reads come from without Supabase keys: development reads the live site's public routes, and a local
+ * production build measured without keys (Lighthouse) may name an origin in `ARK_LANDING_LIVE_ORIGIN`. Never used
+ * where Supabase is configured (production).
+ */
+const LIVE_SITE = process.env.ARK_LANDING_LIVE_ORIGIN?.trim() || (process.env.NODE_ENV === "development" ? "https://animaldex.app" : "");
 
 type Row = Record<string, unknown>;
 
@@ -48,13 +53,14 @@ function text(value: unknown): string | null {
     return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-const development = process.env.NODE_ENV === "development";
+/** Reads from the live site's public routes (no keys here: development, or a local measurement). */
+const viaLiveSite = () => Boolean(LIVE_SITE) && !(getSupabaseUrl() && getSupabasePublicKey());
 
 // MARK: The snapshot
 
 async function readSnapshot(): Promise<ArkSnapshot | null> {
     if (getSupabaseUrl() && getSupabasePublicKey()) return readPublicArk(300);
-    if (!development) return null;
+    if (!viaLiveSite()) return null;
     if (devSnapshot && Date.now() - devSnapshot.at < 60_000) return devSnapshot.promise;
     const promise = fetch(`${LIVE_SITE}/api/ark/voyage`, {cache: "no-store"})
         .then(async (response) => {
@@ -118,7 +124,7 @@ async function readLogPage(since: string): Promise<{events: unknown[]; next: str
             }
             return {events: body.events, next: text(body.next_since), more: body.more === true};
         }
-        if (!development) return null;
+        if (!viaLiveSite()) return null;
         // (Development without keys: the live site's public route, which follows a few pages itself.)
         const response = await fetch(`${LIVE_SITE}/api/ark/events?since=${encodeURIComponent(since)}`, {cache: "no-store"});
         const body = response.ok ? record(await response.json()) : null;
@@ -160,7 +166,7 @@ async function refreshLog(startedAt: string): Promise<void> {
             return;
         }
         let next = read.next ?? last;
-        if (development && next && !getSupabaseUrl() && Math.floor(Date.parse(next) / 60_000) === Math.floor(Date.parse(cursor) / 60_000) && !last) {
+        if (viaLiveSite() && next && Math.floor(Date.parse(next) / 60_000) === Math.floor(Date.parse(cursor) / 60_000) && !last) {
             // (Development's public route starts at a minute: a minute holding more rows than it pages through is
             // stepped over, and the animals it brought are counted as arriving then.)
             log.gapAt ??= Date.parse(cursor);

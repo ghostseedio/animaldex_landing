@@ -51,10 +51,10 @@ function Frame({frame, active, eager}: {frame: HomeArkDayFrame; active: boolean;
     );
 }
 
-function Readout({frame, awake, words, locale}: {frame: HomeArkDayFrame; awake: number | null; words: HomeArkDayWords; locale: string}) {
+function Readout({frame, awake, words, locale, small = false}: {frame: HomeArkDayFrame; awake: number | null; words: HomeArkDayWords; locale: string; small?: boolean}) {
     return (
         <div className="flex flex-col gap-3">
-            <p className="font-display text-7xl font-extrabold leading-none tracking-tight text-white [font-variant-numeric:tabular-nums] md:text-8xl">{frame.time}</p>
+            <p className={`font-display font-extrabold leading-none tracking-tight text-white [font-variant-numeric:tabular-nums] ${small ? "text-4xl" : "text-7xl md:text-8xl"}`}>{frame.time}</p>
             <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-white/85">
                 <li>{frame.phase}</li>
                 <li aria-hidden="true" className="text-white/35">/</li>
@@ -116,7 +116,7 @@ export default function HomeArkDay({frames, words, locale}: {frames: HomeArkDayF
                     <li key={frame.key} className="relative aspect-[4/3] overflow-hidden rounded-sm bg-[#0b1d2e]">
                         <Frame frame={frame} active eager={false} />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-                            <Readout frame={frame} awake={awakeAt(frame)} words={words} locale={locale} />
+                            <Readout frame={frame} awake={awakeAt(frame)} words={words} locale={locale} small />
                         </div>
                     </li>
                 ))}

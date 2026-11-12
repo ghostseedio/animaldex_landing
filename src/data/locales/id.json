@@ -456,7 +456,6 @@
   },
   "landing": {
     "hero": {
-      "eyebrow": "Bahtera, langsung",
       "taglineLead": "Tangkap hewan di dunia nyata",
       "taglineRest": "lalu jadikan teman AI di dunia 3D.",
       "sentence": "Hewan naik ke Bahtera dari foto orang dan hidup menurut panduan lapangannya sendiri, di satu dunia yang dibagi semua orang.",
@@ -502,7 +501,7 @@
       "aboardTitle": "Naik ke Bahtera",
       "aboardBody": "Ia bergabung dengan Bahtera dan hidup di tempat jenisnya hidup, menurut panduan lapangannya.",
       "aboardLabel": "Pulau liar, padang rumput. Di Bahtera sejak {date}",
-      "aboardAlt": "Komodo yang sama di Bahtera, dilingkari, di atas batu di sebuah tanah lapang",
+      "aboardAlt": "Seekor komodo di Bahtera, dilingkari, di padang rumput pulau liar",
       "talkTitle": "Dengar sisinya",
       "talkBody": "Tanyakan apa saja. Ia menjawab dari hidupnya sendiri.",
       "talkAlt": "Model 3D komodo yang bisa bicara, sedang berbicara",
@@ -539,6 +538,9 @@
         "rising": "Air mulai pasang",
         "falling": "Air mulai surut"
       }
+    },
+    "foodChain": {
+      "eyebrow": "Siapa memakan siapa"
     },
     "population": {
       "eyebrow": "Populasi dari waktu ke waktu",

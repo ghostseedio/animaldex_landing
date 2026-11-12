@@ -48,7 +48,7 @@ export default function Header({locale, t}: {locale: string; t: ScopedTranslator
                     <Link href="/" className="flex shrink-0 items-center" aria-label={t("logo")}>
                         {/* Signed in on a narrow phone, the avatar needs the room: the
                             mark stays, the word steps aside. */}
-                        <BrandLockup size={null} className="[--brand-size:25px] md:[--brand-size:28px]" wordClassName="header-wordmark" />
+                        <BrandLockup size={null} chrome className="[--brand-size:25px] md:[--brand-size:28px]" wordClassName="header-wordmark" />
                     </Link>
                     {/* A hairline separates identity from navigation, the way a field
                         guide separates its masthead from the index. */}
