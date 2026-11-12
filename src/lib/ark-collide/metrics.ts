@@ -199,6 +199,12 @@ function spine(s: SimAnimal, p: Pose): Array<[number, number]> {
 }
 
 /** The deepest overlap of a body with a solid thing now (its capsule, its height span), or null. */
+/** The ground's rise over run at a point: over a metre each way along x and z, the steeper (the walk grid's measure). */
+function groundSlope(sim: Sim, x: number, z: number): number {
+    const h = (px: number, pz: number) => sim.world.sampler.heightAt(px, pz);
+    return Math.max(Math.abs(h(x + 1, z) - h(x - 1, z)), Math.abs(h(x, z + 1) - h(x, z - 1))) / 2;
+}
+
 export function bodyHit(set: ColliderSet, s: SimAnimal, p: Pose, scratch: Collider[] = []): {collider: Collider; depth: number} | null {
     const r = s.body.radius;
     let best: {collider: Collider; depth: number} | null = null;
@@ -300,15 +306,17 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
                 keepWorst({id: s.a.id, slug: s.a.model_slug, t, kind: hit.collider.kind, collider: hit.collider.id, depth: Math.round(hit.depth * 1000) / 1000, source: p.source, x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100});
             }
             // On a cliff face: a walker on the ground (not climbing, not on a surface) where the ground is twice as steep
-            // as its walk takes.
+            // as its walk takes. The ground's own rise over a metre each way (the walk grid's measure), not the shading
+            // normal: on the merged scenery that normal carries sub-metre detail (2026-11-12: an anoa herd asleep on
+            // ground rising 0.25 in 1 read 3.3, its normal).
             if (!p.aloft && !p.attached && !p.source.startsWith("surface") && s.sched && p.y > 0.05) {
                 const ground = sim.world.sampler.heightAt(p.x, p.z);
                 const walker = s.profile.move !== "fly" && s.profile.move !== "swim";
-                if (walker && Math.abs(p.y - ground) < 0.1 && sim.world.sampler.slope(p.x, p.z) > maxSlopeOf(s.sched) * 2) {
+                if (walker && Math.abs(p.y - ground) < 0.1 && groundSlope(sim, p.x, p.z) > maxSlopeOf(s.sched) * 2) {
                     report.cliffs.samples++;
                     cliffAnimals.add(s.a.id);
                     bump(report.cliffs.bySource, sourceKey(p.source));
-                    if (report.cliffs.examples.length < 20) report.cliffs.examples.push({id: s.a.id, slug: s.a.model_slug, t, kind: "rock", collider: "cliff", depth: Math.round(sim.world.sampler.slope(p.x, p.z) * 100) / 100, source: p.source, x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100});
+                    if (report.cliffs.examples.length < 20) report.cliffs.examples.push({id: s.a.id, slug: s.a.model_slug, t, kind: "rock", collider: "cliff", depth: Math.round(groundSlope(sim, p.x, p.z) * 100) / 100, source: p.source, x: Math.round(p.x * 100) / 100, z: Math.round(p.z * 100) / 100});
                 }
             }
             // A step through a fence between two samples, on the ground, not a jump between slots.
@@ -320,7 +328,10 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
             if (move < 1e-3 || move > SLOT_SECONDS) continue;
             for (const c of set.near((p.x + before.x) / 2, (p.z + before.z) / 2, move / 2 + 0.1, fences)) {
                 // (Within the fence's height on both sides: a bird coming down onto its top, or off it, goes over it.)
-                if (c.kind !== "fence" || c.shape !== "segment" || !bodyMeets(c, s.body.radius) || !spansCollider(c, p.y, s.body.height) || !spansCollider(c, before.y, s.body.height)) continue;
+                // (Within 3 cm of a rail's underside is under it, the pass-throughs' own tolerance: a crocodile 0.39 m tall
+                // under a paddock's rails 0.4 m up, on ground 2 cm higher than the rail's foot.)
+                const tall = Math.max(s.body.height - 0.03, 0.01);
+                if (c.kind !== "fence" || c.shape !== "segment" || !bodyMeets(c, s.body.radius) || !spansCollider(c, p.y, tall) || !spansCollider(c, before.y, tall)) continue;
                 if (!segmentsCross(before.x, before.z, p.x, p.z, c.ax, c.az, c.bx, c.bz)) continue;
                 // (Its middle within the fence's own thickness is on it: an owl perched along a fence's top, hopping on.)
                 if (colliderDistance(c, p.x, p.z) <= 0 || colliderDistance(c, before.x, before.z) <= 0) continue;

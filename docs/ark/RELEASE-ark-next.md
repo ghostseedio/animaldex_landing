@@ -20,7 +20,7 @@ Lane heads merged into `ark-next`:
 
 | Lane | Branch | Head | Merged as |
 |---|---|---|---|
-| L5 collisions | `ark-collisions` 37de0b1d, `-navstart` 7533ab4e, `-town` 2d939850 | — | 521c3de4 (API), a9af1cc8, 7930ec2e, 7ab61a51, two-island colliders |
+| L5 collisions | `ark-collisions` 37de0b1d, `-navstart` 7533ab4e, `-town` 2d939850, `ark-collide-gate` e056ef12 | — | 521c3de4 (API), a9af1cc8, 7930ec2e, 7ab61a51, two-island colliders, 412fa2e3 |
 | L4 true scale | `ark-true-scale` | f6a1e8f8 | 893832a7 |
 | L6 scenery | `ark-scenery` | 017c5572 | c579bc62, 6a8cefe5, 0de78f61, 9d089ea4 |
 | L3 grounding and perching | `ark-grounding` | fda84235 | 8d90308a, generator 7 re-run 3900a81d |
@@ -91,7 +91,7 @@ On the release candidate's tree (03dfd120 = 5cd8efff):
 | lint | 0 errors |
 | The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
 | The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
-| The collision audit (`ark-collisions.yml`) | **(pending L5)**: pass-throughs 0; cliffs and overlaps over their limits |
+| The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | islands mode (what goes live): pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode: 0 / 0 / 861 / 3.07 M; both within their limits (`tests/ark-collide/thresholds-islands.json`, `thresholds.json`) |
 | Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
 | The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.12 / 1.11; backwards 4.1% / 1.2%, nothing backwards for over 1 s; ground turns 0.8 / 1.8 a minute; over 1.5× its clip: an American alligator (2.3×), the harbour seal (2.5×, its flipper clip), the clawed frog (1.6×); no page errors |
 | The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
@@ -117,7 +117,7 @@ Before is the live release (7764fe12), after is `ark-next`. The per-lane detail 
 | Trees growing into each other | 971 pairs | 0 |
 | Props floating / standing in each other | 284 / 14 | 0 / 0 |
 | Pass-throughs of solid things (true scale, real snapshot, 2 h / 1 h) | 194,000 samples | 0 |
-| Fence crossings (2 h) | 638 | 3 in 1 h (a perched bird on a fence top no longer counts; CI limit 0) |
+| Fence crossings (2 h) | 638 | 0 (CI fixture, both modes) |
 
 Performance per tier (Part B, the real Ark, headless Chromium with Metal; `docs/ark/streaming.md` §7): desktop high /
 medium / low 59 / 60 / 60 fps, view complete 10.4–10.9 / 8.3–9.0 / 5.6–9.0 s; the phone profile (360×800, DPR 2, 4× CPU
@@ -189,18 +189,23 @@ Listed for the owner instead of polished today (decision 136):
 - Emergent trees stand as tall as the mountain.
 - Dolphins overlap in chases.
 - The osprey's and the swallow's poses.
-- The harbour seal walks at about 2.5× its flipper-legs clip at true-scale speed (cosmetic: seals keep their clips).
+- In the default view some animals move faster than their clips: the American alligator (about 2.3×), the clawed frog
+  (about 1.6×), the bullfrog, and the harbour seal (about 2.5×, its flipper-legs clip; seals keep their baked clips).
+  Three causes (L1): the reactive layer moves reactions in metres with no cap from the animal's own clips (fixed after
+  the release: `ark-l1-pace` f21ad63b caps them at 1.2× the walk or run pace); the default-view metric compares with
+  the baked clip even where the locomotion layer draws the feet (fixed in the tool in the same branch); and schedule
+  trips too long for their slot are sped up past 1.2× (bullfrog, alligators, goats, the komodo dragon; being reworked
+  under decision 202).
+- Perched sleepers share crowns: the collision audit's overlaps (3.2 M body samples over 2 hours) are mostly sleepers
+  in their postures and perched animals held where they are; the limit is "at most today's".
+- Arriving at the town on the phone profile leaves two main-thread tasks of 0.5–0.6 s after the first frame (decision
+  163): profile them on a real phone after the release.
 - The town's walk ways are new (T3): watch for town animals crossing garden fences in the first hours.
 
-Routed to lanes, to be fixed or listed here before approval **(pending)**:
+Still open with a lane (**the coordinator decides** before approval):
 - Behaviour lane (`ark-behaviour-backwards`): the share of walking backwards in the default view (0.2% at the release,
   1–5% on ark-next; nothing backwards for over 1 s on the ground). L1 found one zebra in a sleep-then-play bout, the
   same with the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
-- L5: the collision audit (`ark-collisions.yml`) is red on ark-next: pass-throughs 0, but cliffs 7,913 (limit 2,466)
-  and overlaps 3.08 M (limit 2.04 M); the hamlet's fence crossings are gone in islands mode. A gate for the visual
-  accept run.
-- The town's first two tasks after the first frame (0.5–0.6 s on the phone profile, decision 163): profile on a real
-  phone after the release.
 
 ## 7. Rollback
 
