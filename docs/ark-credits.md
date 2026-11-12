@@ -148,3 +148,8 @@ No third-party art. The surfaces (fur, feathers, scales, skin, shell, slime), we
 | Basis Universal transcoder (JS + WASM) | three.js r170 `examples/jsm/libs/basis/` (byte-identical copy of the npm package's files; Basis Universal by Binomial) | Apache-2.0 (Basis Universal), redistributed in three.js (MIT) | decodes the KTX2 close-up skins in the browser | `public/ark/basis/basis_transcoder.js`, `basis_transcoder.wasm` |
 
 Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0, `brew install basis_universal`) builds the close-up skins offline (AnimalDex `scripts/talking-models/ark/export_closeup.py`).
+
+## Town island (`src/ark-scene/islands/`, lane T2)
+
+No third-party assets. Every building, street, fence, tree, car, bin, boat, stall and zoo enclosure on the town, countryside and zoo island is generated in code (`src/ark-scene/islands/town/render/`), coloured by vertex colours, with no textures, models or scans downloaded. Made for AnimalDex; no attribution needed. The town reuses the Ark's existing CC0 day sky (`public/ark/graphics/sky-day.hdr`, credited under Graphics above) and its shared lighting.
+
