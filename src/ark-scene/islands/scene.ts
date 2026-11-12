@@ -9,13 +9,13 @@
  * Everything here answers in world coordinates; the town's own modules work in its local frame (+ the origin).
  */
 
-import type {Group, Mesh, ShaderMaterial, Texture} from "three";
+import {DataTexture, NearestFilter, RedFormat, UnsignedByteType, type Group, type Mesh, type ShaderMaterial, type Texture} from "three";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
-import {TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
+import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
@@ -33,6 +33,12 @@ export type ArkIslandScene = {
     /** Half its square (m), and its sea floor's depth map over it (r = depth / 16 m) for the one world's sea (decision 143). */
     half: number;
     seaDepth: Texture | null;
+    /**
+     * Its chunks as drawn now (1 drawn, 0 not; one texel a chunk over its square, rows along z): the one sea applies the
+     * town's sea floor only where its chunk is drawn, so a chunk that is not drawn never shows the town's shallows (white)
+     * through the land's place, only the open sea.
+     */
+    drawnMask: Texture;
     /** Within its square (its ground answers there; the wild island's outside). */
     contains: (x: number, z: number) => boolean;
     /** The ground's height in the world frame (inside its square). */
@@ -183,10 +189,26 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     let joinOpen: string[] | null = null;
     let revealed = Number.POSITIVE_INFINITY;
     let hidden: Group["children"] = [];
+    // (The one sea's fail-safe: the drawn chunks, for its town patch.)
+    const drawnBytes = new Uint8Array(TOWN_CHUNK_COUNT).fill(255);
+    const drawnMask = new DataTexture(drawnBytes, TOWN_GRID.columns, TOWN_GRID.rows, RedFormat, UnsignedByteType);
+    drawnMask.magFilter = NearestFilter;
+    drawnMask.minFilter = NearestFilter;
+    drawnMask.needsUpdate = true;
     const applyDrawn = () => {
         const stream = streamDrawn;
         const upTo = revealed;
-        town.setDrawn(upTo >= TOWN_CHUNK_COUNT ? stream : (chunk) => chunk < upTo && (!stream || stream(chunk)));
+        const drawn = upTo >= TOWN_CHUNK_COUNT ? stream : (chunk: number) => chunk < upTo && (!stream || stream(chunk));
+        town.setDrawn(drawn);
+        let changed = false;
+        for (let chunk = 0; chunk < TOWN_CHUNK_COUNT; chunk++) {
+            const value = !drawn || drawn(chunk) ? 255 : 0;
+            if (drawnBytes[chunk] !== value) {
+                drawnBytes[chunk] = value;
+                changed = true;
+            }
+        }
+        if (changed) drawnMask.needsUpdate = true;
     };
     // One sea for the world (decision 143): the wild island's; the town's own plane would lie over it.
     const sea = town.root.getObjectByName("town:sea") as Mesh | undefined;
@@ -219,6 +241,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         root: town.root,
         half: def.half,
         seaDepth,
+        drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         has,
