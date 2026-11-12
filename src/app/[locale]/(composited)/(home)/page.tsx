@@ -8,6 +8,7 @@ import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-l
 import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
 import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
+import {ARK_HOW_IT_WORKS_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
 import StoreLink from "@/components/store/store-link";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
@@ -339,11 +340,20 @@ export default async function Home({params}: HomePageProps) {
                                         <span>
                                             <span className="block font-display text-3xl font-bold leading-none text-white">{t("steps.talkTitle")}</span>
                                             <span className="mt-2 block text-base leading-relaxed text-ink-200">{t("steps.talkBody")}</span>
+                                            <Link href={TALK_HREF} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white underline decoration-white/40 underline-offset-[6px] transition-colors hover:decoration-primary-400">
+                                                {t("steps.talkCta")}
+                                                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                                            </Link>
                                         </span>
                                     </figcaption>
                                 </figure>
                             </li>
                         </ol>
+                        {/* The text pages carry the explanation (SEO lane S3): one quiet row of links, not more words here. */}
+                        <p className="mt-12 flex flex-wrap gap-x-8 gap-y-2 border-t border-line-200 pt-4 text-sm font-bold">
+                            <Link href={HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howItWorks")}</Link>
+                            <Link href={ARK_HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howTheArkWorks")}</Link>
+                        </p>
                     </section>
 
                     {/* 4. A day on the Ark: the head here, the day itself full bleed below. */}
