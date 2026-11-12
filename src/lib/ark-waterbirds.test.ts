@@ -51,7 +51,7 @@ test("waterbirds: every species that swims has a band while it is in the water (
     }
     recordMotionMetric("ma3", "swimmers_without_band", missing.size);
     assert.ok(swimmers > 300, `${swimmers} swimmers looked at`);
-    assert.equal(missing.size, 0, `swimmers with no band: ${[...missing].join(", ")}`);
+    assert.equal(missing.size, 0, `swimmers with no band: ${Array.from(missing).join(", ")}`);
     // (A heron wades: no band, it stands on the bed in the shallows.)
     assert.equal(swimDepth("grey-heron", "wetland"), null);
     assert.equal(swimDepth("eurasian-coot", "river_lake")?.kind, "coot");
@@ -156,7 +156,7 @@ function dayOf(s: Subject): {aloft: number; takeoffs: number; awake: number; wat
 }
 
 /** The birds that walk or swim first and can fly (a coot, a duck, a goose, a swan, a peafowl, a pigeon, a hen). */
-const groundBirds = [...new Set(subjects.filter((s) => modelBase(s.slug)?.plan === "bird" && (s.profile.move === "walk" || s.profile.move === "swim") && s.profile.moves.includes("fly")).map((s) => s.slug))];
+const groundBirds = Array.from(new Set(subjects.filter((s) => modelBase(s.slug)?.plan === "bird" && (s.profile.move === "walk" || s.profile.move === "swim") && s.profile.moves.includes("fly")).map((s) => s.slug)));
 
 test("waterbirds: birds that walk or swim first are aloft at most 2% of the day and take off at most 3 times an awake hour", () => {
     const over: string[] = [];
