@@ -481,7 +481,49 @@ On each outdoor plot's own boundary, which stays the hard collider (no gap) and 
 
 ### 13.5 Measured
 
-PERF_TABLE
+**The real Ark in the apps' embed** (production bundles, 3,145 animals with T1's routing merged, the phone profile
+360×800 at 2× with 4× CPU, a forced tier, peak and resident JS heap after the town joined and 25 s more, fps over 10 s;
+this Mac at load 6–16 with other lanes' probes running, so fps swings ±10 between identical runs):
+
+| Build | Tier | Town joined | Peak heap | Heap at rest | fps |
+|---|---|---:|---:|---:|---:|
+| origin/main 970b0461 | low | 9.3 s | 382 MB | 297 MB | 58 |
+| this branch (with GA's and TB's merges), first cut | low | 9.7 s | 454 MB | 384 MB | 44 |
+| this branch, after the heap fixes below | low | 9.3 s | 408 MB | 336 MB | 52 |
+| the same, the town's library trees and foliage off (A/B) | low | 9.3–9.5 s | 388 MB | 302–328 MB | 46–60 |
+| origin/main 970b0461 | medium | 9.8 s | 403 MB | 307 MB | 49 |
+| this branch, after the heap fixes | medium | 9.7 s | 411 MB | 329 MB | 29–54 |
+| GA + TB latest (aba53bd2), without this lane | low / medium | 10.4 / 9.7 s | 429 / 387 MB | 429 / 358 MB | 29 / 60 |
+
+- **This lane's own cost** (the A/B on the same build): about +20 MB at the low tier's peak and +10–30 MB at rest, within
+  the runs' noise at medium. The library trees' decoded levels are 9.5 MB (32 assets; lod0 6.9 MB); the foliage 53k
+  triangles.
+- **The heap fixes** (they help every lane's geometry): the worker's copies of every chunk's arrays are let go once the
+  chunk's meshes are made (before, the whole town's decal, solid and glass arrays stayed twice in the page's heap, held by
+  the build data for the zoo's rebuilds); the trees' and the foliage's CPU arrays are dropped once on the GPU (nothing
+  reads them back); hedges and crop rows drawn lighter (foliage 78k → 53k triangles).
+- **The low tier's peak** is at the 384 MB budget on origin/main already (382 MB, decision 221's 94% figure was 361);
+  merged with GA and TB it is 408–429 MB. Part B's streamer pulls the render distance in under pressure (§3 of
+  `streaming.md`); a real phone's figure is still to be measured (the integrator's WebView run).
+
+**The town's workbench** (`scripts/ark-town.mts perf`, the whole town drawn, flying the route, 20 s; with GA's and TB's
+merges; load ~8):
+
+| Device, tier | fps | Median / p95 / p99 (ms) | Peak heap | Draw calls | Triangles |
+|---|---:|---|---:|---:|---:|
+| Desktop, high | 59.9 | 16.7 / 18.5 / 18.7 | 240 MB | 591 | 1.49 M |
+| Desktop, medium | 60.0 | 16.7 / 18.2 / 18.6 | 243 MB | 263 | 670 k |
+| Desktop, low | 58.0 | 16.7 / 18.4 / 18.6 | 202 MB | 202 | 464 k |
+| Phone (4× CPU), medium | 58.7 | 16.7 / 17.6 / 22.7 | 244 MB | 175 | 479 k |
+| Phone (4× CPU), low | 58.7 | 16.6 / 17.8 / 21.5 | 227 MB | 114 | 273 k |
+
+- The trees add a draw call per asset and level in use (32 assets; the far ones are cards); on the phone's low tier the
+  town is 114 calls (79 in §9's table before GA's, TB's and this lane's work).
+
+**Stills** (before/after, day and night, desktop and phone: the park, the canal at the High Street bridge with a
+narrowboat, the big cats' enclosure, the aviary close, the savanna paddock, the farmstead, the penguin pool; and on the
+live page with the real Ark: the farm with its animals, the aviary with its birds seen through the netting, the savanna,
+the big cats, the canal, the park): in the lane's handover folder.
 
 ### 13.6 Decisions (lane GC)
 
