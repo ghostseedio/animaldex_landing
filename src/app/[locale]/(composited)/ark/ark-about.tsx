@@ -78,7 +78,7 @@ export default function ArkAbout({snapshot, words, locale, speciesPages}: Props)
                             <p className="mt-2 text-[14px] leading-relaxed text-ink-300">
                                 {words.hud.listIntro}{" "}
                                 {/* The overlay over the world opens at its hash (`ark-population-hud.tsx`). */}
-                                <a href="#ark-aboard" className="whitespace-nowrap font-bold text-primary-300 underline-offset-4 hover:underline">
+                                <a href="#ark-aboard" className="inline-flex min-h-6 items-center whitespace-nowrap font-bold text-primary-300 underline-offset-4 hover:underline">
                                     {words.hud.openList}
                                     <span aria-hidden="true"> ↑</span>
                                 </a>

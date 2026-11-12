@@ -56,8 +56,9 @@ populations only in order of biggest first", "show population % changes in red a
 The SEO audit (landing `seo-audit` 80ec7308, §3.9): mobile Lighthouse 49, LCP 4.7 s, TBT 1,061 ms; 5.2 MB of HTML, 4 MB
 of it the whole live snapshot as RSC props; 1.9 MB of JS; TTFB 2-3 s (`force-dynamic`, a per-visitor read per request).
 
-- **The Ark is read by the client** after the first paint (`/api/ark/voyage`, as the visitor, `mine` marked; public
-  answers cached 30 s), never passed as props. The server hands `ArkView` only `lib/ark-page-summary.ts` (the counts
+- **The Ark is read by the client** once the page has loaded (the poster painted) and the browser is idle
+  (`/api/ark/voyage`, as the visitor, `mine` marked; public answers cached 30 s), never passed as props: its parse
+  (~4 MB, thousands of animals) never holds up the first paint. The server hands `ArkView` only `lib/ark-page-summary.ts` (the counts
   and the islands' sizes) so the chip and the island switch paint at their real sizes. Development's modes
   (`?fixture=`, `?snapshot=`, `?record=1`) still hand the snapshot over.
 - **No `force-dynamic`**: it also switched off Next's data cache. The server renders from `readPublicArk(60)`
@@ -79,6 +80,30 @@ of it the whole live snapshot as RSC props; 1.9 MB of JS; TTFB 2-3 s (`force-dyn
   1600×965 (dpr 1) and 390×844 (dpr 2), then `cwebp -q 70 -m 6 -sharp_yuv` (66 for the tall one).
 - **No long lists hydrated**: the overlay renders 40 rows at a time (more as its end scrolls in), the embed builds its
   rows only when first opened (48 at a time); About's list is server HTML in a folded `<details>`.
+
+### Measured (2026-11-12)
+Lighthouse 12.6.1, default simulated throttling, median of 3, on local production builds (`npm run build`,
+`next start`) of the base (main 970b0461) and this branch, run back to back. Each Ark was the live one.
+
+| `/ark` | Perf | FCP | LCP | TBT | Speed Index | TTFB | HTML (transfer / raw) |
+|---|---|---|---|---|---|---|---|
+| mobile, before | 46 (46-47) | 3.5 s | 5.5 s | 1,070 ms | 4.6 s | 1,990 ms | 528 KB / 5.24 MB |
+| mobile, after | **68** (66-68) | **1.2 s** | 4.7 s | **610 ms** | **1.2 s** | **35 ms** | **70 KB / 0.34 MB** |
+| desktop, before | 95 | 0.7 s | 1.4 s | 80 ms | 1.2 s | 1,408 ms | 528 KB |
+| desktop, after | **99** | 0.3 s | 1.0 s | 42 ms | 0.4 s | 33 ms | 70 KB |
+
+- The route's first-load JS (Next's build table) went from 528 kB to 143 kB.
+- Accessibility, best practices and SEO were 100 locally. The audit's 82 for best practices on production comes from
+  third parties.
+- Phone width: the layout viewport went from 592 px to 360 and 390 px at those widths. Targets under 24 px went from
+  942 and 1,049 to 4: the two skip links, the inline link and a short species name.
+- What remains on mobile:
+  - **LCP.** 4.7 s is Lighthouse's simulated figure; the observed LCP is the poster at 136 ms. Under the simulated
+    1.6 Mbps link, the poster's request queues behind the site's JS and gtag (192 KB, on every page; audit §3.9).
+  - **TBT.** It is mostly the live read's parse (one 543 ms task at 4x CPU) and the scene's start.
+  - **Total weight is higher** (2.7 to 5.3 MB) because the live read (2.9 MB) and the scene now load inside
+    Lighthouse's window instead of inline.
+- Next steps: parse and decode the Ark in a worker, and load gtag after `load` (site-wide).
 
 ## The log (`src/ark-scene/live/`, the same DOM on /ark and in the embed)
 - **The Ark's record** (solid lines, coloured dot): arrivals, births, hatchings, clutches laid, meals ("The African

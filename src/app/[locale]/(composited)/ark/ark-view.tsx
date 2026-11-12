@@ -666,23 +666,36 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     useEffect(() => {
         if (initial) return;
         let stopped = false;
-        fetch("/api/ark/voyage")
+        const read = () => fetch("/api/ark/voyage")
             .then((response) => (response.ok ? response.json() : null))
             .then((body: {snapshot?: unknown; founders?: unknown} | null) => {
-                const read = decodeArkSnapshot(body?.snapshot);
+                const next = decodeArkSnapshot(body?.snapshot);
                 if (stopped) return;
-                if (!read) {
+                if (!next) {
                     if (!snapshotRef.current) setUnavailable(true);
                     return;
                 }
                 setFounders(decodeArkFounders(body?.founders));
-                apply(read);
+                apply(next);
             })
             .catch(() => {
                 if (!stopped && !snapshotRef.current) setUnavailable(true);
             });
+        // Once the page has loaded (the poster painted) and the browser is idle: the read's parse (thousands of animals)
+        // never holds up the first paint.
+        let idle: number | null = null;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const whenIdle = () => {
+            if (window.requestIdleCallback) idle = window.requestIdleCallback(() => void read(), {timeout: 1000});
+            else timer = setTimeout(() => void read(), 50);
+        };
+        if (document.readyState === "complete") whenIdle();
+        else window.addEventListener("load", whenIdle, {once: true});
         return () => {
             stopped = true;
+            window.removeEventListener("load", whenIdle);
+            if (idle !== null) window.cancelIdleCallback?.(idle);
+            if (timer) clearTimeout(timer);
         };
         // Once per page; the refresh below keeps it current.
         // eslint-disable-next-line react-hooks/exhaustive-deps

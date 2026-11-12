@@ -87,7 +87,8 @@ export function ArkWorldTools({words, locale, islands, lite, sound}: Props) {
                             className={`flex h-10 min-w-0 items-center gap-1 rounded-full px-2.5 font-sans text-[12.5px] font-bold leading-none transition-colors duration-200 motion-reduce:transition-none disabled:cursor-wait md:h-8 md:px-3 ${FOCUS} ${islands.island === id ? "bg-[#a7f432] text-canvas-950" : "text-[#fffcf4]/90 hover:bg-white/10"}`}
                         >
                             <span className="truncate">{islands.names[id]}</span>
-                            <span className="shrink-0 font-semibold tabular-nums opacity-70">{(id === "wild" ? islands.counts.wild : islands.counts.town).toLocaleString(locale)}</span>
+                            {/* (Under 380 px the names keep the room; the counts are in who is aboard: `.ark-island-count`, globals.css.) */}
+                            <span className="ark-island-count shrink-0 font-semibold tabular-nums opacity-70">{(id === "wild" ? islands.counts.wild : islands.counts.town).toLocaleString(locale)}</span>
                         </button>
                     ))}
                 </div>

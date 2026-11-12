@@ -198,7 +198,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                 <div className="flex items-start gap-1 pb-2 pl-3.5 pr-1.5 pt-2.5">
                     <div className="min-w-0 flex-1 pt-0.5">
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                            <h2 id={`${panelId}-title`} ref={headingRef} tabIndex={-1} className="text-[15px] font-bold leading-tight tabular-nums outline-none focus-visible:underline">
+                            <h2 id={`${panelId}-title`} ref={headingRef} tabIndex={-1} className="font-sans text-[15px] font-bold leading-tight tabular-nums outline-none focus-visible:underline">
                                 <span className="sr-only">{hud.label}: </span>
                                 {totalLine}
                             </h2>
@@ -241,7 +241,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                 {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
 
                 {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
-                <ul ref={listRef} aria-label={hud.listLabel} className="max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
+                <ul ref={listRef} aria-label={hud.listLabel} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
                     {listed ? null : Array.from({length: 8}, (_, i) => (
                         // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
                         <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
