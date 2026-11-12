@@ -15,6 +15,25 @@
         "foundersOne": "1 alapító",
         "foundersOther": "{count} alapító",
         "myAnimals": "Állataim",
+        "islands": {
+            "label": "Szigetek",
+            "wild": "Vad sziget",
+            "town": "Város és állatkert",
+            "both": "Mindkét sziget",
+            "atHome": "otthon",
+            "onFarm": "a farmon",
+            "inTown": "kertek és utcák",
+            "zoo": "Állatkert",
+            "places": {
+                "homes": "Otthonok",
+                "farms": "Farmok",
+                "gardens": "Városi vadvilág · kertek és parkok",
+                "water": "Városi vadvilág · csatorna és tavak",
+                "roofs": "Városi vadvilág · tetők és tornyok",
+                "walls": "Városi vadvilág · falak és ereszek",
+                "streets": "Városi vadvilág · utcák és kikötő"
+            }
+        },
         "hint": "Húzd a körbenézéshez. Csippentéssel vagy görgetéssel nagyíts. Koppints egy állatra, hogy megismerd.",
         "loading": "Az Ark betöltése",
         "noWebgl": "Ez a böngésző nem tudja 3D-ben megjeleníteni az Arkot. Íme, ki van a fedélzeten.",

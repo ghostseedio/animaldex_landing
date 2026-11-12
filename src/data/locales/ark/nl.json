@@ -15,6 +15,25 @@
         "foundersOne": "1 oprichter",
         "foundersOther": "{count} oprichters",
         "myAnimals": "Mijn dieren",
+        "islands": {
+            "label": "Eilanden",
+            "wild": "Wild eiland",
+            "town": "Stad en dierentuin",
+            "both": "Beide eilanden",
+            "atHome": "thuis",
+            "onFarm": "op de boerderij",
+            "inTown": "tuinen en straten",
+            "zoo": "Dierentuin",
+            "places": {
+                "homes": "Huizen",
+                "farms": "Boerderijen",
+                "gardens": "Wilde dieren in de stad · tuinen en parken",
+                "water": "Wilde dieren in de stad · gracht en vijvers",
+                "roofs": "Wilde dieren in de stad · daken en torens",
+                "walls": "Wilde dieren in de stad · muren en dakranden",
+                "streets": "Wilde dieren in de stad · straten en haven"
+            }
+        },
         "hint": "Sleep om rond te kijken. Knijp of scrol om te zoomen. Tik op een dier om het te ontmoeten.",
         "loading": "De Ark komt in beeld",
         "noWebgl": "Deze browser kan de Ark niet in 3D tonen. Dit is wie er aan boord is.",

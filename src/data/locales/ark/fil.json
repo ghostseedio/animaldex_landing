@@ -15,6 +15,25 @@
         "foundersOne": "1 tagapagtatag",
         "foundersOther": "{count} tagapagtatag",
         "myAnimals": "Ang mga hayop ko",
+        "islands": {
+            "label": "Mga isla",
+            "wild": "Ligaw na isla",
+            "town": "Bayan at zoo",
+            "both": "Parehong isla",
+            "atHome": "sa bahay",
+            "onFarm": "sa bukid",
+            "inTown": "mga hardin at kalye",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Mga bahay",
+                "farms": "Mga bukid",
+                "gardens": "Mga ligaw na hayop sa bayan · mga hardin at parke",
+                "water": "Mga ligaw na hayop sa bayan · kanal at maliliit na lawa",
+                "roofs": "Mga ligaw na hayop sa bayan · mga bubong at tore",
+                "walls": "Mga ligaw na hayop sa bayan · mga pader at balisbisan",
+                "streets": "Mga ligaw na hayop sa bayan · mga kalye at daungan"
+            }
+        },
         "hint": "I-drag para tumingin sa paligid. I-pinch o i-scroll para mag-zoom. I-tap ang isang hayop para makilala ito.",
         "loading": "Ipinapakita ang Ark",
         "noWebgl": "Hindi kayang iguhit ng browser na ito ang Ark sa 3D. Narito kung sino ang nakasakay.",

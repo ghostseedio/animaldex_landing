@@ -15,6 +15,25 @@
         "foundersOne": "1 Gründer",
         "foundersOther": "{count} Gründern",
         "myAnimals": "Meine Tiere",
+        "islands": {
+            "label": "Inseln",
+            "wild": "Wilde Insel",
+            "town": "Stadt und Zoo",
+            "both": "Beide Inseln",
+            "atHome": "zu Hause",
+            "onFarm": "auf der Farm",
+            "inTown": "Gärten und Straßen",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Zuhause",
+                "farms": "Farmen",
+                "gardens": "Wildtiere der Stadt · Gärten und Parks",
+                "water": "Wildtiere der Stadt · Kanal und Teiche",
+                "roofs": "Wildtiere der Stadt · Dächer und Türme",
+                "walls": "Wildtiere der Stadt · Mauern und Traufen",
+                "streets": "Wildtiere der Stadt · Straßen und Hafen"
+            }
+        },
         "hint": "Zieh, um dich umzusehen. Zum Zoomen zwei Finger spreizen oder scrollen. Tippe ein Tier an, um es kennenzulernen.",
         "loading": "Die Ark kommt in Sicht",
         "noWebgl": "Dieser Browser kann die Ark nicht in 3D darstellen. Hier siehst du, wer an Bord ist.",

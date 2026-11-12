@@ -15,6 +15,25 @@
         "foundersOne": "1人の創設者",
         "foundersOther": "{count}人の創設者",
         "myAnimals": "自分の動物",
+        "islands": {
+            "label": "島",
+            "wild": "野生の島",
+            "town": "町と動物園",
+            "both": "両方の島",
+            "atHome": "家で",
+            "onFarm": "農場で",
+            "inTown": "庭と通り",
+            "zoo": "動物園",
+            "places": {
+                "homes": "家",
+                "farms": "農場",
+                "gardens": "町の野生動物 · 庭と公園",
+                "water": "町の野生動物 · 運河と池",
+                "roofs": "町の野生動物 · 屋根と塔",
+                "walls": "町の野生動物 · 壁と軒下",
+                "streets": "町の野生動物 · 通りと港"
+            }
+        },
         "hint": "ドラッグで見回し、ピンチかスクロールでズーム。動物をタップすると会えます。",
         "loading": "Arkを表示しています",
         "noWebgl": "このブラウザではArkを3Dで表示できません。乗船中の動物はこちらです。",

@@ -15,6 +15,25 @@
         "foundersOne": "1 fondatore",
         "foundersOther": "{count} fondatori",
         "myAnimals": "I miei animali",
+        "islands": {
+            "label": "Isole",
+            "wild": "Isola selvaggia",
+            "town": "Città e zoo",
+            "both": "Entrambe le isole",
+            "atHome": "a casa",
+            "onFarm": "in fattoria",
+            "inTown": "giardini e strade",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Case",
+                "farms": "Fattorie",
+                "gardens": "Fauna urbana · giardini e parchi",
+                "water": "Fauna urbana · canale e stagni",
+                "roofs": "Fauna urbana · tetti e torri",
+                "walls": "Fauna urbana · muri e gronde",
+                "streets": "Fauna urbana · strade e porto"
+            }
+        },
         "hint": "Trascina per guardarti intorno. Pizzica o scorri per lo zoom. Tocca un animale per conoscerlo.",
         "loading": "L'Ark sta arrivando",
         "noWebgl": "Questo browser non riesce a mostrare l'Ark in 3D. Ecco chi è a bordo.",

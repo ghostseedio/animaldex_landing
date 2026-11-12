@@ -15,6 +15,25 @@
         "foundersOne": "1 位创始人",
         "foundersOther": "{count} 位创始人",
         "myAnimals": "我的动物",
+        "islands": {
+            "label": "岛屿",
+            "wild": "野生岛",
+            "town": "小镇与动物园",
+            "both": "两座岛",
+            "atHome": "家中",
+            "onFarm": "农场里",
+            "inTown": "花园与街道",
+            "zoo": "动物园",
+            "places": {
+                "homes": "家庭",
+                "farms": "农场",
+                "gardens": "小镇野生动物 · 花园与公园",
+                "water": "小镇野生动物 · 运河与池塘",
+                "roofs": "小镇野生动物 · 屋顶与塔楼",
+                "walls": "小镇野生动物 · 墙壁与屋檐",
+                "streets": "小镇野生动物 · 街道与港口"
+            }
+        },
         "hint": "拖动可环顾四周，双指捏合或滚动可缩放，轻点动物即可认识它。",
         "loading": "正在呈现 Ark",
         "noWebgl": "此浏览器无法以 3D 显示 Ark。以下是船上的动物。",
