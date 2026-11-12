@@ -1541,7 +1541,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // poses (the schedule's, the same for every viewer, whatever each draws) and L5's bodies; null until they are wired.
     let trafficCells: {of: Entry[]; count: number; cells: Map<number, Entry[]>} | null = null;
     const trafficCell = (x: number, z: number) => (Math.floor(x / 16) + 4096) * 8192 + (Math.floor(z / 16) + 4096);
-    const trafficAnimals = (x: number, z: number, radius: number, epoch: number): Array<{x: number; z: number; r: number}> | null => {
+    const trafficPoses = {at: Number.NaN, poses: new Map<Entry, {x: number; z: number; r: number; h: number}>()};
+    const trafficAnimals = (x: number, z: number, radius: number, epoch: number): Array<{x: number; z: number; r: number; h: number}> | null => {
         const isl = island;
         if (!isl || !townWorld) return null;
         if (!trafficCells || trafficCells.of !== entries || trafficCells.count !== entries.length) {
@@ -1555,16 +1556,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             trafficCells = {of: entries, count: entries.length, cells};
         }
-        const out: Array<{x: number; z: number; r: number}> = [];
+        // (Several cars ask at the same moment: each animal's pose and body worked out once a moment.)
+        if (trafficPoses.at !== epoch) {
+            trafficPoses.at = epoch;
+            trafficPoses.poses.clear();
+        }
+        const out: Array<{x: number; z: number; r: number; h: number}> = [];
         const reach = radius + 18;
         for (let i = Math.floor((x - reach) / 16); i <= Math.floor((x + reach) / 16); i++) {
             for (let j = Math.floor((z - reach) / 16); j <= Math.floor((z + reach) / 16); j++) {
                 for (const entry of trafficCells.cells.get((i + 4096) * 8192 + (j + 4096)) ?? []) {
                     const range = isl.rangeOf(entry.animal.id) ?? 12;
                     if (Math.hypot(entry.place.x - x, entry.place.z - z) > radius + range + 3) continue;
-                    const pose = entry.sched?.wired ? sharedBase(entry, epoch) : entry.place;
-                    const r = bodyShape(entry.animal.model_slug, entry.full).radius;
-                    if (Math.hypot(pose.x - x, pose.z - z) < radius + r) out.push({x: pose.x, z: pose.z, r});
+                    let known = trafficPoses.poses.get(entry);
+                    if (!known) {
+                        const pose = entry.sched?.wired ? sharedBase(entry, epoch) : entry.place;
+                        const body = bodyShape(entry.animal.model_slug, entry.full);
+                        known = {x: pose.x, z: pose.z, r: body.radius, h: body.height};
+                        trafficPoses.poses.set(entry, known);
+                    }
+                    if (Math.hypot(known.x - x, known.z - z) < radius + known.r) out.push(known);
                 }
             }
         }

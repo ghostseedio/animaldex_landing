@@ -1107,10 +1107,12 @@ float paneTv = (paneHome && paneR2 < 0.12) ? 0.55 : 0.0;
 vec3 paneLight = mix(paneWarm, vec3(0.42, 0.6, 1.0) * (0.8 + 0.2 * sin(paneTime * 6.0 + paneSeed)), paneTv);
 float paneLamp = 0.5 + 0.65 * exp(-((paneT.x - 0.5) * (paneT.x - 0.5) * 5.0 + (paneT.y - 0.8) * (paneT.y - 0.8) * 6.0));
 vec3 paneEmit = paneLight * paneLamp;
-paneEmit = mix(paneEmit, paneCloth * paneLight * 0.6, paneCurtain);
+// (Through drawn curtains: the room's warm light, tinted by the cloth, a little dimmer: a warm window from the street.)
+vec3 paneTint = paneCloth / max(max(paneCloth.r, paneCloth.g), max(paneCloth.b, 0.05));
+paneEmit = mix(paneEmit, mix(paneLight, paneLight * paneTint, 0.4) * 0.82, paneCurtain);
 paneEmit = mix(paneEmit, paneEmit * paneSlat * 0.7, paneBlind * (1.0 - paneCurtain));
 paneEmit *= mix(vec3(1.0), paneGoodsCol * 1.5 + 0.3, paneGoods * paneOnShelf);
-paneEmit *= paneLit * mix(0.45, 1.0, paneNight) * 2.3 * paneGlass;
+paneEmit *= paneLit * mix(0.45, 1.0, paneNight) * 3.1 * paneGlass;
 `;
 
 /**

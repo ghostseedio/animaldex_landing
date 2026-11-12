@@ -704,6 +704,8 @@ export class TrafficSim {
     private blockedSeconds = 0;
     /** Ticks worked out since the start (for the measurements). */
     ticks = 0;
+    /** Each car's last answer about the animals near it (now, and in a moment). */
+    private asked: Array<{found: TrafficAnimal[]; soon: TrafficAnimal[]} | undefined> = [];
     /** What last held each car up (for the measurements): "car", "animal", "animal soon", "signal", "stop". */
     readonly heldBy: string[] = [];
     constructor(
@@ -744,6 +746,7 @@ export class TrafficSim {
 
     private start(window: number): boolean {
         this.window = window;
+        this.asked = [];
         this.at = window;
         this.cars = this.traffic.cars.map((car, index) => {
             const path = this.traffic.paths[car.loop];
@@ -781,11 +784,19 @@ export class TrafficSim {
         let lockHi = Infinity;
         if (this.animals) {
             const mid = pathAt(path, car.s + reach / 2);
-            const found = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 3, epoch);
-            if (found === null) return null;
+            // (Asked every other tick, 0.5 s, about a slightly wider circle, and kept for the tick between: the
+            // scene's poses cost it a schedule look-up each. Which ticks ask is fixed by the clock, so the same for all.)
+            const ask = Math.round(epoch / TICK) % 2 === 0 || !this.asked[car.index];
+            if (ask) {
+                const found = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 5, epoch);
+                if (found === null) return null;
+                // Where they will be in a moment only when something is near now (nothing near: nothing can arrive by then).
+                const soon = found.length ? this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 5, epoch + 1.2) ?? [] : [];
+                this.asked[car.index] = {found, soon};
+            }
+            const {found, soon} = this.asked[car.index]!;
             // Those ahead or alongside, nearest first: pass each by standing off the lane if the lane has room.
             // (And where each will be in a moment, too: a dog trotting out into the road is passed, or waited for, now.)
-            const soon = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 3, epoch + 1.2) ?? [];
             const ahead: Array<{a: TrafficAnimal; gap: number; across: number; at: number}> = [];
             for (const [list, ends] of [[found, 0.4], [soon, 0.7]] as const) {
                 for (const a of list) {
