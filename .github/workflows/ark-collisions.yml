@@ -53,11 +53,11 @@ jobs:
         run: npx tsx --test src/lib/ark-collide.test.ts
       - name: Collision tests on the town island
         run: npx tsx --test src/lib/ark-collide-town.test.ts
-      - name: Collision audit, islands mode (what goes live; decision 148)
+      - name: "Collision audit, islands mode (what goes live; decision 148)"
         run: npx tsx scripts/ark-collide-audit.mts --fixture --wild-island kept --hours 2 --step 4 --workers 4 --models none --label islands --out .ark-collide
       - name: Islands mode against its thresholds
         run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/islands.json --thresholds tests/ark-collide/thresholds-islands.json
-      - name: Collision audit, today's mode (the wild island with its hamlet: while islands can be switched off)
+      - name: "Collision audit, today's mode (the wild island with its hamlet, while islands can be switched off)"
         run: npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --models none --label ci --out .ark-collide
       - name: Today's mode against its thresholds
         run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/ci.json --thresholds tests/ark-collide/thresholds.json
