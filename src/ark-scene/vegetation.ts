@@ -44,6 +44,8 @@ import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
 import {buildReef} from "@/ark-scene/reef-render";
 import {FishView} from "@/ark-scene/fish-render";
+import {ChunkedInstances} from "@/ark-scene/streaming/instances";
+import type {ChunkGrid} from "@/ark-scene/streaming/chunks";
 
 // MARK: - Building blocks
 
@@ -798,6 +800,13 @@ export type Vegetation = {
      * schools in the picture), the surge's clock run.
      */
     update: (camera: Object3D) => void;
+    /**
+     * Part B (docs/ark/streaming.md): the decor's plants, the forest fill and the grass drawn by chunk (null: all).
+     * With every chunk that holds them drawn, each mesh is exactly as built.
+     */
+    setDrawn: (decor: ((chunk: number) => boolean) | null, grass: ((chunk: number) => boolean) | null) => void;
+    /** The chunked meshes (each instance's chunk, the content map; the folded trees' hook). */
+    chunked: ChunkedInstances[];
     triangles: number;
     dispose: () => void;
 };
@@ -806,10 +815,11 @@ function variantCount(kind: DecorKind): number {
     return SHAPES.filter((shape) => shape.kind === kind).length;
 }
 
-export function buildVegetation(maxGrass: number): Vegetation {
+export function buildVegetation(maxGrass: number, grid: ChunkGrid | null = null): Vegetation {
     const items = worldDecor();
     const fill = forestFill();
-    const fillMeshes: Array<{mesh: InstancedMesh; base: number; extra: number; triangles: number}> = [];
+    const fillMeshes: Array<{mesh: InstancedMesh; base: number; extra: number; triangles: number; chunked: ChunkedInstances | null}> = [];
+    const chunked: ChunkedInstances[] = [];
     const meshes: InstancedMesh[] = [];
     const materials: Material[] = [];
     const matrix = new Matrix4();
@@ -850,7 +860,9 @@ export function buildVegetation(maxGrass: number): Vegetation {
         if (shape.shadow) shadowCasters.push(mesh);
         const perInstance = geometry.getAttribute("position").count / 3;
         triangles += perInstance * own.length;
-        if (extra.length) fillMeshes.push({mesh, base: own.length, extra: extra.length, triangles: perInstance});
+        const byChunk = grid ? new ChunkedInstances(mesh, grid, mine.length, mine.length, ["arkTint"]) : null;
+        if (byChunk) chunked.push(byChunk);
+        if (extra.length) fillMeshes.push({mesh, base: own.length, extra: extra.length, triangles: perInstance, chunked: byChunk});
         meshes.push(mesh);
         materials.push(material);
     }
@@ -878,6 +890,8 @@ export function buildVegetation(maxGrass: number): Vegetation {
     grassGeometry.setAttribute("arkTint", new InstancedBufferAttribute(grassTints, 3));
     grass.count = tufts.length;
     grass.computeBoundingSphere();
+    const grassChunked = grid && tufts.length ? new ChunkedInstances(grass, grid, tufts.length, tufts.length, ["arkTint"]) : null;
+    if (grassChunked) chunked.push(grassChunked);
     grass.receiveShadow = true;
     const grassTriangles = grassGeometry.getAttribute("position").count / 3;
 
@@ -891,8 +905,10 @@ export function buildVegetation(maxGrass: number): Vegetation {
         meshes,
         grass,
         setGrassCount: (count) => {
-            grass.count = Math.min(count, tufts.length);
-            grass.visible = grass.count > 0;
+            const limit = Math.min(count, tufts.length);
+            if (grassChunked) grassChunked.setLimit(limit);
+            else grass.count = limit;
+            grass.visible = limit > 0;
         },
         setShadows: (on) => {
             for (const mesh of shadowCasters) mesh.castShadow = on;
@@ -901,7 +917,11 @@ export function buildVegetation(maxGrass: number): Vegetation {
             for (const mesh of meshes) if (kinds.has(mesh.userData.kind)) mesh.visible = false;
         },
         setFill: (fraction) => {
-            for (const entry of fillMeshes) entry.mesh.count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));
+            for (const entry of fillMeshes) {
+                const count = entry.base + Math.round(entry.extra * Math.min(Math.max(fraction, 0), 1));
+                if (entry.chunked) entry.chunked.setLimit(count);
+                else entry.mesh.count = count;
+            }
             // The tier's share (1 / 0.6 / 0.3) pulls the reef's reaches in and thins the schools.
             reef.setReach(0.4 + 0.6 * fraction);
             fish.setTier(Math.max(fraction, 0.35), 0.5 + 0.5 * fraction);
@@ -911,6 +931,10 @@ export function buildVegetation(maxGrass: number): Vegetation {
             reef.update(camera.position);
             fish.update(camera.position, seaView);
         },
+        setDrawn: (decor, grassDrawn) => {
+            for (const entry of chunked) entry.setDrawn(entry === grassChunked ? grassDrawn : decor);
+        },
+        chunked,
         get triangles() {
             return triangles + grassTriangles * grass.count + fillMeshes.reduce((sum, entry) => sum + (entry.mesh.count - entry.base) * entry.triangles, 0) + reef.triangles + fish.triangles;
         },

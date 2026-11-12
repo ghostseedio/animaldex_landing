@@ -31,7 +31,8 @@ import {
     UniformsUtils,
     Vector3,
     DoubleSide,
-    BufferGeometry
+    BufferGeometry,
+    type Group
 } from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, CLOUD_GLSL, NOISE_GLSL} from "@/ark-scene/glsl";
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
@@ -39,6 +40,8 @@ import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
+import {GroundTiles} from "@/ark-scene/streaming/ground-tiles";
+import {chunkGridFor, type ChunkGrid} from "@/ark-scene/streaming/chunks";
 
 /** How rough the sea is: 1 in the usual breeze, more in wind and storms (set with the environment). */
 export const WATER_WIND = {value: 1};
@@ -46,7 +49,9 @@ export const WATER_WIND = {value: 1};
 /** 1 on the low tier: one texture sample per layer and no normal maps. */
 export const ARK_GROUND_LITE = {value: 0};
 
-const SEGMENTS = 240;
+/** The ground's segments across (each ~1.1 m); the chunk grid is cut along them (`streaming/chunks.ts`). */
+export const GROUND_SEGMENTS = 240;
+const SEGMENTS = GROUND_SEGMENTS;
 
 function srgb(hex: string): Color {
     return new Color(hex);
@@ -323,6 +328,16 @@ export function groundArrays(tier: "high" | "medium" | "low" = "high"): GroundAr
 let primedGround: GroundArrays | null = null;
 export function primeGround(arrays: GroundArrays | null): void {
     primedGround = arrays;
+}
+
+/** The water's depth map from the ground's arrays. */
+function groundDepth(a: GroundArrays): {depth: DataTexture} {
+    const depth = new DataTexture(a.depth, a.size, a.size, RGBAFormat);
+    depth.flipY = false;
+    depth.magFilter = LinearFilter;
+    depth.minFilter = LinearFilter;
+    depth.needsUpdate = true;
+    return {depth};
 }
 
 export function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture} {
@@ -1064,17 +1079,24 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
 // MARK: - The landscape
 
 export type Landscape = {
-    ground: Mesh;
+    /** The ground: one tile per chunk (`streaming/ground-tiles.ts`) and the fresh water. */
+    ground: Group;
+    /** The tiles' one material (the cutaway clips it). */
+    groundMaterial: MeshStandardMaterial;
+    tiles: GroundTiles;
+    /** The arrays the tiles are cut from (the chunks' heights). */
+    arrays: GroundArrays;
     water: Mesh;
     dispose: () => void;
 };
 
-export function buildLandscape(): Landscape {
-    const {geometry, depth} = groundGeometry();
+export function buildLandscape(grid: ChunkGrid = chunkGridFor(TERRAIN_HALF, SEGMENTS)): Landscape {
+    const arrays = primedGround ?? groundArrays();
+    const {depth} = groundDepth(arrays);
     const material = groundMaterial();
-    const ground = new Mesh(geometry, material);
-    ground.receiveShadow = true;
-    ground.castShadow = true;
+    // Part B: the ground in tiles along the chunk grid, from the same arrays (the same vertices, normals and triangles).
+    const tiles = new GroundTiles(arrays, grid, material, SEGMENTS);
+    const ground = tiles.group;
     const water = waterMesh(depth);
     // The lake and the river (batch 5): their own water at a fixed level, riding with the (static) ground.
     const freshWater = waterMesh(depth, true);
@@ -1082,9 +1104,12 @@ export function buildLandscape(): Landscape {
     ground.add(freshWater.mesh);
     return {
         ground,
+        groundMaterial: material,
+        tiles,
+        arrays,
         water: water.mesh,
         dispose: () => {
-            geometry.dispose();
+            tiles.dispose();
             material.dispose();
             depth.dispose();
             water.mesh.geometry.dispose();

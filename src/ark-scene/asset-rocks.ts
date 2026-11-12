@@ -208,6 +208,13 @@ export class AssetInstances {
         this.lastAt.set(Infinity, 0, 0);
     }
 
+    /** Part B (docs/ark/streaming.md): whether a point's chunk is drawn (null: everywhere). */
+    private drawnAt: ((x: number, z: number) => boolean) | null = null;
+    setDrawn(drawn: ((x: number, z: number) => boolean) | null) {
+        this.drawnAt = drawn;
+        this.lastAt.set(Infinity, 0, 0);
+    }
+
     /** Re-sort the levels when the camera has moved (or every half second). */
     update(camera: Vector3) {
         if (!this.ready) return;
@@ -220,6 +227,7 @@ export class AssetInstances {
             // Full detail a little further than the asset asks on the lower tiers, never below lod2 far away.
             const [d0, d1] = entry.distances.map((d) => d * Math.max(this.reach, 0.5));
             for (const instance of entry.instances) {
+                if (this.drawnAt && !this.drawnAt(instance.x, instance.z)) continue;
                 const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
                 let index = d < d0 ? 0 : d < d1 ? 1 : 2;
                 while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;

@@ -199,3 +199,5 @@ Still on the main thread outside the mount: `play()` places a replay's ghosts (`
 1. **A far-model pack for the starting view.** One file per tier holding the most-seen kinds' far meshes and skins (and their `ark.json`), so the starting view is 1–3 requests instead of ~240 at ~0.2 s each. Built by the publish pipeline beside `manifest.json`; the library reads the pack first and the single files for the rest.
 2. **`ark.json` inside the GLB** (the glTF `extras`): one request per model instead of two.
 3. Then the measures to repeat: requests per starting view, time to the starting view on a first visit, on a repeat visit, and on a phone's real network.
+
+**Done on `ark-streaming`:** see `docs/ark/streaming.md`. §6 covers the pack and the far-ark files, their tooling and the owner-approved upload; §7 has the measurements.

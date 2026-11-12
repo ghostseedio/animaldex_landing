@@ -26,11 +26,22 @@ import {bodyAxisExtent} from "@/ark-scene/stats";
 import {placeholderGeometry} from "@/ark-scene/placeholder";
 import {fittedSize} from "@/ark-scene/runtime/budgets";
 import {geometryBytes, textureBytes} from "@/ark-scene/runtime/memory";
+import {parseArkPack, type ArkPack} from "@/ark-scene/streaming/pack";
+
+/** One file of a tier's far-model pack: its path beside the manifest and the kinds in it. */
+export type ArkPackPart = {file: string; kinds: string[]};
 
 export type ArkManifest = {
     models: Record<string, string>;
     /** Development only: species served from the full talking model instead. */
     fallback?: Record<string, string>;
+    /**
+     * Part B (docs/ark/streaming.md §6): the far-model pack per tier (`streaming/pack.ts`): its file (beside the
+     * manifest) and the kinds in it. A kind in the pack at the manifest's version loads from it; anything else as before.
+     */
+    packs?: Record<string, ArkPackPart | ArkPackPart[]>;
+    /** Part B: the far files carry their `ark.json` inside (`<version>.far-ark.glb`, `extras.ark`): one request a model. */
+    far_ark?: boolean;
 };
 
 /**
@@ -143,17 +154,31 @@ export class ModelLibrary {
     private readonly staged: Array<() => void> = [];
     /** GPU bytes per loaded level (`runtime/memory.ts`'s estimate). */
     private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
+    /** Part B: the tier whose far-model pack the starting view reads (set once, before the first far model is asked for). */
+    private packTierName: string | null = null;
+    /** The pack's parts (the starting view's first kinds, then the rest), fetched one after another; by kind. */
+    private packParts: Map<string, Promise<ArkPack | null>> | null = null;
+    /** Network requests made (the manifest, the pack, every model file): the measurement page reads it. */
+    requests = 0;
+    /** Kinds whose far model came from the pack, and from single files. */
+    packHits = 0;
+    fileHits = 0;
+    /** The far models in the order first asked for (the first 600): the pack builder's list of the starting view's kinds. */
+    readonly farOrder: string[] = [];
 
     constructor(private readonly base: string, private concurrency = 3) {
         this.loader = new GLTFLoader();
         this.loader.setMeshoptDecoder(MeshoptDecoder);
+        this.requests++;
         this.manifestReady = fetch(`${base.replace(/\/+$/, "")}/manifest.json`, {signal: this.abort.signal})
             .then((response) => (response.ok ? response.json() : null))
             .then((raw: unknown) => {
                 const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : null;
                 const models = row?.models && typeof row.models === "object" ? row.models as Record<string, string> : {};
                 const fallback = row?.fallback && typeof row.fallback === "object" ? row.fallback as Record<string, string> : undefined;
-                this.manifest = {models, fallback};
+                const packs = row?.packs && typeof row.packs === "object" ? row.packs as ArkManifest["packs"] : undefined;
+                this.manifest = {models, fallback, packs, far_ark: row?.far_ark === true};
+                this.startPack();
                 this.pump();
                 return this.manifest;
             })
@@ -165,6 +190,46 @@ export class ModelLibrary {
 
     ready(): Promise<ArkManifest | null> {
         return this.manifestReady;
+    }
+
+    /**
+     * Part B: the tier whose far-model pack to read (the first one set wins: a tier dropped later reads the single files
+     * for what the pack did not hold, as before). Fetched as soon as the manifest is in.
+     */
+    set packTier(tier: string | null) {
+        if (this.packTierName || !tier) return;
+        this.packTierName = tier;
+        this.startPack();
+    }
+
+    get packTier(): string | null {
+        return this.packTierName;
+    }
+
+    private startPack() {
+        if (this.packParts || !this.manifest || !this.packTierName) return;
+        const entry = this.manifest.packs?.[this.packTierName];
+        const parts = (Array.isArray(entry) ? entry : entry ? [entry] : []).filter((part) => part?.file && Array.isArray(part.kinds));
+        if (!parts.length) return;
+        this.packParts = new Map();
+        // In order, each after the one before: the first part (the kinds the starting view asks for first) has the
+        // connection to itself.
+        let before: Promise<unknown> = Promise.resolve();
+        for (const part of parts) {
+            const fetched: Promise<ArkPack | null> = before.then(() => {
+                if (this.disposed) return null;
+                this.requests++;
+                return fetch(`${this.base.replace(/\/+$/, "")}/${part.file}`, {signal: this.abort.signal})
+                    .then((response) => (response.ok ? response.arrayBuffer() : null))
+                    .then((buffer) => (buffer ? parseArkPack(buffer) : null))
+                    .catch((error) => {
+                        if (!this.disposed) console.warn("[ark] pack", error instanceof Error ? error.message : error);
+                        return null;
+                    });
+            });
+            before = fetched;
+            for (const slug of part.kinds) if (!this.packParts.has(slug)) this.packParts.set(slug, fetched);
+        }
     }
 
     /**
@@ -266,6 +331,7 @@ export class ModelLibrary {
         if (asked.has(level)) return;
         if (this.gate && !this.gate(slug, level)) return;
         asked.add(level);
+        if (level === "far" && this.farOrder.length < 600) this.farOrder.push(slug);
         this.requested.set(slug, asked);
         this.queue.push({slug, level});
         this.pump();
@@ -307,8 +373,13 @@ export class ModelLibrary {
         return `${this.base.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${file}`;
     }
 
-    private async loadGltf(url: string, edge = 0): Promise<ModelLevel> {
-        const gltf = await this.loader.loadAsync(url);
+    private async loadGltf(url: string, edge = 0): Promise<ModelLevel & {ark?: unknown}> {
+        this.requests++;
+        return this.levelFrom(await this.loader.loadAsync(url), edge);
+    }
+
+    /** A level from a parsed glTF (a file, or a pack's entry); `ark` is the file's own `ark.json` when it carries one. */
+    private async levelFrom(gltf: {scene: import("three").Group; userData?: Record<string, unknown>}, edge: number): Promise<ModelLevel & {ark?: unknown}> {
         gltf.scene.updateMatrixWorld(true);
         let found: Mesh | null = null;
         let facing = 0;
@@ -325,7 +396,18 @@ export class ModelLibrary {
         mesh.geometry.dispose();
         material?.dispose();
         if (map && edge > 0) await fitTexture(map, edge);
-        return {geometry, map, triangles: triangles(geometry), facing};
+        return {geometry, map, triangles: triangles(geometry), facing, ark: gltf.userData?.ark};
+    }
+
+    /** Part B: a kind's far model from the pack, or null (not in it, another version, or the pack failed). */
+    private async fromPack(slug: string, version: string, edge: number): Promise<(ModelLevel & {ark?: unknown}) | null> {
+        const part = this.packParts?.get(slug);
+        if (!part) return null;
+        const pack = await part;
+        const glb = pack?.glb(slug, version);
+        if (!glb) return null;
+        const gltf = await this.loader.parseAsync(glb, "");
+        return this.levelFrom(gltf as unknown as {scene: import("three").Group; userData?: Record<string, unknown>}, edge);
     }
 
     private remember(slug: string, behaviour: TalkingBehaviour | null, level: ModelLevel): SpeciesModel {
@@ -352,13 +434,31 @@ export class ModelLibrary {
         const version = this.manifest?.models[slug];
         if (version) {
             if (level === "far") {
-                const [far, json] = await Promise.all([
-                    this.loadGltf(this.url(slug, `${version}.far.glb`), this.fit?.far ?? 0),
-                    fetch(this.url(slug, `${version}.ark.json`), {signal: this.abort.signal}).then((response) => (response.ok ? response.json() : null)).catch(() => null)
-                ]);
-                if (this.disposed) return disposeLevel(far);
+                // Part B: from the starting view's pack; else one file with its ark.json inside; else the two files.
+                const edge = this.fit?.far ?? 0;
+                let far = await this.fromPack(slug, version, edge);
+                let json: unknown = far?.ark ?? null;
+                if (far) this.packHits++;
+                else {
+                    this.fileHits++;
+                    if (this.manifest?.far_ark) {
+                        far = await this.loadGltf(this.url(slug, `${version}.far-ark.glb`), edge);
+                        json = far.ark ?? null;
+                    } else {
+                        this.requests++;
+                        const [level, file] = await Promise.all([
+                            this.loadGltf(this.url(slug, `${version}.far.glb`), edge),
+                            fetch(this.url(slug, `${version}.ark.json`), {signal: this.abort.signal}).then((response) => (response.ok ? response.json() : null)).catch(() => null)
+                        ]);
+                        far = level;
+                        json = file;
+                    }
+                }
+                const loaded: ModelLevel = far;
+                if (this.disposed) return disposeLevel(loaded);
                 const behaviour = (json && typeof json === "object" ? (json as {behaviour?: TalkingBehaviour}).behaviour : null) ?? null;
                 this.hand(() => {
+                    const far = loaded;
                     if (far.map) this.upload?.(far.map);
                     this.remember(slug, behaviour, far).far = far;
                     this.count(slug, "far", far);

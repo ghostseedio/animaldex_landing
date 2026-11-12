@@ -112,7 +112,13 @@ import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {CAMERA_RANGE, fitWhole, meetDistance} from "@/ark-scene/runtime/camera";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
-import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
+import {ARK_GROUND_LITE, buildLandscape, GROUND_SEGMENTS} from "@/ark-scene/terrain";
+import {ArkStreamer, spansFromHeights, STATE_IN, STATE_MAP, STATE_OUT} from "@/ark-scene/streaming";
+import {CHUNK_HEADROOM, chunkCount, chunkGridFor} from "@/ark-scene/streaming/chunks";
+import {hazeFog} from "@/ark-scene/streaming/haze";
+import {keepsModelBeyond} from "@/ark-scene/streaming/tiers";
+import {StreamCull} from "@/ark-scene/streaming/cull";
+import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
 import {AssetTrees} from "@/ark-scene/asset-trees";
@@ -173,7 +179,7 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
-import {heightAt, regionCentre, regionLabelAnchor, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {heightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {arkOutside} from "@/ark-scene/live-budget";
@@ -217,6 +223,11 @@ const RIG_BLEND_SECONDS = 0.5;
 const RIG_KEEP_SECONDS = 45;
 const RIG_KEEP = 24;
 const LOAD_NEAR_WITHIN = 48;
+/**
+ * Part B: an animal past the render distance is not drawn or stepped (unless it is big on screen in the map view: `streaming/tiers.ts` keepsModelBeyond); where it is (its schedule's pose, the same for
+ * every viewer) is worked out again after this many seconds (plus up to one more, by its phase, so they spread out).
+ */
+const STREAM_RECHECK_SECONDS = 2;
 const FOV = 38;
 /** True scale (motion pass §3): the camera's reach is `runtime/camera.ts` CAMERA_RANGE. */
 const MAX_DISTANCE = CAMERA_RANGE.far;
@@ -386,6 +397,8 @@ type Entry = {
     sleepAct?: {pitch: number; roll: number} | null;
     /** Lane L2's motion (`locomotion/l2-scene.ts`): its flight beat, its swim and crawl cycles (per viewer, visual only). */
     l2?: L2Motion | null;
+    /** Part B: where it was last worked out (its schedule's pose) and when (scene seconds), for the render distance. */
+    streamAt?: {x: number; y: number; z: number; t: number} | null;
 };
 
 /**
@@ -484,7 +497,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // analytic surface (they differ by metres at the cliff bands).
     setLocoGround(drawnGround);
     const forced = forcedTier();
-    let tier: QualityTier = forced ?? tierFor();
+    let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
     // One frame is several passes: count them all (reset at the frame's start).
     renderer.info.autoReset = false;
@@ -559,6 +572,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const lighting = new ArkLighting(renderer, scene, hoursNow());
     const fog = new Fog(lighting.horizon, 420, 1700);
     scene.fog = fog;
+    // Part B: the edge haze rides on this fog (whoever sets it sets its base; with the haze off it is exactly that).
+    const haze = hazeFog(fog);
     // Liveliness (`liveliness-scene.ts`): the clock's weather, tide and ages through the animals, the rain and fog,
     // the traces they leave, and the sound (off until a tap). Its hooks read the scene below, when they are called.
     const soundBase = options.soundBase !== undefined ? options.soundBase : (/^(https?:\/\/[^/]+)\/storage\/v1\//.exec(options.modelBase)?.[1] ?? null);
@@ -607,13 +622,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const nests = new ArkNests();
     scene.add(nests.root);
 
-    const landscape = buildLandscape();
+    // Part B (docs/ark/streaming.md): the world in chunks along the ground's grid; the ground in tiles, the plants by chunk.
+    const chunkGrid = chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
+    const landscape = buildLandscape(chunkGrid);
     const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     scene.add(landscape.ground, landscape.water);
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
-    const vegetation = buildVegetation(arkGrassBuild(tier));
+    const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     scene.add(nearDetail.group);
@@ -641,7 +658,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const layersScene = buildLayersScene();
     scene.add(layersScene.group);
     renderer.localClippingEnabled = true;
-    layersScene.clip([landscape.ground.material as MeshStandardMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
+    layersScene.clip([landscape.groundMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
     const PLANKTON = planktonClouds();
     // Scenery modules outside this file (`scene-modules.ts`: the props lane's nests, homes and area details), built below.
     let modules: ArkSceneModule[] = [];
@@ -679,10 +696,73 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(shadows.mesh, rings.mesh, tokens.mesh, dots.mesh, specks.meshes["four-legged"].mesh, specks.meshes.oval.mesh);
 
     const post = new ArkPost(renderer, scene, camera, tier);
+
+    // MARK: Part B, streaming (docs/ark/streaming.md)
+
+    // The chunks' heights (the ground's own), and which hold something: land, plants, (with the snapshot) animals' homes.
+    const groundHeights = new Float32Array(landscape.arrays.size * landscape.arrays.size);
+    for (let i = 0; i < groundHeights.length; i++) groundHeights[i] = landscape.arrays.positions[i * 3 + 1];
+    const chunkContent = new Uint8Array(chunkCount(chunkGrid));
+    spansFromHeights(chunkGrid, groundHeights, landscape.arrays.size, 0).forEach((span, key) => {
+        if (span.maxY > 0.3) chunkContent[key] = 1;
+    });
+    {
+        const perChunk = new Uint32Array(chunkCount(chunkGrid));
+        for (const chunked of vegetation.chunked) chunked.perChunk(perChunk);
+        perChunk.forEach((n, key) => {
+            if (n) chunkContent[key] = 1;
+        });
+    }
+    let sceneGpuMB = 0;
+    let sceneGpuAt = -Infinity;
+    const streamer = new ArkStreamer({
+        grid: chunkGrid,
+        spans: spansFromHeights(chunkGrid, groundHeights, landscape.arrays.size, CHUNK_HEADROOM),
+        content: chunkContent,
+        tier,
+        haze,
+        heapLimitMB: ((performance as Performance & {memory?: {jsHeapSizeLimit?: number}}).memory?.jsHeapSizeLimit ?? 0) / 2 ** 20 || null,
+        memory: () => {
+            // The scene's GPU estimate (every object's geometry and textures, `runtime/memory.ts`), at most every 10 s.
+            const nowS = performance.now() / 1000;
+            if (nowS - sceneGpuAt > 10) {
+                sceneGpuAt = nowS;
+                const memory = sceneMemory(scene);
+                sceneGpuMB = (memory.geometryBytes + memory.textureBytes) / 2 ** 20;
+            }
+            const heap = (performance as Performance & {memory?: {usedJSHeapSize?: number}}).memory?.usedJSHeapSize;
+            return {heapMB: typeof heap === "number" ? heap / 2 ** 20 : null, gpuMB: sceneGpuMB};
+        },
+        onDrop: () => {
+            if (!forced && tier !== "low") applyTier(lowerTier(tier));
+        }
+    });
+    let streamSkipped = 0;
+    let streamMarkers = 0;
+    /** The props and other modules' objects, by chunk (`streaming/cull.ts`): the cottage and pond, the burrows and pit, and the modules once built. */
+    const streamCull = new StreamCull();
+    streamCull.track(micro.group);
+    streamCull.track(layersScene.group);
+    const drawnIn = (chunk: number) => streamer.stateOf(chunk) === STATE_IN;
+    const drawnAny = (chunk: number) => streamer.stateOf(chunk) !== STATE_OUT;
+    const atIn = (x: number, z: number) => streamer.stateAt(x, z) === STATE_IN;
+    const atAny = (x: number, z: number) => streamer.stateAt(x, z) !== STATE_OUT;
+    streamer.onChange((states) => {
+        const all = streamer.allIn;
+        landscape.tiles.apply(states, performance.now() / 1000);
+        // The ground's plants and the trees as the map too; the grass, the forest floor and the props only in full.
+        vegetation.setDrawn(all ? null : drawnAny, all ? null : drawnIn);
+        assetTrees.setDrawn(all ? null : atAny);
+        assetRocks.setDrawn(all ? null : atAny);
+        assetFloor.setDrawn(all ? null : atIn);
+        streamCull.apply(all ? null : atIn);
+    });
+
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
         tier = next;
         runtime.tierChanged(tier);
+        streamer.setTier(tier);
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
         vegetation.setShadows(settings.shadows > 0);
@@ -1533,6 +1613,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             });
         }
         const places = placedAll;
+        // Part B: the chunks the animals live in hold content (the haze is on only while such a chunk lies beyond).
+        places.forEach((place) => streamer.markContent(place.x, place.z));
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
         const pins = new Set<string>(replayPins);
         if (selectionPin) pins.add(selectionPin);
@@ -1731,6 +1813,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             herdSphere.radius = herd.radius + herd.length * 2 + 4;
             if (!frustum.intersectsSphere(herdSphere)) continue;
             const body = arkBody(herd.sample, model.behaviour?.plan);
+            // Part B: a herd wholly past the render distance is not drawn (its badge and count stay: they are data), unless
+            // the map view sees its members big on screen (true scale: elephants across the island).
+            if (!streamer.allIn) {
+                const beyond = cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius;
+                if (beyond > streamer.renderDistance && !(streamer.map && keepsModelBeyond(body.display, beyond, height, FOV))) continue;
+            }
             herd.length = body.display;
             const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / herd.length, 0.25), 1);
             const modelScale = herd.length / model.bodyLength;
@@ -3115,6 +3203,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         scheduledCount = 0;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
+        // Part B: animals past the render distance this frame, and their markers in the map view.
+        const streamDots: FindDot[] = [];
+        streamSkipped = 0;
+        const streaming = !streamer.allIn;
+        const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held);
+        // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
+        // scale); otherwise skipped (a marker in the map view).
+        const streamedOut = (entry: Entry, at: {x: number; y: number; z: number}) => {
+            const state = streamer.stateAt(at.x, at.z);
+            if (state === STATE_IN) return false;
+            if (state === STATE_OUT) return true;
+            return !keepsModelBeyond(entry.length, cameraPosition.distanceTo(position.set(at.x, at.y, at.z)), height, FOV);
+        };
+        const skipStreamed = (entry: Entry, at: {x: number; y: number; z: number}) => {
+            entry.middle = null;
+            // Back in range it is drawn as it is then (never lying down on arrival).
+            entry.sleepStarted = false;
+            streamSkipped++;
+            if (streamer.stateAt(at.x, at.z) === STATE_MAP) streamDots.push({x: at.x, y: Math.max(at.y, 0) + 0.6, z: at.z, pixels: 5, alpha: mineOnly && !entry.animal.mine ? 0.35 : 0.85});
+        };
         for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
@@ -3126,6 +3234,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (with reduced motion too: until the spacing is worked out, a predator's place could be among its prey).
             if ((!world || !entry.sched?.wired) && entry.sched && !entry.visitor && !entry.act && !entry.moment) {
                 entry.middle = null;
+                continue;
+            }
+            // Part B: last seen past the render distance, and seen recently: skipped (its schedule is not stepped).
+            if (streaming && entry.streamAt && !pinnedNow(entry) && now - entry.streamAt.t < STREAM_RECHECK_SECONDS + entry.phase && streamedOut(entry, entry.streamAt)) {
+                skipStreamed(entry, entry.streamAt);
                 continue;
             }
             // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
@@ -3190,6 +3303,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             if (model && entry.rig) stepWander(entry, modelScale, dt, now);
             const where = pose(entry, model, modelHeight, now);
+            // Part B: where it is now, for the render distance; past it, not drawn (a marker in the map view).
+            if (streaming) {
+                const at = (entry.streamAt ??= {x: 0, y: 0, z: 0, t: 0});
+                at.x = where.x;
+                at.y = where.base;
+                at.z = where.z;
+                at.t = now;
+                if (!pinnedNow(entry) && streamedOut(entry, at)) {
+                    skipStreamed(entry, at);
+                    continue;
+                }
+            }
             // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
             // the underground only in the cutaway (or peeking out of its burrow).
             const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
@@ -3739,6 +3864,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         layersScene.setGlow(glowing);
         tokens.set(tokenList, camera);
+        for (const dot of streamDots) dotList.push(dot);
+        streamMarkers = streamDots.length;
         dots.set(dotList);
         shadows.set(shadowList);
         rings.set(ringList);
@@ -4131,6 +4258,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!instances.size) folded.delete(mesh);
         });
     };
+    // Part B: a chunked plant mesh rewritten (the render distance moved) puts its folded trees back first; they fold
+    // again at the next check if still in the way.
+    for (const chunked of vegetation.chunked) {
+        chunked.beforeWrite = () => {
+            unfold(new Set());
+            foldCheck = 0;
+        };
+    }
     const foldTrees = (now: number) => {
         if (now - foldCheck < 0.25) return;
         foldCheck = now;
@@ -4419,6 +4554,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const sceneModule of modules) {
             sceneModule.setTier(tier, liteOn());
             sceneModule.setShadows(TIER_SETTINGS[tier].shadows > 0);
+            // Part B: their objects by chunk, past the render distance not drawn.
+            streamCull.track(sceneModule.root);
         }
     };
     if (options.recording) buildModules();
@@ -5198,6 +5335,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         keepInWorld();
         fitCloseUp();
         if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+        // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
+        streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now);
+        landscape.tiles.release(now);
+        streamCull.step(now);
         stepLayers(elapsed);
         foldTrees(elapsed);
         micro.step(camera.position);
@@ -5319,7 +5460,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
@@ -5558,7 +5699,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             animalLook: look.on,
             furShells: look.on ? look.shells.drawn : 0,
             closeUpSkins: look.closeUps.loaded,
-            liveliness: liveliness.stats()
+            liveliness: liveliness.stats(),
+            streaming: (() => {
+                const stream = streamer.stats();
+                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape.tiles.stats(), animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
+            })()
         }),
         dispose: () => {
             disposed = true;

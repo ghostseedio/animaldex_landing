@@ -268,6 +268,13 @@ export class AssetTrees {
         this.lastAt.set(Infinity, 0, 0);
     }
 
+    /** Part B (docs/ark/streaming.md): whether a point's chunk is drawn (null: everywhere). */
+    private drawnAt: ((x: number, z: number) => boolean) | null = null;
+    setDrawn(drawn: ((x: number, z: number) => boolean) | null) {
+        this.drawnAt = drawn;
+        this.lastAt.set(Infinity, 0, 0);
+    }
+
     /** Re-sort the levels when the camera has moved (or every half second). */
     update(camera: Vector3) {
         if (!this.ready) return;
@@ -288,6 +295,7 @@ export class AssetTrees {
             const d2 = entry.distances[2] * Math.max(this.reach, CARD_REACH_MIN);
             for (const instance of entry.instances) {
                 if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
+                if (this.drawnAt && !this.drawnAt(instance.x, instance.z)) continue;
                 // A tree's levels hand over further for a bigger tree (decision 34: trees at their real heights, twice
                 // the library's and more), by the square root of its size: a 40 m emergent keeps its detail further, and
                 // each asset's trees stay in few levels (each level in use is a draw call).
