@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {chasePace, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ChaseKind, type FleeStyle} from "@/ark-scene/acts";
+import {chasePace, clearBearing, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ChaseKind, type FleeStyle} from "@/ark-scene/acts";
 import {forgetRecipes, quarriesOf, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
@@ -261,6 +261,16 @@ test("the server's positions: the hunter where the scene has it near its waypoin
     const stage = mealStage("glide", inDisc.predator, inDisc.prey, {seed: "enc", exact: true});
     const start = stage.predator(0)!;
     assert.ok(Math.hypot(start.x + 10, start.z - 2) < 1e-9, "from its waypoint");
+});
+
+test("the chase's camera looks past the trees: of the side-on bearings, one with no trunk in its line", () => {
+    const focus = {x: 0, y: 1, z: 0};
+    // A tree 6 m out along the first side-on bearing (east): the camera takes the other side.
+    const tree = (x: number, z: number) => Math.hypot(x - 6, z) < 2.4;
+    const b = clearBearing(focus, 20, 1.1, Math.PI / 2, tree, () => 0);
+    assert.ok(Math.abs(Math.atan2(Math.sin(b + Math.PI / 2), Math.cos(b + Math.PI / 2))) < 1e-9, `west (${b})`);
+    // Nothing in the way: side on as the scene asked.
+    assert.equal(clearBearing(focus, 20, 1.1, Math.PI / 2, () => false, () => 0), Math.PI / 2);
 });
 
 test("how prey flee, and the locomotion lanes' paces when they are wired", () => {

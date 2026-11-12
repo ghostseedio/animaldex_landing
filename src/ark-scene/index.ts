@@ -70,7 +70,7 @@ import {
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
+import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, clearBearing, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
 import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
@@ -4841,7 +4841,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (kind !== "cutaway") predator.act = partnered(stage.predator(0), prey.animal.id, "hunter");
         const dx = bodies.prey.x - bodies.predator.x;
         const dz = bodies.prey.z - bodies.predator.z;
-        const azimuth = kind === "cutaway" ? undefined : sideOn(dx, dz);
+        // (Side on, round to the nearest bearing with no tree between the camera and the chase: `clearBearing`.)
+        const azimuth = kind === "cutaway" ? undefined : clearBearing(stage.focus, stage.distance, stage.polar, sideOn(dx, dz), (x, z) => Boolean(world?.sampler.blocked(x, z, 2.4)));
         toFrame(stage.focus, stage.distance, stage.polar, azimuth, stage.seconds, () => {
             let turned = false;
             run.step = (t, last, now) => {

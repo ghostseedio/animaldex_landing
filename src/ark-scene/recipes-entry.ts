@@ -230,21 +230,23 @@ const CLIPS: Record<string, Clip> = {
         find: (ctx) => huntMoment(ctx, "pounce", "leap", (k, ep) => {
             const from = ep.keys[ep.keys.indexOf(k) - 1] ?? k;
             const side = Math.atan2(k.to.x - from.from.x, k.to.z - from.from.z) + Math.PI / 2;
-            return {before: 6, after: 3, step: 1 / 48, close: true, view: view(from.from.x * 0.35 + k.to.x * 0.65, k.to.y + 0.2, from.from.z * 0.35 + k.to.z * 0.65, 2.1, 1.18, side)};
+            // (On the landing, where the grasshopper is caught or hops away; the rush comes in from one side.)
+            return {before: 6, after: 3, step: 1 / 48, close: true, view: view(k.to.x, k.to.y + 0.15, k.to.z, 2.8, 1.15, side)};
         })
     },
     heron_strike: {
         cast: [["he", "grey-heron", 2]],
         hours: 9,
         date: Date.UTC(2026, 10, 12, 9) / 1000,
-        find: (ctx) => huntMoment(ctx, "wade_spear", "strike", (k) => ({before: 6, after: 2.5, step: 1 / 30, close: true, view: view(k.from.x + Math.sin(k.yaw) * 0.55, Math.max(k.from.y, -0.1) + 0.25, k.from.z + Math.cos(k.yaw) * 0.55, 2.2, 0.85, k.yaw + Math.PI / 2)}))
+        // (Its head and the water ahead of it both in frame, a little from above: the fish under the bill.)
+        find: (ctx) => huntMoment(ctx, "wade_spear", "strike", (k) => ({before: 6, after: 2.5, step: 1 / 30, close: true, view: view(k.from.x + Math.sin(k.yaw) * 0.4, Math.max(k.from.y, -0.1) + 0.5, k.from.z + Math.cos(k.yaw) * 0.4, 3, 1.02, k.yaw + Math.PI / 2)}))
     },
     osprey_dive: {
         cast: [["os", "osprey", 2]],
         hours: 10,
         date: Date.UTC(2026, 10, 12, 10) / 1000,
         // (From the side and a little below the hover, the whole drop in frame: the hover, the stoop, the strike, the climb.)
-        find: (ctx) => huntMoment(ctx, "talon_grab", "dive_feet", (k) => ({before: 4, after: 3.5, step: 1 / 40, close: true, view: view(k.to.x, Math.max(k.from.y * 0.4, 2.5), k.to.z, Math.max(k.from.y * 1.6, 11), 1.3, 0.3)}))
+        find: (ctx) => huntMoment(ctx, "talon_grab", "dive_feet", (k) => ({before: 4, after: 3.5, step: 1 / 40, close: true, view: view(k.to.x, Math.max(k.from.y * 0.45, 3), k.to.z, Math.max(k.from.y * 1.5, 12), 1.15, 0.3 + Math.PI / 2)}))
     },
     dolphin_chase: {
         cast: [["dl", "spinner-dolphin", 3]],
@@ -361,6 +363,7 @@ async function main() {
     };
     const moment = clip.find(ctx);
     console.log(`[clip] moment ${moment ? moment.note : "none"}`);
+    let calls = 0;
     const api = {
         moment,
         sexes: ctx.animals.map((a) => `${a.id.slice(-4)} ${sexLook(a.id, a.slug).sex}`),
@@ -373,6 +376,11 @@ async function main() {
             } else {
                 fake.perf += ms - fake.date;
                 fake.date = ms;
+            }
+            // (A replay: where the acting animals are, now and then, for the record.)
+            if (moment?.play && (calls++ % 15 === 0)) {
+                const acting = (debug.entries() as unknown as Array<{animal: {id: string; model_slug: string}; act?: {x: number; z: number; base: number; state?: string; speed?: number; hidden?: boolean} | null}>).filter((e) => e.act);
+                console.log(`[clip] t=${epoch.toFixed(2)} cam ${JSON.stringify(handle.view?.() ?? null)} ${acting.map((e) => `${e.animal.model_slug} ${e.act!.x.toFixed(1)},${e.act!.z.toFixed(1)} y${e.act!.base.toFixed(2)} ${e.act!.state ?? ""} v${(e.act!.speed ?? 0).toFixed(1)}${e.act!.hidden ? " hidden" : ""}`).join(" | ")}`);
             }
             if (moment?.close) {
                 (debug as unknown as {controls: {minDistance: number}}).controls.minDistance = 0.8;

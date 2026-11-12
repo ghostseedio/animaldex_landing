@@ -220,12 +220,13 @@ export function chasePace(body: ActBody, mode: "sprint" | "flee" | "stalk" | "bu
     const stat = statOf(body);
     // (No stat but its pace at a full chase, `moveSpeed`: that is its top speed.)
     const top = !finite(body.speedStat) && finite(body.speed) && body.speed > 0 ? body.speed : (0.3 + 14.5 * Math.pow(stat / 100, 1.2)) * Math.min(Math.max(Math.pow(length, 0.25), 0.4), 1.6);
-    const rig = body.gait ? length * body.gait * 2.5 * 1.3 : Infinity;
+    // (Not capped by today's rig clips: a lion's fastest is its walk, 1.1 m/s, and its first scene chase crawled. L1's
+    // gait engine gives every runner its gallop, its cadence following the speed.)
     switch (mode) {
         case "sprint":
-            return Math.max(Math.min(top, rig, 22), 0.3);
+            return Math.max(Math.min(top, 22), 0.3);
         case "flee":
-            return Math.max(Math.min(top, rig, 22), 0.2);
+            return Math.max(Math.min(top, 22), 0.2);
         case "stalk":
             return Math.min(Math.max(length * 0.45, 0.2), 1.4);
         case "burst":
@@ -281,10 +282,32 @@ const LUNGE_PREY = 0.85;
 
 /** The nearest clear way to `want` (a little ahead of a body), or `want` itself when it is clear or nothing is. */
 function roundIt(want: number, x: number, z: number, ahead: number, ok: (x: number, z: number) => boolean): number {
-    const clear = (a: number) => ok(x + Math.sin(a) * ahead, z + Math.cos(a) * ahead) && ok(x + Math.sin(a) * ahead * 0.5, z + Math.cos(a) * ahead * 0.5);
+    const clear = (a: number) => ok(x + Math.sin(a) * ahead, z + Math.cos(a) * ahead) && ok(x + Math.sin(a) * ahead * 0.5, z + Math.cos(a) * ahead * 0.5) && ok(x + Math.sin(a) * ahead * 0.2, z + Math.cos(a) * ahead * 0.2);
     if (clear(want)) return want;
     for (const off of [0.5, -0.5, 1, -1, 1.5, -1.5, 2.1, -2.1, 2.7, -2.7]) if (clear(want + off)) return want + off;
     return want;
+}
+
+/**
+ * One step of a runner (pure): on along its heading where that is clear; blocked, the nearest clear way round within
+ * a right angle (it swerves); boxed in, on anyway (a chase must end: through a gap the grid does not see).
+ */
+function stepOn(at: {x: number; z: number; yaw: number}, speed: number, ok: (x: number, z: number) => boolean): void {
+    const step = speed * DT;
+    if (step <= 0) return;
+    const free = (a: number) => ok(at.x + Math.sin(a) * step, at.z + Math.cos(a) * step) && ok(at.x + Math.sin(a) * Math.max(step * 4, 0.3), at.z + Math.cos(a) * Math.max(step * 4, 0.3));
+    let yaw = at.yaw;
+    if (ok(at.x, at.z) && !free(yaw)) {
+        for (const off of [0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.4, -1.4]) {
+            if (free(yaw + off)) {
+                yaw += off;
+                break;
+            }
+        }
+        at.yaw = yaw;
+    }
+    at.x += Math.sin(yaw) * step;
+    at.z += Math.cos(yaw) * step;
 }
 
 /**
@@ -437,12 +460,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                     // Round anything in its way, as its prey does.
                     aim = roundIt(aim, p.x, p.z, Math.max(lp * 0.8, 0.6), (x, z) => ok(x, z, predWater));
                     p.yaw = steer(p.yaw, aim, turnP * DT);
-                    const nx = p.x + Math.sin(p.yaw) * p.v * DT;
-                    const nz = p.z + Math.cos(p.yaw) * p.v * DT;
-                    if (ok(nx, nz, predWater) || !ok(p.x, p.z, predWater)) {
-                        p.x = nx;
-                        p.z = nz;
-                    } else p.v *= 0.5;
+                    stepOn(p, p.v, (x, z) => ok(x, z, predWater));
                     // Dust from its feet, a stride at a time.
                     if (!predWater && t - lastStride > Math.max(lp * 0.9, 0.5) / Math.max(p.v, 0.5)) {
                         lastStride = t;
@@ -495,12 +513,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                 const before = q.yaw;
                 q.yaw = lunging ? lungeYaw : steer(q.yaw, want, turnQ * DT);
                 if (Math.abs(wrap(q.yaw - before)) > turnQ * DT * 0.9 && !preyWater && random() < 0.08) puffs.push({x: q.x, y: ground(q.x, q.z), z: q.z, size: lq * 0.4, kind: "dust"});
-                const nx = q.x + Math.sin(q.yaw) * q.v * DT;
-                const nz = q.z + Math.cos(q.yaw) * q.v * DT;
-                if (ok(nx, nz, preyWater) || !ok(q.x, q.z, preyWater)) {
-                    q.x = nx;
-                    q.z = nz;
-                } else q.v *= 0.4;
+                stepOn(q, q.v, (x, z) => ok(x, z, preyWater));
                 preyState = flee === "swim" ? "swim" : flee === "fly" ? "fly" : "run";
                 if (flee === "fly") q.y = Math.max(prey.base, 0) + Math.min(since * 1.8, lq * 2 + 0.6);
             } else if (tFlee < 0 && tLaunch >= 0 && tc < 0) {
@@ -738,7 +751,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
         kind,
         seconds: run.seconds,
         focus: {x: (minX + maxX) / 2, y: Math.max(Math.max(prey.base, 0) + prey.height * 0.5, kind === "swoop" ? (minY + Math.min(maxY, minY + 6)) / 2 : (minY + maxY) / 2 + prey.height * 0.4), z: (minZ + maxZ) / 2},
-        distance: Math.max(6, extent * 1.05 + 2.5 + Math.max(prey.length, predator.length) * 1.6) + (kind === "swoop" ? 3 : 0),
+        // (Close enough that both fill the view; a long chase is framed a little tighter past its first 10 m, side on.)
+        distance: Math.max(6, Math.min(extent, 10) * 1.05 + Math.max(extent - 10, 0) * 0.72 + 2.5 + Math.max(prey.length, predator.length) * 1.6) + (kind === "swoop" ? 3 : 0),
         polar: kind === "swoop" ? 1.0 : kind === "dart" ? 0.85 : 1.1,
         predator: pose(predator, run.pred),
         prey: pose(prey, run.prey),
@@ -772,6 +786,36 @@ function puffTime(run: Run, index: number): number {
     });
     (run as Run & {times?: number[]}).times = times;
     return times[index];
+}
+
+/**
+ * The camera's bearing for a chase: side on (the scene's two choices first), else the nearest bearing round from it,
+ * whichever has the fewest trees between the camera and the chase (`blocked`: a trunk within a crown's reach of a
+ * point; only where the camera's line is still under the treetops). A tree's crown filled the first lion chase's frame.
+ */
+export function clearBearing(focus: {x: number; y: number; z: number}, distance: number, polar: number, side: number, blocked: (x: number, z: number) => boolean, ground: (x: number, z: number) => number = groundAt): number {
+    const candidates = [side, side + Math.PI, side + 0.45, side - 0.45, side + Math.PI + 0.45, side + Math.PI - 0.45, side + 0.9, side - 0.9, side + Math.PI + 0.9, side + Math.PI - 0.9];
+    let best = side;
+    let bestHits = Infinity;
+    for (const bearing of candidates) {
+        let hits = 0;
+        const n = 24;
+        for (let i = 2; i <= n; i++) {
+            const k = i / n;
+            const x = focus.x + Math.sin(polar) * Math.sin(bearing) * distance * k;
+            const z = focus.z + Math.sin(polar) * Math.cos(bearing) * distance * k;
+            const y = focus.y + Math.cos(polar) * distance * k;
+            // (Over the treetops, nothing is in the way.)
+            if (y - Math.max(ground(x, z), 0) > 10) continue;
+            if (blocked(x, z)) hits++;
+        }
+        if (hits < bestHits) {
+            best = bearing;
+            bestHits = hits;
+        }
+        if (hits === 0) break;
+    }
+    return best;
 }
 
 /** Old age: the head goes down, the colour goes, and it sinks out of sight. Quiet, no puff. */
