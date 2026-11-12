@@ -117,7 +117,8 @@ export function attachedOn(trip: TripLike, epoch: number): Array<{x: number; z: 
         if (surface) out.push(surface);
     };
     const phase = tripPhase(trip, epoch);
-    if (phase === "stay") on(trip.to);
+    // (On its way onto a surface place, a crevice in a rock's face, a burrow's mouth: what that place is on is its way in.)
+    if (phase === "stay" || phase === "ground" || phase === "water") on(trip.to);
     else if (phase === "surface" || phase === "pause") {
         on(trip.from);
         on(trip.to);

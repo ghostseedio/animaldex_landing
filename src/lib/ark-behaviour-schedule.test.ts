@@ -213,7 +213,9 @@ test("groups stay together as loose clusters, never a row", () => {
             // (the smaller spread across the best line through them is real).
             const mx = [...poses.map((p) => p.x)].sort((a, b) => a - b)[Math.floor(poses.length / 2)];
             const mz = [...poses.map((p) => p.z)].sort((a, b) => a - b)[Math.floor(poses.length / 2)];
-            const cluster = poses.filter((p) => Math.hypot(p.x - mx, p.z - mz) < 12);
+            // (A bird in the air on its way is not standing in any row: 2026-11-12, a sparrow flying across its flock's
+            // spot lined up with three on the ground by chance.)
+            const cluster = poses.filter((p) => !p.aloft && Math.hypot(p.x - mx, p.z - mz) < 12);
             // (Three points fall near a line by chance; a row needs four.)
             if (cluster.length < 4) continue;
             const kx = cluster.reduce((s, p) => s + p.x, 0) / cluster.length;

@@ -17,7 +17,7 @@
  */
 
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
-import type {Collider, ColliderSet} from "@/ark-scene/collide/colliders";
+import {colliderDistance, type Collider, type ColliderSet} from "@/ark-scene/collide/colliders";
 import {chunked, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {TERRAIN_HALF} from "@/ark-scene/world";
 
@@ -326,8 +326,9 @@ export class NavGrid {
      * A path can start or end here for a body of this radius: a cell round it (within SEED_RING) it fits in, joined to it
      * by a clear straight run. (Without colliders: always.)
      */
-    attachable(x: number, z: number, radius: number, maxSlope = MAX_SLOPE): boolean {
+    attachable(x: number, z: number, radius: number, maxSlope = MAX_SLOPE, onto = false): boolean {
         if (!this.solid) return true;
+        const skip = onto ? (c: Collider) => colliderDistance(c, x, z) < ONTO : undefined;
         const cls = navClass(radius);
         const r = NAV_RADII[cls];
         const [ci, cj] = this.cellOf(x, z);
@@ -336,7 +337,7 @@ export class NavGrid {
                 const i = ci + di;
                 const j = cj + dj;
                 if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1) continue;
-                if (this.fitsCell(j * SIZE + i, maxSlope, r) && this.runClear({x, z}, this.centre(i, j), r)) return true;
+                if (this.fitsCell(j * SIZE + i, maxSlope, r) && this.runClear({x, z}, this.centre(i, j), r, skip)) return true;
             }
         }
         return false;
@@ -426,9 +427,12 @@ export class NavGrid {
      * (a start already inside something gets out by the shortest step). Unreachable: as far as it got towards b. Always
      * starts at a and ends at a reachable point; it ends at b itself only when b is reached.
      */
-    path(a: NavPoint, b: NavPoint, kind: "walk" | "swim" = "walk", minDepth = 0.5, maxNodes = 900, maxSlope = MAX_SLOPE, radius = NAV_DEFAULT_RADIUS): NavPoint[] {
+    path(a: NavPoint, b: NavPoint, kind: "walk" | "swim" = "walk", minDepth = 0.5, maxNodes = 900, maxSlope = MAX_SLOPE, radius = NAV_DEFAULT_RADIUS, onto = false): NavPoint[] {
         const cls = navClass(radius);
         const r = this.solid ? NAV_RADII[cls] : 0;
+        // (`onto`: b is on something's surface, a crevice in a rock's face, a burrow's mouth by a log: the last run goes
+        // onto it, over what it is on, within ONTO of b.)
+        const ontoSkip = onto && this.solid ? (c: Collider) => colliderDistance(c, b.x, b.z) < ONTO : undefined;
         if (this.clear(a, b, kind, minDepth, maxSlope, r)) return [a, b];
         // A short way with something just in its line (a trunk beside a heron's step): one gentle bend round it, out to the
         // side at its middle, the least bend that clears (a grid route there turns sharply at a cell's middle, on the move).
@@ -456,7 +460,7 @@ export class NavGrid {
             const i = k % SIZE;
             const j = (k - i) / SIZE;
             if (!r) return k === goal;
-            return Math.max(Math.abs(i - gi), Math.abs(j - gj)) <= SEED_RING && this.runClear(this.centre(i, j), b, r);
+            return Math.max(Math.abs(i - gi), Math.abs(j - gj)) <= SEED_RING && this.runClear(this.centre(i, j), b, r, ontoSkip);
         };
         const g = new Map<number, number>();
         const from = new Map<number, number>();
@@ -653,6 +657,8 @@ export class NavGrid {
 
 /** How far a cell's clearance is measured (m): enough for the widest class and a step's half. */
 const CLEAR_CAP = 4;
+/** How far round a surface goal what it is on reaches (m): a rock's face, the log under its top (`collide/attach.ts`). */
+const ONTO = 0.6;
 /** How many rings of cells round a path's start and its goal it may join the grid from (by a clear straight run). */
 const SEED_RING = 2;
 /** How many of a path's points ahead its smoothing tries to join in one straight run (with colliders). */

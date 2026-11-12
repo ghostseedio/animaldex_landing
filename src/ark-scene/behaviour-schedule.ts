@@ -603,10 +603,13 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     // (Clear of everything solid, and not on a cliff's face.)
     if (nav.fits(spot.x, spot.z, r, slope)) return spot;
     // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot; each
-    // animal starts its rings at its own bearing, so a group nudged off one trunk does not line up in a row.)
-    const turn = ((hashString(`${animal.id}#clear`) % 1000) / 1000) * Math.PI * 2;
+    // animal starts its rings at its own bearing and its own offset out, so a group nudged off one trunk or one fence
+    // does not line up in a row along it.)
+    const seed = hashString(`${animal.id}#clear`);
+    const turn = ((seed % 1000) / 1000) * Math.PI * 2;
+    const out = ((Math.floor(seed / 1000) % 1000) / 1000) * 0.3;
     for (let ring = 1; ring <= 12; ring++) {
-        const d = ring * 0.35;
+        const d = ring * 0.35 + out;
         const n = Math.min(Math.max(8, Math.round((Math.PI * 2 * d) / 0.35)), 16);
         for (let k = 0; k < n; k++) {
             const a = turn + (k / n) * Math.PI * 2;
@@ -923,6 +926,8 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
         const planned = keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt));
         // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
+        // (Its roost is made clear once, by `roostOf`, the same for everyone who asks: not moved again here.)
+        if (planned.doing === "sleep" || planned.doing === "to_roost" || planned.doing === "watch") return planned;
         if (!perchFits(world, profile, animal, planned.to)) {
             const foot = world.nav.nearest(planned.to.x, planned.to.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
             if (foot) return {...planned, to: groundSpot(world, foot.x, foot.z), mode: planned.mode === "air" ? "air" : "ground"};
@@ -944,13 +949,15 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
     if (!to || placed.follow || !walksGoals(profile)) return true;
-    // A climb up (collisions): it walks to the climb's foot first, so that walk is checked as any other: a foot it can
+    // (Collisions.) A climb up: it walks to the climb's foot first, so that walk is checked as any other: a foot it can
     // reach, by no long way round (2026-11-12: a komodo walked 91 m round to a rock's far side, at 1.6 times its pace).
+    // Not a climb home to its roost (going home to sleep may wind, as below: the chains of goals agree on its roost).
     const from0 = before ?? groundSpot(world, animal.home.x, animal.home.z);
-    if (world.nav.colliders && !flies(profile) && raised(world, to) && !raised(world, from0) && !wet(world, from0)) {
+    const homeward = placed.doing === "sleep" || placed.doing === "to_roost";
+    if (world.nav.colliders && !homeward && !flies(profile) && raised(world, to) && !raised(world, from0)) {
         const foot = climbFoot(world, profile, animal, to);
         if (!foot) return false;
-        return walkable(world, profile, animal, {...placed, to: foot, mode: "ground"}, from0);
+        return walkable(world, profile, animal, {...placed, to: foot, mode: wet(world, foot) ? "water" : "ground"}, from0);
     }
     if (placed.mode !== "ground" && placed.mode !== "water") return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
@@ -979,7 +986,7 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
     if (straight < 0.5 || straight > 25 || home) return true;
     // (The search its trip makes: `tripFor`'s ground.)
-    const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug));
+    const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(goal.point));
     const end = path[path.length - 1];
     const reached = Math.hypot(end.x - goal.x, end.z - goal.z) < 0.01;
     if (!reached) return retreat;
@@ -1030,7 +1037,7 @@ function onItsGround(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
     if (mine < 0 || wet(world, to)) return true;
     if (world.nav.region(to.x, to.z, slope, r) !== mine) return false;
     // (And its path can end there: a cell round the goal its body fits in, by a clear run.)
-    if (!world.nav.attachable(to.x, to.z, r, slope)) return false;
+    if (!world.nav.attachable(to.x, to.z, r, slope, onSurface(to.point))) return false;
     if (!amphibious(profile)) return true;
     // Out of the water onto it, it climbs out at the edge nearest it: that edge on its ground too.
     const edge = waterEdgeNear(world, profile, animal, to);
@@ -1456,11 +1463,12 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const bodyR = bodyRadiusOf(animal, profile.slug);
     const walkPath = (a: Spot, b: Spot, nodes: number): NavPoint[] => {
         const slope = maxSlopeOf(animal);
-        const path = world.nav.path(a, b, "walk", 0.5, nodes, slope, bodyR);
+        const onto = onSurface(b.point);
+        const path = world.nav.path(a, b, "walk", 0.5, nodes, slope, bodyR, onto);
         const end = path[path.length - 1];
         if (Math.hypot(end.x - b.x, end.z - b.z) < 0.01) return path;
         const region = world.nav.region(a.x, a.z, slope, bodyR);
-        return region >= 0 && region === world.nav.region(b.x, b.z, slope, bodyR) ? world.nav.path(a, b, "walk", 0.5, 12000, slope, bodyR) : path;
+        return region >= 0 && region === world.nav.region(b.x, b.z, slope, bodyR) ? world.nav.path(a, b, "walk", 0.5, 12000, slope, bodyR, onto) : path;
     };
     const ground = (a: Spot, b: Spot, beat: ArkBeat = "walk") => {
         const path = walkPath(a, b, 900);

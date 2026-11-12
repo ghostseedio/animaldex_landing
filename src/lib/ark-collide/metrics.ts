@@ -6,7 +6,8 @@
  * - Pass-throughs: a body (its capsule: `collide/bodies.ts`) overlapping a fence, a building, a trunk, a rock, a log or a
  *   hay bale by more than `PASS_TOLERANCE` (a quarter of its radius, at least 3 cm: touching is not passing through),
  *   within its height span (on a rock's top, under a fence's rails is clear). By the kind of thing and by what moved it.
- * - Fence crossings: an animal on the ground that is on the other side of a fence a sample later (a step through it).
+ * - Fence crossings: an animal on the ground that is on the other side of a fence a sample later (a step through it),
+ *   checked on its finely sampled way (not the chord between samples); a climber on its climb is climbing over it.
  * - Overlaps: two bodies on the ground (or two aloft) overlapping by more than `OVERLAP_TOLERANCE` of the smaller one's
  *   radius, within each other's height. Partners on a host and a recipe's own pair (a predator reaching its prey) are
  *   not overlaps.
@@ -313,7 +314,8 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
             // A step through a fence between two samples, on the ground, not a jump between slots.
             const before = last.get(s);
             last.set(s, p);
-            if (!before || before.aloft || p.aloft) continue;
+            // (A climber on its climb goes over a fence, up its posts: climbing, which its body plan does.)
+            if (!before || before.aloft || p.aloft || p.source.startsWith("surface") || before.source.startsWith("surface")) continue;
             const move = Math.hypot(p.x - before.x, p.z - before.z);
             if (move < 1e-3 || move > SLOT_SECONDS) continue;
             for (const c of set.near((p.x + before.x) / 2, (p.z + before.z) / 2, move / 2 + 0.1, fences)) {
