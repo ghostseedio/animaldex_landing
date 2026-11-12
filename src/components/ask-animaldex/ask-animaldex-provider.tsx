@@ -37,6 +37,8 @@ export type AskSubjectDeclaration = {
     companionSpeciesProfileId?: string | null;
     /** Opened from another of their animals' referral: this one speaks first about it. */
     referralId?: string | null;
+    /** An animal on the Ark (the Talk page's `?ark=`): the server decides who the chat is with. */
+    arkAnimalId?: string | null;
 };
 
 /**

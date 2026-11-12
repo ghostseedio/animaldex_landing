@@ -575,7 +575,8 @@ export function useAskThread(params: {
                 summary: subject.summary,
                 path: subject.path,
                 trialContext: subject.trialContext,
-                trialKey: subject.trialKey
+                trialKey: subject.trialKey,
+                ...(subject.arkAnimalId ? {arkAnimalId: subject.arkAnimalId} : {})
             }
         };
 
@@ -830,7 +831,8 @@ export function useAskThread(params: {
                         summary: subject.summary,
                         path: subject.path,
                         trialContext: subject.trialContext,
-                        trialKey: subject.trialKey
+                        trialKey: subject.trialKey,
+                        ...(subject.arkAnimalId ? {arkAnimalId: subject.arkAnimalId} : {})
                     }
                 })
             });

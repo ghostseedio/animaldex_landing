@@ -35,6 +35,8 @@ import {availableAskProviders} from "@/lib/ask-animaldex/providers";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {talkSlugForSpeciesPage} from "@/data/talk-animals";
+import {arkChatTurn, arkForClient} from "@/lib/ask-animaldex/ark-chat-visitor";
+import {loadAskArkAnimal} from "@/lib/ask-animaldex/chat-records-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,24 +49,36 @@ export async function POST(request: Request) {
         body = {};
     }
 
-    const subject = resolveAskSubject(body.subject ?? body);
+    const asked = resolveAskSubject(body.subject ?? body);
     const viewer = await resolveAskViewer(request);
+    // Ark Talk (F1, `ark-chat-visitor.ts`): an Ark animal is resolved on the
+    // server for the signed-in reader; its species is the Ark animal's, and its
+    // card stays private (the owner's own, on their own chat, for its name).
+    const arkRead = asked.arkAnimalId && viewer.userId ? await loadAskArkAnimal(asked.arkAnimalId, viewer.userId) : null;
+    const arkTurn = arkRead?.ok ? arkChatTurn(arkRead.animal, viewer.userId) : null;
+    const subject = asked.arkAnimalId
+        ? {...asked, scope: arkTurn?.speciesSlug ? "species" as const : "general" as const, slug: arkTurn?.speciesSlug ?? null, captureId: null}
+        : asked;
 
     const [species, wildProfile, allowance, card] = await Promise.all([
         buildAskSubjectGrounding(subject),
         getAskWildProfile(viewer.userId),
         peekAskAllowance(request, viewer),
-        subject.scope === "species" ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null)
+        arkTurn
+            ? arkTurn.promptCaptureId ? loadAskCaptureContext(arkTurn.promptCaptureId) : Promise.resolve(null)
+            : subject.scope === "species" ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null)
     ]);
     const hints = species ? buildAskHints(species) : EMPTY_ASK_HINTS;
     const speciesProfileId = species ? await resolveAskCanonicalSpeciesId(species.speciesProfileId ?? null) : null;
     // A card someone else holds: the animal is theirs, and says so.
-    const isVisit = Boolean(card && card.ownerId !== viewer.userId);
+    const isVisit = arkTurn ? arkTurn.audience === "visitor" : Boolean(card && card.ownerId !== viewer.userId);
     // The openers in the reader's language (WEB-21).
     const locale = typeof body.locale === "string" && (localeConfig.locales as readonly string[]).includes(body.locale) ? body.locale : localeConfig.defaultLocale;
     const [talkCount, ownerName, openerTranslate, talkSlug] = await Promise.all([
         loadAskTalkCount(speciesProfileId),
-        isVisit && card ? loadAskOwnerName(card.ownerId) : Promise.resolve(null),
+        // On the Ark, the Ark's label (F2), never the display name.
+        arkTurn ? Promise.resolve(isVisit ? arkTurn.ownerLabel?.label ?? null : null)
+            : isVisit && card ? loadAskOwnerName(card.ownerId) : Promise.resolve(null),
         getScopedTranslator(locale, "askAnimalDex").catch(() => null),
         // This animal's chat on the Talk page, by the catalog's slug (WEB-1): where Full screen goes.
         species && subject.slug ? talkSlugForSpeciesPage(subject.slug).catch(() => subject.slug) : Promise.resolve(null)
@@ -92,6 +106,8 @@ export async function POST(request: Request) {
         // The owner's own name for the animal, on their own card only.
         nickname: card && !isVisit ? card.nickname : null,
         ownerName: isVisit ? ownerName : null,
+        // An Ark turn: who it is with and the header's label; never a person's or a capture's id.
+        ...(arkTurn ? {ark: arkForClient(arkTurn)} : {}),
         talkSlug,
         // Claude counts on a species page, where the animal itself speaks.
         available: availableAskProviders({animalVoice: resolvedSubject.scope === "species"}).length > 0

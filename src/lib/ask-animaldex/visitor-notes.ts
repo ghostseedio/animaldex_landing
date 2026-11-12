@@ -298,5 +298,9 @@ export function askVisitorNotesPromptSection(notes: AskPendingVisitorNote[], now
 // The notes this answer passed on: the ones whose visitor it names.
 export function deliveredAskVisitorNoteIds(notes: AskPendingVisitorNote[], answer: string): string[] {
     const said = answer.toLowerCase();
-    return notes.filter((note) => note.visitor.length >= 2 && said.includes(note.visitor.toLowerCase())).map((note) => note.id);
+    // An Ark visitor's '@handle' counts said without its '@' too (D14).
+    return notes.filter((note) => {
+        const names = [note.visitor, note.visitor.replace(/^@+/, "")].filter((name) => name.length >= 2);
+        return names.some((name) => said.includes(name.toLowerCase()));
+    }).map((note) => note.id);
 }

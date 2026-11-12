@@ -124,6 +124,29 @@ export default function TalkPicker({words, initial, frontDoor = null}: {
         if (catalogState === "idle") fetchCatalog();
     }, [catalogState, fetchCatalog]);
 
+    // Ark Talk: `/talk?ark=<animal id>` opens that Ark animal's chat. The
+    // server says which species it is (the browser does not choose it), then
+    // the chat page takes the id on (`/talk/<slug>?ark=<id>`, talk-chat.tsx).
+    useEffect(() => {
+        const ark = new URLSearchParams(window.location.search).get("ark")?.trim().toLowerCase() ?? "";
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(ark)) return;
+        let cancelled = false;
+        void fetch("/api/ask/context", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({locale, subject: {scope: "species", path: "/talk", arkAnimalId: ark}})
+        })
+            .then((response) => (response.ok ? response.json() as Promise<{talkSlug?: string | null; subject?: {slug?: string | null}}> : null))
+            .then((context) => {
+                const slug = context?.talkSlug ?? context?.subject?.slug ?? null;
+                if (!cancelled && slug) router.replace(getLocalePath(locale, `/talk/${encodeURIComponent(slug)}?ark=${ark}`));
+            })
+            .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [locale, router]);
+
     useEffect(() => {
         const ask = new URLSearchParams(window.location.search).get("ask")?.trim();
         setCarried(ask ? ask.slice(0, 900) : null);
