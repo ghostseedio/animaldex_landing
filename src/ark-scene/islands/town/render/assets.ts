@@ -133,6 +133,9 @@ export class TownAssets {
             const g = geometry as BufferGeometry;
             // (The flowers' and lily pads' morph targets are their own sway, not drawn instanced.)
             if (Object.keys(g.morphAttributes).length) g.morphAttributes = {};
+            // Nothing reads a tree's arrays back (no culling by bounds, no picking): the page's copies go once on the GPU.
+            for (const name of Object.keys(g.attributes)) g.attributes[name].onUpload(releaseArray);
+            g.index?.onUpload(releaseArray);
             this.makeMeshes(entry, lod.level as Level, g, lod.doubleSided, id);
         }).catch(() => {})));
     }
@@ -306,6 +309,11 @@ export class TownAssets {
 }
 
 const WHITE = new Color(1, 1, 1);
+
+/** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
+function releaseArray(this: {array: ArrayLike<number>}) {
+    this.array = new Float32Array(0);
+}
 
 function frac(value: number): number {
     return value - Math.floor(value);

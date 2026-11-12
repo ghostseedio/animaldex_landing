@@ -20,6 +20,7 @@ import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scen
 import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {townTrees} from "@/ark-scene/islands/town/trees";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -744,8 +745,10 @@ function beds(out: SceneryOut, plan: TownPlan) {
 // MARK: - All of it
 
 export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
-    // (`trees`: the plan's candidates; what is drawn is `trees.ts` townTrees, lane GC.)
-    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees: [...plan.trees], lamps: [], bridges: []};
+    // (`trees`: the trees as drawn, `trees.ts` townTrees (lane GC), their crowns' reach as `scale` × 5.5 m for the fallen
+    // leaves under them, lane GA's `near.ts`.)
+    const trees = townTrees(plan).filter((t) => !t.low).map((t) => ({x: t.x, z: t.z, kind: t.kind, scale: t.crown / 5.5, seed: t.seed}));
+    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees, lamps: [], bridges: []};
     streets(out, plan);
     bridges(out, plan);
     harbour(out);

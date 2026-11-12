@@ -113,10 +113,10 @@ const HEDGE_GREENS: RGB[] = [tone("#3f6c2f"), tone("#456f2c"), tone("#3a6234"), 
  */
 export function hedgeAlong(geo: Geo, line: Poly, height: number, seed: number, hedgerow: boolean, gaps: ReadonlyArray<{x: number; z: number; half: number}> = []) {
     const width = hedgerow ? 1.5 : 0.85;
-    const step = hedgerow ? 0.8 : 0.6;
+    const step = hedgerow ? 1.1 : 0.85;
     const base = HEDGE_GREENS[seed % HEDGE_GREENS.length];
     // The cross-section (across, up) as a share of the half width and the height: straight sides, a rounded top.
-    const profile: Array<[number, number]> = [[-1, -0.05], [-1.04, 0.3], [-1.02, 0.62], [-0.9, 0.86], [-0.55, 0.98], [0, 1.02], [0.55, 0.98], [0.9, 0.86], [1.02, 0.62], [1.04, 0.3], [1, -0.05]];
+    const profile: Array<[number, number]> = [[-1, -0.05], [-1.04, 0.45], [-0.94, 0.84], [-0.5, 0.99], [0.5, 0.99], [0.94, 0.84], [1.04, 0.45], [1, -0.05]];
     const r = rng(seed);
     for (let i = 1; i < line.length; i++) {
         const a = line[i - 1];
@@ -218,7 +218,7 @@ export function flowerBed(foliage: Geo, decal: Geo, frame: Frame, w: number, d: 
         decal.drape(frame, w, d, (x, z) => H(x, z) + frame.y, 0.07, () => SOIL, 1);
     }
     decal.tag = before;
-    const spacing = 0.26;
+    const spacing = 0.3;
     for (let lx = -w / 2 + spacing / 2; lx < w / 2; lx += spacing) {
         for (let lz = -d / 2 + spacing / 2; lz < d / 2; lz += spacing) {
             if (round && (lx * lx) / ((w / 2) * (w / 2)) + (lz * lz) / ((d / 2) * (d / 2)) > 0.85) continue;
@@ -248,8 +248,9 @@ export function flowerBed(foliage: Geo, decal: Geo, frame: Frame, w: number, d: 
 export function cropRows(geo: Geo, field: Box, crop: string, seed: number) {
     const r = rng(seed);
     const look: Record<string, {spacing: number; height: number; colour: RGB; head?: RGB; heads?: number}> = {
-        cereal: {spacing: 0.35, height: 0.85, colour: tone("#c4ad62"), head: tone("#d9c27a")},
-        maize: {spacing: 0.75, height: 2.1, colour: tone("#5a8a34"), head: tone("#c8b45a")},
+        // (A drawn row stands for two sown ones: the far view reads the same, at half the triangles.)
+        cereal: {spacing: 0.7, height: 0.85, colour: tone("#c4ad62"), head: tone("#d9c27a")},
+        maize: {spacing: 1.0, height: 2.1, colour: tone("#5a8a34"), head: tone("#c8b45a")},
         cabbage: {spacing: 0.6, height: 0.35, colour: tone("#7ea25a"), heads: 0.55},
         sprouts: {spacing: 0.55, height: 0.75, colour: tone("#5f8a44"), heads: 0.5}
     };
@@ -268,7 +269,7 @@ export function cropRows(geo: Geo, field: Box, crop: string, seed: number) {
             continue;
         }
         // A standing row: a ragged-topped wall of stems, lit on top, the heads (ears, tassels) a lighter band.
-        const n = Math.max(2, Math.ceil(field.w / 0.5));
+        const n = Math.max(2, Math.ceil(field.w / 0.9));
         let prev: {foot: V3; top: V3; head: V3} | null = null;
         for (let k = 0; k <= n; k++) {
             const lx = -field.w / 2 + 0.4 + ((field.w - 0.8) * k) / n;

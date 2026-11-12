@@ -385,8 +385,10 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         add(sc?.decal, materials.decal, "decal", false, true);
         add(bc?.solid ?? sc?.solid, materials.solid, "solid", true);
         add(sc?.net, materials.net, "net", false, true);
-        // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`.
-        add(sc?.foliage, materials.foliage, "foliage", true, true);
+        // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`. Nothing reads
+        // their arrays back, so the page's copies go once they are on the GPU (phone heap).
+        const foliage = add(sc?.foliage, materials.foliage, "foliage", true, true);
+        if (foliage) for (const name of Object.keys(foliage.attributes)) foliage.attributes[name].onUpload(releaseArray);
         const glassGeo = bc?.glass ?? sc?.glass;
         if (glassGeo && glassGeo.triangles > 0) {
             const geometry = glassGeo.toGeometry();
@@ -404,6 +406,9 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             root.add(group);
             chunks[key] = {group, meshes, glass};
         }
+        // (Lane GC, phone heap: the chunk's arrays are in its meshes now; the worker's copies are let go.)
+        scenery.chunks.delete(key);
+        perChunk.delete(key);
         yield;
     }
 
@@ -737,6 +742,11 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
 }
 
 export type {TownPlan};
+
+/** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
+function releaseArray(this: {array: ArrayLike<number>}) {
+    this.array = new Float32Array(0);
+}
 
 /** The procedural stand-ins' height at scale 1 (`instanced.ts` treeGeometry), for drawing them at a settled tree's height. */
 function standInHeight(kind: string): number {

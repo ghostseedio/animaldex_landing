@@ -162,7 +162,7 @@ const TOWN_DIGESTS = {
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged.)
-    sceneryAndBuildings: "0e5bc0a8bd7268f3",
+    sceneryAndBuildings: "8a491615aff8f081",
     zoo: "f7d9bb4d11ad15c9",
     places: "fb1159793f083105"
 };
