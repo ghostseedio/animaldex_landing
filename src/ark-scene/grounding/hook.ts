@@ -17,6 +17,7 @@
  */
 
 import {onHamletSwitch} from "@/ark-scene/no-hamlet";
+import {heightAt, onArkWorld} from "@/ark-scene/world";
 import {allAttachPoints, attachSway, type AttachPoint} from "@/ark-scene/sampler";
 import {clipStandOffset, levelBase, meanDrop, modelBase, type ModelLevelName} from "@/ark-scene/grounding/base";
 import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
@@ -77,20 +78,40 @@ let byId: Map<string, AttachPoint> | null = null;
 onHamletSwitch(() => {
     byId = null;
 });
+// (And the world's: the bigger wild island's scenery, P3.)
+onArkWorld(() => {
+    byId = null;
+});
 function attachPoint(id: string): AttachPoint | null {
     byId ??= new Map(allAttachPoints().map((point) => [point.id, point]));
-    return byId.get(id) ?? null;
+    // (A map roost names the scenery's point after `map:`: `map/place.ts` scheduleRoost.)
+    return byId.get(id) ?? (id.startsWith("map:") ? byId.get(id.slice(4)) ?? null : null);
 }
 
 /** Off the ground: anything the schedule holds it on that is not the ground (its point's tag, or its pose's normal). */
 export const RAISED_POINT_TAGS: ReadonlySet<string> = new Set(["branch", "bark", "leaf", "rock_face", "house_wall", "house_eave", "cliff_ledge", "ledge", "post", "fence_post", "roof_edge", "log_top", "log", "tree_hollow", "canopy_hang", "limb", "canopy_perch", "canopy_climb", "rock_top", "flower_head", "porch_light", "lamp"]);
+
+/** A place's tag from its id: the scenery's `<tag>:<host>:<n>`, the schedule world's own `<tag>:<n>`, the map's `map:<id>`. */
+function tagOf(id: string): string {
+    return (id.startsWith("map:") ? id.slice(4) : id).split(":")[0];
+}
+
+/** A spot this far over the ground under it (m; the analytic or the drawn, the higher) is raised: `standsOnGround`'s tolerance. */
+const RAISED_BY = 0.05;
 
 /**
  * A schedule pose on a raised point as a surface frame (null on the ground, in the air or in the water): at its
  * destination's attach point (moving with its tree's sway, its heading the point's own along a branch or up a
  * trunk), or between points on a climb (the schedule's interpolated normal).
  */
-export function scheduledPerch(at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean}, to: {point: string | null} | null | undefined, arrived: boolean, time: number, wind: {x: number; y: number}): SurfaceFrame | null {
+export function scheduledPerch(
+    at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean},
+    to: {point: string | null; x?: number; y?: number; z?: number; nx?: number; ny?: number; nz?: number} | null | undefined,
+    arrived: boolean,
+    time: number,
+    wind: {x: number; y: number},
+    ground: (x: number, z: number) => number = drawnGroundHeight
+): SurfaceFrame | null {
     if (at.aloft) return null;
     const point = arrived && to?.point ? attachPoint(to.point) : null;
     if (point && RAISED_POINT_TAGS.has(point.tag) && Math.hypot(at.x - point.position.x, at.z - point.position.z) < 0.05) {
@@ -98,6 +119,15 @@ export function scheduledPerch(at: {x: number; y: number; z: number; yaw: number
         const steep = Math.abs(point.normal.y) < 0.5;
         const frame = scheduleSurface({x: point.position.x + sway.x, y: point.position.y + sway.y, z: point.position.z + sway.z, yaw: at.yaw, nx: point.normal.x, ny: point.normal.y, nz: point.normal.z}, steep ? point.forward ?? null : null);
         return frame;
+    }
+    // A raised place the scenery's points do not hold it at: one the schedule's own world made (`world-sampler.ts`: a
+    // rock's top, `rock_top:<n>`, a decor rock's or a crag's, on either wild island; the town's), or a map roost set off
+    // its scenery point. The trip's own spot is that place, as the schedule put it there (its height, its normal): held on
+    // it while it stands there and the spot is above the ground, else the legged driver would stand its body on the
+    // terrain under it, inside the rock (the komodo basking on a boulder, 2026-11-13). A spot on the ground beside a low
+    // rock or a ledge is the ground's, as before.
+    if (arrived && to?.point && to.x !== undefined && to.y !== undefined && to.z !== undefined && RAISED_POINT_TAGS.has(tagOf(to.point)) && Math.hypot(at.x - to.x, at.z - to.z) < 0.05 && to.y > Math.max(heightAt(to.x, to.z), ground(to.x, to.z)) + RAISED_BY) {
+        return scheduleSurface({x: to.x, y: to.y, z: to.z, yaw: at.yaw, nx: to.nx ?? 0, ny: to.ny ?? 1, nz: to.nz ?? 0}, null);
     }
     if (at.ny < 0.95) return scheduleSurface(at);
     return null;
