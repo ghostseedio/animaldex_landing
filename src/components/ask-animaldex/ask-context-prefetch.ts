@@ -28,7 +28,8 @@ export function askContextRequestBody(locale: string, subject: AskSubject): stri
             summary: subject.summary,
             path: subject.path,
             trialContext: subject.trialContext,
-            trialKey: subject.trialKey
+            trialKey: subject.trialKey,
+            ...(subject.arkAnimalId ? {arkAnimalId: subject.arkAnimalId} : {})
         }
     });
 }

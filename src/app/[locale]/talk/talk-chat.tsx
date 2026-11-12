@@ -9,6 +9,12 @@
  * cards) it is their chat with the whole companion loop; anywhere else it is
  * the public chat, open to anyone (docs/rich-chat/SPEC.md, section 4).
  *
+ * With `?ark=<animal id>` it is a chat with that animal on the Ark (Ark Talk,
+ * player control phase 2): the id is passed through as the subject's
+ * `arkAnimalId`, and the server decides everything from it (who the chat is
+ * with, the species, the card; `ark-chat-visitor.ts`). A `?card=` beside it
+ * is ignored, and the chat is its own thread.
+ *
  * Until the conversation mounts, the page shows its frame from the server's
  * HTML (WEB-23): the header, the animal's contact card and what it can do,
  * laid out exactly as the conversation lays them out, so the largest paint
@@ -54,12 +60,14 @@ export default function TalkChat({slug, name, power, locale}: {
     // The chat's words and labels come once with the layout, not with every chat page.
     const {openSidebar, words, labels} = useTalkShell();
     // From the address, before the first paint (`useSearchParams` would render the page on the client only).
-    const [query, setQuery] = useState<{card: string | null; ask: string | null} | null>(null);
+    const [query, setQuery] = useState<{card: string | null; ask: string | null; ark: string | null} | null>(null);
     useIsomorphicLayoutEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const card = params.get("card")?.trim().toLowerCase() ?? "";
+        const ark = params.get("ark")?.trim().toLowerCase() ?? "";
+        // An Ark animal's chat never reads a card from the address.
+        const card = UUID.test(ark) ? "" : params.get("card")?.trim().toLowerCase() ?? "";
         const ask = params.get("ask")?.trim() ?? "";
-        setQuery({card: UUID.test(card) ? card : null, ask: ask ? ask.slice(0, 900) : null});
+        setQuery({card: UUID.test(card) ? card : null, ask: ask ? ask.slice(0, 900) : null, ark: UUID.test(ark) ? ark : null});
     }, []);
     // A card is the owner's when it is one of theirs: their chat, with its loop. Read only with a session.
     const [hasSession, setHasSession] = useState(false);
@@ -70,14 +78,15 @@ export default function TalkChat({slug, name, power, locale}: {
     const companionSpeciesProfileId = ownCard?.speciesProfileId ?? null;
     const avatarUrl = getSpeciesImageRoute(slug);
     const captureId = query?.card ?? null;
+    const arkAnimalId = query?.ark ?? null;
 
     const subject = useMemo(() => (settled
         ? {
-            subject: askDeclaredSubject(pathname, {scope: "species", slug, name, title: name, captureId}, null),
+            subject: askDeclaredSubject(pathname, {scope: "species", slug, name, title: name, captureId, arkAnimalId}, null),
             avatarUrl,
             companionSpeciesProfileId
         }
-        : null), [settled, pathname, slug, name, captureId, avatarUrl, companionSpeciesProfileId]);
+        : null), [settled, pathname, slug, name, captureId, arkAnimalId, avatarUrl, companionSpeciesProfileId]);
 
     const page = useMemo<AskConversationPage>(() => ({
         onMenu: openSidebar,
@@ -103,6 +112,7 @@ export default function TalkChat({slug, name, power, locale}: {
                     name={name}
                     title={name}
                     captureId={captureId}
+                    arkAnimalId={arkAnimalId}
                     avatarUrl={avatarUrl}
                     companionSpeciesProfileId={companionSpeciesProfileId}
                 />
@@ -119,8 +129,8 @@ export default function TalkChat({slug, name, power, locale}: {
                     onMenu={openSidebar}
                     words={words}
                     labels={labels}
-                    // Someone else's card or their own: no public chat's capabilities.
-                    showsCapabilities={!query?.card}
+                    // Someone else's card or their own, or an Ark animal: no public chat's capabilities.
+                    showsCapabilities={!query?.card && !query?.ark}
                 />
             )}
         </>

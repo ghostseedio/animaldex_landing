@@ -141,9 +141,11 @@ type AskThreadSnapshot = {
 };
 
 /** Where a conversation is filed. One animal, one capture, or the site at large. */
-export function askThreadKey(subject: {scope: "species" | "general"; slug?: string | null; captureId?: string | null; trialKey?: string | null}) {
+export function askThreadKey(subject: {scope: "species" | "general"; slug?: string | null; captureId?: string | null; trialKey?: string | null; arkAnimalId?: string | null}) {
     // A Trial conversation is its own thread, never a continuation of the animal's.
     if (subject.trialKey) return `trial:${subject.trialKey}`;
+    // An Ark animal's chat is its own too: never someone's card, never the species chat.
+    if (subject.arkAnimalId) return `ark:${subject.arkAnimalId}`;
     if (subject.captureId) return `capture:${subject.captureId}`;
     if (subject.scope === "species" && subject.slug) return `species:${subject.slug}`;
     return "general";

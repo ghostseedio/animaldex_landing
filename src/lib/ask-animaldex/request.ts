@@ -12,6 +12,7 @@ import {getSupabaseAuthKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {hasAuthCookie} from "@/lib/viewer";
 import {askLimitForViewer, SPECIES_ASK_DAILY_LIMITS, SPECIES_ASK_WINDOW_MS} from "@/lib/species-ask";
 import {askPathWithoutLocale, askSubjectFromPath, type AskSubject} from "@/lib/ask-animaldex/subject";
+import {askArkRequest} from "@/lib/ask-animaldex/ark-chat-visitor";
 
 export const ASK_RESPONSE_HEADERS = {
     "Cache-Control": "private, no-store",
@@ -344,6 +345,25 @@ export function resolveAskSubject(raw: unknown): AskSubject {
     const scope = resolvedSlug && (fromPath.scope === "species" || body.scope === "species")
         ? "species" as const
         : "general" as const;
+    // An Ark animal (F1): its card is the server's to find, never the browser's.
+    const ark = askArkRequest(body);
+
+    if (ark.arkAnimalId) {
+        return {
+            scope,
+            kind: fromPath.kind,
+            slug: resolvedSlug,
+            name: cappedText(body.name, 120),
+            captureId: null,
+            hasReaderPhoto: false,
+            title: cappedText(body.title, 140),
+            summary: cappedText(body.summary, 400),
+            path,
+            trialContext: null,
+            trialKey: null,
+            arkAnimalId: ark.arkAnimalId
+        };
+    }
 
     return {
         scope,

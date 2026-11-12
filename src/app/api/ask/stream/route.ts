@@ -207,6 +207,7 @@ import {
     loadAskDueFollowUp,
     loadAskOwnerContext,
     holdsLiveCard,
+    loadAskArkAnimal,
     loadAskOwnStories,
     loadAskPendingVisitorNotes,
     recordAskChatTranscript,
@@ -219,6 +220,15 @@ import {
     saveAskVisitorNote
 } from "@/lib/ask-animaldex/chat-records-server";
 import {chatMessageOrigin} from "@/lib/ask-animaldex/chat-history";
+import {
+    arkChatTurn,
+    arkForClient,
+    arkRefusal,
+    arkVisitorNoteName,
+    arkVisitorOwnerContext,
+    askArkRequest
+} from "@/lib/ask-animaldex/ark-chat-visitor";
+import type {AskCaptureContext} from "@/data/ask-capture-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -227,6 +237,19 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 function askJson(body: unknown, status = 200) {
     return NextResponse.json(body, {status, headers: ASK_RESPONSE_HEADERS});
+}
+
+/**
+ * Someone else's Ark animal as the route's card: whose it is, and nothing of
+ * the capture that brought it (no name, no place, no time).
+ */
+function arkVisitorCard(ownerId: string): AskCaptureContext {
+    return {
+        ownerId,
+        nickname: null,
+        latitude: null,
+        moment: {captured_at: null, timezone: null, place: null, country_code: null, habitat: null, wild: null, weather: null, temp_c: null, note: null}
+    };
 }
 
 /** The reader's clock, minutes ahead of UTC, as the drawer reports it; null when unknown. */
@@ -264,7 +287,37 @@ export async function POST(request: Request) {
     // Which door the message came in by (talk front door SPEC 6.3): kept on it in their history, nothing else.
     const origin = isGreeting ? null : chatMessageOrigin(body.origin);
 
-    const subject = resolveAskSubject(body.subject);
+    // Who is reading, from the request's first moment (awaited below).
+    const viewerPending = resolveAskViewer(request);
+    viewerPending.catch(() => undefined);
+    // Ark Talk (F1, `ark-chat-visitor.ts`): an Ark animal is resolved here, on
+    // the server, for the signed-in reader: who the chat is with, the species
+    // and the card. The browser's slug and captureId are not used for it.
+    const arkAsked = askArkRequest(body.subject);
+    if (arkAsked.invalid) return askJson({error: "invalid_ark_animal_id"}, 400);
+    const arkRead = arkAsked.arkAnimalId
+        ? await viewerPending.then(async (reader) => reader.userId
+            ? {userId: reader.userId, read: await loadAskArkAnimal(arkAsked.arkAnimalId!, reader.userId)}
+            : null)
+        : null;
+    // F4: the Ark's Talk needs an account; a signed-out reader is never anyone's visitor.
+    if (arkAsked.arkAnimalId && !arkRead) {
+        const refusal = arkRefusal("signed_out");
+        return askJson({...refusal.body, signedIn: false}, refusal.status);
+    }
+    const arkTurn = arkRead?.read.ok ? arkChatTurn(arkRead.read.animal, arkRead.userId) : null;
+    const requestedSubject = resolveAskSubject(body.subject);
+    const subject = arkAsked.arkAnimalId
+        ? {
+            ...requestedSubject,
+            scope: arkTurn?.speciesSlug ? "species" as const : "general" as const,
+            slug: arkTurn?.speciesSlug ?? null,
+            captureId: null,
+            hasReaderPhoto: false,
+            trialContext: null,
+            trialKey: null
+        }
+        : requestedSubject;
     // The animal's record is keyed by the subject alone: it loads while the
     // reader is resolved, instead of after (the apps' function starts its
     // reads beside the sign-in check the same way).
@@ -288,7 +341,7 @@ export async function POST(request: Request) {
         )
         : null;
     heldStancesEarly?.catch(() => undefined);
-    const viewer = await resolveAskViewer(request);
+    const viewer = await viewerPending;
     // Who they are by age (`age-band.ts`, SPEC 3.1): under 13, Talk is closed;
     // 13 to 17, teen mode; unknown (and every signed-out reader), as before.
     const service = createSupabaseServiceClient();
@@ -349,8 +402,15 @@ export async function POST(request: Request) {
         loadAskChatSettings(viewer.userId),
         // The card the chat is about: whose it is, its name, how they met.
         // Only for a signed-in reader; a signed-out one is never anyone's
-        // owner or visitor.
-        viewer.signedIn ? loadAskCaptureContext(subject.captureId) : Promise.resolve(null),
+        // owner or visitor. On the Ark: the owner's own capture on their own
+        // turn; a visitor gets only whose it is, nothing of the capture.
+        !viewer.signedIn
+            ? Promise.resolve(null)
+            : arkTurn
+            ? arkTurn.promptCaptureId
+                ? loadAskCaptureContext(arkTurn.promptCaptureId)
+                : Promise.resolve(arkTurn.audience === "visitor" && arkTurn.ownerId ? arkVisitorCard(arkTurn.ownerId) : null)
+            : loadAskCaptureContext(subject.captureId),
         ratePending ?? Promise.resolve(null)
     ]);
     const ageBand = await ageBandPending;
@@ -419,6 +479,17 @@ export async function POST(request: Request) {
         }
         return askJson(ageRestrictedBody(askLanguageName(body.locale)), 403);
     }
+    // An Ark animal that cannot be talked to (gone, an egg, unknown, no species
+    // page) or a failed read: the message goes back; never a fallback to the
+    // browser's ids. A sleeping one is talked to (D13). An emergency still gets
+    // the helplines.
+    if (arkAsked.arkAnimalId && !(arkTurn && arkTurn.speciesSlug)) {
+        const crisis = await crisisFor();
+        if (crisis.crisis) return await crisisResponse(crisis);
+        await refund();
+        const refusal = arkRefusal(arkRead?.read.ok === false ? "unavailable" : "gone");
+        return askJson(refusal.body, refusal.status);
+    }
     const teen = ageBand === "teen";
     if (rate && !rate.allowed) {
         // Out of messages is never a reason to miss an emergency.
@@ -438,9 +509,10 @@ export async function POST(request: Request) {
             ...(rate.creditOverflow ? {creditOverflow: rate.creditOverflow} : {})
         }, 429);
     }
-    const ownsCapture = Boolean(card && viewer.userId && card.ownerId === viewer.userId);
+    // On the Ark the Ark decides (F1): the owner from voyage_animals.
+    const ownsCapture = arkTurn ? arkTurn.audience === "owner" : Boolean(card && viewer.userId && card.ownerId === viewer.userId);
     // On someone else's card the animal is theirs.
-    const isVisit = Boolean(card && viewer.userId && card.ownerId !== viewer.userId);
+    const isVisit = arkTurn ? arkTurn.audience === "visitor" : Boolean(card && viewer.userId && card.ownerId !== viewer.userId);
     // Personalisation off: no memory is read and nothing is learned.
     const personalise = viewer.signedIn && settings.personalisationEnabled;
     const speaksAsAnimal = basePacket.scope === "species" && Boolean(basePacket.species);
@@ -593,7 +665,9 @@ export async function POST(request: Request) {
             speciesIdPending.then((speciesId) => (speciesId ? loadAskRecordExtras(speciesId) : null)),
             speciesIdPending.then((speciesId) =>
                 isVisit && speciesId && card && viewer.userId
+                    // On the Ark the owner is named by the Ark label, never their display name (F2).
                     ? loadAskOwnerContext({viewerId: viewer.userId, ownerId: card.ownerId, speciesProfileId: speciesId})
+                        .then((context) => (arkTurn ? arkVisitorOwnerContext(context, arkTurn.ownerLabel) : context))
                     : null
             ),
             ownerSpeciesIdPending.then((ownerSpeciesId) =>
@@ -608,7 +682,7 @@ export async function POST(request: Request) {
             ),
             speciesIdPending.then((speciesId) => (speciesId && animalOwnerId ? loadAskOwnStories(animalOwnerId, speciesId) : [])),
             // A species with no card: whether they hold a live card of it (a public chat when not).
-            !speaksAsAnimal || subject.captureId || aboutTrial
+            !speaksAsAnimal || subject.captureId || aboutTrial || arkTurn
                 ? Promise.resolve(null as boolean | null)
                 : !viewer.userId
                 ? Promise.resolve(false as boolean | null)
@@ -626,7 +700,9 @@ export async function POST(request: Request) {
     const speciesId = speaksAsAnimal ? companion?.speciesProfileId ?? null : null;
     const ownerSpeciesId = ownsCapture && viewer.userId ? speciesId : null;
     // A public species chat (SPEC section 4): nobody's card, and nothing of theirs to set or offer.
-    const publicChat = speaksAsAnimal && !subject.captureId && !aboutTrial && !isVisit && holdsSpecies === false;
+    const publicChat = arkTurn
+        ? speaksAsAnimal && !aboutTrial && arkTurn.audience === "public"
+        : speaksAsAnimal && !subject.captureId && !aboutTrial && !isVisit && holdsSpecies === false;
     // Web only (2026-11-01): there too the animal may set one step, which the
     // chat shows with the app as the way to take it on. Nothing is saved.
     // ASK_PUBLIC_STEPS=off turns it off.
@@ -649,7 +725,14 @@ export async function POST(request: Request) {
     const visitorContext = isVisit ? ownerContext ?? {has_spoken: false, journey: null} : null;
     const ownerName = typeof visitorContext?.owner_name === "string" ? visitorContext.owner_name.trim() : "";
     const relay = isVisit && askVisitorNotesEnabled() && speciesId && card && viewer.userId && ownerName
-        ? await resolveAskVisitorRelay({visitorId: viewer.userId, ownerId: card.ownerId, speciesProfileId: speciesId, history})
+        ? await resolveAskVisitorRelay({
+            visitorId: viewer.userId,
+            ownerId: card.ownerId,
+            speciesProfileId: speciesId,
+            history,
+            // Told on the Ark is apart from told on a card (AnimalDex 20261119110000).
+            arkVoyageId: arkTurn?.voyageId ?? null
+        })
         : null;
     const relayOn = Boolean(relay && !relay.blocked);
     // Not told yet: this answer tells them, and what they say now stays here.
@@ -710,7 +793,8 @@ export async function POST(request: Request) {
     const rightNow = nature
         ? askRightNowLine({nature, utcOffsetMinutes: resolveUtcOffset(body.utc_offset_minutes), latitude: card?.latitude ?? null})
         : null;
-    const howYouMet = card ? askHowYouMetLine(card.moment, {forVisitor: isVisit}) : null;
+    // Never for a visitor on the Ark: where and when the owner found it is theirs.
+    const howYouMet = card && !(arkTurn && isVisit) ? askHowYouMetLine(card.moment, {forVisitor: isVisit}) : null;
 
     // The stats and System Dynamics rhythm as conversational dials: how hard
     // it thinks, who steers, how fast it types.
@@ -889,7 +973,9 @@ export async function POST(request: Request) {
                 ownerId: card.ownerId,
                 ownerName,
                 speciesProfileId: speciesId,
-                captureId: subject.captureId,
+                captureId: arkTurn ? arkTurn.noteCaptureId : subject.captureId,
+                // D14: an Ark visit's note names the visitor by their Ark label.
+                ark: arkTurn ? {voyageId: arkTurn.voyageId, visitorName: arkVisitorNoteName(arkTurn)} : null,
                 animalName: packet.species.name,
                 visitorMessage: question ?? "",
                 answer
@@ -914,7 +1000,9 @@ export async function POST(request: Request) {
         if (!viewer.userId || !speaksAsAnimal) return;
         void recordAskChatTranscript({
             userId: viewer.userId,
-            captureId: subject.captureId,
+            // On the Ark: the owner's capture on their own turn; a visit is not kept.
+            captureId: arkTurn ? arkTurn.thread?.captureId ?? null : subject.captureId,
+            arkVisit: Boolean(arkTurn && !arkTurn.thread),
             speciesProfileId: speciesId,
             call: isCall,
             aboutTrial,
@@ -934,9 +1022,11 @@ export async function POST(request: Request) {
         void saveAskOwnStory({ownerId: animalOwnerId, speciesProfileId: speciesId, animalName: packet.species.name, story});
     };
 
-    const personaFrame: {persona?: AskPersonaFrame} = persona && companion
-        ? {persona: askPersonaFrame(companion.voice, persona)}
-        : {};
+    const personaFrame: {persona?: AskPersonaFrame; ark?: ReturnType<typeof arkForClient>} = {
+        ...(persona && companion ? {persona: askPersonaFrame(companion.voice, persona)} : {}),
+        // An Ark turn: who it is with and the header's label; never a person's or a capture's id.
+        ...(arkTurn ? {ark: arkForClient(arkTurn)} : {})
+    };
     // The model and the effort for this kind of turn (`chat-routing.ts`, the
     // apps' routing): a hello and small talk on Haiku, a real turn on the deep
     // model at medium or more whatever the animal's stats. A call keeps its own

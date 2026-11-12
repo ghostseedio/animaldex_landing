@@ -51,7 +51,7 @@ export async function chatMessageId(requestId: string): Promise<string> {
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export type ChatTranscriptSkip = "signed_out" | "call" | "trial" | "no_thread" | "unanswered";
+export type ChatTranscriptSkip = "signed_out" | "call" | "trial" | "ark_visit" | "no_thread" | "unanswered";
 
 export type ChatTranscriptInput = {
     /** The signed-in reader; a signed-out one is never stored. */
@@ -75,6 +75,11 @@ export type ChatTranscriptInput = {
     followUpId?: string | null;
     /** Which door the person's message came in by (docs/talk-front-door/SPEC.md, section 6.3). */
     origin?: ChatMessageOrigin | null;
+    /**
+     * A visit to someone else's Ark animal: not kept, since its thread key
+     * would be the owner's private capture (`ark-chat-visitor.ts`).
+     */
+    arkVisit?: boolean;
 };
 
 /** The doors a message may say it came in by; anything else is ignored (the server's list, AnimalDex 4403b042). */
@@ -110,6 +115,7 @@ export function chatTranscriptSkip(input: ChatTranscriptInput): ChatTranscriptSk
     if (!lowerUUID(input.userId)) return "signed_out";
     if (input.call) return "call";
     if (input.aboutTrial) return "trial";
+    if (input.arkVisit) return "ark_visit";
     if (!chatThreadKey(input)) return "no_thread";
     if (!input.answer.trim()) return "unanswered";
     if (!input.greeting && (!input.question.trim() || !input.requestId)) return "unanswered";

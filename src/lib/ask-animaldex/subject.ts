@@ -45,6 +45,12 @@ export type AskSubject = {
     trialContext: string | null;
     /** Keeps a Trial conversation separate from the animal's Power thread. */
     trialKey: string | null;
+    /**
+     * An animal on the Ark (the Talk page's `?ark=`). The server decides
+     * everything from it (`ark-chat-visitor.ts`, F1): who the chat is with,
+     * the species and the card; `captureId` and the slug are not trusted.
+     */
+    arkAnimalId?: string | null;
 };
 
 /** Everything the drawer needs to write honest suggestions and waiting lines. */
@@ -145,6 +151,8 @@ export type AskSubjectDeclaredFields = {
     photoUrl?: string | null;
     title?: string | null;
     summary?: string | null;
+    /** An animal on the Ark: the server resolves who it is with. */
+    arkAnimalId?: string | null;
 };
 
 /** The Trial a sheet declares while it is open. */
@@ -173,7 +181,8 @@ export function askDeclaredSubject(pathname: string, declaration: AskSubjectDecl
         hasReaderPhoto: Boolean(declaration.photoUrl),
         title: declaration.title ?? fromPath.title,
         summary: declaration.summary ?? fromPath.summary,
-        ...trialFields
+        ...trialFields,
+        ...(declaration.arkAnimalId ? {arkAnimalId: declaration.arkAnimalId} : {})
     };
 }
 

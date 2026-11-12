@@ -963,7 +963,8 @@ function AskConversation({
      * with nothing missing (or before the migration) nothing changes. The
      * thread follows to its end only when the reader was already there.
      */
-    const historyKey = context?.signedIn && context.subject.scope === "species" && !subject.trialContext
+    // Not an Ark animal's chat: its thread is the server's to decide (a visit is not kept).
+    const historyKey = context?.signedIn && context.subject.scope === "species" && !subject.trialContext && !subject.arkAnimalId
         ? serverThreadKey({captureId: subject.captureId ?? null, speciesProfileId: context.speciesProfileId ?? null})
         : null;
     // Each tick reads the account's thread again, so a turn on their phone

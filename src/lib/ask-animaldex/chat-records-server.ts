@@ -22,6 +22,7 @@ import {createSupabaseServiceClient} from "@/lib/supabase/server";
 import {buildChatTranscript, isMissingRpc, type ChatTranscriptInput} from "@/lib/ask-animaldex/chat-history";
 import {requestAskJSONObject} from "@/lib/ask-animaldex/providers";
 import {parseAskOwnStories, type AskOwnStory} from "@/lib/ask-animaldex/stories";
+import {parseArkChatAnimal, type ArkChatAnimal} from "@/lib/ask-animaldex/ark-chat-visitor";
 import {
     buildAskVisitorNotePrompts,
     deliveredAskVisitorNoteIds,
@@ -281,6 +282,30 @@ export async function markAskVisitorNotesDelivered(ownerId: string, notes: AskPe
     if (error) warn("mark_animal_chat_visitor_notes_delivered", error);
 }
 
+// MARK: - The Ark (Talk, player control phase 2)
+
+/**
+ * Who a turn with an Ark animal is with, for this signed-in reader
+ * (`ark_chat_visitor_v1`, AnimalDex migration 20261119110000; F1). `ok: false`
+ * when the read failed: the turn is then refused, never answered from the
+ * browser's ids.
+ */
+export async function loadAskArkAnimal(arkAnimalId: string, callerId: string): Promise<{ok: true; animal: ArkChatAnimal | null} | {ok: false}> {
+    const admin = service();
+    if (!admin) return {ok: false};
+    try {
+        const {data, error} = await admin.rpc("ark_chat_visitor_v1", {p_ark_animal_id: arkAnimalId, p_caller: callerId});
+        if (error) {
+            warn("ark_chat_visitor_v1", error);
+            return {ok: false};
+        }
+        return {ok: true, animal: data == null ? null : parseArkChatAnimal(data)};
+    } catch (error) {
+        warn("ark_chat_visitor_v1", error);
+        return {ok: false};
+    }
+}
+
 // MARK: - The visitor
 
 /**
@@ -323,20 +348,31 @@ export async function resolveAskVisitorRelay(params: {
     ownerId: string;
     speciesProfileId: string;
     history: Array<{role: string; content: string}>;
+    /**
+     * An Ark visit (`ark-chat-visitor.ts`): told on the Ark is kept apart
+     * from told on a card (AnimalDex migration 20261119110000), so the
+     * notice's absence never says which owner a 'Voyager N' is.
+     */
+    arkVoyageId?: string | null;
 }): Promise<{blocked: boolean; noticed: boolean}> {
     const admin = service();
     if (!admin) return {blocked: true, noticed: false};
     try {
-        const args = {p_visitor: params.visitorId, p_owner: params.ownerId, p_species_profile_id: params.speciesProfileId};
+        const args = {
+            p_visitor: params.visitorId,
+            p_owner: params.ownerId,
+            p_species_profile_id: params.speciesProfileId,
+            ...(params.arkVoyageId ? {p_voyage: params.arkVoyageId} : {})
+        };
         const [blocked, noticed] = await Promise.all([
             admin.rpc("animal_chat_users_blocked", {p_a: params.visitorId, p_b: params.ownerId}),
-            admin.rpc("animal_chat_visitor_noticed", args)
+            admin.rpc(params.arkVoyageId ? "ark_chat_visitor_noticed" : "animal_chat_visitor_noticed", args)
         ]);
         if (blocked.error || noticed.error) throw blocked.error ?? noticed.error;
         if (blocked.data === true) return {blocked: true, noticed: false};
         if (noticed.data === true) return {blocked: false, noticed: true};
         if (!historyShowsAskVisitorNotice(params.history)) return {blocked: false, noticed: false};
-        const recorded = await admin.rpc("record_animal_chat_visitor_notice", args);
+        const recorded = await admin.rpc(params.arkVoyageId ? "record_ark_chat_visitor_notice" : "record_animal_chat_visitor_notice", args);
         if (recorded.error) throw recorded.error;
         return {blocked: false, noticed: true};
     } catch (error) {
@@ -352,6 +388,12 @@ export async function saveAskVisitorNote(params: {
     ownerName: string;
     speciesProfileId: string;
     captureId: string | null;
+    /**
+     * An Ark visit (D14): the visitor's Ark label is their name here (their
+     * display name is never read), and the note is saved as an Ark visit's,
+     * so the owner's animal names them by it.
+     */
+    ark?: {voyageId: string; visitorName: string} | null;
     animalName: string;
     visitorMessage: string;
     answer: string;
@@ -363,11 +405,15 @@ export async function saveAskVisitorNote(params: {
     try {
         const args = {p_visitor: params.visitorId, p_owner: params.ownerId, p_species_profile_id: params.speciesProfileId};
         const [visitorRow, todayNote] = await Promise.all([
-            admin.from("profiles").select("display_name, username").eq("id", params.visitorId).maybeSingle(),
+            params.ark
+                ? Promise.resolve({data: null as {display_name?: string | null; username?: string | null} | null})
+                : admin.from("profiles").select("display_name, username").eq("id", params.visitorId).maybeSingle(),
             admin.rpc("animal_chat_visitor_note_today", args)
         ]);
         const name = (value: unknown) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 60) || null : null;
-        const visitorName = name(visitorRow.data?.display_name) ?? name(visitorRow.data?.username) ?? "";
+        const visitorName = params.ark
+            ? name(params.ark.visitorName) ?? ""
+            : name(visitorRow.data?.display_name) ?? name(visitorRow.data?.username) ?? "";
         if (!visitorName) return;
         const existing = typeof todayNote.data === "string" ? todayNote.data : null;
         const prompts = buildAskVisitorNotePrompts({
@@ -382,7 +428,14 @@ export async function saveAskVisitorNote(params: {
         if (!raw) return;
         const note = parseAskVisitorNote(raw, visitorName);
         if (note === (existing ?? "")) return;
-        const {error} = await admin.rpc("save_animal_chat_visitor_note", {...args, p_capture_id: params.captureId, p_note: note});
+        const {error} = params.ark
+            ? await admin.rpc("save_animal_chat_visitor_note_v2", {
+                ...args,
+                p_capture_id: params.captureId,
+                p_note: note,
+                p_ark_voyage_id: params.ark.voyageId
+            })
+            : await admin.rpc("save_animal_chat_visitor_note", {...args, p_capture_id: params.captureId, p_note: note});
         if (error) throw error;
     } catch (error) {
         warn("animal_chat_visitor_note", error);
