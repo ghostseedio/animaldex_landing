@@ -38,6 +38,9 @@ Branch `ark-islands-scene` (landing). This lane covers the town's animals, the c
 - **Part B:** `streamer.registerIsland({id: "town", offset, grid, spans, content, apply})` is called when the multi-island streamer is there. Until then, the town's square counts as drawn in full.
   - The island the camera is not over is map style everywhere, never out (`chunkStates` with `capMap`). The other island stays in the picture whatever the map distance.
   - Why: on v2 at the low tier with the render scale at 0.6, the map distance (960 m) left 57 of the town's 81 chunks out from the two-island view.
+- **v2 on upright phones (decision 234):** the view is from 900 m at polar 1.0, and the clear fog is pushed from 520 m of reach (`fogFrom` in `islands/views.ts`).
+  - The town's near quarter and middle are under 20 % fog (15 %; it was 41 %). The wild island's middle is clear (it was 6 %).
+  - The check is in `src/lib/ark-wild-frame.test.ts`. v1 and islands off are unchanged.
 
 ## 2b. The town's join (decision 153, then the town-join cut)
 
