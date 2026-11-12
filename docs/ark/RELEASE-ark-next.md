@@ -12,7 +12,7 @@ island switching (`ark-islands-scene`), the encounter lane's server activation, 
 | Repo | Branch | Head | What |
 |---|---|---|---|
 | landing (web) | `ark-next` | **the head this document is committed at** | Every lane in §1, merged by the integrator (`docs/ark/NEXT.md`) |
-| AnimalDex (server) | `ark-islands-server` | c4ad9389 | The two islands: migrations `20261117100000`–`130000`, `voyage-world` (lane T1, `docs/ark/islands-server.md`) |
+| AnimalDex (server) | `ark-islands-server` | 66b33a72 | The two islands: migrations `20261117100000`–`130000` and `voyage-world` **applied, inert**; the switch-on script (lane T1, `docs/ark/islands-server.md`) |
 | AnimalDex (server) | `ark-encounter` | 9d8f0303 | Encounter hunting: the islands migrations plus `20261118100000`, `110000` (lower priority today; the scene side is inert without it) |
 | Bucket `talking-models` | unchanged | — | No upload is needed. Part B's far-model pack is optional (§4.3) |
 
@@ -28,9 +28,9 @@ Lane heads merged into `ark-next`:
 | L2 flight, swimming, legless | `ark-flight-swim` | 2cf309e3 | af146487 |
 | L7 chases | `ark-chases` | 30dbbf9e | cc82a1bc, wiring 356d0fc4 |
 | Part B streaming | `ark-streaming` | 366f985b | 77c3f2f5 |
-| Encounter hunting, scene side | `ark-encounter-scene` | 35eb7d35 | 93b9c1b1 |
+| Encounter hunting, scene side | `ark-encounter-scene` | 9fcbb049 | 93b9c1b1, 34524f02 |
 | The second island (T2) | `ark-town-island` | bdcd9ff1 | 084c07f6 |
-| Town animals and island switching (T3) | `ark-islands-scene` | **pending** | — |
+| Town animals and island switching (T3) | `ark-islands-scene` | 439cd5f3 | 1c508857 (more T3 commits **pending**: the behaviour schedule, zoo feeding) |
 
 Player control is not in this release.
 
@@ -70,7 +70,9 @@ ecology are unchanged, except the islands (§5).
   hunting read. Inert while the server's `hunting` is `pool`.
 - **The second island (T2, `docs/ark/town-island.md`).** The town, countryside and zoo island under
   `src/ark-scene/islands/` (12.4 ha: canal, old town, 119 buildings, 10 farms, the zoo's 35 plots), loaded only when a
-  crossing asks. T3's town animals and island switching: **pending**.
+  crossing asks. **T3:** town animals placed and drawn (households, farms, zoo enclosures), one island loaded at a time
+  with the crossing, the toolbar switch, `?focus=` across islands, the population panel's "Both islands", "My animals"
+  across both. With the islands off the scene is the wild island as before.
 
 ## 2. Checks
 
@@ -133,21 +135,26 @@ Not needed for this release: without a pack in the manifest every kind loads its
 
 ## 5. Server (AnimalDex; never `db push`, use `db-migrate.sh`)
 
-### 5.1 The two islands (lane T1, `docs/ark/islands-server.md` §3 on `ark-islands-server`)
+### 5.1 The two islands (lane T1, `docs/ark/islands-server.md` §3 on AnimalDex `ark-islands-server` 66b33a72)
 
-1. Apply `20261117100000_voyage_islands_schema`, `110000_voyage_islands_route`, `120000_voyage_islands_reads`,
-   `130000_voyage_islands_assign` with `db-migrate.sh rehearse` then `apply`, in order. Byte-identical for players while
-   `islands` is off. The ALTER TABLE on `voyage_animals` needs its lock within 5 s; retry if the cache refresh or the
-   minute job holds it.
-2. Deploy `voyage-world` from `ark-islands-server`, merged with whatever else is live. Before step 4.
-3. Deploy the web (§4).
-4. In the town's release window, with the owner's approval (it moves every living animal: a production data change):
-   `SELECT public.voyage_islands_switch_on_v1('islands-YYYY-MM-DD');` (it refuses unless verification passes; quiet, no
-   events or pushes).
-5. Check: `SELECT public.voyage_islands_verify_v1('<run>')` returns `ok`; `voyage_public_v3('first','town')` has the town.
-6. Undo: `SELECT public.voyage_islands_rollback_v1('<run>');`, then the migration rollbacks in reverse if wanted.
+The server side is **already applied and inert** (the coordinator, 2026-11-12): the migrations `20261117100000`–`130000`
+and `voyage-world` from `ark-islands-server`; `islands` stays off, so the reads, the cache and the ecology are
+byte-identical. What is left, in order:
 
-**(pending)** T1's final order, if it differs.
+1. Deploy the web (§4). While `islands` is off, `'wild'` is the whole Ark and `'town'` is empty, so the web is safe to go
+   first; with the islands off the scene is unchanged (checked by the visual CI, §2).
+2. **The switch-on, confirmed by the owner right before** (it moves every living animal to its island: a production data
+   change), from the `ark-islands-server` worktree:
+   ```
+   supabase db query --linked -f supabase/scripts/islands-release/2_switch_on.sql
+   supabase db query --linked -f supabase/scripts/islands-release/3_after_switch_check.sql
+   supabase db query --linked "SELECT public.voyage_islands_verify_v1('islands-2026-11-12')"
+   ```
+   About 2 s; it refuses unless verification passes; quiet (no events, no pushes). Expected (rehearsed): `islands` true;
+   wild/wildlife 707, town/wildlife 727, town/house 1,063, town/farm 149, town/zoo 499 (plus arrivals since); 32 zoo
+   enclosures; every public-read animal has island keys; `kept_eaten_since_switch` 0.
+3. Undo: `supabase/scripts/islands-release/9_rollback_data.sql` (islands off, every home restored); the migration
+   rollbacks and `voyage-world` v3 (3986f80a) only if wanted (`docs/ark/islands-server.md` §3).
 
 ### 5.2 Encounter hunting (lower priority today)
 
@@ -180,6 +187,6 @@ Routed to lanes, to be fixed or listed here before approval **(pending)**:
 
 ## 7. Rollback
 
-- Web: redeploy **7764fe12** with the deploy script (§4.5).
-- Islands: `voyage_islands_rollback_v1`, then the migration rollbacks (§5.1.6).
+- Web: redeploy **7764fe12** with the deploy script (§4, step 5).
+- Islands: `supabase/scripts/islands-release/9_rollback_data.sql`, then the migration rollbacks if wanted (§5.1).
 - Nothing else in this release touches the server or the bucket.
