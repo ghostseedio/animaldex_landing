@@ -19,6 +19,7 @@ import {allMountainRocks, piecePoint, pieceBox} from "@/ark-scene/rock-layout";
 import {cachedRock, ROCK_DETAIL} from "@/ark-scene/rock-shapes";
 import {treeBody} from "@/ark-scene/tree-spacing";
 import {heightAt} from "@/ark-scene/world";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 
 export type Solid = {
     kind: "rock" | "crag" | "boulder" | "scree" | "trunk" | "log" | "hay" | "mound" | "barn" | "cottage";
@@ -96,8 +97,9 @@ export function sceneSolids(): Solid[] {
             })});
         }
     });
-    // The cottage: its plinth reaches 0.87 m under its floor (micro-scene.ts).
-    {
+    // The cottage: its plinth reaches 0.87 m under its floor (micro-scene.ts). (Islands mode and the bigger wild island
+    // have none: `no-hamlet.ts`.)
+    if (!noHamlet()) {
         const halfW = COTTAGE.width / 2;
         const halfD = COTTAGE.depth / 2;
         const b = {min: [-halfW, -0.87, -halfD], max: [halfW, COTTAGE.wall + COTTAGE.ridge, halfD]};

@@ -17,7 +17,8 @@ import manifest from "@/ark-scene/assets-manifest.json";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {inRock} from "@/ark-scene/map/rocks";
 import {treeBody, type TreeBody} from "@/ark-scene/tree-spacing";
-import {sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {arkWorld, onArkWorld, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {wildFloorPlants} from "@/ark-scene/islands/wild/decor-v2";
 import type {ArkZone} from "@/ark-scene/types";
 
 type FloorInfo = {kind: string; bounds: {min: [number, number, number]; max: [number, number, number]}; lod_distances: [number, number, number]; lods: Array<{level: "lod0" | "lod1" | "lod2"; file: string; tris: number; doubleSided: boolean}>};
@@ -40,8 +41,11 @@ function has(id: string): boolean {
 }
 
 let cached: FloorPlacement[] | null = null;
-// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+// Islands mode flips (`no-hamlet.ts`), or the world does (`world.ts`): built from the other world's scenery.
 onHamletSwitch(() => {
+    cached = null;
+});
+onArkWorld(() => {
     cached = null;
 });
 
@@ -179,6 +183,9 @@ export function floorPlacements(): FloorPlacement[] {
             }
         }
     }
+    // The bigger wild island (P3): its generator's ferns, flowers, sedge, moss and grass clumps too, off the trunks,
+    // rocks and these logs (`islands/wild/decor-v2.ts`). The floor's own logs, twigs, cones and litter are the woods'.
+    if (arkWorld() === "v2") out.push(...wildFloorPlants(worldDecor(), forestFill(), out.filter((p) => p.id.startsWith("log-"))));
     cached = out;
     return out;
 }
