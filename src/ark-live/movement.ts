@@ -108,8 +108,22 @@ function gaitAtSpeed(a: Abilities, speed: number, wanted: Clip): Clip {
     return a.sprint > 0 ? "sprint" : "run";
 }
 
-/** One step of the controller's animal. */
+/** The longest stretch one step may cover (m): the server checks every metre of a step, so the mover never jumps one. */
+export const MAX_STEP_M = 0.8;
+
+/** One frame of the controller's animal: split into steps of at most 0.8 m (a slow frame never skips a trunk or a fence). */
 export function stepMover(s: MoverState, input: ControlInput, dt: number, ctx: MoveContext): MoverState {
+    const fastest = Math.max(ctx.a.sprint, ctx.a.run, ctx.a.walk, ctx.a.swim, ctx.a.fly * 2, s.speed, 0.1);
+    const n = Math.min(Math.ceil((fastest * dt) / MAX_STEP_M), 8);
+    if (n <= 1) return stepOnce(s, input, dt, ctx);
+    let state = s;
+    // (Presses happen once: on the first step.)
+    const held = {...input, takeoff: false, land: false, dig: false, climb: false};
+    for (let i = 0; i < n; i++) state = stepOnce(state, i === 0 ? input : held, dt / n, ctx);
+    return state;
+}
+
+function stepOnce(s: MoverState, input: ControlInput, dt: number, ctx: MoveContext): MoverState {
     const {a, facts, terrain, sig} = ctx;
     const t = s.t + dt;
     const next: MoverState = {...s, t, blocked: null, oneWayDrop: false};
