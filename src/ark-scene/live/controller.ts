@@ -8,20 +8,27 @@
  *   snapshot's newcomers stand in for it: arrivals and births only, since the snapshot can't say why one left.
  *   Development's feed hands its rows in through `events()`.
  * - **Seen:** about once a second, what the scene shows near the camera now (`ArkSceneHandle.seen`).
+ * - **Now** (decision 240): the behaviour schedule's moments anywhere on the Ark (`ArkSceneHandle.happening`): at
+ *   most one every few seconds, picked from the shared clock and the animals' ids, so every viewer reads the same. The
+ *   record was too quiet to carry the log alone (2026-11-12: 64 events in 12 hours, 51 of them `fed`, which the log
+ *   doesn't say), and seen lines need the camera within 90 m of the act.
+ *
+ * The record's lines also go to the scene's animal logs (`noteRecord`): a meal, young, a clutch, a pair bred.
  *
  * Nothing here decides anything about the Ark: it says what the server wrote and what the shared layers draw.
  */
 
-import {decodeArkEvents} from "@/lib/ark-life";
-import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
+import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
+import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
+import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
 import {hashString} from "@/ark-scene/world";
 import {ZONE_REGION, type ArkSceneHandle, type ArkSnapshot} from "@/ark-scene/types";
 import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null} | null;
 
 /** The replay's words the log borrows, in English: until (or unless) the reader's words come. */
 const REPLAY_ENGLISH: ArkLiveText["replay"] = {
@@ -55,11 +62,17 @@ export type ArkLiveOptions = {
 };
 
 function words(input: ArkLiveWordsIn): {text: ArkLiveText; showMe: string} {
+    const activity = {...ARK_ACTIVITY_ENGLISH, ...(input?.activity ?? {}), log: {...ARK_ACTIVITY_ENGLISH.log, ...(input?.activity?.log ?? {})}} as ArkActivityWords;
     return {
-        text: {live: {...ARK_LIVE_ENGLISH, ...(input?.live ?? {})}, replay: {...REPLAY_ENGLISH, ...(input?.replay ?? {})} as ArkLiveText["replay"]},
+        text: {live: {...ARK_LIVE_ENGLISH, ...(input?.live ?? {})}, replay: {...REPLAY_ENGLISH, ...(input?.replay ?? {})} as ArkLiveText["replay"], activity},
         showMe: input?.showMe || "Show me"
     };
 }
+
+/** Pages of the event log read in a row at most when the server says there are more (`more`). */
+const MORE_PAGES = 4;
+/** How long a moment's animal and kind keep the same act seen near the camera from being said again (ms). */
+const NOW_SEEN_MS = 90_000;
 
 function signature(snapshot: ArkSnapshot): string {
     const ids = snapshot.animals.map((animal) => animal.id).sort().join(",");
@@ -87,6 +100,10 @@ export class ArkLive {
     private pendingRead: {before: ArkSnapshot; next: ArkSnapshot} | null = null;
     private timer: ReturnType<typeof setInterval> | null = null;
     private ticks = 0;
+    /** The last window of the schedule's moments read (null: none yet, or the log was closed). */
+    private momentWindow: number | null = null;
+    /** Animals a moment named, by kind, until when (ms): their act seen near the camera is not said twice. */
+    private readonly nowSaid = new Map<string, number>();
     private text: ArkLiveText;
     private showMe: string;
     private locale: string;
@@ -115,6 +132,7 @@ export class ArkLive {
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
             seenLife: ARK_LIVE_LOG_DEFAULTS.seenLife,
+            nowLife: ARK_LIVE_LOG_DEFAULTS.nowLife,
             collapsed,
             onCollapsed: (value) => {
                 if (!options.storageKey) return;
@@ -131,7 +149,8 @@ export class ArkLive {
 
     private labels() {
         const live = this.text.live;
-        return {title: live.title, show: live.show, hide: live.hide, logLabel: live.logLabel, seen: live.seen, seenNote: live.seenNote, showMe: this.showMe};
+        const activity = this.text.activity ?? ARK_ACTIVITY_ENGLISH;
+        return {title: live.title, show: live.show, hide: live.hide, logLabel: live.logLabel, seen: live.seen, seenNote: live.seenNote, now: activity.tag, nowNote: activity.tagNote, showMe: this.showMe};
     }
 
     /** The reader's words came (the embed reads them after the scene starts), or the language changed. */
@@ -180,7 +199,18 @@ export class ArkLive {
             this.remember(`event:${event.id}`);
             if (event.animal && (event.kind === "arrival" || event.kind === "birth")) this.remember(`animal:${event.animal.id}`);
         }
+        this.noteRecord(decoded);
         this.push(arkLiveServerItems(decoded));
+    }
+
+    /** The record's lines for the animals they are about, for their own logs on the tap card. */
+    private noteRecord(events: readonly ArkEvent[]) {
+        if (!events.length) return;
+        try {
+            this.options.scene()?.noteRecord?.(arkRecordNotesFromEvents(events));
+        } catch {
+            // (A scene without animal logs: the log says them all the same.)
+        }
     }
 
     private remember(key: string) {
@@ -202,7 +232,7 @@ export class ArkLive {
         this.push(arkLiveArrivalsFromSnapshot(fresh));
     }
 
-    private readEvents(before: ArkSnapshot, next: ArkSnapshot) {
+    private readEvents(before: ArkSnapshot, next: ArkSnapshot, page = 0) {
         if (this.reading) {
             // One read at a time: the next covers whatever changed meanwhile.
             this.pendingRead = {before: this.pendingRead?.before ?? before, next};
@@ -210,9 +240,10 @@ export class ArkLive {
         }
         this.reading = true;
         const since = this.cursor;
+        let more = false;
         fetch(`${this.options.eventsUrl}?since=${encodeURIComponent(since)}`, {cache: "no-store"})
             .then((response) => (response.ok ? response.json() : null))
-            .then((body: {events?: unknown; available?: boolean} | null) => {
+            .then((body: {events?: unknown; available?: boolean; more?: boolean} | null) => {
                 if (this.disposed) return;
                 if (!body || body.available === false) {
                     this.newcomers(before, next);
@@ -227,6 +258,9 @@ export class ArkLive {
                     newest = Math.max(newest, Date.parse(event.at));
                 }
                 this.cursor = new Date(newest).toISOString();
+                // A page at a time (the read's limit): the rest of a burst is read next, never left for the next change.
+                more = body.more === true && newest > from;
+                this.noteRecord(events);
                 this.push(arkLiveServerItems(events));
             })
             .catch(() => {
@@ -236,7 +270,9 @@ export class ArkLive {
                 this.reading = false;
                 const pending = this.pendingRead;
                 this.pendingRead = null;
-                if (pending && !this.disposed) this.readEvents(pending.before, pending.next);
+                if (this.disposed) return;
+                if (pending) this.readEvents(pending.before, pending.next);
+                else if (more && page + 1 < MORE_PAGES) this.readEvents(before, next, page + 1);
             });
     }
 
@@ -244,10 +280,28 @@ export class ArkLive {
         if (this.disposed || (typeof document !== "undefined" && document.visibilityState === "hidden")) return;
         const now = performance.now();
         this.ticks++;
-        // Seen: about once a second, only while the log is open and the world's foot is clear (a line said late is no longer happening).
-        if (this.ticks % 2 === 0 && !this.view.isCollapsed && !this.view.isCovered && !this.options.reducedMotion) {
-            const seen = this.options.scene()?.seen?.();
-            if (seen && (seen.acts.length || seen.alarms.length)) this.log.push(arkSeenItems(seen, this.memory), now);
+        // Seen and now: only while the log is open and the world's foot is clear (a line said late is no longer happening).
+        const open = !this.view.isCollapsed && !this.view.isCovered && !this.options.reducedMotion;
+        if (!open) this.momentWindow = null;
+        if (open) {
+            const scene = this.options.scene();
+            // Now: the schedule's moments since the last window read (one window of the shared clock is a few seconds).
+            const got = scene?.happening?.(this.momentWindow);
+            if (got) {
+                this.momentWindow = got.window;
+                const items = arkNowItems(got.moments, this.memory);
+                for (const item of items) if (item.focus.animalId) this.nowSaid.set(`${item.focus.animalId}:${item.kind}`, Date.now() + NOW_SEEN_MS);
+                if (items.length) this.log.push(items, now);
+            }
+            // Seen: about once a second; an act a moment already named is not said again.
+            if (this.ticks % 2 === 0) {
+                const seen = scene?.seen?.();
+                if (seen && (seen.acts.length || seen.alarms.length)) {
+                    const items = arkSeenItems(seen, this.memory).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
+                    if (items.length) this.log.push(items, now);
+                }
+            }
+            if (this.nowSaid.size > 400) for (const [key, until] of Array.from(this.nowSaid)) if (until < Date.now()) this.nowSaid.delete(key);
         }
         this.log.step(now);
         this.render();

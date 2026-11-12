@@ -2,6 +2,8 @@ import type {ArkHunting} from "@/lib/ark-hunting";
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 import type {ArkSeenNow} from "@/lib/ark-live-log";
+import type {ArkActivityKey, ArkAnimalStatus, ArkRecordNote} from "@/lib/ark-animal-status";
+import type {ScheduleMomentKind} from "@/ark-scene/animal-status";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
@@ -276,6 +278,11 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * on one leg, keeping watch, dozing in the sun…; null up and about), when it is selected and whenever that changes.
      */
     onRest?: (id: string, rest: ArkRestStatus | null) => void;
+    /**
+     * The selected animal's status (decision 240: what it is doing, its next goal, its short log, its bars), when it is
+     * selected and whenever that changes (at most about once a second): the tap card and the embed's `ark:status`.
+     */
+    onStatus?: (id: string, status: ArkAnimalStatus) => void;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
@@ -460,6 +467,19 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     behaviour: (id: string) => ArkBehaviourState | null;
     /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */
     rest: (id: string) => ArkRestStatus | null;
+    /**
+     * Decision 240: what an animal is doing now and its next goal (its behaviour schedule's, the same for every viewer),
+     * its short log (the server's record of it and its last slots) and its bars (fed, health, life left when known);
+     * null when it is not in the scene.
+     */
+    animalStatus?: (id: string) => ArkAnimalStatus | null;
+    /** Record lines for animals' logs, from the server (the page's life story, the live log's events): never made up. */
+    noteRecord?: (notes: readonly ArkRecordNote[]) => void;
+    /**
+     * The live log's moments from the behaviour schedule (`animal-status.ts` pickMoment): at most one per window of the
+     * shared clock, from `after` (the last window the caller has) to the last window done; the same for every viewer.
+     */
+    happening?: (after: number | null) => {window: number; moments: ArkHappening[]};
     /** What the local reactive layer has an animal doing this frame (its action, head look, offset, alarm); null outside its budget. */
     reactive: (id: string) => ArkReactiveSnapshot | null;
     /** The reactive layer's cost and counts on the last frame (for the perf report and the audit lane). */
@@ -490,6 +510,9 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setCutaway: (open: boolean | null) => void;
     dispose: () => void;
 };
+
+/** A moment the schedule has an animal starting now, for the live log: who, what, and a group's size. */
+export type ArkHappening = {id: string; kind: ScheduleMomentKind; /** What it set about (`ark.activity`). */ activity: ArkActivityKey; animalId: string; name: string; speciesId: string; zone: ArkZone; count: number; /** Epoch seconds. */ at: number};
 
 /** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
 export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};

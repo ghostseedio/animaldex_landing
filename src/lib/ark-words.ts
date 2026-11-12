@@ -7,6 +7,7 @@
 
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
+import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 
 export type ArkHudWords = {
     label: string;
@@ -382,6 +383,10 @@ export type ArkWords = {
     lite: ArkLiteWords;
     /** The live log over the world and the population bars (owner, 2026-11-11). */
     live: ArkLiveWords;
+    /** The tap card's "Now" and "Next", its log and bars (decision 240). */
+    card: ArkCardWords;
+    /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
+    activity: ArkActivityWords;
     sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;
