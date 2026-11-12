@@ -12,6 +12,8 @@ import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas"
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
+import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
+import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo};
@@ -19,17 +21,7 @@ export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; trees: 
 
 const H = (x: number, z: number) => townHeight(x, z);
 
-const ROAD = tone("#55585c");
-const HIGH = tone("#5f5d5b");
-const LANE = tone("#6f6a63");
-const TRACK = tone("#9a8462");
 const PATH = tone("#c4b48f");
-const ZOO_PATH = tone("#d2c098");
-const QUAY = tone("#97918a");
-const PAVEMENT = tone("#b6b1a7");
-const KERB = tone("#d4d0c8");
-const WHITE = tone("#e9e7df");
-const YELLOW = tone("#d8b84a");
 const STONE = tone("#a59c8a");
 const COPING = tone("#c9c0ac");
 const HEDGE = tone("#3d6a31");
@@ -84,36 +76,14 @@ function streetHeight(x: number, z: number): number {
 // MARK: - Streets
 
 function streets(out: SceneryOut, plan: TownPlan) {
-    for (const s of plan.streets) {
-        const colour = s.kind === "high" ? HIGH : s.kind === "road" ? ROAD : s.kind === "lane" ? LANE : s.kind === "track" ? TRACK : s.kind === "zoo_path" ? ZOO_PATH : s.kind === "quay" ? QUAY : s.kind === "towpath" ? PATH : PATH;
-        for (const part of pieces(s.line)) {
-            const mid = part[Math.floor(part.length / 2)];
-            const c = chunkFor(out, mid.x, mid.z);
-            c.decal.ribbon(part, s.width, streetHeight, 0.06, colour, 2);
-            if (s.pavement > 0) {
-                for (const side of [-1, 1]) {
-                    c.decal.ribbon(part, s.pavement, streetHeight, 0.16, PAVEMENT, 2, side * (s.width / 2 + s.pavement / 2));
-                    c.solid.ribbon(part, 0.16, streetHeight, 0.17, KERB, 2, side * (s.width / 2 + 0.08));
-                }
-            }
-            // Markings: a dashed centre line on roads; double yellow lines on the high street's edges.
-            if (s.kind === "road" || s.kind === "high") {
-                const length = polylineLength(part);
-                for (let a = 1; a < length - 3; a += 6) {
-                    const p0 = polylineAt(part, a).point;
-                    const p1 = polylineAt(part, a + 3).point;
-                    c.decal.ribbon([p0, p1], 0.12, streetHeight, 0.075, WHITE, 3);
-                }
-                if (s.kind === "high") for (const side of [-1, 1]) c.decal.ribbon(part, 0.1, streetHeight, 0.075, YELLOW, 2, side * (s.width / 2 - 0.3));
-            }
-        }
-    }
+    // Carriageways, pavements, kerbs, markings, crossings and the iron in the road: `streets.ts` (lane GA).
+    streetSurfaces(plan, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});
     // The towpaths either side of the canal (gravel), its walls and coping.
     for (const part of pieces(CANAL, 20)) {
         const mid = part[Math.floor(part.length / 2)];
         const c = chunkFor(out, mid.x, mid.z);
         for (const side of [-1, 1]) {
-            c.decal.ribbon(part, TOWPATH, (x, z) => (overCanal(x, z) ? TOWN_LEVEL : H(x, z)), 0.07, PATH, 2, side * (CANAL_WIDTH / 2 + 0.35 + TOWPATH / 2));
+            tagged(c.decal, SURF.gravel, Math.abs(part[part.length - 1].z - part[0].z) > Math.abs(part[part.length - 1].x - part[0].x), () => c.decal.ribbon(part, TOWPATH, (x, z) => (overCanal(x, z) ? TOWN_LEVEL : H(x, z)), 0.07, PATH, 2, side * (CANAL_WIDTH / 2 + 0.35 + TOWPATH / 2)));
             wallAlong(c.solid, part, side * (CANAL_WIDTH / 2 + 0.15), CANAL_LEVEL - 1.8, TOWN_LEVEL + 0.18, 0.3, STONE, COPING);
         }
     }
@@ -278,12 +248,8 @@ function square(out: SceneryOut, plan: TownPlan) {
     const s = plan.square;
     const c = chunkFor(out, s.x, s.z);
     const f: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
-    // Setts: a draped patch in two greys, laid in bands.
-    c.decal.drape(f, s.w, s.d, H, 0.12, (lx, lz) => {
-        const band = Math.floor((lx + s.w) / 1.6) + Math.floor((lz + s.d) / 1.6);
-        const k = 0.94 + 0.06 * (band % 2) + 0.03 * Math.sin(lx * 3.1 + lz * 1.7);
-        return tone("#a39a8b", k);
-    }, 1.6);
+    // Setts: a draped patch, the granite setts' texture laid at true size (lane GA; flat-coloured cells drew giant pixels).
+    tagged(c.decal, SURF.setts, alongZ(s.rot), () => c.decal.drape(f, s.w, s.d, H, 0.12, () => tone("#a39a8b"), 1.6));
     // The fountain: a stone basin with a column.
     const ff: Frame = {x: s.x, y: H(s.x, s.z) + 0.12, z: s.z, rot: 0};
     c.solid.cylinder(ff, 0, 0, 0, 3.0, 3.0, 0.55, STONE, 16, false);
@@ -399,7 +365,7 @@ function fields(out: SceneryOut, plan: TownPlan) {
         const f: Frame = {x: centre.x, y: 0, z: centre.z, rot};
         const c = chunkFor(out, centre.x, centre.z);
         if (g.kind === "allotments") {
-            c.decal.drape(f, w, d, H, 0.08, (lx) => (Math.floor((lx + w) / 1.4) % 3 === 0 ? tone("#6f9a4a") : Math.floor((lx + w) / 1.4) % 3 === 1 ? tone("#6a5238") : tone("#8fb25e")), 0.7);
+            tagged(c.decal, SURF.crop, alongZ(rot), () => c.decal.drape(f, w, d, H, 0.08, (lx) => (Math.floor((lx + w) / 1.4) % 3 === 0 ? tone("#6f9a4a") : Math.floor((lx + w) / 1.4) % 3 === 1 ? tone("#6a5238") : tone("#8fb25e")), 0.7));
             const r = rng(hashText(g.id));
             for (let k = 0; k < 3; k++) {
                 const p = local({x: centre.x, z: centre.z, w, d, rot}, -w / 2 + 2 + k * (w / 3), -d / 2 + 1.4);
@@ -412,11 +378,8 @@ function fields(out: SceneryOut, plan: TownPlan) {
         }
         const crop = CROP[g.crop ?? "pasture"] ?? CROP.pasture;
         const [on, off, spacing] = crop;
-        c.decal.drape(f, w, d, H, 0.05, (lx, lz) => {
-            const row = Math.floor((lz + d) / spacing) % 2 === 0;
-            const n = 0.94 + 0.08 * Math.sin(lx * 0.7 + lz * 0.3);
-            return tone(row ? on : off, n);
-        }, Math.min(spacing, 1.2));
+        // (Lane GA: no per-cell shade; the crop and soil textures carry the variety.)
+        tagged(c.decal, SURF.crop, alongZ(rot), () => c.decal.drape(f, w, d, H, 0.05, (_lx, lz) => tone(Math.floor((lz + d) / spacing) % 2 === 0 ? on : off), Math.min(spacing, 1.2)));
         if (g.crop === "maize" || g.crop === "cereal") {
             // Standing crop: low ridges of foliage along the rows.
             for (let z = -d / 2 + spacing / 2; z < d / 2; z += spacing * 2) {
@@ -480,7 +443,7 @@ function zooPlaza(out: SceneryOut, plan: TownPlan) {
     const p = plan.zoo.plaza;
     const c = chunkFor(out, p.x, p.z);
     const f: Frame = {x: p.x, y: H(p.x, p.z) + 0.1, z: p.z, rot: p.rot};
-    c.decal.drape({x: p.x, y: 0, z: p.z, rot: p.rot}, p.w, p.d, H, 0.1, (lx, lz) => tone("#c9b48a", 0.95 + 0.05 * ((Math.floor(lx) + Math.floor(lz)) % 2)), 1);
+    tagged(c.decal, SURF.blocks, alongZ(p.rot), () => c.decal.drape({x: p.x, y: 0, z: p.z, rot: p.rot}, p.w, p.d, H, 0.1, () => tone("#c9b48a"), 1));
     for (const lx of [-3.2, 3.2]) c.solid.box(f, lx, 0, -p.d / 2 + 1, 0.9, 5.2, 0.9, tone("#6a5a46"));
     c.solid.box(f, 0, 5.2, -p.d / 2 + 1, 8.0, 1.2, 1.1, tone("#2f4a38"));
     c.solid.box(f, 0, 5.4, -p.d / 2 + 0.42, 5.4, 0.8, 0.05, tone("#e2c86a"));
@@ -495,7 +458,8 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const spec = ZOO_TYPES[e.type];
     const r = rng(e.slot.seed);
     const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
-    if (ground) c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, (lx, lz) => tone(ground, 0.9 + 0.12 * Math.sin(lx * 0.9 + lz * 1.3) * Math.cos(lz * 0.7)), 2);
+    // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
+    if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
     // The fence: a hard boundary all round (glass along the front for the houses' outdoor parts and the pools).
     const k = corners(s);
     const fenceKind: Hedge["kind"] = spec.form === "aviary" ? "net" : "zoo_fence";
@@ -706,13 +670,14 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     for (const p of plan.parcels) {
         if (!p.drive) continue;
         const c = chunkFor(out, p.drive.x, p.drive.z);
-        c.decal.drape({x: p.drive.x, y: 0, z: p.drive.z, rot: p.drive.rot}, p.drive.w, p.drive.d, H, 0.1, () => tone(p.seed % 2 ? "#a49e94" : "#b5ab96"), 2);
+        const drive = p.drive;
+        tagged(c.decal, p.seed % 2 ? SURF.blocks : SURF.gravel, alongZ(drive.rot), () => c.decal.drape({x: drive.x, y: 0, z: drive.z, rot: drive.rot}, drive.w, drive.d, H, 0.1, () => tone(p.seed % 2 ? "#a49e94" : "#b5ab96"), 2));
         // A path from the pavement to the front door.
         const b = plan.buildings.find((q) => q.id === p.building);
         if (b) {
             const door = local(b.at, 0, b.at.d / 2 + 0.5);
             const gate = local(p.at, toLocal(p.at, door.x, door.z).x, p.at.d / 2);
-            c.decal.ribbon([gate, door], 1.1, H, 0.09, tone("#b9b2a4"), 2);
+            tagged(c.decal, SURF.slabs, Math.abs(door.z - gate.z) > Math.abs(door.x - gate.x), () => c.decal.ribbon([gate, door], 1.1, H, 0.09, tone("#b9b2a4"), 2));
         }
     }
     void sub;
