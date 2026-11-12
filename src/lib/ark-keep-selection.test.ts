@@ -41,7 +41,7 @@ test("pinned, the selected animal is drawn one by one whoever else the herds now
     const member = whole.animals.find((animal) => !unpinned.live.has(animal.id));
     assert.ok(member, "the fixture has an animal outside the live set at a tight budget");
     const pins = selectionPins(aboard, {selected: member!.id, promoted: null, followed: "f", replay: ["r"]});
-    assert.deepEqual([...pins].sort(), ["f", member!.id, "r"].sort());
+    assert.deepEqual(Array.from(pins).sort(), ["f", member!.id, "r"].sort());
     const pinned = arkRepresentatives(whole.animals, {pinned: pins, live: 1, from: 2});
     assert.ok(pinned.live.has(member!.id), "the selected animal is in the live set once pinned");
 });
