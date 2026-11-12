@@ -47,9 +47,12 @@ async function highPass(file) {
     const raw = await image.raw().toBuffer();
     const tiled = await sharp({create: {width: width * 3, height: height * 3, channels: 3, background: "#000"}})
         .composite(Array.from({length: 9}, (_, i) => ({input: raw, raw: {width, height, channels: 3}, left: (i % 3) * width, top: Math.floor(i / 3) * height})))
+        // (The composite comes back with an alpha channel: drop it, or every row after the first slides.)
+        .removeAlpha()
         .raw()
         .toBuffer();
-    const blurred = await sharp(tiled, {raw: {width: width * 3, height: height * 3, channels: 3}}).blur(width / 10).extract({left: width, top: height, width, height}).raw().toBuffer();
+    const blurred = await sharp(tiled, {raw: {width: width * 3, height: height * 3, channels: 3}}).blur(width / 10).extract({left: width, top: height, width, height}).removeAlpha().raw().toBuffer();
+    if (tiled.length !== width * height * 27 || blurred.length !== raw.length) throw new Error(`${file}: unexpected channels`);
     const mean = [0, 0, 0];
     for (let i = 0; i < raw.length; i++) mean[i % 3] += raw[i];
     for (let c = 0; c < 3; c++) mean[c] /= raw.length / 3;

@@ -6,12 +6,15 @@
  *   ?quality=high|medium|low   the tier (Part B's render distance and the town's own shares)
  *   ?hours=17                  the island clock's hour (pinned); ?day=<n> the day
  *   ?sky=0                     without the photographed day sky (the visual check: nothing loads after mount)
+ *   ?wet=0..1&rain=0..1        the weather (lane GA: wet streets, puddles, ripples); `__arkTown.weather(wet, rain)`
  */
 
 import {ACESFilmicToneMapping, Fog, PCFSoftShadowMap, PerspectiveCamera, Scene, Vector3, WebGLRenderer} from "three";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ArkPost} from "@/ark-scene/post";
-import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
+import {ARK_ENV, ARK_TIME} from "@/ark-scene/glsl";
+import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
+import {TOWN_TEXTURES} from "@/ark-scene/islands/town/render/textures";
 import {windMaterial} from "@/ark-scene/asset-trees";
 import {buildTownIsland, TOWN_TIERS, type TownTier} from "@/ark-scene/islands/town/render/index";
 import {townPlan} from "@/ark-scene/islands/town/plan";
@@ -23,7 +26,7 @@ import type {TownClock} from "@/ark-scene/islands/town/people";
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
 const STREAM = {high: {distance: 960, hysteresis: 40}, medium: {distance: 640, hysteresis: 32}, low: {distance: 440, hysteresis: 26}} as const;
 
-type Shot = {id: string; eye: [number, number, number]; target: [number, number, number]; hours: number; fov?: number; day?: number};
+type Shot = {id: string; eye: [number, number, number]; target: [number, number, number]; hours: number; fov?: number; day?: number; /** The weather (lane GA): ground wetness and rain, 0–1. */ wet?: number; rain?: number};
 
 function shots(): Shot[] {
     const plan = townPlan();
@@ -56,6 +59,14 @@ function shots(): Shot[] {
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
         {id: "town_night", eye: [-6, 34, 92], target: [-18, 4, 2], hours: 22.3},
         {id: "homes_night", eye: [155, 42, 125], target: [92, 2, 22], hours: 21.5},
+        // Lane GA: the street, close up, by day and night, dry and in the rain.
+        {id: "street_level", eye: [-40, 4.6, 31.5], target: [-14, 3.2, 26], hours: 10.5},
+        {id: "street_night", eye: [-40, 4.6, 31.5], target: [-14, 3.2, 26], hours: 22.5},
+        {id: "street_wet_night", eye: [-40, 4.6, 31.5], target: [-14, 3.2, 26], hours: 22.5, wet: 1, rain: 0.7},
+        {id: "street_wet_day", eye: [-40, 4.6, 31.5], target: [-14, 3.2, 26], hours: 13, wet: 1, rain: 0.5},
+        {id: "pavement_close", eye: [-30, 4.3, 32.2], target: [-27.6, 2.75, 35.4], hours: 11},
+        {id: "pavement_close_wet_night", eye: [-30, 4.3, 32.2], target: [-27.6, 2.75, 35.4], hours: 22.5, wet: 1, rain: 0.4},
+        {id: "square_night", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 23, wet: 0.6, rain: 0},
         // The nature lane's set (GC): a park, the canal at a bridge with boats, a zoo enclosure, the aviary close.
         {id: "park", eye: [10, 9, -38], target: [-22, 1.5, -74], hours: 10.5},
         {id: "canal_bridge", eye: [9, 6.5, 60], target: [4.5, 2.2, 26], hours: 15},
@@ -74,6 +85,8 @@ declare global {
             shot: (id: string, day?: number) => void;
             render: (frames?: number) => void;
             stats: () => unknown;
+            weather: (wetness: number, rain: number) => void;
+            paved: () => boolean;
             perf: (seconds: number) => Promise<unknown>;
             fly: (seconds: number, fps: number) => Promise<unknown>;
             flyPose: (t: number) => {eye: [number, number, number]; target: [number, number, number]; hours: number};
@@ -103,6 +116,8 @@ export function mountTown(el: HTMLElement) {
     if (params.get("sky") !== "0") lighting.loadDaySky("/ark/graphics/sky-day.hdr");
     lighting.setShadows(renderer, TOWN_TIERS[tier].shadows);
     const town = buildTownIsland({tier});
+    ARK_ENV.wetness.value = Number(params.get("wet") ?? 0);
+    ARK_ENV.rain.value = Number(params.get("rain") ?? 0);
     scene.add(town.root);
     // (The workbench's handle on the town's meshes, for probes.)
     (window as unknown as {__arkTownRoot?: unknown}).__arkTownRoot = town.root;
@@ -198,11 +213,22 @@ export function mountTown(el: HTMLElement) {
             const s = list.find((x) => x.id === id);
             if (!s) throw new Error(`no shot ${id}`);
             ARK_TIME.value = 120;
+            ARK_ENV.wetness.value = s.wet ?? Number(params.get("wet") ?? 0);
+            ARK_ENV.rain.value = s.rain ?? Number(params.get("rain") ?? 0);
             view(s.eye, s.target, s.hours, day ?? s.day ?? clock.day, s.fov);
             frame();
         },
         render: (frames = 1) => {
             for (let i = 0; i < frames; i++) frame();
+        },
+        paved: () => {
+            frame();
+            return TOWN_TEXTURES.ready.value > 0.5 && ARK_GROUND_TEXTURES.ready.value > 0.5 && (TOWN_TEXTURES.lite.value > 0.5 || TOWN_TEXTURES.normals.value > 0.5);
+        },
+        weather: (wetness, rain) => {
+            ARK_ENV.wetness.value = wetness;
+            ARK_ENV.rain.value = rain;
+            frame();
         },
         stats: () => ({tier, town: town.stats(), render: {calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, geometries: renderer.info.memory.geometries, textures: renderer.info.memory.textures}, heapMB: heapMB(), gpuMB: gpuEstimateMB(scene)}),
         perf: async (seconds) => {

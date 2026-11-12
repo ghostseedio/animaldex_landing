@@ -13,11 +13,12 @@ import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
 import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
+import {streetFurniture, type FurnitureOut} from "@/ark-scene/islands/town/render/furniture";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo};
-export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>};
+export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
 
 const H = (x: number, z: number) => townHeight(x, z);
 
@@ -666,6 +667,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     fields(out, plan);
     zooPlaza(out, plan);
     lamps(out, plan);
+    // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).
+    out.furniture = streetFurniture(plan, out.lamps, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});
     // Drives: gravel or paving from the street to the house.
     for (const p of plan.parcels) {
         if (!p.drive) continue;

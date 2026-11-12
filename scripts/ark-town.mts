@@ -54,12 +54,12 @@ writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta ch
 
 const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
-    // The sky and the asset library (the town's trees, shrubs and reeds: the GC lane).
-    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/");
+    // The sky, the KTX2 transcoder (GA) and the asset library (the town's trees, shrubs and reeds: the GC lane).
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "town.html");
     if (!file.startsWith(folder) || !existsSync(file)) return void response.writeHead(404).end();
-    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : "application/octet-stream";
+    const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".wasm") ? "application/wasm" : "application/octet-stream";
     response.writeHead(200, {"Content-Type": type}).end(readFileSync(file));
 });
 await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -101,6 +101,8 @@ async function open(quality: string, device: Device, extra = "") {
     });
     await page.goto(`${base}/town.html?quality=${quality}${extra}`, {waitUntil: "domcontentloaded", timeout: 1_800_000});
     await page.waitForFunction(() => window.__arkTown?.ready, null, {timeout: 1_800_000});
+    // The paving's and the ground's textures load after the first frame (lane GA); a shot without them is the fallback.
+    await page.waitForFunction(() => window.__arkTown?.paved?.(), null, {timeout: 120_000}).catch(() => log("the paving textures did not arrive"));
     // The day sky (HDR) loads after mount: give it a moment.
     await page.waitForTimeout(2500);
     return {context, page};
