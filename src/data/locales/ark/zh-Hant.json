@@ -98,7 +98,15 @@
             "bring": "與動物對話",
             "herdTag": "群",
             "breeds": "品種：{breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "船上 {count} 隻",
+            "rowCount": "{animal}：{count}",
+            "change24h": "過去 24 小時 {change}",
+            "changeWindow": "24 小時",
+            "allSpecies": "船上全部 {count} 個物種",
+            "listIntro": "Ark 上的每個物種，按數量從多到少排列，並附上船上的數量。",
+            "openList": "在 Ark 上方查看",
+            "listLabel": "船上的每個物種，按數量從多到少"
         },
         "story": {
             "generic": "在奏效的一步之後登船",

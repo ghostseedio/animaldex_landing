@@ -98,7 +98,15 @@
             "bring": "ఒక జంతువుతో మాట్లాడండి",
             "herdTag": "మంద",
             "breeds": "రకాలు: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "Ark లో {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "గత 24 గంటల్లో {change}",
+            "changeWindow": "24 గంటలు",
+            "allSpecies": "Ark లోని మొత్తం {count} జాతులు",
+            "listIntro": "Ark లోని ప్రతి జాతి, ఎక్కువ సంఖ్యలో ఉన్నవి ముందు, ఒక్కొక్కటి ఎన్ని ఉన్నాయో దానితో.",
+            "openList": "Ark పైన చూడండి",
+            "listLabel": "Ark లోని ప్రతి జాతి, ఎక్కువ సంఖ్యలో ఉన్నవి ముందు"
         },
         "story": {
             "generic": "పని చేసిన ఒక అడుగు తర్వాత Ark ఎక్కింది",

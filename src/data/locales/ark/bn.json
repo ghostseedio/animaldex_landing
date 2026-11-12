@@ -98,7 +98,15 @@
             "bring": "একটি প্রাণীর সঙ্গে কথা বলুন",
             "herdTag": "পাল",
             "breeds": "জাত: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "জাহাজে {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "গত ২৪ ঘণ্টায় {change}",
+            "changeWindow": "২৪ ঘণ্টা",
+            "allSpecies": "জাহাজের সব {count}টি প্রজাতি",
+            "listIntro": "Ark-এর প্রতিটি প্রজাতি, সংখ্যায় সবচেয়ে বেশিগুলো আগে, কতগুলো জাহাজে আছে তা সহ।",
+            "openList": "Ark-এর ওপরে দেখুন",
+            "listLabel": "জাহাজের সব প্রজাতি, সংখ্যায় সবচেয়ে বেশিগুলো আগে"
         },
         "story": {
             "generic": "কাজ করা একটি পদক্ষেপের পর জাহাজে উঠেছে",

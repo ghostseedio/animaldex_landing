@@ -98,7 +98,15 @@
             "bring": "کسی جانور سے بات کریں",
             "herdTag": "ریوڑ",
             "breeds": "نسلیں: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} سوار",
+            "rowCount": "{animal}: {count}",
+            "change24h": "پچھلے 24 گھنٹوں میں {change}",
+            "changeWindow": "24 گھنٹے",
+            "allSpecies": "تمام {count} سوار انواع",
+            "listIntro": "Ark کی ہر نوع، سب سے زیادہ تعداد والی پہلے، اس کے ساتھ کہ کتنے سوار ہیں۔",
+            "openList": "Ark کے اوپر دیکھیں",
+            "listLabel": "سوار ہر نوع، سب سے زیادہ تعداد والی پہلے"
         },
         "story": {
             "generic": "ایک کامیاب قدم کے بعد سوار ہوا",

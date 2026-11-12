@@ -98,7 +98,15 @@
             "bring": "ಒಂದು ಪ್ರಾಣಿಯ ಜೊತೆ ಮಾತನಾಡಿ",
             "herdTag": "ಹಿಂಡು",
             "breeds": "ತಳಿಗಳು: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "ಹಡಗಿನಲ್ಲಿ {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "ಕಳೆದ 24 ಗಂಟೆಗಳಲ್ಲಿ {change}",
+            "changeWindow": "24 ಗಂಟೆ",
+            "allSpecies": "ಹಡಗಿನಲ್ಲಿರುವ ಎಲ್ಲಾ {count} ಪ್ರಭೇದಗಳು",
+            "listIntro": "Ark ನಲ್ಲಿರುವ ಪ್ರತಿಯೊಂದು ಪ್ರಭೇದ, ಹೆಚ್ಚು ಸಂಖ್ಯೆಯವು ಮೊದಲು, ಹಡಗಿನಲ್ಲಿ ಎಷ್ಟಿವೆ ಎಂಬುದರೊಂದಿಗೆ.",
+            "openList": "Ark ಮೇಲೆ ನೋಡಿ",
+            "listLabel": "ಹಡಗಿನಲ್ಲಿರುವ ಪ್ರತಿಯೊಂದು ಪ್ರಭೇದ, ಹೆಚ್ಚು ಸಂಖ್ಯೆಯವು ಮೊದಲು"
         },
         "story": {
             "generic": "ಕೆಲಸ ಮಾಡಿದ ಹೆಜ್ಜೆಯ ನಂತರ Ark ಹತ್ತಿತು",

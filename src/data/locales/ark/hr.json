@@ -98,7 +98,15 @@
             "bring": "Razgovaraj sa životinjom",
             "herdTag": "krdo",
             "breeds": "pasmine: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} na brodu",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} u posljednja 24 sata",
+            "changeWindow": "24 h",
+            "allSpecies": "Sve vrste na brodu ({count})",
+            "listIntro": "Sve vrste na brodu Ark, najbrojnije prve, s brojem jedinki na brodu.",
+            "openList": "Prikaži iznad broda Ark",
+            "listLabel": "Sve vrste na brodu, najbrojnije prve"
         },
         "story": {
             "generic": "Ukrcala se nakon koraka koji je uspio",

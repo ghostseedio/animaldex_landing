@@ -98,7 +98,15 @@
             "bring": "Sprich mit einem Tier",
             "herdTag": "Herde",
             "breeds": "Rassen: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} an Bord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} in den letzten 24 Stunden",
+            "changeWindow": "24 Std.",
+            "allSpecies": "Alle {count} Arten an Bord",
+            "listIntro": "Jede Art auf der Ark, die zahlreichsten zuerst, mit ihrer Zahl an Bord.",
+            "openList": "Über der Ark ansehen",
+            "listLabel": "Alle Arten an Bord, die zahlreichsten zuerst"
         },
         "story": {
             "generic": "Nach einem Schritt, der geklappt hat, an Bord gekommen",

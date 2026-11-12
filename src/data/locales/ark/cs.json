@@ -98,7 +98,15 @@
             "bring": "Mluvit se zvířetem",
             "herdTag": "stádo",
             "breeds": "plemena: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} na palubě",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} za posledních 24 hodin",
+            "changeWindow": "24 h",
+            "allSpecies": "Všechny druhy na palubě ({count})",
+            "listIntro": "Všechny druhy v Ark, nejpočetnější první, s počtem jedinců na palubě.",
+            "openList": "Zobrazit nad Ark",
+            "listLabel": "Všechny druhy na palubě, nejpočetnější první"
         },
         "story": {
             "generic": "Nastoupilo po kroku, který fungoval",

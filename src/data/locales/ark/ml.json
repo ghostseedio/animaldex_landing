@@ -98,7 +98,15 @@
             "bring": "ഒരു മൃഗത്തോട് സംസാരിക്കുക",
             "herdTag": "കൂട്ടം",
             "breeds": "ബ്രീഡുകൾ: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "കപ്പലിൽ {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "കഴിഞ്ഞ 24 മണിക്കൂറിൽ {change}",
+            "changeWindow": "24 മണിക്കൂർ",
+            "allSpecies": "കപ്പലിലെ എല്ലാ {count} സ്പീഷീസും",
+            "listIntro": "Ark-ലെ ഓരോ സ്പീഷീസും, എണ്ണം കൂടിയവ ആദ്യം, കപ്പലിൽ എത്രയെണ്ണമുണ്ടെന്നതിനൊപ്പം.",
+            "openList": "Ark-ന് മുകളിൽ കാണുക",
+            "listLabel": "കപ്പലിലെ എല്ലാ സ്പീഷീസും, എണ്ണം കൂടിയവ ആദ്യം"
         },
         "story": {
             "generic": "ഫലിച്ച ഒരു ചുവടിന് ശേഷം Ark-ൽ കയറി",

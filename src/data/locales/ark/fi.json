@@ -98,7 +98,15 @@
             "bring": "Puhu eläimen kanssa",
             "herdTag": "lauma",
             "breeds": "rodut: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} kyydissä",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} viimeisen 24 tunnin aikana",
+            "changeWindow": "24 t",
+            "allSpecies": "Kaikki {count} lajia kyydissä",
+            "listIntro": "Jokainen Arkin laji, runsaslukuisimmat ensin, ja kuinka monta kutakin on kyydissä.",
+            "openList": "Katso ne Arkin päällä",
+            "listLabel": "Kaikki lajit kyydissä, runsaslukuisimmat ensin"
         },
         "story": {
             "generic": "Nousi kyytiin toimineen askeleen jälkeen",

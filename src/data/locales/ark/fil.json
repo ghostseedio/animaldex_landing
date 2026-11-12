@@ -98,7 +98,15 @@
             "bring": "Kausapin ang isang hayop",
             "herdTag": "kawan",
             "breeds": "mga lahi: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} nakasakay",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} sa nakalipas na 24 oras",
+            "changeWindow": "24 oras",
+            "allSpecies": "Lahat ng {count} species na nakasakay",
+            "listIntro": "Bawat species sa Ark, nauuna ang pinakamarami, kasama kung ilan ang nakasakay.",
+            "openList": "Tingnan sila sa ibabaw ng Ark",
+            "listLabel": "Bawat species na nakasakay, nauuna ang pinakamarami"
         },
         "story": {
             "generic": "Sumakay pagkatapos ng isang hakbang na gumana",

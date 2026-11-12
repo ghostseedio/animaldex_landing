@@ -98,7 +98,15 @@
             "bring": "تحدّث إلى حيوان",
             "herdTag": "قطيع",
             "breeds": "السلالات: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} على المتن",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} خلال آخر 24 ساعة",
+            "changeWindow": "24 ساعة",
+            "allSpecies": "كل الأنواع على المتن ({count})",
+            "listIntro": "كل نوع على Ark، الأكثر عددًا أولًا، مع عدد أفراده على المتن.",
+            "openList": "اعرضها فوق Ark",
+            "listLabel": "كل الأنواع على المتن، الأكثر عددًا أولًا"
         },
         "story": {
             "generic": "صعد على المتن بعد خطوة نجحت",

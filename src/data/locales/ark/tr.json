@@ -98,7 +98,15 @@
             "bring": "Bir hayvanla konuş",
             "herdTag": "sürü",
             "breeds": "ırklar: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "Gemide {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "Son 24 saatte {change}",
+            "changeWindow": "24 sa",
+            "allSpecies": "Gemideki {count} türün tümü",
+            "listIntro": "Ark'taki her tür, en kalabalıktan başlayarak, gemide kaç tane olduğuyla birlikte.",
+            "openList": "Ark'ın üzerinde gör",
+            "listLabel": "Gemideki her tür, en kalabalıktan başlayarak"
         },
         "story": {
             "generic": "İşe yarayan bir adımın ardından gemiye bindi",

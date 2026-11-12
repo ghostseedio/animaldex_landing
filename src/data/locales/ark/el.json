@@ -98,7 +98,15 @@
             "bring": "Μίλα με ένα ζώο",
             "herdTag": "κοπάδι",
             "breeds": "φυλές: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} στο σκάφος",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} τις τελευταίες 24 ώρες",
+            "changeWindow": "24 ώρες",
+            "allSpecies": "Όλα τα είδη στο σκάφος ({count})",
+            "listIntro": "Κάθε είδος στην Ark, τα πολυπληθέστερα πρώτα, με το πόσα ζώα του είναι στο σκάφος.",
+            "openList": "Δες τα πάνω από την Ark",
+            "listLabel": "Όλα τα είδη στο σκάφος, τα πολυπληθέστερα πρώτα"
         },
         "story": {
             "generic": "Ανέβηκε στο σκάφος μετά από ένα βήμα που πέτυχε",

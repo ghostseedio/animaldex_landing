@@ -4225,7 +4225,15 @@
       "bring": "Bicara dengan hewan",
       "herdTag": "kawanan",
       "breeds": "ras: {breeds}",
-      "countStatus": "{count} · {status}"
+      "countStatus": "{count} · {status}",
+      "chip": "{count} di Ark",
+      "rowCount": "{animal}: {count}",
+      "change24h": "{change} dalam 24 jam terakhir",
+      "changeWindow": "24 jam",
+      "allSpecies": "Semua {count} spesies di Ark",
+      "listIntro": "Semua spesies di Ark, yang paling banyak lebih dulu, beserta jumlahnya.",
+      "openList": "Lihat di atas Ark",
+      "listLabel": "Semua spesies di Ark, yang paling banyak lebih dulu"
     },
     "story": {
       "generic": "Naik ke Ark setelah langkah yang berhasil",

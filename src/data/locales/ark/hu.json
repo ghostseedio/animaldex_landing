@@ -98,7 +98,15 @@
             "bring": "Beszélgess egy állattal",
             "herdTag": "csorda",
             "breeds": "fajták: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} a fedélzeten",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} az elmúlt 24 órában",
+            "changeWindow": "24 ó",
+            "allSpecies": "Összes faj a fedélzeten ({count})",
+            "listIntro": "Az Ark összes faja, a legnépesebbek elöl, azzal, hogy hány példány van a fedélzeten.",
+            "openList": "Mutasd az Ark fölött",
+            "listLabel": "Az összes faj a fedélzeten, a legnépesebbek elöl"
         },
         "story": {
             "generic": "Egy bevált lépés után szállt fel",

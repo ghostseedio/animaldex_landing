@@ -98,7 +98,15 @@
             "bring": "ਕਿਸੇ ਜਾਨਵਰ ਨਾਲ ਗੱਲ ਕਰੋ",
             "herdTag": "ਝੁੰਡ",
             "breeds": "ਨਸਲਾਂ: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} ਸਵਾਰ",
+            "rowCount": "{animal}: {count}",
+            "change24h": "ਪਿਛਲੇ 24 ਘੰਟਿਆਂ ਵਿੱਚ {change}",
+            "changeWindow": "24 ਘੰਟੇ",
+            "allSpecies": "ਸਵਾਰ ਸਾਰੀਆਂ {count} ਪ੍ਰਜਾਤੀਆਂ",
+            "listIntro": "Ark ਦੀ ਹਰ ਪ੍ਰਜਾਤੀ, ਸਭ ਤੋਂ ਵੱਧ ਗਿਣਤੀ ਵਾਲੀ ਪਹਿਲਾਂ, ਨਾਲ ਹੀ ਕਿ ਕਿੰਨੇ ਸਵਾਰ ਹਨ।",
+            "openList": "Ark ਦੇ ਉੱਪਰ ਦੇਖੋ",
+            "listLabel": "ਸਵਾਰ ਹਰ ਪ੍ਰਜਾਤੀ, ਸਭ ਤੋਂ ਵੱਧ ਗਿਣਤੀ ਵਾਲੀ ਪਹਿਲਾਂ"
         },
         "story": {
             "generic": "ਕੰਮ ਕਰਨ ਵਾਲੇ ਕਦਮ ਤੋਂ ਬਾਅਦ ਸਵਾਰ ਹੋਇਆ",

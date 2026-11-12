@@ -98,7 +98,15 @@
             "bring": "คุยกับสัตว์",
             "herdTag": "ฝูง",
             "breeds": "พันธุ์: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "บนเรือ {count} ตัว",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} ใน 24 ชั่วโมงที่ผ่านมา",
+            "changeWindow": "24 ชม.",
+            "allSpecies": "ทั้ง {count} สายพันธุ์บนเรือ",
+            "listIntro": "ทุกสายพันธุ์บน Ark เรียงจากที่มีจำนวนมากที่สุด พร้อมจำนวนที่อยู่บนเรือ",
+            "openList": "ดูบน Ark",
+            "listLabel": "ทุกสายพันธุ์บนเรือ เรียงจากที่มีจำนวนมากที่สุด"
         },
         "story": {
             "generic": "ขึ้นเรือมาหลังจากก้าวที่ได้ผล",

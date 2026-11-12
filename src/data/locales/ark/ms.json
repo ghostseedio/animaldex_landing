@@ -98,7 +98,15 @@
             "bring": "Bercakap dengan haiwan",
             "herdTag": "kawanan",
             "breeds": "baka: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} di atas kapal",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} dalam 24 jam lepas",
+            "changeWindow": "24 jam",
+            "allSpecies": "Semua {count} spesies di atas kapal",
+            "listIntro": "Setiap spesies di Ark, yang paling ramai dahulu, berserta bilangannya di atas kapal.",
+            "openList": "Lihat di atas Ark",
+            "listLabel": "Setiap spesies di atas kapal, yang paling ramai dahulu"
         },
         "story": {
             "generic": "Naik ke Ark selepas langkah yang berjaya",

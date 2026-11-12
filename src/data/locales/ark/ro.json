@@ -98,7 +98,15 @@
             "bring": "Vorbește cu un animal",
             "herdTag": "turmă",
             "breeds": "rase: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} la bord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} în ultimele 24 de ore",
+            "changeWindow": "24 h",
+            "allSpecies": "Toate speciile de la bord ({count})",
+            "listIntro": "Toate speciile din Ark, cele mai numeroase primele, cu numărul celor aflați la bord.",
+            "openList": "Vezi-le peste Ark",
+            "listLabel": "Toate speciile de la bord, cele mai numeroase primele"
         },
         "story": {
             "generic": "A urcat la bord după un pas care a mers",
