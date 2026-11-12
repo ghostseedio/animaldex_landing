@@ -250,6 +250,8 @@ const LAID_SECONDS = 2.6;
 const CLOSE_POLAR = 1.13;
 /** Seconds without a touch before the view starts to drift. */
 const IDLE_DRIFT_AFTER = 9;
+/** The idle drift's speed (OrbitControls' autoRotateSpeed: 2π/60 rad/s per unit). */
+const DRIFT_SPEED = 0.18;
 const OPENING_SECONDS = 4.6;
 /** Within this distance (m) an animal glances at the camera now and then (more often the sharper it is). */
 const GLANCE_WITHIN = 14;
@@ -769,7 +771,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.panSpeed = 0.9;
     controls.screenSpacePanning = false;
     controls.zoomToCursor = true;
-    controls.autoRotateSpeed = 0.18;
+    controls.autoRotateSpeed = DRIFT_SPEED;
+    /** When the idle drift began (s; P6's sway on v2 is timed from it). */
+    let driftFrom = 0;
 
     const shadows = new ContactShadows();
     // The animal-look pass (`animal-look.ts`): surfaces, wet and dust, eyes, fur shells, close-up skins, contact shadows.
@@ -4225,7 +4229,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The whole world in view, from the south and above (`islands/views.ts`: per world, with the town or without). */
     const homeView = () => {
-        const view = wildHomeView(width / Math.max(height, 1), FOV, island ? island.origin : null);
+        const view = wildHomeView(width / Math.max(height, 1), FOV, island ? island.origin : null, Boolean(options.wildAnimals));
         return {target: new Vector3(view.target.x, view.target.y, view.target.z), distance: view.distance, polar: view.polar, azimuth: view.azimuth};
     };
 
@@ -5638,7 +5642,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepInset();
         stepIslandNear();
         // Idle: after a while untouched, the view drifts slowly round.
-        if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
+        if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
+            if (!controls.autoRotate) driftFrom = now;
+            controls.autoRotate = true;
+        }
+        // P6 (docs/ark/wild-island.md): on the bigger wild island with the town in the world (or coming: the view is the
+        // two-island view from the first frame), the drift sways about where the view was (± the frame's driftSway rad)
+        // instead of going round, so the town across the strait stays in the picture.
+        const sway = controls.autoRotate && (island || options.wildAnimals) ? wildFrame().driftSway : null;
+        if (sway) controls.autoRotateSpeed = DRIFT_SPEED * Math.cos((now - driftFrom) * ((DRIFT_SPEED * Math.PI) / 30 / sway));
         runtime.controls(frameDt);
         controls.update();
         keepInWorld();

@@ -22,7 +22,7 @@ export type WildFrame = {
     /** The circle the whole view fits (m): wide screens, upright phones (aspect under 0.8). */
     radius: number;
     radiusTall: number;
-    /** An upright phone's view from this far whatever its width (m; null: from `radiusTall`). */
+    /** With the town, an upright phone's view from this far whatever its width (m; null: from `radiusTall`). */
     distanceTall: number | null;
     /** Where the view looks (wide, upright). */
     target: {x: number; z: number};
@@ -35,6 +35,8 @@ export type WildFrame = {
     /** The camera's reach (m): the whole view's distance is held to `reach`, the user's zoom to `reachIslands` once the town is in. */
     reach: number;
     reachIslands: number;
+    /** With the town in the world, the idle drift sways ± this (rad) about where the view was; null: it goes round. */
+    driftSway: number | null;
 };
 
 /** The wild island's whole-view frame in the world in use. */
@@ -42,8 +44,8 @@ export function wildFrame(): WildFrame {
     // v2's upright view (decision rows, docs/ark/wild-island.md §9): from 950 m on every upright phone, looking down
     // a little more (0.9 rad from straight down) and aimed 130 m out toward the town, so the town's far shore stays inside
     // the low tier's 1,600 m map distance; the island fills the frame's width (its east and west tips just outside).
-    if (arkWorld() === "v2") return {radius: 204, radiusTall: 180, distanceTall: 950, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 130, polarTall: 0.9, reach: 1000, reachIslands: 1000};
-    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 0, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE};
+    if (arkWorld() === "v2") return {radius: 204, radiusTall: 236, distanceTall: 950, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 130, polarTall: 0.9, reach: 1000, reachIslands: 1000, driftSway: 0.12};
+    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 0, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE, driftSway: null};
 }
 
 export type WildHomeView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
@@ -52,10 +54,11 @@ export type WildHomeView = {target: {x: number; y: number; z: number}; distance:
  * The whole world in view, from the south and above (`index.ts` homeView): the screen's `aspect` (width / height), the
  * vertical field of view (degrees), and the town's world origin when it is in the world (else null).
  */
-export function wildHomeView(aspect: number, fovDegrees: number, townIn: {x: number; z: number} | null): WildHomeView {
-    // (v2 is islands mode only: the town's place across the strait is known before it is built, so the first frame is
-    // already the two-island view and nothing moves when the town joins.)
-    const town = townIn ?? (arkWorld() === "v2" ? townWorldOrigin() : null);
+export function wildHomeView(aspect: number, fovDegrees: number, townIn: {x: number; z: number} | null, townComing = false): WildHomeView {
+    // (v2, with the town coming (the archipelago's two islands, built after the first frame): its place across the strait
+    // is known before it is built, so the first frame is already the two-island view and nothing moves when it joins.
+    // Without it (one island: the apps' embed with `?world=v2`) the island alone.)
+    const town = townIn ?? (townComing && arkWorld() === "v2" ? townWorldOrigin() : null);
     const vertical = fovDegrees * Math.PI / 180;
     const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
     const fit = Math.min(vertical, horizontal);
@@ -63,7 +66,7 @@ export function wildHomeView(aspect: number, fovDegrees: number, townIn: {x: num
     // view centres a little south-east of the lake and fits a wider circle. (P6: the v2 island's own, `wildFrame`.)
     const frame = wildFrame();
     const radius = aspect < 0.8 ? frame.radiusTall : frame.radius;
-    const distance = aspect < 0.8 && frame.distanceTall !== null ? Math.min(frame.distanceTall, frame.reach) : Math.min(radius / Math.sin(fit / 2) * 0.8, frame.reach);
+    const distance = aspect < 0.8 && town && frame.distanceTall !== null ? Math.min(frame.distanceTall, frame.reach) : Math.min(radius / Math.sin(fit / 2) * 0.8, frame.reach);
     // Part C, one world: the wild island as before, turned and raised a little so the town stands across the strait
     // beyond its far shore (decision 142).
     if (town) return twoIslandHome(aspect, distance, town, frame);

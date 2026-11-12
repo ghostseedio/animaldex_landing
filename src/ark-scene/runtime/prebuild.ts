@@ -17,6 +17,8 @@ import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
 import {primeFloorPlacements} from "@/ark-scene/floor-assets";
 import {primeWheatStands} from "@/ark-scene/near-detail";
+import {primeWildScenery} from "@/ark-scene/islands/wild/scenery";
+import {primeMountainRocks} from "@/ark-scene/rock-layout";
 import type {ArkZone} from "@/ark-scene/types";
 import {arkWorld} from "@/ark-scene/world";
 
@@ -59,6 +61,9 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.reef) primeReefGrowth(data.reef);
     if (data.floor) primeFloorPlacements(data.floor);
     if (data.wheat) primeWheatStands(data.wheat);
+    // (v2: the wild generator's scenery and the mountain's rocks, so the mounds and the props' mountain find them done.)
+    if (data.wild) primeWildScenery(data.wild);
+    if (data.mountain) primeMountainRocks(data.mountain);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
     if (data.capacities) primeZoneCapacities(data.capacities);
 }

@@ -9,6 +9,9 @@ import {reefGrowth, type ReefItem} from "@/ark-scene/reef";
 import {floorPlacements, type FloorPlacement} from "@/ark-scene/floor-assets";
 import {wheatStands} from "@/ark-scene/near-detail";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
+import {arkWorld} from "@/ark-scene/world";
+import {wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
+import {mountainRocks, type RockPiece} from "@/ark-scene/rock-layout";
 
 /**
  * The ground's arrays (graphics' `groundArrays(tier)` / `primeGround(arrays)` in terrain.ts, batch 6): the terrain's
@@ -26,7 +29,19 @@ export function groundBuffers(arrays: GroundArrays | null | undefined): ArrayBuf
 }
 
 export type ArkPackedGrass = {count: number; numbers: Float64Array; zones: Uint8Array};
-export type ArkSceneryPrebuild = {decor: DecorItem[]; fill: FillItem[]; grass: ArkPackedGrass; ground: GroundArrays | null; reef?: ReefItem[]; floor?: FloorPlacement[]; wheat?: ReturnType<typeof wheatStands>; ms: number};
+export type ArkSceneryPrebuild = {
+    decor: DecorItem[];
+    fill: FillItem[];
+    grass: ArkPackedGrass;
+    ground: GroundArrays | null;
+    reef?: ReefItem[];
+    floor?: FloorPlacement[];
+    wheat?: ReturnType<typeof wheatStands>;
+    /** v2 only (P7): the wild generator's scenery (the mounds and anything else that reads it on the main thread) and L6's mountain rocks (the props' mountain), so neither runs on the page's main thread. */
+    wild?: WildItem[];
+    mountain?: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]};
+    ms: number;
+};
 
 export function packGrass(tufts: GrassTuft[], count: number): ArkPackedGrass {
     const numbers = new Float64Array(tufts.length * 6);
@@ -51,5 +66,6 @@ export function unpackGrass(grass: ArkPackedGrass): GrassTuft[] {
 export function computeScenery(grass: number, tier: "high" | "medium" | "low" = "high"): ArkSceneryPrebuild {
     const started = Date.now();
     const ground = groundApi.groundArrays ? groundApi.groundArrays(tier) : null;
-    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ms: Date.now() - started};
+    const v2 = arkWorld() === "v2" ? {wild: wildScenery(), mountain: mountainRocks()} : {};
+    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ...v2, ms: Date.now() - started};
 }

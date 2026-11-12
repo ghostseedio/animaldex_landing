@@ -329,6 +329,12 @@ const GROUND_GRID = 2.2;
 let items: WildItem[] | null = null;
 let byChunk: WildItem[][] | null = null;
 
+/** The runtime's prebuild (`runtime/prebuild.ts`, v2): the same list, made in the scenery worker before the mount. */
+export function primeWildScenery(list: WildItem[]): void {
+    items = list;
+    byChunk = null;
+}
+
 /** The island's whole scenery, in a fixed order (by kind, then by grid cell). */
 export function wildScenery(): WildItem[] {
     if (items) return items;
