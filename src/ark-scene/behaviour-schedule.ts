@@ -545,6 +545,28 @@ export function bodyReachOf(animal: ScheduleAnimal, slug: string): number {
 }
 
 /**
+ * Where a climb up to a raised spot starts (collisions): the nearest ground round it its body fits at whose straight
+ * climb to the spot crosses nothing but what it climbs (the spot's own tree or rock: `collide/attach.ts` hostOf),
+ * searched outwards; else the nearest walkable ground. The same for the walk check and the trip.
+ */
+function climbFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, p: Spot): Spot | null {
+    const bodyR = bodyRadiusOf(animal, profile.slug);
+    const host = hostOf(p.point);
+    const own = (c: Collider) => (host !== null && (c.id === `trunk:${host}` || c.id === `rock:${host}`)) || colliderDistance(c, p.x, p.z) < 0.4;
+    for (let ring = 1; ring <= 8; ring++) {
+        const d = 0.25 + ring * 0.4;
+        for (let k = 0; k < 12; k++) {
+            const a = (k / 12) * Math.PI * 2;
+            const x = p.x + Math.sin(a) * d;
+            const z = p.z + Math.cos(a) * d;
+            if (world.nav.fits(x, z, bodyR, maxSlopeOf(animal)) && world.nav.runClear({x, z}, p, bodyR * 0.5, own)) return groundSpot(world, x, z);
+        }
+    }
+    const at = world.nav.nearest(p.x, p.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyR);
+    return at ? groundSpot(world, at.x, at.z) : null;
+}
+
+/**
  * A perch up on a surface (a rock's top, a branch, a ledge) its body fits on (collisions): nothing solid but what it is on
  * (its rock and the rocks touching it, its tree) within its reach there. A crocodile on a small rock top beside a taller
  * rock does not; it rests at the rock's foot instead.
@@ -572,19 +594,22 @@ function perchFits(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
  * every caller). A spot on a surface (a branch, a rock's face, a burrow's mouth) or off the ground (raised, in the
  * water) stays where it is.
  */
-function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, spot: Spot): Spot {
+function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, spot: Spot, still = false): Spot {
     const nav = world.nav;
     if (!nav.colliders || onSurface(spot.point) || raised(world, spot) || wet(world, spot)) return spot;
-    const r = bodyReachOf(animal, profile.slug);
+    // (Where it lies still, a roost: its width; where it turns, its reach.)
+    const r = still ? bodyRadiusOf(animal, profile.slug) : bodyReachOf(animal, profile.slug);
     const slope = maxSlopeOf(animal);
     // (Clear of everything solid, and not on a cliff's face.)
     if (nav.fits(spot.x, spot.z, r, slope)) return spot;
-    // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot.)
+    // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot; each
+    // animal starts its rings at its own bearing, so a group nudged off one trunk does not line up in a row.)
+    const turn = ((hashString(`${animal.id}#clear`) % 1000) / 1000) * Math.PI * 2;
     for (let ring = 1; ring <= 12; ring++) {
         const d = ring * 0.35;
         const n = Math.min(Math.max(8, Math.round((Math.PI * 2 * d) / 0.35)), 16);
         for (let k = 0; k < n; k++) {
-            const a = (k / n) * Math.PI * 2;
+            const a = turn + (k / n) * Math.PI * 2;
             const x = spot.x + Math.cos(a) * d;
             const z = spot.z + Math.sin(a) * d;
             if (!nav.fits(x, z, r, slope)) continue;
@@ -627,7 +652,30 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 }
 
 /** Its roost: the same place every night (seeded by its id), from its profile's roost kind; a group's members by their leader's. */
+/**
+ * Its roost, as its body can sleep there (collisions): on the ground clear of anything solid and off a cliff's face
+ * (`clearOfSolid`), up on a perch only one its body fits on (`perchFits`), else at the perch's foot. The same spot
+ * for everyone who asks (the trip there, the stay, `restingAtRoost`), worked out once per world.
+ */
+let roosts = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, Spot>>();
 export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    let byAnimal = roosts.get(world);
+    if (!byAnimal) roosts.set(world, (byAnimal = new WeakMap()));
+    const known = byAnimal.get(animal);
+    if (known) return known;
+    let spot = rawRoostOf(world, profile, animal);
+    if (world.nav.colliders && !aquatic(profile)) {
+        if (!perchFits(world, profile, animal, spot)) {
+            const foot = world.nav.nearest(spot.x, spot.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
+            if (foot) spot = groundSpot(world, foot.x, foot.z);
+        }
+        spot = clearOfSolid(world, profile, animal, spot, true);
+    }
+    byAnimal.set(animal, spot);
+    return spot;
+}
+
+function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
     if (animal.roost) return animal.roost;
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
@@ -895,7 +943,16 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
 function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent, before: Spot | null): boolean {
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
-    if (!to || placed.follow || !walksGoals(profile) || (placed.mode !== "ground" && placed.mode !== "water")) return true;
+    if (!to || placed.follow || !walksGoals(profile)) return true;
+    // A climb up (collisions): it walks to the climb's foot first, so that walk is checked as any other: a foot it can
+    // reach, by no long way round (2026-11-12: a komodo walked 91 m round to a rock's far side, at 1.6 times its pace).
+    const from0 = before ?? groundSpot(world, animal.home.x, animal.home.z);
+    if (world.nav.colliders && !flies(profile) && raised(world, to) && !raised(world, from0) && !wet(world, from0)) {
+        const foot = climbFoot(world, profile, animal, to);
+        if (!foot) return false;
+        return walkable(world, profile, animal, {...placed, to: foot, mode: "ground"}, from0);
+    }
+    if (placed.mode !== "ground" && placed.mode !== "water") return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
     let from = before ?? groundSpot(world, animal.home.x, animal.home.z);
@@ -1351,6 +1408,7 @@ function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
 }
 export function forgetSchedules() {
     memos = new WeakMap();
+    roosts = new WeakMap();
     forgetRecipes();
 }
 
@@ -1523,23 +1581,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             // (Collisions: up onto a rock or a tree from the ground it first walks to its foot, round whatever is in the
             // way, and climbs from there; down, the same the other way: never a straight line through a trunk, a fence or
             // the rock itself from wherever it was.)
-            // Its foot: the nearest ground round the spot its body fits at whose straight climb to the spot crosses nothing
-            // but what it climbs (the spot's own tree or rock: `collide/attach.ts` hostOf), searched outwards.
-            const footOf = (p: Spot): Spot | null => {
-                const host = hostOf(p.point);
-                const own = (c: Collider) => (host !== null && (c.id === `trunk:${host}` || c.id === `rock:${host}`)) || colliderDistance(c, p.x, p.z) < 0.4;
-                for (let ring = 1; ring <= 8; ring++) {
-                    const d = 0.25 + ring * 0.4;
-                    for (let k = 0; k < 12; k++) {
-                        const a = (k / 12) * Math.PI * 2;
-                        const x = p.x + Math.sin(a) * d;
-                        const z = p.z + Math.cos(a) * d;
-                        if (world.nav.fits(x, z, bodyR, maxSlopeOf(animal)) && world.nav.runClear({x, z}, p, bodyR * 0.5, own)) return groundSpot(world, x, z);
-                    }
-                }
-                const at = world.nav.nearest(p.x, p.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyR);
-                return at ? groundSpot(world, at.x, at.z) : null;
-            };
+            const footOf = (p: Spot): Spot | null => climbFoot(world, profile, animal, p);
             const fromUp = raised(world, from);
             const toUp = raised(world, to);
             const footA = fromUp ? footOf(from) : from;
@@ -1779,17 +1821,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             }
             if (u >= 1) return {x: to.x, y: to.y, z: to.z, yaw: walkYaw ?? at.yaw, moving: false, aloft: at.aloft, ...up, beat: at.beat};
             const p = shadowPoint(world, at, shadow, epochSeconds, Math.min(u / 0.08, 1));
-            // (Collisions: on the ground, its place beside its leader is never past a fence, a trunk or a wall from where
-            // its leader walks: it keeps as far out as its body fits.)
-            const solid = world.nav.colliders;
-            const owner = trip.owner;
-            if (solid && owner && !at.aloft && at.y >= -0.01) {
-                const k = solid.sweepAll(at.x, at.z, p.x, p.z, bodyRadiusOf(owner.animal, owner.slug));
-                if (k < 1) {
-                    p.x = at.x + (p.x - at.x) * k;
-                    p.z = at.z + (p.z - at.z) * k;
-                }
-            }
+
             const blend = Math.max((u - settleAt) / (1 - settleAt), 0);
             let yaw = p.yaw;
             if (walkYaw !== null) {

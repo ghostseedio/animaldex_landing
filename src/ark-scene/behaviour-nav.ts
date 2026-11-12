@@ -430,6 +430,21 @@ export class NavGrid {
         const cls = navClass(radius);
         const r = this.solid ? NAV_RADII[cls] : 0;
         if (this.clear(a, b, kind, minDepth, maxSlope, r)) return [a, b];
+        // A short way with something just in its line (a trunk beside a heron's step): one gentle bend round it, out to the
+        // side at its middle, the least bend that clears (a grid route there turns sharply at a cell's middle, on the move).
+        const span = Math.hypot(b.x - a.x, b.z - a.z);
+        if (r && span > 0.3 && span < 8) {
+            const nx = -(b.z - a.z) / span;
+            const nz = (b.x - a.x) / span;
+            const mx = (a.x + b.x) / 2;
+            const mz = (a.z + b.z) / 2;
+            for (const d of [0.25, 0.5, 0.8, 1.2, 1.8]) {
+                for (const side of [1, -1]) {
+                    const w = {x: mx + nx * d * side, z: mz + nz * d * side};
+                    if (this.clear(a, w, kind, minDepth, maxSlope, r) && this.clear(w, b, kind, minDepth, maxSlope, r)) return [a, w, b];
+                }
+            }
+        }
         const ok = (k: number) => (kind === "walk" ? (r ? this.fitsCell(k, maxSlope, r) : this.walk[k] === 1 && this.steep[k] <= maxSlope) : this.depth[k] >= minDepth && (!r || this.clearanceOf(k) >= r));
         const [si, sj] = this.cellOf(a.x, a.z);
         const [gi, gj] = this.cellOf(b.x, b.z);
@@ -535,8 +550,13 @@ export class NavGrid {
         const cells: number[] = [];
         for (let k: number | undefined = end; k !== undefined && k >= 0; k = from.get(k)) cells.push(k);
         cells.reverse();
-        // (Without colliders the start's own cell is a's, and is left out, as before: a stands for it.)
+        // (The start's own cell is a's, and is left out, as before: a stands for it. With colliders, when the way from a to
+        // the next cell is clear too: never a step to its own cell's middle and back the way it came, a turn on the move.)
         if (!r && cells.length && cells[0] === start) cells.shift();
+        else if (r && cells.length >= 2 && cells[0] === start) {
+            const next = cells[1];
+            if (!via.has(next) && this.runClear(a, this.centre(next % SIZE, Math.floor(next / SIZE)), r)) cells.shift();
+        }
         const raw: NavPoint[] = [a];
         for (const k of cells) {
             const through = via.get(k);
