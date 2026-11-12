@@ -29,7 +29,9 @@ const ATTRIBUTES: Array<{name: string; key: keyof GroundArrays; size: number}> =
     {name: "arkRock", key: "rock", size: 3},
     {name: "color", key: "colors", size: 3},
     {name: "arkLayers", key: "layers", size: 4},
-    {name: "arkLayers2", key: "layers2", size: 4}
+    {name: "arkLayers2", key: "layers2", size: 4},
+    // (The v2 world only: the fresh water's surface over each vertex, for the ground shader's bed. Absent on v1.)
+    {name: "arkFreshLevel", key: "freshBed", size: 1}
 ];
 
 /** A tile's geometry at a stride (1: every vertex), from the ground's arrays. */
@@ -48,10 +50,11 @@ export function tileGeometry(arrays: GroundArrays, range: {col0: number; col1: n
     const count = grid + skirt;
     const geometry = new BufferGeometry();
     const out: Record<string, Float32Array> = {};
-    for (const attribute of ATTRIBUTES) out[attribute.name] = new Float32Array(count * attribute.size);
+    const attributes = ATTRIBUTES.filter((attribute) => arrays[attribute.key] !== undefined);
+    for (const attribute of attributes) out[attribute.name] = new Float32Array(count * attribute.size);
     let v = 0;
     const copy = (source: number, extraY = 0) => {
-        for (const attribute of ATTRIBUTES) {
+        for (const attribute of attributes) {
             const from = arrays[attribute.key] as Float32Array;
             const to = out[attribute.name];
             for (let k = 0; k < attribute.size; k++) to[v * attribute.size + k] = from[source * attribute.size + k];
@@ -111,7 +114,7 @@ export function tileGeometry(arrays: GroundArrays, range: {col0: number; col1: n
         edge(Array.from({length: down}, (_, i) => i * across + across - 1));
     }
     geometry.setIndex(new BufferAttribute(index.subarray(0, k), 1));
-    for (const attribute of ATTRIBUTES) geometry.setAttribute(attribute.name, new BufferAttribute(out[attribute.name], attribute.size));
+    for (const attribute of attributes) geometry.setAttribute(attribute.name, new BufferAttribute(out[attribute.name], attribute.size));
     geometry.computeBoundingBox();
     geometry.computeBoundingSphere();
     return geometry;

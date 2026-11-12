@@ -155,6 +155,11 @@ export type GroundArrays = {
     rock: Float32Array;
     /** The water's depth map (RGBA, size × size). */
     depth: Uint8Array;
+    /**
+     * The v2 world only: the fresh water's surface over each vertex (m), the ground shader's fresh bed (the lake at 6 m,
+     * the river descending). Absent on v1, whose fresh water is at `FRESH_LEVEL` everywhere.
+     */
+    freshBed?: Float32Array;
 };
 
 export function groundArrays(tier: "high" | "medium" | "low" = "high"): GroundArrays {
@@ -363,6 +368,7 @@ export function groundGeometry(): {geometry: BufferGeometry; depth: DataTexture}
     geometry.setAttribute("color", new BufferAttribute(a.colors, 3));
     geometry.setAttribute("arkLayers", new BufferAttribute(a.layers, 4));
     geometry.setAttribute("arkLayers2", new BufferAttribute(a.layers2, 4));
+    if (a.freshBed) geometry.setAttribute("arkFreshLevel", new BufferAttribute(a.freshBed, 1));
 
     const depth = new DataTexture(a.depth, a.size, a.size, RGBAFormat);
     depth.flipY = false;
@@ -404,7 +410,11 @@ function groundMaterial(): MeshStandardMaterial {
         arkDaylight: ARK_DAYLIGHT
     };
     const snowLine = arkWorld() === "v2" ? WILD_SNOW_LINE : 27;
-    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-3" : `ark-ground-3-snow${snowLine}`);
+    // P2 (docs/ark/wild-island.md): the v2 world's lake and river beds lie under their own levels, not 0: a vertex
+    // attribute (`GroundArrays.freshBed`) carries each one's surface. v1's shader text is unchanged.
+    const freshBed = arkWorld() === "v2";
+    const FRESH = freshBed ? "vArkFreshLevel" : FRESH_LEVEL.toFixed(2);
+    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-3" : `ark-ground-3-snow${snowLine}`) + (freshBed ? "-bed" : "");
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -416,20 +426,20 @@ varying vec4 vArkLayers;
 varying vec4 vArkLayers2;
 varying vec3 vArkRock;
 varying vec3 vArkWorld;
-varying vec3 vArkNormal;`)
+varying vec3 vArkNormal;${freshBed ? "\nattribute float arkFreshLevel;\nvarying float vArkFreshLevel;" : ""}`)
             .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
 vArkWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vArkNormal = normalize(mat3(modelMatrix) * objectNormal);
 vArkLayers = arkLayers;
 vArkLayers2 = arkLayers2;
-vArkRock = arkRock;`);
+vArkRock = arkRock;${freshBed ? "\nvArkFreshLevel = arkFreshLevel;" : ""}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying vec4 vArkLayers;
 varying vec4 vArkLayers2;
 varying vec3 vArkRock;
 varying vec3 vArkWorld;
-varying vec3 vArkNormal;
+varying vec3 vArkNormal;${freshBed ? "\nvarying float vArkFreshLevel;" : ""}
 uniform vec3 rockDark;
 uniform float arkDaylight;
 uniform highp sampler2DArray groundAlbedo;
@@ -835,7 +845,7 @@ float arkWet = 0.0;`)
     // patches, a coarse grain), much darker than a dry beach, so what grows on the reef stands out from its floor.
     {
         // Under the lake and the river, their own fixed level; elsewhere the sea's, with the tide (batch 5).
-        float bedDepth = mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - world.y;
+        float bedDepth = mix(envSeaLevel, ${FRESH}, step(0.5, vArkRock.z)) - world.y;
         if (bedDepth > 0.02) {
             float bedW = smoothstep(0.02, 0.6, bedDepth) * smoothstep(0.1, 0.6, sandW);
             float rubble = smoothstep(0.48, 0.72, arkFbm(p * 0.32 + 3.0));
@@ -853,7 +863,7 @@ float arkWet = 0.0;`)
     diffuseColor.rgb = ground * arkCloudShade(world);
     // Under water (graphics pass): the light that reaches the bed is absorbed with depth, red first, so the sand turns
     // blue-green and darker the deeper it lies (never blown out white), with sand ripples on the bed.
-    float depthBelow = mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - world.y;
+    float depthBelow = mix(envSeaLevel, ${FRESH}, step(0.5, vArkRock.z)) - world.y;
     if (depthBelow > 0.0) {
         vec3 absorb = exp(-depthBelow * vec3(0.45, 0.15, 0.1)) * mix(1.0, 0.8, smoothstep(0.0, 2.0, depthBelow));
         float bedRipple = sin(dot(p, vec2(0.6, 0.8)) * 5.5 + arkNoise(p * 0.7) * 4.0) * 0.5 + 0.5;
@@ -867,7 +877,7 @@ float arkWet = 0.0;`)
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 // Wet ground shines; a bed under the water does not (batch 4: the reef's sand mirrored the sun and read as snow).
-roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, mix(envSeaLevel, ${FRESH_LEVEL.toFixed(2)}, step(0.5, vArkRock.z)) - vArkWorld.y)));
+roughnessFactor = mix(roughnessFactor, 0.32, arkWet * (1.0 - smoothstep(0.02, 0.3, mix(envSeaLevel, ${FRESH}, step(0.5, vArkRock.z)) - vArkWorld.y)));
 // Snow has a faint sheen (batch 5).
 roughnessFactor = mix(roughnessFactor, 0.6, arkSnowy);`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
