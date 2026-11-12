@@ -103,7 +103,8 @@ function deepest(set: ColliderSet, body: ResolveBody, x: number, z: number, y: n
 /**
  * Out of anything solid it stands in, until it only touches: a few steps along the deepest overlap's outward way; wedged
  * (between two trunks, a fence and a wall), the nearest point round it where its body is clear, searched outwards in
- * rings (the same for every caller). Nowhere within 3 m: as the steps left it.
+ * rings (the same for every caller), out to 3 m or its own length and a metre, whichever is more (a true-size whale's
+ * tail by a rock in the shallows). Nowhere within that: as the steps left it.
  */
 export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose): {x: number; z: number; moved: number} {
     let x = pose.x;
@@ -123,7 +124,8 @@ export function pushOut(set: ColliderSet, body: ResolveBody, pose: ResolvePose):
     }
     if (stuck && deepest(set, body, x, z, pose.y, pose.yaw, pose.attached, pose.fixed)) {
         const step = Math.max(body.radius * 0.5, 0.05);
-        for (let ring = 1; ring * step <= 3; ring++) {
+        const most = Math.max(3, 2 * body.half + body.radius + 1);
+        for (let ring = 1; ring * step <= most; ring++) {
             const d = ring * step;
             const n = Math.max(8, Math.ceil((Math.PI * 2 * d) / step));
             for (let k = 0; k < n; k++) {

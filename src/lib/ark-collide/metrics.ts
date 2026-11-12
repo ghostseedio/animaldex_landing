@@ -319,7 +319,8 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
             const move = Math.hypot(p.x - before.x, p.z - before.z);
             if (move < 1e-3 || move > SLOT_SECONDS) continue;
             for (const c of set.near((p.x + before.x) / 2, (p.z + before.z) / 2, move / 2 + 0.1, fences)) {
-                if (c.kind !== "fence" || c.shape !== "segment" || !bodyMeets(c, s.body.radius) || !spansCollider(c, Math.min(p.y, before.y), s.body.height)) continue;
+                // (Within the fence's height on both sides: a bird coming down onto its top, or off it, goes over it.)
+                if (c.kind !== "fence" || c.shape !== "segment" || !bodyMeets(c, s.body.radius) || !spansCollider(c, p.y, s.body.height) || !spansCollider(c, before.y, s.body.height)) continue;
                 if (!segmentsCross(before.x, before.z, p.x, p.z, c.ax, c.az, c.bx, c.bz)) continue;
                 // (The chord between two samples of a run round a garden's corner cuts the corner: the run itself, finely
                 // sampled, must cross the fence to count.)
