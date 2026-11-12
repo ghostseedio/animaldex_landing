@@ -40,6 +40,10 @@
  * fixture with its made-up founders; a production bundle ignores it, so production only ever shows the real Ark).
  * ?insetTop=<px>, ?insetBottom=<px>: what the host draws over the world's top and foot (the iOS panel: insetTop=52); the
  * sound button, the bars, the log and the reset button keep clear of it, and of the safe area.
+ * Part C (two islands, decisions 141-154): when the read carries the server's island fields, the one world with the
+ * town across the strait (window.AnimalDexArk.mountArchipelago): the wild island draws first, the town joins when built
+ * in its worker (./ark-town-worker.js); ark:select flies to an animal on either island. With one island, as before.
+ * ?islands=<url> (a development build of the bundle only): T1's routing merged into ?snapshot= by id (the preview).
  * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
  * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
  * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
@@ -140,11 +144,16 @@
 
   // The runtime's prebuild (the mount's heavy seeded work in a worker), once, before the first mount.
   var prepared = null;
+  // Part C: the one world's handle while it mounts (the scene is handed over once it is up: `mounted`).
+  var mounting = null;
   function show(snapshot) {
     if (!snapshot) return;
     shown = snapshot;
     if (hud) hud.snapshot(snapshot);
     if (scene) { scene.update(snapshot); return; }
+    if (mounting) { mounting.update(snapshot); return; }
+    // (The archipelago does the prebuild itself, with this page's worker files.)
+    if (Ark.mountArchipelago) { mount(snapshot); return; }
     if (!prepared && Ark.prepareArk) {
       prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); });
       return;
@@ -155,7 +164,7 @@
 
   function mount(snapshot) {
     if (scene) { scene.update(snapshot); return; }
-    scene = Ark.mountArk(document.getElementById("ark"), {
+    var options = {
       snapshot: snapshot,
       modelBase: models,
       talkingBase: talking,
@@ -166,6 +175,8 @@
       canvasLabel: params.get("label") || (words && words.a11y && words.a11y.scene) || undefined,
       resetLabel: (words && words.a11y && words.a11y.resetView) || undefined,
       regionLabels: params.get("regions") === "1" && words ? words.regions : undefined,
+      // (Islands mode: the wild island's home petal is the Meadow.)
+      wildIslandRegionLabels: params.get("regions") === "1" && words ? words.wildIslandRegions : undefined,
       herdBadge: function (count) {
         var number = count.toLocaleString(lang);
         return words && words.herd && words.herd.badge ? fill(words.herd.badge, {count: number}) : number;
@@ -174,7 +185,26 @@
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
-    });
+    };
+    if (Ark.mountArchipelago) {
+      options.openOn = Ark.arkOpeningIsland ? Ark.arkOpeningIsland(snapshot) : undefined;
+      options.workers = {scenery: "./ark-prebuild-worker.js", places: "./ark-prebuild-places-worker.js", town: "./ark-town-worker.js"};
+      mounting = Ark.mountArchipelago(document.getElementById("ark"), options);
+      // (A development build: the handle for probes, as the page's `__arkScene`.)
+      if (devBuild) window.__arkScene = mounting;
+      if (selectHeld) mounting.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
+      selectHeld = null;
+      mounting.mounted().then(function () { scene = mounting; mounted(shown || snapshot); });
+      return;
+    }
+    scene = Ark.mountArk(document.getElementById("ark"), options);
+    if (selectHeld) scene.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
+    selectHeld = null;
+    mounted(snapshot);
+  }
+
+  // The scene is up: the held runtime messages, the hunting read, the HUD and the sound button.
+  function mounted(snapshot) {
     for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
     runtimeHeld = {};
     if (hunting && scene.setHunting) scene.setHunting(hunting);
@@ -223,11 +253,15 @@
     }, 8000);
   }
 
+  // Development's preview of the islands: T1's routing merged by id into the given snapshot (never in production).
+  var islandsUrl = devBuild && Ark.mergeArkIslandsRouting ? params.get("islands") : null;
   function read() {
     if (feeding) return Promise.resolve();
-    return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead])
+    var routing = islandsUrl ? fetch(islandsUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
+    return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead, routing])
       .then(function (both) {
         var body = both[0];
+        if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
         var raw = body && body.snapshot ? body.snapshot : body;
         founders = foundersFrom(body, raw);
         show(Ark.decodeArkSnapshot(raw));
@@ -245,6 +279,8 @@
 
   // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
   var runtimeHeld = {};
+  // (And a focus link (ark:select) sent before the first snapshot is read: the latest waits for the mount.)
+  var selectHeld = null;
   function receive(message) {
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:visible" || message.type === "ark:power") {
@@ -252,21 +288,26 @@
       else runtimeHeld[message.type] = message;
       return;
     }
-    if (scene && message.type === "ark:reset") { scene.resetView(); return; }
+    // (With two islands the world's handle takes the scene's messages while it mounts and passes them on once it is up.)
+    var live = scene || mounting;
+    if (live && message.type === "ark:reset") { live.resetView(); return; }
     if (message.type === "ark:snapshot") {
       var snapshot = Ark.decodeArkSnapshot(message.snapshot);
       founders = foundersFrom(message, message.snapshot);
       wordsRead.then(function () { show(snapshot); });
     }
-    else if (scene && message.type === "ark:mine") scene.setMineOnly(Boolean(message.value));
-    else if (scene && message.type === "ark:select") scene.select(message.id || null, Boolean(message.closeUp));
-    else if (scene && message.type === "ark:region") scene.focusRegion(message.region || null);
+    else if (live && message.type === "ark:mine") live.setMineOnly(Boolean(message.value));
+    else if (message.type === "ark:select") {
+      if (live) live.select(message.id || null, Boolean(message.closeUp));
+      else selectHeld = message;
+    }
+    else if (live && message.type === "ark:region") live.focusRegion(message.region || null);
     else if (scene && message.type === "ark:visitor") tell({type: "ark:visitor-id", id: scene.setVisitor(message.visitor || null)});
     else if (scene && message.type === "ark:talking") scene.setTalking(message.talking || null);
     else if (scene && message.type === "ark:talk-text") scene.talkText(String(message.chunk || ""));
     else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);
-    else if (scene && message.type === "ark:herd") scene.selectHerd(message.key || null);
-    else if (scene && message.type === "ark:lite") scene.setLite(message.value === true ? true : message.value === false ? false : null);
+    else if (live && message.type === "ark:herd") live.selectHerd(message.key || null);
+    else if (live && message.type === "ark:lite") live.setLite(message.value === true ? true : message.value === false ? false : null);
     else if (scene && message.type === "ark:sound" && message.value === false) setSound(false);
   }
   if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
