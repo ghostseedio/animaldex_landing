@@ -249,7 +249,7 @@ class WildMapSampler implements ArkMapSampler {
                     const limb = tag === "limb" || tag === "canopy_hang";
                     points.push({
                         id: `${item.asset}@${item.x.toFixed(1)},${item.z.toFixed(1)}#${k}`, tag, x: item.x + p[0], y: item.y + p[1], z: item.z + p[2], normal: n, tangent: f,
-                        size: {min: limb ? s0 * item.scale : Math.min(s0 * item.scale, 0.001), max: s1 * item.scale}, zone,
+                        size: {min: limb ? s0 * item.scale : TINY, max: s1 * item.scale}, zone,
                         ...(limb ? {radius: radius * item.scale, clearAbove: above * item.scale, clearBelow: below * item.scale} : {})
                     });
                 });
@@ -267,16 +267,16 @@ class WildMapSampler implements ArkMapSampler {
                     const ty = t[1] - d * n.y;
                     const tz = t[2] - d * n.z;
                     const l = Math.hypot(tx, ty, tz) || 1;
-                    points.push({id: `${item.asset}@${item.x.toFixed(1)},${item.z.toFixed(1)}#${k}`, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: [n.x, n.y, n.z], tangent: [tx / l, ty / l, tz / l], size: {min: Math.min(point.size[0], SIZES[tag].min), max: Math.max(point.size[1], SIZES[tag].max * 0.5)}, zone});
+                    points.push({id: `${item.asset}@${item.x.toFixed(1)},${item.z.toFixed(1)}#${k}`, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: [n.x, n.y, n.z], tangent: [tx / l, ty / l, tz / l], size: {min: TINY, max: Math.max(point.size[1], SIZES[tag].max * 0.5)}, zone});
                 });
-                if (item.asset.startsWith("tide-pool")) points.push({id: `pool@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "tide_pool", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [1, 0, 0], size: SIZES.tide_pool, zone});
+                if (item.asset.startsWith("tide-pool")) points.push({id: `pool@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "tide_pool", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [1, 0, 0], size: {min: TINY, max: SIZES.tide_pool.max}, zone});
             } else if (item.kind === "shrub" || item.kind === "reed") {
-                points.push({id: `${item.kind}@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "leaf", x: item.x, y: item.y + item.height * 0.92, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: SIZES.leaf, zone: zoneAt(item.x, item.z)});
-                if (item.kind === "shrub") points.push({id: `${item.kind}b@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "branch", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [Math.sin(item.yaw), 0, Math.cos(item.yaw)], size: {min: 0.002, max: 0.2}, zone: zoneAt(item.x, item.z)});
+                points.push({id: `${item.kind}@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "leaf", x: item.x, y: item.y + item.height * 0.92, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: {min: TINY, max: SIZES.leaf.max}, zone: zoneAt(item.x, item.z)});
+                if (item.kind === "shrub") points.push({id: `${item.kind}b@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "branch", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [Math.sin(item.yaw), 0, Math.cos(item.yaw)], size: {min: TINY, max: 0.2}, zone: zoneAt(item.x, item.z)});
             } else if (item.kind === "plant" && item.asset?.startsWith("flower")) {
-                points.push({id: `flower@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "flower_head", x: item.x, y: item.y + item.height, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: SIZES.flower_head, zone: zoneAt(item.x, item.z)});
+                points.push({id: `flower@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "flower_head", x: item.x, y: item.y + item.height, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: {min: TINY, max: SIZES.flower_head.max}, zone: zoneAt(item.x, item.z)});
             } else if (item.kind === "log" && item.asset) {
-                points.push({id: `log@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "bark", x: item.x, y: item.y + (ASSETS[item.asset]?.height ?? 0.5) * item.scale, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, -Math.sin(item.yaw)], size: SIZES.bark, zone: zoneAt(item.x, item.z)});
+                points.push({id: `log@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "bark", x: item.x, y: item.y + (ASSETS[item.asset]?.height ?? 0.5) * item.scale, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, -Math.sin(item.yaw)], size: {min: TINY, max: SIZES.bark.max}, zone: zoneAt(item.x, item.z)});
             }
         }
         // Worm holes and burrows in the ground that holds soil or burrows (a jittered 4 m grid).
@@ -291,8 +291,8 @@ class WildMapSampler implements ArkMapSampler {
                 const ground = this.ground(x, z);
                 // Worm holes in soil; burrows in the ground that holds them, and crabs' holes in the beach's sand and the
                 // estuary's mud.
-                if (ground.tags.includes("soil") && roll < 0.5) points.push({id: `worm${Math.round(x)},${Math.round(z)}`, tag: "worm_hole", x, y: ground.height + 0.005, z, normal: [0, 1, 0], tangent: [1, 0, 0], size: {min: 0.0001, max: SIZES.worm_hole.max}, zone: ground.zone});
-                else if ((ground.tags.includes("burrows") || ground.tags.includes("mudflat") || ground.tags.includes("sandy_beach")) && roll < 0.8) points.push({id: `burrow${Math.round(x)},${Math.round(z)}`, tag: "burrow_entrance", x, y: ground.height + 0.01, z, normal: [0, 1, 0], tangent: [Math.cos(roll * 6.28), 0, Math.sin(roll * 6.28)], size: {min: 0.0001, max: SIZES.burrow_entrance.max}, zone: ground.zone});
+                if (ground.tags.includes("soil") && roll < 0.5) points.push({id: `worm${Math.round(x)},${Math.round(z)}`, tag: "worm_hole", x, y: ground.height + 0.005, z, normal: [0, 1, 0], tangent: [1, 0, 0], size: {min: TINY, max: SIZES.worm_hole.max}, zone: ground.zone});
+                else if ((ground.tags.includes("burrows") || ground.tags.includes("mudflat") || ground.tags.includes("sandy_beach")) && roll < 0.8) points.push({id: `burrow${Math.round(x)},${Math.round(z)}`, tag: "burrow_entrance", x, y: ground.height + 0.01, z, normal: [0, 1, 0], tangent: [Math.cos(roll * 6.28), 0, Math.sin(roll * 6.28)], size: {min: TINY, max: SIZES.burrow_entrance.max}, zone: ground.zone});
             }
         }
         this.pointList = points;
@@ -301,6 +301,9 @@ class WildMapSampler implements ArkMapSampler {
 }
 
 const frac = (v: number) => v - Math.floor(v);
+
+/** Decision 55: an attach point takes any body down to 0.1 mm (a fairyfly); only limbs and hang points keep a least body. */
+const TINY = 0.0001;
 
 /** Steeper than this (behaviour-nav MAX_SLOPE, less a margin for the 2 m grid), only steep ground's tags hold. */
 const STEEP = 0.82;
