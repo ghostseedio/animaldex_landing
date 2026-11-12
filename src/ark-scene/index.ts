@@ -70,14 +70,14 @@ import {
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, clearBearing, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
+import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, clearBearing, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
 import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -159,6 +159,11 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
+import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
+import {flightSpec} from "@/ark-scene/locomotion/flight";
+import {locoStyle} from "@/ark-scene/locomotion/styles";
+import {swimPaces} from "@/ark-scene/locomotion/swim";
+import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
@@ -711,6 +716,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
 
     const library = new ModelLibrary(options.modelBase, 4);
+    // L7's chases (docs/ark/chases.md, "Wiring for the integrator"): recipe legs against L5's colliders, chase paces from
+    // L1's sprint and flee and L2's swim burst and stoop.
+    setRecipeColliders({segmentClear: collideSegmentClear, blocked: (x, z, r) => collideBlocked(x, z, r)});
+    const chasePlan = (slug?: string) => (slug ? library.get(slug)?.behaviour?.plan ?? null : null);
+    setChasePaces({
+        sprint: (b) => sprintPace({plan: chasePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
+        flee: (b) => fleePace({plan: chasePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
+        burst: (b) => {
+            const swim = b.slug ? locoStyle(b.slug, chasePlan(b.slug)).swim : null;
+            return swim ? swimPaces(b.length, swim).burst : null;
+        },
+        dive: (b) => (b.slug ? flightSpec(b.slug, b.length, chasePlan(b.slug))?.dive ?? null : null)
+    });
     const species = new Map<string, SpeciesMeshes>();
     // Runtime (src/ark-scene/runtime): when to draw, power, the load order and budgets, the camera's body, the bar and reset.
     const runtime: ArkRuntime = createArkRuntime({
@@ -4949,7 +4967,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const encounter = mealEncounter(act);
         const bodies = encounter ? encounterBodies(chaser(predator), chaser(prey), encounter) : {predator: chaser(predator), prey: chaser(prey)};
         const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater: inWater(prey), preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
-        const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3));
+        const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
         const stage: MealStage = mealStage(kind, bodies.predator, bodies.prey, {seed: `${act.prey.id}#${act.at}`, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter)});
         const partnered = (pose: ActPose | null, id: string, role: ActPose["role"]): ActPose | null => (pose ? {...pose, with: id, role} : null);
         // Both hold where they are while the camera comes.
