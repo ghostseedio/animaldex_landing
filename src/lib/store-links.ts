@@ -29,6 +29,7 @@ export type StorePlacement =
     | "home_hero"
     | "home_more"
     | "home_download"
+    | "home_qr"
     | "species_hero"
     | "species_card"
     | "species_footer"

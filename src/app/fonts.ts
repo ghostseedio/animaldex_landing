@@ -40,6 +40,19 @@ export const barlowCondensed = localFont({
 });
 
 /**
+ * The display face's italic, the second voice (decision 245, S1's audit: the
+ * old home page's italic line). One face, 600, never preloaded: only the home
+ * hero's second line sets it, and next/font's size-adjusted fallback keeps
+ * that line from shifting when it arrives. `font-display-italic` in Tailwind.
+ */
+export const barlowCondensedItalic = localFont({
+    src: [{path: "./font-files/barlow-condensed-latin-600-italic.woff2", weight: "600", style: "italic"}],
+    variable: "--font-barlow-condensed-italic",
+    display: "swap",
+    preload: false
+});
+
+/**
  * The chat's diagram panel (docs/rich-chat/SPEC.md, section 1.4): JetBrains
  * Mono (OFL, licence beside it), because a text diagram only lines up when
  * the box-drawing characters and arrows have the letters' advance, and
@@ -60,7 +73,7 @@ export const diagramMono = localFont({
     fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"]
 });
 
-export const fontClassName = `${inter.variable} ${barlowCondensed.variable} ${diagramMono.variable}`;
+export const fontClassName = `${inter.variable} ${barlowCondensed.variable} ${barlowCondensedItalic.variable} ${diagramMono.variable}`;
 
 export const fontCssVariables = {
     "--font-sans": "var(--font-inter)",

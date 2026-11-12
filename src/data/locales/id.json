@@ -449,6 +449,115 @@
       "cta": "Lihat Ark"
     }
   },
+  "landing": {
+    "hero": {
+      "eyebrow": "Bahtera, langsung",
+      "taglineLead": "Tangkap hewan di dunia nyata",
+      "taglineRest": "lalu jadikan teman AI di dunia 3D.",
+      "sentence": "Hewan naik ke Bahtera dari foto orang dan hidup menurut panduan lapangannya sendiri, di satu dunia yang dibagi semua orang.",
+      "explore": "Jelajahi Bahtera langsung",
+      "seeLive": "Lihat langsung",
+      "loading": "Memuat dunianya",
+      "interact": "Klik untuk menjelajah",
+      "interactDone": "Selesai menjelajah",
+      "poster": "Bahtera pukul {time} waktu pulau, {date}",
+      "live": "Langsung, pukul {time} di pulau",
+      "sceneLabel": "Bahtera: dunia 3D bersama berisi spesies hewan, langsung"
+    },
+    "taglines": {
+      "b": {
+        "lead": "Dunia hidup berisi spesies hewan",
+        "rest": "dibangun dari panduan lapangannya, diisi oleh fotomu."
+      },
+      "c": {
+        "lead": "Saksikan sebuah ekosistem tumbuh",
+        "rest": "dari sisi cerita para hewan."
+      }
+    },
+    "numbers": {
+      "title": "Di Bahtera saat ini",
+      "animals": "Hewan di Bahtera",
+      "species": "Spesies",
+      "founders": "Pendiri",
+      "births": "Kelahiran, 24 jam terakhir",
+      "meals": "Mangsa dimakan, 24 jam terakhir",
+      "asOf": "Dari catatan publik Bahtera, {time}",
+      "unavailable": "Angka langsung belum bisa dibaca sekarang.",
+      "noMeals": "Belum ada yang dimangsa: pendatang baru mendapat masa aman saat peluncuran.",
+      "top": "Paling banyak: {list}. Bahtera berisi apa yang difoto orang."
+    },
+    "steps": {
+      "eyebrow": "Cara hewan naik ke Bahtera",
+      "title": "Dari kameramu ke Bahtera",
+      "fig": "Gbr. {n}",
+      "catchTitle": "Tangkap",
+      "catchBody": "Foto seekor hewan di dunia nyata. Aplikasinya memberi tahu hewan apa itu.",
+      "catchLabel": "Difoto {date}",
+      "catchAlt": "Kepala komodo dari dekat, difoto oleh pemain AnimalDex",
+      "aboardTitle": "Naik ke Bahtera",
+      "aboardBody": "Ia bergabung dengan Bahtera dan hidup di tempat jenisnya hidup, menurut panduan lapangannya.",
+      "aboardLabel": "Pulau liar, padang rumput. Di Bahtera sejak {date}",
+      "aboardAlt": "Komodo yang sama di Bahtera, dilingkari, di atas batu di sebuah tanah lapang",
+      "talkTitle": "Dengar sisinya",
+      "talkBody": "Tanyakan apa saja. Ia menjawab dari hidupnya sendiri.",
+      "talkAlt": "Model 3D komodo yang bisa bicara, sedang berbicara",
+      "you": "Apa yang kamu lakukan seharian?",
+      "reply": "Pagi hari aku berbaring di batu hangat sampai darahku siap. Lalu aku menunggu di jalur dan mengecap udara. Aku tidak mengejar apa yang bisa kutunggu.",
+      "example": "Contoh percakapan"
+    },
+    "day": {
+      "eyebrow": "Sehari di Bahtera",
+      "title": "Satu jam untuk semua orang",
+      "intro": "Cahaya, cuaca, dan pasang surut berjalan pada satu jam bersama, jadi semua orang melihat pulau yang sama pada saat yang sama.",
+      "date": "Selasa, 10 November 2026, waktu pulau",
+      "awake": "{count} terjaga",
+      "awakeLabel": "Terjaga saat itu, dari semua yang ada di Bahtera hari ini",
+      "frameAlt": "Pulau liar pukul {time} waktu pulau",
+      "phase": {
+        "night": "Malam",
+        "dawn": "Fajar",
+        "day": "Siang",
+        "dusk": "Senja"
+      },
+      "weather": {
+        "clear": "Cerah",
+        "cloudy": "Berawan",
+        "light_rain": "Hujan ringan",
+        "heavy_rain": "Hujan lebat",
+        "windy": "Berangin",
+        "fog": "Berkabut",
+        "storm": "Badai"
+      },
+      "tide": {
+        "high": "Air pasang",
+        "low": "Air surut",
+        "rising": "Air mulai pasang",
+        "falling": "Air mulai surut"
+      }
+    },
+    "population": {
+      "eyebrow": "Populasi dari waktu ke waktu",
+      "title": "Siapa yang ada di Bahtera, sejak hari pertama",
+      "intro": "Dihitung mundur dari catatan peristiwa Bahtera: setiap kedatangan, kelahiran, dan kematian sejak pelayaran dimulai.",
+      "total": "Semua hewan di Bahtera",
+      "backfill": "Tangkapan dari sebelum peluncuran naik bersama-sama",
+      "day24": "{change} dalam 24 jam",
+      "same": "Tidak berubah dalam 24 jam",
+      "unavailable": "Grafik muncul setelah catatan Bahtera bisa dibaca.",
+      "axisStart": "Pelayaran dimulai",
+      "axisNow": "Sekarang",
+      "legend": "Enam spesies terbesar"
+    },
+    "app": {
+      "eyebrow": "Dapatkan aplikasinya",
+      "title": "Bawa hewan pertamamu ke Bahtera",
+      "body": "Gratis di iPhone dan Android.",
+      "qr": "Pindai dengan ponselmu",
+      "qrAlt": "Kode QR: dapatkan AnimalDex di toko aplikasi ponselmu",
+      "appStore": "Unduh AnimalDex di App Store",
+      "googlePlay": "Dapatkan AnimalDex di Google Play"
+    }
+  },
   "blog": {
     "eyebrow": "Blog AnimalDex",
     "title": "Artikel tentang cara hewan hidup, dan apa yang mereka ajarkan",
