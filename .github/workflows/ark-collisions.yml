@@ -4,7 +4,9 @@
 #   1. the collision tests (src/lib/ark-collide.test.ts): the colliders, the queries, every path clear for its body, the
 #      layer's purity, and a half-hour run of a synthetic Ark;
 #   2. the collision audit (scripts/ark-collide-audit.mts) on the synthetic Ark (every catalogue species and the
-#      captures dry run's hamlet at 1x: src/lib/ark-collide/fixture.ts), 2 island hours every 4 s, against the thresholds.
+#      captures dry run's hamlet at 1x: src/lib/ark-collide/fixture.ts), 2 island hours every 4 s, against the thresholds:
+#      islands mode (the wild island without its hamlet: tests/ark-collide/thresholds-islands.json), what goes live, and
+#      today's mode (with the hamlet: tests/ark-collide/thresholds.json) while islands can be switched off.
 # Deterministic: nothing here has randomness, so a changed number is a changed scene. The real snapshot's long runs
 # (many hours, the 3,142 animals) are run locally (the real snapshot is never committed).
 name: Ark collisions
@@ -15,6 +17,7 @@ on:
       - "src/ark-scene/**"
       - "src/lib/ark-collide/**"
       - "src/lib/ark-collide.test.ts"
+      - "src/lib/ark-collide-town.test.ts"
       - "scripts/ark-collide-audit*"
       - "tests/ark-collide/**"
       - ".github/workflows/ark-collisions.yml"
@@ -37,7 +40,7 @@ jobs:
   collisions:
     name: Pass-throughs, fence crossings and overlaps
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,7 +51,13 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Collision tests
         run: npx tsx --test src/lib/ark-collide.test.ts
-      - name: Collision audit (CI configuration)
+      - name: Collision tests on the town island
+        run: npx tsx --test src/lib/ark-collide-town.test.ts
+      - name: Collision audit, islands mode (what goes live; decision 148)
+        run: npx tsx scripts/ark-collide-audit.mts --fixture --wild-island kept --hours 2 --step 4 --workers 4 --models none --label islands --out .ark-collide
+      - name: Islands mode against its thresholds
+        run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/islands.json --thresholds tests/ark-collide/thresholds-islands.json
+      - name: Collision audit, today's mode (the wild island with its hamlet: while islands can be switched off)
         run: npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --models none --label ci --out .ark-collide
-      - name: Against the thresholds
+      - name: Today's mode against its thresholds
         run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/ci.json --thresholds tests/ark-collide/thresholds.json
