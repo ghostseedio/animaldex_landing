@@ -558,7 +558,7 @@ async function mountIsland(el: HTMLElement) {
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", onReady: () => (ready = true)});
     // `view=x,z,distance,polar,azimuth`: a view of the island other than its home view (a mid-distance look at movers).
     const view = params.get("view")?.split(",").map(Number);
-    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null; trip?: unknown} | null; reactive?: {dx: number; dz: number; action: string} | null};
+    type E = {animal: {id: string; model_slug: string}; level?: string; middle?: unknown; air: number; yawNow?: number; rig?: RigSample & {ratio?: number}; sched?: {pose?: {moving?: boolean; doing?: string; x: number; z: number; act?: unknown} | null; trip?: unknown; profile?: {walkPace?: number | null; runPace?: number | null}} | null; reactive?: {dx: number; dz: number; action: string} | null};
     const entries = () => (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
     const settle = async (maxMs = 180_000) => {
         const until = performance.now() + maxMs;
@@ -684,18 +684,25 @@ async function mountIsland(el: HTMLElement) {
                                 tr.rigged += span;
                                 if (e.rig?.now) tr.clips.add(e.rig.now.name);
                                 if (e.rig?.ratio) {
-                                    tr.ratios.push(e.rig.ratio);
                                     // Whether its feet are the baked clip's (played by distance: the pace ratio is what the
                                     // eye sees) or the locomotion layer's (stride and cadence from the speed: the clip's own
                                     // pace no longer matters), and what moved it (its schedule beat, a recipe act, the
                                     // reactive layer's action).
                                     const lc = (e.rig as unknown as {loco?: {driver?: string | null; share?: number}}).loco;
                                     const layered = lc?.driver === "legged" && (lc.share ?? 0) > 0.5;
-                                    if (!layered) (tr.ratiosBaked ??= []).push(e.rig.ratio);
+                                    // Under the layer, against the pace it is driven at: its schedule's walk (its run's on
+                                    // the run clip), in body lengths a second (`behaviours.json`, decision 202's natural
+                                    // paces). The baked clip's ground speed (`rig.ratio`) is the reach-limited clip's: a
+                                    // bullfrog at its natural walk read 7 times it (the integrator's default view, 2026-11-12).
+                                    const prof = e.sched?.profile;
+                                    const own = prof?.walkPace ? (e.rig.now?.name === "run" && prof.runPace ? prof.runPace : prof.walkPace) * Math.max(at.length, 0.01) : 0;
+                                    const ratio = layered && own > 0 ? speed / own : e.rig.ratio;
+                                    tr.ratios.push(ratio);
+                                    if (!layered) (tr.ratiosBaked ??= []).push(ratio);
                                     const act = (e.sched?.pose?.act as {state?: string} | null | undefined)?.state;
                                     const why = `${layered ? "layer" : "baked"}:${e.rig.now?.name ?? "?"}:${act ? `act ${act}` : e.reactive?.action && e.reactive.action !== "none" ? `reactive ${e.reactive.action}` : `sched ${(e.sched?.pose as {beat?: string} | null | undefined)?.beat ?? "?"}`}`;
                                     const list = (tr.ratioWhy ??= new Map()).get(why) ?? [];
-                                    list.push(e.rig.ratio);
+                                    list.push(ratio);
                                     tr.ratioWhy.set(why, list);
                                 }
                             } else {
