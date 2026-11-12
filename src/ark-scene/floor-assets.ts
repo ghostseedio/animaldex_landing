@@ -14,6 +14,8 @@
 
 import manifest from "@/ark-scene/assets-manifest.json";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
+import {inRock} from "@/ark-scene/map/rocks";
+import {treeBody, type TreeBody} from "@/ark-scene/tree-spacing";
 import {sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -59,6 +61,22 @@ export function floorPlacements(): FloorPlacement[] {
         list.push([item.x, item.z, item.kind]);
         trunks.set(key, list);
     }
+    // The trunks as drawn (scenery lane): their real radii, for the logs.
+    const bodies = new Map<string, TreeBody[]>();
+    for (const item of [...worldDecor(), ...forestFill()]) {
+        const body = treeBody(item);
+        if (!body || body.low) continue;
+        const key = `${Math.floor(body.x / 4)},${Math.floor(body.z / 4)}`;
+        const list = bodies.get(key) ?? [];
+        list.push(body);
+        bodies.set(key, list);
+    }
+    const nearTrunkBody = (x: number, z: number, r: number) => {
+        for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+            for (const body of bodies.get(`${Math.floor(x / 4) + dx},${Math.floor(z / 4) + dz}`) ?? []) if (Math.hypot(body.x - x, body.z - z) < body.trunk + r) return true;
+        }
+        return false;
+    };
     const nearTrunk = (x: number, z: number, r: number) => {
         for (let dx = -1; dx <= 1; dx++) {
             for (let dz = -1; dz <= 1; dz++) {
@@ -131,7 +149,27 @@ export function floorPlacements(): FloorPlacement[] {
                     // Gentle ground only (a log on a steep slope would roll; litter would hang over the edge).
                     if (up[1] < (kind.log ? 0.94 : 0.88)) continue;
                     const s = sampleGround(x, z);
-                    out.push({id: ids[Math.min(Math.floor(pick * ids.length), ids.length - 1)], x, y: s.height - (kind.log ? 0.08 : 0.01), z, yaw, scale: kind.log ? 0.8 + size * 0.35 : 0.85 + size * 0.3, up});
+                    const id = ids[Math.min(Math.floor(pick * ids.length), ids.length - 1)];
+                    const scale = kind.log ? 0.8 + size * 0.35 : 0.85 + size * 0.3;
+                    let y = s.height - (kind.log ? 0.08 : 0.01);
+                    if (kind.log) {
+                        // A log is long (scenery lane, the props check): none of its length through a trunk (at the tree's
+                        // real size) or a rock as drawn, and both its ends in the ground on curved ground.
+                        const b = ASSETS[id].bounds;
+                        const along = (t: number) => ({x: x + Math.cos(yaw) * t * scale, z: z - Math.sin(yaw) * t * scale});
+                        const length = [b.min[0], b.min[0] / 2, 0, b.max[0] / 2, b.max[0]];
+                        if (length.some((t) => {
+                            const p = along(t);
+                            return nearTrunkBody(p.x, p.z, 0.45) || inRock(p.x, p.z, 0.3);
+                        })) continue;
+                        for (const t of [b.min[0] * 0.9, b.max[0] * 0.9]) {
+                            const p = along(t);
+                            // The end's underside on the tilted log: its height along the slope from the middle.
+                            const rise = -(up[0] * Math.cos(yaw) - up[2] * Math.sin(yaw)) / up[1] * t * scale;
+                            y = Math.min(y, sampleGround(p.x, p.z).height - rise - b.min[1] * scale - 0.04);
+                        }
+                    }
+                    out.push({id, x, y, z, yaw, scale, up});
                 }
             }
         }

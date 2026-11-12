@@ -33,6 +33,14 @@ Every mesh in `public/ark/assets/v1/` (trees, plants, rocks, forest floor) is ge
 
 Tools (not shipped): Blender 5.2 (GPL-3.0, renders the contact sheets only; nothing from it is in the output), gltfpack 1.3.0 (MIT, npm `gltfpack@1.3.0`, meshopt compression; the same pinned tool the model lane uses), Pillow (HPND, contact-sheet layout), three.js `GLTFLoader` + `MeshoptDecoder` (MIT, existing dependency, `scripts/ark-assets/verify.mjs`).
 
+### The island's own rocks (scenery lane, the motion 100x pass, 2026-11-12)
+
+The mountain's crags, scree and boulders, and the decor's rocks on the mountain and the ice, are made in code at run time by `src/ark-scene/rock-shapes.ts` (a seeded icosphere fractured along joint planes, stepped along bedding, crevice-shaded vertex colours) and placed by `src/ark-scene/rock-layout.ts` and `rock-assets.ts`: no downloaded models, textures or scans, nothing third-party. The surface grain is the ground's CC0 `rock_face_03` (Poly Haven, above), already credited. The tree crowns' measurements (`src/ark-scene/tree-footprints.json`, `scripts/ark-tree-footprints.mjs`) are taken from the asset library's own trees.
+
+| Asset | Source | Licence | Author | Committed file(s) |
+|---|---|---|---|---|
+| Rocks: crags (8 shapes), boulders (6), slabs (3), scree (4), each at three levels of detail | generated in code at run time | CC0 1.0 (made in this repo) | AnimalDex (scenery lane, 2026-11-12) | `src/ark-scene/rock-shapes.ts`, `rock-layout.ts` |
+
 Batch 4, reef and coast water (`reef.ts`, `reef-render.ts`, `fish-schools.ts`, `fish-render.ts`): no third-party assets. Every coral, sponge, anemone, kelp and seagrass shape, every fish and every surface pattern is built in code.
 
 ## Sound

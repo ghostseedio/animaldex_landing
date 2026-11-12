@@ -41,7 +41,7 @@ const {MeshoptDecoder} = await import(pathToFileURL(path.join(nm, "three/example
 const {Vector3, Triangle, Ray} = THREE;
 
 /** Bump when the method changes (it is part of the source hash). */
-const GENERATOR = 5;
+const GENERATOR = 6;
 const OUT = path.join(root, "src/ark-scene/tree-attach.json");
 const manifest = JSON.parse(readFileSync(path.join(root, "src/ark-scene/assets-manifest.json"), "utf8"));
 const base = path.join(root, "public", manifest.base);
@@ -306,6 +306,9 @@ for (const id of Object.keys(attach).sort()) {
             const weights = windAt(wood, mouth);
             const forward = along(row.f, normal);
             const depth = r3(mouth.distanceTo(deepest) + (row.depth ?? 0));
+            // A mouth that opens into the tree's own wood or leaves within half a metre is no way in (snag-a's first
+            // hole faces a limb 11 cm off: generator 6, scenery lane): left out.
+            if (rayHit(tris, mouth.clone().addScaledVector(normal, 0.01), normal, 0.5)) return;
             rows.push(["tree_hollow", ...mouth.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), r3(row.size[0]), r3(Math.min(row.size[1], widest * 2.2)), ...weights.map(r4), 0, source, 0, depth, 0, 0, 0]);
             snapped.tree_hollow.push(p.distanceTo(mouth));
             counts.tree_hollow[1]++;

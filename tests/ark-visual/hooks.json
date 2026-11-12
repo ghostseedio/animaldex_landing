@@ -16,6 +16,13 @@
       "browser": true
     },
     {
+      "name": "scenery checks and numbers (tree overlaps, props floating or in each other, the mountain's rocks)",
+      "lane": "ark-scenery",
+      "requires": ["src/lib/ark-scenery.test.ts", "scripts/ark-scenery-metrics.mts"],
+      "command": "npx tsx --test src/lib/ark-scenery.test.ts && mkdir -p .ark-golden/ci/scenery && npx tsx scripts/ark-scenery-metrics.mts --json .ark-golden/ci/scenery/metrics.json",
+      "artifacts": ".ark-golden/ci/scenery"
+    },
+    {
       "name": "motion metrics (one summary: tests/ark-motion/metrics.json)",
       "lane": "ark-next integrator",
       "requires": ["scripts/ark-motion-ci.mts", "tests/ark-motion/metrics.json"],

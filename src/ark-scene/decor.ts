@@ -16,6 +16,9 @@ import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
 import {cropsGrowAt, ORCHARD} from "@/ark-scene/fields";
 import {hamletKeeps, hamletLotAt} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
+import {treeBody, TreeSpacing} from "@/ark-scene/tree-spacing";
+import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
+import {allMounds, moundFoot} from "@/ark-scene/mounds";
 import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -143,6 +146,112 @@ function tone(zone: ArkZone, kind: DecorKind, r: number): string {
 let cached: DecorItem[] | null = null;
 
 /**
+ * The scatter's trees, kept apart (scenery lane, the motion 100x pass; the owner: "trees grow inside each other"): a
+ * tree that would grow into one already standing (`tree-spacing.ts`: trunk to trunk, a trunk through a crown, crowns
+ * fused) is grown smaller, as a younger tree in the gap; if even that would clash it stands as an understorey shrub
+ * instead (the glade rule's way), and a shrub that would stand in a trunk is smaller, or steps a metre aside.
+ *
+ * Mature trees are placed first (every candidate at its full size, in the scatter's order), then the younger ones in
+ * the gaps left, then the shrubs: a sapling never takes a big tree's place, so the woods keep their big trees and
+ * their thick limbs. Decided after every skip test and with no extra draw, so the scatter's draws, and every decor
+ * index, stay where they were.
+ */
+const MATURE = [1, 0.85];
+const YOUNGER = [0.7, 0.55, 0.42];
+const SMALLER_SHRUB = [1, 0.75, 0.55];
+
+/** The tree grown to the first of these sizes that fits (and kept), the tree as it is when it is not drawn as a tree, or null. */
+function grow(spacing: TreeSpacing, item: DecorItem, sizes: number[]): DecorItem | null {
+    for (const f of sizes) {
+        const grown = f === 1 ? item : {...item, scale: item.scale * f};
+        const body = treeBody(grown);
+        // Not a tree as drawn (an asset tree left off a bare rock face): nothing to keep apart.
+        if (!body) return grown;
+        if (spacing.fits(body)) {
+            spacing.add(body);
+            return grown;
+        }
+    }
+    return null;
+}
+
+/** A shrub, smaller where it would stand in a trunk; with `aside`, the smallest steps a metre or so out of the way. */
+function shrubAt(spacing: TreeSpacing, under: DecorItem, aside: boolean): DecorItem | null {
+    for (const f of SMALLER_SHRUB) {
+        const grown = f === 1 ? under : {...under, scale: under.scale * f};
+        const body = treeBody(grown)!;
+        if (spacing.fits(body)) {
+            spacing.add(body);
+            return grown;
+        }
+    }
+    if (!aside) return null;
+    const small = {...under, scale: under.scale * SMALLER_SHRUB[SMALLER_SHRUB.length - 1]};
+    // Away from the trunk it stands in; or, on a rock or a mound, a metre or two out from where it was.
+    const first = spacing.clashes(treeBody(small)!)[0]?.other;
+    const away = first ? Math.atan2(small.z - first.z, small.x - first.x) : 0;
+    const steps: Array<{x: number; z: number}> = [];
+    for (const reach of first ? [Math.max(first.trunk + 0.75 * 0.65 * small.scale + 0.15, 0.6)] : [1, 2]) {
+        for (const turn of [0, 1, -1, 2, -2, 3]) {
+            const angle = away + turn * (Math.PI / 3);
+            steps.push(first ? {x: first.x + Math.cos(angle) * reach, z: first.z + Math.sin(angle) * reach} : {x: small.x + Math.cos(angle) * reach, z: small.z + Math.sin(angle) * reach});
+        }
+    }
+    for (const {x, z} of steps) {
+        const ground = sampleGround(x, z);
+        if (ground.height < 0.3 || ground.land < 0.45 || riverDistance(x, z) < 3 || Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1) continue;
+        const moved = {...small, x, y: ground.height, z};
+        const body = treeBody(moved)!;
+        if (spacing.fits(body)) {
+            spacing.add(body);
+            return moved;
+        }
+    }
+    return null;
+}
+
+type Pending = {item: DecorItem; /** What it becomes when no tree fits (null: left out). */ shrub: (() => DecorItem) | null};
+
+/** Every pending tree and shrub settled in the order above: the item each becomes, or null when nothing fits. */
+function settle(spacing: TreeSpacing, pending: Pending[], aside: boolean, free: (i: number) => boolean = () => true, take: (i: number) => void = () => {}): Array<DecorItem | null> {
+    const out: Array<DecorItem | null | undefined> = pending.map(() => undefined);
+    for (const sizes of [MATURE, YOUNGER]) {
+        pending.forEach((p, i) => {
+            if (out[i] !== undefined || p.item.kind === "shrub" || !free(i)) return;
+            const grown = grow(spacing, p.item, sizes);
+            if (grown) {
+                out[i] = grown;
+                take(i);
+            }
+        });
+    }
+    pending.forEach((p, i) => {
+        if (out[i] !== undefined) return;
+        const under = p.item.kind === "shrub" ? p.item : p.shrub ? p.shrub() : null;
+        out[i] = under && free(i) ? shrubAt(spacing, under, aside) : null;
+        if (out[i]) take(i);
+    });
+    return out as Array<DecorItem | null>;
+}
+
+/** A decor rock as drawn (`rock-assets.ts`), for the trees to keep their trunks out of. */
+function addRockTo(spacing: TreeSpacing, item: DecorItem) {
+    const placed = rockAssetFor(item);
+    if (placed) spacing.addRock(rockBox(placed));
+}
+
+/** The termite mounds (`mounds.ts`), as square-ish rocks of their foot: no trunk grows out of one. */
+function addMoundsTo(spacing: TreeSpacing) {
+    for (const mound of allMounds()) {
+        const r = moundFoot(mound);
+        spacing.addRock({x: mound.x, z: mound.z, cos: 1, sin: 0, hx0: -r, hx1: r, hz0: -r, hz1: r});
+    }
+}
+
+/** The decor kinds that are trees or shrubs as drawn (kept apart by `settle`). */
+const SPACED = new Set<DecorKind>(["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "shrub", "cactus"]);
+
+/**
  * Runtime prebuild hook (runtime/prebuild.ts): the same seeded lists, computed in a worker before the mount, handed
  * in so the mount does not compute them on the main thread. Identical output (deep-equal tests in ark-prebuild.test.ts).
  */
@@ -158,6 +267,13 @@ export function worldDecor(): DecorItem[] {
     const random = seeded(20261110);
     const items: DecorItem[] = [];
     const push = (item: DecorItem) => items.push(item);
+    // The micro corners' trees (where the small animals live) stand first: the scatter gives way to them.
+    const spacing = new TreeSpacing();
+    for (const item of microDecor()) {
+        const body = treeBody(item);
+        if (body) spacing.add(body);
+    }
+    const pending: Array<Pending & {index: number}> = [];
     const area = (TERRAIN_HALF * 2) ** 2;
     const tries = Math.round(area / 100 * MAX_DENSITY);
     for (let i = 0; i < tries; i++) {
@@ -197,7 +313,12 @@ export function worldDecor(): DecorItem[] {
         // after every skip test above and with no extra draw, so no decor index moves; the shrub keeps its spot.
         const open = WOODS_TREES.has(kind) && variantRoll * 3 - variant > woodsCover(x, z, sample, zone);
         const grown: DecorKind = open ? "shrub" : kind;
-        push({kind: grown, variant, x, y: sample.height, z, scale: open ? 0.75 + 0.55 * sizeRoll : scale, rotation, color: tone(zone, grown, toneRoll)});
+        const item: DecorItem = {kind: grown, variant, x, y: sample.height, z, scale: open ? 0.75 + 0.55 * sizeRoll : scale, rotation, color: tone(zone, grown, toneRoll)};
+        if (SPACED.has(grown)) {
+            // Settled once the whole scatter is in (mature trees first): its slot is kept.
+            pending.push({index: items.length, item, shrub: () => ({...item, kind: "shrub", scale: 0.75 + 0.55 * sizeRoll, color: tone(zone, "shrub", toneRoll)})});
+        }
+        push(item);
         // Rocks come in clusters: a big one and a few smaller about it.
         if (kind === "rock") {
             const extra = 1 + Math.floor(random() * 3);
@@ -211,6 +332,14 @@ export function worldDecor(): DecorItem[] {
             }
         }
     }
+
+    // The scatter's rocks as drawn, and the termite mounds: no trunk stands in one (scenery lane, the props check).
+    for (const item of items) if (item.kind === "rock") addRockTo(spacing, item);
+    addMoundsTo(spacing);
+    // The scatter's trees and shrubs, settled (mature trees, then younger ones, then the shrubs). One that nothing fits
+    // keeps its slot as an empty mark, dropped at the end, so the indices up to there hold.
+    const settled = settle(spacing, pending, true);
+    pending.forEach((p, i) => (items[p.index] = settled[i] ?? {...p.item, kind: "leaf", scale: 0}));
 
     // Rocks along the cliffs and the shore, half in the water: the waves break round them.
     for (let i = 0; i < 260; i++) {
@@ -282,7 +411,10 @@ export function worldDecor(): DecorItem[] {
             const x = farm.x + ORCHARD.x + u * Math.cos(ORCHARD.turn) - v * Math.sin(ORCHARD.turn);
             const z = farm.z + ORCHARD.z + u * Math.sin(ORCHARD.turn) + v * Math.cos(ORCHARD.turn);
             if (!onFarm(x, z) || laneDistance(x, z) < LANE_WIDTH / 2 + 1.5) continue;
-            push({kind: "orchard", variant: (row + col) % 3, x, y: sampleGround(x, z).height, z, scale: 0.85 + random() * 0.25, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#5f8a3a" : "#6b9440"});
+            const tree: DecorItem = {kind: "orchard", variant: (row + col) % 3, x, y: sampleGround(x, z).height, z, scale: 0.85 + random() * 0.25, rotation: random() * Math.PI * 2, color: random() < 0.5 ? "#5f8a3a" : "#6b9440"};
+            // An orchard's trees are pruned to their rows: smaller where two would grow into each other, never a shrub.
+            const [kept] = settle(spacing, [{item: tree, shrub: null}], false);
+            if (kept) push(kept);
         }
     }
     for (let i = 0; i < 60; i++) {
@@ -313,7 +445,7 @@ export function worldDecor(): DecorItem[] {
         const inCottage = Math.abs(item.x - COTTAGE.x) < COTTAGE.width / 2 + 1.4 && item.z - COTTAGE.z < COTTAGE.depth / 2 + COTTAGE.porch.depth + 1.6 && COTTAGE.z - item.z < COTTAGE.depth / 2 + 1.4;
         return !inCottage && Math.hypot(item.x - GARDEN_POND.x, item.z - GARDEN_POND.z) > GARDEN_POND.radius + 0.8;
     };
-    const kept = items.filter(clear);
+    const kept = items.filter((item) => item.scale > 0 && clear(item));
     for (const item of microDecor()) kept.push({kind: item.kind, variant: item.variant, x: item.x, y: item.y, z: item.z, scale: item.scale, rotation: item.rotation, color: item.color});
 
     cached = kept;
@@ -431,6 +563,13 @@ export class DecorObstacles {
  */
 export type FillItem = DecorItem & {rank: number};
 
+/**
+ * How many more trees the fill offers than it used to (scenery lane): with trees kept apart (`tree-spacing.ts`), most
+ * of the old offers grew into a neighbour and are left out, so the clumps are offered more, and fill up to crowns that
+ * touch without growing into each other; the glades stay open (woodsCover still decides them).
+ */
+const FILL_OFFERED = 2.5;
+
 let fillCache: FillItem[] | null = null;
 
 export function forestFill(): FillItem[] {
@@ -439,6 +578,7 @@ export function forestFill(): FillItem[] {
     const items: FillItem[] = [];
     // A coarse grid keeps trunks at least ~2.4 m apart.
     const taken = new Set<string>();
+    const candidates: Array<{key: string; item: FillItem}> = [];
     const cell = 2.4;
     // Graphics batch 6 (owner: "the trees are too dense"): about half the forest fill it had, so the woods read as
     // leafy but broken up from the island view, trunks and understorey show between the crowns, and the animals in
@@ -453,6 +593,15 @@ export function forestFill(): FillItem[] {
         farm_garden: {density: 0.012, pick: (r) => (r < 0.6 ? "broadleaf" : "shrub")}
     };
     const densest = Math.max(...Object.values(kinds).map((growth) => growth!.density));
+    // Kept apart from the decor's trees and from each other (scenery lane): a fill tree that would grow into another is
+    // grown smaller, or left out; a left-out one does not take its cell, so the next try there may stand.
+    const spacing = new TreeSpacing();
+    for (const item of worldDecor()) {
+        const body = treeBody(item);
+        if (body) spacing.add(body);
+        if (item.kind === "rock") addRockTo(spacing, item);
+    }
+    addMoundsTo(spacing);
     const tries = 220000;
     for (let i = 0; i < tries; i++) {
         const x = (random() * 2 - 1) * TERRAIN_HALF;
@@ -467,14 +616,14 @@ export function forestFill(): FillItem[] {
         // Clumps and glades: dense where the noise is high, open where it is low. Tested first against the densest
         // zone's density (it needs no ground sample), so most tries skip sampleGround: the same trees, 2.3× faster.
         const clump = smoothstep(0.38, 0.72, fbm(x * 0.045 + 13, z * 0.045 - 21));
-        if (roll > densest * clump * 6) continue;
+        if (roll > densest * clump * 6 * FILL_OFFERED) continue;
         const sample = sampleGround(x, z);
         if (sample.height < 0.5 || sample.land < 0.7 || sample.cliff > 0.35) continue;
         const zone = zoneAt(sample);
         const growth = kinds[zone];
         if (!growth) continue;
         // The woods only (batch 6): none in the glades, fewer towards the ragged edge.
-        if (roll > growth.density * clump * 6 * woodsCover(x, z, sample, zone)) continue;
+        if (roll > growth.density * clump * 6 * FILL_OFFERED * woodsCover(x, z, sample, zone)) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
         if (kind === "conifer" && sample.height > 22) continue;
@@ -486,11 +635,13 @@ export function forestFill(): FillItem[] {
         if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
         if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
-        if (taken.has(key)) continue;
-        taken.add(key);
         const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
-        items.push({kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank});
+        candidates.push({key, item: {kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank}});
     }
+    // Settled as the decor's are (mature trees first, then younger ones, then shrubs), one to a grid cell. A fill tree
+    // that cannot stand as a tree is left out (the decor's own shrubs are the understorey).
+    const settled = settle(spacing, candidates.map(({item}) => ({item, shrub: null})), false, (i) => !taken.has(candidates[i].key), (i) => taken.add(candidates[i].key));
+    settled.forEach((item) => item && items.push(item as FillItem));
     items.sort((a, b) => a.rank - b.rank);
     fillCache = items;
     return items;

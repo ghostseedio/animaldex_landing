@@ -11,13 +11,15 @@
  * and a pale salt line above it.
  */
 
-import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Mesh} from "three";
+import type {RockMesh} from "@/ark-scene/rock-shapes";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
-import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {generatedRockFile, rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {cachedRock} from "@/ark-scene/rock-shapes";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 
@@ -25,17 +27,31 @@ const LEVELS = ["lod0", "lod1", "lod2"] as const;
 type Level = typeof LEVELS[number];
 type Instance = {x: number; y: number; z: number; matrix: Matrix4; tint: Color};
 
-function rockMaterial(): MeshStandardMaterial {
+/** Rock above this height (m) carries a dusting of snow on its upward faces, full by `ROCK_DUST_FULL` (the high crags). */
+export const ROCK_DUST_FROM = 20;
+export const ROCK_DUST_FULL = 27;
+
+/**
+ * The rocks' material, shared by the asset rocks and the island's own rocks (`rock-shapes.ts`): one material for every
+ * rock, so a crag high in the snow and a boulder by the sea draw in the same batches. High up, snow lies on the upward
+ * faces by height (`ROCK_DUST_FROM`), in drifts that follow the rock's own grain.
+ */
+export function rockMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.9, metalness: 0});
     const uniforms = {groundAlbedo: ARK_GROUND_TEXTURES.albedo, groundReady: ARK_GROUND_TEXTURES.ready, envSeaLevel: ARK_ENV.seaLevel, envWetness: ARK_ENV.wetness};
-    material.customProgramCacheKey = () => "ark-asset-rock-1";
+    material.customProgramCacheKey = () => "ark-asset-rock-2";
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", "#include <common>\nvarying vec3 vRockW;\nvarying vec3 vRockN;")
             .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
+#ifdef USE_INSTANCING
 vRockW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
-vRockN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);`);
+vRockN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);
+#else
+vRockW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+vRockN = normalize(mat3(modelMatrix) * objectNormal);
+#endif`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying vec3 vRockW;
@@ -72,12 +88,27 @@ float rockWet = 0.0;`)
     c = mix(c, c * 1.3 + 0.03, smoothstep(0.55, 0.62, h) * (1.0 - smoothstep(0.62, 0.8, h)) * 0.55);
     rockWet = max(wet, envWetness * 0.7);
     c *= mix(1.0, 0.72, envWetness * (1.0 - wet));
+    // High up, snow lying on the ledges and tops, in drifts that follow the rock's own grain.
+    // Only the flatter tops and ledges hold it, in patches; the faces stay rock (a dusted crag, not a white one).
+    float snowy = smoothstep(${ROCK_DUST_FROM.toFixed(1)}, ${ROCK_DUST_FULL.toFixed(1)}, w.y) * smoothstep(0.68, 0.92, n.y) * smoothstep(0.42, 0.62, arkFbm(w.xz * 1.7 + w.y * 0.6));
+    c = mix(c, vec3(0.86, 0.88, 0.9), clamp(snowy * 0.9, 0.0, 0.9));
     diffuseColor.rgb = c;
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 roughnessFactor = mix(roughnessFactor, 0.28, rockWet);`);
     };
     return material;
+}
+
+/** A rock made in code (`rock-shapes.ts`) as three.js geometry: position, normal, colour. */
+export function rockGeometry(mesh: RockMesh): BufferGeometry {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(mesh.positions, 3));
+    geometry.setAttribute("normal", new BufferAttribute(mesh.normals, 3));
+    geometry.setAttribute("color", new BufferAttribute(mesh.colors, 3));
+    geometry.setIndex(new BufferAttribute(mesh.index, 1));
+    geometry.computeBoundingSphere();
+    return geometry;
 }
 
 type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};
@@ -128,11 +159,18 @@ export class AssetInstances {
             for (const lod of entry.info.lods) {
                 const level = lod.level as Level;
                 if (!LEVELS.includes(level)) continue;
-                jobs.push(loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
-                    let geometry: BufferGeometry | null = null;
-                    gltf.scene.traverse((object) => {
-                        if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
-                    });
+                // A rock made here (rock-assets.ts "gen:…"): its mesh is built, not loaded.
+                const made = generatedRockFile(lod.file);
+                const source: Promise<BufferGeometry | null> = made
+                    ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail)))
+                    : loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
+                          let found: BufferGeometry | null = null;
+                          gltf.scene.traverse((object) => {
+                              if (!found && (object as Mesh).isMesh) found = (object as Mesh).geometry as BufferGeometry;
+                          });
+                          return found;
+                      });
+                jobs.push(source.then((geometry) => {
                     if (!geometry) return;
                     const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
                     mesh.count = 0;

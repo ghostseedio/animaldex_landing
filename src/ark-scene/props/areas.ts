@@ -11,9 +11,11 @@
  * - Farm: a hay shelter with stacked bales and loose hay, the loft door
  *   open on the barn, a paddock with post-and-rail fences, troughs with
  *   water in them, and mud round them and the gate (glossier when wet).
- * - Mountain: outcrops in strata on the steep ground, scree fanned below
- *   them, snow drifts in the lee (more with the snow), icicles in the cold
- *   area; frost whitens their tops at a cold dawn (`kit.ts` materials).
+ * - Mountain: crags of bedded rock in bands along the steep ground, scree
+ *   fanned below them and boulders on the lower slopes (`rock-layout.ts`,
+ *   made in code by `rock-shapes.ts`: the scenery lane's, replacing the
+ *   stacked-box strata), snow drifts in the lee (more with the snow), icicles
+ *   in the cold area.
  * - Grassland: tussocks of three grasses at mixed heights, wildflower
  *   drifts, and old termite mounds (shared scenery: more when termites are
  *   aboard, `homes.ts`). Dust is `effects.ts`.
@@ -22,7 +24,7 @@
  * capped by tier (`kit.ts`).
  */
 
-import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
+import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, Matrix4, MeshStandardMaterial, Quaternion, SphereGeometry, Vector3} from "three";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
@@ -35,6 +37,10 @@ import * as shapes from "@/ark-scene/props/shapes";
 import {barnBase, buildHamletBuildings, type HamletBuildings} from "@/ark-scene/props/hamlet-buildings";
 import {barnStyle, bedsOrigin, chimneyTop, COMPOST, cottageStyle, coopSpot, GARDEN_BEDS, troughSpots, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockFence, paddockRect, PICKET_POST_TOP, picketPostsFor, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {inRock} from "@/ark-scene/map/rocks";
+import {activeTermiteMounds, moundFoot, savannaMounds} from "@/ark-scene/mounds";
+import {rockGeometry, rockMaterial} from "@/ark-scene/asset-rocks";
+import {mountainRocks, SOLID_ACROSS, type RockPiece} from "@/ark-scene/rock-layout";
+import {cachedRock, ROCK_DETAIL} from "@/ark-scene/rock-shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -347,10 +353,11 @@ function farm(plot: HomePlot): {near: BufferGeometry; far: BufferGeometry; centr
         const ga = groundAt(pa.x, pa.z);
         const gb = groundAt(pb.x, pb.z);
         const lean = random() * 0.1;
-        if (segment.post) parts.push(wood(place(new BoxGeometry(0.12, 1.15, 0.12), pa.x, ga + PADDOCK_POST_TOP - 0.575, pa.z, turn + lean), "#7a5f43"));
+        // Posts 1.3 m out of the ground (decision 34), set 8 cm into it; three rails, the top one just under the post's top.
+        if (segment.post) parts.push(wood(place(new BoxGeometry(0.13, PADDOCK_POST_TOP + 0.08, 0.13), pa.x, ga + (PADDOCK_POST_TOP - 0.08) / 2, pa.z, turn + lean), "#7a5f43"));
         if (!segment.rails) continue;
-        for (const y of [0.45, 0.9]) parts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + y, 0.09, 0.05, "#8a6b4a"));
-        farParts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + 0.6, 0.6, 0.06, "#8a6b4a"));
+        for (const y of [0.42, 0.8, 1.18]) parts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + y, 0.1, 0.05, "#8a6b4a"));
+        farParts.push(boxAlong(pa.x, pa.z, pb.x, pb.z, (ga + gb) / 2 + 0.8, 0.85, 0.06, "#8a6b4a"));
     }
 
     // Troughs (one in the paddock, one by the barn door), mud round them and the gate, puddles after rain.
@@ -393,65 +400,43 @@ function barnMark(): Record<string, {x: number; y: number; z: number}> {
 
 // MARK: - Mountain and the ice
 
-/** Outcrops stand below this (m), and below the drawn snow (snow.ts: none sure at a third's snow cover); above `OUTCROP_DUST` their tops are dusted. */
-export const OUTCROP_CEILING = 23;
-export const OUTCROP_DUST = 20;
-/** Their slopes: steep enough for rock to show, not so steep a slab hangs out over the drop (rise over run under about 1.2). */
-export const OUTCROP_SLOPE = {min: 0.18, maxNormalY: 0.64};
+/** The mountain's rocks by area (`ROCK_CLUSTER` m squares): each area one merged piece, near and far. */
+const ROCK_CLUSTER = 60;
 
-function* mountain(): Generator<void, {outcrops: PropInstance[]; dusted: PropInstance[]; scree: PropInstance[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]}, void> {
-    const random = propRandom("mountain");
-    const outcrops: PropInstance[] = [];
-    const dusted: PropInstance[] = [];
-    const scree: PropInstance[] = [];
-    const cave = caveSite();
-    // The ground's cliff ledges (not the rock tops'): the way out of the cliff is the ledge's `forward`.
-    const ledges = propsPoints("ledge").filter((point) => point.host === "ground" && (point.zone === "mountains" || point.zone === "polar")).map((point) => ({...point, normal: point.forward ?? point.normal}));
-    for (let k = 0; k < ledges.length; k++) {
-        const ledge = ledges[k];
-        if (k % 8 === 0) yield;
-        const size = 1.6 + random() * 2.2;
-        const shade = 0.94 + random() * 0.12;
-        // Its back into the slope: a little uphill of the ledge point.
-        const x = ledge.x - ledge.normal.x * size * 0.3;
-        const z = ledge.z - ledge.normal.z * size * 0.3;
-        const surface = surfaceAt(x, z);
-        const slope = 1 - surface.normal.y;
-        // Only below the snow (none of it sure there at a third's cover: snow.ts) and on slopes where a slab can sit,
-        // never on the ice: a bed of rock showing through the grass and scree of the lower mountain.
-        const sureSnow = snowCover(surface.height, slope, 0, 0.35).sure;
-        const fits = ledge.zone === "mountains" && surface.height < OUTCROP_CEILING && sureSnow < 0.02 && surface.normal.y >= OUTCROP_SLOPE.maxNormalY && slope >= OUTCROP_SLOPE.min && surface.waterDepth === 0;
-        if (fits) {
-            // Sunk to about 60% of its height (0.88 × size drawn), tilted most of the way to the slope, so no front
-            // hangs out over the drop; a tint close to the terrain's rock (the tones are strataOutcrop's).
-            const up = new Vector3(surface.normal.x * 0.75, 1 - 0.75 + surface.normal.y * 0.75, surface.normal.z * 0.75).normalize();
-            const instance: PropInstance = {x, y: surface.height - size * 0.88 * 0.6, z, turn: ledge.yaw, scale: size / 2.5, up, tint: new Color(shade, shade, shade)};
-            // Dusted only high up where the terrain has patchy snow round it (snow.ts mean at a third's cover).
-            (surface.height > OUTCROP_DUST && snowCover(surface.height, slope, 0, 0.35).mean > 0.1 ? dusted : outcrops).push(instance);
-        }
-        // A fan of scree below it, downhill.
-        for (let s = 0; s < 46; s++) {
-            const d = size * 0.5 + random() * random() * size * 3.5;
-            const spread = (random() - 0.5) * (0.4 + d * 0.35);
-            const px = ledge.x + ledge.normal.x * d + ledge.normal.z * spread;
-            const pz = ledge.z + ledge.normal.z * d - ledge.normal.x * spread;
-            const ground = sampleGround(px, pz);
-            if (ground.height < 0.5 || ground.land < 0.9) continue;
-            // Scree lies where the slope eases to its resting angle, not on the cliff itself, and not on the snow.
-            const at = surfaceAt(px, pz);
-            const normal = at.normal;
-            const stoneScale = 0.3 + random() * random() * 1.8;
-            const stoneTone = 0.46 + random() * 0.14;
-            if (normal.y < 0.72 || at.height > OUTCROP_CEILING || snowCover(at.height, 1 - normal.y, 0, 0.35).sure > 0.02) continue;
-            scree.push({x: px, y: ground.height - 0.03, z: pz, turn: random() * 6, scale: stoneScale, tint: new Color().setHSL(0.1, 0.07, stoneTone)});
-        }
+/** A cluster's rocks merged into one geometry: each at its own place, tilt and turn, its shade in its colours. */
+function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
+    const parts: BufferGeometry[] = [];
+    const matrix = new Matrix4();
+    const quaternion = new Quaternion();
+    const yawTurn = new Quaternion();
+    const up = new Vector3(0, 1, 0);
+    for (const piece of pieces) {
+        // Far: only what an animal would walk round (small scree is not seen from there).
+        if (level === 2 && piece.across < SOLID_ACROSS) continue;
+        // A copy: the cached shape's own arrays stay as they are (every piece of the shape shares them).
+        const geometry = rockGeometry(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][level])).clone();
+        quaternion.setFromUnitVectors(up, new Vector3(...piece.up)).multiply(yawTurn.setFromAxisAngle(up, piece.yaw));
+        geometry.applyMatrix4(matrix.compose(new Vector3(piece.x, piece.y, piece.z), quaternion, new Vector3(piece.scale, piece.scale, piece.scale)));
+        const colours = geometry.getAttribute("color");
+        for (let i = 0; i < colours.count; i++) colours.setXYZ(i, colours.getX(i) * piece.shade, colours.getY(i) * piece.shade, colours.getZ(i) * piece.shade);
+        parts.push(geometry);
     }
+    return parts.length ? merge(parts) : null;
+}
+
+function* mountain(): Generator<void, {rocks: RockPiece[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]}, void> {
+    const random = propRandom("mountain");
+    const cave = caveSite();
+    const {crags, boulders, scree} = mountainRocks();
+    const rocks = [...crags, ...boulders, ...scree];
     yield;
     // Snow drifts: in the lee of rocks and outcrops high on the mountain (shown with the snow), always on the ice.
     const drifts: PropInstance[] = [];
     const polarDrifts: PropInstance[] = [];
     const lee = 0.6 + Math.PI; // The prevailing wind blows toward +x/+z; drifts build on the far side.
-    for (const item of worldDecor()) {
+    // The decor's rocks, and the crags (as rocks of their size).
+    const leeOf = [...worldDecor(), ...crags.map((crag) => ({kind: "rock", x: crag.x, y: crag.y, z: crag.z, scale: crag.scale * 1.4}))];
+    for (const item of leeOf) {
         if (item.kind !== "rock" || item.y < 1) continue;
         const ground = sampleGround(item.x, item.z);
         const zone = zoneAt(ground);
@@ -485,7 +470,14 @@ function* mountain(): Generator<void, {outcrops: PropInstance[]; dusted: PropIns
         if (face.normal.y > 0.5) continue;
         for (let k = 0; k < 4; k++) icicles.push({x: face.x + (random() - 0.5) * 0.4, y: face.y + 0.1, z: face.z + (random() - 0.5) * 0.4, turn: 0, scale: 0.5 + random() * 0.9});
     }
-    return {outcrops, dusted, scree, drifts, polarDrifts, icicles};
+    return {rocks, drifts, polarDrifts, icicles};
+}
+
+/** Where the golden props shot looks (`golden-props.ts` "outcrop"): the highest crag below 30 m, with its scree below. */
+function outcropMark(rocks: RockPiece[]): {x: number; y: number; z: number} {
+    const crags = rocks.filter((rock) => rock.role === "crag");
+    const best = crags.reduce((top, crag) => (crag.y > top.y && crag.y < 30 ? crag : top), crags[0]);
+    return {x: best.x, y: best.y, z: best.z};
 }
 
 // MARK: - Grassland
@@ -524,15 +516,24 @@ function* grassland(): Generator<void, {tussocks: PropInstance[][]; flowers: Pro
         }
     }
     // Old mounds on the savanna (shared scenery, map plan: they stay when no termites are aboard).
-    const mounds: PropInstance[] = [];
-    for (const [dx, dz, s] of [[-site.clearing - 6, 8, 1.2], [site.clearing + 8, -5, 0.9], [4, -site.clearing - 9, 1.05]] as const) {
-        const x = site.x + dx;
-        const z = site.z + dz;
-        mounds.push({x, y: groundAt(x, z) - 0.05, z, turn: dx, scale: s});
-    }
+    const mounds = savannaMounds();
     // Not on the hamlet's reserved plots (props/hamlet-land.ts): no tussock under a house or a barn, no wildflowers on
     // a plot; filtered after the draws, so every other one stays where it was.
     return {tussocks: tussocks.map((list) => list.filter((item) => hamletLandAt(item.x, item.z) !== "core")), flowers: flowers.filter((item) => !hamletLandAt(item.x, item.z)), mounds};
+}
+
+/** A termite mound as an obstacle: its middle, the radius of its foot, its top (world), and whether it is always there. */
+export type MoundFootprint = {x: number; z: number; radius: number; top: number; /** False: drawn only while termites are aboard (`homes.ts`). */ always: boolean};
+
+/**
+ * Every termite mound's footprint (scenery lane, for the collisions lane; read only, nothing laid out differently): the
+ * savanna's three old mounds (`shapes.termiteMound(2.4)`) and the active ones `homes.ts` raises while termites are
+ * aboard (`shapes.termiteMound(2.2)`). The foot is the mound's lumpy base, 0.55 of its height across each way.
+ */
+export function termiteMoundFootprints(): MoundFootprint[] {
+    const out: MoundFootprint[] = savannaMounds().map((m) => ({x: m.x, z: m.z, radius: moundFoot(m), top: m.y + m.h * m.scale, always: true}));
+    for (const m of activeTermiteMounds()) out.push({x: m.x, z: m.z, radius: moundFoot(m), top: m.y + m.h * m.scale, always: false});
+    return out;
 }
 
 /** All the areas at once (the tests): `buildAreasSteps` run to its end. */
@@ -546,10 +547,6 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
     group.name = "props:areas";
     const warm = propMaterial();
     const cold = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5});
-    // The outcrops below the snow keep the ground's look whatever the weather's snow (the terrain draws no snow there):
-    // no lying snow on them; those above OUTCROP_DUST a light dusting, as the terrain's patchy snow round them.
-    const bareRock = propMaterial({flatShading: true, texture: 5, textureScale: 0.5});
-    const dustedRock = propMaterial({cold: true, flatShading: true, texture: 5, textureScale: 0.5, dust: 0.25});
     const snow = propMaterial({roughness: 0.75, texture: 7, textureScale: 0.35, textureStrength: 0.6});
     const foliage = propMaterial({doubleSide: true});
     const water = new MeshStandardMaterial({color: new Color("#4d5f66"), roughness: 0.04, metalness: 0.85, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -2});
@@ -611,11 +608,26 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
         mountainStep = mountainSteps.next();
     }
     const m = mountainStep.value;
-    // The outcrops near only: from afar the terrain shader draws the mountain's rock beds itself (a far box here was the
-    // owner's "dark blocks"); those above OUTCROP_DUST with snow on their tops.
-    addBatch(new LodBatch("strata", m.outcrops, shapes.strataOutcrop(2.5, 2.2), null, bareRock, {cap: 40, reach: 2.2, shadow: true}));
-    addBatch(new LodBatch("strata-dusted", m.dusted, shapes.strataOutcrop(2.5, 2.2), null, dustedRock, {cap: 20, reach: 2.2, shadow: true}));
-    addBatch(new LodBatch("scree", m.scree, shapes.screeStone(0.22), null, cold, {cap: 2600, reach: 0.9}));
+    // The mountain's rocks (scenery lane): merged by area, so the whole mountain is a few draw calls whatever its
+    // variety (every crag its own shape); the full rocks near, their coarsest meshes far (no small scree). One area a step.
+    const bareRock = rockMaterial();
+    const areasOf = new Map<string, RockPiece[]>();
+    for (const rock of m.rocks) {
+        const key = `${Math.floor(rock.x / ROCK_CLUSTER)},${Math.floor(rock.z / ROCK_CLUSTER)}`;
+        const list = areasOf.get(key) ?? [];
+        list.push(rock);
+        areasOf.set(key, list);
+    }
+    for (const [key, rocks] of Array.from(areasOf)) {
+        yield;
+        const near = mergedRocks(rocks, 0);
+        if (!near) continue;
+        const centre = rocks.reduce((sum, rock) => sum.add(new Vector3(rock.x, rock.y, rock.z)), new Vector3()).multiplyScalar(1 / rocks.length);
+        // Seen near from as far as a crag is a few pixels' detail; far to the island view, only where a crag stands (a
+        // boulder field far off is a few pixels: like the old scree, it is drawn near only).
+        const far = rocks.some((rock) => rock.role === "crag") ? mergedRocks(rocks, 2) : null;
+        addPiece(new LodPiece(`rocks:${key}`, centre, near, far, bareRock, {near: 64, far: 320, shadow: true}));
+    }
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
     addBatch(new LodBatch("polar-drifts", m.polarDrifts, shapes.snowDrift(2.4, 2), null, snow, {cap: 60, reach: 1.6}));
     const icicles = addBatch(new LodBatch("icicles", m.icicles, shapes.icicle(0.45), null, new MeshStandardMaterial({vertexColors: true, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.85}), {cap: 120, reach: 0.6, fine: true}));
@@ -643,7 +655,7 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
         buildings,
         chimney: firstGarden?.chimney ?? new Vector3(0, -100, 0),
         farm: firstFarm?.centre ?? new Vector3(0, -100, 0),
-        marks: {...(firstGarden ? {chimney: firstGarden.chimney} : {}), ...(firstFarm ? {farm: firstFarm.centre, coop: new Vector3(firstFarm.coop.x, firstFarm.coop.y, firstFarm.coop.z)} : {}), ...barnMark(), ...(m.outcrops.length ? {outcrop: m.outcrops.reduce((best, o) => (o.y > best.y && o.y < 30 ? o : best), m.outcrops[0])} : {})},
+        marks: {...(firstGarden ? {chimney: firstGarden.chimney} : {}), ...(firstFarm ? {farm: firstFarm.centre, coop: new Vector3(firstFarm.coop.x, firstFarm.coop.y, firstFarm.coop.z)} : {}), ...barnMark(), ...(m.rocks.some((rock) => rock.role === "crag") ? {outcrop: outcropMark(m.rocks)} : {})},
         setWeather: (w) => {
             puddleMaterial.opacity = Math.min(w.puddles * 1.2, 0.92);
             const key = `${w.puddles > 0.05}|${w.snowCover > 0.35}|${w.cold > 0.55}`;
@@ -658,7 +670,7 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
             for (const batch of batches) batch.dispose();
             for (const piece of pieces) piece.dispose();
             buildings.dispose();
-            for (const material of [warm, cold, bareRock, dustedRock, snow, foliage, water, puddleMaterial, mudMaterial]) material.dispose();
+            for (const material of [warm, cold, bareRock, snow, foliage, water, puddleMaterial, mudMaterial]) material.dispose();
             void GARDEN_POND;
         }
     };

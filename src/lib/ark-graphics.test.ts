@@ -4,6 +4,7 @@ import {goldenClearance, goldenEye, goldenView, type GoldenPlace, type GoldenWor
 import {goldenObstacles} from "@/ark-scene/golden-world";
 import {nearFadeEnd, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {orient} from "@/ark-scene/rock-shapes";
 import {attachPoints, surfaceAt} from "@/ark-scene/sampler";
 import {FRESH_LEVEL, waterLevelAt} from "@/ark-scene/water-level";
 import {CROPS, cropAt, cropsGrowAt, fieldAt, fieldCentre, fieldHash, fieldKeepOuts, HEADLAND, snapToRow} from "@/ark-scene/fields";
@@ -106,13 +107,16 @@ test("graphics: every decor rock is drawn as an asset rock in its place, and its
         assert.equal(placed!.z, item.z);
         const b = rockAssetInfo(placed!.id).bounds;
         const reach = Math.hypot(b.max[0] - b.min[0], b.max[2] - b.min[2]) * placed!.scale / 2 + 0.05;
+        // Its height range as drawn: the bounds' corners leaned with its slope and turned (scenery lane: rocks lean).
+        const rotate = orient(placed!.up ?? [0, 1, 0], placed!.yaw);
+        const heights = [b.min[0], b.max[0]].flatMap((x) => [b.min[1], b.max[1]].flatMap((y) => [b.min[2], b.max[2]].map((z) => rotate(x * placed!.scale, y * placed!.scale, z * placed!.scale)[1])));
         // The same four ids per rock as before (other lanes attach by id).
         const mine = points.filter((point) => point.id.startsWith(`rock_face:decor${i}:`));
         assert.equal(mine.length, 4, `rock ${i} keeps 4 rock faces`);
         for (const point of mine) {
             const d = {x: point.position.x - placed!.x, y: point.position.y - placed!.y, z: point.position.z - placed!.z};
             assert.ok(Math.hypot(d.x, d.z) <= reach, "on the rock, not beside it");
-            assert.ok(d.y >= b.min[1] * placed!.scale - 0.05 && d.y <= b.max[1] * placed!.scale + 0.05, "within the rock's height");
+            assert.ok(d.y >= Math.min(...heights) - 0.05 && d.y <= Math.max(...heights) + 0.05, "within the rock's height");
             assert.ok(point.position.y >= heightAt(point.position.x, point.position.z) - 0.05 || point.hostKind !== "rock", "not buried in the ground");
         }
     });

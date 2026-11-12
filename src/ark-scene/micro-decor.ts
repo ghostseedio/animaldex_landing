@@ -23,25 +23,29 @@ export const COTTAGE = (() => {
     const farm = ZONE_SITES.farm_garden;
     const x = farm.x + 3;
     const z = farm.z + 17;
+    // A small cottage at its real size (decision 34, scenery lane: it was about 0.8 of one beside true-size animals):
+    // a 6.5 × 5 m footprint, eaves at 2.7 m, the ridge at 5 m. Its door (2 m) and windows were real already.
+    const width = 6.5;
+    const depth = 5;
     return {
         x,
         z,
         /** Faces +z: rotation about y (radians). */
         rotation: 0,
         /** Along x, along z, to the eaves. */
-        width: 5.2,
-        depth: 4,
-        wall: 2.6,
+        width,
+        depth,
+        wall: 2.7,
         /** The ridge above the eaves. */
-        ridge: 1.7,
+        ridge: 2.3,
         /** How far the roof reaches past the walls. */
-        overhang: 0.35,
+        overhang: 0.4,
         /** The floor: a little above the ground's highest corner, so no wall sinks into the slope. */
-        floor: Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]].map(([sx, sz]) => sampleGround(x + sx * 2.7, z + sz * 2.1).height)) + 0.04,
+        floor: Math.max(...[[-1, -1], [1, -1], [-1, 1], [1, 1], [0, 0]].map(([sx, sz]) => sampleGround(x + sx * (width / 2 + 0.1), z + sz * (depth / 2 + 0.1)).height)) + 0.04,
         /** The porch: a deck in front of the door, under its own little roof. */
-        porch: {depth: 1.5, width: 2.6, height: 0.16},
+        porch: {depth: 1.6, width: 2.8, height: 0.16},
         /** The porch light: on the front wall beside the door (local coordinates). */
-        light: {x: 0.95, y: 1.85, z: 2 + 0.12}
+        light: {x: 1.0, y: 1.85, z: depth / 2 + 0.12}
     };
 })();
 
@@ -217,7 +221,10 @@ export function microDecor(): MicroDecorItem[] {
             const z = site.z + Math.sin(angle) * reach;
             if (!onLand(x, z)) continue;
             if (items.some((item) => Math.hypot(item.x - x, item.z - z) < 3.5)) continue;
-            items.push({kind: "canopy", variant: placed % 2, x, y: ground(x, z), z, scale: 1, rotation: (placed * 1.7 + angle) % (Math.PI * 2), color: zone === "rainforest" ? "#3e6a2c" : zone === "grassland" ? "#7d8540" : "#5f8a3a", zone});
+            // Seated (scenery lane): its trunk's foot (0.34 m) all in the ground on a slope, with the decor's 8 cm sink.
+            let foot = ground(x, z);
+            for (let k = 0; k < 8; k++) foot = Math.min(foot, ground(x + Math.cos((k * Math.PI) / 4) * 0.28, z + Math.sin((k * Math.PI) / 4) * 0.28) + 0.06);
+            items.push({kind: "canopy", variant: placed % 2, x, y: foot, z, scale: 1, rotation: (placed * 1.7 + angle) % (Math.PI * 2), color: zone === "rainforest" ? "#3e6a2c" : zone === "grassland" ? "#7d8540" : "#5f8a3a", zone});
             placed++;
         }
     }
