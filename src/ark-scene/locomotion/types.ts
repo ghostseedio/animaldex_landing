@@ -13,6 +13,7 @@
  */
 
 import type {Matrix4} from "three";
+import type {ClipBake} from "@/ark-scene/locomotion/flight";
 
 /** The rig contract's body plans (docs/ark/rig-v2-manifest.md section 4), plus `whale` for chain-rigged cetaceans. */
 export type BodyPlan =
@@ -165,6 +166,10 @@ export type LocoInput = {
     /** A hint from the act (`acts.ts` ActPose.state/speed, L7): its state, and the speed it asks for (m/s). */
     actState?: string | null;
     actSpeed?: number | null;
+    /** On an air leg of the schedule (MA1): its stage (`flight.ts` AirStage: a run, the climb, level, the glide-in, a ski). */
+    airStage?: string | null;
+    /** What the clip now bakes itself (`flight.ts` clipBakeOf: a v7 rig's flight clips), or null (v2: as before). */
+    clipBake?: ClipBake | null;
 };
 
 /** One foot's target this frame (world space), for debug views, metrics and L3's checks. */

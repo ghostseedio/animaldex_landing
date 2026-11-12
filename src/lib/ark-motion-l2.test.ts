@@ -145,13 +145,16 @@ test("L2 metric: the bank angle is the coordinated turn's, tan φ = v ω / g, wi
 
 const inputFor = (spec: FlightSpec, extra: Partial<FlightRigInput>): FlightRigInput => ({spec, has: () => true, clipHz: () => 5, current: null, phase: 0, climb: 0, turn: 0, speed: 8, agl: 20, clock: 50, seed: 0.42, dt: 1 / 60, ...extra});
 
-test("L2: take-off snaps up on its clip, then beats hard; level flight beats at the cruise rate; a flare near the ground", () => {
+test("L2: take-off springs up on its clip, then beats hard; level flight beats at the cruise rate; a flare near the ground", () => {
     const spec = bird("c1.35", 0.58);
     const memory = newFlightMemory();
+    // (MA1, movement audit problem 3: the spring at the clip's own pace, through to the push-off's end (0.55) for a bird
+    // whose wings beat faster than the clip's two beats a second; it was cut at 0.42 played 1.5 times as fast, 0.3 s.)
     const t0 = flightRigFrame(inputFor(spec, {oneShot: "takeoff", phase: 0.1, clock: 10}), memory);
     assert.equal(t0.clip, "takeoff");
-    assert.ok(t0.rate > 1.2);
-    const t1 = flightRigFrame(inputFor(spec, {oneShot: "takeoff", phase: 0.5, clock: 10.4, climb: 0.4}), memory);
+    assert.equal(t0.rate, 1);
+    assert.equal(flightRigFrame(inputFor(spec, {oneShot: "takeoff", phase: 0.5, clock: 10.4}), memory).clip, "takeoff");
+    const t1 = flightRigFrame(inputFor(spec, {oneShot: "takeoff", phase: 0.6, clock: 10.6, climb: 0.4}), memory);
     assert.equal(t1.clip, "flap");
     assert.ok(t1.hz > spec.hz * 1.3 - 1e-9, `hard flaps ${t1.hz} vs cruise ${spec.hz}`);
     const cruise = flightRigFrame(inputFor(spec, {clock: 20, climb: 0}), memory);

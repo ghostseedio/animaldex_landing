@@ -152,7 +152,12 @@ export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
 }
 
-/** Its pace in the air or the water (body lengths a second): the walk clip governs only walking. */
+/**
+ * Its pace in the water (body lengths a second): the walk clip governs only walking. Not a bird's or a bat's flight (MA1,
+ * movement audit problem 1): that runs at L2's cruise for its size, up to it and down from it at half a g
+ * (`behaviour-schedule.ts` airPaces); capped by a walk clip's pace, this flew a coot at 0.4 m/s. A flying insect's range
+ * is still reckoned from it (`reachOf`).
+ */
 export function freeBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);

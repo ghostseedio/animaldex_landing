@@ -41,6 +41,7 @@ import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
+import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sexLook, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -114,12 +115,20 @@ export type Leg = {
     /** Air legs: the share of the leg it climbs over (0.18 if not set) and comes down over (0.22): less to clear a fence. */
     rise?: number;
     fall?: number;
+    /**
+     * Air legs (MA1): its flight's plan: its speed through the leg (up at its acceleration out of the take-off, its
+     * cruise, down at its braking), where along the route it lifts off after a run and touches down before a ski, and
+     * how far it climbs and comes down over (its `rise` and `fall` then count from those, as shares of the route).
+     */
+    plan?: AirPlan;
     /** A pause that is a turn on the spot before setting off (it turns over the whole pause, at TURN_RATE). */
     turn?: boolean;
     /** Ground and water legs: how far along its way it looks to face (m; 1.5 if not set). */
     look?: number;
     /** A follower's leg: its walking pace (m/s), for the walk to its own finish at the slot's end. */
     pace?: number;
+    /** A follower's leg that takes off with its leader (MA1): where it stood from its leader then, eased into its place. */
+    lead0?: {x: number; y: number; z: number};
 };
 
 /** One beat of its time at its destination: from `at` seconds after it arrives, it does `beat` at (x, z) facing yaw (a step walks there). */
@@ -438,12 +447,53 @@ export function swimPaceLength(length: number): number {
     return L <= 2 ? L : 2 * Math.sqrt(L / 2);
 }
 
-/** How far it can go in one slot at its own pace (ground, water; flyers go four times as fast). */
+/** How far it can go in one slot at its own pace (ground, water; a flyer at its cruise). */
 export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
+    // (MA1: a bird or a bat at L2's cruise for its size, `airPaces`: it used to be four times its free pace, which a rig's
+    // walk clip capped. A flying insect keeps that reach: its everyday range stays by its plants, its flights' own pace is
+    // its true one all the same.)
+    if (profile.move === "fly") {
+        const paces = airPaces(profile, animal.length);
+        if (paces.kind !== "insect") return paces.cruise * SLOT_SECONDS * 0.75;
+    }
     const flyer = profile.move === "fly";
     // (On foot at its walk's pace; in the air and the water at its own: the walk clip governs only walking.)
     return (flyer || profile.move === "swim" ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * (profile.move === "swim" ? swimPaceLength(animal.length) : Math.max(animal.length, 0.05)) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
 }
+
+/**
+ * A flyer's air paces at its length (MA1, `locomotion/flight.ts` airPacesOf): L2's cruise for its size and family, its
+ * take-off and landing accelerations (at most half a g), its climb and glide-in angles, and whether it runs to take off
+ * or skis in on the water. Pure; remembered by species and length.
+ */
+export function airPaces(profile: Pick<ArkBehaviourProfile, "slug">, length: number): AirPaces {
+    const L = Math.max(length, 0.02);
+    const key = `${profile.slug}#${L.toFixed(3)}`;
+    let paces = AIR_PACES.get(key);
+    if (!paces) {
+        // (A species with no styles row: a continuous flapper's numbers for its size.)
+        const spec = flightSpec(profile.slug, L) ?? flightSpecOf({style: "continuous", kind: "bird", factor: 1, insectHz: null, stoops: false}, L)!;
+        paces = airPacesOf(spec, takeoffClass(profile.slug));
+        AIR_PACES.set(key, paces);
+    }
+    return paces;
+}
+const AIR_PACES = new Map<string, AirPaces>();
+
+/**
+ * The distance (m) a flight loses to its take-off and landing against flying all of it at its cruise: its run, its
+ * speeding up and its slowing down, and its ski. A flight is worth taking (averaging at least 0.6 of its cruise) once it
+ * is half again as long as this.
+ */
+export function flightLoss(paces: AirPaces, run: number, ski: number): number {
+    const V = paces.cruise;
+    const lo = Math.min(run, V);
+    const td = Math.min(ski, V);
+    const time = lo / paces.runAccel + (V - lo) / paces.accel + (V - td) / paces.brake + td / paces.brake;
+    const covered = (lo * lo) / (2 * paces.runAccel) + (V * V - lo * lo) / (2 * paces.accel) + V * V / (2 * paces.brake);
+    return Math.max(V * time - covered, 0);
+}
+export const FLIGHT_WORTH = 1.5;
 
 /**
  * Its home range's radius: by how it moves and its size; never more than half what it can cover in a slot (so
@@ -686,6 +736,40 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     if (aquatic(profile)) return waterSpot(world, profile, animal, x, z, random);
     const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal)) ?? centre;
     return groundSpot(world, land.x, land.z);
+}
+
+/**
+ * A flight's goal on the ground worth flying to from round its range's centre (MA1): between `flightLoss`'s worth and
+ * a third again past it (at most three of its ranges and 20 m beyond, 90 m, and its range's cap), on open ground it can
+ * stand on (or the water, for a swimmer), clear of the predators that eat it; null when none is found in four bearings.
+ */
+function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number): Spot | null {
+    const paces = airPaces(profile, animal.length);
+    // (A bird or a bat: a flying insect keeps to its plants, as its range does.)
+    if (paces.kind === "insect") return null;
+    const worth = FLIGHT_WORTH * flightLoss(paces, paces.runGround, 0);
+    if (worth <= radius * 0.8) return null;
+    // (Never past its range's cap: a predator kept clear of its prey's ranges stays clear, `spaceHomes`. And never down by
+    // a predator that eats it: clear of each threat's whole range and a safe distance more.)
+    const outer = Math.min(Math.max(worth * 1.3, radius), radius * 3 + 20, 90, animal.range ?? Infinity);
+    const safe = Math.max(SAFE_METRES, Math.min(animal.length * 6, SAFE_MOST));
+    const clear = (x: number, z: number) => !(animal.threats ?? []).some((t) => Math.hypot(x - t.animal.home.x, z - t.animal.home.z) < (t.animal.range ?? rangeReach(t.profile, t.animal)) + Math.max(safe, Math.max(SAFE_METRES, Math.min(t.animal.length * 6, SAFE_MOST))));
+    const inner = Math.min(worth, outer * 0.9);
+    if (outer < worth * 0.75) return null;
+    const a0 = random() * Math.PI * 2;
+    const r = inner + (outer - inner) * Math.sqrt(random());
+    for (let k = 0; k < 4; k++) {
+        const a = a0 + k * (Math.PI / 2);
+        const x = centre.x + Math.cos(a) * r;
+        const z = centre.z + Math.sin(a) * r;
+        const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal));
+        // (In the open: not under a tree's crown, where it could not come down through the canopy.)
+        if (land && Math.hypot(land.x - centre.x, land.z - centre.z) >= inner * 0.8 && !world.sampler.blocked(land.x, land.z, 2.2) && clear(land.x, land.z)) return groundSpot(world, land.x, land.z);
+        // (A swimmer, a puffin or a duck, comes down on the water there as well.)
+        const water = swims(profile) ? world.nav.nearest(x, z, "swim", 0.5, 12) : null;
+        if (water && Math.hypot(water.x - centre.x, water.z - centre.z) >= inner * 0.8 && clear(water.x, water.z)) return {x: water.x, y: surfaceAt(water.x, water.z), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
+    }
+    return null;
 }
 
 /** Its roost: the same place every night (seeded by its id), from its profile's roost kind; a group's members by their leader's. */
@@ -1391,6 +1475,11 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const perch = roll < 0.5 ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
+            // (MA1: a flight for its own sake goes somewhere worth its take-off and its landing, half again the distance
+            // they lose against its cruise (`flightLoss`), out past its everyday range if need be: a goose flew 3 m hops at
+            // a fifth of its cruise. A group member keeps by its group; a soar sweeps out anyway.)
+            const away = !group && behaviour === "fly" ? flyAwaySpot(world, profile, animal, own, radius, random) : null;
+            if (away) return {doing: behaviour, to: away, mode: "air", stay: stayBeats("forage", random, null)};
             return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "air", stay: stayBeats("forage", random, null)};
         }
         case "swim":
@@ -1627,16 +1716,72 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (now.follow && animal.group) {
         const shadow = shadowOf(world, animal, slot, hoursAt);
         const finish = shadow.finish;
-        const catchUp = 6;
-        const joinAt = basePoseOnTrip(world, shadow.trips[0], start + catchUp);
-        const joined = shadowPoint(world, joinAt, shadow, start + catchUp, 0);
-        const join: Spot = {x: joined.x, y: joined.y, z: joined.z, nx: 0, ny: 1, nz: 0, point: null};
+        const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
+        const leaderAt = (t: number) => basePoseOnTrip(world, shadow.trips.find((trip) => t >= trip.start && t < trip.end) ?? shadow.trips[shadow.trips.length - 1], t);
+        // (MA1) A flock takes off together: when its leader's flight is still to come in the slot, it waits where it is
+        // and goes up with its leader, the leader's own run, climb and speed, easing from where it stood into its place
+        // by its leader (`lead0`). Its leader already up, it flies up to its place at its own paces.
+        let off: number | null = null;
+        if (now.mode !== "water") {
+            for (const trip of shadow.trips) {
+                let at = trip.start;
+                for (const leg of trip.legs) {
+                    if (leg.mode === "air" && at + leg.seconds > start) {
+                        off = at;
+                        break;
+                    }
+                    at += leg.seconds;
+                }
+                if (off !== null) break;
+            }
+        }
+        if (off !== null && off >= start && off < end - 3) {
+            const wait = off - start;
+            const lead = leaderAt(off);
+            const legs: Leg[] = [];
+            if (wait > 0.05) legs.push({mode: "pause", from, to: from, path: null, length: 0, seconds: wait, beat: "pause", yaw: from.yaw ?? lead.yaw});
+            legs.push({mode: "shadow", from, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - wait, beat: "fly", pace, lead0: {x: from.x - lead.x, y: from.y - lead.y, z: from.z - lead.z}});
+            return {...base, mode: "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: {trips: shadow.trips, dx: shadow.dx, dy: shadow.dy, dz: shadow.dz}};
+        }
+        let catchUp = 6;
+        const joinAt = (t: number): Spot => {
+            const joined = shadowPoint(world, leaderAt(start + t), shadow, start + t, 0);
+            return {x: joined.x, y: joined.y, z: joined.z, nx: 0, ny: 1, nz: 0, point: null};
+        };
+        let join = joinAt(catchUp);
+        const paces = airPaces(profile, animal.length);
+        if (now.mode !== "water") {
+            // (MA1: its leader already up, it meets it where its leader will be once it is at speed itself: the first
+            // moment, every half second from 2 s to 16 s, it can get there at its take-off's acceleration averaging at
+            // least 0.6 of its cruise; else as soon as its acceleration lets it.)
+            let found = false;
+            for (let t = 2; t <= 16 && !found; t += 0.5) {
+                const at = joinAt(t);
+                const d = Math.hypot(at.x - from.x, at.z - from.z);
+                if (d / t >= 0.6 * paces.cruise && t >= Math.sqrt((2 * d) / paces.accel)) {
+                    catchUp = t;
+                    join = at;
+                    found = true;
+                }
+            }
+            if (!found) {
+                catchUp = Math.min(Math.max(Math.sqrt((2 * Math.hypot(join.x - from.x, join.z - from.z)) / paces.accel), 1.5), 16);
+                join = joinAt(catchUp);
+            }
+        }
+        const flat = Math.hypot(join.x - from.x, join.z - from.z);
+        // (MA1: its leader not up in the air where it joins it (down already, or not off yet): it walks or swims there.)
+        const afoot = now.mode !== "water" && !leaderAt(start + catchUp).aloft;
+        const joinWet = wet(world, join);
         const legs: Leg[] = [
-            now.mode === "water"
-                ? {mode: "water", from, to: join, path: [from, join], length: Math.hypot(join.x - from.x, join.z - from.z), seconds: catchUp, beat: "swim"}
-                : {mode: "air", from, to: join, path: [from, join], length: Math.hypot(join.x - from.x, join.z - from.z), seconds: catchUp, beat: "fly", cruise: Math.max(cruise * 0.5, 1)},
-            {mode: "shadow", from: join, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - catchUp, beat: "fly", pace: bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05)}
+            now.mode === "water" || (afoot && joinWet && wet(world, from))
+                ? {mode: "water", from, to: join, path: [from, join], length: flat, seconds: catchUp, beat: "swim"}
+                : afoot
+                  ? {mode: "ground", from, to: join, path: [from, join], length: flat, seconds: Math.max(catchUp, flat / Math.max(pace, 0.05)), beat: "walk"}
+                  : {mode: "air", from, to: join, path: [from, join], length: flat, seconds: catchUp, beat: "fly", cruise: Math.max(cruise * 0.5, 1), plan: catchUpPlan(paces, flat, catchUp, Math.max(cruise * 0.5, 1))},
         ];
+        legs[0].seconds = Math.min(legs[0].seconds, SLOT_SECONDS - 4);
+        legs.push({mode: "shadow", from: join, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - legs[0].seconds, beat: "fly", pace});
         return {...base, mode: now.mode === "water" ? "water" : "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: {trips: shadow.trips, dx: shadow.dx, dy: shadow.dy, dz: shadow.dz}};
     }
 
@@ -1645,10 +1790,26 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (!now.to || (Math.hypot(to.x - from.x, to.z - from.z) < 0.05 && Math.abs(to.y - from.y) < 0.05)) mode = "stay";
     // Up off the ground at either end (a branch, a wall, a rock top): a flyer flies it, anything else climbs it.
     if ((mode === "ground" || mode === "water") && (raised(world, from) || raised(world, to))) mode = flies(profile) ? "air" : "surface";
-    // A bird walks a few steps; further than that it flies.
-    if (mode === "ground" && flies(profile) && Math.hypot(to.x - from.x, to.z - from.z) > Math.max(3, animal.length * 6)) mode = "air";
-
     const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
+    // A bird walks a few steps; further than that it flies, once the flight is worth it (MA1: a way so short its flight
+    // would average under about 0.4 of its cruise, `WALK_SHARE` of what its take-off and landing lose at half a g, is
+    // walked, waded or swum when it gets there that way in under WALK_INSTEAD s). A flyer's own way to a spot nearby
+    // is walked or swum the same, one for its own sake too (not a soar, nor up to or down from a raised spot): a goose
+    // "flew" 1 m hops across its pond, a heron 5 m hops along its shallows at a fifth of its cruise.
+    const wetFrom = wet(world, from);
+    const wetTo = wet(world, to);
+    const shallow = (p: Spot) => !wet(world, p) || surfaceY(world, p.x, p.z) - world.sampler.heightAt(p.x, p.z) < Math.max(animal.length, 0.05) * 0.5;
+    const swimsThere = swims(profile) && (wetFrom || wetTo) && (amphibious(profile) || (wetFrom && wetTo));
+    const wadesThere = walks(profile) && shallow(from) && shallow(to);
+    if (flies(profile) && (mode === "ground" || (mode === "air" && now.doing !== "soar" && !raised(world, from) && !raised(world, to) && (swimsThere || wadesThere)))) {
+        const flatWay = Math.hypot(to.x - from.x, to.z - from.z);
+        const paces = airPaces(profile, animal.length);
+        const swimming = wetFrom && wetTo && swimsThere && !(wadesThere && !swims(profile));
+        const own = swimming ? freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * 1.4 : pace;
+        const walkMost = Math.max(3, animal.length * 6, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * WALK_INSTEAD));
+        mode = flatWay > walkMost ? "air" : swimming ? "water" : "ground";
+    }
+
     // (0.85-1.2 of its walk's own pace: its clip plays at 0.85-1.2 its rate.)
     const speed = pace * (0.85 + 0.35 * random());
     // In the air and the water at its own pace (the walk clip's cap is for its feet).
@@ -1750,45 +1911,36 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             break;
         }
         case "air": {
+            // (MA1, movement audit problems 1 and 3: at its cruise for its size (L2), not four times a walk clip's pace;
+            // up to it at its take-off's acceleration and down from it at its braking, never more than half a g; off
+            // the water by a run across it (a coot, a swan), off the ground by a run when heavy (a crane, a goose), else
+            // springing straight off; onto the water skiing in on its feet; climbing and gliding in at its angles.)
+            const paces = airPaces(profile, animal.length);
+            // (A flying insect keeps its own flutter about its plants at its free pace, as before: its range is reckoned
+            // from it, and arriving sooner it sat longer where the town's cars wait. MA1 is the birds' and the bats'.)
+            const insect = paces.kind === "insect" ? freeSpeed * 4 : undefined;
             const flat = Math.hypot(to.x - from.x, to.z - from.z);
-            const air = freeSpeed * 4;
+            const fromWater = wet(world, from) && !raised(world, from);
+            const run = fromWater ? paces.runWater : raised(world, from) ? 0 : paces.runGround;
+            const ski = wet(world, to) && !raised(world, to) ? paces.skiWater : 0;
             if (now.doing === "soar") {
                 // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
                 // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
                 // where it began runs out along a seeded heading and back.
                 // (2026-11-11: it glides at about half its flapping cruise, so a soar over a near goal sweeps out far
                 // enough to fill its time aloft; before, every soar crawled along a few metres at under 1 m/s.)
+                // (MA1: at its glide, 0.8 of its true cruise, out as far as fills about half the slot.)
                 const r = Math.max(homeRadius(profile, animal) * 0.8, 6);
-                const glideReach = Math.min(60, (air * 0.55 * SLOT_SECONDS * 0.55) / 2.2);
-                const span = Math.max(flat, r, glideReach);
-                const side = random() < 0.5 ? -1 : 1;
-                const bow = side * (0.18 + random() * 0.14) * span;
-                let route: NavPoint[];
-                if (flat >= span * 0.8) {
-                    const dir = Math.atan2(to.x - from.x, to.z - from.z);
-                    const ux = Math.sin(dir);
-                    const uz = Math.cos(dir);
-                    route = [from, {x: from.x + ux * (flat / 3) + uz * bow, z: from.z + uz * (flat / 3) - ux * bow}, {x: from.x + ux * ((2 * flat) / 3) + uz * bow * 0.9, z: from.z + uz * ((2 * flat) / 3) - ux * bow * 0.9}, to];
-                } else {
-                    // Out along a heading (towards its goal, or seeded), round in one wide U at the far end, and back
-                    // to the goal: half a turn, not a loop. Towards the island's middle if the far end would be off it.
-                    let dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (random() - 0.5) * 0.8 : random() * Math.PI * 2;
-                    if (Math.hypot(from.x + Math.sin(dir) * span, from.z + Math.cos(dir) * span) > Math.max(Math.hypot(from.x, from.z), 60)) dir = Math.atan2(-from.x, -from.z) + (random() - 0.5) * 0.8;
-                    const ux = Math.sin(dir);
-                    const uz = Math.cos(dir);
-                    const at = (along: number, across: number): NavPoint => ({x: from.x + ux * along + uz * across, z: from.z + uz * along - ux * across});
-                    route = [from, at(span * 0.5, bow * 0.15), at(span * 0.9, bow * 0.45), at(span * 0.85, bow * 0.85), at(span * 0.45, bow * 0.8), to];
-                }
-                const length = pathLength(route) + Math.abs(to.y - from.y);
-                legs.push(overSolids(world, {mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2}, bodyR));
+                const glideReach = Math.min(SOAR_REACH, (paces.glide * SLOT_SECONDS * 0.55) / 2.2);
+                const route = sweepRoute(from, to, Math.max(flat, r, glideReach), random);
+                legs.push(airLeg(world, paces, from, to, route, cruise * 1.2, "glide", {pace: insect ?? paces.glide, run, ski}, bodyR));
             } else {
                 // Its own line: bowed a little to one side by a seeded amount (a straight flight to where it is going, not
-                // a weaving one: problem 2's turns).
-                const side = (random() - 0.5) * 0.25 * flat;
+                // a weaving one: problem 2's turns). (MA1: a twentieth of its length either way at most, 23° of turn in
+                // all: at its true speed its flights are short in time, so a bow's turn counted three times over.)
+                const side = (random() - 0.5) * 0.1 * flat;
                 const mid = {x: (from.x + to.x) / 2 + ((to.z - from.z) / (flat || 1)) * side, z: (from.z + to.z) / 2 - ((to.x - from.x) / (flat || 1)) * side};
-                const route = [from, mid, to];
-                const length = pathLength(route) + Math.abs(to.y - from.y);
-                legs.push(overSolids(world, {mode: "air", from, to, path: route, length, seconds: length / air, beat: "fly", cruise: flat < 4 ? Math.min(cruise, flat * 0.5 + 0.5) : cruise}, bodyR));
+                legs.push(airLeg(world, paces, from, to, [from, mid, to], cruise, "fly", {pace: insect, run, ski}, bodyR));
             }
             break;
         }
@@ -1923,59 +2075,142 @@ export type TripPose = {
     nz: number;
     /** The beat now (bite, chew, scan, walk, swim, enter_water…). */
     beat: ArkBeat;
+    /**
+     * On an air leg (MA1): its stage (a run to take off, the climb, level flight, the glide-in, a ski to a stop on the
+     * water), its speed over the ground (m/s), and the heights of the surfaces it took off from and lands on (a perch,
+     * a rock's top, the lake's level), for the rig's height over its landing.
+     */
+    air?: {stage: AirStage; speed: number; from: number; to: number};
 };
 
 /** A point along a polyline route (x, z), smoothed through its middle points (a bowed line, an arc). */
 /** What a low flyer climbs over rather than through (the colliders' kinds: never a trunk, under its crown). */
 const FLOWN_OVER: ReadonlySet<string> = new Set(["fence", "building", "post", "hay", "log", "rock"]);
 
+/** A flock member taking off with its leader eases into its place by it over this long (s). */
+const JOIN_SECONDS = 5;
+/** How far out a soar sweeps at most (m; MA1: at a true glide, 60 m filled a soar's time at a crawl). */
+const SOAR_REACH = 140;
+/** A short way a flyer walks, wades or swims rather than flies, if it gets there that way in no longer than this (s). */
+const WALK_INSTEAD = 45;
+/**
+ * Shorter than this share of its flight's loss (`flightLoss`), a flight would average under about 0.4 of its cruise: at
+ * half a g it never comes near its speed between its take-off and its landing (for a springer, a flight of length L that
+ * never reaches its cruise averages √(aL)/2; 0.4 of the cruise at L = 0.64 of the loss).
+ */
+const WALK_SHARE = 0.65;
+
+/**
+ * A soar's sweep out over its range towards a goal: bowed out to one side through to the goal when the goal is far
+ * enough, else out along a heading (towards the goal, bent a little; or seeded),
+ * round in one wide U at the far end and back in to the goal: half a turn, not a loop. Towards the island's middle if
+ * the far end would be off it. About 2.2 times `span` long as a U.
+ */
+function sweepRoute(from: Spot, to: Spot, span: number, random: () => number): NavPoint[] {
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    const side = random() < 0.5 ? -1 : 1;
+    const bow = side * (0.18 + random() * 0.14) * span;
+    if (flat >= span * 0.8) {
+        const dir = Math.atan2(to.x - from.x, to.z - from.z);
+        const ux = Math.sin(dir);
+        const uz = Math.cos(dir);
+        return [from, {x: from.x + ux * (flat / 3) + uz * bow, z: from.z + uz * (flat / 3) - ux * bow}, {x: from.x + ux * ((2 * flat) / 3) + uz * bow * 0.9, z: from.z + uz * ((2 * flat) / 3) - ux * bow * 0.9}, to];
+    }
+    let dir = flat > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (random() - 0.5) * 0.8 : random() * Math.PI * 2;
+    if (Math.hypot(from.x + Math.sin(dir) * span, from.z + Math.cos(dir) * span) > Math.max(Math.hypot(from.x, from.z), 60)) dir = Math.atan2(-from.x, -from.z) + (random() - 0.5) * 0.8;
+    const ux = Math.sin(dir);
+    const uz = Math.cos(dir);
+    const at = (along: number, across: number): NavPoint => ({x: from.x + ux * along + uz * across, z: from.z + uz * along - ux * across});
+    return [from, at(span * 0.5, bow * 0.15), at(span * 0.9, bow * 0.45), at(span * 0.85, bow * 0.85), at(span * 0.45, bow * 0.8), to];
+}
+
+/**
+ * An air leg along a route (MA1): planned at its paces (`planAirLeg`), its run dropped when the run would cross something
+ * solid or leave the surface it starts on (it springs off instead), then cleared over what it would cross low.
+ */
+function airLeg(world: ScheduleWorld, paces: AirPaces, from: Spot, to: Spot, route: NavPoint[], height: number, beat: ArkBeat, opts: {pace?: number; run: number; ski: number}, bodyR: number): Leg {
+    const flat = Math.max(routeLength(route), 0.01);
+    let run = opts.run;
+    if (run > 0) {
+        const metres = (run * run) / (2 * paces.runAccel);
+        const onWater = wet(world, from);
+        const scratch: Collider[] = [];
+        for (let d = 0.5; d <= metres + 0.5 && run > 0; d += 0.5) {
+            const at = alongRouteBy(route, Math.min(d / flat, 1));
+            if (wet(world, at) !== onWater) run = 0;
+            else if (world.nav.colliders) for (const c of world.nav.colliders.near(at.x, at.z, bodyR + 0.01, scratch)) if (!c.soft && colliderDistance(c, at.x, at.z) < bodyR) run = 0;
+        }
+    }
+    // (Its speed along its way up or down as well: a hop up to a perch 3 m over it is 3 m of flight, not half a metre.)
+    const plan = planAirLeg(paces, Math.hypot(flat, to.y - from.y), height, {pace: opts.pace, run, ski: opts.ski});
+    return overSolids(world, {mode: "air", from, to, path: route, length: flat + Math.abs(to.y - from.y), seconds: plan.seconds, beat, cruise: plan.height, plan}, bodyR);
+}
+
+/**
+ * A flock member's catch-up to its leader in the air (MA1): `seconds` fixed (it joins where its leader will be), up to
+ * its speed at its take-off's acceleration where that is enough (else quicker), and on at it; up over a hump of `height`
+ * and into its place beside its leader, never stopping.
+ */
+function catchUpPlan(paces: AirPaces, length: number, seconds: number, height: number): AirPlan {
+    let share = 0.5;
+    for (let k = 0; k < 4; k++) {
+        const top = length / Math.max(seconds * (1 - share / 2), 1e-6);
+        share = Math.min(Math.max(top / (paces.accel * seconds), 0.15), 1);
+    }
+    const peak = length / Math.max(seconds * (1 - share / 2), 1e-6);
+    return {seconds, knots: [0, 0, share, 1, 1, 1], liftoff: 0, touchdown: 1, rise: 0.5, fall: 0.5, height, peak, joins: true};
+}
+
 /**
  * A flight that clears what it takes off beside or comes down behind (collisions): where its climb or its descent would
  * cross a fence, a wall, a hay bale or a rock below its top, it climbs (or comes down) over a shorter share of the leg,
  * steeply enough to pass 0.15 m over it (2026-11-12: a masked owl took off low through a garden's pickets). Its route
- * and its pace are as they were.
+ * and its pace are as they were. (MA1: in its plan's shares, from its lift-off and to its touch-down.)
  */
 function overSolids(world: ScheduleWorld, leg: Leg, bodyR: number): Leg {
     const solid = world.nav.colliders;
     const route = leg.path;
-    if (!solid || !route || leg.mode !== "air") return leg;
-    const cruise = leg.cruise ?? 0;
-    if (cruise <= 0.2) return leg;
-    let rise = 0.18;
-    let fall = 0.22;
+    const plan = leg.plan;
+    if (!solid || !route || leg.mode !== "air" || !plan) return leg;
+    const height = plan.height;
+    if (height <= 0.2) return leg;
+    const lo = plan.liftoff;
+    const td = plan.touchdown;
+    let rise = plan.rise;
+    let fall = plan.fall;
     const n = Math.min(Math.max(Math.ceil(leg.length / 0.5), 8), 120);
     const inverse = (need: number) => {
-        // (The share of the climb (0-1) that lifts it `need` of its cruise: smoothstep's inverse.)
-        let lo = 0;
-        let hi = 1;
+        // (The share of the climb (0-1) that lifts it `need` of its height: smoothstep's inverse.)
+        let a = 0;
+        let b = 1;
         for (let k = 0; k < 14; k++) {
-            const m = (lo + hi) / 2;
-            if (m * m * (3 - 2 * m) < need) lo = m;
-            else hi = m;
+            const m = (a + b) / 2;
+            if (m * m * (3 - 2 * m) < need) a = m;
+            else b = m;
         }
-        return hi;
+        return b;
     };
     const scratch: Collider[] = [];
     for (let j = 1; j < n; j++) {
-        const u = j / n;
-        // (Only its climb and its descent: in between it is at its cruise.)
-        if (u > rise && 1 - u > fall) continue;
-        const at = alongRoute(route, u);
+        const q = j / n;
+        // (Only its climb and its descent: in between it is at its height; on its run and its ski it is on the surface.)
+        if (q <= lo || q >= td || (q - lo > rise && td - q > fall)) continue;
+        const at = alongRouteBy(route, q);
         let top = -Infinity;
         for (const c of solid.near(at.x, at.z, bodyR + 0.01, scratch)) {
             if (!FLOWN_OVER.has(c.kind) || c.soft || colliderDistance(c, at.x, at.z) >= bodyR) continue;
             top = Math.max(top, c.y1);
         }
         if (top === -Infinity) continue;
-        const base = leg.from.y + (leg.to.y - leg.from.y) * u;
+        const base = leg.from.y + (leg.to.y - leg.from.y) * Math.min(Math.max((q - lo) / Math.max(td - lo, 1e-6), 0), 1);
         const ground = Math.max(world.sampler.heightAt(at.x, at.z), 0);
-        const need = (top + 0.15 - base) / (cruise + Math.max(ground - base, 0));
+        const need = (top + 0.15 - base) / (height + Math.max(ground - base, 0));
         if (need <= 0 || need >= 0.98) continue;
         const k = inverse(need);
-        if (u <= 0.5) rise = Math.max(Math.min(rise, u / k), 0.01);
-        else fall = Math.max(Math.min(fall, (1 - u) / k), 0.01);
+        if (q <= (lo + td) / 2) rise = Math.max(Math.min(rise, (q - lo) / k), 0.01);
+        else fall = Math.max(Math.min(fall, (td - q) / k), 0.01);
     }
-    return rise === 0.18 && fall === 0.22 ? leg : {...leg, rise, fall};
+    return rise === plan.rise && fall === plan.fall ? leg : {...leg, plan: {...plan, rise, fall}};
 }
 
 function alongRoute(route: NavPoint[], u: number): {x: number; z: number; yaw: number} {
@@ -2007,6 +2242,50 @@ function alongRoute(route: NavPoint[], u: number): {x: number; z: number; yaw: n
     }
     const at = alongPath(route, u);
     return at;
+}
+
+/**
+ * A route's curve sampled by length (MA1): the cumulative length at even steps of its parameter, so a share of its
+ * length finds its point (`alongRouteBy`) and a flight's planned speed is its speed over the ground, not the curve's
+ * parameter's (a sweep's Catmull-Rom spans differ in length). Remembered per route.
+ */
+const ROUTE_TABLES = new WeakMap<NavPoint[], Float64Array>();
+function routeTable(route: NavPoint[]): Float64Array {
+    let table = ROUTE_TABLES.get(route);
+    if (table) return table;
+    // (A step every 10 cm or so, 64 to 4096: a coarser table's straight pieces showed as small jolts in its speed.)
+    const steps = Math.min(Math.max(Math.ceil(pathLength(route) / 0.1), 64), 4096);
+    table = new Float64Array(steps + 1);
+    let prev = alongRoute(route, 0);
+    for (let i = 1; i <= steps; i++) {
+        const p = alongRoute(route, i / steps);
+        table[i] = table[i - 1] + Math.hypot(p.x - prev.x, p.z - prev.z);
+        prev = p;
+    }
+    ROUTE_TABLES.set(route, table);
+    return table;
+}
+/** A route's length along its curve (m). */
+function routeLength(route: NavPoint[]): number {
+    const table = routeTable(route);
+    return table[table.length - 1];
+}
+/** The point a share of a route's length along it. */
+function alongRouteBy(route: NavPoint[], share: number): {x: number; z: number; yaw: number} {
+    const table = routeTable(route);
+    const steps = table.length - 1;
+    const total = table[steps];
+    if (total <= 1e-9) return alongRoute(route, Math.min(Math.max(share, 0), 1));
+    const want = Math.min(Math.max(share, 0), 1) * total;
+    let a = 0;
+    let b = steps;
+    while (b - a > 1) {
+        const m = (a + b) >> 1;
+        if (table[m] <= want) a = m;
+        else b = m;
+    }
+    const span = table[b] - table[a];
+    return alongRoute(route, (a + (span > 1e-12 ? (want - table[a]) / span : 0)) / steps);
 }
 
 /**
@@ -2067,18 +2346,35 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
         }
         case "air": {
             const route = leg.path ?? [from, to];
-            const at = alongRoute(route, u);
-            const base = from.y + (to.y - from.y) * u;
+            const plan = leg.plan;
+            if (!plan) {
+                const at = alongRoute(route, u);
+                const base = from.y + (to.y - from.y) * u;
+                const ground = world.sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), world.sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
+                const k = Math.min(Math.min(u / (leg.rise ?? 0.18), 1), Math.min((1 - u) / (leg.fall ?? 0.22), 1));
+                const lift = k * k * (3 - 2 * k);
+                const y = Math.max(base + ((leg.cruise ?? trip.cruise) + Math.max(ground - base, 0)) * lift, Math.min(ground, base) + 0.05 * lift);
+                return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft: moving && lift > 0.05, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly"};
+            }
+            // (MA1) Along its route by its plan's speed (speeding up out of the take-off, slowing into the landing), not
+            // at one speed from its first frame to its last.
+            const {share, rate} = airProgress(plan.knots, u);
+            const at = alongRouteBy(route, share);
+            const stage = airStage(plan, share);
+            const speed = moving ? (rate * routeLength(route)) / Math.max(leg.seconds, 1e-6) : 0;
+            const air = {stage, speed, from: from.y, to: to.y};
+            // On its run or its ski: on the surface under it (the water's, or the ground's).
+            if (stage === "run" || stage === "ski") return {x: at.x, y: topAt(world, at.x, at.z), z: at.z, yaw: at.yaw, moving, aloft: false, ...up, beat: "fly", air};
+            // Its line from where it lifts off to where it touches down, a hump over it to its height (smoothsteps at its
+            // climb's and its glide-in's angles), and over the ground and the rocks' tops where they stand higher.
+            const base = from.y + (to.y - from.y) * Math.min(Math.max((share - plan.liftoff) / Math.max(plan.touchdown - plan.liftoff, 1e-6), 0), 1);
             // (v2: over the drawn rocks' tops too, `flightFloor`: the bigger island's mountain is rock-strewn.)
             const ground = world.sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), world.sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
-            // Take off, climb to its band, cruise, and come down to land (gliding in on long legs).
-            const rise = Math.min(u / (leg.rise ?? 0.18), 1);
-            const fall = Math.min((1 - u) / (leg.fall ?? 0.22), 1);
-            const k = Math.min(rise, fall);
-            const lift = k * k * (3 - 2 * k);
-            const floor = Math.min(ground, base);
-            const y = Math.max(base + ((leg.cruise ?? trip.cruise) + Math.max(ground - base, 0)) * lift, floor + 0.05 * lift);
-            return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft: moving && lift > 0.05, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly"};
+            const lift = airLift(plan, share);
+            const y = Math.max(base + (plan.height + Math.max(ground - base, 0)) * lift, Math.min(ground, base) + 0.05 * lift);
+            // (Joining its leader it is up as soon as it is off the ground: its hump comes back to its line in the air.)
+            const aloft = moving && (plan.joins ? y > ground + 0.05 : lift > 0.05);
+            return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly", air};
         }
         case "surface": {
             const x = from.x + (to.x - from.x) * u;
@@ -2112,8 +2408,18 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
                     if (u >= settleAt) walkYaw = Math.atan2(to.x - p0.x, to.z - p0.z);
                 }
             }
+            // (MA1: its leader's stage and speed in the air, landing on its own finish.)
+            const air = at.air ? {...at.air, to: to.y} : undefined;
             if (u >= 1) return {x: to.x, y: to.y, z: to.z, yaw: walkYaw ?? at.yaw, moving: false, aloft: at.aloft, ...up, beat: at.beat};
             const p = shadowPoint(world, at, shadow, epochSeconds, Math.min(u / 0.08, 1));
+            if (leg.lead0) {
+                // (Taking off with its leader: from where it stood by it into its place, over its first JOIN_SECONDS.)
+                const k0 = Math.min(Math.max((u * leg.seconds) / JOIN_SECONDS, 0), 1);
+                const k = k0 * k0 * (3 - 2 * k0);
+                p.x = at.x + leg.lead0.x + (p.x - at.x - leg.lead0.x) * k;
+                p.z = at.z + leg.lead0.z + (p.z - at.z - leg.lead0.z) * k;
+                p.y = (at.aloft ? at.y + leg.lead0.y : at.y) + (p.y - (at.aloft ? at.y + leg.lead0.y : at.y)) * k;
+            }
 
             const blend = Math.max((u - settleAt) / (1 - settleAt), 0);
             let yaw = p.yaw;
@@ -2121,7 +2427,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
                 const turn = Math.atan2(Math.sin(walkYaw - p.yaw), Math.cos(walkYaw - p.yaw));
                 yaw = p.yaw + turn * Math.min(blend * 4, 1);
             }
-            return {x: p.x + (to.x - p.x) * blend, y: p.y + (to.y - p.y) * blend, z: p.z + (to.z - p.z) * blend, yaw, moving: walkYaw !== null ? blend > 0 : at.moving, aloft: at.aloft, ...up, beat: walkYaw !== null && blend > 0 ? "walk" : at.beat};
+            return {x: p.x + (to.x - p.x) * blend, y: p.y + (to.y - p.y) * blend, z: p.z + (to.z - p.z) * blend, yaw, moving: walkYaw !== null ? blend > 0 : at.moving, aloft: at.aloft, ...up, beat: walkYaw !== null && blend > 0 ? "walk" : at.beat, ...(air && at.moving && walkYaw === null ? {air} : {})};
         }
         case "pause":
         default:
