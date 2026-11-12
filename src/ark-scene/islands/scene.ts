@@ -16,6 +16,7 @@ import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
+import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 
 export type ArkIslandScene = {
     id: "town";
@@ -53,6 +54,11 @@ export type ArkIslandScene = {
     rangeOf: (id: string) => number | null;
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
     kept: (id: string) => boolean;
+    /**
+     * A zoo resident's schedule animal for the slot holding `epoch`: during its enclosure's feeding (on the island clock,
+     * decided at the slot's start) the same animal with the feeding station as its home and a small range; else itself.
+     */
+    feedingAnimal: (animal: ScheduleAnimal, epoch: number) => ScheduleAnimal;
     /** Its whole-island view: target (world) and the radius it fits. */
     home: {x: number; z: number; radius: number; radiusTall: number};
     /** The camera's target is kept within this of its middle. */
@@ -62,13 +68,17 @@ export type ArkIslandScene = {
 
 /** Builds the town for the scene (its modules on demand, so a one-island page does not carry them). */
 export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}}): Promise<ArkIslandScene> {
-    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures}, {inPoly, centroid}, {townWorldSampler}] = await Promise.all([
+    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {zooFeedingAt, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
         import("@/ark-scene/islands/town/areas"),
         import("@/ark-scene/islands/town/geom"),
-        import("@/ark-scene/islands/town/sampler")
+        import("@/ark-scene/islands/town/sampler"),
+        import("@/ark-scene/islands/town/render/zoo-life"),
+        import("@/ark-scene/islands/town/zoo-life"),
+        import("@/ark-scene/behaviour-schedule"),
+        import("@/ark-scene/islands/town/ground")
     ]);
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
@@ -81,6 +91,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     if (sea) sea.visible = false;
     town.root.updateMatrixWorld(true);
     let openKey = (open.length ? open : launchEnclosures()).join(",");
+    // The zoo's day: its enrichment and the food at its stations (`render/zoo-life.ts`), in the town's frame.
+    let zooLife = buildZooLife(zooLayout(openKey.split(",")).enclosures, townHeight);
+    town.root.add(zooLife.group);
+    const clockAt = (ms: number) => townClockAt(ms, options.offsetHours ?? 0);
+    /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
+    const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
     const STILL_WHERE = new Set(["window", "indoor", "pool"]);
@@ -96,7 +112,11 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         spans: town.spans,
         content: town.content,
         applyStream: (states, allIn) => town.setDrawn(allIn ? null : (chunk) => states[chunk] !== 0),
-        update: (epochMs) => town.update(townClockAt(epochMs, options.offsetHours ?? 0)),
+        update: (epochMs) => {
+            const clock = clockAt(epochMs);
+            town.update(clock);
+            zooLife.update(clock);
+        },
         setShadows: town.setShadows,
         setTier: town.setTier,
         place: (animals) => {
@@ -106,6 +126,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (key !== openKey) {
                 openKey = key;
                 town.setZooOpen(placed.open);
+                town.root.remove(zooLife.group);
+                zooLife.dispose();
+                zooLife = buildZooLife(zooLayout(placed.open).enclosures, townHeight);
+                town.root.add(zooLife.group);
             }
             towned = placed.town;
             const world = new Map<string, Placement>();
@@ -146,9 +170,33 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const area = towned.get(id)?.area;
             return area === "house" || area === "farm" || area === "zoo";
         },
+        feedingAnimal: (animal, epoch) => {
+            const enclosure = towned.get(animal.id)?.enclosure;
+            if (!enclosure) return animal;
+            // (Decided at the start of the slot holding `epoch`: one goal a slot, the schedule's rule.)
+            const offset = slotOffset(animal.id);
+            const start = Math.floor((epoch + offset) / SLOT_SECONDS) * SLOT_SECONDS - offset;
+            if (!zooFeedingAt(enclosure.type, clockAt(start * 1000))) return animal;
+            let variant = feeding.get(animal);
+            if (!variant) {
+                const station = feedingHome(enclosure, townHeight);
+                const lead = (base: ScheduleAnimal) => (towned.get(base.id)?.enclosure?.id === enclosure.id ? (feeding.get(base) ?? base) : base);
+                variant = Object.create(animal, {
+                    home: {value: {x: station.x + origin.x, y: station.y, z: station.z + origin.z}, enumerable: true},
+                    range: {value: station.range * 1.5, enumerable: true},
+                    // (Its group's leader feeds too: the same enclosure, the same time.)
+                    group: {get: () => (animal.group ? {...animal.group, leader: lead(animal.group.leader)} : animal.group), enumerable: true}
+                }) as ScheduleAnimal;
+                feeding.set(animal, variant);
+            }
+            return variant;
+        },
         home: {x: origin.x + def.home.target[0], z: origin.z + def.home.target[2], radius: 205, radiusTall: 230},
         worldRadius: half * 0.92,
-        dispose: town.dispose
+        dispose: () => {
+            zooLife.dispose();
+            town.dispose();
+        }
     };
 }
 

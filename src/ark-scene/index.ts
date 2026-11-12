@@ -157,7 +157,7 @@ import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
@@ -1235,7 +1235,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scheduled = (entry: Pick<Entry, "sched" | "visitor" | "act" | "moment">): boolean => Boolean(entry.sched) && !reducedMotion && !entry.visitor && !entry.act && !entry.moment;
     const tripFor = (holder: Sched, key: "trip" | "lead", profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkAnimal["activity"], epoch: number): Trip => {
         let trip = holder[key];
-        if (!trip || epoch < trip.start || epoch >= trip.end) holder[key] = trip = tripAt(worldOf(animal), profile, animal, epoch, scheduleHours, activity, trip);
+        if (!trip || epoch < trip.start || epoch >= trip.end) {
+            // Part C: a zoo animal's feeding time takes it to its enclosure's station (its home for those slots), on the
+            // island clock; a feeding's first and last slot start where the slot before ended, for every viewer alike.
+            const who = island ? island.feedingAnimal(animal, epoch) : animal;
+            let previous = trip;
+            if (island) {
+                const before = island.feedingAnimal(animal, epoch - SLOT_SECONDS);
+                const held = previous && epoch - SLOT_SECONDS >= previous.start && epoch - SLOT_SECONDS < previous.end;
+                if (before !== who && !held) previous = tripAt(worldOf(animal), profile, before, epoch - SLOT_SECONDS, scheduleHours, activity, null);
+            }
+            holder[key] = trip = tripAt(worldOf(animal), profile, who, epoch, scheduleHours, activity, previous);
+        }
         return trip;
     };
     /**
@@ -5482,7 +5493,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyEnvironment();
         if (landscape) landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
-        island?.update(worldMs());
+        // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
+        island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         stepFlight(now);
         stepInset();
         stepIslandNear();

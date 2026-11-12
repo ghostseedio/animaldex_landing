@@ -241,3 +241,22 @@ test("the town on the behaviour schedule in the one world: its own walk grid at 
     assert.ok(checked > 50);
     assert.ok(far / checked < 0.2, `zoo poses outside the mask before the scene's hard bound: ${far} of ${checked}`);
 });
+
+test("the zoo's day: feeding times on the island clock, the weekly and fast days, the station as home while fed", async () => {
+    const {zooFeedingAt, feedingHome, WEEKLY_FEED_DAY, FAST_DAY, FEED_HOURS} = await import("@/ark-scene/islands/town/zoo-life");
+    const {zooEnclosures} = await import("@/ark-scene/islands/town/areas");
+    const clock = (hours: number, weekday: number) => ({hours, day: 7 * 3000 + weekday});
+    assert.equal(zooFeedingAt("penguin_seal_pools", clock(11.1, 2))?.food, "fish");
+    assert.equal(zooFeedingAt("penguin_seal_pools", clock(11 + FEED_HOURS + 0.01, 2)), null);
+    assert.ok(Math.abs(zooFeedingAt("primate_house", clock(14.25, 1))!.eaten - 0.5) < 1e-9);
+    assert.equal(zooFeedingAt("reptile_house", clock(12.1, (WEEKLY_FEED_DAY + 1) % 7)), null, "snakes and crocodiles once a week");
+    assert.ok(zooFeedingAt("reptile_house", clock(12.1, WEEKLY_FEED_DAY)));
+    assert.equal(zooFeedingAt("big_cats", clock(16.1, FAST_DAY)), null, "the big cats' fast day");
+    assert.ok(zooFeedingAt("big_cats", clock(16.1, (FAST_DAY + 2) % 7)));
+    for (const e of zooEnclosures()) {
+        if (e.shared) continue;
+        const home = feedingHome(e, () => 0);
+        assert.ok(inPoly(e.mask, home.x, home.z) || inPoly(e.mask, (home.x + e.slot.at.x) / 2, (home.z + e.slot.at.z) / 2), `${e.id}: the station by its mask`);
+        assert.ok(home.range >= 2 && home.range <= 5);
+    }
+});
