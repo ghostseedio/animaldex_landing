@@ -668,7 +668,9 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         if (memory.wasClip !== "land") memory.landPhase = input.phase;
         const reach = Math.max(input.landHeight ?? 0, 0.05);
         const byHeight = input.landHeight ? 1 - Math.min(Math.max(input.agl, 0) / reach, 1) : 0;
-        const down = input.agl <= 0.02;
+        // (On an air leg, down once on its landing's surface and nearly stopped: it brakes its last metre or two on its
+        // feet with its wings up, not running; up to a perch from below, not before it is there.)
+        const down = input.agl <= 0.02 && (!input.stage || (input.agl >= -0.05 && input.speed < Math.max((input.drawnLength ?? spec.lengthM) * 1.5, 0.4)));
         let phase = Math.min(Math.max(byHeight * 0.8, memory.landPhase + dt * (down ? 1.6 : 0.5)), 1);
         if (input.stage === "ski") phase = Math.min(Math.max(memory.landPhase, 0.78), 0.8);
         else if (input.stage && !down) phase = Math.min(phase, 0.8);
