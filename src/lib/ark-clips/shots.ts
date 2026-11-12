@@ -17,7 +17,7 @@ import {ARK_MOMENTS, canMoment, MOMENT_SECONDS, type ArkMomentKind} from "@/ark-
  * at all), and nothing from a problem, debate, chat or memory is read.
  */
 
-export const ARK_SHOTS = ["day_to_night", "arrival", "meal_chase", "follow", "flyover", "meet", ...ARK_MOMENTS] as const;
+export const ARK_SHOTS = ["day_to_night", "arrival", "meal_chase", "follow", "flyover", "meet", "islands", ...ARK_MOMENTS] as const;
 /** The cross-layer moments (`ark-scene/moments.ts`): cosmetic, never a meal; available when the Ark has an animal that can act one out. */
 export const ARK_MOMENT_SHOTS: readonly ArkShotKind[] = ARK_MOMENTS;
 export type ArkShotKind = (typeof ARK_SHOTS)[number];
@@ -33,6 +33,7 @@ export const ARK_SHOT_LABELS: Record<ArkShotKind, string> = {
     follow: "Following one animal",
     flyover: "Flyover of the whole Ark",
     meet: "Meet the species (field-guide facts)",
+    islands: "Across the strait: the wild island and the town (Part C)",
     seabird_dive: "A seabird dives into the sea",
     whale_surface: "A whale surfaces to blow",
     owl_swoop: "An owl swoops from its branch",
@@ -336,6 +337,34 @@ export function planArkShot(kind: ArkShotKind, input: ArkClipInput): ArkShotPlan
                 title: `Fly over the AnimalDex Ark: ${counts.animals} animals, ${counts.species} species`,
                 hookText: hook,
                 direction: direction({hours: {from: 17.0, to: 17.4}, lead: 21.4}),
+                cues,
+                subject: null
+            };
+        }
+        case "islands": {
+            // Part C, one world (decision 141): from the wild island across the strait to the town, the two islands' counts.
+            // (One island, before the server's switch: the same flight over the one island and its count.)
+            const town = animals.filter((animal) => animal.island === "town");
+            const zoo = town.filter((animal) => animal.area === "zoo").length;
+            const wild = animals.length - town.length;
+            const cues: ArkCue[] = town.length
+                ? [
+                      {kind: "hook", text: "TWO ISLANDS. ONE ARK.", from: at("start", 0), to: at("start", 3.4)},
+                      {kind: "caption", label: "The wild island", text: `${wild} animals in their habitats.`, from: at("start", 3.8), to: at("start", 9.0)},
+                      {kind: "caption", label: "The town", text: `${town.length - zoo} at home, on the farms and in the streets; ${zoo} in the zoo.`, from: at("start", 9.4), to: at("start", 16.0)},
+                      {kind: "caption", text: ARK_HOW_LINE, from: at("start", 16.4), to: at("end", 0)}
+                  ]
+                : [
+                      {kind: "hook", text: `${counts.animals} ANIMALS. ONE ARK.`, from: at("start", 0), to: at("start", 3.4)},
+                      {kind: "caption", text: ARK_HOW_LINE, from: at("start", 3.8), to: at("end", 0)}
+                  ];
+            cues.push(endCue());
+            return {
+                ...base,
+                slug: sample(`islands-${today}`),
+                title: `The AnimalDex Ark: the wild island and the town, ${counts.animals} animals`,
+                hookText: town.length ? "TWO ISLANDS. ONE ARK." : `${counts.animals} ANIMALS. ONE ARK.`,
+                direction: direction({hours: {from: 10.5, to: 11.5}, lead: 22}),
                 cues,
                 subject: null
             };

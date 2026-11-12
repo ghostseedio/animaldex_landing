@@ -4133,13 +4133,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const length = Math.hypot(o.x, o.z) || 1;
         const ux = o.x / length;
         const uz = o.z / length;
-        // (Upright phones keep the wild island's own framing; the town is a pan away.)
-        const share = aspect < 0.8 ? 0.12 : 0.45;
-        const fx = ux * share;
-        const fz = -1 + (uz + 1) * share;
+        // Upright phones (decision 154): the narrow frame looks straight across the strait, the wild island the subject in
+        // the middle and the town in the upper part beyond it. Wider screens: turned 45% of the way, the town upper right.
+        const tall = aspect < 0.8;
+        const tx = tall ? 16 : 12 + ux * 45;
+        const tz = tall ? 24 : 14 + uz * 45;
+        let fx = ux * 0.45;
+        let fz = -1 + (uz + 1) * 0.45;
+        if (tall) {
+            const dx = o.x - tx;
+            const dz = o.z - tz;
+            const d = Math.hypot(dx, dz) || 1;
+            fx = dx / d;
+            fz = dz / d;
+        }
         const azimuth = Math.atan2(-fx, -fz);
-        const shift = aspect < 0.8 ? 10 : 45;
-        return {target: new Vector3((aspect < 0.8 ? 16 : 12) + ux * shift, 0, (aspect < 0.8 ? 24 : 14) + uz * shift), distance: distance * (aspect < 0.8 ? 0.98 : 1.12), polar: aspect < 0.8 ? 1.08 : 1.15, azimuth};
+        return {target: new Vector3(tx, 0, tz), distance: distance * (tall ? 1.0 : 1.12), polar: 1.15, azimuth};
     };
     /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
     const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
@@ -5952,6 +5961,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             fly(view.target, view.distance, reducedMotion ? 0 : 3.2, view.polar, view.azimuth);
         },
         islandNear: () => islandNear,
+        islandView: (id: "wild" | "town") => {
+            const view = islandView(id);
+            return {target: {x: view.target.x, y: view.target.y, z: view.target.z}, distance: view.distance, polar: view.polar, azimuth: view.azimuth};
+        },
         focusRegion: (region) => {
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;

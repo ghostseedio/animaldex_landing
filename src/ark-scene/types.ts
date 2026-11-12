@@ -361,6 +361,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     flyToIsland?: (island: ArkIsland) => void;
     /** Part C: the island the view is over now. */
     islandNear?: () => ArkIsland;
+    /** Part C: an island's whole view (the director's crossing shot). */
+    islandView?: (island: ArkIsland) => ArkCameraView;
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;
