@@ -207,3 +207,42 @@ Deploy checks:
   the variable names checked, not their values).
 - After the deploy: `cf-cache-status: HIT` on `/api/ark/landing/snapshot.bin`; `/ark/assets/town-v1/vehicles.bin`
   served (306 KB).
+
+## Web deploy: decision 285's round (waterbirds, rock tops, select aim, the lake ghost; without MA1)
+
+Branch `ark-round-283`, from landing main d8ee89f0 (live). Head: see the push below; rollback: redeploy **d8ee89f0**.
+Lane MA1 (`ark-flight-physics`) is left out: its flyers (462), circling (8.1%) and turns (2.04) are regressions it
+fixes on its own branch and brings to the next round, built on `ark-next` 135282f6 / af4ef02b. Nothing of MA1's is
+here (7c266935 and a8726780 are not ancestors; rock-tops takes its own `index.ts` lines, no `airStage`).
+
+| # | Lane | Branch head | `ark-round-283` head | Notes |
+|---|---|---|---|---|
+| 61 | MA3: waterbirds (fly water to water, come ashore by swimming; town walk-first birds off the roads) | `ark-waterbirds` 852147e2 | 765e3568 | clean; carries its amphibian limit 420 -> 375 with why |
+| 62 | Rock tops: an animal on a raised schedule spot is drawn on it, never sunk into the rock | `ark-v2-rock-tops` 18b19422 | 0843651f | clean |
+| 63 | Select aim: `ark:select` and a row tap fly to where the animal is drawn now | `ark-select-aim` b0e8ae3e | 79c8f959 | clean |
+| 64 | MA3: the v2 lake's teal ghost (the high tier's ambient occlusion) | `ark-lake-ghost` a91bc845 | e2386114 | clean |
+| — | The behaviour audit keeps its folder (`include-hidden-files: true`; `.ark-audit` starts with a dot) | — | dfd83278 | the artifact now uploads (run 43316302402) |
+| — | Audit limits: circling 1 -> 2.8, never move 800 -> 840, each with why | — | 12f893b8 | main already 2.2 (all swifts and swallows) and 819; MA3 adds 0.6 circling |
+
+Gates on dfd83278: suite 2,506/2,508, 0 fail, 2 skipped (the quoted glob); tsc 0; lint 0; motion all pass (42 numbers);
+default view ×2 pace 0.99 / 1.11, backwards 1.9% / 2.5% (none over 1 s), ground turns 0.4 / 0.5 a minute, no page
+errors (over 1.5: the harbor seal's baked run hauling out and slipping in, 2.5–2.8; an alligator's walk 1.54 in one run).
+
+Behaviour audit (run 43316302402 on dfd83278; the limits above on 12f893b8 pass all 23): flyers 615 (≥ 580), circling
+2.8%, turns 0.75 a minute (≤ 0.85), never move 828, amphibians 384 (≥ 375), snapped 0, heads 99.4%, predators within
+5 m 122, prey react 96.7% / flee 69.7% near the camera; encounters react 62.1%, close flee 58.9%, median 0.1 s. These
+are MA3's own numbers (ark-waterbirds alone: 615 / 2.8 / 0.75 / 828 / 384).
+
+Collisions (run 43316309748 on dfd83278), green in all three modes: islands v2 0 / 0 / 8 / 1,030,088; islands v1
+(rollback) 0 / 0 / 208 / 3,139,948; today's mode 0 / 0 / 217 / 2,951,413 (pass-throughs / fence crossings / cliffs /
+overlaps).
+
+Visual (accept run 43316317093 on dfd83278, hooks job green): all 19 golden shots within the limits against main's
+baselines (at most 0.26%: the river pond, its waterbirds placed differently; the two high-tier shots 0.03% and
+0.08%), looked at, no page errors, so the baselines stay. The v2 lake is not in the golden set.
+
+Production heap, the low phone profile, islands on, the real snapshot read in place (dfd83278): heap 256.5–282.2 MB,
+peak 257.8–282.1 MB against the 384 MB budget; 52 / 57.4 fps (a loaded Mac).
+
+Deploy checks after the deploy: on /ark (v2), no animal inside a boulder where it basks (the komodo); no teal duplicate
+beside a bird on the lake on a high-tier device; tapping an animal in the list flies the camera to it.
