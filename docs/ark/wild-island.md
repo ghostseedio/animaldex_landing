@@ -262,12 +262,16 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 
 ### Left
 
-- **P7, gates:** see the gate list in the coordinator's brief and the results below; the default switch (`archipelago.ts` `wildIslandAsked`: v2 unless `v1`) once they pass.
-- **P8:** when placement is final (B says it is, from f61cbaaf), the coordinator has the encounter lane regenerate `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
-- **The apps' embed** (`public/ark/embed.html`) mounts one island with `mountArk` and never calls `setArkWorld`: it stays v1 whatever islands mode says. With v2 the web default in islands mode, the apps and the web see different wild islands until the embed takes the archipelago (or `?world=v2`). That is the islands-on-the-apps lane's call; W1b checked only that `?world=v2` renders and frames the island alone there.
+- **P7, the open gates (helper B, `ark-wild-map`; all sent to B with the numbers):**
+  - the fixture collide audit on v2 (`ARK_WORLD=v2 npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --wild-island kept`, then `--check <report> --thresholds tests/ark-collide/thresholds-islands.json`): 34 pass-throughs, one common vampire bat at rest 0.17 m inside `rock:decor1273` (−71.2, −98.1). The live snapshot passes;
+  - `ARK_WORLD=v2` behaviour-schedule (33 mallard 5.1 m slot jump, 42 alligator 8.5 m, 45 flyers 2.45 turns a minute, 49 3.9 % circling; 37, 50, 52 are homestead species, likely n/a), sea-depth 114–116 (v1's lake rule in the test, or placement), behaviour-build (node out of memory), grounding 73 (a tent-making bat in a crown), map 93 (a v1 terrain swap, likely n/a).
+- **The default switch (P7 step 5), once those pass:** in `islands/archipelago.ts` `wildIslandAsked`, `return setting === "v2"` becomes `return setting !== "v1"` (and the `wildIsland` option's comment: v2 by default, `v1` or `?wild=v1` for today's). The page and the apps' embed (`public/ark/embed.html` mounts the archipelago since ark-next bcb5eca9) both follow it. Then tell the coordinator, the integrator and B (P8).
+- **P8:** placement is final from B's side (f61cbaaf); after the switch the coordinator has the encounter lane regenerate `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+- **Main-thread costs left on v2 (helper A's phone profile):** the ground's tiles and `freshWaterGeometry` (~200 ms of the mount task over v1's), and `world.ts` building v2's zone sites at load (~0.25 s). Under budget; worth moving to the scenery worker later.
+- **The town's join** (T3's prebuild worker): 35–102 s on this loaded Mac on both worlds, against the coordinator's ~10 s.
 - **The workbench renderer** (`islands/wild/render/index.ts`, `entry.ts`, `scripts/ark-wild.mts`, `tests/ark-visual/wild/`): kept until v2 is the default; then retire it with its baselines.
 
-### P7 results (W1b, 2026-11-12, `ark-wild-island-next` 4af53066)
+### P7 results (W1b, 2026-11-12, `ark-wild-island-next` a65a3db5)
 
 | Gate | Result |
 |---|---|
@@ -284,18 +288,20 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 ### Next commands
 
 ```sh
-cd <worktree on ark-wild-island-next>
-git fetch origin && git merge origin/ark-next            # keep current (docs, L5's audit fix before the cut)
-npm ci && git checkout yarn.lock
-npx tsc --noEmit -p tsconfig.json                          # only the 2 known header-menu errors
-nice -n 10 npx tsx --test src/lib/ark-map.test.ts src/lib/ark-grounding.test.ts src/lib/ark-streaming.test.ts \
-  src/lib/ark-islands.test.ts src/lib/ark-town-island.test.ts src/lib/ark-wild-island.test.ts src/lib/ark-sea-depth.test.ts \
-  src/lib/ark-prebuild.test.ts src/lib/ark-collide.test.ts src/lib/ark-behaviour-build.test.ts      # v1: all pass
-ARK_WORLD=v2 nice -n 10 npx tsx -e 'import("./src/ark-scene/world.ts").then((w) => console.log(w.arkWorld(), w.TERRAIN_HALF))'
-nice -n 10 npx tsx scripts/ark-wild-plan.mts --out .ark-golden/wild               # the plan picture and numbers
-nice -n 10 npx tsx scripts/ark-wild.mts stills --size 960x540                      # the workbench stills (Metal)
-# The scene in islands mode on v2: wt-view's local real data (never commit public/ark-local):
-#   /ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json&wild=v2
+cd <worktree on ark-wild-island-next>        # W1b's: scratchpad/wt-wild-W1b (detached; push with HEAD:ark-wild-island-next)
+git fetch origin && git merge origin/ark-next origin/ark-wild-map
+npm ci && git checkout yarn.lock && node scripts/build-ark-bundle.mjs   # the workers, so the dev page uses them
+npx tsc --noEmit -p tsconfig.json
+nice -n 10 npx tsx --test src/lib/ark-wild-frame.test.ts src/lib/ark-wild-island.test.ts src/lib/ark-wild-scenery.test.ts \
+  src/lib/ark-wild-map.test.ts src/lib/ark-reef.test.ts src/lib/ark-prebuild.test.ts src/lib/ark-islands.test.ts \
+  src/lib/ark-town-island.test.ts src/lib/ark-streaming.test.ts                    # v1; then the v2 list with ARK_WORLD=v2
+# v1 byte-identity: W=<worktree> npx tsx scratchpad/w1b-v1-hash.mts (and NOHAMLET=1) in this and an ark-next worktree; compare
+ARK_WORLD=v2 nice -n 10 npx tsx scripts/ark-map-live-validate.mts --snapshot <live.json> --routing <islands-routing.json>
+ARK_WORLD=v2 nice -n 10 npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --wild-island kept --out <dir>
+node scripts/ark-runtime-measure.mjs --devices phone --runs 1 --seconds 90 --islands --world v2 --prebuild \
+  --population-file <live.json> [--quality low]                                      # Part B's budgets
+# The page (wt-view's local real data, never committed): /ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json&wild=v2&hour=10
+# Probes and stills: scratchpad/w1b-views.mts (VW/VH, PHONE=1, QUALITY/MAPD/RSCALE, VIEWS home_*/wait_*), w1b-embed.mts, w1b-fly.mts
 ```
 
 ### Traps
@@ -310,6 +316,7 @@ nice -n 10 npx tsx scripts/ark-wild.mts stills --size 960x540                   
   - `map/hamlet.ts` OTHER_SITES and HOME_SITE;
   - `map/world-sampler.ts` MOUTH (B's).
 - **Module cycle:** `world.ts` → `islands/wild/world-v2.ts` → the wild generator → `world.ts`'s noise functions. These are hoisted function declarations, so the cycle is safe. Keep the wild generator's module-level code free of calls into `world.ts`, and of module-level `const`s that `sampleWildGround` reads (`ground.ts`'s VALLEY was moved inline for this).
+- **A process that asks for v2 at load (`ARK_WORLD=v2`, `?world=v2`) must load `world.ts` before the wild generator's modules.** At load `world.ts` applies v2 at once, which samples the generator (`wildZoneSites`); if a module under `islands/wild/` was imported first, the cycle hands it a half-evaluated `fields.ts` ("reading 'bearingOf' of undefined"). The page (the archipelago calls `setArkWorld` after load) and the workers (their entries import `world.ts` through the decor first) are fine; `ark-wild-island.test.ts` under `ARK_WORLD=v2` trips it (it tests the generator itself, so it runs on v1).
 - **`?world=v2` vs `?wild=v2`:**
   - `world=` is read by `world.ts` itself, meant for worker URLs and tests, and works even with islands off.
   - `wild=` is the page's review override, honoured only in islands mode.
