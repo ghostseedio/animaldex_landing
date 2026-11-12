@@ -58,8 +58,18 @@ the privacy text).
 | 34 | T3 warm-up guard | `ark-islands-scene` 0a98e0de | f0cf2f1f | 8/8; default view and the town probe: no page errors |
 | — | Linux visual baselines (decision 147), the intelligence hook CI-only skip (decision 209), the release doc | — | 1a2781af, 643a5d9f, cb91a9f1, **471c8d76 (the release head)** | 19 golden + 4 town shots looked at |
 
-After the cut, in order: L1 `ark-l1-walkpace` 86b15179 (contains `ark-l1-pace` f21ad63b), the behaviour lane's
-`ark-behaviour-backwards` cef5c27d, L5 `ark-collide-ease` 50760287, W1 `ark-wild-island-next` 89377939.
+## After the islands release (the next web-only deploy)
+
+| # | Lane | Branch head | `ark-next` head | Gates |
+|---|---|---|---|---|
+| 35 | L1 decisions 201–202 (reactions capped at 1.2× the walk or run pace; Froude walk and run floors for reach-limited rigs; goals out of a slot's reach not taken; unreachable roosts become a home-ground bed; a stay never jumps) | `ark-l1-walkpace` 86b15179 (contains `ark-l1-pace` f21ad63b) | c42708cb | clean |
+| 36 | Behaviour: backwards (a foal faces home, a sleeper keeps its heading, turns at TURN_RATE) | `ark-behaviour-backwards` cef5c27d | — | clean |
+| 37 | L5 decision 204: the separation push eased between 4 s moments, still bodies weigh more | `ark-collide-ease` 50760287 | 772f60e1 | clean; tsc 0; full gates running |
+
+- L1's 202c `roostOf` home-ground bed (a roost off the animal's own ground, or too far to walk in a slot, becomes a
+  seeded bed on its home ground, the same for every caller) **replaces decision 205's plan** for the roost jumps.
+- Held: W1 `ark-wild-island-next` (W1b clearing v2's gates); T3's embed islands support (`public/ark/embed.html`
+  ignores the islands today) comes next.
 
 ### Wirings and fixes the integrator made (allowed by the coordinator)
 
