@@ -171,7 +171,7 @@ import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
-import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
+import {installWorldSampler, setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import * as worldSampling from "@/ark-scene/world-sampler";
@@ -1031,8 +1031,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: The behaviour schedule (NPC-style, visual only)
 
     /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
-    // (Part C, first cut: another island's animals stand at their places, its behaviour world comes with the town's sampler.)
-    const scheduleOn = options.behaviour !== false && !island;
+    const scheduleOn = options.behaviour !== false;
+    // Part C: another island's behaviour world (its places, walk grid and obstacles: `islands/town/sampler.ts`) is the one
+    // the schedule reads while it is loaded; the wild island's otherwise.
+    installWorldSampler(island ? island.sampler() : null);
     let world: ScheduleWorld | null = null;
     /**
      * The places and the walk grid, from the graphics lane's scenery interface: built a few milliseconds a frame
@@ -1048,7 +1050,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // The graphics lane's attach points first, a slice a frame on their own (`prepareAttachPoints`, about 6 ms each): the
     // places start from them, so this build waits for them rather than building them in one task itself. Asked for on
     // the first frame, after the snapshot has set the hamlet's plots (a reset mid-build would finish it in one go).
-    let attachReady = false;
+    // (Part C: another island's places come with its sampler, not the wild scenery's attach points.)
+    let attachReady = Boolean(island);
     let attachAsked = false;
     /** The hamlet's plots changed (`setBehaviourHomePlots`): the world is built again, a slice a frame, and rewired. */
     const restartBehaviourWorld = () => {
@@ -1172,11 +1175,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Everyone but a true micro animal and an underground one (`map/place.ts` onSchedule); a perched bird or bat from its perch.
         // (Nor one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
-        const sea = ZONE_SITES[animal.zone]?.kind === "sea";
+        // (Part C: on another island, one kept still at a window, behind the glass or in a tank stays at its spot.)
+        if (island && !island.scheduled(animal.id)) return null;
+        const sea = !island && ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal)}, () => mapRoostOf(place, animal.zone)),
+            // (Part C: another island's animals find their roost among its places; their range is their garden, paddock or enclosure.)
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), ...(island ? {range: island.rangeOf(animal.id)} : {})}, () => (island ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1243,7 +1249,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         // (The map lane's line, 2026-11-11: a flyer's home may be any dry ground; every home keeps 5 m inside its habitat.)
         const job = spaceHomesTasks(
-            onIt.filter((e) => !groups.get(e)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && mapHabitatAt(e.animal, x, z, 5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z, 5))})),
+            // (Part C: another island's kept animals keep their homes: they take no part in the wild ecology, decision 43.)
+            onIt.filter((e) => !groups.get(e) && !(island && island.kept(e.animal.id))).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && (island ? true : mapHabitatAt(e.animal, x, z, 5)) : nav.walkable(x, z) && (island ? true : mapHabitatAt(e.animal, x, z, 5)))})),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -2537,7 +2544,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
             }
         }
-        if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
+        if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) {
+            const at = fromSchedule(entry, modelHeight);
+            // Part C: a zoo animal never leaves its enclosure (the mask is its hard bound, whatever its schedule's route).
+            if (island) island.bound(entry.animal.id, at);
+            return at;
+        }
         if (place.micro && !entry.visitor) {
             // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
             const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
@@ -5826,6 +5838,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (island) {
                 scene.remove(island.root);
                 island.dispose();
+                installWorldSampler(null);
             }
             for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();

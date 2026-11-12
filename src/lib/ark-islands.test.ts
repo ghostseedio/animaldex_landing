@@ -180,3 +180,23 @@ test("the older local snapshot with islands synthesised near T1's counts", {skip
         assert.ok(Math.abs(counts[key] - want) <= Math.max(12, want * 0.08), `${key}: ${counts[key]} near ${want}`);
     }
 });
+
+test("the town's panel by place: homes, farms, the zoo's types, town wildlife by niche (decision T3-6)", async () => {
+    const {arkTownGroupOf} = await import("@/lib/ark-islands");
+    const {arkPopulation} = await import("@/lib/ark-population");
+    const town = arkIslandSnapshot(islandsFixture(), "town");
+    const grouping = (animal: (typeof town.animals)[number]) => {
+        const g = arkTownGroupOf(animal);
+        return {key: g.key, order: g.order, label: g.key};
+    };
+    const population = arkPopulation(town, grouping);
+    const keys = population.regions.map((group) => group.place!.key);
+    assert.ok(keys.every((key) => /^(homes|farms|zoo:[a-z_]+|gardens|water|roofs|walls|streets)$/.test(key)), keys.join(","));
+    assert.equal(population.regions.reduce((n, g) => n + g.animals, 0), town.animals.length);
+    // No zoo animal is listed under a wild zone, and the zoo's groups come in its types' order after homes and farms.
+    for (const group of population.regions) for (const row of group.species) for (const a of row.animals) assert.equal(a.area === "zoo", group.place!.key.startsWith("zoo:"));
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "mallard", zone: "river_lake"}).group, "water");
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "peregrine-falcon", zone: "mountains"}).group, "roofs");
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "brown-rat", zone: "farm_garden"}).group, "streets");
+    assert.equal(arkTownGroupOf({area: "zoo", enclosure: "aquarium-2", model_slug: "blue-tang", zone: "coral_reef"}).key, "zoo:aquarium");
+});

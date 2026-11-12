@@ -15,7 +15,12 @@ import {TERRAIN_HALF} from "@/ark-scene/world";
 export type NavPoint = {x: number; z: number};
 
 const CELL = 2;
-const SIZE = Math.ceil((TERRAIN_HALF * 2) / CELL);
+
+/** The grid's extent: the sampler's own square (Part C: another island's, `ArkWorldSampler.half`), else the wild island's terrain. */
+function extentOf(sampler: ArkWorldSampler): {size: number; half: number} {
+    const half = sampler.half ?? TERRAIN_HALF;
+    return {half, size: Math.ceil((half * 2) / CELL)};
+}
 /** Steeper than this (rise over run) is a cliff to a walker. */
 export const MAX_SLOPE = 0.9;
 /** A mountain animal's (goats, ibex, snow leopards): steep ground is theirs. */
@@ -77,28 +82,29 @@ export type NavCells = {version: string; size: number; walk: Uint8Array; steep: 
  * cell's slope and whether it can be walked. The same numbers in the same order as the build all at once.
  */
 export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cells: NavCells} {
-    const cells: NavCells = {version: sampler.version, size: SIZE, walk: new Uint8Array(SIZE * SIZE), steep: new Float32Array(SIZE * SIZE), depth: new Float32Array(SIZE * SIZE), height: new Float32Array(SIZE * SIZE)};
+    const {size, half} = extentOf(sampler);
+    const cells: NavCells = {version: sampler.version, size: size, walk: new Uint8Array(size * size), steep: new Float32Array(size * size), depth: new Float32Array(size * size), height: new Float32Array(size * size)};
     const {walk, steep, depth, height} = cells;
-    const heights = chunked(() => SIZE, 1, (j) => {
-        for (let i = 0; i < SIZE; i++) {
-            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+    const heights = chunked(() => size, 1, (j) => {
+        for (let i = 0; i < size; i++) {
+            const x = -half + (i + 0.5) * CELL;
+            const z = -half + (j + 0.5) * CELL;
             const h = sampler.heightAt(x, z);
-            const k = j * SIZE + i;
+            const k = j * size + i;
             height[k] = h;
             depth[k] = h < 0 ? -h : 0;
         }
     });
-    const walkable = chunked(() => SIZE - 2, 1, (row) => {
+    const walkable = chunked(() => size - 2, 1, (row) => {
         const j = row + 1;
-        for (let i = 1; i < SIZE - 1; i++) {
-            const k = j * SIZE + i;
+        for (let i = 1; i < size - 1; i++) {
+            const k = j * size + i;
             const h = height[k];
             if (h <= 0.05) continue;
-            const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + SIZE] - height[k - SIZE])) / (2 * CELL);
+            const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + size] - height[k - size])) / (2 * CELL);
             steep[k] = slope;
-            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+            const x = -half + (i + 0.5) * CELL;
+            const z = -half + (j + 0.5) * CELL;
             if (sampler.blocked(x, z, 0.2)) continue;
             walk[k] = 1;
         }
@@ -115,6 +121,9 @@ export class NavGrid {
     /** Water depth (m, 0 on land). */
     private readonly depth: Float32Array;
     private readonly height: Float32Array;
+    /** Cells across, and half the square it covers (m): the sampler's island (Part C), else the wild island's terrain. */
+    private readonly size: number;
+    private readonly half: number;
 
     /** Built now from the sampler, or from cells already worked out (`navGridBuild`, a slice at a time). */
     constructor(private readonly sampler: ArkWorldSampler, built?: NavCells) {
@@ -125,6 +134,7 @@ export class NavGrid {
             cells = job.cells;
         }
         this.version = sampler.version;
+        ({size: this.size, half: this.half} = extentOf(sampler));
         this.walk = cells.walk;
         this.steep = cells.steep;
         this.depth = cells.depth;
@@ -133,40 +143,40 @@ export class NavGrid {
 
     /** The cells (read only: for the determinism tests and the scene stats). */
     get cells(): NavCells {
-        return {version: this.version, size: SIZE, walk: this.walk, steep: this.steep, depth: this.depth, height: this.height};
+        return {version: this.version, size: this.size, walk: this.walk, steep: this.steep, depth: this.depth, height: this.height};
     }
 
     private cellOf(x: number, z: number): [number, number] {
-        return [Math.min(Math.max(Math.floor((x + TERRAIN_HALF) / CELL), 0), SIZE - 1), Math.min(Math.max(Math.floor((z + TERRAIN_HALF) / CELL), 0), SIZE - 1)];
+        return [Math.min(Math.max(Math.floor((x + this.half) / CELL), 0), this.size - 1), Math.min(Math.max(Math.floor((z + this.half) / CELL), 0), this.size - 1)];
     }
 
     private centre(i: number, j: number): NavPoint {
-        return {x: -TERRAIN_HALF + (i + 0.5) * CELL, z: -TERRAIN_HALF + (j + 0.5) * CELL};
+        return {x: -this.half + (i + 0.5) * CELL, z: -this.half + (j + 0.5) * CELL};
     }
 
     /** Dry, clear and no steeper than `maxSlope` (a mountain goat's is higher than a cow's). */
     walkable(x: number, z: number, maxSlope = MAX_SLOPE): boolean {
         const [i, j] = this.cellOf(x, z);
-        const k = j * SIZE + i;
+        const k = j * this.size + i;
         return this.walk[k] === 1 && this.steep[k] <= maxSlope;
     }
 
     /** Water at least this deep there. */
     swimmable(x: number, z: number, minDepth: number): boolean {
         const [i, j] = this.cellOf(x, z);
-        return this.depth[j * SIZE + i] >= minDepth;
+        return this.depth[j * this.size + i] >= minDepth;
     }
 
     depthAt(x: number, z: number): number {
         const [i, j] = this.cellOf(x, z);
-        return this.depth[j * SIZE + i];
+        return this.depth[j * this.size + i];
     }
 
     /** The nearest cell of the kind (walkable, or water this deep) to a point, searched outwards in rings. */
     nearest(x: number, z: number, kind: "walk" | "swim", minDepth = 0.5, maxRing = 12, maxSlope = MAX_SLOPE): NavPoint | null {
         const [ci, cj] = this.cellOf(x, z);
         const ok = (k: number) => (kind === "walk" ? this.walk[k] === 1 && this.steep[k] <= maxSlope : this.depth[k] >= minDepth);
-        if (ok(cj * SIZE + ci)) return {x, z};
+        if (ok(cj * this.size + ci)) return {x, z};
         for (let r = 1; r <= maxRing; r++) {
             let best: NavPoint | null = null;
             let bestD = Infinity;
@@ -175,7 +185,7 @@ export class NavGrid {
                     if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
                     const i = ci + di;
                     const j = cj + dj;
-                    if (i < 0 || j < 0 || i >= SIZE || j >= SIZE || !ok(j * SIZE + i)) continue;
+                    if (i < 0 || j < 0 || i >= this.size || j >= this.size || !ok(j * this.size + i)) continue;
                     const c = this.centre(i, j);
                     const d = Math.hypot(c.x - x, c.z - z);
                     if (d < bestD) {
@@ -219,8 +229,8 @@ export class NavGrid {
         const ok = (k: number) => (kind === "walk" ? this.walk[k] === 1 && this.steep[k] <= maxSlope : this.depth[k] >= minDepth);
         const [si, sj] = this.cellOf(a.x, a.z);
         const [gi, gj] = this.cellOf(b.x, b.z);
-        const start = sj * SIZE + si;
-        const goal = gj * SIZE + gi;
+        const start = sj * this.size + si;
+        const goal = gj * this.size + gi;
         const g = new Map<number, number>([[start, 0]]);
         const from = new Map<number, number>();
         const open = new Heap();
@@ -231,8 +241,8 @@ export class NavGrid {
         while (open.size && expanded < maxNodes) {
             const k = open.pop();
             expanded++;
-            const i = k % SIZE;
-            const j = (k - i) / SIZE;
+            const i = k % this.size;
+            const j = (k - i) / this.size;
             const h = Math.hypot(gi - i, gj - j);
             if (h < bestH) {
                 bestH = h;
@@ -244,8 +254,8 @@ export class NavGrid {
                     if (!di && !dj) continue;
                     const ni = i + di;
                     const nj = j + dj;
-                    if (ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
-                    const nk = nj * SIZE + ni;
+                    if (ni < 0 || nj < 0 || ni >= this.size || nj >= this.size) continue;
+                    const nk = nj * this.size + ni;
                     // (The goal's cell may be blocked, a drinking spot by a pond, a rock's top: it is entered from open
                     // ground, never straight from a blocked start, across whatever blocks them both: a dog crossed the
                     // garden pond from one drinking spot to the next.)
@@ -262,7 +272,7 @@ export class NavGrid {
         const cells: number[] = [];
         for (let k: number | undefined = best; k !== undefined && k !== start; k = from.get(k)) cells.push(k);
         cells.reverse();
-        const raw: NavPoint[] = [a, ...cells.map((k) => this.centre(k % SIZE, Math.floor(k / SIZE)))];
+        const raw: NavPoint[] = [a, ...cells.map((k) => this.centre(k % this.size, Math.floor(k / this.size)))];
         // Reached: it ends at b itself (and still starts at a when both are in one cell: it used to lose a, and jump).
         if (best === goal) {
             if (raw.length > 1) raw[raw.length - 1] = b;
@@ -296,24 +306,24 @@ export class NavGrid {
     region(x: number, z: number, maxSlope = MAX_SLOPE): number {
         let ids = this.regions.get(maxSlope);
         if (!ids) {
-            ids = new Int32Array(SIZE * SIZE).fill(-1);
+            ids = new Int32Array(this.size * this.size).fill(-1);
             const ok = (k: number) => this.walk[k] === 1 && this.steep[k] <= maxSlope;
             const stack: number[] = [];
             let next = 0;
-            for (let k0 = 0; k0 < SIZE * SIZE; k0++) {
+            for (let k0 = 0; k0 < this.size * this.size; k0++) {
                 if (ids[k0] >= 0 || !ok(k0)) continue;
                 ids[k0] = next;
                 stack.push(k0);
                 while (stack.length) {
                     const k = stack.pop()!;
-                    const i = k % SIZE;
-                    const j = (k - i) / SIZE;
+                    const i = k % this.size;
+                    const j = (k - i) / this.size;
                     for (let dj = -1; dj <= 1; dj++) {
                         for (let di = -1; di <= 1; di++) {
                             const ni = i + di;
                             const nj = j + dj;
-                            if ((!di && !dj) || ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
-                            const nk = nj * SIZE + ni;
+                            if ((!di && !dj) || ni < 0 || nj < 0 || ni >= this.size || nj >= this.size) continue;
+                            const nk = nj * this.size + ni;
                             if (ids[nk] >= 0 || !ok(nk)) continue;
                             ids[nk] = next;
                             stack.push(nk);
@@ -325,15 +335,15 @@ export class NavGrid {
             this.regions.set(maxSlope, ids);
         }
         const [ci, cj] = this.cellOf(x, z);
-        const own = ids[cj * SIZE + ci];
+        const own = ids[cj * this.size + ci];
         if (own >= 0) return own;
         let best = -1;
         for (let dj = -1; dj <= 1; dj++) {
             for (let di = -1; di <= 1; di++) {
                 const i = ci + di;
                 const j = cj + dj;
-                if (i < 0 || j < 0 || i >= SIZE || j >= SIZE) continue;
-                const id = ids[j * SIZE + i];
+                if (i < 0 || j < 0 || i >= this.size || j >= this.size) continue;
+                const id = ids[j * this.size + i];
                 if (id >= 0 && (best < 0 || id < best)) best = id;
             }
         }
