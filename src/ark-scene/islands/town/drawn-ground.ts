@@ -15,8 +15,9 @@
  * through, the tile). `src/lib/ark-town-grounding.test.ts` holds the tile against the drawn mesh's own triangles.
  */
 
-import {sampleTownGround} from "@/ark-scene/islands/town/ground";
-import {TOWN_HALF, TOWN_SEGMENTS} from "@/ark-scene/islands/town/plan";
+import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {bounds, inBox} from "@/ark-scene/islands/town/geom";
+import {CANAL_LEVEL, HARBOUR_BASIN, TOWN_HALF, TOWN_SEGMENTS, townPlan} from "@/ark-scene/islands/town/plan";
 
 const SIZE = TOWN_SEGMENTS + 1;
 const STEP = (TOWN_HALF * 2) / TOWN_SEGMENTS;
@@ -138,7 +139,7 @@ export function townWalkSurfacesNow(): TownWalkSurfaces | null {
 export type TownDrawnGround = {height: number; nx: number; ny: number; nz: number};
 
 /** The highest walk surface over a point and its triangle's normal (null: none there). */
-function surfaceAt(x: number, z: number, own: TownWalkSurfaces | null): TownDrawnGround | null {
+function surfaceAt(x: number, z: number, own: TownWalkSurfaces | null, under = Infinity): TownDrawnGround | null {
     if (!own || outside(x, z)) return null;
     const ci = Math.floor((x + TOWN_HALF) / CELL);
     const cj = Math.floor((z + TOWN_HALF) / CELL);
@@ -161,7 +162,8 @@ function surfaceAt(x: number, z: number, own: TownWalkSurfaces | null): TownDraw
         const eps = -1e-6;
         if (w0 < eps || w1 < eps || w2 < eps) continue;
         const y = w0 * t[o + 1] + w1 * t[o + 4] + w2 * t[o + 7];
-        if (best && y <= best.height) continue;
+        // (Stacked floors, a flat's balcony over the one below: the highest at or under the body, not the one over it.)
+        if (y > under || (best && y <= best.height)) continue;
         // Its normal, facing up.
         const ux = bx - ax;
         const uy = t[o + 4] - t[o + 1];
@@ -182,10 +184,14 @@ function surfaceAt(x: number, z: number, own: TownWalkSurfaces | null): TownDraw
     return best;
 }
 
-/** The town's drawn ground's height at a point (m, local frame): the tile, or the walk surface on it. */
-export function townDrawnHeight(x: number, z: number, own: TownWalkSurfaces | null = surfaces): number {
+/**
+ * The town's drawn ground's height at a point (m, local frame): the tile, or the walk surface on it. `near`: the height
+ * the body is at (its pose's base), so where floors are stacked (balconies, a cage's perch over its tray) the one it
+ * stands on is taken, not one over its head (anything up to 0.3 m over it counts: a step, a kerb).
+ */
+export function townDrawnHeight(x: number, z: number, own: TownWalkSurfaces | null = surfaces, near?: number): number {
     const tile = townTileHeight(x, z);
-    const top = surfaceAt(x, z, own);
+    const top = surfaceAt(x, z, own, near === undefined ? Infinity : near + 0.3);
     return top && top.height > tile ? top.height : tile;
 }
 
@@ -200,4 +206,63 @@ export function townDrawnGround(x: number, z: number, own: TownWalkSurfaces | nu
     const dz = (townTileHeight(x, z + e) - townTileHeight(x, z - e)) / (2 * e);
     const l = Math.hypot(dx, 1, dz);
     return {height: tile, nx: -dx / l, ny: 1 / l, nz: -dz / l};
+}
+
+// MARK: - Its water's surface
+
+/** Per 1 m cell: 0 dry land, 1 the sea's (the harbour and the sea round the island), else the fresh water's level + 2. */
+let waterCells: Float32Array | null = null;
+const WATER_CELLS = Math.ceil(TOWN_HALF * 2);
+let farmPond: {x0: number; x1: number; z0: number; z1: number; level: number} | null | undefined;
+
+function farmPondLevel(): typeof farmPond {
+    if (farmPond !== undefined) return farmPond;
+    const w = townPlan().waters.find((q) => q.kind === "farm_pond");
+    if (!w) return (farmPond = null);
+    const b = bounds(w.poly);
+    // (Its bed in the middle is its level less its depth: `ground.ts`.)
+    const cx = (b.x0 + b.x1) / 2;
+    const cz = (b.z0 + b.z1) / 2;
+    return (farmPond = {x0: b.x0 - 4, x1: b.x1 + 4, z0: b.z0 - 4, z1: b.z1 + 4, level: townHeight(cx, cz) + w.depth});
+}
+
+function waterCell(x: number, z: number): number {
+    const i = Math.floor(x + TOWN_HALF);
+    const j = Math.floor(z + TOWN_HALF);
+    if (i < 0 || j < 0 || i >= WATER_CELLS || j >= WATER_CELLS) return 1;
+    waterCells ??= new Float32Array(WATER_CELLS * WATER_CELLS).fill(Number.NaN);
+    const k = j * WATER_CELLS + i;
+    let v = waterCells[k];
+    if (Number.isNaN(v)) {
+        const cx = i + 0.5 - TOWN_HALF;
+        const cz = j + 0.5 - TOWN_HALF;
+        const g = sampleTownGround(cx, cz);
+        // (The harbour basin, the sea and anything else under the sea's level: the sea's water. The canal's and the
+        // millpond's beds are under it too, but their water is held by the lock.)
+        if (g.surface === "water" && inBox(HARBOUR_BASIN, cx, cz, 0.2)) v = 1;
+        else if (g.surface !== "water") v = g.surface === "sea" || g.height < 0.02 ? 1 : 0;
+        else {
+            const pond = farmPondLevel();
+            v = 2 + (pond && cx >= pond.x0 && cx <= pond.x1 && cz >= pond.z0 && cz <= pond.z1 ? pond.level : CANAL_LEVEL);
+        }
+        waterCells[k] = v;
+    }
+    return v;
+}
+
+/**
+ * The town's fresh water's surface over a point (local frame): the canal's and the millpond's held by the lock, the
+ * farm pond's own; null at sea (the sea's, with the tide) and on dry land (no water over it). Cheap (1 m cells).
+ */
+export function townWaterSurface(x: number, z: number): number | null {
+    const v = waterCell(x, z);
+    return v >= 2 ? v - 2 : null;
+}
+
+/** For trip planning: the water's surface, the ground's own height on dry land, null at sea. */
+export function townWaterLevel(x: number, z: number): number | null {
+    const v = waterCell(x, z);
+    if (v >= 2) return v - 2;
+    if (v === 1) return null;
+    return townHeight(x, z);
 }

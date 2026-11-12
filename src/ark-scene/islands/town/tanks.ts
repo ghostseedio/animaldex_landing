@@ -18,10 +18,10 @@
  * - **Big livestock routed to a home** (horses, cattle, donkeys, pigs, llamas) is kept at a farm's paddock (livery).
  */
 
-import {corners, hashText, local, sub, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, inBox, local, sub, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
-import type {Household, ZooEnclosure} from "@/ark-scene/islands/town/areas";
+import {townHouseholds, type Household, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {fitInWater, speciesDepth, swimRange, bandCycle, breathAt, waterMotion, type DepthBand, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 
 // MARK: - Tanks
@@ -182,10 +182,12 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
     const roomX = Math.max(tank.w / 2 - margin, 0.01);
     const roomZ = Math.max(tank.d / 2 - margin, 0.01);
     const share = motion === "swim" ? 0.55 + 0.45 * unit(id, "loop") : motion === "float" ? 0.3 + 0.4 * unit(id, "loop") : 0.15 + 0.35 * unit(id, "loop");
-    const a = roomX * share;
-    const b = roomZ * share;
-    const ox = (roomX - a) * (unit(id, "ox") * 2 - 1);
-    const oz = (roomZ - b) * (unit(id, "oz") * 2 - 1);
+    // (A body as long as the tank is wide keeps to its long axis, up and back along it, turning at the ends.)
+    const long = length > Math.min(tank.w, tank.d) - 0.12;
+    const a = long ? (tank.w >= tank.d ? Math.max(tank.w / 2 - length / 2 - 0.04, 0) : 0) : roomX * share;
+    const b = long ? (tank.w >= tank.d ? 0 : Math.max(tank.d / 2 - length / 2 - 0.04, 0)) : roomZ * share;
+    const ox = long ? 0 : (roomX - a) * (unit(id, "ox") * 2 - 1);
+    const oz = long ? 0 : (roomZ - b) * (unit(id, "oz") * 2 - 1);
     const pace = motion === "swim" ? Math.min(Math.max(0.08 + 0.28 * length, 0.05), 0.55) * (0.7 + 0.6 * unit(id, "pace")) : motion === "float" ? 0.04 : motion === "walk" ? 0.025 : 0;
     const radius = Math.max((a + b) / 2, 0.02);
     const dir = unit(id, "dir") < 0.5 ? -1 : 1;
@@ -195,6 +197,14 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
     // Heading along the loop (models face +z: forward is (sin yaw, cos yaw)).
     let tx = -Math.sin(angle) * a * dir;
     let tz = Math.cos(angle) * b * dir;
+    if (long) {
+        // Along the long axis, facing the way it goes (it turns where it stops, at the ends).
+        const along = Math.sin(angle) * dir;
+        lx = tank.w >= tank.d ? Math.cos(angle) * a : 0;
+        lz = tank.w >= tank.d ? 0 : Math.cos(angle) * b;
+        tx = tank.w >= tank.d ? -along || 1 : 0;
+        tz = tank.w >= tank.d ? 0 : -along || 1;
+    }
     if (motion === "hole") {
         // In its corner on the sand, its head turning slowly.
         lx = (tank.w / 2 - margin) * (unit(id, "cx") < 0.5 ? -1 : 1);
@@ -295,11 +305,11 @@ const ROOM = {house: {w: 3.4, d: 2.6, h: 2.5}, terrace_home: {w: 2.6, d: 2.2, h:
 export const POND_SIZE = {w: 2.2, d: 1.5, wall: 0.5, water: 0.44};
 
 /** The displays' shares of the wall (tank, cage, vivarium): a vivarium holds the longest pets, a cage the smallest. */
-const SHARES = {tank: 0.32, cage: 0.18, vivarium: 0.5};
+const SHARES = {room: {tank: 0.32, cage: 0.18, vivarium: 0.5}, balcony: {tank: 0.36, cage: 0.3, vivarium: 0.34}};
 
-function displaySlots(household: string, frame: Box, floor: number, usable: number, depth: number, stand: number, scale: number): HomeSite["displays"] {
+function displaySlots(household: string, frame: Box, floor: number, usable: number, depth: number, stand: number, scale: number, shares: {tank: number; cage: number; vivarium: number} = SHARES.room): HomeSite["displays"] {
     const gap = 0.1;
-    const widths = {tank: usable * SHARES.tank - gap, cage: usable * SHARES.cage - gap, vivarium: usable * SHARES.vivarium - gap};
+    const widths = {tank: usable * shares.tank - gap, cage: usable * shares.cage - gap, vivarium: usable * shares.vivarium - gap};
     const heights = {tank: 0.46 * scale, cage: 0.62 * scale, vivarium: 0.46 * scale};
     const out = {} as HomeSite["displays"];
     let u = -usable / 2;
@@ -365,7 +375,7 @@ function siteFor(home: Household, b: Building, parcel: Parcel | null): HomeSite 
     const balcony = floorIndex >= 1 && floorIndex < b.floors;
     const box = sub(b.at, (side * b.at.w) / 4, -b.at.d / 2 - 0.36, 1.5, 0.6);
     const floor = balcony ? f + floorIndex * storey + 0.08 : Math.max(...corners(box).map((c) => townHeight(c.x, c.z))) + 0.02;
-    const displays = displaySlots(home.id, box, floor, box.w - 0.1, 0.42, 0.42, 0.85);
+    const displays = displaySlots(home.id, box, floor, box.w - 0.1, 0.42, 0.42, 0.85, SHARES.balcony);
     return {household: home.id, kind: balcony ? "balcony" : "patio", box, floor, height: 1.0, pond: null, displays};
 }
 
@@ -404,12 +414,15 @@ export function displaySpot(display: HomeDisplay, animal: {id: string; model_slu
     const half = Math.max(display.w / 2 - Math.min(length * 0.5, display.w / 2) - 0.02, 0);
     const depth = Math.max(display.d / 2 - Math.min(length * 0.3, display.d / 2) - 0.02, 0);
     const lx = u * half;
-    const lz = v * depth * 0.5;
+    // (A perched bird is on the bar down the cage's middle.)
+    const lz = perched ? 0 : v * depth * 0.5;
     const c = Math.cos(display.rot);
     const s = Math.sin(display.rot);
     // Side on to the glass (seen whole from the room), facing one way or the other.
-    const yaw = display.rot + (unit(animal.id, "face") < 0.5 ? Math.PI / 2 : -Math.PI / 2) + (unit(animal.id, "turn") - 0.5) * 0.5;
-    const y = perched ? display.floor + (display.top - display.floor) * 0.55 : display.floor;
+    // (A long body lies straight along it: no turn that would put its nose through the glass.)
+    const turn = length < display.d * 0.7 ? (unit(animal.id, "turn") - 0.5) * 0.5 : 0;
+    const yaw = display.rot + (unit(animal.id, "face") < 0.5 ? Math.PI / 2 : -Math.PI / 2) + turn;
+    const y = perched ? perchHeight(display) : display.floor;
     return {x: display.x + lx * c - lz * s, z: display.z + lx * s + lz * c, y, yaw};
 }
 
@@ -422,3 +435,79 @@ export function perchesInCage(slug: string, plan: string | null): boolean {
 export function displayTank(display: HomeDisplay): Tank {
     return {id: display.id, kind: "fresh", form: display.form === "pond" ? "pond" : "home", x: display.x, z: display.z, rot: display.rot, w: display.w, d: display.d, floor: display.floor, top: display.top};
 }
+
+// MARK: - Floors (walk surfaces: `drawn-ground.ts`)
+
+/** A box's top at a height as two upward triangles (x y z, three vertices each). */
+export function floorTriangles(b: Box, y: number, out: number[] = []): number[] {
+    const c = corners(b);
+    // corners: (-,-), (+,-), (+,+), (-,+) in the box's frame; counter-clockwise from above for an upward normal.
+    const p = (i: number) => [c[i].x, y, c[i].z];
+    out.push(...p(0), ...p(3), ...p(2), ...p(0), ...p(2), ...p(1));
+    return out;
+}
+
+/** The zoo houses' floors (every open house enclosure's inside, at its floor's height). */
+export function zooHouseFloors(enclosures: readonly ZooEnclosure[]): Float32Array {
+    const out: number[] = [];
+    for (const e of enclosures) {
+        if (e.shared || !ZOO_HOUSE_TYPES.has(e.type)) continue;
+        const f = zooHouseFrame(e);
+        floorTriangles(f.inner, f.floor, out);
+    }
+    return new Float32Array(out);
+}
+
+/** The bar a cage's birds perch on (the cage's middle, along it): its height. */
+export function perchHeight(display: HomeDisplay): number {
+    return display.floor + (display.top - display.floor) * 0.55;
+}
+
+/** The floors of the drawn home sites: each garden room's, and its cages' trays and vivaria's substrate. */
+export function homeDisplayFloors(sites: readonly HomeSite[], used: ReadonlySet<string>): Float32Array {
+    const out: number[] = [];
+    for (const site of sites) {
+        if (site.kind === "garden_room") floorTriangles(site.box, site.floor, out);
+        for (const form of ["cage", "vivarium"] as const) {
+            const d = site.displays[form];
+            if (!used.has(d.id)) continue;
+            // (A perched bird stands at its perch's height, held there: the bar is not a floor.)
+            floorTriangles({x: d.x, z: d.z, w: d.w, d: d.d, rot: d.rot}, d.floor, out);
+        }
+    }
+    return new Float32Array(out);
+}
+
+// MARK: - The town's solids (buildings, garden rooms, ponds), for placement and the behaviour world
+
+let solids: {boxes: Box[]; grid: Map<number, number[]>} | null = null;
+const SOLID_CELL = 16;
+/** Every building's footprint, and the garden rooms and ponds, on a coarse grid. */
+function solidBoxes(): {boxes: Box[]; grid: Map<number, number[]>} {
+    if (solids) return solids;
+    const plan = townPlan();
+    const boxes: Box[] = [...plan.buildings.map((b) => b.at), ...homeSiteFootprints(townHouseholds(plan), plan)];
+    const grid = new Map<number, number[]>();
+    boxes.forEach((b, i) => {
+        const r = Math.hypot(b.w, b.d) / 2 + 2;
+        for (let cx = Math.floor((b.x - r) / SOLID_CELL); cx <= Math.floor((b.x + r) / SOLID_CELL); cx++) {
+            for (let cz = Math.floor((b.z - r) / SOLID_CELL); cz <= Math.floor((b.z + r) / SOLID_CELL); cz++) {
+                const key = (cx + 512) * 1024 + cz + 512;
+                (grid.get(key) ?? grid.set(key, []).get(key)!).push(i);
+            }
+        }
+    });
+    return (solids = {boxes, grid});
+}
+
+export function nearTownSolids(x: number, z: number): Box[] {
+    const {boxes, grid} = solidBoxes();
+    return (grid.get((Math.floor(x / SOLID_CELL) + 512) * 1024 + Math.floor(z / SOLID_CELL) + 512) ?? []).map((i) => boxes[i]);
+}
+
+/** Within `margin` of a building's footprint (or inside it). */
+export function inTownSolid(x: number, z: number, margin: number): boolean {
+    for (const b of nearTownSolids(x, z)) if (inBox(b, x, z, margin)) return true;
+    return false;
+}
+

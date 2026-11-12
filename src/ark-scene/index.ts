@@ -565,9 +565,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setLocoGround(isl ? (x, z) => (isl.contains(x, z) ? isl.drawnGround(x, z) : drawnGround(x, z)) : drawnGround);
     };
     /** Lane TB: the drawn ground the grounding stand puts feet on, on the island it stands on (never the wild sea floor under the town). */
-    const standGround = (x: number, z: number) => {
+    const standGround = (x: number, z: number, near?: number) => {
         const isl = island;
-        return isl && isl.contains(x, z) ? isl.drawnHeight(x, z) : drawnGroundHeight(x, z);
+        return isl && isl.contains(x, z) ? isl.drawnHeight(x, z, near) : drawnGroundHeight(x, z);
     };
     /** The ground and water under an animal for its contact shadow and ring, on its own island. */
     const groundUnderAt = (x: number, z: number, seaLevel: number, exact: boolean) => {
@@ -2743,6 +2743,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = momentAt(entry, model, modelHeight, time);
             if (at) return at;
         }
+        // Lane TB: a town tank's resident (the aquarium's, a home's tank, a garden pond) swims in its tank's own water.
+        const tank = island && !entry.visitor ? island.tankPose(entry.animal.id, entry.length, modelHeight, reducedMotion ? 0 : clockNow()) : null;
+        if (tank) return {x: tank.x, z: tank.z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
             // Out of doors, the collisions have the last word (out of the props, eased off the others: `collide/`).
@@ -2853,6 +2856,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** On its own feet on land: where a rigged animal may walk about its spot. */
     const onFoot = (entry: Entry) =>
         !scheduled(entry) &&
+        // (Lane TB: never out of its cage, vivarium, tank or zoo house: a town animal held there.)
+        !(island && island.held(entry.animal.id)) &&
         !entry.visitor && !entry.place.micro && !entry.place.perch && !entry.place.canopy && !entry.place.burrow && !entry.place.water && !atSeaOf(entry) && entry.air <= 0.001 && !entry.act && !entry.moment;
     /** A number in [0, 1) for this animal and this count (the same every visit). */
     const wanderRandom = (entry: Entry, n: number) => {
@@ -3911,8 +3916,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
             } else {
                 // Grounding: its true base on the drawn ground, leaning to the slope (the pose's own offsets carried over).
-                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z))
-                    ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight, ground: standGround})
+                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))
+                    ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight, ground: island ? (x, z) => standGround(x, z, poseBase) : standGround})
                     : null;
                 if (stand) {
                     where.pitch += stand.pitch;
@@ -3962,7 +3967,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Grounding's runtime check (development, `?grounding=1`): its contacts against what it stands on.
             if (groundingCheck.on && !slept && !act && !where.water && entry.air <= 0.001 && !entry.denIn) {
                 const checkLevel = rig ? "rig" : level === "far" ? "far" : "near";
-                if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, standGround) ?? 0, modelHeight);
+                if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, (x, z) => standGround(x, z, poseBase)) ?? 0, modelHeight);
                 else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
@@ -3972,7 +3977,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const act2 = act as {state?: string; speed?: number} | null;
                 // (A behaviour recipe's state too: its attitude, a crouch or a rear, stays on the body.)
                 const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? null;
-                const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept;
+                // (Lane TB: one held in a cage, a vivarium or a zoo house keeps its clip's feet: its floor may be over another.)
+                const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id));
                 const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null}, index);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
