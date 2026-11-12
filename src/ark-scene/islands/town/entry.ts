@@ -13,6 +13,8 @@ import {ArkLighting} from "@/ark-scene/lighting";
 import {ArkPost} from "@/ark-scene/post";
 import {ARK_TIME} from "@/ark-scene/glsl";
 import {buildTownIsland, TOWN_TIERS, type TownTier} from "@/ark-scene/islands/town/render/index";
+import {buildZooHouses} from "@/ark-scene/islands/town/render/zoo-houses";
+import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import {local} from "@/ark-scene/islands/town/geom";
@@ -94,6 +96,8 @@ export function mountTown(el: HTMLElement) {
     lighting.setShadows(renderer, TOWN_TIERS[tier].shadows);
     const town = buildTownIsland({tier});
     scene.add(town.root);
+    // (Lane TB: the zoo's houses, their tanks and halls, are drawn with the zoo's day, not the scenery.)
+    town.root.add(buildZooHouses(zooLayout(launchEnclosures()).enclosures).group);
     const post = new ArkPost(renderer, scene, camera, tier);
     let clock: TownClock = {hours: hours0, day: Number(params.get("day") ?? 20406)};
     const target = new Vector3();
