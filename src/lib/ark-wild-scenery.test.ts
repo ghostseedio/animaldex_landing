@@ -13,8 +13,10 @@ import {setNoHamlet} from "@/ark-scene/no-hamlet";
 import {forestFill, grassTufts, worldDecor} from "@/ark-scene/decor";
 import {floorObstacles, floorPlacements} from "@/ark-scene/floor-assets";
 import {drawnRocks} from "@/ark-scene/map/rocks";
-import {allMountainRocks} from "@/ark-scene/rock-layout";
-import {allMounds} from "@/ark-scene/mounds";
+import {allMountainRocks, mountainRocks} from "@/ark-scene/rock-layout";
+import {allMounds, savannaMounds} from "@/ark-scene/mounds";
+import {computeScenery} from "@/ark-scene/runtime/prebuild-scenery";
+import {applyArkPrebuild} from "@/ark-scene/runtime/prebuild";
 import {microDecor} from "@/ark-scene/micro-decor";
 import {rockAssetFor} from "@/ark-scene/rock-assets";
 import {assetTreePlacement, treeAssetFor} from "@/ark-scene/tree-pick";
@@ -183,4 +185,35 @@ test("v2: the attach points are the wild island's trees', rocks', logs' and grou
         setArkWorld("v1");
         setNoHamlet(false);
     }
+});
+
+test("v2: the scenery worker lays the mountain's rocks and the savanna's mounds too, and the mount takes them as primed (no main-thread build)", () => {
+    setArkWorld("v2");
+    try {
+        const scenery = computeScenery(500, "low");
+        assert.ok(scenery.mountain && scenery.mounds, "the v2 prebuild carries the mountain and the mounds");
+        // What the worker posts is a structured clone: the mount's modules take the copy and build nothing themselves.
+        const copy = structuredClone({mountain: scenery.mountain, mounds: scenery.mounds, decor: scenery.decor, fill: scenery.fill, rocks: scenery.rocks, trees: scenery.trees});
+        assert.deepEqual(copy.mountain, mountainRocks());
+        assert.deepEqual(copy.mounds, savannaMounds());
+        assert.deepEqual(copy.rocks, worldDecor().map((item) => rockAssetFor(item)));
+        assert.deepEqual(copy.trees, {decor: worldDecor().map((item) => assetTreePlacement(item)), fill: forestFill().map((item) => assetTreePlacement(item))});
+        applyArkPrebuild({...copy, grass: scenery.grass}, null);
+        assert.equal(mountainRocks(), copy.mountain);
+        assert.equal(savannaMounds(), copy.mounds);
+        // Each decor rock's placement is the worker's, shared by every reader (no seating on the main thread).
+        assert.equal(worldDecor(), copy.decor);
+        copy.decor.forEach((item, i) => assert.equal(rockAssetFor(item), copy.rocks![i]));
+        // And each tree's (no seating on the main thread either).
+        assert.equal(forestFill(), copy.fill);
+        copy.decor.forEach((item, i) => assert.equal(assetTreePlacement(item), copy.trees!.decor[i]));
+        copy.fill.forEach((item, i) => assert.equal(assetTreePlacement(item), copy.trees!.fill[i]));
+    } finally {
+        setArkWorld("v1");
+        setNoHamlet(false);
+    }
+    // Today's world: the prebuild is as it was (no mountain, no mounds in it).
+    const today = computeScenery(500, "low");
+    assert.equal(today.mountain, undefined);
+    assert.equal(today.mounds, undefined);
 });

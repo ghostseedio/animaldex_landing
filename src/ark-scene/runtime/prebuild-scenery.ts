@@ -8,6 +8,11 @@ import * as terrain from "@/ark-scene/terrain";
 import {reefGrowth, type ReefItem} from "@/ark-scene/reef";
 import {floorPlacements, type FloorPlacement} from "@/ark-scene/floor-assets";
 import {wheatStands} from "@/ark-scene/near-detail";
+import {mountainRocks, type RockPiece} from "@/ark-scene/rock-layout";
+import {savannaMounds, type Mound} from "@/ark-scene/mounds";
+import {arkWorld} from "@/ark-scene/world";
+import {rockAssetFor, type RockPlacement} from "@/ark-scene/rock-assets";
+import {assetTreePlacement, type TreePlacement} from "@/ark-scene/tree-pick";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 
 /**
@@ -26,7 +31,23 @@ export function groundBuffers(arrays: GroundArrays | null | undefined): ArrayBuf
 }
 
 export type ArkPackedGrass = {count: number; numbers: Float64Array; zones: Uint8Array};
-export type ArkSceneryPrebuild = {decor: DecorItem[]; fill: FillItem[]; grass: ArkPackedGrass; ground: GroundArrays | null; reef?: ReefItem[]; floor?: FloorPlacement[]; wheat?: ReturnType<typeof wheatStands>; ms: number};
+export type ArkSceneryPrebuild = {
+    decor: DecorItem[];
+    fill: FillItem[];
+    grass: ArkPackedGrass;
+    ground: GroundArrays | null;
+    reef?: ReefItem[];
+    floor?: FloorPlacement[];
+    wheat?: ReturnType<typeof wheatStands>;
+    /** The bigger wild island (P3): L6's mountain over its whole square, and its savanna's mounds (each seconds on a phone). */
+    mountain?: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]};
+    mounds?: Mound[];
+    /** The bigger wild island: each decor item's asset rock as placed (`rock-assets.ts` rockAssetFor; null for the rest), by index. */
+    rocks?: Array<RockPlacement | null>;
+    /** And each decor and fill item's asset tree as placed (`tree-pick.ts` assetTreePlacement; null for the rest), by index. */
+    trees?: {decor: Array<TreePlacement | null>; fill: Array<TreePlacement | null>};
+    ms: number;
+};
 
 export function packGrass(tufts: GrassTuft[], count: number): ArkPackedGrass {
     const numbers = new Float64Array(tufts.length * 6);
@@ -51,5 +72,16 @@ export function unpackGrass(grass: ArkPackedGrass): GrassTuft[] {
 export function computeScenery(grass: number, tier: "high" | "medium" | "low" = "high"): ArkSceneryPrebuild {
     const started = Date.now();
     const ground = groundApi.groundArrays ? groundApi.groundArrays(tier) : null;
-    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ms: Date.now() - started};
+    const scenery: ArkSceneryPrebuild = {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ms: 0};
+    // The bigger wild island (P3): its mountain's rocks and its savanna's mounds are built here too, off the main thread.
+    if (arkWorld() === "v2") {
+        Object.assign(scenery, {
+            mountain: mountainRocks(),
+            mounds: savannaMounds(),
+            rocks: scenery.decor.map((item) => rockAssetFor(item)),
+            trees: {decor: scenery.decor.map((item) => assetTreePlacement(item)), fill: scenery.fill.map((item) => assetTreePlacement(item))}
+        });
+    }
+    scenery.ms = Date.now() - started;
+    return scenery;
 }

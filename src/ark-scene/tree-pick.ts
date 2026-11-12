@@ -10,7 +10,7 @@
 import manifest from "@/ark-scene/assets-manifest.json";
 import type {DecorItem} from "@/ark-scene/decor";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
-import {heightAt, sampleGround, zoneAt} from "@/ark-scene/world";
+import {arkWorld, heightAt, onArkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
 
 export type AssetInfo = {
     kind: string;
@@ -149,6 +149,34 @@ type Placeable = Pick<DecorItem, "kind" | "x" | "y" | "z" | "scale" | "rotation"
  * its instance matrix from exactly this, so attach points agree with the drawn tree.
  */
 export function assetTreePlacement(item: Placeable): TreePlacement | null {
+    if (arkWorld() !== "v2") return placeTree(item);
+    const known = placedTrees.get(item);
+    if (known !== undefined) return known;
+    const placed = placeTree(item);
+    placedTrees.set(item, placed);
+    return placed;
+}
+
+/**
+ * The bigger wild island's trees as placed (P3): each seated on eight samples of its ground, asked by every reader (the
+ * spacing, the renderer, the attach points), about a tenth of a second over the island on a phone. On v2 each decor and
+ * fill tree's placement is kept by its item, the scenery worker's own handed in with the decor (`primeTreePlacements`,
+ * runtime/prebuild.ts). Today's island places a tree at each ask, as before.
+ */
+let placedTrees = new WeakMap<object, TreePlacement | null>();
+onArkWorld(() => {
+    placedTrees = new WeakMap();
+});
+
+/** Runtime prebuild hook: the scenery worker's placements of these decor or fill items (the primed lists' own), by index. */
+export function primeTreePlacements(items: readonly object[], placements: ReadonlyArray<TreePlacement | null>): void {
+    if (arkWorld() !== "v2") return;
+    items.forEach((item, i) => {
+        if (placements[i] !== undefined) placedTrees.set(item, placements[i]);
+    });
+}
+
+function placeTree(item: Placeable): TreePlacement | null {
     const asset = treeAssetFor(item);
     if (!asset) return null;
     if (item.y > 16) {
