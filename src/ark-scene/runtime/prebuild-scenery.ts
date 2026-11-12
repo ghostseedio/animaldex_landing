@@ -8,10 +8,13 @@ import * as terrain from "@/ark-scene/terrain";
 import {reefGrowth, type ReefItem} from "@/ark-scene/reef";
 import {floorPlacements, type FloorPlacement} from "@/ark-scene/floor-assets";
 import {wheatStands} from "@/ark-scene/near-detail";
-import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import {arkWorld} from "@/ark-scene/world";
-import {wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 import {mountainRocks, type RockPiece} from "@/ark-scene/rock-layout";
+import {savannaMounds, type Mound} from "@/ark-scene/mounds";
+import {arkWorld} from "@/ark-scene/world";
+import {rockAssetFor, type RockPlacement} from "@/ark-scene/rock-assets";
+import {assetTreePlacement, type TreePlacement} from "@/ark-scene/tree-pick";
+import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
+import {wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 
 /**
  * The ground's arrays (graphics' `groundArrays(tier)` / `primeGround(arrays)` in terrain.ts, batch 6): the terrain's
@@ -37,9 +40,15 @@ export type ArkSceneryPrebuild = {
     reef?: ReefItem[];
     floor?: FloorPlacement[];
     wheat?: ReturnType<typeof wheatStands>;
-    /** v2 only (P7): the wild generator's scenery (the mounds and anything else that reads it on the main thread) and L6's mountain rocks (the props' mountain), so neither runs on the page's main thread. */
-    wild?: WildItem[];
+    /** The bigger wild island (P3): L6's mountain over its whole square, and its savanna's mounds (each seconds on a phone). */
     mountain?: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]};
+    mounds?: Mound[];
+    /** The bigger wild island: each decor item's asset rock as placed (`rock-assets.ts` rockAssetFor; null for the rest), by index. */
+    rocks?: Array<RockPlacement | null>;
+    /** And each decor and fill item's asset tree as placed (`tree-pick.ts` assetTreePlacement; null for the rest), by index. */
+    trees?: {decor: Array<TreePlacement | null>; fill: Array<TreePlacement | null>};
+    /** The bigger wild island (P7): the wild generator's scenery itself, for what still reads it on the main thread (the map's sampler, the reef). */
+    wild?: WildItem[];
     ms: number;
 };
 
@@ -66,6 +75,18 @@ export function unpackGrass(grass: ArkPackedGrass): GrassTuft[] {
 export function computeScenery(grass: number, tier: "high" | "medium" | "low" = "high"): ArkSceneryPrebuild {
     const started = Date.now();
     const ground = groundApi.groundArrays ? groundApi.groundArrays(tier) : null;
-    const v2 = arkWorld() === "v2" ? {wild: wildScenery(), mountain: mountainRocks()} : {};
-    return {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ...v2, ms: Date.now() - started};
+    const scenery: ArkSceneryPrebuild = {decor: worldDecor(), fill: forestFill(), grass: packGrass(grassTufts(grass), grass), ground, reef: reefGrowth(), floor: floorPlacements(), wheat: wheatStands(), ms: 0};
+    // The bigger wild island (P3): its mountain's rocks and its savanna's mounds are built here too, off the main thread;
+    // and (P7) the generator's scenery itself, which the map's sampler reads.
+    if (arkWorld() === "v2") {
+        Object.assign(scenery, {
+            mountain: mountainRocks(),
+            mounds: savannaMounds(),
+            rocks: scenery.decor.map((item) => rockAssetFor(item)),
+            trees: {decor: scenery.decor.map((item) => assetTreePlacement(item)), fill: scenery.fill.map((item) => assetTreePlacement(item))},
+            wild: wildScenery()
+        });
+    }
+    scenery.ms = Date.now() - started;
+    return scenery;
 }
