@@ -76,6 +76,8 @@ const scratch: Collider[] = [];
 /** The deepest overlap of a body with something solid it meets (its capsule, its height), its spine point and the outward way. */
 function deepest(set: ColliderSet, body: ResolveBody, x: number, z: number, y: number, yaw: number, attached: ResolvePose["attached"], fixed?: boolean): {depth: number; nx: number; nz: number} | null {
     let best: {depth: number; nx: number; nz: number} | null = null;
+    // (Nothing solid within its whole reach: clear, from one look round its middle.)
+    if (set.distance(x, z, body.half + body.radius + 0.05) >= body.half + body.radius + 0.01) return null;
     for (const [px, pz] of spinePoints(body, x, z, yaw)) {
         for (const c of set.near(px, pz, body.radius + 0.01, scratch)) {
             if (c.soft || !bodyMeets(c, body.radius) || !spansCollider(c, y, body.height) || exempt(c, attached, fixed)) continue;

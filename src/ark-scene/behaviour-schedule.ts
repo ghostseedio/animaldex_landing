@@ -558,11 +558,10 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const slope = maxSlopeOf(animal);
     // (Clear of everything solid, and not on a cliff's face.)
     if (nav.fits(spot.x, spot.z, r, slope)) return spot;
-    for (let ring = 1; ring <= 16; ring++) {
-        const d = ring * 0.25;
-        const n = Math.max(8, Math.round((Math.PI * 2 * d) / 0.25));
-        let best: {x: number; z: number} | null = null;
-        let bestScore = Infinity;
+    // (Rings 0.35 m apart, out to 4.2 m, at most 16 points each: the first that fits, in ring order, is the spot.)
+    for (let ring = 1; ring <= 12; ring++) {
+        const d = ring * 0.35;
+        const n = Math.min(Math.max(8, Math.round((Math.PI * 2 * d) / 0.35)), 16);
         for (let k = 0; k < n; k++) {
             const a = (k / n) * Math.PI * 2;
             const x = spot.x + Math.cos(a) * d;
@@ -570,13 +569,8 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             if (!nav.fits(x, z, r, slope)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
-            const score = k;
-            if (score < bestScore) {
-                bestScore = score;
-                best = {x, z};
-            }
+            return {...spot, x, y: Math.max(world.sampler.heightAt(x, z), 0), z};
         }
-        if (best) return {...spot, x: best.x, y: Math.max(world.sampler.heightAt(best.x, best.z), 0), z: best.z};
     }
     return spot;
 }

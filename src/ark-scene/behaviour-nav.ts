@@ -237,6 +237,12 @@ export class NavGrid {
         return this.height[k] > 0.05 && this.steep[k] <= maxSlope && this.clearanceOf(k) >= r;
     }
 
+    /** The ground's steepness right here (rise over run over half a metre each way, from the ground's own lattice: cheap). */
+    localSlope(x: number, z: number): number {
+        const h = (px: number, pz: number) => this.sampler.heightAt(px, pz);
+        return Math.max(Math.abs(h(x + 0.5, z) - h(x - 0.5, z)), Math.abs(h(x, z + 0.5) - h(x, z - 0.5)));
+    }
+
     /**
      * A body of this radius can stand exactly here (collisions): dry ground no steeper than its slope, nothing solid
      * within its radius. Without colliders: `walkable`.
@@ -247,7 +253,7 @@ export class NavGrid {
         const k = j * SIZE + i;
         if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1 || this.height[k] <= 0.05 || this.steep[k] > maxSlope) return false;
         // (Nor on a cliff's face: the ground right there no steeper than its walk takes, a quarter again.)
-        return this.sampler.heightAt(x, z) > 0.02 && this.sampler.slope(x, z) <= maxSlope * 1.25 && this.clearanceAt(x, z) >= radius;
+        return this.clearanceAt(x, z) >= radius && this.sampler.heightAt(x, z) > 0.02 && this.localSlope(x, z) <= maxSlope * 1.25;
     }
 
     /** Per body class and slope: each cell's steps through a fence's gate to a cell on its far side (`gateJumps`). */
@@ -538,7 +544,8 @@ export class NavGrid {
         const out: NavPoint[] = [raw[0]];
         let at = 0;
         while (at < raw.length - 1) {
-            let next = raw.length - 1;
+            // (With colliders, each try is a swept run: no more than SMOOTH_AHEAD points ahead, a path's corners a few cells apart.)
+            let next = r ? Math.min(raw.length - 1, at + SMOOTH_AHEAD) : raw.length - 1;
             while (next > at + 1 && !this.clear(raw[at], raw[next], kind, minDepth, maxSlope, r)) next--;
             out.push(raw[next]);
             at = next;
@@ -620,6 +627,8 @@ export class NavGrid {
 const CLEAR_CAP = 4;
 /** How many rings of cells round a path's start and its goal it may join the grid from (by a clear straight run). */
 const SEED_RING = 2;
+/** How many of a path's points ahead its smoothing tries to join in one straight run (with colliders). */
+const SMOOTH_AHEAD = 10;
 /** A gate's two points, either side of its middle (m). */
 const GATE_REACH = 1.1;
 
