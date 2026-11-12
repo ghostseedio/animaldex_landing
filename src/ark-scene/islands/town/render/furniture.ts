@@ -426,22 +426,20 @@ export function lampMapData(plan: TownPlan, heads: Float32Array): Uint8Array {
             }
         }
     }
+    // (No allocation per test: some 240,000 of them run.)
+    const homes: Box[] = [];
     const blocked = (x0: number, z0: number, x1: number, z1: number) => {
+        // The buildings the point itself stands in (its wall, a terrace's party wall) do not shade it.
+        homes.length = 0;
+        for (const b of grid.get(key(Math.floor(x0 / 8), Math.floor(z0 / 8))) ?? []) if (inBox(b, x0, z0, 0.3)) homes.push(b);
         const steps = Math.ceil(Math.hypot(x1 - x0, z1 - z0) / 0.7);
-        const seen = new Set<Box>();
         for (let i = 1; i < steps; i++) {
             const t = i / steps;
             const x = x0 + (x1 - x0) * t;
             const z = z0 + (z1 - z0) * t;
-            for (const b of grid.get(key(Math.floor(x / 8), Math.floor(z / 8))) ?? []) {
-                if (seen.has(b)) continue;
-                // A building the point itself stands in (its wall) does not shade it.
-                if (inBox(b, x0, z0, 0.3)) {
-                    seen.add(b);
-                    continue;
-                }
-                if (inBox(b, x, z, -0.05)) return true;
-            }
+            const list = grid.get(key(Math.floor(x / 8), Math.floor(z / 8)));
+            if (!list) continue;
+            for (let k = 0; k < list.length; k++) if (inBox(list[k], x, z, -0.05) && !homes.includes(list[k])) return true;
         }
         return false;
     };

@@ -310,26 +310,33 @@ export function surfaceWeights(surface: TownSurface): [number, number, number, n
  */
 export function townSurfaceWeights(size: number, surfaceIndex: Uint8Array): Uint8Array {
     const table = TOWN_SURFACES.map((s) => surfaceWeights(s));
-    const raw = new Float32Array(size * size * 8);
-    for (let i = 0; i < size * size; i++) {
-        const w = table[surfaceIndex[i]] ?? table[3];
-        for (let k = 0; k < 8; k++) raw[i * 8 + k] = w[k];
-    }
     const out = new Uint8Array(size * size * 8);
-    for (let row = 0; row < size; row++) {
-        for (let column = 0; column < size; column++) {
-            for (let k = 0; k < 8; k++) {
+    // A separable box, one channel at a time (two size² scratch rows, not a float copy of the whole grid ×8).
+    const across = new Float32Array(size * size);
+    const fallback = table[3];
+    for (let k = 0; k < 8; k++) {
+        for (let row = 0; row < size; row++) {
+            for (let column = 0; column < size; column++) {
+                let sum = 0;
+                let n = 0;
+                for (let dc = -1; dc <= 1; dc++) {
+                    const c = column + dc;
+                    if (c < 0 || c >= size) continue;
+                    sum += (table[surfaceIndex[row * size + c]] ?? fallback)[k];
+                    n++;
+                }
+                across[row * size + column] = sum / n;
+            }
+        }
+        for (let row = 0; row < size; row++) {
+            for (let column = 0; column < size; column++) {
                 let sum = 0;
                 let n = 0;
                 for (let dr = -1; dr <= 1; dr++) {
                     const r = row + dr;
                     if (r < 0 || r >= size) continue;
-                    for (let dc = -1; dc <= 1; dc++) {
-                        const c = column + dc;
-                        if (c < 0 || c >= size) continue;
-                        sum += raw[(r * size + c) * 8 + k];
-                        n++;
-                    }
+                    sum += across[r * size + column];
+                    n++;
                 }
                 out[(row * size + column) * 8 + k] = Math.round((sum / n) * 255);
             }

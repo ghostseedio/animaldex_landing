@@ -156,7 +156,7 @@ function digest(value: unknown): string {
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     areas: "7a26937a126da351",
-    ground: "0fef400bcff22b82",
+    ground: "9f6d9fa1b00ec782",
     sceneryAndBuildings: "f1d58d27bdb4abdf",
     zoo: "04414c07340b7095",
     places: "c9708c0cd0281d71"
