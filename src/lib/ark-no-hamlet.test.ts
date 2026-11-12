@@ -114,7 +114,7 @@ test("islands mode: the former hamlet is meadow with a few trees and shrubs, kep
         assert.deepEqual(decor.filter((item) => item.kind === "rock").map(key), worldDecor().filter((item) => item.kind === "rock").map(key));
         // A meadow with scattered shrubs and a few trees: some more than grew between today's plots, mostly shrubs, and
         // the village's land still open (at most 0.6 as many again as stood between its plots).
-        const wooded = (list: Array<{kind: string; x: number; z: number}>) => list.filter((item) => ["broadleaf", "shrub", "acacia", "conifer", "orchard"].includes(item.kind) && inFormerHamlet(item.x, item.z) && zoneAt(sampleGround(item.x, item.z)) === "farm_garden");
+        const wooded = <T extends {kind: string; x: number; z: number}>(list: T[]) => list.filter((item) => ["broadleaf", "shrub", "acacia", "conifer", "orchard"].includes(item.kind) && inFormerHamlet(item.x, item.z) && zoneAt(sampleGround(item.x, item.z)) === "farm_garden");
         const trees = wooded([...decor, ...fill]);
         setNoHamlet(false);
         const before = wooded([...worldDecor(), ...forestFill()]);
@@ -166,7 +166,7 @@ test("islands mode: the map validator passes every species (a farm or garden spe
     try {
         const {failures, placed} = validateMap();
         assert.deepEqual(failures.slice(0, 10), []);
-        for (const place of placed.values()) assert.ok(!place.hamlet, "nobody placed on a plot");
+        for (const place of Array.from(placed.values())) assert.ok(!place.hamlet, "nobody placed on a plot");
     } finally {
         setNoHamlet(false);
     }
