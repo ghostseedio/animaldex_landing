@@ -43,6 +43,15 @@ export type ArkIslandScene = {
     contains: (x: number, z: number) => boolean;
     /** The ground's height in the world frame (inside its square). */
     heightAt: (x: number, z: number) => number;
+    /**
+     * Lane TB: the ground as it is drawn there (world frame): its ground tile's triangles, its decals (roads, pavements,
+     * paths, fields, the zoo's ground, bridge decks) and its floors (`islands/town/drawn-ground.ts`). Feet, the
+     * grounding stand, contact shadows and selection rings stand on it, never on the wild island's sea floor.
+     */
+    drawnHeight: (x: number, z: number) => number;
+    drawnGround: (x: number, z: number) => {height: number; nx: number; ny: number; nz: number};
+    /** The drawn ground under a point and the water's surface over it (null on dry land), for contact shadows and rings. */
+    groundUnder: (x: number, z: number, seaLevel: number) => {height: number; water: number | null};
     /** Lives on this island (the server's `island`, else a kept area). */
     has: (animal: Pick<ArkAnimal, "island" | "area">) => boolean;
     /** Part B (its chunks in its local frame, the streamer places them at `origin`). */
@@ -154,6 +163,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+    const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townWalkSurfaces} = await import("@/ark-scene/islands/town/drawn-ground");
+    const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
+    const {CANAL_LEVEL} = await import("@/ark-scene/islands/town/plan");
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -184,6 +196,18 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     }
     if (sliced) await pause();
     town.root.position.set(origin.x, 0, origin.z);
+    // Lane TB: the drawn ground's grid (the prebuild's, when there is one) and its walk surfaces: every decal the town
+    // draws, the zoo's included (and, as they change, the zoo's and the displays' floors: `walkSurfacesNow`).
+    primeTownDrawnGrid(prepared?.built?.grid.heights ?? null);
+    const walkSurfacesNow = () => {
+        const sources: Float32Array[] = [];
+        town.root.traverse((o) => {
+            const mesh = o as Mesh;
+            if (mesh.isMesh && (mesh.name === "decal" || mesh.name === "zoo:decal")) sources.push(mesh.geometry.getAttribute("position").array as Float32Array);
+        });
+        setTownWalkSurfaces(townWalkSurfaces(sources));
+    };
+    walkSurfacesNow();
     // What Part B's streamer draws, and how much of the town is shown yet as it joins (decision 153).
     let streamDrawn: ((chunk: number) => boolean) | null = null;
     let joinOpen: string[] | null = null;
@@ -244,6 +268,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
+        drawnHeight: (x, z) => townDrawnHeight(x - origin.x, z - origin.z),
+        drawnGround: (x, z) => townDrawnGround(x - origin.x, z - origin.z),
+        groundUnder: (x, z, seaLevel) => {
+            const lx = x - origin.x;
+            const lz = z - origin.z;
+            const height = townDrawnHeight(lx, lz);
+            // (The sea and the harbour at the sea's level; the canal, the millpond and the farm pond held by the lock.)
+            const ground = sampleTownGround(lx, lz);
+            const water = ground.height < seaLevel ? seaLevel : ground.surface === "water" ? Math.max(CANAL_LEVEL, ground.height + 0.05) : null;
+            return {height, water: water !== null && water > height ? water : null};
+        },
         has,
         grid: town.grid,
         spans: town.spans,
@@ -285,6 +320,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (key !== openKey) {
                 openKey = key;
                 town.setZooOpen(placed.open);
+                walkSurfacesNow();
                 town.root.remove(zooLife.group);
                 zooLife.dispose();
                 zooLife = buildZooLife(zooLayout(placed.open).enclosures, townHeight);

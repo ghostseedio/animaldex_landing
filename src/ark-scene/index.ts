@@ -509,17 +509,6 @@ function forcedTier(): QualityTier | null {
     return asked === "high" || asked === "medium" || asked === "low" ? asked : null;
 }
 
-/** A foot-IK ground query (`locomotion/ground.ts`) from a height function: the height and the normal from its slope (25 cm). */
-function groundQueryOf(height: (x: number, z: number) => number): (x: number, z: number) => {height: number; nx: number; ny: number; nz: number} {
-    const e = 0.25;
-    return (x, z) => {
-        const dx = (height(x + e, z) - height(x - e, z)) / (2 * e);
-        const dz = (height(x, z + e) - height(x, z - e)) / (2 * e);
-        const l = Math.hypot(dx, 1, dz);
-        return {height: height(x, z), nx: -dx / l, ny: 1 / l, nz: -dz / l};
-    };
-}
-
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
     // Islands mode (decision 148, `no-hamlet.ts`): with two islands the wild island has no hamlet. Set before anything
     // of the world is built (the page's `prepareArk` set the same from the same read).
@@ -570,10 +559,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // analytic surface (they differ by metres at the cliff bands). On the town, its own ground (`island.heightAt`, the
     // normal from its slope), never the wild island's.
     // (One world, T3: the town beside the wild island, so each foot asks the ground of the island it stands on.)
+    // (Lane TB: the town's drawn ground, its tile with its pavements, paths and floors, `island.drawnGround`.)
     const applyLocoGround = () => {
         const isl = island;
-        const townGround = isl ? groundQueryOf(isl.heightAt) : null;
-        setLocoGround(isl && townGround ? (x, z) => (isl.contains(x, z) ? townGround(x, z) : drawnGround(x, z)) : drawnGround);
+        setLocoGround(isl ? (x, z) => (isl.contains(x, z) ? isl.drawnGround(x, z) : drawnGround(x, z)) : drawnGround);
+    };
+    /** Lane TB: the drawn ground the grounding stand puts feet on, on the island it stands on (never the wild sea floor under the town). */
+    const standGround = (x: number, z: number) => {
+        const isl = island;
+        return isl && isl.contains(x, z) ? isl.drawnHeight(x, z) : drawnGroundHeight(x, z);
+    };
+    /** The ground and water under an animal for its contact shadow and ring, on its own island. */
+    const groundUnderAt = (x: number, z: number, seaLevel: number, exact: boolean) => {
+        const isl = island;
+        return isl && isl.contains(x, z) ? isl.groundUnder(x, z, seaLevel) : look.groundUnder(x, z, seaLevel, exact);
     };
     applyLocoGround();
     const forced = forcedTier();
@@ -3846,7 +3845,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 actor.root.scale.setScalar(as);
                 actor.root.visible = true;
                 // Its shadow on the ground under it now (not its home spot's height), gone off the ground or in water.
-                const under = look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true);
+                const under = groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true);
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
                 if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
                 if (marked) ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
@@ -3911,8 +3910,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
             } else {
                 // Grounding: its true base on the drawn ground, leaning to the slope (the pose's own offsets carried over).
-                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z))
-                    ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight})
+                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z))
+                    ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight, ground: standGround})
                     : null;
                 if (stand) {
                     where.pitch += stand.pitch;
@@ -3962,7 +3961,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Grounding's runtime check (development, `?grounding=1`): its contacts against what it stands on.
             if (groundingCheck.on && !slept && !act && !where.water && entry.air <= 0.001 && !entry.denIn) {
                 const checkLevel = rig ? "rig" : level === "far" ? "far" : "near";
-                if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s) ?? 0, modelHeight);
+                if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, standGround) ?? 0, modelHeight);
                 else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
@@ -4026,7 +4025,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // nor under water; everything else is projected down onto the ground under it now, and fades as it leaves
             // the ground (a hop, a perch, flight), none where water covers the ground.
             const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
-            const underFeet = broadSurface && look.on ? null : look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near");
+            const underFeet = broadSurface && look.on ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near");
             const contact = underFeet ? groundContact(where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
             if ((broadSurface && look.on) || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
@@ -4056,7 +4055,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             if (marked && !entry.micro) {
                 // On the ground under it now (its home spot's height floated the ring over one that had walked downhill).
-                const ringY = where.afloat ? 0 : Math.max(underFeet?.height ?? look.groundUnder(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, 0);
+                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : 0) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, 0);
                 ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.

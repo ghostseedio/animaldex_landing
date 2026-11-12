@@ -43,15 +43,21 @@ export type GroundStandInput = {
     /** A rig's standing clip now, and how much of it is drawn (its height off rest is taken off). */
     clip?: string | null;
     clipWeight?: number;
+    /**
+     * The drawn ground it stands on (m at a world point): the wild island's drawn mesh by default; on another island its
+     * own (lane TB: the town's tile, pavements and floors, `islands/town/drawn-ground.ts`), never the wild sea floor.
+     */
+    ground?: (x: number, z: number) => number;
 };
 
 /**
  * Whether a pose stands on the ground (not in the air, on a surface, in the water, on something raised): its base is
  * at or below the ground under it (the analytic ground the schedule reads, or the drawn one), over dry land.
  */
-export function standsOnGround(pose: {x: number; z: number; base: number; afloat: boolean; surface?: unknown; water?: unknown}, analytic: number): boolean {
+export function standsOnGround(pose: {x: number; z: number; base: number; afloat: boolean; surface?: unknown; water?: unknown}, analytic: number, drawn?: number): boolean {
     if (pose.afloat || pose.surface || pose.water || analytic <= 0.02) return false;
-    return pose.base <= Math.max(analytic, drawnGroundHeight(pose.x, pose.z)) + 0.05;
+    // (`drawn`: the drawn ground there when it is another island's: lane TB.)
+    return pose.base <= Math.max(analytic, drawn ?? drawnGroundHeight(pose.x, pose.z)) + 0.05;
 }
 
 /** The origin and extra lean for a ground pose (null: the model is not listed; the scene keeps its own rule). */
@@ -61,7 +67,7 @@ export function groundedStand(input: GroundStandInput): Stand | null {
     const base = levelBase(input.slug, input.level === "far" ? "far" : "near", input.minY);
     // (On ground too uneven to lie on, its highest contact may go in a little, well inside the tolerance, so the rest float less.)
     const give = 0.5 * Math.max(0.02, 0.03 * found.size.y * input.scale);
-    const stand = standOnGround(input.x, input.z, input.yaw, input.scale, base, found.footprint, input.pitch, input.roll, undefined, give);
+    const stand = standOnGround(input.x, input.z, input.yaw, input.scale, base, found.footprint, input.pitch, input.roll, input.ground, give);
     if (input.clip && input.level === "rig") stand.rootY -= clipStandOffset(input.slug, input.clip) * input.scale * (input.clipWeight ?? 1);
     return stand;
 }
@@ -183,7 +189,7 @@ export const groundingCheck = {
  * The lowest of a drawn ground animal's contacts over the drawn ground (m), from the matrix the scene composed: its
  * origin, its rotation (a quaternion) and scale. For the runtime check.
  */
-export function drawnContactGap(slug: string, level: ModelLevelName | "rig", minY: number, position: {x: number; y: number; z: number}, q: {x: number; y: number; z: number; w: number}, scale: number): number | null {
+export function drawnContactGap(slug: string, level: ModelLevelName | "rig", minY: number, position: {x: number; y: number; z: number}, q: {x: number; y: number; z: number; w: number}, scale: number, ground: (x: number, z: number) => number = drawnGroundHeight): number | null {
     const found = modelBase(slug);
     if (!found) return null;
     const base = levelBase(slug, level === "far" ? "far" : "near", minY);
@@ -204,7 +210,7 @@ export function drawnContactGap(slug: string, level: ModelLevelName | "rig", min
         const wx = ix * q.w + iw * -q.x + iy * -q.z - iz * -q.y;
         const wy = iy * q.w + iw * -q.y + iz * -q.x - ix * -q.z;
         const wz = iz * q.w + iw * -q.z + ix * -q.y - iy * -q.x;
-        lowest = Math.min(lowest, position.y + wy - drawnGroundHeight(position.x + wx, position.z + wz));
+        lowest = Math.min(lowest, position.y + wy - ground(position.x + wx, position.z + wz));
     }
     return lowest;
 }
