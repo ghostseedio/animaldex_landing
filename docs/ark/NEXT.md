@@ -74,6 +74,18 @@ the privacy text).
 | 42 | L5: collision limits re-derived on ed508601 (L1's dry-land beds moved sleepers) | `ark-collide-limits` ba79e797 | 4ee5c2ad | collisions workflow green (both modes) |
 | 43 | The town built in its worker alongside the wild prebuild (joins 0.13 s after the first frame on the phone profile) | `ark-town-worker-speed` c5558bcd | c7112bd6 | **the follow-up deploy's code**: suite 2,390/2,391, 0 fail; tsc 0; lint 0; motion all pass; default view ×2: pace 1.04 / 1.02, backwards 1.5% / 2.6% (a zebra 1.1 s, a puffin 1.6 s), turns 0.6 / 0.6, a zebra 1.63× and a cheetah 1.76×, no page errors; T3's embed check on c7112bd6 (two islands and one): no page errors, every host message right, the zoo focus link flown to once joined; visual: run 43165446837 re-accepted (9cbc3871) |
 
+## The v2 round (decision 226; held for decision 234)
+
+| # | Lane | Branch head | `ark-next` head | Gates |
+|---|---|---|---|---|
+| 44 | W1: the bigger wild island, v2 the islands default | `ark-wild-island-next` 75419a2c | bdf8d811 (prepared as 37f0b8db) | conflicts: behaviour-schedule imports (both), the drift (W1's `wildFrame().driftSway`, v1 `driftSway` 0.12), `archipelago.ts` with the town worker (both; `setArkWorld("v2")` before the town starts, so the town sits at v2's origin); suite 2,418/2,419, 0 fail; motion all pass; default view ×2 pace 1.02 / 1.00, backwards 0.7% / 0.9%; islands-off golden shots unchanged (run 43171782625: ≤ 0.11% against 9cbc3871, so the baselines stay) |
+| 45 | Positions atlas v3 (encounter lane; inert) | `ark-positions-atlas-v3` a2e30ce4 | b2e5655a | positions 3/3; served atlas sha256 72442b16…; collisions green |
+| 46 | T3: the other island map style, never out; the one sea only under drawn town chunks | `ark-islands-town-map` 63acc25a | dd9410fa | streaming + islands + town 49/49; default view ×2 pace 1.00 / 0.97, backwards 1.9% / 0.9%; islands-off renders unchanged (Mac before/after 0.006% / 0.002%) |
+
+- Held (decision 234): on the phone at the low tier v2's town is drawn but lost in the base fog at its 950 m portrait
+  view; T3 pushes the low tier's two-island fog out, reins in the haze and brings v2's portrait view closer (target: the
+  town's near half under 20% fog on the phone at low and medium at 0, 60 and 120 s).
+
 - For W1's merge later: its drift lines conflict with 41; resolve with W1b's `wildFrame().driftSway` and set v1's
   `driftSway` in `islands/views.ts` to 0.12 (null there today), or v1 in islands mode orbits again (T3).
 - Known: the clawed frog's `dive_in` leap reads 3.67× under the layer (a 0.5 s leap with no `enter_water` clip, drawn
