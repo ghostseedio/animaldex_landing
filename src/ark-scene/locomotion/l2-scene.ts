@@ -14,7 +14,7 @@
  */
 
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
-import {flightRigFrame, flightSpecOf, newFlightMemory, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
+import {flightRigFrame, flightSpecOf, landingNow, newFlightMemory, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {LEGLESS, leglessCycles, leglessMode, newLeglessMemory, sidewindYaw, type LeglessMemory} from "@/ark-scene/locomotion/legless";
 import {locoStyle, type LocoStyle} from "@/ark-scene/locomotion/styles";
 import {newSwimMemory, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
@@ -26,6 +26,14 @@ import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
 registerLocoDriver(chainDriver);
 registerLocoDriver(flightDriver);
 
+/**
+ * Lane L2 on (the default). Development only: `globalThis.__arkL2Motion = false` before mounting turns every L2 hook back to
+ * what the scene did before it (the before/after recordings, `scripts/ark-l2-scenes.mjs --before`).
+ */
+export function l2On(): boolean {
+    return (globalThis as {__arkL2Motion?: boolean}).__arkL2Motion !== false;
+}
+
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 export type {L2BodyUniforms} from "@/ark-scene/locomotion/swim";
@@ -36,6 +44,7 @@ export {L2_BODY_NONE} from "@/ark-scene/locomotion/swim";
  * over a fifth of its length: a cobra's raised hood, an anaconda's loops) swings less. Null: no style of ours.
  */
 export function l2BodyUniforms(slug: string, behaviour: TalkingBehaviour | null | undefined): L2BodyUniforms | null {
+    if (!l2On()) return null;
     const kind = behaviour?.motion?.kind;
     if (kind !== "swim" && kind !== "flap") return null;
     const style = locoStyle(slug, behaviour?.plan ?? null);
@@ -77,6 +86,7 @@ export function newL2Motion(slug: string, plan: string | null | undefined, seed:
  * with no wave of ours. `inWater`: it swims now (a snake in the water swims its eel's wave).
  */
 export function l2BodyChannel(motion: L2Motion, x: number, y: number, z: number, dt: number, drawnLength: number, inWater: boolean): number {
+    if (!l2On()) return 0;
     const last = motion.last;
     let moved = last ? Math.hypot(x - last.x, y - last.y, z - last.z) : 0;
     // A jump (a new spot, a cut) is no swim.
@@ -104,6 +114,7 @@ export function l2BodyChannel(motion: L2Motion, x: number, y: number, z: number,
 
 /** A sidewinder's heading offset now (radians): across its way while it moves, straight while still. */
 export function l2Sidewind(motion: L2Motion, seed: number): number {
+    if (!l2On()) return 0;
     if (motion.style.legless !== "sidewind" || !motion.legless) return 0;
     const moving = clamp((motion.legless.speed - 0.03) / 0.1, 0, 1);
     return sidewindYaw(seed) * moving;
@@ -117,6 +128,7 @@ export function l2LeglessNow(motion: L2Motion): string | null {
 
 /** A chain rig's swim clip rate (a whale's, a dolphin's): the tail-beat rate for its speed over the clip's own. */
 export function l2SwimRate(motion: L2Motion, speedBLs: number, clipSeconds: number): number | null {
+    if (!l2On()) return null;
     const style = motion.style.swim;
     if (!style) return null;
     return clamp(tailBeatHz(speedBLs, style) * clipSeconds, 0.1, 4);
@@ -124,6 +136,7 @@ export function l2SwimRate(motion: L2Motion, speedBLs: number, clipSeconds: numb
 
 /** The surface guard for a swimmer's base (`swim.ts` swimSurfaceGuard); unchanged for a species with no swim style. */
 export function l2SurfaceGuard(motion: L2Motion, base: number, height: number, length: number, pitch: number, sea: number): number {
+    if (!l2On()) return base;
     const style = motion.style.swim;
     if (!style) return base;
     return swimSurfaceGuard(base, height, length, style, pitch, sea);
@@ -134,6 +147,7 @@ export function l2SurfaceGuard(motion: L2Motion, base: number, height: number, l
  * no flight style (the rig player's own `flightClip` then plays, as before).
  */
 export function l2FlightFrame(motion: L2Motion, trueLength: number, input: Omit<FlightRigInput, "spec">): FlightRigFrame | null {
+    if (!l2On()) return null;
     if (!motion.style.flight) return null;
     if (!motion.flightSpec || Math.abs(motion.flightLength - trueLength) > 1e-6) {
         motion.flightSpec = flightSpecOf(motion.style.flight, trueLength);
@@ -143,4 +157,10 @@ export function l2FlightFrame(motion: L2Motion, trueLength: number, input: Omit<
     motion.flight ??= newFlightMemory();
     if (input.open || !input.has("flap")) OPEN_WING_RIGS.add(motion.slug);
     return flightRigFrame({...input, spec: motion.flightSpec}, motion.flight);
+}
+
+/** A flying rig should start its landing now (`flight.ts` landingNow): within the clip's reach of the ground, coming down. */
+export function l2LandingNow(motion: L2Motion, agl: number, climb: number, landHeight: number): boolean {
+    if (!l2On() || !motion.style.flight) return false;
+    return landingNow(agl, climb, landHeight);
 }

@@ -291,10 +291,18 @@ export function stoopPose(u: number): {clip: "glide" | "plunge" | "flap"; pitch:
 // MARK: The rig frame
 
 /** Per animal, per viewer (visual only): its beat and how it is flying now. */
-export type FlightMemory = {beat: number; mode: FlightMode; wasClip: string | null; takeoffAt: number; flare: number};
+export type FlightMemory = {beat: number; mode: FlightMode; wasClip: string | null; takeoffAt: number; flare: number; landPhase: number};
 
 export function newFlightMemory(): FlightMemory {
-    return {beat: 0, mode: "flap", wasClip: null, takeoffAt: -1e9, flare: 0};
+    return {beat: 0, mode: "flap", wasClip: null, takeoffAt: -1e9, flare: 0, landPhase: 0};
+}
+
+/**
+ * When the landing should start: coming down and within the landing clip's own reach of the ground (its `rise_h`
+ * times the body's drawn height), so the clip's touch-down meets the ground rather than playing out after it.
+ */
+export function landingNow(agl: number, climb: number, landHeight: number): boolean {
+    return climb < -0.02 && agl < Math.max(landHeight, 0.05) && agl > -0.05;
 }
 
 export type FlightRigInput = {
@@ -324,6 +332,8 @@ export type FlightRigInput = {
     open?: boolean;
     /** Its length as drawn (m), when the scene draws it at another size than its true one: the heave and the flare height scale with it. */
     drawnLength?: number;
+    /** The landing clip's reach over the ground (m: its `rise_h` times the drawn height), for timing the touch-down. */
+    landHeight?: number;
 };
 
 export type FlightRigFrame = {
@@ -372,8 +382,14 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         }
     }
     if (input.oneShot === "land") {
-        // The touch-down: legs reaching, the wings folding away (the clip's last part, a little quicker).
-        Object.assign(out, {clip: "land", mode: "time", rate: 1.3, flightMode: "land", pitch: 0, roll: 0, bank: 0});
+        // The touch-down: the clip's phase follows the height left (legs reaching down as the ground comes up), never
+        // going back, and finishes in time once down (the wings folding away).
+        if (memory.wasClip !== "land") memory.landPhase = input.phase;
+        const reach = Math.max(input.landHeight ?? 0, 0.05);
+        const byHeight = input.landHeight ? 1 - Math.min(Math.max(input.agl, 0) / reach, 1) : 0;
+        const byTime = memory.landPhase + dt * (input.agl <= 0.02 ? 1.6 : 0.5);
+        memory.landPhase = Math.min(Math.max(byHeight * 0.8, byTime), 1);
+        Object.assign(out, {clip: "land", mode: "sync", phase: memory.landPhase, flightMode: "land", pitch: 0, roll: 0, bank: 0});
         memory.wasClip = "land";
         return out;
     }
@@ -424,6 +440,8 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     if (memory.flare > 0.3 || sinceTakeoff < 1.6 || burst) mode = "flap";
     else if (input.climb > 0.12) mode = spec.style === "flap_bound" && rhythm.mode === "bound" ? "bound" : "flap";
     else if ((input.beat === "glide" || input.climb < -0.12) && spec.style !== "continuous" && spec.style !== "whir" && spec.style !== "bat") mode = spec.style === "soar" || input.soaring ? "soar" : "glide";
+    // (A continuous flapper sets its wings on a steep way down, well above the ground: a duck gliding in.)
+    else if (spec.style === "continuous" && input.climb < -0.2 && input.agl > flareHeight * 1.5) mode = "glide";
     else if (spec.style === "continuous" || spec.style === "bat" || spec.style === "whir") mode = "flap";
     else mode = rhythm.mode;
     // A flap bout ends on a whole beat (wings back up), never mid-stroke.

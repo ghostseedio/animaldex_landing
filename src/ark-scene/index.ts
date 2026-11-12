@@ -175,7 +175,7 @@ import {arkOutside} from "@/ark-scene/live-budget";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
-import {l2BodyChannel, l2BodyUniforms, l2FlightFrame, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
+import {l2BodyChannel, l2BodyUniforms, l2FlightFrame, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -2647,9 +2647,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // and the take-off plays from the ground); otherwise as its state's air eases in.
         const pose = own?.pose ?? null;
         const airLeg = Boolean(pose && pose.moving && (pose.beat === "fly" || pose.beat === "glide"));
-        const inAir = pose ? pose.aloft || airLeg : entry.air > 0.001;
+        // (Lane L2: a small flyer off its microhabitat's surface, a moth round the porch light or a starling in its
+        // murmuration, flies on its rig too: it has no schedule pose to say so. On its leaf, bark or wall it is not flying.)
+        const microAloft = Boolean(place.micro && flies && !entry.visitor && ((entry.toLight ?? 0) > 0.5 || (entry.recipeAct?.flock && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12))));
+        const inAir = (pose ? pose.aloft || airLeg : entry.air > 0.001) || microAloft;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
-        const rising = pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne;
+        const rising = (pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne) || microAloft;
         if (flies && !state.flying && inAir && rising) {
             // Leaving the ground: a take-off, unless it comes into view already up in the air.
             state.flying = true;
@@ -2660,7 +2663,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const oneShot = (name: string) => state.now.name === name && state.now.phase < 1;
         // Coming down: the landing plays as it touches down (its wings folding away), once it is low and descending on
         // its schedule's leg, or its state's air has nearly eased out.
-        const landing = pose ? (!pose.aloft && state.climb < -0.01) || !inAir : !entry.state.airborne && entry.air < 0.2;
+        // (Lane L2: within the landing clip's reach of the ground on the way down, so its touch-down meets the ground.)
+        const agl = where.base - Math.max(heightAt(where.x, where.z), 0);
+        const landHeight = (clip("land")?.rise_h ?? 1.2) * entry.drawnHeight;
+        const landing = !microAloft && ((pose ? (!pose.aloft && state.climb < -0.01) || !inAir : !entry.state.airborne && entry.air < 0.2) || (state.flying && l2LandingNow(l2Of(entry, model.behaviour?.plan), agl, state.climb, landHeight)));
         if (state.flying && landing && !oneShot("takeoff") && state.now.name !== "land" && clip("land")) rigSwitch(state, "land", 0);
         if (state.flying && state.now.name === "land" && state.now.phase >= 1) {
             state.flying = false;
@@ -2679,8 +2685,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 climb: state.climb,
                 turn: state.turn,
                 speed: groundSpeed,
-                agl: where.base - Math.max(heightAt(where.x, where.z), 0),
+                agl,
                 drawnLength: entry.length,
+                landHeight,
                 beat: own?.pose?.beat ?? null,
                 soaring: own?.pose?.doing === "soar",
                 oneShot: oneShot("takeoff") ? "takeoff" : oneShot("land") ? "land" : null,
@@ -2827,6 +2834,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const pick = paceClip(speed, gaits, state.now.name);
             if (moving(pick)) {
                 want = pick.name;
+                mode = "distance";
+            } else if (speed > 1e-3 && clip("slither") && !clip("walk") && l2Of(entry, model.behaviour?.plan).style.legless) {
+                // (Lane L2: a legless animal creeping slower than its slither's own pace still crawls, a heavy snake
+                // straight on its belly: the chain driver poses it by the distance it moves.)
+                want = "slither";
                 mode = "distance";
             }
         }

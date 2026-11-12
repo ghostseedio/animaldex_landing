@@ -21,8 +21,8 @@ export const MOTION_L2_THRESHOLDS = {
     /** Rigs: a snake chain's mean sideways slip against its front's track, as a share of its swing. */
     rigSlipMax: 0.2,
     /**
-     * Rigs: a chain driver's pose (ms). A guard against a pathological regression only: CI machines and a shared Mac
-     * under load vary several-fold (measured 0.01-0.03 ms on the M3 idle; L1's budget is 0.1 ms an animal for its whole pose).
+     * Rigs: a chain driver's mean pose (ms) in the test's own loop. A guard against a pathological regression only (a
+     * shared Mac under load measured 0.5 ms; idle 0.01-0.03 ms): the real figures are `scripts/ark-l2-perf.mts`'s.
      */
-    poseMsMax: 0.5
+    poseMsMax: 5
 } as const;
