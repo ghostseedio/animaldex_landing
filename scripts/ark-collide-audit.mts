@@ -9,6 +9,7 @@
  *   raw: the schedule and the hamlet's straight door walks, as drawn before the collisions; planned: this tree's paths
  *   and routed door walks; final (default): and the collisions' layer on top (collide/resolve.ts), as the scene draws.
  *
+ * `--world v1|v2`: the wild island's world (islands mode: v2 unless asked, as live; islands off: v1).
  * `--wild-island <islands-routing.json | kept>`: islands mode (decision 148, `src/ark-scene/no-hamlet.ts`): the wild island
  * without its hamlet, and only its animals (by the routing's ids, or "kept": all but the house, farm and zoo animals).
  *
@@ -93,6 +94,13 @@ if (!isMainThread) {
     const models = opt("models", path.join(process.env.HOME ?? "", "animaldex-talking-models"))!;
     // `--wild-island <islands-routing.json | kept>`: islands mode (no-hamlet.ts), the wild island's animals only.
     const wild = opt("wild-island") ?? null;
+    // `--world v1|v2`: which wild island (world.ts setArkWorld). Islands mode's is v2, as live since W1's gates (the
+    // `wildIsland` setting's default); `v1` measures today's island in islands mode. Islands off: v1, always. The
+    // workers read it from the environment (ARK_WORLD) before anything builds.
+    const world = opt("world", wild ? "v2" : "v1")!;
+    if (world !== "v1" && world !== "v2") throw new Error(`--world ${world}: v1 or v2`);
+    if (world === "v2" && !wild) throw new Error("--world v2 is islands mode's wild island: pass --wild-island too");
+    process.env.ARK_WORLD = world;
     const start = Number(opt("from", String(Math.floor(Date.UTC(2026, 10, 12, 0, 0, 0) / 1000))));
     mkdirSync(out, {recursive: true});
     const total = hours * 3600;
@@ -112,9 +120,10 @@ if (!isMainThread) {
         return Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]));
     };
     const sum = (f: (r: import("@/lib/ark-collide/metrics").CollideReport) => number) => results.reduce((s, r) => s + f(r), 0);
-    const strip = <T extends {id?: string}>(list: T[]) => list.map(({id: _id, ...rest}) => rest);
+    const strip = <T extends {id?: string},>(list: T[]) => list.map(({id: _id, ...rest}) => rest);
     const report = {
         label,
+        world,
         hours,
         step,
         mode,

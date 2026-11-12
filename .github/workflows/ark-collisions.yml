@@ -5,7 +5,7 @@
 #      layer's purity, and a half-hour run of a synthetic Ark;
 #   2. the collision audit (scripts/ark-collide-audit.mts) on the synthetic Ark (every catalogue species and the
 #      captures dry run's hamlet at 1x: src/lib/ark-collide/fixture.ts), 2 island hours every 4 s, against the thresholds:
-#      islands mode (the wild island without its hamlet: tests/ark-collide/thresholds-islands.json), what goes live, and
+#      islands mode (the bigger wild island, v2, as live since W1: tests/ark-collide/thresholds-islands.json), and
 #      today's mode (with the hamlet: tests/ark-collide/thresholds.json) while islands can be switched off.
 # Deterministic: nothing here has randomness, so a changed number is a changed scene. The real snapshot's long runs
 # (many hours, the 3,142 animals) are run locally (the real snapshot is never committed).
@@ -53,8 +53,8 @@ jobs:
         run: npx tsx --test src/lib/ark-collide.test.ts
       - name: Collision tests on the town island
         run: npx tsx --test src/lib/ark-collide-town.test.ts
-      - name: "Collision audit, islands mode (what goes live; decision 148)"
-        run: npx tsx scripts/ark-collide-audit.mts --fixture --wild-island kept --hours 2 --step 4 --workers 4 --models none --label islands --out .ark-collide
+      - name: "Collision audit, islands mode on the v2 wild island (what goes live; decision 148, W1)"
+        run: npx tsx scripts/ark-collide-audit.mts --fixture --wild-island kept --world v2 --hours 2 --step 4 --workers 4 --models none --label islands --out .ark-collide
       - name: Islands mode against its thresholds
         run: npx tsx scripts/ark-collide-audit.mts --check .ark-collide/islands.json --thresholds tests/ark-collide/thresholds-islands.json
       - name: "Collision audit, today's mode (the wild island with its hamlet, while islands can be switched off)"
