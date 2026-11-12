@@ -4,6 +4,7 @@
  * moves the surface under them, and the rest of the island's points stay where they were.
  */
 
+import {perchSize} from "@/ark-scene/grounding/perch";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFileSync, writeFileSync} from "node:fs";
@@ -500,7 +501,8 @@ test("attach: limbs for large climbers lie on thick drawn wood, with the radius 
     for (const point of limbs) {
         assert.ok(!point.asset!.startsWith("palm"), `${point.id} on a palm`);
         assert.ok(point.radius! >= 0.03 && point.normal.y >= 0.6, point.id);
-        assert.deepEqual(point.size, [0.15, Math.min(1.6, 24 * point.radius!)]);
+        // (A limb hidden in its crown keeps to the small things that live in the leaves: grounding/perch.ts.)
+        assert.deepEqual(point.size, perchSize("limb", point.open, true, [0.15, Math.min(1.6, 24 * point.radius!)]));
         const w = point.wind!;
         assert.equal(point.load, limbLoad(point.radius!, Math.max(Math.hypot(point.position.x - w.root.x, point.position.z - w.root.z), 0.5)));
         assert.ok(point.clearBelow! <= point.position.y - sampleGround(point.position.x, point.position.z).height + 1e-9 && point.clearAbove! > 0, point.id);

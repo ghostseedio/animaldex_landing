@@ -465,7 +465,9 @@ function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length:
     for (const tag of tags) {
         const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius});
         const fits = near.filter((p) => length >= p.size[0] * 0.5 && length <= p.size[1] * 1.5);
-        const list = fits.length ? fits : near;
+        // (Grounding, L3: never a tree perch that does not suit it, a pelican on a twig or a crane in a crown hidden in the
+        // leaves; another goal instead.)
+        const list = fits.length ? fits : near.filter((p) => p.tag !== "branch" && p.tag !== "canopy_hang");
         if (list.length) {
             // Nearer places a little more likely: by distance (then id), a seeded pick weighted to the front (each animal
             // its own). The pick is the k-th in that order, found without sorting the whole list (`kthNearest`).
