@@ -564,11 +564,14 @@ export class DecorObstacles {
 export type FillItem = DecorItem & {rank: number};
 
 /**
- * How many more trees the fill offers than it used to (scenery lane): with trees kept apart (`tree-spacing.ts`), most
- * of the old offers grew into a neighbour and are left out, so the clumps are offered more, and fill up to crowns that
- * touch without growing into each other; the glades stay open (woodsCover still decides them).
+ * How many more trees the fill offers than it used to in the woods and on the mountain (scenery lane): with trees kept
+ * apart (`tree-spacing.ts`), most of the old offers there grew into a neighbour and are left out, so the clumps are
+ * offered more, and fill up to crowns that touch without growing into each other; the glades stay open (woodsCover still
+ * decides them). The open country (grassland, farmland, the wetland and the lakeside) keeps its own sparse fill: there
+ * the spacing seldom binds, and more offers would only be more trees where the animals graze, meet and sleep.
  */
 const FILL_OFFERED = 2.5;
+const FILL_OFFERED_IN: ReadonlySet<ArkZone> = new Set<ArkZone>(["rainforest", "woodland", "mountains"]);
 
 let fillCache: FillItem[] | null = null;
 
@@ -623,7 +626,7 @@ export function forestFill(): FillItem[] {
         const growth = kinds[zone];
         if (!growth) continue;
         // The woods only (batch 6): none in the glades, fewer towards the ragged edge.
-        if (roll > growth.density * clump * 6 * FILL_OFFERED * woodsCover(x, z, sample, zone)) continue;
+        if (roll > growth.density * clump * 6 * (FILL_OFFERED_IN.has(zone) ? FILL_OFFERED : 1) * woodsCover(x, z, sample, zone)) continue;
         const kind = growth.pick(pickRoll);
         if (!kind) continue;
         if (kind === "conifer" && sample.height > 22) continue;

@@ -42,8 +42,15 @@ export type RockPiece = {
 /** Crags stand below this (m); above `DUST_FROM` their tops are dusted (rock through the high snow, as on a real peak). */
 export const CRAG_CEILING = 38;
 export const DUST_FROM = 20;
-/** Smaller than this across (m), a stone is walked over: not an obstacle. */
-export const SOLID_ACROSS = 0.3;
+/**
+ * Smaller than this across (m), a stone is stepped over: not an obstacle (`map/rocks.ts`). The walk grid's cells are
+ * 2 m with a rock margin round each obstacle, so every listed stone closes a cell or more: at 0.3 m the mountain's scree
+ * (148 stones) walled off slope a goat or a leopard crosses without a thought, and left the spawn spacing too little
+ * mountain to keep a snow leopard 20 m from the farm goats' range (`behaviour-schedule.ts` spaceHomes). From 0.45 m
+ * (128 of the 356 pieces, 75 of them scree) a stone is one a deer steps round. Small animals sit on attach points, not
+ * on the walk grid.
+ */
+export const SOLID_ACROSS = 0.45;
 
 const STEP = 1.2;
 
