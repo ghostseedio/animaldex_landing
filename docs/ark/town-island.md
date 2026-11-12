@@ -225,7 +225,48 @@ As the wild island's `near-detail.ts`, the detail exists only round the point th
 
 It is seeded per 2 m cell from what lies there, and cells are built 10 a frame (all at once after a jump). One draw call per kind while near; none from afar. The share is 1 / 0.6 / 0.35 a tier. The camera is read from the meshes' own render callback, so the scene's hooks are unchanged.
 
-### 11.6 Tests and the workbench
+### 11.6 Measured (2026-11-12)
+
+**The real Ark, both islands in one world (v2).**
+- **Setup:**
+  - 3,145 animals, from the local snapshot read in place;
+  - the phone profile: 360 × 800 at DPR 2, 4× CPU, Metal;
+  - `scripts/ark-runtime-measure.mjs --islands --world v2 --pan town --seconds 60`;
+  - before is 970b0461 (a worktree of its own); runs were interleaved, at a Mac load of 24–38.
+- **The heap is mostly garbage-collection timing:** the two "before" low runs differ by 97 MB.
+
+| Tier | Run | Peak JS heap | Heap at the end | Peak GPU est | fps | p95 frame |
+|---|---|---|---|---|---|---|
+| low | before ×2 | 375 / 472 MB | 367 / 468 MB | 120.8 MB | 30.1 / 28.2 | 33 ms |
+| low | after ×2 | 378 / 397 MB | 365 / 345 MB | 126.1 MB | 29.3 / 28.1 | 33 ms |
+| medium | before | 430 MB | 369 MB | 120.8 MB | 17.4 | 67 ms |
+| medium | after | 411 MB | 315 MB | 126.1 MB | 26.5 | 33 ms |
+| high (forced) | before | 477 MB | 383 MB | 145.0 MB | 17.6 | 83 ms |
+| high (forced) | after | 434 MB | 397 MB | 156.1 MB | 19.6 | 83 ms |
+
+- **What it costs:**
+  - ~+5.3 MB of GPU geometry (the kerb faces, the furniture, the lights);
+  - the KTX2 arrays on the GPU, which the estimate does not count: ~2.1 MB on low (albedo only), ~4.2 MB on medium and high;
+  - the 0.9 MB lamp map.
+  - The heap shows no change past its own noise, and fps none on any tier.
+
+**The town's own page** (`scripts/ark-town.mts perf`, the 20 s flythrough from the harbour to the homes at night, much of it at street level).
+
+| Device, tier | fps before → after | p99 frame | Peak heap | GPU est | Draw calls | Triangles |
+|---|---|---|---|---|---|---|
+| desktop high | 59.7 → 60.0 | 17.8 → 18.1 ms | 154 → 195 MB | 25.6 → 30.8 MB | 419 → 414 | 1.10 M → 1.15 M |
+| desktop medium | 59.6 → 60.0 | 18.5 → 18.6 ms | 151 → 197 MB | 25.6 → 30.8 MB | 203 → 201 | 550 k → 575 k |
+| desktop low | 59.9 → 60.0 | 18.5 → 17.4 ms | 150 → 150 MB | 25.6 → 30.8 MB | 152 → 152 | 340 k → 351 k |
+| phone medium | 59.8 → 58.4 | 19.0 → 23.0 ms | 152 → 192 MB | 25.6 → 30.8 MB | 130 → 128 | 396 k → 418 k |
+| phone low | 59.8 → 59.0 | 19.0 → 21.0 ms | 149 → 187 MB | 25.6 → 30.8 MB | 79 → 79 | 185 k → 194 k |
+
+- **The town page's extra heap** is mostly the wild ground's texture strips, which this page now loads and the wild island's page always had.
+  - Their 9 layers stay in the JS heap as a DataArrayTexture's data (~19 MB, plus ~20 MB transient while decoding).
+  - On the two-island page they were already there, so nothing is added.
+  - Freeing them after upload (`ground-textures.ts`, as the town's KTX2 is freed) would take ~19 MB off every page. That file is the wild island's; the change is noted for its owner.
+- **Draw calls** are unchanged: the old lamp sets went, and one lights mesh and one glow came, the glow only at night.
+
+### 11.7 Tests and the workbench
 
 - **Tests:** `npx tsx --test src/lib/ark-town-ground.test.ts` (7). The prebuild's digests (`ark-town-prebuild-speed.test.ts`) were updated for the intended ground, scenery and zoo change; the plan, areas and places are unchanged, so nothing moved.
 - **The workbench:**
@@ -233,3 +274,23 @@ It is seeded per 2 m cell from what lies there, and cells are built 10 a frame (
   - `?wet=&rain=` and `__arkTown.weather(w, r)` pin the weather;
   - new shots: `street_level`, `street_night`, `street_wet_night`, `street_wet_day`, `pavement_close`, `pavement_close_wet_night`, `square_night`.
 - **The town's visual set** (`tests/ark-visual/town/*.webp`, 4 shots) changes by design. It needs re-accepting through the visual CI run.
+
+### 11.8 Decisions (lane GA)
+
+To be logged in AnimalDex `docs/ark/DECISIONS.md` by the integrator. Each is open to change.
+
+| Question | Options | Chosen | Why |
+|---|---|---|---|
+| GA-1: What caused the "giant pixels", and the fix | (a) a finer ground mesh; (b) procedural shading only; (c) tiled PBR textures per surface, decals tagged | **(c)** | The town had no textures at all. Each 1–2 m drape cell had one flat colour (the setts' bands, the zoo floors, the fields), and each 1.1 m ground vertex had a random shade. A finer mesh only makes smaller pixels and costs memory. Textures at true scale, with mipmaps and anisotropy, carry the detail for almost nothing |
+| GA-2: How the shader knows each decal's surface | (a) UVs added to `Geo` (GB's `kit.ts`); (b) guess from the vertex colour; (c) the existing `Geo.extra` float as a tag: surface × 8 + axis × 4 + across | **(c)** | No change to `kit.ts` or the prebuild packing. Untagged decals draw as before. `across` gives the asphalt's wheel tracks, crown and gutters. Every town street is axis-aligned or nearly, so world-axis mapping per piece is enough |
+| GA-3: The texture format | (a) WebP strips into a DataArrayTexture, as the wild ground; (b) KTX2 (Basis) arrays: ETC1S albedo + roughness, UASTC normals | **(b)** | The brief asks for compressed textures, and `public/ark/basis` is already there. They stay compressed on the GPU (about 1 byte a texel), and the transcoded data is dropped from the JS heap after upload. 556 KB + 1,346 KB over the wire |
+| GA-4: Which textures, from where | new sets for every surface / new for the paving, the wild ground's strips for natural ground | **Six Poly Haven CC0 paving sets** (asphalt_02, concrete_pavement, cobblestone_floor_03, gravel_floor, patterned_brick_floor, granite_tile); grass, soil, mud, sand and leaves from the wild strips | Nothing extra to download or hold for the natural surfaces, and the town's grass matches the wild island's. Poly Haven's measured sizes keep true scale. Credited in `docs/ark-credits.md` |
+| GA-5: Tiers | (a) the same everywhere; (b) a smaller texture on low; (c) low: albedo only (no normal maps, close-up grain or ripples), one sample a layer; anisotropy 8 / 4 / 4; close-up detail 1 / 0.6 / 0.35 | **(c)** | v2 low already runs close to its heap budget on the phone. Low skips the 1.35 MB normal array and the extra fetches but keeps the textures, puddles and lamps, so detail is tuned, not removed |
+| GA-6: Anti-tiling | the wild ground's turned second sample / texture bombing (two offset cell grids) | **Bombing** for asphalt, gravel, grass and soil; patterned layers read once | Bombing keeps the texture at its true size; the turned sample rescales it. The asphalt's cracks stopped repeating every 3 m |
+| GA-7: Street lamps at night | (a) three PointLights for the nearest N lamps; (b) a baked light texture; (c) each town material lit by its nearest lamp through three's own `RE_Direct`, from a 1 m lamp map built in the worker with building shadows | **(c)** | (a) adds lights to every material in the world, the wild island's included, with recompiles and a per-pixel cost everywhere. (b) gives no specular, so no lamp reflections on wet streets. (c) costs only the town, gives physically based diffuse and GGX streaks, and a lamp never lights the garden behind a house |
+| GA-8: Where the furniture's bodies go | instanced sets per kind (~15 draw calls) / merged into each chunk's solid mesh | **Merged into the chunks' solids**; one lights mesh; one glow | No draw calls added. Bodies stream and cast shadows with their chunk, and they are built in the worker. The lights need their own shader (signals, beacons, dusk) |
+| GA-9: Where things stand | (as built) | Heritage lanterns in the old town, by the canal, on the quays and in the park; steel columns on the other roads. Signals at the high street and park road; six zebras with Belisha beacons; five bus stops; bins every 34 m on the high street (52 m elsewhere); benches and planters on the high street; bollards and bike stands at the square | An English market town at true scale (lanterns 4.2 m, columns 5.8 m). Seeded and pure, so every viewer sees the same street |
+| GA-10: Signs and bus stops | real words / no text | **No text, names or logos**: give-way triangles, a no-vehicles roundel, blank name plates, red-and-white bus flags | The brief: no real brand names or logos; people implied, never shown |
+| GA-11: Rain on the puddles | ripples from wetness alone / a rain uniform | **`ARK_ENV.rain`** (glsl.ts, one line set in index.ts from the scene's weather, pins honoured) | Wetness lags the rain (streets stay wet after it stops), and the ripples should stop when it does |
+| GA-12: Furniture as obstacles | add to the nav footprints / leave to TB and L5 | **Leave, and flag it** | `obstacles.ts` and colliders are TB's and L5's; the old lamps were not obstacles either |
+| GA-13: The prebuild digests and the town's visual set | keep the old ones / update | **Digests updated** (ground, scenery, zoo; plan, areas and places unchanged); **the 4 town visual shots need re-accepting** through the visual CI run | The change is intended. Nothing moved, which the unchanged plan, areas and places digests prove |
