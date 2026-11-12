@@ -393,11 +393,13 @@ function within(list: Array<[number, number]>, along: number, margin = 0): boole
 }
 
 /**
- * Which kerbs have parking at a point: on a two-way stretch only the left kerb (-1, left of the street's line) and only
- * where the carriageway is 7 m; on a one-way stretch the kerb on the traffic's right (so it keeps left, as in Britain);
- * where no car drives, both.
+ * Which kerbs have parking at a point: none on the high streets (double yellow lines); on a two-way stretch only the
+ * left kerb (-1, left of the street's line) and only where the carriageway is 7 m; on a one-way stretch the kerb on the
+ * traffic's right (so it keeps left, as in Britain); where no car drives, both.
  */
 export function parkingSides(street: Street, use: StreetUse | undefined, along: number): Array<-1 | 1> {
+    // (The high streets have double yellow lines along both kerbs, lane GA's: no parking there at all.)
+    if (street.kind === "high") return [];
     const plus = Boolean(use && within(use.plus, along, 8));
     const minus = Boolean(use && within(use.minus, along, 8));
     if (plus && minus) return street.width >= 7 ? [-1] : [];

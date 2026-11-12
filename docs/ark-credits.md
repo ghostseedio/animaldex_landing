@@ -151,7 +151,7 @@ Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0, `brew install b
 
 ## Town island (`src/ark-scene/islands/`, lane T2)
 
-Every building, street, fence, tree, car, bin, boat, stall and zoo enclosure on the town, countryside and zoo island is generated in code (`src/ark-scene/islands/town/render/`), coloured by vertex colours, with no models or scans downloaded. Made for AnimalDex; no attribution needed. The town reuses the Ark's existing CC0 day sky (`public/ark/graphics/sky-day.hdr`, credited under Graphics above) and its shared lighting.
+Every building, street, fence, tree, bin, boat, stall and zoo enclosure on the town, countryside and zoo island is generated in code (`src/ark-scene/islands/town/render/`), coloured by vertex colours, with no models or scans downloaded. Made for AnimalDex; no attribution needed. The cars and bicycles are Quaternius's CC0 models (below). The town reuses the Ark's existing CC0 day sky (`public/ark/graphics/sky-day.hdr`, credited under Graphics above) and its shared lighting.
 
 ### The town's ground and paving (lane GA, 2026-11-12)
 
@@ -175,4 +175,15 @@ Six CC0 texture sets from Poly Haven for the paving, each at its measured real s
 - **Street furniture, lamps and signs** are made in code (`render/furniture.ts`). The signs and the bus stop flags carry no text, names or logos.
 
 Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0; only its ETC1S and UASTC LDR 4x4 codecs, which three's bundled transcoder reads), `sharp` (Apache-2.0, an existing dev dependency).
+
+### The town's cars and bicycles (lane GB, 2026-11-12)
+
+Low-poly models with material colours only (no textures, no logos), checked CC0 before download: each pack's page on quaternius.com links its licence to creativecommons.org/publicdomain/zero/1.0, and the Cars download's own `License.txt` reads "CC0 1.0 Universal (CC0 1.0) Public Domain Dedication" (checked 2026-11-12). The OBJ and MTL files were kept outside the repo; only the processed binary is committed. Made into it by `scripts/ark-town-vehicles.mts` (turned, stood, scaled to true length, materials sorted into classes, welded, a second level simplified with meshoptimizer 0.18.1, MIT, an existing dependency's dependency, tooling only).
+
+| Asset | Source | Licence | Author | Used as | Committed file |
+|---|---|---|---|---|---|
+| Cars pack: Taxi (its roof sign cut off), NormalCar1, NormalCar2, SUV, SportsCar, SportsCar2 | https://quaternius.com/packs/cars.html | CC0 1.0 | Quaternius | the saloon, hatchback, city car, SUV, coupe and estate, parked and moving | `public/ark/assets/town-v1/vehicles.bin` |
+| Public Transport pack: Bicycle | https://quaternius.com/packs/publictransport.html | CC0 1.0 | Quaternius | bicycles left out by doors and shops | same file |
+
+The cars' far proxies, their colours and lamps, and every shop sign's pictogram are made in code (`render/vehicles.ts`, `render/buildings.ts`). Kenney's Car Kit (CC0) was looked at and not used.
 

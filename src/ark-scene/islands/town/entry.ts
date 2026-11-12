@@ -57,11 +57,12 @@ function shots(): Shot[] {
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
         {id: "town_night", eye: [-6, 34, 92], target: [-18, 4, 2], hours: 22.3},
         {id: "homes_night", eye: [155, 42, 125], target: [92, 2, 22], hours: 21.5},
-        // Close-ups at eye height (lane GB: facades, shops, parked and moving cars, lit windows).
-        {id: "street_shops", eye: [-4, 4.5, 31], target: [-52, 5.6, 38], hours: 11, day: 20406},
-        {id: "street_shops_night", eye: [-4, 4.5, 31], target: [-52, 5.6, 38], hours: 21.2, day: 20406},
-        {id: "street_houses", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 10, day: 20407},
-        {id: "street_houses_night", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 22, day: 20407},
+        // Close-ups at eye height (lane GB: facades, shops, parked and moving cars, lit windows); each street's hour is a
+        // moment a moving car is in the picture.
+        {id: "street_shops", eye: [-4, 4.5, 31], target: [-52, 5.6, 38], hours: 11.0047, day: 20406},
+        {id: "street_shops_night", eye: [-4, 4.5, 31], target: [-52, 5.6, 38], hours: 21.2083, day: 20406},
+        {id: "street_houses", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 10.0014, day: 20407},
+        {id: "street_houses_night", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 22.0056, day: 20407},
         {id: "parked_cars", eye: [126, 5.4, -50], target: [84, 3.4, -57], hours: 19.5, day: 20406},
         {id: "terraces", eye: [150, 11.5, 26], target: [120, 5.5, 40], hours: 15, day: 20406},
         // Lane GA: the street, close up, by day and night, dry and in the rain.
