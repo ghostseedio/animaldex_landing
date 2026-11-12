@@ -17,6 +17,39 @@
 import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import {REGION_ZONES} from "@/ark-scene/types";
+import {sampleGroundV2, wildWorldV2} from "@/ark-scene/islands/wild/world-v2";
+import {setNoHamlet} from "@/ark-scene/no-hamlet";
+
+// MARK: - Which world (Part C, docs/ark/wild-island.md §Integration)
+
+/**
+ * The world this page (or worker, or test process) draws: `v1` today's island, `v2` the bigger wild island (Part C).
+ * Chosen once, before anything builds from the world: `setArkWorld` reassigns this module's live bindings (ZONE_SITES,
+ * LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES, TERRAIN_HALF, TERRAIN_SEGMENTS, WORLD_RADIUS) and its
+ * functions (sampleGround, heightAt, coastRadius, homeLobe, riverDistance, regionLabelAnchor) answer for the chosen world.
+ * With nothing chosen it is `v1`, exactly as before.
+ */
+export type ArkWorldId = "v1" | "v2";
+// (On the global object, as the hamlet's switch (`no-hamlet.ts`): a script's loader may hold two copies of the scene's
+// modules, and every copy's bindings follow the one switch.)
+type WorldSwitch = {world: ArkWorldId; touched: boolean; listeners: Array<(world: ArkWorldId) => void>};
+const WORLD_KEY = "__arkWorldSwitch";
+const worldState: WorldSwitch = (((globalThis as Record<string, unknown>)[WORLD_KEY] as WorldSwitch | undefined) ??= {world: "v1", touched: false, listeners: []});
+let ACTIVE: ArkWorldId = "v1";
+
+/** The world in use. */
+export function arkWorld(): ArkWorldId {
+    return worldState.world;
+}
+
+/**
+ * Run `listener` whenever the world changes (and never at registration): for a module that derives a value from the
+ * world when it loads (`sea-depth.ts` LAKE_SWIM_RADIUS, the drawn ground's grid) or keeps something built from it, so
+ * it follows the switch.
+ */
+export function onArkWorld(listener: (world: ArkWorldId) => void): void {
+    worldState.listeners.push(listener);
+}
 
 // MARK: - Noise
 
@@ -87,6 +120,7 @@ export function hashString(value: string): number {
 
 /** How far the land reaches from the middle, at this bearing (radians, 0 = +x). */
 export function coastRadius(theta: number): number {
+    if (ACTIVE === "v2") return wildWorldV2().coastRadius(theta);
     return 78
         + 5.5 * Math.sin(3 * theta + 1.1)
         + 3.5 * Math.sin(5 * theta - 0.4)
@@ -104,6 +138,7 @@ export function coastRadius(theta: number): number {
  */
 const HOME_LOBE = {south: 32, southFrom: [16, 46], southTo: [97, 119], east: 30, eastFrom: [-44, -8], eastTo: [40, 60]} as const;
 export function homeLobe(theta: number): number {
+    if (ACTIVE === "v2") return 0;
     const turned = ((((theta * 180) / Math.PI) % 360) + 360) % 360;
     const degrees = turned > 180 ? turned - 360 : turned;
     const L = HOME_LOBE;
@@ -118,9 +153,11 @@ function coastPoint(theta: number, offset: number): {x: number; z: number} {
     return {x: Math.cos(theta) * r, z: Math.sin(theta) * r};
 }
 
-export const LAKE = {x: -4, z: -4, r: 10.5};
+export let LAKE = {x: -4, z: -4, r: 10.5};
 /** The river, from the lake out to the southern coast. */
-export const RIVER: Array<[number, number]> = [[-4, -4], [-10, 12], [-19, 28], [-24, 46], [-27, 66], [-29, 92]];
+export let RIVER: Array<[number, number]> = [[-4, -4], [-10, 12], [-19, 28], [-24, 46], [-27, 66], [-29, 92]];
+/** The river above the lake, from its spring (v2; today's world has none). */
+export let RIVER_UPPER: Array<[number, number]> = [];
 
 export type ZoneSite = {
     x: number;
@@ -142,7 +179,7 @@ const SHORE_THETA = SOUTH - 0.3;
 export const BEACH_INSET = 5.6;
 
 /** Where each zone's animals gather. */
-export const ZONE_SITES: Record<ArkZone, ZoneSite> = {
+export let ZONE_SITES: Record<ArkZone, ZoneSite> = {
     farm_garden: {x: 8, z: 34, spacing: 2.6, kind: "land", clearing: 13},
     // On the beach itself, just above the waterline (about 4.5 m inside the coast line), facing the sea.
     seashore: {...coastPoint(SHORE_THETA, -6), spacing: 2.4, kind: "shore", clearing: 8, theta: SHORE_THETA},
@@ -191,7 +228,7 @@ const MORE_CENTRES: Partial<Record<LandZone, Array<{x: number; z: number}>>> = {
  * aboard): a small jetty on the beach a little along from the Coast's
  * animals. A land animal stands at its foot; a swimmer waits off its end.
  */
-export const VISITOR_LANDING = (() => {
+export let VISITOR_LANDING = (() => {
     const theta = SHORE_THETA + 0.3;
     return {theta, foot: coastPoint(theta, -(BEACH_INSET + 0.8)), end: coastPoint(theta, 7.5), deckFrom: coastPoint(theta, -3.5), deckTo: coastPoint(theta, 6)};
 })();
@@ -224,13 +261,19 @@ export function regionLabelAnchor(region: ArkRegion): {x: number; z: number} {
             return coastPoint(theta, 9);
         }
         case "coast":
+            if (ACTIVE === "v2") return {x: ZONE_SITES.seashore.x, z: ZONE_SITES.seashore.z};
             return coastPoint(SHORE_THETA, -BEACH_INSET);
         case "fresh_water":
             // Over the lake's open water, inside the ring of animals on its shore.
             return {x: LAKE.x, z: LAKE.z};
         case "home":
+            if (ACTIVE === "v2") return {x: ZONE_SITES.farm_garden.x, z: ZONE_SITES.farm_garden.z};
             return {x: ZONE_CENTRES.farm_garden.x - 4, z: ZONE_CENTRES.farm_garden.z + 8};
         default: {
+            if (ACTIVE === "v2") {
+                const sites = REGION_ZONES[region].map((zone) => ZONE_SITES[zone]);
+                return {x: sites.reduce((sum, site) => sum + site.x, 0) / sites.length, z: sites.reduce((sum, site) => sum + site.z, 0) / sites.length};
+            }
             const zones = REGION_ZONES[region] as readonly LandZone[];
             return {
                 x: zones.reduce((sum, zone) => sum + ZONE_CENTRES[zone].x, 0) / zones.length,
@@ -266,6 +309,7 @@ function distanceToSegment(px: number, pz: number, ax: number, az: number, bx: n
 }
 
 export function riverDistance(x: number, z: number): number {
+    if (ACTIVE === "v2") return wildWorldV2().riverDistance(x, z);
     let best = Infinity;
     for (let i = 1; i < RIVER.length; i++) {
         best = Math.min(best, distanceToSegment(x, z, RIVER[i - 1][0], RIVER[i - 1][1], RIVER[i][0], RIVER[i][1]));
@@ -285,7 +329,7 @@ export type HamletLane = {
     /** A street with smallholdings on one side (1: right of its way, -1: left) and cottages on the other. */
     farmSide?: 1 | -1;
 };
-export const HAMLET_LANES: HamletLane[] = [
+export let HAMLET_LANES: HamletLane[] = [
     // The village street: past the cottage's gate, then east between the two rows of the east end.
     {kind: "street", points: [[-21, 63], [-8, 63.5], [4, 62.8], [16, 62.5], [30, 62], [59, 47.5], [88, 33], [100, 27]]},
     // Shore lane: down past the old orchard's ground to the beach, then west along it to the river's mouth.
@@ -393,6 +437,8 @@ function siteBase(zone: LandZone): number {
 }
 
 export function sampleGround(x: number, z: number): GroundSample {
+    worldState.touched = true;
+    if (ACTIVE === "v2") return sampleGroundV2(x, z) as unknown as GroundSample;
     const theta = Math.atan2(z, x);
     const r = Math.hypot(x, z);
     const inland = coastRadius(theta) - r + 3 * (fbm(x * 0.06, z * 0.06) - 0.5);
@@ -512,6 +558,61 @@ export function zoneAt(sample: GroundSample): LandZone {
 
 export const WATER_LEVEL = 0;
 /** The terrain mesh's half-width; the sea plane reaches far beyond it. */
-export const TERRAIN_HALF = 132;
+export let TERRAIN_HALF = 132;
+/** The terrain mesh's segments across (1.1 m each on both worlds: 240 today, 480 on v2). */
+export let TERRAIN_SEGMENTS = 240;
 /** Far enough that the whole world fits from the widest camera distance. */
-export const WORLD_RADIUS = 120;
+export let WORLD_RADIUS = 120;
+
+// MARK: - The switch
+
+/** Today's world's values, to come back to (tests that run both). */
+const V1 = {ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES, TERRAIN_HALF, TERRAIN_SEGMENTS, WORLD_RADIUS};
+
+/**
+ * Choose the world. Call it before anything builds from the world (the scene's import, its prebuild, a test's or a
+ * script's first sample): every cache built from the world (decor, the map's cells, the behaviour world, the ground)
+ * is built once. The prebuild workers take it from their URL (`?world=v2`); a test or script process from
+ * `ARK_WORLD=v2` or a call at its top.
+ */
+export function setArkWorld(world: ArkWorldId): void {
+    if (world === worldState.world) return;
+    if (worldState.touched && typeof console !== "undefined") console.warn(`setArkWorld(${world}) after the world was sampled: anything built from it that does not follow onArkWorld stays as built`);
+    worldState.world = world;
+    // The v2 world is the islands mode's wild island: no hamlet on it (decision 148's switch, its resets with it).
+    if (world === "v2") setNoHamlet(true);
+    for (const listener of worldState.listeners) listener(world);
+}
+
+/** This copy of the module's bindings for a world. */
+function applyWorld(world: ArkWorldId): void {
+    ACTIVE = world;
+    if (world === "v2") {
+        const v2 = wildWorldV2();
+        ZONE_SITES = v2.ZONE_SITES;
+        LAKE = v2.LAKE;
+        RIVER = v2.RIVER;
+        RIVER_UPPER = v2.RIVER_UPPER;
+        VISITOR_LANDING = v2.VISITOR_LANDING;
+        HAMLET_LANES = [];
+        TERRAIN_HALF = v2.TERRAIN_HALF;
+        TERRAIN_SEGMENTS = v2.TERRAIN_SEGMENTS;
+        WORLD_RADIUS = v2.WORLD_RADIUS;
+    } else {
+        ({ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES, TERRAIN_HALF, TERRAIN_SEGMENTS, WORLD_RADIUS} = V1);
+    }
+}
+// Every copy follows the one switch; a copy loaded after it was set starts there. (Registered first, so the world's own
+// bindings change before any module's listener reads them.)
+worldState.listeners.unshift(applyWorld);
+if (worldState.world !== "v1") applyWorld(worldState.world);
+
+/** The world asked for by the process: `globalThis.__ARK_WORLD__`, a worker's or page's `?world=v2`, or `ARK_WORLD=v2`. */
+function askedWorld(): ArkWorldId {
+    const g = globalThis as unknown as {__ARK_WORLD__?: string; location?: {search?: string}; process?: {env?: Record<string, string | undefined>}};
+    let asked: string | null | undefined = g.__ARK_WORLD__;
+    if (!asked && g.location?.search) asked = new URLSearchParams(g.location.search).get("world");
+    if (!asked) asked = g.process?.env?.ARK_WORLD;
+    return asked === "v2" ? "v2" : "v1";
+}
+if (askedWorld() === "v2") setArkWorld("v2");

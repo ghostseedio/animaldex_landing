@@ -21,6 +21,7 @@
  */
 
 import {onHamletSwitch} from "@/ark-scene/no-hamlet";
+import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import table from "@/ark-scene/recipes.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
@@ -224,7 +225,7 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         const to = goalSpot(input, template, random);
         if (!to) continue;
         const flyer = input.kit.flies(input.profile);
-        const raisedTo = to.y > Math.max(input.world.sampler.heightAt(to.x, to.z), 0) + 0.4;
+        const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
         const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest") ? "air" : "ground";
         return {doing: template.doing, to, mode, recipe: id};
     }
@@ -240,7 +241,7 @@ export function sitterIntent(input: {world: ScheduleWorld; profile: ArkBehaviour
     const site = nestSource(input.animal.id, input.start);
     if (!site || !((site.eggs ?? 0) > 0 || (site.chicks ?? 0) > 0)) return null;
     const to: Spot = {x: site.x, y: site.y, z: site.z, nx: 0, ny: 1, nz: 0, point: null};
-    const raisedTo = to.y > Math.max(input.world.sampler.heightAt(to.x, to.z), 0) + 0.4;
+    const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
     const mode: TripMode = input.kit.flies(input.profile) && raisedTo ? "air" : input.kit.aquatic(input.profile) ? "water" : "ground";
     return {doing: input.awake ? "rest" : "sleep", to, mode, recipe: "incubate_sit"};
 }
@@ -255,7 +256,7 @@ function waterNear(world: ScheduleWorld, x: number, z: number, reach: number, de
             const px = x + Math.sin(a) * r;
             const pz = z + Math.cos(a) * r;
             const floor = world.sampler.heightAt(px, pz);
-            if (floor < -depth) return {x: px, z: pz, floor};
+            if (floor < waterSurfaceOf(world.sampler, px, pz) - depth) return {x: px, z: pz, floor};
         }
     }
     return null;
@@ -277,7 +278,7 @@ function clearPlunge(world: ScheduleWorld, from: P, to: P): boolean {
         const x = from.x + (to.x - from.x) * along;
         const z = from.z + (to.z - from.z) * along;
         const y = from.y + (to.y - from.y) * Math.pow(u, 1.6);
-        if (y < Math.max(world.sampler.heightAt(x, z), 0) + 0.1) return false;
+        if (y < topOf(world.sampler, x, z) + 0.1) return false;
     }
     return true;
 }
@@ -291,8 +292,9 @@ function plungeWater(world: ScheduleWorld, from: P, reach: number, length: numbe
             const a = (k / 16) * Math.PI * 2;
             const x = from.x + Math.sin(a) * reach * f;
             const z = from.z + Math.cos(a) * reach * f;
-            if (world.sampler.heightAt(x, z) >= -0.45) continue;
-            const to = {x, y: -Math.max(length * 0.3, 0.06), z};
+            const top = waterSurfaceOf(world.sampler, x, z);
+            if (world.sampler.heightAt(x, z) >= top - 0.45) continue;
+            const to = {x, y: top - Math.max(length * 0.3, 0.06), z};
             if (clearPlunge(world, from, to)) return to;
         }
     }
@@ -311,7 +313,7 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
             const lowest = Math.min(Math.max(length * 20, 2.5), 8);
             for (const low of [true, false]) {
                 for (const tag of ["branch", "reeds", "rock_top", "cliff_ledge"] as AttachTag[]) {
-                    const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius * 1.6}).filter((p) => !low || p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) < lowest);
+                    const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius * 1.6}).filter((p) => !low || p.y - topOf(world.sampler, p.x, p.z) < lowest);
                     const sorted = [...near].sort((a, b) => Math.hypot(a.x - centre.x, a.z - centre.z) - Math.hypot(b.x - centre.x, b.z - centre.z) || a.id.localeCompare(b.id));
                     // (Open water below it and a clear drop: a perch on a high bank over the lake is no plunge perch.)
                     for (const point of sorted.slice(0, 24)) if (plungeWater(world, {x: point.x, y: point.y, z: point.z}, reach, length)) return kit.spotOf(point);
@@ -326,7 +328,7 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         }
         case "edge": {
             const point = kit.placeNear(world, centre, length, ["water_edge"], Math.min(radius * 1.8, 40), random());
-            return point ? {...kit.spotOf(point), y: Math.max(world.sampler.heightAt(point.x, point.z), 0)} : null;
+            return point ? {...kit.spotOf(point), y: topOf(world.sampler, point.x, point.z)} : null;
         }
         case "water": {
             if (kit.aquatic(profile) || kit.floats(profile) || profile.moves.includes("swim")) {
@@ -342,7 +344,7 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         case "bare": {
             if (kit.aquatic(profile)) return null;
             const spot = kit.rangeSpot(world, profile, animal, centre, radius * 0.8, random);
-            return world.sampler.heightAt(spot.x, spot.z) > 0.02 ? spot : null;
+            return world.sampler.heightAt(spot.x, spot.z) > waterSurfaceOf(world.sampler, spot.x, spot.z) + 0.02 ? spot : null;
         }
         case "bark": {
             const point = kit.placeNear(world, centre, length, ["bark"], radius * 1.4, random());
@@ -363,7 +365,7 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
                 const x = centre.x + Math.sin(a) * r;
                 const z = centre.z + Math.cos(a) * r;
                 if (k < 7 && !openAir(world, x, z)) continue;
-                return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+                return {x, y: topOf(world.sampler, x, z) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
             }
             return null;
         }
@@ -452,7 +454,7 @@ export function nestSiteOf(world: ScheduleWorld, profile: ArkBehaviourProfile, a
     if (kit.flies(profile) && ["cup", "dome", "platform", "other"].includes(kind)) {
         const low = world.sampler
             .attachPoints("branch", {x: animal.home.x, z: animal.home.z, r: 14})
-            .filter((p) => p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) < 5 && p.y - Math.max(world.sampler.heightAt(p.x, p.z), 0) > 1.2)
+            .filter((p) => p.y - topOf(world.sampler, p.x, p.z) < 5 && p.y - topOf(world.sampler, p.x, p.z) > 1.2)
             .sort((a, b) => a.id.localeCompare(b.id));
         if (low.length) {
             const spot = kit.spotOf(low[Math.floor(rng(hashString(key))() * low.length)]);
@@ -650,10 +652,10 @@ export function swimBurst(profile: ArkBehaviourProfile, length: number): number 
 /** The block a "go" step resolves to: its own way of getting there. */
 function goBlock(profile: ArkBehaviourProfile, kit: ScheduleKit, world: ScheduleWorld, from: P, to: P, length = 0): BlockDef {
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
-    const raisedTo = to.y > Math.max(world.sampler.heightAt(to.x, to.z), 0) + 0.4;
-    const raisedFrom = from.y > Math.max(world.sampler.heightAt(from.x, from.z), 0) + 0.4;
+    const raisedTo = to.y > topOf(world.sampler, to.x, to.z) + 0.4;
+    const raisedFrom = from.y > topOf(world.sampler, from.x, from.z) + 0.4;
     // (A swimmer that flies swims from water to water: a puffin or a duck does not take off to go a few metres.)
-    const wet = world.sampler.heightAt(to.x, to.z) < -0.1 && world.sampler.heightAt(from.x, from.z) < -0.1;
+    const wet = world.sampler.heightAt(to.x, to.z) < waterSurfaceOf(world.sampler, to.x, to.z) - 0.1 && world.sampler.heightAt(from.x, from.z) < waterSurfaceOf(world.sampler, from.x, from.z) - 0.1;
     const swims = kit.aquatic(profile) || kit.floats(profile) || profile.moves.includes("swim");
     if (wet && !raisedTo && !raisedFrom && swims) return BLOCKS.swim;
     // (A bird walks or wades a few steps, as behaviour's own: further than that, or up or down, it flies.)
@@ -859,7 +861,7 @@ function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading
     const flat = Math.hypot(to.x - from.x, to.z - from.z);
     if (flat < 0.05) return null;
     const sampler = world.sampler;
-    const wet = (x: number, z: number) => sampler.heightAt(x, z) < -0.02;
+    const wet = (x: number, z: number) => sampler.heightAt(x, z) < waterSurfaceOf(sampler, x, z) - 0.02;
     const dry = !(wet(from.x, from.z) && wet(to.x, to.z)) && onGround(block);
     const medium = block.aloft || block.id === "fly" ? null : !dry ? (wet(from.x, from.z) && wet(to.x, to.z) ? wet : null) : (x: number, z: number) => walkableAt(world, x, z);
     const clear = (c: {x: number; z: number} | null, c2: {x: number; z: number} | null) => !medium || wayClear(from, c, c2, to, medium, dry);
@@ -951,7 +953,7 @@ function clippedAtEdge(world: ScheduleWorld, from: P, to: P): P {
         const x = from.x + ((to.x - from.x) * j) / n;
         const z = from.z + ((to.z - from.z) * j) / n;
         if (!walkableAt(world, x, z) || (colliders && !colliders.segmentClear(last.x, last.z, x, z, LEG_RADIUS))) return last;
-        last = {x, y: Math.max(world.sampler.heightAt(x, z), 0), z};
+        last = {x, y: topOf(world.sampler, x, z), z};
     }
     return to;
 }
@@ -964,7 +966,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
     const origin = step.near === "here" ? pos : anchor;
     const scaleUp = Math.min(Math.max(length / 0.4, 0.4), 2.2);
     const sampler = world.sampler;
-    const ground = (x: number, z: number) => Math.max(sampler.heightAt(x, z), 0);
+    const ground = (x: number, z: number) => topOf(sampler, x, z);
     switch (step.to) {
         case undefined:
         case "here":
@@ -990,14 +992,17 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             const depth = step.to === "prey" ? Math.max(length * 1.2, 0.5) : block.id === "dive_air" || block.id === "dive_feet" ? 0.45 : 0.25;
             const reach = within(Math.max(step.r ?? Math.min(Math.max(length * 40, 4), 14), 1.5));
             const under = block.id === "dive_air" || block.id === "dive_feet" ? -Math.max(length * 0.3, 0.06) : 0;
-            const inWater = (x: number, z: number, floor: number): P =>
-                step.to === "over_water" ? {x, y: (step.h ?? 4) * scaleUp, z} : step.to === "prey" ? {x, y: Math.max(floor + length * 0.6, -Math.max(length * 2.5, 1.2)) * (0.5 + 0.4 * random()), z} : {x, y: under, z};
+            // (Heights from the water's surface there: the sea's 0, or the bigger island's lake and river at their own level.)
+            const inWater = (x: number, z: number, floor: number): P => {
+                const top = waterSurfaceOf(sampler, x, z);
+                return step.to === "over_water" ? {x, y: top + (step.h ?? 4) * scaleUp, z} : step.to === "prey" ? {x, y: top + Math.max(floor - top + length * 0.6, -Math.max(length * 2.5, 1.2)) * (0.5 + 0.4 * random()), z} : {x, y: top + under, z};
+            };
             // (A plunge goes only where its way down is clear of the ground: else null, and it hovers out over the water first.)
             const plunge = block.id === "dive_air" || block.id === "dive_feet";
             const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
             const ahead = aheadSpot(ctx, step, pos, heading, reach, drifts ? DRIFT_SPREAD : step.to === "prey" ? 0.2 : 0.3, random, (x, z) => {
                 const floor = sampler.heightAt(x, z);
-                if (floor >= -depth) return null;
+                if (floor >= waterSurfaceOf(sampler, x, z) - depth) return null;
                 const at = inWater(x, z, floor);
                 return !plunge || clearPlunge(world, pos, at) ? at : null;
             }, t, drifts);
@@ -1014,7 +1019,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
             const ahead = aheadSpot(ctx, step, pos, heading, reach, drifts ? DRIFT_SPREAD : 0.35, random, (x, z) => {
                 const h = sampler.heightAt(x, z);
-                return h < -0.02 && h > -deepest ? {x, y: h, z} : null;
+                const top = waterSurfaceOf(sampler, x, z);
+                return h < top - 0.02 && h > top - deepest ? {x, y: h, z} : null;
             }, t, drifts);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
@@ -1025,7 +1031,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
                     const x = origin.x + Math.sin(a) * reach * f;
                     const z = origin.z + Math.cos(a) * reach * f;
                     const h = sampler.heightAt(x, z);
-                    if (h < -0.02 && h > -deepest) return {x, y: h, z};
+                    const top = waterSurfaceOf(sampler, x, z);
+                    if (h < top - 0.02 && h > top - deepest) return {x, y: h, z};
                 }
             }
             return null;
@@ -1043,7 +1050,7 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
             // (Only where its way there is clear ground: never across the garden pond, a rock or a building.)
             // (A pounce too: it does not leap a fence or a rock to land on its prey.)
-            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > 0.03 && walkableAt(world, x, z) && ((block.aloft && block.id !== "leap") || groundWay(world, pos, null, null, {x, y: 0, z}));
+            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > waterSurfaceOf(sampler, x, z) + 0.03 && walkableAt(world, x, z) && ((block.aloft && block.id !== "leap") || groundWay(world, pos, null, null, {x, y: 0, z}));
             const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
             const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, drifts ? DRIFT_SPREAD : block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t, drifts);
             if (ahead) return ahead;
@@ -1389,7 +1396,8 @@ function waterFace(world: ScheduleWorld, at: P, length: number, heading: number)
         for (const f of [0.15, 0.35, 0.6, 1]) {
             const x = at.x + Math.sin(heading + off) * reach * f;
             const z = at.z + Math.cos(heading + off) * reach * f;
-            if (world.sampler.heightAt(x, z) < -0.05) return {x, y: 0, z};
+            const top = waterSurfaceOf(world.sampler, x, z);
+            if (world.sampler.heightAt(x, z) < top - 0.05) return {x, y: top, z};
         }
     }
     return null;
@@ -1462,7 +1470,8 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
         z = at.z;
         if (b.curve === "ground") {
             const h = world.sampler.heightAt(x, z);
-            y = key.wade ? Math.min(h, 0.02) : b.wet && h < 0 ? h : Math.max(h, 0);
+            const top = waterSurfaceOf(world.sampler, x, z);
+            y = key.wade ? Math.min(h, top + 0.02) : b.wet && h < top ? h : Math.max(h, top);
         }
         // It faces the way it goes (turning into it from its heading at its turn rate); a charge turns to its rival.
         if (!(b.id === "clash" && key.face) && flat > (key.toBase ? SHUFFLE : 0.03)) yaw = turnedBy(key.yawIn, legTurn(from, key.c, c2, to, along, key.yawIn), elapsed, rate);
@@ -1489,7 +1498,7 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
     const pitchBefore = previous ? previous.block.pitch ?? 0 : 0;
     const pitch = pitchBefore + (pitchNow - pitchBefore) * blend;
     const roll = ((b.roll ?? 0) + (b.rollWave ?? 0) * wave) * blend + (previous ? (previous.block.roll ?? 0) * (1 - blend) : 0);
-    const ground = Math.max(world.sampler.heightAt(x, z), 0);
+    const ground = topOf(world.sampler, x, z);
     return {p: {x, y, z}, yaw, pitch, roll, u, aloft: Boolean(b.aloft) && y > ground + 0.05};
 }
 
@@ -1794,7 +1803,7 @@ function pairBuild(world: ScheduleWorld, kit: ScheduleKit, owner: TripOwner, oth
     const otherTrip = kit.tripAt(world, otherProfile, other, start, owner.hoursAt, otherActivity);
     const own = kit.basePose(world, ownTrip, start);
     const there = kit.basePose(world, otherTrip, start);
-    const onLand = (p: TripPose) => !p.aloft && world.sampler.heightAt(p.x, p.z) > 0.03 && p.y < Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.3;
+    const onLand = (p: TripPose) => !p.aloft && world.sampler.heightAt(p.x, p.z) > waterSurfaceOf(world.sampler, p.x, p.z) + 0.03 && p.y < topOf(world.sampler, p.x, p.z) + 0.3;
     const awake = (t: Trip) => t.doing !== "sleep" && t.doing !== "to_roost";
     if (!(hourOk(template, hours) && onLand(own) && onLand(there) && awake(ownTrip) && awake(otherTrip) && Math.hypot(own.x - there.x, own.z - there.z) < 40)) return null;
     const clips = {n: 0};
@@ -1906,7 +1915,7 @@ export function murmurationOf(world: ScheduleWorld, owner: TripOwner, kit: Sched
     // The window in world seconds (the hours map to the clock one to one).
     const t0 = epoch - (hours - MURMURATION_HOURS[0]) * 3600;
     const t1 = t0 + (MURMURATION_HOURS[1] - MURMURATION_HOURS[0]) * 3600;
-    return {centre: {x: roost.x, y: Math.max(world.sampler.heightAt(roost.x, roost.z), 0), z: roost.z}, seed: hashString(leader.id), t0, t1};
+    return {centre: {x: roost.x, y: topOf(world.sampler, roost.x, roost.z), z: roost.z}, seed: hashString(leader.id), t0, t1};
 }
 
 /**
@@ -2120,7 +2129,7 @@ function settingOff(world: ScheduleWorld, owner: TripOwner, trip: Trip, pose: Re
 /** A flyer whose stay is a place in the air (a bat's beat, between its sallies) keeps flying there: a slow circle. */
 function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose | null {
     if (trip.to.point !== null || !kit.flies(owner.profile)) return null;
-    const ground = Math.max(world.sampler.heightAt(trip.to.x, trip.to.z), 0);
+    const ground = topOf(world.sampler, trip.to.x, trip.to.z);
     if (trip.to.y < ground + 1.2) return null;
     const r = Math.max(owner.animal.length * 6, 1.2);
     const a = (epoch - trip.arrive) * (0.9 / r) * 2 + (hashString(owner.animal.id) % 628) / 100;
@@ -2292,7 +2301,7 @@ function mixedPose(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, bas
         const fz = Math.cos(other.yaw);
         const tx = other.x - fx * back + fz * side;
         const tz = other.z - fz * back - fx * side;
-        const ty = other.aloft ? other.y + (random() - 0.5) : Math.max(world.sampler.heightAt(tx, tz), 0);
+        const ty = other.aloft ? other.y + (random() - 0.5) : topOf(world.sampler, tx, tz);
         const k = ease(Math.min(Math.max(Math.min(epoch - start, start + MIXED_SECONDS - epoch) / 12, 0), 1));
         const b = BLOCKS.follow;
         return {

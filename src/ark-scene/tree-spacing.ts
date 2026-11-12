@@ -59,7 +59,7 @@ export type TreeBody = {
     reach: number;
 };
 
-type TreeLike = {kind: string; variant?: number; x: number; y: number; z: number; scale: number; rotation: number};
+type TreeLike = {kind: string; variant?: number; x: number; y: number; z: number; scale: number; rotation: number; asset?: string};
 
 const ROUND = [1, 1, 1, 1, 1, 1, 1, 1];
 /** The decor's sink (micro-decor.ts DECOR_SINK), repeated to keep this module light. */

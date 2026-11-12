@@ -108,8 +108,12 @@ export function denProblems(animal: ArkAnimal, place: Placement): Array<{check: 
     return out;
 }
 
-export function validateMap(): {failures: ValidatorFailure[]; animals: number; species: number; placed: Map<string, Placement>} {
-    const animals = validatorAnimals();
+/**
+ * The validator over `animals` (default: every listed species, `validatorAnimals`). A real snapshot's animals (the live
+ * check, `scripts/ark-map-live-validate.mts`: the wild island's in islands mode) go through the same placement and the
+ * same checks, at the server's own slots and ranks.
+ */
+export function validateMap(animals: ArkAnimal[] = validatorAnimals()): {failures: ValidatorFailure[]; animals: number; species: number; placed: Map<string, Placement>} {
     const placed = placeAnimals(animals);
     const all = mapPoints();
     const sampler = all.sampler;

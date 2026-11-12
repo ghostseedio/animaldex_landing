@@ -21,6 +21,7 @@ import {
     waterLoopRadius,
     waterMotion,
     waterSpec,
+    waterSurfaceAt,
     type SpeciesDepth
 } from "@/ark-scene/sea-depth";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -116,24 +117,26 @@ test("through 24 hours each water species stays in its band, under the surface b
             const x = place.x + Math.cos(angle) * radius;
             const z = place.z + Math.sin(angle) * radius;
             const floorY = heightAt(x, z);
-            assert.ok(floorY < -0.5, `${animal.model_slug} swam out of its water at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+            // (The water's surface there: the sea's 0, or on the bigger wild island the lake's and river's own level.)
+            const surface = waterSurfaceAt(x, z);
+            assert.ok(surface - floorY > 0.5, `${animal.model_slug} swam out of its water at ${x.toFixed(1)}, ${z.toFixed(1)}`);
             // Its breath comes through its behaviour state (awake here; asleep the cycle is only slower).
             const state = behaviourState({activity: "any", elevation: 30, flyer: false, breather: depth.breathes && motion !== "float" ? {seed, clock} : null});
             const breath = state.breathing ? breathAt(seed, clock) : 0;
             assert.equal(state.breathing, breath > 0);
             if (state.breathing) assert.ok(depth.breathes, `${animal.model_slug} breathes but is not an air-breather`);
-            const spec = waterSpec(depth, floorY, seed, clock, breath);
+            const spec = waterSpec(depth, floorY, seed, clock, breath, surface);
             // At its true drawn height and at the far view's 2.3 times.
             for (const height of [body.display * 0.4, body.display * 0.4 * 2.3]) {
                 const {base, middle} = fitInWater(spec, height);
                 const top = base + height;
                 samples++;
                 if (motion === "float") {
-                    assert.ok(Math.abs(base + FLOAT_SINK * height) < 1e-9, `${animal.model_slug} floats`);
+                    assert.ok(Math.abs(base - surface + FLOAT_SINK * height) < 1e-9, `${animal.model_slug} floats`);
                     continue;
                 }
                 if (breath > 0) {
-                    surfaced ||= breath === 1 && top > 0;
+                    surfaced ||= breath === 1 && top > surface;
                     continue;
                 }
                 if (motion === "walk") {
@@ -145,17 +148,17 @@ test("through 24 hours each water species stays in its band, under the surface b
                     continue;
                 }
                 // A swimmer: wholly under the surface, always.
-                assert.ok(top <= -SURFACE_CLEAR + 1e-9, `${animal.model_slug} breaks the surface (top ${top.toFixed(2)}) at ${t}s`);
-                const waterDepth = -floorY;
+                assert.ok(top <= surface - SURFACE_CLEAR + 1e-9, `${animal.model_slug} breaks the surface (top ${top.toFixed(2)}) at ${t}s`);
+                const waterDepth = surface - floorY;
                 const room = waterDepth >= height + SURFACE_CLEAR + FLOOR_CLEAR;
                 if (!room) continue;
                 assert.ok(base >= floorY + FLOOR_CLEAR - 1e-9, `${animal.model_slug} in the floor`);
                 // In its band, or at the edge it was fitted to.
                 const range = swimRange(depth.band, waterDepth);
-                const lo = range.aboveFloor ? floorY + FLOOR_CLEAR + height / 2 + range.from : -range.to;
-                const hi = range.aboveFloor ? floorY + FLOOR_CLEAR + height / 2 + range.to : -range.from;
+                const lo = range.aboveFloor ? floorY + FLOOR_CLEAR + height / 2 + range.from : surface - range.to;
+                const hi = range.aboveFloor ? floorY + FLOOR_CLEAR + height / 2 + range.to : surface - range.from;
                 const fittedLow = floorY + FLOOR_CLEAR + height / 2;
-                const fittedHigh = -SURFACE_CLEAR - height / 2;
+                const fittedHigh = surface - SURFACE_CLEAR - height / 2;
                 const inBand = middle >= lo - 1e-9 && middle <= hi + 1e-9;
                 const atEdge = Math.abs(middle - fittedLow) < 1e-9 || Math.abs(middle - fittedHigh) < 1e-9;
                 assert.ok(inBand || atEdge, `${animal.model_slug} (${depth.band}) at ${middle.toFixed(2)} outside ${lo.toFixed(2)}…${hi.toFixed(2)}`);
@@ -165,8 +168,9 @@ test("through 24 hours each water species stays in its band, under the surface b
         if (depth.breathes && motion !== "float") {
             for (let t = 0; t < 300 && !surfaced; t += 0.5) {
                 const breath = breathAt(seed, START + t);
-                const {base} = fitInWater(waterSpec(depth, place.ground, seed, START + t, breath), 1);
-                surfaced = breath === 1 && base + 1 > 0;
+                const surface = waterSurfaceAt(place.x, place.z);
+                const {base} = fitInWater(waterSpec(depth, place.ground, seed, START + t, breath, surface), 1);
+                surfaced = breath === 1 && base + 1 > surface;
             }
             assert.ok(surfaced, `${animal.model_slug} never came up to breathe`);
         }
@@ -181,8 +185,9 @@ test("the seabed's animals sit at the seabed's height", () => {
         const place = placed.places.get(animal.id)!;
         if (waterMotion(depth) !== "walk" || place.micro) continue;
         const floorY = sampleGround(place.x, place.z).height;
-        assert.ok(floorY < -0.3, `${animal.model_slug} not over water`);
-        const {base} = fitInWater(waterSpec(depth, floorY, depthSeed(animal.id), 0, 0), 0.3);
+        const surface = waterSurfaceAt(place.x, place.z);
+        assert.ok(surface - floorY > 0.3, `${animal.model_slug} not over water`);
+        const {base} = fitInWater(waterSpec(depth, floorY, depthSeed(animal.id), 0, 0, surface), 0.3);
         assert.equal(base, floorY, animal.model_slug);
         checked++;
     }
@@ -206,7 +211,7 @@ test("fresh-water species are never in the sea, salt-water species never in the 
             continue;
         }
         if (depth.water === "fresh") {
-            assert.ok(inLake && ground.height < -0.3, `${animal.model_slug} (fresh, ${animal.zone}) not in the lake`);
+            assert.ok(inLake && waterSurfaceAt(place.x, place.z) - ground.height > 0.3, `${animal.model_slug} (fresh, ${animal.zone}) not in the lake`);
         } else {
             assert.ok(!inLake && ground.inland < 0 && ground.height < -1, `${animal.model_slug} (salt, ${animal.zone}) not in the sea`);
         }

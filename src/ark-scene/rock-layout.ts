@@ -19,7 +19,7 @@ import {cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, tiltedBox, type RockStyl
 import {allMounds, moundFoot} from "@/ark-scene/mounds";
 import {snowCover} from "@/ark-scene/snow";
 import {treeBody} from "@/ark-scene/tree-spacing";
-import {fbm, heightAt, riverDistance, sampleGround, seeded, smoothstep, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {arkWorld, fbm, heightAt, onArkWorld, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 /** A rock as placed: its shape, where its base's middle is, its turn about up, its tilt (up vector) and size. */
 export type RockPiece = {
@@ -52,6 +52,15 @@ export const DUST_FROM = 20;
  * on the walk grid.
  */
 export const SOLID_ACROSS = 0.45;
+
+/**
+ * The mountain's rock on the bigger wild island (P3): its snow line is 52 m (`snow.ts` SNOW_LINE_V2), 25 m above today's,
+ * so the crags' ceiling and the dusted tops rise with it; the grid covers its whole square.
+ */
+const V2_SNOW_RISE = 25;
+function layout(): {half: number; ceiling: number; dustFrom: number} {
+    return arkWorld() === "v2" ? {half: TERRAIN_HALF, ceiling: CRAG_CEILING + V2_SNOW_RISE, dustFrom: DUST_FROM + V2_SNOW_RISE} : {half: 132, ceiling: CRAG_CEILING, dustFrom: DUST_FROM};
+}
 
 const STEP = 1.2;
 
@@ -114,14 +123,26 @@ class Grid {
 }
 
 let cached: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]} | null = null;
-// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+// Islands mode flips (`no-hamlet.ts`), or the world does (`world.ts`): built from the other world's scenery.
 onHamletSwitch(() => {
     cached = null;
 });
+onArkWorld(() => {
+    cached = null;
+});
+
+/**
+ * Runtime prebuild hook (runtime/prebuild.ts): the same pieces, laid in the scenery worker before the mount (on the
+ * bigger wild island its whole mountain is seconds of work on a phone), handed in so the mount does not lay them.
+ */
+export function primeMountainRocks(rocks: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]}): void {
+    cached = rocks;
+}
 
 /** The mountain's crags, boulders and scree. */
 export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]} {
     if (cached) return cached;
+    const {half, ceiling, dustFrom} = layout();
     const random = seeded(20261112);
     // What the rocks keep off: trunks (with a hand's width), the decor's own rocks, each other.
     const trunks = new Grid(4);
@@ -158,8 +179,8 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
 
     // Crags: a jittered grid over the mountain, in bands along the contours.
     const CELL = 3.5;
-    for (let gx = -132; gx < 132; gx += CELL) {
-        for (let gz = -132; gz < 132; gz += CELL) {
+    for (let gx = -half; gx < half; gx += CELL) {
+        for (let gz = -half; gz < half; gz += CELL) {
             const x = gx + random() * CELL;
             const z = gz + random() * CELL;
             const roll = random();
@@ -168,13 +189,13 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
             const jitter = random() - 0.5;
             const shadeRoll = random();
             const sample = sampleGround(x, z);
-            if (sample.land < 0.92 || sample.height < 3 || sample.height > CRAG_CEILING) continue;
+            if (sample.land < 0.92 || sample.height < 3 || sample.height > ceiling) continue;
             if (zoneAt(sample) !== "mountains") continue;
             const n = normalAt(x, z);
             const slope = 1 - n[1];
             if (n[1] > 0.92 || n[1] < 0.3) continue;
             // Through the snow only high up (dusted): never a bare crag in a snowfield low down.
-            if (sample.height < DUST_FROM && snowCover(sample.height, slope, 0, 0.35).sure > 0.02) continue;
+            if (sample.height < dustFrom && snowCover(sample.height, slope, 0, 0.35).sure > 0.02) continue;
             // Bands along the contours (a wavering height), broken into reaches; more where the ground is steeper.
             const band = 0.5 + 0.5 * Math.sin(sample.height * 0.62 + 5 * fbm(x * 0.045 + 3, z * 0.045 - 8));
             const reach = smoothstep(0.3, 0.6, fbm(x * 0.07 - 11, z * 0.07 + 4));
@@ -198,7 +219,7 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
                 const l = Math.hypot(u[0], u[1], u[2]);
                 return [u[0] / l, u[1] / l, u[2] / l];
             })();
-            const dusted = sample.height > DUST_FROM && snowCover(sample.height, slope, 0, 0.35).mean > 0.1;
+            const dusted = sample.height > dustFrom && snowCover(sample.height, slope, 0, 0.35).mean > 0.1;
             const crag = lay("crag", "crag", variant, x, z, yaw, up, scale, 0.18, 0.92 + 0.16 * shadeRoll, dusted);
             // On ground so steep that sinking its whole base buries it: no crag (the terrain's own rock shows there).
             if (shows(crag) < 0.4) continue;
@@ -221,7 +242,7 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
                 const px = x + down[0] * d + side[0] * lateral;
                 const pz = z + down[1] * d + side[1] * lateral;
                 const g = sampleGround(px, pz);
-                if (g.land < 0.9 || g.height < 0.5 || g.height > CRAG_CEILING) continue;
+                if (g.land < 0.9 || g.height < 0.5 || g.height > ceiling) continue;
                 const gn = normalAt(px, pz);
                 if (gn[1] < 0.6 || snowCover(g.height, 1 - gn[1], 0, 0.35).sure > 0.02) continue;
                 // Mostly fine stuff, a few blocks; coarser toward the toe.
@@ -243,8 +264,8 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
 
     // Boulders fallen on the lower slopes (and the mountain's foot), sunk on their uphill side.
     const boulderRandom = seeded(20261113);
-    for (let gx = -132; gx < 132; gx += 4) {
-        for (let gz = -132; gz < 132; gz += 4) {
+    for (let gx = -half; gx < half; gx += 4) {
+        for (let gz = -half; gz < half; gz += 4) {
             const x = gx + boulderRandom() * 4;
             const z = gz + boulderRandom() * 4;
             const roll = boulderRandom();
@@ -253,7 +274,7 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
             const yaw = boulderRandom() * Math.PI * 2;
             const shadeRoll = boulderRandom();
             const sample = sampleGround(x, z);
-            if (sample.land < 0.92 || sample.height < 1.5 || sample.height > CRAG_CEILING) continue;
+            if (sample.land < 0.92 || sample.height < 1.5 || sample.height > ceiling) continue;
             if (zoneAt(sample) !== "mountains") continue;
             const n = normalAt(x, z);
             if (n[1] < 0.62 || snowCover(sample.height, 1 - n[1], 0, 0.35).sure > 0.02) continue;

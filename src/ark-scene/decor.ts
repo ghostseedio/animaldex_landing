@@ -20,7 +20,8 @@ import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {treeBody, TreeSpacing} from "@/ark-scene/tree-spacing";
 import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
 import {allMounds, moundFoot} from "@/ark-scene/mounds";
-import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, villageLaneDistance, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {arkWorld, fbm, LAKE, LANE_WIDTH, laneDistance, noise, onArkWorld, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, villageLaneDistance, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {wildDecor, wildFill, wildGrassTufts} from "@/ark-scene/islands/wild/decor-v2";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type DecorKind =
@@ -61,6 +62,12 @@ export type DecorItem = {
     scale: number;
     rotation: number;
     color: string;
+    /**
+     * The asset tree drawn, chosen by the world's own generator (the v2 island, `islands/wild/decor-v2.ts`): then
+     * `scale` is the asset's own uniform scale (its real height), and `tree-pick.ts` treeAssetFor takes both as they
+     * are. Absent on today's island, whose trees `treeAssetFor` picks from their place.
+     */
+    asset?: string;
 };
 
 type Pick = (roll: number) => DecorKind | null;
@@ -125,7 +132,7 @@ function woodsCover(x: number, z: number, sample: GroundSample, zone: ArkZone): 
  */
 const TREE_SIZE: Partial<Record<DecorKind, number>> = {broadleaf: 1.5, rainforest: 1.45, conifer: 1.6, acacia: 1.35, palm: 1.3, orchard: 1.15};
 
-function tone(zone: ArkZone, kind: DecorKind, r: number): string {
+export function tone(zone: ArkZone, kind: DecorKind, r: number): string {
     const palette = ZONE_PALETTES[zone];
     switch (kind) {
         case "rock":
@@ -220,10 +227,10 @@ function shrubAt(spacing: TreeSpacing, under: DecorItem, aside: boolean): DecorI
     return null;
 }
 
-type Pending = {item: DecorItem; /** What it becomes when no tree fits (null: left out). */ shrub: (() => DecorItem) | null};
+export type Pending = {item: DecorItem; /** What it becomes when no tree fits (null: left out). */ shrub: (() => DecorItem) | null};
 
 /** Every pending tree and shrub settled in the order above: the item each becomes, or null when nothing fits. */
-function settle(spacing: TreeSpacing, pending: Pending[], aside: boolean, free: (i: number) => boolean = () => true, take: (i: number) => void = () => {}): Array<DecorItem | null> {
+export function settle(spacing: TreeSpacing, pending: Pending[], aside: boolean, free: (i: number) => boolean = () => true, take: (i: number) => void = () => {}): Array<DecorItem | null> {
     const out: Array<DecorItem | null | undefined> = pending.map(() => undefined);
     for (const sizes of [MATURE, YOUNGER]) {
         pending.forEach((p, i) => {
@@ -245,13 +252,13 @@ function settle(spacing: TreeSpacing, pending: Pending[], aside: boolean, free: 
 }
 
 /** A decor rock as drawn (`rock-assets.ts`), for the trees to keep their trunks out of. */
-function addRockTo(spacing: TreeSpacing, item: DecorItem) {
+export function addRockTo(spacing: TreeSpacing, item: DecorItem) {
     const placed = rockAssetFor(item);
     if (placed) spacing.addRock(rockBox(placed));
 }
 
 /** The termite mounds (`mounds.ts`), as square-ish rocks of their foot: no trunk grows out of one. */
-function addMoundsTo(spacing: TreeSpacing) {
+export function addMoundsTo(spacing: TreeSpacing) {
     for (const mound of allMounds()) {
         const r = moundFoot(mound);
         spacing.addRock({x: mound.x, z: mound.z, cos: 1, sin: 0, hx0: -r, hx1: r, hz0: -r, hz1: r});
@@ -274,6 +281,8 @@ export function primeDecor(primed: {decor?: DecorItem[]; fill?: FillItem[]; gras
 
 export function worldDecor(): DecorItem[] {
     if (cached) return cached;
+    // The bigger wild island (P3): its own generator's scenery, settled as below (`islands/wild/decor-v2.ts`).
+    if (arkWorld() === "v2") return (cached = wildDecor());
     const random = seeded(20261110);
     const items: DecorItem[] = [];
     const push = (item: DecorItem) => items.push(item);
@@ -481,6 +490,7 @@ export function grassTufts(count: number): GrassTuft[] {
         primedGrass = null;
         return tufts;
     }
+    if (arkWorld() === "v2") return wildGrassTufts(count);
     const random = seeded(77001);
     const tufts: GrassTuft[] = [];
     const meadow: Partial<Record<ArkZone, number>> = {grassland: 1, woodland: 0.75, farm_garden: 0.55, river_lake: 0.85, wetland: 0.6, rainforest: 0.45, mountains: 0.35, seashore: 0.12};
@@ -595,15 +605,19 @@ const FILL_OFFERED_IN: ReadonlySet<ArkZone> = new Set<ArkZone>(["rainforest", "w
 
 let fillCache: FillItem[] | null = null;
 
-// Islands mode flips (`no-hamlet.ts`): the decor, the fill and any primed grass are the other world's.
-onHamletSwitch(() => {
+// Islands mode flips (`no-hamlet.ts`), or the world does (`world.ts` setArkWorld): the decor, the fill and any primed
+// grass are the other world's.
+function dropDecor() {
     cached = null;
     fillCache = null;
     primedGrass = null;
-});
+}
+onHamletSwitch(dropDecor);
+onArkWorld(dropDecor);
 
 export function forestFill(): FillItem[] {
     if (fillCache) return fillCache;
+    if (arkWorld() === "v2") return (fillCache = wildFill(worldDecor()));
     const random = seeded(20261111);
     const items: FillItem[] = [];
     // A coarse grid keeps trunks at least ~2.4 m apart.

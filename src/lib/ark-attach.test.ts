@@ -25,7 +25,8 @@ import {rock} from "@/ark-scene/vegetation";
 import {CAVE_SITE, EVERY_TIER_FILL, drawnRockPoint, setAttachHomePlots, allAttachPoints, attachPointAt, attachSway, fencePostTops, limbLoad, place, prepareAttachPoints, resetAttachPoints, surfaceAt, yawFor, type AttachPoint} from "@/ark-scene/sampler";
 import {canopyTree, limbAt} from "@/ark-scene/micro-decor";
 import {LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
-import {snowCover, snowLine} from "@/ark-scene/snow";
+import {snowCover, snowLine, SNOW_LINE_V2} from "@/ark-scene/snow";
+import {WILD_SNOW_LINE} from "@/ark-scene/islands/wild/render/ground";
 import {TREE_CLOSE, floorLogTops, assetAttachRows, assetTreePlacement, treeAssetFor, treeLodDistance} from "@/ark-scene/tree-assets";
 import {fillDrawnOnEveryTier} from "@/ark-scene/tree-pick";
 
@@ -636,7 +637,9 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
     const terrain = readFileSync(path.join(root, "src/ark-scene/terrain.ts"), "utf8");
     for (const line of [
         "const snow = polar * smoothstep(0.3, 1, sample.land);",
-        "float snowLine = 27.0 - 12.0 * envSnow;",
+        // (Per world since P1: 27 m on today's island, the bigger wild island's own on v2; snow.ts follows the same switch.)
+        'const snowLine = arkWorld() === "v2" ? WILD_SNOW_LINE : 27;',
+        "float snowLine = ${snowLine.toFixed(1)} - 12.0 * envSnow;",
         "float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);",
         "float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);",
         "float high = smoothstep(snowLine + 2.0, snowLine + 11.0, snowAt + 6.0 * (0.5 - rib));",
@@ -653,6 +656,7 @@ test("attach: the ground is snow where the terrain shader draws snow, and only t
         "float ribOnX = arkFbm(vec2(world.x * 0.16, world.y * 0.035 + 5.0));",
         "float rib = 1.0 - abs(2.0 * mix(ribOnX, ribOnZ, faceTurn) - 1.0);"
     ]) assert.ok(terrain.includes(line), `terrain.ts snow changed: ${line}`);
+    assert.equal(SNOW_LINE_V2, WILD_SNOW_LINE, "snow.ts's v2 line is the v2 ground's");
     assert.equal(snowLine(0), 27);
     assert.equal(snowLine(1), 15);
     // Over the mountain: snow is sure only well above the line's lowest wander, and none at all well under it.

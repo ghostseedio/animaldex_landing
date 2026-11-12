@@ -16,8 +16,22 @@ import {placeAnimals, primePlaces, primePlacesFor, type Placement} from "@/ark-s
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
 import {primeFloorPlacements} from "@/ark-scene/floor-assets";
+import {primeMountainRocks} from "@/ark-scene/rock-layout";
+import {primeSavannaMounds} from "@/ark-scene/mounds";
+import {primeRockPlacements} from "@/ark-scene/rock-assets";
+import {primeTreePlacements} from "@/ark-scene/tree-pick";
 import {primeWheatStands} from "@/ark-scene/near-detail";
+import {primeWildScenery} from "@/ark-scene/islands/wild/scenery";
 import type {ArkZone} from "@/ark-scene/types";
+import {arkWorld} from "@/ark-scene/world";
+
+/**
+ * A prebuild worker's URL for the world in use (docs/ark/wild-island.md §Integration): a v2 world's worker is told so in
+ * its URL (`?world=v2`), which `world.ts` reads as it loads, before any of the worker's modules build from the world.
+ */
+function forWorld(url: string): string {
+    return arkWorld() === "v2" ? `${url}${url.includes("?") ? "&" : "?"}world=v2` : url;
+}
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";
 import {computeScenery, packGrass, primeGroundIfAble, unpackGrass, type ArkSceneryPrebuild} from "@/ark-scene/runtime/prebuild-scenery";
@@ -50,6 +64,16 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.reef) primeReefGrowth(data.reef);
     if (data.floor) primeFloorPlacements(data.floor);
     if (data.wheat) primeWheatStands(data.wheat);
+    // The bigger wild island (P3): its mountain's rocks and its savanna's mounds, laid in the worker.
+    if (data.mountain) primeMountainRocks(data.mountain);
+    if (data.mounds) primeSavannaMounds(data.mounds);
+    if (data.decor && data.rocks) primeRockPlacements(data.decor, data.rocks);
+    if (data.decor && data.fill && data.trees) {
+        primeTreePlacements(data.decor, data.trees.decor);
+        primeTreePlacements(data.fill, data.trees.fill);
+    }
+    // (P7: the generator's scenery, which the map's sampler reads on the main thread.)
+    if (data.wild) primeWildScenery(data.wild);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
     if (data.capacities) primeZoneCapacities(data.capacities);
 }
@@ -97,10 +121,10 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
     if (typeof Worker === "undefined") return {where: "skipped", ms: 0, error: "no workers"};
     const animals = options.snapshot?.animals ?? null;
     const timeout = options.timeoutMs ?? 60_000;
-    const scenery = ask<ArkSceneryPrebuild>(() => new Worker(options.workerUrl ?? "/ark/ark-prebuild-worker.js"), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier(), noHamlet: wild}, timeout);
+    const scenery = ask<ArkSceneryPrebuild>(() => new Worker(forWorld(options.workerUrl ?? "/ark/ark-prebuild-worker.js")), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier(), noHamlet: wild}, timeout);
     const big = Boolean(animals && animals.length >= PLACES_IN_WORKER_FROM);
     const places = big
-        ? ask<{places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>}>(() => new Worker(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js"), {animals, noHamlet: wild}, timeout)
+        ? ask<{places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>}>(() => new Worker(forWorld(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js")), {animals, noHamlet: wild}, timeout)
         : Promise.resolve({data: null as {places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>} | null, error: undefined});
     const [a, b] = await Promise.all([scenery, places]);
     try {
@@ -123,7 +147,7 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
  */
 export async function prepareGhostPlaces(animals: ArkAnimal[], placesWorkerUrl = "/ark/ark-prebuild-places-worker.js"): Promise<boolean> {
     if (typeof Worker === "undefined" || !animals.length) return false;
-    const answer = await ask<{places: Array<[string, Placement]>}>(() => new Worker(placesWorkerUrl), {animals, noHamlet: noHamlet()}, 30_000);
+    const answer = await ask<{places: Array<[string, Placement]>}>(() => new Worker(forWorld(placesWorkerUrl)), {animals, noHamlet: noHamlet()}, 30_000);
     if (!answer.data) return false;
     primePlacesFor(animals, new Map(answer.data.places));
     return true;

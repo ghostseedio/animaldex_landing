@@ -7,6 +7,7 @@ import {depthSeed, depthTable, heldTable, speciesDepth, SURFACE_CLEAR, waterMoti
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import {displayLength} from "@/ark-scene/sizes";
 import {sceneSampler} from "@/ark-scene/world-sampler";
+import {waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import type {ArkAnimal, ArkZone} from "@/ark-scene/types";
 
 /**
@@ -49,7 +50,7 @@ const items = (() => {
         });
 })();
 
-type Sample = {item: (typeof items)[number]; at: ReturnType<typeof poseOnTrip>; ground: number; t: number};
+type Sample = {item: (typeof items)[number]; at: ReturnType<typeof poseOnTrip>; ground: number; surface: number; t: number};
 let sampled: Sample[] | null = null;
 /** Each animal's schedule over two island days (every 9th slot, at a moment inside it), as the scene reads it (worked out once). */
 function samples(): Sample[] {
@@ -62,7 +63,8 @@ function samples(): Sample[] {
             const trip: Trip = tripAt(world, item.profile, item.animal, t, hoursAt, item.a.activity, previous);
             previous = trip;
             const at = poseOnTrip(world, trip, t);
-            out.push({item, at, ground: world.sampler.heightAt(at.x, at.z), t});
+            // (The water's surface there: the sea's 0, or on the bigger wild island the lake's and river's own level.)
+            out.push({item, at, ground: world.sampler.heightAt(at.x, at.z), surface: waterSurfaceOf(world.sampler, at.x, at.z), t});
         }
     }
     sampled = out;
@@ -73,25 +75,25 @@ test("in the water, a scheduled water animal is drawn in its depth band, not at 
     assert.ok(items.length > 400, `${items.length} water species on the schedule`);
     let wet = 0;
     const missed = new Map<string, number>();
-    for (const {item, at, ground, t} of samples()) {
-        if (at.aloft || ground >= 0) continue;
+    for (const {item, at, ground, surface, t} of samples()) {
+        if (at.aloft || ground >= surface) continue;
         const waterOnly = aquatic(item.profile) && !amphibious(item.profile);
-        if (!inDepthBand(item.depth, at, ground)) {
+        if (!inDepthBand(item.depth, at, ground, surface)) {
             // Only an amphibious one at the edge (sliding in, climbing out, taking off) may be above the surface over water.
             if (waterOnly) missed.set(item.a.model_slug, (missed.get(item.a.model_slug) ?? 0) + 1);
             continue;
         }
         wet++;
         const height = Math.max(item.animal.length * 0.6, 0.05);
-        const {spec, base} = scheduledWater(item.depth, ground, depthSeed(item.a.id), t, 0, height);
+        const {spec, base} = scheduledWater(item.depth, ground, depthSeed(item.a.id), t, 0, height, surface);
         const motion = waterMotion(item.depth);
         assert.equal(spec.motion, motion);
         // The band's body, fitted in the water at its drawn size: a floater floats at the surface, a floor-dweller is on
         // the floor (a hole-dweller a little into it), a swimmer's whole body is under the surface and above the floor.
-        if (motion === "float") assert.ok(base < 0 && base > -height, `${item.a.model_slug} afloat at ${base}`);
+        if (motion === "float") assert.ok(base < surface && base > surface - height, `${item.a.model_slug} afloat at ${base}`);
         else if (motion === "walk") assert.ok(Math.abs(base - ground) < 1e-9, `${item.a.model_slug} not on the floor (${base}, floor ${ground})`);
         else if (motion === "hole") assert.ok(base <= ground && base > ground - height, `${item.a.model_slug} not in its hole`);
-        else if (-ground > height + SURFACE_CLEAR + 0.1) assert.ok(base + height <= -SURFACE_CLEAR + 1e-6 && base >= ground, `${item.a.model_slug} out of its water (${base}, floor ${ground})`);
+        else if (surface - ground > height + SURFACE_CLEAR + 0.1) assert.ok(base + height <= surface - SURFACE_CLEAR + 1e-6 && base >= ground, `${item.a.model_slug} out of its water (${base}, floor ${ground})`);
     }
     assert.ok(wet > 50000, `${wet} samples in the water`);
     assert.equal(missed.size, 0, `water-only animals drawn at the schedule's height over water: ${JSON.stringify(Object.fromEntries(missed))}`);
@@ -100,10 +102,10 @@ test("in the water, a scheduled water animal is drawn in its depth band, not at 
 test("a water-only animal (a fish, a seabed walker) is never sent onto land or a rock above the surface", () => {
     let waterOnly = 0;
     const dry = new Map<string, number>();
-    for (const {item, at, ground} of samples()) {
+    for (const {item, at, ground, surface} of samples()) {
         if (!aquatic(item.profile) || amphibious(item.profile) || at.aloft) continue;
         waterOnly++;
-        if (ground >= 0 || at.y > 0.02) dry.set(item.a.model_slug, (dry.get(item.a.model_slug) ?? 0) + 1);
+        if (ground >= surface || at.y > surface + 0.02) dry.set(item.a.model_slug, (dry.get(item.a.model_slug) ?? 0) + 1);
     }
     const total = Array.from(dry.values()).reduce((sum, n) => sum + n, 0);
     assert.ok(waterOnly > 50000, `${waterOnly} samples`);

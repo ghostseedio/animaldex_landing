@@ -21,10 +21,14 @@ import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {floorObstacles} from "@/ark-scene/floor-assets";
-import {drawnRocks, type DrawnRock} from "@/ark-scene/map/rocks";
+import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
+import {perchHidden} from "@/ark-scene/grounding/perch";
+import treeAttachFile from "@/ark-scene/tree-attach.json";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
-import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+import {arkWorld, hashString, heightAt as groundHeight, LAKE, onArkWorld, RIVER, RIVER_UPPER, TERRAIN_HALF} from "@/ark-scene/world";
+import {wildWaterDepth, wildWaterSurface} from "@/ark-scene/islands/wild/map-v2";
+import {WETLAND} from "@/ark-scene/islands/wild/fields";
 import {colliderDistance, ColliderSet, colliderSetFor} from "@/ark-scene/collide/colliders";
 
 /** The behaviour system's place tags. */
@@ -76,6 +80,11 @@ export type AttachPoint = {
     /** Under a limb (`canopy_hang`): the clear drop below it (m), and the limb's radius there. */
     clearBelow?: number;
     radius?: number;
+    /**
+     * Part C (v2): inside a tree's crown (`grounding/perch.ts` perchHidden): a body no larger than its size, which is
+     * already the crown's small one (the grounding audit's rule), never the half again a place otherwise allows.
+     */
+    hidden?: boolean;
 };
 
 export interface ArkWorldSampler {
@@ -85,6 +94,23 @@ export interface ArkWorldSampler {
     readonly half?: number;
     /** Part C: the middle of that square in the world frame (another island across the strait); absent: (0, 0). */
     readonly centre?: {x: number; z: number};
+    /**
+     * Part C (v2, the bigger wild island): metres of water over a point, the sea's and the fresh water's (its lake and
+     * river stand above the sea at their own level). Absent: the sea's alone, below the height 0 (today's island and the
+     * town: their fresh water is at 0 too).
+     */
+    waterDepth?(x: number, z: number): number;
+    /**
+     * Part C (v2): the water's surface over a point (m): its lake's and river's own level where they stand, else the sea's
+     * 0. Absent: 0 everywhere (today's island and the town: all their water's surface is at 0), so the schedule's water
+     * is what it was.
+     */
+    waterSurface?(x: number, z: number): number;
+    /**
+     * Part C (v2): what a flight keeps above (m): the ground, or a drawn rock's top where one stands (the bigger island's
+     * mountain is rock-strewn). Absent: the ground alone, as before.
+     */
+    flightFloor?(x: number, z: number): number;
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
@@ -136,6 +162,12 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
  * diagonal however the rock is turned) holds no point of the rock.
  */
 export const ROCK_MARGIN = 1.25;
+
+/** The trees' attach points measure how open each is (`sampler.ts`'s and the grounding audit's own test). */
+const OPEN_MEASURED = ((treeAttachFile as unknown as {generator?: number}).generator ?? 0) >= 7;
+
+/** v2: a cave mouth stands this far out from its rock's drawn box (m): a roosting bat's body clear of the rock. */
+const CAVE_MOUTH_OUT = 0.6;
 
 /** How far the garden pond's ring of stones reaches past its water (m: `micro-scene.ts` stones at radius + 0.05, up to 0.3 across). */
 export const POND_STONES = 0.3;
@@ -239,6 +271,9 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     };
     const surface = (x: number, z: number) => surfaceAt(x, z);
     const lattice = new HeightLattice();
+    // Part C (P4): the bigger wild island (v2), whose lake and river stand above the sea at their own level.
+    const v2 = arkWorld() === "v2";
+    const waterOver = (x: number, z: number, s: {waterDepth: number}) => (v2 ? wildWaterDepth(x, z) : s.waterDepth);
     const tasks: BuildTask[] = [];
 
     // The scenery's own points (trees, flowers, rocks, the house, lamps, ponds, the ground's holes and litter).
@@ -250,7 +285,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const p = scenery[i];
         const tag = FROM_SCENERY[p.tag];
         if (!tag) return;
-        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {})});
+        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {}), ...(v2 && perchHidden(p.tag, p.open, OPEN_MEASURED) ? {hidden: true} : {})});
     }));
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
@@ -282,7 +317,22 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             // renderer places it): its top is where a small animal basks or perches; its box keeps walkers out (blocked).
             const solid = rockOf.get(`${item.x},${item.z}`);
             add({tag: "rock_top", x: item.x, y: solid ? solid.y1 : item.y + 0.18 * item.scale + 0.53 * item.scale * 0.95, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.4 * item.scale], zone: s.zone});
-            if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
+            if (item.scale > 1.3 && (s.zone === "mountains" || s.surface === "rock")) {
+                if (v2 && solid) {
+                    // (v2: the asset rock as drawn reaches further than today's rock of that scale: the mouth just outside
+                    // its box on that bearing, and none where another rock stands there.)
+                    const dx = Math.sin(item.rotation);
+                    const dz = Math.cos(item.rotation);
+                    const lx = dx * solid.cos - dz * solid.sin;
+                    const lz = dx * solid.sin + dz * solid.cos;
+                    const tx = lx > 1e-6 ? solid.hx1 / lx : lx < -1e-6 ? solid.hx0 / lx : Infinity;
+                    const tz = lz > 1e-6 ? solid.hz1 / lz : lz < -1e-6 ? solid.hz0 / lz : Infinity;
+                    const t = Math.min(tx, tz) + CAVE_MOUTH_OUT;
+                    const mx = solid.x + dx * t;
+                    const mz = solid.z + dz * t;
+                    if (!inRock(mx, mz, 0.3)) add({tag: "cave_mouth", x: mx, y: surface(mx, mz).height, z: mz, nx: dx, ny: 0, nz: dz, yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
+                } else add({tag: "cave_mouth", x: item.x + Math.sin(item.rotation) * item.scale, y: s.height, z: item.z + Math.cos(item.rotation) * item.scale, nx: Math.sin(item.rotation), ny: 0, nz: Math.cos(item.rotation), yaw: item.rotation, size: [0.05, 2.5], zone: s.zone});
+            }
         } else if (item.kind === "reed") {
             add({tag: "reeds", x: item.x, y: item.y, z: item.z, ...UP, yaw: item.rotation, size: [0.02, 1.2], zone: surface(item.x, item.z).zone});
         } else if (item.kind === "shrub" || item.kind === "cactus") {
@@ -333,30 +383,59 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     }));
 
     // Water edges: just dry ground at the lake, along the river, round the garden pond, walked out from the water.
-    const edge = (x: number, z: number, outward: number, zone?: ArkZone) => {
-        for (let d = 0; d < 6; d += 0.25) {
+    const edge = (x: number, z: number, outward: number, zone?: ArkZone, reach = 6) => {
+        for (let d = 0; d < reach; d += 0.25) {
             const px = x + Math.cos(outward) * d;
             const pz = z + Math.sin(outward) * d;
             const s = surface(px, pz);
-            if (s.waterDepth <= 0 && s.height > 0.05) {
+            if (waterOver(px, pz, s) <= 0 && s.height > 0.05) {
                 add({tag: "water_edge", x: px, y: s.height, z: pz, ...UP, yaw: outward + Math.PI, size: [0.02, 6], zone: zone ?? s.zone});
                 return;
             }
         }
     };
-    tasks.push(chunked(() => 28, 7, (k) => {
-        const a = (k / 28) * Math.PI * 2;
-        edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
+    // (v2: the lake is 28 m across its middle with a wandering shore, so its edge is walked out to from halfway in, at
+    // as many bearings as keep the spots about 4 m apart.)
+    const lakeBearings = v2 ? Math.round((Math.PI * 2 * LAKE.r) / 4) : 28;
+    tasks.push(chunked(() => lakeBearings, 7, (k) => {
+        const a = (k / lakeBearings) * Math.PI * 2;
+        if (v2) edge(LAKE.x + Math.cos(a) * LAKE.r * 0.5, LAKE.z + Math.sin(a) * LAKE.r * 0.5, a, "river_lake", LAKE.r * 1.2);
+        else edge(LAKE.x + Math.cos(a) * (LAKE.r - 1), LAKE.z + Math.sin(a) * (LAKE.r - 1), a, "river_lake");
     }));
-    tasks.push(chunked(() => Math.max(RIVER.length - 1, 0), 2, (seg) => {
-        const [ax, az] = RIVER[seg];
-        const [bx, bz] = RIVER[seg + 1];
-        const normal = Math.atan2(bx - ax, -(bz - az));
-        for (let t = 0.2; t < 1; t += 0.3) {
-            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal);
-            edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI);
-        }
-    }));
+    // The river's banks (v2: the lower river and the upper, spring to lake; its wider reaches walked out to further).
+    const reaches = v2 ? [RIVER, RIVER_UPPER] : [RIVER];
+    for (const river of reaches) {
+        tasks.push(chunked(() => Math.max(river.length - 1, 0), 2, (seg) => {
+            const [ax, az] = river[seg];
+            const [bx, bz] = river[seg + 1];
+            const normal = Math.atan2(bx - ax, -(bz - az));
+            for (let t = 0.2; t < 1; t += 0.3) {
+                edge(ax + (bx - ax) * t, az + (bz - az) * t, normal, undefined, v2 ? 12 : 6);
+                edge(ax + (bx - ax) * t, az + (bz - az) * t, normal + Math.PI, undefined, v2 ? 12 : 6);
+            }
+        }));
+    }
+    // (v2: the wetland's pools, fresh water standing over its low ground: just dry ground at their edges on a 3 m lattice
+    // over the basin, facing the pool, so a heron drinks and a caiman climbs out where it is, not at the river.)
+    if (v2) {
+        const xs: number[] = [];
+        for (let x = WETLAND.x - WETLAND.rx * 1.1; x <= WETLAND.x + WETLAND.rx * 1.1; x += 3) xs.push(x);
+        tasks.push(chunked(() => xs.length, 4, (c) => {
+            const x = xs[c];
+            for (let z = WETLAND.z - WETLAND.rz * 1.1; z <= WETLAND.z + WETLAND.rz * 1.1; z += 3) {
+                if (wildWaterDepth(x, z) > 0) continue;
+                for (let k = 0; k < 8; k++) {
+                    const a = (k / 8) * Math.PI * 2;
+                    const wx = x + Math.cos(a) * 2;
+                    const wz = z + Math.sin(a) * 2;
+                    if (wildWaterDepth(wx, wz) <= 0.05 || wildWaterSurface(wx, wz) <= 0) continue;
+                    const s = surface(x, z);
+                    if (s.height > 0.05) add({tag: "water_edge", x, y: s.height, z, ...UP, yaw: Math.atan2(Math.cos(a), Math.sin(a)), size: [0.02, 6], zone: s.zone});
+                    break;
+                }
+            }
+        }));
+    }
     // The garden pond (drawn water over dry ground, so `surfaceAt` has no water there): where to drink is just outside
     // its ring of stones, facing the water (2026-11-11: a dog drank standing in it, from points 0.8 m inside).
     tasks.push(chunked(() => (noHamlet() ? 0 : 6), 6, (k) => {
@@ -386,7 +465,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             const px = x + ((jitter % 97) / 97 - 0.5) * step;
             const pz = z + (((jitter >> 7) % 97) / 97 - 0.5) * step;
             const s = surface(px, pz);
-            if (s.waterDepth > 0 || s.height <= 0.05) continue;
+            if (waterOver(px, pz, s) > 0 || s.height <= 0.05) continue;
             if (s.cliff > 0.45 && s.normal.y > 0.6) add({tag: "cliff_ledge", x: px, y: s.height, z: pz, ...UP, yaw: Math.atan2(-px, -pz), size: [0.1, 1.5], zone: s.zone});
             if ((s.weights.grass ?? 0) > 0.45 && s.normal.y > 0.85) add({tag: "grass", x: px, y: s.height, z: pz, ...UP, yaw: 0, size: [0.05, 6], zone: s.zone});
         }
@@ -412,6 +491,12 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 }
             }
         }
+        /** The top of a drawn rock over a point (the highest), or -Infinity. */
+        const rockTopAt = (x: number, z: number) => {
+            let top = -Infinity;
+            for (const rock of rockIndex.get(`${Math.floor(x / 6)},${Math.floor(z / 6)}`) ?? []) if (rock.y1 > top && nearDrawnRock(rock, x, z, 0.3)) top = rock.y1;
+            return top;
+        };
         const rockAt = (x: number, z: number, clearance: number) => {
             const widen = clearance + ROCK_MARGIN;
             // (A point within `widen` of a box, in the rock's frame, is within widen·√2 of it on the world's axes.)
@@ -457,10 +542,13 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         return {
             colliders,
             // (The drawn rocks are in it too: a new rock set rebuilds the walk grid; and the colliders, any change of them.)
-            version: `scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
+            version: `${v2 ? "v2:" : ""}scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
+            // Part C (P4): on v2 the walk grid covers the bigger island's own square (`behaviour-nav.ts` extentOf), and
+            // knows its fresh water, which stands above the sea.
+            ...(v2 ? {half: TERRAIN_HALF, centre: {x: 0, z: 0}, waterDepth: wildWaterDepth, waterSurface: wildWaterSurface, flightFloor: (x: number, z: number) => Math.max(lattice.at(x, z), rockTopAt(x, z))} : {}),
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
-            isWater: (x, z) => surface(x, z).waterDepth > 0,
+            isWater: v2 ? (x, z) => wildWaterDepth(x, z) > 0 : (x, z) => surface(x, z).waterDepth > 0,
             slope: (x, z) => {
                 const n = surface(x, z).normal;
                 return Math.sqrt(Math.max(1 - n.y * n.y, 0)) / Math.max(n.y, 0.05);
@@ -568,6 +656,12 @@ export function resetWorldSampler() {
 // Islands mode flips (`no-hamlet.ts`): the behaviour world is the other world's, its plots back to the default (the
 // mount sets its own again: none in islands mode).
 onHamletSwitch(() => {
+    behaviourPlots = null;
+    behaviourPlotsKey = "";
+    resetWorldSampler();
+});
+// The world's switch (Part C, `world.ts` setArkWorld): the behaviour world is the other world's.
+onArkWorld(() => {
     behaviourPlots = null;
     behaviourPlotsKey = "";
     resetWorldSampler();

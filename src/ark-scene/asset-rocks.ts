@@ -22,6 +22,7 @@ import {generatedRockFile, rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-a
 import {cachedRock} from "@/ark-scene/rock-shapes";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
+import {arkWorld} from "@/ark-scene/world";
 
 const LEVELS = ["lod0", "lod1", "lod2"] as const;
 type Level = typeof LEVELS[number];
@@ -30,6 +31,8 @@ type Instance = {x: number; y: number; z: number; matrix: Matrix4; tint: Color};
 /** Rock above this height (m) carries a dusting of snow on its upward faces, full by `ROCK_DUST_FULL` (the high crags). */
 export const ROCK_DUST_FROM = 20;
 export const ROCK_DUST_FULL = 27;
+/** On the bigger wild island (P3) the snow line is 25 m higher (52 m, `snow.ts` SNOW_LINE_V2): so is the rocks' dusting. */
+const V2_DUST_RISE = 25;
 
 /**
  * The rocks' material, shared by the asset rocks and the island's own rocks (`rock-shapes.ts`): one material for every
@@ -39,7 +42,8 @@ export const ROCK_DUST_FULL = 27;
 export function rockMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.9, metalness: 0});
     const uniforms = {groundAlbedo: ARK_GROUND_TEXTURES.albedo, groundReady: ARK_GROUND_TEXTURES.ready, envSeaLevel: ARK_ENV.seaLevel, envWetness: ARK_ENV.wetness};
-    material.customProgramCacheKey = () => "ark-asset-rock-2";
+    const rise = arkWorld() === "v2" ? V2_DUST_RISE : 0;
+    material.customProgramCacheKey = () => (rise ? `ark-asset-rock-2-dust${ROCK_DUST_FROM + rise}` : "ark-asset-rock-2");
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -90,7 +94,7 @@ float rockWet = 0.0;`)
     c *= mix(1.0, 0.72, envWetness * (1.0 - wet));
     // High up, snow lying on the ledges and tops, in drifts that follow the rock's own grain.
     // Only the flatter tops and ledges hold it, in patches; the faces stay rock (a dusted crag, not a white one).
-    float snowy = smoothstep(${ROCK_DUST_FROM.toFixed(1)}, ${ROCK_DUST_FULL.toFixed(1)}, w.y) * smoothstep(0.68, 0.92, n.y) * smoothstep(0.42, 0.62, arkFbm(w.xz * 1.7 + w.y * 0.6));
+    float snowy = smoothstep(${(ROCK_DUST_FROM + rise).toFixed(1)}, ${(ROCK_DUST_FULL + rise).toFixed(1)}, w.y) * smoothstep(0.68, 0.92, n.y) * smoothstep(0.42, 0.62, arkFbm(w.xz * 1.7 + w.y * 0.6));
     c = mix(c, vec3(0.86, 0.88, 0.9), clamp(snowy * 0.9, 0.0, 0.9));
     diffuseColor.rgb = c;
 }`)
@@ -172,6 +176,9 @@ export class AssetInstances {
                       });
                 jobs.push(source.then((geometry) => {
                     if (!geometry) return;
+                    // The library's flowers and lily pads carry morph targets (their own sway) that this instancing does not
+                    // draw (the bigger wild island's ground plants on the floor, P3): drawn at rest.
+                    if (Object.keys(geometry.morphAttributes).length) geometry.morphAttributes = {};
                     const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
                     mesh.count = 0;
                     // Culled against the view by the bounds of the instances drawn at this level (set in update).

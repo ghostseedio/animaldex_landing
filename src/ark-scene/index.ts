@@ -98,7 +98,7 @@ import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
@@ -189,6 +189,7 @@ import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type R
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {warmShaders} from "@/ark-scene/runtime/load";
@@ -240,8 +241,7 @@ const LOAD_NEAR_WITHIN = 48;
  */
 const STREAM_RECHECK_SECONDS = 2;
 const FOV = 38;
-/** True scale (motion pass §3): the camera's reach is `runtime/camera.ts` CAMERA_RANGE. */
-const MAX_DISTANCE = CAMERA_RANGE.far;
+// (True scale, motion pass §3: the camera's reach is `runtime/camera.ts` CAMERA_RANGE, per world in `islands/views.ts` wildFrame.)
 const ENTRANCE_SECONDS = 1.6;
 const RIPPLE_SECONDS = 2.6;
 /** A clutch being laid, in a replay. */
@@ -252,8 +252,6 @@ const CLOSE_POLAR = 1.13;
 const IDLE_DRIFT_AFTER = 9;
 /** The idle drift's speed (OrbitControls' autoRotateSpeed: 2π/60 rad/s per unit). */
 const DRIFT_SPEED = 0.18;
-/** Part C: with the town in the world (or coming), the idle drift sways ± this (rad) about where the view was. */
-const ISLANDS_DRIFT_SWAY = 0.12;
 const OPENING_SECONDS = 4.6;
 /** Within this distance (m) an animal glances at the camera now and then (more often the sharper it is). */
 const GLANCE_WITHIN = 14;
@@ -764,8 +762,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
     controls.minDistance = CAMERA_RANGE.near;
-    // (Part C: with two islands the camera reaches out over both: the town's whole view is ~600 m off.)
-    let maxDistance = island ? 900 : MAX_DISTANCE;
+    // (Part C: with two islands the camera reaches out over both: the town's whole view is ~600 m off. The v2 island
+    // is islands mode only: the reach is the two islands' from the start.)
+    let maxDistance = island ? wildFrame().reachIslands : wildFrame().reach;
     controls.maxDistance = maxDistance;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
@@ -775,7 +774,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.screenSpacePanning = false;
     controls.zoomToCursor = true;
     controls.autoRotateSpeed = DRIFT_SPEED;
-    /** When the idle drift began (s; the two islands' sway is timed from it). */
+    /** When the idle drift began (s; P6's sway on v2 is timed from it). */
     let driftFrom = 0;
 
     const shadows = new ContactShadows();
@@ -2095,7 +2094,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // Standing (or floating, a swimmer at sea) still at its own place, as the server placed it.
                     let base = member.ground;
                     // One depth for the whole school (the herd's own seed), each spread on its own spot: level, side by side.
-                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(herd.slug), 0, 0), tall).base;
+                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(herd.slug), 0, 0, waterSurfaceAt(member.x, member.z)), tall).base;
                     else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
                     else if (member.water) base = Math.max(member.ground, -0.3);
                     herdRotation.setFromAxisAngle(up, member.yaw);
@@ -2607,15 +2606,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
         const act = (at as RecipePose).act;
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
-        if (inDepthBand(entry.depth, at, ground) && !act?.own) {
+        // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
+        const waterTop = waterSurfaceAt(at.x, at.z);
+        if (inDepthBand(entry.depth, at, ground, waterTop) && !act?.own) {
             const clock = clockNow();
             // (Awake, its breath on its way there: `breath-trip.ts`.)
             const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
-            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
+            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight, waterTop);
             // (Under the surface where the tide has it now: `tideFit`.)
             const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
-            const base = spec.motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, 0, ARK_ENVIRONMENT.seaLevel.value) : fitted;
+            const base = spec.motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, 0, spec.surface ?? ARK_ENVIRONMENT.seaLevel.value) : fitted;
             const yaw = at.yaw + (entry.glance ?? 0);
             // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
             const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
@@ -2678,7 +2679,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const breath = entry.state.breathing && !reducedMotion ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
         if (motion === "hole") {
             // In its hole: still, its head turning slowly.
-            const spec = waterSpec(depth, place.ground, entry.seed, clock, breath);
+            const spec = waterSpec(depth, place.ground, entry.seed, clock, breath, waterSurfaceAt(place.x, place.z));
             const yaw = place.yaw + (reducedMotion ? 0 : Math.sin(time * 0.2 + entry.phase * 9) * 0.5 * (1 - entry.rest));
             return {x: place.x, z: place.z, base: tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
         }
@@ -2715,13 +2716,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const floorY = heightAt(x, z);
         // The school swims at its first one's depth in the band (its own breath apart).
-        const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
+        const spec = waterSpec(depth, floorY, owner.seed, clock, breath, waterSurfaceAt(x, z));
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
         // (A penguin lies down to swim: `swimBodyPitch`.)
-        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, (spec.surface ?? 0) - floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
         const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
         // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
-        const base = motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch - (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0), ARK_ENVIRONMENT.seaLevel.value) : fitted;
+        const base = motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch - (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0), spec.surface ?? ARK_ENVIRONMENT.seaLevel.value) : fitted;
         // A walker on the floor stands on its slope (its rig walks it there). (A walker's swim pitch is 0.)
         const surface = motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(x, base, z, yaw) : undefined;
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
@@ -4203,30 +4204,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Part C, two islands in one world (decisions 141-142)
 
-    /** The default view with the town beside the wild island: turned toward it and raised a little, the town across the strait. */
-    const twoIslandHome = (aspect: number, distance: number) => {
-        const o = island!.origin;
-        const length = Math.hypot(o.x, o.z) || 1;
-        const ux = o.x / length;
-        const uz = o.z / length;
-        // Upright phones (decision 154): the narrow frame looks straight across the strait, the wild island the subject in
-        // the middle and the town in the upper part beyond it. Wider screens: turned 45% of the way, the town upper right.
-        const tall = aspect < 0.8;
-        // (A tall frame's target a little toward the town: the wild island below the middle, the town in the upper part.)
-        const tx = tall ? 16 + ux * 80 : 12 + ux * 45;
-        const tz = tall ? 24 + uz * 80 : 14 + uz * 45;
-        let fx = ux * 0.45;
-        let fz = -1 + (uz + 1) * 0.45;
-        if (tall) {
-            const dx = o.x - tx;
-            const dz = o.z - tz;
-            const d = Math.hypot(dx, dz) || 1;
-            fx = dx / d;
-            fz = dz / d;
-        }
-        const azimuth = Math.atan2(-fx, -fz);
-        return {target: new Vector3(tx, 0, tz), distance: distance * (tall ? 1.0 : 1.12), polar: 1.15, azimuth};
-    };
     /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
     const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
         const o = island!.origin;
@@ -4263,23 +4240,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {target: new Vector3(island.home.x, 0, island.home.z), distance: distance * 0.94, polar: 1.0, azimuth: 0};
     };
 
-    /** The whole world in view, from the south and above. */
+    /** The whole world in view, from the south and above (`islands/views.ts`: per world, with the town or without). */
     const homeView = () => {
-        const aspect = width / Math.max(height, 1);
-        const vertical = FOV * Math.PI / 180;
-        const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
-        const fit = Math.min(vertical, horizontal);
-        // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
-        // view centres a little south-east of the lake and fits a wider circle.
-        const radius = aspect < 0.8 ? 114 : 96;
-        // (Part C: with two islands the camera reaches further: a tall, narrow frame (the apps' panel) fits the whole wild
-        // island with the town beyond it, not a close crop.)
-        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, island ? maxDistance : MAX_DISTANCE);
-        // Part C, one world: the wild island as before, turned and raised a little so the town stands across the strait
-        // beyond its far shore (decision 142).
-        if (island) return twoIslandHome(aspect, distance);
-        // Low enough to see the horizon over the island's far shore.
-        return {target: new Vector3(aspect < 0.8 ? 16 : 12, 0, aspect < 0.8 ? 24 : 14), distance: distance * 0.94, polar: 1.06, azimuth: 0};
+        const view = wildHomeView(width / Math.max(height, 1), FOV, island ? island.origin : null, Boolean(options.wildAnimals));
+        return {target: new Vector3(view.target.x, view.target.y, view.target.z), distance: view.distance, polar: view.polar, azimuth: view.azimuth};
     };
 
     // Keep the view over the world and above the ground.
@@ -5695,11 +5659,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!controls.autoRotate) driftFrom = now;
             controls.autoRotate = true;
         }
-        // Part C (W1b's rule for the v2 wild island, docs/ark/wild-island.md P6): with the town in the world, or coming
-        // (the view is the two-island view from the first frame), the drift sways ± ISLANDS_DRIFT_SWAY rad about where the
-        // view was instead of going round: going round, the town 500 m off the drift's centre left a phone's frame within
-        // about 20 s. With one island it goes round as before.
-        const sway = controls.autoRotate && (island || options.wildAnimals) ? ISLANDS_DRIFT_SWAY : null;
+        // P6 (docs/ark/wild-island.md): on the bigger wild island with the town in the world (or coming: the view is the
+        // two-island view from the first frame), the drift sways about where the view was (± the frame's driftSway rad)
+        // instead of going round, so the town across the strait stays in the picture.
+        const sway = controls.autoRotate && (island || options.wildAnimals) ? wildFrame().driftSway : null;
         if (sway) controls.autoRotateSpeed = DRIFT_SPEED * Math.cos((now - driftFrom) * ((DRIFT_SPEED * Math.PI) / 30 / sway));
         runtime.controls(frameDt);
         controls.update();
@@ -6058,7 +6021,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const reveal = () => (townRevealing = true);
             void warm.then(reveal, reveal);
             registerIslandStream(isl);
-            maxDistance = 900;
+            maxDistance = wildFrame().reachIslands;
             controls.maxDistance = maxDistance;
             reactiveQueries = null;
             if (scheduleOn) townBuild = new ScheduleWorldBuild(isl.sampler());
@@ -6115,7 +6078,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             const centre = regionCentre(region);
-            fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, 48), 150), 1.6);
+            // (P6: on v2 a region is seen from further and a little more from above, over its taller canopy: `wildFrame()`.)
+            const frame = wildFrame();
+            fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, frame.regionNearest), 150), 1.6, frame.regionPolar ?? undefined);
         },
         stats: (): ArkSceneStats => ({
             drawCalls: renderer.info.render.calls,

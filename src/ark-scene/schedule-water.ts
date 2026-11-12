@@ -25,13 +25,13 @@ import {fitInWater, heldOffWater, waterSpec, type SpeciesDepth, type WaterSpec} 
 export type ScheduledFoot = {y: number; aloft: boolean};
 
 /** Whether a scheduled animal is drawn in its depth band now: a water species the schedule has in the water (`ground` < 0 is water). */
-export function inDepthBand(depth: SpeciesDepth | null | undefined, at: ScheduledFoot, ground: number): depth is SpeciesDepth {
-    return Boolean(depth) && !at.aloft && ground < 0 && at.y < 0.02;
+export function inDepthBand(depth: SpeciesDepth | null | undefined, at: ScheduledFoot, ground: number, surface = 0): depth is SpeciesDepth {
+    return Boolean(depth) && !at.aloft && ground < surface && at.y < surface + 0.02;
 }
 
 /** Its body in the band over the floor at `ground`: the band's spec and the base (its lowest point's height) at its drawn height. */
-export function scheduledWater(depth: SpeciesDepth, ground: number, seed: number, clock: number, breath: number, modelHeight: number): {spec: WaterSpec; base: number} {
-    const spec = waterSpec(depth, ground, seed, clock, breath);
+export function scheduledWater(depth: SpeciesDepth, ground: number, seed: number, clock: number, breath: number, modelHeight: number, surface = 0): {spec: WaterSpec; base: number} {
+    const spec = waterSpec(depth, ground, seed, clock, breath, surface);
     return {spec, base: fitInWater(spec, modelHeight).base};
 }
 
