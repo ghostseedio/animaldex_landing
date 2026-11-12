@@ -45,7 +45,7 @@ The models are all one unit along their body axis (`bodyAxisExtent`: +z head to 
 - **Models by size on screen**: the 150 model slots go to the largest on screen (`screenWeight` = drawn length / distance), so a whale far off keeps its model before a beetle near by; and an animal 220 px or more across gets its near model (and is asked for it) however far off it is (`nearBySize`: a 14 m humpback across the bay is not drawn with 600 triangles), the near slots also going largest on screen first.
 - **Camera** (`runtime/camera.ts`): `CAMERA_RANGE` {near 4, close 0.08, far 340} and `meetDistance(length, aspect)`: small ones about a fifth of the view, mid-sized in their surroundings (`10 + 4 L`, as before), a whale or an elephant far enough back to be seen whole across the narrower side (`fitWhole`: a 25 m blue whale on an upright phone from about 115 m). A swimmer is met from far enough to see it whole.
 - **Chase speed** (`moveSpeed`): by dynamic similarity, `(0.25 + 0.75 · speed/100) · √(g · L)`, 0.03–12 m/s, so a cheetah (3.7 m/s) outruns a lion (3.5) and a whale (8.9) is not 25 antelopes' pace. Visual only.
-- **Swim pace** (`behaviour-schedule.ts` `swimPaceLength`): a swimmer's trip pace counts its length up to 2 m (a seal, a dolphin), then grows as √L (in body lengths a second a 14 m humpback cruised at 16.6 m/s; now about 6). A breath swims up to four body lengths off (it was ±4 m, so a whale reached its breath in a second and floated).
+- **Swim pace** (`behaviour-schedule.ts` `swimPaceLength`): a swimmer's trip pace counts its length up to 2 m (a seal, a dolphin), then grows as √L (in body lengths a second a 14 m humpback cruised at 16.6 m/s; now about 6). A breath swims about 12 s at its own pace, any way round (it was ±4 m, so a whale reached its breath in a second and floated through it). Predators' safe distance from their prey: six body lengths, at most 40 m (`SAFE_MOST`; a true-size humpback's 84 m was more sea than the island has).
 
 ## 4b. Room (decision 35)
 
@@ -85,7 +85,8 @@ The trees are about half their real height: an elephant (3.7 m) now reaches half
 
 ## 5c. Open (for other lanes)
 
-- `ark-behaviour-schedule.test.ts`, two checks the new sizes exposed (L1): the Atlantic herring's group (0.28 m) falls near a line by chance at slot 1023 (minor/total 0.0028, spacing variation 0.29; the seeded bearings in `shadowOf`), and the African clawed frog walks at a median 1.44 of its clip's pace (at 9 cm its walking now passes the test's fixed 5 cm/s filter; at 0.33 m it was filtered out).
+- `ark-behaviour-schedule.test.ts` "walking goes at its walk clip's own pace" (L1): the African clawed frog walks at a median 1.44 of its clip's pace (at 9 cm its walking now passes the test's fixed 5 cm/s filter; at 0.33 m it was filtered out). The only failing test on this branch (2,260 of 2,261 pass).
+- Floors from the old drawn sizes still in the behaviour code (L1, L7): `behaviour-recipes.ts` `pace()` walks at least 8 cm/s and counts at least 5 cm of body, and `behaviour-schedule.ts` counts at least 5 cm (`Math.max(animal.length, 0.05)`) in its paces and reach: at true size an ant (5 mm) or a mite then moves 10 or more times its clip's pace. `behaviour-recipes.ts` `speedOf` swims at the whole length (the schedule counts √L past 2 m: `swimPaceLength`).
 - Scenery to real metres (L6, decision 34), big land animals' room (L5 now, Part C's map), drawing and keeping by size on screen (Part B).
 
 ## 6. Shots

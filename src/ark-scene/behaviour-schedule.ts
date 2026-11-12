@@ -964,9 +964,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // Air-breathers come up to breathe every few slots, then go back down.
     if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
-        // (Up to a few body lengths off: at true size a 14 m humpback reached its breath ±4 m away in a second and floated.)
-        const wander = Math.max(8, animal.length * 4);
-        const near = world.nav.nearest(animal.home.x + (random() - 0.5) * wander, animal.home.z + (random() - 0.5) * wander, "swim", 0.6) ?? animal.home;
+        // (About a breath's swim away at its own pace, any way round: at true size a 14 m humpback reached a breath ±4 m
+        // away in a second and floated through it. Motion pass §3.)
+        const pace = freeBodyLengthsPerSecond(profile) * swimPaceLength(animal.length);
+        const bearing = random() * Math.PI * 2;
+        const away = Math.max(4, pace * 12 * (0.75 + 0.5 * random()));
+        const near = world.nav.nearest(animal.home.x + Math.cos(bearing) * away, animal.home.z + Math.sin(bearing) * away, "swim", 0.6) ?? animal.home;
         return {doing: "breathe", to: {x: near.x, y: surfaceAt(near.x, near.z), z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
@@ -1891,6 +1894,11 @@ export function withLazyRoost(animal: Omit<ScheduleAnimal, "roost">, find: () =>
 
 /** The least a predator is kept from an animal it eats (or that eats it), beyond both their reaches: 20 m (owner's problem 6). */
 export const SAFE_METRES = 20;
+/**
+ * The most the body-length part of a safe distance asks (m): six body lengths was for the old drawn sizes (a 3.5 m
+ * whale, 21 m); at true size a 14 m humpback would need 84 m, more sea than the island has. Motion pass §3.
+ */
+export const SAFE_MOST = 40;
 
 export type HomeInput = {id: string; slug: string; home: {x: number; z: number}; length: number; walkable: (x: number, z: number) => boolean};
 export type SpacedHome = {home: {x: number; z: number}; range: number | null; prey: {x: number; z: number} | null};
@@ -1898,7 +1906,7 @@ export type SpacedHome = {home: {x: number; z: number}; range: number | null; pr
 /**
  * Predators' home ranges kept a safe distance from their prey's (visual only; the server decides every meal).
  * `reachOf(id)` is how far an animal (a leader with its group round it) can get from its home. A predator whose reach
- * comes within the safe distance (6 body lengths, at least `SAFE_METRES`) of the reach of an animal it eats (or of one that
+ * comes within the safe distance (6 body lengths, at most `SAFE_MOST` and at least `SAFE_METRES`) of the reach of an animal it eats (or of one that
  * eats it) is moved to the nearest clear walkable spot, searching outward to 120 m; where none is clear, it goes to
  * the clearest spot found and both ranges shrink until they keep the distance. Biggest predators first. Returns the
  * moved homes and range caps (prey whose range shrank are in it too, with their own home).
@@ -1971,7 +1979,7 @@ export function spaceHomesTasks(animals: HomeInput[], eats: (predator: string, p
         const prey = ofKinds(itsPrey, predator);
         if (!prey.length) return () => true;
         const enemies = ofKinds(enemyKinds(predator.slug), predator);
-        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
+        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.min(Math.max(predator.length, other.length) * 6, SAFE_MOST));
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
         // The enemies' homes in a grid (as they are now: earlier predators may have moved), and the most any needs.
         // (Each enemy as numbers: its home and what it needs do not change during this predator's search.)
