@@ -363,6 +363,12 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const inTree = (point: AttachPoint) => TREE_POINT.has(point.tag) || (point.tag === "leaf" && point.y - sampler.ground(point.x, point.z).height > 0.3);
             let list = found.list.filter((point) => !(species.move === "fly" && tag !== "trunks_bark" && point.tag === "bark") && !(point.tag === "house_eave" && species.move !== "crawl" && species.move !== "climb") && !(point.tag === "canopy_hang" && !hanger) && (climber || !inTree(point)));
             if (hanger && list.some((point) => point.tag === "canopy_hang")) list = list.filter((point) => point.tag === "canopy_hang");
+            // (v2: a crevice or cave dweller on a point with a rock in its den's reach, where its zone's points have one: the
+            // bigger island's forests have rocks far apart, and moving it to a rock's foot would put a frog on the ground.)
+            if (arkWorld() === "v2" && list.length && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !trueMicro(species, animal.model_slug, trueLength)) {
+                const near = list.filter((point) => rockWithin(point.x, point.z));
+                if (near.length) list = near;
+            }
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
@@ -420,6 +426,28 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const n = point.normal;
             const t = point.tangent;
             const tag = tags.find((t2) => CANOPY_TAGS.has(t2)) ?? "canopy";
+            return {
+                x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(t[0], t[2]), water: false,
+                perch: {x: point.x, y: point.y, z: point.z, nx: n[0], ny: n[1], nz: n[2], tx: t[0], ty: t[1], tz: t[2], tag: point.tag, id: point.id},
+                map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost: null, key, level}
+            };
+        }
+    }
+
+    // v2 (the bigger wild island, which has no canopy trees of today's kind, below): a large tree climber or percher no limb
+    // fits (a mamba, a crocodile monitor: longer than the trees' thickest limbs take) on a branch or the bark of its canopy
+    // tags whose size fits it, as a small one sits (its perch, home and roost on the schedule).
+    if (arkWorld() === "v2" && arborealOf(species, animal.model_slug) && !species.small && !heavy && species.move !== "hang") {
+        for (const tag of tags.filter((t) => CANOPY_TAGS.has(t))) {
+            const found = all.attachOf(tag, trueLength, zone, false);
+            const list = found.list.filter((point) => (point.tag === "branch" || point.tag === "bark") && attachFits(point, trueLength));
+            if (!list.length) continue;
+            const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), list.length);
+            const point = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            tracer()?.attach(list, found.own);
+            tracer()?.route("attach");
+            const n = point.normal;
+            const t = point.tangent;
             return {
                 x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(t[0], t[2]), water: false,
                 perch: {x: point.x, y: point.y, z: point.z, nx: n[0], ny: n[1], nz: n[2], tx: t[0], ty: t[1], tz: t[2], tag: point.tag, id: point.id},
@@ -851,6 +879,18 @@ export function rockHomes(species: MapSpecies, zone: ArkZone, length: number): A
     return list;
 }
 
+/** v2: is a dry drawn rock's foot within its den's reach of a spot (a metre to spare)? Per 2 m square, from the terrain. */
+const rockReach = new Map<string, boolean>();
+function rockWithin(x: number, z: number): boolean {
+    const key = `${Math.round(x / 2)},${Math.round(z / 2)}`;
+    let near = rockReach.get(key);
+    if (near === undefined) {
+        near = rockFeet(Math.round(x / 2) * 2, Math.round(z / 2) * 2, ROCK_DEN_REACH - 2.5).length > 0;
+        rockReach.set(key, near);
+    }
+    return near;
+}
+
 /** Has a crevice or cave dweller a rock den in reach of a home there? */
 function rockInReach(map: MapPlace, perch: MapPerch | null, x: number, z: number): boolean {
     return rockDen(map, perch, x, z) !== null;
@@ -1043,6 +1083,7 @@ const dropBuilt = () => {
     rockHomeLists.clear();
     lapSpotCache.clear();
     cove = null;
+    rockReach.clear();
     resetWildMapV2();
 };
 onHamletSwitch(dropBuilt);
