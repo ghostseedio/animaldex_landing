@@ -4206,8 +4206,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Upright phones (decision 154): the narrow frame looks straight across the strait, the wild island the subject in
         // the middle and the town in the upper part beyond it. Wider screens: turned 45% of the way, the town upper right.
         const tall = aspect < 0.8;
-        const tx = tall ? 16 : 12 + ux * 45;
-        const tz = tall ? 24 : 14 + uz * 45;
+        // (A tall frame's target a little toward the town: the wild island below the middle, the town in the upper part.)
+        const tx = tall ? 16 + ux * 80 : 12 + ux * 45;
+        const tz = tall ? 24 + uz * 80 : 14 + uz * 45;
         let fx = ux * 0.45;
         let fz = -1 + (uz + 1) * 0.45;
         if (tall) {
@@ -4265,7 +4266,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
         // view centres a little south-east of the lake and fits a wider circle.
         const radius = aspect < 0.8 ? 114 : 96;
-        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
+        // (Part C: with two islands the camera reaches further: a tall, narrow frame (the apps' panel) fits the whole wild
+        // island with the town beyond it, not a close crop.)
+        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, island ? maxDistance : MAX_DISTANCE);
         // Part C, one world: the wild island as before, turned and raised a little so the town stands across the strait
         // beyond its far shore (decision 142).
         if (island) return twoIslandHome(aspect, distance);
@@ -6024,7 +6027,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.air = 0;
             entry.arrivedAt = elapsedNow();
         },
-        attachIsland: (isl: ArkIslandScene, snapshot: ArkSnapshot) => {
+        attachIsland: (isl: ArkIslandScene, snapshot: ArkSnapshot, joined?: () => void) => {
             // Decision 153: the town built off the first frame joins the one world now (its meshes, sea floor, ground,
             // streaming, behaviour world and animals); the view goes on to the two-island default if it is still at home.
             if (island || disposed) return;
@@ -6049,27 +6052,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const townAnimals = snapshot.animals.filter((animal) => isl.has(animal));
             const wildAnimals = snapshot.animals.filter((animal) => !isl.has(animal));
             isl.joining(true);
-            let joined = 0;
+            let joinedCount = 0;
             const join = () => {
                 if (disposed || island !== isl) return;
-                joined = Math.min(joined + 450, townAnimals.length);
-                const done = joined >= townAnimals.length;
+                joinedCount = Math.min(joinedCount + 450, townAnimals.length);
+                const done = joinedCount >= townAnimals.length;
                 if (done) isl.joining(false);
-                setSnapshot(done ? snapshot : {...snapshot, animals: [...wildAnimals, ...townAnimals.slice(0, joined)].sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))}, false);
-                if (!done) {
+                setSnapshot(done ? snapshot : {...snapshot, animals: [...wildAnimals, ...townAnimals.slice(0, joinedCount)].sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))}, false);
+                if (done) joined?.();
+                else {
                     const ric = (globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback;
                     if (ric) ric(join, {timeout: 250});
                     else setTimeout(join, 32);
                 }
             };
-            join();
+            // (The view's flight first: a focus link waiting for the town (`joined`) flies on from it.)
             if (options.openIsland === "town") {
                 const view = islandView("town");
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.6, view.polar, view.azimuth);
-            } else if (atHome && !opening) {
+            } else if (atHome || opening) {
+                // (Still at home, or still on the opening flight: on to the two-island view.)
+                opening = false;
                 const view = homeView();
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
             }
+            join();
         },
         flyToIsland: (id: "wild" | "town") => {
             controls.autoRotate = false;
