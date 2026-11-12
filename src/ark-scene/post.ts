@@ -10,7 +10,7 @@
  * The scene picks the tier (`tierFor`, then drops one if frames run long).
  */
 
-import {AdditiveBlending, Vector2, type Camera, type Material, type Mesh, type Scene, type Sprite, type WebGLRenderer} from "three";
+import {AdditiveBlending, Vector2, type Camera, type InstancedMesh, type Material, type Mesh, type Object3D, type Scene, type Sprite, type WebGLRenderer} from "three";
 import {EffectComposer} from "three/examples/jsm/postprocessing/EffectComposer.js";
 import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
 import {GTAOPass} from "three/examples/jsm/postprocessing/GTAOPass.js";
@@ -75,6 +75,24 @@ void main() {
 }`
 };
 
+/**
+ * What the high tier's ambient occlusion leaves out of its depth and normal pass, which draws every visible object with
+ * one opaque normal material and none of the object's own shader:
+ *
+ * - glows: a sprite stood in it as a solid square and the occlusion shaded a dark frame round each lamp (batch 6), so
+ *   sprites and additive, depth-less layers (light shafts);
+ * - the rigged animals (lane ark-lake-ghost): their pose is made in their own vertex shader from the bone texture
+ *   (`animal-material.ts` arkRigA/arkRigB), so the pass drew each one in its rest pose where its instance stands, a
+ *   figure the picture does not show: a bird afloat cast its standing self in occlusion on the water beside it (on the
+ *   v2 lake, a bright teal duplicate). Their contact shadows ground them; the far and near models stay in.
+ */
+export function gtaoLeavesOut(object: Object3D): boolean {
+    if ((object as Sprite).isSprite) return true;
+    const material = (object as Mesh).material as Material | Material[] | undefined;
+    if (!!material && !Array.isArray(material) && material.blending === AdditiveBlending && !material.depthWrite) return true;
+    return Boolean((object as InstancedMesh).isInstancedMesh && (object as InstancedMesh).geometry?.getAttribute("arkRigA"));
+}
+
 export class ArkPost {
     private composer: EffectComposer | null = null;
     private tiltH: ShaderPass | null = null;
@@ -110,18 +128,14 @@ export class ArkPost {
             const gtao = new GTAOPass(this.scene, this.camera, this.width, this.height);
             gtao.blendIntensity = 0.85;
             gtao.updateGtaoMaterial({radius: 1.2, distanceExponent: 1.4, thickness: 1.2, scale: 1.0, samples: 12});
-            // Its depth and normal pass draws every visible object with one opaque material, so a glow sprite stood in it
-            // as a solid square and the occlusion shaded a dark frame round each lamp (batch 6). Leave out the glows: sprites
-            // and additive, depth-less layers (light shafts). The water stays in, so its surface keeps the occlusion it had.
+            // Its depth and normal pass draws every visible object with one opaque material: what that material cannot
+            // draw as it is seen stays out (`gtaoLeavesOut`). The water stays in, so its surface keeps the occlusion it had.
             // (The pass caches every object's visibility before hiding points and lines, and restores them all after.)
             const hideBase = gtao.overrideVisibility.bind(gtao);
             gtao.overrideVisibility = () => {
                 hideBase();
                 this.scene.traverse((object) => {
-                    if (!object.visible) return;
-                    const material = (object as Mesh).material as Material | Material[] | undefined;
-                    const glow = !!material && !Array.isArray(material) && material.blending === AdditiveBlending && !material.depthWrite;
-                    if ((object as Sprite).isSprite || glow) object.visible = false;
+                    if (object.visible && gtaoLeavesOut(object)) object.visible = false;
                 });
             };
             composer.addPass(gtao);

@@ -30,7 +30,7 @@ import {CloseUpTextures} from "@/ark-scene/closeup-textures";
 import {surfaceAt, groundNormal, type Vec3} from "@/ark-scene/sampler";
 import {unit} from "@/lib/ark-clock";
 import {sampleGround} from "@/ark-scene/world";
-import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
+import {freshFrom, freshLevelFrom} from "@/ark-scene/water-level";
 import type {QualityTier} from "@/ark-scene/post";
 
 const ROWS = (table as {species: Record<string, number[]>}).species;
@@ -283,7 +283,7 @@ export class AnimalLook {
     private islandNow = 0;
     private readonly dryness = new Map<number, number>();
     private readonly normals = new Map<number, Vec3>();
-    private readonly grounds = new Map<number, {height: number; fresh: boolean}>();
+    private readonly grounds = new Map<number, {height: number; fresh: number | null}>();
     readonly shells: FurShells;
     readonly closeUps: CloseUpTextures;
     private readonly bySlug = new Map<string, Set<MeshStandardMaterial>>();
@@ -422,10 +422,13 @@ export class AnimalLook {
      * cached on a 25 cm grid for the rest (the terrain never moves; the sea's level is applied after).
      */
     groundUnder(x: number, z: number, seaLevel: number, exact: boolean): {height: number; water: number | null} {
-        let cell: {height: number; fresh: boolean} | undefined;
+        // (`fresh`: the fresh water's own surface there, else null: the sea's, at its level now. Lane ark-lake-ghost: it
+        // was today's lake's fixed 0 for every lake, so the v2 lake at 6 m read as dry land and its swimmers got a
+        // contact shadow on its bed.)
+        let cell: {height: number; fresh: number | null} | undefined;
         if (exact) {
             const sample = sampleGround(x, z);
-            cell = {height: sample.height, fresh: freshFrom(sample, x, z) >= 0.5};
+            cell = {height: sample.height, fresh: freshFrom(sample, x, z) >= 0.5 ? freshLevelFrom(sample) : null};
         } else {
             const key = (Math.round(x * 4) + 32768) * 65536 + Math.round(z * 4) + 32768;
             cell = this.grounds.get(key);
@@ -433,12 +436,12 @@ export class AnimalLook {
                 const sx = Math.round(x * 4) / 4;
                 const sz = Math.round(z * 4) / 4;
                 const sample = sampleGround(sx, sz);
-                cell = {height: sample.height, fresh: freshFrom(sample, sx, sz) >= 0.5};
+                cell = {height: sample.height, fresh: freshFrom(sample, sx, sz) >= 0.5 ? freshLevelFrom(sample) : null};
                 if (this.grounds.size > 60000) this.grounds.clear();
                 this.grounds.set(key, cell);
             }
         }
-        const level = cell.fresh ? FRESH_LEVEL : seaLevel;
+        const level = cell.fresh ?? seaLevel;
         return {height: cell.height, water: level > cell.height ? level : null};
     }
 

@@ -40,6 +40,10 @@ export function freshWaterGeometry(ground: GroundArrays & {freshLevels: Float32A
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    // Normals (lane ark-lake-ghost): the water's own shader never reads them, but the high tier's ambient occlusion
+    // (`post.ts` GTAO) draws every mesh with one normal material, and with none the lake read as a surface facing
+    // nowhere: the whole lake shaded to ink, with a bright figure where anything with normals stood in it.
+    geometry.computeVertexNormals();
     return geometry;
 }
 
