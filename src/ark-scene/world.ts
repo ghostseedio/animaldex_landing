@@ -18,6 +18,7 @@ import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import {REGION_ZONES} from "@/ark-scene/types";
 import {sampleGroundV2, wildWorldV2} from "@/ark-scene/islands/wild/world-v2";
+import {setNoHamlet} from "@/ark-scene/no-hamlet";
 
 // MARK: - Which world (Part C, docs/ark/wild-island.md §Integration)
 
@@ -29,21 +30,25 @@ import {sampleGroundV2, wildWorldV2} from "@/ark-scene/islands/wild/world-v2";
  * With nothing chosen it is `v1`, exactly as before.
  */
 export type ArkWorldId = "v1" | "v2";
+// (On the global object, as the hamlet's switch (`no-hamlet.ts`): a script's loader may hold two copies of the scene's
+// modules, and every copy's bindings follow the one switch.)
+type WorldSwitch = {world: ArkWorldId; touched: boolean; listeners: Array<(world: ArkWorldId) => void>};
+const WORLD_KEY = "__arkWorldSwitch";
+const worldState: WorldSwitch = (((globalThis as Record<string, unknown>)[WORLD_KEY] as WorldSwitch | undefined) ??= {world: "v1", touched: false, listeners: []});
 let ACTIVE: ArkWorldId = "v1";
-let touched = false;
-const listeners: Array<(world: ArkWorldId) => void> = [];
 
 /** The world in use. */
 export function arkWorld(): ArkWorldId {
-    return ACTIVE;
+    return worldState.world;
 }
 
 /**
  * Run `listener` whenever the world changes (and never at registration): for a module that derives a value from the
- * world when it loads (`sea-depth.ts` LAKE_SWIM_RADIUS, the drawn ground's grid), so it follows the switch.
+ * world when it loads (`sea-depth.ts` LAKE_SWIM_RADIUS, the drawn ground's grid) or keeps something built from it, so
+ * it follows the switch.
  */
 export function onArkWorld(listener: (world: ArkWorldId) => void): void {
-    listeners.push(listener);
+    worldState.listeners.push(listener);
 }
 
 // MARK: - Noise
@@ -432,7 +437,7 @@ function siteBase(zone: LandZone): number {
 }
 
 export function sampleGround(x: number, z: number): GroundSample {
-    touched = true;
+    worldState.touched = true;
     if (ACTIVE === "v2") return sampleGroundV2(x, z) as unknown as GroundSample;
     const theta = Math.atan2(z, x);
     const r = Math.hypot(x, z);
@@ -571,8 +576,16 @@ const V1 = {ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES,
  * `ARK_WORLD=v2` or a call at its top.
  */
 export function setArkWorld(world: ArkWorldId): void {
-    if (world === ACTIVE) return;
-    if (touched && typeof console !== "undefined") console.warn(`setArkWorld(${world}) after the world was sampled: anything built from it already stays as built`);
+    if (world === worldState.world) return;
+    if (worldState.touched && typeof console !== "undefined") console.warn(`setArkWorld(${world}) after the world was sampled: anything built from it that does not follow onArkWorld stays as built`);
+    worldState.world = world;
+    // The v2 world is the islands mode's wild island: no hamlet on it (decision 148's switch, its resets with it).
+    if (world === "v2") setNoHamlet(true);
+    for (const listener of worldState.listeners) listener(world);
+}
+
+/** This copy of the module's bindings for a world. */
+function applyWorld(world: ArkWorldId): void {
     ACTIVE = world;
     if (world === "v2") {
         const v2 = wildWorldV2();
@@ -588,8 +601,11 @@ export function setArkWorld(world: ArkWorldId): void {
     } else {
         ({ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES, TERRAIN_HALF, TERRAIN_SEGMENTS, WORLD_RADIUS} = V1);
     }
-    for (const listener of listeners) listener(world);
 }
+// Every copy follows the one switch; a copy loaded after it was set starts there. (Registered first, so the world's own
+// bindings change before any module's listener reads them.)
+worldState.listeners.unshift(applyWorld);
+if (worldState.world !== "v1") applyWorld(worldState.world);
 
 /** The world asked for by the process: `globalThis.__ARK_WORLD__`, a worker's or page's `?world=v2`, or `ARK_WORLD=v2`. */
 function askedWorld(): ArkWorldId {
