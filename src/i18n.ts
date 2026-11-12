@@ -1,13 +1,17 @@
-import {getRequestConfig} from 'next-intl/server';
-
-export default getRequestConfig(async ({locale}) => {
+/**
+ * next-intl's request config (its `getRequestConfig` is the identity function,
+ * so this is the same thing written without importing `next-intl/server`): that
+ * import throws outside Next's bundler, and plain modules that read
+ * `localeConfig` (lib/site, the SEO builders) and their tests import this file.
+ */
+export default async function getRequestConfig({locale}: {locale: string}) {
     const localeFile = await import(`./data/locales/${locale}.json`);
     const messages = localeFile.default || {};
 
     return {
         messages
     }
-});
+}
 
 export const localeConfig = {
     locales: ['en', 'id'],

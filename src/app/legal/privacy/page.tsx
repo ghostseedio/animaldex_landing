@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {languageAlternates} from "@/lib/seo/page-metadata";
 import policy from "@/data/privacy-policy.md";
 import LegalPage from "@/app/legal/legal-page";
 import {getSiteUrl} from "@/lib/site";
@@ -8,7 +9,9 @@ export const metadata: Metadata = withOgCard({
     title: "AnimalDex Privacy Policy",
     description: "Read how AnimalDex handles account data, animal captures, location data, purchases, community features, moderation, and account deletion.",
     alternates: {
-        canonical: "/legal/privacy"
+        canonical: "/legal/privacy",
+        // Written in English only: en and x-default (SEO lane S3).
+        languages: languageAlternates("/legal/privacy", {englishOnly: true})
     },
     openGraph: {
         type: "website",

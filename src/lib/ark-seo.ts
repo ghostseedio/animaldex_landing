@@ -76,10 +76,12 @@ export type ArkFoodLink = {
     name: string;
     /** The other species' page slug, when the link is to one species. */
     slug: string | null;
+    /** The verbatim piece of the predator's field guide the link came from, when read. */
+    phrase?: string | null;
 };
 
-/** A `voyage_food_links` row as read (contract: predator, prey, basis 'species'|'group', group_label, realm_ok). */
-export type ArkFoodLinkRow = {predator?: unknown; prey?: unknown; basis?: unknown; group_label?: unknown; realm_ok?: unknown};
+/** A `voyage_food_links` row as read (contract: predator, prey, basis 'species'|'group', group_label, phrase, realm_ok, size_ok). */
+export type ArkFoodLinkRow = {predator?: unknown; prey?: unknown; basis?: unknown; group_label?: unknown; phrase?: unknown; realm_ok?: unknown; size_ok?: unknown};
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -90,13 +92,14 @@ function idText(value: unknown): string | null {
 /**
  * The species a page has to name for its diet links: what it eats as a
  * species (what it eats by a group its diet names, "birds", is said as the
- * group) and everything that eats it. Links the realm check refused are left out.
+ * group) and everything that eats it. Links the realm check refused, and group
+ * prey above the size rule (`size_ok = false`: only some group hunters take it), are left out.
  */
 export function arkFoodLinkOthers(rows: ArkFoodLinkRow[], speciesProfileId: string): string[] {
     const id = speciesProfileId.trim().toLowerCase();
     const others = new Set<string>();
     for (const row of rows) {
-        if (row.realm_ok === false) continue;
+        if (row.realm_ok === false || row.size_ok === false) continue;
         const predator = idText(row.predator);
         const other = predator === id ? (row.basis === "group" ? null : idText(row.prey)) : idText(row.prey) === id ? predator : null;
         if (other) others.add(other);
@@ -110,7 +113,7 @@ export function arkFoodLinks(rows: ArkFoodLinkRow[], speciesProfileId: string, n
     const links: ArkFoodLink[] = [];
     const seen = new Set<string>();
     for (const row of rows) {
-        if (row.realm_ok === false) continue;
+        if (row.realm_ok === false || row.size_ok === false) continue;
         const predator = idText(row.predator);
         const prey = idText(row.prey);
         const direction = predator === id ? "eats" : prey === id ? "eatenBy" : null;
@@ -122,7 +125,8 @@ export function arkFoodLinks(rows: ArkFoodLinkRow[], speciesProfileId: string, n
         const key = `${direction}:${name.toLowerCase()}`;
         if (seen.has(key)) continue;
         seen.add(key);
-        links.push({direction, name, slug: group ? null : other?.slug ?? null});
+        const phrase = typeof row.phrase === "string" && row.phrase.trim() ? row.phrase.replace(/\s+/g, " ").trim() : null;
+        links.push({direction, name, slug: group ? null : other?.slug ?? null, ...(phrase ? {phrase} : {})});
     }
     return links;
 }

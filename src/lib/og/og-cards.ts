@@ -24,7 +24,8 @@ import {getSupportArticleBySlugs} from "@/lib/support-articles";
 import type {OgCardSpec, OgTile} from "@/lib/og/og-card";
 import {profileOgAnimals, profileOgCard} from "@/lib/og/profile-og-card";
 import {STATIC_OG_CARDS} from "@/lib/og/static-og-cards";
-import {arkSpeciesCounts, arkSpeciesShare, isArkSlug} from "@/lib/ark-seo";
+import {arkSpeciesShare, isArkSlug} from "@/lib/ark-seo";
+import {ARK_ISLAND_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 import {fillArkWords} from "@/lib/ark-words";
 import {getArkWords} from "@/loaders/ark-words";
 
@@ -224,16 +225,15 @@ async function arkCard(slug: string | null): Promise<OgCardSpec | null> {
     const share = words.share;
     const base: Pick<OgCardSpec, "kicker" | "layout" | "cache"> = {kicker: words.eyebrow, layout: "ark", cache: "short"};
     if (!slug) {
-        if (!snapshot) return {...base, title: words.eyebrow, stat: share.cardSoon, subtitle: share.cardSubtitle};
+        // SEO lane S3 (S1's audit): the whole Ark's card is the 3D world itself, a real render of it, with the live count.
+        const world = {...base, layout: "ark-world" as const, background: ARK_ISLAND_RENDER_IMAGE};
+        if (!snapshot) return {...world, title: words.eyebrow, stat: share.cardSoon, subtitle: share.cardSubtitle};
         const {animals, species} = snapshot.counts;
-        const top = arkSpeciesCounts(snapshot);
-        const picked = new Set(await withArtwork(top.map((row) => row.slug), 6));
         return {
-            ...base,
+            ...world,
             title: words.eyebrow,
             stat: animals ? fillArkWords(share.cardStatArk, {animals: counted(animals, words.animalsOne, words.animalsOther), species: counted(species, words.speciesOne, words.speciesOther)}) : share.cardSoon,
-            subtitle: share.cardSubtitle,
-            tiles: top.filter((row) => picked.has(row.slug)).slice(0, 6).map((row) => art(row.slug, row.name, fillArkWords(share.countAboard, {count: row.count.toLocaleString("en")})))
+            subtitle: share.cardSubtitle
         };
     }
     const aboard = arkSpeciesShare(snapshot, slug);

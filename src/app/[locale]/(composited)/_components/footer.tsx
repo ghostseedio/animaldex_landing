@@ -86,7 +86,7 @@ export default function Footer({t}: {t: ScopedTranslator}) {
                     </div>
 
                     {/* Navigation. Numbered like the index of a field guide — the one motif. */}
-                    <nav aria-label={t("title")} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:gap-x-8">
+                    <nav aria-label={t("title")} className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-4 lg:gap-x-8">
                         {footerColumns.map((section, index) => (
                             <div key={section.titleKey} className="flex min-w-0 flex-col gap-3">
                                 {/* Fixed height so every rule lands on the same line,

@@ -10,6 +10,7 @@ import {loadLocaleMessages} from "@/loaders/locale";
 import GoogleAnalytics from "@/components/analytics/google-analytics";
 import CampaignAttribution from "@/app/[locale]/_components/campaign-attribution";
 import {getMetadataLocale, getSiteUrl} from "@/lib/site";
+import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
 import {AskAnimalDexProvider} from "@/components/ask-animaldex/ask-animaldex-provider";
 import AskAnimalDexSurface from "@/components/ask-animaldex/ask-animaldex-surface";
@@ -21,9 +22,9 @@ import ThemeScript from "@/components/theme/theme-script";
 // 192 px rendition of /images/logo.webp (400 px, 132 KB), which every page
 // used to download at high priority as a rel=icon.
 const brandIconUrl = "/icon-192.webp";
-// The brand card (WEB-13): "Talk to animals. Every animal has a lesson."
-// A new file name, so social networks fetch it afresh rather than reuse the old card.
-const socialImageUrl = "/images/og-every-animal-has-a-lesson.png";
+// The default share card (SEO lane S3, 2026-11-12): a real render of the live Ark, the 3D world the product is
+// about (S1's audit: the old advice-chat card was every page's fallback). A new file name, so networks fetch it afresh.
+const socialImageUrl = ARK_RENDER_IMAGE;
 
 type RootLayoutProps = {
     children: ReactNode;
@@ -75,7 +76,6 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
     const fullTitle = typeof meta.fullTitle === "string" ? meta.fullTitle : "AnimalDex";
     const title = typeof meta.title === "string" ? meta.title : "AnimalDex";
     const description = typeof meta.description === "string" ? meta.description : fullTitle;
-    const keywords = Array.isArray(meta.keywords) ? meta.keywords : [];
 
     return {
         metadataBase: new URL(getSiteUrl()),
@@ -84,7 +84,7 @@ export async function generateMetadata({params: {locale: reqLocale}}: RootLayout
             template: `%s | ${title}`
         },
         description,
-        keywords,
+        // No site-wide keywords: the home page's list leaked onto every page without its own (S1's audit).
         generator: "Next.js",
         other: {
             "apple-itunes-app": "app-id=6761607780",

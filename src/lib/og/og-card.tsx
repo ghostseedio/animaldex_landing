@@ -32,7 +32,9 @@ export type OgCardSpec = {
      * `ark`: the shared Ark's card (Part 4c), its animals on the Ark's sand
      * with their counts (`tile.caption`), and `stat` under the title.
      */
-    layout?: "ark";
+    layout?: "ark" | "ark-world";
+    /** `ark-world`: a real render of the Ark under public/ (1200×630), the card's whole background. */
+    background?: string;
     /** The Ark card's count line, e.g. "2 aboard · a pair". */
     stat?: string;
     /** `short`: the card shows live counts, so caches keep it for minutes, not a week. */
@@ -325,6 +327,41 @@ function ArkCard({spec, pictures, icon}: {spec: OgCardSpec; pictures: Array<{til
     );
 }
 
+/**
+ * The whole Ark's card (SEO lane S3, S1's audit): a real render of the live 3D
+ * world as the background, the live count over it. No species tiles: the card
+ * shows the world itself.
+ */
+function ArkWorldCard({spec, background, icon}: {spec: OgCardSpec; background: string; icon: string | null}) {
+    return (
+        <div style={{width: "100%", height: "100%", display: "flex", position: "relative", fontFamily: "Onest, Noto Sans", color: "#ffffff", background: "#07170c"}}>
+            <img alt="" src={background} width={OG_WIDTH} height={OG_HEIGHT} style={{position: "absolute", top: 0, left: 0, width: OG_WIDTH, height: OG_HEIGHT, objectFit: "cover"}} />
+            {/* The words sit over the open sea on the render's right, the island stays clear on the left. */}
+            <div style={{position: "absolute", top: 0, left: 0, width: OG_WIDTH, height: OG_HEIGHT, display: "flex", background: "linear-gradient(270deg, rgba(3,12,24,0.88) 0%, rgba(3,12,24,0.7) 34%, rgba(3,12,24,0) 62%)"}} />
+            <div style={{display: "flex", flexDirection: "column", justifyContent: "space-between", padding: "56px 60px 48px 40px", width: 560, height: OG_HEIGHT, position: "absolute", top: 0, right: 0}}>
+                <div style={{display: "flex", flexDirection: "column", gap: 16}}>
+                    {spec.kicker && spec.kicker !== spec.title ? <Kicker text={spec.kicker} /> : null}
+                    <div style={{display: "flex", fontSize: titleSize(spec.title, false), fontWeight: 700, lineHeight: 1.06, letterSpacing: -1}}>{spec.title}</div>
+                    {spec.stat ? <div style={{display: "flex", fontSize: 38, fontWeight: 700, lineHeight: 1.15, color: LIME}}>{spec.stat}</div> : null}
+                    {spec.subtitle ? <div style={{display: "flex", fontSize: 26, fontWeight: 500, lineHeight: 1.32, color: "#e2e8f0"}}>{spec.subtitle}</div> : null}
+                </div>
+                <Brand icon={icon} />
+            </div>
+        </div>
+    );
+}
+
+async function loadBackground(publicPath: string): Promise<string | null> {
+    try {
+        const resolved = path.join(PUBLIC_DIR, publicPath.replace(/^\/+/, ""));
+        if (!resolved.startsWith(PUBLIC_DIR)) return null;
+        const jpeg = await sharp(await readFile(resolved), {failOn: "none"}).resize({width: OG_WIDTH, height: OG_HEIGHT, fit: "cover"}).jpeg({quality: 86}).toBuffer();
+        return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+    } catch {
+        return null;
+    }
+}
+
 const SHORT_CACHE_CONTROL = "public, max-age=600, s-maxage=600, stale-while-revalidate=3600";
 const CACHE_CONTROL = "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000";
 const PARTIAL_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600";
@@ -342,7 +379,10 @@ export async function renderOgCard(spec: OgCardSpec) {
         .filter((item): item is {tile: OgTile; src: string} => Boolean(item.src));
 
     let element: React.ReactElement;
-    if (spec.layout === "ark") {
+    const background = spec.layout === "ark-world" && spec.background ? await loadBackground(spec.background) : null;
+    if (background) {
+        element = <ArkWorldCard spec={spec} background={background} icon={icon} />;
+    } else if (spec.layout === "ark" || spec.layout === "ark-world") {
         const largeIcon = pictures.length ? icon : await loadTileImage({publicPath: "/images/logo.webp"}, 440);
         element = <ArkCard spec={spec} pictures={pictures} icon={pictures.length ? icon : largeIcon} />;
     } else if (pictures.length >= 2) {
@@ -360,7 +400,8 @@ export async function renderOgCard(spec: OgCardSpec) {
     // can't load its own default font on Node 22 (ENOTDIR), so lay out with
     // Satori (text becomes paths) and rasterise the SVG with sharp.
     const svg = await satori(element, {width: OG_WIDTH, height: OG_HEIGHT, fonts});
-    const png = await sharp(Buffer.from(svg)).png({compressionLevel: 9}).toBuffer();
+    // A photographic background (the Ark's render) is quantised, or the PNG runs to well over a megabyte.
+    const png = await sharp(Buffer.from(svg)).png(background ? {compressionLevel: 9, palette: true, quality: 90, effort: 7} : {compressionLevel: 9}).toBuffer();
     return new Response(new Uint8Array(png), {
         headers: {"Content-Type": "image/png", "Cache-Control": cacheControl, "CDN-Cache-Control": cacheControl}
     });

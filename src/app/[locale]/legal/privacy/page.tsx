@@ -1,4 +1,5 @@
 import { remark } from 'remark';
+import {legalMarkdownForPage} from "@/lib/legal-markdown";
 import html from 'remark-html';
 import policy from "@/data/privacy-policy.md"
 import Image from "next/image";
@@ -19,7 +20,7 @@ export function generateStaticParams() {
 export default async function PrivacyPolicy() {
     const processedContent = await remark()
         .use(html)
-        .process(policy);
+        .process(legalMarkdownForPage(policy));
     const contentHtml = processedContent.toString();
 
     return (

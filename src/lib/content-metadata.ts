@@ -4,6 +4,7 @@ import {localeConfig} from "@/i18n";
 import {ContentImage} from "@/data/content-schema";
 import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 import {getAbsoluteAssetUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
+import {clampMetaDescription} from "@/lib/seo/page-metadata";
 
 type BuildContentMetadataOptions = {
     locale: string;
@@ -41,6 +42,8 @@ export function buildContentMetadata({
     tags,
     canonicalUrl
 }: BuildContentMetadataOptions): Metadata {
+    // What a result shows of it (SEO lane S3): whole sentences up to 160 characters.
+    description = clampMetaDescription(description);
     const imageUrl = getAbsoluteAssetUrl(featuredImage.src);
     const brandedTitle = withBrandSuffix(title);
     const brandedImageAlt = featuredImage.alt.includes("AnimalDex") ? featuredImage.alt : `${featuredImage.alt} | AnimalDex`;

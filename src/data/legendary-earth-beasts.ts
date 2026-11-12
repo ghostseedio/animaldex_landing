@@ -5,7 +5,7 @@ export const LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH = "/legendary-earth-beas
 export const LEGENDARY_EARTH_BEASTS_PILLAR_PATH = LEGENDARY_EARTH_BEASTS_CANONICAL_BASE_PATH;
 
 export const legendaryEarthBeastsHubTitle =
-    "Legendary Earth Beasts: Real Animal-Shaped Rocks, Mythic Places & S-Tier AnimalDex Captures";
+    "Legendary Earth Beasts: Animal-Shaped Rocks and Mythic Places";
 
 export const legendaryEarthBeastsHubDescription =
     "Explore AnimalDex Legendary Earth Beasts: real animals inspired by Naga Cave, Sinai Dragon Head Mountain, Elephant Rock, Sigiriya, Devils Tower, and other mythic animal-shaped places.";

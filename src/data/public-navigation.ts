@@ -46,6 +46,11 @@ export const WILDLIFE_GUIDES_HREF = "/wildlife-guides";
 export const FIND_YOUR_ANIMALS_HREF = "/what-animal-am-i";
 /** AI disclosure, crisis protocol, teen mode and what reaches AI providers (SPEC 3.1). */
 export const AI_AND_SAFETY_HREF = "/legal/ai-and-safety";
+/** The shared 3D world, and the pages that explain it (SEO lane S3, 2026-11-12). */
+export const ARK_HREF = "/ark";
+export const ARK_HOW_IT_WORKS_HREF = "/ark/how-it-works";
+export const ARK_FOOD_CHAIN_HREF = "/ark/food-chain";
+export const ABOUT_HREF = "/about";
 
 /**
  * 01 — AnimalDex: what the product is, and the ways in. Talking comes first
@@ -113,7 +118,9 @@ export const resourceLinks: PublicNavLink[] = [
  * in the sitemap, search and internal links, just not in the header.
  */
 export const findYourAnimalsNavLink: PublicNavLink = {href: FIND_YOUR_ANIMALS_HREF, labelKey: "findYourAnimals"};
-export const headerNavLinks: PublicNavLink[] = [findYourAnimalsNavLink];
+/** The Ark leads the header's links (S1's audit, 2026-11-12: the world the product is about was in no navigation). */
+export const arkNavLink: PublicNavLink = {href: ARK_HREF, labelKey: "theArk"};
+export const headerNavLinks: PublicNavLink[] = [arkNavLink, findYourAnimalsNavLink];
 
 /** Kept for older callers: How it works' own link (it is in the footer now). */
 export const howItWorksNavLink: PublicNavLink = {href: HOW_IT_WORKS_HREF, labelKey: "howItWorks"};
@@ -139,6 +146,14 @@ export const footerProductLinks: PublicNavLink[] = [
     howItWorksNavLink
 ];
 
+/** The Ark: the world, how it works, who eats whom, and what AnimalDex is (SEO lane S3). */
+export const footerArkLinks: PublicNavLink[] = [
+    arkNavLink,
+    {href: ARK_HOW_IT_WORKS_HREF, labelKey: "howTheArkWorks"},
+    {href: ARK_FOOD_CHAIN_HREF, labelKey: "arkFoodChain"},
+    {href: ABOUT_HREF, labelKey: "aboutAnimalDex"}
+];
+
 export const footerExploreLinks: PublicNavLink[] = [
     {href: "/animals", labelKey: "browseAnimals"},
     {href: "/comparisons", labelKey: "compareAnimals"},
@@ -158,6 +173,7 @@ export const footerColumns: Array<{
     groups?: PublicNavLink[][];
 }> = [
     {titleKey: "footerGroups.product", links: footerProductLinks},
+    {titleKey: "footerGroups.ark", links: footerArkLinks},
     {titleKey: "footerGroups.explore", links: footerExploreLinks},
     {titleKey: "footerGroups.help", links: footerHelpLinks}
 ];

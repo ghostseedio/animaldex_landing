@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {languageAlternates} from "@/lib/seo/page-metadata";
 import policy from "@/data/ai-and-safety.md";
 import LegalPage from "@/app/legal/legal-page";
 import {getSiteUrl} from "@/lib/site";
@@ -10,7 +11,9 @@ export const metadata: Metadata = withOgCard({
     title: "AnimalDex AI and Safety",
     description,
     alternates: {
-        canonical: "/legal/ai-and-safety"
+        canonical: "/legal/ai-and-safety",
+        // Written in English only: en and x-default (SEO lane S3).
+        languages: languageAlternates("/legal/ai-and-safety", {englishOnly: true})
     },
     openGraph: {
         type: "website",

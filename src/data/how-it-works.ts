@@ -36,6 +36,9 @@ export type HowItWorksContent = {
     loopDescription: string;
     details: HowItWorksDetail[];
     trialsLink: string;
+    /** Your step's links to the Ark and how it works (SEO lane S3). */
+    arkLink: string;
+    arkHowLink: string;
     debateModes: Array<{title: string; body: string}>;
     safetyTitle: string;
     safetyBody: string;
@@ -90,6 +93,8 @@ const en: HowItWorksContent = {
         }
     ],
     trialsLink: "Browse Animal Trials",
+    arkLink: "See the Ark",
+    arkHowLink: "How the Ark works",
     debateModes: [
         {title: "Private", body: "With your own animals. Nothing is at stake, and you choose the way to try."},
         {title: "Public", body: "Other people's animals can join, and the community votes."}
@@ -147,6 +152,8 @@ const id: HowItWorksContent = {
         }
     ],
     trialsLink: "Jelajahi Ujian Hewan",
+    arkLink: "Lihat Ark",
+    arkHowLink: "Cara kerja Ark",
     debateModes: [
         {title: "Privat", body: "Dengan hewan-hewanmu sendiri. Tidak ada yang dipertaruhkan, dan kamu memilih cara yang akan dicoba."},
         {title: "Publik", body: "Hewan milik orang lain bisa ikut, dan komunitas memberi suara."}

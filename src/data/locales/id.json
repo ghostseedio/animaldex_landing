@@ -64,7 +64,8 @@
       "earn": "Hasilkan",
       "experienceAndEarn": "Pengalaman & Hasilkan",
       "follow": "Ikuti",
-      "help": "Bantuan"
+      "help": "Bantuan",
+      "ark": "Ark"
     },
     "credits": {
       "platform": "Hak cipta",
@@ -86,7 +87,11 @@
     "backToTop": "Kembali ke atas",
     "findYourAnimals": "Temukan hewanmu",
     "aiAndSafety": "AI & keamanan",
-    "search": "Cari"
+    "search": "Cari",
+    "theArk": "Ark",
+    "howTheArkWorks": "Cara kerja Ark",
+    "arkFoodChain": "Siapa memangsa siapa",
+    "aboutAnimalDex": "Tentang AnimalDex"
   },
   "home": {
     "title": "AnimalDex",
@@ -1819,8 +1824,8 @@
     "eyebrow": "Berdampingan",
     "title": "Dua hewan, berdampingan",
     "description": "Pilih dua spesies dan lihat cara masing-masing bertahan hidup: tabel statistik, situasi tempat masing-masing unggul, dan biologi yang berdasar. Pasangan apa pun bisa.",
-    "metaTitle": "Bandingkan Dua Hewan Apa Pun — Siapa yang Menang? | AnimalDex",
-    "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan. Pilih dua spesies dari ribuan pilihan dan dapatkan verdict langsung dengan stat, breakdown skenario, tingkat keyakinan, dan FAQ — dibangun dari biologi nyata.",
+    "metaTitle": "Bandingkan Dua Hewan Apa Pun Secara Berdampingan | AnimalDex",
+    "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan: stat demi stat, situasi di mana masing-masing unggul, dan biologi di baliknya, dari panduan lapangan setiap spesies.",
     "statAnimals": "Hewan untuk dibandingkan",
     "statComparisons": "Perbandingan yang terbit",
     "builder": {
@@ -2460,9 +2465,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Bawa Ide Apa Pun ke Seekor Hewan. Setiap Hewan Punya Pelajaran",
+    "fullTitle": "AnimalDex: Tangkap Hewan Nyata Jadi Teman AI di Dunia 3D",
     "title": "AnimalDex",
-    "description": "Bicara dengan hewan tentang ide, rencana, atau keputusan apa pun dan dapatkan sudut pandang yang benar-benar berbeda. Setiap hewan menjawab dari perilaku nyata jenisnya, dan setiap hewan yang kamu temui menambah cara pandang baru. Langkah yang berhasil membawa hewan ke Ark, sebuah dunia hewan bersama.",
+    "description": "Tangkap hewan di dunia nyata dan jadikan mereka teman AI di dunia 3D: Ark, simulasi bersama yang dibangun dari panduan lapangan setiap hewan.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -3310,7 +3315,7 @@
     "stats": "Statistik"
   },
   "talkPage": {
-    "metaTitle": "Bicara dengan hewan",
+    "metaTitle": "Bicara dengan Hewan: Chat AI dari Sudut Pandangnya",
     "metaDescription": "Bicara dengan hewan mana pun di AnimalDex, gratis. Masing-masing menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, jadi kamu mendengar sudut pandang yang nyata, bukan sekadar persetujuan.",
     "animalTitleA": "Bicara dengan {animal}",
     "animalTitleAn": "Bicara dengan {animal}",
@@ -4283,13 +4288,13 @@
       "aboutEyebrow": "Tentang Ark",
       "aboutTitle": "Dunia hewan bersama, disimulasikan dari panduan lapangan",
       "aboutBody": "Ark adalah satu dunia hewan yang dibagi semua orang dan terlihat sama bagi siapa pun. Ini simulasi yang bisa kamu jelajahi dalam 3D: ketuk seekor hewan untuk berkenalan, ikuti ia, atau baca kisah hidupnya.",
-      "liveCounts": "Saat ini {animals} dari {species} hidup di Ark. Dunianya punya tujuh wilayah, dari laut lepas sampai es kutub.",
+      "liveCounts": "Saat ini {animals} dari {species} hidup di Ark. Dunianya punya dua pulau: pulau liar dengan wilayah dari laut lepas sampai es kutub, dan kota dengan rumah, peternakan, dan kebun binatang.",
       "arriveTitle": "Bagaimana hewan datang",
       "arriveBody": "Tidak ada yang menaruh hewan dengan tangan. Saat seseorang menangkap seekor hewan dengan AnimalDex, satu dari jenisnya naik ke Ark, sampai sepasang untuk setiap orang, dan tetap di sana. Bicara dengan seekor hewan tentang sesuatu yang nyata dalam hidupmu dan mencoba langkah yang ia sarankan membuat hewan-hewanmu berkembang: setiap langkah yang berhasil membuat kondisi mereka lebih baik. Ark menampilkan spesies dan jumlahnya; di mana seekor hewan ditangkap dan apa yang dibicarakan siapa pun tidak pernah ditampilkan.",
       "lifeTitle": "Bagaimana makanan dan perkembangbiakan menggerakkannya",
       "lifeBody": "Hidup setiap spesies di Ark didasarkan pada panduan lapangannya di AnimalDex: apa yang ia makan, berapa banyak anaknya dan berapa lama mereka lahir, kapan ia terjaga, apakah ia hidup sendiri, berpasangan, atau berkelompok, dan berapa lama ia hidup di alam liar.",
       "lifeRules": "Predator hanya memakan hewan yang disebut sebagai makanan dalam panduan lapangannya, atau kelompok tempat hewan itu termasuk, seperti burung, dan lebih dulu memangsa hewan dengan kondisi paling lemah. Dua hewan dewasa dari satu jenis membesarkan anak saat ada makanan, paling banyak satu kelahiran per masa berkembang biak: hewan dalam kondisi prima berkembang biak setiap masa, yang biasa lebih jarang. Hewan dengan umur liar yang diketahui menjadi tua, dan pemburu yang terlalu lama lapar mati kelaparan. Satu tahun Ark berlalu setiap 14 hari nyata.",
-      "lifeNote": "Aturannya disederhanakan agar dunia bersama yang kecil bisa berjalan. Ark adalah permainan berdasarkan panduan lapangan setiap hewan, bukan model ilmiah.",
+      "lifeNote": "Aturannya disederhanakan agar dunia bersama yang kecil bisa berjalan. Ark adalah simulasi yang dibangun dari panduan lapangan setiap hewan, bukan model ilmiah.",
       "listTitle": "Siapa saja yang ada di Ark",
       "listIntro": "Setiap spesies di Ark, menurut wilayah, dengan jumlahnya.",
       "listAboard": "{count} di Ark",
@@ -4427,6 +4432,179 @@
       "notNow": "Nanti saja",
       "note": "Ditanyakan sekali. Jika di bawah 18 tahun, hewanmu tampil dengan nomor Voyager, bukan @username-mu.",
       "failed": "Belum berhasil. Coba lagi sebentar lagi."
+    }
+  },
+  "seo": {
+    "breadcrumbHome": "Beranda",
+    "breadcrumbArk": "Ark",
+    "arkImageAlt": "Ark, dunia hewan 3D bersama milik AnimalDex",
+    "arkSummary": {
+      "eyebrow": "Memahami Ark",
+      "title": "Cara kerja dunia ini",
+      "intro": "Ark berjalan dengan aturan yang dibangun dari panduan lapangan setiap hewan. Halaman-halaman ini menjelaskannya dengan bahasa sederhana.",
+      "howTitle": "Cara kerja Ark",
+      "howBody": "Bagaimana tangkapan membawa hewan naik ke Ark, dan bagaimana makanan, perkembangbiakan, musim, dan langkah membentuk hidup mereka.",
+      "foodTitle": "Siapa memangsa siapa",
+      "foodBody": "Ketuk hewan mana pun di Ark untuk melihat apa yang dimakannya dan apa yang memangsanya, dengan kata-kata panduan lapangannya sendiri.",
+      "aboutTitle": "Dunia riset yang hidup",
+      "aboutBody": "Mengapa AnimalDex adalah dunia bersama untuk diamati dan dipelajari, bukan permainan untuk dimenangkan."
+    },
+    "breadcrumbLabel": "Jejak navigasi"
+  },
+  "pages": {
+    "howItWorks": {
+      "metaTitle": "Cara Kerja Ark: Rantai Makanan, Anak, dan Musim",
+      "metaDescription": "Bagaimana hewan naik ke Ark bersama AnimalDex saat orang menangkapnya, lalu makan, berkembang biak, menua, dan melewati musim dengan aturan dari panduan lapangannya.",
+      "breadcrumb": "Cara kerja",
+      "eyebrow": "Ark",
+      "title": "Cara kerja Ark",
+      "intro": "Ark adalah satu dunia hewan bersama yang dilihat semua orang dengan cara yang sama. Tidak ada yang menaruh hewan atau menentukan siapa memangsa siapa. Hewan naik ke Ark saat orang menangkapnya di dunia nyata, dan sejak itu aturan yang dibangun dari panduan lapangan setiap spesies menjalankan hidup mereka: apa yang mereka makan, kapan mereka berkembang biak, berapa lama mereka hidup. Beginilah aturan-aturan itu bekerja.",
+      "live": "Saat ini {animals} dari {species} hidup di Ark.",
+      "unavailable": "Angka langsung Ark tidak dapat dibaca saat ini.",
+      "contents": "Di halaman ini",
+      "captures": {
+        "title": "Tangkapan membawa hewan naik ke Ark",
+        "p1": "Saat kamu memotret hewan sungguhan dengan AnimalDex dan tangkapan itu mengenali spesiesnya, satu dari jenisnya naik ke Ark. Setiap orang bisa punya hingga dua hewan hidup dari satu spesies di Ark: sepasang. Menangkap spesies yang sama lagi tidak menambah apa pun selama keduanya masih hidup. Jika satu mati, tangkapanmu berikutnya dari spesies itu membawa penggantinya.",
+        "p2": "Hanya spesies yang punya model 3D yang bisa naik ke Ark. Tangkapan dari spesies yang modelnya belum siap akan menunggu, lalu naik saat modelnya siap.",
+        "p3": "Setiap hewan menunjukkan siapa yang membawanya, dengan @nama pengguna, atau sebagai Voyager jika orang itu berusia di bawah 18 tahun atau tidak punya nama pengguna. Tempat hewan itu ditangkap tidak pernah ditampilkan."
+      },
+      "islands": {
+        "title": "Dua pulau: alam liar dan kota",
+        "p1": "Pulau alam liar punya wilayah mulai dari samudra terbuka dan terumbu karang hingga hutan hujan, padang rumput, gurun, pegunungan, dan es kutub. Setiap spesies liar hidup di wilayah yang dijelaskan panduan lapangannya.",
+        "p2": "Pulau kota punya rumah, peternakan, dan kebun binatang. Hewan peliharaan tinggal di rumah, ternak dan unggas di peternakan, dan hewan yang difoto di kebun binatang tinggal di kandangnya. Hewan liar yang hidup di sekitar manusia, seperti cicak rumah, burung gereja, dan bebek mallard, tinggal di taman, pepohonan, kanal, dan atap kota.",
+        "p3": "Tempat tinggal seekor hewan ditentukan sekali, saat ia tiba, dari jenis tempat ia difoto: di alam liar, di rumah, di peternakan, atau di kebun binatang. Lokasinya sendiri tidak pernah sampai ke Ark."
+      },
+      "condition": {
+        "title": "Langkah membuat mereka berkembang",
+        "p1": "Setiap hewan yang kamu tangkap juga menjadi teman AI yang bisa kamu ajak bicara. Bawa sesuatu yang nyata dari hidupmu, dan ia menjawab dari sudut pandang jenisnya sendiri, lalu menyarankan satu langkah untuk dicoba. Saat kamu memberitahunya bahwa langkah itu berhasil, kondisi hewan-hewanmu dari jenis itu di Ark meningkat.",
+        "p2": "Kondisi punya tiga tingkat: biasa, baik, dan prima. Setiap langkah yang berhasil menutup sebagian jarak menuju puncak. Langkah yang hanya berhasil sebagian tidak menaikkan apa pun, dan kondisi perlahan turun lagi setelah berminggu-minggu tanpa langkah. Anak yang lahir di Ark mewarisi sebagian kondisi induknya, paling tinggi baik.",
+        "p3": "Kondisi mengubah hidup di Ark: hewan dalam kondisi prima berkembang biak di setiap masa kawin dan yang biasa lebih jarang, dan pemangsa yang berburu mengambil mangsa terlemah lebih dulu. Ark hanya menampilkan tingkatnya, tidak pernah apa yang dibicarakan siapa pun."
+      },
+      "food": {
+        "title": "Rantai makanan dari panduan lapangan",
+        "p1": "Siapa memangsa siapa berasal dari panduan lapangan setiap pemangsa. Makanannya menyebut spesies tertentu, atau kelompok seperti burung, ikan, atau serangga. Spesies yang disebut menjadi tautan makanan. Sebuah kelompok menjangkau setiap spesies dari kelompok itu di Ark, dengan tiga pemeriksaan: hewan tidak pernah memakan spesies atau genusnya sendiri, mangsa dari kelompok tidak boleh lebih besar dari pemangsanya (lebih kecil lagi jika panduannya menyebut mangsa kecil), dan keduanya harus berbagi alam yang sama: laut, air tawar, darat, atau udara.",
+        "p2": "Setiap tautan menyimpan kata-kata persis dari panduan lapangan asalnya, jadi kamu bisa melihat mengapa tautan itu ada.",
+        "p3": "Pemangsa hanya berburu di pulaunya sendiri dan di wilayahnya sendiri, dan pemangsa yang lapar memburu mangsa yang ditemuinya di sana, yang terlemah lebih dulu. Seberapa sering pemangsa butuh makan bergantung pada massa tubuhnya, dan pemburu berdarah dingin bisa lebih lama tanpa makan dibanding yang berdarah panas. Hewan peliharaan, hewan ternak, dan hewan kebun binatang diberi makan oleh pemeliharanya: mereka tidak berburu dan tidak pernah diburu. Selama dua minggu pertama Ark, hingga sekitar 25 November 2026, hewan yang naik ke Ark tidak pernah diburu, agar populasi mendapat awal yang baik.",
+        "p4": "Tumbuhan, biji, buah, nektar, serangga, cacing, dan makanan kecil lain di setiap wilayah adalah makanan latar. Makanan ini memberi makan hewan tanpa dihitung di Ark. Pemburu yang tidak punya apa pun untuk dimakan dan tidak punya makanan latar akan kelaparan, dan yang terlalu lama kelaparan akan mati kelaparan.",
+        "link": "Lihat setiap tautan makanan di Ark"
+      },
+      "breeding": {
+        "title": "Perkembangbiakan dan anak",
+        "p1": "Dua hewan dewasa dari satu spesies yang tinggal di tempat yang sama membesarkan anak saat ada makanan untuk mereka. Berapa banyak anaknya, dan berapa lama mereka lahir atau menetas, berasal dari panduan lapangan. Jika panduannya tidak menyebutkan, Ark memakai perkiraan yang diberi label: nilai tengah dari angka yang tersimpan untuk hewan dari kelas yang sama.",
+        "p2": "Hewan bertelur meletakkan sekumpulan telur yang menetas setelah masa inkubasinya; telur tidak dihitung sebagai hewan dan tidak pernah menjadi makanan. Anak tumbuh dewasa selama sebagian masa hidupnya, dan setiap spesies punya batas yang ditentukan ukurannya, jadi hewan kecil bisa menjadi lebih banyak daripada hewan besar. Perkembangbiakan berhenti di batas itu.",
+        "p3": "Anak-anak dihitung atas nama orang yang membawa induknya, jadi satu tangkapan bisa memulai garis keturunan yang bertahan selama beberapa generasi."
+      },
+      "seasons": {
+        "title": "Musim, hari, dan masa hidup",
+        "p1": "Ark punya kalendernya sendiri: satu tahun Ark berlalu setiap 14 hari nyata, masing-masing dimulai pada 1 Januari, dan dunianya bergerak maju sekali setiap jam, jadi ia sudah berubah di antara kunjunganmu. Spesies yang panduan lapangannya menyebut bulan atau musim kawin hanya berkembang biak saat itu. Spesies tanpa musim yang disebut, atau yang berkembang biak sepanjang tahun, bisa berkembang biak kapan saja.",
+        "p2": "Di dunia 3D, hewan yang disebut nokturnal oleh panduan lapangannya keluar pada malam hari, yang diurnal pada siang hari, dan yang krepuskular saat fajar dan senja.",
+        "p3": "Hewan dengan masa hidup liar yang diketahui menjadi tua dan mati karena usia saat mencapainya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
+      },
+      "honesty": {
+        "title": "Apa Ark itu, dan apa yang bukan",
+        "p1": "Ark dibangun dari panduan lapangan setiap hewan di AnimalDex. Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang, dan Ark bukan model ilmiah: angkanya menunjukkan bagaimana aturan itu berjalan di Ark, bukan berapa banyak suatu hewan hidup di alam liar. Siapa yang ada di Ark adalah apa pun yang difoto orang, jadi campurannya bukan campuran alam: ada jauh lebih banyak kucing dan anjing di Ark daripada macan tutul salju.",
+        "p2": "Semua yang menentukan hidup dan mati berjalan di server AnimalDex, sama untuk semua orang. Apa yang kamu lihat dalam 3D, seperti ke mana hewan berjalan atau kapan ia menoleh, digambar di perangkatmu dan tidak mengubah apa pun."
+      },
+      "ctaTitle": "Lihat sendiri",
+      "ctaBody": "Buka Ark di browsermu, atau tangkap seekor hewan di aplikasi untuk membawa satu dari jenisnya naik ke Ark.",
+      "ctaArk": "Lihat Ark",
+      "ctaFoodChain": "Siapa memangsa siapa",
+      "ctaAbout": "Tentang AnimalDex"
+    },
+    "foodChain": {
+      "metaTitle": "Rantai Makanan Ark: Siapa Memangsa Siapa",
+      "metaDescription": "Ketuk hewan mana pun di Ark bersama AnimalDex untuk melihat apa yang dimakannya dan apa yang memangsanya, dengan kata-kata dari panduan lapangan asal setiap tautan.",
+      "metaFocusTitle": "Apa yang memangsa {animal}? Rantai makanan Ark",
+      "metaFocusDescription": "Apa yang dimakan {animal} dan apa yang memangsanya di Ark bersama AnimalDex, dengan kata-kata dari panduan lapangan asal setiap tautan makanan.",
+      "breadcrumb": "Siapa memangsa siapa",
+      "eyebrow": "Ark",
+      "title": "Siapa memangsa siapa di Ark",
+      "intro": "Setiap tautan makanan di sini berasal dari panduan lapangan seekor pemangsa di AnimalDex: spesies yang disebutnya, atau kelompok seperti burung atau ikan. Hanya hewan yang ada di Ark saat ini yang ditampilkan, dan hanya tautan yang bisa dipakai Ark: antara hewan liar di wilayah yang sama.",
+      "live": "{animals} dari {species} di Ark saat ini.",
+      "unavailable": "Ark tidak dapat dibaca saat ini, jadi rantai makanannya tidak dapat ditampilkan.",
+      "searchLabel": "Cari hewan di Ark",
+      "searchPlaceholder": "Ketik nama",
+      "listTitle": "Hewan di Ark",
+      "listHint": "Ketuk seekor hewan untuk melihat tautan makanannya.",
+      "noMatch": "Tidak ada hewan di Ark yang cocok dengan nama itu.",
+      "showAll": "Tampilkan semua {count}",
+      "aboardOne": "1 di Ark",
+      "aboardOther": "{count} di Ark",
+      "eats": "Memakan",
+      "eatenBy": "Dimangsa oleh",
+      "eatsNone": "Tidak ada hewan di wilayahnya di Ark yang disebut sebagai makanan oleh panduan lapangannya.",
+      "eatenByNone": "Tidak ada yang memburunya di wilayahnya di Ark.",
+      "kept": "Semua yang ada di Ark adalah hewan pemeliharaan: hewan peliharaan, ternak, dan hewan kebun binatang diberi makan oleh pemeliharanya, dan mereka tidak berburu atau diburu.",
+      "pet": "Hewan peliharaan tidak pernah menjadi mangsa di Ark.",
+      "fieldGuide": "Panduan lapangannya: “{phrase}”",
+      "about": "Tentang {animal}",
+      "seeInArk": "Lihat di Ark",
+      "loading": "Membaca tautan makanannya…",
+      "error": "Tautan makanannya tidak dapat dibaca saat ini.",
+      "howTitle": "Bagaimana tautan dibuat",
+      "howBody": "Spesies yang disebut dalam makanan sebuah panduan lapangan menjadi tautan. Sebuah kelompok (burung, ikan, serangga) menjangkau setiap spesies dari kelompok itu di Ark yang tidak lebih besar dari pemangsanya, bukan dari genusnya sendiri, dan berbagi alam yang sama. Pemangsa hanya berburu di pulaunya sendiri dan di wilayahnya sendiri.",
+      "howLink": "Cara kerja Ark",
+      "note": "Dibangun dari panduan lapangan setiap hewan di AnimalDex. Ini bukan model ilmiah.",
+      "compactTitle": "Siapa memangsa siapa di Ark",
+      "compactIntro": "Tautan makanan dari panduan lapangan setiap hewan, antara hewan-hewan yang ada di Ark saat ini. Ketuk salah satunya.",
+      "compactMore": "Lihat seluruh rantai makanan",
+      "chooseLabel": "Pilih seekor hewan",
+      "andMore": "dan {count} lainnya"
+    },
+    "about": {
+      "metaTitle": "Tentang AnimalDex: Dunia Riset Hewan yang Hidup",
+      "metaDescription": "Tangkap hewan di dunia nyata dan jadikan mereka teman AI di dunia 3D: simulasi bersama yang berjalan dengan rantai makanan dari panduan lapangan setiap hewan.",
+      "breadcrumb": "Tentang",
+      "eyebrow": "Tentang AnimalDex",
+      "title": "Dunia riset yang hidup, berisi hewan sungguhan",
+      "tagline": "Tangkap hewan di dunia nyata dan jadikan mereka teman AI di dunia 3D.",
+      "intro": "AnimalDex dimulai dari hewan sungguhan yang kamu temui: di alam liar, di kebun binatang, di taman, atau di rumah. Potret hewan itu, dan aplikasi mengenali spesiesnya lalu menjadikannya teman yang bisa kamu ajak bicara. Satu dari jenisnya naik ke Ark, dunia 3D bersama yang bisa dibuka siapa saja di browser.",
+      "live": "Saat ini {animals} dari {species} hidup di Ark, dibawa oleh {people}.",
+      "peopleOne": "1 orang",
+      "peopleOther": "{count} orang",
+      "research": {
+        "title": "Dunia untuk diamati, bukan permainan untuk dimenangkan",
+        "p1": "Ark adalah simulasi bersama dari spesies-spesies hewan. Tidak ada level yang harus dikalahkan dan tidak ada yang harus digiling: hewan datang, makan, membesarkan anak, menjadi tua, dan mati, dan populasi naik turun seiring waktu lewat musim dan lewat rantai makanan yang diambil dari panduan lapangan setiap hewan.",
+        "p2": "Kamu mengikuti apa yang terjadi pada hewan-hewan yang kamu bawa, dan milik semua orang lainnya, di satu dunia yang sama untuk semua orang."
+      },
+      "pointOfView": {
+        "title": "Alam dari sudut pandang seekor hewan",
+        "p1": "Setiap hewan di AnimalDex menjawab dari hidupnya sendiri: apa yang dimakannya, apa yang memburunya, bagaimana ia membesarkan anak, dan bagaimana jenisnya melewati masa sulit. Berbicara dengannya adalah jalan untuk memahami bagaimana spesies itu menghadapi dunia.",
+        "p2": "Di Ark, setiap hewan punya kisah hidup: dari mana ia datang, di mana ia tinggal, anak-anak yang ia besarkan, dan bagaimana hidupnya berjalan."
+      },
+      "fieldGuides": {
+        "title": "Dibangun dari panduan lapangan, disampaikan dengan jujur",
+        "p1": "Setiap dari {catalog} hewan di AnimalDex punya panduan lapangan: habitatnya, makanannya, masa hidupnya, perkembangbiakannya, dan perilakunya. Ark mengubah isian itu menjadi aturan, menyimpan kata-kata persis asal setiap tautan makanan, dan memberi label pada setiap perkiraan yang dibuatnya saat sebuah panduan tidak menyebutkan.",
+        "p2": "Ark bukan model ilmiah. Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang, dan angka-angka Ark menggambarkan apa yang terjadi di Ark, bukan berapa banyak hewan apa pun hidup di alam liar. Siapa yang ada di Ark adalah apa pun yang difoto orang, jadi campuran spesiesnya bukan campuran alam."
+      },
+      "privacy": {
+        "title": "Apa yang ditampilkan Ark, dan apa yang tidak",
+        "p1": "Ark menampilkan spesies, jumlah, kisah hidup, dan siapa yang membawa setiap hewan, dengan @nama pengguna. Orang di bawah 18 tahun dan akun tanpa nama pengguna muncul sebagai Voyager. Tempat siapa pun menangkap seekor hewan, dan apa yang dibicarakan siapa pun dengan teman-temannya, tidak pernah ditampilkan."
+      },
+      "who": {
+        "title": "Siapa yang membuat AnimalDex",
+        "p1": "AnimalDex dibuat oleh GHOSTSEED LTD, perusahaan yang terdaftar di Inggris dan Wales. Aplikasinya gratis diunduh di iPhone dan Android, dan Ark gratis dibuka di web."
+      },
+      "linksTitle": "Jelajahi lebih jauh",
+      "linkArk": "Buka Ark",
+      "linkHow": "Cara kerja Ark",
+      "linkFood": "Siapa memangsa siapa",
+      "linkTalk": "Bicara dengan hewan"
+    }
+  },
+  "species": {
+    "inTheArk": {
+      "trendLine": "Sejak {date}: {changes}.",
+      "trendNone": "Tidak ada yang naik ke Ark atau pergi sejak {date}.",
+      "trendArrived": "{count} naik ke Ark",
+      "trendBorn": "{count} lahir",
+      "trendEaten": "{count} dimangsa",
+      "trendDiedOld": "{count} mati karena usia",
+      "trendStarved": "{count} mati kelaparan",
+      "trendSeparator": ", ",
+      "arkEats": "Di Ark ia bisa memakan",
+      "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
+      "foodChain": "Lihat siapa memangsa siapa di Ark"
     }
   }
 }
