@@ -13,7 +13,7 @@ import {paddockRect, paddockSegments, picketRuns, plotFrame} from "@/ark-scene/p
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
-import {hashString, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+import {arkWorld, hashString, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 /**
@@ -27,6 +27,9 @@ const SIZE = Math.ceil((TERRAIN_HALF * 2) / CELL);
 
 /** The old `NavGrid` constructor's two loops, verbatim. */
 function referenceCells(sampler: ArkWorldSampler): Omit<NavCells, "version" | "size"> {
+    // (Part C, v2: the world's own water depth where it gives one, its lake and river above the sea, never walked: the
+    // one rule the walk grid has gained since. Absent, as on today's island, the old loops exactly.)
+    const waterDepth = sampler.waterDepth?.bind(sampler) ?? null;
     const walk = new Uint8Array(SIZE * SIZE);
     const steep = new Float32Array(SIZE * SIZE);
     const depth = new Float32Array(SIZE * SIZE);
@@ -38,14 +41,14 @@ function referenceCells(sampler: ArkWorldSampler): Omit<NavCells, "version" | "s
             const h = sampler.heightAt(x, z);
             const k = j * SIZE + i;
             height[k] = h;
-            depth[k] = h < 0 ? -h : 0;
+            depth[k] = waterDepth ? Math.max(waterDepth(x, z), 0) : h < 0 ? -h : 0;
         }
     }
     for (let j = 1; j < SIZE - 1; j++) {
         for (let i = 1; i < SIZE - 1; i++) {
             const k = j * SIZE + i;
             const h = height[k];
-            if (h <= 0.05) continue;
+            if (h <= 0.05 || (waterDepth && depth[k] > 0)) continue;
             const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + SIZE] - height[k - SIZE])) / (2 * CELL);
             steep[k] = slope;
             const x = -TERRAIN_HALF + (i + 0.5) * CELL;
@@ -180,10 +183,14 @@ function finest<T>(build: SlicedBuild<T>): {result: T; slices: number} {
     }
 }
 
-const allAtOnce = sceneSampler();
-const reference = referencePlaces();
+// (The bigger wild island, v2: its places are its own (its lake's wandering shore, both river reaches, the wetland's
+// pools), not the old build's of today's island, which the reference copies; the slicing tests below hold on both.)
+const V2 = arkWorld() === "v2" ? "v2: the reference is today's island's old build" : false;
 
-test("the places are the old build's: the same points, ids, order and version", () => {
+const allAtOnce = sceneSampler();
+const reference = V2 ? {version: "", points: new Map<AttachTag, AttachPoint[]>()} : referencePlaces();
+
+test("the places are the old build's: the same points, ids, order and version", {skip: V2}, () => {
     assert.equal(allAtOnce.version, reference.version);
     for (const tag of ATTACH_TAGS) assert.deepEqual(allAtOnce.attachPoints(tag), reference.points.get(tag) ?? [], tag);
 });
@@ -250,7 +257,7 @@ test("the schedule world built between frames is the world built at once, and be
     assert.equal(early.version, once.sampler.version);
 });
 
-test("the hamlet's plots: houses, barns, coops and fences block the walk grid, built sliced as all at once", () => {
+test("the hamlet's plots: houses, barns, coops and fences block the walk grid, built sliced as all at once", {skip: arkWorld() === "v2" ? "v2: no hamlet on the bigger wild island" : false}, () => {
     // The map lane's plots for a full hamlet (houses and smallholdings), as the scene sets them beside setAttachHomePlots.
     const plots = homePlots(900, 220);
     assert.ok(plots.length >= 6, `plots ${plots.length}`);
@@ -361,7 +368,7 @@ test("the drawn rocks: the map's shapes (drawnRocks, inRock), walkers never insi
     }
 });
 
-test("the garden pond: walkers never step in it or on its stones; they drink just outside, facing the water", () => {
+test("the garden pond: walkers never step in it or on its stones; they drink just outside, facing the water", {skip: arkWorld() === "v2" ? "v2: no garden pond on the bigger wild island" : false}, () => {
     const grid = new NavGrid(allAtOnce);
     const reach = GARDEN_POND.radius + POND_STONES;
     let points = 0;

@@ -369,6 +369,12 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
                 const near = list.filter((point) => rockWithin(point.x, point.z));
                 if (near.length) list = near;
             }
+            // (v2: a flyer comes in to a rock by air and rests on its top, a ledge, never hanging on its face, inside the
+            // rock's bounds, where the collisions' layer and the audit find it in the rock.)
+            if (arkWorld() === "v2" && flyerOnRocks(species, animal.model_slug)) {
+                const off = list.filter((point) => point.tag !== "rock_face");
+                if (off.length) list = off;
+            }
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
@@ -786,6 +792,11 @@ function pointsNear(x: number, z: number, reach: number): AttachPoint[] {
     return found.sort((a, b) => a - b).map((k) => all[k]);
 }
 
+/** A flyer (its movement, or a bat's body): it comes in to a rock by air, so it rests on top of one, never on its face. */
+function flyerOnRocks(species: MapSpecies, slug: string): boolean {
+    return species.move === "fly" || species.move === "perch" || bodyOf(slug) === "t";
+}
+
 /** The dens that are rock's: a crevice, a cave. */
 const ROCK_DENS: ReadonlySet<string> = new Set(["crevice", "cave"]);
 /** How far a rock den may be from its home (m); none: the home goes to the rocks (`mapPlace`). */
@@ -884,11 +895,13 @@ export function atRock(x: number, z: number, point: string | null): boolean {
  * in reach (its home was put by rocks when it had none: `mapPlace`).
  */
 function rockDen(map: MapPlace, perch: MapPerch | null, x: number, z: number): ScheduleSpot | null {
-    if (perch && (perch.tag === "rock_face" || perch.tag === "ledge") && denIsDry(perch.x, perch.z)) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
+    if (perch && ((perch.tag === "rock_face" && !(arkWorld() === "v2" && map.species && flyerOnRocks(map.species, map.who!.slug))) || perch.tag === "ledge") && denIsDry(perch.x, perch.z)) return {x: perch.x, y: perch.y, z: perch.z, nx: perch.nx, ny: perch.ny, nz: perch.nz, point: `map:${perch.id}`};
     const who = map.who!;
     const roll = (hashString(`${who.slug}#rockden#${map.key}`) % 1000) / 1000;
+    // (v2: a flyer's den on a rock is its top, a ledge: `flyerOnRocks`.)
+    const facesToo = !(arkWorld() === "v2" && map.species && flyerOnRocks(map.species, who.slug));
     const points = pointsNear(x, z, ROCK_DEN_REACH)
-        .filter((point) => (point.tag === "rock_face" || point.tag === "ledge") && Math.hypot(point.x - x, point.z - z) <= ROCK_DEN_REACH && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
+        .filter((point) => ((point.tag === "rock_face" && facesToo) || point.tag === "ledge") && Math.hypot(point.x - x, point.z - z) <= ROCK_DEN_REACH && who.length >= point.size.min * 0.5 && who.length <= point.size.max * 1.5 && denIsDry(point.x, point.z))
         .sort((a, b) => Math.hypot(a.x - x, a.z - z) - Math.hypot(b.x - x, b.z - z) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (points.length) {
         const point = points[Math.floor(roll ** 1.4 * points.length)];

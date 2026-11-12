@@ -484,7 +484,8 @@ const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.h
 function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number): AttachPoint | null {
     for (const tag of tags) {
         const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius});
-        const fits = near.filter((p) => length >= p.size[0] * 0.5 && length <= p.size[1] * 1.5);
+        // (A place inside a tree's crown, on the bigger wild island: no body larger than its own small size.)
+        const fits = near.filter((p) => length >= p.size[0] * 0.5 && length <= p.size[1] * (p.hidden ? 1.05 : 1.5));
         // (Grounding, L3: never a tree perch that does not suit it, a pelican on a twig or a crane in a crown hidden in the
         // leaves; another goal instead.)
         const list = fits.length ? fits : near.filter((p) => p.tag !== "branch" && p.tag !== "canopy_hang");
@@ -1952,7 +1953,8 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             const route = leg.path ?? [from, to];
             const at = alongRoute(route, u);
             const base = from.y + (to.y - from.y) * u;
-            const ground = topAt(world, at.x, at.z);
+            // (v2: over the drawn rocks' tops too, `flightFloor`: the bigger island's mountain is rock-strewn.)
+            const ground = world.sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), world.sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
             // Take off, climb to its band, cruise, and come down to land (gliding in on long legs).
             const rise = Math.min(u / 0.18, 1);
             const fall = Math.min((1 - u) / 0.22, 1);

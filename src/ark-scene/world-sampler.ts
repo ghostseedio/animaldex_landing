@@ -22,6 +22,8 @@ import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
+import {perchHidden} from "@/ark-scene/grounding/perch";
+import treeAttachFile from "@/ark-scene/tree-attach.json";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {arkWorld, hashString, heightAt as groundHeight, LAKE, onArkWorld, RIVER, RIVER_UPPER, TERRAIN_HALF} from "@/ark-scene/world";
@@ -78,6 +80,11 @@ export type AttachPoint = {
     /** Under a limb (`canopy_hang`): the clear drop below it (m), and the limb's radius there. */
     clearBelow?: number;
     radius?: number;
+    /**
+     * Part C (v2): inside a tree's crown (`grounding/perch.ts` perchHidden): a body no larger than its size, which is
+     * already the crown's small one (the grounding audit's rule), never the half again a place otherwise allows.
+     */
+    hidden?: boolean;
 };
 
 export interface ArkWorldSampler {
@@ -99,6 +106,11 @@ export interface ArkWorldSampler {
      * is what it was.
      */
     waterSurface?(x: number, z: number): number;
+    /**
+     * Part C (v2): what a flight keeps above (m): the ground, or a drawn rock's top where one stands (the bigger island's
+     * mountain is rock-strewn). Absent: the ground alone, as before.
+     */
+    flightFloor?(x: number, z: number): number;
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
@@ -150,6 +162,9 @@ const FROM_SCENERY: Partial<Record<SceneryTag, AttachTag>> = {
  * diagonal however the rock is turned) holds no point of the rock.
  */
 export const ROCK_MARGIN = 1.25;
+
+/** The trees' attach points measure how open each is (`sampler.ts`'s and the grounding audit's own test). */
+const OPEN_MEASURED = ((treeAttachFile as unknown as {generator?: number}).generator ?? 0) >= 7;
 
 /** v2: a cave mouth stands this far out from its rock's drawn box (m): a roosting bat's body clear of the rock. */
 const CAVE_MOUTH_OUT = 0.6;
@@ -270,7 +285,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         const p = scenery[i];
         const tag = FROM_SCENERY[p.tag];
         if (!tag) return;
-        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {})});
+        add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {}), ...(v2 && perchHidden(p.tag, p.open, OPEN_MEASURED) ? {hidden: true} : {})});
     }));
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
@@ -476,6 +491,12 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 }
             }
         }
+        /** The top of a drawn rock over a point (the highest), or -Infinity. */
+        const rockTopAt = (x: number, z: number) => {
+            let top = -Infinity;
+            for (const rock of rockIndex.get(`${Math.floor(x / 6)},${Math.floor(z / 6)}`) ?? []) if (rock.y1 > top && nearDrawnRock(rock, x, z, 0.3)) top = rock.y1;
+            return top;
+        };
         const rockAt = (x: number, z: number, clearance: number) => {
             const widen = clearance + ROCK_MARGIN;
             // (A point within `widen` of a box, in the rock's frame, is within widen·√2 of it on the world's axes.)
@@ -524,7 +545,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             version: `${v2 ? "v2:" : ""}scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
             // Part C (P4): on v2 the walk grid covers the bigger island's own square (`behaviour-nav.ts` extentOf), and
             // knows its fresh water, which stands above the sea.
-            ...(v2 ? {half: TERRAIN_HALF, centre: {x: 0, z: 0}, waterDepth: wildWaterDepth, waterSurface: wildWaterSurface} : {}),
+            ...(v2 ? {half: TERRAIN_HALF, centre: {x: 0, z: 0}, waterDepth: wildWaterDepth, waterSurface: wildWaterSurface, flightFloor: (x: number, z: number) => Math.max(lattice.at(x, z), rockTopAt(x, z))} : {}),
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
             isWater: v2 ? (x, z) => wildWaterDepth(x, z) > 0 : (x, z) => surface(x, z).waterDepth > 0,
