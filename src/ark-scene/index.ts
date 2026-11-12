@@ -67,6 +67,7 @@ import {
     Group,
     Mesh,
     MeshStandardMaterial,
+    type ShaderMaterial,
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
@@ -672,7 +673,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     if (landscape) scene.add(landscape.ground, landscape.water);
-    if (island) scene.add(island.root);
+    if (island) {
+        scene.add(island.root);
+        // One sea for the one world (decision 143): the wild island's, reading the town's sea floor over its square.
+        const uniforms = (landscape.water.material as ShaderMaterial).uniforms;
+        if (uniforms.islandDepth && island.seaDepth) {
+            uniforms.islandDepth.value = island.seaDepth;
+            (uniforms.islandPatch.value as {set: (x: number, y: number, z: number, w: number) => void}).set(island.origin.x, island.origin.z, island.half, 16);
+        }
+    }
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
     const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.

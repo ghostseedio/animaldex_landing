@@ -9,7 +9,7 @@
  * Everything here answers in world coordinates; the town's own modules work in its local frame (+ the origin).
  */
 
-import type {Group} from "three";
+import type {Group, Mesh, ShaderMaterial, Texture} from "three";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
@@ -25,6 +25,9 @@ export type ArkIslandScene = {
     origin: {x: number; z: number};
     /** Its meshes, already at the origin. */
     root: Group;
+    /** Half its square (m), and its sea floor's depth map over it (r = depth / 16 m) for the one world's sea (decision 143). */
+    half: number;
+    seaDepth: Texture | null;
     /** Within its square (its ground answers there; the wild island's outside). */
     contains: (x: number, z: number) => boolean;
     /** The ground's height in the world frame (inside its square). */
@@ -91,8 +94,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const town = buildTownIsland({tier: options.tier, zooOpen: open.length ? open : launchEnclosures()});
     town.root.position.set(origin.x, 0, origin.z);
     // One sea for the world (decision 143): the wild island's; the town's own plane would lie over it.
-    const sea = town.root.getObjectByName("town:sea");
+    const sea = town.root.getObjectByName("town:sea") as Mesh | undefined;
     if (sea) sea.visible = false;
+    const seaDepth = ((sea?.material as ShaderMaterial | undefined)?.uniforms?.depthMap?.value as Texture | null | undefined) ?? null;
     town.root.updateMatrixWorld(true);
     let openKey = (open.length ? open : launchEnclosures()).join(",");
     // The zoo's day: its enrichment and the food at its stations (`render/zoo-life.ts`), in the town's frame.
@@ -110,6 +114,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         id: "town",
         origin,
         root: town.root,
+        half: def.half,
+        seaDepth,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         has,
