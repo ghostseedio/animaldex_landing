@@ -111,6 +111,12 @@ export interface ArkWorldSampler {
      * mountain is rock-strewn). Absent: the ground alone, as before.
      */
     flightFloor?(x: number, z: number): number;
+    /**
+     * Part C (the town): on a road's carriageway there, where the cars drive and park (lane MA3). A bird that walks or
+     * swims first ends no walk or swim on one (under a bridge too) and walks across none (`behaviour-schedule.ts`
+     * walkable). Absent: no roads (the wild islands).
+     */
+    roadway?(x: number, z: number): boolean;
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
