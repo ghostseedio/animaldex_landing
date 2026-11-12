@@ -7,7 +7,7 @@
  */
 
 import type {IslandId} from "@/ark-live/islands";
-import type {EndState, SessionStats, StartResult, Store, StoreAnimal, StoredState, TraceRow} from "@/ark-live/room";
+import type {EndState, MealRequest, MealStatus, SessionStats, StartResult, Store, StoreAnimal, StoredState, TraceRow} from "@/ark-live/room";
 import type {ReleaseReason} from "@/ark-live/protocol";
 import {COOLDOWN_S, DAY_LIMIT_S, LOCK_TTL_S, SESSION_LIMIT_S} from "@/ark-live/session";
 import {signTicket} from "@/ark-live/ticket";
@@ -25,6 +25,11 @@ export class MemoryStore implements Store {
     tickedToStep = -1;
     /** Fail every call (the store-down tests). */
     down = false;
+    /** Phase 3: `voyage_config.player_hunting`, the previous day's tick meals (the Ark-wide cap's base), and the ecology's verdict. */
+    huntingOn = true;
+    previousDayTickMeals = 0;
+    decide: (row: {predatorId: string; preyId: string}) => {ok: true} | {ok: false; reason: string} = () => ({ok: true});
+    readonly meals: Array<{id: string; sessionId: string; hunter: string; predatorId: string; preyId: string; preyOwner: string | null; at: number; status: MealStatus["status"]; reason?: string}> = [];
 
     constructor(private readonly now: () => number) {}
 
@@ -120,6 +125,41 @@ export class MemoryStore implements Store {
     async stateOf(animalId: string): Promise<StoredState | null> {
         if (this.down) throw new Error("store down");
         return this.states.get(animalId) ?? null;
+    }
+
+    /** Phase 3 (`ark_live_meal_request_v1`): the D9/D10 caps, then a pending request the ecology decides. */
+    async mealRequest(sessionId: string, predatorId: string, preyId: string): Promise<MealRequest> {
+        if (this.down) throw new Error("store down");
+        if (!this.huntingOn) return {ok: false, reason: "off"};
+        const session = this.sessions.get(sessionId);
+        const lock = this.locks.get(predatorId);
+        if (!session || session.endedAt || !lock || lock.sessionId !== sessionId) return {ok: false, reason: "not_controlled"};
+        if (this.meals.some((m) => m.sessionId === sessionId && m.status === "pending")) return {ok: false, reason: "busy"};
+        const day = this.dayStart(this.now());
+        const today = this.meals.filter((m) => m.status === "confirmed" && m.at >= day);
+        const preyOwner = this.animals.get(preyId)?.owners[0] ?? null;
+        if (today.some((m) => m.hunter === session.userId)) return {ok: false, reason: "cap_hunter"};
+        if (preyOwner && today.some((m) => m.preyOwner === preyOwner)) return {ok: false, reason: "cap_owner"};
+        if (today.length >= Math.max(3, Math.floor(0.15 * this.previousDayTickMeals))) return {ok: false, reason: "cap_ark"};
+        const id = (globalThis as {crypto: Crypto & {randomUUID: () => string}}).crypto.randomUUID();
+        this.meals.push({id, sessionId, hunter: session.userId, predatorId, preyId, preyOwner, at: this.now(), status: "pending"});
+        return {ok: true, id};
+    }
+
+    /** Phase 3 (`ark_live_meal_status_v1`): decided on first read (the ecology's `applyPlayerMeal` stands in as `decide`). */
+    async mealStatus(id: string): Promise<MealStatus> {
+        if (this.down) throw new Error("store down");
+        const m = this.meals.find((x) => x.id === id);
+        if (!m) return {status: "rejected", reason: "unknown"};
+        if (m.status === "pending") {
+            if (this.now() - m.at > 8000) m.status = "expired";
+            else {
+                const verdict = this.decide({predatorId: m.predatorId, preyId: m.preyId});
+                m.status = verdict.ok ? "confirmed" : "rejected";
+                if (!verdict.ok) m.reason = verdict.reason;
+            }
+        }
+        return {status: m.status, reason: m.reason};
     }
 
     /** The tick's read (`voyage_home_overrides_v1`): every stored home override on an island. */

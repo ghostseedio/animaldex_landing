@@ -33,6 +33,8 @@ export type ControlWords = {
     turnBack: string;
     crossing: string;
     talk: string;
+    hungry: string;
+    hunt: Record<string, string>;
     released: Record<string, string>;
     rotate: string;
     keys: string;
@@ -79,6 +81,19 @@ export const CONTROL_WORDS_EN: ControlWords = {
     turnBack: "Turn back",
     crossing: "Crossing the strait",
     talk: "Talk",
+    hungry: "Hungry: it can hunt",
+    hunt: {
+        contact: "Caught!",
+        confirmed: "It has eaten",
+        escaped: "It slipped away",
+        not_hungry: "Just a practice chase: it isn't hungry",
+        protected: "That one is kept safe",
+        cap_hunter: "That's enough hunting for today",
+        cap_owner: "That keeper has lost one already today",
+        cap_ark: "The Ark has had enough hunting today",
+        off: "Just a practice chase",
+        other: "It slipped away"
+    },
     released: {
         player: "Back to its own life",
         session_limit: "It needs to rest now",
@@ -254,6 +269,7 @@ export class ControlHud {
         else if (m.flags & METER_FLAG.EXHAUSTED) text = w.exhausted;
         else if (m.flags & METER_FLAG.UNCOMFORTABLE) text = w.uncomfortable[m.cause] ?? w.uncomfortable.none;
         else if (m.stamina < 0.6) text = w.breathless;
+        else if (m.flags & METER_FLAG.HUNGRY) text = w.hungry;
         this.line.textContent = text;
         this.time.textContent = fill(w.left, {time: `${Math.floor(m.sessionLeft / 60)}:${String(Math.floor(m.sessionLeft % 60)).padStart(2, "0")}`});
         if (!this.crossing) this.crossButton.style.display = m.flags & METER_FLAG.CAN_CROSS ? "block" : "none";

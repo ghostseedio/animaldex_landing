@@ -46,7 +46,7 @@ export const POSE_FLAG = {RUN: 1, STALK: 2, SPRINT: 4, FIRST_PERSON: 8, STILL: 1
 /** Snapshot flags per animal (server → everyone). */
 export const ENTITY_FLAG = {EXHAUSTED: 1, DISTRESSED: 2, CROSSING: 4, HELD: 8, TALKING: 16, YOURS: 32} as const;
 /** Meter flags (server → its controller). */
-export const METER_FLAG = {EXHAUSTED: 1, DISTRESSED: 2, UNCOMFORTABLE: 4, IN_DANGER: 8, NO_RUN: 16, ONE_WAY_DROP: 32, CAN_CROSS: 64} as const;
+export const METER_FLAG = {EXHAUSTED: 1, DISTRESSED: 2, UNCOMFORTABLE: 4, IN_DANGER: 8, NO_RUN: 16, ONE_WAY_DROP: 32, CAN_CROSS: 64, HUNGRY: 128} as const;
 
 /** Why the server corrected a pose. */
 export const CORRECTION_REASONS = ["none", "speed", "teleport", "terrain", "mode", "time", "turn", "bounds", "enclosure", "held", "depth", "altitude", "exhausted", "crossing"] as const;

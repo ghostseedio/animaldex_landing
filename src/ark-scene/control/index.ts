@@ -29,6 +29,8 @@ export type PlayerControlEvent =
     | {kind: "denied"; animalId: string; reason: string}
     | {kind: "ended"; animalId: string; reason: string}
     | {kind: "haptic"; type: "takeoff" | "land" | "bump" | "warn"}
+    /** Phase 3: a hunt ended in a meal (everyone hears it: the prey goes from the scene until the next snapshot). */
+    | {kind: "eaten"; preyId: string}
     /** Phase 2: Talk pressed beside another animal (the page opens that animal's chat with its Ark id). */
     | {kind: "talk"; animalId: string; slug?: string | null};
 
@@ -81,6 +83,14 @@ export class PlayerControl {
                     else if (phase === "denied" && reason) this.hud?.flash(reason);
                 },
                 onControlledSet: () => o.onPins?.(),
+                onHunt: (phase, preyId, reason) => {
+                    if (phase === "confirmed") o.onEvent?.({kind: "eaten", preyId});
+                    if (!this.hud) return;
+                    const w = this.words.hunt;
+                    if (phase === "contact" || phase === "confirmed" || phase === "escaped") this.hud.flash(w[phase] ?? w.other);
+                    else if (phase === "denied") this.hud.flash(w[reason ?? "other"] ?? w.escaped);
+                    if (phase === "contact") o.onEvent?.({kind: "haptic", type: "bump"});
+                },
                 onTalkReady: (animalId) => {
                     this.talkTarget = animalId;
                     this.hud?.setTalk(Boolean(animalId));

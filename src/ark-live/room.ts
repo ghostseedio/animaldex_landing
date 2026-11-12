@@ -46,6 +46,7 @@ import {ZONE_SITES} from "@/ark-scene/world";
 import {encodeNpc, type NpcOffset} from "@/ark-live/protocol";
 import {actionCode, NPC_HZ, type NpcReactions} from "@/ark-live/npc-reactions";
 import type {NpcWorld} from "@/ark-live/npc-world";
+import {eats as foodEats} from "@/ark-scene/food-links";
 import {ZONE_REGION, type ArkArea, type ArkZone} from "@/ark-scene/types";
 
 export interface ClientLink {
@@ -108,7 +109,14 @@ export type EndState = {
     home: HomeOverride | null;
 };
 
+/** Phase 3: a player kill, as the database decides it (contract: ark_live_meal_request_v1 / ark_live_meal_status_v1). */
+export type MealRequest = {ok: true; id: string} | {ok: false; reason: string};
+export type MealStatus = {status: "pending" | "confirmed" | "rejected" | "expired"; reason?: string};
+
 export interface Store {
+    /** Phase 3 (optional: phase 1 stores have none, and hunting stays off). */
+    mealRequest?(sessionId: string, predatorId: string, preyId: string, evidence: Record<string, unknown>): Promise<MealRequest>;
+    mealStatus?(id: string): Promise<MealStatus>;
     start(args: {nonce: string; sessionId: string; userId: string; animalId: string; island: IslandId; client: string | null; appVersion: string | null}): Promise<StartResult>;
     heartbeat(sessionIds: string[]): Promise<void>;
     trace(rows: TraceRow[]): Promise<void>;
@@ -138,6 +146,11 @@ export type RoomOptions = {
     homeOf?: HomeLookup;
     /** Phase 2: the shared schedule and reactions near players, once built (null until then, or without a snapshot). */
     npc?: () => {world: NpcWorld; reactions: NpcReactions} | null;
+    /**
+     * Phase 3: whether a predator is due to hunt now (the encounter lane's `voyage_hunting_v1` hunt_from), or null when
+     * nobody knows here (the database's re-check decides). Absent: hunting is off in this room.
+     */
+    hunting?: () => {due(animalId: string, nowMs: number): boolean | null} | null;
     log?: (line: string) => void;
 };
 
@@ -183,6 +196,10 @@ export type Session = {
     /** Arrived on this island by a crossing during this session (for the retrace). */
     crossed: StoredState["crossed"];
     talking: boolean;
+    /** Phase 3: a contact being held (mouth on the prey), a kill being decided, and a pause after either. */
+    contact: {preyId: string; since: number} | null;
+    hunt: {id: string; preyId: string; at: number; lastPoll: number} | null;
+    huntQuietUntil: number;
     lastMeterAt: number;
     lastTraceStep: number;
     stamina0: number;
@@ -501,6 +518,9 @@ export class Room {
             crossing: null,
             crossed: state?.crossed ?? null,
             talking: false,
+            contact: null,
+            hunt: null,
+            huntQuietUntil: 0,
             lastMeterAt: 0,
             lastTraceStep: traceStep(now / 1000),
             stamina0: 1,
@@ -797,6 +817,7 @@ export class Room {
                 if (sig.uncomfortable) flags |= METER_FLAG.UNCOMFORTABLE;
                 if (sig.inDanger) flags |= METER_FLAG.IN_DANGER;
                 if (sig.noRun) flags |= METER_FLAG.NO_RUN;
+                if (this.o.hunting?.()?.due(s.animalId, now) === true) flags |= METER_FLAG.HUNGRY;
                 const strait = this.straitFrom();
                 if (strait && !s.crossing) {
                     const pc = preCheck({a: s.a, facts: s.facts, home: s.home, strait, stamina: s.meters.stamina, exposure: s.meters.exposure, sessionLeft: left.sessionLeft, dayLeft: left.dayLeft, x: p.x, z: p.z, kind: null});
@@ -820,6 +841,7 @@ export class Room {
             this.lastNpcAt = now;
             this.stepNpcs(now);
         }
+        this.stepHunt(now);
         if (now - this.lastTalkAt >= 500) {
             this.lastTalkAt = now;
             this.stepTalk(now);
@@ -940,6 +962,111 @@ export class Room {
                 this.sendText(client, {t: "talk-ready", animalId: chosen});
             }
         }
+    }
+
+    // MARK: Phase 3: hunting (design §7)
+
+    /**
+     * Contact on the server's own poses: the predator's mouth within 0.35·D_pred + 0.25·D_prey of the prey's middle for
+     * 0.3 s, the prey where the shared schedule (and its shared reaction) had it 150 ms ago. Then a kill is asked of
+     * the database, which re-checks every rule and cap (`applyPlayerMeal`); a practice chase (not due, a kept animal,
+     * not its food) only startles: no event (D15).
+     */
+    private stepHunt(now: number): void {
+        const npc = this.o.npc?.() ?? null;
+        const hunting = this.o.hunting?.() ?? null;
+        if (!npc || !hunting) return;
+        for (const s of Array.from(this.sessions.values())) {
+            const client = s.clientId !== null ? this.clients.get(s.clientId) : null;
+            if (s.hunt) {
+                this.pollHunt(s, client ?? null, now);
+                continue;
+            }
+            if (!client || s.crossing || s.facts.enclosure !== null || s.facts.area || now < s.huntQuietUntil) {
+                s.contact = null;
+                continue;
+            }
+            const me = s.motion.last;
+            const mouth = {x: me.x + Math.sin(me.yaw) * 0.45 * s.a.D, z: me.z + Math.cos(me.yaw) * 0.45 * s.a.D};
+            let touching: string | null = null;
+            for (const id of npc.world.candidates(me.x, me.z, 8)) {
+                if (this.byAnimal.has(id)) continue;
+                const slug = npc.world.slugOf(id);
+                if (!slug || !foodEats(s.slug, slug)) continue;
+                const pose = npc.world.poseAt(id, (now - 150) / 1000);
+                if (!pose) continue;
+                const reach = 0.35 * s.a.D + 0.25 * abilitiesOf(slug).D;
+                if (Math.hypot(pose.x - mouth.x, pose.z - mouth.z) <= reach) {
+                    touching = id;
+                    break;
+                }
+            }
+            if (!touching) {
+                s.contact = null;
+                continue;
+            }
+            if (!s.contact || s.contact.preyId !== touching) {
+                s.contact = {preyId: touching, since: now};
+                continue;
+            }
+            if (now - s.contact.since < 300) continue;
+            const preyId = touching;
+            s.contact = null;
+            const due = hunting.due(s.animalId, now);
+            const reason = npc.world.keptOf(preyId) ? "protected" : due === false ? "not_hungry" : null;
+            if (reason || !this.o.store.mealRequest) {
+                s.huntQuietUntil = now + 3000;
+                this.sendText(client, {t: "hunt", phase: "denied", preyId, reason: reason ?? "off"});
+                continue;
+            }
+            this.sendText(client, {t: "hunt", phase: "contact", preyId});
+            s.hunt = {id: "", preyId, at: now, lastPoll: now};
+            const evidence = {mouth: {x: Math.round(mouth.x * 100) / 100, z: Math.round(mouth.z * 100) / 100}, at: now, held_ms: 300, rtt_rewind_ms: 150};
+            this.o.store.mealRequest(s.id, s.animalId, preyId, evidence).then(
+                (r) => {
+                    if (!s.hunt) return;
+                    if (r.ok) s.hunt.id = r.id;
+                    else this.endHunt(s, "denied", r.reason, now);
+                },
+                () => this.endHunt(s, "escaped", "network", now)
+            );
+        }
+    }
+
+    private pollHunt(s: Session, client: Client | null, now: number): void {
+        const h = s.hunt!;
+        if (!h.id) {
+            if (now - h.at > 8000) this.endHunt(s, "escaped", "timeout", now);
+            return;
+        }
+        if (now - h.lastPoll < 500) return;
+        h.lastPoll = now;
+        if (!this.o.store.mealStatus) return;
+        this.o.store.mealStatus(h.id).then(
+            (st) => {
+                if (s.hunt !== h) return;
+                if (st.status === "confirmed") {
+                    s.hunt = null;
+                    s.huntQuietUntil = now + 10_000;
+                    // Everyone: the prey was eaten (the meal itself arrives in the log like any meal; the hunter is never named).
+                    this.broadcastText({t: "hunt", phase: "confirmed", preyId: h.preyId});
+                } else if (st.status === "rejected" || st.status === "expired") {
+                    this.endHunt(s, "escaped", st.reason ?? st.status, now);
+                } else if (now - h.at > 8000) {
+                    this.endHunt(s, "escaped", "timeout", now);
+                }
+            },
+            () => undefined
+        );
+        void client;
+    }
+
+    private endHunt(s: Session, phase: "denied" | "escaped", reason: string, now: number): void {
+        const h = s.hunt;
+        s.hunt = null;
+        s.huntQuietUntil = now + 3000;
+        const client = s.clientId !== null ? this.clients.get(s.clientId) : null;
+        if (client && h) this.sendText(client, {t: "hunt", phase, preyId: h.preyId, reason});
     }
 
     /** Release everything (a shutdown): every animal back into NPC life where it is. */

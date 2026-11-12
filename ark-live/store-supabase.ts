@@ -7,7 +7,7 @@
  * refuses a trace for a step the tick has already committed.
  */
 
-import type {EndState, SessionStats, StartResult, Store, StoredState, TraceRow} from "@/ark-live/room";
+import type {EndState, MealRequest, MealStatus, SessionStats, StartResult, Store, StoredState, TraceRow} from "@/ark-live/room";
 import type {IslandId} from "@/ark-live/islands";
 import type {ReleaseReason} from "@/ark-live/protocol";
 
@@ -78,6 +78,15 @@ export class SupabaseStore implements Store {
 
     async end(sessionId: string, reason: ReleaseReason, stats: SessionStats, state: EndState): Promise<void> {
         await this.rpc<unknown>("ark_live_end_v1", {p_session_id: sessionId, p_reason: reason, p_stats: stats, p_state: state});
+    }
+
+    /** Phase 3: ask the database for a kill (it re-checks every rule and the D9/D10 caps; voyage-world decides). */
+    async mealRequest(sessionId: string, predatorId: string, preyId: string, evidence: Record<string, unknown>): Promise<MealRequest> {
+        return this.rpc<MealRequest>("ark_live_meal_request_v1", {p_session_id: sessionId, p_predator_id: predatorId, p_prey_id: preyId, p_evidence: evidence});
+    }
+
+    async mealStatus(id: string): Promise<MealStatus> {
+        return this.rpc<MealStatus>("ark_live_meal_status_v1", {p_id: id});
     }
 
     async stateOf(animalId: string): Promise<StoredState | null> {

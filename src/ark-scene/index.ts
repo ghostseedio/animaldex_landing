@@ -5192,6 +5192,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             if (typeof document !== "undefined" && document.pointerLockElement) document.exitPointerLock?.();
         }
+        // A player's kill (phase 3): the prey is gone for every viewer until the next snapshot drops it.
+        if (event.kind === "eaten") {
+            const prey = findEntry(event.preyId);
+            if (prey) prey.held = true;
+        }
         // Talk: the scene knows which kind it is (the host opens that species' chat with the Ark animal's id).
         if (event.kind === "talk") event = {...event, slug: findEntry(event.animalId)?.animal.model_slug ?? null};
         options.onControl?.(event);

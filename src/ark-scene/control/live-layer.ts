@@ -44,6 +44,8 @@ export type LiveEvents = {
     onControlledSet?: (ids: ReadonlySet<string>) => void;
     /** Phase 2: the animal the controller's own is close enough to talk to (null: none). */
     onTalkReady?: (animalId: string | null) => void;
+    /** Phase 3: a hunt's news (contact, confirmed for everyone, escaped, denied with why). */
+    onHunt?: (phase: string, preyId: string, reason?: string) => void;
 };
 
 /** A server-shared NPC reaction (phase 2), eased from the last one over a fifth of a second. */
@@ -83,7 +85,7 @@ export class LiveLayer {
     private pingTimer: ReturnType<typeof setInterval> | null = null;
     private pendingStart: {ticket: string; start: StartPose; facts: AnimalFacts} | null = null;
     // The viewer's own animal.
-    private own: {state: MoverState; facts: AnimalFacts; a: Abilities; sessionId: string; resumeToken: string; seq: number; lastSent: number; blend: {dx: number; dy: number; dz: number; left: number} | null; meter: MeterMessage | null} | null = null;
+    private own: {state: MoverState; facts: AnimalFacts; a: Abilities; sessionId: string; resumeToken: string; seq: number; lastSent: number; blend: {dx: number; dy: number; dz: number; left: number} | null; meter: MeterMessage | null; strikeUntil?: number} | null = null;
     private terrain: Terrain | null = null;
     private readonly island: IslandId;
     lastMeter: MeterMessage | null = null;
@@ -266,6 +268,11 @@ export class LiveLayer {
             case "talk-ready":
                 this.events.onTalkReady?.(m.animalId);
                 return;
+            case "hunt":
+                // The strike plays from the contact while the ecology decides (a second or two).
+                if (m.phase === "contact" && this.own) this.own.strikeUntil = Date.now() + 1200;
+                this.events.onHunt?.(m.phase, m.preyId, m.reason);
+                return;
             case "crossing":
                 this.events.onCrossing?.(m.phase, m.reason);
                 return;
@@ -380,7 +387,8 @@ export class LiveLayer {
             const s = own.state;
             const b = own.blend;
             const k = b ? b.left / BLEND_S : 0;
-            return {x: s.x + (b ? b.dx * k : 0), y: s.y + (b ? b.dy * k : 0), z: s.z + (b ? b.dz * k : 0), yaw: s.yaw, pitch: s.pitch, roll: s.roll, mode: s.mode, clip: s.clip, speed: s.speed, own: true, flags: 0};
+            const striking = (own.strikeUntil ?? 0) > Date.now() && s.mode === "ground";
+            return {x: s.x + (b ? b.dx * k : 0), y: s.y + (b ? b.dy * k : 0), z: s.z + (b ? b.dz * k : 0), yaw: s.yaw, pitch: s.pitch, roll: s.roll, mode: s.mode, clip: striking ? "strike" : s.clip, speed: s.speed, own: true, flags: 0};
         }
         const track = this.tracks.get(animalId);
         if (!track || !this.controlled.has(animalId)) return null;
