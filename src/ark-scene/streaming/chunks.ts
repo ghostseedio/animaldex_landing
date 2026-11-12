@@ -7,10 +7,12 @@
  * its chunk and a chunked picture is the unchunked one. Chunking never moves anything: it only decides what is
  * drawn and what is kept loaded; every position stays a pure function of the shared clock and the ids.
  *
- * A chunk is `in` (within the render distance: everything drawn, at full detail), `map` (beyond it, seen from the
- * map view: the ground and the trees, animals as markers) or `out` (beyond it otherwise: nothing drawn, the haze has
- * already hidden it). Going `in` happens at the render distance; going back out only past it plus a margin
- * (hysteresis), so a camera resting on a boundary does not flicker chunks in and out.
+ * A chunk is `in` (within the render distance: everything drawn, at full detail), `map` (beyond it, within the
+ * tier's map distance, or anywhere on an island the camera is not over: the ground and the trees, animals as markers)
+ * or `out` (past the map distance: nothing drawn, the haze has already hidden it). Going `in` happens at the render
+ * distance; going back out only past it plus a margin (hysteresis), so a camera resting on a boundary does not
+ * flicker chunks in and out. Several islands each have their own grid, placed in the world by an offset
+ * (`streaming/index.ts`).
  */
 
 export type ChunkGrid = {
@@ -87,30 +89,34 @@ export function farthestInChunk(grid: ChunkGrid, key: number, x: number, y: numb
 }
 
 export type ChunkView = {
-    /** The camera's eye. */
+    /** The camera's eye, in the island's own frame. */
     x: number;
     y: number;
     z: number;
-    /** The render distance now (m). */
+    /** The render distance now (m): within it a chunk is drawn in full. */
     distance: number;
     /** The margin past it before an `in` chunk goes (m). */
     hysteresis: number;
-    /** Seen from the map view: chunks beyond the render distance are `map`, not `out`. */
-    map: boolean;
+    /** Past the render distance and within this (m), a chunk is drawn in map style; past it, not at all. */
+    mapDistance: number;
+    /** Not the island the camera is over: its chunks are at most map style (the other island across the strait). */
+    capMap?: boolean;
 };
 
 /**
- * Each chunk's state for a view, from the states before (hysteresis): `in` within `distance`, or within `distance +
- * hysteresis` if it was `in`; else `map` from the map view and `out` otherwise. Pure.
+ * Each chunk's state for a view, from the states before (hysteresis): `in` within `distance` (or `distance +
+ * hysteresis` if it was `in`), unless the island is capped at map style; else `map` within `mapDistance` (plus the
+ * hysteresis if it was drawn); else `out`. Pure.
  */
 export function chunkStates(grid: ChunkGrid, spans: ChunkSpan[], view: ChunkView, before: ArrayLike<number> | null, into?: Uint8Array): Uint8Array {
     const n = chunkCount(grid);
     const out = into && into.length === n ? into : new Uint8Array(n);
     for (let key = 0; key < n; key++) {
         const d = distanceToChunk(grid, key, view.x, view.y, view.z, spans[key] ?? DEFAULT_SPAN);
-        const wasIn = before ? before[key] === STATE_IN : false;
-        const within = d <= view.distance || (wasIn && d <= view.distance + view.hysteresis);
-        out[key] = within ? STATE_IN : view.map ? STATE_MAP : STATE_OUT;
+        const was = before ? before[key] : STATE_OUT;
+        const within = !view.capMap && (d <= view.distance || (was === STATE_IN && d <= view.distance + view.hysteresis));
+        const mapped = d <= view.mapDistance || (was !== STATE_OUT && was !== undefined && before !== null && d <= view.mapDistance + view.hysteresis);
+        out[key] = within ? STATE_IN : mapped ? STATE_MAP : STATE_OUT;
     }
     return out;
 }
@@ -125,9 +131,9 @@ export function stateName(code: number): ChunkState {
 }
 
 /**
- * How strongly the edge haze is on (0…1): only when something with content lies past the render distance, so a world
- * that fits inside it looks exactly as it did; ramped over `ramp` m of that reach so it never pops. Never in the map
- * view (beyond the distance is drawn as the map there).
+ * How strongly the edge haze is on (0…1): only when something with content lies past `distance` (the map distance:
+ * nothing nearer is ever hidden), so a world that fits inside it looks exactly as it did; ramped over `ramp` m of that
+ * reach so it never pops. Never in the map view.
  */
 export function hazeStrength(farthestContent: number, distance: number, map: boolean, ramp = 25): number {
     if (map || !(farthestContent > distance - ramp)) return 0;
