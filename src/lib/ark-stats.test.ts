@@ -69,12 +69,14 @@ test("size is a body length: models are scaled along their head-to-tail axis, so
     assert.equal(bodyAxisExtent("grey-heron", "bird", {x: 0.585, y: 1.27, z: 1}), 1);
     assert.equal(bodyAxisExtent("african-rock-python", "snake", {x: 0.29, y: 0.08, z: 1}), 1);
     assert.equal(bodyAxisExtent("bluefin-tuna", "fish", {x: 0.18, y: 0.31, z: 1}), 1);
-    // Upright bodies by their height: a penguin, an owl, a hawk sitting up, a seahorse, a jellyfish. "Lowland" is not an owl.
+    // Upright bodies by their height: a penguin, an owl, a hawk sitting up, a seahorse. "Lowland" is not an owl.
     assert.equal(bodyAxisExtent("emperor-penguin", "bird", {x: 1.14, y: 1.91, z: 1}), 1.91);
     assert.equal(bodyAxisExtent("barn-owl", "bird", {x: 0.64, y: 1.32, z: 1}), 1.32);
     assert.equal(bodyAxisExtent("coopers-hawk", "bird", {x: 0.5, y: 1.3, z: 1}), 1.3);
     assert.equal(bodyAxisExtent("pot-bellied-seahorse", "fish", {x: 0.3, y: 1.83, z: 1}), 1.83);
-    assert.equal(bodyAxisExtent("moon-jellyfish", "jellyfish", {x: 1, y: 2.36, z: 1}), 2.36);
+    // A jellyfish by its bell across (its stated size is the bell's: "Bell 25-50 cm"), a hydra by its height (lane TB).
+    assert.equal(bodyAxisExtent("moon-jellyfish", "jellyfish", {x: 1, y: 2.36, z: 0.98}), 1);
+    assert.equal(bodyAxisExtent("common-hydra", "jellyfish", {x: 0.3, y: 1, z: 0.3}), 1);
     assert.equal(bodyAxisExtent("western-lowland-gorilla", "mammal", {x: 0.69, y: 1.17, z: 1}), 1);
     assert.equal(bodyAxisExtent("owl-butterfly", "butterfly", {x: 1.2, y: 0.4, z: 1}), 1);
     // A degenerate z: the longest horizontal side.

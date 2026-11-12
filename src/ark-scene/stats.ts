@@ -208,7 +208,8 @@ const UPRIGHT_PLANS = new Set(["sessile", "jellyfish", "worm"]);
  *   along their length.
  * - Along y for an animal whose body runs upright, measured top to bottom
  *   (penguins, owls, perched birds that sit up tall such as hawks and
- *   macaws, seahorses, gibbons, corals, jellyfish, worms): its height.
+ *   macaws, seahorses, gibbons, corals, worms): its height.
+ * - A jellyfish by its bell across (its stated size), a hydra by its height.
  * - A z extent that is degenerate (under a fifth of the longest side):
  *   the longest horizontal one.
  */
@@ -217,6 +218,10 @@ export function bodyAxisExtent(slug: string, plan: string | null | undefined, ex
     const y = Math.max(extent.y, 0.001);
     const z = Math.max(extent.z, 0.001);
     const bird = plan === "bird";
+    // A jellyfish's (and a float's) size is its bell across, as every stored and generated length of one is ("Bell 25-50
+    // cm", "Float 10-30 cm"): by its widest horizontal side, not its height with the tentacles (lane TB: drawn by the
+    // height, a moon jellyfish's bell was 14 cm, not 32). A hydra stands up: by its height.
+    if (plan === "jellyfish" && !/hydra/.test(slug)) return Math.max(x, z);
     const upright = UPRIGHT.test(slug) || (bird && UPRIGHT_BIRDS.test(slug)) || (UPRIGHT_PLANS.has(plan ?? "") && y > z) || (bird && y > z * 1.2 && !ALONG.test(slug));
     if (upright) return y;
     if (z < 0.2 * Math.max(x, y, z)) return Math.max(x, z);
