@@ -72,6 +72,9 @@
             "high_cold": "Cao và lạnh",
             "home": "Nhà"
         },
+        "wildIslandRegions": {
+            "home": "Bãi cỏ"
+        },
         "hud": {
             "label": "Ai đang ở trên tàu",
             "title": "Trên tàu",

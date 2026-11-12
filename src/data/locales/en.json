@@ -4095,6 +4095,9 @@
       "high_cold": "High and cold",
       "home": "Home"
     },
+    "wildIslandRegions": {
+      "home": "Meadow"
+    },
     "hud": {
       "label": "Who is aboard",
       "title": "Aboard",

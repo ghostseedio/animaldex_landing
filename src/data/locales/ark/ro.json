@@ -72,6 +72,9 @@
             "high_cold": "Înălțimi reci",
             "home": "Acasă"
         },
+        "wildIslandRegions": {
+            "home": "Fâneață"
+        },
         "hud": {
             "label": "Cine e la bord",
             "title": "La bord",

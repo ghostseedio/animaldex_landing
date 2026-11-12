@@ -4080,6 +4080,9 @@
       "high_cold": "Tinggi dan dingin",
       "home": "Rumah"
     },
+    "wildIslandRegions": {
+      "home": "Padang"
+    },
     "hud": {
       "label": "Siapa saja di Ark",
       "title": "Di Ark",

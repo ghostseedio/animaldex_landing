@@ -72,6 +72,9 @@
             "high_cold": "ऊँचा और ठंडा",
             "home": "घर"
         },
+        "wildIslandRegions": {
+            "home": "चरागाह"
+        },
         "hud": {
             "label": "कौन सवार है",
             "title": "सवार",

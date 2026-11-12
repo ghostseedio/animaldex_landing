@@ -72,6 +72,9 @@
             "high_cold": "بلند اور سرد",
             "home": "گھر"
         },
+        "wildIslandRegions": {
+            "home": "چراگاہ"
+        },
         "hud": {
             "label": "کون سوار ہے",
             "title": "سوار",

@@ -72,6 +72,9 @@
             "high_cold": "Výšky a chlad",
             "home": "Domov"
         },
+        "wildIslandRegions": {
+            "home": "Louka"
+        },
         "hud": {
             "label": "Kdo je na palubě",
             "title": "Na palubě",

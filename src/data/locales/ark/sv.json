@@ -72,6 +72,9 @@
             "high_cold": "Högt och kallt",
             "home": "Hemma"
         },
+        "wildIslandRegions": {
+            "home": "Äng"
+        },
         "hud": {
             "label": "Vilka som är ombord",
             "title": "Ombord",

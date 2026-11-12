@@ -72,6 +72,9 @@
             "high_cold": "উঁচু ও ঠান্ডা",
             "home": "বাড়ি"
         },
+        "wildIslandRegions": {
+            "home": "মাঠ"
+        },
         "hud": {
             "label": "জাহাজে কারা আছে",
             "title": "জাহাজে",

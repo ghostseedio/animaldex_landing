@@ -72,6 +72,9 @@
             "high_cold": "Mataas at malamig",
             "home": "Tahanan"
         },
+        "wildIslandRegions": {
+            "home": "Parang"
+        },
         "hud": {
             "label": "Sino ang nakasakay",
             "title": "Nakasakay",

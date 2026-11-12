@@ -72,6 +72,9 @@
             "high_cold": "उंच आणि थंड",
             "home": "घर"
         },
+        "wildIslandRegions": {
+            "home": "कुरण"
+        },
         "hud": {
             "label": "जहाजावर कोण आहे",
             "title": "जहाजावर",
