@@ -9,6 +9,8 @@
  */
 
 import type {Group} from "three";
+import {arkWorld} from "@/ark-scene/world";
+import {wildReachToward} from "@/ark-scene/islands/wild/index";
 
 export type ArkIslandId = "wild" | "town";
 
@@ -43,8 +45,16 @@ export const TOWN_REACH = 210.25;
 const WILD_HALF = 132;
 const TOWN_HALF_M = 237.6;
 
+/**
+ * The wild island's land toward the town in the world in use (P6, docs/ark/wild-island.md §6): today's `WILD_REACH`, or
+ * the v2 island's measured reach (`islands/wild/index.ts` wildReachToward, about 190.5 m), so the strait stays 250 m.
+ */
+export function wildReachNow(): number {
+    return arkWorld() === "v2" ? wildReachToward(ARCHIPELAGO_TOWN_ANGLE) : WILD_REACH;
+}
+
 /** The town's local origin in the world frame (the wild island's): reach + strait + reach along the angle. */
-export function townWorldOrigin(wildReach = WILD_REACH, townReach = TOWN_REACH, strait = ARCHIPELAGO_STRAIT): {x: number; z: number} {
+export function townWorldOrigin(wildReach = wildReachNow(), townReach = TOWN_REACH, strait = ARCHIPELAGO_STRAIT): {x: number; z: number} {
     const distance = wildReach + strait + townReach;
     return {x: Math.round(Math.cos(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10, z: Math.round(Math.sin(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10};
 }

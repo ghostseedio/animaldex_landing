@@ -221,3 +221,76 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 | Fresh water | At its own levels, the river descending; a lighter lake colour | A 6 m lake and a river from 21 m |
 | Attach points | Any body down to 0.1 mm (decision 55) on the island's points | The common rotifer |
 | The world switch | Inside `world.ts`: global state, live bindings, `onArkWorld`, v2 implies no hamlet | About 60 modules import `world.ts` directly; no parallel scene |
+
+## 10. Handover (W1, 2026-11-12): state, what is left, the next commands, the traps
+
+**Branch:** landing `ark-wild-island-next`, from `origin/ark-next` 3b81fa5a with `ark-wild-island` merged in. The worktree used was `scratchpad/wt-wild-next` (`npm ci` done; restore `yarn.lock` after it). The integrator merges it only after the islands release is cut. Until then, keep merging `origin/ark-next` into it as that moves.
+
+### Done
+
+- **The island on its own** (§1–§7): generator, scenery, reserves, map sampler, sites, validator (0 failures), the workbench (stills, visual baselines), the archipelago hook.
+- **P0:** merged onto `ark-next`; the wild tests pass there.
+- **P1, the world switch** (§8): `world.ts` `arkWorld`, `setArkWorld`, `onArkWorld`, the live bindings, the per-world functions. Global state; v2 implies `setNoHamlet(true)`; the choice is read at load (`__ARK_WORLD__`, `?world=v2`, `ARK_WORLD=v2`); the prebuild workers' URLs carry it.
+- **The archipelago's choice:** in islands mode only, `?wild=v2` or the `wildIsland: "v2"` option (`ArkArchipelagoOptions.wildIsland`, default v1) calls `setArkWorld("v2")` before the scene's modules load (`islands/archipelago.ts`). Islands off never calls it.
+- **P2 (ground and water), first half:** `terrain.ts` takes v2's segments (480), its arrays (`islands/wild/render/ground.ts`), a 52 m snow line, and the fresh water at its own levels. `water-level.ts` `freshLevelAt`. The drawn ground's grid and `sea-depth` `LAKE_SWIM_RADIUS` follow the switch.
+- **P6, the frame:** `islands/index.ts` `wildReachNow()` returns `wildReachToward(−22.5°)` on v2 (190.5 m) and `WILD_REACH` (90.25) on v1. `townWorldOrigin()` defaults to it, so on v2 the town stands about 100 m further out and the strait stays 250 m.
+- **v1 regression:** map, grounding, streaming, islands, town, wild, sea-depth, prebuild, collide and behaviour-build tests: 100 pass, 0 fail.
+
+### Left
+
+- **P2, second half (W1's successor):**
+  - The one world's sea (T3, decision 143) must take v2's depth field over ±264. The town's depth patch is T3's; the wild island's sea plane comes from `buildLandscape` as on v1 (`halfSize` = TERRAIN_HALF, read at build). Check the sea draws the lagoon, the drop-off and the strait.
+  - The ground shader's fresh-water bed rule uses `FRESH_LEVEL` (0) as a GLSL constant (`terrain.ts`, the "sea bed" and "under water" blocks). v2's lake (level 6) and river beds are above 0, so they get no underwater tint. Pass the vertex's fresh level as an attribute, or a uniform per mesh, if it shows.
+- **P3 (helper A, `ark-wild-scenery`):** scenery through the motion pass. Until it lands, v2 in the main scene builds v1's decor generators over v2 ground. That is not reviewable.
+- **P4 and P5 (helper B, `ark-wild-map`):**
+  - samplers;
+  - `extentOf` `half`/`centre`;
+  - ranges and whale cells in `map/place.ts`;
+  - zone keys;
+  - the live validator (707 wild animals) at 0 failures.
+- **P6, rest:**
+  - `ARK_ISLANDS.wild` (half 132, 5 chunks, 2.38 ha, its home view) is still v1's record. On v2 it should read `islands/wild/index.ts` `WILD_ISLAND` (half 264, 10 chunks, 11.9 ha). Make `ARK_ISLANDS.wild` a getter on `arkWorld()`, or give it a v2 twin.
+  - The default views: the whole-island view's target, radius and eye (`index.ts` and `islands/scene.ts` `home`) must fit a 411 m island. The phone's upright view across the strait must still show the town 190.5 + 250 + 210.25 = 651 m away. This is unchecked.
+- **P7, gates:**
+  - the map, grounding, collide, behaviour, recipes, islands and town tests in v1;
+  - the same tests with `ARK_WORLD=v2` where they apply;
+  - tsc and lint;
+  - one phone-profile memory and fps check (Part B's budgets: 384 MB heap and 192 MB GPU on low);
+  - stills of the default views and a few biomes;
+  - the GitHub visual run is the integrator's.
+- **P8:** when placement is final (after B), tell the coordinator, so the encounter lane regenerates `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+
+### Next commands
+
+```sh
+cd <worktree on ark-wild-island-next>
+git fetch origin && git merge origin/ark-next            # keep current (docs, L5's audit fix before the cut)
+npm ci && git checkout yarn.lock
+npx tsc --noEmit -p tsconfig.json                          # only the 2 known header-menu errors
+nice -n 10 npx tsx --test src/lib/ark-map.test.ts src/lib/ark-grounding.test.ts src/lib/ark-streaming.test.ts \
+  src/lib/ark-islands.test.ts src/lib/ark-town-island.test.ts src/lib/ark-wild-island.test.ts src/lib/ark-sea-depth.test.ts \
+  src/lib/ark-prebuild.test.ts src/lib/ark-collide.test.ts src/lib/ark-behaviour-build.test.ts      # v1: all pass
+ARK_WORLD=v2 nice -n 10 npx tsx -e 'import("./src/ark-scene/world.ts").then((w) => console.log(w.arkWorld(), w.TERRAIN_HALF))'
+nice -n 10 npx tsx scripts/ark-wild-plan.mts --out .ark-golden/wild               # the plan picture and numbers
+nice -n 10 npx tsx scripts/ark-wild.mts stills --size 960x540                      # the workbench stills (Metal)
+# The scene in islands mode on v2: wt-view's local real data (never commit public/ark-local):
+#   /ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json&wild=v2
+```
+
+### Traps
+
+- **Choose the world before anything builds from it.** `setArkWorld` after a sample warns: any cache not registered with `onArkWorld` (decor, map points, the behaviour world, attach points, colliders) stays as built. In the page, the archipelago calls it before `import("@/ark-scene")`. The page's static imports evaluate `world.ts` as v1 first, which is fine only because they build nothing from it.
+- **Never copy a world value into a module constant at load.** Read the live binding at use, or register `onArkWorld`. Known derived-at-load values that are now handled:
+  - `terrain.ts` SEGMENTS;
+  - `grounding/drawn-ground.ts` SIZE and SEGMENT;
+  - `sea-depth.ts` LAKE_SWIM_RADIUS.
+
+  Still v1-derived at load, all hamlet or v1-only:
+  - `map/hamlet.ts` OTHER_SITES and HOME_SITE;
+  - `map/world-sampler.ts` MOUTH (B's).
+- **Module cycle:** `world.ts` → `islands/wild/world-v2.ts` → the wild generator → `world.ts`'s noise functions. These are hoisted function declarations, so the cycle is safe. Keep the wild generator's module-level code free of calls into `world.ts`, and of module-level `const`s that `sampleWildGround` reads (`ground.ts`'s VALLEY was moved inline for this).
+- **`?world=v2` vs `?wild=v2`:**
+  - `world=` is read by `world.ts` itself, meant for worker URLs and tests, and works even with islands off.
+  - `wild=` is the page's review override, honoured only in islands mode.
+- **Fresh water on v2 has its own levels** (the lake at 6 m, the river from 21 m down). Anything assuming fresh water at 0 is wrong on v2: the ground shader's bed tint, `sea-depth`'s lake test, `map/water.ts`. Use `freshLevelAt`.
+- **The shared Mac:** render with `nice -n 10`; SwiftShader shots take minutes under load. Never `gradlew --stop`.
