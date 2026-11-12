@@ -1437,6 +1437,61 @@ SPECIES = {
         bark=dict(color=hexc("#a8a092"), dark=hexc("#6a5a48"), fx=3, fy=0.7, contrast=1.3, rough=0.04,
                   marks=dict(color=hexc("#7a5e42"), lo=0.15, hi=0.35, foot=hexc("#4a3e32"))),
         open_top=False, holes=3, brackets=3, bark_top=0.9, card_wood_level=2, card_ribbons=14, n_branch=18),
+    # The town island's street and park trees (lane GC, 2026-11-12): the common lime, the London plane, the
+    # churchyard yew and the garden cherry, each from the same skeleton and meshing as the wild island's.
+    "lime": dict(
+        # Common lime (Tilia x europaea): a tall clean stem, ascending limbs arching out at the ends into a dense
+        # ovoid dome; small heart-shaped leaves; grey-brown bark in shallow ridges.
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.42, 0.62), points=10, notch=0.74, cup=0.3, face_up=0.5),
+        H=12, trunk=dict(length=9.6, radius=0.3, taper=0.38, wobble=0.03, lean=0.03, flare=0.45),
+        levels=[dict(count=(10, 12), t=(0.28, 0.98), angle=40, angle_var=10, ratio=0.5, shape="ovoid", rratio=0.5,
+                     bend=0.4, wobble=0.1),
+                dict(per_m=2.4, t=(0.3, 1.0), angle=50, ratio=0.46, rratio=0.5, bend=-0.12, wobble=0.14),
+                dict(per_m=4.5, t=(0.3, 1.0), angle=52, ratio=0.34, rratio=0.5, bend=-0.3, wobble=0.15, rtip=0.004)],
+        leaves=dict(per_m=24, length=0.16, width=0.14, levels=[2, 3], t0=0.35, colors=G("#5f8f34", "#6c9c3a", "#557f2e", "#78a642"),
+                    tip=hexc("#a2c454"), fold=0.25, curl=0.1, angle=62, tilt=0.4),
+        bark=dict(color=hexc("#7c7466"), dark=hexc("#48423a"), fx=3, fy=1.6, contrast=1.0, rough=0.04), n_branch=20),
+    "plane": dict(
+        # London plane (Platanus x acerifolia): a broad spreading crown on a stout trunk, big maple-like leaves,
+        # the flaking camouflage bark (grey-olive with cream patches) and seed balls hanging on long stalks.
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.5, 0.78), points=11, notch=0.68, cup=0.32, face_up=0.45),
+        H=13, trunk=dict(length=8.4, radius=0.4, taper=0.4, wobble=0.05, lean=0.05, flare=0.4),
+        levels=[dict(count=(7, 9), t=(0.32, 0.96), angle=50, angle_var=12, ratio=0.62, shape="hemi", rratio=0.55,
+                     bend=0.22, wobble=0.15, taper=0.3),
+                dict(per_m=2.0, t=(0.25, 1.0), angle=48, ratio=0.5, rratio=0.5, bend=0.05, wobble=0.2),
+                dict(per_m=3.6, t=(0.3, 1.0), angle=50, ratio=0.38, rratio=0.5, bend=-0.15, wobble=0.22, rtip=0.005)],
+        leaves=dict(per_m=17, length=0.3, width=0.28, levels=[2, 3], t0=0.35, colors=G("#5a8a36", "#679640", "#4e7c30", "#72a046"),
+                    tip=hexc("#a0bc5a"), fold=0.3, curl=0.14, angle=58, tilt=0.5),
+        bark=dict(color=hexc("#8c8a72"), dark=hexc("#5e5c4a"), fx=2, fy=0.8, contrast=0.8,
+                  marks=dict(color=hexc("#ddd3ad"), lo=0.05, hi=0.22, foot=hexc("#5a5444"))),
+        fruit=dict(count=26, radius=0.03, colors=G("#7a6038", "#6a5232", "#86683e")), n_branch=20),
+    "yew": dict(
+        # English yew (Taxus baccata), the churchyard's: a short fluted trunk dividing low into many ascending
+        # limbs under one broad, dense, near-black-green dome, with a dark heart (no sky through it) and
+        # red-brown flaking bark.
+        clumps=dict(levels=[2, 3], per_limb=(2, 3), r=(0.42, 0.66), points=12, notch=0.82, cup=0.22, face_up=0.55, tilt=0.25),
+        core=dict(scale=0.66, pct=72, color=hexc("#16261a"), sides=[10, 7, 6], rings=[8, 5, 4]),
+        H=9, trunk=dict(length=4.2, radius=0.42, taper=0.5, wobble=0.06, lean=0.05, flare=0.6),
+        levels=[dict(count=(11, 14), t=(0.18, 0.99), angle=48, angle_var=14, ratio=1.0, shape="spherical", rratio=0.55,
+                     bend=0.35, wobble=0.14, abs_length=4.2),
+                dict(per_m=3.0, t=(0.25, 1.0), angle=55, ratio=0.45, rratio=0.5, bend=0.0, wobble=0.18, planar=0.4),
+                dict(per_m=5.0, t=(0.3, 1.0), angle=55, ratio=0.32, rratio=0.5, bend=-0.1, wobble=0.18, planar=0.5, rtip=0.004)],
+        leaves=dict(per_m=40, length=0.07, width=0.035, levels=[2, 3], t0=0.3, colors=G("#22402a", "#2a4a30", "#1c3824", "#30502f"),
+                    tip=hexc("#4d6e40"), fold=0.15, curl=0.05, angle=70, tilt=0.5),
+        bark=dict(color=hexc("#8a4c36"), dark=hexc("#4a2a20"), fx=4, fy=1.0, contrast=1.3, rough=0.06), n_branch=18),
+    "cherry": dict(
+        # A garden cherry (Prunus): a short stem, a vase of ascending limbs opening to a flat-topped crown, glossy
+        # bronze-green leaves, banded red-brown bark; one variant in blossom.
+        clumps=dict(levels=[2, 3], per_limb=(1, 2), r=(0.34, 0.5), points=10, notch=0.7, cup=0.3, face_up=0.55),
+        H=6.5, trunk=dict(length=1.9, radius=0.17, taper=0.55, wobble=0.06, lean=0.06, flare=0.3),
+        levels=[dict(count=(5, 6), t=(0.7, 1.0), angle=34, angle_var=10, ratio=1.4, shape="uniform", rratio=0.68,
+                     bend=0.15, wobble=0.16, abs_length=3.2),
+                dict(per_m=2.6, t=(0.25, 1.0), angle=46, ratio=0.5, rratio=0.5, bend=-0.05, wobble=0.2),
+                dict(per_m=4.5, t=(0.25, 1.0), angle=45, ratio=0.38, rratio=0.5, bend=-0.15, wobble=0.2, rtip=0.004)],
+        leaves=dict(per_m=36, length=0.14, width=0.06, levels=[2, 3], t0=0.3, colors=G("#5a7e34", "#6a8a38", "#7a7a36", "#4f742e"),
+                    tip=hexc("#a4a048"), fold=0.3, curl=0.12),
+        bark=dict(color=hexc("#7a4a3e"), dark=hexc("#3c2a26"), fx=2, fy=0.5, contrast=0.9,
+                  rings=dict(freq=3.0, depth=0.25)), bark_top=0.9, n_branch=18),
 }
 
 # Variants: (seed, tweaks). Tweaks scale the trunk/H or swap a few settings.
@@ -1462,6 +1517,12 @@ VARIANTS = {
                     "leaves.per_m": 22, "leaves.colors": G("#f4b8cc", "#eeaac2", "#6a9a3a", "#f8d2de", "#5a8a32")})],
     "mangrove": [(101, {}), (102, {"trunk.length": 2.4, "roots.count": 14, "roots.reach": (1.6, 3.0)})],
     "emergent": [(111, {}), (112, {"H": 20, "trunk.length": 15.5, "levels.0.abs_length": 6.0, "lianas": 6})],
+    "lime": [(131, {}), (132, {"H": 10, "trunk.length": 8.0, "levels.0.t": (0.4, 0.98), "levels.0.angle": 34, "levels.0.ratio": 0.42}),
+             (133, {"H": 13.5, "trunk.length": 10.8, "levels.0.count": (12, 14)})],
+    "plane": [(141, {}), (142, {"H": 11.5, "trunk.length": 7.2, "levels.0.angle": 44, "levels.0.ratio": 0.56})],
+    "yew": [(151, {}), (152, {"H": 7.5, "trunk.length": 3.2, "levels.0.abs_length": 3.4, "levels.0.count": (9, 11)})],
+    "cherry": [(161, {}), (162, {"fruit": None, "blossom": dict(count=260, colors=G("#f6c8d6", "#f0b2c6", "#fbe2ea")),
+                                 "leaves.per_m": 18, "leaves.colors": G("#f2b4c8", "#eaa2bc", "#7a7a36", "#f8d0dc", "#5a7e34")})],
     "snag": [(121, {}), (122, {"H": 5, "trunk.length": 4.2, "levels.0.count": (3, 4), "holes": 2}),
              (123, {"trunk.length": 7.5, "trunk.radius": 0.36, "holes": 4, "brackets": 5,
                      "levels": [dict(count=(4, 5), t=(0.3, 0.9), angle=75, angle_var=15, ratio=0.12, shape="uniform",
