@@ -44,7 +44,8 @@
  * town across the strait (window.AnimalDexArk.mountArchipelago): the wild island draws first, the town joins when built
  * in its worker (./ark-town-worker.js); ark:select flies to an animal on either island. With one island, as before.
  * ?islands=<url> (a development build of the bundle only): T1's routing merged into ?snapshot= by id (the preview).
- * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
+ * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard: a chip that opens to every species
+ * biggest first with its 24-hour change, from /api/ark/events), ?hud=log or ?hud=bars
  * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
  * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
  * From the host (postMessage or window.AnimalDexArkHost):
@@ -214,6 +215,7 @@
         words: words,
         locale: document.documentElement.lang || lang || "en",
         eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
+        iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
         log: hudLog,
         bars: hudBars,
         reducedMotion: motion.matches

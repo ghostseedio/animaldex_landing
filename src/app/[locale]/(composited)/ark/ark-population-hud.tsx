@@ -1,43 +1,54 @@
 "use client";
 
-import React, {useEffect, useMemo, useRef} from "react";
-import Link from "@/app/[locale]/_components/link";
+import React, {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
-import {REGION_ZONES, type ArkRegion, type ArkSnapshot} from "@/ark-scene/types";
-import {arkPopulation, type ArkPairStatus, type ArkPlaceGrouping, type ArkSpeciesRow} from "@/lib/ark-population";
-import {fillArkWords, type ArkWords} from "@/lib/ark-words";
-import {arkIconUrl} from "@/ark-scene/placeholder";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
-import {arkBarIndex, ArkCountTrend, ArkRegionBar, ArkSpeciesBar} from "@/app/[locale]/(composited)/ark/ark-live-bars";
+import type {ArkSnapshot} from "@/ark-scene/types";
+import {arkIconUrl} from "@/ark-scene/placeholder-icon";
+import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
+import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, type ArkChange, type ArkChangeScope, type ArkPopulationThen} from "@/lib/ark-population-change";
+import type {ArkSpeciesRow} from "@/lib/ark-population";
+import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 /**
- * Who is aboard the Ark, species by species: the totals, then every species
- * grouped by region with its live count against the ideal of two. A species
- * flies the camera to one of its animals; a region to the region.
+ * Who is aboard, over the Ark (decision 239; owner, 2026-11-12: "much more minimal - and maybe overlaying the ark
+ * instead of a sidebar, it should represent populations only in order of biggest first"). A small glass panel in the
+ * world's top end corner: the total and its 24-hour change, the island filter, then every species biggest first as a
+ * thin bar with its icon, name, count and 24-hour change (green ▲ / red ▼, nothing when the same). About a dozen
+ * show; the rest scroll inside. A row flies to one of that species' animals, as before.
  *
- * Desktop: a column beside the world, folded to a rail on request. Phone: a
- * band under the world, edge to edge, its first rows open and the rest one
- * tap away.
+ * It folds to a chip ("3,152 aboard ▾"): folded at first on a phone, open on a desktop, then as the reader left it
+ * on this device. It sits in the page's overlay grid (`ark-view.tsx`): beside the toolbar on a desktop, under it on a
+ * phone (the whole width when open there).
  *
- * For a screen reader (A18) it is a list per region under a heading, each
- * row a button saying the species, its count and its pair status; a herd
- * (A14) says so, and opens the species' card rather than one animal's.
+ * For a screen reader (A18) it is a list of buttons, each saying the species, its count and its change; a herd (A14)
+ * and the reader's own say so.
  */
 
-const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-300";
+/** The reader's fold, per device: "1" open, "0" folded; absent: by the screen. */
+export const ARK_HUD_OPEN_KEY = "ark.hud.open";
+const PHONE = "(max-width: 767px)";
+/** Rows rendered at a time. */
+const ROWS_STEP = 40;
 
-/** Rows shown on a phone before "Show all". */
-const PHONE_ROWS = 6;
-
-const STATUS_TONE: Record<ArkPairStatus, {text: string; dot: string}> = {
-    single: {text: "text-[#e9c77b]", dot: "bg-[#e9c77b]"},
-    pair: {text: "text-primary-300", dot: "bg-primary-300"},
-    more: {text: "text-primary-200", dot: "bg-primary-200"},
-    crowded: {text: "text-[#ee9f6c]", dot: "bg-[#ee9f6c]"}
-};
+const GLASS = "border border-white/[0.14] bg-[rgba(14,20,14,0.72)] text-[#fffcf4] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl";
+const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#c8fa63]";
+const UP = "text-[#86e08f]";
+const DOWN = "text-[#ff8a7a]";
 
 type Props = {
-    snapshot: ArkSnapshot;
+    /** The whole Ark (the total's change); null until the client has read it (decision 246). */
+    snapshot: ArkSnapshot | null;
+    /** The total, its species and founders: the Ark's, else the page's summary before it is read. */
+    counts: ArkSnapshot["counts"];
+    /** What the rows list: the island shown, both islands, or the reader's own animals; null until read (placeholders). */
+    listed: ArkSnapshot | null;
+    /** The rows' scope, for their 24-hour change. */
+    scope: ArkChangeScope;
+    /** Each species' count 24 hours ago; null: not read (yet), or not to be said (the reader's own). */
+    then: ArkPopulationThen | null;
+    /** The same for the total (whole Ark), so the reader's own list can still show the Ark's change. */
+    totalThen: ArkPopulationThen | null;
     words: ArkWords;
     locale: string;
     /** The species of the selected animal (or herd), highlighted. */
@@ -46,44 +57,99 @@ type Props = {
     herdKeys: ReadonlySet<string>;
     /** The species of the newest arrival, while its notice shows. */
     arrivalKey: string | null;
-    region: ArkRegion | null;
-    /** Desktop only: folded to a rail. */
-    folded: boolean;
-    onFold: (folded: boolean) => void;
-    expanded: boolean;
-    onExpand: (expanded: boolean) => void;
-    beginning: boolean;
     onSpecies: (row: ArkSpeciesRow) => void;
-    onRegion: (region: ArkRegion | null) => void;
+    /** The island filter and "My animals", over the rows. */
+    filters?: React.ReactNode;
     /** The page's own path ("/ark", "/id/ark"): where a share link points. */
     shareLocalePath?: string;
-    /** Part C: the island switch over the totals (the island shown, or both islands' counts from data). */
-    scope?: React.ReactNode;
-    /** Part C: on the town island, the list by place (homes, farms, the zoo's types, town wildlife), not by the wild regions. */
-    byPlace?: ArkPlaceGrouping | null;
-    /** Part C: a region's name (with two islands the wild island's home petal is the Meadow); default `words.regions`. */
-    regionName?: (region: ArkRegion) => string;
 };
 
 function counted(count: number, one: string, other: string, locale: string): string {
     return count === 1 ? one : other.replace("{count}", count.toLocaleString(locale));
 }
 
-function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
-    const tone = STATUS_TONE[status].dot;
+/** "▲ +12%" in green, "▼ −3%" in red; nothing when the count is the same or the log was not read. */
+export function ArkChangeBadge({change, words, locale, className = ""}: {change: ArkChange | null; words: ArkWords; locale: string; className?: string}) {
+    const said = arkChangeText(change, locale);
+    if (!said) return null;
+    const label = fillArkWords(words.hud.change24h, {change: said.text});
     return (
-        <span aria-hidden="true" className="flex items-center gap-[3px]">
-            <span className={`h-2 w-2 rounded-full ${tone}`} />
-            <span className={`h-2 w-2 rounded-full ${count >= 2 ? tone : "border border-white/25"}`} />
+        <span title={label} className={`shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums leading-none ${said.up ? UP : DOWN} ${className}`}>
+            <span aria-hidden="true">
+                <span className="text-[8px]">{said.up ? "▲" : "▼"}</span> {said.text}
+            </span>
+            <span className="sr-only">{label}</span>
         </span>
     );
 }
 
-export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark", scope = null, byPlace = null, regionName}: Props) {
-    const named = (region: ArkRegion) => regionName?.(region) ?? words.regions[region];
+function Caret({up}: {up: boolean}) {
+    return (
+        <svg viewBox="0 0 20 20" className={`h-3.5 w-3.5 shrink-0 opacity-75 transition-transform duration-200 motion-reduce:transition-none ${up ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 7.5l5 5 5-5" />
+        </svg>
+    );
+}
+
+export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark"}: Props) {
     const hud = words.hud;
-    const listRef = useRef<HTMLDivElement | null>(null);
-    // An animal tapped in the world: its species' row comes into the column's view (desktop; the page never scrolls for it).
+    const panelId = useId();
+    const listRef = useRef<HTMLUListElement | null>(null);
+    const headingRef = useRef<HTMLHeadingElement | null>(null);
+    // Null: as the screen has it (a phone folded, a desktop open) with no flash before the reader's choice is read.
+    const [open, setOpenState] = useState<boolean | null>(null);
+    const setOpen = useCallback((next: boolean, remember = true) => {
+        setOpenState(next);
+        if (!remember) return;
+        try {
+            window.localStorage.setItem(ARK_HUD_OPEN_KEY, next ? "1" : "0");
+        } catch {
+            // For this visit.
+        }
+    }, []);
+    useEffect(() => {
+        try {
+            const stored = window.localStorage.getItem(ARK_HUD_OPEN_KEY);
+            if (stored === "1" || stored === "0") setOpenState(stored === "1");
+        } catch {
+            // No storage: by the screen.
+        }
+        // "#ark-aboard" (the skip link, About's link): open, and its heading takes focus.
+        const asked = () => {
+            if (window.location.hash !== "#ark-aboard") return;
+            setOpenState(true);
+            window.setTimeout(() => headingRef.current?.focus({preventScroll: true}), 0);
+        };
+        asked();
+        window.addEventListener("hashchange", asked);
+        return () => window.removeEventListener("hashchange", asked);
+    }, []);
+    const isOpen = () => open ?? !window.matchMedia(PHONE).matches;
+
+    const rows = useMemo(() => arkRankedSpecies(listed), [listed]);
+    // Rows are rendered a step at a time (decision 246: never hundreds of buttons at once), more as the end scrolls in.
+    const [limit, setLimit] = useState(ROWS_STEP);
+    const moreRef = useRef<HTMLLIElement | null>(null);
+    const selectedIndex = selectedKey ? rows.findIndex((row) => row.key === selectedKey) : -1;
+    const shownRows = rows.slice(0, Math.max(limit, selectedIndex + 1));
+    useEffect(() => {
+        const sentinel = moreRef.current;
+        const list = listRef.current;
+        if (!sentinel || !list || typeof IntersectionObserver === "undefined") return;
+        const observer = new IntersectionObserver((entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) setLimit((now) => now + ROWS_STEP);
+        }, {root: list, rootMargin: "0px 0px 240px 0px"});
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [shownRows.length, rows.length]);
+    const ceiling = useMemo(() => arkBarCeiling(rows[0]?.count ?? 0), [rows]);
+    const number = (value: number) => value.toLocaleString(locale);
+    const total = snapshot ? arkTotalChange(snapshot.animals.length, totalThen, "both") : null;
+    const totalSaid = arkChangeText(total, locale);
+    const totalLine = fillArkWords(hud.chip, {count: number(counts.animals)});
+    const subline = `${counted(counts.species, words.speciesOne, words.speciesOther, locale)} · ${counted(counts.founders, words.foundersOne, words.foundersOther, locale)}`;
+
+    // An animal tapped in the world: its species' row comes into the panel's view (the page never scrolls for it).
     useEffect(() => {
         const list = listRef.current;
         if (!list || !selectedKey || list.scrollHeight <= list.clientHeight) return;
@@ -94,183 +160,147 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
             list.scrollTo({top: Math.max(top - list.clientHeight / 3, 0), behavior: "smooth"});
         }
     }, [selectedKey]);
-    const population = useMemo(() => arkPopulation(snapshot, byPlace), [snapshot, byPlace]);
-    // (Part C: a place group's bar is its share of the biggest place's animals.)
-    const placeMost = useMemo(() => Math.max(1, ...population.regions.map((group) => group.animals)), [population]);
-    // The live bars (owner, 2026-11-11): each count against the others in its region, growing and shrinking as it changes.
-    const bars = useMemo(() => arkBarIndex(population), [population]);
-    const number = (value: number) => value.toLocaleString(locale);
-    const status = (value: ArkPairStatus) => hud[value];
-    let index = 0;
 
-    if (folded) {
-        return (
-            <aside id="ark-aboard" aria-label={hud.label} className="hidden border-l border-line-200 bg-canvas-950 md:flex md:w-14 md:flex-col md:items-center">
-                <button
-                    type="button"
-                    onClick={() => onFold(false)}
-                    aria-expanded={false}
-                    aria-label={hud.show}
-                    title={hud.show}
-                    className={`flex h-full w-full flex-col items-center gap-3 pt-4 text-ink-200 transition-colors hover:bg-white/[0.04] hover:text-white ${FOCUS}`}
-                >
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
-                    <span className="font-display text-lg font-extrabold tabular-nums text-white">{number(snapshot.counts.animals)}</span>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400 [writing-mode:vertical-rl]">{hud.title}</span>
-                </button>
-            </aside>
-        );
-    }
+    // A card opening on a phone (a tap in the world) folds the open panel too: the card and the animal need the room.
+    useEffect(() => {
+        if (selectedKey && window.matchMedia(PHONE).matches) setOpen(false, false);
+    }, [selectedKey, setOpen]);
+
+    const pick = (row: ArkSpeciesRow) => {
+        onSpecies(row);
+        // On a phone the open panel would cover the animal it flies to: it folds (not remembered as the reader's choice).
+        if (window.matchMedia(PHONE).matches) setOpen(false, false);
+    };
+
+    // Folded: the chip. Open: the panel. Before the reader's choice is read, the screen decides (CSS only, no shift).
+    const chipShown = open === null ? "flex md:hidden" : open ? "hidden" : "flex";
+    const panelShown = open === null ? "hidden md:flex" : open ? "flex" : "hidden";
+    // In the overlay grid: under the toolbar on a phone (the whole width when open), beside it on a desktop.
+    const place = open ? "col-span-2 justify-self-stretch" : "col-span-2 justify-self-end";
 
     return (
-        <aside id="ark-aboard" aria-labelledby="ark-aboard-title" tabIndex={-1} className="flex flex-col outline-none border-t border-line-200 bg-canvas-950 md:h-full md:w-[21rem] md:shrink-0 md:border-l md:border-t-0 lg:w-[23rem]">
-            {/* The totals. */}
-            <div className="border-b border-line-200 px-4 pb-4 pt-4 md:px-5">
-                {scope}
-                <div className="flex items-center justify-between gap-3">
-                    <h2 id="ark-aboard-title" className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300"><span className="sr-only">{hud.label}</span><span aria-hidden="true">{hud.title}</span></h2>
-                    <div className="flex items-center gap-1">
-                        <ArkShareButton
-                            target="population"
-                            look="icon"
-                            localePath={shareLocalePath}
-                            slug={null}
-                            title={words.eyebrow}
-                            text={fillArkWords(words.share.textArk, {
-                                animals: counted(snapshot.counts.animals, words.animalsOne, words.animalsOther, locale),
-                                species: counted(snapshot.counts.species, words.speciesOne, words.speciesOther, locale)
-                            })}
-                            label={words.share.shareArk}
-                            copied={words.share.copied}
-                            className="flex h-8 w-8 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60"
-                        />
-                        <button
-                            type="button"
-                            aria-pressed={region === null}
-                            onClick={() => onRegion(null)}
-                            className={`inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors ${FOCUS} ${region === null ? "border-primary-400 text-white" : "border-line-200 text-ink-200 hover:border-line-100 hover:text-white"}`}
-                        >
-                            {words.wholeWorld}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onFold(true)}
-                            aria-expanded
-                            aria-label={hud.hide}
-                            title={hud.hide}
-                            className={`hidden h-8 w-8 items-center justify-center rounded-full text-ink-300 transition-colors hover:bg-white/10 hover:text-white md:flex ${FOCUS}`}
-                        >
-                            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                        </button>
-                    </div>
-                </div>
-                <dl className="mt-3 grid grid-cols-3 gap-3">
-                    {([["statAnimals", snapshot.counts.animals], ["statSpecies", snapshot.counts.species], ["statFounders", snapshot.counts.founders]] as const).map(([key, value]) => (
-                        <div key={key} className="flex flex-col-reverse">
-                            <dt className="text-[12px] text-ink-400">{hud[key]}</dt>
-                            <dd className="font-display text-[1.75rem] font-extrabold leading-none tabular-nums text-white">{number(value)}</dd>
+        <section id="ark-aboard" aria-labelledby={`${panelId}-title`} tabIndex={-1} className={`pointer-events-none row-start-2 scroll-mt-[8rem] md:scroll-mt-[4.8rem] flex min-h-0 min-w-0 flex-col self-start outline-none md:col-span-1 md:col-start-2 md:row-span-2 md:row-start-1 md:max-h-full md:justify-self-end ${place}`}>
+            <button
+                type="button"
+                onClick={() => setOpen(true)}
+                aria-expanded={false}
+                aria-controls={panelId}
+                aria-label={[totalLine, totalSaid ? fillArkWords(hud.change24h, {change: totalSaid.text}) : null, hud.show].filter(Boolean).join(", ")}
+                title={hud.show}
+                className={`${chipShown} ${GLASS} ${FOCUS} pointer-events-auto h-11 items-center gap-2 rounded-full pl-3.5 pr-3 text-[13px] font-bold tabular-nums transition-colors hover:bg-[rgba(24,32,24,0.82)] md:h-9`}
+            >
+                <span className="whitespace-nowrap">{totalLine}</span>
+                <ArkChangeBadge change={total} words={words} locale={locale} />
+                <Caret up={false} />
+            </button>
+
+            <div id={panelId} className={`${panelShown} ${GLASS} pointer-events-auto min-h-0 w-full flex-col overflow-hidden rounded-2xl md:w-[19rem]`}>
+                <div className="flex items-start gap-1 pb-2 pl-3.5 pr-1.5 pt-2.5">
+                    <div className="min-w-0 flex-1 pt-0.5">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            <h2 id={`${panelId}-title`} ref={headingRef} tabIndex={-1} className="text-[15px] font-bold leading-tight tabular-nums outline-none focus-visible:underline">
+                                <span className="sr-only">{hud.label}: </span>
+                                {totalLine}
+                            </h2>
+                            {totalSaid ? (
+                                <span className="flex items-baseline gap-1">
+                                    <ArkChangeBadge change={total} words={words} locale={locale} />
+                                    <span aria-hidden="true" className="text-[10.5px] font-semibold text-white/40">{hud.changeWindow}</span>
+                                </span>
+                            ) : null}
                         </div>
-                    ))}
-                </dl>
-                {population.species > 0 ? (
-                    <p className="mt-3 flex items-center gap-2 text-[13px] text-ink-200">
-                        <PairMeter count={population.paired ? 2 : 1} status={population.paired ? "pair" : "single"} />
-                        {fillArkWords(hud.pairsLine, {paired: number(population.paired), species: number(population.species)})}
-                    </p>
-                ) : null}
-            </div>
-
-            {/* Every species, by region. */}
-            <div ref={listRef} className="relative min-h-0 flex-1 md:overflow-y-auto md:overscroll-contain" role="group" aria-label={words.a11y.list}>
-                {population.regions.map((group) => (
-                    <section key={group.place?.key ?? group.region} aria-labelledby={`ark-region-${group.place?.key.replace(/[^a-z_]/g, "-") ?? group.region}`}>
-                        <h3 className="m-0">
-                        <button
-                            type="button"
-                            onClick={() => (group.place ? undefined : onRegion(group.region))}
-                            aria-pressed={group.place ? undefined : region === group.region}
-                            aria-label={group.place ? group.place.label : fillArkWords(hud.flyTo, {region: named(group.region)})}
-                            title={group.place ? group.place.label : REGION_ZONES[group.region].map((zone) => words.zones[zone]).join(" · ")}
-                            className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} relative min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${FOCUS} ${!group.place && region === group.region ? "text-white" : "text-ink-300"}`}
-                        >
-                            <span id={`ark-region-${group.place?.key.replace(/[^a-z_]/g, "-") ?? group.region}`} className="text-[11px] font-bold uppercase tracking-[0.14em]">{group.place?.label ?? named(group.region)}</span>
-                            <span className="flex items-center gap-1.5 text-[12px] tabular-nums text-ink-400"><ArkCountTrend count={group.animals} locale={locale} words={words} />{number(group.animals)}</span>
-                            <ArkRegionBar share={group.place ? group.animals / placeMost : bars.region(group.region)} words={words} />
-                        </button>
-                        </h3>
-                        <ul aria-label={fillArkWords(words.a11y.regionCount, {region: group.place?.label ?? named(group.region), count: number(group.animals)})}>
-                            {group.species.map((row) => {
-                                const hidden = index++ >= PHONE_ROWS && !expanded;
-                                const selected = row.key === selectedKey;
-                                const fresh = row.key === arrivalKey;
-                                const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
-                                const label = fillArkWords(hud.rowLabel, {animal: row.name, count: number(row.count), status: status(row.status)}) + (row.breeds.length ? `; ${fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")})}` : "");
-                                return (
-                                    <li key={row.key} data-species={row.key} className={hidden ? "hidden md:block" : undefined}>
-                                        <button
-                                            type="button"
-                                            onClick={() => onSpecies(row)}
-                                            aria-current={selected ? "true" : undefined}
-                                            aria-label={isHerd ? `${label}, ${hud.herdTag}` : label}
-                                            className={`group relative flex min-h-[3.25rem] w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-200 md:px-5 ${FOCUS} ${selected ? "bg-white/[0.07]" : fresh ? "bg-primary-400/[0.10]" : "hover:bg-white/[0.04]"}`}
-                                        >
-                                            {selected ? <span aria-hidden="true" className="absolute inset-y-0 left-0 w-[3px] bg-primary-400" /> : null}
-                                            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
-                                                <ArkSpeciesIcon src={arkIconUrl(row.slug)} size={36} className="h-[82%] w-[82%] object-contain" />
-                                            </span>
-                                            <span className="min-w-0 flex-1">
-                                                <span className="flex items-center gap-2">
-                                                    <span className="truncate text-[14px] font-bold text-white">{row.name}</span>
-                                                    {row.mine ? <span className="shrink-0 rounded-full bg-primary-400/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-[0.08em] text-primary-200">{hud.yours}</span> : null}
-                                                </span>
-                                                <span className={`block text-[12px] ${STATUS_TONE[row.status].text}`}>{status(row.status)}{isHerd ? <span className="text-ink-400"> · {hud.herdTag}</span> : null}</span>
-                                                <ArkSpeciesBar count={row.count} status={row.status} words={words} {...bars.species(row.key)} />
-                                                {/* A kind with breeds aboard (A1): one row, its breeds named. */}
-                                                {row.breeds.length ? (
-                                                    <span className="block truncate text-[11px] text-ink-400">
-                                                        {row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(" · ")}
-                                                    </span>
-                                                ) : null}
-                                            </span>
-                                            <span className="flex shrink-0 items-center gap-2.5">
-                                                <ArkCountTrend count={row.count} locale={locale} words={words} />
-                                                <span className="min-w-6 text-right font-display text-base font-extrabold tabular-nums text-white">{number(row.count)}</span>
-                                            </span>
-                                        </button>
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </section>
-                ))}
-
-                {index > PHONE_ROWS ? (
+                        <p className="mt-0.5 truncate text-[11.5px] text-white/55">{subline}</p>
+                    </div>
+                    <ArkShareButton
+                        target="population"
+                        look="icon"
+                        localePath={shareLocalePath}
+                        slug={null}
+                        title={words.eyebrow}
+                        text={fillArkWords(words.share.textArk, {
+                            animals: counted(counts.animals, words.animalsOne, words.animalsOther, locale),
+                            species: counted(counts.species, words.speciesOne, words.speciesOther, locale)
+                        })}
+                        label={words.share.shareArk}
+                        copied={words.share.copied}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60 md:h-8 md:w-8 ${FOCUS}`}
+                    />
                     <button
                         type="button"
-                        onClick={() => onExpand(!expanded)}
-                        aria-expanded={expanded}
-                        className={`flex min-h-12 w-full items-center justify-center gap-2 border-t border-line-300 text-sm font-bold text-primary-300 md:hidden ${FOCUS}`}
+                        onClick={() => setOpen(!isOpen())}
+                        aria-expanded
+                        aria-controls={panelId}
+                        aria-label={hud.hide}
+                        title={hud.hide}
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8 ${FOCUS}`}
                     >
-                        {expanded ? hud.showFewer : fillArkWords(hud.showAll, {count: number(population.species)})}
-                        <span aria-hidden="true" className={`text-xs transition-transform ${expanded ? "rotate-180" : ""}`}>⌄</span>
+                        <Caret up />
                     </button>
-                ) : null}
+                </div>
 
-                {/* A beginning Ark: what the few rows mean, and the way to add one. */}
-                {beginning ? (
-                    <div className="border-t border-line-300 px-4 py-5 md:px-5">
-                        {/* On a phone the page's "How an animal comes aboard" follows at once, with the same move. */}
-                        <p className="font-display text-base font-extrabold text-white">{hud.earlyTitle}</p>
-                        <p className="mt-1.5 text-[13px] leading-relaxed text-ink-200">{hud.earlyBody}</p>
-                        <Link href="/talk" className="mt-4 hidden min-h-10 md:inline-flex items-center gap-2 rounded-full bg-primary-400 px-4 text-[13px] font-bold text-canvas-950 transition-colors hover:bg-primary-100">
-                            {hud.bring}
-                            <span aria-hidden="true">→</span>
-                        </Link>
-                    </div>
-                ) : null}
+                {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
+
+                {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
+                <ul ref={listRef} aria-label={hud.listLabel} className="max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
+                    {listed ? null : Array.from({length: 8}, (_, i) => (
+                        // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
+                        <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
+                            <span className="h-6 w-6 shrink-0 rounded-full bg-white/[0.08]" />
+                            <span className="min-w-0 flex-1">
+                                <span className="block h-2.5 rounded-full bg-white/[0.08]" style={{width: `${72 - i * 5}%`}} />
+                                <span className="mt-[7px] block h-[3px] rounded-full bg-white/[0.06]" style={{width: `${86 - i * 7}%`}} />
+                            </span>
+                            <span className="h-2.5 w-6 rounded-full bg-white/[0.08]" />
+                        </li>
+                    ))}
+                    {shownRows.map((row) => {
+                        const selected = row.key === selectedKey;
+                        const fresh = row.key === arrivalKey;
+                        const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
+                        const change = arkChangeOf(row.count, then, row.key, scope);
+                        const said = arkChangeText(change, locale);
+                        const label = [
+                            fillArkWords(hud.rowCount, {animal: row.name, count: number(row.count)}),
+                            said ? fillArkWords(hud.change24h, {change: said.text}) : null,
+                            row.mine ? hud.yours : null,
+                            isHerd ? hud.herdTag : null,
+                            row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
+                        ].filter(Boolean).join(", ");
+                        return (
+                            <li key={row.key} data-species={row.key}>
+                                <button
+                                    type="button"
+                                    onClick={() => pick(row)}
+                                    aria-current={selected ? "true" : undefined}
+                                    aria-label={label}
+                                    className={`relative flex min-h-11 w-full items-center gap-2.5 px-3.5 py-1 text-left transition-colors duration-200 md:min-h-[2.375rem] ${FOCUS} ${selected ? "bg-white/[0.10]" : fresh ? "bg-[#c8fa63]/[0.10]" : "hover:bg-white/[0.06]"}`}
+                                >
+                                    {selected ? <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[3px] rtl:left-auto rtl:right-0 rounded-full bg-[#c8fa63]" /> : null}
+                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
+                                        <ArkSpeciesIcon src={arkIconUrl(row.slug)} size={24} className="h-[84%] w-[84%] object-contain" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="truncate text-[13px] font-semibold leading-tight">{row.name}</span>
+                                            {row.mine ? <span aria-hidden="true" title={hud.yours} className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c8fa63]" /> : null}
+                                        </span>
+                                        {/* Its count against the biggest (log scale: one animal and three hundred both read); it glides as it changes. */}
+                                        <span aria-hidden="true" className="mt-[5px] block h-[3px] w-full rounded-full bg-white/[0.09]">
+                                            <span
+                                                className={`block h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${selected ? "bg-[#c8fa63]" : "bg-white/60"}`}
+                                                style={{width: `${(arkBarShare(row.count, ceiling) * 100).toFixed(1)}%`}}
+                                            />
+                                        </span>
+                                    </span>
+                                    <ArkChangeBadge change={change} words={words} locale={locale} />
+                                    <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                    {shownRows.length < rows.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
+                </ul>
             </div>
-
-            <p className="border-t border-line-300 px-4 py-3 text-[12px] leading-snug text-ink-400 md:px-5">{words.hint}</p>
-        </aside>
+        </section>
     );
 }

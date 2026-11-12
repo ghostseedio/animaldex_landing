@@ -1,13 +1,13 @@
 /**
  * The live HUD for pages outside Next (the apps' embed, `public/ark/embed.html?hud=1`): the log over the world
- * and the population bars, wired to a mounted scene. /ark uses the log's controller directly and draws its bars
- * in its own column (`ark-live-bars.tsx`).
+ * and who is aboard (biggest first, with the 24-hour change), wired to a mounted scene. /ark uses the log's
+ * controller directly and draws who is aboard as its own overlay (`ark-population-hud.tsx`).
  */
 
 import {ArkLive, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ArkBarsView, type ArkBarsWords} from "@/ark-scene/live/bars-view";
-import {ARK_LIVE_ENGLISH, type ArkLiveWords} from "@/lib/ark-live-words";
-import type {ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkLiveWords} from "@/lib/ark-live-words";
+import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 
 export {ArkLive} from "@/ark-scene/live/controller";
 
@@ -16,9 +16,9 @@ export type ArkHudWordsIn = {
     live?: Partial<ArkLiveWords> | null;
     replay?: Record<string, string> | null;
     showMe?: string | null;
-    regions?: Partial<Record<ArkRegion, string>> | null;
-    hud?: Partial<Record<"title" | "show" | "hide" | "rowLabel" | "single" | "pair" | "more" | "crowded", string>> | null;
-    a11y?: {regionCount?: string} | null;
+    speciesOne?: string | null;
+    speciesOther?: string | null;
+    hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;
 } | null;
 
 export type ArkLiveHudOptions = {
@@ -27,28 +27,28 @@ export type ArkLiveHudOptions = {
     locale: string;
     /** `/api/ark/events`, or null (development's fixtures). */
     eventsUrl: string | null;
+    /** A species' icon in who is aboard (the embed's icon folder); absent: the Ark's generic figure. */
+    iconUrl?: ((slug: string) => string) | null;
     /** Draw the log, the bars (default both). */
     log?: boolean;
     bars?: boolean;
     reducedMotion?: boolean;
 };
 
-const REGIONS_ENGLISH: Record<ArkRegion, string> = {ocean: "Ocean", coast: "Coast", fresh_water: "Fresh water", forest: "Forest", open_land: "Open land", high_cold: "High and cold", home: "Home"};
-
 function barsWords(words: ArkHudWordsIn): ArkBarsWords {
     const hud = words?.hud ?? {};
-    const live = {...ARK_LIVE_ENGLISH, ...(words?.live ?? {})};
     return {
-        title: hud.title || "Aboard",
+        chip: hud.chip || "{count} aboard",
         show: hud.show || "Who is aboard",
         hide: hud.hide || "Hide who is aboard",
-        barsNote: live.barsNote,
-        up: live.up,
-        down: live.down,
-        regions: {...REGIONS_ENGLISH, ...(words?.regions ?? {})},
-        status: {single: hud.single || "needs a mate", pair: hud.pair || "a pair", more: hud.more || "more than a pair", crowded: hud.crowded || "crowded"},
-        rowLabel: hud.rowLabel || "{animal}: {count}, {status}",
-        regionCount: words?.a11y?.regionCount || "{region}: {count} animals"
+        rowCount: hud.rowCount || "{animal}: {count}",
+        change24h: hud.change24h || "{change} in the last 24 hours",
+        changeWindow: hud.changeWindow || "24 h",
+        speciesOne: words?.speciesOne || "1 species",
+        speciesOther: words?.speciesOther || "{count} species",
+        yours: hud.yours || "Yours",
+        herdTag: hud.herdTag || "herd",
+        list: hud.listLabel || "Every species aboard, the most numerous first"
     };
 }
 
@@ -65,9 +65,9 @@ export type ArkLiveHud = {
 
 /** The log and the bars over `host` (a positioned box over the world). */
 export function mountArkLiveHud(host: HTMLElement, options: ArkLiveHudOptions): ArkLiveHud {
-    const narrow = typeof window !== "undefined" && window.matchMedia?.("(max-width: 599px)").matches;
     const log = options.log === false ? null : new ArkLive({host, scene: options.scene, words: options.words as ArkLiveWordsIn, locale: options.locale, eventsUrl: options.eventsUrl, reducedMotion: options.reducedMotion, storageKey: null});
-    const bars = options.bars === false ? null : new ArkBarsView(host, {scene: options.scene, words: barsWords(options.words), locale: options.locale, reducedMotion: Boolean(options.reducedMotion), collapsed: Boolean(narrow)});
+    // Who is aboard starts as its chip, every time (decision 239; nothing is remembered in the apps' panel).
+    const bars = options.bars === false ? null : new ArkBarsView(host, {scene: options.scene, words: barsWords(options.words), locale: options.locale, reducedMotion: Boolean(options.reducedMotion), collapsed: true, eventsUrl: options.eventsUrl, iconUrl: options.iconUrl ?? null});
     return {
         snapshot: (snapshot) => {
             log?.snapshot(snapshot);

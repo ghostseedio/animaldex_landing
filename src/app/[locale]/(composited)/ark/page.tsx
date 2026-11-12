@@ -19,12 +19,15 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkFoundersOf, ARK_NO_FOUNDERS, type ArkFounders} from "@/lib/ark-founders";
 import {arkLocalSnapshotOf, arkLocalSnapshotPath} from "@/lib/ark-local-snapshot";
 import {rigBaseFrom} from "@/ark-scene/rig-clips";
+import {arkPageSummary} from "@/lib/ark-page-summary";
 
 /**
  * /ark: the shared Ark (Ark v1 contract, section 5). Every animal in it came
  * aboard because someone's step from that animal's way worked.
  *
- * Public, read as the visitor (their own animals come back `mine`). Indexed
+ * Public. The server renders from the public read (cached, decision 246); the
+ * client then reads the Ark as the visitor (their own animals come back
+ * `mine`) after the first paint, behind a poster frame of the world. Indexed
  * (Part 4d): under the world the page says in words what the Ark is, how
  * animals arrive and live, and who is aboard, rendered on the server
  * (`ark-about`). `?focus=` pages share a card of that species but keep /ark
@@ -82,7 +85,13 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
  * (`src/lib/ark-languages.ts`), English key by key, right to left where it reads so.
  */
 
-export const dynamic = "force-dynamic";
+/*
+ * Not `force-dynamic` (decision 246): that also turned off Next's data cache, so every request read the whole live
+ * Ark (2-3 s) and handed it to the client as 4 MB of props. Now the server reads the public Ark from the data cache
+ * (`readPublicArk`, stale-while-revalidate, PUBLIC_REVALIDATE_SECONDS) for the words under the world, the metadata
+ * and the first paint's counts; the client reads the visitor's own Ark (`/api/ark/voyage`) after the first paint.
+ * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
+ */
 
 type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
 
@@ -143,12 +152,15 @@ function pageLocale(locale: string) {
     return localeConfig.locales.includes(locale) ? locale : localeConfig.defaultLocale;
 }
 
-/** How long the share card's counts and the page's metadata may be cached (the scene itself refreshes every 45 s). */
-const META_REVALIDATE_SECONDS = 300;
+/**
+ * How long the public read behind the page may be served from cache: the metadata, the share card's counts, the words
+ * under the world and the first paint's counts (the client reads the live Ark itself after the first paint).
+ */
+const PUBLIC_REVALIDATE_SECONDS = 60;
 
 export async function generateMetadata({params, searchParams}: Props): Promise<Metadata> {
     const locale = pageLocale(params.locale);
-    const [{words}, snapshot] = await Promise.all([getArkWords(locale, langOf(searchParams)), readPublicArk(META_REVALIDATE_SECONDS)]);
+    const [{words}, snapshot] = await Promise.all([getArkWords(locale, langOf(searchParams)), readPublicArk(PUBLIC_REVALIDATE_SECONDS)]);
     const seo = words.seo;
     // `?focus=<species>`: that species' card and title; the page itself stays /ark.
     const focus = arkFocusSlug(snapshot, typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null);
@@ -510,14 +522,20 @@ export default async function ArkPage({params, searchParams}: Props) {
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
     // Names are on by default (owner, 2026-11-11: every bringer with a handle shows as their @username); `&founders=0`: a server that names nobody.
     const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
+    const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
+    // The live Ark: the public read from the data cache (decision 246); the visitor's own (`mine`) only for the recorder.
     const [{words, talk, language}, data] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
-        mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null})) : readArkVoyage().then((read) => ({fixture: null, read}))
+        mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null, shared: null}))
+            : local ? Promise.resolve({fixture: null, read: null, shared: null})
+            : record ? readArkVoyage().then((read) => ({fixture: null, read, shared: null}))
+            : readPublicArk(PUBLIC_REVALIDATE_SECONDS).then((shared) => ({fixture: null, read: null, shared}))
     ]);
-    const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null);
+    const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null) ?? data.shared;
+    // Handed to the client as props only in development's modes: the live Ark is read by the client after the first paint.
+    const handed = local || mode ? snapshot : null;
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
     const founders = local?.founders ?? data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
-    const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
     const wordsLocale = otherLanguage ? language : locale;
@@ -531,7 +549,8 @@ export default async function ArkPage({params, searchParams}: Props) {
         />
         <ArkView
             locale={wordsLocale}
-            initial={snapshot}
+            initial={handed}
+            summary={arkPageSummary(snapshot)}
             founders={founders}
             growFrom={data.fixture?.full ?? null}
             fixture={Boolean(mode)}

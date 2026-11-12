@@ -5,10 +5,10 @@
  * places a species it has no zone for), never the whole Ark.
  */
 
-import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stats";
+import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stat-keys";
 import {ARK_ZONES, type ArkAnimal, type ArkNestRow, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {arkActivity} from "@/lib/ark-daylight";
-import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkArea, arkArrivalSource, arkThrive} from "@/ark-scene/thrive";
 
 const ZONES = new Set<string>(ARK_ZONES);

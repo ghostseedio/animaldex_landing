@@ -35,6 +35,20 @@ export type ArkHudWords = {
     breeds: string;
     /** "12 · crowded": a count and its pair status. */
     countStatus: string;
+    /** The population overlay (decision 239): "3,152 aboard", its folded chip and its heading. */
+    chip: string;
+    /** A row's accessible name: "Plains Zebra: 12" (its 24-hour change follows when there is one). */
+    rowCount: string;
+    /** "+12% in the last 24 hours": a count's change, as a tooltip and for a screen reader. */
+    change24h: string;
+    /** The window beside the total's change ("24 h"). */
+    changeWindow: string;
+    /** About's compact list of every species: "All 953 species aboard", what it is, and the link up to the overlay. */
+    allSpecies: string;
+    listIntro: string;
+    openList: string;
+    /** The overlay's list, for a screen reader. */
+    listLabel: string;
 };
 
 /** `generic`: an animal a step brought (before captures did); `capture`: one a capture brought (captures + thrive). */

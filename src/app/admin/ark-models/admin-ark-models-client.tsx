@@ -2,7 +2,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import type {ArkModelsPayload} from "@/app/api/admin/ark-models/route";
-import {arkIconFallback, arkIconUrl, arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkIconFallback, arkIconUrl, arkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {AdminPage, Alert, Badge, EmptyState, ListSkeleton, PageHeader, RefreshButton, Stat, StatGrid, StatGridSkeleton, Table, TD, TH} from "@/components/admin/ui";
 
 /**
