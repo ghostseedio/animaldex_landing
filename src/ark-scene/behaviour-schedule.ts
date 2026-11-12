@@ -29,7 +29,7 @@
 import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
-import {hostOf, onSurface} from "@/ark-scene/collide/attach";
+import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -545,6 +545,27 @@ export function bodyReachOf(animal: ScheduleAnimal, slug: string): number {
 }
 
 /**
+ * A perch up on a surface (a rock's top, a branch, a ledge) its body fits on (collisions): nothing solid but what it is on
+ * (its rock and the rocks touching it, its tree) within its reach there. A crocodile on a small rock top beside a taller
+ * rock does not; it rests at the rock's foot instead.
+ */
+function perchFits(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, spot: Spot): boolean {
+    const solid = world.nav.colliders;
+    if (!solid || !raised(world, spot)) return true;
+    const surface = surfaceOf(spot);
+    if (!surface) return true;
+    const reach = bodyReachOf(animal, profile.slug);
+    const height = Math.max(animal.length * 0.5, 0.1);
+    // (Up in a tree, the trunks are its tree's: only rocks, walls and fences round a perch count.)
+    for (const c of solid.near(spot.x, spot.z, reach + 0.01)) {
+        if (c.soft || c.kind === "trunk" || c.y1 - 0.02 <= spot.y || c.y0 >= spot.y + height) continue;
+        if ((surface.host && c.id === `rock:${surface.host}`) || colliderDistance(c, surface.x, surface.z) < (surface.r ?? 0.15)) continue;
+        if (reach - colliderDistance(c, spot.x, spot.z) > Math.max(reach * 0.25, 0.03)) return false;
+    }
+    return true;
+}
+
+/**
  * A goal on the ground it fits at (collisions): a spot whose body would stand in a trunk, a rock, a fence or a wall (a
  * patch of grass by a barn, the shade spot of one tree in another's trunk, a wander spot by a log) moves to the nearest
  * point its body fits at whichever way it turns there (its reach), walkable, within 4 m (searched outwards, the same for
@@ -852,8 +873,12 @@ const LOOK_BACK = 6;
 function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     return remember(memoOf(world, hoursAt, animal).placed, slot, () => {
         const planned = keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt));
-        // (Collisions: a ground goal its body fits at.)
+        // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
+        if (!perchFits(world, profile, animal, planned.to)) {
+            const foot = world.nav.nearest(planned.to.x, planned.to.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
+            if (foot) return {...planned, to: groundSpot(world, foot.x, foot.z), mode: planned.mode === "air" ? "air" : "ground"};
+        }
         const to = clearOfSolid(world, profile, animal, planned.to);
         return to === planned.to ? planned : {...planned, to};
     });

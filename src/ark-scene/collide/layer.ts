@@ -32,8 +32,6 @@ const key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
 export class CollideLayer<E> {
     private epoch = Number.NaN;
     private readonly grid = new Map<number, E[]>();
-    /** The furthest any entry's body reaches, plus how far it could have gone since it was last placed (m): the search's margin. */
-    private margin = 0;
     private readonly placedNow = new Map<E, ResolvePose | null>();
     private readonly resolvedNow = new Map<E, {x: number; z: number}>();
     private readonly bodies = new Map<E, ResolveBody>();
@@ -66,27 +64,30 @@ export class CollideLayer<E> {
         return b;
     }
 
-    /** A new moment: who is where, roughly (from where each was last worked out). */
+    /**
+     * A new moment: who is where, roughly. Each is listed in every cell its body could reach now: round where it was last
+     * worked out, as far as its body reaches plus how far it could have gone since (so a search needs only its own reach).
+     */
     private begin(epoch: number) {
         if (epoch === this.epoch) return;
         this.epoch = epoch;
         this.grid.clear();
         this.placedNow.clear();
         this.resolvedNow.clear();
-        let reach = 0;
-        let travel = 0;
         for (const e of this.hooks.everyone()) {
             const last = this.hooks.last(e);
             if (!last) continue;
             const body = this.bodyOf(e);
-            reach = Math.max(reach, body.half + body.radius);
-            travel = Math.max(travel, Math.min(this.hooks.speed(e) * Math.abs(epoch - last.at), MOST_TRAVEL));
-            const k = key(Math.floor(last.x / CELL), Math.floor(last.z / CELL));
-            const list = this.grid.get(k);
-            if (list) list.push(e);
-            else this.grid.set(k, [e]);
+            const r = body.half + body.radius + Math.min(this.hooks.speed(e) * Math.abs(epoch - last.at), MOST_TRAVEL) + 0.05;
+            for (let i = Math.floor((last.x - r) / CELL); i <= Math.floor((last.x + r) / CELL); i++) {
+                for (let j = Math.floor((last.z - r) / CELL); j <= Math.floor((last.z + r) / CELL); j++) {
+                    const k = key(i, j);
+                    const list = this.grid.get(k);
+                    if (list) list.push(e);
+                    else this.grid.set(k, [e]);
+                }
+            }
         }
-        this.margin = reach + travel;
     }
 
     /** Its pose now out of anything solid (worked out once a moment). */
@@ -109,12 +110,14 @@ export class CollideLayer<E> {
     /** Everyone touching it now (their poses out of anything solid). */
     private touching(e: E, self: ResolvePose, epoch: number): E[] {
         const body = this.bodyOf(e);
-        const range = body.half + body.radius + this.margin;
+        const range = body.half + body.radius + 0.05;
         const out: E[] = [];
+        const seen = new Set<E>();
         for (let i = Math.floor((self.x - range) / CELL); i <= Math.floor((self.x + range) / CELL); i++) {
             for (let j = Math.floor((self.z - range) / CELL); j <= Math.floor((self.z + range) / CELL); j++) {
                 for (const other of this.grid.get(key(i, j)) ?? []) {
-                    if (other === e) continue;
+                    if (other === e || seen.has(other)) continue;
+                    seen.add(other);
                     const last = this.hooks.last(other)!;
                     const ob = this.bodyOf(other);
                     const could = body.half + body.radius + ob.half + ob.radius + Math.min(this.hooks.speed(other) * Math.abs(epoch - last.at), MOST_TRAVEL) + 0.05;

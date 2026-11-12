@@ -99,16 +99,22 @@ type TripLike = {
  * The surface points a trip has it on now, or climbing between (`behaviour-schedule.ts` Trip): at a branch, a rock's
  * face, a burrow's mouth; on a climb's way up or down. Null when it is on open ground or in the air.
  */
+/** The surface a place is on, as the collisions exempt it (its host, the rocks or the log touching it), or null off any surface. */
+export function surfaceOf(spot: {x: number; z: number; point: string | null}, r?: number): {x: number; z: number; r?: number; host?: string} | null {
+    if (!onSurface(spot.point)) return null;
+    // (The whole of the tree or rock it is on: a bird on a branch beside its trunk. On a rock's face or top, the rocks
+    // touching it too: a toad in the crevice between two, a lizard across two tops.)
+    const host = hostOf(spot.point);
+    const tag = tagOfPoint(spot.point);
+    const reach = Math.max(r ?? 0, ROCKY.has(tag) ? ROCK_TOUCH : LOGS.has(tag) ? LOG_TOUCH : 0);
+    return {x: spot.x, z: spot.z, ...(reach ? {r: reach} : {}), ...(host ? {host} : {})};
+}
+
 export function attachedOn(trip: TripLike, epoch: number): Array<{x: number; z: number; r?: number; host?: string}> | null {
     const out: Array<{x: number; z: number; r?: number; host?: string}> = [];
     const on = (spot: {x: number; z: number; point: string | null}, r?: number) => {
-        if (!onSurface(spot.point)) return;
-        // (The whole of the tree or rock it is on: a bird on a branch beside its trunk. On a rock's face or top, the rocks
-        // touching it too: a toad in the crevice between two, a lizard across two tops.)
-        const host = hostOf(spot.point);
-        const tag = tagOfPoint(spot.point);
-        const reach = Math.max(r ?? 0, ROCKY.has(tag) ? ROCK_TOUCH : LOGS.has(tag) ? LOG_TOUCH : 0);
-        out.push({x: spot.x, z: spot.z, ...(reach ? {r: reach} : {}), ...(host ? {host} : {})});
+        const surface = surfaceOf(spot, r);
+        if (surface) out.push(surface);
     };
     const phase = tripPhase(trip, epoch);
     if (phase === "stay") on(trip.to);
