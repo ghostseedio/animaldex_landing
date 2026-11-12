@@ -1,6 +1,9 @@
 import type {Metadata} from "next";
 import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkAbout from "@/app/[locale]/(composited)/ark/ark-about";
+import ArkSeoSummary from "@/app/[locale]/(composited)/ark/ark-seo-summary";
+import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {arkJsonLd, breadcrumbJsonLd, jsonLdHtml, type JsonLd} from "@/lib/seo/structured-data";
 import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readPublicArk} from "@/data/ark-public";
 import {readArkVoyage} from "@/data/ark-voyage";
@@ -10,8 +13,7 @@ import {arkFocusSlug, arkOgImagePath, arkSpeciesShare} from "@/lib/ark-seo";
 import {fillArkWords} from "@/lib/ark-words";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
-import {appStoreUrl, googlePlayUrl} from "@/lib/store-links";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {getArkWords} from "@/loaders/ark-words";
 import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -188,45 +190,13 @@ export async function generateMetadata({params, searchParams}: Props): Promise<M
 }
 
 /**
- * The Ark as schema.org says it: a browser game (VideoGame, a simulation)
- * that is part of the AnimalDex app, and where it sits on the site.
+ * The Ark as schema.org says it (SEO lane S3, S1's D5): a free browser simulation (WebApplication) that is part
+ * of the AnimalDex app, and where it sits on the site.
  */
-function arkJsonLd(locale: string, description: string, name: string, homeName: string, snapshot: ArkSnapshot | null) {
-    const url = getAbsoluteUrl(locale, "/ark");
-    const site = getSiteUrl();
+function arkPageJsonLd(locale: string, description: string, name: string, homeName: string): JsonLd[] {
     return [
-        {
-            "@context": "https://schema.org",
-            "@type": "VideoGame",
-            name,
-            url,
-            description,
-            inLanguage: locale,
-            genre: ["Simulation"],
-            gamePlatform: ["Web browser"],
-            applicationCategory: "GameApplication",
-            operatingSystem: "Any (web browser)",
-            isAccessibleForFree: true,
-            image: new URL(arkOgImagePath(null, snapshot?.counts.animals ?? 0), site).toString(),
-            offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
-            publisher: {"@type": "Organization", name: "AnimalDex", url: site},
-            isPartOf: {
-                "@type": "MobileApplication",
-                name: "AnimalDex",
-                operatingSystem: "iOS, Android",
-                applicationCategory: "EducationApplication",
-                url: site,
-                installUrl: [appStoreUrl, googlePlayUrl]
-            }
-        },
-        {
-            "@context": "https://schema.org",
-            "@type": "BreadcrumbList",
-            itemListElement: [
-                {"@type": "ListItem", position: 1, name: homeName, item: getAbsoluteUrl(locale)},
-                {"@type": "ListItem", position: 2, name, item: url}
-            ]
-        }
+        arkJsonLd({locale, name, description, image: ARK_RENDER_IMAGE}),
+        breadcrumbJsonLd(locale, [{name: homeName, path: "/"}, {name, path: "/ark"}])
     ];
 }
 
@@ -527,7 +497,7 @@ export default async function ArkPage({params, searchParams}: Props) {
         <>
         <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{__html: JSON.stringify(arkJsonLd(locale, words.seo.metaDescription, words.eyebrow, words.seo.breadcrumbHome, snapshot)).replace(/</g, "\\u003c")}}
+            dangerouslySetInnerHTML={{__html: jsonLdHtml(arkPageJsonLd(locale, words.seo.metaDescription, words.eyebrow, words.seo.breadcrumbHome))}}
         />
         <ArkView
             locale={wordsLocale}
@@ -551,6 +521,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
+        <ArkSeoSummary locale={locale} />
         </>
     );
     // Another language than the site's: its own lang and direction, so screen readers and right-to-left scripts read it right.

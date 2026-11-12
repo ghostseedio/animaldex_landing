@@ -64,7 +64,8 @@
       "earn": "Earn",
       "experienceAndEarn": "Experience and earn",
       "follow": "Follow",
-      "help": "Help"
+      "help": "Help",
+      "ark": "The Ark"
     },
     "credits": {
       "platform": "Copyright",
@@ -86,7 +87,11 @@
     "backToTop": "Back to top",
     "findYourAnimals": "Find your animals",
     "aiAndSafety": "AI & safety",
-    "search": "Search"
+    "search": "Search",
+    "theArk": "The Ark",
+    "howTheArkWorks": "How the Ark works",
+    "arkFoodChain": "Who eats whom",
+    "aboutAnimalDex": "About AnimalDex"
   },
   "home": {
     "title": "AnimalDex",
@@ -4397,7 +4402,18 @@
       "eats": "Eats, by its field guide",
       "eatenBy": "Eaten by",
       "see": "See the {animal} in the Ark",
-      "seeArk": "See the Ark"
+      "seeArk": "See the Ark",
+      "trendLine": "Since {date}: {changes}.",
+      "trendNone": "None have come aboard or left since {date}.",
+      "trendArrived": "{count} came aboard",
+      "trendBorn": "{count} born",
+      "trendEaten": "{count} eaten",
+      "trendDiedOld": "{count} died of old age",
+      "trendStarved": "{count} starved",
+      "trendSeparator": ", ",
+      "arkEats": "On the Ark it can eat",
+      "arkEatenBy": "On the Ark it can be eaten by",
+      "foodChain": "See who eats whom in the Ark"
     },
     "founders": {
       "settings": {
@@ -4442,6 +4458,163 @@
       "notNow": "Not now",
       "note": "Asked once. Under 18, your animals show as a Voyager number instead of your @username.",
       "failed": "That didn't go through. Try again in a moment."
+    }
+  },
+  "seo": {
+    "breadcrumbHome": "Home",
+    "breadcrumbArk": "The Ark",
+    "arkImageAlt": "The Ark, AnimalDex's shared 3D animal world",
+    "arkSummary": {
+      "eyebrow": "Understand the Ark",
+      "title": "How this world works",
+      "intro": "The Ark runs on rules built from each animal's field guide. These pages explain them in plain words.",
+      "howTitle": "How the Ark works",
+      "howBody": "How captures bring animals aboard, and how food, breeding, seasons and steps shape their lives.",
+      "foodTitle": "Who eats whom",
+      "foodBody": "Tap any animal aboard to see what it eats and what eats it, in its field guide's own words.",
+      "aboutTitle": "A living research world",
+      "aboutBody": "Why AnimalDex is a shared world to watch and learn from, not a game to win."
+    },
+    "breadcrumbLabel": "Breadcrumb"
+  },
+  "pages": {
+    "howItWorks": {
+      "metaTitle": "How the Ark Works: Food Chains, Breeding, Seasons",
+      "metaDescription": "How animals come aboard AnimalDex's shared Ark when people capture them, then eat, breed, age and live through seasons by rules from their field guides.",
+      "breadcrumb": "How it works",
+      "eyebrow": "The Ark",
+      "title": "How the Ark works",
+      "intro": "The Ark is one shared world of animals that everyone sees the same way. Nobody places an animal or decides who eats whom. Animals come aboard when people capture them in real life, and from then on rules built from each species' field guide run their lives: what they eat, when they breed, how long they live. This is how those rules work.",
+      "live": "Right now {animals} of {species} live aboard.",
+      "unavailable": "The Ark's live numbers can't be read right now.",
+      "contents": "On this page",
+      "captures": {
+        "title": "Captures bring animals aboard",
+        "p1": "When you photograph a real animal with AnimalDex and the capture identifies its species, one of its kind comes aboard the Ark. Each person can have up to two living animals of a species aboard: a pair. Capturing the same species again adds nothing while both are alive. If one dies, your next capture of that species brings a replacement.",
+        "p2": "Only species with a 3D model can come aboard. A capture of a species whose model isn't ready yet waits, and boards when it is.",
+        "p3": "Each animal shows who brought it, by @username, or as a Voyager when the person is under 18 or has no username. Where an animal was captured is never shown."
+      },
+      "islands": {
+        "title": "Two islands: the wild and the town",
+        "p1": "The wild island has regions from the open ocean and the coral reef to rainforest, grassland, desert, mountains and the polar ice. Each wild species lives in the region its field guide describes.",
+        "p2": "The town island has houses, farms and a zoo. Pets live in the houses, livestock and poultry on the farms, and animals photographed at a zoo live in its enclosures. Wild animals that live around people, such as house geckos, sparrows and mallards, live in the town's gardens, trees, canal and roofs.",
+        "p3": "Where an animal lives is set once, when it arrives, from the kind of place it was photographed in: in the wild, at home, on a farm or at a zoo. The place itself never reaches the Ark."
+      },
+      "condition": {
+        "title": "Steps keep them thriving",
+        "p1": "Every animal you capture also becomes an AI companion you can talk to. Bring it something real from your life and it answers from its own kind's point of view, then suggests one step to try. When you tell it the step worked, your animals of that kind aboard the Ark gain condition.",
+        "p2": "Condition has three bands: ordinary, good and prime. Each step that worked closes part of the gap to the top. A step that only partly worked raises nothing, and condition slowly fades again over weeks without steps. Young born aboard inherit part of their parents' condition, up to good.",
+        "p3": "Condition changes lives aboard: animals in prime condition breed every breeding period and ordinary ones less often, and a hunting predator takes the weakest prey first. The Ark shows only the band, never what anyone talked about."
+      },
+      "food": {
+        "title": "Food chains from field guides",
+        "p1": "Who eats whom comes from each predator's field guide. Its diet names particular species, or groups such as birds, fish or insects. A named species becomes a food link. A group reaches every species of that group aboard, with three checks: an animal never eats its own species or genus, prey from a group must be no larger than the predator (smaller still when the guide says small prey), and the two must share a realm: sea, fresh water, land or air.",
+        "p2": "Every link keeps the exact words of the field guide it came from, so you can see why it exists.",
+        "p3": "A predator hunts only on its own island and in its own region, and a hungry one hunts the prey it comes across there, the weakest first. How often a predator needs a meal depends on its body mass, and cold-blooded hunters go longer between meals than warm-blooded ones. Pets, farm animals and the zoo's animals are fed by their keepers: they don't hunt and are never hunted. For the Ark's first two weeks, until about 25 November 2026, animals that came aboard are never hunted, to give populations a head start.",
+        "p4": "Plants, seeds, fruit, nectar, insects, worms and other small food in each region are background food. They feed animals without being counted aboard. A hunter with nothing it can eat and no background food goes hungry, and one that stays hungry too long starves.",
+        "link": "See every food link aboard"
+      },
+      "breeding": {
+        "title": "Breeding and young",
+        "p1": "Two adults of a species that live in the same place raise young when there is food for them. How many young, and how long they take to be born or to hatch, come from the field guide. When the guide doesn't say, the Ark uses a labelled estimate: the middle of the values stored for animals of the same class.",
+        "p2": "Egg layers lay clutches that hatch after their incubation; eggs don't count as animals and are never food. Young grow into adults over part of their lifespan, and each species has a limit set by its size, so small animals can become more numerous than large ones. Breeding stops at that limit.",
+        "p3": "Young are credited to the people who brought their parents, so one capture can start a family line that lasts for generations."
+      },
+      "seasons": {
+        "title": "Seasons, days and lifespans",
+        "p1": "The Ark keeps its own calendar: one Ark year passes every 14 real days, each starting on 1 January, and the world moves on once an hour, so it has changed between your visits. A species whose field guide names breeding months or seasons breeds only then. One with no named season, or one that breeds all year, can breed at any time.",
+        "p2": "In the 3D world, animals the field guide calls nocturnal are out at night, diurnal ones by day, and crepuscular ones at dawn and dusk.",
+        "p3": "Animals with a known wild lifespan grow old and die of old age when they reach it. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
+      },
+      "honesty": {
+        "title": "What the Ark is, and what it isn't",
+        "p1": "The Ark is built from each animal's field guide in AnimalDex. Its rules are simplified so that one shared world can run for everyone, and it is not a scientific model: its numbers show how those rules play out aboard, not how many of an animal live in the wild. Who is aboard is whoever people have photographed, so the mix is not nature's: there are far more cats and dogs aboard than snow leopards.",
+        "p2": "Everything that decides life and death runs on AnimalDex's servers, the same for everyone. What you see in 3D, such as where an animal walks or when it turns its head, is drawn on your device and changes nothing."
+      },
+      "ctaTitle": "See it for yourself",
+      "ctaBody": "Open the Ark in your browser, or capture an animal in the app to bring one of its kind aboard.",
+      "ctaArk": "See the Ark",
+      "ctaFoodChain": "Who eats whom",
+      "ctaAbout": "About AnimalDex"
+    },
+    "foodChain": {
+      "metaTitle": "The Ark's Food Chain: Who Eats Whom",
+      "metaDescription": "Tap any animal aboard AnimalDex's shared Ark to see what it eats and what eats it, with the words from its field guide that each food link comes from.",
+      "metaFocusTitle": "What eats the {animal}? The Ark's food chain",
+      "metaFocusDescription": "What the {animal} eats and what eats it aboard AnimalDex's shared Ark, with the words from its field guide that each food link comes from.",
+      "breadcrumb": "Who eats whom",
+      "eyebrow": "The Ark",
+      "title": "Who eats whom in the Ark",
+      "intro": "Every food link here comes from a predator's field guide in AnimalDex: a species it names, or a group such as birds or fish. Only animals aboard right now are shown, and only links the Ark can use: between wild animals in the same region.",
+      "live": "{animals} of {species} aboard right now.",
+      "unavailable": "The Ark can't be read right now, so its food chain can't be shown.",
+      "searchLabel": "Find an animal aboard",
+      "searchPlaceholder": "Type a name",
+      "listTitle": "Animals aboard",
+      "listHint": "Tap an animal to see its food links.",
+      "noMatch": "No animal aboard matches that name.",
+      "showAll": "Show all {count}",
+      "aboardOne": "1 aboard",
+      "aboardOther": "{count} aboard",
+      "eats": "Eats",
+      "eatenBy": "Eaten by",
+      "eatsNone": "None of the animals in its region aboard are food its field guide names.",
+      "eatenByNone": "Nothing aboard in its region hunts it.",
+      "kept": "Every one aboard is kept: pets, farm animals and the zoo's animals are fed by their keepers, and they don't hunt or get hunted.",
+      "pet": "Pets are never prey on the Ark.",
+      "fieldGuide": "Its field guide: “{phrase}”",
+      "about": "About the {animal}",
+      "seeInArk": "See it in the Ark",
+      "loading": "Reading its food links…",
+      "error": "Its food links can't be read right now.",
+      "howTitle": "How the links are made",
+      "howBody": "A species named in a field guide's diet is a link. A group (birds, fish, insects) reaches every species of that group aboard that is no larger than the predator, is not of its own genus and shares its realm. A predator hunts only on its own island and in its own region.",
+      "howLink": "How the Ark works",
+      "note": "Built from each animal's field guide in AnimalDex. It is not a scientific model.",
+      "compactTitle": "Who eats whom in the Ark",
+      "compactIntro": "Food links from each animal's field guide, between the animals aboard right now. Tap one.",
+      "compactMore": "See the whole food chain",
+      "chooseLabel": "Choose an animal"
+    },
+    "about": {
+      "metaTitle": "About AnimalDex: A Living Research World of Animals",
+      "metaDescription": "Catch animals in real life and turn them into AI companions in a 3D world: a shared simulation run by food chains drawn from each animal's field guide.",
+      "breadcrumb": "About",
+      "eyebrow": "About AnimalDex",
+      "title": "A living research world of real animals",
+      "tagline": "Catch animals in real life and turn them into AI companions in a 3D world.",
+      "intro": "AnimalDex starts with a real animal you meet: in the wild, at a zoo, in a garden or at home. Photograph it, and the app identifies its species and turns it into a companion you can talk to. One of its kind comes aboard the Ark, a shared 3D world anyone can open in a browser.",
+      "live": "Right now {animals} of {species} live aboard, brought by {people}.",
+      "peopleOne": "1 person",
+      "peopleOther": "{count} people",
+      "research": {
+        "title": "A world to watch, not a game to win",
+        "p1": "The Ark is a shared simulation of animal species. There is no level to beat and nothing to grind: animals arrive, eat, raise young, grow old and die, and populations rise and fall over time through the seasons and through food chains drawn from each animal's field guide.",
+        "p2": "You follow what happens to the animals you brought, and to everyone else's, in one world that is the same for everybody."
+      },
+      "pointOfView": {
+        "title": "Nature from an animal's point of view",
+        "p1": "Every animal in AnimalDex answers from its own life: what it eats, what hunts it, how it raises young and how its kind gets through hard times. Talking with one is a way into how that species meets the world.",
+        "p2": "On the Ark, each animal has a life story: where it came from, where it lives, the young it raised and how its life went."
+      },
+      "fieldGuides": {
+        "title": "Built from field guides, said honestly",
+        "p1": "Each of AnimalDex's {catalog} animals has a field guide: its habitat, diet, lifespan, breeding and behaviour. The Ark turns those fields into rules, keeps the exact words each food link came from, and labels any estimate it makes when a guide is silent.",
+        "p2": "It is not a scientific model. The rules are simplified so one shared world can run for everyone, and the Ark's numbers describe what happens aboard, not how many of any animal live in the wild. Who is aboard is whoever people have photographed, so its mix of species is not nature's."
+      },
+      "privacy": {
+        "title": "What the Ark shows, and what it doesn't",
+        "p1": "The Ark shows species, counts, life stories and who brought each animal, by @username. People under 18 and accounts without a username appear as Voyagers. Where anyone captured an animal, and what anyone talks about with their companions, is never shown."
+      },
+      "who": {
+        "title": "Who makes AnimalDex",
+        "p1": "AnimalDex is made by GHOSTSEED LTD, a company registered in England and Wales. The app is free to download on iPhone and Android, and the Ark is free to open on the web."
+      },
+      "linksTitle": "Go further",
+      "linkArk": "Open the Ark",
+      "linkHow": "How the Ark works",
+      "linkFood": "Who eats whom",
+      "linkTalk": "Talk to an animal"
     }
   }
 }

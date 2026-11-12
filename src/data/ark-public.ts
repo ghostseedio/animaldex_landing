@@ -72,11 +72,18 @@ function text(value: unknown): string | null {
 }
 
 /**
- * A species' stored diet links (`voyage_food_links`: each phrase is taken from
- * the species' own field guide), or null while the table is not live (it
- * answers PGRST205 until its migration is applied) or cannot be read. The
- * table is closed to anon and authenticated, so this reads with the service
- * key on the server; it holds species-to-species links only, nobody's data.
+ * What a species' field guide says it eats, as stored diet links
+ * (`voyage_food_links`: each phrase is taken from the species' own field guide):
+ * a named species, or the group the diet names ("birds"), each with its
+ * phrase. Null while the view cannot be read. Links the realm check refused,
+ * and group prey above the size rule (`size_ok = false`), are left out, so a
+ * hawk never reads as eating a Komodo dragon. The view is closed to anon and
+ * authenticated, so this reads with the service key on the server (decision
+ * 244): species, link and phrase columns only, nobody's data.
+ *
+ * What eats a species is not listed from the whole catalogue (a fish's
+ * predators by group run to hundreds); the species page says it for the Ark
+ * instead, among the animals aboard (`src/data/ark-food-chain.ts`).
  */
 export async function readArkFoodLinks(speciesProfileId: string, revalidate = 86400): Promise<ArkFoodLink[] | null> {
     const url = getSupabaseUrl();
@@ -86,7 +93,7 @@ export async function readArkFoodLinks(speciesProfileId: string, revalidate = 86
     const headers = getSupabaseHeaders(key);
     try {
         const response = await fetch(
-            `${url}/rest/v1/voyage_food_links?select=predator,prey,basis,group_label,realm_ok&or=(predator.eq.${id},prey.eq.${id})&limit=200`,
+            `${url}/rest/v1/voyage_food_links?select=predator,prey,basis,group_label,phrase,realm_ok,size_ok&predator=eq.${id}&limit=1000`,
             {headers, next: {revalidate, tags: ["ark-food-links"]}}
         );
         if (!response.ok) return null;
@@ -94,7 +101,7 @@ export async function readArkFoodLinks(speciesProfileId: string, revalidate = 86
         const others = arkFoodLinkOthers(rows, id);
         const names = new Map<string, {name: string; slug: string | null}>();
         if (others.length) {
-            const list = others.join(",");
+            const list = others.slice(0, 150).join(",");
             const named = await fetch(`${url}/rest/v1/species_profiles?select=id,display_name,landing_page_slug&id=in.(${list})`, {headers, next: {revalidate, tags: ["ark-food-links"]}});
             if (named.ok) {
                 for (const row of (await named.json()) as SpeciesNameRow[]) {
