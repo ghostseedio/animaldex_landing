@@ -82,7 +82,8 @@ ecology are unchanged, except the islands (§5).
 
 ## 2. Checks
 
-On the release candidate's tree (03dfd120 = 5cd8efff):
+On the release head's code (412fa2e3: the candidate 03dfd120 plus L5's collide gate; later commits are this document
+and a workflow quoting fix):
 
 | Check | Result |
 |---|---|
@@ -91,9 +92,9 @@ On the release candidate's tree (03dfd120 = 5cd8efff):
 | lint | 0 errors |
 | The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
 | The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
-| The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | islands mode (what goes live): pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode: 0 / 0 / 861 / 3.07 M; both within their limits (`tests/ark-collide/thresholds-islands.json`, `thresholds.json`) |
+| The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | **green on GitHub** (run 43151583996): islands mode (what goes live) pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode 0 / 0 / 861 / 3.07 M; within `tests/ark-collide/thresholds-islands.json` and `thresholds.json` |
 | Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
-| The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.12 / 1.11; backwards 4.1% / 1.2%, nothing backwards for over 1 s; ground turns 0.8 / 1.8 a minute; over 1.5× its clip: an American alligator (2.3×), the harbour seal (2.5×, its flipper clip), the clawed frog (1.6×); no page errors |
+| The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.20 / 1.05; backwards 4.9% / 5.5%, nothing backwards for over 1 s; ground turns 1.8 / 2.0 a minute; over 1.5× its clip: American alligators (1.7–3.6×), the bullfrog (9.4–9.7×), an African rock python (1.6×), the clawed frog (1.7×) (the three causes in §6); no page errors |
 | The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
 
 ## 3. Before and after
