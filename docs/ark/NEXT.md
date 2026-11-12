@@ -22,9 +22,34 @@ the privacy text).
 | # | Lane | Branch head | `ark-next` head | Gates |
 |---|---|---|---|---|
 | 1 | L5 collisions (API surface: `collide/`, `ark-collide-bodies.mts`, `behaviourHomePlots()`) | `ark-collisions` 39adcbd8 | 521c3de4 | tests 2,260/2,260 (validator 0 failures); tsc: the 2 known; lint 0. Nothing imports `collide/` yet, so the picture and the default view are main's (visual CI and the default view run on merge 2) |
-| 2 | L1 locomotion (interface + the live pose layer: `locomotion/`, `ARK_RIG_LIVE`, `rigLivePose` after `matrix.compose`) | `ark-locomotion` fc694a84 | 0e5e526e | tests 2,260/2,260; tsc clean; lint 0; visual CI: running (9/19 pass so far, worst changed 0.73%) |
+| 2 | L1 locomotion (interface + the live pose layer: `locomotion/`, `ARK_RIG_LIVE`, `rigLivePose` after `matrix.compose`) | `ark-locomotion` fc694a84 | 0e5e526e | tests 2,260/2,260; tsc clean; lint 0; visual CI (Mac, SwiftShader): 13/13 desktop shots pass against the release baselines (worst changed 0.73%), the run then timed out mounting the high tier at load ~130 |
 | — | Integrator: the motion CI summary (`scripts/ark-motion-ci.mts`, `tests/ark-motion/metrics.json`, `src/lib/ark-motion-metrics.ts`, a visual-CI hook) | — | 851c56fd, 6a723ada, 73e1a747 | — |
-| 3 | L2 flight, swim, legless (midpoint; includes L1 fc694a84) | `ark-flight-swim` 3cb18604 | 7f2108dd | tests 2,279/2,279 (L2's 18 in); tsc clean; lint 0; default view ×2: pace ratio median 0.93 / 0.99, backwards 0.2% / 0.2% (none over 1 s), ground turns median 0.2 / 0.0 a minute, bullfrog 2.35× / 3.12× (release 2.2×); motion summary 13/13; visual CI: queued behind merge 2's (flyer and swimmer shots change on purpose) |
+| 3 | L2 flight, swim, legless (midpoint; includes L1 fc694a84) | `ark-flight-swim` 3cb18604 | 7f2108dd | tests 2,279/2,279 (L2's 18 in); tsc clean; lint 0; default view ×2: pace ratio median 0.93 / 0.99, backwards 0.2% / 0.2% (none over 1 s), ground turns median 0.2 / 0.0 a minute, bullfrog 2.35× / 3.12× (release 2.2×); motion summary 13/13; visual CI (Mac): 18/19 pass, `desktop-reef_underwater-day` fails on its turtles' new swim (looked at: flippers mid-stroke, bodies lower, no broken geometry) |
+| 4 | L4 true scale | `ark-true-scale` f6a1e8f8 | 893832a7 | clean merge; tests 2,279/2,280 (the frog pace, known); tsc, lint 0; motion 13/13; default view ×2: pace 0.97 / 1.01, backwards 0.2% / 3.1%, turns 0 / 0.6, bullfrog 9.1× (true size meets the old 5 cm floor) |
+| 5 | L6 scenery | `ark-scenery` c5812a75 | c579bc62 (+ b71cebde: L6's numbers in the summary) | `tests/ark-visual/hooks.json` conflict: both hooks kept, scenery's first; tests 2,280/2,289: the 3 attach floors (expected before generator 7), the frog pace and the bear's validator spot (known), and 3 that fail on L6's own head too (stags clash 5.23 m apart, snow leopard 15 m from a goat, pigs vs zebras asleep), routed to L6; motion 20/20 |
+| 6 | L3 grounding | `ark-grounding` fda84235 | 8d90308a + 3900a81d | conflicts: generator number (7), sampler imports (both), index.ts (L2's sidewind yaw, then L3's stand), the attach files from L6's side then regenerated; `node scripts/ark-tree-attach.mjs` (1,784 points), `ARK_ATTACH_BASELINE=update`, floors ~15% under (see the fixes below); tests 2,289/2,296 (the 3 L6, the duck sitter, the 2 known); default view ×2: pace 1.00 / 0.94, backwards 5.3% / 4.9% (none over 1 s), turns 1.2 / 0.0 |
+| 7 | L1 locomotion final | `ark-locomotion` 314927d0 | e813bd21 + a9ecfffd (`setLocoGround(drawnGround)`, L1's tests in the summary) | clean; tsc 0 |
+| 8 | L2 final | `ark-flight-swim` 2cf309e3 | af146487 + f1037423 (L2's numbers in the summary) | clean; motion 21/21 |
+| 9 | L7 chases | `ark-chases` 30dbbf9e | cc82a1bc + 356d0fc4 (its three wirings) | clean; tsc 0 |
+| 10 | Part B streaming | `ark-streaming` 366f985b | 77c3f2f5 | conflicts: `asset-trees.ts` (Part B's chunk cull, then L6's level hand-over by size), `index.ts` (entry: L2's `l2` and Part B's `streamAt`; the debug handle: Part B's `library` and L3's grounding report); tsc 0, lint 0 |
+| 11 | Encounter scene | `ark-encounter-scene` 35eb7d35 | 93b9c1b1 + 385e8921 (`Array.from` in `ark-hunting.test.ts`, TS2802) | clean; inert while the server's `hunting` is `pool` |
+| 12 | Town island (T2) | `ark-town-island` bdcd9ff1 | 084c07f6 | clean; new files under `src/ark-scene/islands/`, its own visual set in `tests/ark-visual/town/` |
+
+### Wirings and fixes the integrator made (allowed by the coordinator)
+
+- `setLocoGround(drawnGround)` at the top of `mountArk` (L3's request to L1, `docs/ark/grounding.md`).
+- L7's three (`docs/ark/chases.md`): `setRecipeColliders({segmentClear: collideSegmentClear, blocked: collideBlocked})`;
+  `setChasePaces` from L1's `sprintPace`/`fleePace` (plan from the model library) and L2's `swimPaces(...).burst` (only for a
+  species with a swim style) and `flightSpec(...).dive`; `!collideBlocked(x, z, 0.3)` in the meal's `chaseGround`.
+- Not done: `GaitState.feet` into L3's `groundingCheck` is not a one-liner (a planted foot's height carries a sole offset
+  and needs its own record kind): a known issue.
+- Test-only: the attach floors at about 15% under the merged counts (true-size trees plus generator 7): tree points 3,583
+  (> 3,000), leaf/bark/branch 1,164/618/824 (> 990/525/700), limbs 649 (> 550), forest limbs 342 on 45 trees (> 290 on
+  > 38), hangs 370 (> 310); the attach test composes the renderer's matrix from `assetTreePlacement(item).y` (L6 sinks a
+  tree's foot into its slope; this failed on L6's own head too, behind the floors); `Array.from(h.predators)` in
+  `ark-hunting.test.ts` (the encounter lane carries the same).
+- Not done: the duck sitter. It is not the nest spot: on the merged tree the mallard never takes the `incubate_sit` trip
+  (on L7's own head the test passes); routed to L7 with the recipes file's timeout.
 
 ## Motion metrics (one CI summary)
 
@@ -32,7 +57,25 @@ Each lane's metrics join CI as they arrive; before is the live release (7764fe12
 
 | Metric | Lane | Before | After | CI threshold |
 |---|---|---|---|---|
-| L2 tests (`ark-motion-l2`, `-l2-drivers`): wing-beat by size, beat cap, stroke shape, coordinated bank, tail beat by speed, surface guard, no-slip undulation; rigs: upstroke flex, level head in a bank, insect wings, snake chain slip, sidewinder lift and fluke beat | L2 | — | 18/18 pass | `src/lib/ark-motion-l2-thresholds.ts` |
+| L1: planted-foot slide per step, walk (median mm, 20 golden species) | L1 | 19 | 0.05 | ≤ 2% of the leg (`ark-locomotion.test.ts`) |
+| L1: slide, turning half round on the spot | L1 | 622 | 0.26 | ≤ 2% of the leg |
+| L1: slide, a 15° slope over a ridge | L1 | 1,200 | 4.0 | ≤ 5% of the leg |
+| L1: planted sole height, slope (median mm) | L1 | 80 | 1.2 | ≤ 2.5% of the leg |
+| L2: wing-beat exponent against length (651 birds) | L2 | −0.598 | −0.975 | −1.1 to −0.8 |
+| L2: bank error against tan φ = vω/g (rad) | L2 | 0.397 | 0 | ≤ 0.01 |
+| L2: up-and-down swimmers breaking the surface | L2 | 35 of 39 | 0 | 0 |
+| L2: upstroke span over downstroke (mallard / eagle) | L2 | 1 / 1 | 0.76 / 0.78 | ≤ 0.85 |
+| L3: floating / sinking (real snapshot, near) | L3 | 145 / 280 | 0 / 0 | 0 (`ark-grounding.test.ts`, all species) |
+| L3: inside scenery at rest (real snapshot) | L3 | 298 | 175 | ≤ 556 on the validator's population |
+| L3: perched hidden in a crown (samples) | L3 | 412 | 0 | — |
+| L4: species drawn more than 2× off their true length (the old curve, floor and cap) | L4 | 1,283 of 2,630 | 0: every species at its stored or data-gap length (humpback 3.5 → 14 m, ladybird 0.18 m → 7.5 mm) | `ark-stats.test.ts` |
+| L4: overlapping pairs (real snapshot) / open ocean | L4 | 96 / 1 | 63 / 0 | — |
+| L6: trees growing into each other | L6 | 971 | 0 | 0 (`ark-scenery.test.ts`) |
+| L6: props floating / in each other | L6 | 284 / 14 | 0 / 0 | 0 |
+| L5: pass-throughs and overlaps | L5 | — | — | the final L5 has not landed (API only) |
+
+All of it runs as one table: `npx tsx scripts/ark-motion-ci.mts` (the visual CI's hooks job runs it too): 21 numbers and
+the L1, L2 and L6 tests, all pass on `ark-next`.
 
 Lanes put their measured numbers into the table with `recordMotionMetric(lane, id, value)` (`src/lib/ark-motion-metrics.ts`);
 until they do, a test-file check shows pass/fail per metric test.
@@ -43,6 +86,10 @@ Under `~/animaldex-ark-handover-2026-11-11/ark/motion/next/` (none yet).
 
 ## Open issues
 
+- Routed: L6's three tests (stags, snow leopard, pigs/zebras asleep); L1's backwards share (0.2% at the release, ~5%
+  since L6/L3 in the default view; nothing backwards over 1 s); L7's duck sitter and the recipes test file's timeout.
+- The visual CI now runs on GitHub Actions (decision 134): `gh workflow run ark-visual.yml --ref ark-next`. Its first run
+  is the first Linux render of the baselines (they were all made on the Mac).
 - The shared Mac ran at load 80–137 on 16 cores during merges 2–3: SwiftShader shots took 2–20 min each (normally ~2).
 - L1 (observation, for the lane): with no driver taking an animal, `LocoLayer.pose` still runs `plantClipFeet` for grounded
   clip feet, so "no driver" is not byte-for-byte the baked pose (within the visual tolerances so far). The driver's share
