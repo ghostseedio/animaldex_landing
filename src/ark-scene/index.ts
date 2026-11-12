@@ -2512,6 +2512,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 size: e.sched.profile.size,
                 speed: e.sched.profile.speed,
                 gait: e.sched.profile.gait,
+                walkPace: e.sched.profile.walkPace,
+                runPace: e.sched.profile.runPace,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,

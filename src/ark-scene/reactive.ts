@@ -80,6 +80,12 @@ export type ReactiveInput = {
     speed?: number | null;
     /** Its rig's fastest ground clip (`behaviours.json` `gait`): it never runs faster than `gait × GAIT_CADENCE` body lengths a second (its feet would slide). */
     gait?: number | null;
+    /**
+     * Its walk and run clips' own paces (body lengths a second; `behaviours.json` `walkPace`, `runPace`): an unhurried move
+     * (a look closer, a step back, a drift home) goes no faster than its walk's pace cap, the schedule's own rule.
+     */
+    walkPace?: number | null;
+    runPace?: number | null;
     social: string;
     diet: string;
     intel: ArkIntelProfile;
@@ -249,6 +255,15 @@ export const reactiveEnvelope: EnvelopeFn = (input, fleeing) => {
  * fastest), so a tortoise doesn't dash like a deer; small animals cover more of their own lengths a second than big
  * ones (×1/√length, 0.8–2.2: a mouse bolts, an elephant lumbers). Never more than 8 m/s.
  */
+/** The fastest it moves on a reaction that isn't a flight (m/s): its walk's pace cap (1.2), or its run's when hurried. Unknown: no cap. */
+export function paceCap(input: ReactiveInput, hurried: boolean): number {
+    const walk = input.walkPace ?? null;
+    if (!walk || walk <= 0) return Infinity;
+    const length = Math.max(input.length, 0.01);
+    const run = hurried && input.runPace && input.runPace > walk ? input.runPace : walk;
+    return length * run * 1.2;
+}
+
 export function fleeSpeed(input: ReactiveInput): number {
     const stat = Math.min(Math.max(input.speed ?? 50, 0), 100);
     const length = Math.max(input.length, 0.3);
@@ -1001,12 +1016,17 @@ export class ReactiveLayer {
         // back-step goes backwards, slowly. (Before, a play hop or a flee whose way lay behind it ran it backwards.)
         const backStep = BACK_STEPS.has(action);
         if (backStep) speed = Math.min(speed, BACK_STEP_SPEED);
+        // (Not past its own clips' pace: an unhurried move at its walk's cap (1.2, as the schedule), a hurried one at
+        // its run's. These speeds were in metres from a 0.3 m floor: a 9 cm clawed frog investigated the camera at 1.6
+        // times its walk, an alligator whose walk is 0.05 lengths a second at 2.3. A flight keeps `fleeSpeed`.)
+        if (action !== "flee") speed = Math.min(speed, paceCap(me, speed > 1.5 * Math.max(me.length, 0.3)));
         const wx = target.x - agent.offset.x;
         const wz = target.z - agent.offset.z;
         const wl = Math.hypot(wx, wz);
         let moveFace: number | null = null;
-        // A move starts above 0.3 m/s and, once going, carries on down to 0.15 (no flicking between moving and standing).
-        const moveFrom = world.now < agent.moveHold ? 0.15 : 0.3;
+        // A move starts above 0.3 m/s and, once going, carries on down to 0.15 (no flicking between moving and standing);
+        // a slow walker's at half its own speed.
+        const moveFrom = Math.min(world.now < agent.moveHold ? 0.15 : 0.3, speed * 0.5);
         if (!backStep && wl > 1e-4 && dt > 0 && Math.min(wl / dt, speed) > moveFrom) {
             const dir = Math.atan2(wx, wz);
             moveFace = dir;

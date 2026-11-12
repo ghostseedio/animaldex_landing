@@ -268,6 +268,9 @@ if (flag("island")) {
         riggedShare: Math.round((sum("rigged") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
         paceRatioMedian: ratios.length ? ratios[Math.floor(ratios.length / 2)] : null,
         paceRatioOver1_5: movers.filter((r) => r.ratioMedian !== null && r.ratioMedian > 1.5).map((r) => `${r.slug}(${r.ratioMedian})`),
+        // (Only where the baked clip draws the feet: under the locomotion layer the stride follows the speed.)
+        paceRatioBakedOver1_5: movers.filter((r) => r.ratioBakedMedian !== null && r.ratioBakedMedian > 1.5).map((r) => `${r.slug}(${r.ratioBakedMedian})`),
+        paceWhy: Object.fromEntries(movers.filter((r) => r.ratioMedian !== null && r.ratioMedian > 1.3).map((r) => [`${r.slug}#${r.id}`, r.ratioWhy])),
         groundTurnsPerMinuteMedian: ground.length ? ground.map((r) => r.turnsPerMinute).sort((a, b) => a - b)[Math.floor(ground.length / 2)] : null,
         groundCircling: ground.filter((r) => r.turnsPerMinute > 1.5 && r.moving > 4).map((r) => `${r.slug}(${r.turnsPerMinute}/min, ${r.doing})`),
         stats: {tier: stats.tier, near: stats.near, far: stats.far, rigged: stats.rigged, rigsLoaded: stats.rigsLoaded},
