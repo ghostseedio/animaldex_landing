@@ -32,6 +32,7 @@
 import table from "@/ark-scene/depth-bands.json";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {arkWorld, coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
+import {wildWaterSurface} from "@/ark-scene/islands/wild/map-v2";
 
 export type DepthBand = "surface" | "upper" | "mid" | "seabed" | "reef" | "deep" | "pond_surface" | "pond_mid" | "pond_bed";
 export type WaterKind = "salt" | "fresh";
@@ -213,15 +214,28 @@ export type WaterSpec = {
     aboveFloor: boolean;
     /** 0…1 up into a breath. */
     breath: number;
+    /**
+     * The water's surface over it (m), where it is not the sea's 0 (Part C: the bigger wild island's lake and river,
+     * at their own level; absent everywhere else). Its depths are under it, and the tide never moves it (`tideFit`).
+     */
+    surface?: number;
 };
 
+/** The water's surface over a point (Part C): v2's lake's and river's own level where they stand, else the sea's 0. */
+export function waterSurfaceAt(x: number, z: number): number {
+    return arkWorld() === "v2" ? wildWaterSurface(x, z) : 0;
+}
+
 /** Its place in the column now, from its band, the floor under it, the clock and its seed, and how far into a breath it is. */
-export function waterSpec(depth: SpeciesDepth, floorY: number, seed: number, clock: number, breath: number): WaterSpec {
+export function waterSpec(depth: SpeciesDepth, floorY: number, seed: number, clock: number, breath: number, surface = 0): WaterSpec {
     const motion = waterMotion(depth);
-    const waterDepth = Math.max(-floorY, 0);
+    const waterDepth = Math.max(surface - floorY, 0);
     const range = swimRange(depth.band, waterDepth);
     const u = bandCycle(seed, clock);
-    return {motion, floorY, depth: range.from + (range.to - range.from) * u, aboveFloor: Boolean(range.aboveFloor), breath: depth.breathes ? breath : 0};
+    const spec: WaterSpec = {motion, floorY, depth: range.from + (range.to - range.from) * u, aboveFloor: Boolean(range.aboveFloor), breath: depth.breathes ? breath : 0};
+    // (Only a surface of its own: the sea's columns stay exactly as they were.)
+    if (surface) spec.surface = surface;
+    return spec;
 }
 
 /**
@@ -233,22 +247,24 @@ export function waterSpec(depth: SpeciesDepth, floorY: number, seed: number, clo
  * breaks the surface.
  */
 export function fitInWater(spec: WaterSpec, height: number): {base: number; middle: number} {
+    // (Its surface: the sea's 0, or the bigger island's lake's and river's own level.)
+    const top = spec.surface ?? 0;
     if (spec.motion === "float") {
-        const base = -FLOAT_SINK * height;
+        const base = top - FLOAT_SINK * height;
         return {base, middle: base + height / 2};
     }
     if (spec.motion === "walk" || spec.motion === "hole") {
         const base = spec.floorY - (spec.motion === "hole" ? HOLE_SINK * height : 0);
         // A breather on the floor still comes up for air.
         const middle = base + height / 2;
-        const up = spec.breath > 0 ? middle + (-BREATH_MIDDLE * height - middle) * spec.breath : middle;
+        const up = spec.breath > 0 ? middle + (top - BREATH_MIDDLE * height - middle) * spec.breath : middle;
         return {base: up - height / 2, middle: up};
     }
-    let middle = spec.aboveFloor ? spec.floorY + FLOOR_CLEAR + height / 2 + spec.depth : -spec.depth;
+    let middle = spec.aboveFloor ? spec.floorY + FLOOR_CLEAR + height / 2 + spec.depth : top - spec.depth;
     // Above the floor, then under the surface (which wins where the water is too shallow for both).
     middle = Math.max(middle, spec.floorY + FLOOR_CLEAR + height / 2);
-    middle = Math.min(middle, -SURFACE_CLEAR - height / 2);
-    if (spec.breath > 0) middle += (-BREATH_MIDDLE * height - middle) * spec.breath;
+    middle = Math.min(middle, top - SURFACE_CLEAR - height / 2);
+    if (spec.breath > 0) middle += (top - BREATH_MIDDLE * height - middle) * spec.breath;
     return {base: middle - height / 2, middle};
 }
 

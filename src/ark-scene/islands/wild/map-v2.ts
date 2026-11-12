@@ -22,6 +22,7 @@ import {hashString} from "@/ark-scene/world";
 import {sampleWildGround, underWater} from "@/ark-scene/islands/wild/ground";
 import {BIG_LAND_LENGTH, rangesOf, whaleCells, WHALE_CLEAR, WHALE_LENGTH, type Range} from "@/ark-scene/islands/wild/reserves";
 import {COVE, ICE_FRONT_Z} from "@/ark-scene/islands/wild/fields";
+import {WILD_HALF} from "@/ark-scene/islands/wild/frame";
 import {wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 
 export {BIG_LAND_LENGTH, WHALE_CLEAR, WHALE_LENGTH};
@@ -32,6 +33,32 @@ export function wildWaterDepth(x: number, z: number): number {
     const water = underWater(s);
     if (water === "fresh") return (s.freshLevel ?? 0) - s.height;
     return water === "sea" ? -s.height : 0;
+}
+
+/**
+ * The water's surface over a point on v2, for the behaviour world (`world-sampler.ts` waterSurface): the lake's, the
+ * river's or a pool's own level where fresh water stands there, else the sea's 0 (on dry ground too: the schedule takes
+ * the higher of it and the ground). From a 1 m lattice of the fresh water's levels, each corner worked out the first
+ * time it is needed and read at the nearest corner (never blended across a shore: a bank never gets half a lake's level).
+ */
+const SURFACE_STEP = 1;
+let surfaceLattice: {n: number; half: number; levels: Float32Array} | null = null;
+export function wildWaterSurface(x: number, z: number): number {
+    if (!surfaceLattice) {
+        const n = Math.ceil((WILD_HALF * 2) / SURFACE_STEP) + 1;
+        surfaceLattice = {n, half: WILD_HALF, levels: new Float32Array(n * n).fill(Number.NaN)};
+    }
+    const {n, half, levels} = surfaceLattice;
+    const i = Math.round((x + half) / SURFACE_STEP);
+    const j = Math.round((z + half) / SURFACE_STEP);
+    if (i < 0 || j < 0 || i >= n || j >= n) return 0;
+    const k = j * n + i;
+    let level = levels[k];
+    if (Number.isNaN(level)) {
+        const s = sampleWildGround(-half + i * SURFACE_STEP, -half + j * SURFACE_STEP);
+        level = levels[k] = underWater(s) === "fresh" ? (s.freshLevel ?? 0) : 0;
+    }
+    return level;
 }
 
 /** The cold cove's middle on v2: its ice shelf's front, in the inlet of the north shore. */
@@ -160,5 +187,6 @@ export function rangeSpot(sampler: ArkMapSampler, zone: ArkZone, allowed: Readon
 /** Drop the lists built from the world (`onArkWorld`). */
 export function resetWildMapV2(): void {
     coral = null;
+    surfaceLattice = null;
     rangeLists.clear();
 }

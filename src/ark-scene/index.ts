@@ -98,7 +98,7 @@ import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
@@ -2086,7 +2086,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // Standing (or floating, a swimmer at sea) still at its own place, as the server placed it.
                     let base = member.ground;
                     // One depth for the whole school (the herd's own seed), each spread on its own spot: level, side by side.
-                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(herd.slug), 0, 0), tall).base;
+                    if (herdDepth) base = fitInWater(waterSpec(herdDepth, heightAt(member.x, member.z), depthSeed(herd.slug), 0, 0, waterSurfaceAt(member.x, member.z)), tall).base;
                     else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
                     else if (member.water) base = Math.max(member.ground, -0.3);
                     herdRotation.setFromAxisAngle(up, member.yaw);
@@ -2596,15 +2596,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // each animal its own depth, so a school is spread up and down), up to the surface on its breath, fitted at its drawn size.
         const act = (at as RecipePose).act;
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
-        if (inDepthBand(entry.depth, at, ground) && !act?.own) {
+        // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
+        const waterTop = waterSurfaceAt(at.x, at.z);
+        if (inDepthBand(entry.depth, at, ground, waterTop) && !act?.own) {
             const clock = clockNow();
             // (Awake, its breath on its way there: `breath-trip.ts`.)
             const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
-            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight);
+            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight, waterTop);
             // (Under the surface where the tide has it now: `tideFit`.)
             const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
-            const base = spec.motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, 0, ARK_ENVIRONMENT.seaLevel.value) : fitted;
+            const base = spec.motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, 0, spec.surface ?? ARK_ENVIRONMENT.seaLevel.value) : fitted;
             const yaw = at.yaw + (entry.glance ?? 0);
             // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
             const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
@@ -2667,7 +2669,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const breath = entry.state.breathing && !reducedMotion ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
         if (motion === "hole") {
             // In its hole: still, its head turning slowly.
-            const spec = waterSpec(depth, place.ground, entry.seed, clock, breath);
+            const spec = waterSpec(depth, place.ground, entry.seed, clock, breath, waterSurfaceAt(place.x, place.z));
             const yaw = place.yaw + (reducedMotion ? 0 : Math.sin(time * 0.2 + entry.phase * 9) * 0.5 * (1 - entry.rest));
             return {x: place.x, z: place.z, base: tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base, yaw, pitch: 0, roll: 0, afloat: true, water: spec};
         }
@@ -2704,13 +2706,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const floorY = heightAt(x, z);
         // The school swims at its first one's depth in the band (its own breath apart).
-        const spec = waterSpec(depth, floorY, owner.seed, clock, breath);
+        const spec = waterSpec(depth, floorY, owner.seed, clock, breath, waterSurfaceAt(x, z));
         const along = reducedMotion ? 0 : (0.05 + owner.phase * 0.05) * owner.pace * radius * (1 - 0.85 * owner.rest);
         // (A penguin lies down to swim: `swimBodyPitch`.)
-        const pitch = (reducedMotion ? 0 : swimPitch(depth, -floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
+        const pitch = (reducedMotion ? 0 : swimPitch(depth, (spec.surface ?? 0) - floorY, owner.seed, clock, along)) + (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0);
         const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
         // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
-        const base = motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch - (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0), ARK_ENVIRONMENT.seaLevel.value) : fitted;
+        const base = motion === "swim" && !spec.breath ? l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch - (motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0), spec.surface ?? ARK_ENVIRONMENT.seaLevel.value) : fitted;
         // A walker on the floor stands on its slope (its rig walks it there). (A walker's swim pitch is 0.)
         const surface = motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(x, base, z, yaw) : undefined;
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};

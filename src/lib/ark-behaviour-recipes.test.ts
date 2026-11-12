@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import test from "node:test";
 import table from "@/ark-scene/recipes.json";
 import full from "../../data/ark/behaviour-recipes.json";
@@ -112,7 +113,8 @@ test("a kingfisher fishes from a perch by the water: a steep dive under the surf
         dives++;
         // Under the surface at the end of the dive, nose down, from the air; back at its perch when the episode ends.
         const at = poseOnTrip(world, trip, dive.t1 + 0.02) as RecipePose;
-        assert.ok(at.y < 0, `under at ${at.y}`);
+        // (Under the water's surface there: the sea's 0, or on the bigger wild island the lake's and river's own level.)
+        assert.ok(at.y < waterSurfaceOf(world.sampler, at.x, at.z), `under at ${at.y}`);
         const down = poseOnTrip(world, trip, dive.t1 - 0.05) as RecipePose;
         assert.ok(down.act && down.act.pitch > 1, `nose down ${down.act?.pitch}`);
         const mid = poseOnTrip(world, trip, (dive.t0 + dive.t1) / 2) as RecipePose;
@@ -121,7 +123,7 @@ test("a kingfisher fishes from a perch by the water: a steep dive under the surf
         const base = basePoseOnTrip(world, trip, episode.t1 + 0.01);
         assert.ok(Math.hypot(end.x - base.x, end.y - base.y, end.z - base.z) < 1e-6, "back in its schedule's pose");
         assert.ok(Math.hypot(trip.to.x - base.x, trip.to.z - base.z) < 1e-6, "on its perch");
-        assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < -0.25, "into open water");
+        assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < waterSurfaceOf(world.sampler, dive.to.x, dive.to.z) - 0.25, "into open water");
     }
     assert.ok(dives >= 5, `dives ${dives}`);
 });
@@ -148,7 +150,7 @@ test("a plunge dive never goes through the ground: a clear drop from its perch, 
                     const p = poseOnTrip(world, trip, dive.t0 + (dive.t1 - dive.t0) * u) as RecipePose;
                     assert.ok(p.y > Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.05, `${slug} at ${hx},${hz}: under the ground ${u} into its dive`);
                 }
-                assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < -0.25, "into open water");
+                assert.ok(world.sampler.heightAt(dive.to.x, dive.to.z) < waterSurfaceOf(world.sampler, dive.to.x, dive.to.z) - 0.25, "into open water");
             }
         }
     }

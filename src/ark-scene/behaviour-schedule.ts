@@ -33,6 +33,7 @@ import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
+import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
@@ -456,8 +457,17 @@ function spotOf(point: AttachPoint): Spot {
     return {x: point.x, y: point.y, z: point.z, nx: point.nx, ny: point.ny, nz: point.nz, point: point.id};
 }
 
+/**
+ * The water's surface over a point (Part C: the world's own, `ArkWorldSampler.waterSurface`: the bigger wild island's
+ * lake and river stand above the sea at their own level). Absent, as on today's island and the town: 0, the sea's,
+ * where all their water's surface is; so every test below reads exactly as it did there.
+ */
+const surfaceY = (world: ScheduleWorld, x: number, z: number) => waterSurfaceOf(world.sampler, x, z);
+/** What stands there: the ground, or the water's surface over it. */
+const topAt = (world: ScheduleWorld, x: number, z: number) => topOf(world.sampler, x, z);
+
 function groundSpot(world: ScheduleWorld, x: number, z: number): Spot {
-    return {x, y: Math.max(world.sampler.heightAt(x, z), 0), z, nx: 0, ny: 1, nz: 0, point: null};
+    return {x, y: topAt(world, x, z), z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
 /**
@@ -467,8 +477,8 @@ function groundSpot(world: ScheduleWorld, x: number, z: number): Spot {
  */
 const surfaceAt = (x: number, z: number) => waterLevelAt(x, z, 0);
 
-const raised = (world: ScheduleWorld, p: Spot) => p.y > Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.4;
-const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < 0;
+const raised = (world: ScheduleWorld, p: Spot) => p.y > topAt(world, p.x, p.z) + 0.4;
+const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < surfaceY(world, p.x, p.z);
 
 /** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
 function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number): AttachPoint | null {
@@ -636,7 +646,7 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
             if (!nav.fits(x, z, r, slope)) continue;
             // (The way it came in, from the spot: never past a fence to its far side.)
             if (!nav.runClear({x: spot.x, z: spot.z}, {x, z}, 0.01)) continue;
-            return {...spot, x, y: Math.max(world.sampler.heightAt(x, z), 0), z};
+            return {...spot, x, y: topAt(world, x, z), z};
         }
     }
     return spot;
@@ -648,7 +658,8 @@ function waterSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const floor = world.sampler.heightAt(water.x, water.z);
     // (On the surface: the lake's and river's fixed level, the sea's mean: the scene's depth bands follow the tide.)
     const level = surfaceAt(water.x, water.z);
-    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? level : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - random() * Math.max(-floor - animal.length, 0), level - 0.2));
+    // (Its depth under the surface: below the sea's 0 there, under the lake's or the river's own level on the bigger island.)
+    const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? level : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - random() * Math.max(surfaceY(world, water.x, water.z) - floor - animal.length, 0), level - 0.2));
     return {x: water.x, y: Math.min(y, level), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
 }
 
@@ -728,11 +739,12 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
-    if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < 0.02))) return spotOf(point);
+    if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
-        const y = profile.roost === "water" && floats(profile) ? surfaceAt(water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max(-floor * 0.5, 0.4), -0.3);
+        const top = surfaceY(world, water.x, water.z);
+        const y = profile.roost === "water" && floats(profile) ? surfaceAt(water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max((top - floor) * 0.5, 0.4), top - 0.3);
         return {x: water.x, y, z: water.z, nx: 0, ny: 1, nz: 0, point: null};
     }
     return {...groundSpot(world, animal.home.x, animal.home.z)};
@@ -1068,7 +1080,7 @@ function onItsGround(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
 }
 
 /** In the water and under its surface: where a water-only animal may be sent. */
-const underSurface = (world: ScheduleWorld, spot: Spot) => wet(world, spot) && spot.y < 0.02;
+const underSurface = (world: ScheduleWorld, spot: Spot) => wet(world, spot) && spot.y < surfaceY(world, spot.x, spot.z) + 0.02;
 
 /**
  * A water-only animal (a fish, a seabed walker: `aquatic`, not `amphibious`) is never sent onto land, nor onto a rock
@@ -1237,7 +1249,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // Water and lights may be a little beyond its usual ground: never more than half again its range (`rangeReach`).
             const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), cap), random());
             if (point) {
-                const up = point.y > world.sampler.heightAt(point.x, point.z) + 0.5;
+                const up = point.y > topAt(world, point.x, point.z) + 0.5;
                 // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
                 // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
                 // point or standing in the ledges' even row.
@@ -1248,8 +1260,8 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                     const x = point.x + Math.cos(a) * r;
                     const z = point.z + Math.sin(a) * r;
                     // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
-                    const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
-                    if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > 0.02)) {
+                    const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > surfaceY(world, x, z) + 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
+                    if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > surfaceY(world, x, z) + 0.02)) {
                         return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(doing, random, null)};
                     }
                 }
@@ -1340,7 +1352,7 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         }
         out.push(dur === undefined ? {at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance} : {at: beat.at, beat: beat.beat, x, z, yaw: yaw + glance, dur});
     }
-    const y = onGround ? Math.max(world.sampler.heightAt(x, z), 0) + (at.y - Math.max(world.sampler.heightAt(at.x, at.z), 0)) : at.y;
+    const y = onGround ? topAt(world, x, z) + (at.y - topAt(world, at.x, at.z)) : at.y;
     return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z, yaw}};
 }
 
@@ -1369,13 +1381,16 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
         const d = (0.8 + random() * 2.2) * spread;
         dx = Math.cos(a) * d;
         dz = Math.sin(a) * d;
-        if (at.aloft || at.y < 0 || world.nav.walkable(at.x + dx, at.z + dz)) break;
+        if (at.aloft || at.y < surfaceY(world, at.x, at.z) || world.nav.walkable(at.x + dx, at.z + dz)) break;
     }
     const fx = at.x + dx;
     const fz = at.z + dz;
     let finish: Spot;
     if (at.aloft) finish = {x: fx, y: at.y + dy, z: fz, nx: 0, ny: 1, nz: 0, point: null};
-    else if (at.y < 0 || wet(world, {x: fx, z: fz})) finish = {x: fx, y: Math.min(Math.max(at.y + dy, world.sampler.heightAt(fx, fz) + 0.2), at.y >= -0.01 ? 0 : -0.15), z: fz, nx: 0, ny: 1, nz: 0, point: null};
+    else if (at.y < surfaceY(world, at.x, at.z) || wet(world, {x: fx, z: fz})) {
+        const top = surfaceY(world, fx, fz);
+        finish = {x: fx, y: Math.min(Math.max(at.y + dy, world.sampler.heightAt(fx, fz) + 0.2), at.y >= surfaceY(world, at.x, at.z) - 0.01 ? top : top - 0.15), z: fz, nx: 0, ny: 1, nz: 0, point: null};
+    }
     else {
         const landed = world.nav.nearest(fx, fz, "walk", 0.5, 4) ?? {x: fx, z: fz};
         finish = groundSpot(world, landed.x, landed.z);
@@ -1752,7 +1767,9 @@ function waterEdgeNear(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
 function edgeYaw(world: ScheduleWorld, edge: Spot): number {
     for (let k = 0; k < 8; k++) {
         const a = (k / 8) * Math.PI * 2;
-        if (world.sampler.heightAt(edge.x + Math.sin(a) * 1.5, edge.z + Math.cos(a) * 1.5) < 0) return a;
+        const px = edge.x + Math.sin(a) * 1.5;
+        const pz = edge.z + Math.cos(a) * 1.5;
+        if (world.sampler.heightAt(px, pz) < surfaceY(world, px, pz)) return a;
     }
     return 0;
 }
@@ -1814,13 +1831,14 @@ function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Tri
     const phase = (shadow.dx * 7.3 + shadow.dz * 3.1) % (Math.PI * 2);
     // (Slowly and a little: a quick in-and-out round a resting leader read as swimming in circles.)
     const breathe = 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
-    const inWater = at.y < -0.01;
+    const inWater = at.y < surfaceY(world, at.x, at.z) - 0.01;
     const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.15 * Math.sin(epochSeconds * 0.15 + phase)) : at.y;
     const x = at.x + shadow.dx * breathe;
     const z = at.z + shadow.dz * breathe;
     const floor = world.sampler.heightAt(x, z);
-    const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, 0);
-    const ceiling = inWater ? -0.1 : Infinity;
+    const top = surfaceY(world, x, z);
+    const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, top);
+    const ceiling = inWater ? top - 0.1 : Infinity;
     return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
 }
 
@@ -1840,11 +1858,14 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
                 if (Math.hypot(ahead.x - at.x, ahead.z - at.z) > 0.05) at.yaw = Math.atan2(ahead.x - at.x, ahead.z - at.z);
             }
             const ground = world.sampler.heightAt(at.x, at.z);
+            // (Its height over the ground, or in the water at its depth under the surface: the sea's 0, or on the bigger
+            // island the lake's and the river's own level.)
             const level = (p: Spot) => {
                 const h = world.sampler.heightAt(p.x, p.z);
-                return h > 0 ? p.y - h : 0;
+                return h > surfaceY(world, p.x, p.z) ? p.y - h : 0;
             };
-            const base = ground > 0 ? ground : Math.max(Math.min(from.y + (to.y - from.y) * u, 0), ground);
+            const top = surfaceY(world, at.x, at.z);
+            const base = ground > top ? ground : Math.max(Math.min(from.y + (to.y - from.y) * u, top), ground);
             const y = base + level(from) * (1 - u) + level(to) * u;
             return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft: false, ...up, beat: leg.beat};
         }
@@ -1861,7 +1882,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             const route = leg.path ?? [from, to];
             const at = alongRoute(route, u);
             const base = from.y + (to.y - from.y) * u;
-            const ground = Math.max(world.sampler.heightAt(at.x, at.z), 0);
+            const ground = topAt(world, at.x, at.z);
             // Take off, climb to its band, cruise, and come down to land (gliding in on long legs).
             const rise = Math.min(u / 0.18, 1);
             const fall = Math.min((1 - u) / 0.22, 1);
@@ -1999,8 +2020,8 @@ export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: n
     const u = Math.min(Math.max((since - beat.at) / stepSeconds, 0), 1);
     const x = before.x + (beat.x - before.x) * u;
     const z = before.z + (beat.z - before.z) * u;
-    const onGround = Math.abs(to.y - Math.max(world.sampler.heightAt(to.x, to.z), 0)) < 0.05 && !(to.y < 0);
-    const y = onGround && (x !== to.x || z !== to.z) ? Math.max(world.sampler.heightAt(x, z), 0) : to.y;
+    const onGround = Math.abs(to.y - topAt(world, to.x, to.z)) < 0.05 && !(to.y < surfaceY(world, to.x, to.z));
+    const y = onGround && (x !== to.x || z !== to.z) ? topAt(world, x, z) : to.y;
     const wrapTurn = (a: number) => {
         let v = a;
         while (v > Math.PI) v -= Math.PI * 2;
