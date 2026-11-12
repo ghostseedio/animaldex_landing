@@ -260,3 +260,14 @@ test("the zoo's day: feeding times on the island clock, the weekly and fast days
         assert.ok(home.range >= 2 && home.range <= 5);
     }
 });
+
+test("the director covers both islands: the crossing shot plans from the two islands' counts, one island has none", async () => {
+    const {planArkShot, ArkShotUnavailable} = await import("@/lib/ark-clips/shots");
+    const two = islandsFixture();
+    const plan = planArkShot("islands", {snapshot: two, fixture: true, events: [], now: new Date("2026-11-12T10:00:00Z")} as unknown as Parameters<typeof planArkShot>[1]);
+    assert.equal(plan.kind, "islands");
+    assert.ok(plan.cues.some((cue) => /zoo/.test(cue.text)));
+    const one = planArkShot("islands", {snapshot: decodeArkSnapshot(base)!, fixture: true, events: [], now: new Date("2026-11-12T10:00:00Z")} as unknown as Parameters<typeof planArkShot>[1]);
+    assert.ok(!one.cues.some((cue) => /zoo|town/i.test(cue.text)), "one island: no town in its words");
+    void ArkShotUnavailable;
+});

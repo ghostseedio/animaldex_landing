@@ -5947,6 +5947,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             fly(view.target, view.distance, reducedMotion ? 0 : 3.2, view.polar, view.azimuth);
         },
         islandNear: () => islandNear,
+        islandView: (id: "wild" | "town") => {
+            const view = islandView(id);
+            return {target: {x: view.target.x, y: view.target.y, z: view.target.z}, distance: view.distance, polar: view.polar, azimuth: view.azimuth};
+        },
         focusRegion: (region) => {
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
