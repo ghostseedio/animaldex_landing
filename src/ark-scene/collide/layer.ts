@@ -5,11 +5,13 @@
  * Its neighbours' poses are theirs at the same moment, worked out from their own schedules (pure), never what this
  * viewer happened to draw last: who is near is found from where each was last worked out, widened by how far it could
  * have gone since, so every animal that touches it now is found. Touching animals are eased apart as one cluster (all
- * that touch, transitively), so the answer is the same for every viewer, whatever each has drawn and when.
+ * that touch, transitively), so the answer is the same for every viewer, whatever each has drawn and when. The push
+ * apart is worked out at the shared clock's SEPARATION_EASE moments and eased between them (decision 204: it never
+ * jumps); out of anything solid is exact at every moment.
  */
 
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {inContact, pushOut, separateCluster, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
+import {clipMove, inContact, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type ResolveBody, type ResolvePose} from "@/ark-scene/collide/resolve";
 
 export type CollideHooks<E> = {
     colliders(): ColliderSet | null;
@@ -34,7 +36,10 @@ const key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
 export class CollideLayer<E> {
     private epoch = Number.NaN;
     private readonly grid = new Map<number, E[]>();
-    private readonly placedNow = new Map<E, ResolvePose | null>();
+    /** Poses out of anything solid, by moment (now, and the two easing moments round it). */
+    private readonly placedBy = new Map<number, Map<E, ResolvePose | null>>();
+    /** The push apart at an easing moment, by moment (everyone's in a cluster worked out at once). */
+    private readonly pushBy = new Map<number, Map<E, {dx: number; dz: number}>>();
     private readonly resolvedNow = new Map<E, {x: number; z: number}>();
     private readonly bodies = new Map<E, ResolveBody>();
     /** Work (ms), poses moved out of something solid and poses eased apart, since `resetStats`. */
@@ -50,7 +55,8 @@ export class CollideLayer<E> {
         this.bodies.clear();
         this.speeds.clear();
         this.gridEpoch = Number.NaN;
-        this.placedNow.clear();
+        this.placedBy.clear();
+        this.pushBy.clear();
         this.resolvedNow.clear();
         this.epoch = Number.NaN;
     }
@@ -85,8 +91,11 @@ export class CollideLayer<E> {
     private begin(epoch: number) {
         if (epoch === this.epoch) return;
         this.epoch = epoch;
-        this.placedNow.clear();
         this.resolvedNow.clear();
+        // (Kept: the two easing moments round now; anything else was another frame's.)
+        const {q0, q1} = separationMoments(epoch);
+        for (const k of Array.from(this.placedBy.keys())) if (k !== q0 && k !== q1) this.placedBy.delete(k);
+        for (const k of Array.from(this.pushBy.keys())) if (k !== q0 && k !== q1) this.pushBy.delete(k);
         if (!(epoch >= this.gridEpoch && epoch <= this.gridEpoch + GRID_HOLD)) {
             this.gridEpoch = epoch;
             this.grid.clear();
@@ -94,7 +103,8 @@ export class CollideLayer<E> {
                 const last = this.hooks.last(e);
                 if (!last) continue;
                 const body = this.bodyOf(e);
-                const r = body.half + body.radius + Math.min(this.speedOf(e) * (Math.abs(epoch - last.at) + GRID_HOLD), MOST_TRAVEL) + 0.05;
+                // (And as far as it could go to either easing moment round now, which are at most SEPARATION_EASE away.)
+                const r = body.half + body.radius + Math.min(this.speedOf(e) * (Math.abs(epoch - last.at) + GRID_HOLD + SEPARATION_EASE), MOST_TRAVEL) + 0.05;
                 for (let i = Math.floor((last.x - r) / CELL); i <= Math.floor((last.x + r) / CELL); i++) {
                     for (let j = Math.floor((last.z - r) / CELL); j <= Math.floor((last.z + r) / CELL); j++) {
                         const k = key(i, j);
@@ -107,9 +117,11 @@ export class CollideLayer<E> {
         }
     }
 
-    /** Its pose now out of anything solid (worked out once a moment). */
+    /** Its pose at a moment out of anything solid (worked out once a moment). */
     private placed(e: E, epoch: number, base?: ResolvePose | null): ResolvePose | null {
-        if (this.placedNow.has(e)) return this.placedNow.get(e)!;
+        let placedNow = this.placedBy.get(epoch);
+        if (!placedNow) this.placedBy.set(epoch, (placedNow = new Map()));
+        if (placedNow.has(e)) return placedNow.get(e)!;
         const pose = base === undefined ? this.hooks.base(e, epoch) : base;
         const set = this.hooks.colliders();
         let out: ResolvePose | null = pose;
@@ -120,7 +132,7 @@ export class CollideLayer<E> {
                 out = {...pose, x: moved.x, z: moved.z};
             }
         }
-        this.placedNow.set(e, out);
+        placedNow.set(e, out);
         return out;
     }
 
@@ -147,7 +159,48 @@ export class CollideLayer<E> {
         return out;
     }
 
-    /** Its pose now with the collisions: `base` is its pose before them (the schedule's, as `hooks.base` would give it). */
+    /**
+     * Its push apart at an easing moment: its cluster then (everyone touching it, and everyone touching them, at their
+     * poses then) eased apart, each member's push the way it moved (worked out once a moment for the whole cluster).
+     */
+    private pushAt(e: E, q: number): {dx: number; dz: number} {
+        let pushes = this.pushBy.get(q);
+        if (!pushes) this.pushBy.set(q, (pushes = new Map()));
+        const known = pushes.get(e);
+        if (known) return known;
+        const set = this.hooks.colliders();
+        const self = this.placed(e, q);
+        const none = {dx: 0, dz: 0};
+        if (!self || !set) {
+            pushes.set(e, none);
+            return none;
+        }
+        const members: E[] = [e];
+        const seen = new Set<E>(members);
+        for (let k = 0; k < members.length && members.length < 400; k++) {
+            const pose = this.placed(members[k], q)!;
+            for (const other of this.touching(members[k], pose, q)) {
+                if (seen.has(other)) continue;
+                seen.add(other);
+                members.push(other);
+            }
+        }
+        if (members.length < 2) {
+            pushes.set(e, none);
+            return none;
+        }
+        this.clusters++;
+        const poses = members.map((m) => this.placed(m, q)!);
+        const at = separateCluster(set, members.map((m, k) => ({body: this.bodyOf(m), pose: poses[k]})));
+        members.forEach((m, k) => pushes!.set(m, {dx: at[k].x - poses[k].x, dz: at[k].z - poses[k].z}));
+        return pushes.get(e)!;
+    }
+
+    /**
+     * Its pose now with the collisions: `base` is its pose before them (the schedule's, as `hooks.base` would give it).
+     * Out of anything solid, exactly, now; then its push apart, eased between the two easing moments round now, as far as
+     * it goes without touching anything solid (sliding along what stops it).
+     */
     apply(e: E, epoch: number, base: ResolvePose): {x: number; z: number} {
         const set = this.hooks.colliders();
         if (!set) return {x: base.x, z: base.z};
@@ -156,25 +209,17 @@ export class CollideLayer<E> {
         const done = this.resolvedNow.get(e);
         if (done) return done;
         const self = this.placed(e, epoch, base)!;
-        // Its cluster: everyone touching it, and everyone touching them.
-        const members: E[] = [e];
-        const seen = new Set<E>(members);
-        for (let k = 0; k < members.length && members.length < 400; k++) {
-            const pose = this.placed(members[k], epoch)!;
-            for (const other of this.touching(members[k], pose, epoch)) {
-                if (seen.has(other)) continue;
-                seen.add(other);
-                members.push(other);
-            }
-        }
+        const {q0, q1, s} = separationMoments(epoch);
+        const a = this.pushAt(e, q0);
+        const b = this.pushAt(e, q1);
+        const dx = a.dx + (b.dx - a.dx) * s;
+        const dz = a.dz + (b.dz - a.dz) * s;
         let out = {x: self.x, z: self.z};
-        if (members.length > 1) {
-            this.clusters++;
-            const at = separateCluster(set, members.map((m) => ({body: this.bodyOf(m), pose: this.placed(m, epoch)!})));
-            members.forEach((m, k) => this.resolvedNow.set(m, at[k]));
-            out = at[0];
+        if (Math.abs(dx) > 1e-6 || Math.abs(dz) > 1e-6) {
+            out = clipMove(set, this.bodyOf(e), self, {x: self.x + dx, z: self.z + dz}, self);
             if (out.x !== self.x || out.z !== self.z) this.eased++;
-        } else this.resolvedNow.set(e, out);
+        }
+        this.resolvedNow.set(e, out);
         if (started) this.spentMs += performance.now() - started;
         return out;
     }

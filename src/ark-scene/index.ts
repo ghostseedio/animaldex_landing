@@ -1494,6 +1494,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         yaw: pose.yaw,
         aloft: pose.aloft,
         asleep: pose.doing === "sleep",
+        // (At its spot: it holds its place against one walking past, decision 204.)
+        still: !pose.aloft && !pose.moving,
         partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)

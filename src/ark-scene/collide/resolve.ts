@@ -42,7 +42,15 @@ export type ResolvePose = {
     attached?: ReadonlyArray<{x: number; z: number; r?: number; host?: string}> | null;
     /** Held where it is (perched up on a branch or a rock's top: moving it would leave it in the air); others move round it. */
     fixed?: boolean;
+    /**
+     * At its spot, not on its way (resting, grazing, asleep): it gives way a fifth as much as one walking past it (decision
+     * 204: a seal at rest slid aside, backwards, as one swam by; the one moving goes round).
+     */
+    still?: boolean;
 };
+
+/** How much more a still body holds its place against one on its way (decision 204). */
+export const STILL_WEIGHT = 4;
 
 /** Touching is not overlapping: what is left of an overlap after the easing (m, as a share of the smaller radius). */
 export const SEPARATION_SLACK = 0.1;
@@ -277,7 +285,10 @@ export function separation(a: ResolveBody, pa: ResolvePose, neighbours: Readonly
         if (o.depth <= 0) continue;
         const excess = o.depth - allowedOverlap(a, pa, b, pb);
         if (excess <= 0) continue;
-        const share = pb.fixed ? 1 : (b.radius * b.radius) / (a.radius * a.radius + b.radius * b.radius);
+        // (Its share of the push: the other's weight over both, a body's weight its width squared, a still one's more.)
+        const wa = a.radius * a.radius * (pa.still ? STILL_WEIGHT : 1);
+        const wb = b.radius * b.radius * (pb.still ? STILL_WEIGHT : 1);
+        const share = pb.fixed ? 1 : wb / (wa + wb);
         dx += o.nx * excess * share;
         dz += o.nz * excess * share;
     }
@@ -286,6 +297,23 @@ export function separation(a: ResolveBody, pa: ResolvePose, neighbours: Readonly
 
 /** How many easing rounds a cluster of touching animals gets. */
 export const SEPARATION_ROUNDS = 4;
+
+/**
+ * How the push between touching animals follows time (decision 204): worked out at every SEPARATION_EASE seconds of the
+ * shared clock (each animal's push there, from everyone's poses then) and eased between the two either side of now, so
+ * a push never jumps from one moment to the next (a cluster forming or breaking moved a lion 20 cm in a frame: a step
+ * the default view's measure read as a walk, 4.1 turns a minute and 3.9% backwards with the layer, 0.2 without). Pure
+ * in the moment: every viewer eases the same pushes the same way. A slow push turns no body: a resting animal is nudged
+ * as it faces; a walker's way bends by its push's slow drift, a few degrees off its heading at most.
+ */
+export const SEPARATION_EASE = 4;
+
+/** The moments either side of `epoch` the push is worked out at, and how far between them (0-1, smoothstepped). */
+export function separationMoments(epoch: number): {q0: number; q1: number; s: number} {
+    const q0 = Math.floor(epoch / SEPARATION_EASE) * SEPARATION_EASE;
+    const u = Math.min(Math.max((epoch - q0) / SEPARATION_EASE, 0), 1);
+    return {q0, q1: q0 + SEPARATION_EASE, s: u * u * (3 - 2 * u)};
+}
 
 /** Two bodies close enough to be in one cluster (touching or nearly: a round's easing could bring them together). */
 export function inContact(a: ResolveBody, pa: ResolvePose, b: ResolveBody, pb: ResolvePose): boolean {
