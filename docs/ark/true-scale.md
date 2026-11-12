@@ -45,11 +45,11 @@ The models are all one unit along their body axis (`bodyAxisExtent`: +z head to 
 - **Models by size on screen**: the 150 model slots go to the largest on screen (`screenWeight` = drawn length / distance), so a whale far off keeps its model before a beetle near by; and an animal 220 px or more across gets its near model (and is asked for it) however far off it is (`nearBySize`: a 14 m humpback across the bay is not drawn with 600 triangles), the near slots also going largest on screen first.
 - **Camera** (`runtime/camera.ts`): `CAMERA_RANGE` {near 4, close 0.08, far 340} and `meetDistance(length, aspect)`: small ones about a fifth of the view, mid-sized in their surroundings (`10 + 4 L`, as before), a whale or an elephant far enough back to be seen whole across the narrower side (`fitWhole`: a 25 m blue whale on an upright phone from about 115 m). A swimmer is met from far enough to see it whole.
 - **Chase speed** (`moveSpeed`): by dynamic similarity, `(0.25 + 0.75 · speed/100) · √(g · L)`, 0.03–12 m/s, so a cheetah (3.7 m/s) outruns a lion (3.5) and a whale (8.9) is not 25 antelopes' pace. Visual only.
-- **Swim pace** (`behaviour-schedule.ts` `swimPaceLength`): a swimmer's trip pace counts √L past 1 m (in body lengths a second a 14 m humpback cruised at 16.6 m/s; now about 4.5). A breath swims up to four body lengths off (it was ±4 m, so a whale reached its breath in a second and floated).
+- **Swim pace** (`behaviour-schedule.ts` `swimPaceLength`): a swimmer's trip pace counts its length up to 2 m (a seal, a dolphin), then grows as √L (in body lengths a second a 14 m humpback cruised at 16.6 m/s; now about 6). A breath swims up to four body lengths off (it was ±4 m, so a whale reached its breath in a second and floated).
 
 ## 4b. Room (decision 35)
 
-- **Sea** (`map/water.ts`): a swimmer drawn 6 m or longer takes a reserved cell in the deepest open water (at least 9 m deep, furthest from the island's middle, 30 m apart, up to 4 a zone); every other sea cell within 14 m of a reserved one is left out of the other swimmers' lists. Static (the terrain alone), so no arrival or departure moves anyone.
+- **Sea** (`map/water.ts`): a swimmer drawn 6 m or longer takes a reserved cell in deep open water (at least 9 m deep, nearest its zone's site, 30 m apart, up to 4 a zone); every other sea cell within 14 m of a reserved one is left out of the other swimmers' lists. Static (the terrain alone), so no arrival or departure moves anyone.
 - **Measured on the real snapshot** (773 animals on the ground or in the water, bodies as discs a third of their length; `overlap.mts` in the handover folder):
 
 | | Overlapping pairs | of them with an animal of 3 m or more | Open ocean |

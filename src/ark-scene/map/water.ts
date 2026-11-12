@@ -47,7 +47,7 @@ export const BAND_TAGS: Record<WaterClass, readonly MapTag[]> = {
 
 /**
  * Room for the giants (true scale, motion pass §3; decision 35): a swimmer drawn this long or longer (a whale, a whale
- * shark) has its home in the deepest open water, on cells reserved for it, at least `BIG_SWIMMER_APART` apart; every
+ * shark) has its home in deep open water by its zone's site, on cells reserved for it, at least `BIG_SWIMMER_APART` apart; every
  * other sea cell within `BIG_SWIMMER_CLEAR` of a reserved one is left out of the other swimmers' lists. Static (the
  * terrain alone), so nobody moves when a whale arrives or leaves.
  */
@@ -158,8 +158,8 @@ export class WaterCells {
     }
 
     /**
-     * The cells reserved for big swimmers, by zone: the open water's cells at least `BIG_SWIMMER_DEPTH` deep, furthest from
-     * the island's middle first, `BIG_SWIMMER_APART` apart, a few a zone.
+     * The cells reserved for big swimmers, by zone: the open water's cells at least `BIG_SWIMMER_DEPTH` deep, nearest the
+     * zone's site first, `BIG_SWIMMER_APART` apart, a few a zone.
      */
     giantCells(): Map<ArkZone, Cell[]> {
         if (this.giants) return this.giants;
@@ -168,7 +168,9 @@ export class WaterCells {
         this.build().forEach((cells, cls) => {
             if (OPEN_CLASSES.has(cls)) for (const cell of cells) if (cell.depth >= BIG_SWIMMER_DEPTH) open.push(cell);
         });
-        open.sort((a, b) => Math.hypot(b.x, b.z) - Math.hypot(a.x, a.z) || a.x - b.x || a.z - b.z);
+        // Nearest its zone's own site first (where the open ocean's animals were before), deep enough, apart.
+        const site = (cell: Cell) => ZONE_SITES[cell.zone] ?? ZONE_SITES.farm_garden;
+        open.sort((a, b) => Math.hypot(a.x - site(a).x, a.z - site(a).z) - Math.hypot(b.x - site(b).x, b.z - site(b).z) || a.x - b.x || a.z - b.z);
         const all: Cell[] = [];
         for (const cell of open) {
             const list = out.get(cell.zone) ?? [];

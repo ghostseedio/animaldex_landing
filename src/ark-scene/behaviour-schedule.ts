@@ -415,12 +415,12 @@ export function floats(profile: ArkBehaviourProfile): boolean {
 }
 
 /**
- * The length (m) a swimmer's pace is counted in, at true size: its own up to a metre, √L beyond (cruising speed grows
- * far slower than length: a 14 m humpback cruises at about 4 m/s, not 16). Motion pass §3 (true scale).
+ * The length (m) a swimmer's pace is counted in, at true size: its own up to 2 m (a seal, a dolphin), then growing as
+ * √L (cruising speed grows far slower than length: a 14 m humpback cruises at about 6 m/s, not 16). Motion pass §3.
  */
 export function swimPaceLength(length: number): number {
     const L = Math.max(length, 0.05);
-    return L <= 1 ? L : Math.sqrt(L);
+    return L <= 2 ? L : 2 * Math.sqrt(L / 2);
 }
 
 /** How far it can go in one slot at its own pace (ground, water; flyers go four times as fast). */
