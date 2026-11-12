@@ -401,7 +401,7 @@ function barnMark(): Record<string, {x: number; y: number; z: number}> {
 // MARK: - Mountain and the ice
 
 /** The mountain's rocks by area (`ROCK_CLUSTER` m squares): each area one merged piece, near and far. */
-const ROCK_CLUSTER = 32;
+const ROCK_CLUSTER = 60;
 
 /** A cluster's rocks merged into one geometry: each at its own place, tilt and turn, its shade in its colours. */
 function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
@@ -623,8 +623,10 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
         const near = mergedRocks(rocks, 0);
         if (!near) continue;
         const centre = rocks.reduce((sum, rock) => sum.add(new Vector3(rock.x, rock.y, rock.z)), new Vector3()).multiplyScalar(1 / rocks.length);
-        // Seen near from as far as a crag is a few pixels' detail; far to the island view.
-        addPiece(new LodPiece(`rocks:${key}`, centre, near, mergedRocks(rocks, 2), bareRock, {near: 64, far: 320, shadow: true}));
+        // Seen near from as far as a crag is a few pixels' detail; far to the island view, only where a crag stands (a
+        // boulder field far off is a few pixels: like the old scree, it is drawn near only).
+        const far = rocks.some((rock) => rock.role === "crag") ? mergedRocks(rocks, 2) : null;
+        addPiece(new LodPiece(`rocks:${key}`, centre, near, far, bareRock, {near: 64, far: 320, shadow: true}));
     }
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
     addBatch(new LodBatch("polar-drifts", m.polarDrifts, shapes.snowDrift(2.4, 2), null, snow, {cap: 60, reach: 1.6}));

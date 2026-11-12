@@ -424,10 +424,12 @@ const spotCache = new Map<string, PlotSpots>();
  */
 const HOUSE_SPOTS: Array<{x: number; z: number; sizes: readonly SpotSize[]; where: PlotSpot["where"]}> = [
     ...[3.9, 5.5, 7.1].flatMap((z) => [-3.6, -2, 1.8, 3.4].map((x) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const}))),
-    // Beside and behind the cottage, out from its walls (it grew to its real 6.5 × 5 m, decision 34).
-    ...[[4.2, -0.9], [4.2, 0.9], [-4.1, -1], [-4.1, 1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const})),
-    ...[[-2.6, -4.0], [-0.8, -4.0], [1, -4.0], [-1.8, -4.9]].map(([x, z]) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const})),
-    ...[[0.2, -4.9], [-4.0, 3], [4.2, -2.6], [-4.0, -3.1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const}))
+    // Beside and behind the cottage, out from its walls (it grew to its real 6.5 × 5 m, decision 34); its west side is
+    // the vegetable beds now, so those two are on the front lawn's middle, either side of the path's line.
+    ...[[4.2, -0.9], [4.2, 0.9], [0, 5.5], [0, 7.1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const})),
+    // Behind it in two staggered rows (1.3 m and more apart), and at the front lawn's west corner.
+    ...[[-2.6, -4.0], [-0.8, -4.0], [1, -4.0], [-1.7, -4.95]].map(([x, z]) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const})),
+    ...[[0.1, -4.95], [-4.2, 4.6], [4.2, -2.6], [2.6, -4.95]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const}))
 ];
 /** How many outdoor spots each plot keeps (its capacity out of doors). */
 export const HOUSE_SPOT_COUNT = 20;

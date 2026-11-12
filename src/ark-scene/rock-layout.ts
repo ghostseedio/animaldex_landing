@@ -132,6 +132,11 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
         const b = cachedRock(style, variant, ROCK_DETAIL[style][0]).bounds;
         return Math.min(b.max[0] - b.min[0], b.max[2] - b.min[2]) * scale;
     };
+    // How far a rock's footprint reaches from its middle (its long side too): the room it needs clear of trunks.
+    const reachOf = (style: RockStyle, variant: number, scale: number) => {
+        const b = cachedRock(style, variant, ROCK_DETAIL[style][0]).bounds;
+        return Math.hypot(Math.max(-b.min[0], b.max[0]), Math.max(-b.min[2], b.max[2])) * scale;
+    };
     const lay = (role: RockPiece["role"], style: RockStyle, variant: number, x: number, z: number, yaw: number, up: [number, number, number], scale: number, bury: number, shade: number, dusted: boolean): RockPiece => {
         const ring = baseRing(style, variant, scale, orient(up, yaw));
         const height = cachedRock(style, variant, ROCK_DETAIL[style][0]).bounds.max[1] * scale;
@@ -213,7 +218,7 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
                 const style: RockStyle = big ? "boulder" : "scree";
                 const v = Math.floor(sv * ROCK_VARIANTS[style]);
                 const stoneScale = big ? size / 1.6 : size;
-                const rr = Math.max(across(style, v, stoneScale) * 0.5, 0.05);
+                const rr = Math.max(big ? reachOf(style, v, stoneScale) : across(style, v, stoneScale) * 0.5, 0.05);
                 if (trunks.hits(px, pz, rr) || decorRocks.hits(px, pz, rr) || (big && placed.hits(px, pz, rr))) continue;
                 // Not under the crag itself.
                 if (Math.hypot(px - x, pz - z) < r * 0.55) continue;
@@ -243,7 +248,7 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
             const want = 0.1 * smoothstep(0.45, 0.7, fbm(x * 0.06 + 21, z * 0.06 - 2));
             if (roll > want) continue;
             const scale = 0.35 + 0.65 * sizeRoll * sizeRoll;
-            const rr = across("boulder", variant, scale) * 0.6;
+            const rr = reachOf("boulder", variant, scale);
             if (!clearOf(x, z, rr)) continue;
             // Resting on the slope: tilted part of the way to it, sunk a fifth.
             const up: [number, number, number] = (() => {

@@ -180,7 +180,8 @@ test("hamlet: a house's door and window follow its cottage's size", () => {
         const local = plotFrame(plot).toLocal(plotSpots(plot).door.x, plotSpots(plot).door.z);
         assert.ok(Math.abs(local.z - ((COTTAGE.depth / 2) * k + 0.3)) < 1e-6 && Math.abs(local.x) < 1e-6, plot.id);
         const window = plotFrame(plot).toLocal(plotSpots(plot).window!.x, plotSpots(plot).window!.z);
-        assert.ok(Math.abs(window.x - 1.6 * k) < 1e-6, plot.id);
+        // The front window right of the door (micro-scene.ts: x 2.1 on the real-size cottage, decision 34).
+        assert.ok(Math.abs(window.x - 2.1 * k) < 1e-6, plot.id);
     }
 });
 

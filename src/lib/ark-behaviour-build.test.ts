@@ -77,6 +77,11 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
         add({id: p.id, tag, x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x, ny: p.normal.y, nz: p.normal.z, yaw: p.yaw, size: p.size, zone: (p.zone ?? surface(p.position.x, p.position.z).zone) as ArkZone, ...(tag === "canopy_hang" ? {clearBelow: p.clearBelow, radius: p.radius} : {})});
     }
     const items: DecorItem[] = [...worldDecor(), ...forestFill()];
+    // (Scenery lane, the motion 100x pass: the mountain's crags, boulders and scree as drawn have their tops too.)
+    for (const rock of drawnRocks()) {
+        if (!rock.source || rock.source === "decor") continue;
+        add({tag: "rock_top", x: rock.x, y: rock.y1, z: rock.z, ...UP, yaw: 0, size: [0.02, Math.min(rock.hx1 - rock.hx0, rock.hz1 - rock.hz0) * 0.7], zone: surface(rock.x, rock.z).zone});
+    }
     for (let i = 0; i < items.length; i++) {
         const item = items[i];
         if (TREE_KINDS.has(item.kind)) {

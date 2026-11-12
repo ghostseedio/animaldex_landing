@@ -478,10 +478,11 @@ const geometryHash = (geometry: Geometry) => {
 };
 
 test("props hamlet: today's cottage and barn byte-identical from the shared builders; every other plot its own look; lit glass", () => {
-    // The hashes of today's meshes, taken before the builders were factored out (micro-scene.ts, vegetation.ts).
+    // The hashes of today's meshes, taken before the builders were factored out (micro-scene.ts, vegetation.ts); the
+    // cottage's re-taken at its real size (decision 34, scenery lane: 6.5 × 5 m, the front windows out with its walls).
     const cottage = cottageGeometry(COTTAGE_STYLE);
-    assert.equal(geometryHash(cottage.house), "c764629f617cacde");
-    assert.equal(geometryHash(cottage.glass), "c4460e6c3837436d");
+    assert.equal(geometryHash(cottage.house), "d5ef51c40e1ee3ca");
+    assert.equal(geometryHash(cottage.glass), "4298eae55dbdab1a");
     assert.equal(geometryHash(barnGeometry(BARN_STYLE)), "1c5c96232f09e8b1");
     assert.equal(geometryHash(barnGeometry()), "1c5c96232f09e8b1");
     // The first plots keep today's look; the hamlet at 1× (7 houses, 3 smallholdings) is not one building cloned.
