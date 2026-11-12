@@ -40,6 +40,7 @@ import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-sce
 import {fbm, LAKE, noise, RIVER, sampleGround, smoothstep, TERRAIN_HALF} from "@/ark-scene/world";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {GroundTiles} from "@/ark-scene/streaming/ground-tiles";
 import {chunkGridFor, type ChunkGrid} from "@/ark-scene/streaming/chunks";
@@ -238,7 +239,8 @@ export function groundArrays(tier: "high" | "medium" | "low" = "high"): GroundAr
         // Layers: sand (beaches, desert, the reef floor), wet mud (wetland), farmland, snow.
         const sandLayer = Math.min(1, beach + (w.desert ?? 0) * 0.9 + (w.seashore ?? 0) * 0.7 + (sample.height < 0 ? sample.reef : 0));
         const mud = (w.wetland ?? 0) * smoothstep(0.2, 1, sample.land) * (1 - beach);
-        const farmland = (w.farm_garden ?? 0) * smoothstep(0.6, 1, sample.land) * (sample.height > 0.2 ? 1 : 0);
+        // (Islands mode, `no-hamlet.ts`: no farmland: Home's district is meadow, its own green ground with the grass.)
+        const farmland = noHamlet() ? 0 : (w.farm_garden ?? 0) * smoothstep(0.6, 1, sample.land) * (sample.height > 0.2 ? 1 : 0);
         // The ice's snow only: the mountain's is drawn per pixel by height and slope (graphics pass).
         const snow = polar * smoothstep(0.3, 1, sample.land);
         layers[i * 4] = sandLayer;

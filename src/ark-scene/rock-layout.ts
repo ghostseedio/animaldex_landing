@@ -13,6 +13,7 @@
  * these and `map/rocks.ts` lists the solid ones as the obstacles the animals walk round (L5) and the validator checks.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, tiltedBox, type RockStyle} from "@/ark-scene/rock-shapes";
 import {allMounds, moundFoot} from "@/ark-scene/mounds";
@@ -113,6 +114,10 @@ class Grid {
 }
 
 let cached: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]} | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    cached = null;
+});
 
 /** The mountain's crags, boulders and scree. */
 export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]} {

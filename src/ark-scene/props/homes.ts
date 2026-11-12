@@ -19,6 +19,7 @@
 
 import {BoxGeometry, BufferAttribute, BufferGeometry, Color, Group, LineBasicMaterial, LineSegments, Matrix4, MeshStandardMaterial, Vector3} from "three";
 import {COTTAGE} from "@/ark-scene/micro-decor";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {Placement} from "@/ark-scene/placement";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {LodBatch, merge, paint, propMaterial, runSteps, type PropInstance, type PropsTier} from "@/ark-scene/props/kit";
@@ -369,7 +370,8 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
         trails.push(strip(away, 0.08, "#b0976f", () => 0.92));
         dots.push(...specks(away, 0.035, random));
         // At Home: up the cottage's wall too.
-        if (ants.zone === "farm_garden") {
+        // (Islands mode, `no-hamlet.ts`: there is no cottage.)
+        if (ants.zone === "farm_garden" && !noHamlet()) {
             const wallX = COTTAGE.x - COTTAGE.width / 2 - 0.01;
             const wallZ = COTTAGE.z + 0.6;
             const toWall = groundPath(wallX - 2.6, wallZ + 1.2, wallX - 0.02, wallZ, 0.2, random);
@@ -406,15 +408,18 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
             marks.beesHollow = {x: hollow.x, y: hollow.y, z: hollow.z};
             marks.beesFacing = {x: hollow.normal.x, y: 0, z: hollow.normal.z};
         }
-        const hiveX = COTTAGE.x - 6.2;
-        const hiveZ = COTTAGE.z - 2.4;
-        marks.hiveBox = {x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ};
-        add(new LodBatch("hive-box", [{x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ, turn: 0.3, scale: 1}], shapes.hiveBox(), null, warm, {cap: 2, reach: 1.2, shadow: true}));
+        // The keeper's hive box in the cottage's garden (islands mode: no garden, the wild comb only).
+        if (!noHamlet()) {
+            const hiveX = COTTAGE.x - 6.2;
+            const hiveZ = COTTAGE.z - 2.4;
+            marks.hiveBox = {x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ};
+            add(new LodBatch("hive-box", [{x: hiveX, y: groundAt(hiveX, hiveZ), z: hiveZ, turn: 0.3, scale: 1}], shapes.hiveBox(), null, warm, {cap: 2, reach: 1.2, shadow: true}));
+        }
     }
 
     yield;
     // MARK: Wasps: a paper nest under the back eave
-    if (has("wasps")) {
+    if (has("wasps") && !noHamlet()) {
         const halfD = COTTAGE.depth / 2;
         add(new LodBatch("wasp-nest", [{x: COTTAGE.x + 1.6, y: COTTAGE.floor + COTTAGE.wall - 0.02, z: COTTAGE.z - halfD - COTTAGE.overhang * 0.5, turn: 0, scale: 1}], shapes.waspNest(0.3), null, warm, {cap: 2, reach: 1}));
     }
@@ -431,8 +436,8 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
         const halfD = COTTAGE.depth / 2;
         const postX = COTTAGE.x + COTTAGE.porch.width / 2 - 0.1;
         const postZ = COTTAGE.z + halfD + COTTAGE.porch.depth - 0.1;
-        // In the porch's corner, between the post and the porch roof.
-        webs.push({x: postX - 0.32, y: COTTAGE.floor + 2.15, z: postZ - 0.05, facing: 0, radius: 0.34});
+        // In the porch's corner, between the post and the porch roof (islands mode: no porch).
+        if (!noHamlet()) webs.push({x: postX - 0.32, y: COTTAGE.floor + 2.15, z: postZ - 0.05, facing: 0, radius: 0.34});
         // Between two tall flowers (sampler `flower_head` points a hand to a stride apart), as garden orb weavers hang them:
         // the web's middle a little below the heads, its face square to the line between them.
         const spiders = first("spiders")!;
@@ -452,8 +457,8 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
             const radius = Math.min(span * 0.42, Math.max(mid.y - groundAt(mid.x, mid.z) - 0.04, 0.08) * 0.9);
             webs.push({x: mid.x, y: mid.y - radius, z: mid.z, facing: Math.atan2(b.x - a.x, b.z - a.z) + Math.PI / 2 + (random() - 0.5) * 0.2, radius});
         }
-        // Between two fence pickets at the garden's gate.
-        webs.push({x: COTTAGE.x + 1.15, y: groundAt(COTTAGE.x + 1.15, COTTAGE.z + 8.6) + 0.55, z: COTTAGE.z + 8.6, facing: 0, radius: 0.22});
+        // Between two fence pickets at the garden's gate (islands mode: no garden).
+        if (!noHamlet()) webs.push({x: COTTAGE.x + 1.15, y: groundAt(COTTAGE.x + 1.15, COTTAGE.z + 8.6) + 0.55, z: COTTAGE.z + 8.6, facing: 0, radius: 0.22});
     }
 
     yield;
@@ -646,16 +651,20 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
             }
             trails.push(strip(points, 0.018, "#ffffff"));
         }
-        // Up the cottage's front wall from the flower bed, wandering.
-        const wallZ = COTTAGE.z + COTTAGE.depth / 2 + 0.012;
-        const wall: Array<{p: Vector3; n: Vector3}> = [];
-        for (let k = 0; k <= 18; k++) wall.push({p: new Vector3(COTTAGE.x - 2.3 + Math.sin(k * 0.45) * 0.18 + k * 0.02, COTTAGE.floor - 0.05 + k * 0.07, wallZ), n: new Vector3(0, 0, 1)});
-        trails.push(strip(wall, 0.016, "#ffffff"));
-        marks.slimeWall = {x: COTTAGE.x - 2.1, y: COTTAGE.floor + 0.6, z: wallZ};
+        // Up the cottage's front wall from the flower bed, wandering, and across the garden path's stones (islands mode,
+        // `no-hamlet.ts`: no cottage and no path; the rocks' trails only).
+        if (!noHamlet()) {
+            const wallZ = COTTAGE.z + COTTAGE.depth / 2 + 0.012;
+            const wall: Array<{p: Vector3; n: Vector3}> = [];
+            for (let k = 0; k <= 18; k++) wall.push({p: new Vector3(COTTAGE.x - 2.3 + Math.sin(k * 0.45) * 0.18 + k * 0.02, COTTAGE.floor - 0.05 + k * 0.07, wallZ), n: new Vector3(0, 0, 1)});
+            trails.push(strip(wall, 0.016, "#ffffff"));
+            marks.slimeWall = {x: COTTAGE.x - 2.1, y: COTTAGE.floor + 0.6, z: wallZ};
+        }
         if (rocks[0]) marks.slimeRock = {x: rocks[0].x, y: rocks[0].y, z: rocks[0].z};
-        // Across the path's stones.
-        const path = groundPath(COTTAGE.x - 0.6, COTTAGE.z + 4.6, COTTAGE.x + 0.7, COTTAGE.z + 6.8, 0.3, random);
-        trails.push(strip(path, 0.016, "#ffffff"));
+        if (!noHamlet()) {
+            const path = groundPath(COTTAGE.x - 0.6, COTTAGE.z + 4.6, COTTAGE.x + 0.7, COTTAGE.z + 6.8, 0.3, random);
+            trails.push(strip(path, 0.016, "#ffffff"));
+        }
         const geometry = merge(trails);
         // Glints along the trails (`effects.ts` draws them): a point every few centimetres.
         const position = geometry.getAttribute("position");

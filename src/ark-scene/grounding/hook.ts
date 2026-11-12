@@ -16,6 +16,7 @@
  *   it stands on, counted per animal and kind; `window.__arkDebug.grounding()` reads it.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {allAttachPoints, attachSway, type AttachPoint} from "@/ark-scene/sampler";
 import {clipStandOffset, levelBase, meanDrop, modelBase, type ModelLevelName} from "@/ark-scene/grounding/base";
 import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
@@ -66,6 +67,10 @@ export function groundedStand(input: GroundStandInput): Stand | null {
 }
 
 let byId: Map<string, AttachPoint> | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    byId = null;
+});
 function attachPoint(id: string): AttachPoint | null {
     byId ??= new Map(allAttachPoints().map((point) => [point.id, point]));
     return byId.get(id) ?? null;

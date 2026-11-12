@@ -16,6 +16,7 @@
  * stretch of ground a point is on (`region`) joins cells the same way, so a goal on its stretch is one its path reaches.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import {colliderDistance, type Collider, type ColliderSet} from "@/ark-scene/collide/colliders";
 import {chunked, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
@@ -719,6 +720,11 @@ function keep(made: NavGrid) {
     grids.set(made.version, made);
     while (grids.size > 3) grids.delete(grids.keys().next().value as string);
 }
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    grids.clear();
+    building.clear();
+});
 /** The grid for this sampler, built once (and again when the sampler's version changes). */
 export function navGrid(sampler: ArkWorldSampler): NavGrid {
     const known = grids.get(sampler.version);

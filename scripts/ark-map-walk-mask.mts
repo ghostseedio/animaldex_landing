@@ -6,6 +6,7 @@
  * test fails until it is).
  *
  *   npx tsx scripts/ark-map-walk-mask.mts
+ *   npx tsx scripts/ark-map-walk-mask.mts --no-hamlet   # islands mode (`no-hamlet.ts`): walk-mask-no-hamlet.json
  */
 
 import {writeFileSync} from "node:fs";
@@ -15,13 +16,17 @@ import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {encodeMask} from "@/ark-scene/map/walk-mask";
 import {TERRAIN_HALF} from "@/ark-scene/world";
+import {setNoHamlet} from "@/ark-scene/no-hamlet";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// `--no-hamlet`: islands mode's mask (`no-hamlet.ts`: the wild island without its hamlet), walk-mask-no-hamlet.json.
+const wild = process.argv.includes("--no-hamlet");
+setNoHamlet(wild);
 const sampler = worldSampler();
 const grid = navGrid(sampler);
 const {size, walk, steep} = grid.cells;
 const slopes: Record<string, string> = {};
 for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) slopes[String(slope)] = encodeMask(size, (k) => walk[k] === 1 && steep[k] <= slope);
 const file = {cell: (TERRAIN_HALF * 2) / size === 2 ? 2 : (TERRAIN_HALF * 2) / size, size, half: TERRAIN_HALF, version: sampler.version, slopes};
-writeFileSync(path.join(root, "src/ark-scene/map/walk-mask.json"), JSON.stringify(file) + "\n");
+writeFileSync(path.join(root, wild ? "src/ark-scene/map/walk-mask-no-hamlet.json" : "src/ark-scene/map/walk-mask.json"), JSON.stringify(file) + "\n");
 console.log(`walk mask: ${size}x${size} cells, ${Object.keys(slopes).length} slopes, from ${sampler.version}`);

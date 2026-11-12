@@ -1,6 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkPopulation} from "@/lib/ark-population";
+import {arkIslandsGrouping, arkTwoIslands} from "@/lib/ark-islands";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 /**
@@ -27,7 +28,8 @@ function counted(count: number, one: string, other: string, locale: string): str
 
 export default function ArkAbout({snapshot, words, locale, speciesPages}: Props) {
     const seo = words.seo;
-    const population = arkPopulation(snapshot);
+    // Part C: with two islands, the wild island's regions, then the town's homes, farms, zoo and wildlife (decision T3-6).
+    const population = arkPopulation(snapshot, arkTwoIslands(snapshot) ? arkIslandsGrouping(words) : null);
     const number = (value: number) => value.toLocaleString(locale);
     const live = !snapshot
         ? words.unavailable
@@ -66,9 +68,9 @@ export default function ArkAbout({snapshot, words, locale, speciesPages}: Props)
                             <p className="mt-2 text-[14px] leading-relaxed text-ink-300">{seo.listIntro}</p>
                             <div className="mt-4 flex flex-col gap-5">
                                 {population.regions.map((group) => (
-                                    <div key={group.region}>
+                                    <div key={group.place?.key ?? group.region}>
                                         <h4 className="flex items-baseline justify-between border-b border-line-300 pb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-300">
-                                            <span>{words.regions[group.region]}</span>
+                                            <span>{group.place?.label ?? words.regions[group.region]}</span>
                                             <span className="tabular-nums font-semibold tracking-normal text-ink-400">{number(group.animals)}</span>
                                         </h4>
                                         <ul className="mt-1">

@@ -23,6 +23,7 @@ import {forestFill, rockRadius, rockSquash, worldDecor, type DecorItem, type Fil
 import {rockAssetFor, rockAttachPoints, rockFaceToward} from "@/ark-scene/rock-assets";
 import {floorPlacements} from "@/ark-scene/floor-assets";
 import {defaultHomePlots, fencePostTops as homeFencePosts, type HomePlot} from "@/ark-scene/props/home-layout";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {snowCover} from "@/ark-scene/snow";
 import {floorLogTops, treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
 import {fillDrawnOnEveryTier} from "@/ark-scene/tree-pick";
@@ -473,6 +474,13 @@ let generation = 0;
 let pending: Promise<AttachPoint[]> | null = null;
 let slices: number[] = [];
 
+// Islands mode flips (`no-hamlet.ts`): the points are the other world's.
+onHamletSwitch(() => {
+    homePlots = null;
+    resetAttachPoints();
+    placeCache.clear();
+});
+
 /** Run the build to its end (from where a sliced build has got to, if one is under way). */
 function finishBuild(): AttachPoint[] {
     if (attachCache) return attachCache;
@@ -702,7 +710,9 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         {n: {x: -1, y: 0, z: 0}, along: {x: 0, y: 0, z: 1}, half: c.depth / 2, cx: -c.width / 2, cz: 0}
     ];
     const random = streamOf("house", 3);
-    walls.forEach((wall, w) => {
+    // (Islands mode, `no-hamlet.ts`: no cottage and no lamp posts, so none of their points; every host has its own
+    // stream, so no other point moves.)
+    if (!noHamlet()) walls.forEach((wall, w) => {
         for (let k = 0; k < 6; k++) {
             const t = (random() * 2 - 1) * wall.half * 0.85;
             const y = c.floor + 0.4 + random() * (c.wall - 0.7);
@@ -719,15 +729,15 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
             add("house_eave", "house", w, {x: c.x + wall.cx + wall.n.x * out, y: c.floor + c.wall + c.ridge - 0.004, z: c.z}, {x: 0, y: -1, z: 0}, "farm_garden");
         }
     });
-    add("porch_light", "house", 0, {x: c.x + c.light.x, y: c.floor + c.light.y + 0.1, z: c.z + c.light.z + 0.06}, {x: 0, y: 0, z: 1}, "farm_garden");
-    for (const zone of ["farm_garden", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar"] as ArkZone[]) {
+    if (!noHamlet()) add("porch_light", "house", 0, {x: c.x + c.light.x, y: c.floor + c.light.y + 0.1, z: c.z + c.light.z + 0.06}, {x: 0, y: 0, z: 1}, "farm_garden");
+    for (const zone of noHamlet() ? [] : (["farm_garden", "seashore", "river_lake", "wetland", "rainforest", "woodland", "grassland", "desert", "mountains", "polar"] as ArkZone[])) {
         const lamp = zoneLamp(zone);
         add("lamp", `lamp-${zone}`, 0, {x: lamp.x, y: lamp.y + LAMP.height - 0.15, z: lamp.z + LAMP.radius * 2}, {x: 0, y: 0, z: 1}, zone);
     }
 
     // Ponds: lily-pad points round the garden pond and the lake's margin.
     const pond = streamOf("garden-pond", 4);
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < (noHamlet() ? 0 : 8); k++) {
         const a = pond() * Math.PI * 2;
         const r = GARDEN_POND.radius * Math.sqrt(pond()) * 0.8;
         add("pond_surface", "garden-pond", k, {x: GARDEN_POND.x + Math.cos(a) * r, y: GARDEN_POND.y, z: GARDEN_POND.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "farm_garden");
@@ -838,10 +848,10 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         points[points.length - 1].forward = along;
     };
     const ridgeTop = c.floor + c.wall + c.ridge + COTTAGE_ROOF_THICKNESS + 0.05 + 0.002;
-    [-2.2, -1.1, 0, 1.1, 2.2].forEach((x, k) => roof("house", k, {x: c.x + x, y: ridgeTop, z: c.z}, {x: 1, y: 0, z: 0}));
+    if (!noHamlet()) [-2.2, -1.1, 0, 1.1, 2.2].forEach((x, k) => roof("house", k, {x: c.x + x, y: ridgeTop, z: c.z}, {x: 1, y: 0, z: 0}));
     const run = c.depth / 2 + c.overhang;
     const eaveTop = c.floor + c.wall + c.ridge * (1 - run / (c.depth / 2)) + COTTAGE_ROOF_THICKNESS + 0.002;
-    for (const [side, base] of [[1, 10], [-1, 20]] as const) {
+    for (const [side, base] of noHamlet() ? [] : ([[1, 10], [-1, 20]] as const)) {
         [-2.1, -0.7, 0.7, 2.1].forEach((x, k) => roof("house", base + k, {x: c.x + x, y: eaveTop, z: c.z + side * run}, {x: 1, y: 0, z: 0}));
     }
     decor.forEach((item, i) => {

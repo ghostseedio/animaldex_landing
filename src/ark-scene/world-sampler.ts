@@ -18,6 +18,7 @@
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {allAttachPoints, shoreRadius, surfaceAt, type AttachPoint as SceneryPoint, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {drawnRocks, type DrawnRock} from "@/ark-scene/map/rocks";
@@ -293,7 +294,8 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         } else if (item.kind === "barn") obstacles.push([item.x, item.z, 5.5]);
     }));
     tasks.push(once(() => {
-        obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
+        // (Islands mode, `no-hamlet.ts`: no cottage.)
+        if (!noHamlet()) obstacles.push([COTTAGE.x, COTTAGE.z, Math.max(COTTAGE.width, COTTAGE.depth) / 2]);
     }));
     // The fallen logs (graphics batch 6, `floor-assets.ts` floorObstacles: circles along each log): walkers go round them.
     // A small animal (up to 0.8 m) may climb onto one: its top is the scenery's `log` points on the drawn bark (log_top).
@@ -357,7 +359,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
     }));
     // The garden pond (drawn water over dry ground, so `surfaceAt` has no water there): where to drink is just outside
     // its ring of stones, facing the water (2026-11-11: a dog drank standing in it, from points 0.8 m inside).
-    tasks.push(chunked(() => 6, 6, (k) => {
+    tasks.push(chunked(() => (noHamlet() ? 0 : 6), 6, (k) => {
         const a = (k / 6) * Math.PI * 2;
         const r = GARDEN_POND.radius + POND_STONES + 0.25;
         const x = GARDEN_POND.x + Math.cos(a) * r;
@@ -442,6 +444,8 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         // the plots' solid props: compost, water butts, the hay shelter, troughs, coops) is added to its cells here, with
         // the same margins as a fence (0.9 m off its line) and a building (ROCK_MARGIN off its sides).
         const colliders = colliderSetFor(plots);
+        // (Islands mode, `no-hamlet.ts`: no garden pond to keep out of.)
+        const pondStands = !noHamlet();
         const added = new ColliderSet(colliders.list.filter((c) => c.id.startsWith("field-fence") || c.kind === "hay" || c.id.startsWith("lamp") || (c.kind === "building" && !c.id.startsWith("house:") && !c.id.startsWith("barn:"))), "cells");
         const addedAt = (x: number, z: number, clearance: number) => {
             for (const c of added.near(x, z, ROCK_MARGIN + clearance + 0.1)) {
@@ -470,7 +474,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 if (rockAt(x, z, clearance)) return true;
                 // The garden pond and its stones, kept as clear as a rock (no walkable cell holds any of it): a land
                 // animal drinks at its edge, never walks in.
-                if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + POND_STONES + ROCK_MARGIN + clearance) return true;
+                if (pondStands && Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + POND_STONES + ROCK_MARGIN + clearance) return true;
                 if (addedAt(x, z, clearance)) return true;
                 return solids.length || fences.length ? solidAt(x, z, clearance) : false;
             }
@@ -560,3 +564,11 @@ export function resetWorldSampler() {
     shared = null;
     building = null;
 }
+
+// Islands mode flips (`no-hamlet.ts`): the behaviour world is the other world's, its plots back to the default (the
+// mount sets its own again: none in islands mode).
+onHamletSwitch(() => {
+    behaviourPlots = null;
+    behaviourPlotsKey = "";
+    resetWorldSampler();
+});

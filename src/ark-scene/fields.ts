@@ -17,6 +17,7 @@
 import {HAMLET_LANES, LANE_WIDTH, laneDistance, sampleGround, smoothstep, ZONE_SITES} from "@/ark-scene/world";
 import {COTTAGE} from "@/ark-scene/micro-decor";
 import {hamletLotAt, hamletLotsGlsl} from "@/ark-scene/props/hamlet-land";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 
 export const CROPS = ["pasture", "tilled", "sprouts", "cabbage", "cereal", "maize"] as const;
 export type Crop = typeof CROPS[number];
@@ -68,10 +69,11 @@ export const LANE_CLEAR = LANE_WIDTH / 2 + 0.8;
  */
 export function lanesGlsl(): string {
     const segments: string[] = [];
-    for (const {points} of HAMLET_LANES) for (let i = 1; i < points.length; i++) segments.push(`    d = min(d, arkSegment(p, vec2(${points[i - 1][0].toFixed(2)}, ${points[i - 1][1].toFixed(2)}), vec2(${points[i][0].toFixed(2)}, ${points[i][1].toFixed(2)})));`);
+    // (Islands mode, `no-hamlet.ts`: no lanes, so the ground paints none and the shader's twin is never near one.)
+    if (!noHamlet()) for (const {points} of HAMLET_LANES) for (let i = 1; i < points.length; i++) segments.push(`    d = min(d, arkSegment(p, vec2(${points[i - 1][0].toFixed(2)}, ${points[i - 1][1].toFixed(2)}), vec2(${points[i][0].toFixed(2)}, ${points[i][1].toFixed(2)})));`);
     const xs = HAMLET_LANES.flatMap((lane) => lane.points.map((q) => q[0]));
     const zs = HAMLET_LANES.flatMap((lane) => lane.points.map((q) => q[1]));
-    const box = xs.length ? [Math.min(...xs) - 6, Math.max(...xs) + 6, Math.min(...zs) - 6, Math.max(...zs) + 6] : [0, 0, 0, 0];
+    const box = xs.length && !noHamlet() ? [Math.min(...xs) - 6, Math.max(...xs) + 6, Math.min(...zs) - 6, Math.max(...zs) + 6] : [0, 0, 0, 0];
     return `
 float arkSegment(vec2 p, vec2 a, vec2 b) {
     vec2 ab = b - a;
@@ -172,6 +174,8 @@ export function cropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop,
 
 /** The field's own crop at a point, whatever the hamlet reserves there (the props' paddock placement asks this). */
 export function fieldCropAt(x: number, z: number): (FieldPoint & {crop: Exclude<Crop, "pasture">}) | null {
+    // (Islands mode, `no-hamlet.ts`: Home's fields are meadow, no crop anywhere.)
+    if (noHamlet()) return null;
     // (Home growth: no crop on the hamlet's lanes or their verges.)
     if (laneDistance(x, z) < LANE_CLEAR) return null;
     const field = fieldAt(x, z);

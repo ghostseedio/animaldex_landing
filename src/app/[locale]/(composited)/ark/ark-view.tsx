@@ -11,9 +11,7 @@ import {fetchArkHunting} from "@/lib/ark-hunting";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
-import {arkIslandCounts, arkIslandOf, arkIslandSnapshot, arkOpeningIsland, arkTownGroupOf, arkTwoIslands} from "@/lib/ark-islands";
-import {ARK_REGIONS, ZONE_REGION} from "@/ark-scene/types";
-import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
+import {arkIslandCounts, arkIslandsGrouping, arkIslandSnapshot, arkOpeningIsland, arkRegionName, arkTwoIslands} from "@/lib/ark-islands";
 import type {ArkPlaceGrouping} from "@/lib/ark-population";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkHerdKeys} from "@/ark-scene/herds";
@@ -320,17 +318,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // on the wild island by its regions, as before; both islands: the wild regions first, then the town's places.
     const byPlace = useMemo<ArkPlaceGrouping | null>(() => {
         if (!twoIslands || (panelScope === "island" && island === "wild")) return null;
-        const places = {homes: "Homes", farms: "Farms", gardens: "Town wildlife · gardens and parks", water: "Town wildlife · canal and ponds", roofs: "Town wildlife · roofs and towers", walls: "Town wildlife · walls and eaves", streets: "Town wildlife · streets and harbour", ...words.islands?.places};
-        const zoo = words.islands?.zoo ?? "Zoo";
-        const wild = words.islands?.wild ?? "Wild island";
-        return (animal) => {
-            if (arkIslandOf(animal, true) === "wild") {
-                const region = ZONE_REGION[animal.zone] ?? "home";
-                return {key: `wild:${region}`, order: -10 + ARK_REGIONS.indexOf(region), label: `${wild} · ${words.regions[region]}`};
-            }
-            const place = arkTownGroupOf(animal);
-            return {key: place.key, order: place.order, label: place.group === "zoo" ? `${zoo} · ${place.enclosure ? ZOO_TYPES[place.enclosure].label : ""}` : places[place.group as keyof typeof places]};
-        };
+        return arkIslandsGrouping(words);
     }, [twoIslands, panelScope, island, words]);
     const showMineToggle = hasMine && (signedIn || Boolean(session.user) || fixture);
 
@@ -380,6 +368,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         onTier: (_tier, lite) => setLiteOn(lite),
                         mineOnly: false,
                         regionLabels: words.regions,
+                        wildIslandRegionLabels: words.wildIslandRegions,
                         reducedMotion,
                         hours,
                         onFollowEnd: () => setFollowing(false),
@@ -1007,6 +996,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 <ArkPopulationHud
                     snapshot={panelScope === "both" ? snapshot : shown ?? snapshot}
                     byPlace={byPlace}
+                    regionName={(region) => arkRegionName(words, region, twoIslands)}
                     scope={twoIslands ? (
                         <div role="group" aria-label={islandWords.label} className="mb-3 flex gap-1">
                             {(["island", "both"] as const).map((id) => (

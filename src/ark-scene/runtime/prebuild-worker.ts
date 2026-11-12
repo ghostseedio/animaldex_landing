@@ -5,10 +5,13 @@
  */
 
 import {computeScenery, groundBuffers} from "@/ark-scene/runtime/prebuild-scenery";
+import {setNoHamlet} from "@/ark-scene/no-hamlet";
 
-const scope = self as unknown as {onmessage: ((event: MessageEvent<{grass: number; tier?: "high" | "medium" | "low"}>) => void) | null; postMessage: (data: unknown, transfer?: Transferable[]) => void};
+const scope = self as unknown as {onmessage: ((event: MessageEvent<{grass: number; tier?: "high" | "medium" | "low"; noHamlet?: boolean}>) => void) | null; postMessage: (data: unknown, transfer?: Transferable[]) => void};
 
 scope.onmessage = (event) => {
+    // Islands mode (`no-hamlet.ts`): the page's switch, so the worker builds the same world as the mount.
+    setNoHamlet(event.data.noHamlet === true);
     const result = computeScenery(event.data.grass, event.data.tier);
     scope.postMessage(result, [result.grass.numbers.buffer, result.grass.zones.buffer, ...groundBuffers(result.ground)]);
 };

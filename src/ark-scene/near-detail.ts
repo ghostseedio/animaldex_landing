@@ -13,6 +13,7 @@
  * in a small cache.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {
     BufferAttribute,
     BufferGeometry,
@@ -582,6 +583,10 @@ const WHEAT_FRINGE = 1.3;
  * a rank so a tier can thin them evenly.
  */
 let wheatCache: Array<Item & {rank: number}> | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    wheatCache = null;
+});
 /** Runtime prebuild hook (runtime/prebuild.ts): the same stands, placed in the scenery worker before the mount. */
 export function primeWheatStands(items: Array<Item & {rank: number}>): void {
     wheatCache = items;

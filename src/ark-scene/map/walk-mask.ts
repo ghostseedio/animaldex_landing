@@ -17,12 +17,16 @@
  */
 
 import mask from "@/ark-scene/map/walk-mask.json";
+import maskNoHamlet from "@/ark-scene/map/walk-mask-no-hamlet.json";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import {TERRAIN_HALF} from "@/ark-scene/world";
 
 type MaskFile = {cell: number; size: number; half: number; version: string; slopes: Record<string, string>};
-const FILE = mask as MaskFile;
+/** Today's island's mask, and islands mode's (`no-hamlet.ts`: the wild island without its hamlet), each from its own world. */
+const FILES = {hamlet: mask as MaskFile, noHamlet: maskNoHamlet as MaskFile};
+const fileNow = (): MaskFile => (noHamlet() ? FILES.noHamlet : FILES.hamlet);
 
-const decoded = new Map<number, Uint8Array>();
+const decoded = new Map<string, Uint8Array>();
 let enabled = true;
 
 /** Off: placement asks the behaviour lane's grid itself (the tests compare the two). */
@@ -32,19 +36,22 @@ export function setWalkMaskEnabled(on: boolean): void {
 
 /** The base64 of a bit per cell (row-major, as NavGrid's cells), least significant bit first. */
 function bits(slope: number): Uint8Array | null {
-    let out = decoded.get(slope);
+    const FILE = fileNow();
+    const key = `${noHamlet() ? "n" : "h"}${slope}`;
+    let out = decoded.get(key);
     if (out) return out;
     const text = FILE.slopes[String(slope)];
     if (!text) return null;
     const raw = typeof atob === "function" ? atob(text) : Buffer.from(text, "base64").toString("binary");
     out = new Uint8Array(raw.length);
     for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-    decoded.set(slope, out);
+    decoded.set(key, out);
     return out;
 }
 
 /** The grid's answer from the mask: walkable at this slope, or null when the mask does not hold that slope (or is off). */
 export function maskWalkable(x: number, z: number, maxSlope: number): boolean | null {
+    const FILE = fileNow();
     if (!enabled || FILE.half !== TERRAIN_HALF) return null;
     const cells = bits(maxSlope);
     if (!cells) return null;
@@ -66,4 +73,6 @@ export function encodeMask(size: number, walkableAt: (k: number) => boolean): st
 }
 
 /** The behaviour sampler's version the mask was written from (for the test's message). */
-export const WALK_MASK_VERSION = FILE.version;
+export const WALK_MASK_VERSION = FILES.hamlet.version;
+/** Islands mode's (`no-hamlet.ts`). */
+export const WALK_MASK_NO_HAMLET_VERSION = FILES.noHamlet.version;

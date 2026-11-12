@@ -11,6 +11,7 @@
  * Deterministic: the same sites for every viewer.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {allAttachPoints, surfaceAt, type AttachPoint} from "@/ark-scene/sampler";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, microCorner} from "@/ark-scene/micro-decor";
@@ -102,6 +103,11 @@ function groundUnder(point: AttachPoint): number {
 
 /** Up the attach list once (by tag), so a site search does not refilter thousands of points. */
 let byTag: Map<string, AttachPoint[]> | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    byTag = null;
+    groundUnderPoint.clear();
+});
 function pointsTagged(tag: string): AttachPoint[] {
     if (!byTag) {
         byTag = new Map();
