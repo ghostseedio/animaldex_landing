@@ -13,7 +13,7 @@
     {"id": "animals that never move", "problem": "2 Roaming", "source": "audit", "path": "roaming.distanceMPerAnimalDay.animalsThatNeverMove", "max": 800},
     {"id": "grazer awake time grazing at the grass (%)", "problem": "3 Grazing", "source": "audit", "path": "grazing.grazeLabelAtGrassPct", "min": 26},
     {"id": "grazers that never grazed", "problem": "3 Grazing", "source": "audit", "path": "grazing.grazersThatNeverGrazed", "max": 45},
-    {"id": "amphibians that cross land and water", "problem": "4 Land/water", "source": "audit", "path": "landWater.amphibiousWithATransition", "min": 420},
+    {"id": "amphibians that cross land and water", "problem": "4 Land/water", "source": "audit", "path": "landWater.amphibiousWithATransition", "min": 375, "why": "Lane MA3 (2026-11-13, the movement audit): 436 on ark-next 640b0062 -> 384. Deliberate: a waterbird's flights go water to water (before, ducks flew onto land and walked back in), grebes and loons stay on the water, and a duck whose spaced range is a few metres reaches no bank. Ducks, geese and swans now come ashore by swimming to the bank to rest."},
     {"id": "crossings that jump (snap)", "problem": "4 Land/water", "source": "audit", "path": "landWater.transitions.snapped", "max": 0},
     {"id": "near camera: awake animals that turn their heads (%)", "problem": "5 Heads", "source": "audit", "path": "camera.heads.turnedPct", "min": 90},
     {"id": "species whose heads turn on their own (%)", "problem": "5 Heads", "source": "encounters", "path": "heads.turnOnTheirOwnPct", "min": 78},
