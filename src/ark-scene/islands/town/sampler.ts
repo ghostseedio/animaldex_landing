@@ -109,7 +109,10 @@ export type TownSampler = ArkWorldSampler & {readonly half: number; readonly cen
  * The town's behaviour world for these open enclosures (the snapshot's names, or the launch set), in the world frame:
  * the town's local frame moved to `origin` (decision 141: one world, the town across the strait). (0, 0): its own frame.
  */
-export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}, colliders?: ColliderSet): TownSampler {
+export type TownSamplerData = {solid: Uint8Array; points: AttachPoint[]};
+
+/** The sampler's heavy part (its obstacle raster and its places, world frame): pure, so the prebuild worker makes it (decision 153). */
+export function townSamplerData(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}): TownSamplerData {
     const plan = townPlan();
     const half = TOWN_HALF;
     const ox = origin.x;
@@ -210,6 +213,26 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         }
         add("leaf", `town:tree:${i}:leaf`, t.x, ground + height * 0.8, t.z);
     });
+    return {solid, points};
+}
+
+/** The town's behaviour world (see the top); `data`: its raster and places worked out already (`townSamplerData`). */
+export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}, colliders?: ColliderSet, data?: TownSamplerData): TownSampler {
+    const half = TOWN_HALF;
+    const ox = origin.x;
+    const oz = origin.z;
+    const n = Math.ceil((half * 2) / RASTER);
+    const cellOf = (x: number, z: number) => {
+        const i = Math.floor((x + half) / RASTER);
+        const j = Math.floor((z + half) / RASTER);
+        return i < 0 || j < 0 || i >= n || j >= n ? -1 : j * n + i;
+    };
+    const localZone = (x: number, z: number): ArkZone => {
+        const g = sampleTownGround(x, z);
+        return g.height < 0 ? "open_ocean" : ZONE_BY_SURFACE[g.surface] ?? "farm_garden";
+    };
+    const {solid, points} = data ?? townSamplerData(open, origin);
+
     // By tag, in buckets for the near queries.
     const byTag = new Map<AttachTag, {all: AttachPoint[]; buckets: Map<number, AttachPoint[]>}>();
     const bucketOf = (x: number, z: number) => Math.floor((x + 1000) / BUCKET) * 4096 + Math.floor((z + 1000) / BUCKET);

@@ -18,8 +18,14 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
 
-/** The town's collider set at its world origin for these open enclosures. */
-export function townColliderSet(open: readonly string[], origin: {x: number; z: number}): ColliderSet {
+/** The town's collider set at its world origin for these open enclosures (`list`: worked out already, the prebuild's). */
+export function townColliderSet(open: readonly string[], origin: {x: number; z: number}, list?: Collider[]): ColliderSet {
+    const out = list ?? townColliderList(open, origin);
+    return new ColliderSet(out, `town@${origin.x},${origin.z}:${open.join(",")}:${out.length}`);
+}
+
+/** The town's colliders (plain data: the prebuild worker makes them, decision 153). */
+export function townColliderList(open: readonly string[], origin: {x: number; z: number}): Collider[] {
     const ox = origin.x;
     const oz = origin.z;
     const out: Collider[] = [];
@@ -61,5 +67,5 @@ export function townColliderSet(open: readonly string[], origin: {x: number; z: 
             out.push({shape: "segment", kind: "fence", id: `town:${o.id}:${i}`, ax: a.x + ox, az: a.z + oz, bx: b.x + ox, bz: b.z + oz, r, cx, cz, reach: Math.hypot(b.x - a.x, b.z - a.z) / 2 + r, y0, y1: Math.max(ga, gb) + o.height, gap});
         }
     }
-    return new ColliderSet(out, `town@${ox},${oz}:${open.join(",")}:${out.length}`);
+    return out;
 }

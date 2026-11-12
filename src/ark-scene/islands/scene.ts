@@ -15,9 +15,12 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
+import {TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
+import type {TownPrepared} from "@/ark-scene/islands/town/prebuild";
+import type {TownIsland} from "@/ark-scene/islands/town/render/index";
 
 export type ArkIslandScene = {
     id: "town";
@@ -40,6 +43,14 @@ export type ArkIslandScene = {
     content: Uint8Array;
     /** Part B's states for its chunks (STATE_IN full, STATE_MAP map style, STATE_OUT hidden); `allIn`: everything drawn. */
     applyStream: (states: Uint8Array, allIn: boolean) => void;
+    /**
+     * Decision 153: shown a few chunks a frame as it joins the world (its GPU uploads spread over frames, never one long
+     * frame): `beginReveal` hides it, each `stepReveal(n)` shows n more chunks; true while there is more to show.
+     */
+    beginReveal: () => void;
+    stepReveal: (chunks: number) => boolean;
+    /** Decision 153: its animals join a few hundred at a time; meanwhile their places keep the whole town's open enclosures. */
+    joining: (on: boolean) => void;
     /** Every frame: the world's clock (epoch ms), for the people implied and the zoo's day. */
     update: (epochMs: number) => void;
     setShadows: (on: boolean) => void;
@@ -73,8 +84,21 @@ export type ArkIslandScene = {
 };
 
 /** Builds the town for the scene (its modules on demand, so a one-island page does not carry them). */
-export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}}): Promise<ArkIslandScene> {
-    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {zooFeedingAt, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
+/** The next idle moment (or the next frame's time where the browser has no idle callbacks). */
+function idle(): Promise<void> {
+    return new Promise((resolve) => {
+        const ric = (globalThis as {requestIdleCallback?: (cb: () => void, options?: {timeout: number}) => number}).requestIdleCallback;
+        if (ric) ric(() => resolve(), {timeout: 120});
+        else setTimeout(resolve, 16);
+    });
+}
+
+/**
+ * `prepared`: the town's prebuild worker's answer (`islands/town/prebuild.ts`, decision 153). `sliceMs`: the build runs
+ * in idle slices of about this long (its meshes chunk by chunk), never one long task; absent: all at once.
+ */
+export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number}): Promise<ArkIslandScene> {
+    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {zooFeedingAt, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
@@ -91,17 +115,45 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
     const open = enclosuresIn(options.animals.filter(has));
-    const town = buildTownIsland({tier: options.tier, zooOpen: open.length ? open : launchEnclosures()});
+    const zooOpen = open.length ? open : launchEnclosures();
+    const prepared = options.prepared ?? null;
+    const steps = townIslandSteps({tier: options.tier, zooOpen, built: prepared?.built ?? undefined});
+    const sliced = options.sliceMs !== undefined;
+    let town: TownIsland;
+    for (;;) {
+        const sliceStart = performance.now();
+        let next = steps.next();
+        while (!next.done && (!sliced || performance.now() - sliceStart < options.sliceMs!)) next = steps.next();
+        if (next.done) {
+            town = next.value;
+            break;
+        }
+        await idle();
+    }
+    if (sliced) await idle();
     town.root.position.set(origin.x, 0, origin.z);
+    // What Part B's streamer draws, and how much of the town is shown yet as it joins (decision 153).
+    let streamDrawn: ((chunk: number) => boolean) | null = null;
+    let joinOpen: string[] | null = null;
+    let revealed = Number.POSITIVE_INFINITY;
+    let hidden: Group["children"] = [];
+    const applyDrawn = () => {
+        const stream = streamDrawn;
+        const upTo = revealed;
+        town.setDrawn(upTo >= TOWN_CHUNK_COUNT ? stream : (chunk) => chunk < upTo && (!stream || stream(chunk)));
+    };
     // One sea for the world (decision 143): the wild island's; the town's own plane would lie over it.
     const sea = town.root.getObjectByName("town:sea") as Mesh | undefined;
     if (sea) sea.visible = false;
     const seaDepth = ((sea?.material as ShaderMaterial | undefined)?.uniforms?.depthMap?.value as Texture | null | undefined) ?? null;
     town.root.updateMatrixWorld(true);
-    let openKey = (open.length ? open : launchEnclosures()).join(",");
+    let openKey = zooOpen.join(",");
+    // (The prebuild's sampler and colliders are for the enclosures open when it ran.)
+    const preparedKey = prepared?.built?.zooOpen.join(",") ?? null;
     // The zoo's day: its enrichment and the food at its stations (`render/zoo-life.ts`), in the town's frame.
     let zooLife = buildZooLife(zooLayout(openKey.split(",")).enclosures, townHeight);
     town.root.add(zooLife.group);
+    if (sliced) await idle();
     const clockAt = (ms: number) => townClockAt(ms, options.offsetHours ?? 0);
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
@@ -122,7 +174,29 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         grid: town.grid,
         spans: town.spans,
         content: town.content,
-        applyStream: (states, allIn) => town.setDrawn(allIn ? null : (chunk) => states[chunk] !== 0),
+        applyStream: (states, allIn) => {
+            streamDrawn = allIn ? null : (chunk) => states[chunk] !== 0;
+            applyDrawn();
+        },
+        joining: (on) => {
+            joinOpen = on ? openKey.split(",") : null;
+        },
+        beginReveal: () => {
+            revealed = 0;
+            hidden = town.root.children.filter((child) => !child.name.startsWith("town:chunk:") && child.visible);
+            for (const child of hidden) child.visible = false;
+            applyDrawn();
+        },
+        stepReveal: (chunks) => {
+            if (revealed >= TOWN_CHUNK_COUNT) return false;
+            revealed = Math.min(revealed + chunks, TOWN_CHUNK_COUNT);
+            if (revealed >= TOWN_CHUNK_COUNT) {
+                for (const child of hidden) child.visible = true;
+                hidden = [];
+            }
+            applyDrawn();
+            return revealed < TOWN_CHUNK_COUNT;
+        },
         update: (epochMs) => {
             const clock = clockAt(epochMs);
             town.update(clock);
@@ -131,7 +205,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         setShadows: town.setShadows,
         setTier: town.setTier,
         place: (animals) => {
-            const placed = placeTownAnimals(animals);
+            const placed = placeTownAnimals(animals, joinOpen ?? undefined);
             // The zoo's open enclosures follow the snapshot (an arrival opening the next plot).
             const key = placed.open.join(",");
             if (key !== openKey) {
@@ -167,13 +241,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         sampler: () => {
             if (!sampler || sampler.key !== openKey) {
-                if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin)};
-                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, collidersMemo.set)};
+                if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
+                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, collidersMemo.set, openKey === preparedKey ? prepared?.sampler ?? undefined : undefined)};
             }
             return sampler.sampler;
         },
         colliders: () => {
-            if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin)};
+            if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin, openKey === preparedKey ? prepared?.colliders ?? undefined : undefined)};
             return collidersMemo.set;
         },
         scheduled: (id) => {
