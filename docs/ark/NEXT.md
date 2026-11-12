@@ -69,6 +69,10 @@ the privacy text).
 | 39 | L1: 202c beds follow the den rule; the default view measures layer-drawn walks against the schedule's pace | `ark-l1-dens` 3224649c | 9757fe5b | map + schedule 42/42 |
 | 40 | L5: flights clear what they would cross low (the masked owl); a walk goal the body can't stand at is not taken (the tenkile) | `ark-collide-owl` 453ccb23 | ed508601 | suite 2,386/2,387, 0 fail; motion all pass; default view ×2: pace 1.02 / 0.97, backwards 1.2% / 0.7%, turns 0.6 / 0.5 a minute, only a zebra 1.6× once, no page errors; collisions: islands-mode overlaps +0.26% over L5's limit (L5 re-deriving on this tree) |
 
+| 41 | T3: the idle drift sways ±0.12 rad in islands mode (the phone kept the town in frame) | `ark-islands-drift` 9d820def | 0b082f91 | clean; tsc 0; golden shots unaffected (islands off, frozen clock) |
+
+- For W1's merge later: its drift lines conflict with 41; resolve with W1b's `wildFrame().driftSway` and set v1's
+  `driftSway` in `islands/views.ts` to 0.12 (null there today), or v1 in islands mode orbits again (T3).
 - Known: the clawed frog's `dive_in` leap reads 3.67× under the layer (a 0.5 s leap with no `enter_water` clip, drawn
   as walk steps).
 
