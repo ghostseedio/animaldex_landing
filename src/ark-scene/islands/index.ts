@@ -20,24 +20,43 @@ export type ArkIslandDef = {
     chunks: number;
     /** Land (ha), measured at 1 m. */
     landHa: number;
-    /** Where its origin sits in the archipelago frame (m): the wild island at the origin, the town east-north-east. */
+    /** Where its origin sits in the world frame (m): the wild island at the origin, the town across the strait (decision 141). */
     archipelago: {x: number; z: number};
     /** The opening view in its own frame (the camera looks north from the southern sea, as on the wild island). */
     home: {target: [number, number, number]; eye: [number, number, number]};
 };
 
-/** The strait between the islands (decision 8: the islands plan's figure): the town ~1.5 km east-north-east. */
-export const ARCHIPELAGO_TOWN_BEARING = (22.5 * Math.PI) / 180;
-export const ARCHIPELAGO_TOWN_DISTANCE = 1500;
+/**
+ * One world, both islands in it (decisions 141 and 142; the owner: "the second island should be pannable from the first
+ * island, they should be visibly next to each other"): the town across a strait of `ARCHIPELAGO_STRAIT` m of sea between
+ * the two coasts, along `ARCHIPELAGO_TOWN_ANGLE` (atan2(dz, dx): east-north-east). The distance is each island's reach of
+ * land toward the other (`WILD_REACH`, W1's `wildReachToward(angle)` for its bigger island; `TOWN_REACH` back toward
+ * the wild island) plus the strait, so a bigger wild island moves the town out with the same strait. Each island keeps
+ * its own local frame; the world frame is the wild island's.
+ */
+export const ARCHIPELAGO_STRAIT = 250;
+export const ARCHIPELAGO_TOWN_ANGLE = (-22.5 * Math.PI) / 180;
+/** Today's wild island's land toward the town (m, measured at 0.25 m: `scripts/ark-islands-reach.mts`, checked by the tests). */
+export const WILD_REACH = 90.25;
+/** The town's land back toward the wild island (m, the same way). */
+export const TOWN_REACH = 210.25;
+const WILD_HALF = 132;
+const TOWN_HALF_M = 237.6;
+
+/** The town's local origin in the world frame (the wild island's): reach + strait + reach along the angle. */
+export function townWorldOrigin(wildReach = WILD_REACH, townReach = TOWN_REACH, strait = ARCHIPELAGO_STRAIT): {x: number; z: number} {
+    const distance = wildReach + strait + townReach;
+    return {x: Math.round(Math.cos(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10, z: Math.round(Math.sin(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10};
+}
 
 export const ARK_ISLANDS: Record<ArkIslandId, ArkIslandDef> = {
-    wild: {id: "wild", half: 132, chunks: 5, landHa: 2.38, archipelago: {x: 0, z: 0}, home: {target: [0, 0, 0], eye: [0, 160, 300]}},
+    wild: {id: "wild", half: WILD_HALF, chunks: 5, landHa: 2.38, archipelago: {x: 0, z: 0}, home: {target: [0, 0, 0], eye: [0, 160, 300]}},
     town: {
         id: "town",
-        half: 237.6,
+        half: TOWN_HALF_M,
         chunks: 9,
         landHa: 12.4,
-        archipelago: {x: Math.round(Math.cos(ARCHIPELAGO_TOWN_BEARING) * ARCHIPELAGO_TOWN_DISTANCE), z: -Math.round(Math.sin(ARCHIPELAGO_TOWN_BEARING) * ARCHIPELAGO_TOWN_DISTANCE)},
+        archipelago: townWorldOrigin(),
         home: {target: [10, 0, -10], eye: [40, 190, 430]}
     }
 };

@@ -237,12 +237,18 @@ export type ArkHerdInfo = {key: string; slug: string; name: string; count: numbe
 export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
     /**
-     * Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`
-     * `loadTownScene`), its animals through the same pipeline; the snapshot is that island's slice. Absent: the wild
-     * island. One island is loaded at a time (`islands/archipelago.ts`).
+     * Part C, one world (decisions 141-142): the town island beside the wild island across the strait
+     * (`islands/scene.ts` `loadTownScene`), both islands' animals in the snapshot, through the same pipeline. Absent: the
+     * wild island alone, exactly as before.
      */
     island?: ArkIslandScene | null;
-    /** Part C, the end of a crossing: the opening flight starts from this view (over the sea, facing in) instead of its own. */
+    /** Part C: the wild island's animals as the page's prebuild was given them (`prepareArk`), so their places come primed. */
+    wildAnimals?: ArkAnimal[] | null;
+    /** Part C: the island the page opens on (decision 26); the wild island by default. */
+    openIsland?: ArkIsland | null;
+    /** Part C: the island the view is over changed (the nearer along the strait). */
+    onIslandNear?: (island: ArkIsland) => void;
+    /** Part C (unused since decision 141): the opening flight from this view instead of its own. */
     arrival?: {from: ArkCameraView; seconds: number} | null;
     /**
      * Part B: the device's memory in GB as the app knows it (iOS never tells the page; Chromium caps it at 8), for the
@@ -351,6 +357,10 @@ export type ArkVisitor = {slug: string; name: string; /** Its label in the scene
 export type ArkTalking = {slug: string; animalId: string | null; active: boolean};
 
 export type ArkSceneHandle = ArkRuntimeHandle & {
+    /** Part C: fly to an island's whole view (the switch, decision 141: a camera flight across the strait). */
+    flyToIsland?: (island: ArkIsland) => void;
+    /** Part C: the island the view is over now. */
+    islandNear?: () => ArkIsland;
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;

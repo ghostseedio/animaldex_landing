@@ -1,8 +1,12 @@
 /**
- * Part C: another island hosted by the Ark's scene (`mountArk` with `island`), in place of the wild island's own
- * world: its ground, scenery and chunks (Part B's streamer draws them), its placement of the animals that live there,
- * its camera's reach. The animals themselves go through the scene's one pipeline (models, rigs, the behaviour
- * schedule, the motion pass), exactly as on the wild island. One island is loaded at a time (`archipelago.ts`).
+ * Part C: the town island in the Ark's one world (decisions 141–142; the owner: "the second island should be pannable
+ * from the first island, they should be visibly next to each other"). `mountArk` with `island` builds the wild island
+ * as always and this island beside it, across the strait at its world origin (`islands/index.ts` townWorldOrigin): its
+ * ground, scenery and people implied (the town lane's meshes, moved to the origin), its placement of the animals that
+ * live there (in world coordinates), its camera views. The animals go through the scene's one pipeline (models, rigs,
+ * the live budget, Part B's streaming), exactly as on the wild island.
+ *
+ * Everything here answers in world coordinates; the town's own modules work in its local frame (+ the origin).
  */
 
 import type {Group} from "three";
@@ -10,71 +14,76 @@ import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
-import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
-import {ARK_ISLANDS} from "@/ark-scene/islands";
+import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
 
 export type ArkIslandScene = {
     id: "town";
+    /** Its local origin in the world frame. */
+    origin: {x: number; z: number};
+    /** Its meshes, already at the origin. */
     root: Group;
-    /** The ground's height (never below the sea's 0 for walkers: the scene clamps as on the wild island). */
+    /** Within its square (its ground answers there; the wild island's outside). */
+    contains: (x: number, z: number) => boolean;
+    /** The ground's height in the world frame (inside its square). */
     heightAt: (x: number, z: number) => number;
+    /** Lives on this island (the server's `island`, else a kept area). */
+    has: (animal: Pick<ArkAnimal, "island" | "area">) => boolean;
+    /** Part B (its chunks in its local frame, the streamer places them at `origin`). */
     grid: ChunkGrid;
     spans: ChunkSpan[];
     content: Uint8Array;
-    /** Part B's streamer: which chunks are drawn (null: all). */
-    setDrawn: (drawn: ((chunk: number) => boolean) | null) => void;
+    /** Part B's states for its chunks (STATE_IN full, STATE_MAP map style, STATE_OUT hidden); `allIn`: everything drawn. */
+    applyStream: (states: Uint8Array, allIn: boolean) => void;
     /** Every frame: the world's clock (epoch ms), for the people implied and the zoo's day. */
     update: (epochMs: number) => void;
     setShadows: (on: boolean) => void;
     setTier: (tier: "high" | "medium" | "low") => void;
-    /** Every animal's place on this island (the snapshot is this island's slice). */
+    /** Its animals' places in the world frame (the snapshot's animals of this island). */
     place: (animals: ArkAnimal[]) => Map<string, Placement>;
-    /** The town's facts for a placed animal (its area, home, enclosure and range). */
+    /** The town's facts for a placed animal (its area, home, enclosure and range; local frame). */
     townPlace: (id: string) => TownPlace | undefined;
-    /** The behaviour world (`islands/town/sampler.ts`), installed while this island is loaded (`installWorldSampler`). */
-    sampler: () => ArkWorldSampler;
-    /** On the behaviour schedule (not one kept still at a window, behind the glass or in a tank). */
-    scheduled: (id: string) => boolean;
-    /** The most its home range may reach (m): its garden, paddock or enclosure; null: its kind's own. */
-    rangeOf: (id: string) => number | null;
-    /** A kept animal (house, farm, zoo): its home is never moved away from prey (it takes no part in the wild ecology). */
-    kept: (id: string) => boolean;
-    /** A zoo animal's hard bound: the pose pulled back inside its enclosure's mask. */
+    /** A zoo animal's hard bound: a world pose pulled back inside its enclosure's mask. */
     bound: (id: string, pose: {x: number; z: number}) => void;
-    /** The view the page opens on: its target and the radius it fits in view. */
+    /** Its whole-island view: target (world) and the radius it fits. */
     home: {x: number; z: number; radius: number; radiusTall: number};
-    /** The camera's target is kept within this of the middle. */
+    /** The camera's target is kept within this of its middle. */
     worldRadius: number;
-    /** The camera's furthest. */
-    maxDistance: number;
     dispose: () => void;
 };
 
-/** Builds the town for the scene (its modules on demand, so the wild island's page does not carry them). */
-export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number}): Promise<ArkIslandScene> {
-    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures}, {townWorldSampler}, {inPoly, centroid}] = await Promise.all([
+/** Builds the town for the scene (its modules on demand, so a one-island page does not carry them). */
+export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}}): Promise<ArkIslandScene> {
+    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures}, {inPoly, centroid}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
         import("@/ark-scene/islands/town/areas"),
-        import("@/ark-scene/islands/town/sampler"),
         import("@/ark-scene/islands/town/geom")
     ]);
-    const open = enclosuresIn(options.animals);
+    const origin = options.origin ?? townWorldOrigin();
+    const def = ARK_ISLANDS.town;
+    const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
+    const open = enclosuresIn(options.animals.filter(has));
     const town = buildTownIsland({tier: options.tier, zooOpen: open.length ? open : launchEnclosures()});
+    town.root.position.set(origin.x, 0, origin.z);
+    // One sea for the world (decision 143): the wild island's; the town's own plane would lie over it.
+    const sea = town.root.getObjectByName("town:sea");
+    if (sea) sea.visible = false;
+    town.root.updateMatrixWorld(true);
     let openKey = (open.length ? open : launchEnclosures()).join(",");
     let towned = new Map<string, TownPlace>();
-    let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
-    const def = ARK_ISLANDS.town;
-    const STILL_WHERE = new Set(["window", "indoor", "pool"]);
+    const half = def.half;
     return {
         id: "town",
+        origin,
         root: town.root,
-        heightAt: town.heightAt,
+        contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
+        heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
+        has,
         grid: town.grid,
         spans: town.spans,
         content: town.content,
-        setDrawn: town.setDrawn,
+        applyStream: (states, allIn) => town.setDrawn(allIn ? null : (chunk) => states[chunk] !== 0),
         update: (epochMs) => town.update(townClockAt(epochMs, options.offsetHours ?? 0)),
         setShadows: town.setShadows,
         setTier: town.setTier,
@@ -87,42 +96,30 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 town.setZooOpen(placed.open);
             }
             towned = placed.town;
-            return placed.places;
+            const world = new Map<string, Placement>();
+            placed.places.forEach((p, id) => world.set(id, {...p, x: p.x + origin.x, z: p.z + origin.z}));
+            return world;
         },
         townPlace: (id) => towned.get(id),
-        sampler: () => {
-            if (!sampler || sampler.key !== openKey) sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [])};
-            return sampler.sampler;
-        },
-        scheduled: (id) => {
-            const info = towned.get(id);
-            return Boolean(info) && !info!.still && !STILL_WHERE.has(info!.where);
-        },
-        rangeOf: (id) => {
-            const info = towned.get(id);
-            return info ? Math.max(info.range, 0.6) * 1.5 : null;
-        },
-        kept: (id) => {
-            const area = towned.get(id)?.area;
-            return area === "house" || area === "farm" || area === "zoo";
-        },
         bound: (id, pose) => {
             const mask = towned.get(id)?.enclosure?.mask;
-            if (!mask || inPoly(mask, pose.x, pose.z)) return;
+            if (!mask) return;
+            const lx = pose.x - origin.x;
+            const lz = pose.z - origin.z;
+            if (inPoly(mask, lx, lz)) return;
             const c = centroid(mask);
             let lo = 0;
             let hi = 1;
             for (let k = 0; k < 8; k++) {
                 const t = (lo + hi) / 2;
-                if (inPoly(mask, c.x + (pose.x - c.x) * t, c.z + (pose.z - c.z) * t)) lo = t;
+                if (inPoly(mask, c.x + (lx - c.x) * t, c.z + (lz - c.z) * t)) lo = t;
                 else hi = t;
             }
-            pose.x = c.x + (pose.x - c.x) * lo;
-            pose.z = c.z + (pose.z - c.z) * lo;
+            pose.x = origin.x + c.x + (lx - c.x) * lo;
+            pose.z = origin.z + c.z + (lz - c.z) * lo;
         },
-        home: {x: def.home.target[0], z: def.home.target[2], radius: 205, radiusTall: 230},
-        worldRadius: def.half * 0.95,
-        maxDistance: 560,
+        home: {x: origin.x + def.home.target[0], z: origin.z + def.home.target[2], radius: 205, radiusTall: 230},
+        worldRadius: half * 0.92,
         dispose: town.dispose
     };
 }
