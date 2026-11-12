@@ -6,7 +6,10 @@
  * a contact sheet of frames (one every `--every` seconds, for reviewing frame by frame), and every watched animal's
  * rig and L2 state sampled every 100 ms (json). `--perf` adds the frame times per scene.
  *
- *   node scripts/ark-l2-scenes.mjs --set <publish dir> --out <dir> [--scenes a,b] [--seconds 16] [--every 0.25] [--device desktop|phone] [--before] [--perf]
+ *   node scripts/ark-l2-scenes.mjs --set <publish dir> [--set-version v2] --out <dir> [--scenes a,b] [--seconds 16] [--every 0.25] [--device desktop|phone] [--before] [--perf]
+ *
+ * `--set-version`: the version path the set is served and read at (`/ark-rig/<v>`; its manifest must say that version):
+ * v2 by default, v3 for MA2's bird re-rig.
  *
  * `--before`: lane L2 switched off in the page (`__arkL2Motion = false`: every L2 hook falls back to the scene as it was).
  *
@@ -29,6 +32,7 @@ const arg = (name, fallback) => {
 const flag = (name) => process.argv.includes(`--${name}`);
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "l2-shots")));
 const set = arg("set", null) ? path.resolve(arg("set")) : null;
+const setVersion = /^v[0-9]{1,3}$/.test(arg("set-version", "v2")) ? arg("set-version", "v2") : "v2";
 const seconds = Number(arg("seconds", "16"));
 const every = Number(arg("every", "0.25"));
 const deviceName = arg("device", "desktop");
@@ -62,7 +66,7 @@ const server = createServer((request, response) => {
     const parts = url.pathname.split("/").filter(Boolean);
     let file = null;
     let type = "application/octet-stream";
-    if (parts[0] === "ark-rig" && parts[1] === "v2" && set) {
+    if (parts[0] === "ark-rig" && parts[1] === setVersion && set) {
         if (parts.length === 3 && parts[2] === "manifest.json") {
             file = path.join(set, "manifest.json");
             type = "application/json";
@@ -170,7 +174,7 @@ async function record(cdp, name) {
     };
 }
 
-const query = [set ? "rig=/ark-rig/v2" : "", arg("quality", "") ? `quality=${arg("quality", "")}` : "", flag("before") ? "before=1" : "", arg("hours", "") ? `hours=${arg("hours", "")}` : ""].filter(Boolean).join("&");
+const query = [set ? `rig=/ark-rig/${setVersion}` : "", arg("quality", "") ? `quality=${arg("quality", "")}` : "", flag("before") ? "before=1" : "", arg("hours", "") ? `hours=${arg("hours", "")}` : ""].filter(Boolean).join("&");
 const summary = [];
 const wanted = arg("scenes", "takeoff_land,bank_circle,soar,bound_hop,hover_walk,flutter,swim_orca,swim_humpback,swim_shark,swim_salmon,swim_manta,swim_stingray,swim_reef,swim_eel,snake_lateral,snake_sidewind,snake_python");
 for (const name of wanted.split(",").filter(Boolean)) {
