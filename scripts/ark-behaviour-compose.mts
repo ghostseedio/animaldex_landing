@@ -56,7 +56,8 @@ export function composeRecipes(s: SpeciesText, b: Record<string, Hit[]>, ctx: {s
         else if (fam(s, "Ardeidae")) rule("wade_spear", "family Ardeidae (herons, egrets, bitterns)", 6);
         if (has(b, "bill_sweep") && !fam(s, "Anatidae")) phrase("bill_sweep", "bill_sweep", 6);
         else if (fam(s, "Phoenicopteridae", "Recurvirostridae") || named(s, /spoonbill/i)) rule("bill_sweep", `family ${s.family} (sweeps or filters with the bill)`, 6);
-        if (has(b, "scoop") || fam(s, "Pelecanidae")) has(b, "scoop") ? phrase("pouch_scoop", "scoop", 6) : rule("pouch_scoop", "family Pelecanidae (pelicans)", 6);
+        // (A swallow "scoops" insects out of the air: that is its hawking, not a pelican's pouch.)
+        if ((has(b, "scoop") && !fam(s, "Hirundinidae", "Apodidae", "Hemiprocnidae")) || fam(s, "Pelecanidae")) has(b, "scoop") ? phrase("pouch_scoop", "scoop", 6) : rule("pouch_scoop", "family Pelecanidae (pelicans)", 6);
         if (has(b, "dabble") || (fam(s, "Anatidae") && has(b, "bill_sweep"))) phrase("dabble", has(b, "dabble") ?? "bill_sweep", 6);
         else if (fam(s, "Anatidae") && swims(s)) rule("dabble", "family Anatidae on the water (ducks, swans, geese)", 4);
         if (has(b, "surface_dive") && swims(s)) phrase("surface_dive", "surface_dive", 6);
@@ -78,7 +79,11 @@ export function composeRecipes(s: SpeciesText, b: Record<string, Hit[]>, ctx: {s
     // MARK: Foraging on land and in the air
     if (has(b, "pounce") && !bird) phrase("pounce", "pounce", 6);
     else if ((fam(s, "Canidae") && named(s, /fox/i)) || (fam(s, "Felidae") && (s.size ?? 50) < 45)) rule("pounce", `family ${s.family}: ${s.name} stalks and pounces`, 4);
-    if ((has(b, "hawking") && (bird || s.plan === "bat")) || fam(s, "Tyrannidae", "Muscicapidae", "Meropidae", "Dicruridae", "Monarchidae")) has(b, "hawking") ? phrase("hawk_insects", "hawking", 6) : rule("hawk_insects", `family ${s.family} (sallies for flying insects)`, 4);
+    // (Swallows, martins, swifts and treeswifts take insects in continuous flight, not in sallies from a perch: the
+    // motion pass's chases, 2026-11-12.)
+    const aerial = bird && fam(s, "Hirundinidae", "Apodidae", "Hemiprocnidae");
+    if (aerial) has(b, "hawking") ? phrase("aerial_hawk", "hawking", 6) : rule("aerial_hawk", `family ${s.family} (hawks insects in continuous flight)`, 6);
+    else if ((has(b, "hawking") && (bird || s.plan === "bat")) || fam(s, "Tyrannidae", "Muscicapidae", "Meropidae", "Dicruridae", "Monarchidae")) has(b, "hawking") ? phrase("hawk_insects", "hawking", 6) : rule("hawk_insects", `family ${s.family} (sallies for flying insects)`, 4);
     if (s.plan === "flying_insect" && (s.order === "Odonata" || has(b, "hawking"))) has(b, "hawking") ? phrase("hawk_insects", "hawking", 6) : rule("hawk_insects", "order Odonata (dragonflies hawk from a perch)", 5);
     if (has(b, "hover") && bird && fam(s, "Falconidae", "Accipitridae")) phrase("hover_drop", "hover", 6);
     if (has(b, "worm_pull") && bird && !fam(s, "Strigidae", "Tytonidae", "Accipitridae")) phrase("worm_pull", "worm_pull", 5);

@@ -70,8 +70,11 @@ for (const clip of clips) {
     const context = await browser.newContext({viewport: {width, height}});
     const page = await context.newPage();
     page.on("pageerror", (e) => console.log(clip, "pageerror", e.message));
+    page.on("console", (m) => (m.type() === "error" || m.text().startsWith("[clip]")) && console.log(clip, "console", m.type(), m.text().slice(0, 300)));
+    page.on("crash", () => console.log(clip, "crashed"));
     await page.goto(`${base}?clip=${clip}`, {waitUntil: "domcontentloaded", timeout: 120000});
-    await page.waitForFunction(() => window.__clip, null, {timeout: 240000});
+    // (Ten minutes: the shared Mac under load, a cast of big models.)
+    await page.waitForFunction(() => window.__clip, null, {timeout: 600000});
     const info = await page.evaluate(() => ({moment: window.__clip.moment, sexes: window.__clip.sexes}));
     console.log(clip, JSON.stringify(info.moment?.note ?? "no moment"), info.sexes.join(", "));
     summary[clip] = info;

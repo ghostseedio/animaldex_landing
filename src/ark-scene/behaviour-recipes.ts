@@ -27,6 +27,7 @@ import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehav
 import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMode, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
+import {buildQuarry, quarryAt, type QuarryLook, type QuarryNow, type QuarryTrack} from "@/ark-scene/recipe-hunt";
 
 // MARK: Species data
 
@@ -353,12 +354,17 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         case "nest":
             return nestSiteOf(world, profile, animal, input.slug, kit, input.start);
         case "air": {
-            // A place in the air over open ground or water near its range (a bat's beat): 3–6 m up.
-            const a = random() * Math.PI * 2;
-            const r = radius * (0.3 + 0.7 * random());
-            const x = centre.x + Math.sin(a) * r;
-            const z = centre.z + Math.cos(a) * r;
-            return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+            // A place in the air over open ground or water near its range (a bat's beat, a swallow's): 3–6 m up, clear of
+            // the trees' crowns (`openAir`).
+            for (let k = 0; k < 8; k++) {
+                const a = random() * Math.PI * 2;
+                const r = radius * (0.3 + 0.7 * random());
+                const x = centre.x + Math.sin(a) * r;
+                const z = centre.z + Math.cos(a) * r;
+                if (k < 7 && !openAir(world, x, z)) continue;
+                return {x, y: Math.max(world.sampler.heightAt(x, z), 0) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+            }
+            return null;
         }
         default:
             return null;
@@ -552,6 +558,10 @@ export type RecipeAct = {
     label: string;
     /** A murmuration's centre and seed (the scene draws its ambient flockmates from the same function). */
     flock?: Flock | null;
+    /** The ambient creature it is hunting now, where it is (`recipe-hunt.ts`): a grasshopper, a moth, a fish. */
+    quarry?: QuarryNow | null;
+    /** Its partner in a pair's act (a rival, a mate), by id: the collision lane lets the two close to contact. */
+    with?: string | null;
 };
 
 /** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
@@ -580,13 +590,13 @@ function pace(profile: ArkBehaviourProfile, length: number): number {
  * run's (`runFactor`: one with no run clip walks it), in the water at its schedule's own swimming pace (its free pace
  * times 1.4: a harbour seal chasing fish swam at a fixed 0.3 m/s, 2.1 times its clip's).
  */
-function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number): number {
+function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number, fast = false): number {
     const runs = Math.min(runFactor(profile), 2.3);
-    const swim = freeBodyLengthsPerSecond(profile) * Math.max(length, 0.05) * 1.4;
+    const swim = fast ? swimBurst(profile, length) : freeBodyLengthsPerSecond(profile) * Math.max(length, 0.05) * 1.4;
     switch (block.id) {
         case "run":
         case "flee":
-            return walk * runs;
+            return walk * runs * (fast ? RUN_SPRINT : 1);
         case "clash":
             return walk * Math.min(runs, 2.1);
         case "stalk":
@@ -605,7 +615,7 @@ function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBeha
         case "surface":
             return Math.max(swim, 0.02);
         case "fly":
-            return Math.min(Math.max(walk * 4, 2.5), 14);
+            return Math.min(Math.max(walk * 4, 2.5), 14) * (fast ? FLY_BURST : 1);
         case "dive_air":
         case "dive_feet":
             // Faster from higher up: a kingfisher's few metres at 6-8 m/s, a gannet's twenty-odd at 20.
@@ -613,6 +623,23 @@ function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBeha
         default:
             return walk;
     }
+}
+
+/**
+ * A hunt's fast legs (a template step's `fast`): the chase itself. Provisional until the locomotion lanes publish their
+ * paces (L2 `swimPaces(...).burst`, `flightPaces(...).burst`; L1's sprint gait): a swimmer's burst is twice its cruise
+ * (its tail beats faster with speed: the swim clip's rate follows the speed), a flyer's 1.6 times, a runner's sprint
+ * 1.3 times its run (its run clip plays by the distance covered, so the feet keep up). Swapped in one place.
+ */
+export const SWIM_BURST = 2;
+export const FLY_BURST = 1.6;
+export const RUN_SPRINT = 1.3;
+/** A burst is at least a body length a second (the rigs' swim clips are slow: a seal cruises at 0.17 m/s on its clip). */
+export const SWIM_BURST_BL = 1;
+/** A swimmer's burst at its prey (m/s): twice its cruise, at least a body length a second. */
+export function swimBurst(profile: ArkBehaviourProfile, length: number): number {
+    const l = Math.max(length, 0.05);
+    return Math.max(freeBodyLengthsPerSecond(profile) * l * 1.4 * SWIM_BURST, l * SWIM_BURST_BL);
 }
 
 /** The block a "go" step resolves to: its own way of getting there. */
@@ -826,8 +853,9 @@ function legCurve(world: ScheduleWorld, block: BlockDef, from: P, to: P, heading
     if (flat < 0.05) return null;
     const sampler = world.sampler;
     const wet = (x: number, z: number) => sampler.heightAt(x, z) < -0.02;
-    const medium = block.aloft || block.id === "fly" ? null : wet(from.x, from.z) && wet(to.x, to.z) ? wet : onGround(block) ? (x: number, z: number) => walkableAt(world, x, z) : null;
-    const clear = (c: {x: number; z: number} | null, c2: {x: number; z: number} | null) => !medium || wayClear(from, c, c2, to, medium);
+    const dry = !(wet(from.x, from.z) && wet(to.x, to.z)) && onGround(block);
+    const medium = block.aloft || block.id === "fly" ? null : !dry ? (wet(from.x, from.z) && wet(to.x, to.z) ? wet : null) : (x: number, z: number) => walkableAt(world, x, z);
+    const clear = (c: {x: number; z: number} | null, c2: {x: number; z: number} | null) => !medium || wayClear(from, c, c2, to, medium, dry);
     // Lining up with the end heading only where it comes in from behind that heading: from in front it would loop round
     // to come in (it turns at the end instead, at its turn rate).
     const chord = Math.atan2(to.x - from.x, to.z - from.z);
@@ -857,19 +885,54 @@ function onGround(block: BlockDef): boolean {
     return !block.aloft && !block.wet && block.id !== "fly" && block.id !== "swim" && block.id !== "dive" && block.id !== "surface";
 }
 
+/**
+ * The collision lane's colliders (L5, `@/ark-scene/collide`: fences, buildings and keep-outs, trunks, drawn rocks, logs,
+ * bales), wired by the scene with `setRecipeColliders` once that lane is in. Without them the nav's walk grid and the
+ * sampler's `blocked` stand alone, as before. Thin fences fall between point samples, so a ground leg's way is also
+ * checked segment by segment along its curve (`segmentClear`).
+ */
+export type RecipeColliders = {
+    segmentClear: (ax: number, az: number, bx: number, bz: number, radius: number) => boolean;
+    blocked?: (x: number, z: number, radius: number) => boolean;
+};
+let colliders: RecipeColliders | null = null;
+export function setRecipeColliders(source: RecipeColliders | null) {
+    colliders = source;
+    forgetRecipes();
+}
+/** A recipe leg's body radius against the colliders (the walk grid's 0.2 m for small ones). */
+const LEG_RADIUS = 0.2;
+
 /** Ground a walker may cross: the nav's own rule (a dry walkable cell, nothing in the way: the garden pond, a rock, a building). */
 function walkableAt(world: ScheduleWorld, x: number, z: number): boolean {
-    return world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.2);
+    return world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.2) && !(colliders?.blocked?.(x, z, LEG_RADIUS) ?? false);
 }
 
-/** Whether a leg's way, sampled every quarter metre or so, stays where `ok` says. */
-function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P, ok: (x: number, z: number) => boolean): boolean {
+/** Whether a leg's way, sampled every quarter metre or so, stays where `ok` says (and, on the ground, crosses no collider). */
+function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P, ok: (x: number, z: number) => boolean, ground = false): boolean {
     const n = Math.min(Math.max(Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.25), 3), 60);
-    for (let j = 1; j < n; j++) {
-        const at = legAt(from, c, c2, to, j / n);
-        if (!ok(at.x, at.z)) return false;
+    let last = {x: from.x, z: from.z};
+    for (let j = 1; j <= n; j++) {
+        const at = j === n ? {x: to.x, z: to.z} : legAt(from, c, c2, to, j / n);
+        if (j < n && !ok(at.x, at.z)) return false;
+        if (ground && colliders && !colliders.segmentClear(last.x, last.z, at.x, at.z, LEG_RADIUS)) return false;
+        last = at;
     }
     return true;
+}
+
+/**
+ * Open air for a low flyer's sweeps (under the treetops): no trunk, rock, shrub or building within a crown's reach.
+ * (The sampler keeps trunks as obstacles of 0.35 × the tree's scale; its crown spreads about four times that.)
+ */
+const CROWN_CLEARANCE = 2.4;
+function openAir(world: ScheduleWorld, x: number, z: number): boolean {
+    return !world.sampler.blocked(x, z, CROWN_CLEARANCE);
+}
+
+/** A ground way: the walk grid's cells and the colliders between them. */
+function groundWay(world: ScheduleWorld, from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P): boolean {
+    return wayClear(from, c, c2, to, (x, z) => walkableAt(world, x, z), true);
 }
 
 /** A ground leg cut short where something blocks its way (it stops at the edge, never crosses). */
@@ -880,7 +943,7 @@ function clippedAtEdge(world: ScheduleWorld, from: P, to: P): P {
     for (let j = 1; j <= n; j++) {
         const x = from.x + ((to.x - from.x) * j) / n;
         const z = from.z + ((to.z - from.z) * j) / n;
-        if (!walkableAt(world, x, z)) return last;
+        if (!walkableAt(world, x, z) || (colliders && !colliders.segmentClear(last.x, last.z, x, z, LEG_RADIUS))) return last;
         last = {x, y: Math.max(world.sampler.heightAt(x, z), 0), z};
     }
     return to;
@@ -972,7 +1035,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             const reach = within(step.r ?? 3);
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
             // (Only where its way there is clear ground: never across the garden pond, a rock or a building.)
-            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > 0.03 && walkableAt(world, x, z) && (block.aloft || wayClear(pos, null, null, {x, y: 0, z}, (px, pz) => walkableAt(world, px, pz)));
+            // (A pounce too: it does not leap a fence or a rock to land on its prey.)
+            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > 0.03 && walkableAt(world, x, z) && ((block.aloft && block.id !== "leap") || groundWay(world, pos, null, null, {x, y: 0, z}));
             const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
             const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, drifts ? DRIFT_SPREAD : block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t, drifts);
             if (ahead) return ahead;
@@ -987,12 +1051,20 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             return null;
         }
         case "air": {
-            const ahead = aheadSpot(ctx, step, pos, heading, within(step.r ?? 3), 0.35, random, (x, z) => ({x, y: origin.y + (random() - 0.3) * 1.2, z}), t);
+            // (Open air: a hawking swallow or bat sweeps clear of the trees' crowns, the house and the rocks, there and
+            // on its way: `openAir`.)
+            const open = (x: number, z: number) => openAir(world, x, z) && wayClear(pos, null, null, {x, y: 0, z}, (px, pz) => openAir(world, px, pz));
+            const ahead = aheadSpot(ctx, step, pos, heading, within(step.r ?? 3), 0.35, random, (x, z) => (open(x, z) ? {x, y: origin.y + (random() - 0.3) * 1.2, z} : null), t);
             if (ahead) return ahead;
             if (step.near === "here") return pos;
-            const a = random() * Math.PI * 2;
-            const r = (step.r ?? 3) * (0.5 + 0.5 * random());
-            return {x: origin.x + Math.sin(a) * r, y: origin.y + (random() - 0.3) * 1.2, z: origin.z + Math.cos(a) * r};
+            for (let k = 0; k < 8; k++) {
+                const a = random() * Math.PI * 2;
+                const r = (step.r ?? 3) * (0.5 + 0.5 * random());
+                const x = origin.x + Math.sin(a) * r;
+                const z = origin.z + Math.cos(a) * r;
+                if (open(x, z)) return {x, y: origin.y + (random() - 0.3) * 1.2, z};
+            }
+            return null;
         }
         case "nest": {
             const nest = nestOrigin(ctx);
@@ -1127,7 +1199,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             // A ground leg whose way is blocked (the garden pond, a rock, a building) and that no arc gets round stops at the edge.
             if (block.motion === "travel" && onGround(block) && Math.hypot(target.x - pos.x, target.z - pos.z) > 0.05 && walkableAt(world, pos.x, pos.z)) {
                 const from = pos;
-                if (!wayClear(from, null, null, target, (x, z) => walkableAt(world, x, z)) && !legCurve(world, block, from, target, yaw, null)) target = clippedAtEdge(world, from, target);
+                if (!groundWay(world, from, null, null, target) && !legCurve(world, block, from, target, yaw, null)) target = clippedAtEdge(world, from, target);
             }
             const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
             const height = Math.max(pos.y - target.y, 0);
@@ -1140,7 +1212,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                         ? 0.5 + 0.25 * timing()
                         : // A pair's travel times come from the pair's geometry (the same for both sides) at the slower one's pace;
                           // rivals walk up to each other slowly and stiffly (half their walk).
-                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / (speedOf(block, walk, height, owner.profile, length) * (ctx.pair && !step.role && block.id === "walk" ? 0.5 : 1));
+                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / (speedOf(block, walk, height, owner.profile, length, step.fast) * (ctx.pair && !step.role && block.id === "walk" ? 0.5 : 1));
             const flat = Math.hypot(target.x - pos.x, target.z - pos.z);
             const face: P | null = step.face === "other" && ctx.pair ? ctx.pair.other : step.face === "water" ? waterFace(world, pos, length, yaw) : null;
             // Its heading (behaviour's no-spin rule): a leg curves on from the way it was going and it faces along the
@@ -1180,7 +1252,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             const turning = block.motion === "travel" && !ctx.pair && flat > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1, yawIn)) * 1.2) / rate : 0;
             // (On its own it goes the curve's length at its pace, however long that takes: a leg is never sped up past its
             // clip. A pair keeps the template's bounds, the same on both sides.)
-            const curved = ctx.pair || !TIMED_BY_LENGTH.has(block.id) || flat <= 0.03 ? travelSeconds : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target) / speedOf(block, walk, height, owner.profile, length);
+            const curved = ctx.pair || !TIMED_BY_LENGTH.has(block.id) || flat <= 0.03 ? travelSeconds : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target) / speedOf(block, walk, height, owner.profile, length, step.fast);
             const bounded = step.s ? (ctx.pair ? Math.min(Math.max(curved, step.s[0]), step.s[1]) : Math.max(curved, step.s[0])) : curved;
             const seconds = block.motion === "travel" ? Math.max(bounded, 0.2, turning) : Math.max(draw, 0.3);
             // It stops while it still has time to get back at its own pace (a pair keeps the shared reserve: both sides stop together).
@@ -1414,6 +1486,8 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
 function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof keyPose>): RecipeAct {
     const b = key.block;
     const states = b.states;
+    // (The catch is in its mouth, bill or feet only from the moment it is made: until then the quarry is still loose.)
+    const loose = Boolean(key.catch?.ok) && at.u < (b.motion === "hold" ? CATCH_AT_HOLD : 0.98);
     const fx = b.fx ? {kind: b.fx, at: b.fxAt === "end" ? key.to : b.fxAt === "during" ? at.p : key.from, id: `${episode.id}#${index}`, during: b.fxAt === "during", when: b.fxAt ?? "start"} : null;
     return {
         episode: episode.id,
@@ -1424,13 +1498,106 @@ function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof 
         pitch: at.pitch,
         roll: at.roll,
         own: true,
-        carry: key.carry,
+        carry: loose ? null : key.carry,
         prey: key.prey,
         catch: key.catch,
         fx,
         mark: b.mark ? {kind: b.mark, at: key.from, id: `${episode.id}#${index}`, from: key.t0} : null,
-        label: TEMPLATES[episode.recipe]?.label ?? episode.recipe
+        label: TEMPLATES[episode.recipe]?.label ?? episode.recipe,
+        with: episode.other ?? null
     };
+}
+
+// MARK: The quarry (`recipe-hunt.ts`): the one ambient creature a hunt goes after
+
+/** A hold's catch (a strike, a swipe, a scoop) is made this far through it: the lunge's reach. */
+const CATCH_AT_HOLD = 0.7;
+/** What leads up to a catch: it is watching its quarry through these (the quarry is there from the first of them). */
+const LEAD_UP = new Set(["stalk", "freeze", "scan", "ambush", "hover", "perch", "run", "turn", "take_off", "wade", "swim", "dive", "fly"]);
+const quarryMemo = new WeakMap<Episode, QuarryTrack[]>();
+
+/** Its pose inside an episode at a time (the keys only: catches are never in the last blend home). */
+function episodeKeyPose(world: ScheduleWorld, episode: Episode, epoch: number) {
+    const keys = episode.keys;
+    let i = 0;
+    while (i + 1 < keys.length && keys[i].t1 <= epoch) i++;
+    return {key: keys[i], at: keyPose(world, keys[i], epoch, episode.length, i > 0 ? keys[i - 1] : null)};
+}
+
+/**
+ * Where a catch is made at a time: its mouth or bill a little ahead of the body (half a length), a pounce's forepaws,
+ * a diving bird's bill below it, an osprey's talons under it.
+ */
+function mouthOf(world: ScheduleWorld, episode: Episode, catchBlock: string, epoch: number) {
+    const {at} = episodeKeyPose(world, episode, epoch);
+    const length = episode.length;
+    const reach = catchBlock === "dive_feet" ? 0 : catchBlock === "leap" ? length * 0.45 : catchBlock === "strike" ? length * 0.6 : length * 0.5;
+    const c = Math.cos(Math.min(Math.abs(at.pitch), 1.4));
+    const y = catchBlock === "dive_air" ? at.p.y - length * 0.35 : catchBlock === "dive_feet" ? at.p.y : at.p.y + heightOf(length) * 0.5;
+    return {x: at.p.x + Math.sin(at.yaw) * reach * c, y, z: at.p.z + Math.cos(at.yaw) * reach * c, yaw: at.yaw};
+}
+
+/**
+ * The quarry of each catch in an episode (fish and insects: a worm comes out of the ground in the bill, a shellfish
+ * off the bottom, and are drawn as carried). Built once per episode, pure in its keys.
+ */
+export function quarriesOf(world: ScheduleWorld, episode: Episode): QuarryTrack[] {
+    const memo = quarryMemo.get(episode);
+    if (memo) return memo;
+    const out: QuarryTrack[] = [];
+    const keys = episode.keys;
+    keys.forEach((key, i) => {
+        const c = key.catch;
+        if (!c || (c.kind !== "fish" && c.kind !== "insect")) return;
+        const b = key.block.id;
+        const look: QuarryLook = c.kind === "fish" ? "fish" : key.block.aloft && b !== "leap" ? "flier" : "hopper";
+        const hold = key.block.motion === "hold";
+        const tc = hold ? key.t0 + (key.t1 - key.t0) * CATCH_AT_HOLD : key.t1 - 0.02;
+        // Seen from the first of the watching that leads up to it (a stalk, a freeze, an ambush, a hover), at most 14 s.
+        let h = i;
+        while (h > 0 && LEAD_UP.has(keys[h - 1].block.id) && !keys[h - 1].catch && tc - keys[h - 1].t0 < 14) h--;
+        const tv = keys[h].t0;
+        const prev = keys[i - 1];
+        let ts: number;
+        if (b === "leap") ts = prev?.block.id === "run" ? prev.t0 + 0.15 : key.t0 + (key.t1 - key.t0) * 0.3;
+        else if (hold && prev && (prev.block.id === "swim" || prev.block.id === "dive") && prev.prey) ts = prev.t0 + (prev.t1 - prev.t0) * 0.3;
+        else if (hold) ts = key.t0 - 0.05;
+        else if (b === "dive_air" || b === "dive_feet") ts = tc - 0.32;
+        else if (b === "fly") ts = Math.max(key.t0 + (key.t1 - key.t0) * 0.35, tc - 1.2);
+        else ts = key.t0 + (key.t1 - key.t0) * 0.25;
+        // A watcher's fish swims in to it while it waits (a heron in ambush, a bear at the river, a pelican).
+        const approach = hold && ts >= key.t0 - 0.1 && (prev?.block.id === "ambush" || prev?.block.id === "scan");
+        out.push(
+            buildQuarry({
+                id: `${episode.id}#${i}`,
+                kind: c.kind,
+                look,
+                ok: c.ok,
+                tv: Math.max(tv, ts - 14),
+                ts,
+                tc,
+                mouth: (t) => mouthOf(world, episode, b, t),
+                length: episode.length,
+                heightAt: (x, z) => world.sampler.heightAt(x, z),
+                approach
+            })
+        );
+    });
+    quarryMemo.set(episode, out);
+    return out;
+}
+
+/** The quarry it is after at a time, if any (cheap when none of its catches is near in time). */
+function quarryNow(world: ScheduleWorld, episode: Episode, epoch: number): QuarryNow | null {
+    let near = false;
+    for (const k of episode.keys) if (k.catch && epoch >= k.t0 - 16 && epoch < k.t1 + 3) near = true;
+    if (!near) return null;
+    for (const track of quarriesOf(world, episode)) {
+        if (epoch < track.tv || epoch >= track.te) continue;
+        const now = quarryAt(track, epoch, (x, z) => world.sampler.heightAt(x, z));
+        if (now) return now;
+    }
+    return null;
 }
 
 /** An episode's pose at a time over its schedule pose: it starts from it and ends back in it (the last moment blends). */
@@ -1458,6 +1625,8 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
     const blendFrom = Math.min(Math.max(episode.t1 - turnSeconds, keys[keys.length - 1].t0), episode.t1 - 0.3);
     const kYaw = holds ? 0 : ease(Math.min(Math.max((epoch - blendFrom) / Math.max(episode.t1 - blendFrom, 1e-3), 0), 1));
     const act = actOf(episode, key, i, at);
+    const quarry = quarryNow(world, episode, epoch);
+    if (quarry) act.quarry = quarry;
     const moving = key.block.motion === "travel" && at.u < 1;
     return {...base, x, y, z, yaw: at.yaw + dyaw * kYaw, moving, aloft: at.aloft && k < 0.5, beat: key.block.beat, act: {...act, pitch: act.pitch * (1 - k), roll: act.roll * (1 - k)}};
 }

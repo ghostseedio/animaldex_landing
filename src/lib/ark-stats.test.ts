@@ -96,29 +96,28 @@ test("snapshot: stats and a stored length decode when the server sends them", ()
     assert.equal(arkStats(plain).size, arkStats({model_slug: plain.model_slug}).size);
 });
 
-test("speed: 0.6 to 2 body lengths a second, and a chase takes as long as its predator's pace says, ending in the same place", () => {
+test("speed: 0.6 to 2 body lengths a second, and a chase takes as long as its predator's pace says, ending over its prey", () => {
     assert.equal(bodyLengthsPerSecond(0), 0.6);
     assert.equal(bodyLengthsPerSecond(100), 2);
     assert.equal(bodyLengthsPerSecond(250), 2);
     const cheetah = arkBody({model_slug: "cheetah"}).display;
     const lion = arkBody({model_slug: "african-lion"}).display;
     assert.ok(moveSpeed({model_slug: "cheetah"}, cheetah) > moveSpeed({model_slug: "african-lion"}, lion) * 0.9);
+    // (The meal's chase, `acts.ts` (motion pass, L7): its speed stat sets its sprint; it ends over its prey, wherever the
+    // prey's darts took it. More in ark-chases.test.ts.)
     const prey: ActBody = {x: 0, z: 0, base: 0.5, yaw: 0, length: 1.6, height: 1};
-    const hunter = (speed?: number): ActBody => ({x: -6, z: 0, base: 0.5, yaw: 0, length: 1.8, height: 1, speed});
+    const hunter = (speedStat?: number): ActBody => ({x: -6, z: 0, base: 0.5, yaw: 0, length: 1.8, height: 1, speedStat});
     const plain = mealStage("glide", hunter(), prey);
-    const fast = mealStage("glide", hunter(7), prey);
-    const slow = mealStage("glide", hunter(1.2), prey);
-    assert.ok(fast.seconds < plain.seconds && plain.seconds < slow.seconds, `${fast.seconds} ${plain.seconds} ${slow.seconds}`);
-    // Each ends where it would have: standing over the prey, the prey gone.
-    for (const stage of [fast, slow]) {
-        const end = stage.predator(stage.seconds)!;
-        const was = plain.predator(plain.seconds)!;
-        near(end.x, was.x, 1e-9, "x");
-        near(end.z, was.z, 1e-9, "z");
+    const fast = mealStage("glide", hunter(95), prey);
+    const slow = mealStage("glide", hunter(15), prey);
+    assert.ok(fast.catchAt! < plain.catchAt! && plain.catchAt! < slow.catchAt!, `${fast.catchAt} ${plain.catchAt} ${slow.catchAt}`);
+    for (const stage of [fast, plain, slow]) {
+        const at = stage.catchAt!;
+        const end = stage.predator(at)!;
+        const caught = stage.prey(at);
+        assert.ok(Math.hypot(end.x - caught.x, end.z - caught.z) < 1.8 * 0.5 + 1.6 * 0.6, "over its prey at the catch");
         assert.ok(stage.prey(stage.seconds).hidden);
     }
-    // Clamped: never slower than twice the stage's own stretch.
-    assert.ok(mealStage("glide", hunter(0.01), prey).seconds <= plain.seconds + 2 * 1.6 + 1e-9);
 });
 
 test("intelligence: sharper animals have more kinds of idle and look round at a near camera more often", () => {

@@ -6,6 +6,10 @@
  * ambient flockmates round the catalogue starlings. Every animal's position is the schedule's (the same far
  * away); this only adds detail.
  *
+ * The quarry (`recipe-hunt.ts`): the one creature a hunt goes after, drawn where the engine has it: a grasshopper
+ * that hops off ahead of a cat's rush (a puff of dust where it lands), a moth or fly that a swallow twists after, a fish
+ * that swims in under a heron's bill or bolts ahead of a seal. Kept to a pixel or so far off, like the swarms.
+ *
  * Ambient creatures only: the fish, insects and flockmates here are decoration, never catalogue animals.
  */
 
@@ -28,6 +32,7 @@ import {
     Vector3
 } from "three";
 import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
+import {quarrySize, type QuarryNow} from "@/ark-scene/recipe-hunt";
 import {hashString} from "@/ark-scene/world";
 
 export type RecipeActor = {id: string; x: number; y: number; z: number; yaw: number; pitch: number; length: number; height: number; act: RecipeAct};
@@ -50,6 +55,7 @@ const SWARM_INSECTS = 90;
 const CLUSTER_BUGS = 40;
 const MAX_INSECTS = SWARM_INSECTS * 4;
 const MAX_BATS = EMERGENCE_AMBIENT * 2;
+const MAX_QUARRY = 64;
 const NEST_TWIGS = 44;
 
 /**
@@ -84,6 +90,10 @@ export class RecipeScene {
     private readonly flock: InstancedMesh;
     private readonly insects: InstancedMesh;
     private readonly bats: InstancedMesh;
+    /** The quarry: grasshoppers, moths and flies, fish. */
+    private readonly hoppers: InstancedMesh;
+    private readonly fliers: InstancedMesh;
+    private readonly quarryFish: InstancedMesh;
     private readonly points: Points;
     private readonly particles: Particle[] = [];
     private readonly emitted = new Map<string, number>();
@@ -132,6 +142,14 @@ export class RecipeScene {
         // Dark brown (a little lighter than black, so the stream reads over grass as well as against the sky).
         this.bats = make(chevronGeometry(), "#3a2e27", MAX_BATS, 0.85);
         (this.bats.material as MeshStandardMaterial).side = 2;
+        // A grasshopper: a long body, nose along +z (scaled to its length); a moth or fly: a tiny chevron with its wings
+        // beating; a fish: a long silvery body.
+        this.hoppers = make(new SphereGeometry(0.5, 8, 5), "#93b44c", MAX_QUARRY, 0.7);
+        (this.hoppers.material as MeshStandardMaterial).emissive.set("#2a3412");
+        this.fliers = make(chevronGeometry(), "#d9cfb4", MAX_QUARRY, 0.7);
+        (this.fliers.material as MeshStandardMaterial).side = 2;
+        (this.fliers.material as MeshStandardMaterial).emissive.set("#3d3a32");
+        this.quarryFish = make(new SphereGeometry(0.5, 10, 6), "#c4cfd6", MAX_QUARRY, 0.3);
         const geometry = new BufferGeometry();
         geometry.setAttribute("position", new BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(DynamicDrawUsage));
         geometry.setAttribute("color", new BufferAttribute(new Float32Array(MAX_PARTICLES * 3), 3).setUsage(DynamicDrawUsage));
@@ -163,6 +181,9 @@ export class RecipeScene {
         this.flock.count = 0;
         this.insects.count = 0;
         this.bats.count = 0;
+        this.hoppers.count = 0;
+        this.fliers.count = 0;
+        this.quarryFish.count = 0;
         for (const m of Object.values(this.marks)) m.count = 0;
         this.chasers = [];
         const flocks = new Map<string, NonNullable<RecipeAct["flock"]>>();
@@ -178,19 +199,30 @@ export class RecipeScene {
                 const colour = act.carry.item === "material" ? MATERIAL_COLOURS[act.carry.material ?? "twigs"] : undefined;
                 const at = act.carry.at;
                 const reach = at === "feet" ? 0.1 : at === "back" || at === "chest" ? 0 : 0.52;
-                const up = at === "feet" ? -0.05 : at === "back" ? 1 : at === "chest" ? 0.5 : 0.55;
+                // (A bird's bill is near the top of its drawn height, its neck up; a mammal's mouth a little lower: the
+                // rig's head bone would be exact, `act.quarry` is where the catch was made.)
+                const up = at === "feet" ? -0.05 : at === "back" ? 1 : at === "chest" ? 0.5 : at === "beak" ? 0.8 : 0.62;
                 const x = a.x + fx * a.length * reach;
                 const z = a.z + fz * a.length * reach;
                 const y = a.y + a.height * up - Math.sin(a.pitch) * a.length * reach;
                 const l = a.length;
                 const wiggle = kind === "fish" || kind === "worm" ? Math.sin(now * 14 + hashString(a.id)) * 0.35 : 0;
-                if (kind === "fish") this.put(this.items.fish, x, y, z, a.yaw + Math.PI / 2 + wiggle, 0, 0, Math.min(Math.max(l * 0.09, 0.012), 0.12), Math.min(Math.max(l * 0.12, 0.016), 0.16), Math.min(Math.max(l * 0.38, 0.05), 0.6));
+                // (The fish it caught, at the quarry's own size: `quarrySize`.)
+                if (kind === "fish") {
+                    const f = quarrySize("fish", l);
+                    this.put(this.items.fish, x, y, z, a.yaw + Math.PI / 2 + wiggle, 0, 0, f * 0.22, f * 0.3, f);
+                }
                 else if (kind === "twig" || kind === "grass") this.put(this.items[kind], x, y, z, a.yaw + Math.PI / 2 + 0.3, 0.2, 0, Math.max(l * 0.025, 0.004), Math.max(l * 0.025, 0.004), Math.min(Math.max(l * 0.7, 0.08), 1.2), colour);
                 else if (kind === "worm") this.put(this.items.worm, x, y - l * 0.06, z, a.yaw + wiggle, 1.1, 0, Math.max(l * 0.02, 0.004), Math.max(l * 0.02, 0.004), Math.max(l * 0.35, 0.05));
+                // (An insect at its own size, a grasshopper's or a moth's, crossways in the mouth or bill: not scaled to the hunter.)
+                else if (kind === "insect") this.put(this.items.insect, x, y, z, a.yaw + Math.PI / 2, 0, 0, 0.012, 0.012, 0.04, "#7b8a3c");
                 else this.put(this.items[kind], x, y, z, a.yaw, 0, 0, Math.max(l * 0.12, 0.015), Math.max(l * 0.1, 0.012), Math.max(l * 0.12, 0.015), colour);
             }
-            // The ambient prey round it: a small school that splits round the chaser, or insects in the air.
-            if (act.prey && !(act.catch?.ok && act.u > 0.6)) {
+            // The quarry it is after (one creature, fleeing it: `recipe-hunt.ts`).
+            if (act.quarry) this.drawQuarry(act.quarry, a, now, epoch, camera);
+            // The ambient prey round it: a small school that splits round the chaser, or insects in the air (the quarry
+            // stands in for the insects when there is one).
+            if (act.prey && !(act.catch?.ok && act.u > 0.6) && !(act.quarry && act.prey.kind === "insect")) {
                 const p = act.prey.at;
                 const seed = hashString(`${act.episode}#prey`);
                 if (act.prey.kind === "fish" || act.prey.kind === "shellfish") {
@@ -311,9 +343,52 @@ export class RecipeScene {
                 this.put(this.flock, p.x, y, p.z, Math.atan2(q.x - p.x, q.z - p.z), -Math.atan2(q.y - p.y, Math.hypot(q.x - p.x, q.z - p.z) || 1e-3), Math.sin(now * 0.9 + i) * 0.8, size * (0.6 + 0.4 * flap), size * (1 + 0.6 * flap), size);
             }
         }
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) {
+        for (const mesh of this.meshes()) {
             mesh.instanceMatrix.needsUpdate = true;
             if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        }
+    }
+
+    private meshes(): InstancedMesh[] {
+        return [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, this.hoppers, this.fliers, this.quarryFish, ...Object.values(this.marks)];
+    }
+
+    /**
+     * One quarry: its body at its true size (never under a pixel or so from the camera), turned along its way; an escaped
+     * one shrinks away as it hides in the grass or swims off. A hopper's landings throw a little dust; a fish bolting near
+     * the surface a little spray; a fish is a chaser's for the reef's schools too.
+     */
+    private drawQuarry(q: QuarryNow, a: RecipeActor, now: number, epoch: number, camera: {x: number; y: number; z: number}) {
+        const away = Math.hypot(q.x - camera.x, q.y - camera.y, q.z - camera.z);
+        const k = q.alpha;
+        if (k <= 0.01) return;
+        if (q.look === "hopper") {
+            const size = Math.max(q.size, away * 0.0024) * k;
+            // Nose up as it leaps, level on the ground.
+            this.put(this.hoppers, q.x, q.y, q.z, q.yaw, -0.6 * q.air, 0, size * 0.28, size * 0.3, size);
+            if (q.since !== null && q.since < 0.12) {
+                const id = `${q.id}#land#${Math.round((epoch - q.since) * 20)}`;
+                if (!this.emitted.has(id)) {
+                    this.emitted.set(id, now);
+                    this.burst("dust", q.x, q.y, q.z, Math.max(q.size * 6, 0.12), 5, now, hashString(id));
+                }
+            }
+        } else if (q.look === "flier") {
+            const size = Math.max(q.size, away * 0.0026) * k;
+            const flap = Math.sin(q.air * Math.PI * 2);
+            this.put(this.fliers, q.x, q.y, q.z, q.yaw, 0, flap * 0.4, size * (0.7 + 0.5 * flap), size * (1 + 0.6 * flap), size * 0.8);
+        } else {
+            const size = Math.max(q.size, away * 0.0018) * k;
+            const wiggle = Math.sin(now * (q.phase === "flee" ? 22 : 9) + hashString(q.id)) * 0.25;
+            this.put(this.quarryFish, q.x, q.y, q.z, q.yaw + wiggle, 0, 0, size * 0.22, size * 0.3, size);
+            this.chasers.push({x: a.x, y: a.y, z: a.z, r: Math.max(a.length * 2.5, 0.8)});
+            if (q.since !== null && q.since < 0.1 && q.y > -0.25) {
+                const id = `${q.id}#bolt`;
+                if (!this.emitted.has(id)) {
+                    this.emitted.set(id, now);
+                    this.burst("spray", q.x, 0, q.z, Math.max(q.size * 3, 0.1), 6, now, hashString(id));
+                }
+            }
         }
     }
 
@@ -360,11 +435,11 @@ export class RecipeScene {
     clear() {
         this.particles.length = 0;
         this.emitted.clear();
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) mesh.count = 0;
+        for (const mesh of this.meshes()) mesh.count = 0;
     }
 
     dispose() {
-        for (const mesh of [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, ...Object.values(this.marks)]) {
+        for (const mesh of this.meshes()) {
             mesh.geometry.dispose();
             (mesh.material as MeshStandardMaterial).dispose();
             mesh.dispose();

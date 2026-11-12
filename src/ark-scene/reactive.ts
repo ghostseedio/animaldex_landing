@@ -98,6 +98,11 @@ export type ReactiveInput = {
     sessile?: boolean;
     /** The one the viewer has selected or follows: the camera coming to it never wakes it. */
     watched?: boolean;
+    /**
+     * Running down its prey (a server meal's chase, `acts.ts`): a threat to everything it could eat and a fright to
+     * anything smaller close by, awake or not in the shared layer, noticed at once; they scatter (`SCATTER`).
+     */
+    chasing?: boolean;
 };
 
 export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
@@ -263,6 +268,8 @@ export function threatScale(me: ReactiveInput, threat: ReactiveInput | null | un
     const ratio = Math.max(threat.length, 0.05) / Math.max(me.length, 0.05);
     // Its own size: 1; twice its length 1.25; four times or more 1.5; half its length or less 0.75.
     const size = Math.min(Math.max(1 + 0.25 * Math.log2(ratio), 0.75), 1.5);
+    // (A predator in full chase is the most alarming of all, wherever it is heading.)
+    if (threat.chasing) return Math.max(size, 1) * 1.6;
     if (!threat.shared.moving) return size * 0.85;
     const toMe = Math.atan2(me.shared.x - threat.shared.x, me.shared.z - threat.shared.z);
     const coming = Math.abs(wrapAngle(toMe - threat.shared.yaw)) < 0.7;
@@ -472,6 +479,14 @@ const FEEDING = new Set(["forage", "graze", "visit_flowers", "drink"]);
 const RESTING = new Set(["rest", "idle", "groom", "bask", "perch", "hide"]);
 /** The actions of an animal reacting to a threat (it counts its alarm from the first of them). */
 const REACTING = new Set<ReactiveAction>(["alert", "freeze", "flee", "shield_young", "threat_display", "hide_behind_parent", "play_dead", "withdraw"]);
+/**
+ * Prey near a chase scatter (the motion pass's chases): each bolts off at its own seeded angle either side of straight
+ * away, up to this far (rad), so a herd splits and fans out instead of running as one block.
+ */
+export const SCATTER = 0.85;
+/** A chase frightens anything at most this many times the chaser's length away, and at least this far (m), that is not much bigger than it. */
+const CHASE_FRIGHT_LENGTHS = 7;
+const CHASE_FRIGHT_MIN = 8;
 
 export class ReactiveLayer {
     private agents = new Map<string, Agent>();
@@ -687,8 +702,9 @@ export class ReactiveLayer {
             const hunts = p.hunt.some((h) => h !== "filter" && h !== "scavenge");
             for (const other of around(me.shared.x, me.shared.z, reach)) {
                 if (other.id === me.id) continue;
-                // Only what matters to it is looked for: what could eat it, and (a hunter) what it could eat.
-                const threat = !this.sleeping(other) && this.eats(other, me) && !(other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"));
+                // Only what matters to it is looked for: what could eat it, and (a hunter) what it could eat; and a chase
+                // going on near it (`chasing`: a fright to anything smaller close by, whatever the shared layer says).
+                const threat = (other.chasing ? this.eats(other, me) || this.frightened(me, other) : !this.sleeping(other) && this.eats(other, me)) && !(other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"));
                 const prey = hunts && !other.shared.aloft && this.eats(me, other);
                 if (!threat && !prey) continue;
                 const pair = `${me.id}|${other.id}`;
@@ -714,7 +730,7 @@ export class ReactiveLayer {
         for (const seen of agent.perceived) {
             const other = byId.get(seen.id);
             if (!other) continue;
-            if (seen.threat && !this.sleeping(other)) {
+            if (seen.threat && (!this.sleeping(other) || other.chasing)) {
                 if (!threat || seen.distance < threat.seen.distance) threat = {input: other, seen};
             }
             if (seen.prey && !other.shared.aloft) {
@@ -785,7 +801,9 @@ export class ReactiveLayer {
                 // The one on watch is looking for exactly this: it is quickest of all.
                 // (Watching already: on sentinel duty, or the shared layer has it watching a predator it saw at its slot's start.)
                 const watching = agent.onWatch || me.shared.doing === "watch";
-                const delay = Math.max(0.05, person.fleeDelay * (1.2 - p.learning * 0.5) * (watching ? 0.35 : 1) - 0.12 * burnt);
+                const calm = Math.max(0.05, person.fleeDelay * (1.2 - p.learning * 0.5) * (watching ? 0.35 : 1) - 0.12 * burnt);
+                // (A chase is noticed at once: a moment for the nearest, a little more the further off.)
+                const delay = threat.input.chasing ? Math.min(calm, 0.08 + threat.seen.distance * 0.02 + unit(me.id, "chase-notice") * 0.12) : calm;
                 agent.threat = {id: threat.input.id, slug: threat.input.slug, x: threat.seen.x, z: threat.seen.z, seen: world.now, noticed: world.now + delay};
             } else {
                 agent.threat.x = threat.seen.x;
@@ -868,9 +886,11 @@ export class ReactiveLayer {
                 // or from one about a threat not far off; an alarm about one far away on the ground only puts it on
                 // alert (head up, looking where the caller looked).
                 action = "flee";
-                const away = {x: dx / d, z: dz / d};
-                // From a raptor overhead it makes for cover (a burrow, a bush, a tree), not for the open with its group.
                 const threatId = danger ? danger.id : heardNow!.threat;
+                // From a chase it scatters: each off at its own angle either side of straight away (`SCATTER`).
+                const fan = byId.get(threatId)?.chasing ? (unit(me.id, "scatter") * 2 - 1) * SCATTER : 0;
+                const away = {x: (dx / d) * Math.cos(fan) + (dz / d) * Math.sin(fan), z: (dz / d) * Math.cos(fan) - (dx / d) * Math.sin(fan)};
+                // From a raptor overhead it makes for cover (a burrow, a bush, a tree), not for the open with its group.
                 const dir = this.fleeDirection(me, agent, away, world, kin, Boolean(byId.get(threatId)?.shared.aloft));
                 const reach = this.envelope(me, true);
                 target = {x: dir.x * reach, z: dir.z * reach};
@@ -1049,9 +1069,11 @@ export class ReactiveLayer {
         dozing.shared = me.shared;
         const reach = Math.min(this.budget.reach, Math.max(flight * 1.5, p.smell * 1.5, 4));
         for (const other of around(me.shared.x, me.shared.z, reach)) {
-            if (other.id === me.id || this.sleeping(other) || !this.eats(other, me) || (other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"))) continue;
+            if (other.id === me.id || (other.shared.aloft && !other.intel.hunt.includes("aerial_swoop"))) continue;
+            // (A chase going on close by wakes it: the noise of it; anything else only if it could eat it.)
+            if (other.chasing ? !this.eats(other, me) && !this.frightened(me, other) : this.sleeping(other) || !this.eats(other, me)) continue;
             const d = Math.hypot(other.shared.x - me.shared.x, other.shared.z - me.shared.z);
-            if (d > flight * 1.2) continue;
+            if (d > flight * 1.2 * (other.chasing ? 1.5 : 1)) continue;
             const how = perceive(dozing, other, world, 1, this.budget.sightSamples, world.sight);
             if (how) {
                 const seen = {x: other.shared.x, z: other.shared.z};
@@ -1090,6 +1112,13 @@ export class ReactiveLayer {
     /** How far a curious animal comes to look at the camera: two and a half times its calm reach, within its flee reach. */
     private investigateReach(me: ReactiveInput): number {
         return Math.min(this.envelope(me, false) * 2.5, this.envelope(me, true));
+    }
+
+    /** A chase close by frightens an animal not much bigger than the chaser (it bolts though it is not the prey). */
+    private frightened(me: ReactiveInput, chaser: ReactiveInput): boolean {
+        if (!chaser.chasing || me.length > chaser.length * 1.5) return false;
+        const d = Math.hypot(chaser.shared.x - me.shared.x, chaser.shared.z - me.shared.z);
+        return d < Math.max(chaser.length * CHASE_FRIGHT_LENGTHS, CHASE_FRIGHT_MIN);
     }
 
     /** Whether `a` could eat `b` (cached per species pair). */
