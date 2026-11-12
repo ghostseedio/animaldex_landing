@@ -58,7 +58,9 @@ export function groundedStand(input: GroundStandInput): Stand | null {
     const found = modelBase(input.slug);
     if (!found) return null;
     const base = levelBase(input.slug, input.level === "far" ? "far" : "near", input.minY);
-    const stand = standOnGround(input.x, input.z, input.yaw, input.scale, base, found.footprint, input.pitch, input.roll);
+    // (On ground too uneven to lie on, its highest contact may go in a little, well inside the tolerance, so the rest float less.)
+    const give = 0.5 * Math.max(0.02, 0.03 * found.size.y * input.scale);
+    const stand = standOnGround(input.x, input.z, input.yaw, input.scale, base, found.footprint, input.pitch, input.roll, undefined, give);
     if (input.clip && input.level === "rig") stand.rootY -= clipStandOffset(input.slug, input.clip) * input.scale * (input.clipWeight ?? 1);
     return stand;
 }
@@ -161,6 +163,9 @@ export const groundingCheck = {
             animals: rows.length,
             floating: rows.filter((r) => r.floats > 0).length,
             sinking: rows.filter((r) => r.sinks > 0).length,
+            /** Off in more than a tenth of the frames it was drawn (not a passing frame: a level swap, a push, a hop). */
+            floatingMostly: rows.filter((r) => r.floats > 0.1 * r.frames).length,
+            sinkingMostly: rows.filter((r) => r.sinks > 0.1 * r.frames).length,
             worst: rows.sort((a, b) => Math.abs(b.worst) - Math.abs(a.worst)).slice(0, 20).map((r) => ({slug: r.slug, kind: r.kind, worst: Math.round(r.worst * 1000) / 1000, floats: r.floats, sinks: r.sinks, frames: r.frames}))
         };
     },
@@ -181,7 +186,8 @@ export function drawnContactGap(slug: string, level: ModelLevelName | "rig", min
     const zc = (f.z0 + f.z1) / 2;
     const xc = (f.x0 + f.x1) / 2;
     let lowest = Infinity;
-    for (const [lx, lz] of [[xc, f.z1], [xc, f.z0], [f.x1, zc], [f.x0, zc]] as const) {
+    // (The same eight contacts `standOnGround` stands on: the footprint's edges' middles and its corners.)
+    for (const [lx, lz] of [[xc, f.z1], [xc, f.z0], [f.x1, zc], [f.x0, zc], [f.x1, f.z1], [f.x0, f.z1], [f.x1, f.z0], [f.x0, f.z0]] as const) {
         // v' = q v q*
         const vx = lx * scale;
         const vy = base * scale;

@@ -16,6 +16,12 @@
  *   limb    the top of thick (radius 3 cm and up), not too steep wood up in the tree, for large climbers, with the
  *           limb's radius and the clear room above and below; canopy_hang  the underside of such a limb where the
  *           drop below is clearest (bats).
+ *   perch   (generator 7, motion pass lane L3: "tree animals aren't properly on branches") more branch points, for
+ *           birds to grip: the tops of thin twigs and branches (radius 0.6 to 5 cm) out in the crown's edge where
+ *           half the sight lines out leave the tree and nothing of it is within 30 cm above (the room a perched bird
+ *           needs), spread 0.6 m apart; written as `branch` rows with their radius and clear room.
+ * Every branch, limb and hang point also gets its `open` (generator 7): before, only leaves and bark had it, and 61% of
+ * branch and 57% of limb points turned out to be inside their crown, where an animal sitting on them is hidden.
  *
  * Each point also gets the drawn surface's wind weights there (COLOR_1, interpolated), so the scene can move an
  * animal with its leaf exactly as the tree shader moves the leaf (`tree-assets.ts` treeSway), and `open`: the share
@@ -41,7 +47,7 @@ const {MeshoptDecoder} = await import(pathToFileURL(path.join(nm, "three/example
 const {Vector3, Triangle, Ray} = THREE;
 
 /** Bump when the method changes (it is part of the source hash). */
-const GENERATOR = 5;
+const GENERATOR = 7;
 const OUT = path.join(root, "src/ark-scene/tree-attach.json");
 const manifest = JSON.parse(readFileSync(path.join(root, "src/ark-scene/assets-manifest.json"), "utf8"));
 const base = path.join(root, "public", manifest.base);
@@ -330,7 +336,7 @@ for (const id of Object.keys(attach).sort()) {
         const position = new Vector3(...hit.point.clone().addScaledVector(normal, 0.002).toArray().map(r3));
         const weights = windAt(wood, position);
         const forward = along(row.f, normal);
-        const open = row.tag === "bark" ? openness(tris, position, normal, new Set([hit.t])) : 0;
+        const open = openness(tris, position, normal, new Set([hit.t]));
         rows.push([row.tag, ...position.toArray().map(r3), ...normal.toArray().map(r3), ...forward.toArray().map(r3), ...row.size.map(r3), ...weights.map(r4), r3(open), source, 0, 0, 0, 0, 0]);
         snapped[row.tag].push(p.distanceTo(hit.point));
         counts[row.tag][1]++;
@@ -404,7 +410,7 @@ for (const id of Object.keys(attach).sort()) {
         const above = rayHit(wood, limb.c.clone().addScaledVector(limb.n, 0.01), new Vector3(0, 1, 0), 3)?.d ?? 3;
         const below = rayHit(tris, limb.bottom.clone().add(new Vector3(0, -0.01, 0)), new Vector3(0, -1, 0), 6)?.d ?? 6;
         const position = new Vector3(...limb.c.clone().addScaledVector(limb.n, 0.002).toArray().map(r3));
-        rows.push(["limb", ...position.toArray().map(r3), ...limb.n.toArray().map(r3), ...axisAt(limb.c, limb.n).toArray().map(r3), 0.15, r3(Math.min(1.6, 24 * limb.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(limb.radius), r3(above), r3(below)]);
+        rows.push(["limb", ...position.toArray().map(r3), ...limb.n.toArray().map(r3), ...axisAt(limb.c, limb.n).toArray().map(r3), 0.15, r3(Math.min(1.6, 24 * limb.radius)), ...windAt(wood, position).map(r4), r3(openness(tris, position, limb.n, new Set([limb.t]))), -1, 0, 0, r3(limb.radius), r3(above), r3(below)]);
         limbCount++;
     }
     // (The drop measured from 5 mm under the underside, as the test does: an apple hanging just under it counts.)
@@ -418,9 +424,52 @@ for (const id of Object.keys(attach).sort()) {
         // drop more than the test's 1 cm shorter replaces the first measurement, so no other tree's rows change.)
         const recheck = rayHit(tris, position.clone().add(new Vector3(0, -0.003, 0)), new Vector3(0, -1, 0), 6);
         const below = recheck && recheck.d + 0.003 < Math.min(hang.below, 6) - 0.01 ? recheck.d + 0.003 : hang.below;
-        rows.push(["canopy_hang", ...position.toArray().map(r3), 0, -1, 0, ...along(axisAt(hang.c, hang.n).toArray(), new Vector3(0, -1, 0)).toArray().map(r3), 0.02, r3(Math.min(0.6, 12 * hang.radius)), ...windAt(wood, position).map(r4), 0, -1, 0, 0, r3(hang.radius), 0, r3(below)]);
+        rows.push(["canopy_hang", ...position.toArray().map(r3), 0, -1, 0, ...along(axisAt(hang.c, hang.n).toArray(), new Vector3(0, -1, 0)).toArray().map(r3), 0.02, r3(Math.min(0.6, 12 * hang.radius)), ...windAt(wood, position).map(r4), r3(openness(tris, position, new Vector3(0, -1, 0), null)), -1, 0, 0, r3(hang.radius), 0, r3(below)]);
         hangCount++;
     }
+    // Perches out at the crown's edge (generator 7): thin wood tops seen from outside, room above for a bird.
+    let perchCount = 0;
+    if (!id.startsWith("palm")) {
+        const perches = [];
+        for (const t of wood) {
+            if (t.area < 2e-5) continue;
+            const c = t.tri.getMidpoint(new Vector3());
+            if (c.y < 0.3 * H) continue;
+            const n = new Vector3(...interpolate(N, t, c, 3)).normalize();
+            if (n.y < 0.6 || t.normal.dot(n) < 0.3) continue;
+            const point = c.clone().addScaledVector(n, 0.002);
+            const chord = rayHit(wood, point.clone().addScaledVector(n, -0.004), n.clone().negate(), 0.2);
+            const radius = chord ? chord.point.distanceTo(point) / 2 : Infinity;
+            if (!(radius >= 0.006 && radius <= 0.05)) continue;
+            perches.push({t, c, n, radius, point});
+        }
+        // Most out of the crown first (the cheap test: the straight-up sight line and the room above), then the full openness.
+        const scored = [];
+        for (const perch of perches) {
+            const above = rayHit(tris, perch.point.clone().add(new Vector3(0, 0.01, 0)), new Vector3(0, 1, 0), 3, new Set([perch.t]))?.d ?? 3;
+            if (above < 0.3) continue;
+            scored.push({...perch, above});
+        }
+        scored.sort((a, b) => b.above - a.above || b.c.y - a.c.y || a.c.x - b.c.x);
+        const kept = [];
+        for (const perch of scored) {
+            if (kept.length >= 10) break;
+            if (kept.some((other) => other.c.distanceTo(perch.c) < 0.6) || rows.some((row) => row[0] === "branch" && new Vector3(row[1], row[2], row[3]).distanceTo(perch.c) < 0.3)) continue;
+            const open = openness(tris, perch.point, perch.n, new Set([perch.t]));
+            if (open < 0.5) continue;
+            kept.push({...perch, open});
+        }
+        for (const perch of kept) {
+            const position = new Vector3(...perch.point.toArray().map(r3));
+            // (The wood nearest the stored point must face the way its up does: on a thin twig the rounding can land it
+            // by a neighbouring face.)
+            const under = closestOn(wood, position);
+            if (!under || under.t.normal.dot(perch.n) < 0.35) continue;
+            rows.push(["branch", ...position.toArray().map(r3), ...perch.n.toArray().map(r3), ...axisAt(perch.c, perch.n).toArray().map(r3), 0.01, r3(Math.min(0.6, 14 * perch.radius)), ...windAt(wood, position).map(r4), r3(perch.open), -2, 0, 0, r3(perch.radius), r3(Math.min(perch.above, 3)), 0]);
+            perchCount++;
+        }
+    }
+    report[report.length] = `${id}: ${perchCount} outer perches`;
     assets[id] = rows;
     const med = (list) => (list.length ? list.slice().sort((a, b) => a - b)[list.length >> 1].toFixed(3) : "-");
     report.push(`${id}: ${Object.entries(counts).map(([tag, [n, kept]]) => `${tag} ${kept}/${n} (moved ${med(snapped[tag])} m median)`).join(", ")}, limb ${limbCount}, canopy_hang ${hangCount}`);
@@ -447,7 +496,7 @@ for (const id of logIds()) {
 }
 
 const out = {
-    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index, 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood, a hollow's depth (m) / 0, limb radius (m) / 0, clear room above to wood (m), clear drop below to anything of the tree (m)]. Do not edit by hand.",
+    about: "Generated by scripts/ark-tree-attach.mjs from public/ark/assets/v1/trees/attach.json and the lod0 GLBs: each tree asset's attach points on its drawn lod0 surface, in the asset's own metres. Row: [tag, px, py, pz, upx, upy, upz, fwdx, fwdy, fwdz, sizeMin, sizeMax, wind sway, wind phase, flutter, leaf phase, open, attach.json index (-1 a limb or hang point, -2 an outer perch), 1 on a single leaf (blade) / 0 on a leaf mass (clump) or wood, a hollow's depth (m) / 0, limb or perch radius (m) / 0, clear room above (a limb: to wood; a perch: to anything of the tree) (m), clear drop below to anything of the tree (m)]. open is measured for every point since generator 7. Do not edit by hand.",
     generator: GENERATOR,
     source: sourceHash(),
     assets,

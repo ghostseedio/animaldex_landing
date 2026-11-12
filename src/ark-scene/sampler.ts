@@ -25,6 +25,11 @@ import {floorPlacements} from "@/ark-scene/floor-assets";
 import {defaultHomePlots, fencePostTops as homeFencePosts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {snowCover} from "@/ark-scene/snow";
 import {floorLogTops, treeAttachPoints, treeSway, type TreeAttach, type TreeAttachTag, type TreeWind} from "@/ark-scene/tree-assets";
+import treeAttachFile from "@/ark-scene/tree-attach.json";
+import {perchHidden, perchSize} from "@/ark-scene/grounding/perch";
+
+/** Every tree point's openness is measured (tree-attach generator 7, grounding lane L3): hidden ones keep to small bodies. */
+const OPEN_MEASURED = ((treeAttachFile as unknown as {generator?: number}).generator ?? 0) >= 7;
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
@@ -576,14 +581,15 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         // Which of the asset's points this tree keeps (seeded by the tree, so two trees of one asset differ). The
         // hollows (added later) come after, outside the draw, so the leaves, bark and branches kept stay the same.
         const pick = seeded(hashString(host) + 7919);
+        // (Grounding, L3: a branch that sees out of its crown before one hidden in it, so the visible ones are kept.)
         const order = [
-            ...real.filter((point) => point.tag === "leaf" || point.tag === "bark" || point.tag === "branch").map((point) => ({point, key: pick()})).sort((a, b) => a.key - b.key),
+            ...real.filter((point) => point.tag === "leaf" || point.tag === "bark" || point.tag === "branch").map((point) => ({point, key: pick() + (point.tag === "branch" && perchHidden(point.tag, point.open, OPEN_MEASURED) ? 1 : 0)})).sort((a, b) => a.key - b.key),
             ...real.filter((point) => point.tag === "tree_hollow").map((point) => ({point, key: 0}))
         ];
         const kept: Record<TreeAttachTag, number> = {leaf: 0, bark: 0, branch: 0, tree_hollow: 0, limb: 0, canopy_hang: 0};
         for (const {point} of order) {
             if (kept[point.tag]++ >= TREE_CAP[point.tag]) continue;
-            const size: [number, number] = point.tag === "leaf" ? [point.size[0], Math.min(point.size[1], LEAF_MAX)] : point.size;
+            const size: [number, number] = point.tag === "leaf" ? [point.size[0], Math.min(point.size[1], LEAF_MAX)] : perchSize(point.tag, point.open, OPEN_MEASURED, point.size);
             const hostKind = kinds.get(host) ?? item.kind;
             points.push({
                 id: `${point.tag}:${host}:${point.n}`,
@@ -886,7 +892,8 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         yield;
         const zone = zoneOf(item.x, item.z);
         const kept = {limb: 0, canopy_hang: 0};
-        for (const point of real) {
+        // (Grounding, L3: the limbs and hang points that see out of the crown first, under the cap.)
+        for (const point of [...real].sort((a, b) => Number(perchHidden(a.tag, a.open, OPEN_MEASURED)) - Number(perchHidden(b.tag, b.open, OPEN_MEASURED)))) {
             if (point.tag !== "limb" && point.tag !== "canopy_hang") continue;
             const radius = point.radius ?? 0;
             if (radius < 0.03 || kept[point.tag] >= TREE_CAP[point.tag]) continue;
@@ -904,7 +911,8 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
                 position: point.position,
                 normal: normalise(point.normal),
                 yaw: yawFor(point.normal, point.forward),
-                size: point.tag === "limb" ? [0.15, Math.min(1.6, 24 * radius)] : [0.02, Math.min(0.6, 12 * radius)],
+                size: perchSize(point.tag, point.open, OPEN_MEASURED, point.tag === "limb" ? [0.15, Math.min(1.6, 24 * radius)] : [0.02, Math.min(0.6, 12 * radius)]),
+                open: point.open,
                 zone,
                 host,
                 hostKind: kinds.get(host) ?? item.kind,

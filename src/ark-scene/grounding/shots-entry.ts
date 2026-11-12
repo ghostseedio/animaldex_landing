@@ -17,6 +17,7 @@ import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground
 import {groundingCheck, setGroundingRules} from "@/ark-scene/grounding/hook";
 import {heightAt} from "@/ark-scene/world";
 import {modelBase} from "@/ark-scene/grounding/base";
+import {allAttachPoints, type AttachPoint} from "@/ark-scene/sampler";
 import {Raycaster, Vector3, type Camera, type Object3D} from "three";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -59,6 +60,14 @@ async function mount(el: HTMLElement) {
         return false;
     };
     let tracking = 0;
+    /** Where it is drawn now: its middle once drawn, else its schedule's pose (locate falls back to its home spot while unseen). */
+    const where = (id: string) => {
+        const entry = debug().entries().find((e) => e.animal.id === id);
+        if (entry?.middle) return {x: entry.middle.x, y: entry.middle.y, z: entry.middle.z};
+        const at = entry?.sched?.pose;
+        if (at) return {x: at.x, y: at.y + (entry!.drawnHeight || entry!.length * 0.5) * 0.5, z: at.z};
+        return handle.locate(id);
+    };
     const api = {
         ready: () => ready,
         settle,
@@ -71,7 +80,8 @@ async function mount(el: HTMLElement) {
             handle.setView({target: {x, y: Math.max(heightAt(x, z), 0) + lift, z}, distance, polar, azimuth});
         },
         find: (kind: string, count = 8) => {
-            const rows: Array<{id: string; slug: string; score: number; x: number; z: number; tag: string; length: number; yaw: number; nx: number; nz: number}> = [];
+            const rows: Array<{id: string; slug: string; score: number; x: number; z: number; tag: string; length: number; yaw: number; nx: number; nz: number; out: number | null; open: number | null; gx: number; gz: number}> = [];
+            const points = new Map<string, AttachPoint>(allAttachPoints().map((p) => [p.id, p]));
             for (const e of debug().entries()) {
                 const at = e.sched?.pose;
                 if (!at || at.aloft || e.air > 0.01 || e.place.hamlet) continue;
@@ -85,7 +95,9 @@ async function mount(el: HTMLElement) {
                     const n = drawnGround(at.x, at.z);
                     const slope = Math.sqrt(1 - n.ny * n.ny) / n.ny;
                     const plan = modelBase(e.animal.model_slug)?.plan;
-                    if (plan === "mammal" && e.length > 0.5 && slope > 0.2 && slope < 0.9 && Math.abs(at.y - ground) < 0.1 && pointTag !== "shade") score = slope * Math.min(e.length, 3);
+                    const doing = (e.sched as {trip?: {doing?: string} | null} | null)?.trip?.doing ?? "";
+                    const awake = !["sleep", "rest", "to_roost"].includes(doing) && !(e as {denIn?: number}).denIn;
+                    if (plan === "mammal" && awake && !at.moving && e.length > 0.5 && slope > 0.2 && slope < 0.9 && Math.abs(at.y - ground) < 0.1 && !["shade", "map", "worm_hole"].includes(pointTag)) score = slope * Math.min(e.length, 3);
                 } else if (kind === "perch") {
                     if (!at.moving && (pointTag === "branch" || pointTag === "limb") && at.y > ground + 0.8 && e.length < 0.8) score = 1 + e.length;
                 } else if (kind === "cling") {
@@ -97,7 +109,13 @@ async function mount(el: HTMLElement) {
                     if (Math.abs(at.y - ground) < 0.1 && !at.moving) score = off;
                 }
                 const pose = at as unknown as {yaw: number; nx: number; nz: number};
-                if (score > 0) rows.push({id: e.animal.id, slug: e.animal.model_slug, score, x: at.x, z: at.z, tag: pointTag || tag, length: e.length, yaw: pose.yaw, nx: pose.nx, nz: pose.nz});
+                // Out of its tree: from the trunk to the point (the camera looks back in at it from there).
+                const attach = point ? points.get(point) : undefined;
+                const root = attach?.wind?.root;
+                const out = root ? Math.atan2(attach!.position.x - root.x, attach!.position.z - root.z) : null;
+                if (kind === "perch" && attach && typeof attach.open === "number") score *= 0.5 + attach.open;
+                const g = drawnGround(at.x, at.z);
+                if (score > 0) rows.push({id: e.animal.id, slug: e.animal.model_slug, score, x: at.x, z: at.z, tag: pointTag || tag, length: e.length, yaw: pose.yaw, nx: pose.nx, nz: pose.nz, out, open: attach?.open ?? null, gx: g.nx, gz: g.nz});
             }
             return rows.sort((a, b) => b.score - a.score).slice(0, count);
         },
@@ -107,7 +125,7 @@ async function mount(el: HTMLElement) {
             const entry = () => debug().entries().find((e) => e.animal.id === id);
             for (const turn of [0, 0.5, -0.5, 1, -1, Math.PI, Math.PI - 0.6, Math.PI + 0.6]) {
                 const side = around + turn;
-                const at = handle.locate(id);
+                const at = where(id);
                 if (!at) return around;
                 handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth: side});
                 await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -136,7 +154,7 @@ async function mount(el: HTMLElement) {
             debug().controls.minDistance = 0.3;
             const step = () => {
                 if (token !== tracking) return;
-                const at = handle.locate(id);
+                const at = where(id);
                 if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth});
                 requestAnimationFrame(step);
             };

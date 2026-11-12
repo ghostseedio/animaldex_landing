@@ -18,7 +18,7 @@ import type {Footprint} from "@/ark-scene/grounding/base";
 
 /** How far a body leans to the slope along its length, and across it (radians). */
 export const MAX_PITCH = 0.5;
-export const MAX_ROLL = 0.18;
+export const MAX_ROLL = 0.3;
 
 export type Stand = {
     /** The model's origin height (m). */
@@ -35,8 +35,10 @@ export type Stand = {
  * The model's origin and lean so its contacts stand on the drawn ground (the scene's Euler order: yaw, then
  * pitch, then roll, `YXZ`). `base` is the level's true base, `footprint` its contacts' extent; both model units.
  * `extraPitch` and `extraRoll` are the pose's own (a recipe's lean, sleep's roll): the contacts are found with them.
+ * `give` (m): on ground too uneven for the body to lie on, how far its highest-standing contact may go in so the
+ * lowest floats less (half the spread, at most `give`); keep it inside the floating/sinking tolerance.
  */
-export function standOnGround(x: number, z: number, yaw: number, scale: number, base: number, footprint: Footprint, extraPitch = 0, extraRoll = 0, ground: (x: number, z: number) => number = drawnGroundHeight): Stand {
+export function standOnGround(x: number, z: number, yaw: number, scale: number, base: number, footprint: Footprint, extraPitch = 0, extraRoll = 0, ground: (x: number, z: number) => number = drawnGroundHeight, give = 0): Stand {
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     // Heading (+z of the model) and across it (+x of the model) in the world.
@@ -63,6 +65,7 @@ export function standOnGround(x: number, z: number, yaw: number, scale: number, 
     const cr = Math.cos(r);
     const sr = Math.sin(r);
     let rootY = -Infinity;
+    let lowest = Infinity;
     const contacts: Array<[number, number]> = [
         [xc, footprint.z1],
         [xc, footprint.z0],
@@ -84,8 +87,11 @@ export function standOnGround(x: number, z: number, yaw: number, scale: number, 
         // Ry(yaw): x, z
         const wx = x + x1 * cy + z2 * sy;
         const wz = z - x1 * sy + z2 * cy;
-        rootY = Math.max(rootY, ground(wx, wz) - y2);
+        const need = ground(wx, wz) - y2;
+        rootY = Math.max(rootY, need);
+        lowest = Math.min(lowest, need);
     }
+    rootY -= Math.min(give, (rootY - lowest) / 2);
     return {rootY, pitch, roll, ground: ground(x, z)};
 }
 

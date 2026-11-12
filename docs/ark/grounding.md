@@ -41,6 +41,32 @@ Owner: "animals float or sink; tree animals aren't properly on branches." Brief 
 - `scripts/ark-grounding-shots.mjs`: before/after stills and videos on the real snapshot, and the runtime check
   over a tour of the island.
 
+## Perches on real branches
+- tree-attach generator 7 (`scripts/ark-tree-attach.mjs`): every branch, limb and hang point's `open` (the share of
+  sight lines out of its tree), and up to 10 outer-crown perches a tree (thin wood tops of 0.6 to 5 cm radius, half the
+  sight lines open, 30 cm clear above), written as `branch` rows with their radius and room. 210 perches added; visible
+  branch points 390 of 696, limbs 109 of 268, hang points 156 of 187.
+- `grounding/perch.ts` + `sampler.ts`: a point hidden in its crown (open under 0.25) keeps to bodies of 6 cm and
+  under (20 cm under a limb: roosting bats); the visible ones come first under each tree's cap.
+- On the schedule a percher, climber or clinger is drawn on its point's surface (`scheduledPerch`), moving with its
+  branch in the wind, its gripping feet's soles on the wood.
+
+## Numbers (2026-11-12; 24 samples through an Ark day; legacy → grounded on the same poses)
+- Real snapshot (3,137 animals, near level): floating 145 → 0, sinking 280 → 0, inside scenery 298 → 175 (all at
+  rest on the ground beside a trunk or at a rock's foot: the schedule's rest and roost spots, lane L5's colliders).
+- Every catalogue species (the validator's 5,230 animals): floating 422 → 0, sinking 1,070 → 0, inside 881 → 556
+  (the same kind). CI (`src/lib/ark-grounding.test.ts`): floating and sinking 0, nothing off the ground inside
+  scenery, at rest inside no more than `GROUNDING_INSIDE_AT_REST` (556; lower it as L5 lands).
+- Hidden in a crown: 412 samples over 23 species with the old perch choice → 0. Upright through a trunk, wall or rock
+  face: ~2,400 samples over 81 species → 0.
+- Runtime check (drawn matrices, 6 views of the real snapshot): sinking 73 of 163 drawn → 5 of 187.
+- Reproduce: `npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-grounding-audit.mts public/ark-local/real.json`
+  (`--validator` for every species, `--level far`); `node scripts/ark-grounding-shots.mjs --snapshot <file> --out <dir>`.
+
+## Also changed
+- `behaviour-schedule.ts` placeNear: a goal no longer falls back to a tree perch that does not suit the body (a
+  pelican on a twig, a crane in a crown); it takes another goal.
+
 ## For the other lanes
 - **L1 (foot IK):** `setLocoGround(drawnGround)` (from `grounding/drawn-ground.ts`; it already returns
   `{height, nx, ny, nz}`) so feet plant on the drawn triangles, not the analytic surface (they differ by metres at

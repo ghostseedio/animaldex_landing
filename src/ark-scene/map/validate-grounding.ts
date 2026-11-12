@@ -32,7 +32,7 @@ export const GROUNDING_HOLDS: Record<string, string> = {};
  * building: the behaviour schedule's rest and roost spots ("shade" beside a trunk, a rock's foot for a 3 m monitor),
  * which lane L5's colliders settle. Reviewed 2026-11-12 (lane L3); CI fails when it grows. Lower it as they land.
  */
-export const GROUNDING_INSIDE_AT_REST = 562;
+export const GROUNDING_INSIDE_AT_REST = 556;
 
 export function validateGrounding(epochs = arkDayEpochs(24)): {animals: number; failures: GroundingFailure[]; counts: GroundingAudit["counts"]; kinds: GroundingAudit["kinds"]} {
     const audit = auditGrounding(validatorAnimals(), {epochs});

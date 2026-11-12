@@ -27,7 +27,7 @@ const arg = (name, fallback) => {
 const snapshotFile = arg("snapshot");
 if (!snapshotFile) throw new Error("--snapshot <file> is required");
 const out = path.resolve(arg("out", path.join(root, ".ark-golden", "grounding-shots")));
-const kinds = arg("kinds", "slope,perch,cling,hang,cliff").split(",");
+const kinds = arg("kinds", "slope,perch,cling,hang,cliff").split(",").filter((kind) => kind && kind !== "none");
 const per = Number(arg("per", "3"));
 const seconds = Number(arg("seconds", "6"));
 mkdirSync(out, {recursive: true});
@@ -146,10 +146,11 @@ for (const kind of kinds) {
     for (const row of rows) if (picked.length < per && !picked.some((p) => p.slug === row.slug)) picked.push(row);
     for (const [i, row] of picked.entries()) {
         const name = `${kind}-${i + 1}-${row.slug}`;
-        const distance = Math.min(Math.max(row.length * 2.6, 0.9), 9);
+        const distance = Math.min(Math.max(row.length * (kind === "perch" || kind === "hang" ? 3.2 : 2.6), 0.9), 9);
         // From its side (along the slope's contour), or facing the wall it clings to, a little round.
-        const around = kind === "cling" ? Math.atan2(row.nx, row.nz) + 0.7 : row.yaw + Math.PI / 2;
-        const polar = kind === "cling" || kind === "hang" ? 1.45 : 1.3;
+        // (A slope from along its contour, so its fall is across the frame and the feet stand on its line.)
+        const around = kind === "cling" ? Math.atan2(row.nx, row.nz) + 0.7 : (kind === "perch" || kind === "hang") && row.out !== null ? row.out + 0.35 : kind === "slope" ? Math.atan2(row.gx, row.gz) + Math.PI / 2 : row.yaw + Math.PI / 2;
+        const polar = kind === "cling" ? 1.45 : kind === "hang" ? 1.75 : kind === "perch" ? 1.4 : 1.42;
         const side = await page.evaluate(([id, d, p, a]) => window.__arkGroundShots.clearSide(id, d, p, a), [row.id, distance, polar, around]);
         await page.evaluate(([id, d, p, a]) => window.__arkGroundShots.frame(id, d, p, a), [row.id, distance, polar, side]);
         await page.waitForTimeout(1500);
@@ -173,16 +174,16 @@ for (const kind of kinds) {
 const tour = [[0, 0, 60, 0.3, 0.95], [-40, -60, 30, 1.2, 1.1], [-30, 0, 25, 2.2, 1.1], [30, 20, 25, 3.4, 1.1], [10, -30, 20, 4.4, 1.15], [-55, -30, 20, 5.2, 1.15]];
 const counts = {};
 for (const rules of ["legacy", "grounded"]) {
-    await page.evaluate((r) => {
-        window.__arkGroundShots.rules(r);
-        window.__arkGroundShots.reset();
-    }, rules);
+    // (The rules switched, a moment for every schedule pose to be worked out again under them, then counted.)
+    await page.evaluate((r) => window.__arkGroundShots.rules(r), rules);
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.__arkGroundShots.reset());
     for (const [x, z, d, azimuth, polar] of tour) {
         await page.evaluate(([x, z, d, a, p]) => window.__arkGroundShots.view(x, z, d, a, p), [x, z, d, azimuth, polar]);
         await page.waitForTimeout(3500);
     }
     counts[rules] = await page.evaluate(() => window.__arkGroundShots.report());
-    log(rules, JSON.stringify({animals: counts[rules].animals, floating: counts[rules].floating, sinking: counts[rules].sinking}));
+    log(rules, JSON.stringify({animals: counts[rules].animals, floating: counts[rules].floating, sinking: counts[rules].sinking, floatingMostly: counts[rules].floatingMostly, sinkingMostly: counts[rules].sinkingMostly}));
 }
 writeFileSync(path.join(out, "shots.json"), JSON.stringify({shots, runtime: counts, errors: errors.slice(0, 20)}, null, 1));
 log("errors:", errors.length);

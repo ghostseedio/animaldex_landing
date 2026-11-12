@@ -2262,7 +2262,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Grounding: held on a raised point (a branch, a limb, bark, a wall), drawn on it: its back along the surface's
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
-        const perch = groundingRules() === "grounded" && !act ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
+        const perch = groundingRules() === "grounded" ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         return {
             x: at.x,
@@ -3474,10 +3474,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
             // Grounding's runtime check (development, `?grounding=1`): its contacts against what it stands on.
-            if (groundingCheck.on && !slept && !act && !where.water && entry.air <= 0.001) {
-                if (stand) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s) ?? 0, modelHeight);
-                else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
-                else if (!surface && !where.afloat && heightAt(where.x, where.z) > 0.02) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, rig ? "rig" : level === "far" ? "far" : "near", model.minY, position, rotation, s) ?? 0, modelHeight);
+            if (groundingCheck.on && !slept && !act && !where.water && entry.air <= 0.001 && !entry.denIn) {
+                const checkLevel = rig ? "rig" : level === "far" ? "far" : "near";
+                if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s) ?? 0, modelHeight);
+                else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
             matrix.compose(position, rotation, scale.set(s, s, s));
             mesh.setMatrixAt(index, matrix);

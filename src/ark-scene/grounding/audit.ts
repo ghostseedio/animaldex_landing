@@ -40,6 +40,7 @@ import {islandHours} from "@/lib/ark-clock";
 import {hangBelow, levelBase, modelBase, rigFeet, meanDrop} from "@/ark-scene/grounding/base";
 import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {RAISED_POINT_TAGS} from "@/ark-scene/grounding/hook";
+import {HIDDEN_HANG_MAX_BODY, HIDDEN_MAX_BODY, perchHidden} from "@/ark-scene/grounding/perch";
 import {scheduleSurface, standOnGround} from "@/ark-scene/grounding/stand";
 import {inRock} from "@/ark-scene/map/rocks";
 import {goesIntoRoost} from "@/ark-scene/sleep";
@@ -261,7 +262,7 @@ function sampleOne(s: Subject, epoch: number, world: ScheduleWorld, byId: Map<st
         const yaw = place.hamlet.plot.rotation;
         const g = Math.max(analyticHeight(spot.x, spot.z), 0);
         const legacy = contactGap(spot.x, spot.z, yaw, 0, 0, g - minY * s.scale, s.scale, base, footprint);
-        const stand = standOnGround(spot.x, spot.z, yaw, s.scale, base, footprint);
+        const stand = standOnGround(spot.x, spot.z, yaw, s.scale, base, footprint, 0, 0, undefined, 0.5 * tol);
         const after = contactGap(spot.x, spot.z, yaw, stand.pitch, stand.roll, stand.rootY, s.scale, base, footprint);
         const judge = (gap: {lowest: number}): GroundingProblem[] => (gap.lowest > tol ? ["floats"] : gap.lowest < -tol ? ["sinks"] : []);
         return [out("legacy", "ground", legacy.lowest, judge(legacy), "lawn", ""), out("grounded", "ground", after.lowest, judge(after), "lawn", "")];
@@ -307,7 +308,7 @@ function sampleOne(s: Subject, epoch: number, world: ScheduleWorld, byId: Map<st
             detail = `${(lift * 100).toFixed(1)} cm under its bounding box + ${(sway * 100).toFixed(1)} cm of sway`;
         }
         const open = point?.open;
-        const hidden = OPEN_MEASURED && typeof open === "number" && point && (point.tag === "branch" || point.tag === "limb" || point.tag === "canopy_hang") && open < 0.2 && s.length > 0.08;
+        const hidden = Boolean(point && perchHidden(point.tag, open, OPEN_MEASURED) && s.length > (point.tag === "canopy_hang" ? HIDDEN_HANG_MAX_BODY : HIDDEN_MAX_BODY) * 1.05);
         const legacy = out("legacy", "surface", gap, [...problems, ...(hidden ? ["inside" as const] : [])], on, detail || (hidden ? `in the crown (open ${open!.toFixed(2)})` : ""));
         const grounded = out("grounded", "surface", 0, hidden ? ["inside"] : [], on, hidden ? `in the crown (open ${open!.toFixed(2)})` : "");
         // The frame it is drawn on (checked for a usable heading).
@@ -318,7 +319,7 @@ function sampleOne(s: Subject, epoch: number, world: ScheduleWorld, byId: Map<st
     const yaw = at.yaw;
     const pitch = level === "near" && ground > 0.02 && Math.abs(at.y - ground) < 0.05 ? legacySlopePitch(at.x, at.z, yaw, s.length) : 0;
     const legacyGap = contactGap(at.x, at.z, yaw, pitch, 0, at.y - minY * s.scale, s.scale, base, footprint);
-    const stand = standOnGround(at.x, at.z, yaw, s.scale, base, footprint);
+    const stand = standOnGround(at.x, at.z, yaw, s.scale, base, footprint, 0, 0, undefined, 0.5 * tol);
     const afterGap = contactGap(at.x, at.z, yaw, stand.pitch, stand.roll, stand.rootY, s.scale, base, footprint);
     // Inside scenery at rest: its middle in a trunk, a rock or a building.
     const clearance = Math.min(Math.max(s.length * 0.2, 0.1), 0.6);
