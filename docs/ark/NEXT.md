@@ -71,6 +71,9 @@ the privacy text).
 
 | 41 | T3: the idle drift sways ±0.12 rad in islands mode (the phone kept the town in frame) | `ark-islands-drift` 9d820def | 0b082f91 | clean; tsc 0; golden shots unaffected (islands off, frozen clock) |
 
+| 42 | L5: collision limits re-derived on ed508601 (L1's dry-land beds moved sleepers) | `ark-collide-limits` ba79e797 | 4ee5c2ad | collisions workflow green (both modes) |
+| 43 | The town built in its worker alongside the wild prebuild (joins 0.13 s after the first frame on the phone profile) | `ark-town-worker-speed` c5558bcd | c7112bd6 | **the follow-up deploy's code**: suite 2,390/2,391, 0 fail; tsc 0; lint 0; motion all pass; default view ×2: pace 1.04 / 1.02, backwards 1.5% / 2.6% (a zebra 1.1 s, a puffin 1.6 s), turns 0.6 / 0.6, a zebra 1.63× and a cheetah 1.76×, no page errors; T3's embed check on c7112bd6 (two islands and one): no page errors, every host message right, the zoo focus link flown to once joined; visual: run 43165446837 re-accepted (9cbc3871) |
+
 - For W1's merge later: its drift lines conflict with 41; resolve with W1b's `wildFrame().driftSway` and set v1's
   `driftSway` in `islands/views.ts` to 0.12 (null there today), or v1 in islands mode orbits again (T3).
 - Known: the clawed frog's `dive_in` leap reads 3.67× under the layer (a 0.5 s leap with no `enter_water` clip, drawn
