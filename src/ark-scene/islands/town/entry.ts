@@ -11,7 +11,8 @@
 import {ACESFilmicToneMapping, Fog, PCFSoftShadowMap, PerspectiveCamera, Scene, Vector3, WebGLRenderer} from "three";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ArkPost} from "@/ark-scene/post";
-import {ARK_TIME} from "@/ark-scene/glsl";
+import {ARK_TIME, ARK_WIND} from "@/ark-scene/glsl";
+import {windMaterial} from "@/ark-scene/asset-trees";
 import {buildTownIsland, TOWN_TIERS, type TownTier} from "@/ark-scene/islands/town/render/index";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
@@ -103,7 +104,10 @@ export function mountTown(el: HTMLElement) {
     lighting.setShadows(renderer, TOWN_TIERS[tier].shadows);
     const town = buildTownIsland({tier});
     scene.add(town.root);
+    // (The workbench's handle on the town's meshes, for probes.)
+    (window as unknown as {__arkTownRoot?: unknown}).__arkTownRoot = town.root;
     const post = new ArkPost(renderer, scene, camera, tier);
+    (window as unknown as {__dbg?: unknown}).__dbg = {windMaterial, scene, renderer, camera, post};
     let clock: TownClock = {hours: hours0, day: Number(params.get("day") ?? 20406)};
     const target = new Vector3();
     const states = new Uint8Array(TOWN_CHUNK_COUNT).fill(1);

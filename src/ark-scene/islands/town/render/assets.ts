@@ -132,11 +132,11 @@ export class TownAssets {
             const g = geometry as BufferGeometry;
             // (The flowers' and lily pads' morph targets are their own sway, not drawn instanced.)
             if (Object.keys(g.morphAttributes).length) g.morphAttributes = {};
-            this.makeMeshes(entry, lod.level as Level, g, lod.doubleSided);
+            this.makeMeshes(entry, lod.level as Level, g, lod.doubleSided, id);
         }).catch(() => {})));
     }
 
-    private makeMeshes(entry: Entry, level: Level, geometry: BufferGeometry, doubleSided: boolean) {
+    private makeMeshes(entry: Entry, level: Level, geometry: BufferGeometry, doubleSided: boolean, id: string) {
         const capacity = Math.max(entry.instances.length, 1);
         const mesh = new InstancedMesh(geometry, this.materialFor(doubleSided, false, entry.conifer), capacity);
         mesh.count = 0;
@@ -144,6 +144,7 @@ export class TownAssets {
         mesh.castShadow = level !== "card" && this.shadows;
         mesh.receiveShadow = true;
         mesh.userData.kind = this.label;
+        mesh.name = `${this.label}:${id}:${level}`;
         entry.meshes[level] = mesh;
         this.group.add(mesh);
         if (level === "lod0") {
@@ -154,6 +155,7 @@ export class TownAssets {
             near.castShadow = this.shadows;
             near.receiveShadow = true;
             near.userData.kind = this.label;
+            near.name = `${this.label}:${id}:near`;
             entry.near = near;
             this.group.add(near);
         }
@@ -170,9 +172,8 @@ export class TownAssets {
             if (!mesh) continue;
             this.group.remove(mesh);
             mesh.dispose();
-            this.makeMeshes(entry, level, mesh.geometry, entry.doubleSided[level] ?? true);
+            this.makeMeshes(entry, level, mesh.geometry, entry.doubleSided[level] ?? true, id);
         }
-        void id;
         this.lastAt.set(Infinity, 0, 0);
     }
 
@@ -309,6 +310,11 @@ const windCache = new Map<string, Material>();
 function cachedWind(doubleSided: boolean, near: boolean, conifer: boolean): Material {
     const key = `${doubleSided}|${near}|${conifer}`;
     let m = windCache.get(key);
-    if (!m) windCache.set(key, (m = windMaterial(doubleSided, near, conifer)));
+    if (!m) {
+        const material = windMaterial(doubleSided, near, conifer);
+        const base = material.customProgramCacheKey.bind(material);
+        material.customProgramCacheKey = () => `${base()}-town`;
+        windCache.set(key, (m = material));
+    }
     return m;
 }
