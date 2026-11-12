@@ -72,6 +72,9 @@
             "high_cold": "สูงและหนาว",
             "home": "บ้าน"
         },
+        "wildIslandRegions": {
+            "home": "ลานหญ้า"
+        },
         "hud": {
             "label": "ใครอยู่บนเรือบ้าง",
             "title": "บนเรือ",

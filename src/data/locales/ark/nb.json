@@ -72,6 +72,9 @@
             "high_cold": "Høyt og kaldt",
             "home": "Hjemme"
         },
+        "wildIslandRegions": {
+            "home": "Eng"
+        },
         "hud": {
             "label": "Hvem som er om bord",
             "title": "Om bord",

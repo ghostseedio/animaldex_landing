@@ -72,6 +72,9 @@
             "high_cold": "높고 추운 곳",
             "home": "집 주변"
         },
+        "wildIslandRegions": {
+            "home": "풀밭"
+        },
         "hud": {
             "label": "탑승한 동물",
             "title": "탑승 중",

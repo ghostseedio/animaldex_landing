@@ -72,6 +72,9 @@
             "high_cold": "Tinggi dan sejuk",
             "home": "Rumah"
         },
+        "wildIslandRegions": {
+            "home": "Padang"
+        },
         "hud": {
             "label": "Siapa di atas kapal",
             "title": "Di atas kapal",

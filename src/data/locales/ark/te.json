@@ -72,6 +72,9 @@
             "high_cold": "ఎత్తు, చలి",
             "home": "ఇల్లు"
         },
+        "wildIslandRegions": {
+            "home": "పచ్చిక బయలు"
+        },
         "hud": {
             "label": "Ark లో ఎవరున్నారు",
             "title": "Ark లో",

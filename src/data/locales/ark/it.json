@@ -72,6 +72,9 @@
             "high_cold": "Alto e freddo",
             "home": "Casa"
         },
+        "wildIslandRegions": {
+            "home": "Prato"
+        },
         "hud": {
             "label": "Chi è a bordo",
             "title": "A bordo",

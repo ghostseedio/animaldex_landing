@@ -72,6 +72,9 @@
             "high_cold": "高寒地帶",
             "home": "家園"
         },
+        "wildIslandRegions": {
+            "home": "草地"
+        },
         "hud": {
             "label": "船上有誰",
             "title": "船上",

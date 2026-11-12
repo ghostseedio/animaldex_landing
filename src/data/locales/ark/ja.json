@@ -72,6 +72,9 @@
             "high_cold": "高地と寒冷地",
             "home": "人里"
         },
+        "wildIslandRegions": {
+            "home": "野原"
+        },
         "hud": {
             "label": "乗船中の動物",
             "title": "乗船中",

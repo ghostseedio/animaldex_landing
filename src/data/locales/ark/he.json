@@ -72,6 +72,9 @@
             "high_cold": "גבוה וקר",
             "home": "בית"
         },
+        "wildIslandRegions": {
+            "home": "אחו"
+        },
         "hud": {
             "label": "מי על הסיפון",
             "title": "על הסיפון",

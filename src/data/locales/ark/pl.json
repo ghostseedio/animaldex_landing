@@ -72,6 +72,9 @@
             "high_cold": "Wysoko i zimno",
             "home": "Dom"
         },
+        "wildIslandRegions": {
+            "home": "Łąka"
+        },
         "hud": {
             "label": "Kto jest na pokładzie",
             "title": "Na pokładzie",
