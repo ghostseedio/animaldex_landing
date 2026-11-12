@@ -98,7 +98,8 @@ import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
-import {breathAt, depthSeed, fitInWater, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {waterLevelAt} from "@/ark-scene/water-level";
+import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
 import {ARK_CAUSTICS} from "@/ark-scene/terrain";
@@ -164,7 +165,7 @@ import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
@@ -237,6 +238,8 @@ const FLIGHT_RIG_EXTRA = 20;
 const MOVING_RIG_WITHIN = 260;
 /** Seconds a rig takes to fade in or out against the procedural motion. */
 const RIG_BLEND_SECONDS = 0.5;
+/** Lane MA3: a floater still on the water plays its paddle this slowly (its float idle): feet gently under it, body level. */
+const FLOAT_IDLE_RATE = 0.3;
 /** Rigs not drawn for this long are let go (keeping this many). */
 const RIG_KEEP_SECONDS = 45;
 const RIG_KEEP = 24;
@@ -345,6 +348,11 @@ type Entry = {
     layer: SpeciesLayer;
     /** A water species' depth band (`sea-depth.ts`), and its seed for its swim up and down the band and its breaths; null on land. */
     depth: SpeciesDepth | null;
+    /**
+     * Lane MA3: its band while its schedule has it in the water (`sea-depth.ts` swimDepth: a water species' own with its
+     * kind's float line; any other swimmer's, a coot's, an otter's, a crocodile's), worked out once; null if it does not swim.
+     */
+    swim?: SpeciesDepth | null;
     seed: number;
     /** Underground and in its tunnel or chamber now (drawn only in the cutaway). */
     buried?: boolean;
@@ -2539,6 +2547,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         water?: WaterSpec;
         /** A school's member: its first one's point, which its offset is scaled about at the size it is drawn (so a school drawn larger from afar spreads with it). */
         school?: {x: number; z: number};
+        /**
+         * Lane MA3: on its way into the water or out of it (the schedule's slide in or climb out): how far along (`u`), its
+         * feet's height on the bank (`stand`), its band in the water there (`spec`), and how far it has settled to its float
+         * line (`k`, 0 standing, 1 afloat). The base is blended again at the height it is drawn at, as `water` is.
+         */
+        edge?: {mode: "enter" | "exit"; u: number; k: number; stand: number; spec: WaterSpec};
+        /** Lane MA3: over water with no band (a heron in the shallows): standing on the bed, never on the surface. */
+        wading?: boolean;
+        /** Lane MA3: under the surface in a recipe's act of its own (a coot's, a cormorant's dive): it swims there, never walks. */
+        underwater?: boolean;
     };
 
     /**
@@ -2994,12 +3012,37 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const act = (at as RecipePose).act;
         // (`schedule-water.ts`: in the water, the band wins over the schedule's own height; a recipe act of its own, a dive, keeps its height.)
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
-        const waterTop = waterSurfaceAt(at.x, at.z);
-        if (inDepthBand(entry.depth, at, ground, waterTop) && !act?.own) {
+        // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
+        // lattice reads the sea's 0 at points by a lake's shore, and a goose sliding in sank to the sea's level.)
+        const surfaceHere = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
+        const waterTop = surfaceHere(at.x, at.z);
+        // (Lane MA3: anything that swims has a band while its schedule has it in the water, a coot, an otter, a crocodile
+        // as well as a duck: `swimDepth`; a water species its own band, with its kind's float line.)
+        const band = (entry.swim ??= entry.place.micro ? null : swimDepth(entry.animal.model_slug, entry.animal.zone));
+        // Into the water or out of it (lane MA3, the movement audit's goose): down the bank it settles from standing to its
+        // float line by the slide's progress, nose down into the water; out of it, the reverse, nose up. Its rig plays
+        // the entry or exit clip by the same progress (`rigFor`).
+        const edge = band && own.trip && !at.aloft && !act?.own ? waterEdgeAt(own.trip, own.at) : null;
+        if (edge && band) {
+            const leg = own.trip!.legs.find((l) => l.mode === edge.mode);
+            const wetEnd = leg ? (edge.mode === "enter" ? leg.to : leg.from) : at;
+            const top = surfaceHere(wetEnd.x, wetEnd.z);
+            const {spec} = scheduledWater(band, Math.min(ground, top - 0.05), entry.seed, clockNow(), 0, modelHeight, top);
+            const s = edge.u * edge.u * (3 - 2 * edge.u);
+            const k = edge.mode === "enter" ? s : 1 - s;
+            const stand = Math.max(at.y, ground);
+            const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+            const dip = (edge.mode === "enter" ? 0.32 : -0.26) * Math.sin(Math.PI * edge.u);
+            return {x: at.x, z: at.z, base: stand + (fitted - stand) * k, yaw: at.yaw + (entry.glance ?? 0), pitch: dip + floatPitch(band.kind) * k, roll: 0, afloat: k > 0.5, edge: {mode: edge.mode, u: edge.u, k, stand, spec}};
+        }
+        // (A recipe's act owns its pose, a dive under the surface; one at the surface, a dabble's swim and up-end, rides at
+        // its float line all the same: lane MA3, a dabbling duck stood on the water.)
+        const atSurface = Boolean(act?.own) && band !== null && waterMotion(band) === "float" && !at.aloft && Math.abs(at.y - waterTop) < 0.06;
+        if (inDepthBand(band, at, ground, waterTop) && (!act?.own || atSurface)) {
             const clock = clockNow();
             // (Awake, its breath on its way there: `breath-trip.ts`.)
             const breath = entry.state.breathing ? scheduledBreath(own) ?? breathAt(entry.seed, clock, entry.state.asleep) : 0;
-            const {spec} = scheduledWater(entry.depth, ground, entry.seed, clock, breath, modelHeight, waterTop);
+            const {spec} = scheduledWater(band, ground, entry.seed, clock, breath, modelHeight, waterTop);
             // (Under the surface where the tide has it now: `tideFit`.)
             const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             // (Lane L2: a swimmer not up for air keeps its flukes and tail under the surface: `swimSurfaceGuard`.)
@@ -3007,8 +3050,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const yaw = at.yaw + (entry.glance ?? 0);
             // A walker on the floor stands on its slope while its rig walks it there (as in `waterPose`).
             const surface = spec.motion === "walk" && entry.rig && entry.rig.weight > 0 ? onGround(at.x, base, at.z, yaw) : undefined;
-            // (A penguin lies down to swim: `swimBodyPitch`.)
-            return {x: at.x, z: at.z, base, yaw, pitch: spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : 0, roll: 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
+            // (A penguin lies down to swim: `swimBodyPitch`; a floater rides its kind's way, a duck tail up: `floatPitch`. A
+            // recipe's attitude on top: an up-end tips it nose down.)
+            const ride = spec.motion === "swim" ? swimBodyPitch(entry.animal.model_slug) : spec.motion === "float" ? floatPitch(band.kind) : 0;
+            return {x: at.x, z: at.z, base, yaw, pitch: ride + (act && act.episode !== "sleep" ? act.pitch : 0), roll: act && act.episode !== "sleep" ? act.roll : 0, afloat: true, water: spec, ...(surface ? {surface} : {})};
+        }
+        // Under the surface in its own act (a dive): where the act has it, swimming (lane MA3: it walked and hopped there).
+        const diving = Boolean(band) && Boolean(act?.own) && !at.aloft && ground < waterTop - 0.02 && at.y < waterTop - 0.06;
+        // No walking on the water (lane MA3): over water with no band (a heron, an egret in the shallows), not in the air,
+        // it stands on the bed, its legs in the water, never on the surface.
+        if (!band && !at.aloft && !act?.own && ground < waterTop - 0.02 && at.y >= ground - 0.01 && at.y <= waterTop + 0.02) {
+            return {x: at.x, z: at.z, base: ground, yaw: at.yaw + (entry.glance ?? 0), pitch: act ? act.pitch : 0, roll: act ? act.roll : 0, afloat: false, wading: true};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -3033,7 +3085,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
             pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
             roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
-            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0
+            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || diving,
+            ...(diving ? {underwater: true} : {})
         };
     };
 
@@ -3405,6 +3458,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let want: string | null = null;
         let mode: "distance" | "time" | "sync" = "time";
         let sync = 0;
+        /** Lane MA3: still on the water, its float idle (below) where nothing else plays, never its standing idle under the surface. */
+        let floatIdle = false;
         /** A time-played clip's pace (a swim's, by how fast it goes). */
         let rate = 1;
         const place = entry.place;
@@ -3567,11 +3622,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "distance";
                 }
             }
-        } else if (entry.depth && !entry.visitor && where.water) {
+        } else if (where.edge && !entry.visitor && clip(where.edge.mode === "enter" ? "enter_water" : "exit_water")) {
+            // Into the water or out of it (lane MA3, the movement audit's goose: it paddled down the bank and through the
+            // slide, and its entry played for 0.13 s once afloat): its entry or exit clip by how far along the slide it is,
+            // the pose settling it from standing to its float line the while (`fromSchedule`). A rig with no such clip
+            // (a seal, an otter: MA2's list) plays its gait by its speed, as before.
+            want = where.edge.mode === "enter" ? "enter_water" : "exit_water";
+            mode = "sync";
+            sync = where.edge.u;
+        } else if (!entry.visitor && where.underwater) {
+            // Lane MA3: under the surface in its own dive: its swim, else its paddle, by the distance it covers (its dive clip
+            // plays from the recipe below), never a walk on the bed.
+            const swim = clip("swim") ?? clip("paddle");
+            if (moving(swim)) {
+                want = swim.name;
+                mode = "distance";
+            }
+        } else if (!entry.visitor && where.water) {
             // In the water, in its depth band (`sea-depth.ts`; on land, a seal or a duck walks like any walker): a seabed crab or lobster walks its slow loop on the
             // floor (feet planted: phase by distance); a swimmer swims (or a snake or eel slithers) at the pace it goes;
             // a floater and a hole-dweller keep their idle.
-            const motion = waterMotion(entry.depth);
+            // (Lane MA3: any animal with a band in the water, `swimDepth`, a coot as well as a duck: its band is its pose's.)
+            const motion = where.water.motion;
             if (motion === "walk") {
                 const move = clip("walk") ?? clip("slither") ?? clip("run");
                 if (moving(move)) {
@@ -3591,7 +3663,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (moving(paddle)) {
                 want = "paddle";
                 mode = "distance";
-            }
+            } else if (motion === "float") floatIdle = true;
         } else if (place.water && !entry.visitor && (clip("swim") || clip("slither"))) {
             // Standing water with no band (an anaconda in the wetland's pool): it swims where it lies.
             want = clip("swim") ? "swim" : "slither";
@@ -3653,7 +3725,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "time";
                     byRecipe = true;
                 }
-            } else if (fromRecipe.play === "once" || !want || want === "idle") {
+            } else if (fromRecipe.play === "once" || !want || want === "idle" || (where.water && want === "paddle" && fromRecipe.name !== "paddle")) {
+                // (Lane MA3: on the water a recipe's own state plays through its drift, a dabbler's up-end as it paddles on.)
                 want = fromRecipe.name;
                 mode = "time";
                 byRecipe = true;
@@ -3664,6 +3737,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let beat = !state.flying && !byRecipe && !reacted && own?.pose ? beatClip(own.pose.beat, own.pose.doing, (name) => Boolean(clip(name))) : null;
         if (watching && headDown(beat)) beat = null;
         if (beat && (!want || want === "idle")) want = beat;
+        // (Lane MA3.) Still on the water: its paddle held slow, body level and feet under it, the float idle; and never a
+        // walk, a run or a hop on the surface (the audit's coot ran on the lake).
+        const afloat = (where.water && (where.water.motion === "float" || where.water.motion === "swim")) || Boolean(where.underwater);
+        if (afloat && (want === "walk" || want === "run" || want === "hop")) {
+            want = null;
+            floatIdle = where.water?.motion === "float";
+        }
+        if ((!want || want === "idle") && floatIdle && clip("paddle")) {
+            want = "paddle";
+            mode = "time";
+            rate = FLOAT_IDLE_RATE;
+        }
         if (!want && clip("idle")) want = "idle";
         if (!want) {
             // Nothing for standing still (an idle that did not pass): its moving clip held at its first frame.
@@ -4161,6 +4246,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
                 // (At the sea's level now: the column rises and falls with the tide, `tideFit`.)
                 where.base = tideFit(where.water, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+            } else if (where.edge) {
+                // (Lane MA3: into the water or out of it, settled to its float line as far as its slide has gone, at the height it is drawn at.)
+                const fitted = tideFit(where.edge.spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+                where.base = where.edge.stand + (fitted - where.edge.stand) * where.edge.k;
             }
             if (!candidate.visible) {
                 entry.middle = null;

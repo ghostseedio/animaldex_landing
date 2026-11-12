@@ -32,7 +32,7 @@ import {surfacePoint} from "@/ark-scene/micro";
 import {placeAnimals, type Placement} from "@/ark-scene/placement";
 import {allAttachPoints, attachSway, type AttachPoint} from "@/ark-scene/sampler";
 import {inDepthBand, onBehaviourSchedule} from "@/ark-scene/schedule-water";
-import {speciesDepth} from "@/ark-scene/sea-depth";
+import {swimDepth} from "@/ark-scene/sea-depth";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {worldSampler, type ArkWorldSampler} from "@/ark-scene/world-sampler";
 import {heightAt as analyticHeight, ZONE_SITES} from "@/ark-scene/world";
@@ -281,7 +281,8 @@ function sampleOne(s: Subject, epoch: number, world: ScheduleWorld, byId: Map<st
     const at = poseOnTrip(world, trip, epoch);
     if (at.aloft) return both("air", "air");
     const ground = analyticHeight(at.x, at.z);
-    const depth = speciesDepth(slug, s.animal.zone);
+    // (Lane MA3: any swimmer has a band in the water, `swimDepth`, as the scene draws it.)
+    const depth = swimDepth(slug, s.animal.zone);
     if (inDepthBand(depth, at, ground) || ground < 0) return both("water", "water");
     const drawn = drawnGroundHeight(at.x, at.z);
     const lattice = sampler.heightAt(at.x, at.z);

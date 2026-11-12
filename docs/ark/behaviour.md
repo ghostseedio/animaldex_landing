@@ -368,3 +368,75 @@ The integrator's default-view check read a median walk pace ratio of 0.41–0.59
 - Tests:
   - Walking samples' median pace ratio is within 0.8–1.3 for every walker, and 85% of samples are within it.
   - In-place activities stay under one turn in any minute.
+
+## Part 8: waterbirds and swimmers (lane MA3, 2026-11-13, the movement audit's problems 2, 4, 6, 7, 9)
+
+The movement audit (`docs/ark/movement-audit-2026-11-13.md`, landing branch `movement-audit`) found the owner's coot running on the
+lake and taking off 27 times an hour, swans in conifers, herons that never waded, and floaters standing on the water.
+
+### Data (`scripts/ark-behaviour-profiles.mts` → `behaviours.json`; `scripts/ark-behaviour-compose.mts` → `recipes.json`)
+
+- **Flight propensity** (`flightPropensity`): the `fly` weight by family and way of life, where it is low:
+  - rails, grebes, loons, gamebirds, curassows, megapodes, tinamous, buttonquail: 0.03; bustards 0.05; screamers 0.04;
+  - Anatidae: swans 0.03, geese 0.04, ducks 0.06; a farmyard breed of duck, goose or fowl (a breed, `domestic-`, or the
+    farm zone): 0.01;
+  - any other bird that walks or swims first: 0.03; the text's "rarely flies" halves it.
+  - Every other flyer keeps 0.5 (0.6 a flying insect). The compact row's weights are ninths, so the generator writes these as
+    a fine weight in hundredths (row field 18, `7:3`); `behaviour-profile.ts` reads it over the ninth.
+- **Water kind** (`waterKindOf`, row field 17): how a swimmer or wader is in the water, from the taxonomy (and the text's
+  "dives for" for the diving ducks): dabbler, diver, swan, goose, grebe (and loons), cormorant, pelican, coot, wader, bird,
+  penguin, otter, seal, mammal, croc, turtle, lizard, snake, amphibian, fish, skater, bed.
+- **Moves and places:** coots swim first and roost on the water (their text's "on the water" wins over the reeds); waterfowl,
+  grebes, loons and coots lose `perch` and `perch_branch` except the perching ducks (by genus: the wood duck and mandarin,
+  the muscovy, the whistling ducks, the Australian wood duck, the pygmy geese) and those whose text perches or roosts in
+  trees; grebes and loons do not walk (ashore only to nest); swimming Anatidae rest on the bank (`shore`).
+- **Recipes:** a diving duck surface-dives instead of dabbling (unless its text dabbles); a coot up-ends and dives; no air
+  plunge for a duck, swan, goose, coot or grebe (the wood duck's "dive quickly into the water to escape danger").
+
+### The schedule (`behaviour-schedule.ts`)
+
+- A bird that walks or swims first walks its ground trips as far as half a slot at its pace takes it (`walkReach`); further,
+  and any raised goal (a perch, a branch, a recipe in a tree), only as often as it flies (`airShare`: its fly weight over a
+  flyer's 0.5, squared, a seeded roll per slot). Its own `fly` goal comes down on the ground.
+- A waterbird's flight goes from water to water, further than its swims.
+- A perch suits a body 0.6 m or longer only on a limb that suits its whole length, never in a crown (`perchSuits`).
+- A wading bird stands in the shallows to fish and rest in 55% of its forage, rest, wander and groom slots
+  (`shallowsNear`: out from its nearest water's edges, 5 cm to a third of its length deep).
+- `waterEdgeAt(trip, epoch)`: the slide in or the climb out and how far along it.
+
+### The scene (`sea-depth.ts`, `index.ts`)
+
+- `swimDepth(slug, zone)`: a band while in the water for every species that swims (a water species' own band with its
+  kind's float line; any other swimmer a float, swim or bed band by its kind). `speciesDepth` (where it lives: placement,
+  the town's tanks, the validators) is unchanged.
+- Float lines by kind (`floatLine`, a share of the drawn height under the surface: dabbler 0.36, diver 0.42, swan 0.24,
+  goose 0.3, grebe 0.32, cormorant 0.42, coot 0.34, mammal 0.72, croc 0.85) and a riding pitch (`floatPitch`: a dabbler's
+  tail up, a swan breast up, a cormorant bill raised).
+- `fromSchedule`: the slide in blends from standing on the bank to the float line by the leg's progress, nose down into the
+  water (out: the reverse, nose up), and `rigFor` plays the entry or exit clip by the same progress; a floater in a recipe
+  at the surface (a dabble's swim and up-end) rides at its float line with the act's attitude (an up-end tips it); an
+  animal over water with no band (a heron) stands on the bed, never on the surface; one under the surface in its own dive
+  swims there (`underwater`). The surface is the higher of the drawn lattice's and the schedule's own water level
+  (`waterLevelAt`): the lattice reads the sea's 0 at points by the lake's shore, and a goose sliding in sank to it.
+- `rigFor`: the water branch reads the pose's band; still on the water a floater plays its paddle slowly (the float idle),
+  never its standing idle; a recipe's own state (an up-end) plays over the paddle; nothing walks, runs or hops afloat.
+- The grounding audit and the behaviour audit's model read `swimDepth` the same way.
+
+### Regenerating
+
+The inputs reproduce `behaviours.json` and `recipes.json` byte for byte at ark-next 640b0062 (checked before any rule changed):
+
+    H=~/animaldex-ark-handover-2026-11-11/behaviour/data; M=~/animaldex-talking-models/rig
+    npx tsx scripts/ark-behaviour-profiles.mts $H/species.json $M/manifest_before_v5.json <B1 microhabitats.json> $H/food.json $M/manifest.json $M/publish-v2/manifest.json
+    npx tsx scripts/ark-walk-pace.mts --apply
+    npx tsx scripts/ark-behaviour-recipes.mts $H/species.json <recipes extra.json> ~/animaldex-ark-handover-2026-11-11/intel-web/export.json
+
+`depth-bands.json` (`scripts/ark-layers.mts`) does not reproduce from the stored inputs (30 rows' phrases have drifted), so the
+swimmers' bands are worked out from the profiles at run time (`swimDepth`), not regenerated into it.
+
+### Tests
+
+`src/lib/ark-waterbirds.test.ts` (the audit's CI candidates, v2, the spawn validator's animals, one island day from the
+trips): 0 swimmers without a band; every bird that walks or swims first at most 2% of the day aloft and 3 take-offs an
+awake hour; the coot at least 60% on the water and off it by flying at most 6 times a day; no waterfowl perch save the
+perching ducks; `perchSuits`. It records `ma3` motion metrics when `ARK_MOTION_METRICS_DIR` is set.

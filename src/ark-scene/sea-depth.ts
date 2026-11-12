@@ -30,6 +30,7 @@
  */
 
 import table from "@/ark-scene/depth-bands.json";
+import {behaviourProfile, type ArkWaterKind} from "@/ark-scene/behaviour-profile";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {arkWorld, coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
 import {wildWaterSurface} from "@/ark-scene/islands/wild/map-v2";
@@ -55,6 +56,12 @@ export type SpeciesDepth = {
     reason: string;
     /** text, taxonomy, plan, zone, or default (no usable depth data: the band is the default for its body). */
     source: string;
+    /**
+     * Lane MA3 (`swimDepth` only): how it is in the water (its behaviour profile's water kind), and a floater's float
+     * line, the share of its drawn height under the surface (`floatLine`; FLOAT_SINK when absent).
+     */
+    kind?: ArkWaterKind | null;
+    sink?: number;
 };
 
 type Row = [string, string, string, string, string, string];
@@ -120,6 +127,96 @@ export function speciesDepth(slug: string, zone: string): SpeciesDepth | null {
         ? {band: row[0] as DepthBand, water: row[1] as WaterKind, home: row[2] as WaterHome, breathes: row[3].includes("b"), crevice: row[3].includes("c"), deepFloor: row[3].includes("f"), glow: row[3].includes("g"), reason: row[4], source: row[5]}
         : (diverDepth(slug) ?? fallback(zone));
     known.set(key, found);
+    return found;
+}
+
+// MARK: In the water, for anything that swims (lane MA3: the movement audit's coot ran on the lake)
+
+/**
+ * A floater's float line by how it is in the water: the share of its drawn height (its model's, head and neck
+ * included) under the surface. A duck rides with its body half under and its tail clear; a diving duck, a grebe and
+ * a cormorant sit lower (a cormorant's back nearly awash); a swan's and a goose's height is mostly neck, so a smaller
+ * share of it is under; a capybara, an otter or a crocodile swims with only its head and back out.
+ */
+const FLOAT_LINES: Readonly<Partial<Record<ArkWaterKind, number>>> = {
+    dabbler: 0.36,
+    diver: 0.42,
+    swan: 0.24,
+    goose: 0.3,
+    grebe: 0.32,
+    cormorant: 0.42,
+    pelican: 0.3,
+    coot: 0.34,
+    bird: 0.35,
+    otter: 0.72,
+    mammal: 0.72,
+    croc: 0.85,
+    lizard: 0.8,
+    snake: 0.75,
+    amphibian: 0.8,
+    skater: 0.04
+};
+
+/** Its float line (a share of its drawn height under the surface): its kind's, else the old one for every floater. */
+export function floatLine(kind: ArkWaterKind | null | undefined): number {
+    return (kind && FLOAT_LINES[kind]) ?? FLOAT_SINK;
+}
+
+/**
+ * How a floater rides (radians, the scene's pitch: positive tips the nose down and the tail up): a dabbling duck with
+ * its tail cocked up out of the water, a coot a little so; a swan breast up, its neck upright; a cormorant low with its
+ * bill raised; the rest level.
+ */
+const FLOAT_PITCHES: Readonly<Partial<Record<ArkWaterKind, number>>> = {dabbler: 0.09, coot: 0.05, diver: 0.03, swan: -0.04, goose: -0.02, cormorant: -0.08, pelican: -0.03};
+export function floatPitch(kind: ArkWaterKind | null | undefined): number {
+    return (kind && FLOAT_PITCHES[kind]) ?? 0;
+}
+
+/** The kinds that swim down in the water when they swim (not on the surface), and the ones on the bed. */
+const SWIM_KINDS: ReadonlySet<ArkWaterKind> = new Set<ArkWaterKind>(["fish", "turtle", "penguin", "seal"]);
+const BED_KINDS: ReadonlySet<ArkWaterKind> = new Set<ArkWaterKind>(["bed"]);
+const SALT_ZONES: ReadonlySet<string> = new Set(["coral_reef", "open_ocean", "seashore", "polar"]);
+const swimKnown = new Map<string, SpeciesDepth | null>();
+
+/**
+ * Where it is in the water while its schedule has it there (lane MA3; the scene's pose and the rig player read this,
+ * `index.ts` fromSchedule and rigFor): a water species' own band, with its kind's float line; else, for any animal
+ * that swims (its behaviour profile's move or moves), a band for its kind: a bird, an otter, a capybara, a crocodile,
+ * a lizard or a frog floats at its float line, a turtle or a fish swims down in the water, a crab walks the bed.
+ * Null for one that does not swim (a heron wades: it stands on the bed in the shallows; `index.ts` keeps any animal
+ * the schedule has over water with no band standing on the bed, never on the surface).
+ *
+ * Only for how it is drawn in the water: where it lives (placement, the town's tanks, the validators) stays
+ * `speciesDepth`, so a crocodile still lives on its bank.
+ */
+export function swimDepth(slug: string, zone: string): SpeciesDepth | null {
+    const key = `${slug}#${zone}`;
+    if (swimKnown.has(key)) return swimKnown.get(key)!;
+    const own = speciesDepth(slug, zone);
+    const profile = behaviourProfile(slug);
+    const kind = profile.water;
+    let found: SpeciesDepth | null = null;
+    if (own) found = waterMotion(own) === "float" ? {...own, kind, sink: floatLine(kind)} : {...own, kind};
+    else if (!heldOffWater(slug) && (profile.move === "swim" || profile.moves.includes("swim"))) {
+        const salt = SALT_ZONES.has(zone);
+        const swims = kind !== null && SWIM_KINDS.has(kind);
+        const bed = kind !== null && BED_KINDS.has(kind);
+        const band: DepthBand = bed ? (salt ? "seabed" : "pond_bed") : swims ? (salt ? "upper" : "pond_mid") : salt ? "surface" : "pond_surface";
+        found = {
+            band,
+            water: salt ? "salt" : "fresh",
+            home: "zone",
+            breathes: false,
+            crevice: false,
+            deepFloor: false,
+            glow: false,
+            reason: `swims (${profile.move}${profile.moves.length ? `|${profile.moves.join(",")}` : ""}), ${kind ?? "no water kind"}: ${bed ? "on the bed" : swims ? "swims down in the water" : "floats"} while in it`,
+            source: "swim",
+            kind,
+            ...(bed || swims ? {} : {sink: floatLine(kind)})
+        };
+    }
+    swimKnown.set(key, found);
     return found;
 }
 
@@ -220,6 +317,8 @@ export type WaterSpec = {
      * at their own level; absent everywhere else). Its depths are under it, and the tide never moves it (`tideFit`).
      */
     surface?: number;
+    /** A floater's float line (lane MA3, `swimDepth`): the share of its drawn height under the surface; FLOAT_SINK when absent. */
+    sink?: number;
 };
 
 /** The water's surface over a point (Part C): v2's lake's and river's own level where they stand, else the sea's 0. */
@@ -239,6 +338,7 @@ export function waterSpec(depth: SpeciesDepth, floorY: number, seed: number, clo
     const spec: WaterSpec = {motion, floorY, depth: range.from + (range.to - range.from) * u, aboveFloor: Boolean(range.aboveFloor), breath: depth.breathes ? breath : 0};
     // (Only a surface of its own: the sea's columns stay exactly as they were.)
     if (surface) spec.surface = surface;
+    if (depth.sink !== undefined && motion === "float") spec.sink = depth.sink;
     return spec;
 }
 
@@ -254,7 +354,7 @@ export function fitInWater(spec: WaterSpec, height: number): {base: number; midd
     // (Its surface: the sea's 0, or the bigger island's lake's and river's own level.)
     const top = spec.surface ?? 0;
     if (spec.motion === "float") {
-        const base = top - FLOAT_SINK * height;
+        const base = top - (spec.sink ?? FLOAT_SINK) * height;
         return {base, middle: base + height / 2};
     }
     if (spec.motion === "walk" || spec.motion === "hole") {

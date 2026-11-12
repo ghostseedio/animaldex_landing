@@ -23,6 +23,11 @@ export type ArkMove = "walk" | "climb" | "perch" | "fly" | "swim" | "burrow" | "
 export type ArkRoost = "tree" | "tree_hole" | "cliff" | "cave" | "crevice" | "rocks" | "burrow" | "den" | "ground_cover" | "reeds" | "water" | "bottom" | "reef" | "leaf" | "bark" | "wall" | "nest" | "attached" | "open" | "shore";
 export type ArkSocial = "solitary" | "pair" | "group" | "herd" | "flock" | "school" | "colony" | "pack" | "troop" | "swarm";
 export type ArkProfileActivity = "diurnal" | "nocturnal" | "crepuscular" | "any";
+/**
+ * How it is in the water (lane MA3, from the stored taxonomy: `scripts/ark-behaviour-profiles.mts` waterKindOf): its
+ * float line, posture and feeding there (`sea-depth.ts` swimDepth, floatLine).
+ */
+export type ArkWaterKind = "dabbler" | "diver" | "swan" | "goose" | "grebe" | "cormorant" | "pelican" | "coot" | "wader" | "bird" | "penguin" | "otter" | "seal" | "mammal" | "croc" | "turtle" | "lizard" | "snake" | "amphibian" | "fish" | "skater" | "bed";
 
 export type ArkBehaviourProfile = {
     slug: string;
@@ -45,6 +50,8 @@ export type ArkBehaviourProfile = {
     surface: "any" | "upside" | null;
     breathes: boolean;
     seabed: boolean;
+    /** How it is in the water; null when it neither swims nor wades. */
+    water: ArkWaterKind | null;
     size: number | null;
     speed: number | null;
     dominance: number | null;
@@ -64,11 +71,17 @@ const ROWS = (table as {species: Record<string, string>}).species;
 const cache = new Map<string, ArkBehaviourProfile>();
 
 export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfile {
-    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait, walkPace, runPace] = row.split("|");
+    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait, walkPace, runPace, water = "", fine = ""] = row.split("|");
     const weights: Partial<Record<ArkBehaviour, number>> = {};
     for (let i = 0; i + 1 < behaviours.length; i += 2) {
         const name = ARK_BEHAVIOURS[parseInt(behaviours[i], 36)];
         if (name) weights[name] = Number(behaviours[i + 1]) / 9;
+    }
+    // (Finer weights where the generator set them, in hundredths: a coot's appetite for flying, 0.03.)
+    for (const pair of fine ? fine.split(",") : []) {
+        const [index, hundredths] = pair.split(":");
+        const name = ARK_BEHAVIOURS[parseInt(index, 36)];
+        if (name && name in weights) weights[name] = Number(hundredths) / 100;
     }
     const number = (value: string | undefined) => (value === undefined || value === "" ? null : Number(value));
     return {
@@ -87,6 +100,7 @@ export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfi
         surface: flags.includes("u") ? "upside" : flags.includes("a") ? "any" : null,
         breathes: flags.includes("b"),
         seabed: flags.includes("s"),
+        water: (water || null) as ArkWaterKind | null,
         size: number(size),
         speed: number(speed),
         dominance: number(dominance),
@@ -119,7 +133,7 @@ export function behaviourProfile(slug: string, plan?: string | null): ArkBehavio
     const row = ROWS[slug];
     const profile: ArkBehaviourProfile = row
         ? decodeBehaviourRow(slug, row)
-        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, size: null, speed: null, dominance: null, gait: null, walkPace: null, runPace: null, defaulted: true, fallback: true};
+        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, water: null, size: null, speed: null, dominance: null, gait: null, walkPace: null, runPace: null, defaulted: true, fallback: true};
     cache.set(slug, profile);
     return profile;
 }
