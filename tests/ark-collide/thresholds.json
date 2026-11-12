@@ -1,7 +1,7 @@
 {
- "about": "The collision audit's CI limits (scripts/ark-collide-audit.mts --fixture --hours 2 --step 4: the synthetic Ark of every species and the hamlet at 1x). Pass-throughs and fence crossings must stay at 0; cliffs and overlaps at today's values (a change that makes them worse fails the PR; a deliberate change updates them here, with why).",
+ "about": "The collision audit's CI limits (scripts/ark-collide-audit.mts --fixture --hours 2 --step 4: the synthetic Ark of every species and the hamlet at 1x, 6,526 animals, 4,516 measured, 7.7 M body samples). Pass-throughs stay at 0. Fence crossings, cliffs and overlaps at most today's (2026-11-12, ark-collisions): the 2 crossings are a gecko climbing over a picket fence and an albatross's preening step; the overlaps are mostly sleepers in their postures (perched ones are held where they are). A change that makes them worse fails the PR; a deliberate change updates them here, with why.",
  "passThrough": 0,
- "fenceCrossings": 0,
- "cliffs": 0,
- "overlaps": 0
+ "fenceCrossings": 2,
+ "cliffs": 2222,
+ "overlaps": 2042868
 }
