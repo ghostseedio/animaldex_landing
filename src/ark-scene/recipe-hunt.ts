@@ -183,8 +183,9 @@ export function buildQuarry(input: QuarryInput): QuarryTrack {
         const at = chaseAt(track, tc, input.heightAt);
         track.escapeAt = at;
         const yaw = path[path.length - 1];
-        // Away to its side and on a little: a hopper sideways, a fish off at an angle, a moth up and off.
-        const a = yaw + side * (input.look === "hopper" ? 1.25 : 0.85);
+        // Away to its side: a hopper sideways, a fish off at an angle, a moth aside and back, up and off (the bird
+        // sweeps on past it at several times its speed: a moth that jinked ahead was overtaken again on ark-next).
+        const a = yaw + side * (input.look === "hopper" ? 1.25 : input.look === "flier" ? 2 : 0.85);
         track.escapeDir = {x: Math.sin(a), z: Math.cos(a)};
     }
     return track;
