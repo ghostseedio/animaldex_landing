@@ -822,6 +822,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         spans: spansFromHeights(chunkGrid, groundHeights, groundSize, CHUNK_HEADROOM),
         content: chunkContent,
         tier,
+        // (Two islands: the clear fog pushed out with their reach, as the world's frame says: decisions 142 and 234.)
+        fogFrom: wildFrame().fogFrom,
         haze,
         heapLimitMB: ((performance as Performance & {memory?: {jsHeapSizeLimit?: number}}).memory?.jsHeapSizeLimit ?? 0) / 2 ** 20 || null,
         memory: () => {

@@ -104,6 +104,8 @@ export type StreamerOptions = {
     heapLimitMB?: number | null;
     /** Memory pressure at the smallest distance: ask the scene for a lower tier. */
     onDrop?: () => void;
+    /** With two islands, the clear fog is pushed out beyond this reach (m; `arkFogReach`'s `from`; default 700). */
+    fogFrom?: number;
 };
 
 export class ArkStreamer {
@@ -296,7 +298,7 @@ export class ArkStreamer {
                 reach = Math.max(reach, Math.hypot(Math.max(Math.abs(bx0 - cx), Math.abs(bx1 - cx)), Math.max(Math.abs(bz0 - cz), Math.abs(bz1 - cz))));
             }
         }
-        this.fogReach = arkFogReach(reach);
+        this.fogReach = arkFogReach(reach, this.options.fogFrom);
         this.options.haze?.setClear?.(this.fogReach.near, this.fogReach.far);
     }
 
@@ -411,11 +413,12 @@ export class ArkStreamer {
 /**
  * The base fog's clear-weather reach for a world whose islands reach `reach` m from one island's middle to the
  * farthest corner of another (decision 142: "visibly next to each other"): today's 420 → 1700 m for one island (reach
- * 0), pushed out in proportion beyond ~700 m so the other island's near half is under ~5 % fog and its far half under
- * ~25 % from the first island's views. Pure.
+ * 0), pushed out in proportion beyond `from` m (700: v1's two islands, the other island's near half under ~5 % fog and
+ * its far half under ~25 % from the first island's views; the world's frame may push it further, decision 234: v2's
+ * `islands/views.ts` fogFrom) . Pure.
  */
-export function arkFogReach(reach: number): {near: number; far: number} {
-    const scale = Math.max(1, reach / 700);
+export function arkFogReach(reach: number, from = 700): {near: number; far: number} {
+    const scale = Math.max(1, reach / from);
     return {near: Math.round(CLEAR_FOG.near * scale), far: Math.round(CLEAR_FOG.far * scale)};
 }
 

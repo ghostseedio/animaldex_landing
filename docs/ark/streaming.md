@@ -271,6 +271,8 @@ streamer.stateAt(x, z) / islandAt(x, z) / islandStateOf(id, chunk) / activeIslan
   - From the wild island the town is map style; a pan to the town makes the town the one in full and the wild island map style.
 - **Haze** only past the map distance (and never in the map view). Both islands lie within ~1.1 km of any view over them, so the haze never hides the other island.
 - **The base fog is pushed out** (decision 142, "visibly next to each other") while more than one island is registered: the clear-weather 420 → 1,700 m grows with the islands' spread (`arkFogReach`: from one island's middle to the farthest corner of another's grid, beyond 700 m, in proportion). For T3's layout that is ~520 → ~2,110 m.
+  - The world's frame may push it further (`fogFrom`, decision 234). v2 uses 520 m, so ~810 → ~3,290 m: the town's near half is under 20 % fog from the upright phone's view too.
+  - The push is the same on every tier.
   - The town's near half, from the wild island's default view, is under 20 % fog (the test checks its corners and middle). Before, it was up to about 15–45 % across the near half, and more on the far half.
   - The wild island itself is unchanged: its far shore is ~415 m off, with no fog either way.
   - Weather closing in (rain, fog, a storm) keeps its own distances: only the clear part of the fog is pushed, blended by how clear the weather's fog is.

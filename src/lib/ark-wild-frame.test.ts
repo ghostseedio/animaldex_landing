@@ -127,7 +127,7 @@ async function twoIslands(tier: StreamTierName) {
     })());
     const content = new Uint8Array(chunkCount(WILD_GRID)).fill(1);
     const haze = hazeFog(new Fog(0xffffff, 420, 1700));
-    const streamer = new ArkStreamer({grid: WILD_GRID, spans: arrays, content, tier, haze});
+    const streamer = new ArkStreamer({grid: WILD_GRID, spans: arrays, content, tier, haze, fogFrom: wildFrame().fogFrom});
     const townSpans = Array.from({length: chunkCount(TOWN_GRID)}, () => ({minY: -4, maxY: 30}));
     streamer.registerIsland({id: "wild", offset: {x: 0, z: 0}, reach: wildReachNow(), grid: WILD_GRID, spans: arrays, content});
     streamer.registerIsland({id: "town", offset: townWorldOrigin(), reach: TOWN_REACH, grid: TOWN_GRID, spans: townSpans, content: new Uint8Array(chunkCount(TOWN_GRID)).fill(1)});
@@ -150,6 +150,31 @@ test("frame: v2 with one island (the apps' embed with ?world=v2) frames the isla
         }).length;
         // Desktop: the whole coast; an upright phone at the camera's reach (1,000 m): its middle, at least half the coast.
         assert.ok(inside / wildCoast.length >= (aspect < 0.8 ? 0.5 : 1), `aspect ${aspect.toFixed(2)}: ${inside}/${wildCoast.length}`);
+    }
+});
+
+test("frame: from v2's default views the town's near half is under 20 % fog and the island itself clear, upright phones too (decision 234)", async () => {
+    const town = townWorldOrigin();
+    const streamer = await twoIslands("low");
+    const {near, far} = streamer.fog;
+    // three's linear fog: smoothstep(near, far, depth), taken at the distance (never less than the depth).
+    const fogAt = (d: number) => {
+        const t = Math.min(Math.max((d - near) / (far - near), 0), 1);
+        return t * t * (3 - 2 * t);
+    };
+    for (const aspect of [...DESKTOP, ...PHONE]) {
+        const eye = viewEye(wildHomeView(aspect, FOV, town));
+        const at = (x: number, z: number) => Math.hypot(x - eye.x, eye.y, z - eye.z);
+        // The town's quarter facing the eye: its corners and the town's middle (Part B's measure, decision 152).
+        const sx = Math.sign(eye.x - town.x);
+        const sz = Math.sign(eye.z - town.z);
+        const half = ARK_ISLANDS.town.half;
+        for (const [dx, dz] of [[sx, sz], [0, sz], [sx, 0], [0, 0]]) {
+            const share = fogAt(at(town.x + dx * half, town.z + dz * half));
+            assert.ok(share < 0.2, `aspect ${aspect.toFixed(2)}: the town's near half at ${dx}, ${dz}: ${share.toFixed(3)}`);
+        }
+        // The wild island's middle: clear (not washed out).
+        assert.ok(fogAt(at(-10, 0)) < 0.02, `aspect ${aspect.toFixed(2)}: the island's middle ${fogAt(at(-10, 0)).toFixed(3)}`);
     }
 });
 

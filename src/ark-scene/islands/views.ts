@@ -37,6 +37,12 @@ export type WildFrame = {
     reachIslands: number;
     /** With the town in the world, the idle drift sways ± this (rad) about where the view was; null: it goes round. */
     driftSway: number | null;
+    /**
+     * With two islands, the base fog's clear reach is pushed out in proportion to the islands' reach beyond this (m;
+     * Part B's `arkFogReach`): v1's 700 (decision 142); v2's 520, so its town's near half is under 20 % fog from the
+     * upright phone's view too (decision 234).
+     */
+    fogFrom: number;
     /** A region's view (`focusRegion`) from this polar angle (rad from straight down; null: the view's own), at least this far (m). */
     regionPolar: number | null;
     regionNearest: number;
@@ -44,11 +50,14 @@ export type WildFrame = {
 
 /** The wild island's whole-view frame in the world in use. */
 export function wildFrame(): WildFrame {
-    // v2's upright view (decision rows, docs/ark/wild-island.md §9): from 950 m on every upright phone, looking down
-    // a little more (0.9 rad from straight down) and aimed 130 m out toward the town, so the town's far shore stays inside
-    // the low tier's 1,600 m map distance; the island fills the frame's width (its east and west tips just outside).
-    if (arkWorld() === "v2") return {radius: 204, radiusTall: 236, distanceTall: 950, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 130, polarTall: 0.9, reach: 1000, reachIslands: 1000, driftSway: 0.12, regionPolar: 0.62, regionNearest: 110};
-    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 80, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE, driftSway: 0.12, regionPolar: null, regionNearest: 48};
+    // v2's upright view (decision rows, docs/ark/wild-island.md §9; decision 234): from 900 m on every upright phone, at
+    // 1.0 rad from straight down, aimed 100 m out toward the town: the nearest view where the island still fills the
+    // frame's width (its east and west tips just outside, about half its coast in the picture), the town across the
+    // upper part, under 20 % fog with v2's fog push (`fogFrom`). From 950 m at 0.9 rad with v1's push, the town's middle
+    // was at about 26 % fog on phones. (The other island is never out of the streamer since T3-25, so the low tier's map
+    // distance no longer sets this.)
+    if (arkWorld() === "v2") return {radius: 204, radiusTall: 236, distanceTall: 900, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 100, polarTall: 1.0, reach: 1000, reachIslands: 1000, driftSway: 0.12, fogFrom: 520, regionPolar: 0.62, regionNearest: 110};
+    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 80, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE, driftSway: 0.12, fogFrom: 700, regionPolar: null, regionNearest: 48};
 }
 
 export type WildHomeView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
