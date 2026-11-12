@@ -95,18 +95,23 @@ test("streaming: a map tile is every 4th vertex with a skirt, on the ground's ow
 test("streaming: states by distance, with hysteresis, map and out", () => {
     const flat: ChunkSpan[] = Array.from({length: chunkCount(grid)}, () => ({minY: 0, maxY: 0}));
     const eye = {x: -TERRAIN_HALF - 100, y: 0, z: 0};
-    const first = chunkStates(grid, flat, {...eye, distance: 150, hysteresis: 20, map: false}, null);
-    // Columns 0 (100 m off) and 1 (152.8 m off) of the middle row: in, out.
+    const view = {distance: 150, hysteresis: 20, mapDistance: 300};
+    const first = chunkStates(grid, flat, {...eye, ...view}, null);
+    // The middle row: column 0 (100 m off) in, column 1 (152.8 m) map, column 4 (311.2 m) out.
     assert.equal(first[2 * 5], STATE_IN);
-    assert.equal(first[2 * 5 + 1], STATE_OUT);
-    // Moved 10 m away: column 0 is 110 m off, still in; column 0 at 165 m stays in (hysteresis), at 175 m goes.
-    const kept = chunkStates(grid, flat, {...eye, x: eye.x - 65, distance: 150, hysteresis: 20, map: false}, first);
+    assert.equal(first[2 * 5 + 1], STATE_MAP);
+    assert.equal(first[2 * 5 + 4], STATE_OUT);
+    // Moved 65 m away: column 0 is 165 m off, still in (hysteresis); at 175 m it goes to map style.
+    const kept = chunkStates(grid, flat, {...eye, x: eye.x - 65, ...view}, first);
     assert.equal(kept[2 * 5], STATE_IN);
-    const gone = chunkStates(grid, flat, {...eye, x: eye.x - 75, distance: 150, hysteresis: 20, map: true}, kept);
+    const gone = chunkStates(grid, flat, {...eye, x: eye.x - 75, ...view}, kept);
     assert.equal(gone[2 * 5], STATE_MAP);
     // Never in without having been within the distance itself.
-    const fresh = chunkStates(grid, flat, {...eye, x: eye.x - 65, distance: 150, hysteresis: 20, map: false}, null);
-    assert.equal(fresh[2 * 5], STATE_OUT);
+    const fresh = chunkStates(grid, flat, {...eye, x: eye.x - 65, ...view}, null);
+    assert.equal(fresh[2 * 5], STATE_MAP);
+    // An island the camera is not over: at most map style, however near.
+    const capped = chunkStates(grid, flat, {...eye, ...view, capMap: true}, null);
+    assert.equal(capped[2 * 5], STATE_MAP);
 });
 
 test("streaming: the haze is on only while content lies past the distance, ramped, never in the map view", () => {
@@ -129,9 +134,9 @@ test("streaming: today's island lies inside the medium and high distances from e
                         for (let a = 0; a < 8; a++) {
                             const azimuth = (a / 8) * Math.PI * 2;
                             const eye = {x: tx + distance * Math.sin(polar) * Math.sin(azimuth), y: Math.max(heightAt(tx, tz), 0) + distance * Math.cos(polar), z: tz + distance * Math.sin(polar) * Math.cos(azimuth)};
-                            const states = chunkStates(grid, spans, {...eye, distance: t.renderDistance, hysteresis: t.hysteresis, map: distance >= 150}, null);
+                            const states = chunkStates(grid, spans, {...eye, distance: t.renderDistance, hysteresis: t.hysteresis, mapDistance: t.mapDistance}, null);
                             assert.ok(states.every((s) => s === STATE_IN), `${tier}: every chunk in from ${JSON.stringify(eye)}`);
-                            assert.equal(hazeStrength(farthestContent(grid, spans, content, eye.x, eye.y, eye.z), t.renderDistance, distance >= 150), 0, `${tier}: no haze from ${JSON.stringify(eye)}`);
+                            assert.equal(hazeStrength(farthestContent(grid, spans, content, eye.x, eye.y, eye.z), t.mapDistance, distance >= 150), 0, `${tier}: no haze from ${JSON.stringify(eye)}`);
                         }
                     }
                 }
@@ -144,7 +149,7 @@ test("streaming: the island's home views are whole on the low tier too (desktop 
     const t = ARK_STREAM_TIERS.low;
     // The scene's home views (index.ts homeView): 800×500 and 360×800.
     for (const eye of [{x: 12, y: 108.5, z: 207.4}, {x: 16, y: 156.6, z: 302.6}]) {
-        const states = chunkStates(grid, spans, {...eye, distance: t.renderDistance, hysteresis: t.hysteresis, map: true}, null);
+        const states = chunkStates(grid, spans, {...eye, distance: t.renderDistance, hysteresis: t.hysteresis, mapDistance: t.mapDistance}, null);
         assert.ok(states.every((s) => s === STATE_IN), JSON.stringify(eye));
     }
 });
@@ -238,24 +243,27 @@ test("streaming: a chunked mesh is exactly as built while every chunk is drawn, 
     assert.equal(mesh.count, 150);
 });
 
-test("streaming: the streamer leaves everything in from the home view and hides far chunks when the distance is small", () => {
+test("streaming: the streamer leaves everything in from the home view, and past small distances draws map style, then nothing", () => {
     const content = new Uint8Array(chunkCount(grid)).fill(1);
     const fog = new Fog(0xffffff, 420, 1700);
     const streamer = new ArkStreamer({grid, spans, content, tier: "medium", haze: hazeFog(fog)});
     streamer.update({x: 16, y: 156.6, z: 302.6}, 320, 38, 0.45, 0);
     assert.equal(streamer.allIn, true);
     assert.equal(fog.far, 1700);
-    // A close view at the island's south-east, a 60 m distance forced: the far chunks are out and the haze comes on.
-    (globalThis as {__arkRenderDistance?: number}).__arkRenderDistance = 60;
+    // A close view at the island's south-east, 60 m and 150 m forced: near chunks in, then map style, then out (hazed).
+    const g = globalThis as {__arkRenderDistance?: number; __arkMapDistance?: number};
+    g.__arkRenderDistance = 60;
+    g.__arkMapDistance = 150;
     try {
-        streamer.update({x: 90, y: 12, z: 90}, 20, 38, 1.6, 1);
-        for (let t = 1; t < 3; t += 0.1) streamer.update({x: 90, y: 12, z: 90}, 20, 38, 1.6, t);
+        for (let t = 1; t < 6; t += 0.1) streamer.update({x: 90, y: 12, z: 90}, 20, 38, 1.6, t, {x: 80, z: 80});
         assert.equal(streamer.allIn, false);
-        assert.equal(streamer.stateAt(-100, -100), STATE_OUT);
         assert.equal(streamer.stateAt(90, 90), STATE_IN);
-        assert.ok(fog.far < 60, `haze whole by the distance (fog far ${fog.far})`);
+        assert.equal(streamer.stateAt(-40, -40), STATE_MAP);
+        assert.equal(streamer.stateAt(-120, -120), STATE_OUT);
+        assert.ok(fog.far < 150, `haze whole by the map distance (fog far ${fog.far})`);
     } finally {
-        delete (globalThis as {__arkRenderDistance?: number}).__arkRenderDistance;
+        delete g.__arkRenderDistance;
+        delete g.__arkMapDistance;
     }
 });
 
@@ -292,4 +300,90 @@ test("streaming: true scale past the render distance — a 25 m whale keeps its 
     }
     // Where the beetle's own size reaches MAP_MODEL_PIXELS: about 1.5 m off (inside every distance, where L4's own rules decide).
     assert.ok(screenPixelsAt(0.0075, 1.4, 800, 38) > MAP_MODEL_PIXELS && screenPixelsAt(0.0075, 1.6, 800, 38) < MAP_MODEL_PIXELS);
+});
+
+/** Two islands side by side (decision 141): T3's world frame (islands/index.ts townWorldOrigin), the town across a 250 m strait. */
+const TOWN_OFFSET = {x: 508.6, z: -210.7};
+
+async function twoIslands(tier: StreamTierName = "medium") {
+    const {TOWN_GRID} = await import("@/ark-scene/islands/town/chunks");
+    const content = new Uint8Array(chunkCount(grid)).fill(1);
+    const fog = new Fog(0xffffff, 420, 1700);
+    const haze = hazeFog(fog);
+    const streamer = new ArkStreamer({grid, spans, content, tier, haze});
+    const townStates: Uint8Array[] = [];
+    const townSpans = Array.from({length: chunkCount(TOWN_GRID)}, () => ({minY: -4, maxY: 30}));
+    streamer.registerIsland({id: "wild", offset: {x: 0, z: 0}, reach: 90.25, grid, spans, content});
+    streamer.registerIsland({id: "town", offset: TOWN_OFFSET, reach: 210.25, grid: TOWN_GRID, spans: townSpans, content: new Uint8Array(chunkCount(TOWN_GRID)).fill(1), apply: (states) => townStates.push(states.slice())});
+    return {streamer, fog, townStates, TOWN_GRID};
+}
+
+test("streaming islands: from the wild island's home view the wild island is whole and the town is all map style, on every tier", async () => {
+    for (const tier of ["high", "medium", "low"] as StreamTierName[]) {
+        const {streamer, townStates} = await twoIslands(tier);
+        // (Registering told the town at once: map style.)
+        assert.ok(townStates[0].every((s) => s === STATE_MAP));
+        for (const eye of [{x: 12, y: 108.5, z: 207.4}, {x: 16, y: 156.6, z: 302.6}]) {
+            for (let t = 0; t < 2; t += 0.1) streamer.update(eye, 300, 38, 1.6, t, {x: 12, z: 14});
+            const stats = streamer.stats();
+            assert.equal(stats.active, "wild");
+            assert.deepEqual(stats.islands.wild, {in: 25, map: 0, out: 0}, `${tier} wild`);
+            assert.deepEqual(stats.islands.town, {in: 0, map: 81, out: 0}, `${tier} town`);
+            assert.equal(stats.haze, 0);
+        }
+    }
+});
+
+test("streaming islands: from a ground view on the wild island the town is never hazed out (no haze at all)", async () => {
+    const {streamer} = await twoIslands("low");
+    // On the wild island's east shore, low over the water, looking at the town.
+    for (let t = 0; t < 2; t += 0.1) streamer.update({x: 100, y: 8, z: 0}, 30, 38, 0.45, t, {x: 110, z: -10});
+    const stats = streamer.stats();
+    assert.equal(stats.islands.town.out, 0);
+    assert.equal(stats.haze, 0);
+});
+
+test("streaming islands: a pan to the town makes the town the island drawn in full and the wild island map style", async () => {
+    const {streamer, TOWN_GRID} = await twoIslands("medium");
+    for (let t = 0; t < 1; t += 0.1) streamer.update({x: 12, y: 108.5, z: 207.4}, 220, 38, 1.6, t, {x: 12, z: 14});
+    // The camera flown to the middle of the strait (the wild island stays the one drawn in full) and onto the town.
+    for (let t = 1; t < 2; t += 0.1) streamer.update({x: 198.6, y: 80, z: 40}, 150, 38, 1.6, t, {x: 198.6, z: -82.3});
+    assert.equal(streamer.activeIsland, "wild");
+    const over = {x: TOWN_OFFSET.x, z: TOWN_OFFSET.z};
+    for (let t = 2; t < 3; t += 0.1) streamer.update({x: over.x, y: 60, z: over.z + 120}, 130, 38, 1.6, t, over);
+    const stats = streamer.stats();
+    assert.equal(stats.active, "town");
+    assert.equal(stats.islands.wild.in, 0);
+    assert.equal(stats.islands.wild.map, 25);
+    assert.ok(stats.islands.town.in > 20, `town chunks in full near the camera (${stats.islands.town.in})`);
+    // Points: the town's middle is in; the wild island's middle is map style; the strait goes to the nearer island.
+    assert.equal(streamer.stateAt(over.x, over.z), STATE_IN);
+    assert.equal(streamer.stateAt(0, 0), STATE_MAP);
+    assert.equal(streamer.islandAt(over.x, over.z), "town");
+    assert.equal(streamer.islandAt(0, 0), "wild");
+    assert.equal(streamer.islandAt(TOWN_OFFSET.x + TOWN_GRID.originX - 30, TOWN_OFFSET.z), null);
+});
+
+test("streaming islands: the base fog is pushed out so the town reads across the strait; the wild island looks as before", async () => {
+    const {streamer, fog} = await twoIslands("medium");
+    const {near, far} = streamer.fog;
+    assert.ok(near > 420 && far > 1700);
+    assert.equal(fog.near, near);
+    assert.equal(fog.far, far);
+    // three's linear fog: smoothstep(near, far, depth). From the wild island's home view (the phone's eye, the farther).
+    const fogAt = (d: number, n: number, f: number) => {
+        const t = Math.min(Math.max((d - n) / (f - n), 0), 1);
+        return t * t * (3 - 2 * t);
+    };
+    const eye = {x: 16, y: 156.6, z: 302.6};
+    const town = (x: number, z: number) => Math.hypot(TOWN_OFFSET.x + x - eye.x, eye.y, TOWN_OFFSET.z + z - eye.z);
+    // The town's near half (its south-west quarter's corners and middle) under 20 % fog (decision 142); before, more.
+    const nearHalf = [town(-237.6, 237.6), town(0, 237.6), town(-237.6, 0), town(0, 0)];
+    for (const d of nearHalf) assert.ok(fogAt(d, near, far) < 0.2, `town near half at ${Math.round(d)} m: ${fogAt(d, near, far).toFixed(3)}`);
+    // The wild island's own far shore (~415 m): no fog either way.
+    assert.ok(fogAt(415, near, far) < 0.01 && fogAt(415, 420, 1700) < 0.01);
+    // Weather closing in keeps its own distances (a storm's 170 m stays near 170 m).
+    fog.near = 8;
+    fog.far = 170;
+    assert.ok(fog.far < 200, `storm fog far ${fog.far}`);
 });

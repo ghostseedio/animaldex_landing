@@ -39,8 +39,16 @@ export default function ArkRecordView({initial, fixture, modelBase, events}: Pro
                 .then((body: {events?: unknown}) => body.events ?? [])
                 .catch(() => []);
         Promise.all([import("@/ark-scene"), import("@/ark-scene/record-clock"), import("@/ark-scene/director"), log])
-            .then(([{mountArk}, {installRecordClock}, {createArkDirector}, eventLog]) => {
+            .then(async ([{mountArk}, {installRecordClock}, {createArkDirector}, eventLog]) => {
                 if (disposed) return;
+                // Part C, one world (decision 141): with two islands the town is built first and stands across the strait.
+                const {arkIslandSnapshot, arkTwoIslands} = await import("@/lib/ark-islands");
+                const two = arkTwoIslands(initial);
+                const town = two ? await (await import("@/ark-scene/islands/scene")).loadTownScene({tier: "high", animals: arkIslandSnapshot(initial, "town").animals}) : null;
+                if (disposed) {
+                    town?.dispose();
+                    return;
+                }
                 // The best quality tier, never lowered: frames take as long as they take.
                 (globalThis as {__arkQuality?: string}).__arkQuality = "high";
                 const clock = installRecordClock(window);
@@ -49,7 +57,8 @@ export default function ArkRecordView({initial, fixture, modelBase, events}: Pro
                     modelBase,
                     iconUrl: getSpeciesArtworkUrl,
                     recording: true,
-                    hours: 10.5
+                    hours: 10.5,
+                    ...(town ? {island: town, wildAnimals: arkIslandSnapshot(initial, "wild").animals} : {})
                 });
                 dispose = () => handle.dispose();
                 const director = createArkDirector({

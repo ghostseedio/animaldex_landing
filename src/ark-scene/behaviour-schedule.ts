@@ -345,9 +345,16 @@ export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
  * works for about its budget and returns the world once it is built; `spentMs` is the main-thread time it took.
  */
 export class ScheduleWorldBuild {
-    private sampler: SlicedBuild<ArkWorldSampler> | null = worldSamplerBuild();
+    private sampler: SlicedBuild<ArkWorldSampler> | null;
     private nav: SlicedBuild<NavGrid> | null = null;
     private world: ScheduleWorld | null = null;
+    /** Part C: another island's sampler (its own behaviour world in the one world, decision 141); absent: the shared one. */
+    private readonly own: ArkWorldSampler | null;
+
+    constructor(own?: ArkWorldSampler | null) {
+        this.own = own ?? null;
+        this.sampler = this.own ? new SlicedBuild<ArkWorldSampler>([], () => this.own!) : worldSamplerBuild();
+    }
     spentMs = 0;
     slices = 0;
     /** The longest single slice (ms): the graphics lane's `allAttachPoints`, one task, sets it unless it was built already. */
@@ -371,7 +378,7 @@ export class ScheduleWorldBuild {
         }
         if (this.nav && (left() > 0 || this.nav.done)) {
             const nav = this.nav.step(Math.max(left(), 0));
-            if (nav) this.world = {sampler: worldSampler(), nav};
+            if (nav) this.world = {sampler: this.own ?? worldSampler(), nav};
         }
         const took = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
         this.spentMs += took;
@@ -960,6 +967,9 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
     if (!to || placed.follow || !walksGoals(profile)) return true;
+    // (A sitter goes to its eggs, the props lane's nest, whatever the way: it never sits beside it. On the merged scenery
+    // a boulder by the test's nest made the way a detour, and the duck settled at home: L7, 2026-11-12.)
+    if (placed.recipe === "incubate_sit") return true;
     // (Collisions.) A climb up: it walks to the climb's foot first, so that walk is checked as any other: a foot it can
     // reach, by no long way round (2026-11-12: a komodo walked 91 m round to a rock's far side, at 1.6 times its pace).
     // Not a climb home to its roost (going home to sleep may wind, as below: the chains of goals agree on its roost).

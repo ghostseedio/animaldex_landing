@@ -67,6 +67,7 @@ import {
     Group,
     Mesh,
     MeshStandardMaterial,
+    type ShaderMaterial,
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
@@ -162,7 +163,7 @@ import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {forgetSchedules, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
@@ -174,10 +175,11 @@ import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
-import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
+import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
-import {noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
+import {composedSampler, type ArkIslandScene} from "@/ark-scene/islands/scene";
+import {noHamlet, noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
 import {arkTwoIslands} from "@/lib/ark-islands";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
@@ -517,14 +519,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Islands mode (decision 148, `no-hamlet.ts`): with two islands the wild island has no hamlet. Set before anything
     // of the world is built (the page's `prepareArk` set the same from the same read).
     setNoHamlet(noHamletFor(arkTwoIslands(options.snapshot)));
-    // Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`), the animals
-    // through this one pipeline. Absent: the wild island, built here exactly as before.
+    // Part C, one world (decisions 141-142): the town island beside the wild island, across the strait at its world origin
+    // (`islands/scene.ts`), its animals through this one pipeline. Absent: the wild island alone, exactly as before.
     const island = options.island ?? null;
-    const heightAt = island ? island.heightAt : wildHeightAt;
+    const heightAt = island ? (x: number, z: number) => (island.contains(x, z) ? island.heightAt(x, z) : wildHeightAt(x, z)) : wildHeightAt;
+    /** Part C: the wild island's animals of a list (the town's are placed by the town). */
+    const wildOnly = (animals: ArkAnimal[]) => (island ? animals.filter((animal) => !island.has(animal)) : animals);
+    /** Every animal's place: the wild island's by its map, the town's by its plan (in the world frame). */
+    const placeAll = (animals: ArkAnimal[], ghosts = false): Map<string, Placement> => {
+        if (!island) return placeAnimals(animals);
+        const town: ArkAnimal[] = [];
+        const wild: ArkAnimal[] = [];
+        for (const animal of animals) (island.has(animal) ? town : wild).push(animal);
+        // (The wild island's list as the page's prebuild was given it, so its places come from the worker when primed.)
+        const places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
+        island.place(town).forEach((place, id) => places.set(id, place));
+        // (The town's colliders for the motion pass, L5's per island: its enclosures follow the snapshot.)
+        setIslandColliders({contains: island.contains, set: island.colliders()});
+        // (A replay's departed are added to the town's list; a snapshot's replace it.)
+        if (ghosts) for (const animal of town) townIds.add(animal.id);
+        else townIds = new Set(town.map((animal) => animal.id));
+        return places;
+    };
     // L1's foot IK on the drawn ground (L3's request, docs/ark/grounding.md): feet plant on the drawn triangles, not the
-    // analytic surface (they differ by metres at the cliff bands). On another island, its own ground (`island.heightAt`,
-    // the normal from its slope), never the wild island's.
-    setLocoGround(island ? groundQueryOf(island.heightAt) : drawnGround);
+    // analytic surface (they differ by metres at the cliff bands). On the town, its own ground (`island.heightAt`, the
+    // normal from its slope), never the wild island's.
+    // (One world, T3: the town beside the wild island, so each foot asks the ground of the island it stands on.)
+    const townGround = island ? groundQueryOf(island.heightAt) : null;
+    setLocoGround(island && townGround ? (x, z) => (island.contains(x, z) ? townGround(x, z) : drawnGround(x, z)) : drawnGround);
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
@@ -629,7 +651,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             roostOf: (e) => {
                 const own = (e as Entry).sched;
-                return own ? roostOf(scheduleWorldNow(), own.profile, own.animal) : null;
+                return own ? roostOf(worldOf(own.animal), own.profile, own.animal) : null;
             },
             entryOf: (id) => findEntry(id),
             heightAt
@@ -652,29 +674,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(nests.root);
 
     // Part B (docs/ark/streaming.md): the world in chunks along the ground's grid; the ground in tiles, the plants by chunk.
-    const chunkGrid = island ? island.grid : chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
-    // (Part C: on another island none of the wild island's ground, plants, trees, rocks or props are built.)
-    const landscape = island ? null : buildLandscape(chunkGrid);
+    const chunkGrid = chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
+    const landscape = buildLandscape(chunkGrid);
     const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
-    if (!island) void loadGroundTextures(graphicsBase);
+    void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     if (landscape) scene.add(landscape.ground, landscape.water);
-    if (island) scene.add(island.root);
+    if (island) {
+        scene.add(island.root);
+        // One sea for the one world (decision 143): the wild island's, reading the town's sea floor over its square.
+        const uniforms = (landscape.water.material as ShaderMaterial).uniforms;
+        if (uniforms.islandDepth && island.seaDepth) {
+            uniforms.islandDepth.value = island.seaDepth;
+            (uniforms.islandPatch.value as {set: (x: number, y: number, z: number, w: number) => void}).set(island.origin.x, island.origin.z, island.half, 16);
+        }
+    }
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
-    const vegetation = island ? null : buildVegetation(arkGrassBuild(tier), chunkGrid);
+    const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
-    const nearDetail = island ? null : new NearDetail();
+    const nearDetail = new NearDetail();
     if (nearDetail) scene.add(nearDetail.group);
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
-    const assetTrees = island ? null : new AssetTrees(options.assetBase);
+    const assetTrees = new AssetTrees(options.assetBase);
     if (assetTrees) scene.add(assetTrees.group);
     let assetTreesShown = false;
     // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
-    const assetRocks = island ? null : new AssetRocks(options.assetBase);
+    const assetRocks = new AssetRocks(options.assetBase);
     if (assetRocks) scene.add(assetRocks.group);
     let assetRocksShown = false;
     // Graphics batch 6: the asset lane's forest floor (litter, twigs, cones, logs).
-    const assetFloor = island ? null : new AssetFloor(options.assetBase);
+    const assetFloor = new AssetFloor(options.assetBase);
     if (assetFloor) scene.add(assetFloor.group);
     if (vegetation) {
         for (const mesh of vegetation.meshes) scene.add(mesh);
@@ -684,7 +713,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     motes.points.visible = !reducedMotion;
     scene.add(motes.points);
     // The cottage at Home, its porch light and the garden pond (the small animals' microhabitats).
-    const micro = island ? null : buildMicroScene();
+    const micro = buildMicroScene();
     if (micro) {
         scene.add(micro.group);
         micro.setNight(lighting.daylight.night);
@@ -703,8 +732,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
     controls.minDistance = CAMERA_RANGE.near;
-    // (Part C: a bigger island's camera reaches further out.)
-    const maxDistance = island ? Math.max(island.maxDistance, MAX_DISTANCE) : MAX_DISTANCE;
+    // (Part C: with two islands the camera reaches out over both: the town's whole view is ~600 m off.)
+    const maxDistance = island ? 900 : MAX_DISTANCE;
     controls.maxDistance = maxDistance;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
@@ -740,9 +769,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const groundSize = landscape ? landscape.arrays.size : 0;
     const groundHeights = new Float32Array(groundSize * groundSize);
     if (landscape) for (let i = 0; i < groundHeights.length; i++) groundHeights[i] = landscape.arrays.positions[i * 3 + 1];
-    // (Part C: another island brings its own spans and content.)
-    const chunkContent = island ? island.content.slice() : new Uint8Array(chunkCount(chunkGrid));
-    if (!island) spansFromHeights(chunkGrid, groundHeights, groundSize, 0).forEach((span, key) => {
+    const chunkContent = new Uint8Array(chunkCount(chunkGrid));
+    spansFromHeights(chunkGrid, groundHeights, groundSize, 0).forEach((span, key) => {
         if (span.maxY > 0.3) chunkContent[key] = 1;
     });
     if (vegetation) {
@@ -756,7 +784,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let sceneGpuAt = -Infinity;
     const streamer = new ArkStreamer({
         grid: chunkGrid,
-        spans: island ? island.spans : spansFromHeights(chunkGrid, groundHeights, groundSize, CHUNK_HEADROOM),
+        spans: spansFromHeights(chunkGrid, groundHeights, groundSize, CHUNK_HEADROOM),
         content: chunkContent,
         tier,
         haze,
@@ -786,18 +814,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const drawnAny = (chunk: number) => streamer.stateOf(chunk) !== STATE_OUT;
     const atIn = (x: number, z: number) => streamer.stateAt(x, z) === STATE_IN;
     const atAny = (x: number, z: number) => streamer.stateAt(x, z) !== STATE_OUT;
-    streamer.onChange((states) => {
-        const all = streamer.allIn;
+    streamer.onChange((states, allHere) => {
+        // (This island's own: with another island in the world, it is all in whenever its own chunks are.)
+        const all = allHere;
         landscape?.tiles.apply(states, performance.now() / 1000);
         // The ground's plants and the trees as the map too; the grass, the forest floor and the props only in full.
         vegetation?.setDrawn(all ? null : drawnAny, all ? null : drawnIn);
         assetTrees?.setDrawn(all ? null : atAny);
         assetRocks?.setDrawn(all ? null : atAny);
         assetFloor?.setDrawn(all ? null : atIn);
-        // (Part C: the other island's chunks, its own meshes.)
-        island?.setDrawn(all ? null : drawnIn);
         streamCull.apply(all ? null : atIn);
     });
+    // Part C: the town's chunks on Part B's streamer, on its own grid at its world origin (the multi-island streamer,
+    // `ark-streaming-islands`); until that is in, the town is drawn whole.
+    const islandStreamed = Boolean(island && (streamer as unknown as {registerIsland?: unknown}).registerIsland);
+    /** A point's chunk state (Part C: until the multi-island streamer is in, the town's square counts as drawn in full). */
+    const streamStateAt = (x: number, z: number) => (island && !islandStreamed && island.contains(x, z) ? STATE_IN : streamer.stateAt(x, z));
+    if (island) (streamer as unknown as {registerIsland?: (spec: {id: string; offset: {x: number; z: number}; grid: ArkIslandScene["grid"]; spans: ArkIslandScene["spans"]; content: Uint8Array; apply: (states: Uint8Array, allIn: boolean) => void}) => void}).registerIsland?.({id: "town", offset: island.origin, grid: island.grid, spans: island.spans, content: island.content, apply: island.applyStream});
 
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
@@ -855,7 +888,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const species = new Map<string, SpeciesMeshes>();
     // Runtime (src/ark-scene/runtime): when to draw, power, the load order and budgets, the camera's body, the bar and reset.
     const runtime: ArkRuntime = createArkRuntime({
-        ...(island ? {groundAt: island.heightAt} : {}),
+        ...(island ? {groundAt: heightAt} : {}),
         el,
         canvas,
         renderer,
@@ -961,8 +994,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const labels = new Map<ArkRegion, HTMLSpanElement>();
     for (const region of ARK_REGIONS) {
-        // (Part C: the regions' names are the wild island's.)
-        const text = island ? undefined : options.regionLabels?.[region];
+        // (Islands mode, `no-hamlet.ts`: the wild island's former home area is natural land, under its own name.)
+        const text = (noHamlet() ? options.wildIslandRegionLabels?.[region] : undefined) ?? options.regionLabels?.[region];
         if (!text) continue;
         const label = document.createElement("span");
         label.textContent = text;
@@ -1055,8 +1088,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: The behaviour schedule (NPC-style, visual only)
 
     /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
-    // (Part C, first cut: another island's animals stand at their places, its behaviour world comes with the town's sampler.)
-    const scheduleOn = options.behaviour !== false && !island;
+    const scheduleOn = options.behaviour !== false;
     let world: ScheduleWorld | null = null;
     /**
      * The places and the walk grid, from the graphics lane's scenery interface: built a few milliseconds a frame
@@ -1083,6 +1115,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         attachAsked = false;
     };
     const scheduleWorldNow = (): ScheduleWorld => world!;
+    // Part C, one world (decision 141): the town's own behaviour world (its places, walk grid and obstacles in the world
+    // frame, `islands/town/sampler.ts`), built after the wild island's; its animals' schedules read it, the wild island's
+    // theirs. The two are ready together (`world` is set once both are).
+    let townBuild: ScheduleWorldBuild | null = scheduleOn && island ? new ScheduleWorldBuild(island.sampler()) : null;
+    let townWorld: ScheduleWorld | null = null;
+    /** The town's animals now (their schedules read the town's world). */
+    let townIds = new Set<string>();
+    const worldOf = (animal: {id: string}): ScheduleWorld => (townWorld && townIds.has(animal.id) ? townWorld : world!);
     /**
      * Runtime (sliced mount): the map's roost for a place (`scheduleRoost`, pure per place), remembered, so the mount can
      * look them up a slice at a time before the animals are laid out instead of all in that one task.
@@ -1114,7 +1154,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const place = places.get(id);
             if (!animal || !place) return false;
             const sched = entryById.get(id)?.sched ?? makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
-            const value = sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false;
+            const value = sched ? resting(worldOf(sched.animal), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false;
             restingMemo.set(key, value);
             return value;
         };
@@ -1150,7 +1190,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const place = places.get(id);
             if (!animal || !place) return;
             const sched = entryById.get(id)?.sched ?? makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
-            restingMemo.set(key, sched ? resting(scheduleWorldNow(), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false);
+            restingMemo.set(key, sched ? resting(worldOf(sched.animal), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false);
         };
     };
     const stepWorldBuild = (budgetMs: number) => {
@@ -1168,6 +1208,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourBuildSlices = worldBuild.slices;
         behaviourBuildLongestMs = worldBuild.longestMs;
         if (!built) return;
+        // Part C: then the town's, a slice a frame too; both are ready together.
+        if (townBuild) {
+            const town = options.recording ? townBuild.run() : townBuild.step(budgetMs);
+            behaviourBuildMs += townBuild.spentMs;
+            if (!town) return;
+            townWorld = town;
+            townBuild = null;
+        }
         world = built;
         worldBuild = null;
         // Runtime: who is resting at home is known now; the live budget sits them out first. (Only where behaviour has
@@ -1196,11 +1244,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Everyone but a true micro animal and an underground one (`map/place.ts` onSchedule); a perched bird or bat from its perch.
         // (Nor one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
-        const sea = ZONE_SITES[animal.zone]?.kind === "sea";
+        // (Part C: a town animal kept still at a window, behind the glass or in a tank stays at its spot.)
+        const inTown = Boolean(island?.has(animal));
+        if (inTown && !island!.scheduled(animal.id)) return null;
+        const sea = !inTown && ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal)}, () => mapRoostOf(place, animal.zone)),
+            // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), ...(inTown ? {range: island!.rangeOf(animal.id)} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1222,7 +1274,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const scheduled = (entry: Pick<Entry, "sched" | "visitor" | "act" | "moment">): boolean => Boolean(entry.sched) && !reducedMotion && !entry.visitor && !entry.act && !entry.moment;
     const tripFor = (holder: Sched, key: "trip" | "lead", profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkAnimal["activity"], epoch: number): Trip => {
         let trip = holder[key];
-        if (!trip || epoch < trip.start || epoch >= trip.end) holder[key] = trip = tripAt(scheduleWorldNow(), profile, animal, epoch, scheduleHours, activity, trip);
+        if (!trip || epoch < trip.start || epoch >= trip.end) {
+            // Part C: a zoo animal's feeding time takes it to its enclosure's station (its home for those slots), on the
+            // island clock; a feeding's first and last slot start where the slot before ended, for every viewer alike.
+            const who = island ? island.feedingAnimal(animal, epoch) : animal;
+            let previous = trip;
+            if (island) {
+                const before = island.feedingAnimal(animal, epoch - SLOT_SECONDS);
+                const held = previous && epoch - SLOT_SECONDS >= previous.start && epoch - SLOT_SECONDS < previous.end;
+                if (before !== who && !held) previous = tripAt(worldOf(animal), profile, before, epoch - SLOT_SECONDS, scheduleHours, activity, null);
+            }
+            holder[key] = trip = tripAt(worldOf(animal), profile, who, epoch, scheduleHours, activity, previous);
+        }
         return trip;
     };
     /**
@@ -1233,7 +1296,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const own = entry.sched!;
         const fromSchedule = () => {
             const trip = tripFor(own, "trip", own.profile, own.animal, entry.animal.activity, epoch);
-            return {...poseOnTrip(scheduleWorldNow(), trip, epoch), doing: trip.doing};
+            return {...poseOnTrip(worldOf(own.animal), trip, epoch), doing: trip.doing};
         };
         // Encounter hunting (`hunting.ts`): a due, awake predator walks its forays, from the server's own positions.
         if (hunting.active) {
@@ -1262,12 +1325,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && GROUPED.has(own.profile.social) ? e.leader : null;
             groups.set(e, leader ? {leader: leader.sched!.animal, profile: leader.sched!.profile, activity: leader.animal.activity, rank: Math.max(e.place.rank ?? 1, 1), size: sizes.get(leader) ?? 2} : null);
         }
-        const nav = scheduleWorldNow().nav;
+        const navOf = (e: Entry) => worldOf(e.sched!.animal).nav;
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
         // (The map lane's line, 2026-11-11: a flyer's home may be any dry ground; every home keeps 5 m inside its habitat.)
         const job = spaceHomesTasks(
-            onIt.filter((e) => !groups.get(e)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && mapHabitatAt(e.animal, x, z, 5) : nav.walkable(x, z) && mapHabitatAt(e.animal, x, z, 5))})),
+            // (Part C: the town's kept animals keep their homes: house, farm and zoo animals take no part in the wild ecology.)
+            onIt.filter((e) => !groups.get(e) && !(island && townIds.has(e.animal.id) && island.kept(e.animal.id))).map((e) => {
+                const nav = navOf(e);
+                const inTown = townIds.has(e.animal.id);
+                const habitat = (x: number, z: number) => inTown || mapHabitatAt(e.animal, x, z, 5);
+                return {id: e.animal.id, slug: e.animal.model_slug, home: {x: e.sched!.animal.home.x, z: e.sched!.animal.home.z}, length: e.length, walkable: (x: number, z: number) => (e.sched!.profile.move === "swim" || e.sched!.profile.seabed ? nav.swimmable(x, z, 0.5) : e.sched!.profile.move === "fly" ? heightAt(x, z) > 0.05 && habitat(x, z) : nav.walkable(x, z) && habitat(x, z))};
+            }),
             eats,
             (id) => radius.get(id) ?? 3
         );
@@ -1448,7 +1517,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const points: Array<{x: number; z: number}> = [];
         for (let t = from; t <= to; t += step) {
             const trip = tripFor(holder, "trip", own.profile, own.animal, (e as Entry).animal.activity, t);
-            const at = poseOnTrip(scheduleWorldNow(), trip, t);
+            const at = poseOnTrip(worldOf(own.animal), trip, t);
             if (!at.aloft) points.push({x: at.x, z: at.z});
         }
         return points;
@@ -1488,8 +1557,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // It starts as it is now: a sleeping hawk on its roost, an awake one in the air (no drop from the sky on load).
         const sched = makeSched(animal, place, body.display);
         if (sched && !reducedMotion && world) {
-            const trip = (sched.trip = tripAt(scheduleWorldNow(), sched.profile, sched.animal, worldMs() / 1000, scheduleHours, animal.activity));
-            sched.pose = {...poseOnTrip(scheduleWorldNow(), trip, worldMs() / 1000), doing: trip.doing};
+            const trip = (sched.trip = tripAt(worldOf(sched.animal), sched.profile, sched.animal, worldMs() / 1000, scheduleHours, animal.activity));
+            sched.pose = {...poseOnTrip(worldOf(sched.animal), trip, worldMs() / 1000), doing: trip.doing};
             sched.at = worldMs() / 1000;
             sched.ground = heightAt(sched.pose.x, sched.pose.z);
         }
@@ -1711,15 +1780,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
-        if (placedFor !== snapshot && island) {
-            // Part C: the other island places its own (`islands/town/placement.ts`: homes, farms, zoo enclosures, niches).
-            placedAll = island.place(snapshot.animals);
-            placedFor = snapshot;
-            hamletResidents = [];
-        }
         if (placedFor !== snapshot) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
-            const plots = hamletPlotsFor(snapshot.animals);
+            // (Part C: the wild island's residents only; with two islands the kept animals live in the town.)
+            const plots = hamletPlotsFor(wildOnly(snapshot.animals));
             const plotsKey = plots.map((plot) => plot.id).join(",");
             if (plotsKey !== hamletPlotsKey) {
                 hamletPlotsKey = plotsKey;
@@ -1728,7 +1792,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (setBehaviourHomePlots(plots)) restartBehaviourWorld();
                 for (const sceneModule of modules) (sceneModule as Partial<{setHomePlots: (list: HomePlot[]) => void}>).setHomePlots?.(plots);
             }
-            placedAll = placeAnimals(snapshot.animals);
+            placedAll = placeAll(snapshot.animals);
             placedFor = snapshot;
             hamletResidents = snapshot.animals.flatMap((animal) => {
                 const plot = placedAll.get(animal.id)?.hamlet?.plot;
@@ -1749,7 +1813,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         buildHerds(snapshot, representatives.herds, places);
         // Runtime: a big Ark draws at most the tier's live budget one by one, the rest resting out of sight by the
         // shared rotation (live-budget.ts); the counts and herds are untouched.
-        const outside = runtime.outside(snapshot.animals, representatives.live, pins, liteOn(), restingFor(snapshot, places));
+        // (Part C: the wild island's per-zone capacity is its own land's: the town's animals are counted as the town's.)
+        const candidates = island ? snapshot.animals.map((animal) => (island.has(animal) ? {...animal, zone: "town" as ArkAnimal["zone"]} : animal)) : snapshot.animals;
+        const outside = runtime.outside(candidates, representatives.live, pins, liteOn(), restingFor(snapshot, places));
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
@@ -1941,8 +2007,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Part B: a herd wholly past the render distance is not drawn (its badge and count stay: they are data), unless
             // the map view sees its members big on screen (true scale: elephants across the island).
             if (!streamer.allIn) {
-                const beyond = cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius;
-                if (beyond > streamer.renderDistance && !(streamer.map && keepsModelBeyond(body.display, beyond, height, FOV))) continue;
+                // Past the render distance (map style) its figures only while big on screen; past the map distance none.
+                const state = streamer.stateAt(herdSphere.center.x, herdSphere.center.z);
+                const beyond = Math.max(cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius, 0);
+                if (state === STATE_OUT || (state === STATE_MAP && !keepsModelBeyond(body.display, beyond, height, FOV))) continue;
             }
             herd.length = body.display;
             const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / herd.length, 0.25), 1);
@@ -2418,7 +2486,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         const sampler = worldSampler();
-        reactiveQueries ??= reactiveWorldQueries(sampler, budget.sightSamples);
+        // (Part C: the town's places and ground inside its square, the wild island's elsewhere.)
+        reactiveQueries ??= reactiveWorldQueries(island ? composedSampler(sampler, island.sampler(), island.contains) : sampler, budget.sightSamples);
         reactiveQueries.samples = budget.sightSamples;
         const queries = reactiveQueries;
         const out = reactive.step(inputs, {
@@ -2628,7 +2697,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
             }
         }
-        if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) return fromSchedule(entry, modelHeight);
+        if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) {
+            const at = fromSchedule(entry, modelHeight);
+            // Part C: a zoo animal never leaves its enclosure (the mask is its hard bound, whatever its schedule's route).
+            if (island) island.bound(entry.animal.id, at);
+            return at;
+        }
         if (place.micro && !entry.visitor) {
             // A house starling in its flock's murmuration at dusk (`behaviour-recipes.ts`), else at its microhabitat.
             const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
@@ -3340,7 +3414,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
         // scale); otherwise skipped (a marker in the map view).
         const streamedOut = (entry: Entry, at: {x: number; y: number; z: number}) => {
-            const state = streamer.stateAt(at.x, at.z);
+            const state = streamStateAt(at.x, at.z);
             if (state === STATE_IN) return false;
             if (state === STATE_OUT) return true;
             return !keepsModelBeyond(entry.length, cameraPosition.distanceTo(position.set(at.x, at.y, at.z)), height, FOV);
@@ -3350,7 +3424,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Back in range it is drawn as it is then (never lying down on arrival).
             entry.sleepStarted = false;
             streamSkipped++;
-            if (streamer.stateAt(at.x, at.z) === STATE_MAP) streamDots.push({x: at.x, y: Math.max(at.y, 0) + 0.6, z: at.z, pixels: 5, alpha: mineOnly && !entry.animal.mine ? 0.35 : 0.85});
+            if (streamStateAt(at.x, at.z) === STATE_MAP) streamDots.push({x: at.x, y: Math.max(at.y, 0) + 0.6, z: at.z, pixels: 5, alpha: mineOnly && !entry.animal.mine ? 0.35 : 0.85});
         };
         for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
@@ -4057,6 +4131,67 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lastTouch = performance.now() / 1000;
     });
 
+    // MARK: Part C, two islands in one world (decisions 141-142)
+
+    /** The default view with the town beside the wild island: turned toward it and raised a little, the town across the strait. */
+    const twoIslandHome = (aspect: number, distance: number) => {
+        const o = island!.origin;
+        const length = Math.hypot(o.x, o.z) || 1;
+        const ux = o.x / length;
+        const uz = o.z / length;
+        // Upright phones (decision 154): the narrow frame looks straight across the strait, the wild island the subject in
+        // the middle and the town in the upper part beyond it. Wider screens: turned 45% of the way, the town upper right.
+        const tall = aspect < 0.8;
+        const tx = tall ? 16 : 12 + ux * 45;
+        const tz = tall ? 24 : 14 + uz * 45;
+        let fx = ux * 0.45;
+        let fz = -1 + (uz + 1) * 0.45;
+        if (tall) {
+            const dx = o.x - tx;
+            const dz = o.z - tz;
+            const d = Math.hypot(dx, dz) || 1;
+            fx = dx / d;
+            fz = dz / d;
+        }
+        const azimuth = Math.atan2(-fx, -fz);
+        return {target: new Vector3(tx, 0, tz), distance: distance * (tall ? 1.0 : 1.12), polar: 1.15, azimuth};
+    };
+    /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
+    const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
+        const o = island!.origin;
+        const l2 = o.x * o.x + o.z * o.z || 1;
+        const t = Math.min(Math.max((x * o.x + z * o.z) / l2, 0), 1);
+        const cx = o.x * t;
+        const cz = o.z * t;
+        const radius = WORLD_RADIUS + (island!.worldRadius - WORLD_RADIUS) * t;
+        const d = Math.hypot(x - cx, z - cz);
+        if (d <= radius) return null;
+        const pull = 1 - radius / d;
+        return {dx: (cx - x) * pull, dz: (cz - z) * pull};
+    };
+    /** The island the view is over now (the nearer along the strait), told to the page when it changes. */
+    let islandNear: "wild" | "town" = "wild";
+    const stepIslandNear = () => {
+        if (!island) return;
+        const o = island.origin;
+        const t = (controls.target.x * o.x + controls.target.z * o.z) / (o.x * o.x + o.z * o.z || 1);
+        const next = island.contains(controls.target.x, controls.target.z) && t > 0.55 ? "town" : t < 0.45 ? "wild" : islandNear;
+        if (next === islandNear) return;
+        islandNear = next;
+        options.onIslandNear?.(next);
+    };
+    /** An island's whole view: the wild island's default, or the town's from the south (its own radius). */
+    const islandView = (id: "wild" | "town") => {
+        if (id === "wild" || !island) return homeView();
+        const aspect = width / Math.max(height, 1);
+        const vertical = FOV * Math.PI / 180;
+        const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
+        const fit = Math.min(vertical, horizontal);
+        const radius = aspect < 0.8 ? island.home.radiusTall : island.home.radius;
+        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, maxDistance);
+        return {target: new Vector3(island.home.x, 0, island.home.z), distance: distance * 0.94, polar: 1.0, azimuth: 0};
+    };
+
     /** The whole world in view, from the south and above. */
     const homeView = () => {
         const aspect = width / Math.max(height, 1);
@@ -4065,9 +4200,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const fit = Math.min(vertical, horizontal);
         // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
         // view centres a little south-east of the lake and fits a wider circle.
-        const radius = island ? (aspect < 0.8 ? island.home.radiusTall : island.home.radius) : aspect < 0.8 ? 114 : 96;
-        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, maxDistance);
-        if (island) return {target: new Vector3(island.home.x, 0, island.home.z), distance: distance * 0.94, polar: 1.0, azimuth: 0};
+        const radius = aspect < 0.8 ? 114 : 96;
+        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
+        // Part C, one world: the wild island as before, turned and raised a little so the town stands across the strait
+        // beyond its far shore (decision 142).
+        if (island) return twoIslandHome(aspect, distance);
         // Low enough to see the horizon over the island's far shore.
         return {target: new Vector3(aspect < 0.8 ? 16 : 12, 0, aspect < 0.8 ? 24 : 14), distance: distance * 0.94, polar: 1.06, azimuth: 0};
     };
@@ -4076,9 +4213,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const keepInWorld = () => {
         const target = controls.target;
         const reach = Math.hypot(target.x, target.z);
-        const worldRadius = island ? island.worldRadius : WORLD_RADIUS;
-        if (reach > worldRadius) {
-            const pull = worldRadius / reach;
+        // (Part C: with two islands the view may be anywhere over either and the strait between: a capsule.)
+        const capsule = island ? keepInCapsule(target.x, target.z) : null;
+        if (capsule) {
+            target.x += capsule.dx;
+            target.z += capsule.dz;
+            camera.position.x += capsule.dx;
+            camera.position.z += capsule.dz;
+        } else if (!island && reach > WORLD_RADIUS) {
+            const pull = WORLD_RADIUS / reach;
             const dx = target.x * pull - target.x;
             const dz = target.z * pull - target.z;
             target.x += dx;
@@ -4665,8 +4808,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Runtime (sliced mount): the scenery modules (the props' homes, areas, nests and effects, ~0.3 s on a phone) are
     // built after mountArk returns, in their own task before the animals are laid out; a recording builds them now.
     const buildModules = () => {
-        // (Part C: the props lane's homes, nests and area details are the wild island's.)
-        if (island) return;
         modules = ARK_SCENE_MODULES.map((create) => create({
             scene,
             renderer,
@@ -4699,11 +4840,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
-    // (Part C: the wild island's per-zone capacity is its own land's; another island's areas hold their animals.)
-    if (island) liveBudget.setArkZoneCapacity(null);
-    else wireZoneCapacity(liveBudget);
-    setNestSource(options.props === false || island ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
-    setFishSource(island ? null : (pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
+    wireZoneCapacity(liveBudget);
+    setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
+    setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).
     setFishChasers(() => recipeScene.chasers);
     applyTier(tier);
@@ -4722,13 +4861,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let roostQueue: ArkAnimal[] | null = null;
         runtime.mountLater([
             () => {
-                if (island) attachDone = true;
-                else void prepareAttachPoints().then(() => (attachDone = true));
+                void prepareAttachPoints().then(() => (attachDone = true));
                 return true;
             },
             () => attachDone,
             () => {
-                placedAll = island ? island.place(first.animals) : placeAnimals(first.animals);
+                placedAll = placeAll(first.animals);
                 placedFor = first;
                 roostQueue = [...first.animals];
                 return true;
@@ -4750,7 +4888,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         ]);
     }
-    const home = homeView();
+    // (Part C: the page may open on the town, decision 26.)
+    const home = island && options.openIsland === "town" ? islandView("town") : homeView();
     // A recording (`?record=1`) starts on its first shot's view: no opening flight.
     let opening = !reducedMotion && !options.recording;
     const newest = [...options.snapshot.animals].sort((a, b) => b.arrived_at.localeCompare(a.arrived_at))[0];
@@ -5380,7 +5519,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Who is gone now (eaten, or died): standing in where they were until their act (`ghostAnimalsOf`).
         const ghostAnimals = ghostAnimalsOf(acts);
-        const places = ghostAnimals.length ? (island ? island.place(ghostAnimals) : placeAnimals(ghostAnimals)) : new Map<string, Placement>();
+        const places = ghostAnimals.length ? placeAll(ghostAnimals, true) : new Map<string, Placement>();
         ghosts = ghostAnimals.map((animal) => Object.assign(newEntry(animal, places.get(animal.id)!, null), {ghost: true}));
         const after = new Map<Entry, number>();
         for (const ghost of ghosts) {
@@ -5471,9 +5610,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyEnvironment();
         if (landscape) landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
-        island?.update(worldMs());
+        // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
+        island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         stepFlight(now);
         stepInset();
+        stepIslandNear();
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
         runtime.controls(frameDt);
@@ -5482,7 +5623,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         fitCloseUp();
         if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
-        streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now);
+        streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now, controls.target);
         landscape?.tiles.release(now);
         streamCull.step(now);
         stepLayers(elapsed);
@@ -5817,6 +5958,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.air = 0;
             entry.arrivedAt = elapsedNow();
         },
+        flyToIsland: (id: "wild" | "town") => {
+            controls.autoRotate = false;
+            lastTouch = performance.now() / 1000;
+            endFollow();
+            const view = islandView(id);
+            // Across the strait: a longer, higher flight than a region's.
+            fly(view.target, view.distance, reducedMotion ? 0 : 3.2, view.polar, view.azimuth);
+        },
+        islandNear: () => islandNear,
+        islandView: (id: "wild" | "town") => {
+            const view = islandView(id);
+            return {target: {x: view.target.x, y: view.target.y, z: view.target.z}, distance: view.distance, polar: view.polar, azimuth: view.azimuth};
+        },
         focusRegion: (region) => {
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
@@ -5825,8 +5979,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 fly(view.target, view.distance, 1.6, view.polar);
                 return;
             }
-            // (Part C: the wild island's regions; another island has its own places, not these.)
-            if (island) return;
             const centre = regionCentre(region);
             fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, 48), 150), 1.6);
         },
@@ -5862,7 +6014,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveliness: liveliness.stats(),
             streaming: (() => {
                 const stream = streamer.stats();
-                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
+                return {renderDistance: stream.renderDistance, mapDistance: stream.mapDistance, active: stream.active, islands: stream.islands, fog: stream.fog, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
             })()
         }),
         dispose: () => {
@@ -5917,6 +6069,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (island) {
                 scene.remove(island.root);
                 island.dispose();
+                setIslandColliders(null);
             }
             for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();

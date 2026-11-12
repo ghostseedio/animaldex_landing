@@ -81,6 +81,10 @@ export type AttachPoint = {
 export interface ArkWorldSampler {
     /** Changes whenever the terrain or scenery does: anything built from the sampler is rebuilt. */
     readonly version: string;
+    /** Part C: half the island's square (m) the walk grid covers; absent: the wild island's terrain (`TERRAIN_HALF`). */
+    readonly half?: number;
+    /** Part C: the middle of that square in the world frame (another island across the strait); absent: (0, 0). */
+    readonly centre?: {x: number; z: number};
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
@@ -513,19 +517,34 @@ export function setBehaviourHomePlots(plots: HomePlot[] | null): boolean {
 }
 
 let shared: ArkWorldSampler | null = null;
+/**
+ * Part C: another island's sampler (`islands/town/sampler.ts`), installed while that island is the one loaded (one at a
+ * time): the schedule, the walk grid and everything that asks `worldSampler()` read it. Null: the wild island's.
+ */
+let installed: ArkWorldSampler | null = null;
+export function installWorldSampler(sampler: ArkWorldSampler | null): void {
+    if (installed === sampler) return;
+    installed = sampler;
+    resetWorldSampler();
+}
 /** The shared sampler being built a slice at a time (`worldSamplerBuild`); asked for before it is done, it is finished at once. */
 let building: SlicedBuild<ArkWorldSampler> | null = null;
 /** The sampler in use, built once from the scenery (and again whenever `resetWorldSampler` is called after a terrain change). */
 export function worldSampler(): ArkWorldSampler {
+    if (installed) return installed;
     if (!shared) shared = building ? building.run() : sceneSampler();
     return shared;
 }
 /** Built already (`worldSampler` would return at once). */
 export function worldSamplerReady(): boolean {
-    return shared !== null;
+    return installed !== null || shared !== null;
 }
 /** The shared sampler built a slice at a time (`SlicedBuild.step`); it becomes `worldSampler`'s once done. */
 export function worldSamplerBuild(): SlicedBuild<ArkWorldSampler> {
+    if (installed) {
+        const island = installed;
+        return new SlicedBuild<ArkWorldSampler>([], () => island);
+    }
     if (shared) {
         const built = shared;
         return new SlicedBuild<ArkWorldSampler>([], () => built);
