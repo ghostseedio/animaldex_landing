@@ -960,6 +960,9 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
     if (!to || placed.follow || !walksGoals(profile)) return true;
+    // (A sitter goes to its eggs, the props lane's nest, whatever the way: it never sits beside it. On the merged scenery
+    // a boulder by the test's nest made the way a detour, and the duck settled at home: L7, 2026-11-12.)
+    if (placed.recipe === "incubate_sit") return true;
     // (Collisions.) A climb up: it walks to the climb's foot first, so that walk is checked as any other: a foot it can
     // reach, by no long way round (2026-11-12: a komodo walked 91 m round to a rock's far side, at 1.6 times its pace).
     // Not a climb home to its roost (going home to sleep may wind, as below: the chains of goals agree on its roost).
