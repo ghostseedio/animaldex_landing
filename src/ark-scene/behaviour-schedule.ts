@@ -1103,6 +1103,10 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     if (raised(world, from) || raised(world, to)) return true;
     const fromWet = wet(world, from);
     const toWet = wet(world, to);
+    // (Lane MA3: a bird that walks or swims first keeps off the roads the cars drive, the town's: no walk or swim of its
+    // ends on one, a duck under the Harbour Road bridge; it does what it came to do where it is. The walk-first rule had
+    // the town's pigeons walk their forage out across the high street among the moving cars: the town-cars check.)
+    if (flies(profile) && !home && world.sampler.roadway?.(to.x, to.z)) return false;
     if (fromWet && toWet) return true;
     if (fromWet !== toWet) {
         // Out of the water or into it (a seal, a polar bear): the walk is the part on land, from or to the edge it
@@ -1114,6 +1118,8 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
         if (toWet) goal = edge;
         else from = edge;
     }
+    // (Lane MA3: nor does it walk across one on the way, a pigeon foraging, a duck out to its bank: the land part.)
+    if (flies(profile) && !home && walksOntoRoad(world, from, goal)) return false;
     // A prey animal going off from a predator it watches (the shared wariness) goes, unless its way there would turn it
     // a full circle (the default view's zebra, 47 turns a minute on 3 m): then it watches from where it is.
     const retreat = placed.face !== undefined;
@@ -1143,6 +1149,25 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     };
     if (retreat) return turnsOn(0.05) < Math.PI * 2;
     return pathLength(path) <= straight * 1.3 + 2 && turnsOn(0.3) <= 2.2;
+}
+
+/**
+ * Whether a walk from `from` to `to` goes onto a road's carriageway (`ArkWorldSampler.roadway`, the town's): its goal on
+ * one, or its way stepping onto one once it is off the one it starts on (one that landed on a road walks off it). Its
+ * straight way, every half metre. False where the world has no roads.
+ */
+function walksOntoRoad(world: ScheduleWorld, from: {x: number; z: number}, to: {x: number; z: number}): boolean {
+    const roadway = world.sampler.roadway;
+    if (!roadway) return false;
+    if (roadway(to.x, to.z)) return true;
+    const steps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.5);
+    let off = !roadway(from.x, from.z);
+    for (let k = 1; k < steps; k++) {
+        const on = roadway(from.x + ((to.x - from.x) * k) / steps, from.z + ((to.z - from.z) * k) / steps);
+        if (on && off) return true;
+        if (!on) off = true;
+    }
+    return false;
 }
 
 /** Whether it walks to its goals (a flyer flies there; a swimmer that never leaves the water swims). */
