@@ -82,9 +82,10 @@ the privacy text).
 | 45 | Positions atlas v3 (encounter lane; inert) | `ark-positions-atlas-v3` a2e30ce4 | b2e5655a | positions 3/3; served atlas sha256 72442b16…; collisions green |
 | 46 | T3: the other island map style, never out; the one sea only under drawn town chunks | `ark-islands-town-map` 63acc25a | dd9410fa | streaming + islands + town 49/49; default view ×2 pace 1.00 / 0.97, backwards 1.9% / 0.9%; islands-off renders unchanged (Mac before/after 0.006% / 0.002%) |
 
-- Held (decision 234): on the phone at the low tier v2's town is drawn but lost in the base fog at its 950 m portrait
-  view; T3 pushes the low tier's two-island fog out, reins in the haze and brings v2's portrait view closer (target: the
-  town's near half under 20% fog on the phone at low and medium at 0, 60 and 120 s).
+| 47 | T3, decision 234: v2's portrait view from 900 m at polar 1.0 toward the town; fog pushed from 520 m of reach on v2 (v1 700) | `ark-islands-v2-phone-view` 6dfd7cb3 | 840af3d3 (**the v2 deploy's code**) | streaming + islands + town + wild 78/78; tsc 0; default view ×2 pace 0.98 / 0.97, backwards 2.1% / 1.6% (a puffin 1.9 s and 1.1 s), turns 1.8 / 0.6, no page errors (T3's one-off "reading 'at'" not seen); islands-off renders unchanged (Mac 0.007% / 0.0%), so no new visual run |
+
+- Decision 234 (T3): on the phone the town's middle went from 41% to 15% fog (near half 33% → 10%) at low and medium;
+  the wild island's middle 0%.
 
 - For W1's merge later: its drift lines conflict with 41; resolve with W1b's `wildFrame().driftSway` and set v1's
   `driftSway` in `islands/views.ts` to 0.12 (null there today), or v1 in islands mode orbits again (T3).
