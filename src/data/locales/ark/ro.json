@@ -15,6 +15,25 @@
         "foundersOne": "1 fondator",
         "foundersOther": "fondatori: {count}",
         "myAnimals": "Animalele mele",
+        "islands": {
+            "label": "Insule",
+            "wild": "Insula sălbatică",
+            "town": "Oraș și grădină zoologică",
+            "both": "Ambele insule",
+            "atHome": "acasă",
+            "onFarm": "la fermă",
+            "inTown": "grădini și străzi",
+            "zoo": "Grădina zoologică",
+            "places": {
+                "homes": "Case",
+                "farms": "Ferme",
+                "gardens": "Fauna orașului · grădini și parcuri",
+                "water": "Fauna orașului · canal și iazuri",
+                "roofs": "Fauna orașului · acoperișuri și turnuri",
+                "walls": "Fauna orașului · ziduri și streșini",
+                "streets": "Fauna orașului · străzi și port"
+            }
+        },
         "hint": "Trage ca să privești în jur. Apropie degetele sau derulează pentru zoom. Atinge un animal ca să-l cunoști.",
         "loading": "Se afișează Ark",
         "noWebgl": "Acest browser nu poate desena Ark în 3D. Iată cine e la bord.",

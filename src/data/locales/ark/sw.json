@@ -15,6 +15,25 @@
         "foundersOne": "Mwanzilishi 1",
         "foundersOther": "Waanzilishi {count}",
         "myAnimals": "Wanyama wangu",
+        "islands": {
+            "label": "Visiwa",
+            "wild": "Kisiwa cha porini",
+            "town": "Mji na bustani ya wanyama",
+            "both": "Visiwa vyote viwili",
+            "atHome": "nyumbani",
+            "onFarm": "shambani",
+            "inTown": "bustani na mitaa",
+            "zoo": "Bustani ya wanyama",
+            "places": {
+                "homes": "Nyumba",
+                "farms": "Mashamba",
+                "gardens": "Wanyamapori wa mjini · bustani na viwanja",
+                "water": "Wanyamapori wa mjini · mfereji na mabwawa",
+                "roofs": "Wanyamapori wa mjini · paa na minara",
+                "walls": "Wanyamapori wa mjini · kuta na kingo za paa",
+                "streets": "Wanyamapori wa mjini · mitaa na bandari"
+            }
+        },
         "hint": "Buruta ili kutazama pande zote. Bana au sogeza ili kukuza. Gusa mnyama ili kukutana naye.",
         "loading": "Inaonyesha Ark",
         "noWebgl": "Kivinjari hiki hakiwezi kuchora Ark kwa 3D. Hawa ndio walio ndani.",

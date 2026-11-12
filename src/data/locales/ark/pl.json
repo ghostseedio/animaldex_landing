@@ -15,6 +15,25 @@
         "foundersOne": "1 założyciel",
         "foundersOther": "założyciele ({count})",
         "myAnimals": "Moje zwierzęta",
+        "islands": {
+            "label": "Wyspy",
+            "wild": "Dzika wyspa",
+            "town": "Miasto i zoo",
+            "both": "Obie wyspy",
+            "atHome": "w domu",
+            "onFarm": "w gospodarstwie",
+            "inTown": "ogrody i ulice",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Domy",
+                "farms": "Gospodarstwa",
+                "gardens": "Dzikie zwierzęta w mieście · ogrody i parki",
+                "water": "Dzikie zwierzęta w mieście · kanał i stawy",
+                "roofs": "Dzikie zwierzęta w mieście · dachy i wieże",
+                "walls": "Dzikie zwierzęta w mieście · mury i okapy",
+                "streets": "Dzikie zwierzęta w mieście · ulice i port"
+            }
+        },
         "hint": "Przeciągnij, aby się rozejrzeć. Zsuń palce lub przewiń, aby powiększyć. Stuknij zwierzę, aby je poznać.",
         "loading": "Wczytywanie Ark",
         "noWebgl": "Ta przeglądarka nie potrafi pokazać Ark w 3D. Oto kto jest na pokładzie.",

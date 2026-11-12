@@ -15,6 +15,25 @@
         "foundersOne": "1 位創始人",
         "foundersOther": "{count} 位創始人",
         "myAnimals": "我的動物",
+        "islands": {
+            "label": "島嶼",
+            "wild": "野生島",
+            "town": "小鎮與動物園",
+            "both": "兩座島",
+            "atHome": "家中",
+            "onFarm": "農場裡",
+            "inTown": "花園與街道",
+            "zoo": "動物園",
+            "places": {
+                "homes": "家庭",
+                "farms": "農場",
+                "gardens": "小鎮野生動物 · 花園與公園",
+                "water": "小鎮野生動物 · 運河與池塘",
+                "roofs": "小鎮野生動物 · 屋頂與塔樓",
+                "walls": "小鎮野生動物 · 牆壁與屋簷",
+                "streets": "小鎮野生動物 · 街道與港口"
+            }
+        },
         "hint": "拖曳可環顧四周，雙指縮放或捲動可放大縮小，點一下動物就能認識牠。",
         "loading": "正在呈現 Ark",
         "noWebgl": "這個瀏覽器無法以 3D 顯示 Ark。以下是船上的動物。",

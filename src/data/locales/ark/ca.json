@@ -15,6 +15,25 @@
         "foundersOne": "1 fundador",
         "foundersOther": "{count} fundadors",
         "myAnimals": "Els meus animals",
+        "islands": {
+            "label": "Illes",
+            "wild": "Illa salvatge",
+            "town": "Poble i zoo",
+            "both": "Les dues illes",
+            "atHome": "a casa",
+            "onFarm": "a la granja",
+            "inTown": "jardins i carrers",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Cases",
+                "farms": "Granges",
+                "gardens": "Fauna del poble · jardins i parcs",
+                "water": "Fauna del poble · canal i basses",
+                "roofs": "Fauna del poble · teulades i torres",
+                "walls": "Fauna del poble · murs i ràfecs",
+                "streets": "Fauna del poble · carrers i port"
+            }
+        },
         "hint": "Arrossega per mirar al voltant. Pessiga o desplaça per fer zoom. Toca un animal per conèixer-lo.",
         "loading": "S'està mostrant l'Ark",
         "noWebgl": "Aquest navegador no pot dibuixar l'Ark en 3D. Aquí tens qui hi ha a bord.",

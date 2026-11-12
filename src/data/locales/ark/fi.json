@@ -15,6 +15,25 @@
         "foundersOne": "1 perustaja",
         "foundersOther": "{count} perustajaa",
         "myAnimals": "Eläimeni",
+        "islands": {
+            "label": "Saaret",
+            "wild": "Villi saari",
+            "town": "Kaupunki ja eläintarha",
+            "both": "Molemmat saaret",
+            "atHome": "kotona",
+            "onFarm": "maatilalla",
+            "inTown": "puutarhat ja kadut",
+            "zoo": "Eläintarha",
+            "places": {
+                "homes": "Kodit",
+                "farms": "Maatilat",
+                "gardens": "Kaupungin villieläimet · puutarhat ja puistot",
+                "water": "Kaupungin villieläimet · kanava ja lammet",
+                "roofs": "Kaupungin villieläimet · katot ja tornit",
+                "walls": "Kaupungin villieläimet · muurit ja räystäät",
+                "streets": "Kaupungin villieläimet · kadut ja satama"
+            }
+        },
         "hint": "Katsele ympärillesi vetämällä. Zoomaa nipistämällä tai vierittämällä. Tapaa eläin napauttamalla sitä.",
         "loading": "Tuodaan Arkia näkyviin",
         "noWebgl": "Tämä selain ei pysty piirtämään Arkia 3D:nä. Tässä ovat kyydissä olevat.",
