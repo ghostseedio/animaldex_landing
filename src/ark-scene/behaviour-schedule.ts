@@ -1390,7 +1390,11 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
             // Water and lights may be a little beyond its usual ground: never more than half again its range (`rangeReach`).
-            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), cap), random());
+            // (Lane MA3: a duck, a goose or a swan out on its water looks for its bank to rest on up to 20 m off, a slot's
+            // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
+            // reach is its walk clip's, and it never came ashore.)
+            const bank = place === "shore" && aquatic(profile) && amphibious(profile) ? 20 : 0;
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random());
             if (point) {
                 const up = point.y > topAt(world, point.x, point.z) + 0.5;
                 // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
