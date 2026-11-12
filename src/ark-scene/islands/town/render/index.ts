@@ -602,6 +602,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         instances.cars = traffic.parked;
         instances.moving_cars = traffic.moving;
         instances.bikes = traffic.bikes;
+        for (const [level, n] of Object.entries(traffic.byLevel)) instances[`cars_${level}`] = n;
         drawCalls += traffic.drawCalls;
         drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
         return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};

@@ -53,7 +53,7 @@ writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta ch
 
 const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
-    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/town-v1/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "town.html");
     if (!file.startsWith(folder) || !existsSync(file)) return void response.writeHead(404).end();

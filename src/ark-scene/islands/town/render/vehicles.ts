@@ -29,6 +29,7 @@ import {CANAL, CANAL_WIDTH, TOWN_LEVEL, townPlan, type Street, type TownPlan} fr
 import {carAt, chance, weekday, type CarSpot, type TownClock} from "@/ark-scene/islands/town/people";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import {townWeather} from "@/ark-scene/islands/town/render/materials";
 
 // MARK: - The models
 
@@ -92,6 +93,8 @@ export function vehicleGeometry(level: VehicleLevel): BufferGeometry {
     g.setAttribute("aPaint", new BufferAttribute(paint, 1));
     g.setAttribute("aLamp", new BufferAttribute(lamp, 1));
     g.setIndex(new BufferAttribute(level.indices, 1));
+    // (Flat shaded on screen; the normals are for the town's weather: how much a face turned up to the sky shines wet.)
+    g.computeVertexNormals();
     g.computeBoundingSphere();
     return g;
 }
@@ -142,7 +145,6 @@ export function proxyGeometry(model: Pick<VehicleModel, "size" | "glass">): Buff
         lampAttr[i] = k === 2 ? 1 : k === 3 ? 2 : 0;
     }
     g.deleteAttribute("aTag");
-    g.deleteAttribute("normal");
     g.setAttribute("aPaint", new BufferAttribute(paintAttr, 1));
     g.setAttribute("aLamp", new BufferAttribute(lampAttr, 1));
     return g;
@@ -164,6 +166,7 @@ export const CAR_BOXES: Record<CarKind, Pick<VehicleModel, "size" | "glass">> = 
  */
 export function vehicleMaterial(lit: boolean): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, flatShading: true, roughness: 0.42, metalness: 0.18});
+    material.customProgramCacheKey = () => `town-vehicle:${lit ? 1 : 0}`;
     material.onBeforeCompile = (shader) => {
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>\nattribute float aPaint;\nattribute float aLamp;\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nattribute vec2 aLights;\nvarying vec2 vCarLights;" : ""}`)
@@ -173,13 +176,14 @@ export function vehicleMaterial(lit: boolean): MeshStandardMaterial {
             );
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nvarying vec2 vCarLights;" : ""}`)
-            .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor = mix(0.62, 0.34, vCarPaint);")
+            .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor *= mix(1.48, 0.81, vCarPaint);")
             .replace(
                 "#include <emissivemap_fragment>",
                 `#include <emissivemap_fragment>${lit ? "\nfloat carHead = step(0.5, vCarLamp) * step(vCarLamp, 1.5);\nfloat carTail = step(1.5, vCarLamp);\ntotalEmissiveRadiance += vec3(1.0, 0.93, 0.78) * carHead * vCarLights.x * 2.6 + vec3(1.0, 0.12, 0.08) * carTail * (vCarLights.x * 0.9 + vCarLights.y * 2.2);" : ""}`
             );
     };
-    return material;
+    // The town's weather (lane GA's kit): paint, glass and plastic never soak; wet, they shine; lit by the street lamps.
+    return townWeather(material, {soak: 0, wetRoughness: 0.18});
 }
 
 let library: Promise<Map<string, VehicleModel> | null> | null = null;
@@ -366,13 +370,18 @@ function within(list: Array<[number, number]>, along: number, margin = 0): boole
     return list.some(([a, b]) => along >= a - margin && along <= b + margin);
 }
 
-/** Does a street have parking on a side at a point: -1 (left of its line) always on roads; +1 only where no car drives. */
+/**
+ * Which kerbs have parking at a point: on a two-way stretch only the left kerb (-1, left of the street's line) and only
+ * where the carriageway is 7 m; on a one-way stretch the kerb on the traffic's right (so it keeps left, as in Britain);
+ * where no car drives, both.
+ */
 export function parkingSides(street: Street, use: StreetUse | undefined, along: number): Array<-1 | 1> {
-    const twoWay = use && within(use.plus, along, 8) && within(use.minus, along, 8);
-    const oneWay = use && (within(use.plus, along, 8) || within(use.minus, along, 8));
-    if (twoWay) return street.width >= 7 ? [-1] : [];
-    if (oneWay) return [-1];
-    return street.kind === "high" ? [-1, 1] : [-1, 1];
+    const plus = Boolean(use && within(use.plus, along, 8));
+    const minus = Boolean(use && within(use.minus, along, 8));
+    if (plus && minus) return street.width >= 7 ? [-1] : [];
+    if (plus) return [1];
+    if (minus) return [-1];
+    return [-1, 1];
 }
 
 /** The lane's offset (m, + to the right of the street's line) for a car going `dir` along it at `along`. */
@@ -381,9 +390,9 @@ export function laneOffset(street: Street, use: StreetUse | undefined, along: nu
     const sides = parkingSides(street, use, along);
     const lo = -half + (sides.includes(-1) ? PARK_STRIP : 0);
     const hi = half - (sides.includes(1) ? PARK_STRIP : 0);
-    const twoWay = use && within(use.plus, along, 8) && within(use.minus, along, 8);
+    const twoWay = Boolean(use && within(use.plus, along, 8) && within(use.minus, along, 8));
+    // One way: the middle of what the parked cars leave (on the traffic's left); two way: driving on the left.
     if (!twoWay) return (lo + hi) / 2;
-    // Driving on the left: going along the line, the left (negative) half; against it, the right half.
     return dir > 0 ? lo + (hi - lo) / 4 : lo + ((hi - lo) * 3) / 4;
 }
 
@@ -847,9 +856,9 @@ export function bikeOut(spot: BikeSpot, clock: TownClock): boolean {
 
 /** Per tier: how near (m) a car is drawn at its full model and at its second level; beyond, the proxy up to `far`. */
 export const VEHICLE_TIERS = {
-    high: {full: 34, mid: 110, far: 900, bikes: 45, kinds: CAR_KINDS as readonly CarKind[]},
-    medium: {full: 24, mid: 80, far: 700, bikes: 32, kinds: CAR_KINDS as readonly CarKind[]},
-    low: {full: 14, mid: 50, far: 480, bikes: 18, kinds: LOW_TIER_KINDS}
+    high: {full: 30, mid: 80, far: 900, bikes: 45, kinds: CAR_KINDS as readonly CarKind[]},
+    medium: {full: 22, mid: 60, far: 700, bikes: 32, kinds: CAR_KINDS as readonly CarKind[]},
+    low: {full: 12, mid: 36, far: 480, bikes: 18, kinds: LOW_TIER_KINDS}
 } as const;
 export type VehicleTier = keyof typeof VEHICLE_TIERS;
 
@@ -995,7 +1004,7 @@ export class TownVehicles {
     }
 
     private build() {
-        for (const set of [...this.parked.values(), ...this.moving.values(), ...this.bikeSets]) {
+        for (const set of [...Array.from(this.parked.values()), ...Array.from(this.moving.values()), ...this.bikeSets]) {
             this.group.remove(set.mesh);
             set.dispose();
         }
@@ -1021,7 +1030,7 @@ export class TownVehicles {
             }
             for (const [level, geometry, capacity] of levels) {
                 const parked = new CarSet(geometry, this.parkedMaterial, capacity, false, `cars:${kind}:${level}`);
-                parked.mesh.castShadow = level !== "proxy";
+                parked.mesh.castShadow = level === "full";
                 parked.mesh.receiveShadow = true;
                 this.parked.set(`${kind}:${level}`, parked);
                 this.group.add(parked.mesh);
@@ -1100,7 +1109,7 @@ export class TownVehicles {
     }
 
     private writeParked(eye: Vector3) {
-        for (const set of this.parked.values()) set.begin();
+        this.parked.forEach((set) => set.begin());
         for (const p of this.now.parked) {
             if (this.drawn && !this.drawn(this.spotChunk[p.spot])) continue;
             const spot = this.spots[p.spot];
@@ -1109,7 +1118,7 @@ export class TownVehicles {
             if (!level) continue;
             this.parked.get(`${p.kind}:${level}`)?.push(place(spot.x, y, spot.z, spot.turn), p.paint);
         }
-        for (const set of this.parked.values()) set.end();
+        this.parked.forEach((set) => set.end());
         for (const set of this.bikeSets) set.begin();
         if (this.bikeSets.length) {
             const near = VEHICLE_TIERS[this.tier].bikes;
@@ -1127,7 +1136,7 @@ export class TownVehicles {
     }
 
     private writeMoving(clock: TownClock, epochSeconds: number, eye: Vector3) {
-        for (const set of this.moving.values()) set.begin();
+        this.moving.forEach((set) => set.begin());
         const cars = this.sim.at_(epochSeconds);
         this.movingNow = cars;
         if (cars) {
@@ -1144,7 +1153,7 @@ export class TownVehicles {
                 this.moving.get(`${kind}:${level}`)?.push(place(car.x, y, car.z, Math.atan2(car.dx, car.dz)), this.colour, carLights(clock.hours, car.braking));
             }
         }
-        for (const set of this.moving.values()) set.end();
+        this.moving.forEach((set) => set.end());
     }
 
     /** The moving cars as last worked out (null while waiting for the animals' poses). */
@@ -1176,7 +1185,7 @@ export class TownVehicles {
     }
 
     dispose() {
-        for (const set of [...this.parked.values(), ...this.moving.values(), ...this.bikeSets]) set.dispose();
+        for (const set of [...Array.from(this.parked.values()), ...Array.from(this.moving.values()), ...this.bikeSets]) set.dispose();
         for (const g of this.geometries) g.dispose();
         this.parkedMaterial.dispose();
         this.movingMaterial.dispose();

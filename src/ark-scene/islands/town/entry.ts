@@ -17,6 +17,7 @@ import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import {local} from "@/ark-scene/islands/town/geom";
 import type {TownClock} from "@/ark-scene/islands/town/people";
+import {loadVehicles} from "@/ark-scene/islands/town/render/vehicles";
 
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
 const STREAM = {high: {distance: 960, hysteresis: 40}, medium: {distance: 640, hysteresis: 32}, low: {distance: 440, hysteresis: 26}} as const;
@@ -180,7 +181,8 @@ export function mountTown(el: HTMLElement) {
 
     const list = shots();
     window.__arkTown = {
-        ready: true,
+        // (Ready once the cars' models are in: the town's own read of them, the same promise.)
+        ready: false,
         shots: list,
         mountMs: performance.now() - started,
         view: (eye, at, hours, day, fov) => {
@@ -223,6 +225,11 @@ export function mountTown(el: HTMLElement) {
         flyPose
     };
     frame();
+    void loadVehicles().then(() => {
+        // (The town's own `then` on the same promise ran first: its cars are the models now.)
+        frame();
+        if (window.__arkTown) window.__arkTown.ready = true;
+    });
 }
 
 function heapMB(): number | null {
