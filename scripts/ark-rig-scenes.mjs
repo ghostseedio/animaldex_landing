@@ -243,7 +243,9 @@ if (flag("island")) {
     log("island prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, near: prepared.stats.near, far: prepared.stats.far, rigged: prepared.stats.rigged}));
     const label = arg("label", "island");
     const stop = await record(cdp, label);
-    const {rows, stats} = await page.evaluate((sec) => window.__arkIsland.motion(sec), seconds);
+    // `--start-at <epoch ms>`: start sampling at that wall-clock moment (two runs side by side see the same schedule).
+    const startAt = Number(arg("start-at", "0")) || 0;
+    const {rows, stats} = await page.evaluate(([sec, at]) => window.__arkIsland.motion(sec, at), [seconds, startAt]);
     const video = await stop();
     await context.close();
     const movers = rows.filter((r) => r.moving > 1);

@@ -580,7 +580,10 @@ async function mountIsland(el: HTMLElement) {
             return {settled, stats: handle.stats()};
         },
         stats: () => handle.stats(),
-        motion: async (seconds: number) => {
+        motion: async (seconds: number, startAt?: number) => {
+            // (A wall-clock start shared by two runs, so a run with the layer and one without sample the same moment of
+            // the schedule: `--start-at`.)
+            while (startAt && Date.now() < startAt) await wait(50);
             type Track = {byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
