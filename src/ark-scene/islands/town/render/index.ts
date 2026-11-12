@@ -8,27 +8,35 @@
  * the market's stalls, the street lamps, the church clock's hands.
  */
 
-import {BufferAttribute, BufferGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
 import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
-import {sampleTownGround, type TownSurface} from "@/ark-scene/islands/town/ground";
+import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {binSpots, carSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {binsOut, boatIn, CAR_COLOURS, carAt, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
-import {binGeometry, boatGeometry, carGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {binGeometry, boatGeometry, carGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
+import {buildTownNear} from "@/ark-scene/islands/town/render/near";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
+import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
+import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
+import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
 export type TownTier = "high" | "medium" | "low";
 
 /** Per tier: the share of trees and small props drawn, shadows. (The render distance is Part B's.) */
-export const TOWN_TIERS: Record<TownTier, {trees: number; props: number; shadows: number; pixelRatio: number}> = {
-    high: {trees: 1, props: 1, shadows: 2048, pixelRatio: 2},
-    medium: {trees: 1, props: 1, shadows: 1024, pixelRatio: 1.5},
-    low: {trees: 0.6, props: 0.5, shadows: 0, pixelRatio: 1}
+export const TOWN_TIERS: Record<TownTier, {trees: number; props: number; shadows: number; pixelRatio: number; /** The paving's normal maps and close-up grain (lane GA). */ paveNormals: boolean; anisotropy: number}> = {
+    high: {trees: 1, props: 1, shadows: 2048, pixelRatio: 2, paveNormals: true, anisotropy: 8},
+    medium: {trees: 1, props: 1, shadows: 1024, pixelRatio: 1.5, paveNormals: true, anisotropy: 4},
+    low: {trees: 0.6, props: 0.5, shadows: 0, pixelRatio: 1, paveNormals: false, anisotropy: 4}
 };
+
+/** The close-up detail's share per tier (as the wild island's near detail: 1 / 0.6 / 0.35). */
+const NEAR_SHARE: Record<TownTier, number> = {high: 1, medium: 0.6, low: 0.35};
 
 export type TownIsland = {
     root: Group;
@@ -75,7 +83,7 @@ const SURFACE_COLOUR: Record<TownSurface, string> = {
     water: "#5a6446"
 };
 
-export type GroundGrid = {size: number; heights: Float32Array; colours: Float32Array};
+export type GroundGrid = {size: number; heights: Float32Array; colours: Float32Array; /** 8 bytes a vertex: what the ground shows of its texture layers (`ground.ts` townSurfaceWeights). */ surfaces: Uint8Array};
 
 /** The ground's heights and colours at every vertex of the 1.1 m grid (433 × 433). */
 export function groundGrid(): GroundGrid {
@@ -83,6 +91,7 @@ export function groundGrid(): GroundGrid {
     const step = (TOWN_HALF * 2) / TOWN_SEGMENTS;
     const heights = new Float32Array(size * size);
     const colours = new Float32Array(size * size * 3);
+    const surfaceIndex = new Uint8Array(size * size);
     // (Each surface's colour parsed once, not at every vertex: the same numbers.)
     const parsed = new Map<TownSurface, Color>();
     for (let row = 0; row < size; row++) {
@@ -94,15 +103,17 @@ export function groundGrid(): GroundGrid {
             heights[i] = g.height;
             let c = parsed.get(g.surface);
             if (!c) parsed.set(g.surface, (c = new Color().set(SURFACE_COLOUR[g.surface])));
-            // Mottling, and the sea floor darker with depth.
-            const n = 0.9 + 0.2 * (Math.sin(x * 0.37 + z * 0.11) * 0.5 + Math.sin(x * 0.07 - z * 0.23) * 0.5) * 0.5 + ((hashText(`${column}|${row}`) % 100) / 100 - 0.5) * 0.05;
+            surfaceIndex[i] = Math.max(TOWN_SURFACES.indexOf(g.surface), 0);
+            // Mottling, and the sea floor darker with depth. (Lane GA: no per-vertex random shade any more; each
+            // vertex's own made a 1.1 m speckle. The textures carry the grain.)
+            const n = 0.9 + 0.2 * (Math.sin(x * 0.37 + z * 0.11) * 0.5 + Math.sin(x * 0.07 - z * 0.23) * 0.5) * 0.5;
             const deep = g.height < 0 ? Math.max(0.45, 1 + g.height * 0.05) : 1;
             colours[i * 3] = c.r * n * deep;
             colours[i * 3 + 1] = c.g * n * deep;
             colours[i * 3 + 2] = c.b * n * deep;
         }
     }
-    return {size, heights, colours};
+    return {size, heights, colours, surfaces: townSurfaceWeights(size, surfaceIndex)};
 }
 
 /** One chunk's ground tile: the grid's vertices inside the chunk (shared edges), indexed, with normals from the whole grid. */
@@ -115,6 +126,8 @@ function groundTile(grid: GroundGrid, key: number): BufferGeometry | null {
     const positions = new Float32Array(n * n * 3);
     const normals = new Float32Array(n * n * 3);
     const colours = new Float32Array(n * n * 3);
+    const surf = new Uint8Array(n * n * 4);
+    const surf2 = new Uint8Array(n * n * 4);
     let highest = -Infinity;
     for (let r = 0; r < n; r++) {
         for (let c = 0; c < n; c++) {
@@ -141,6 +154,10 @@ function groundTile(grid: GroundGrid, key: number): BufferGeometry | null {
             colours[j * 3] = grid.colours[i * 3];
             colours[j * 3 + 1] = grid.colours[i * 3 + 1];
             colours[j * 3 + 2] = grid.colours[i * 3 + 2];
+            for (let k = 0; k < 4; k++) {
+                surf[j * 4 + k] = grid.surfaces[i * 8 + k];
+                surf2[j * 4 + k] = grid.surfaces[i * 8 + 4 + k];
+            }
         }
     }
     // Deep sea only: no tile (the water's own depth colour covers it).
@@ -159,23 +176,14 @@ function groundTile(grid: GroundGrid, key: number): BufferGeometry | null {
     geometry.setAttribute("position", new BufferAttribute(positions, 3));
     geometry.setAttribute("normal", new BufferAttribute(normals, 3));
     geometry.setAttribute("color", new BufferAttribute(colours, 3));
+    geometry.setAttribute("aTownSurf", new BufferAttribute(surf, 4, true));
+    geometry.setAttribute("aTownSurf2", new BufferAttribute(surf2, 4, true));
     geometry.setIndex(index);
     geometry.computeBoundingSphere();
     return geometry;
 }
 
 // MARK: - Materials
-
-function groundMaterial(): MeshStandardMaterial {
-    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.96, metalness: 0});
-    material.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vTownWorld;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvTownWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;");
-        shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", "#include <common>\nvarying vec3 vTownWorld;\nfloat townHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat townNoise(vec2 p) { vec2 i = floor(p); vec2 f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f); return mix(mix(townHash(i), townHash(i + vec2(1.0, 0.0)), u.x), mix(townHash(i + vec2(0.0, 1.0)), townHash(i + vec2(1.0, 1.0)), u.x), u.y); }")
-            .replace("#include <color_fragment>", "#include <color_fragment>\nfloat townGrain = townNoise(vTownWorld.xz * 1.7) * 0.6 + townNoise(vTownWorld.xz * 0.23) * 0.4;\ndiffuseColor.rgb *= 0.86 + 0.26 * townGrain;");
-    };
-    return material;
-}
 
 function glassMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.12, metalness: 0.35});
@@ -261,7 +269,9 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const built = options.built ?? null;
     const grid = built?.grid ?? groundGrid();
     yield;
-    const materials = {ground: groundMaterial(), decal: new MeshStandardMaterial({vertexColors: true, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), solid: new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), glass: glassMaterial(), net: netMaterial(), prop: propMaterial(), tree: new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), lampHead: new MeshStandardMaterial({color: new Color("#fff1c4"), emissive: new Color("#ffc878"), emissiveIntensity: 0, roughness: 0.4})};
+    // (Lane GA: the ground and the paving are tiled PBR, `surfaces.ts`; the solids, props and trees answer the rain,
+    // the cloud shade and the street lamps through the town's kit, `materials.ts`.)
+    const materials = {ground: townGroundMaterial(), decal: townPavingMaterial(), solid: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35}), glass: glassMaterial(), net: netMaterial(), prop: townWeather(propMaterial(), {soak: 0.1, wetRoughness: 0.2}), tree: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), {soak: 0.3, wetRoughness: 0.45})};
 
     // Scenery and buildings, chunk by chunk (worked out already when `built` is given).
     const scenery = built?.scenery ?? buildScenery(plan);
@@ -284,6 +294,13 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const content = new Uint8Array(TOWN_CHUNK_COUNT);
     const spans: TownChunkSpan[] = [];
     let triangles = 0;
+    // The paving textures load when the town is first drawn (the renderer is known then), for the tier's needs.
+    let seenRenderer: WebGLRenderer | null = null;
+    const askTextures = (renderer: WebGLRenderer) => {
+        if (seenRenderer) return;
+        seenRenderer = renderer;
+        loadTownTextures(renderer, {normals: TOWN_TIERS[tier].paveNormals, anisotropy: TOWN_TIERS[tier].anisotropy});
+    };
     for (let key = 0; key < TOWN_CHUNK_COUNT; key++) {
         const group = new Group();
         group.name = `town:chunk:${key}`;
@@ -295,6 +312,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             const mesh = new Mesh(tile, materials.ground);
             mesh.receiveShadow = true;
             mesh.name = "ground";
+            mesh.onBeforeRender = (renderer) => askTextures(renderer);
             meshes.push(mesh);
             tile.computeBoundingBox();
             minY = Math.min(minY, tile.boundingBox!.min.y);
@@ -319,7 +337,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             maxY = Math.max(maxY, geometry.boundingBox!.max.y);
             return geometry;
         };
-        add(sc?.decal, materials.decal, "decal", false);
+        // (Decals carry their surface tag: `surface-tags.ts`, lane GA.)
+        add(sc?.decal, materials.decal, "decal", false, true);
         add(bc?.solid ?? sc?.solid, materials.solid, "solid", true);
         add(sc?.net, materials.net, "net", false);
         const glassGeo = bc?.glass ?? sc?.glass;
@@ -369,7 +388,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
             for (const [geo, material, name] of parts) {
                 if (!geo.triangles) continue;
-                const geometry = geo.toGeometry();
+                const geometry = geo.toGeometry(name === "decal");
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 const mesh = new Mesh(geometry, material);
                 mesh.name = `zoo:${name}`;
@@ -421,23 +440,28 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const washSet = new ChunkedSet(washingGeometry(), materials.prop, washingLines.length);
     const boatSet = new ChunkedSet(boatGeometry(), materials.prop, plan.moorings.length, true);
     const stallSet = new ChunkedSet(stallGeometry(), materials.prop, stallSpots.length, true);
-    const lamp = lampGeometry();
-    const lampSet = new ChunkedSet(lamp.post, materials.solid, scenery.lamps.length);
-    const lampHeadSet = new ChunkedSet(lamp.head, materials.lampHead, scenery.lamps.length);
-    for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet], ["lamp_heads", lampHeadSet]] as const) {
+    for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet]] as const) {
         set.mesh.name = `props:${name}`;
-        set.mesh.castShadow = name !== "lamp_heads";
+        set.mesh.castShadow = true;
         set.mesh.receiveShadow = true;
         root.add(set.mesh);
     }
     const colour = new Color();
-    scenery.lamps.forEach((l, i) => {
-        const turn = (hashText(`${l.x}|${l.z}`) % 628) / 100;
-        lampSet.set(i, placeMatrix(l.x, l.y, l.z, turn));
-        lampHeadSet.set(i, placeMatrix(l.x, l.y, l.z, turn));
-    });
-    lampSet.write();
-    lampHeadSet.write();
+    // The street lamps and furniture (lane GA, `furniture.ts`): their bodies are in the chunks' solids; here the
+    // lights (lamps, signals, beacons), the glow round each lit lamp, and the lamp map that lights the town at night.
+    const furniture = scenery.furniture ?? null;
+    const lightsMesh = furniture && furniture.lights.triangles ? new Mesh(lightsGeometry(furniture.lights), lightsMaterial()) : null;
+    if (lightsMesh) {
+        lightsMesh.name = "town:lights";
+        root.add(lightsMesh);
+    }
+    const glow = furniture && furniture.heads.length ? lampGlow(furniture.heads) : null;
+    if (glow) root.add(glow);
+    if (furniture) TOWN_LIGHT.lampMap.value = lampMapTexture(furniture.lampMap);
+    // Close up: leaves, weeds, grit, daisies and the odd scrap round the camera when it comes down to the street.
+    const near = buildTownNear(plan, scenery.trees);
+    near.setShare(NEAR_SHARE[tier]);
+    root.add(near.group);
     const binColours = ["#2b4a2f", "#3a3d40", "#2a4a7a", "#7a4a2a"];
     const ground = (x: number, z: number) => sampleTownGround(x, z).height;
 
@@ -459,6 +483,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     });
 
     const update = (clock: TownClock) => {
+        // The town's frame in the world, for the paving and the lamps (`materials.ts` TOWN_LIGHT.origin).
+        TOWN_LIGHT.origin.value.set(root.matrixWorld.elements[12], root.matrixWorld.elements[14]);
         const minute = Math.floor(clock.day * 1440 + clock.hours * 60);
         if (minute === lastMinute) return;
         lastMinute = minute;
@@ -506,7 +532,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             stallSet.set(i, placeMatrix(p.x, ground(p.x, p.z) + 0.1, p.z, plan.square.rot + (i < 5 ? 0 : Math.PI)), market, colour);
         });
         stallSet.write();
-        materials.lampHead.emissiveIntensity = lampsOn(clock) * 2.4;
+        TOWN_LIGHT.lampOn.value = lampsOn(clock);
+        if (glow) glow.visible = lampsOn(clock) > 0;
         // Clock hands: hour (short, thick) and minute (long), turned in each face's plane.
         const {hour, minute: min} = clockHands(clock);
         const m = new Matrix4();
@@ -542,7 +569,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         chunks.forEach((c, key) => {
             if (c) c.group.visible = !next || next(key);
         });
-        for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet, lampSet, lampHeadSet]) set.setDrawn(next);
+        for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet]) set.setDrawn(next);
         for (const {key, mesh} of zooMeshes) if (key >= 0) mesh.visible = !next || next(key);
     };
 
@@ -562,6 +589,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         });
         lastMinute = -1;
         setShadows(TOWN_TIERS[tier].shadows > 0);
+        if (seenRenderer) loadTownTextures(seenRenderer, {normals: TOWN_TIERS[tier].paveNormals, anisotropy: TOWN_TIERS[tier].anisotropy});
+        near.setShare(NEAR_SHARE[tier]);
     };
 
     const stats = () => {
@@ -579,12 +608,13 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             instances[`tree:${kind}`] = set.shown;
             drawCalls++;
         });
-        for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet]] as const) {
+        instances.lamps = furniture ? furniture.heads.length / 4 : 0;
+        for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet]] as const) {
             instances[name] = set.shown;
             drawCalls++;
         }
         drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
-        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
+        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4 + (lightsMesh ? 1 : 0) + (glow?.visible ? 1 : 0), instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
 
     yield;
@@ -613,6 +643,13 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
                 const mesh = o as Mesh;
                 if (mesh.isMesh && mesh.geometry) mesh.geometry.dispose();
             });
+            near.dispose();
+            (lightsMesh?.material as Material | undefined)?.dispose();
+            (glow?.material as Material | undefined)?.dispose();
+            if (furniture && TOWN_LIGHT.lampMap.value) {
+                TOWN_LIGHT.lampMap.value.dispose();
+                TOWN_LIGHT.lampMap.value = null;
+            }
             Object.values(materials).forEach((m) => m.dispose());
             depth.dispose();
             water.dispose();
