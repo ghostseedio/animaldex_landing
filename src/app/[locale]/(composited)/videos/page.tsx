@@ -1,4 +1,5 @@
 import type {Metadata} from "next";
+import {languageAlternates} from "@/lib/seo/page-metadata";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {SOURCE_LABELS} from "@/lib/content-video/source-paths";
@@ -15,9 +16,10 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-    title: "Short Animal Videos: Rankings, Hybrids and Wild Facts",
+    title: "Short Animal Videos: Rankings and Wild Facts",
     description: "Short animal videos from AnimalDex: the fastest and strongest animals ranked, imagined hybrids and the wildest facts, each with its full story and sources.",
-    alternates: {canonical: "/videos"}
+    // English only: en and x-default (SEO lane S3).
+    alternates: {canonical: "/videos", languages: languageAlternates("/videos", {englishOnly: true})}
 };
 
 export default async function VideosPage({params}: {params: {locale: string}}) {
@@ -28,7 +30,7 @@ export default async function VideosPage({params}: {params: {locale: string}}) {
             <header className="flex flex-col gap-3">
                 <p className="text-xs font-black uppercase tracking-[.2em] text-primary-200">AnimalDex shorts</p>
                 <h1 className="font-display text-4xl leading-tight text-white sm:text-6xl">Animal videos</h1>
-                <p className="max-w-3xl text-lg leading-8 text-ink-300">Who would win, the fastest and strongest animals ranked, imagined hybrids and the strangest true facts, each under a minute and each with the full story behind it.</p>
+                <p className="max-w-3xl text-lg leading-8 text-ink-300">The fastest and strongest animals ranked, imagined hybrids and the strangest true facts, each under a minute and each with the full story behind it.</p>
             </header>
             <ul className="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-5">
                 {videos.map((video) => (

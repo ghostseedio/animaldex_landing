@@ -1,3 +1,4 @@
+import {clampMetaDescription} from "@/lib/seo/page-metadata";
 import type {Metadata} from "next";
 import type {ContentImage} from "@/data/content-schema";
 
@@ -28,14 +29,17 @@ export function ogMetadataImages(alt: string, kind: string, ...slug: string[]) {
  */
 export function withOgCard(metadata: Metadata, alt: string, kind: string, ...slug: string[]): Metadata {
     const images = ogMetadataImages(alt, kind, ...slug);
-    const openGraph = metadata.openGraph ?? {};
-    const twitter = metadata.twitter ?? {};
+    const description = typeof metadata.description === "string" ? clampMetaDescription(metadata.description) : metadata.description;
+    const openGraph = {...(metadata.openGraph ?? {}), ...(typeof metadata.openGraph?.description === "string" ? {description: clampMetaDescription(metadata.openGraph.description)} : {})};
+    const twitter = {...(metadata.twitter ?? {}), ...(typeof metadata.twitter?.description === "string" ? {description: clampMetaDescription(metadata.twitter.description)} : {})};
     return {
         ...metadata,
+        // What a result shows of a description (SEO lane S3): whole sentences up to 160 characters.
+        description,
         openGraph: {...openGraph, images: images.openGraph},
         twitter: {
             title: openGraph.title ?? metadata.title ?? undefined,
-            description: openGraph.description ?? metadata.description ?? undefined,
+            description: openGraph.description ?? description ?? undefined,
             ...twitter,
             card: "summary_large_image",
             images: images.twitter

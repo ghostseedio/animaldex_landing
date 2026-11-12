@@ -33,6 +33,8 @@ type Props = {
 };
 
 const LIST_FIRST = 48;
+/** The compact panel's longest list. */
+const COMPACT_MAX = 6;
 
 export default function ArkFoodChainExplorer({variant, entries, index, initial, words, locale, arkHref, panelHeadingLevel, readAddress}: Props) {
     const id = useId();
@@ -143,7 +145,16 @@ export default function ArkFoodChainExplorer({variant, entries, index, initial, 
 
             <div ref={panelRef} id={`${id}-panel`} aria-live="polite" className="min-w-0 border border-line-300 bg-surface-900/70 p-5 md:p-7">
                 {entry ? (
-                    <ArkFoodChainPanel entry={entry} words={words} locale={locale} arkHref={arkHref} headingLevel={panelHeadingLevel} headingId={`${id}-heading`} />
+                    <ArkFoodChainPanel
+                        entry={entry}
+                        words={words}
+                        locale={locale}
+                        arkHref={arkHref}
+                        headingLevel={panelHeadingLevel}
+                        headingId={`${id}-heading`}
+                        // Compact (S2, the home page): about six in each list, the rest in the full explorer.
+                        {...(variant === "compact" ? {maxPerList: COMPACT_MAX, moreHref: `/ark/food-chain?species=${encodeURIComponent(entry.species.slug)}`} : {})}
+                    />
                 ) : state === "error" ? (
                     <p className="text-[15px] text-ink-300">{words.error}</p>
                 ) : selected ? (

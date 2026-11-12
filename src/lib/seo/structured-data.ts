@@ -20,7 +20,7 @@ export function brandLogoUrl(): string {
     return getAbsoluteAssetUrl("/images/logo.webp");
 }
 
-/** The organisation behind AnimalDex, by its public name only. */
+/** The organisation behind AnimalDex: its public name, and the operator the privacy policy names. */
 export function organizationJsonLd(): JsonLd {
     const site = getSiteUrl();
     return {
@@ -28,6 +28,7 @@ export function organizationJsonLd(): JsonLd {
         "@type": "Organization",
         "@id": `${site}/#organization`,
         name: "AnimalDex",
+        legalName: "GHOSTSEED LTD",
         url: `${site}/`,
         logo: brandLogoUrl(),
         sameAs: [appStoreUrl, googlePlayUrl, ...socialProfileUrlList]

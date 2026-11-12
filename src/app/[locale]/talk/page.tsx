@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import {withBrandSuffix} from "@/lib/brand-title";
+import {clampMetaDescription} from "@/lib/seo/page-metadata";
 import {breadcrumbJsonLd, jsonLdHtml, talkJsonLd} from "@/lib/seo/structured-data";
 import {localeConfig} from "@/i18n";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -33,7 +34,9 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({params}: {params: {locale: string}}): Promise<Metadata> {
-    const words = talkWords((await loadLocaleMessages(params.locale).catch(() => null))?.talkPage);
+    const loaded = talkWords((await loadLocaleMessages(params.locale).catch(() => null))?.talkPage);
+    // What a result shows of the description (the Indonesian one ran to 217 characters).
+    const words = {...loaded, metaDescription: clampMetaDescription(loaded.metaDescription)};
     const path = "/talk";
     const image = ogImagePath("talk");
     return {

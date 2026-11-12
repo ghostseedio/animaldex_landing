@@ -125,10 +125,10 @@ export default function SpeciesAskAnimalDex({
             <button
                 type="button"
                 onClick={() => openConversation(undefined, "form")}
-                aria-label={labels.submit.replace("{animal}", animalName)}
                 className="mt-6 flex w-full items-center gap-3 rounded-[1.75rem] border border-white/12 bg-black/30 light:bg-canvas-950 py-3 pl-4 pr-2 text-left transition-colors hover:border-primary-300/50"
             >
-                <span className="flex-1 text-base text-ink-400">{placeholder}</span>
+                {/* The accessible name starts with the visible words (WCAG 2.5.3), then says what the button does. */}
+                <span className="flex-1 text-base text-ink-400">{placeholder}<span className="sr-only">. {labels.submit.replace("{animal}", animalName)}</span></span>
                 <span
                     aria-hidden="true"
                     className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary-400 text-canvas-950"

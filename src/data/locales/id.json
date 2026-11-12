@@ -4548,7 +4548,8 @@
       "compactTitle": "Siapa memangsa siapa di Ark",
       "compactIntro": "Tautan makanan dari panduan lapangan setiap hewan, antara hewan-hewan yang ada di Ark saat ini. Ketuk salah satunya.",
       "compactMore": "Lihat seluruh rantai makanan",
-      "chooseLabel": "Pilih seekor hewan"
+      "chooseLabel": "Pilih seekor hewan",
+      "andMore": "dan {count} lainnya"
     },
     "about": {
       "metaTitle": "Tentang AnimalDex: Dunia Riset Hewan yang Hidup",

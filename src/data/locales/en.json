@@ -4563,7 +4563,8 @@
       "compactTitle": "Who eats whom in the Ark",
       "compactIntro": "Food links from each animal's field guide, between the animals aboard right now. Tap one.",
       "compactMore": "See the whole food chain",
-      "chooseLabel": "Choose an animal"
+      "chooseLabel": "Choose an animal",
+      "andMore": "and {count} more"
     },
     "about": {
       "metaTitle": "About AnimalDex: A Living Research World of Animals",
