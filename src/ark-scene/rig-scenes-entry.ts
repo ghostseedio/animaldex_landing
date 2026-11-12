@@ -550,6 +550,8 @@ async function mountIsland(el: HTMLElement) {
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     if (params.get("moverGait") === "0") (globalThis as {__arkMoverGait?: boolean}).__arkMoverGait = false;
+    // (`collide=0`: the collisions' layer off, the schedule's poses as they come: L5's floor for the turns measure.)
+    if (params.get("collide") === "0") (globalThis as {__arkCollideOff?: boolean}).__arkCollideOff = true;
     const snapshot = decodeArkSnapshot(fixture);
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
