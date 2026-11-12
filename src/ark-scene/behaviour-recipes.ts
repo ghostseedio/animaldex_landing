@@ -670,6 +670,8 @@ type BuildContext = {
     seed: string;
     /** A pair: where the other starts, the role, the pair's own seed (both sides share timings). */
     pair?: {other: P; role: "a" | "b"; otherLength: number; pace: number} | null;
+    /** Counts the legs cut short at blocked ground (a pair's: either side's makes the meeting off, `pairEpisode`). */
+    clips?: {n: number};
     hours: number;
     /** Its heading as the episode starts (its schedule pose's then): the first key turns from it, never from north. */
     yaw0: number;
@@ -1199,7 +1201,10 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             // A ground leg whose way is blocked (the garden pond, a rock, a building) and that no arc gets round stops at the edge.
             if (block.motion === "travel" && onGround(block) && Math.hypot(target.x - pos.x, target.z - pos.z) > 0.05 && walkableAt(world, pos.x, pos.z)) {
                 const from = pos;
-                if (!groundWay(world, from, null, null, target) && !legCurve(world, block, from, target, yaw, null)) target = clippedAtEdge(world, from, target);
+                if (!groundWay(world, from, null, null, target) && !legCurve(world, block, from, target, yaw, null)) {
+                    target = clippedAtEdge(world, from, target);
+                    if (ctx.clips) ctx.clips.n++;
+                }
             }
             const distance = Math.hypot(target.x - pos.x, target.y - pos.y, target.z - pos.z);
             const height = Math.max(pos.y - target.y, 0);
@@ -1775,6 +1780,41 @@ export function pairWindows(animal: ScheduleAnimal, slug: string, from: number, 
 }
 
 /** A pair's episode for one side at a time (null: none now). Both sides work out the same window from the pair's key. */
+/** One side of a pair's meeting in a window (null: not this window: out of hours, asleep, in the water, too far apart). */
+function pairBuild(world: ScheduleWorld, kit: ScheduleKit, owner: TripOwner, other: ScheduleAnimal, otherProfile: ArkBehaviourProfile, otherActivity: ArkBehaviourProfile["activity"] | null | undefined, role: "a" | "b", key: string, templateId: string, start: number, period: number): {episode: Episode; clipped: boolean} | null {
+    const template = TEMPLATES[templateId];
+    const species = speciesRecipes(owner.slug);
+    const hours = owner.hoursAt(start);
+    const ownTrip = kit.tripAt(world, owner.profile, owner.animal, start, owner.hoursAt, owner.activity);
+    const otherTrip = kit.tripAt(world, otherProfile, other, start, owner.hoursAt, otherActivity);
+    const own = kit.basePose(world, ownTrip, start);
+    const there = kit.basePose(world, otherTrip, start);
+    const onLand = (p: TripPose) => !p.aloft && world.sampler.heightAt(p.x, p.z) > 0.03 && p.y < Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.3;
+    const awake = (t: Trip) => t.doing !== "sleep" && t.doing !== "to_roost";
+    if (!(hourOk(template, hours) && onLand(own) && onLand(there) && awake(ownTrip) && awake(otherTrip) && Math.hypot(own.x - there.x, own.z - there.z) < 40)) return null;
+    const clips = {n: 0};
+    const episode = buildEpisode({
+        world,
+        kit,
+        owner,
+        species,
+        template,
+        anchor: {x: own.x, y: own.y, z: own.z},
+        t0: start,
+        t1: start + PAIR_MAX,
+        seed: `${key}#${period}`,
+        pair: {other: {x: there.x, y: there.y, z: there.z}, role, otherLength: other.length, pace: Math.min(pace(owner.profile, owner.animal.length), pace(otherProfile, other.length))},
+        hours,
+        yaw0: own.yaw,
+        homeAt: (at: number) => {
+            const p = kit.basePose(world, kit.tripAt(world, owner.profile, owner.animal, at, owner.hoursAt, owner.activity), at);
+            return {x: p.x, y: p.y, z: p.z, yaw: p.yaw};
+        },
+        clips
+    });
+    return episode ? {episode, clipped: clips.n > 0} : null;
+}
+
 function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
     const list = links.get(owner.animal);
     if (!list) return null;
@@ -1792,35 +1832,14 @@ function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, e
         const memoKey = `${l.key}#${period}#${l.role}`;
         let episode = pairEpisodes.get(memoKey);
         if (episode === undefined) {
-            episode = null;
-            const hours = owner.hoursAt(start);
-            const own = kit.basePose(world, kit.tripAt(world, owner.profile, owner.animal, start, owner.hoursAt, owner.activity), start);
-            const other = kit.basePose(world, kit.tripAt(world, l.otherProfile, l.other, start, owner.hoursAt, l.otherActivity), start);
-            const ownTrip = kit.tripAt(world, owner.profile, owner.animal, start, owner.hoursAt, owner.activity);
-            const otherTrip = kit.tripAt(world, l.otherProfile, l.other, start, owner.hoursAt, l.otherActivity);
-            const onLand = (p: TripPose) => !p.aloft && world.sampler.heightAt(p.x, p.z) > 0.03 && p.y < Math.max(world.sampler.heightAt(p.x, p.z), 0) + 0.3;
-            const awake = (t: Trip) => t.doing !== "sleep" && t.doing !== "to_roost";
-            if (hourOk(template, hours) && onLand(own) && onLand(other) && awake(ownTrip) && awake(otherTrip) && Math.hypot(own.x - other.x, own.z - other.z) < 40) {
-                episode = buildEpisode({
-                    world,
-                    kit,
-                    owner,
-                    species,
-                    template,
-                    anchor: {x: own.x, y: own.y, z: own.z},
-                    t0: start,
-                    t1: start + PAIR_MAX,
-                    seed: `${l.key}#${period}`,
-                    pair: {other: {x: other.x, y: other.y, z: other.z}, role: l.role, otherLength: l.other.length, pace: Math.min(pace(owner.profile, owner.animal.length), pace(l.otherProfile, l.other.length))},
-                    hours,
-                    yaw0: own.yaw,
-                    homeAt: (at: number) => {
-                        const p = kit.basePose(world, kit.tripAt(world, owner.profile, owner.animal, at, owner.hoursAt, owner.activity), at);
-                        return {x: p.x, y: p.y, z: p.z, yaw: p.yaw};
-                    }
-                });
-                if (episode) episode = {...episode, other: l.other.id, role: l.role};
-            }
+            // Both sides' episodes, built the same way on either side (pure in the pair): when either one's way to the
+            // meeting is cut short by blocked ground (a boulder, a trunk, a fence), they would fight metres apart, so the
+            // meeting is off for this window on both sides (L7 on the merged scenery: stags 5.2 m apart). They meet in
+            // another window, where the way is clear.
+            const partner: TripOwner = {animal: l.other, profile: l.otherProfile, slug: l.otherSlug, activity: l.otherActivity, hoursAt: owner.hoursAt};
+            const mine = pairBuild(world, kit, owner, l.other, l.otherProfile, l.otherActivity, l.role, l.key, l.template, start, period);
+            const theirs = mine ? pairBuild(world, kit, partner, owner.animal, owner.profile, owner.activity, l.role === "a" ? "b" : "a", l.key, l.template, start, period) : null;
+            episode = mine && theirs && !mine.clipped && !theirs.clipped ? {...mine.episode, other: l.other.id, role: l.role} : null;
             pairEpisodes.set(memoKey, episode);
             if (pairEpisodes.size > 400) pairEpisodes.delete(pairEpisodes.keys().next().value as string);
         }

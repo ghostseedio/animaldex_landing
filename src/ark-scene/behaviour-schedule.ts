@@ -821,6 +821,9 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const to = placed.to;
     // (Off from a predator it has seen it goes by a plain way, or watches it from where it is: `workIntent`.)
     if (!to || placed.follow || !walksGoals(profile) || (placed.mode !== "ground" && placed.mode !== "water")) return true;
+    // (A sitter goes to its eggs, the props lane's nest, whatever the way: it never sits beside it. On the merged scenery
+    // a boulder by the test's nest made the way a detour, and the duck settled at home: L7, 2026-11-12.)
+    if (placed.recipe === "incubate_sit") return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
     let from = before ?? groundSpot(world, animal.home.x, animal.home.z);

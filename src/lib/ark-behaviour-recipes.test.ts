@@ -567,8 +567,8 @@ test("a sitter with eggs sits on its nest (the props lane's nests), awake and as
         for (let k = 0; k < 30; k++) {
             const t = t0 + k * 1777;
             const trip = tripAt(world, duck.profile, duck.animal, t, hoursAt, "diurnal");
-            assert.equal(trip.recipe, "incubate_sit");
-            assert.ok(Math.hypot(trip.to.x - site.x, trip.to.z - site.z) < 1e-6);
+            assert.equal(trip.recipe, "incubate_sit", `slot ${k}: sitting`);
+            assert.ok(Math.hypot(trip.to.x - site.x, trip.to.z - site.z) < 1e-6, `to its nest (${trip.to.x.toFixed(2)}, ${trip.to.z.toFixed(2)})`);
             if (t >= trip.arrive + 1) {
                 const p = poseOnTrip(world, trip, t);
                 assert.ok(Math.hypot(p.x - site.x, p.z - site.z) < 0.05, "on the nest");
@@ -577,7 +577,9 @@ test("a sitter with eggs sits on its nest (the props lane's nests), awake and as
         eggs = 0;
         forgetRecipes();
         const free = [0, 1, 2, 3, 4, 5].map((k) => tripAt(world, duck.profile, duck.animal, t0 + 90000 + k * 997, hoursAt, "diurnal"));
-        assert.ok(free.every((trip) => trip.recipe !== "incubate_sit"));
+        // (Messages on these: a bare assert.ok failing in this file sent node's message builder into a minutes-long
+        // parse of the TypeScript source under tsx, which read as the whole file timing out.)
+        assert.ok(free.every((trip) => trip.recipe !== "incubate_sit"), "no sitting without eggs");
     } finally {
         setNestSource(null);
     }
