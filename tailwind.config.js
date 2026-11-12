@@ -58,6 +58,8 @@ module.exports = {
         fontFamily: {
             sans: ["var(--font-sans)", ...fontFamily.sans],
             display: ["var(--font-display)", ...fontFamily.sans],
+            // The display face's italic (src/app/fonts.ts barlowCondensedItalic): the home hero's second voice.
+            "display-italic": ["var(--font-barlow-condensed-italic)", "var(--font-display)", ...fontFamily.sans],
             // Declaring fontFamily at the theme root replaces the defaults, which dropped
             // font-mono even though the codebase uses it.
             mono: [...fontFamily.mono],

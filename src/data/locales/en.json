@@ -454,6 +454,120 @@
       "cta": "See the Ark"
     }
   },
+  "landing": {
+    "hero": {
+      "taglineLead": "Catch animals in real life",
+      "taglineRest": "and turn them into AI companions in a 3D world.",
+      "sentence": "Animals come aboard from people's photos and live by their own field guides, in one world shared by everyone.",
+      "explore": "Explore the live Ark",
+      "seeLive": "See it live",
+      "loading": "Bringing the world in",
+      "interact": "Click to explore",
+      "interactDone": "Done exploring",
+      "poster": "The Ark at {time}, island time, {date}",
+      "live": "Live, {time} on the island",
+      "sceneLabel": "The Ark: a shared 3D world of animal species, live"
+    },
+    "taglines": {
+      "b": {
+        "lead": "A living world of animal species",
+        "rest": "built from their field guides, filled by your photos."
+      },
+      "c": {
+        "lead": "Watch an ecosystem grow",
+        "rest": "from the animals' side of the story."
+      }
+    },
+    "numbers": {
+      "title": "Aboard right now",
+      "animals": "Animals aboard",
+      "species": "Species",
+      "founders": "Founders",
+      "births": "Births, last 24 h",
+      "meals": "Meals, last 24 h",
+      "asOf": "From the Ark's public record, {time}",
+      "unavailable": "The live numbers can't be read right now.",
+      "noMeals": "No meals yet: new arrivals have a head start at launch.",
+      "top": "Most aboard: {list}. The Ark holds what people photograph."
+    },
+    "steps": {
+      "eyebrow": "How an animal comes aboard",
+      "title": "From your camera to the Ark",
+      "fig": "Fig. {n}",
+      "catchTitle": "Catch",
+      "catchBody": "Photograph an animal in real life. The app tells you what it is.",
+      "catchLabel": "Photographed {date}",
+      "catchAlt": "A Komodo dragon's head, close up, photographed by an AnimalDex player",
+      "aboardTitle": "Aboard",
+      "aboardBody": "It joins the Ark and lives where its kind lives, by its field guide.",
+      "aboardLabel": "Wild island, grassland. Aboard since {date}",
+      "aboardAlt": "A Komodo dragon in the Ark, ringed, in the wild island's grassland",
+      "talkTitle": "Hear its side",
+      "talkBody": "Ask it anything. It answers from its own life.",
+      "talkCta": "Talk to one now",
+      "howItWorks": "How AnimalDex works",
+      "howTheArkWorks": "How the Ark works",
+      "talkAlt": "The Komodo dragon's talking 3D model, speaking",
+      "you": "What do you do all day?",
+      "reply": "Mornings I lie on warm rock until my blood is ready. Then I wait by the trail and taste the air. I don't chase what I can wait for.",
+      "example": "An example conversation"
+    },
+    "day": {
+      "eyebrow": "A day on the Ark",
+      "title": "One clock for everyone",
+      "intro": "Light, weather and tides run on one shared clock, so everyone sees the same island at the same moment.",
+      "date": "Tuesday 10 November 2026, island time",
+      "awake": "{count} awake",
+      "awakeLabel": "Awake now, of everyone aboard today",
+      "frameAlt": "The wild island at {time}, island time",
+      "phase": {
+        "night": "Night",
+        "dawn": "Dawn",
+        "day": "Day",
+        "dusk": "Dusk"
+      },
+      "weather": {
+        "clear": "Clear",
+        "cloudy": "Cloudy",
+        "light_rain": "Light rain",
+        "heavy_rain": "Heavy rain",
+        "windy": "Windy",
+        "fog": "Fog",
+        "storm": "Storm"
+      },
+      "tide": {
+        "high": "High tide",
+        "low": "Low tide",
+        "rising": "Tide rising",
+        "falling": "Tide falling"
+      }
+    },
+    "foodChain": {
+      "eyebrow": "Who eats whom"
+    },
+    "population": {
+      "eyebrow": "Populations over time",
+      "title": "Who is aboard, since day one",
+      "intro": "Counted back from the Ark's event log: every arrival, birth and death since the voyage began.",
+      "total": "All animals aboard",
+      "backfill": "Captures from before launch came aboard together",
+      "day24": "{change} in 24 h",
+      "same": "No change in 24 h",
+      "unavailable": "The chart appears once the Ark's log can be read.",
+      "axisStart": "Voyage began",
+      "axisNow": "Now",
+      "legend": "Biggest six species"
+    },
+    "app": {
+      "eyebrow": "Get the app",
+      "title": "Bring your first animal aboard",
+      "body": "Free on iPhone and Android.",
+      "qr": "Scan with your phone",
+      "qrAlt": "QR code: get AnimalDex on your phone's store",
+      "appStore": "Download AnimalDex on the App Store",
+      "googlePlay": "Get AnimalDex on Google Play"
+    }
+  },
   "blog": {
     "eyebrow": "AnimalDex Blog",
     "title": "Articles on how animals live, and what they teach",

@@ -1,64 +1,62 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import Image from "next/image";
-import HomeChatStill from "@/app/[locale]/(composited)/(home)/_components/home-chat-still";
-import {HomeDoneStill, HomeRevealStill} from "@/app/[locale]/(composited)/(home)/_components/home-stills";
-import HomeAnimalOrbit, {type HomeOrbitAnimal} from "@/app/[locale]/(composited)/(home)/_components/home-animal-orbit";
-import HomeSides from "@/app/[locale]/(composited)/(home)/_components/home-sides";
-import HomeIdeaDemo, {type HomeIdeaDemoWords} from "@/app/[locale]/(composited)/(home)/_components/home-idea-demo";
-import HeroVariantGate from "@/app/[locale]/(composited)/(home)/_components/hero-variant-gate";
-import {default as downloads} from "@/data/downloads.json";
+import HomeArkHero from "@/app/[locale]/(composited)/(home)/_components/home-ark-hero";
+import HomeLiveNumbers from "@/app/[locale]/(composited)/(home)/_components/home-live-numbers";
+import HomeArkDay, {type HomeArkDayFrame} from "@/app/[locale]/(composited)/(home)/_components/home-ark-day";
+import HomeArkPopulations from "@/app/[locale]/(composited)/(home)/_components/home-ark-populations";
+import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-loop-video";
+import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
+import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
-import {getLocalePath, getMetadataLocale} from "@/lib/site";
+import {ARK_HOW_IT_WORKS_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
 import StoreLink from "@/components/store/store-link";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 import {homeFeatureList} from "@/lib/seo/home-features";
 import {homeJsonLd, jsonLdHtml} from "@/lib/seo/structured-data";
 import {loadLocaleMessages} from "@/loaders/locale";
-import {getScopedTranslator} from "@/loaders/translation";
+import {getScopedTranslator, type ScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
-import {TRY_TALKING_SPECIES} from "@/lib/try-talking";
-import {ADVICE_FATIGUE_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
-import {getDisagreeExample} from "@/data/animal-perspective";
-import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
-import {HERO_ARM_ATTRIBUTE, heroBootScript, heroVariantSplit} from "@/lib/hero-variant";
-import {HERO_DEMO_ANIMAL, HERO_DEMO_CHIPS, type HeroDemoChip} from "@/lib/hero-demo";
-
-const heroBackgroundImage =
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif";
-
-// The hero word's texture is the same photo at the size a phone's background
-// already fetched (w=828 through the image optimizer), so it costs no second download.
-const heroTextureImage = `/_next/image?url=${encodeURIComponent(
-    "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/admin-assets/blog/2026-08-30/animaldex-background-2dc78d85-1954-4033-8418-78155bedb274.avif"
-)}&w=828&q=75`;
+import {tideAt, weatherAt} from "@/lib/ark-clock";
+import {daylightAt} from "@/lib/ark-daylight";
 
 /**
- * The animals around the hero's talking octopus (2026-11-01). Each has icon
- * art in the `animals` bucket; the name is the catalog's when the Talk rows
- * carry it, these otherwise.
+ * The home page (landing lane S2, 2026-11-12): the live Ark first, then what it is made of, in pictures.
+ *
+ *   1. The hero: the real Ark (a frame of it, then the live 3D world) behind the tagline.
+ *   2. Who is aboard right now (the public read and the event log).
+ *   3. From your camera to the Ark: a real capture, a Komodo dragon in the Ark, its talking model.
+ *   4. A day on the Ark: one real day of the shared clock, as the reader scrolls.
+ *   5. The food chain, from the stored food links (SEO lane S3's compact explorer).
+ *   6. Populations over time, from the event log.
+ *   7. Get the app.
+ *
+ * Words are few on purpose: the text pages (/ark/how-it-works, /ark/food-chain, /about) carry the explanation.
+ * Honest by construction: the world is built from each animal's field guide and never called accurate; every number
+ * is read live, and nothing personal reaches the page (no names, no chats, no problems).
  */
-const heroOrbitAnimals = [
-    {slug: "gray-wolf", name: "Gray Wolf"},
-    {slug: "little-owl", name: "Little Owl"},
-    {slug: "african-bush-elephant", name: "African Bush Elephant"},
-    {slug: "cheetah", name: "Cheetah"},
-    {slug: "emperor-penguin", name: "Emperor Penguin"},
-    {slug: "honey-badger", name: "Honey Badger"}
-] as const;
 
-/** Hero B's chips, with the reader's words for each (`home.demo.chips`). */
-function demoChips(raw: unknown): HeroDemoChip[] {
-    const chips = raw && typeof raw === "object" ? raw as Record<string, {label?: unknown; message?: unknown; usual?: unknown}> : {};
-    return HERO_DEMO_CHIPS.flatMap(({id, kind}) => {
-        const words = chips[id];
-        const usual = Array.isArray(words?.usual) ? words.usual.filter((line): line is string => typeof line === "string") : [];
-        return typeof words?.label === "string" && typeof words.message === "string" && usual.length > 0
-            ? [{id, kind, label: words.label, message: words.message, usual}]
-            : [];
-    });
-}
+const ART = "/images/home/ark";
+
+/** The hero's frame: the Ark at 17:18 island time on 10 November 2026, rendered from the live world. */
+const POSTER_AT = Date.UTC(2026, 10, 10, 17, 18);
+
+/** A day on the Ark: the frames drawn, each at its island hour of 10 November 2026 (island time is UTC). */
+const DAY_FRAMES: Array<{key: string; hours: number}> = [
+    {key: "0200", hours: 2},
+    {key: "0600", hours: 6},
+    {key: "1100", hours: 11},
+    {key: "1400", hours: 14},
+    {key: "1736", hours: 17.6},
+    {key: "1824", hours: 18.4},
+    {key: "2100", hours: 21}
+];
+const DAY_AT = Date.UTC(2026, 10, 10);
+
+/** The capture (a player's public card, shown without their name) and the Komodo dragon aboard. */
+const CAPTURED_AT = Date.UTC(2026, 9, 14);
+const ABOARD_AT = Date.UTC(2026, 10, 9);
 
 export const revalidate = 86400;
 
@@ -108,371 +106,322 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
     };
 }
 
+function islandClock(ms: number, locale: string) {
+    return new Intl.DateTimeFormat(locale, {hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC"}).format(new Date(ms));
+}
+
+function shortDate(ms: number, locale: string) {
+    return new Intl.DateTimeFormat(locale, {day: "numeric", month: "short", year: "numeric", timeZone: "UTC"}).format(new Date(ms));
+}
+
+/** The shared clock's words for one frame: its phase of the day, its weather and its tide, at that exact moment. */
+function dayFrame(frame: {key: string; hours: number}, t: ScopedTranslator, locale: string): HomeArkDayFrame {
+    const ms = DAY_AT + frame.hours * 3_600_000;
+    const tide = tideAt(ms);
+    const tideKey = tide.height > 0.75 * tide.amplitude ? "high" : tide.height < -0.75 * tide.amplitude ? "low" : tide.rising ? "rising" : "falling";
+    const time = islandClock(ms, locale);
+    const srcset = (format: string) => [960, 1600].map((width) => `${ART}/day-${frame.key}-${width}.${format} ${width}w`).join(", ");
+    return {
+        key: frame.key,
+        hours: frame.hours,
+        time,
+        phase: t(`day.phase.${daylightAt(frame.hours).phase}`),
+        weather: t(`day.weather.${weatherAt(ms).kind}`),
+        tide: t(`day.tide.${tideKey}`),
+        alt: t("day.frameAlt", {time}),
+        avif: srcset("avif"),
+        webp: srcset("webp")
+    };
+}
+
+/** A section's head, the same everywhere: a numbered plate label over a hairline, the title, a line of intro. */
+function SectionHead({index, eyebrow, title, intro, id}: {index: string; eyebrow: string; title: string; intro?: string; id: string}) {
+    return (
+        <header className="grid gap-y-4 md:grid-cols-12 md:gap-x-8">
+            <p className="flex items-center gap-3 border-t border-line-200 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300 md:col-span-12">
+                <span className="text-primary-200 [font-variant-numeric:tabular-nums]">{index}</span>
+                <span>{eyebrow}</span>
+            </p>
+            <h2 id={id} className="font-display text-[2.5rem] font-bold leading-[0.95] tracking-tight text-white [text-wrap:balance] md:col-span-7 md:text-6xl">{title}</h2>
+            {intro ? <p className="max-w-xl self-end text-base leading-relaxed text-ink-200 md:col-span-5 md:text-lg">{intro}</p> : null}
+        </header>
+    );
+}
+
+/** The figure's specimen label: what it is, its scientific name in italic, and where or when. */
+function Specimen({name, latin, line}: {name: string; latin: string; line: string}) {
+    return (
+        <div className="absolute bottom-3 left-3 right-3 max-w-[18rem] rounded-sm bg-[#f4f1e8] px-3 py-2.5 text-[#13221a] shadow-[0_10px_30px_rgba(0,0,0,0.28)]">
+            <p className="font-display text-lg font-bold leading-none">{name}</p>
+            <p className="mt-1 text-[13px] italic leading-tight text-[#13221a]/75">{latin}</p>
+            <p className="mt-2 border-t border-[#13221a]/15 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#13221a]/70">{line}</p>
+        </div>
+    );
+}
+
+function Picture({name, widths, alt, sizes, className}: {name: string; widths: number[]; alt: string; sizes: string; className?: string}) {
+    const set = (format: string) => widths.map((width) => `${ART}/${name}-${width}.${format} ${width}w`).join(", ");
+    return (
+        <picture>
+            <source type="image/avif" srcSet={set("avif")} sizes={sizes} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`${ART}/${name}-${widths[0]}.webp`} srcSet={set("webp")} sizes={sizes} alt={alt} loading="lazy" decoding="async" className={className} />
+        </picture>
+    );
+}
+
+/** The official store badges (Apple's and Google's own artwork), with the placement each was clicked from. */
+function StoreBadges({locale, placement, t}: {locale: string; placement: "home_hero" | "home_download"; t: ScopedTranslator}) {
+    return (
+        <div className="flex flex-wrap items-center gap-3">
+            <StoreLink store="app_store" placement={placement} inheritPlacement={placement === "home_download"} target="_blank" rel="noopener noreferrer" aria-label={t("app.appStore")} className="block rounded-[9px] transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${ART}/badge-app-store.svg`} alt="" width={132} height={44} className="h-11 w-auto" />
+            </StoreLink>
+            <StoreLink store="google_play" placement={placement} inheritPlacement={placement === "home_download"} target="_blank" rel="noopener noreferrer" aria-label={t("app.googlePlay")} className="block rounded-[9px] transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${ART}/badge-google-play-${locale === "id" ? "id" : "en"}.png`} alt="" width={locale === "id" ? 148 : 148} height={44} className="h-11 w-auto" />
+            </StoreLink>
+        </div>
+    );
+}
+
 export default async function Home({params}: HomePageProps) {
     const timer = createDevRequestTimer("home.page");
     const locale = localeConfig.locales.includes(params.locale) ? params.locale : localeConfig.defaultLocale;
 
     try {
         const [t, messages] = await timeDevStep(timer, "translations", () => Promise.all([
-            getScopedTranslator(locale, "home"),
+            getScopedTranslator(locale, "landing"),
             loadLocaleMessages(locale)
         ]));
-    // Structured data (SEO lane S3, S1's audit): one app entity in the world positioning, no SearchAction.
-    const homeSchema = homeJsonLd({
-        locale,
-        name: "AnimalDex",
-        description: String((messages.meta as {description?: unknown} | undefined)?.description ?? ""),
-        image: ARK_RENDER_IMAGE,
-        featureList: homeFeatureList(locale)
-    });
-    const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
-    const orbitCenter: HomeOrbitAnimal = {slug: TRY_TALKING_SPECIES.slug, name: t("chatStill.animal"), image: TRY_TALKING_SPECIES.image};
-    const orbitAnimals: HomeOrbitAnimal[] = heroOrbitAnimals.map(({slug, name}) => ({slug, name, image: getSpeciesArtworkUrl(slug)}));
-    const downloadStoreLinks = downloads.filter(({name}) => name === "App Store" || name === "Google Play");
-    // The hero test (lib/hero-variant): read at render, so the split changes with the server's environment.
-    const heroSplit = heroVariantSplit(process.env.HERO_VARIANT_SPLIT);
-    const chips = demoChips((messages.home as {demo?: {chips?: unknown}} | undefined)?.demo?.chips);
-    const askT = await getScopedTranslator(locale, "askAnimalDex");
-    const demoWords: HomeIdeaDemoWords = {
-        label: t("demo.label"),
-        eyebrow: t("demo.eyebrow"),
-        chipsLabel: t("demo.chipsLabel"),
-        usualTitle: t("demo.usualTitle"),
-        exampleTag: t("demo.exampleTag"),
-        exampleNote: t("demo.exampleNote"),
-        takeTitle: t("demo.takeTitle"),
-        idle: t("demo.idle"),
-        ask: t("demo.ask"),
-        thinking: t("demo.thinking"),
-        keepTalking: t("demo.keepTalking"),
-        share: t("demo.share"),
-        copied: t("demo.copied"),
-        shareTitle: t("demo.shareTitle"),
-        failed: t("demo.failed"),
-        tryAgain: t("demo.tryAgain"),
-        limit: t("demo.limit"),
-        limitCta: t("demo.limitCta"),
-        disclosure: t("demo.disclosure"),
-        safetyLink: t("demo.safetyLink"),
-        aiTagLabel: askT("aiTagLabel"),
-        under13Title: askT("under13Title")
-    };
-    // Six cards fill the 4-column bento exactly (WEB-28): the article on why an
-    // animal that takes a side matters leads, side by side comes last (W6).
-    // Pictures and a title only (2026-11-01).
-    const keepExploringCards: Array<{id: string; href: string; image: string | null; layout: "featured" | "medium" | "small" | "wide"}> = [
-        {id: "adviceFatigue", href: ADVICE_FATIGUE_HREF, image: null, layout: "featured"},
-        {id: "wolfLessons", href: "/animal-powers/wolf", image: "/images/blog/wolf-symbolism/wolf-symbolism-hero.webp", layout: "medium"},
-        {id: "owlSymbolism", href: "/blog/owl-symbolism", image: "/images/blog/owl-symbolism/owl-symbolism-hero.webp", layout: "medium"},
-        {id: "octopusMind", href: "/blog/octopus-symbolism", image: "/images/blog/how-octopus-intelligence-works/common-octopus.webp", layout: "small"},
-        {id: "lionProfile", href: "/animals/lion", image: "/images/blog/lion-symbolism/lion-symbolism-hero.webp", layout: "small"},
-        {id: "tigerLion", href: "/comparisons/tiger-vs-lion", image: "/images/blog/tiger-symbolism/tiger-symbolism-hero.webp", layout: "wide"}
-    ];
-    const sectionTitle = "font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white md:text-5xl lg:text-6xl";
-    const heroStoreRow = (
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-            {/* Its own line on a phone, so the row never rewraps when the web font
-                arrives (it shifted the hero by 48 px: CLS 0.043). */}
-            <span className="mr-1 basis-full text-center text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 sm:basis-auto sm:text-left">{t("heroGetApp")}</span>
-            {downloadStoreLinks.map(({name}) => (
-                <StoreLink
-                    key={name}
-                    store={name === "App Store" ? "app_store" : "google_play"}
-                    placement="home_hero"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary-200/60 px-4 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950"
-                >
-                    {name}
-                </StoreLink>
-            ))}
-        </div>
-    );
+        // Structured data (SEO lane S3, S1's audit): one app entity in the world positioning, no SearchAction.
+        const homeSchema = homeJsonLd({
+            locale,
+            name: "AnimalDex",
+            description: String((messages.meta as {description?: unknown} | undefined)?.description ?? ""),
+            image: ARK_RENDER_IMAGE,
+            featureList: homeFeatureList(locale)
+        });
+
+        const posterWide = (format: string) => [1280, 1920, 2400].map((width) => `${ART}/poster-wide-${width}.${format} ${width}w`).join(", ");
+        const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
+        const posterCaption = t("hero.poster", {time: islandClock(POSTER_AT, locale), date: shortDate(POSTER_AT, locale)});
+        const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
+        const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
+        const foodChainClass = "[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl";
+        // (Called, not mounted: an async server component as JSX fails this React's types. In development without keys
+        // S3's section has nothing to read, and the same pieces run over the local extraction instead.)
+        const foodChain = (await ArkFoodChainSection({locale, variant: "compact", limit: 6, headingLevel: 2, className: foodChainClass}))
+            ?? (await HomeFoodChainDev({locale, limit: 6, className: foodChainClass}));
 
         return (
-        <>
-            {/* No FAQPage: the questions left the page (2026-11-01), and the markup has to match what is shown. */}
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: jsonLdHtml(homeSchema)}}
-            />
-            {/* The hero test: marks <html> with this visitor's hero before either is painted. */}
-            <script dangerouslySetInnerHTML={{__html: heroBootScript(heroSplit)}} />
-            <HeroVariantGate splitB={heroSplit} />
-            <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 top-0 -z-20 h-[min(120svh,56rem)] overflow-hidden"
-            >
-                <Image
-                    src={heroBackgroundImage}
-                    alt=""
-                    fill
-                    priority
-                    sizes="100vw"
-                    className="hero-background-feather object-cover object-center light:opacity-30"
-                />
-            </div>
+            <>
+                {/* No FAQPage: the questions left the page (2026-11-01), and the markup has to match what is shown. */}
+                <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLdHtml(homeSchema)}} />
 
-            {/* Hero A: the hero the page had, the talking octopus and its orbit (Nov 2026: without the stats and the laurel). */}
-            <section
-                {...{[HERO_ARM_ATTRIBUTE]: "a"}}
-                className="relative mx-auto -mt-6 mb-16 grid min-h-[calc(100svh-7rem)] w-full max-w-[86rem] grid-cols-1 items-center gap-10 px-4 pb-12 pt-8 sm:pb-14 md:px-8 lg:-mt-8 lg:mb-8 lg:grid-cols-2 lg:items-center lg:gap-6 lg:pb-16 lg:pt-8 xl:gap-10"
-                id="top"
-            >
-                <div className="relative z-10 flex flex-col items-center text-center lg:-ml-3 lg:items-start lg:text-left xl:-ml-5">
-                    {/* The repositioning (2026-10-31): talking, and an animal that takes a side, first. */}
-                    <h1 className="font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
-                        <span
-                            className="hero-wild-textured block text-6xl font-semibold leading-[0.85] sm:text-7xl lg:text-[5.25rem] xl:text-[6.25rem]"
-                            style={{"--hero-wild-texture": `url(${heroTextureImage})`} as React.CSSProperties}
-                        >
-                            {t("heroTalkLead")}
-                        </span>
-                        <span className="mt-3 block text-[2.1rem] leading-[0.95] [text-wrap:balance] sm:text-5xl lg:text-[3rem] xl:text-[3.5rem]">{t("heroTalkAccent")}</span>
+                {/* 1. The live Ark. */}
+                <HomeArkHero
+                    locale={locale}
+                    lang={locale}
+                    words={{
+                        seeLive: t("hero.seeLive"),
+                        loading: t("hero.loading"),
+                        interact: t("hero.interact"),
+                        interactDone: t("hero.interactDone"),
+                        poster: posterCaption,
+                        live: t("hero.live"),
+                        sceneLabel: t("hero.sceneLabel")
+                    }}
+                    poster={
+                        <picture>
+                            <source media="(min-width: 768px)" type="image/avif" srcSet={posterWide("avif")} sizes="100vw" />
+                            <source media="(min-width: 768px)" type="image/webp" srcSet={posterWide("webp")} sizes="100vw" />
+                            <source type="image/avif" srcSet={posterTall("avif")} sizes="100vw" />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                data-ark-poster=""
+                                src={`${ART}/poster-tall-640.webp`}
+                                srcSet={posterTall("webp")}
+                                sizes="100vw"
+                                alt={posterCaption}
+                                fetchPriority="high"
+                                className="h-full w-full object-cover object-[50%_40%] md:object-[38%_50%]"
+                            />
+                        </picture>
+                    }
+                >
+                    <h1 className="max-w-5xl text-white">
+                        <span className="block font-display text-[3.1rem] font-extrabold uppercase leading-[0.86] tracking-[-0.005em] [text-wrap:balance] sm:text-7xl lg:text-[6.25rem]">{t("hero.taglineLead")}</span>
+                        <span className="mt-3 block font-display-italic text-[1.7rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-4xl lg:mt-4 lg:text-[2.75rem]">{t("hero.taglineRest")}</span>
                     </h1>
-                    <div className="mt-9 flex w-full max-w-xl flex-col items-center gap-4 lg:items-start">
-                        <Link
-                            href={TALK_HREF}
-                            className="group/talk relative flex min-h-[4.25rem] w-full items-center gap-3 overflow-hidden rounded-full border border-primary-200/40 bg-primary-400 py-3.5 pl-4 pr-6 text-left text-canvas-950 shadow-[0_18px_50px_rgba(167,244,50,0.22),inset_0_1px_0_rgba(255,255,255,0.38)] transition-[transform,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:bg-primary-300 hover:shadow-[0_26px_74px_rgba(167,244,50,0.32)] sm:w-auto sm:min-w-[22rem]"
-                        >
-                            <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center">
-                                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M4 5.5h16v10H9.5L5 19.5v-4H4z" />
-                                    <path d="M8 10.5h8" />
-                                </svg>
-                            </span>
-                            <span className="min-w-0 flex-1 font-display text-xl font-bold leading-none sm:text-2xl">{t("heroCta")}</span>
-                            <span aria-hidden="true" className="text-2xl transition-transform duration-300 group-hover/talk:translate-x-1">→</span>
+                    <p className="mt-5 max-w-[34rem] text-base leading-relaxed text-white/80 md:mt-6 md:text-lg">{t("hero.sentence")}</p>
+                    <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
+                        <StoreBadges locale={locale} placement="home_hero" t={t} />
+                        <Link href="/ark" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white underline decoration-white/40 underline-offset-[6px] transition-colors hover:decoration-primary-400">
+                            {t("hero.explore")}
+                            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
                         </Link>
-                        {heroStoreRow}
                     </div>
-                </div>
-                <div className="relative z-10 flex w-full items-center justify-center pb-10 lg:pb-0">
-                    <HomeAnimalOrbit center={orbitCenter} animals={orbitAnimals} bubble={t("heroBubble")} label={t("orbitLabel")} />
-                </div>
-            </section>
+                </HomeArkHero>
 
-            {/* Hero B: the demo first (SPEC section 1): the usual answer beside the lion's own take, live. */}
-            <section
-                {...{[HERO_ARM_ATTRIBUTE]: "b"}}
-                aria-labelledby="home-idea-title"
-                className="relative mx-auto -mt-4 mb-16 flex w-full max-w-5xl flex-col items-center gap-7 px-4 pb-10 pt-4 sm:pt-8 md:px-8 lg:mb-20 lg:pt-10"
-                id="try"
-            >
-                <h1 id="home-idea-title" className="w-full text-center font-display font-extrabold uppercase leading-[0.9] tracking-tight text-white">
-                    <span
-                        className="hero-wild-textured block text-[2.65rem] font-semibold leading-[0.88] [text-wrap:balance] sm:text-6xl lg:text-[4.5rem] xl:text-[5rem]"
-                        style={{"--hero-wild-texture": `url(${heroTextureImage})`} as React.CSSProperties}
-                    >
-                        {t("heroIdeaLead")}
-                    </span>
-                    <span className="mt-3 block text-[1.6rem] leading-[0.95] [text-wrap:balance] sm:text-4xl lg:text-[2.75rem]">{t("heroTalkAccent")}</span>
-                </h1>
-                <HomeIdeaDemo chips={chips} words={demoWords} locale={locale} animalImage={getSpeciesArtworkUrl(HERO_DEMO_ANIMAL.slug)} />
-                {heroStoreRow}
-            </section>
+                <div className="mx-auto w-full max-w-[86rem] px-4 md:px-8">
+                    {/* 2. Who is aboard right now. */}
+                    <section aria-labelledby="home-numbers-title" className="pt-10 md:pt-14">
+                        <h2 id="home-numbers-title" className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">{t("numbers.title")}</h2>
+                        <HomeLiveNumbers
+                            locale={locale}
+                            words={{
+                                title: t("numbers.title"),
+                                animals: t("numbers.animals"),
+                                species: t("numbers.species"),
+                                founders: t("numbers.founders"),
+                                births: t("numbers.births"),
+                                meals: t("numbers.meals"),
+                                asOf: t("numbers.asOf"),
+                                unavailable: t("numbers.unavailable"),
+                                noMeals: t("numbers.noMeals"),
+                                top: t("numbers.top")
+                            }}
+                        />
+                    </section>
 
-            {/* Every animal is different (spec §3): one question, two animals facing off across it. */}
-            <section aria-labelledby="home-different-title" className="relative mx-auto mb-20 flex w-full max-w-5xl flex-col items-center gap-10 px-4 md:px-8 lg:mb-28">
-                <h2 id="home-different-title" className={`${sectionTitle} max-w-3xl text-center`}>{t("different.title")}</h2>
-                <HomeSides example={disagree} />
-            </section>
-
-            {/* Three pictures for how it goes: capture one, talk to it, do the step and keep its Power. */}
-            <Anchor id="features" className="top-12 lg:-top-24" />
-            <section aria-labelledby="home-flow-title" className="relative mb-20 w-full overflow-hidden bg-[#071B0F] py-14 light:bg-canvas-900 md:py-20 lg:mb-28">
-                <h2 id="home-flow-title" className="sr-only">{t("heroHowItWorks")}</h2>
-                <ol className="mx-auto flex w-full max-w-[86rem] snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-4 [scrollbar-width:none] md:px-8 lg:grid lg:grid-cols-3 lg:gap-8 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                    {[
-                        {
-                            label: t("flow.capture"),
-                            still: (
-                                <HomeRevealStill
-                                    image={getSpeciesArtworkUrl("red-fox")}
-                                    words={{
-                                        label: t("more.theme.alt"),
-                                        eyebrow: t("more.theme.stillLabel"),
-                                        animal: "Red Fox",
-                                        scientificName: "Vulpes vulpes",
-                                        power: `${t("chatStill.power").split("·")[0].trim()} · Cunning`,
-                                        motto: "Work the edges.",
-                                        talk: t("more.theme.stillTalk"),
-                                        stars: t("more.theme.stillStars")
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            label: t("flow.talk"),
-                            still: (
-                                <HomeChatStill
-                                    image={TRY_TALKING_SPECIES.image}
-                                    words={{
-                                        label: t("chatStill.label"),
-                                        animal: t("chatStill.animal"),
-                                        power: t("chatStill.power"),
-                                        you: t("chatStill.you"),
-                                        reply: t("chatStill.reply"),
-                                        stepLabel: t("chatStill.stepLabel"),
-                                        step: t("chatStill.step"),
-                                        accept: t("chatStill.accept"),
-                                        other: t("chatStill.other"),
-                                        caption: t("chatStill.caption")
-                                    }}
-                                />
-                            )
-                        },
-                        {
-                            label: t("flow.grow"),
-                            still: (
-                                <HomeDoneStill
-                                    image={getSpeciesArtworkUrl("gray-wolf")}
-                                    words={{
-                                        label: t("more.ui.alt"),
-                                        animal: "Gray Wolf",
-                                        power: `${t("chatStill.power").split("·")[0].trim()} · Cooperation`,
-                                        you: t("more.ui.you"),
-                                        reply: t("more.ui.reply"),
-                                        doneLabel: t("more.ui.doneLabel"),
-                                        doneText: t("more.ui.doneText")
-                                    }}
-                                />
-                            )
-                        }
-                    ].map((step, index) => (
-                        <li key={step.label} className="flex w-[86%] max-w-[24rem] shrink-0 snap-center flex-col items-center gap-6 sm:w-[60%] lg:w-auto lg:max-w-none">
-                            <p className="flex items-baseline gap-3 font-display font-black uppercase leading-none text-white">
-                                <span className="text-5xl text-primary-400 md:text-6xl">{String(index + 1).padStart(2, "0")}</span>
-                                <span className="text-2xl tracking-[0.04em] md:text-3xl">{step.label}</span>
-                            </p>
-                            <div className="w-full">{step.still}</div>
-                        </li>
-                    ))}
-                </ol>
-                <p className="mt-10 px-4 text-center">
-                    <Link href={HOW_IT_WORKS_HREF} className="inline-flex items-center gap-2 text-base font-bold text-primary-200 transition-colors hover:text-white">
-                        {t("heroHowItWorks")} <span aria-hidden="true">→</span>
-                    </Link>
-                </p>
-            </section>
-
-            {/* The Ark (Part 4d): where an animal goes when its step works. */}
-            <section aria-labelledby="home-ark-title" className="relative mx-auto mb-20 flex w-full max-w-5xl flex-col items-center gap-5 px-4 text-center md:px-8 lg:mb-28">
-                <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-200">{t("ark.eyebrow")}</p>
-                <h2 id="home-ark-title" className="max-w-3xl font-display text-3xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white [text-wrap:balance] md:text-5xl">{t("ark.title")}</h2>
-                <p className="max-w-2xl text-base leading-7 text-ink-200 md:text-lg md:leading-8">{t("ark.body")}</p>
-                <Link href="/ark" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary-200/60 px-5 text-sm font-bold text-white transition-colors duration-300 hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950">
-                    {t("ark.cta")} <span aria-hidden="true">→</span>
-                </Link>
-            </section>
-
-            <Anchor id="download" className="md:-top-48" />
-            <section className="relative mb-20 flex w-full flex-col items-center px-4 md:px-8 lg:mb-28">
-                <div className="relative w-full max-w-6xl">
-                    <div className="pointer-events-none absolute inset-x-10 top-8 -z-10 h-56 rounded-full bg-primary-500/[0.18] blur-3xl motion-safe:animate-[ctaGlow_5s_ease-in-out_infinite]" />
-                    <div className="relative overflow-hidden border border-primary-200/15 bg-[radial-gradient(circle_at_20%_0%,rgba(167,244,50,0.16),transparent_34%),radial-gradient(circle_at_100%_100%,rgba(167,244,50,0.10),transparent_34%),linear-gradient(135deg,rgba(28,37,32,0.92),rgba(7,11,9,0.96))] p-6 shadow-[0_28px_120px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.08)] light:border-line-200 light:bg-none light:bg-surface-900 md:p-10 motion-safe:animate-[ctaRise_700ms_ease-out_both]">
-                        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
-                            <div className="flex flex-col gap-6 text-center lg:text-left">
-                                <h2 className="font-display text-5xl font-bold leading-[0.96] text-white md:text-6xl lg:text-7xl">
-                                    {t("download.title")}
-                                </h2>
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                {downloadStoreLinks.map(({name}) => (
-                                    <StoreLink
-                                        key={name}
-                                        store={name === "App Store" ? "app_store" : "google_play"}
-                                        placement="home_download"
-                                        inheritPlacement
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="group/store flex min-h-[5.25rem] items-center gap-4 rounded-[2px] border border-white/10 bg-[#07100B]/88 px-5 py-4 text-left text-white shadow-[0_18px_60px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-[transform,border-color,box-shadow,background-color] duration-300 ease-out hover:-translate-y-1 hover:border-primary-200/45 hover:bg-[#0D2A16] hover:shadow-[0_22px_70px_rgba(33,192,94,0.12),inset_0_1px_0_rgba(255,255,255,0.10)] light:bg-surface-800 light:hover:bg-surface-700"
-                                    >
-                                        <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-white/[0.08] bg-white/[0.055] text-primary-100 transition-colors duration-300 group-hover/store:border-primary-200/30 group-hover/store:text-white">
-                                            {name === "App Store" ? (
-                                                <svg aria-hidden="true" viewBox="0 0 32 32" className="h-7 w-7 fill-current">
-                                                    <path d="M21.8 4.2c.1 1.4-.4 2.8-1.3 3.8-.9 1.1-2.4 1.9-3.8 1.8-.2-1.3.4-2.8 1.2-3.7.9-1.1 2.5-1.9 3.9-1.9Zm4.7 19.2c-.6 1.4-.9 2.1-1.7 3.3-1.1 1.7-2.7 3.8-4.7 3.8-1.8 0-2.2-1.1-4.6-1.1s-2.9 1.1-4.6 1.2c-2 0-3.5-1.9-4.7-3.6-3.2-4.9-3.6-10.6-1.6-13.7 1.4-2.2 3.6-3.4 5.7-3.4 2.1 0 3.5 1.2 5.3 1.2 1.7 0 2.8-1.2 5.3-1.2 1.9 0 3.9 1 5.3 2.8-4.7 2.6-3.9 9.3.3 10.7Z" />
-                                                </svg>
-                                            ) : (
-                                                <svg aria-hidden="true" viewBox="0 0 42 42" className="h-7 w-7 fill-current">
-                                                    <path fillRule="evenodd" clipRule="evenodd" d="M21.5435 24.9506C20.8295 24.234 19.6675 24.234 18.9547 24.9506C17.0825 26.8266 5.34416 38.5968 3.76343 40.1699C5.59743 42.1248 8.91926 42.5982 11.2471 41.1779L28.1031 31.5178C26.5478 29.9677 23.1204 26.5326 21.5435 24.9506Z" />
-                                                    <path fillRule="evenodd" clipRule="evenodd" d="M18.9544 17.1818C19.6684 17.8983 20.8291 17.8983 21.5431 17.1818L25.4797 13.2363L25.4759 13.2338L28.155 10.5572L11.3129 0.859026C8.93803 -0.627523 5.51693 -0.11843 3.67529 1.87466C5.21911 3.40958 17.114 15.3401 18.9544 17.1818Z" />
-                                                    <path fillRule="evenodd" clipRule="evenodd" d="M16.3722 22.3631C17.0874 21.6453 17.0874 20.4846 16.3722 19.7668L5.82886 9.19418L2.04249 5.4129C2.01576 5.63436 1.99667 5.8749 2.00049 6.10909L2.00303 35.9533C2.01194 36.2333 2.05267 36.5592 2.09594 36.8404C4.58922 34.3993 13.7656 25.0193 16.3722 22.3631Z" />
-                                                    <path fillRule="evenodd" clipRule="evenodd" d="M37.0414 15.6736L31.4388 12.4473C29.797 14.0764 25.8045 18.0906 24.127 19.7693C23.4105 20.4871 23.4105 21.6478 24.127 22.3657C25.8146 24.0457 29.7385 27.9988 31.3905 29.6368L36.9892 26.4295C41.2223 24.3295 41.2541 17.8105 37.0414 15.6736Z" />
-                                                </svg>
-                                            )}
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block text-[0.68rem] font-black uppercase tracking-[0.22em] text-primary-200/85">
-                                                {t("download.available")}
-                                            </span>
-                                            <span className="mt-1 block font-display text-2xl font-bold leading-none">
-                                                {name}
-                                            </span>
-                                        </span>
-                                        <span className="text-2xl text-primary-200 transition-transform duration-300 group-hover/store:translate-x-1">
-                                            →
-                                        </span>
-                                    </StoreLink>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section aria-labelledby="home-explore-title" className="relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 md:px-8">
-                <h2 id="home-explore-title" className={`${sectionTitle} text-center`}>{t("explore.title")}</h2>
-                <div className="grid auto-rows-[15rem] grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[16.5rem]">
-                    {keepExploringCards.map((item) => {
-                        const isFeatured = item.layout === "featured";
-                        const isMedium = item.layout === "medium";
-                        const isWide = item.layout === "wide";
-                        const cardClassName = isFeatured
-                            ? "md:col-span-2 lg:row-span-2"
-                            : isMedium
-                                ? "lg:col-span-2"
-                                : isWide
-                                    ? "md:col-span-2"
-                                    : "";
-
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={`group relative flex overflow-hidden bg-surface-900 text-white ${cardClassName}`}
-                            >
-                                {item.image ? (
-                                    <Image
-                                        src={item.image}
-                                        alt={t(`explore.cards.${item.id}.alt`)}
-                                        fill
-                                        sizes={isFeatured ? "(min-width: 1024px) 50vw, 100vw" : isWide ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 1024px) 25vw, (min-width: 768px) 50vw, 100vw"}
-                                        className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-                                    />
-                                ) : (
-                                    // The article has no photograph: two animals who would disagree, facing each other.
-                                    <div role="img" aria-label={t(`explore.cards.${item.id}.alt`)} className="absolute inset-0 flex items-start justify-center gap-[6%] bg-[radial-gradient(circle_at_30%_30%,rgba(167,244,50,0.18),transparent_45%),radial-gradient(circle_at_75%_35%,rgba(33,192,94,0.14),transparent_45%)] px-8 pt-10 md:pt-14">
-                                        {["little-owl", "cheetah"].map((slug, index) => (
-                                            <span key={slug} className={`relative aspect-square w-[34%] max-w-[13rem] ${index === 1 ? "-scale-x-100" : ""}`}>
-                                                <Image src={getSpeciesArtworkUrl(slug)} alt="" fill sizes="(min-width: 1024px) 14rem, 34vw" className="object-contain drop-shadow-[0_18px_40px_rgba(0,0,0,0.45)]" />
-                                            </span>
-                                        ))}
+                    {/* 3. From your camera to the Ark. */}
+                    <section aria-labelledby="home-steps-title" className="pt-24 md:pt-32">
+                        <SectionHead id="home-steps-title" index="01" eyebrow={t("steps.eyebrow")} title={t("steps.title")} />
+                        <ol className="mt-10 grid gap-x-8 gap-y-12 md:mt-14 sm:grid-cols-2 lg:grid-cols-3">
+                            <li>
+                                <figure>
+                                    <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-surface-900">
+                                        <Picture name="catch-komodo" widths={[480, 960]} alt={t("steps.catchAlt")} sizes={plateSizes} className="h-full w-full object-cover" />
+                                        <Specimen name="Komodo Dragon" latin="Varanus komodoensis" line={t("steps.catchLabel", {date: shortDate(CAPTURED_AT, locale)})} />
                                     </div>
-                                )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-canvas-950 via-canvas-950/30 to-transparent light:bg-[linear-gradient(to_top,rgb(var(--c-canvas-950))_0%,rgb(var(--c-canvas-950)/0.7)_30%,rgb(var(--c-canvas-950)/0)_60%)]" />
-                                <div className={`relative mt-auto flex w-full items-end justify-between gap-4 ${isFeatured ? "p-6 md:p-8" : "p-5"}`}>
-                                    <h3 className={`font-display font-bold leading-[0.98] ${isFeatured ? "text-4xl md:text-5xl lg:text-6xl" : "text-2xl md:text-3xl"}`}>
-                                        {t(`explore.cards.${item.id}.title`)}
-                                    </h3>
-                                    <span aria-hidden="true" className="shrink-0 text-2xl text-primary-200 transition-transform duration-300 group-hover:translate-x-1">→</span>
-                                </div>
-                            </Link>
-                        );
-                    })}
+                                    <figcaption className="mt-5 grid grid-cols-[3.5rem_1fr] gap-x-3">
+                                        <span className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-200">{t("steps.fig", {n: "2a"})}</span>
+                                        <span>
+                                            <span className="block font-display text-3xl font-bold leading-none text-white">{t("steps.catchTitle")}</span>
+                                            <span className="mt-2 block text-base leading-relaxed text-ink-200">{t("steps.catchBody")}</span>
+                                        </span>
+                                    </figcaption>
+                                </figure>
+                            </li>
+                            <li>
+                                <figure>
+                                    <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-surface-900">
+                                        <Picture name="aboard-komodo" widths={[480, 720]} alt={t("steps.aboardAlt")} sizes={plateSizes} className="h-full w-full object-cover" />
+                                        <Specimen name="Komodo Dragon" latin="Varanus komodoensis" line={t("steps.aboardLabel", {date: shortDate(ABOARD_AT, locale)})} />
+                                    </div>
+                                    <figcaption className="mt-5 grid grid-cols-[3.5rem_1fr] gap-x-3">
+                                        <span className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-200">{t("steps.fig", {n: "2b"})}</span>
+                                        <span>
+                                            <span className="block font-display text-3xl font-bold leading-none text-white">{t("steps.aboardTitle")}</span>
+                                            <span className="mt-2 block text-base leading-relaxed text-ink-200">{t("steps.aboardBody")}</span>
+                                        </span>
+                                    </figcaption>
+                                </figure>
+                            </li>
+                            <li className="sm:col-span-2 lg:col-span-1">
+                                <figure className="sm:mx-auto sm:max-w-[calc(50%-1rem)] lg:max-w-none">
+                                    <div className="theme-dark relative aspect-[4/5] overflow-hidden rounded-sm bg-[#3a2a17]">
+                                        <HomeLoopVideo
+                                            sources={[{src: `${ART}/talk-komodo.webm`, type: "video/webm"}, {src: `${ART}/talk-komodo.mp4`, type: "video/mp4"}]}
+                                            poster={`${ART}/talk-komodo-960.webp`}
+                                            label={t("steps.talkAlt")}
+                                            className="h-full w-full object-cover"
+                                        />
+                                        <div className="absolute inset-x-3 bottom-3 flex flex-col gap-2">
+                                            <p className="ml-auto max-w-[80%] rounded-sm bg-primary-400 px-3 py-2 text-sm font-semibold leading-snug text-canvas-950">{t("steps.you")}</p>
+                                            <p className="max-w-[92%] rounded-sm bg-[#0b130e]/90 px-3 py-2 text-sm leading-snug text-white backdrop-blur-sm">{t("steps.reply")}</p>
+                                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70">{t("steps.example")}</p>
+                                        </div>
+                                    </div>
+                                    <figcaption className="mt-5 grid grid-cols-[3.5rem_1fr] gap-x-3">
+                                        <span className="pt-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-primary-200">{t("steps.fig", {n: "2c"})}</span>
+                                        <span>
+                                            <span className="block font-display text-3xl font-bold leading-none text-white">{t("steps.talkTitle")}</span>
+                                            <span className="mt-2 block text-base leading-relaxed text-ink-200">{t("steps.talkBody")}</span>
+                                            <Link href={TALK_HREF} className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white underline decoration-white/40 underline-offset-[6px] transition-colors hover:decoration-primary-400">
+                                                {t("steps.talkCta")}
+                                                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+                                            </Link>
+                                        </span>
+                                    </figcaption>
+                                </figure>
+                            </li>
+                        </ol>
+                        {/* The text pages carry the explanation (SEO lane S3): one quiet row of links, not more words here. */}
+                        <p className="mt-12 flex flex-wrap gap-x-8 gap-y-2 border-t border-line-200 pt-4 text-sm font-bold">
+                            <Link href={HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howItWorks")}</Link>
+                            <Link href={ARK_HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howTheArkWorks")}</Link>
+                        </p>
+                    </section>
+
+                    {/* 4. A day on the Ark: the head here, the day itself full bleed below. */}
+                    <section aria-labelledby="home-day-title" className="pt-24 md:pt-32">
+                        <SectionHead id="home-day-title" index="02" eyebrow={t("day.eyebrow")} title={t("day.title")} intro={t("day.intro")} />
+                    </section>
                 </div>
-            </section>
-        </>
+
+                <div className="mt-10 md:mt-14">
+                    <HomeArkDay frames={dayFrames} locale={locale} words={{awake: t("day.awake"), awakeLabel: t("day.awakeLabel"), date: t("day.date")}} />
+                </div>
+
+                <div className="mx-auto w-full max-w-[86rem] px-4 md:px-8">
+                    {/* 5. Who eats whom (S3's compact explorer, its own heading set in this page's section style); nothing when it can't be read. */}
+                    {foodChain ? (
+                        <div className="pt-24 md:pt-32">
+                            <p className="mb-4 flex items-center gap-3 border-t border-line-200 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">
+                                <span className="text-primary-200">03</span>
+                                <span>{t("foodChain.eyebrow")}</span>
+                            </p>
+                            {foodChain}
+                        </div>
+                    ) : null}
+
+                    {/* 6. Populations over time. */}
+                    <section aria-labelledby="home-population-title" className="pt-24 md:pt-32">
+                        <SectionHead id="home-population-title" index="04" eyebrow={t("population.eyebrow")} title={t("population.title")} intro={t("population.intro")} />
+                        <div className="mt-10 md:mt-14">
+                            <HomeArkPopulations
+                                locale={locale}
+                                words={{
+                                    total: t("population.total"),
+                                    backfill: t("population.backfill"),
+                                    day24: t("population.day24"),
+                                    same: t("population.same"),
+                                    unavailable: t("population.unavailable"),
+                                    axisStart: t("population.axisStart"),
+                                    axisNow: t("population.axisNow"),
+                                    legend: t("population.legend")
+                                }}
+                            />
+                        </div>
+                    </section>
+
+                    {/* 7. Get the app. */}
+                    <Anchor id="download" className="md:-top-24" />
+                    <section aria-labelledby="home-app-title" className="py-24 md:py-32">
+                        <div className="grid gap-10 border-t border-line-200 pt-10 md:grid-cols-12 md:gap-8 md:pt-14">
+                            <div className="flex flex-col gap-5 md:col-span-8">
+                                <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">
+                                    <span className="text-primary-200">05</span>
+                                    <span>{t("app.eyebrow")}</span>
+                                </p>
+                                <h2 id="home-app-title" className="font-display text-[2.5rem] font-bold leading-[0.95] tracking-tight text-white [text-wrap:balance] md:text-6xl">{t("app.title")}</h2>
+                                <p className="text-base text-ink-200 md:text-lg">{t("app.body")}</p>
+                                <StoreBadges locale={locale} placement="home_download" t={t} />
+                            </div>
+                            <figure className="hidden flex-col items-start gap-3 md:col-span-4 md:flex md:items-end">
+                                <div className="rounded-sm bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.25)]">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={`${ART}/qr-get-app.svg`} alt={t("app.qrAlt")} width={144} height={144} loading="lazy" className="h-36 w-36" />
+                                </div>
+                                <figcaption className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-300">{t("app.qr")}</figcaption>
+                            </figure>
+                        </div>
+                    </section>
+                </div>
+            </>
         );
     } finally {
         finishDevRequestTimer(timer, {locale});

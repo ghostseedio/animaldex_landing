@@ -227,7 +227,8 @@ test("every animal is different: the owl says not yet and the cheetah says take 
 test("Talk is the way in everywhere: the home hero, the article, How it works, the sitemap and llms.txt", () => {
     const home = readRepo("src/app/[locale]/(composited)/(home)/page.tsx");
     assert.match(home, /href=\{TALK_HREF\}/);
-    assert.match(home, /ADVICE_FATIGUE_HREF/);
+    // (The Ark-first home, 2026-11-12, landing lane S2: Talk from "Hear its side", How it works under the steps; the
+    // advice fatigue article is reached from the header and footer, no longer from the home page.)
     assert.match(home, /HOW_IT_WORKS_HREF/);
     assert.doesNotMatch(home, /heroTryTalking/);
     for (const page of ["advice-fatigue", "how-it-works"]) {

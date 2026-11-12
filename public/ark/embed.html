@@ -33,6 +33,10 @@
  *
  * Query: ?snapshot=<url> (default /api/ark/voyage, refreshed every 45 s while
  * visible), ?models=<ark model folder>, ?talking=<talking model folder>, ?mine=1,
+ * ?refresh=<seconds> (at least 45, the default): how often the snapshot is read again while visible; ?idle=<seconds>:
+ * stop reading again after that long with no interaction (a tap, a key, the wheel, or the host's {type: "ark:activity"}),
+ * and read once more as soon as there is some (the home page's hero: refresh=600, idle=900, decision 258; the apps
+ * pass neither, so they read every 45 s as before). The animals keep moving between reads on the scene's own schedule.
  * ?lang=<app language> (any of the apps' 44: the Ark's words from /api/ark/words, English key by key,
  * the page's lang and dir, the herds' counts), ?label=<the world's accessible name; default: the Ark's own, in ?lang>,
  * ?regions=1 (the seven regions' names drawn over the world from far, in ?lang),
@@ -61,6 +65,7 @@
  *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
  *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
+ *   {type: "ark:activity"}                                       the reader did something on the host page (for ?idle=)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  * To the host: {type: "ark:selected", animal, founders}, where founders is that animal's named founders and shared story
  * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
@@ -255,8 +260,22 @@
 
   // Development's preview of the islands: T1's routing merged by id into the given snapshot (never in production).
   var islandsUrl = devBuild && Ark.mergeArkIslandsRouting ? params.get("islands") : null;
+  // How often the snapshot is read again, and when to stop for lack of interaction (?refresh=, ?idle=; decision 258).
+  var refreshMs = Math.max(45, Number(params.get("refresh")) || 45) * 1000;
+  var idleMs = Math.max(0, Number(params.get("idle")) || 0) * 1000;
+  var lastActive = Date.now();
+  var lastRead = 0;
+  function activity() {
+    var wasIdle = idleMs && Date.now() - lastActive >= idleMs;
+    lastActive = Date.now();
+    // Back after a quiet while: the Ark as it is now, once, then on the usual interval.
+    if (wasIdle && Date.now() - lastRead >= refreshMs && document.visibilityState === "visible") read();
+  }
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach(function (kind) { window.addEventListener(kind, activity, {passive: true}); });
+
   function read() {
     if (feeding) return Promise.resolve();
+    lastRead = Date.now();
     var routing = islandsUrl ? fetch(islandsUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
     return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead, routing])
       .then(function (both) {
@@ -283,6 +302,7 @@
   var selectHeld = null;
   function receive(message) {
     if (!message || typeof message !== "object") return;
+    if (message.type === "ark:activity") { activity(); return; }
     if (message.type === "ark:visible" || message.type === "ark:power") {
       if (scene && scene.receive) scene.receive(message);
       else runtimeHeld[message.type] = message;
@@ -315,7 +335,11 @@
   window.addEventListener("message", function (event) { receive(event.data); });
 
   read();
-  setInterval(function () { if (document.visibilityState === "visible") read(); }, 45000);
+  setInterval(function () {
+    if (document.visibilityState !== "visible") return;
+    if (idleMs && Date.now() - lastActive >= idleMs) return;
+    read();
+  }, refreshMs);
 })();
 </script>
 </body>

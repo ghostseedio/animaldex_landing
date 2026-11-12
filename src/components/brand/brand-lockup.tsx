@@ -10,14 +10,18 @@
  * transparent mark on dark, the app-icon tile on light, where the art's dark
  * shading would otherwise wash out).
  *
- * Replaces the chrome `animaldex-logo-text.webp` wordmark, which is retired
- * from the UI (the file stays for old links).
+ * `chrome`: the word as the chrome italic wordmark instead (decision 245,
+ * 2026-11-12: S1's audit found the flat lockup the biggest loss of
+ * distinctiveness; the site header wears it again). A 7 KB rendition of
+ * `animaldex-logo-text.webp` at the header's size (`/images/brand/wordmark-chrome-*`),
+ * its own dark edge reading on both themes.
  */
 export default function BrandLockup({
     size = 28,
     large = false,
     className = "",
-    wordClassName = ""
+    wordClassName = "",
+    chrome = false
 }: {
     /**
      * The word's font size in px; everything else is derived from it. Null
@@ -29,6 +33,8 @@ export default function BrandLockup({
     className?: string;
     /** Extra classes on the word, e.g. to hide it on narrow screens. */
     wordClassName?: string;
+    /** The chrome italic wordmark in place of the flat word. */
+    chrome?: boolean;
 }) {
     return (
         <span
@@ -36,10 +42,22 @@ export default function BrandLockup({
             style={size === null ? undefined : {"--brand-size": `${size}px`} as React.CSSProperties}
         >
             <span aria-hidden="true" className="brand-mark" />
-            <span className={`brand-word ${wordClassName}`}>
-                <span className="brand-word-animal">Animal</span>
-                <span className="brand-word-dex">Dex</span>
-            </span>
+            {chrome ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                    src="/images/brand/wordmark-chrome-56.webp"
+                    srcSet="/images/brand/wordmark-chrome-56.webp 2x, /images/brand/wordmark-chrome-84.webp 3x"
+                    alt="AnimalDex"
+                    width={128}
+                    height={28}
+                    className={`block h-[1.04em] w-auto ${wordClassName}`}
+                />
+            ) : (
+                <span className={`brand-word ${wordClassName}`}>
+                    <span className="brand-word-animal">Animal</span>
+                    <span className="brand-word-dex">Dex</span>
+                </span>
+            )}
         </span>
     );
 }
