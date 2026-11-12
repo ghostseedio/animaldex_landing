@@ -5,7 +5,7 @@
  *
  * **The cutaway** (`cutawayMaterial`): a house's walls and roof drawn whole from afar, cut down to a low wall as the
  * camera comes close (from 70 m in to 40 m), so its tanks and residents are seen from any side and from above; the
- * cut fragments are dropped with a dither, in the sun's shadow pass too, so nothing cut casts a shadow inside. Each
+ * cut fragments are dropped, in the sun's shadow pass too, so nothing cut casts a shadow inside. Each
  * vertex carries its house's middle, floor and full height (`aCut`).
  */
 
@@ -38,14 +38,12 @@ const CUT_FRAGMENT_PARS = `
 uniform vec3 uCutEye;
 varying vec3 vCutWorld;
 varying vec4 vCutHouse;
-float cutDither(vec2 p) { return fract(sin(dot(floor(p), vec2(12.9898, 78.233))) * 43758.5453); }
 `;
 const CUT_FRAGMENT_BODY = `
 {
     float open = 1.0 - smoothstep(${CUT_NEAR.toFixed(1)}, ${CUT_FAR.toFixed(1)}, distance(uCutEye, vCutHouse.xyz));
     float cutY = vCutHouse.y + mix(vCutHouse.w + 6.0, ${CUT_LOW.toFixed(2)}, open);
-    float band = (vCutWorld.y - cutY) / 0.35;
-    if (band > cutDither(gl_FragCoord.xy * 0.5)) discard;
+    if (vCutWorld.y > cutY) discard;
 }
 `;
 

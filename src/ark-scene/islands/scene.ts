@@ -98,6 +98,11 @@ export type ArkIslandScene = {
     tankPose: (id: string, length: number, height: number, clock: number) => {x: number; z: number; yaw: number; pitch: number; base: number; spec: WaterSpec} | null;
     /** Lane TB: held at its place (in a cage, a vivarium, a tank, a zoo house): never walks off it. */
     held: (id: string) => boolean;
+    /**
+     * Lane TB: where a herd's member figure stands (its lowest point, m): in its tank's water, on its display's tray or
+     * its zoo house's floor (`ground`, its place's), else on the town's drawn ground there (never the wild sea floor).
+     */
+    figureBase: (id: string, x: number, z: number, ground: number, tall: number) => number;
     /** The most its home range may reach (m): its garden, paddock or enclosure. */
     rangeOf: (id: string) => number | null;
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
@@ -437,6 +442,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (!tank || !animal) return null;
             const pose = tankPose(tank, animal, length, height, modelBase(animal.model_slug)?.plan ?? null, clock);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
+        },
+        figureBase: (id, x, z, ground, tall) => {
+            const info = towned.get(id);
+            if (info?.tank) return Math.max(info.tank.floor + 0.05, (info.tank.floor + info.tank.top) / 2 - tall / 2);
+            if (info && (info.display || info.where === "indoor" || info.where === "window" || info.where === "pool")) return ground;
+            return townDrawnHeight(x - origin.x, z - origin.z, undefined, ground);
         },
         held: (id) => {
             const info = towned.get(id);

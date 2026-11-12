@@ -1881,7 +1881,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Part C: the wild island's per-zone capacity is its own land's: the town's animals are counted as the town's.)
         const isl = island;
         const candidates = isl ? snapshot.animals.map((animal) => (isl.has(animal) ? {...animal, zone: "town" as ArkAnimal["zone"]} : animal)) : snapshot.animals;
-        const outside = runtime.outside(candidates, representatives.live, pins, liteOn(), restingFor(snapshot, places));
+        // (Lane TB: on the high and medium tiers the town's kept pets and zoo residents held in their tanks, cages,
+        // vivaria and houses are always out: an empty tank in a lit window reads as a bug, not as rest. They cost no
+        // schedule. On the low tier and the lighter view they take their turn in the budget like everyone.)
+        const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
+        const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
@@ -2102,9 +2106,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     else if (member.water && member.ground < -0.45) base = -(swims ? 0.5 : 0.28) * tall;
                     else if (member.water) base = Math.max(member.ground, -0.3);
                     herdRotation.setFromAxisAngle(up, member.yaw);
+                    // (Lane TB: a town member on its own island's ground: its drawn ground, its tank's water, its cage's tray.)
+                    const townBase = island && island.contains(member.x, member.z) ? island.figureBase(member.id, member.x, member.z, member.ground, tall) : null;
+                    if (townBase !== null) base = townBase;
                     // (Grounding: on land, the far level's true base on the drawn ground.)
                     const onLand = !herdDepth && !member.water && groundingRules() === "grounded";
-                    herdPosition.set(member.x, onLand ? drawnGroundHeight(member.x, member.z) - groundedLevelBase(herd.slug, "far", model.minY) * s : base - model.minY * s, member.z);
+                    herdPosition.set(member.x, townBase !== null ? townBase - groundedLevelBase(herd.slug, "far", model.minY) * s : onLand ? drawnGroundHeight(member.x, member.z) - groundedLevelBase(herd.slug, "far", model.minY) * s : base - model.minY * s, member.z);
                     herdMatrix.compose(herdPosition, herdRotation, herdScale.set(s, s, s));
                     herdMatrix.toArray(herd.figureMatrices, i * 16);
                     // The speck: a generic figure the member's size (a four-legged one, or an oval on a bird or a swimmer's body).

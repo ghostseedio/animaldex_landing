@@ -133,8 +133,9 @@ function tank(t: Tank, parts: {inside: Geo; glow: Geo; glass: Geo; water: Geo}, 
         }
     }
     // The glass: four sides up to a little over the water; the water: its surface and its sides inside the glass.
-    const gh = top - sand + 0.22;
-    const g0 = sand - floor - 0.14;
+    const gh = top - sand + 0.215;
+    // (From just over the stand's top, so the glass never fights it.)
+    const g0 = sand - floor - 0.135;
     const glass = tone("#dcebe6");
     const P = (lx: number, ly: number, lz: number) => at(fr, lx, ly, lz);
     const hw = w / 2;
@@ -144,8 +145,8 @@ function tank(t: Tank, parts: {inside: Geo; glow: Geo; glass: Geo; water: Geo}, 
     parts.glass.quad(P(hw, g0, hd), P(hw, g0, -hd), P(hw, g0 + gh, -hd), P(hw, g0 + gh, hd), glass);
     parts.glass.quad(P(-hw, g0, -hd), P(-hw, g0, hd), P(-hw, g0 + gh, hd), P(-hw, g0 + gh, -hd), glass);
     const tint = t.kind === "salt" ? SALT : FRESH;
-    const ww = hw - 0.01;
-    const wd = hd - 0.01;
+    const ww = hw - 0.03;
+    const wd = hd - 0.03;
     const y0 = sand - floor;
     const y1 = top - floor;
     parts.water.quad(P(-ww, y1, wd), P(ww, y1, wd), P(ww, y1, -wd), P(-ww, y1, -wd), tint);

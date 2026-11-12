@@ -158,9 +158,18 @@ export type TankPose = {x: number; z: number; yaw: number; pitch: number; base: 
 
 const FISHLIKE = new Set(["fish", "ray", "eel", "flatfish", "cetacean", "jellyfish", "cephalopod", "turtle"]);
 
+const units = new Map<string, number>();
 function unit(id: string, salt: string): number {
-    return (hashText(`${id}#${salt}`) % 100000) / 100000;
+    // (Remembered: a tank's resident asks every frame.)
+    const key = `${id}#${salt}`;
+    let u = units.get(key);
+    if (u === undefined) {
+        if (units.size > 200000) units.clear();
+        units.set(key, (u = (hashText(key) % 100000) / 100000));
+    }
+    return u;
 }
+const depths = new Map<string, SpeciesDepth>();
 
 /**
  * Its pose in its tank at a clock (s): a loop inside the tank's water (kept a body length's margin from the glass),
@@ -169,7 +178,9 @@ function unit(id: string, salt: string): number {
  */
 export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, length: number, height: number, plan: string | null, clock: number): TankPose {
     const id = animal.id;
-    const depth = tankDepth(animal.model_slug, animal.zone, plan);
+    const depthKey = `${animal.model_slug}|${animal.zone}|${plan ?? ""}`;
+    let depth = depths.get(depthKey);
+    if (!depth) depths.set(depthKey, (depth = tankDepth(animal.model_slug, animal.zone, plan)));
     let motion: TankMotion = waterMotion(depth);
     // (A fish of the floor, a sturgeon or a sawfish, swims along the sand rather than walking it.)
     if (motion === "walk" && FISHLIKE.has(plan ?? "")) motion = "swim";

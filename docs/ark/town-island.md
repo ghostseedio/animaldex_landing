@@ -136,3 +136,100 @@ Today: **0 errors, 5 warnings**. The warnings are aviary, savanna, children's fa
 - The crossing and the horizon silhouette; `?island=` and `?focus=`; My animals and the population panel across islands; the director (the islands-on-the-web lane). It builds on `islands/index.ts`.
 - The server's island, area and enclosure fields and the routing (`ark-islands-server`). This lane reads `island: wild | town`, `area: house | farm | zoo` and `enclosure: <type>-<n>` with the server's 13 type ids.
 - Animals on the town island: placement reads `areas.ts`; the behaviour and nav lanes read the spots, masks and footprints.
+
+## 12. The town's bugs (lane TB, branch `town-bugs`)
+
+The owner's three bugs: aquarium animals could not be seen, pets did not show at people's homes, animals sank into the
+ground. The causes, measured on the real Ark (`/ark-local/live.json` with T1's routing: 2,438 town animals) before
+anything was fixed:
+
+| Bug | Cause |
+|---|---|
+| All three | **The grounding stand stood every town animal on the wild island's drawn ground.** `groundedStand` (L3) reads `drawnGroundHeight`, the wild terrain's mesh, which at the town's world position is the wild world's sea floor: about 110 m under the town on world v2 (10–18 m on v1). Every animal standing on the ground (1,757 at their places) was drawn there, except a rigged one close by whose body the locomotion layer re-planted on its feet (which read the town's ground); sleepers, perchers and swimmers showed. Herd figures read the same ground (`herdPosition`), and contact shadows and selection rings read the wild `sampleGround` (no shadow, a ring under the town). The integrator's `setLocoGround` per-island rule fixed the feet only. |
+| Aquariums | The aquarium was a closed solid box with an opaque "glass" panel (the town's glass material is not transparent); its tanks were boxes inside the box. Its residents had no tanks: they stood on the floor (water false, 1.7–2.2 m) inside the walls. The other zoo houses (reptile, insect, nocturnal, primate) were the same closed boxes: 101 more residents hidden. |
+| Pets | The pets kept indoors stood at "window" spots 1.2 m inside the solid house box. The kept-indoors rule missed most fish (barbs, sharks, discus, arowanas, koi over 0.6 m), so 30 fish and turtles stood on lawns. Garden-wildlife and bin spots under blocks of flats, paddock spots inside barns, and the schedule's places (bins, drains, tree shade) inside buildings put animals in walls. Swimmers on the schedule used the sea's 0 as the water's surface: geese and fish with no water near swam 2.6 m under their lawns, ducks floated 1.15 m under the canal. The live budget (§12.4) keeps most of the town indoors at any moment. |
+| Sinking | As the first row; and the analytic ground is not the drawn one: pavements (16 cm), roads (6 cm), paths, setts, drives, fields, the zoo's ground and bridge decks lie over it, so a foot on the analytic height is in the pavement. |
+
+### 12.1 What lane TB built
+
+- **The town's drawn ground** (`islands/town/drawn-ground.ts`): the tile's own triangles (433 × 433, the `groundTile`
+  split), plus walk surfaces: every upward triangle of the town's decal meshes (roads, pavements, markings, paths,
+  setts, drives, bridge decks, fields, the zoo's ground: read from the meshes, so lane GA's street surfaces count as
+  drawn), the zoo houses' floors, the garden rooms' floors and the displays' trays and substrate. Stacked floors
+  (balconies) answer by the body's height (`near`). `islands/scene.ts` exposes it in the world frame
+  (`drawnHeight`, `drawnGround`, `groundUnder`); `index.ts` uses it for the grounding stand, the feet (`setLocoGround`),
+  herd figures (`figureBase`), contact shadows and selection rings, on the island the point is on.
+- **The town's water at its own level** (`water-level.ts` `setIslandWater`, read by `waterLevelAt` and
+  `sea-depth.ts` `waterSurfaceAt`; `sampler.ts` `waterSurface`): the canal and millpond at 1.15 m, the farm pond at its
+  own; on dry land the ground's height, so a swim with no water near stands on the ground. Unset with one island.
+- **A guard** (`islands/scene.ts` `bound`): a scheduled town pose under the analytic ground on dry land stands on the
+  drawn ground (2 schedule samples a day on the real Ark: a rabbit drinking at the canal's walled edge).
+- **The zoo houses** (`render/zoo-houses.ts`, drawn with the zoo's day): walls, a glass front and a roof cut away as
+  the camera comes within 70 → 40 m (`render/displays.ts` cutawayMaterial; the cut is dropped in the sun's shadow pass
+  too), whole from afar. `scenery.ts` `zooHouse` draws nothing now.
+  - The aquarium (`tanks.ts` `aquariumTanks`): an ocean and a river tank across the back (3.75 m of water), three fresh
+    and three reef tanks down the sides, a jellyfish column; stands, sand or gravel, rocks, plants or corals, a back
+    light and a strip light, clear glass, water tinted by its kind. Every resident has its tank (`aquariumTankOf`:
+    jellyfish to the column, 0.95 m and longer to the big tank of its water, the rest to a side tank of its water) and
+    swims in it (`tankPose`): a loop a body's margin off the glass, at its band's depth in the tank's own column (the
+    scene's `fitInWater` with the tank's surface), up for air on a breath; a long body up and down the long axis; a
+    hole-dweller in its corner; floor walkers on the sand.
+  - The other houses: the hall's floor by house (sand, leaf litter, dark floor, bark chips), rocks or plants in the
+    corners, logs, lights on the back wall, a climbing frame and the glazed barrel for the primates and insects; the
+    residents on the floor, their bodies half a length in from the walls.
+- **Pets at home** (`tanks.ts` `homeKeeping`, `homeSite`; `render/pet-homes.ts`):
+  - koi, goldfish, terrapins and pond frogs at a house: a raised garden pond (2.2 × 1.5 m) in the back garden;
+  - other water pets: a tank; cage birds and small rodents: a cage (bars and lid of bars); reptiles, amphibians and
+    kept invertebrates: a vivarium (glass front and lid);
+  - each household's displays on a stand in a glass garden room on the back of its house (3.4 × 2.6 m) or terrace home
+    (2.6 × 2.2 m), cut away close by like the zoo houses; a flat's on a low cabinet on its balcony, or its patio on
+    the ground floor;
+  - a pet goes to the first home in its rendezvous order whose display holds its body, so nobody moves when others
+    arrive; a pet too long for any cage or vivarium basks outdoors;
+  - horses, cattle, donkeys, pigs and llamas routed to a home are kept at a farm's paddock (livery);
+  - outdoor pets: the home's garden, yard or courtyard, never in a garden room's or pond's footprint, their bodies
+    clear of every building (`clearOf`).
+  - The sites are the plan's alone (drawn only where someone lives in them); the town's behaviour world blocks them
+    (no walk through their glass) and keeps its ground places out of buildings, rooms and ponds.
+- **The live budget**: on the high and medium tiers the town's held animals (tanks, displays, zoo houses) are always
+  out (pinned): an empty lit tank reads as a bug, not as rest, and they cost no schedule. The low tier is unchanged.
+
+### 12.2 Validator and tests
+
+`islands/town/validate-animals.ts` checks every town animal where the scene draws it, with the scene's own stand
+(`grounding/stand.ts`), bases and drawn ground: in its tank (nose and tail inside the glass, base between the sand and
+the surface, every sample of a day), in its display, in its zoo house, on the ground (contacts within L3's tolerance;
+not in a building, a garden room, a pond or a zoo house), and through an Ark day on the town's own schedule (never
+under what is drawn, never at rest in a building). `legacy` counts the same animals by the old rule. `scripts/ark-town-grounding.mts` runs it on the real Ark (development).
+
+Real Ark (2,438 town animals, 12 samples a day): floats 0, sinks 0, out of tank 0, out of display 0, out of house 0;
+in a wall at their places 0; 14 schedule samples at rest by a block's wall (small wildlife, ducks by the mill lane
+shops), which the scene's L5 colliders push out. Legacy: 1,757 animals sunk, the worst 118 m.
+
+`src/lib/ark-town-grounding.test.ts` (CI): the tile against the drawn grid; pavements, roads, the aquarium's floor and
+the millpond's level; how each pet is kept; every aquarium resident inside its tank all day; a synthetic town of every
+kind (pets of every keeping, farm stock, every zoo house and form, wildlife): zero sinking, floating, out of tank,
+display or house, none in a wall at its place, the schedule within 1%; pets in their displays, outdoor pets clear of
+buildings, livery at a farm, nobody moved by arrivals; a breed's stored length. The real Ark's town runs when the
+local files are there.
+
+### 12.3 Sizes
+
+`scripts/ark-town-sizes.mts` (development) lists every domestic, farm and zoo species on the town with its drawn length
+and height against the expected standing height (`scripts/ark-true-scale/generated-heights.json`): 308 with a height,
+median 1.04, p10 0.93, p90 1.21. The owner's examples: Domestic Dog 0.97, cat 1.12, rabbit 1.28, horse 0.99, chicken
+1.13, cow 1.00, goat 1.01, pig 0.97, sheep 0.96, guinea pig 1.06. Two past 1.5×: the desert cottontail (2.15×, its
+model sits tall past the true-scale rule's 2× agreement, so the height never pulled it down: now drawn at the
+geometric mean, 0.29 m long, 1.46×) and the California sea lion (2.88× against a lying body depth; it is drawn propped
+on its fore flippers at its 2 m length: not a bug). Breeds: a stored `length_m` wins (L4's rule), else the parent
+species' row; the live read sends no breed lengths today (the only kinds are moths, flies and Ankole-Watusi cattle).
+
+### 12.4 Pets aboard, and where they are seen
+
+Real Ark: 1,063 pets (house area), 149 farm animals. Outdoors 829 (lawns 519, yards 318, the 1 left on a balcony);
+in a garden room 139 (tank 46, cage 36, vivarium 29, pond 28 in the garden beside it); on a balcony 39 and a patio 28;
+at a farm's paddock (livery) 19. The live budget (`live-budget.ts`, the runtime lane's) draws at most 1,200 / 400 / 200
+animals one by one on the high / medium / low tier, the rest resting out of sight on a shared rotation: of the 1,063
+pets, 391 / 225 / 25 are out at once (with this lane's held pins on high and medium). On the low tier (phones, the
+apps' embed) that is the runtime lane's call: a town share of the low budget, or the resting pets drawn as static
+figures (the herd path), would show more.

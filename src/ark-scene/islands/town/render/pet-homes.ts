@@ -107,7 +107,9 @@ function cage(d: HomeDisplay, parts: Parts) {
     parts.bars.quad(P(hw, 0, hd), P(-hw, 0, hd), P(-hw, h, hd), P(hw, h, hd), c);
     parts.bars.quad(P(hw, 0, -hd), P(hw, 0, hd), P(hw, h, hd), P(hw, h, -hd), c);
     parts.bars.quad(P(-hw, 0, hd), P(-hw, 0, -hd), P(-hw, h, -hd), P(-hw, h, hd), c);
-    parts.inside.box(fr, 0, h, 0, d.w + 0.06, 0.02, d.d + 0.06, tone("#d8d4c8"));
+    // The lid: bars too, so the bird is seen from above.
+    parts.bars.quad(P(-hw, h, hd), P(hw, h, hd), P(hw, h, -hd), P(-hw, h, -hd), c);
+    for (const side of [-1, 1]) parts.inside.box(fr, 0, h - 0.01, side * hd, d.w + 0.06, 0.02, 0.02, tone("#d8d4c8"));
 }
 
 function vivarium(d: HomeDisplay, parts: Parts) {
@@ -119,13 +121,15 @@ function vivarium(d: HomeDisplay, parts: Parts) {
     // Wooden back, ends and lid; the substrate; a stone; a heat lamp under the lid. The glass front faces the garden.
     parts.inside.box(fr, 0, 0, hd - 0.01, d.w + 0.04, h, 0.02, tone("#7a5a3e"));
     for (const side of [-1, 1]) parts.inside.box(fr, side * (hw - 0.01), 0, 0, 0.02, h, d.d + 0.04, tone("#7a5a3e"));
-    parts.inside.box(fr, 0, h, 0, d.w + 0.06, 0.02, d.d + 0.06, tone("#6a4a32"));
+    // A glass lid in a wooden rim, so the vivarium is seen into from above.
+    for (const side of [-1, 1]) parts.inside.box(fr, 0, h, side * (hd - 0.01), d.w + 0.06, 0.03, 0.03, tone("#6a4a32"));
     parts.inside.box(fr, 0, 0, 0, d.w, 0.07, d.d, tone("#c9a46a"));
     const p = at(fr, d.w * 0.32, 0, d.d * 0.15);
     parts.inside.blob(p[0], d.floor + 0.03, p[2], Math.min(0.12, d.w * 0.12), 0.05, 0.08, tone("#8a7a62"), hashText(d.id), 0);
     parts.glow.box(fr, -d.w * 0.3, h - 0.03, 0, 0.12, 0.02, 0.12, tone("#ffb070"));
     const P = (lx: number, ly: number, lz: number) => at(fr, lx, ly, lz);
     parts.glass.quad(P(-hw, 0, -hd), P(hw, 0, -hd), P(hw, h, -hd), P(-hw, h, -hd), tone("#dcebe6"));
+    parts.glass.quad(P(-hw, h, hd), P(hw, h, hd), P(hw, h, -hd), P(-hw, h, -hd), tone("#dcebe6"));
 }
 
 function pond(d: HomeDisplay, parts: Parts) {
