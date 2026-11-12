@@ -6,7 +6,7 @@ import {coastNorm, landArea, TOWN_HALF, TOWN_SEGMENTS, townPlan, townPlanMisses}
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {binsOut, carAt, clockHands, collectionDay, marketDay, townClockAt, washingOut, weekday, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
-import {binSpots, carSpots, farmOf, householdOf, openZooSlots, TOWN_HABITATS_BY_ZONE, townAreas, townHouseholds, urbanNiche} from "@/ark-scene/islands/town/areas";
+import {binSpots, carSpots, farmOf, householdOf, launchEnclosures, openZooSlots, TOWN_HABITATS_BY_ZONE, townAreas, townHouseholds, urbanNiche, zooLayout} from "@/ark-scene/islands/town/areas";
 import {enclosuresOpen, launchResidents, ZOO_ENCLOSURE_TYPES, ZOO_LAUNCH_TOTAL, ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {townObstacles, townObstaclesJSON} from "@/ark-scene/islands/town/obstacles";
 import {validateTown} from "@/ark-scene/islands/town/validate";
@@ -58,9 +58,22 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
         assert.equal(enclosuresOpen(type, ZOO_TYPES[type].residents.today), ZOO_TYPES[type].launch, `${type} opens the plan's launch count`);
     }
     assert.equal(openZooSlots(launchResidents()).length, 26);
+    // The server's names (`<type>-<n>`, n from 1) are the plan's slots; past a type's slots a spare, then sharing.
+    const launch = zooLayout(launchEnclosures());
+    assert.equal(launch.enclosures.length, 26);
+    assert.equal(launch.closed.length, plan.zoo.slots.length - 26 + plan.zoo.spares.length);
+    assert.ok(plan.zoo.slots.every((s) => s.id === `${s.type}-${s.rank + 1}`));
+    const busy = zooLayout([...launchEnclosures(), "penguin_seal_pools-2", "small_mammals-4", "bears_wolves-4", "aviaries-9"]);
+    const where = (id: string) => busy.enclosures.find((e) => e.id === id)!;
+    assert.equal(where("penguin_seal_pools-2").place, "spare-1", "the lowest number first");
+    assert.equal(where("small_mammals-4").place, "spare-2");
+    assert.equal(where("bears_wolves-4").shared, true, "past the spares: shares its type's last slot");
+    // An enclosure keeps its plot as others open after it.
+    const more = zooLayout([...launchEnclosures(), "penguin_seal_pools-2", "small_mammals-4", "big_cats-3"]);
+    assert.equal(more.enclosures.find((e) => e.id === "penguin_seal_pools-2")!.place, "spare-1");
     // Births never open one: opening depends only on arrived residents, capped at the slots.
-    assert.equal(enclosuresOpen("aviary", 10_000), ZOO_TYPES.aviary.slots);
-    assert.equal(enclosuresOpen("aviary", 0), 0);
+    assert.equal(enclosuresOpen("aviaries", 10_000), ZOO_TYPES.aviaries.slots);
+    assert.equal(enclosuresOpen("aviaries", 0), 0);
 });
 
 test("on Part B's grid: 9 × 9 chunks of 48 segments of 1.1 m", () => {
@@ -159,7 +172,8 @@ test("nav footprints: buildings closed, zoo fences hard, the canal water, bridge
     const buildings = obstacles.filter((o) => o.kind === "building");
     assert.equal(buildings.length, townPlan().buildings.length);
     const fences = obstacles.filter((o) => o.kind === "barrier" && (o.barrier === "zoo_fence" || o.barrier === "net"));
-    assert.ok(fences.length >= townPlan().zoo.slots.length);
+    assert.equal(fences.length, 26, "a hard fence round each enclosure open at launch (closed plots are lawn)");
+    assert.equal(obstacles.filter((o) => o.kind === "enclosure").length, 26);
     for (const f of fences) assert.ok(f.kind === "barrier" && f.hard);
     assert.ok(obstacles.some((o) => o.kind === "water" && o.id === "canal"));
     const json = JSON.parse(townObstaclesJSON()) as {bridges: unknown[]; gates: unknown[]};

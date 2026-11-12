@@ -18,7 +18,7 @@
 import {corners, hashText, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
-import {ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
 
 export type TownArea = "house" | "farm" | "garden_wildlife" | "urban_wildlife" | "zoo";
@@ -381,12 +381,18 @@ function nearLine(line: Poly, x: number, z: number, r: number): boolean {
 // MARK: - The zoo
 
 export type ZooEnclosure = {
+    /** The server's enclosure name (`<type>-<n>`, `voyage_animals.enclosure`). */
+    id: string;
+    /** The plot it is drawn on: its type's own slot, or a spare (`slot.id` is the enclosure's name either way). */
     slot: ZooSlot;
+    place: string;
+    /** Drawn in its type's last own slot with that enclosure's residents (past every slot and spare). */
+    shared: boolean;
     type: ZooEnclosureType;
     /** The fence: residents stay inside (hard bounds for placement, behaviour, the walk grid and player control). */
     mask: Poly;
     capacity: number;
-    /** The pool (penguins, bears, otters…) or the tank zone. */
+    /** The pool (penguins and seals, bears, otters, the primates' moat) or none. */
     pool: Poly | null;
     /** Indoors (a house): the exhibit behind the glass. */
     indoor: boolean;
@@ -396,20 +402,79 @@ export type ZooEnclosure = {
     feedingTimes: number[];
 };
 
-export function zooEnclosures(plan: TownPlan = townPlan()): ZooEnclosure[] {
-    return plan.zoo.slots.map((slot) => {
-        const spec = ZOO_TYPES[slot.type];
-        const inner = sub(slot.at, 0, 0, slot.at.w - 0.8, slot.at.d - 0.8);
-        const indoor = spec.form === "house";
-        const pool = slot.type === "penguin_pool" ? corners(sub(slot.at, -slot.at.w * 0.12, 0.5, slot.at.w * 0.55, slot.at.d * 0.55)) : slot.type === "bears_wolves" || slot.type === "small_mammals" || slot.type === "primate_house" ? corners(sub(slot.at, slot.at.w * 0.28, slot.at.d * 0.22, slot.at.w * 0.28, slot.at.d * 0.26)) : null;
-        const feeding = local(slot.at, slot.at.w * 0.3, -slot.at.d / 2 + 1.4);
-        const r = rng(slot.seed);
-        const enrichment = spec.enrichment.map((what) => ({what, at: local(slot.at, (r() - 0.5) * (slot.at.w - 3), (r() - 0.5) * (slot.at.d - 3))}));
-        return {slot, type: slot.type, mask: corners(inner), capacity: spec.capacity, pool, indoor, feeding, enrichment, feedingTimes: spec.feeding};
-    });
+export type ZooLayout = {enclosures: ZooEnclosure[]; /** Plots with nothing open on them: landscaped (plan §3.5). */ closed: Array<{id: string; at: Box}>};
+
+/** The enclosures open at launch with no snapshot: each type's first `launch` (the plan's 26). */
+export function launchEnclosures(): string[] {
+    return ZOO_ENCLOSURE_TYPES.flatMap((type) => Array.from({length: ZOO_TYPES[type].launch}, (_, i) => `${type}-${i + 1}`));
 }
 
-/** Which slots are open for these arrived residents per type (decision 23), in each type's opening order. */
+/** The open enclosures named in a snapshot's zoo animals (`enclosure`), in name order. */
+export function enclosuresIn(animals: ReadonlyArray<{area?: string | null; enclosure?: string | null}>): string[] {
+    const names = new Set<string>();
+    for (const a of animals) if (a.area === "zoo" && a.enclosure) names.add(a.enclosure);
+    return Array.from(names).sort();
+}
+
+function parseEnclosure(id: string): {type: ZooEnclosureType; n: number} | null {
+    const match = /^([a-z_]+)-([0-9]{1,3})$/.exec(id);
+    if (!match || !(ZOO_ENCLOSURE_TYPES as readonly string[]).includes(match[1])) return null;
+    return {type: match[1] as ZooEnclosureType, n: Number(match[2])};
+}
+
+/**
+ * Where each open enclosure is drawn. `<type>-<n>` takes its type's own slot n (the plan's slots are named the
+ * server's way); one past its type's slots takes a spare, the lowest numbers first (then the types in order), so an
+ * enclosure keeps its spare as others open after it; past the spares it shares its type's last own slot (more
+ * residents per enclosure, decision 23). Unknown names are left out. Every other slot and spare is landscaped.
+ */
+export function zooLayout(open: readonly string[] = launchEnclosures(), plan: TownPlan = townPlan()): ZooLayout {
+    const parsed = open.map((id) => ({id, p: parseEnclosure(id)})).filter((x): x is {id: string; p: {type: ZooEnclosureType; n: number}} => x.p !== null);
+    const used = new Set<string>();
+    const placed: Array<{id: string; type: ZooEnclosureType; n: number; slot: ZooSlot; place: string; shared: boolean}> = [];
+    const overflow: typeof parsed = [];
+    for (const x of parsed) {
+        const own = plan.zoo.slots.find((s) => s.id === x.id);
+        if (own) {
+            used.add(own.id);
+            placed.push({id: x.id, type: x.p.type, n: x.p.n, slot: own, place: own.id, shared: false});
+        } else overflow.push(x);
+    }
+    overflow.sort((a, b) => a.p.n - b.p.n || ZOO_ENCLOSURE_TYPES.indexOf(a.p.type) - ZOO_ENCLOSURE_TYPES.indexOf(b.p.type));
+    const spares = plan.zoo.spares.slice();
+    for (const x of overflow) {
+        const spare = spares.shift();
+        if (spare) {
+            used.add(spare.id);
+            placed.push({id: x.id, type: x.p.type, n: x.p.n, slot: {id: x.id, type: x.p.type, rank: x.p.n - 1, at: spare.at, path: spare.path, seed: hashText(x.id)}, place: spare.id, shared: false});
+            continue;
+        }
+        const own = plan.zoo.slots.filter((s) => s.type === x.p.type).sort((a, b) => b.rank - a.rank)[0];
+        if (own) placed.push({id: x.id, type: x.p.type, n: x.p.n, slot: own, place: own.id, shared: true});
+    }
+    const enclosures = placed.filter((x) => !x.shared).map((x) => enclosureOn(x.id, x.slot, x.place, false));
+    for (const x of placed.filter((y) => y.shared)) enclosures.push(enclosureOn(x.id, x.slot, x.place, true));
+    const closed = [...plan.zoo.slots.filter((s) => !used.has(s.id)).map((s) => ({id: s.id, at: s.at})), ...plan.zoo.spares.filter((s) => !used.has(s.id)).map((s) => ({id: s.id, at: s.at}))];
+    return {enclosures, closed};
+}
+
+function enclosureOn(id: string, slot: ZooSlot, place: string, shared: boolean): ZooEnclosure {
+    const spec = ZOO_TYPES[slot.type];
+    const inner = sub(slot.at, 0, 0, slot.at.w - 0.8, slot.at.d - 0.8);
+    const indoor = spec.form === "house";
+    const pool = slot.type === "penguin_seal_pools" ? corners(sub(slot.at, -slot.at.w * 0.12, 0.5, slot.at.w * 0.55, slot.at.d * 0.55)) : slot.type === "bears_wolves" || slot.type === "small_mammals" || slot.type === "primate_house" ? corners(sub(slot.at, slot.at.w * 0.28, slot.at.d * 0.22, slot.at.w * 0.28, slot.at.d * 0.26)) : null;
+    const feeding = local(slot.at, slot.at.w * 0.3, -slot.at.d / 2 + 1.4);
+    const r = rng(hashText(id));
+    const enrichment = spec.enrichment.map((what) => ({what, at: local(slot.at, (r() - 0.5) * (slot.at.w - 3), (r() - 0.5) * (slot.at.d - 3))}));
+    return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: spec.capacity, pool, indoor, feeding, enrichment, feedingTimes: spec.feeding};
+}
+
+/** The open enclosures (the launch set by default). */
+export function zooEnclosures(plan: TownPlan = townPlan(), open?: readonly string[]): ZooEnclosure[] {
+    return zooLayout(open ?? launchEnclosures(), plan).enclosures;
+}
+
+/** Which of the plan's own slots are open for these arrived residents per type (decision 23), in opening order. */
 export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>, plan: TownPlan = townPlan()): ZooSlot[] {
     const out: ZooSlot[] = [];
     for (const slot of plan.zoo.slots) {
@@ -421,21 +486,27 @@ export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>,
     return out;
 }
 
-/** Spots inside each enclosure: outdoors on the ground, the pool's surface, indoors behind the glass. */
-function zooSpots(plan: TownPlan): TownSpot[] {
+/** Spots inside each open enclosure: outdoors on the ground, the pool's surface, indoors behind the glass. */
+function zooSpots(plan: TownPlan, open?: readonly string[]): TownSpot[] {
     const out: TownSpot[] = [];
-    for (const e of zooEnclosures(plan)) {
+    for (const e of zooEnclosures(plan, open)) {
+        if (e.shared) continue;
         const count = Math.min(e.capacity, 40);
         const inner = sub(e.slot.at, 0, -0.6, e.slot.at.w - 2.2, e.slot.at.d - 2.6);
         for (const s of spread(inner, count, e.slot.seed)) {
             const inPool = e.pool ? inPoly(e.pool, s.x, s.z) : false;
-            out.push({...s, y: y(s.x, s.z), area: "zoo", where: e.indoor ? "indoor" : inPool ? "pool" : "enclosure", place: e.slot.id, sizes: ALL, protected: true});
+            out.push({...s, y: y(s.x, s.z), area: "zoo", where: e.indoor ? "indoor" : inPool ? "pool" : "enclosure", place: e.id, sizes: ALL, protected: true});
         }
     }
     return out;
 }
 
 // MARK: - All of it
+
+/** The zoo's spots for the open enclosures (the snapshot's names): the enclosures' spots move only when one opens. */
+export function zooSpotsFor(open: readonly string[]): TownSpot[] {
+    return zooSpots(townPlan(), open);
+}
 
 export type TownAreas = {spots: TownSpot[]; households: Household[]; enclosures: ZooEnclosure[]};
 

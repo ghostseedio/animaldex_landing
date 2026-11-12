@@ -5,6 +5,7 @@
  *
  *   ?quality=high|medium|low   the tier (Part B's render distance and the town's own shares)
  *   ?hours=17                  the island clock's hour (pinned); ?day=<n> the day
+ *   ?sky=0                     without the photographed day sky (the visual check: nothing loads after mount)
  */
 
 import {ACESFilmicToneMapping, Fog, PCFSoftShadowMap, PerspectiveCamera, Scene, Vector3, WebGLRenderer} from "three";
@@ -25,12 +26,12 @@ type Shot = {id: string; eye: [number, number, number]; target: [number, number,
 function shots(): Shot[] {
     const plan = townPlan();
     const slot = (id: string) => plan.zoo.slots.find((s) => s.id === id)!;
-    const penguins = slot("penguin_pool-0").at;
-    const savanna = slot("savanna-0").at;
-    const aviary = slot("aviary-0").at;
+    const penguins = slot("penguin_seal_pools-1").at;
+    const savanna = slot("savanna_paddocks-1").at;
+    const aviary = slot("aviaries-1").at;
     const sq = plan.square;
     const pFront = local(penguins, 3, penguins.d / 2 + 3.2);
-    const aFront = local(aviary, 5, aviary.d / 2 + 3.4);
+    const aFront = local(aviary, 6, aviary.d / 2 + 11);
     const farm = plan.farms.find((f) => f.id === "farmstead-0")!.at;
     return [
         {id: "island_far", eye: [70, 230, 470], target: [0, 0, -15], hours: 11},
@@ -44,7 +45,7 @@ function shots(): Shot[] {
         {id: "zoo", eye: [-40, 95, 70], target: [-125, 0, -60], hours: 11.5},
         {id: "zoo_savanna", eye: [savanna.x + 6, 14, savanna.z + 40], target: [savanna.x - 10, 2, savanna.z - 4], hours: 13},
         {id: "zoo_penguins", eye: [pFront.x, 5.5, pFront.z], target: [penguins.x, 2.4, penguins.z], hours: 11},
-        {id: "zoo_aviary", eye: [aFront.x, 4.5, aFront.z], target: [aviary.x, 4, aviary.z], hours: 9},
+        {id: "zoo_aviary", eye: [aFront.x, 13, aFront.z], target: [aviary.x, 2, aviary.z], hours: 9},
         {id: "harbour", eye: [26, 32, 215], target: [14, 2, 128], hours: 17.5},
         {id: "square_market", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 10, day: 20408},
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
@@ -88,7 +89,8 @@ export function mountTown(el: HTMLElement) {
     const lighting = new ArkLighting(renderer, scene, hours0);
     const fog = new Fog(lighting.horizon, 420, 1700);
     scene.fog = fog;
-    lighting.loadDaySky("/ark/graphics/sky-day.hdr");
+    // The photographed day sky loads after mount; the visual check leaves it out (`?sky=0`) so a shot never races it.
+    if (params.get("sky") !== "0") lighting.loadDaySky("/ark/graphics/sky-day.hdr");
     lighting.setShadows(renderer, TOWN_TIERS[tier].shadows);
     const town = buildTownIsland({tier});
     scene.add(town.root);

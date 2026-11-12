@@ -237,6 +237,27 @@ export class Geo {
         }
     }
 
+    /** Appends another (non-indexed or indexed) geometry with position, normal and colour, placed and turned about y. */
+    addGeometry(geometry: BufferGeometry, x: number, y: number, z: number, turn = 0, scale = 1) {
+        const flat = geometry.index ? geometry.toNonIndexed() : geometry;
+        const p = flat.getAttribute("position");
+        const n = flat.getAttribute("normal");
+        const c = flat.getAttribute("color");
+        const cos = Math.cos(turn);
+        const sin = Math.sin(turn);
+        for (let i = 0; i < p.count; i++) {
+            const px = p.getX(i) * scale;
+            const pz = p.getZ(i) * scale;
+            this.pos.push(x + px * cos - pz * sin, y + p.getY(i) * scale, z + px * sin + pz * cos);
+            const nx = n ? n.getX(i) : 0;
+            const nz = n ? n.getZ(i) : 0;
+            this.nor.push(nx * cos - nz * sin, n ? n.getY(i) : 1, nx * sin + nz * cos);
+            this.col.push(c ? c.getX(i) : 1, c ? c.getY(i) : 1, c ? c.getZ(i) : 1);
+            this.extra.push(this.tag);
+        }
+        if (flat !== geometry) flat.dispose();
+    }
+
     sub(frame: Frame, lx: number, y: number, lz: number, turn: number): Frame {
         const p = at(frame, lx, 0, lz);
         return {x: p[0], y: frame.y + y, z: p[2], rot: frame.rot + turn};

@@ -107,7 +107,7 @@ function groundIndex(): GroundIndex {
         for (const part of [p.front, p.back]) if (part) add({kind: "garden", poly: cornersOf(part), priority: 6});
     }
     for (const f of plan.farms) add({kind: "farm", poly: cornersOf(f.at), priority: 4});
-    for (const s of plan.zoo.slots) add({kind: s.type === "savanna" || s.type === "hoofstock" ? "savanna" : "slot", poly: cornersOf(s.at), priority: s.type === "savanna" ? 7 : 6});
+    for (const s of plan.zoo.slots) add({kind: s.type === "savanna_paddocks" || s.type === "hoofstock_paddocks" ? "savanna" : "slot", poly: cornersOf(s.at), priority: s.type === "savanna_paddocks" ? 7 : 6});
     cells.forEach((list) => list.sort((a, b) => b.priority - a.priority));
     index = {cells, streets: plan.streets};
     return index;

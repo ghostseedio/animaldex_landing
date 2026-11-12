@@ -90,6 +90,8 @@ export type ArkIslandWorld = {
     update: (epochMs: number) => void;
     setShadows: (on: boolean) => void;
     setTier: (tier: "high" | "medium" | "low") => void;
+    /** The town: the open zoo enclosures' names from the snapshot (`voyage_animals.enclosure`); the wild island has none. */
+    setZooOpen?: (enclosures: readonly string[]) => void;
     dispose: () => void;
 };
 
@@ -97,9 +99,9 @@ export type ArkIslandWorld = {
  * Builds the town island (the wild island is today's scene, `index.ts`). Imported on demand so the wild island's
  * page does not carry the town's code until a crossing asks for it.
  */
-export async function loadIsland(id: "town", options: {tier: "high" | "medium" | "low"; offsetHours?: number}): Promise<ArkIslandWorld> {
+export async function loadIsland(id: "town", options: {tier: "high" | "medium" | "low"; offsetHours?: number; zooOpen?: readonly string[]}): Promise<ArkIslandWorld> {
     const [{buildTownIsland}, {townClockAt}] = await Promise.all([import("@/ark-scene/islands/town/render/index"), import("@/ark-scene/islands/town/people")]);
-    const town = buildTownIsland({tier: options.tier});
+    const town = buildTownIsland({tier: options.tier, zooOpen: options.zooOpen});
     return {
         id,
         root: town.root,
@@ -111,6 +113,7 @@ export async function loadIsland(id: "town", options: {tier: "high" | "medium" |
         update: (epochMs) => town.update(townClockAt(epochMs, options.offsetHours ?? 0)),
         setShadows: town.setShadows,
         setTier: town.setTier,
+        setZooOpen: town.setZooOpen,
         dispose: town.dispose
     };
 }

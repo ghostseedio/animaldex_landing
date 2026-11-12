@@ -49,7 +49,7 @@ await build({
     const bytes = Object.values(result.metafile!.outputs).reduce((sum, o) => sum + o.bytes, 0);
     log(`town.js ${(bytes / 1024).toFixed(0)} KB`);
 });
-writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#9fb6cc;overflow:hidden}#ark-town{width:100vw;height:100vh}</style></head><body><div id="ark-town"></div><script src="town.js"></script></body></html>`);
+writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="data:,"><style>html,body{margin:0;height:100%;background:#9fb6cc;overflow:hidden}#ark-town{width:100vw;height:100vh}</style></head><body><div id="ark-town"></div><script src="town.js"></script></body></html>`);
 
 const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -63,24 +63,42 @@ const server = createServer((request, response) => {
 await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 const base = `http://127.0.0.1:${(server.address() as {port: number}).port}`;
 
-const cache = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
-const chromiumDir = readdirSync(cache).filter((n) => /^chromium-\d+$/.test(n)).sort().reverse()[0];
-const executablePath = path.join(cache, chromiumDir, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing");
+/** The Chromium playwright-core pins, on the Mac or on Linux (CI), as `scripts/ark-visual.mts` finds it. */
+function cachedChromium(): string | undefined {
+    if (process.env.ARK_CHROMIUM) return process.env.ARK_CHROMIUM;
+    const cache = process.platform === "darwin" ? path.join(os.homedir(), "Library", "Caches", "ms-playwright") : path.join(os.homedir(), ".cache", "ms-playwright");
+    if (!existsSync(cache)) return undefined;
+    for (const name of readdirSync(cache).filter((entry) => /^chromium-\d+$/.test(entry)).sort().reverse()) {
+        const found = [
+            path.join(cache, name, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"),
+            path.join(cache, name, "chrome-linux64", "chrome"),
+            path.join(cache, name, "chrome-linux", "chrome")
+        ].find((candidate) => existsSync(candidate));
+        if (found) return found;
+    }
+    return undefined;
+}
 const {chromium} = await import("playwright-core");
 const gpu = arg("gpu", command === "visual" ? "swiftshader" : "metal");
-const gpuArgs = gpu === "swiftshader" ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-gl=angle"] : ["--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal"];
-const browser = await chromium.launch({executablePath, headless: true, args: ["--headless=new", "--enable-precise-memory-info", ...gpuArgs]});
+const gpuArgs = gpu === "swiftshader" ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-gl=angle"] : ["--enable-gpu", "--ignore-gpu-blocklist", ...(process.platform === "darwin" ? ["--use-angle=metal"] : [])];
+const browser = await chromium.launch({
+    executablePath: cachedChromium(),
+    headless: true,
+    args: ["--headless=new", "--enable-precise-memory-info", ...gpuArgs, "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--font-render-hinting=none", "--force-color-profile=srgb"]
+});
 
 type Device = {width: number; height: number; scale: number; mobile: boolean};
 async function open(quality: string, device: Device, extra = "") {
     const context = await browser.newContext({viewport: {width: device.width, height: device.height}, deviceScaleFactor: device.scale, isMobile: device.mobile, hasTouch: device.mobile});
     const page = await context.newPage();
+    // SwiftShader on the shared Mac under load: a frame of the town can take minutes.
+    page.setDefaultTimeout(900_000);
     page.on("pageerror", (error) => log("page error:", error.message));
     page.on("console", (message) => {
         if (message.type() === "error") log("console:", message.text());
     });
-    await page.goto(`${base}/town.html?quality=${quality}${extra}`, {waitUntil: "domcontentloaded", timeout: 300_000});
-    await page.waitForFunction(() => window.__arkTown?.ready, null, {timeout: 300_000});
+    await page.goto(`${base}/town.html?quality=${quality}${extra}`, {waitUntil: "domcontentloaded", timeout: 1_800_000});
+    await page.waitForFunction(() => window.__arkTown?.ready, null, {timeout: 1_800_000});
     // The day sky (HDR) loads after mount: give it a moment.
     await page.waitForTimeout(2500);
     return {context, page};
@@ -172,7 +190,7 @@ if (command === "visual") {
     mkdirSync(path.join(out, "actual"), {recursive: true});
     mkdirSync(path.join(out, "diff"), {recursive: true});
     const config = JSON.parse(readFileSync(path.join(dir, "config.json"), "utf8")) as {shots: string[]; width: number; height: number; quality: string; tolerance?: Partial<VisualTolerance>};
-    const {context, page} = await open(config.quality, {width: config.width, height: config.height, scale: 1, mobile: false});
+    const {context, page} = await open(config.quality, {width: config.width, height: config.height, scale: 1, mobile: false}, "&sky=0");
     let failed = 0;
     const report: string[] = ["| shot | result | changed | mean | block |", "|---|---|---|---|---|"];
     for (const id of config.shots) {

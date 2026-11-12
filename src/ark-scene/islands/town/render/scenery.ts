@@ -8,7 +8,8 @@
 import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {zooEnclosures, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
+import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
+import {treeGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
@@ -454,9 +455,33 @@ function tractor(geo: Geo, p: Pt, rot: number) {
 
 // MARK: - The zoo
 
-function zoo(out: SceneryOut, plan: TownPlan) {
-    const enclosures = zooEnclosures(plan);
-    for (const e of enclosures) enclosure(out, e);
+/**
+ * The zoo's enclosures as their own chunked geometry (rebuilt when enclosures open: `render/index.ts`
+ * `setZooOpen`): each open enclosure built, every plot with nothing open on it landscaped (plan §3.5: "lawn and trees
+ * until an enclosure opens there"). Enclosure trees (acacias, pines, a birch in an aviary) are drawn into it.
+ */
+export function buildZooScenery(layout: ZooLayout): SceneryOut {
+    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees: [], lamps: [], bridges: []};
+    for (const e of layout.enclosures) if (!e.shared) enclosure(out, e);
+    for (const plot of layout.closed) {
+        const c = chunkFor(out, plot.at.x, plot.at.z);
+        const r = rng(hashText(plot.id));
+        for (let k = 0; k < 2 + Math.floor(r() * 2); k++) {
+            const p = local(plot.at, (r() - 0.5) * (plot.at.w - 4), (r() - 0.5) * (plot.at.d - 4));
+            out.trees.push({...p, kind: r() < 0.5 ? "lime" : "birch", scale: 0.7 + r() * 0.3, seed: hashText(`${plot.id}${k}`)});
+        }
+        for (let k = 0; k < 3; k++) {
+            const p = local(plot.at, (r() - 0.5) * (plot.at.w - 2), (r() - 0.5) * (plot.at.d - 2));
+            c.solid.blob(p.x, H(p.x, p.z) + 0.5, p.z, 1.2, 0.8, 1.2, tone("#4f7a3a"), hashText(`${plot.id}s${k}`), 0);
+        }
+        bench(c.solid, local(plot.at, 0, plot.at.d / 2 - 1.2), plot.at.rot + Math.PI);
+    }
+    for (const t of out.trees) chunkFor(out, t.x, t.z).solid.addGeometry(treeGeometry(t.kind), t.x, H(t.x, t.z) - 0.1, t.z, (t.seed % 628) / 100, t.scale);
+    out.trees = [];
+    return out;
+}
+
+function zooPlaza(out: SceneryOut, plan: TownPlan) {
     // The entrance plaza: an arch gate, a ticket kiosk, a sign.
     const p = plan.zoo.plaza;
     const c = chunkFor(out, p.x, p.z);
@@ -475,7 +500,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
     const r = rng(e.slot.seed);
-    const ground = e.type === "savanna" ? "#cdb07a" : e.type === "hoofstock" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
+    const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     if (ground) c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, (lx, lz) => tone(ground, 0.9 + 0.12 * Math.sin(lx * 0.9 + lz * 1.3) * Math.cos(lz * 0.7)), 2);
     // The fence: a hard boundary all round (glass along the front for the houses' outdoor parts and the pools).
     const k = corners(s);
@@ -506,12 +531,12 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         const pd = Math.hypot(e.pool[3].x - e.pool[0].x, e.pool[3].z - e.pool[0].z);
         for (const [lx, lz, w, d] of [[0, pd / 2, pw + 0.7, 0.35], [0, -pd / 2, pw + 0.7, 0.35], [pw / 2, 0, 0.35, pd], [-pw / 2, 0, 0.35, pd]] as const) c.solid.box(f, lx, -0.6, lz, w, 1.2, d, tone("#9d968a"));
         c.solid.box(f, 0, -0.2, 0, pw, 0.3, pd, tone("#3f6f7a"));
-        if (e.type === "penguin_pool") for (let i = 0; i < 4; i++) c.solid.blob(...at(f, (i - 1.5) * pw * 0.25, 0.4, -pd / 2 - 1.2), 1.2, 0.8, 1.0, tone("#d8d4cc"), hashText(`${e.slot.id}ice${i}`), 0);
+        if (e.type === "penguin_seal_pools") for (let i = 0; i < 4; i++) c.solid.blob(...at(f, (i - 1.5) * pw * 0.25, 0.4, -pd / 2 - 1.2), 1.2, 0.8, 1.0, tone("#d8d4cc"), hashText(`${e.slot.id}ice${i}`), 0);
     }
     // Rocks, logs, a shelter at the back, the keepers' hatch; per type, a few things for enrichment.
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
     if (spec.form === "paddock" || spec.form === "pool") {
-        for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_pool" ? 5 : 2); i++) {
+        for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
             const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));
             if (e.pool && pointIn(e.pool, p)) continue;
             c.solid.blob(p.x, H(p.x, p.z) + 0.3, p.z, 1.2 + r(), 0.9 + r() * 0.6, 1.1 + r(), tone("#8f877a"), hashText(`${e.slot.id}r${i}`), 0);
@@ -519,14 +544,14 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         const log = local(s, (r() - 0.5) * (s.w - 6), s.d / 2 - 3.5);
         const lf: Frame = {x: log.x, y: H(log.x, log.z) + 0.3, z: log.z, rot: s.rot + r()};
         c.solid.box(lf, 0, 0, 0, 3.4, 0.55, 0.55, tone("#6a5038"));
-        if (e.type !== "penguin_pool") {
+        if (e.type !== "penguin_seal_pools") {
             const shelter = back(s.w / 2 - 4);
             const sf: Frame = {x: shelter.x, y: H(shelter.x, shelter.z), z: shelter.z, rot: s.rot};
             const sw = Math.min(6, s.w * 0.3);
             c.solid.box(sf, 0, 0, 0, sw, 2.6, 3.0, tone(e.type === "childrens_farm" ? "#9b4b36" : "#7a6a52"));
             c.solid.gable(sf, 0, 2.6, 0, sw, 3.0, 1.0, 0.3, tone("#4a4440"), tone("#7a6a52"));
         }
-        if (e.type === "savanna") {
+        if (e.type === "savanna_paddocks") {
             for (let i = 0; i < 2; i++) out.trees.push({...local(s, (r() - 0.5) * (s.w - 8), (r() - 0.5) * (s.d - 10)), kind: "acacia", scale: 1 + r() * 0.3, seed: e.slot.seed + i});
             const m = local(s, -s.w / 4, s.d / 6);
             c.solid.cylinder({x: m.x, y: H(m.x, m.z), z: m.z, rot: 0}, 0, 0, 0, 1.1, 0.3, 2.4, tone("#a9763e"), 7);
@@ -692,7 +717,7 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     square(out, plan);
     boundaries(out, plan);
     fields(out, plan);
-    zoo(out, plan);
+    zooPlaza(out, plan);
     lamps(out, plan);
     // Drives: gravel or paving from the street to the house.
     for (const p of plan.parcels) {

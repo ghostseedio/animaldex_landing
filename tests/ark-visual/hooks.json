@@ -8,6 +8,20 @@
       "command": "npx tsx --test src/lib/ark-map.test.ts"
     },
     {
+      "name": "town island: validator, nav footprints, people-implied schedules (tests)",
+      "lane": "ark-town-island",
+      "requires": ["src/lib/ark-town-island.test.ts"],
+      "command": "npx tsx --test src/lib/ark-town-island.test.ts"
+    },
+    {
+      "name": "town island visual check (SwiftShader, tests/ark-visual/town)",
+      "lane": "ark-town-island",
+      "requires": ["scripts/ark-town.mts", "tests/ark-visual/town/config.json"],
+      "command": "npx tsx scripts/ark-town.mts visual",
+      "artifacts": ".ark-golden/town/visual",
+      "browser": true
+    },
+    {
       "name": "intelligence scenarios (key frames, page errors)",
       "lane": "ark-intelligence-web",
       "requires": ["scripts/ark-intelligence-scenarios.mjs", "src/ark-scene/intelligence-entry.ts"],

@@ -8,7 +8,7 @@
 
 import {boxesOverlap, corners, inPoly, polylineNearest, type Box} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_WIDTH, HARBOUR_BASIN, inland, landArea, MILLPOND, townPlan, townPlanMisses, TOWN_HALF, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {townAreas, type TownArea} from "@/ark-scene/islands/town/areas";
+import {launchEnclosures, townAreas, zooLayout, type TownArea} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, ZOO_LAUNCH_TOTAL, ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 
 /** Animals routed to the town island (islands plan §0–§1, 2026-11-12): today, 3× and a year. */
@@ -106,11 +106,17 @@ export function validateTown(plan: TownPlan = townPlan(), real?: {house?: number
         if (spec.capacity * n < spec.residents.year) warnings.push(`zoo: ${type} past its room at a year (${spec.residents.year} for ${n} × ${spec.capacity}): more residents per enclosure, no births in full ones (decision 23)`);
     }
     const areas = townAreas();
+    // Spares take enclosures a type opens past its own slots; past them, the type's last slot is shared.
+    const busy = zooLayout([...launchEnclosures(), "small_mammals-4", "penguin_seal_pools-2", "bears_wolves-4"], plan);
+    const onSpares = busy.enclosures.filter((e) => e.place.startsWith("spare-")).length;
+    metrics.zooSpares = plan.zoo.spares.length;
+    if (onSpares !== Math.min(3, plan.zoo.spares.length)) errors.push(`zoo: ${onSpares} overflow enclosures on spares, want ${Math.min(3, plan.zoo.spares.length)}`);
+    for (let i = 0; i < plan.zoo.spares.length; i++) for (const s of [...plan.zoo.slots, ...plan.zoo.spares.slice(i + 1)]) if (boxesOverlap(plan.zoo.spares[i].at, s.at, 0.05)) errors.push(`overlap: ${plan.zoo.spares[i].id} × ${s.id}`);
     for (const e of areas.enclosures) {
-        const spots = areas.spots.filter((s) => s.area === "zoo" && s.place === e.slot.id);
+        const spots = areas.spots.filter((s) => s.area === "zoo" && s.place === e.id);
         const outside = spots.filter((s) => !inPoly(e.mask, s.x, s.z));
-        if (outside.length) errors.push(`zoo: ${outside.length} spots of ${e.slot.id} outside its mask`);
-        if (!spots.length) errors.push(`zoo: ${e.slot.id} has no spots`);
+        if (outside.length) errors.push(`zoo: ${outside.length} spots of ${e.id} outside its mask`);
+        if (!spots.length) errors.push(`zoo: ${e.id} has no spots`);
     }
 
     // The places hold their animals.

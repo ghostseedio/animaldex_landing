@@ -1,0 +1,7 @@
+{
+  "about": "The town island's visual check (docs/ark/town-island.md): its own page (src/ark-scene/islands/town/entry.ts) on SwiftShader, the clock frozen per shot (shot hours, day 20406 unless the shot says), without the photographed sky (nothing loads after mount). Run: npx tsx scripts/ark-town.mts visual [--update]. Same measures and default limits as the Ark's visual CI (runtime/visual-compare.ts).",
+  "width": 800,
+  "height": 500,
+  "quality": "medium",
+  "shots": ["island_far", "old_town", "zoo", "homes_night"]
+}

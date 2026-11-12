@@ -170,6 +170,9 @@ export type ZooSlot = {
     seed: number;
 };
 
+/** A spare enclosure plot: landscaped until an enclosure a type opens past its own slots is drawn on it. */
+export type ZooSpare = {id: string; at: Box; path: string; seed: number};
+
 export type Hedge = {id: string; line: Poly; height: number; kind: "hedge" | "wall" | "fence" | "railing" | "picket" | "paddock_rail" | "zoo_fence" | "net"};
 
 export type TownPlan = {
@@ -179,7 +182,8 @@ export type TownPlan = {
     greens: Green[];
     waters: Water[];
     farms: FarmPlot[];
-    zoo: {area: Box; slots: ZooSlot[]; plaza: Box; yard: Box; paths: string[]};
+    /** The zoo: each type's own slots, and the spares that take an enclosure a type opens past its own (`areas.ts` zooLayout). */
+    zoo: {area: Box; slots: ZooSlot[]; spares: ZooSpare[]; plaza: Box; yard: Box; paths: string[]};
     hedges: Hedge[];
     canal: Poly;
     bridges: Array<{id: string; street: string; at: Box}>;
@@ -357,7 +361,7 @@ function flatsCourt(ctx: Ctx, id: string, block: Box, streets: string[], sides: 
 
 // MARK: - Placing along streets and paths
 
-type Full = Ctx & {waters: Water[]; farms: FarmPlot[]; slots: ZooSlot[]; moorings: TownPlan["moorings"]; misses: string[]};
+type Full = Ctx & {waters: Water[]; farms: FarmPlot[]; slots: ZooSlot[]; spares: ZooSpare[]; moorings: TownPlan["moorings"]; misses: string[]};
 
 /** Whether a box is clear: on land (`coastMargin` m in), off every street and path, off the canal and the water, off every building and slot. */
 export const PLAN_DEBUG: {why: string | null} = {why: null};
@@ -389,6 +393,7 @@ function boxClearWhy(ctx: Full, b: Box, options: {coastMargin?: number; streetMa
     }
     for (const other of ctx.buildings) if (boxesOverlap(other.at, b, -0.3)) return `building ${other.id}`;
     for (const slot of ctx.slots) if (boxesOverlap(slot.at, b, -0.3)) return `slot ${slot.id}`;
+    for (const spare of ctx.spares) if (boxesOverlap(spare.at, b, -0.3)) return `spare ${spare.id}`;
     for (const farm of ctx.farms) if (boxesOverlap(farm.at, b, -0.3)) return `farm ${farm.id}`;
     for (const keep of ctx.keepOut) if (boxesOverlap(keep, b, -0.3)) return `keepOut ${keep.x.toFixed(0)},${keep.z.toFixed(0)}`;
     return null;
@@ -482,14 +487,14 @@ export const TOWN_STREETS: Street[] = [
 ];
 
 function buildPlan(): TownPlan {
-    const ctx: Full = {streets: [], buildings: [], parcels: [], greens: [], hedges: [], trees: [], counts: {house: 0, terrace: 0, flats: 0}, waters: [], farms: [], slots: [], moorings: [], misses: [], keepOut: []};
+    const ctx: Full = {streets: [], buildings: [], parcels: [], greens: [], hedges: [], trees: [], counts: {house: 0, terrace: 0, flats: 0}, waters: [], farms: [], slots: [], spares: [], moorings: [], misses: [], keepOut: []};
     ctx.streets.push(...TOWN_STREETS);
     const street = (id: string) => ctx.streets.find((s) => s.id === id)!;
 
     // MARK: Water: the millpond, the harbour basin, the farm pond (the canal is a line, `CANAL`).
     ctx.waters.push({id: "millpond", kind: "millpond", poly: ellipse(MILLPOND.x, MILLPOND.z, MILLPOND.rx, MILLPOND.rz, 40), level: CANAL_LEVEL, depth: 1.6});
     ctx.waters.push({id: "harbour", kind: "harbour", poly: corners(HARBOUR_BASIN), level: 0, depth: 3.5});
-    ctx.waters.push({id: "farm_pond", kind: "farm_pond", poly: ellipse(170, -128, 8, 5.5, 24, 0.3), level: 0, depth: 1.1});
+    ctx.waters.push({id: "farm_pond", kind: "farm_pond", poly: ellipse(161, -144, 5.5, 4, 24, 0.3), level: 0, depth: 1.1});
 
     // MARK: The market square and the civic buildings (kept clear of everything else).
     const square = box(-36, 12, 38, 25, 0.02);
@@ -641,20 +646,29 @@ function buildPlan(): TownPlan {
     let fieldIndex = 0;
     const field = (b: Box, crop?: string) => {
         const ok = corners(b).every((p) => inland(p.x, p.z) > 4) && boxClear(ctx, b, {coastMargin: 4});
-        if (!ok) return;
+        if (!ok) {
+            ctx.misses.push(`field ${crop ?? ""} at ${b.x},${b.z} (${PLAN_DEBUG.why ?? "coast"})`);
+            return;
+        }
         const i = fieldIndex++;
         const kind: GreenKind = crop === "orchard" ? "orchard" : "field";
         ctx.greens.push({id: `field-${i}`, kind, poly: corners(b), crop: crop ?? crops[i % crops.length]});
         ctx.keepOut.push(b);
         const p = corners(b);
         ctx.hedges.push({id: `field-${i}-hedge`, line: [p[0], p[1], p[2], p[3], p[0]], height: 1.6, kind: "hedge"});
-        if (kind === "orchard") for (let k = 0; k < 20; k++) {
-            const t = local(b, -b.w / 2 + 3 + (k % 5) * ((b.w - 6) / 4), -b.d / 2 + 3 + Math.floor(k / 5) * ((b.d - 6) / 3));
-            ctx.trees.push({x: t.x, z: t.z, kind: "apple", scale: 0.75, seed: hashText(`orchard-${k}`)});
+        if (kind === "orchard") {
+            // Fruit trees in rows about 4.5 m apart.
+            const columns = Math.max(2, Math.floor((b.w - 2) / 4.5) + 1);
+            const rows = Math.max(2, Math.floor((b.d - 2) / 4.5) + 1);
+            for (let k = 0; k < columns * rows; k++) {
+                const t = local(b, -b.w / 2 + 2 + (k % columns) * ((b.w - 4) / (columns - 1)), -b.d / 2 + 2 + Math.floor(k / columns) * ((b.d - 4) / (rows - 1)));
+                ctx.trees.push({x: t.x, z: t.z, kind: "apple", scale: 0.7, seed: hashText(`orchard-${k}`)});
+            }
         }
     };
-    for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) field(box(134 + i * 21, -127 - k * 23, 19, 21, 0.02), i === 1 && k === 1 ? "orchard" : undefined);
-    for (let i = 0; i < 4; i++) field(box(-42 + i * 23, -186, 21, 14, 0.02));
+    // The north-east corner between the farm track, the lane and the coast: two fields and the orchard.
+    field(box(160.5, -124, 15, 17, 0.02), "pasture");
+    field(box(134, -152, 14, 14, 0.02), "orchard");
 
     // MARK: The zoo: rows of enclosures back to back between three paths, the entrance plaza by the park.
     const zooPaths: Street[] = [
@@ -673,23 +687,34 @@ function buildPlan(): TownPlan {
             const w = Math.max(Math.min(wanted / depth, depth * 2.2), spec.form === "house" ? 9 : 11);
             const d = Math.min(depth, wanted / w);
             const k = (rank[type] = (rank[type] ?? -1) + 1);
-            return {key: `${type}-${k}`, w, d, setback: 0.4, gap: spec.form === "house" ? 0.3 : 1.4};
+            // The server's enclosure name: the type and its number from 1 (`voyage_zoo_enclosure_pick`).
+            return {key: `${type}-${k + 1}`, w, d, setback: 0.4, gap: spec.form === "house" ? 0.3 : 1.4};
         }));
         for (const {item, at} of alongStreet(ctx, street(path), side, from, 400, items, {coastMargin: 5})) {
             const type = item.key.replace(/-\d+$/, "") as ZooEnclosureType;
-            ctx.slots.push({id: item.key, type, rank: Number(item.key.split("-").pop()), at, path, seed: hashText(item.key)});
+            ctx.slots.push({id: item.key, type, rank: Number(item.key.split("-").pop()) - 1, at, path, seed: hashText(item.key)});
         }
     };
     // Walking west, side 1 is north. The launch slots of each type nearest the entrance (rank 0 first).
-    zooRow("zoo_a", -1, 40.5, [["savanna", 3]], 8);
+    zooRow("zoo_a", -1, 40.5, [["savanna_paddocks", 3]], 8);
     zooRow("zoo_a", 1, 24, [["big_cats", 2], ["bears_wolves", 3]], 8);
     zooRow("zoo_b", -1, 23, [["aquarium", 2], ["reptile_house", 3], ["insect_house", 1], ["nocturnal_house", 2]], 8);
-    zooRow("zoo_b", 1, 24.5, [["hoofstock", 3], ["small_mammals", 1]], 8);
-    zooRow("zoo_c", -1, 23.5, [["primate_house", 4], ["penguin_pool", 1], ["small_mammals", 1]], 8);
-    zooRow("zoo_c", 1, 20, [["aviary", 5]], 8);
+    zooRow("zoo_b", 1, 24.5, [["hoofstock_paddocks", 3], ["small_mammals", 1]], 8);
+    zooRow("zoo_c", -1, 23.5, [["primate_house", 4], ["penguin_seal_pools", 1], ["small_mammals", 1]], 8);
+    zooRow("zoo_c", 1, 20, [["aviaries", 5]], 8);
     // Walking north up the spine, side 1 is east (towards the park), side -1 the 9 m strip before the rows.
     zooRow("zoo_spine", 1, 12, [["childrens_farm", 2], ["small_mammals", 1]], 14);
-    zooRow("zoo_spine", -1, 8.5, [["aviary", 1]], 12);
+    zooRow("zoo_spine", -1, 8.5, [["aviaries", 1]], 12);
+    // Two spare plots beside the savanna, for an enclosure a type opens past its own slots (the server opens up to 40).
+    for (const {item, at} of alongStreet(ctx, street("zoo_a"), -1, 8, 400, [{key: "spare-1", w: 15, d: 24, setback: 0.4, gap: 1.4, optional: true}], {coastMargin: 5})) {
+        ctx.spares.push({id: item.key, at, path: "zoo_a", seed: hashText(item.key)});
+    }
+    // The second on the lawn north of the aviaries, by the coast path.
+    for (const candidate of [box(-100, -178, 18, 18), box(-122, -177, 18, 18), box(-90, -176, 16, 16)]) {
+        if (ctx.spares.length >= 2) break;
+        if (boxClear(ctx, candidate, {coastMargin: 5})) ctx.spares.push({id: `spare-${ctx.spares.length + 1}`, at: candidate, path: "zoo_c", seed: hashText(`spare-${ctx.spares.length + 1}`)});
+    }
+    if (ctx.spares.length < 2) ctx.misses.push("zoo: spare plots");
     ctx.greens.push({id: "zoo_lawn", kind: "zoo_lawn", poly: [{x: -200, z: -190}, {x: -54, z: -190}, {x: -54, z: 16}, {x: -200, z: 16}]});
 
     plant(ctx);
@@ -702,7 +727,7 @@ function buildPlan(): TownPlan {
         greens: ctx.greens,
         waters: ctx.waters,
         farms: ctx.farms,
-        zoo: {area: box(-128, -87, 144, 206), slots: ctx.slots, plaza: box(-62, -20, 12, 14), yard: box(-184, -10, 16, 12), paths: zooPaths.map((p) => p.id)},
+        zoo: {area: box(-128, -87, 144, 206), slots: ctx.slots, spares: ctx.spares, plaza: box(-62, -20, 12, 14), yard: box(-184, -10, 16, 12), paths: zooPaths.map((p) => p.id)},
         hedges: ctx.hedges,
         canal: CANAL,
         bridges: [],
@@ -861,6 +886,9 @@ function addFarm(ctx: Full, id: string, at: Box) {
     const run = sub(at, (at.w / 2 - 4) * left, at.d / 2 - 8, 6, 5);
     ctx.farms.push({id, kind, at, buildings, paddock, yard, run, seed: hashText(id)});
     ctx.greens.push({id: `${id}-paddock`, kind: "paddock", poly: corners(paddock)});
+    // The farm's crop patch in the back corner opposite the barn (crops by its seed).
+    const crops = sub(at, -left * (at.w / 2 - at.w * 0.2 - 1), -at.d / 2 + at.d * 0.1 + 1.2, at.w * 0.4, at.d * 0.2);
+    ctx.greens.push({id: `${id}-crops`, kind: "field", poly: corners(crops), crop: ["cabbage", "cereal", "sprouts", "maize", "tilled"][hashText(id) % 5]});
     ctx.greens.push({id: `${id}-yard`, kind: "farmyard", poly: corners(yard)});
     const p = corners(at);
     ctx.hedges.push({id: `${id}-hedge`, line: [p[0], p[1], p[2], p[3], p[0]], height: 1.5, kind: "hedge"});

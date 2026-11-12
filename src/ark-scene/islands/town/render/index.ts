@@ -13,10 +13,10 @@ import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
-import {binSpots, carSpots} from "@/ark-scene/islands/town/areas";
+import {binSpots, carSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {binsOut, boatIn, CAR_COLOURS, carAt, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
-import {buildScenery} from "@/ark-scene/islands/town/render/scenery";
+import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, boatGeometry, carGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
@@ -38,12 +38,17 @@ export type TownIsland = {
     content: Uint8Array;
     /** Part B's streamer says which chunks are drawn (null: all). */
     setDrawn: (drawn: ((chunk: number) => boolean) | null) => void;
+    /**
+     * The open zoo enclosures (the snapshot's `enclosure` names, `areas.ts` enclosuresIn): each drawn on its plot,
+     * every other plot landscaped. Rebuilds only the zoo's meshes; call when the set changes.
+     */
+    setZooOpen: (enclosures: readonly string[]) => void;
     /** The people-implied things and the clocks, on the island clock (call every frame; work happens once a minute). */
     update: (clock: TownClock) => void;
     setShadows: (on: boolean) => void;
     setTier: (tier: TownTier) => void;
     heightAt: (x: number, z: number) => number;
-    stats: () => {chunks: number; drawnChunks: number; triangles: number; drawCalls: number; instances: Record<string, number>; windows: number; litWindows: number};
+    stats: () => {chunks: number; drawnChunks: number; triangles: number; drawCalls: number; instances: Record<string, number>; windows: number; litWindows: number; zooOpen: number};
     dispose: () => void;
 };
 
@@ -196,7 +201,7 @@ function netMaterial(): MeshStandardMaterial {
 
 type ChunkMeshes = {group: Group; meshes: Mesh[]; glass: {attribute: BufferAttribute; windows: WindowRecord[]} | null};
 
-export function buildTownIsland(options: {tier?: TownTier} = {}): TownIsland {
+export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]} = {}): TownIsland {
     const plan = townPlan();
     let tier: TownTier = options.tier ?? "high";
     const root = new Group();
@@ -278,11 +283,50 @@ export function buildTownIsland(options: {tier?: TownTier} = {}): TownIsland {
         }
     }
 
+    let drawn: ((chunk: number) => boolean) | null = null;
     // Water: the sea round the island and in the harbour, the fresh water.
     const depth = seaDepthMap(grid.heights, grid.size);
     const water: TownWater = buildTownWater(depth, scenery.fresh.triangles ? scenery.fresh.toGeometry() : null);
     root.add(water.sea);
     if (water.fresh) root.add(water.fresh);
+    if (!water.fresh) throw new Error("the town's fresh water is missing");
+
+    // The zoo: its own meshes, rebuilt when enclosures open.
+    const zooRoot = new Group();
+    zooRoot.name = "town:zoo";
+    root.add(zooRoot);
+    let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
+    let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
+    const buildZoo = (open: readonly string[]) => {
+        for (const {mesh} of zooMeshes) {
+            mesh.geometry.dispose();
+            zooRoot.remove(mesh);
+        }
+        zooMeshes = [];
+        const zoo = buildZooScenery(zooLayout(open, plan));
+        zoo.chunks.forEach((c, key) => {
+            const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
+            for (const [geo, material, name] of parts) {
+                if (!geo.triangles) continue;
+                const geometry = geo.toGeometry();
+                if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
+                const mesh = new Mesh(geometry, material);
+                mesh.name = `zoo:${name}`;
+                mesh.castShadow = name === "solid";
+                mesh.receiveShadow = true;
+                mesh.visible = !drawn || drawn(key);
+                zooRoot.add(mesh);
+                zooMeshes.push({key, mesh});
+            }
+        });
+        if (zoo.fresh.triangles && water.fresh) {
+            const mesh = new Mesh(zoo.fresh.toGeometry(), water.fresh.material as Material);
+            mesh.name = "zoo:pools";
+            mesh.renderOrder = 2;
+            zooRoot.add(mesh);
+            zooMeshes.push({key: -1, mesh});
+        }
+    };
 
     // Trees: one set per kind.
     const treeSets = new Map<string, ChunkedSet>();
@@ -343,7 +387,6 @@ export function buildTownIsland(options: {tier?: TownTier} = {}): TownIsland {
     hands.count = faces.length * 2;
     root.add(hands);
 
-    let drawn: ((chunk: number) => boolean) | null = null;
     let lastMinute = -1;
     let litCount = 0;
     let windowCount = 0;
@@ -436,6 +479,7 @@ export function buildTownIsland(options: {tier?: TownTier} = {}): TownIsland {
             if (c) c.group.visible = !next || next(key);
         });
         for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet, lampSet, lampHeadSet]) set.setDrawn(next);
+        for (const {key, mesh} of zooMeshes) if (key >= 0) mesh.visible = !next || next(key);
     };
 
     const setShadows = (on: boolean) => {
@@ -475,11 +519,19 @@ export function buildTownIsland(options: {tier?: TownTier} = {}): TownIsland {
             instances[name] = set.shown;
             drawCalls++;
         }
-        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount};
+        drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
+        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
 
+    buildZoo(zooOpenNow);
     void rng;
     return {
+        setZooOpen: (enclosures) => {
+            const next = Array.from(new Set(enclosures)).sort();
+            if (next.join() === Array.from(zooOpenNow).sort().join()) return;
+            zooOpenNow = next;
+            buildZoo(next);
+        },
         root,
         grid: TOWN_GRID,
         spans,

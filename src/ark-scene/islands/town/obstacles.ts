@@ -57,7 +57,8 @@ function canalPoly(): Poly {
     return [...left, ...right.reverse()];
 }
 
-export function townObstacles(plan: TownPlan = townPlan()): TownObstacle[] {
+/** For the open enclosures (the launch set by default): closed plots are lawn, nothing to stop anyone. */
+export function townObstacles(plan: TownPlan = townPlan(), open?: readonly string[]): TownObstacle[] {
     const out: TownObstacle[] = [];
     for (const b of plan.buildings) {
         const poly = corners(b.at);
@@ -69,12 +70,13 @@ export function townObstacles(plan: TownPlan = townPlan()): TownObstacle[] {
         const p = PASS[h.kind];
         out.push({id: h.id, kind: "barrier", line: h.line, height: h.height, thickness: p.thickness, barrier: h.kind, passable: p.passable, hard: p.hard});
     }
-    for (const e of zooEnclosures(plan)) {
+    for (const e of zooEnclosures(plan, open)) {
+        if (e.shared) continue;
         const k = corners(e.slot.at);
-        const aviary = e.type === "aviary";
+        const aviary = e.type === "aviaries";
         const p = PASS[aviary ? "net" : "zoo_fence"];
         out.push({id: `${e.slot.id}-fence`, kind: "barrier", line: [k[0], k[1], k[2], k[3], k[0]], height: aviary ? 8 : e.type === "big_cats" ? 4.5 : 2.6, thickness: p.thickness, barrier: aviary ? "net" : "zoo_fence", passable: p.passable, hard: true});
-        out.push({id: e.slot.id, kind: "enclosure", poly: e.mask, type: e.type, hard: true});
+        out.push({id: e.id, kind: "enclosure", poly: e.mask, type: e.type, hard: true});
         if (e.pool) out.push({id: `${e.slot.id}-pool`, kind: "water", poly: e.pool, level: townHeight(e.slot.at.x, e.slot.at.z) + 0.45, fresh: true});
     }
     out.push({id: "canal", kind: "water", poly: canalPoly(), level: CANAL_LEVEL, fresh: true});
