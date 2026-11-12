@@ -98,6 +98,21 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
         return () => observer.disconnect();
     }, [phase]);
 
+    // The reader still here (a scroll, a key, a tap anywhere on the page): told to the world at most once a minute.
+    useEffect(() => {
+        if (phase === "poster") return;
+        let last = 0;
+        const onActivity = () => {
+            const now = Date.now();
+            if (now - last < 60_000) return;
+            last = now;
+            frameRef.current?.contentWindow?.postMessage({type: "ark:activity"}, window.location.origin);
+        };
+        const kinds = ["scroll", "pointerdown", "keydown", "wheel", "touchstart"] as const;
+        kinds.forEach((kind) => window.addEventListener(kind, onActivity, {passive: true}));
+        return () => kinds.forEach((kind) => window.removeEventListener(kind, onActivity));
+    }, [phase]);
+
     // The island's time, once the world is live.
     useEffect(() => {
         if (phase !== "live") return;
@@ -107,7 +122,9 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
         return () => window.clearInterval(id);
     }, [phase, locale]);
 
-    const embedSrc = `/ark/embed.html?${new URLSearchParams({snapshot: "/api/ark/landing/snapshot", lang, label: words.sceneLabel}).toString()}`;
+    // The world reads the Ark again every 10 minutes at most, and not at all after 15 minutes with nobody here
+    // (decision 258: egress); between reads the animals keep to the scene's own schedule.
+    const embedSrc = `/ark/embed.html?${new URLSearchParams({snapshot: "/api/ark/landing/snapshot.bin", lang, label: words.sceneLabel, refresh: "600", idle: "900"}).toString()}`;
 
     return (
         <section

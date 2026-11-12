@@ -88,6 +88,22 @@ export async function readArkLandingSnapshot(): Promise<ArkSnapshot | null> {
     };
 }
 
+/** The anonymous snapshot as the route sends it, made once per public read (the read is shared and kept five minutes). */
+const bodyMemo = new WeakMap<ArkSnapshot, string>();
+
+export async function readArkLandingSnapshotBody(): Promise<string | null> {
+    const snapshot = await readSnapshot();
+    if (!snapshot) return null;
+    let body = bodyMemo.get(snapshot);
+    if (!body) {
+        const anonymous = await readArkLandingSnapshot();
+        if (!anonymous) return null;
+        body = JSON.stringify({available: true, snapshot: anonymous, founders: {names: false, animals: {}}});
+        bodyMemo.set(snapshot, body);
+    }
+    return body;
+}
+
 // MARK: The event log, kept per process
 
 type LogState = {rows: Row[]; ids: Set<string>; cursor: string | null; from: string | null; complete: boolean; readAt: number; gapAt: number | null};
