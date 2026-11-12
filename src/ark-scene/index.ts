@@ -500,14 +500,26 @@ function forcedTier(): QualityTier | null {
     return asked === "high" || asked === "medium" || asked === "low" ? asked : null;
 }
 
+/** A foot-IK ground query (`locomotion/ground.ts`) from a height function: the height and the normal from its slope (25 cm). */
+function groundQueryOf(height: (x: number, z: number) => number): (x: number, z: number) => {height: number; nx: number; ny: number; nz: number} {
+    const e = 0.25;
+    return (x, z) => {
+        const dx = (height(x + e, z) - height(x - e, z)) / (2 * e);
+        const dz = (height(x, z + e) - height(x, z - e)) / (2 * e);
+        const l = Math.hypot(dx, 1, dz);
+        return {height: height(x, z), nx: -dx / l, ny: 1 / l, nz: -dz / l};
+    };
+}
+
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
     // Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`), the animals
     // through this one pipeline. Absent: the wild island, built here exactly as before.
     const island = options.island ?? null;
     const heightAt = island ? island.heightAt : wildHeightAt;
     // L1's foot IK on the drawn ground (L3's request, docs/ark/grounding.md): feet plant on the drawn triangles, not the
-    // analytic surface (they differ by metres at the cliff bands).
-    setLocoGround(drawnGround);
+    // analytic surface (they differ by metres at the cliff bands). On another island, its own ground (`island.heightAt`,
+    // the normal from its slope), never the wild island's.
+    setLocoGround(island ? groundQueryOf(island.heightAt) : drawnGround);
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
