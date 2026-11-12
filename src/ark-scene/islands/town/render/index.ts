@@ -17,12 +17,13 @@ import {binSpots, carSpots, launchEnclosures, zooLayout} from "@/ark-scene/islan
 import {binsOut, boatIn, CAR_COLOURS, carAt, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
-import {binGeometry, boatGeometry, carGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {binGeometry, boatGeometry, carGeometry, narrowboatGeometry, NARROWBOAT_LIVERIES, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
 import {buildTownNear} from "@/ark-scene/islands/town/render/near";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene/islands/town/render/assets";
+import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/nature";
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
@@ -204,15 +205,49 @@ function glassMaterial(): MeshStandardMaterial {
     return material;
 }
 
+/**
+ * The zoo's mesh, netting and clear panels (lane GC, `render/zoo-barriers.ts`; the net channel's `aTag`: 0 welded mesh
+ * on a 5 cm grid, 1 an aviary's fine stainless netting on 2.5 cm, 2 clear glass). The wires are drawn at their real
+ * thickness in the plane's own coordinates and anti-aliased by their screen size, so close up they are wires and far
+ * away the mesh becomes the faint veil of its coverage: what is behind (the birds in an aviary) is seen through it.
+ */
 function netMaterial(): MeshStandardMaterial {
-    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.7, metalness: 0.2, transparent: true, side: DoubleSide, depthWrite: false});
+    const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.55, metalness: 0.35, transparent: true, side: DoubleSide, depthWrite: false});
+    material.customProgramCacheKey = () => "town-net-2";
     material.onBeforeCompile = (shader) => {
-        shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vNetWorld;").replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvNetWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+        shader.vertexShader = shader.vertexShader
+            .replace("#include <common>", "#include <common>\nattribute float aTag;\nvarying vec3 vNetWorld;\nvarying vec3 vNetNormal;\nvarying float vNetKind;")
+            .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvNetWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvNetNormal = normalize(mat3(modelMatrix) * objectNormal);\nvNetKind = aTag;");
         shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", "#include <common>\nvarying vec3 vNetWorld;")
-            .replace("#include <alphatest_fragment>", "vec3 netCell = abs(fract(vNetWorld * 3.0) - 0.5);\nfloat netWire = step(0.42, max(max(netCell.x, netCell.y), netCell.z));\ndiffuseColor.a = mix(0.06, 0.75, netWire);\n#include <alphatest_fragment>");
+            .replace("#include <common>", "#include <common>\nvarying vec3 vNetWorld;\nvarying vec3 vNetNormal;\nvarying float vNetKind;")
+            .replace(
+                "#include <alphatest_fragment>",
+                `{
+    if (vNetKind > 1.5) {
+        // Clear glass: a faint tint, brighter at a grazing angle.
+        float facing = abs(dot(normalize(vNetNormal), normalize(cameraPosition - vNetWorld)));
+        diffuseColor.a = mix(0.42, 0.1, facing);
+    } else {
+        vec3 n = normalize(vNetNormal);
+        vec3 t = abs(n.y) > 0.8 ? vec3(1.0, 0.0, 0.0) : normalize(cross(vec3(0.0, 1.0, 0.0), n));
+        vec3 b = cross(n, t);
+        float cells = vNetKind > 0.5 ? 40.0 : 20.0;
+        float thick = vNetKind > 0.5 ? 0.06 : 0.08;
+        vec2 uv = vec2(dot(vNetWorld, t), dot(vNetWorld, b)) * cells;
+        vec2 d = abs(fract(uv) - 0.5);
+        vec2 w = max(fwidth(uv), vec2(1e-4));
+        vec2 wire = 1.0 - smoothstep(vec2(thick * 0.5) - w, vec2(thick * 0.5) + w, 0.5 - d);
+        float near = max(wire.x, wire.y);
+        float cover = 1.0 - (1.0 - thick) * (1.0 - thick);
+        // Far away (a wire under a pixel): its coverage, a faint veil.
+        float far = smoothstep(0.25, 0.7, max(w.x, w.y));
+        diffuseColor.a = mix(near * 0.95, cover * 1.6 + 0.04, far);
+    }
+}
+#include <alphatest_fragment>`
+            );
     };
-    return material;
+    return townWeather(material, {soak: 0, cloud: false});
 }
 
 // MARK: - Building it
@@ -280,7 +315,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     yield;
     // (Lane GA: the ground and the paving are tiled PBR, `surfaces.ts`; the solids, props and trees answer the rain,
     // the cloud shade and the street lamps through the town's kit, `materials.ts`.)
-    const materials = {ground: townGroundMaterial(), decal: townPavingMaterial(), solid: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35}), glass: glassMaterial(), net: netMaterial(), prop: townWeather(propMaterial(), {soak: 0.1, wetRoughness: 0.2}), tree: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), {soak: 0.3, wetRoughness: 0.45})};
+    const materials = {ground: townGroundMaterial(), decal: townPavingMaterial(), solid: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35}), glass: glassMaterial(), net: netMaterial(), prop: townWeather(propMaterial(), {soak: 0.1, wetRoughness: 0.2}), tree: townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), {soak: 0.3, wetRoughness: 0.45}), foliage: foliageMaterial()};
 
     // Scenery and buildings, chunk by chunk (worked out already when `built` is given).
     const scenery = built?.scenery ?? buildScenery(plan);
@@ -349,7 +384,9 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         // (Decals carry their surface tag: `surface-tags.ts`, lane GA.)
         add(sc?.decal, materials.decal, "decal", false, true);
         add(bc?.solid ?? sc?.solid, materials.solid, "solid", true);
-        add(sc?.net, materials.net, "net", false);
+        add(sc?.net, materials.net, "net", false, true);
+        // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`.
+        add(sc?.foliage, materials.foliage, "foliage", true, true);
         const glassGeo = bc?.glass ?? sc?.glass;
         if (glassGeo && glassGeo.triangles > 0) {
             const geometry = glassGeo.toGeometry();
@@ -396,14 +433,14 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         const zoo = built && built.zooOpen.join(",") === open.join(",") ? built.zoo : buildZooScenery(zooLayout(open, plan));
         if (assetsMade) assets.setPlacements([...planTrees, ...zooTreesFor(open)]);
         zoo.chunks.forEach((c, key) => {
-            const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
+            const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"], ...(c.foliage ? [[c.foliage, materials.foliage, "foliage"] as [Geo, Material, string]] : [])];
             for (const [geo, material, name] of parts) {
                 if (!geo.triangles) continue;
-                const geometry = geo.toGeometry(name === "decal");
+                const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 const mesh = new Mesh(geometry, material);
                 mesh.name = `zoo:${name}`;
-                mesh.castShadow = name === "solid";
+                mesh.castShadow = name === "solid" || name === "foliage";
                 mesh.receiveShadow = true;
                 mesh.visible = !drawn || drawn(key);
                 zooRoot.add(mesh);
@@ -423,7 +460,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     // Trees and shrubs (lane GC): the asset library's, settled by L6's spacing (`trees.ts`), instanced per asset and level
     // of detail (`render/assets.ts`); the zoo's own with its enclosures. Until they load, the procedural stand-ins.
     const placementOf = (t: TownTree): TownAssetPlacement => ({asset: t.asset, x: t.x, y: t.y, z: t.z, rotation: t.rotation, scale: t.scale, shade: 0.9 + 0.2 * (((t.seed >>> 5) % 1000) / 1000)});
-    const planTrees = townTrees(plan).map(placementOf);
+    // (With them, the millpond's and the farm pond's reeds and lily pads, `render/nature.ts`.)
+    const planTrees = [...townTrees(plan).map(placementOf), ...townPlantings(plan)];
     const zooTreesFor = (open: readonly string[]) => townZooTrees(zooLayout(open, plan), plan).map(placementOf);
     const assets = new TownAssets([...planTrees, ...zooTreesFor(options.zooOpen ?? launchEnclosures())], options.assetBase, "town:trees");
     assets.setTier(TOWN_TIERS[tier].reach, TOWN_TIERS[tier].shadows > 0);
@@ -463,9 +501,11 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const carSet = new ChunkedSet(carGeometry(), materials.prop, cars.length, true);
     const binSet = new ChunkedSet(binGeometry(), materials.prop, bins.length, true);
     const washSet = new ChunkedSet(washingGeometry(), materials.prop, washingLines.length);
+    // The harbour's fishing boats; the canal's narrowboats in four liveries (one set each: their colours are painted on, lane GC).
     const boatSet = new ChunkedSet(boatGeometry(), materials.prop, plan.moorings.length, true);
+    const narrowboatSets = NARROWBOAT_LIVERIES.map((livery) => new ChunkedSet(narrowboatGeometry(livery), materials.prop, plan.moorings.length, true));
     const stallSet = new ChunkedSet(stallGeometry(), materials.prop, stallSpots.length, true);
-    for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet]] as const) {
+    for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ...narrowboatSets.map((nb, k) => [`narrowboats${k}`, nb] as const)] as const) {
         set.mesh.name = `props:${name}`;
         set.mesh.castShadow = true;
         set.mesh.receiveShadow = true;
@@ -546,11 +586,20 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         });
         washSet.write();
         plan.moorings.forEach((m, i) => {
-            colour.set(["#ffffff", "#2c4a7a", "#8a2a2a", "#2f5a3a", "#d8b84a"][m.seed % 5]);
-            const scale = m.length / 7;
-            boatSet.set(i, placeMatrix(m.x, m.harbour ? 0.15 : 1.25, m.z, m.turn, scale), boatIn(`${m.seed}`, m.harbour, clock), colour);
+            const shown = boatIn(`${m.seed}`, m.harbour, clock);
+            colour.set(1, 1, 1);
+            if (m.harbour) {
+                // (A fishing boat at its true size: 6–10 m.)
+                boatSet.set(i, placeMatrix(m.x, 0.15, m.z, m.turn, m.length / 7), shown, colour);
+                narrowboatSets.forEach((set) => set.set(i, placeMatrix(m.x, 1.25, m.z, m.turn), false, colour));
+                return;
+            }
+            boatSet.set(i, placeMatrix(m.x, 1.25, m.z, m.turn), false, colour);
+            // A narrowboat at its true beam (2.08 m), its length the mooring's (12–18 m).
+            narrowboatSets.forEach((set, k) => set.set(i, placeMatrix(m.x, 1.25, m.z, m.turn, 1, undefined, m.length / 15), shown && m.seed % narrowboatSets.length === k, colour));
         });
         boatSet.write();
+        for (const set of narrowboatSets) set.write();
         const market = marketDay(clock);
         stallSpots.forEach((p, i) => {
             colour.set(["#2f6a4a", "#8a2f2f", "#2f4a7a", "#c9a23c", "#6a3a6a"][i % 5]);
@@ -594,13 +643,13 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         chunks.forEach((c, key) => {
             if (c) c.group.visible = !next || next(key);
         });
-        for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet]) set.setDrawn(next);
+        for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet, ...narrowboatSets]) set.setDrawn(next);
         assets.setDrawn(next);
         for (const {key, mesh} of zooMeshes) if (key >= 0) mesh.visible = !next || next(key);
     };
 
     const setShadows = (on: boolean) => {
-        for (const c of chunks) if (c) for (const mesh of c.meshes) if (mesh.name === "solid") mesh.castShadow = on;
+        for (const c of chunks) if (c) for (const mesh of c.meshes) if (mesh.name === "solid" || mesh.name === "foliage") mesh.castShadow = on;
         treeSets.forEach((set) => {
             set.mesh.castShadow = on;
         });

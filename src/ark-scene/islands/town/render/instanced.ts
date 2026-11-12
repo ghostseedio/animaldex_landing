@@ -143,10 +143,10 @@ const up = new Vector3(0, 1, 0);
 const v = new Vector3();
 const s = new Vector3();
 
-export function placeMatrix(x: number, y: number, z: number, turn: number, scale = 1, out = m): Matrix4 {
+export function placeMatrix(x: number, y: number, z: number, turn: number, scale = 1, out = m, stretchZ = 1): Matrix4 {
     q.setFromAxisAngle(up, turn);
     v.set(x, y, z);
-    s.set(scale, scale, scale);
+    s.set(scale, scale, scale * stretchZ);
     return out.compose(v, q, s);
 }
 
@@ -187,16 +187,111 @@ export function washingGeometry(): BufferGeometry {
     return g.toGeometry();
 }
 
+/** The canal boats' liveries (lane GC): hull, cabin side, coach lines, the panels' second colour. */
+export const NARROWBOAT_LIVERIES: Array<[string, string, string, string]> = [
+    ["#1f3d2c", "#2f5a3a", "#e8dcb4", "#8a2a2a"],
+    ["#3a1c1c", "#7a2a2a", "#e8dcb4", "#2f5a3a"],
+    ["#1a2438", "#2c4a7a", "#e8d48a", "#c8a43c"],
+    ["#161616", "#8a2a2a", "#e8dcb4", "#1f3d2c"]
+];
+
+/**
+ * A canal narrowboat (lane GC): 15 m long along +z (bow), 2.08 m beam (stretched along its length to the mooring's
+ * boat), its waterline 0.1 m under its origin: a black hull with a painted band and coach lines, the cabin with its
+ * windows and portholes, a grey roof with a chimney, a water can and plant pots, the open well deck at the bow, the
+ * stern counter with its tiller.
+ */
+export function narrowboatGeometry(livery: [string, string, string, string]): BufferGeometry {
+    const g = new Geo();
+    const f: Frame = {x: 0, y: 0, z: 0, rot: 0};
+    const [hullHex, cabinHex, lineHex, panelHex] = livery;
+    const black = tone("#161616");
+    const hull = tone(hullHex);
+    const cabin = tone(cabinHex);
+    const line = tone(lineHex);
+    const panel = tone(panelHex);
+    const roof = tone("#5a5c5a");
+    const glass = tone("#1e2a30");
+    const beam = 2.08;
+    const L = 15;
+    // The hull: straight sides from the stern to 2.6 m short of the bow, then tapering to the stem.
+    const sections: Array<[number, number]> = [[-L / 2, beam / 2 - 0.12], [-L / 2 + 0.8, beam / 2], [L / 2 - 2.6, beam / 2], [L / 2 - 1.2, beam / 2 - 0.35], [L / 2, 0.06]];
+    const bottom = -0.75;
+    const top = 0.42;
+    for (let i = 1; i < sections.length; i++) {
+        const [z0, h0] = sections[i - 1];
+        const [z1, h1] = sections[i];
+        for (const side of [-1, 1]) {
+            const q = (y: number, z: number, h: number): [number, number, number] => [side * h, y, z];
+            const quad = (y0: number, y1: number, colour: [number, number, number]) => (side > 0 ? g.quad(q(y0, z0, h0), q(y0, z1, h1), q(y1, z1, h1), q(y1, z0, h0), colour) : g.quad(q(y0, z1, h1), q(y0, z0, h0), q(y1, z0, h0), q(y1, z1, h1), colour));
+            quad(bottom, -0.05, black);
+            quad(-0.05, 0.02, tone("#2a2a2a"));
+            quad(0.02, 0.3, hull);
+            quad(0.3, 0.36, line);
+            quad(0.36, top, hull);
+        }
+        // The gunwale (deck edge) on top of the hull's sides.
+        g.quad([-h0, top, z0], [h0, top, z0], [h1, top, z1], [-h1, top, z1], tone("#3a3a38"));
+    }
+    // The stern counter and the rudder and tiller.
+    g.box(f, 0, top, -L / 2 + 0.4, 0.1, 1.0, 0.1, tone("#b8963c"));
+    g.box(f, 0, top + 1.0, -L / 2 + 0.75, 0.06, 0.06, 0.8, tone("#b8963c"));
+    g.box(f, 0, bottom, -L / 2 - 0.3, 0.06, 1.1, 0.6, black);
+    // The cabin: from the stern deck to the well deck, a little narrower than the hull.
+    const c0 = -L / 2 + 1.4;
+    const c1 = L / 2 - 2.9;
+    const cw = beam - 0.2;
+    g.box(f, 0, top, (c0 + c1) / 2, cw, 1.12, c1 - c0, cabin);
+    // Panels (a second colour), coach lines round them, and the windows and portholes along both sides.
+    for (const side of [-1, 1]) {
+        for (let z = c0 + 1.0; z < c1 - 0.8; z += 2.6) {
+            g.box(f, side * (cw / 2 + 0.005), top + 0.32, z + 0.9, 0.012, 0.6, 1.9, line);
+            g.box(f, side * (cw / 2 + 0.01), top + 0.36, z + 0.9, 0.012, 0.52, 1.8, panel);
+            g.box(f, side * (cw / 2 + 0.015), top + 0.5, z + 0.25, 0.012, 0.36, 0.5, glass);
+            g.cylinder({x: side * (cw / 2 + 0.02), y: top + 0.62, z: z + 1.5, rot: Math.PI / 2}, 0, 0, 0, 0.11, 0.11, 0.02, tone("#c8a43c"), 8);
+        }
+    }
+    // The roof: grey, a hand rail along each edge, a chimney with its collar, a water can, plant pots, a pole.
+    g.box(f, 0, top + 1.12, (c0 + c1) / 2, cw + 0.06, 0.05, c1 - c0 + 0.06, roof);
+    for (const side of [-1, 1]) g.box(f, side * (cw / 2 - 0.08), top + 1.17, (c0 + c1) / 2, 0.04, 0.05, c1 - c0 - 0.4, tone("#b8963c"));
+    g.cylinder(f, 0.35, top + 1.17, c1 - 1.2, 0.08, 0.08, 0.55, black, 8);
+    g.cylinder(f, 0.35, top + 1.6, c1 - 1.2, 0.11, 0.11, 0.06, tone("#b8963c"), 8);
+    g.box(f, -0.35, top + 1.17, c0 + 3.0, 0.3, 0.32, 0.45, tone("#2f6a3a"));
+    for (const [lx, lz, colour] of [[-0.4, c0 + 6.2, "#a84a2a"], [0.4, c0 + 6.9, "#a84a2a"]] as const) {
+        g.cylinder(f, lx, top + 1.17, lz, 0.14, 0.11, 0.2, tone(colour), 7);
+        g.blob(lx, top + 1.48, lz, 0.2, 0.16, 0.2, tone("#4a7a30"), Math.round(lz * 13), 0);
+    }
+    g.cylinder(f, 0, top + 1.17, c0 + 4.5, 0.03, 0.03, 1.8, tone("#8a6a48"), 5);
+    // The well deck's front bulkhead and the bow's cratch board.
+    g.box(f, 0, top, c1 + 1.3, 0.8, 0.9, 0.06, cabin);
+    return g.toGeometry();
+}
+
+/** A small inshore fishing boat for the harbour (7 m along +z, waterline at its origin): white hull, a wheelhouse, a mast. */
 export function boatGeometry(): BufferGeometry {
     const g = new Geo();
     const f: Frame = {x: 0, y: 0, z: 0, rot: 0};
-    const hull = tone("#ffffff");
-    g.box(f, 0, -0.5, 0, 2.2, 1.0, 7.0, hull);
-    g.pyramid({x: 0, y: -0.5, z: 3.5, rot: 0}, 0, 0, 0, 1.5, 0.9, hull);
-    g.box(f, 0, 0.5, -0.6, 1.8, 1.4, 2.6, tone("#f2efe6"));
-    g.box(f, 0, 1.9, -0.6, 2.0, 0.1, 2.8, tone("#3a4a5a"));
-    g.box(f, 0, 0.44, 0, 2.26, 0.12, 7.04, tone("#2a2a2a"));
-    g.cylinder(f, 0, 1.9, -1.2, 0.06, 0.05, 3.2, tone("#c8c4bc"), 5);
+    const hull = tone("#f2efe8");
+    const stripe = tone("#2c4a7a");
+    const sections: Array<[number, number]> = [[-3.5, 1.0], [1.4, 1.15], [2.8, 0.75], [3.5, 0.05]];
+    for (let i = 1; i < sections.length; i++) {
+        const [z0, h0] = sections[i - 1];
+        const [z1, h1] = sections[i];
+        for (const side of [-1, 1]) {
+            const q = (y: number, z: number, h: number): [number, number, number] => [side * h, y, z];
+            const quad = (y0: number, y1: number, colour: [number, number, number]) => (side > 0 ? g.quad(q(y0, z0, h0 * 0.85), q(y0, z1, h1 * 0.85), q(y1, z1, h1), q(y1, z0, h0), colour) : g.quad(q(y0, z1, h1 * 0.85), q(y0, z0, h0 * 0.85), q(y1, z0, h0), q(y1, z1, h1), colour));
+            quad(-0.6, 0.0, tone("#7a2a24"));
+            quad(0.0, 0.5, hull);
+            quad(0.5, 0.62, stripe);
+            quad(0.62, 0.9, hull);
+        }
+        g.quad([-h0, 0.9, z0], [h0, 0.9, z0], [h1, 0.9, z1], [-h1, 0.9, z1], tone("#c8c4bc"));
+    }
+    g.box(f, 0, 0.9, -0.6, 1.5, 1.5, 1.9, tone("#f2efe6"));
+    g.box(f, 0, 1.75, 0.36, 1.4, 0.45, 0.02, tone("#1e2a30"));
+    g.box(f, 0, 2.4, -0.6, 1.7, 0.1, 2.1, stripe);
+    g.cylinder(f, 0, 2.5, -1.2, 0.06, 0.05, 3.0, tone("#c8c4bc"), 5);
+    g.box(f, 0, 0.9, -3.0, 1.6, 0.25, 0.9, tone("#3a3a3a"));
     return g.toGeometry();
 }
 

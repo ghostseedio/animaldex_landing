@@ -181,7 +181,7 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         }
     };
     for (const o of townObstacles(plan, open)) {
-        if (o.kind === "building") fillPoly(o.poly, 0.5);
+        if (o.kind === "building" || o.kind === "prop") fillPoly(o.poly, 0.5);
         else if (o.kind === "tree") fillDisc(o.x, o.z, Math.max(o.r, 0.25));
         // (A zoo fence or net 2.5 m thick on the raster: the walk grid's 2 m cells have no way through it.)
         else if (o.kind === "barrier" && o.hard) fillLine(o.line, 2.5);

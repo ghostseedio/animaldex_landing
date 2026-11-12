@@ -156,11 +156,14 @@ function digest(value: unknown): string {
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     areas: "7a26937a126da351",
-    ground: "5554417fbd78537c",
+    // (Lane GA: the ground's surface weights.)
+    ground: "9f6d9fa1b00ec782",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
-    // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings.)
-    sceneryAndBuildings: "3b7087a0eb3ca73e",
-    zoo: "f38cd89b62c1d0ec",
+    // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
+    // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
+    // aviaries, the zoo's trees drawn by the asset library, not merged.)
+    sceneryAndBuildings: "0e5bc0a8bd7268f3",
+    zoo: "f7d9bb4d11ad15c9",
     places: "fb1159793f083105"
 };
 
