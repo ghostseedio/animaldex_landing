@@ -179,7 +179,7 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
-import {heightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {arkOutside} from "@/ark-scene/live-budget";
@@ -494,6 +494,10 @@ function forcedTier(): QualityTier | null {
 }
 
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
+    // Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`), the animals
+    // through this one pipeline. Absent: the wild island, built here exactly as before.
+    const island = options.island ?? null;
+    const heightAt = island ? island.heightAt : wildHeightAt;
     // L1's foot IK on the drawn ground (L3's request, docs/ark/grounding.md): feet plant on the drawn triangles, not the
     // analytic surface (they differ by metres at the cliff bands).
     setLocoGround(drawnGround);
@@ -624,42 +628,48 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(nests.root);
 
     // Part B (docs/ark/streaming.md): the world in chunks along the ground's grid; the ground in tiles, the plants by chunk.
-    const chunkGrid = chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
-    const landscape = buildLandscape(chunkGrid);
+    const chunkGrid = island ? island.grid : chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
+    // (Part C: on another island none of the wild island's ground, plants, trees, rocks or props are built.)
+    const landscape = island ? null : buildLandscape(chunkGrid);
     const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
-    void loadGroundTextures(graphicsBase);
+    if (!island) void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
-    scene.add(landscape.ground, landscape.water);
+    if (landscape) scene.add(landscape.ground, landscape.water);
+    if (island) scene.add(island.root);
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
-    const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
+    const vegetation = island ? null : buildVegetation(arkGrassBuild(tier), chunkGrid);
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
-    const nearDetail = new NearDetail();
-    scene.add(nearDetail.group);
+    const nearDetail = island ? null : new NearDetail();
+    if (nearDetail) scene.add(nearDetail.group);
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
-    const assetTrees = new AssetTrees(options.assetBase);
-    scene.add(assetTrees.group);
+    const assetTrees = island ? null : new AssetTrees(options.assetBase);
+    if (assetTrees) scene.add(assetTrees.group);
     let assetTreesShown = false;
     // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
-    const assetRocks = new AssetRocks(options.assetBase);
-    scene.add(assetRocks.group);
+    const assetRocks = island ? null : new AssetRocks(options.assetBase);
+    if (assetRocks) scene.add(assetRocks.group);
     let assetRocksShown = false;
     // Graphics batch 6: the asset lane's forest floor (litter, twigs, cones, logs).
-    const assetFloor = new AssetFloor(options.assetBase);
-    scene.add(assetFloor.group);
-    for (const mesh of vegetation.meshes) scene.add(mesh);
-    scene.add(vegetation.grass);
+    const assetFloor = island ? null : new AssetFloor(options.assetBase);
+    if (assetFloor) scene.add(assetFloor.group);
+    if (vegetation) {
+        for (const mesh of vegetation.meshes) scene.add(mesh);
+        scene.add(vegetation.grass);
+    }
     const motes = buildMotes(260);
     motes.points.visible = !reducedMotion;
     scene.add(motes.points);
     // The cottage at Home, its porch light and the garden pond (the small animals' microhabitats).
-    const micro = buildMicroScene();
-    scene.add(micro.group);
-    micro.setNight(lighting.daylight.night);
+    const micro = island ? null : buildMicroScene();
+    if (micro) {
+        scene.add(micro.group);
+        micro.setNight(lighting.daylight.night);
+    }
     // The layers: burrows and the cutaway's pit and tunnels, the sea's plankton, glow and underwater light.
     const layersScene = buildLayersScene();
     scene.add(layersScene.group);
     renderer.localClippingEnabled = true;
-    layersScene.clip([landscape.groundMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
+    if (landscape && vegetation) layersScene.clip([landscape.groundMaterial, vegetation.grass.material as MeshStandardMaterial, ...vegetation.meshes.map((mesh) => mesh.material as MeshStandardMaterial)]);
     const PLANKTON = planktonClouds();
     // Scenery modules outside this file (`scene-modules.ts`: the props lane's nests, homes and area details), built below.
     let modules: ArkSceneModule[] = [];
@@ -669,7 +679,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
     controls.minDistance = CAMERA_RANGE.near;
-    controls.maxDistance = MAX_DISTANCE;
+    // (Part C: a bigger island's camera reaches further out.)
+    const maxDistance = island ? Math.max(island.maxDistance, MAX_DISTANCE) : MAX_DISTANCE;
+    controls.maxDistance = maxDistance;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
     controls.rotateSpeed = 0.55;
@@ -701,13 +713,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: Part B, streaming (docs/ark/streaming.md)
 
     // The chunks' heights (the ground's own), and which hold something: land, plants, (with the snapshot) animals' homes.
-    const groundHeights = new Float32Array(landscape.arrays.size * landscape.arrays.size);
-    for (let i = 0; i < groundHeights.length; i++) groundHeights[i] = landscape.arrays.positions[i * 3 + 1];
-    const chunkContent = new Uint8Array(chunkCount(chunkGrid));
-    spansFromHeights(chunkGrid, groundHeights, landscape.arrays.size, 0).forEach((span, key) => {
+    const groundSize = landscape ? landscape.arrays.size : 0;
+    const groundHeights = new Float32Array(groundSize * groundSize);
+    if (landscape) for (let i = 0; i < groundHeights.length; i++) groundHeights[i] = landscape.arrays.positions[i * 3 + 1];
+    // (Part C: another island brings its own spans and content.)
+    const chunkContent = island ? island.content.slice() : new Uint8Array(chunkCount(chunkGrid));
+    if (!island) spansFromHeights(chunkGrid, groundHeights, groundSize, 0).forEach((span, key) => {
         if (span.maxY > 0.3) chunkContent[key] = 1;
     });
-    {
+    if (vegetation) {
         const perChunk = new Uint32Array(chunkCount(chunkGrid));
         for (const chunked of vegetation.chunked) chunked.perChunk(perChunk);
         perChunk.forEach((n, key) => {
@@ -718,7 +732,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let sceneGpuAt = -Infinity;
     const streamer = new ArkStreamer({
         grid: chunkGrid,
-        spans: spansFromHeights(chunkGrid, groundHeights, landscape.arrays.size, CHUNK_HEADROOM),
+        spans: island ? island.spans : spansFromHeights(chunkGrid, groundHeights, groundSize, CHUNK_HEADROOM),
         content: chunkContent,
         tier,
         haze,
@@ -742,7 +756,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let streamMarkers = 0;
     /** The props and other modules' objects, by chunk (`streaming/cull.ts`): the cottage and pond, the burrows and pit, and the modules once built. */
     const streamCull = new StreamCull();
-    streamCull.track(micro.group);
+    if (micro) streamCull.track(micro.group);
     streamCull.track(layersScene.group);
     const drawnIn = (chunk: number) => streamer.stateOf(chunk) === STATE_IN;
     const drawnAny = (chunk: number) => streamer.stateOf(chunk) !== STATE_OUT;
@@ -750,12 +764,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const atAny = (x: number, z: number) => streamer.stateAt(x, z) !== STATE_OUT;
     streamer.onChange((states) => {
         const all = streamer.allIn;
-        landscape.tiles.apply(states, performance.now() / 1000);
+        landscape?.tiles.apply(states, performance.now() / 1000);
         // The ground's plants and the trees as the map too; the grass, the forest floor and the props only in full.
-        vegetation.setDrawn(all ? null : drawnAny, all ? null : drawnIn);
-        assetTrees.setDrawn(all ? null : atAny);
-        assetRocks.setDrawn(all ? null : atAny);
-        assetFloor.setDrawn(all ? null : atIn);
+        vegetation?.setDrawn(all ? null : drawnAny, all ? null : drawnIn);
+        assetTrees?.setDrawn(all ? null : atAny);
+        assetRocks?.setDrawn(all ? null : atAny);
+        assetFloor?.setDrawn(all ? null : atIn);
+        // (Part C: the other island's chunks, its own meshes.)
+        island?.setDrawn(all ? null : drawnIn);
         streamCull.apply(all ? null : atIn);
     });
 
@@ -766,17 +782,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamer.setTier(tier);
         const settings = TIER_SETTINGS[tier];
         lighting.setShadows(renderer, settings.shadows);
-        vegetation.setShadows(settings.shadows > 0);
-        micro.setShadows(settings.shadows > 0);
+        vegetation?.setShadows(settings.shadows > 0);
+        micro?.setShadows(settings.shadows > 0);
+        island?.setShadows(settings.shadows > 0);
+        island?.setTier(tier);
         shadows.setStrength(look.contactStrength(settings.shadows > 0));
         look.setTier(tier, liteOn());
-        vegetation.setGrassCount(settings.grass);
-        vegetation.setFill(settings.fill);
-        nearDetail.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        vegetation?.setGrassCount(settings.grass);
+        vegetation?.setFill(settings.fill);
+        nearDetail?.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
         // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
-        assetTrees.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
-        assetRocks.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
-        assetFloor.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
+        assetTrees?.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
+        assetRocks?.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
+        assetFloor?.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
         species.forEach((meshes) => {
             for (const mesh of [meshes.near, meshes.far]) if (mesh) mesh.castShadow = settings.shadows > 0;
         });
@@ -813,6 +831,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const species = new Map<string, SpeciesMeshes>();
     // Runtime (src/ark-scene/runtime): when to draw, power, the load order and budgets, the camera's body, the bar and reset.
     const runtime: ArkRuntime = createArkRuntime({
+        ...(island ? {groundAt: island.heightAt} : {}),
         el,
         canvas,
         renderer,
@@ -918,7 +937,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const labels = new Map<ArkRegion, HTMLSpanElement>();
     for (const region of ARK_REGIONS) {
-        const text = options.regionLabels?.[region];
+        // (Part C: the regions' names are the wild island's.)
+        const text = island ? undefined : options.regionLabels?.[region];
         if (!text) continue;
         const label = document.createElement("span");
         label.textContent = text;
@@ -1011,7 +1031,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: The behaviour schedule (NPC-style, visual only)
 
     /** On unless the page turns it off: every animal's behaviour from the time and its id (`behaviour-schedule.ts`). */
-    const scheduleOn = options.behaviour !== false;
+    // (Part C, first cut: another island's animals stand at their places, its behaviour world comes with the town's sampler.)
+    const scheduleOn = options.behaviour !== false && !island;
     let world: ScheduleWorld | null = null;
     /**
      * The places and the walk grid, from the graphics lane's scenery interface: built a few milliseconds a frame
@@ -1605,6 +1626,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
+        if (placedFor !== snapshot && island) {
+            // Part C: the other island places its own (`islands/town/placement.ts`: homes, farms, zoo enclosures, niches).
+            placedAll = island.place(snapshot.animals);
+            placedFor = snapshot;
+            hamletResidents = [];
+        }
         if (placedFor !== snapshot) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
             const plots = hamletPlotsFor(snapshot.animals);
@@ -3891,7 +3918,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const spherical = new Spherical();
 
     const fly = (target: Vector3, distance: number, seconds = 1.1, polar?: number, azimuth?: number, then?: () => void) => {
-        distance = Math.min(Math.max(distance, controls.minDistance), MAX_DISTANCE);
+        distance = Math.min(Math.max(distance, controls.minDistance), maxDistance);
         spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
         const toPolar = polar ?? spherical.phi;
         let toAzimuth = azimuth ?? spherical.theta;
@@ -3947,8 +3974,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const fit = Math.min(vertical, horizontal);
         // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
         // view centres a little south-east of the lake and fits a wider circle.
-        const radius = aspect < 0.8 ? 114 : 96;
-        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, MAX_DISTANCE);
+        const radius = island ? (aspect < 0.8 ? island.home.radiusTall : island.home.radius) : aspect < 0.8 ? 114 : 96;
+        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, maxDistance);
+        if (island) return {target: new Vector3(island.home.x, 0, island.home.z), distance: distance * 0.94, polar: 1.0, azimuth: 0};
         // Low enough to see the horizon over the island's far shore.
         return {target: new Vector3(aspect < 0.8 ? 16 : 12, 0, aspect < 0.8 ? 24 : 14), distance: distance * 0.94, polar: 1.06, azimuth: 0};
     };
@@ -3957,8 +3985,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const keepInWorld = () => {
         const target = controls.target;
         const reach = Math.hypot(target.x, target.z);
-        if (reach > WORLD_RADIUS) {
-            const pull = WORLD_RADIUS / reach;
+        const worldRadius = island ? island.worldRadius : WORLD_RADIUS;
+        if (reach > worldRadius) {
+            const pull = worldRadius / reach;
             const dx = target.x * pull - target.x;
             const dz = target.z * pull - target.z;
             target.x += dx;
@@ -4009,8 +4038,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             underwater = under;
             lighting.setUnderwater(under);
             scene.fog = under ? underFog : fog;
-            vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
-            micro.group.visible = !under;
+            if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
+            if (micro) micro.group.visible = !under;
             ARK_CAUSTICS.value = under ? 0.9 : 0.3;
         }
         if (under) {
@@ -4208,7 +4237,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** The plants that can stand between the camera and an animal up a tree (never the grass). */
     const TREE_KINDS = new Set(["canopy", "rainforest", "broadleaf", "conifer", "acacia", "palm", "orchard", "shrub", "cactus"]);
-    const occluders = vegetation.meshes.filter((mesh) => TREE_KINDS.has(mesh.userData.kind as string));
+    const occluders = (vegetation?.meshes ?? []).filter((mesh) => TREE_KINDS.has(mesh.userData.kind as string));
     const rays = new Raycaster();
     const rayFrom = new Vector3();
     const rayTo = new Vector3();
@@ -4271,7 +4300,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     // Part B: a chunked plant mesh rewritten (the render distance moved) puts its folded trees back first; they fold
     // again at the next check if still in the way.
-    for (const chunked of vegetation.chunked) {
+    for (const chunked of vegetation?.chunked ?? []) {
         chunked.beforeWrite = () => {
             unfold(new Set());
             foldCheck = 0;
@@ -4491,7 +4520,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (event.key === "+" || event.key === "=" || event.key === "-" || event.key === "_") {
             event.preventDefault();
             const distance = camera.position.distanceTo(controls.target);
-            const next = Math.min(Math.max(distance * (event.key === "+" || event.key === "=" ? 0.8 : 1.25), controls.minDistance), MAX_DISTANCE);
+            const next = Math.min(Math.max(distance * (event.key === "+" || event.key === "=" ? 0.8 : 1.25), controls.minDistance), maxDistance);
             fly(controls.target.clone(), next, 0.35);
         }
     };
@@ -4545,6 +4574,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Runtime (sliced mount): the scenery modules (the props' homes, areas, nests and effects, ~0.3 s on a phone) are
     // built after mountArk returns, in their own task before the animals are laid out; a recording builds them now.
     const buildModules = () => {
+        // (Part C: the props lane's homes, nests and area details are the wild island's.)
+        if (island) return;
         modules = ARK_SCENE_MODULES.map((create) => create({
             scene,
             renderer,
@@ -4577,9 +4608,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
-    wireZoneCapacity(liveBudget);
-    setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
-    setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
+    // (Part C: the wild island's per-zone capacity is its own land's; another island's areas hold their animals.)
+    if (island) liveBudget.setArkZoneCapacity(null);
+    else wireZoneCapacity(liveBudget);
+    setNestSource(options.props === false || island ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
+    setFishSource(island ? null : (pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).
     setFishChasers(() => recipeScene.chasers);
     applyTier(tier);
@@ -4598,12 +4631,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let roostQueue: ArkAnimal[] | null = null;
         runtime.mountLater([
             () => {
-                void prepareAttachPoints().then(() => (attachDone = true));
+                if (island) attachDone = true;
+                else void prepareAttachPoints().then(() => (attachDone = true));
                 return true;
             },
             () => attachDone,
             () => {
-                placedAll = placeAnimals(first.animals);
+                placedAll = island ? island.place(first.animals) : placeAnimals(first.animals);
                 placedFor = first;
                 roostQueue = [...first.animals];
                 return true;
@@ -4638,10 +4672,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // From the island's edge looking in, so the world (the lake, the trees, the mountain) stands behind it.
         fly(new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + 0.6, entry.place.z), 9 + entry.length * 2.6, 2.8, 1.22, Math.atan2(entry.place.x, entry.place.z));
     };
-    if (opening) {
+    if (opening && options.arrival) {
+        // Part C, a crossing (`islands/archipelago.ts`): in from over the sea the way the camera came, down onto the island.
+        const from = options.arrival.from;
+        controls.target.set(from.target.x, from.target.y, from.target.z);
+        spherical.set(Math.min(from.distance, maxDistance), from.polar, from.azimuth);
+        camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
+        controls.update();
+        fly(home.target, home.distance, options.arrival.seconds, home.polar, home.azimuth, afterOpening);
+    } else if (opening) {
         // The opening: from high over the sea, a slow descent and arc onto the island.
         controls.target.copy(home.target).add(new Vector3(0, 0, -10));
-        spherical.set(MAX_DISTANCE * 0.98, 0.62, -0.95);
+        spherical.set(maxDistance * 0.98, 0.62, -0.95);
         camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
         controls.update();
         fly(home.target, home.distance, OPENING_SECONDS, home.polar, home.azimuth, afterOpening);
@@ -4887,7 +4929,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let lastClock = performance.now() / 1000;
     const setLight = () => {
         lighting.setHours(hoursNow(), fog);
-        micro.setNight(lighting.daylight.night);
+        micro?.setNight(lighting.daylight.night);
         for (const sceneModule of modules) sceneModule.setHours(hoursNow());
         applyHours();
     };
@@ -5247,7 +5289,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Who is gone now (eaten, or died): standing in where they were until their act (`ghostAnimalsOf`).
         const ghostAnimals = ghostAnimalsOf(acts);
-        const places = ghostAnimals.length ? placeAnimals(ghostAnimals) : new Map<string, Placement>();
+        const places = ghostAnimals.length ? (island ? island.place(ghostAnimals) : placeAnimals(ghostAnimals)) : new Map<string, Placement>();
         ghosts = ghostAnimals.map((animal) => Object.assign(newEntry(animal, places.get(animal.id)!, null), {ghost: true}));
         const after = new Map<Entry, number>();
         for (const ghost of ghosts) {
@@ -5336,7 +5378,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ARK_CLOCK.value = runtime.animalClock();
         }
         applyEnvironment();
-        landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
+        if (landscape) landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
+        // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
+        island?.update(worldMs());
         stepFlight(now);
         stepInset();
         // Idle: after a while untouched, the view drifts slowly round.
@@ -5348,11 +5392,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
         streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now);
-        landscape.tiles.release(now);
+        landscape?.tiles.release(now);
         streamCull.step(now);
         stepLayers(elapsed);
         foldTrees(elapsed);
-        micro.step(camera.position);
+        micro?.step(camera.position);
         for (const sceneModule of modules) sceneModule.step(elapsed, camera, controls.target);
         stepTalking(elapsed);
         // The hour: read again every minute (the light changes only a little).
@@ -5406,18 +5450,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             lastTracked = null;
         }
         const viewDistance = camera.position.distanceTo(controls.target);
-        nearDetail.update(controls.target, viewDistance);
-        assetTrees.update(camera.position);
-        assetRocks.update(camera.position);
-        assetFloor.update(camera.position);
-        if (assetRocks.ready && !assetRocksShown) {
+        nearDetail?.update(controls.target, viewDistance);
+        assetTrees?.update(camera.position);
+        assetRocks?.update(camera.position);
+        assetFloor?.update(camera.position);
+        if (assetRocks?.ready && !assetRocksShown) {
             assetRocksShown = true;
-            vegetation.hideKinds(new Set(["rock"]));
+            vegetation?.hideKinds(new Set(["rock"]));
         }
-        vegetation.update(camera);
-        if (assetTrees.ready && !assetTreesShown) {
+        vegetation?.update(camera);
+        if (assetTrees?.ready && !assetTreesShown) {
             assetTreesShown = true;
-            vegetation.hideKinds(ASSET_TREE_KINDS);
+            vegetation?.hideKinds(ASSET_TREE_KINDS);
         }
         lighting.fitShadow(controls.target, viewDistance);
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
@@ -5617,7 +5661,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             flight = null;
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
-            spherical.set(Math.min(Math.max(view.distance, controls.minDistance), MAX_DISTANCE), view.polar, view.azimuth);
+            spherical.set(Math.min(Math.max(view.distance, controls.minDistance), maxDistance), view.polar, view.azimuth);
             controls.target.set(view.target.x, view.target.y, view.target.z);
             camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
             controls.update();
@@ -5690,6 +5734,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 fly(view.target, view.distance, 1.6, view.polar);
                 return;
             }
+            // (Part C: the wild island's regions; another island has its own places, not these.)
+            if (island) return;
             const centre = regionCentre(region);
             fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, 48), 150), 1.6);
         },
@@ -5725,7 +5771,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveliness: liveliness.stats(),
             streaming: (() => {
                 const stream = streamer.stats();
-                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape.tiles.stats(), animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
+                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
             })()
         }),
         dispose: () => {
@@ -5770,13 +5816,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             dots.dispose();
             shadows.dispose();
             rings.dispose();
-            landscape.dispose();
-            nearDetail.dispose();
-            assetTrees.dispose();
-            assetRocks.dispose();
-            assetFloor.dispose();
-            vegetation.dispose();
-            micro.dispose();
+            landscape?.dispose();
+            nearDetail?.dispose();
+            assetTrees?.dispose();
+            assetRocks?.dispose();
+            assetFloor?.dispose();
+            vegetation?.dispose();
+            micro?.dispose();
+            if (island) {
+                scene.remove(island.root);
+                island.dispose();
+            }
             for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();
             lighting.dispose();

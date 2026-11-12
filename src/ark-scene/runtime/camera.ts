@@ -223,6 +223,8 @@ export type CollideOptions = {
     closeUp: boolean;
     /** The forest fill's share the tier draws (default all). */
     fill?: number;
+    /** Part C: the loaded island's ground (default the wild island's). */
+    ground?: (x: number, z: number) => number;
 };
 
 /**
@@ -236,10 +238,11 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
     if (!options.diving) {
         // The ground round the eye, not only under it: a slope rising in front is kept off the near plane.
         const ring = Math.min(Math.max(options.clearance * 1.5, 0.15), 1.6);
-        let ground = Math.max(heightAt(camera.x, camera.z), 0);
+        const groundAt = options.ground ?? heightAt;
+        let ground = Math.max(groundAt(camera.x, camera.z), 0);
         for (let k = 0; k < 6; k++) {
             const angle = (k / 6) * Math.PI * 2;
-            ground = Math.max(ground, Math.max(heightAt(camera.x + Math.cos(angle) * ring, camera.z + Math.sin(angle) * ring), 0) - ring * 0.35);
+            ground = Math.max(ground, Math.max(groundAt(camera.x + Math.cos(angle) * ring, camera.z + Math.sin(angle) * ring), 0) - ring * 0.35);
         }
         const floor = ground + options.clearance;
         if (camera.y < floor) camera.y += (floor - camera.y) * ease(options.dt, 0.08);

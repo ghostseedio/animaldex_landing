@@ -102,6 +102,11 @@ export type ArkRuntimeContext = {
     fillShare: (tier: QualityTier) => number;
     /** The render target the scene's materials draw into (the post chain's), for the shader warm-up. */
     renderTarget: () => WebGLRenderTarget | null;
+    /**
+     * Part C: another island's ground (the town's), for the camera's floor; its own buildings are not camera
+     * obstacles yet, and the wild island's trees and rocks are not there. Absent: the wild island's ground and scenery.
+     */
+    groundAt?: (x: number, z: number) => number;
 };
 
 /** The grass to build for the device's first tier (`buildVegetation`). */
@@ -401,13 +406,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          */
         collide(target: Vector3, dt: number, closeUp: boolean) {
             // Built once (every fill tree, with its rank); a tier's share is applied at the query.
-            obstacles ??= CameraObstacles.forScene();
+            obstacles ??= ctx.groundAt ? new CameraObstacles([]) : CameraObstacles.forScene();
             const fill = ctx.fillShare(ctx.tier());
             // The scene's rules (keepInWorld): under the sea it keeps its own floor; the eye's height over the ground
             // is a quarter of the view distance, 3 cm to 1.2 m.
-            const diving = heightAt(target.x, target.z) < -0.4 && target.y < -0.15;
+            const diving = (ctx.groundAt ?? heightAt)(target.x, target.z) < -0.4 && target.y < -0.15;
             const clearance = Math.min(Math.max(ctx.camera.position.distanceTo(target) * 0.25, 0.03), 1.2);
-            if (collideCamera(obstacles, ctx.camera.position, target, {dt, diving, clearance, closeUp, fill}) > 1e-4) collisions++;
+            if (collideCamera(obstacles, ctx.camera.position, target, {dt, diving, clearance, closeUp, fill, ...(ctx.groundAt ? {ground: ctx.groundAt} : {})}) > 1e-4) collisions++;
         },
 
         /** The world scrolled into (true) or out of (false) the page's view. */

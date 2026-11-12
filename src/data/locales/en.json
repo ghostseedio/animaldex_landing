@@ -4038,6 +4038,16 @@
     "foundersOne": "1 founder",
     "foundersOther": "{count} founders",
     "myAnimals": "My animals",
+    "islands": {
+      "label": "Islands",
+      "wild": "Wild island",
+      "town": "Town and zoo",
+      "both": "Both islands",
+      "atHome": "at home",
+      "onFarm": "on the farm",
+      "inTown": "gardens and streets",
+      "zoo": "Zoo"
+    },
     "hint": "Drag to look around. Pinch or scroll to zoom. Tap an animal to meet it.",
     "loading": "Bringing the Ark into view",
     "noWebgl": "This browser can't draw the Ark in 3D. Here is who is aboard.",

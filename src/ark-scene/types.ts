@@ -9,6 +9,7 @@ import type {ArkRestStatus} from "@/ark-scene/sleep";
 
 export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
+import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -62,8 +63,18 @@ export type ArkCondition = "well_fed" | "hungry" | "old";
  */
 export type ArkThrive = "ordinary" | "good" | "prime";
 export const ARK_THRIVE_BANDS: readonly ArkThrive[] = ["ordinary", "good", "prime"];
-/** Where in the home region a pet or a farm animal lives (placement only; its zone is unchanged). Null: its own zone. */
-export type ArkArea = "house" | "farm";
+/**
+ * Where a kept animal lives (placement only; its zone is unchanged): a pet's house, a farm animal's farm, and (Part C,
+ * with `voyage_config.islands` on) a zoo animal's enclosure. Null: its own zone.
+ */
+export type ArkArea = "house" | "farm" | "zoo";
+/**
+ * Part C (islands plan §6, decisions 22, 26, 28): the island an animal lives on, the server's `voyage_animals.island`,
+ * sent only while `voyage_config.islands` is on. Absent (islands off): the one island, today's Ark.
+ */
+export type ArkIsland = "wild" | "town";
+/** Part C: each island's living animals (`voyage_public_v3`'s `islands`; the zoo's are inside the town's). */
+export type ArkIslandCounts = {wild: number; town: number; zoo: number};
 /** How an arrived animal came aboard: a capture (since 2026-11-11) or, before that, a step that worked. */
 export type ArkArrivalSource = "capture" | "step";
 /** The species' stored social life: `group` gathers in a cluster, `pair` stays close. */
@@ -107,6 +118,10 @@ export type ArkAnimal = {
      * absent: its zone, placed by the map.
      */
     area?: ArkArea | null;
+    /** Part C: the island it lives on (only while the server's `islands` switch is on; absent: the one island). */
+    island?: ArkIsland | null;
+    /** Part C: a zoo animal's enclosure, `<type>-<n>` (`voyage_animals.enclosure`; the town's `zoo-types.ts` ids). */
+    enclosure?: string | null;
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
     condition?: ArkCondition | null;
@@ -160,6 +175,10 @@ export type ArkSnapshot = {
     ark_day?: number | null;
     /** The clutches in (v2's `nests`, A9); absent from a v1 answer or before the eggs migration. */
     nests?: ArkNestRow[];
+    /** Part C: the island this answer holds (`voyage_public_v3`'s `island`), when it is one island's read or slice. */
+    island?: ArkIsland;
+    /** Part C: both islands' living counts (`voyage_public_v3`'s `islands`). */
+    islands?: ArkIslandCounts;
 };
 
 export type ArkSceneStats = {
@@ -217,6 +236,14 @@ export type ArkHerdInfo = {key: string; slug: string; name: string; count: numbe
 
 export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
+    /**
+     * Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`
+     * `loadTownScene`), its animals through the same pipeline; the snapshot is that island's slice. Absent: the wild
+     * island. One island is loaded at a time (`islands/archipelago.ts`).
+     */
+    island?: ArkIslandScene | null;
+    /** Part C, the end of a crossing: the opening flight starts from this view (over the sea, facing in) instead of its own. */
+    arrival?: {from: ArkCameraView; seconds: number} | null;
     /**
      * Part B: the device's memory in GB as the app knows it (iOS never tells the page; Chromium caps it at 8), for the
      * quality tier and its render distance and memory budget (`streaming/tiers.ts`). The embed also reads `?mem=`.

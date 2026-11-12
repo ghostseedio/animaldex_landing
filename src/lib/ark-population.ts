@@ -138,10 +138,12 @@ export function arkPickAnimal(animals: ArkAnimal[], selectedId: string | null): 
     return animals.find((animal) => animal.mine) ?? animals[0];
 }
 
-/** A `?focus=` value: a species_profile_id or a model slug. */
+/** A `?focus=` value: an animal's id (Part C: `/ark?focus=<animal>`, on whichever island), a species_profile_id or a model slug. */
 export function arkFocusAnimals(snapshot: ArkSnapshot | null, focus: string | null | undefined): ArkAnimal[] {
     const wanted = focus?.trim().toLowerCase();
     if (!wanted || !snapshot) return [];
+    const one = snapshot.animals.find((animal) => animal.id.toLowerCase() === wanted);
+    if (one) return [one];
     return snapshot.animals
         .filter((animal) => animal.species_profile_id.toLowerCase() === wanted || animal.model_slug.toLowerCase() === wanted || (animal.kind_species_profile_id ?? "").toLowerCase() === wanted)
         .sort((a, b) => b.arrived_at.localeCompare(a.arrived_at));
