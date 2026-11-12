@@ -149,3 +149,18 @@ test("release: the stored home override for the shared position module (null fal
     assert.ok(typeof settled.x === "number" && typeof settled.z === "number" && typeof settled.r === "number", "search: the disc it settled in");
     assert.deepEqual(homeOverrideOf(planRelease(input("red-fox", -12, -28)), {releaseIsland: "town", homeIsland: "wild"}), {island: "town"}, "left on another island");
 });
+
+test("homes from the shared position module: its home with the stored override; the zone's site without a slot", async () => {
+    const {positionHomes} = await import("@/ark-live/position-homes");
+    const calls: unknown[] = [];
+    const fake = {homeOf: (_atlas: null, ref: {slot: number}, override?: unknown) => (calls.push([ref, override]), {x: 10, z: 20, r: 7})};
+    const lookup = positionHomes(fake, null);
+    const facts = {id: "a", slug: "red-fox", zone: "grassland" as const, area: null, enclosure: null};
+    const a = abilitiesOf("red-fox");
+    assert.deepEqual(lookup(facts, a, null, {island: "wild", speciesId: "s", slot: 3, rank: 1}), {x: 10, z: 20, r: 7});
+    const state = {animal_id: "a", island: "wild" as const, released_at: "", plan: {kind: "search" as const, legs: [], settle_at: null, settle: null}, zone: null, stamina: 1, exposure: 0, home: {island: "wild", x: 1, z: 2, r: 3}};
+    lookup(facts, a, state, {island: "wild", speciesId: "s", slot: 3, rank: 1});
+    assert.deepEqual((calls[1] as unknown[])[1], {island: "wild", x: 1, z: 2, r: 3}, "the stored HomeOverride goes to homeOf");
+    const fallback = lookup(facts, a, null, {island: "wild", speciesId: null, slot: null, rank: null});
+    assert.ok(fallback.r > 0 && calls.length === 2, "no slot: the zone's site");
+});
