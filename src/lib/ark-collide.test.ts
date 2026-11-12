@@ -153,8 +153,9 @@ test("a run of every species and a full hamlet: no animal passes through anythin
         assert.ok(report.measured > 300, `measured ${report.measured}`);
         assert.equal(report.passThrough.samples, 0, `passing through: ${JSON.stringify(report.passThrough.byKindSource)} ${JSON.stringify(report.passThrough.worst.slice(0, 3))}`);
         assert.equal(report.fenceCrossings.count, 0, `through fences: ${JSON.stringify(report.fenceCrossings.examples.slice(0, 3))}`);
-        // (The paths alone, before the layer's last word: almost nothing for it to do.)
-        assert.ok(raw.passThrough.samples <= Math.max(report.samples * 0.01, 50), `the paths alone pass through ${raw.passThrough.samples} times`);
+        // (The paths alone, before the layer's last word: little left for it to do, the stays it moves off a trunk or a rock.)
+        assert.ok(raw.passThrough.samples <= report.samples * 0.05, `the paths alone pass through ${raw.passThrough.samples} times in ${report.samples}`);
+        assert.equal(raw.fenceCrossings.count, 0, "the paths alone never step through a fence");
     } finally {
         setBehaviourHomePlots(null);
     }
