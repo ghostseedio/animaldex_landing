@@ -1,5 +1,5 @@
 {
- "about": "The collision audit's CI limits (scripts/ark-collide-audit.mts --fixture --hours 6 --step 2: the synthetic Ark of every species and the hamlet at 1x). Pass-throughs and fence crossings must stay at 0; cliffs and overlaps at today's values (a change that makes them worse fails the PR; a deliberate change updates them here, with why).",
+ "about": "The collision audit's CI limits (scripts/ark-collide-audit.mts --fixture --hours 2 --step 4: the synthetic Ark of every species and the hamlet at 1x). Pass-throughs and fence crossings must stay at 0; cliffs and overlaps at today's values (a change that makes them worse fails the PR; a deliberate change updates them here, with why).",
  "passThrough": 0,
  "fenceCrossings": 0,
  "cliffs": 0,

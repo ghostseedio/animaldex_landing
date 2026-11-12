@@ -92,7 +92,7 @@ class Heap {
 }
 
 /** The grid's cells: walkable (1 dry ground with nothing in the way), steepness (rise over run), water depth, ground height. */
-export type NavCells = {version: string; size: number; walk: Uint8Array; steep: Float32Array; depth: Float32Array; height: Float32Array};
+export type NavCells = {version: string; size: number; walk: Uint8Array; steep: Float32Array; depth: Float32Array; height: Float32Array; /** Each cell middle's clearance from everything solid (collisions; with colliders). */ clear?: Float32Array};
 
 /**
  * The grid's cells as tasks, a row at a time (`behaviour-build.ts`): heights and depths first, then each inner
@@ -125,7 +125,14 @@ export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cel
             walk[k] = 1;
         }
     });
-    return {tasks: [heights, walkable], cells};
+    // (Collisions: each cell middle's clearance from everything solid, a row at a time too: a phone's mount never waits on it.)
+    const solid = sampler.colliders;
+    if (!solid) return {tasks: [heights, walkable], cells};
+    const clear = (cells.clear = new Float32Array(SIZE * SIZE));
+    const clearance = chunked(() => SIZE, 2, (j) => {
+        for (let i = 0; i < SIZE; i++) clear[j * SIZE + i] = solid.distance(-TERRAIN_HALF + (i + 0.5) * CELL, -TERRAIN_HALF + (j + 0.5) * CELL, CLEAR_CAP);
+    });
+    return {tasks: [heights, walkable, clearance], cells};
 }
 
 export class NavGrid {
@@ -158,6 +165,7 @@ export class NavGrid {
         this.depth = cells.depth;
         this.height = cells.height;
         this.solid = sampler.colliders ?? null;
+        this.clr = cells.clear ?? null;
     }
 
     /** The cells (read only: for the determinism tests and the scene stats). */
