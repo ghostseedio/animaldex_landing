@@ -14,6 +14,7 @@ import {STATE_IN, STATE_OUT} from "@/ark-scene/streaming/chunks";
 import {AssetInstances, type AssetPlacement} from "@/ark-scene/asset-rocks";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
 import {wildGroundArrays, type WildGround} from "@/ark-scene/islands/wild/render/ground";
+import {WildGrass} from "@/ark-scene/islands/wild/render/grass";
 import {sceneryCounts, wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 import {wildHeight} from "@/ark-scene/islands/wild/ground";
 import {WILD_CHUNK_COUNT, WILD_GRID, WILD_HALF, WILD_SEGMENTS, wildChunkOf, type WildChunkSpan} from "@/ark-scene/islands/wild/frame";
@@ -52,7 +53,9 @@ export type WildIsland = {
     setTier: (tier: WildTier) => void;
     heightAt: (x: number, z: number) => number;
     ready: () => boolean;
-    stats: () => {chunks: number; drawnChunks: number; scenery: Record<string, number>; groundVertices: number};
+    /** Build everything near this eye now (the grass): for stills and recordings, so nothing pops in after a shot. */
+    prepare: (camera: Vector3) => void;
+    stats: () => {chunks: number; drawnChunks: number; scenery: Record<string, number>; groundVertices: number; grassTufts: number};
     dispose: () => void;
 };
 
@@ -193,6 +196,8 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
     shape("floe", new CylinderGeometry(1, 1.1, 0.35, 7), ["#f4f8fa", "#e6eef3"], [1, 1, 0.75]);
     shape("mound", new ConeGeometry(0.75, 2.4, 7).translate(0, 1.2, 0), ["#a2724a", "#9a6a44"], [1, 1, 1]);
 
+    const grass = new WildGrass(tier, spans);
+    root.add(grass.group);
     let drawn: ((chunk: number) => boolean) | null = null;
     let settled = false;
     const states = new Uint8Array(WILD_CHUNK_COUNT).fill(STATE_IN);
@@ -200,6 +205,7 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
         for (let k = 0; k < WILD_CHUNK_COUNT; k++) states[k] = !drawn || drawn(k) ? STATE_IN : STATE_OUT;
         tiles.apply(states, performance.now() / 1000);
         for (const set of sets) set.setDrawn(drawn ? (x, z) => drawn!(wildChunkOf(x, z)) : null);
+        grass.setDrawn(drawn);
         for (const mesh of shapes) mesh.visible = true;
     };
 
@@ -227,6 +233,7 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
                 }
             }
             for (const set of sets) set.update(camera);
+            grass.update(camera);
             tiles.release(performance.now() / 1000);
         },
         setShadows: (on) => {
@@ -234,12 +241,15 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
         },
         setTier: (next) => {
             for (const set of sets) set.setTier(WILD_TIERS[next].reach, WILD_TIERS[next].shadows > 0);
+            grass.setTier(next);
         },
+        prepare: (camera) => grass.fill(camera),
         heightAt: wildHeight,
         ready: () => sets.every((set) => set.ready),
-        stats: () => ({chunks: WILD_CHUNK_COUNT, drawnChunks: drawn ? Array.from({length: WILD_CHUNK_COUNT}, (_, k) => k).filter((k) => drawn!(k)).length : WILD_CHUNK_COUNT, scenery: sceneryCounts(), groundVertices: ground.size * ground.size}),
+        stats: () => ({chunks: WILD_CHUNK_COUNT, drawnChunks: drawn ? Array.from({length: WILD_CHUNK_COUNT}, (_, k) => k).filter((k) => drawn!(k)).length : WILD_CHUNK_COUNT, scenery: sceneryCounts(), groundVertices: ground.size * ground.size, grassTufts: grass.count()}),
         dispose: () => {
             tiles.dispose();
+            grass.dispose();
             landscape.dispose();
             for (const set of sets) set.dispose();
             for (const mesh of shapes) {

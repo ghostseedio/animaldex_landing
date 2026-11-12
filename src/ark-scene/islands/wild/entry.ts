@@ -19,21 +19,22 @@ import {WILD_CHUNK_COUNT, wildChunkDistance} from "@/ark-scene/islands/wild/fram
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
 const STREAM = {high: {distance: 960, hysteresis: 40}, medium: {distance: 640, hysteresis: 32}, low: {distance: 440, hysteresis: 26}} as const;
 
-export type WildShot = {id: string; eye: [number, number, number]; target: [number, number, number]; hours: number; fov?: number};
+/** A shot: `eye` and `target` heights are above the ground under them (`ground: true`) or absolute (m). */
+export type WildShot = {id: string; eye: [number, number, number]; target: [number, number, number]; hours: number; fov?: number; ground?: boolean};
 
 export const WILD_SHOTS: WildShot[] = [
     {id: "island_far", eye: [0, 230, 560], target: [0, 8, -30], hours: 11},
     {id: "island_north", eye: [40, 150, -520], target: [10, 20, -40], hours: 15},
+    {id: "town_side", eye: [360, 46, -150], target: [150, 6, -55], hours: 9},
     {id: "cove_peaks", eye: [30, 34, -300], target: [10, 30, -140], hours: 10.5},
     {id: "lagoon_rainforest", eye: [-250, 42, 250], target: [-130, 6, 90], hours: 10},
-    {id: "savanna", eye: [150, 22, 150], target: [60, 6, 30], hours: 16.5},
-    {id: "desert_dunes", eye: [235, 26, 40], target: [130, 4, -30], hours: 17.5},
-    {id: "lake_river", eye: [-30, 44, 46], target: [-62, 6, -14], hours: 9.5},
-    {id: "lake_top", eye: [-62, 70, 20], target: [-62, 6, -14], hours: 11},
-    {id: "wetland_estuary", eye: [10, 28, 205], target: [-55, 1, 120], hours: 8.5},
-    {id: "woodland_valley", eye: [-40, 22, -10], target: [-100, 14, -70], hours: 13},
-    {id: "ecotone_edge", eye: [8, 7, 34], target: [-30, 5, 10], hours: 14},
-    {id: "east_dropoff", eye: [215, 18, 120], target: [250, -6, 10], hours: 12},
+    {id: "savanna", eye: [120, 4, 110], target: [60, 3, 20], hours: 16.5, ground: true},
+    {id: "desert_dunes", eye: [150, 5, -10], target: [110, 3, -70], hours: 17.5, ground: true},
+    {id: "lake_river", eye: [-45, 6, 5], target: [-66, 1, -18], hours: 9.5, ground: true},
+    {id: "wetland_estuary", eye: [-20, 34, 215], target: [-60, 1, 130], hours: 8.5},
+    {id: "woodland_valley", eye: [-78, 9, -8], target: [-100, 6, -60], hours: 13, ground: true},
+    {id: "ecotone_edge", eye: [30, 3, 60], target: [-20, 4, 20], hours: 14, ground: true},
+    {id: "mountain_meadow", eye: [-18, 42, -48], target: [-58, 40, -124], hours: 11.5},
     {id: "island_dusk", eye: [0, 230, 560], target: [0, 8, -30], hours: 18.4}
 ];
 
@@ -166,13 +167,16 @@ export function mountWild(el: HTMLElement) {
         mountMs: performance.now() - started,
         view: (eye, at, h, fov) => {
             view(eye, at, h, fov);
+            island.prepare(camera.position);
             frame();
         },
         shot: (id) => {
             const s = WILD_SHOTS.find((x) => x.id === id);
             if (!s) throw new Error(`no shot ${id}`);
             ARK_TIME.value = 120;
-            view(s.eye, s.target, s.hours, s.fov);
+            const lift = (p: [number, number, number]): [number, number, number] => (s.ground ? [p[0], Math.max(island.heightAt(p[0], p[2]), 0) + p[1], p[2]] : p);
+            view(lift(s.eye), lift(s.target), s.hours, s.fov);
+            island.prepare(camera.position);
             frame();
         },
         render: (frames = 1) => {

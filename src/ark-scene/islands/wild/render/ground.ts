@@ -72,7 +72,9 @@ export function wildGroundArrays(): WildGround {
     const seaFloor = srgb(ZONE_PALETTES.open_ocean.ground[0]);
     const alpine = srgb("#8a8f62");
     const tundra = srgb("#9d9c78");
-    const savannaGreen = srgb("#9a9d58");
+    const savannaGreen = srgb("#8f9a50");
+    const straw = srgb("#b9aa68");
+    const duneSand = srgb("#e2c48e");
     const color = new Color();
     const mix = new Color();
     const tone = new Color();
@@ -95,8 +97,10 @@ export function wildGroundArrays(): WildGround {
             color.g += mix.g * weight;
             color.b += mix.b * weight;
         }
-        // The savanna greener where it is wetter (beside the woods and the river), golden where it is dry.
-        color.lerp(savannaGreen, w.grassland * smoothstep(0.3, 0.6, s.moisture) * 0.55);
+        // The savanna: straw where it is dry, greener where it is wetter (beside the woods and the river); the desert's sand.
+        color.lerp(straw, w.grassland * 0.6);
+        color.lerp(savannaGreen, w.grassland * smoothstep(0.28, 0.58, s.moisture) * 0.6);
+        color.lerp(duneSand, w.desert * 0.65);
         // The mountains' alpine meadows green above the tree line, the cove's tundra olive.
         color.lerp(alpine, w.mountains * smoothstep(26, 40, s.height) * (1 - smoothstep(44, 52, s.height)) * 0.45);
         color.lerp(tundra, w.polar * (1 - s.ice) * 0.4);
@@ -110,13 +114,13 @@ export function wildGroundArrays(): WildGround {
         // The tundra holds snow in patches (and in the coldest hollows), the ice shelf is all snow.
         const patches = smoothstep(0.5, 0.7, fbm(x * 0.06 + 3, z * 0.06 - 9));
         const snow = Math.max(w.polar * smoothstep(0.3, 1, s.land) * smoothstep(0.24, 0.08, s.temperature) * (0.4 + 0.6 * patches), s.ice);
-        layers[i * 4] = Math.min(1, beach + w.desert * 0.9 + w.seashore * 0.6 * (1 - s.cliff) + (s.height < 0 ? s.reef : 0));
+        layers[i * 4] = Math.min(1, beach + w.desert * 1.1 + w.seashore * 0.6 * (1 - s.cliff) + (s.height < 0 ? s.reef : 0));
         layers[i * 4 + 1] = Math.min(1, w.wetland * smoothstep(0.2, 1, s.land) * (1 - beach) + s.estuary * (1 - smoothstep(0.4, 1.6, s.height)) * 0.8);
         layers[i * 4 + 2] = 0;
         layers[i * 4 + 3] = snow;
         const land = smoothstep(0.3, 1, s.land);
         layers2[i * 4] = (w.rainforest + w.woodland + w.mountains * 0.35 * (1 - smoothstep(34, 44, s.height))) * land * (1 - snow);
-        layers2[i * 4 + 1] = (w.grassland + w.desert * 0.5 + w.mountains * 0.3) * land;
+        layers2[i * 4 + 1] = (w.grassland + w.desert * 0.2 + w.mountains * 0.3) * land;
         const lakeBank = smoothstep(lakeEdge(x, z) + 5, lakeEdge(x, z) + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z));
         layers2[i * 4 + 2] = Math.max(lakeBank, smoothstep(s.riverHit.width + 4, s.riverHit.width + 0.5, s.river) * (s.inland > 3 ? 1 : 0), w.wetland * 0.6) * (1 - snow);
         layers2[i * 4 + 3] = s.cliff;
