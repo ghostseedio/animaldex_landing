@@ -16,8 +16,11 @@ import type {StreamTierName} from "@/ark-scene/streaming/tiers";
 import {hazeFog} from "@/ark-scene/streaming/haze";
 
 const FOV = 38;
-/** The screens the views are checked on: the probe's desktop canvas, 16:10 and 16:9; upright phones' canvases (the page's own on a 390 × 844 phone is 390 × 557). */
-const DESKTOP = [1.6, 1072 / 604, 16 / 9];
+/**
+ * The screens the views are checked on: the /ark page's canvas beside its side panel (1072 × 604 in a 1440 × 900 window,
+ * 910 × 480 in 1280 × 760), 16:10 and 16:9; upright phones' canvases (the page's own on a 390 × 844 phone is 390 × 557).
+ */
+const DESKTOP = [1.6, 1072 / 604, 16 / 9, 910 / 480];
 const PHONE = [360 / 800, 390 / 844, 390 / 700, 390 / 557];
 
 test("frame: v1's records are today's (the town at 508.6, -210.7)", () => {
@@ -132,8 +135,22 @@ async function twoIslands(tier: StreamTierName) {
 }
 let spansCache: ReturnType<typeof spansFromHeights> | null = null;
 
-test("frame: v2 opens on the two-island view (the town's place is known before it is built)", () => {
-    for (const aspect of [...DESKTOP, ...PHONE]) assert.deepEqual(wildHomeView(aspect, FOV, null), wildHomeView(aspect, FOV, townWorldOrigin()));
+test("frame: v2 opens on the two-island view with the town coming (its place is known before it is built)", () => {
+    for (const aspect of [...DESKTOP, ...PHONE]) assert.deepEqual(wildHomeView(aspect, FOV, null, true), wildHomeView(aspect, FOV, townWorldOrigin()));
+});
+
+test("frame: v2 with one island (the apps' embed with ?world=v2) frames the island alone, from the south", () => {
+    for (const aspect of [...DESKTOP, ...PHONE]) {
+        const view = wildHomeView(aspect, FOV, null);
+        assert.equal(view.azimuth, 0);
+        const camera = cameraFor(view, aspect);
+        const inside = wildCoast.filter((p) => {
+            const s = onScreen(camera, p.x, 0, p.z);
+            return s && Math.abs(s.x) <= 1 && Math.abs(s.y) <= 1;
+        }).length;
+        // Desktop: the whole coast; an upright phone at the camera's reach (1,000 m): its middle, at least half the coast.
+        assert.ok(inside / wildCoast.length >= (aspect < 0.8 ? 0.5 : 1), `aspect ${aspect.toFixed(2)}: ${inside}/${wildCoast.length}`);
+    }
 });
 
 test("frame: from v2's default views no chunk of either island is out or hazed, on every tier", async () => {

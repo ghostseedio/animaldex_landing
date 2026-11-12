@@ -389,10 +389,43 @@ export function heelPose(
         const p = here(1);
         return {...p, lift: kicks(since, b.end - b.start - b.dashMs), yaw: parent.yaw + dashYaw - turnTo(dashYaw, since), playing: true, moving: false};
     }
-    // Ahead of her after a dash, facing her way, until she walks up past it (or it creeps back); kicks on the spot meanwhile.
+    // Ahead of her after a dash, facing her way, until she walks up past it; kicks on the spot meanwhile. If she does not
+    // (asleep, say), it walks back to her heel between 50 and 80 s after, facing the way it goes while that creep is what
+    // brings it back: turned to it and back to her heading at its rate (from the moments before, so nothing snaps when
+    // she walks up after all). (2026-11-12: it slid back to heel facing her way, a foal backwards for 7 s in the default
+    // view.)
     const back = lastDash ? backAfter(lastDash) : 1;
     const p = here(1 - back);
     const lift = kick ? kicks(ms - kick.start, kick.end - kick.start) : 0;
+    const homeward = Math.atan2(heel.r - ahead.r, heel.f - ahead.f);
+    const turnMsBack = Math.max((Math.abs(homeward) / youngTurnRate(youngLength)) * 1000, 1);
+    const creepStart = lastDash ? lastDash.end + 50_000 : Infinity;
+    const then = lastDash && parentAt && ms > creepStart && ms < creepStart + 30_000 + 2 * turnMsBack ? parentAt(lastDash.end) : null;
+    if (then && parentAt) {
+        // Its own creep at a moment (0 or 1): the creep, not her walking up, bringing it back.
+        const own = (t: number, mother: {x: number; z: number} | null) => {
+            if (t < creepStart || t >= creepStart + 30_000 || !mother) return 0;
+            const c = (t - creepStart) / 30_000;
+            return c * c * (3 - 2 * c) > Math.hypot(mother.x - then.x, mother.z - then.z) / span ? 1 : 0;
+        };
+        // How far turned to its way home: following `own` at its turn rate over the last two turns' time, on a fixed grid
+        // of moments (the same for every frame and viewer), and read between the grid moments either side of now (so it
+        // turns no faster than its rate). Where she has not moved over that time, as she is now (the grid moment just
+        // after now is asked all the same: she may set off).
+        const step = 150;
+        const g = Math.floor(ms / step) * step;
+        const t0 = g - Math.ceil((2 * turnMsBack) / step) * step;
+        const first = parentAt(t0);
+        const still = first !== null && Math.hypot(first.x - parent.x, first.z - parent.z) < 1e-3;
+        let w = own(t0, first);
+        let before = w;
+        for (let t = t0 + step; t <= g + step; t += step) {
+            before = w;
+            w += Math.min(Math.max(own(t, still && t <= ms ? parent : parentAt(t)) - w, -step / turnMsBack), step / turnMsBack);
+        }
+        const share = before + (w - before) * ((ms - g) / step);
+        if (share > 0) return {...p, lift, yaw: parent.yaw + homeward * share, playing: Boolean(kick), moving: own(ms, parent) === 1};
+    }
     return {...p, lift, yaw: parent.yaw, playing: Boolean(kick), moving: false};
 }
 

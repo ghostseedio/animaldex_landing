@@ -244,59 +244,64 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 | The reef on v2 (W1b) | The generator's lagoon-wide coral, kelp and seagrass through `reef.ts`, under its rules; the reef site's patch reefs and anchors kept | One path (`reef-render.ts`, `fish-schools.ts`, the map's landmarks) as A did the decor; the generator's own reef and kelp fields are v2's design |
 | The workbench renderer (W1b) | `islands/wild/render/index.ts` kept for now | `scripts/ark-wild.mts` and the visual baselines (`tests/ark-visual/wild/`) use it; it is not on the page's path (only `loadWildIsland`'s dynamic import). Drop it with those after v2 is the default |
 
-## 10. Handover (W1, 2026-11-12): state, what is left, the next commands, the traps
+## 10. Handover (W1, then W1b, 2026-11-12): state, what is left, the next commands, the traps
 
-**Branch:** landing `ark-wild-island-next`, from `origin/ark-next` 3b81fa5a with `ark-wild-island` merged in. The worktree used was `scratchpad/wt-wild-next` (`npm ci` done; restore `yarn.lock` after it). The integrator merges it only after the islands release is cut. Until then, keep merging `origin/ark-next` into it as that moves.
+**Branch:** landing `ark-wild-island-next`: `origin/ark-next` with `ark-wild-island`, helper A's `ark-wild-scenery` (P3) and helper B's `ark-wild-map` (P4, P5) merged in. W1b's worktree is `scratchpad/wt-wild-W1b` (detached, pushed with `git push origin HEAD:ark-wild-island-next`; `npm ci` done, `yarn.lock` restored after it; `public/ark-local/` links to wt-view's real data, never committed; `node scripts/build-ark-bundle.mjs` run so the dev page's workers exist). The integrator merges it only after the islands release is cut. Until then, keep merging `origin/ark-next` into it as that moves.
 
 ### Done
 
 - **The island on its own** (§1–§7): generator, scenery, reserves, map sampler, sites, validator (0 failures), the workbench (stills, visual baselines), the archipelago hook.
 - **P0:** merged onto `ark-next`; the wild tests pass there.
 - **P1, the world switch** (§8): `world.ts` `arkWorld`, `setArkWorld`, `onArkWorld`, the live bindings, the per-world functions. Global state; v2 implies `setNoHamlet(true)`; the choice is read at load (`__ARK_WORLD__`, `?world=v2`, `ARK_WORLD=v2`); the prebuild workers' URLs carry it.
-- **The archipelago's choice:** in islands mode only, `?wild=v2` or the `wildIsland: "v2"` option (`ArkArchipelagoOptions.wildIsland`, default v1) calls `setArkWorld("v2")` before the scene's modules load (`islands/archipelago.ts`). Islands off never calls it.
-- **P2 (ground and water), first half:** `terrain.ts` takes v2's segments (480), its arrays (`islands/wild/render/ground.ts`), a 52 m snow line, and the fresh water at its own levels. `water-level.ts` `freshLevelAt`. The drawn ground's grid and `sea-depth` `LAKE_SWIM_RADIUS` follow the switch.
-- **P6, the frame:** `islands/index.ts` `wildReachNow()` returns `wildReachToward(−22.5°)` on v2 (190.5 m) and `WILD_REACH` (90.25) on v1. `townWorldOrigin()` defaults to it, so on v2 the town stands about 100 m further out and the strait stays 250 m.
-- **v1 regression:** map, grounding, streaming, islands, town, wild, sea-depth, prebuild, collide and behaviour-build tests: 100 pass, 0 fail.
+- **The archipelago's choice:** in islands mode only, `?wild=v2` or the `wildIsland: "v2"` option (`ArkArchipelagoOptions.wildIsland`) calls `setArkWorld("v2")` before the scene's modules load (`islands/archipelago.ts`). Islands off never calls it.
+- **P2, ground and water** (W1, then W1b): v2's segments, arrays, snow line and fresh water at its own levels; the one sea with v2's depth field (checked in stills) and a 12 km plane on v2; the ground shader's fresh bed at each vertex's own level (§8).
+- **P3** (helper A, merged 22c33056): the scenery through the motion pass (`islands/wild/decor-v2.ts`): 0 tree clashes over 1,350 bodies, 0 floating or intersecting props, 20,948 attach points, 3,574 colliders; collide audit on v2 (fixture, 2 h at 4 s): pass-throughs 0, fence crossings 0, cliffs 430, overlaps 1.54 M.
+- **The reef on v2** (W1b): the generator's lagoon-wide coral, kelp and seagrass through `reef.ts` (§8).
+- **P4, P5** (helper B, merged f61cbaaf): the map's and the behaviour world's samplers on v2, the walk mask v2, ranges and whale cells, the validator at 0 on v2 (synthetic 5,230; live 707; 3× 2,121; a year 2,884); placement of the live snapshot's 3,145 animals 14.8 s against v1's 12.0 s in the same run (decision 207).
+- **P6** (W1, then W1b): the town's origin from `wildReachNow()` (601.2, −249 on v2); `ARK_ISLANDS` per world; the default views per world in `islands/views.ts` (§8).
 
 ### Left
 
-- **P2, second half (W1's successor):**
-  - The one world's sea (T3, decision 143) must take v2's depth field over ±264. The town's depth patch is T3's; the wild island's sea plane comes from `buildLandscape` as on v1 (`halfSize` = TERRAIN_HALF, read at build). Check the sea draws the lagoon, the drop-off and the strait.
-  - The ground shader's fresh-water bed rule uses `FRESH_LEVEL` (0) as a GLSL constant (`terrain.ts`, the "sea bed" and "under water" blocks). v2's lake (level 6) and river beds are above 0, so they get no underwater tint. Pass the vertex's fresh level as an attribute, or a uniform per mesh, if it shows.
-- **P3 (helper A, `ark-wild-scenery`):** scenery through the motion pass. Until it lands, v2 in the main scene builds v1's decor generators over v2 ground. That is not reviewable.
-- **P4 and P5 (helper B, `ark-wild-map`):**
-  - samplers;
-  - `extentOf` `half`/`centre`;
-  - ranges and whale cells in `map/place.ts`;
-  - zone keys;
-  - the live validator (707 wild animals) at 0 failures.
-- **P6, rest:**
-  - `ARK_ISLANDS.wild` (half 132, 5 chunks, 2.38 ha, its home view) is still v1's record. On v2 it should read `islands/wild/index.ts` `WILD_ISLAND` (half 264, 10 chunks, 11.9 ha). Make `ARK_ISLANDS.wild` a getter on `arkWorld()`, or give it a v2 twin.
-  - The default views: the whole-island view's target, radius and eye (`index.ts` and `islands/scene.ts` `home`) must fit a 411 m island. The phone's upright view across the strait must still show the town 190.5 + 250 + 210.25 = 651 m away. This is unchecked.
-- **P7, gates:**
-  - the map, grounding, collide, behaviour, recipes, islands and town tests in v1;
-  - the same tests with `ARK_WORLD=v2` where they apply;
-  - tsc and lint;
-  - one phone-profile memory and fps check (Part B's budgets: 384 MB heap and 192 MB GPU on low);
-  - stills of the default views and a few biomes;
-  - the GitHub visual run is the integrator's.
-- **P8:** when placement is final (after B), tell the coordinator, so the encounter lane regenerates `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+- **P7, the open gates (helper B, `ark-wild-map`; all sent to B with the numbers):**
+  - the fixture collide audit on v2 (`ARK_WORLD=v2 npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --wild-island kept`, then `--check <report> --thresholds tests/ark-collide/thresholds-islands.json`): 34 pass-throughs, one common vampire bat at rest 0.17 m inside `rock:decor1273` (−71.2, −98.1). The live snapshot passes;
+  - `ARK_WORLD=v2` behaviour-schedule (33 mallard 5.1 m slot jump, 42 alligator 8.5 m, 45 flyers 2.45 turns a minute, 49 3.9 % circling; 37, 50, 52 are homestead species, likely n/a), sea-depth 114–116 (v1's lake rule in the test, or placement), behaviour-build (node out of memory), grounding 73 (a tent-making bat in a crown), map 93 (a v1 terrain swap, likely n/a).
+- **The default switch (P7 step 5), once those pass:** in `islands/archipelago.ts` `wildIslandAsked`, `return setting === "v2"` becomes `return setting !== "v1"` (and the `wildIsland` option's comment: v2 by default, `v1` or `?wild=v1` for today's). The page and the apps' embed (`public/ark/embed.html` mounts the archipelago since ark-next bcb5eca9) both follow it. Then tell the coordinator, the integrator and B (P8).
+- **P8:** placement is final from B's side (f61cbaaf); after the switch the coordinator has the encounter lane regenerate `atlas.json` (and POSITIONS_VERSION) with `ARK_WORLD=v2`. Don't edit those files.
+- **Main-thread costs left on v2 (helper A's phone profile):** the ground's tiles and `freshWaterGeometry` (~200 ms of the mount task over v1's), and `world.ts` building v2's zone sites at load (~0.25 s). Under budget; worth moving to the scenery worker later.
+- **The town's join** (T3's prebuild worker): 35–102 s on this loaded Mac on both worlds, against the coordinator's ~10 s.
+- **The workbench renderer** (`islands/wild/render/index.ts`, `entry.ts`, `scripts/ark-wild.mts`, `tests/ark-visual/wild/`): kept until v2 is the default; then retire it with its baselines.
+
+### P7 results (W1b, 2026-11-12, `ark-wild-island-next` a65a3db5)
+
+| Gate | Result |
+|---|---|
+| v1 byte-identical | 22 hashes against `ark-next` (sampleGround, the world's constants, ground arrays and keys, the ground shader's vertex, fragment and key, the water shader, tiles, decor, fill, grass, floor, drawn and mountain rocks, mounds, attach points, colliders, reef and landmarks, the islands' records, the validator's places), islands off and no-hamlet: all identical (`scratchpad/w1b-v1-hash.mts`) |
+| v1 tests | map, grounding, collide, behaviour build/recipes/schedule/state, islands, town, collide-town, streaming, wild island/scenery/map/frame, sea-depth, reef, prebuild, attach, no-hamlet, graphics: 216 pass, 0 fail (1 skipped) |
+| Map validator, v2 | synthetic 0 failures (B: 5,230 animals); live islands mode 0 (707 wild animals, 440 species) |
+| Collide audit, v2 (`--wild-island`, 2 h at 4 s) | live snapshot: pass-throughs 0, fences 0, cliffs 0, overlaps 21,115; **fixture (CI's): pass-throughs 34** (one common vampire bat at rest 0.17 m inside `rock:decor1273`, −71.2, −98.1), fences 0, cliffs 0, overlaps 1.07 M: with B |
+| Tests with `ARK_WORLD=v2` | 36 of 167 fail. Not applicable (v1 constants or v1 fixture homes): streaming's v1 grid and views, town-island's frame, the hamlet's fences and paddocks, the recipes' fixture homes (the kingfisher at −70, 22…), the "v1 stays today's" tests, the garden pond. **Open, with B:** behaviour-schedule (a mallard's 5.1 m slot jump, an alligator's 8.5 m, flyers 2.45 turns a minute, 3.9 % circling), sea-depth (114–116 keep v1's lake rule), behaviour-build (node out of memory), grounding (a tent-making bat in a crown), map 93 (a v1 terrain swap). The reef's two are fixed. `ark-wild-island.test.ts` under `ARK_WORLD=v2` trips the load-order trap below (not a gate: it tests the generator itself) |
+| tsc, eslint | 0; clean on the changed files |
+| Phone (4× CPU, 360 × 800, islands mode, the live 3,145 animals, prebuild workers, production bundle, 90 s) | v2 low: peak heap 361 MB of 384, GPU 126 of 192, 60 fps, first frame 15.4 s, longest task 3.5 s. v2 medium: 439 of 512, 127 of 320, 54 fps, 16.1 s, 3.6 s. v1: low 222 MB / 104 MB / 55 fps / 17.7 s; medium 224 / 165 / 19 fps / 17.9 s. (`scripts/ark-runtime-measure.mjs --islands --world v2 --prebuild --population-file …`.) The phone's default view draws v2 all in map style (950 m out). The floor's plants were not thinned: they draw only in chunks that are in, and their instances are a few hundred KB of the heap |
+| Stills | desktop and phone on the `/ark` page's own layout, day and night, the idle sway, underwater (lagoon, kelp), the biomes: `scratchpad/w1b-shots/` |
+| Town join | the town's prebuild worker 35–74 s on v2, 102 s on v1 (dev page, production workers, load 15–18): T3's, the same on both worlds |
 
 ### Next commands
 
 ```sh
-cd <worktree on ark-wild-island-next>
-git fetch origin && git merge origin/ark-next            # keep current (docs, L5's audit fix before the cut)
-npm ci && git checkout yarn.lock
-npx tsc --noEmit -p tsconfig.json                          # only the 2 known header-menu errors
-nice -n 10 npx tsx --test src/lib/ark-map.test.ts src/lib/ark-grounding.test.ts src/lib/ark-streaming.test.ts \
-  src/lib/ark-islands.test.ts src/lib/ark-town-island.test.ts src/lib/ark-wild-island.test.ts src/lib/ark-sea-depth.test.ts \
-  src/lib/ark-prebuild.test.ts src/lib/ark-collide.test.ts src/lib/ark-behaviour-build.test.ts      # v1: all pass
-ARK_WORLD=v2 nice -n 10 npx tsx -e 'import("./src/ark-scene/world.ts").then((w) => console.log(w.arkWorld(), w.TERRAIN_HALF))'
-nice -n 10 npx tsx scripts/ark-wild-plan.mts --out .ark-golden/wild               # the plan picture and numbers
-nice -n 10 npx tsx scripts/ark-wild.mts stills --size 960x540                      # the workbench stills (Metal)
-# The scene in islands mode on v2: wt-view's local real data (never commit public/ark-local):
-#   /ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json&wild=v2
+cd <worktree on ark-wild-island-next>        # W1b's: scratchpad/wt-wild-W1b (detached; push with HEAD:ark-wild-island-next)
+git fetch origin && git merge origin/ark-next origin/ark-wild-map
+npm ci && git checkout yarn.lock && node scripts/build-ark-bundle.mjs   # the workers, so the dev page uses them
+npx tsc --noEmit -p tsconfig.json
+nice -n 10 npx tsx --test src/lib/ark-wild-frame.test.ts src/lib/ark-wild-island.test.ts src/lib/ark-wild-scenery.test.ts \
+  src/lib/ark-wild-map.test.ts src/lib/ark-reef.test.ts src/lib/ark-prebuild.test.ts src/lib/ark-islands.test.ts \
+  src/lib/ark-town-island.test.ts src/lib/ark-streaming.test.ts                    # v1; then the v2 list with ARK_WORLD=v2
+# v1 byte-identity: W=<worktree> npx tsx scratchpad/w1b-v1-hash.mts (and NOHAMLET=1) in this and an ark-next worktree; compare
+ARK_WORLD=v2 nice -n 10 npx tsx scripts/ark-map-live-validate.mts --snapshot <live.json> --routing <islands-routing.json>
+ARK_WORLD=v2 nice -n 10 npx tsx scripts/ark-collide-audit.mts --fixture --hours 2 --step 4 --workers 4 --wild-island kept --out <dir>
+node scripts/ark-runtime-measure.mjs --devices phone --runs 1 --seconds 90 --islands --world v2 --prebuild \
+  --population-file <live.json> [--quality low]                                      # Part B's budgets
+# The page (wt-view's local real data, never committed): /ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json&wild=v2&hour=10
+# Probes and stills: scratchpad/w1b-views.mts (VW/VH, PHONE=1, QUALITY/MAPD/RSCALE, VIEWS home_*/wait_*), w1b-embed.mts, w1b-fly.mts
 ```
 
 ### Traps
@@ -311,6 +316,7 @@ nice -n 10 npx tsx scripts/ark-wild.mts stills --size 960x540                   
   - `map/hamlet.ts` OTHER_SITES and HOME_SITE;
   - `map/world-sampler.ts` MOUTH (B's).
 - **Module cycle:** `world.ts` → `islands/wild/world-v2.ts` → the wild generator → `world.ts`'s noise functions. These are hoisted function declarations, so the cycle is safe. Keep the wild generator's module-level code free of calls into `world.ts`, and of module-level `const`s that `sampleWildGround` reads (`ground.ts`'s VALLEY was moved inline for this).
+- **A process that asks for v2 at load (`ARK_WORLD=v2`, `?world=v2`) must load `world.ts` before the wild generator's modules.** At load `world.ts` applies v2 at once, which samples the generator (`wildZoneSites`); if a module under `islands/wild/` was imported first, the cycle hands it a half-evaluated `fields.ts` ("reading 'bearingOf' of undefined"). The page (the archipelago calls `setArkWorld` after load) and the workers (their entries import `world.ts` through the decor first) are fine; `ark-wild-island.test.ts` under `ARK_WORLD=v2` trips it (it tests the generator itself, so it runs on v1).
 - **`?world=v2` vs `?wild=v2`:**
   - `world=` is read by `world.ts` itself, meant for worker URLs and tests, and works even with islands off.
   - `wild=` is the page's review override, honoured only in islands mode.

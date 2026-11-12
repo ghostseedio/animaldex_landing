@@ -16,7 +16,12 @@ import {placeAnimals, primePlaces, primePlacesFor, type Placement} from "@/ark-s
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
 import {primeFloorPlacements} from "@/ark-scene/floor-assets";
+import {primeMountainRocks} from "@/ark-scene/rock-layout";
+import {primeSavannaMounds} from "@/ark-scene/mounds";
+import {primeRockPlacements} from "@/ark-scene/rock-assets";
+import {primeTreePlacements} from "@/ark-scene/tree-pick";
 import {primeWheatStands} from "@/ark-scene/near-detail";
+import {primeWildScenery} from "@/ark-scene/islands/wild/scenery";
 import type {ArkZone} from "@/ark-scene/types";
 import {arkWorld} from "@/ark-scene/world";
 
@@ -59,6 +64,16 @@ export function applyArkPrebuild(data: Partial<ArkPrebuild>, animals: ArkAnimal[
     if (data.reef) primeReefGrowth(data.reef);
     if (data.floor) primeFloorPlacements(data.floor);
     if (data.wheat) primeWheatStands(data.wheat);
+    // The bigger wild island (P3): its mountain's rocks and its savanna's mounds, laid in the worker.
+    if (data.mountain) primeMountainRocks(data.mountain);
+    if (data.mounds) primeSavannaMounds(data.mounds);
+    if (data.decor && data.rocks) primeRockPlacements(data.decor, data.rocks);
+    if (data.decor && data.fill && data.trees) {
+        primeTreePlacements(data.decor, data.trees.decor);
+        primeTreePlacements(data.fill, data.trees.fill);
+    }
+    // (P7: the generator's scenery, which the map's sampler reads on the main thread.)
+    if (data.wild) primeWildScenery(data.wild);
     if (animals && data.places) primePlaces(animals, new Map(data.places));
     if (data.capacities) primeZoneCapacities(data.capacities);
 }

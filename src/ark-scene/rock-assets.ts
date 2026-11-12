@@ -16,7 +16,7 @@ import manifest from "@/ark-scene/assets-manifest.json";
 import rockAttach from "../../public/ark/assets/v1/rocks/attach.json";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
 import {baseOutline, cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, rockAttachRows, tiltedBox} from "@/ark-scene/rock-shapes";
-import {heightAt, sampleGround, zoneAt} from "@/ark-scene/world";
+import {arkWorld, heightAt, onArkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
 
 type RockInfo = {kind: string; height: number; bounds: {min: [number, number, number]; max: [number, number, number]}; lod_distances: [number, number, number]; lods: Array<{level: "lod0" | "lod1" | "lod2"; file: string; tris: number; doubleSided: boolean}>};
 type Row = {tag: string; p: [number, number, number]; n: [number, number, number]; size: [number, number]; spot?: string};
@@ -87,8 +87,36 @@ export type RockPlacement = {id: string; x: number; y: number; z: number; yaw: n
 
 type RockItem = {kind: string; x: number; y: number; z: number; scale: number; rotation: number};
 
+/**
+ * The bigger wild island's rocks as placed (P3): seating one samples its ground a few dozen times, and over the island's
+ * rocks that is most of a second on a phone, asked again by every reader (the renderer, the drawn rocks, the attach
+ * points). So on v2 each decor rock's placement is kept by its item, the scenery worker's own handed in with the decor
+ * (`primeRockPlacements`, runtime/prebuild.ts). Today's island places a rock at each ask, as before.
+ */
+let placedRocks = new WeakMap<object, RockPlacement | null>();
+onArkWorld(() => {
+    placedRocks = new WeakMap();
+});
+
+/** Runtime prebuild hook: the scenery worker's placements of these decor items (the primed decor's own), by index. */
+export function primeRockPlacements(items: readonly object[], placements: ReadonlyArray<RockPlacement | null>): void {
+    if (arkWorld() !== "v2") return;
+    items.forEach((item, i) => {
+        if (placements[i] !== undefined) placedRocks.set(item, placements[i]);
+    });
+}
+
 /** The asset rock for a decor rock, placed (null when the rock set is missing). */
 export function rockAssetFor(item: RockItem): RockPlacement | null {
+    if (arkWorld() !== "v2") return placeRock(item);
+    const known = placedRocks.get(item);
+    if (known !== undefined) return known;
+    const placed = placeRock(item);
+    placedRocks.set(item, placed);
+    return placed;
+}
+
+function placeRock(item: RockItem): RockPlacement | null {
     if (item.kind !== "rock" || !ROCK_ASSET_IDS.length) return null;
     const sample = sampleGround(item.x, item.z);
     const zone = zoneAt(sample);

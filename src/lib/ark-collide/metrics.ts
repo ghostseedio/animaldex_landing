@@ -18,7 +18,7 @@ import {maxSlopeOf, poseOnTrip, restingAtRoost, tripAt, SLOT_SECONDS} from "@/ar
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import type {RecipePose} from "@/ark-scene/behaviour-recipes";
 import {residentAt, type Sim, type SimAnimal} from "@/lib/ark-collide/sim";
-import {allowedOverlap, inContact, overlapOf, pushOut, separateCluster, type ResolveBody} from "@/ark-scene/collide/resolve";
+import {allowedOverlap, clipMove, inContact, overlapOf, pushOut, separateCluster, separationMoments, SEPARATION_EASE, type ResolveBody} from "@/ark-scene/collide/resolve";
 import {sleepStyle} from "@/ark-scene/sleep";
 
 /** A body overlapping a solid thing by less than this is touching it, not passing through. */
@@ -47,6 +47,8 @@ export type Pose = {
     asleep?: boolean;
     /** Perched up on a surface (held there by the collisions' layer). */
     fixed?: boolean;
+    /** At its spot, not on its way (it holds its place against one walking past: decision 204). */
+    still?: boolean;
 };
 
 /** Where it is now, as the scene draws it, and what moved it there (a leg's mode, a stay's beat, a recipe's block). */
@@ -69,7 +71,7 @@ export function schedulePoseOf(sim: Sim, routed = false): PoseOf {
             // (Asleep or resting in its den, burrow, cave, crevice or tree hole: out of sight, not measured.)
             const hidden = (trip.doing === "sleep" || trip.doing === "rest" || trip.doing === "to_roost") && epoch >= trip.arrive && restingAtRoost(sim.world, s.profile, s.sched, epoch, sim.hoursAt, s.a.activity).enclosed;
             if (hidden) return null;
-            return {x: p.x, y: p.y, z: p.z, yaw: p.yaw, aloft: p.aloft, moving: p.moving, source: act ? `recipe:${act.recipe}:${act.block}` : `${tripPhase(trip, epoch)}:${p.beat}`, attached, partner, asleep: trip.doing === "sleep" && epoch >= trip.arrive, fixed};
+            return {x: p.x, y: p.y, z: p.z, yaw: p.yaw, aloft: p.aloft, moving: p.moving, source: act ? `recipe:${act.recipe}:${act.block}` : `${tripPhase(trip, epoch)}:${p.beat}`, attached, partner, asleep: trip.doing === "sleep" && epoch >= trip.arrive, fixed, still: !p.aloft && !p.moving};
         }
         if (s.resident) {
             const at = residentAt(sim, s, epoch, routed);
@@ -112,12 +114,18 @@ export function resolvedPosesAt(sim: Sim, set: ColliderSet): PosesAt {
         if (!b) bodies.set(s, (b = resolveBodyOf(s)));
         return b;
     };
-    return (epoch, list) => {
-        const base = raw(epoch, list);
-        const placed = base.map(({s, p}) => {
+    /** Everyone's poses out of anything solid at a moment. */
+    const placedAt = (epoch: number, list: readonly SimAnimal[]) =>
+        raw(epoch, list).map(({s, p}) => {
             const out = pushOut(set, bodyOf(s), p);
             return {s, p: {...p, x: out.x, z: out.z}};
         });
+    /** Everyone's push apart at an easing moment (the layer's `pushAt`): each cluster of touching animals eased apart then. */
+    const pushes = new Map<number, Map<SimAnimal, {dx: number; dz: number}>>();
+    const pushesAt = (q: number, list: readonly SimAnimal[]) => {
+        const known = pushes.get(q);
+        if (known) return known;
+        const placed = placedAt(q, list);
         // Clusters: everyone touching (or nearly) anyone in it, transitively.
         const grid = new Map<number, number[]>();
         const cell = (v: number) => Math.floor(v / 4);
@@ -155,15 +163,31 @@ export function resolvedPosesAt(sim: Sim, set: ColliderSet): PosesAt {
             if (list) list.push(i);
             else clusters.set(root, [i]);
         });
-        const out = placed.slice();
+        const out = new Map<SimAnimal, {dx: number; dz: number}>();
         for (const members of Array.from(clusters.values())) {
             if (members.length < 2) continue;
             const at = separateCluster(set, members.map((i) => ({body: bodyOf(placed[i].s), pose: placed[i].p})));
-            members.forEach((i, k) => {
-                out[i] = {s: placed[i].s, p: {...placed[i].p, x: at[k].x, z: at[k].z}};
-            });
+            members.forEach((i, k) => out.set(placed[i].s, {dx: at[k].x - placed[i].p.x, dz: at[k].z - placed[i].p.z}));
         }
+        // (The two moments round now are kept; the measure walks forward in time.)
+        for (const k of Array.from(pushes.keys())) if (k < q - SEPARATION_EASE) pushes.delete(k);
+        pushes.set(q, out);
         return out;
+    };
+    return (epoch, list) => {
+        const placed = placedAt(epoch, list);
+        const {q0, q1, s: u} = separationMoments(epoch);
+        const a = pushesAt(q0, list);
+        const b = pushesAt(q1, list);
+        return placed.map(({s, p}) => {
+            const pa = a.get(s);
+            const pb = b.get(s);
+            if (!pa && !pb) return {s, p};
+            const dx = (pa?.dx ?? 0) + ((pb?.dx ?? 0) - (pa?.dx ?? 0)) * u;
+            const dz = (pa?.dz ?? 0) + ((pb?.dz ?? 0) - (pa?.dz ?? 0)) * u;
+            const at = clipMove(set, bodyOf(s), p, {x: p.x + dx, z: p.z + dz}, p);
+            return {s, p: {...p, x: at.x, z: at.z}};
+        });
     };
 }
 

@@ -4,8 +4,7 @@
 branch is landing `ark-next`. The previous web release, and the rollback, is landing `main` **7764fe12** (the release
 1323a70d plus the privacy text).
 
-Status of this draft: **(pending)** marks a part that waits for a lane: the final L5 collisions, T3's town animals and
-island switching (`ark-islands-scene`), the encounter lane's server activation, and the routed fixes in §6.
+Status: final for the owner's approval. The encounter server activation (§5.2) stays for later; everything else is in.
 
 ## 0. At a glance
 
@@ -31,7 +30,7 @@ Lane heads merged into `ark-next`:
 | Encounter hunting, scene side | `ark-encounter-scene` | 9fcbb049 | 93b9c1b1, 34524f02 |
 | The positions atlas v2 (encounter lane) | `ark-positions-atlas` | cba0594d | 342097c9 (pinned to AnimalDex `ark-encounter` 8f9bc465) |
 | The second island (T2) | `ark-town-island` | bdcd9ff1 | 084c07f6 |
-| Town animals, one world, the schedule, zoo feeding, the town worker (T3) | `ark-islands-scene` | 57014b78 | 1c508857, 9df003b3, e043745b, 31fdcbcb, 5cd8efff |
+| Town animals, one world, the schedule, zoo feeding, the town worker, the warm-up guard (T3) | `ark-islands-scene` | 0a98e0de | 1c508857, 9df003b3, e043745b, 31fdcbcb, 5cd8efff, f0cf2f1f |
 | The `ark.islands.*` and Meadow strings (i18n lane) | `ark-islands-i18n` | 33306e20 | 491a4692, 60f41b2f |
 | The wild island without its hamlet (islands mode) | `ark-wild-no-hamlet` | 98a30984 | f098c301, 03dfd120 |
 
@@ -93,8 +92,9 @@ and a workflow quoting fix):
 | The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
 | The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
 | The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | **green on GitHub** (run 43151583996): islands mode (what goes live) pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode 0 / 0 / 861 / 3.07 M; within `tests/ark-collide/thresholds-islands.json` and `thresholds.json` |
-| Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
+| Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | the 19 golden shots and the town's 4 rendered on GitHub (run 43151429276 on 412fa2e3; T3's later warm-up guard changes no render), no page errors, every shot looked at (nothing broken; the caterpillar close-up frames its leaf with the 1.7 cm butterfly barely visible at true scale), accepted as the new baselines |
 | The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.20 / 1.05; backwards 4.9% / 5.5%, nothing backwards for over 1 s; ground turns 1.8 / 2.0 a minute; over 1.5× its clip: American alligators (1.7–3.6×), the bullfrog (9.4–9.7×), an African rock python (1.6×), the clawed frog (1.7×) (the three causes in §6); no page errors |
+| T3's warm-up guard (f0cf2f1f) | `ark-warm-shaders` + `ark-runtime-load` 8/8; the default view twice: no page errors (pace 1.01 / 0.97, backwards 6.0% / 4.5%, none over 1 s); islands on and the camera panned to the town (`ark-runtime-measure.mjs --islands --pan town`, desktop and phone): **no page errors**, the longest task after the first frame 152 ms (desktop) / 198 ms (phone) |
 | The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
 
 ## 3. Before and after
@@ -174,7 +174,7 @@ byte-identical. What is left, in order:
 ### 5.2 Encounter hunting (lower priority today)
 
 The scene side is in and inert while the server's `hunting` is `pool`. The server activation (`20261118100000`,
-`110000` on `ark-encounter`, and its switch) comes from the encounter lane: **(pending)**.
+`110000` on `ark-encounter`, and its switch) is not part of this release: the encounter lane hands it over later.
 
 ## 6. Known issues
 
@@ -204,6 +204,9 @@ Listed for the owner instead of polished today (decision 136):
 - Walking backwards: 0.2% at the release, 1–5% on this head (nothing over 1 s on the ground); the behaviour lane's fix
   (`ark-behaviour-backwards` cef5c27d: a foal faces its way home, a sleeper keeps its heading across slots, no snapping
   round) brings it to 3.2% in the replay and comes right after the release.
+- The "intelligence scenarios" visual-CI hook is skipped on GitHub (decision 209): it never passed on GitHub's
+  SwiftShader runners (first the missing headless shell, then a 30 s screenshot timeout on the high tier); it still
+  runs locally and gets fixed after the release.
 - Perched sleepers share crowns: the collision audit's overlaps (3.2 M body samples over 2 hours) are mostly sleepers
   in their postures and perched animals held where they are; the limit is "at most today's".
 - Arriving at the town on the phone profile leaves two main-thread tasks of 0.5–0.6 s after the first frame (decision

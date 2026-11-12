@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {CORAL_MIN_DEPTH, REEF_KINDS, reefCloseupSpot, reefGrowth, reefLandmarks, seaBedAt} from "@/ark-scene/reef";
 import {FISH_KINDS, FISH_LOOKS, SEA_CLOCK_PERIOD, fishPosition, fishSchoolAt, fishSchools, fishSchoolsNear, fleeFrom, schoolFish, schoolTime, seaClockSeconds, type FishChaser} from "@/ark-scene/fish-schools";
-import {ZONE_SITES, heightAt} from "@/ark-scene/world";
+import {ZONE_SITES, arkWorld, heightAt} from "@/ark-scene/world";
 
 const EPOCH = 1_794_355_200; // 2026-11-11 00:00 UTC
 
@@ -33,7 +33,9 @@ test("reef: by depth and substrate", () => {
     }
     // Sea fans and barrel sponges are deep-water growth; branching corals are mostly on the flat and the crest.
     const deep = (kind: string) => items.filter((item) => item.kind === kind).reduce((sum, item) => sum + item.depth, 0) / Math.max(items.filter((item) => item.kind === kind).length, 1);
-    assert.ok(deep("fan") > deep("branching") + 1, `fans ${deep("fan").toFixed(1)} m vs branching ${deep("branching").toFixed(1)} m`);
+    // (The bigger wild island's reef site lies on its lagoon's flat ~4 m floor, so its bands sit closer: half a metre there.)
+    const gap = arkWorld() === "v2" ? 0.5 : 1;
+    assert.ok(deep("fan") > deep("branching") + gap, `fans ${deep("fan").toFixed(1)} m vs branching ${deep("branching").toFixed(1)} m`);
     assert.ok(deep("barrel_sponge") > 4.5);
 });
 

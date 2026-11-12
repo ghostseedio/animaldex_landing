@@ -319,7 +319,9 @@ export function reefGrowth(): ReefItem[] {
                     if (local() < 0.5 + 0.35 * bed.framework) {
                         const ex = x + (local() - 0.5) * 0.4;
                         const ez = z + (local() - 0.5) * 0.4;
-                        put("encrusting", ex, ez, bedFrom(ex, ez, sampleGround(ex, ez), slope), local);
+                        // (Its own point is a little off the head's: it keeps the shallows' rule too. Never so on v1's reef.)
+                        const under = bedFrom(ex, ez, sampleGround(ex, ez), slope);
+                        if (under.depth >= CORAL_MIN_DEPTH) put("encrusting", ex, ez, under, local);
                     }
                     // Dense on the knolls' tops, thinner on their flanks.
                     const cover = 0.22 + 0.5 * bed.framework;
@@ -425,7 +427,8 @@ export function reefGrowth(): ReefItem[] {
     // 5. The bigger wild island (v2, P3's shared path): the island's generator (`islands/wild/scenery.ts`) lays its coral
     // heads over the whole lagoon (its reef field), its kelp in the cold north-west (its kelp field) and its seagrass in
     // the warm shallows; each becomes the reef's own, under the reef's rules here (corals on hard ground 1.9–10 m by
-    // depth band with their cover, seagrass 1.2–3.5 m, kelp reaching to 0.4–1.2 m under the surface along the coast).
+    // depth band with their cover, seagrass on sand 1.2–3.5 m, kelp on rock 2.2–9 m reaching to 0.4–1.2 m under the surface
+    // along the coast).
     // The reef site's patch reefs (1, 2) keep their circle; the generator's heads inside it are left to them.
     if (v2) {
         const half = 34;
@@ -436,7 +439,7 @@ export function reefGrowth(): ReefItem[] {
             const ground = sampleGround(x, z);
             if (item.kind === "kelp") {
                 const bed = bedFrom(x, z, ground, 0);
-                if (bed.depth < 2.2) continue;
+                if (bed.depth < 2.2 || bed.depth > 9) continue;
                 const reach = bed.depth - 0.4 - local() * 0.8;
                 const variant = reach < 3.6 ? 0 : reach < 6 ? 1 : 2;
                 const along = -(Math.atan2(z, x) + Math.PI / 2) + (local() - 0.5) * 0.5;
@@ -445,7 +448,7 @@ export function reefGrowth(): ReefItem[] {
             }
             const bed = bedFrom(x, z, ground, bedSlope(x, z));
             if (item.kind === "seagrass") {
-                if (bed.depth < 1.2 || bed.depth > 3.5) continue;
+                if (bed.depth < 1.2 || bed.depth > 3.5 || bed.substrate !== "sand") continue;
                 put("seagrass", x, z, bed, local);
                 continue;
             }
@@ -456,7 +459,7 @@ export function reefGrowth(): ReefItem[] {
                 const ex = x + (local() - 0.5) * 0.6;
                 const ez = z + (local() - 0.5) * 0.6;
                 const under = bedFrom(ex, ez, sampleGround(ex, ez), bed.slope);
-                put("encrusting", ex, ez, {...under, substrate: hard.substrate}, local);
+                if (under.depth >= CORAL_MIN_DEPTH) put("encrusting", ex, ez, {...under, substrate: hard.substrate}, local);
             }
             const band = BANDS.find((b) => hard.depth < b.to) ?? BANDS[BANDS.length - 1];
             put(pick(band.mix, local()), x, z, hard, local);

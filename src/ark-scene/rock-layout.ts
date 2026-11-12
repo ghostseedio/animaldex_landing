@@ -131,6 +131,14 @@ onArkWorld(() => {
     cached = null;
 });
 
+/**
+ * Runtime prebuild hook (runtime/prebuild.ts): the same pieces, laid in the scenery worker before the mount (on the
+ * bigger wild island its whole mountain is seconds of work on a phone), handed in so the mount does not lay them.
+ */
+export function primeMountainRocks(rocks: {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]}): void {
+    cached = rocks;
+}
+
 /** The mountain's crags, boulders and scree. */
 export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scree: RockPiece[]} {
     if (cached) return cached;

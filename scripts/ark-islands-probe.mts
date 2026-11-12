@@ -17,7 +17,8 @@ function chromiumPath(): string | undefined {
 const {chromium} = await import("playwright-core");
 const browser = await chromium.launch({executablePath: chromiumPath(), headless: true, args: ["--headless=new", "--enable-precise-memory-info", "--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]});
 const phone = process.env.ARK_PHONE === "1";
-const context = await browser.newContext(phone ? {viewport: {width: 360, height: 800}, deviceScaleFactor: 2, isMobile: true, hasTouch: true} : {viewport: {width: 1280, height: 800}, deviceScaleFactor: 1});
+const [vw, vh] = (process.env.ARK_VIEWPORT ?? (phone ? "360x800" : "1280x800")).split("x").map(Number);
+const context = await browser.newContext(phone ? {viewport: {width: vw, height: vh}, deviceScaleFactor: 2, isMobile: true, hasTouch: true} : {viewport: {width: vw, height: vh}, deviceScaleFactor: 1});
 const page = await context.newPage();
 if (phone && process.env.ARK_THROTTLE !== "0") {
     const cdp = await context.newCDPSession(page);
@@ -37,7 +38,7 @@ await page.addInitScript(() => {
 });
 const t0 = Date.now();
 const log = (...a: unknown[]) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
-await page.goto(`${base}/ark?${query}`, {waitUntil: "domcontentloaded", timeout: 1_800_000});
+await page.goto(`${base}${process.env.ARK_PATH ?? "/ark"}?${query}`, {waitUntil: "domcontentloaded", timeout: 1_800_000});
 log("loaded");
 await page.waitForFunction(() => Boolean((window as any).__arkScene), null, {timeout: 1_800_000});
 log("scene handle");
