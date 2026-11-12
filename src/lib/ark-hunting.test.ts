@@ -45,7 +45,7 @@ test("the hunting read: decoded and checked; a missing read, the pool or nonsens
     const h = decodeArkHunting(raw)!;
     assert.equal(h.hunting, "encounter");
     assert.equal(h.startedAtMs, Date.parse("2026-11-08T21:45:21.431Z"));
-    assert.deepEqual([...h.predators], [[fox, 81.25], [fox.replace("100", "101"), 82]]);
+    assert.deepEqual(Array.from(h.predators), [[fox, 81.25], [fox.replace("100", "101"), 82]]);
     assert.equal(h.meals.length, 1);
     assert.deepEqual(h.meals[0].encounter, ENCOUNTER);
     assert.equal(decodeArkHuntingResponse({available: false}), null);
