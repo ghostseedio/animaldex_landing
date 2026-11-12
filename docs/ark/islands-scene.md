@@ -35,6 +35,60 @@ Branch `ark-islands-scene` (landing). This lane covers the town's animals, the c
 - **Default view** (decision 142): on desktop the wild island's view is turned 45% of the way toward the town, moved 45 m toward it, and lifted to polar 1.15, so the town stands across the strait in the upper right. Upright phones keep the wild island's own framing, and the town is a pan away. `openIsland: "town"` opens on the town's view instead (decision 26).
 - **Part B:** `streamer.registerIsland({id: "town", offset, grid, spans, content, apply})` is called when the multi-island streamer is there. Until then, the town's square counts as drawn in full.
 
+## 2b. The town's join (decision 153, then the town-join cut)
+
+The wild island draws its first frame exactly as with one island. The town joins the live scene after that frame. The work before the join runs off the frame:
+
+1. **Worker start.** The town's worker (`islands/town/prebuild-worker.ts`, built as `ark-town-worker.js`) starts beside the wild island's prebuild (`archipelago.ts` `startTownWork`). It works out:
+   - the plan and areas;
+   - the ground grid;
+   - the scenery and buildings;
+   - the zoo;
+   - the places;
+   - the behaviour raster and colliders.
+
+   It keeps the answer and says `ready` (`prebuild.ts` `startTown`, the request's `hold`).
+2. **Early collect.** If the answer is ready while the main thread only waits for the wild island's workers, the page takes it then (`collect`). It also makes the town's meshes, colliders and behaviour world then (`makeTown`, in idle slices of about 8 ms).
+3. **Late collect.** If the answer is not ready by then, all of this waits for the first frame. After the first frame the slices run as user-blocking tasks (`islands/scene.ts` `nextTask`). Idle callbacks and plain tasks ran 0.9 to 1.2 s late there on the phone profile, because the live scene's frames and the page's loading leave no idle time.
+4. **Attach.** The attach is a task of its own, right after the first frame.
+
+**The worker's arithmetic.** The geometry's nearest-point searches skip polyline segments by their bounds (`geom.ts` `polylineNearest`, `polylineDistance`, `polylineWithin`). FNV-1a's shared prefixes are hashed once (`hashTextPrefix`, `hashTextOn`). Each surface's colour is parsed once.
+- The answers are exact. `src/lib/ark-town-prebuild-speed.test.ts` checks the searches against the plain scan at more than 300,000 points on every town line, and on odd lines (single points, repeats, NaN). It checks the hashes on edge texts.
+- The same test checks the town's prebuild against the digests recorded before the change (plan, areas, ground, scenery and buildings, zoo, places, on the fixture).
+- On the real snapshot, all nine parts digest as before, including the raster and colliders.
+- When the town is changed on purpose, update `TOWN_DIGESTS` with the change.
+
+**Measured (production bundles of the embed, the real snapshot and T1's routing, interleaved runs, this Mac at load 21–30).**
+- The phone profile is 360x800 at DPR 2 with 4x CPU. Chrome's CPU throttle does not reach dedicated workers, so the worker's own times below are unthrottled on both profiles. A real phone's worker would take about 4x.
+
+| | Worker (ms) | First frame | Town joined | After the first frame |
+|---|---|---|---|---|
+| Before, desktop | 1,630–2,001 (answer 1.8–2.4 s after asking) | 3.7–3.9 s | 6.0–7.7 s | 2.3–3.8 s |
+| After, desktop | 312–345 | 3.7–3.8 s | 3.75–3.84 s | 0.04–0.05 s |
+| Before, phone profile | 1,196–1,334 (answer 2.5–2.8 s after asking) | 6.5–7.1 s | 10.8–11.8 s | 4.0–4.9 s |
+| After, phone profile | 306–345 | 6.6–7.1 s | 6.7–7.3 s | 0.13–0.15 s |
+| After, phone profile, answer after the wild prebuild (late path) | 316–323 | 6.9–7.3 s | 8.6–8.8 s | 1.3–1.9 s |
+
+- **The worker's steps** (ms, desktop, before → after):
+
+  | Step | Before | After |
+  |---|---|---|
+  | plan | 290 | 53–57 |
+  | areas | 29 | 10 |
+  | ground grid | 798 | 86–91 |
+  | scenery | 218 | 37–41 |
+  | buildings | 55 | 30–35 |
+  | zoo | 31 | 17–20 |
+  | places | 215 | 63–69 |
+  | behaviour raster | 48 | 10 |
+  | colliders | 12 | 2 |
+
+- **First frame and long tasks:** the first frame and the long tasks before it are unchanged. After the first frame the town adds only the attach (about 100 ms on the phone profile, about 30 ms on desktop).
+- **The 35–102 s join on the dev page under load** is not seen with production bundles: the worker answered in 1.8–2.8 s. The rest is likely the dev server and the load: `next dev` compiles chunks on demand, including the imports made after the worker's answer, and the Mac was at load 40 or more.
+- **Commands:**
+  - `scripts/ark-town-prebuild-bench.mts`: each step in Node, with digests (`ARK_DIGEST=1`).
+  - `scripts/ark-town-join-probe.mts`: the embed's timeline from the `ark:town:joined` mark, which a production bundle sets too, plus the long tasks.
+
 ## 3. The town's animals (`islands/town/placement.ts`)
 
 | Area | Where | Range |

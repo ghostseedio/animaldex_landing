@@ -21,7 +21,7 @@
 import {arkBody} from "@/ark-scene/stats";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
-import {hashText, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
+import {hashText, hashTextOn, hashTextPrefix, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
@@ -57,8 +57,10 @@ function sizeOf(length: number): "small" | "medium" | "large" {
 function pick<T>(list: readonly T[], key: string, label: (item: T, index: number) => string): T | null {
     let best: T | null = null;
     let bestScore = -1;
+    // (`hashText(`${key}|${label}`)`, the key's part hashed once.)
+    const prefix = hashTextPrefix(`${key}|`);
     list.forEach((item, index) => {
-        const score = hashText(`${key}|${label(item, index)}`);
+        const score = hashTextOn(prefix, label(item, index));
         if (score > bestScore) {
             bestScore = score;
             best = item;

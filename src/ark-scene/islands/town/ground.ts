@@ -6,7 +6,7 @@
  * are cut into it (their walls and quays are meshes, `render/water.ts`).
  */
 
-import {bounds, inBox, inPoly, polylineNearest, type Poly} from "@/ark-scene/islands/town/geom";
+import {bounds, inBox, inPoly, polylineDistance, polylineWithin, type Poly} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, inland, MILLPOND, TOWN_LEVEL, townPlan, type GreenKind, type TownPlan} from "@/ark-scene/islands/town/plan";
 
 export type TownSurface =
@@ -137,7 +137,7 @@ export function areaAt(x: number, z: number): Indexed["kind"] | null {
 export function streetEdgeDistance(x: number, z: number): number {
     let best = Infinity;
     for (const s of groundIndex().streets) {
-        const d = polylineNearest(s.line, x, z).distance - s.width / 2 - s.pavement;
+        const d = polylineDistance(s.line, x, z) - s.width / 2 - s.pavement;
         if (d < best) best = d;
     }
     return best;
@@ -193,11 +193,12 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
         height = Math.min(height, TOWN_LEVEL);
     }
     // The canal: a walled channel (the walls are meshes); the towpaths stay at the town's level.
-    const canal = polylineNearest(CANAL, x, z);
-    if (canal.distance < CANAL_WIDTH / 2 + 0.55) {
-        const t = smoothstep(CANAL_WIDTH / 2 + 0.55, CANAL_WIDTH / 2 - 0.2, canal.distance);
+    // (Most of the grid is far from it: `polylineWithin` answers by the canal's bounds alone.)
+    if (polylineWithin(CANAL, x, z, CANAL_WIDTH / 2 + 0.55)) {
+        const distance = polylineDistance(CANAL, x, z);
+        const t = smoothstep(CANAL_WIDTH / 2 + 0.55, CANAL_WIDTH / 2 - 0.2, distance);
         height = height + (CANAL_BED - height) * t;
-        if (canal.distance < CANAL_WIDTH / 2) surface = "water";
+        if (distance < CANAL_WIDTH / 2) surface = "water";
     }
     // The millpond: a natural bowl with soft banks.
     const pond = Math.hypot((x - MILLPOND.x) / MILLPOND.rx, (z - MILLPOND.z) / MILLPOND.rz);
