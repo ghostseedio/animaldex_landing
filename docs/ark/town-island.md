@@ -426,9 +426,9 @@ Each chunk's buildings are drawn in three parts.
 - **Colours** as a British town has them: greys, silvers, black and white most, then blues, reds, greens, a few bright ones (`CAR_PAINTS`).
 - **Parked** (`townParking`, 268 spots): every drive whose car fits (46 of 72: a garden's tree or a front fence stands in the others), kerb bays 6 m apart (210), the farms' yards, the harbour's car park (8). Bays never: on the high streets (lane GA's double yellow lines), within 7 m of a junction's mouth, 9 m of a zebra or 15 m of a bus stop, across a drive's dropped kerb, on a bridge; one kerb on a one-way stretch (the traffic's right, so it keeps left), none on a two-way 6 m street that cars drive down, both where none drives. Every car checked clear of L5's colliders (slid up to 0.6 m along its bay, else the bay is left empty). Who is parked: `people.ts` `carAt` (drives full at night, a third in working hours; kerbs busier in the evening); the kind and colour by the spot and the day (kerbs) or the month (drives).
 - **Moving** (`townTraffic`, `TrafficSim`): six cars on three loops of the plan's road graph (the old town: the High Street, Park Road, Harbour Road one way west, West Street; the new town's south and north blocks), driving on the left at 17–22 km/h, 10 km/h round corners; two of them run all night, the others 05:30–00:30.
-  - They give way before each turn, stop 3.5 s at lane GA's zebras (people implied: someone has just crossed), and obey lane GA's signals at the High Street and Park Road (the same 60 s cycle on the shared clock).
+  - They give way before each turn, stop 3.5 s at lane GA's zebras (people implied: someone has just crossed), and obey lane GA's signals at the High Street and Park Road (the same 60 s cycle on the shared clock). Each loop's lap is a whole number of minutes (counted in doubles: from 1970 a float's rounding would drift), and each car's phase is set so that, on its timetable, it reaches the lights 5, 13 or 21 s into its road's green, lap after lap.
   - **The shared clock:** each car has a timetable round its loop; the run is worked out from the timetable at the start of each 600 s window, in 0.25 s ticks, so every viewer sees the same cars in the same places (a page opening mid-window works the run out at most 3 ms a frame; its cars appear when it is done).
-  - **Never through anything:** a car keeps a car's length behind any car ahead; it stops short of an animal in its way (the scene's shared poses of the town's animals and L5's bodies, now and 1.2 s ahead), steps round one at the kerb within its own lane's room (never into the parked cars or the oncoming lane), overtakes into the oncoming lane when nothing is coming, never moves sideways into one alongside, then catches up with its timetable (a quarter faster). Its lanes never cross a building, wall, fence or trunk (L5's colliders, every sample).
+  - **Never through anything:** a car keeps a car's length behind any car ahead; it stops short of an animal in its way (the scene's shared poses of the town's animals and L5's bodies, now and, when one is near, 1.2 s ahead; asked every other tick, each animal's pose worked out once a moment), steps round one at the kerb within its own lane's room (never into the parked cars or the oncoming lane), overtakes into the oncoming lane when nothing is coming, never moves sideways into one alongside, then catches up with its timetable (a quarter faster). Its lanes never cross a building, wall, fence or trunk (L5's colliders, every sample).
   - **Lamps:** headlamps from dusk, tail lamps brighter when braking.
 - **Bicycles** (people implied): by a third of the front doors, two thirds of the terraces, the flats' doors and some shops; the always-out ones, more on dry daytimes and weekends, a few in the evening by the pub (`bikeOut`). Lane GA's stands at the square have their own.
 
@@ -440,9 +440,38 @@ Each chunk's buildings are drawn in three parts.
 
 ### 13.5 Tests (`src/lib/ark-town-vehicles.test.ts`)
 
-The models at true size; the parked cars clear of every building, wall, fence and trunk, never overlapping one another or a moving lane, drives fuller at night; every moving lane's car footprint clear of L5's colliders, the loops closed, stops at the zebras, no car into the signalled junction on a red; two runs (one stepped all along, one joining late) identical, no two moving cars touching, no moving car into a parked one; a cat in the lane and a fox crossing: the car stops short and drives on; the real Ark's town animals on their own schedules for 20 minutes (192 animals within reach of a lane): no moving car touches one (nearest 0.05 m), an animal is against a waiting car in 1.0 % of car samples (bound 3 %); the buildings' surface kinds, panes, detail and curtains. The town digests (`ark-town-prebuild-speed.test.ts`) are updated for the facades.
+The models at true size; the parked cars clear of every building, wall, fence and trunk, never overlapping one another or a moving lane, drives fuller at night; every moving lane's car footprint clear of L5's colliders, the loops closed, stops at the zebras, no car into the signalled junction on a red; two runs (one stepped all along, one joining late) identical, no two moving cars touching, no moving car into a parked one; a cat in the lane and a fox crossing: the car stops short and drives on; the real Ark's town animals on their own schedules for 20 minutes (192 animals within reach of a lane): a moving car touched one in 2 of 14,400 car samples (a dog running into it, 0.08 m), an animal against a waiting car in 33 (bounds 4 and 3 %); the buildings' surface kinds, panes, detail and curtains. The town digests (`ark-town-prebuild-speed.test.ts`) are updated for the facades.
 
-**Left for L5:** an animal that walks into a car waiting at a zebra, a light or behind an animal (1.0 % of car time on the real Ark) is L5's to keep out once moving cars are among its obstacles (`TownIsland.vehicles.movingCars()` each frame, `carAnimalGap`). A car that is still more than 3 m behind its timetable when its 600 s window ends is put back on it (in 20 minutes of the real Ark, 8 of 60 car-windows ended 3–180 m behind, mostly at the High Street when an animal sat in the road with traffic coming the other way).
+**Two hours of the real Ark** (the evening, `scratchpad` probe, the same run as the test's): no moving car touched an animal; one was against a waiting car in 19 of 86,400 car samples; 69 of 72 car-windows ended within 3 m of the timetable, 3 more than 50 m behind (the worst 83 m: a car held long at the High Street).
+
+**Left for L5:** an animal that walks or runs into a car (a dog darting under a bumper; one against a car waiting at a zebra or a light) is L5's to keep out once moving cars are among its obstacles (`TownIsland.vehicles.movingCars()` each frame, `carAnimalGap`). And a car more than 3 m behind its timetable when its 600 s window ends is put back on it (above: 3 of 72): a visible step, rare.
+
+### 13.7 Measured (2026-11-13)
+
+**The real Ark, both islands in one world (v2).** 3,145 animals from the local snapshot read in place; the phone profile (360 × 800 at DPR 2, 4× CPU, Metal); `scripts/ark-runtime-measure.mjs --islands --world v2 --pan town --seconds 60`, one run each, before and after interleaved; before is lanes GA and TB merged without this lane (a worktree of its own); the Mac at a load of 10–43. As lane GA found, the heap is mostly garbage-collection timing (the before runs alone span 405–508 MB).
+
+| Tier | Run | Peak JS heap | Peak GPU est | fps | p95 frame | Long tasks after the first frame |
+|---|---|---|---|---|---|---|
+| low | before ×3 | 405 / 508 / 427 MB | 130.5–135.8 MB | 35.0 / 26.7 / 33.5 | 33 / 67 / 33 ms | 21 / 129 / 26 |
+| low | after ×2 | 421 / 430 MB | 135.9 MB | 32.6 / 34.2 | 33 / 33 ms | 17 / 22 |
+| medium | before | 396 MB | 135.9 MB | 29.0 | 50 ms | 58 |
+| medium | after | 440 MB | 136.0 MB | 30.0 | 33 ms | 28 |
+
+- From the town's whole view the cars are proxies and no facade detail is built: +0.1 MB of GPU geometry. An earlier build, asking about the animals every tick, ran the low tier at 27 fps with 73 long tasks; asking every other tick, only ahead in time when something is near, with each pose worked out once a moment, brought it back within the before runs' spread.
+- The cars' run: about 2 ms of CPU a second steady (Node, desktop); catching up a whole window at a page's opening, 0.2–1.2 s, spread at 3 ms a frame (on a phone ~4×: the cars appear a few seconds after the town).
+
+**The town's own page** (`scripts/ark-town.mts perf`, the 20 s flythrough, much of it at street level; before is the same GA + TB worktree).
+
+| Device, tier | fps before → after | p99 frame | Peak heap | GPU est | Draw calls | Triangles | Detail chunks |
+|---|---|---|---|---|---|---|---|
+| desktop high | 60.0 → 60.0 | 17.7 → 18.6 ms | 195 → 183 MB | 31.4 → 43.0 MB | 423 → 499 | 1.17 M → 1.29 M | 22 |
+| desktop medium | 60.0 → 60.0 | 17.7 → 18.6 ms | 191 → 197 MB | 31.4 → 43.0 MB | 206 → 236 | 586 k → 618 k | 13 |
+| desktop low | 60.0 → 60.0 | 17.7 → 18.6 ms | 152 → 196 MB | 31.4 → 41.9 MB | 155 → 166 | 357 k → 371 k | 6 |
+| phone medium | 58.4 → 58.5 | 20.7 → 22.1 ms | 196 → 211 MB | 31.4 → 43.0 MB | 133 → 157 | 430 k → 453 k | 13 |
+| phone low | 58.5 → 58.8 | 20.2 → 22.0 ms | 192 → 180 MB | 31.4 → 41.9 MB | 82 → 88 | 201 k → 208 k | 6 |
+
+- At street level the near facades' detail (sills, lintels, doors, railings) is the most of the +10–12 MB of GPU geometry, freed 20 s after the camera leaves; the cars and their two levels about 2 MB; the panes as before.
+- A first build of the detail a whole chunk a frame cost the phone 43 fps (p99 77 ms) on medium; a few buildings a frame (2 ms) brought it back.
 
 ### 13.6 Decisions (lane GB)
 
