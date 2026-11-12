@@ -109,9 +109,13 @@ test("streaming: states by distance, with hysteresis, map and out", () => {
     // Never in without having been within the distance itself.
     const fresh = chunkStates(grid, flat, {...eye, x: eye.x - 65, ...view}, null);
     assert.equal(fresh[2 * 5], STATE_MAP);
-    // An island the camera is not over: at most map style, however near.
+    // An island the camera is not over: map style, however near, and however far (never out: the other island stays in
+    // the picture whatever the map distance).
     const capped = chunkStates(grid, flat, {...eye, ...view, capMap: true}, null);
     assert.equal(capped[2 * 5], STATE_MAP);
+    assert.equal(capped[2 * 5 + 4], STATE_MAP, "past the map distance, still map style");
+    const far = chunkStates(grid, flat, {...eye, x: eye.x - 5000, ...view, capMap: true}, capped);
+    assert.ok(Array.from(far).every((state) => state === STATE_MAP), "kilometres off, all map style");
 });
 
 test("streaming: the haze is on only while content lies past the distance, ramped, never in the map view", () => {

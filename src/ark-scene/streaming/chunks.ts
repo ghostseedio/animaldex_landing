@@ -99,14 +99,18 @@ export type ChunkView = {
     hysteresis: number;
     /** Past the render distance and within this (m), a chunk is drawn in map style; past it, not at all. */
     mapDistance: number;
-    /** Not the island the camera is over: its chunks are at most map style (the other island across the strait). */
+    /**
+     * Not the island the camera is over: its chunks are map style, never in and never out (the other island across the
+     * strait stays in the picture, decision 141, whatever the map distance: on v2's farther view at the low tier the
+     * map distance left most of the town out).
+     */
     capMap?: boolean;
 };
 
 /**
  * Each chunk's state for a view, from the states before (hysteresis): `in` within `distance` (or `distance +
  * hysteresis` if it was `in`), unless the island is capped at map style; else `map` within `mapDistance` (plus the
- * hysteresis if it was drawn); else `out`. Pure.
+ * hysteresis if it was drawn), or anywhere on a capped island; else `out`. Pure.
  */
 export function chunkStates(grid: ChunkGrid, spans: ChunkSpan[], view: ChunkView, before: ArrayLike<number> | null, into?: Uint8Array): Uint8Array {
     const n = chunkCount(grid);
@@ -115,7 +119,7 @@ export function chunkStates(grid: ChunkGrid, spans: ChunkSpan[], view: ChunkView
         const d = distanceToChunk(grid, key, view.x, view.y, view.z, spans[key] ?? DEFAULT_SPAN);
         const was = before ? before[key] : STATE_OUT;
         const within = !view.capMap && (d <= view.distance || (was === STATE_IN && d <= view.distance + view.hysteresis));
-        const mapped = d <= view.mapDistance || (was !== STATE_OUT && was !== undefined && before !== null && d <= view.mapDistance + view.hysteresis);
+        const mapped = view.capMap || d <= view.mapDistance || (was !== STATE_OUT && was !== undefined && before !== null && d <= view.mapDistance + view.hysteresis);
         out[key] = within ? STATE_IN : mapped ? STATE_MAP : STATE_OUT;
     }
     return out;

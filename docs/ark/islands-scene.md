@@ -19,6 +19,8 @@ Branch `ark-islands-scene` (landing). This lane covers the town's animals, the c
 
 - **The world:** the wild world is built exactly as before. The town's meshes (the town lane's `buildTownIsland`) are placed at the town's origin.
 - **One sea (decision 143).** The wild island's 4 km sea plane reads the town's sea floor over the town's square through new uniforms in its shader (`islandDepth`, `islandPatch`). The town's own sea plane is hidden.
+  - **Fail-safe:** the patch applies only under the town's drawn chunks (`islandDrawn`, one texel a chunk, from the town's `drawnMask`).
+  - A chunk that is not drawn, for any reason, shows the open sea, never the town's shallows. Before this, those read as a white shape with the canal and the harbour as lines.
 - **The ground:** `heightAt` composes the two. Inside the town's square it is the town's ground; elsewhere the wild island's. The runtime camera's floor uses the same.
 - **Animals:** both islands' animals are in the snapshot and go through the one pipeline.
   - **Placement** (`placeAll`): the wild island's by its map, as before; the town's by `islands/town/placement.ts`, in the world frame.
@@ -34,6 +36,8 @@ Branch `ark-islands-scene` (landing). This lane covers the town's animals, the c
   - `onIslandNear` reports the island nearer the target along the strait.
 - **Default view** (decision 142): on desktop the wild island's view is turned 45% of the way toward the town, moved 45 m toward it, and lifted to polar 1.15, so the town stands across the strait in the upper right. Upright phones keep the wild island's own framing, and the town is a pan away. `openIsland: "town"` opens on the town's view instead (decision 26).
 - **Part B:** `streamer.registerIsland({id: "town", offset, grid, spans, content, apply})` is called when the multi-island streamer is there. Until then, the town's square counts as drawn in full.
+  - The island the camera is not over is map style everywhere, never out (`chunkStates` with `capMap`). The other island stays in the picture whatever the map distance.
+  - Why: on v2 at the low tier with the render scale at 0.6, the map distance (960 m) left 57 of the town's 81 chunks out from the two-island view.
 
 ## 2b. The town's join (decision 153, then the town-join cut)
 

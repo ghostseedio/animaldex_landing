@@ -921,6 +921,9 @@ uniform float halfSize;
 // square (xy its middle, z half its side, w the depth scale; w 0: none, exactly as before).
 uniform sampler2D islandDepth;
 uniform vec4 islandPatch;
+// Its chunks as drawn (r 1 drawn, 0 not): its sea floor only under a drawn chunk; elsewhere the open sea (never its
+// shallows showing white where its land is not drawn).
+uniform sampler2D islandDrawn;
 uniform vec3 deep;
 uniform vec3 open;
 uniform vec3 shallow;
@@ -978,6 +981,7 @@ void main() {
     float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
     vec2 uvIsland = (vWorld.xz - islandPatch.xy + islandPatch.z) / (2.0 * islandPatch.z);
     float onIsland = step(0.5, islandPatch.w) * step(0.0, uvIsland.x) * step(uvIsland.x, 1.0) * step(0.0, uvIsland.y) * step(uvIsland.y, 1.0) * (1.0 - inside);
+    onIsland *= step(0.5, texture2D(islandDrawn, clamp(uvIsland, 0.0, 1.0)).r);
     depth = mix(depth, texture2D(islandDepth, clamp(uvIsland, 0.0, 1.0)).r * islandPatch.w + seaLevel, onIsland);
     float reefy = at.g * inside;
     float fresh = at.b * inside;
@@ -1065,6 +1069,7 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
                 halfSize: {value: TERRAIN_HALF},
                 islandDepth: {value: null},
                 islandPatch: {value: new Vector4(0, 0, 1, 0)},
+                islandDrawn: {value: null},
                 deep: {value: srgb(WATER.deep)},
                 open: {value: srgb(WATER.open)},
                 shallow: {value: srgb(WATER.shallow)},

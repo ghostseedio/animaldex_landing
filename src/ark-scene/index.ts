@@ -715,6 +715,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const uniforms = (landscape.water.material as ShaderMaterial).uniforms;
         if (uniforms.islandDepth && isl.seaDepth) {
             uniforms.islandDepth.value = isl.seaDepth;
+            // (Its sea floor only under its drawn chunks: the fail-safe for any part of it not drawn.)
+            if (uniforms.islandDrawn) uniforms.islandDrawn.value = isl.drawnMask;
             (uniforms.islandPatch.value as {set: (x: number, y: number, z: number, w: number) => void}).set(isl.origin.x, isl.origin.z, isl.half, 16);
         }
     };
