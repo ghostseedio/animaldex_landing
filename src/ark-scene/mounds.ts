@@ -5,7 +5,8 @@
  * keep clear of them, and the collisions lane reads them (`props/areas.ts` termiteMoundFootprints).
  */
 
-import {hashString, sampleGround, seeded, ZONE_SITES} from "@/ark-scene/world";
+import {arkWorld, hashString, sampleGround, seeded, ZONE_SITES} from "@/ark-scene/world";
+import {wildScenery} from "@/ark-scene/islands/wild/scenery";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type Mound = {x: number; y: number; z: number; turn: number; scale: number; /** The mound's height at scale 1 (`shapes.termiteMound(h)`). */ h: number};
@@ -22,8 +23,17 @@ function seated(x: number, z: number, foot: number): number {
     return lowest - 0.05;
 }
 
-/** The savanna's old termite mounds (shared scenery: there whether termites are aboard or not). */
+/** The mound's height at scale 1 on the bigger wild island (its generator draws them 2 m at its scale). */
+const WILD_MOUND_H = 2;
+
+/**
+ * The savanna's old termite mounds (shared scenery: there whether termites are aboard or not). On the bigger wild island
+ * (P3), its generator's: up to 18 over the savanna and the desert's edge, 14 m apart and more, each seated as these are.
+ */
 export function savannaMounds(): Mound[] {
+    if (arkWorld() === "v2") {
+        return wildScenery().filter((item) => item.kind === "mound").map((item) => ({x: item.x, y: seated(item.x, item.z, WILD_MOUND_H * 0.55 * item.scale), z: item.z, turn: item.yaw, scale: item.scale, h: WILD_MOUND_H}));
+    }
     const site = ZONE_SITES.grassland;
     const mounds: Mound[] = [];
     for (const [dx, dz, s] of [[-site.clearing - 6, 8, 1.2], [site.clearing + 8, -5, 0.9], [4, -site.clearing - 9, 1.05]] as const) {

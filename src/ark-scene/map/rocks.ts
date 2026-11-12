@@ -15,6 +15,7 @@
  */
 
 import {onHamletSwitch} from "@/ark-scene/no-hamlet";
+import {onArkWorld} from "@/ark-scene/world";
 import {worldDecor} from "@/ark-scene/decor";
 import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
@@ -30,6 +31,11 @@ let index: Map<string, DrawnRock[]> | null = null;
 let list: DrawnRock[] | null = null;
 // Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
 onHamletSwitch(() => {
+    index = null;
+    list = null;
+});
+// And when the world does (`world.ts`: the bigger wild island's rocks, P3).
+onArkWorld(() => {
     index = null;
     list = null;
 });

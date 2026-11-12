@@ -33,7 +33,7 @@ import {perchHidden, perchSize} from "@/ark-scene/grounding/perch";
 /** Every tree point's openness is measured (tree-attach generator 7, grounding lane L3): hidden ones keep to small bodies. */
 const OPEN_MEASURED = ((treeAttachFile as unknown as {generator?: number}).generator ?? 0) >= 7;
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
-import {BEACH_INSET, LAKE, RIVER, VISITOR_LANDING, ZONE_SITES, coastRadius, fbm, hashString, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {BEACH_INSET, LAKE, RIVER, TERRAIN_HALF, VISITOR_LANDING, ZONE_SITES, arkWorld, coastRadius, fbm, hashString, onArkWorld, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type Vec3 = {x: number; y: number; z: number};
@@ -90,8 +90,9 @@ function surfaceFrom(sample: GroundSample, x: number, z: number, environment: Ar
     const zone = zoneAt(sample) as ArkZone;
     const slope = 1 - normal.y;
     const height = sample.height;
-    // The lake and the river keep their own level; the sea rises and falls with the tide (batch 5: water-level.ts).
-    const level = freshFrom(sample, x, z) >= 0.5 ? FRESH_LEVEL : environment.seaLevel;
+    // The lake and the river keep their own level; the sea rises and falls with the tide (batch 5: water-level.ts). On the
+    // bigger wild island (P3) the lake and the river have their own levels, the river descending: the sample's.
+    const level = freshFrom(sample, x, z) >= 0.5 ? (arkWorld() === "v2" ? (sample as {freshLevel?: number | null}).freshLevel ?? FRESH_LEVEL : FRESH_LEVEL) : environment.seaLevel;
     const waterDepth = Math.max(level - height, 0);
     const weights: Partial<Record<SurfaceKind, number>> = {};
     let cover = {mean: 0, sure: 0};
@@ -99,7 +100,7 @@ function surfaceFrom(sample: GroundSample, x: number, z: number, environment: Ar
         if (value > 0.001) weights[kind] = (weights[kind] ?? 0) + value;
     };
     if (height < level - 0.05) {
-        const fresh = Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
+        const fresh = arkWorld() === "v2" ? freshFrom(sample, x, z) >= 0.5 : Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1 || (sample.river < 4 && sample.inland > 4);
         put(fresh ? "lakebed" : "seabed", 1);
     } else {
         // Snow as the terrain shader draws it (snow.ts): the ice's own layer, and the mountain's above its snow line
@@ -474,8 +475,13 @@ let generation = 0;
 let pending: Promise<AttachPoint[]> | null = null;
 let slices: number[] = [];
 
-// Islands mode flips (`no-hamlet.ts`): the points are the other world's.
+// Islands mode flips (`no-hamlet.ts`), or the world does (`world.ts`): the points are the other world's.
 onHamletSwitch(() => {
+    homePlots = null;
+    resetAttachPoints();
+    placeCache.clear();
+});
+onArkWorld(() => {
     homePlots = null;
     resetAttachPoints();
     placeCache.clear();
@@ -743,22 +749,38 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         add("pond_surface", "garden-pond", k, {x: GARDEN_POND.x + Math.cos(a) * r, y: GARDEN_POND.y, z: GARDEN_POND.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "farm_garden");
     }
     const lake = streamOf("lake", 5);
-    for (let k = 0; k < 24; k++) {
-        const a = lake() * Math.PI * 2;
-        const r = LAKE.r * (0.7 + lake() * 0.22);
-        add("pond_surface", "lake", k, {x: LAKE.x + Math.cos(a) * r, y: 0.02, z: LAKE.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "river_lake");
+    if (arkWorld() === "v2") {
+        // The bigger wild island (P3): its lake is no circle and its surface is its own (6 m): 24 points on its open
+        // water a metre or more from the shore, on that surface.
+        for (let k = 0, tries = 0; k < 24 && tries < 400; tries++) {
+            const a = lake() * Math.PI * 2;
+            const r = LAKE.r * Math.sqrt(lake()) * 0.95;
+            const x = LAKE.x + Math.cos(a) * r;
+            const z = LAKE.z + Math.sin(a) * r;
+            const sample = sampleGround(x, z) as GroundSample & {freshLevel?: number | null};
+            if (sample.freshLevel === null || sample.freshLevel === undefined || freshFrom(sample, x, z) < 0.5 || sample.freshLevel - sample.height < 0.4) continue;
+            add("pond_surface", "lake", k++, {x, y: sample.freshLevel + 0.02, z}, {x: 0, y: 1, z: 0}, "river_lake");
+        }
+    } else {
+        for (let k = 0; k < 24; k++) {
+            const a = lake() * Math.PI * 2;
+            const r = LAKE.r * (0.7 + lake() * 0.22);
+            add("pond_surface", "lake", k, {x: LAKE.x + Math.cos(a) * r, y: 0.02, z: LAKE.z + Math.sin(a) * r}, {x: 0, y: 1, z: 0}, "river_lake");
+        }
     }
 
-    // The ground: leaf litter under the forests, worm holes in soft soil, burrow mouths in open banks.
+    // The ground: leaf litter under the forests, worm holes in soft soil, burrow mouths in open banks. (The bigger wild
+    // island, P3: over its whole land, about five times today's, three times as many of each.)
+    const wide = arkWorld() === "v2" ? {reach: TERRAIN_HALF * 0.85, more: 3} : {reach: 100, more: 1};
     let tries = 0;
     let litter = 0;
     let holes = 0;
     let burrows = 0;
     const search = streamOf("ground", 6);
-    while (tries++ < 40000 && (litter < 300 || holes < 200 || burrows < 120)) {
+    while (tries++ < 40000 * wide.more && (litter < 300 * wide.more || holes < 200 * wide.more || burrows < 120 * wide.more)) {
         if (tries % 16 === 0) yield;
-        const x = (search() * 2 - 1) * 100;
-        const z = (search() * 2 - 1) * 100;
+        const x = (search() * 2 - 1) * wide.reach;
+        const z = (search() * 2 - 1) * wide.reach;
         // The height first (it is surfaceAt's; at calm sea level, water only lies under 0): no normal for the sea.
         const sample = sampleGround(x, z);
         if (sample.height < 0.4) continue;
@@ -766,9 +788,9 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
         // (The lake and the river keep their own level: water can lie over ground above 0.4 m there.)
         if (surface.waterDepth > 0) continue;
         const ground = {x, y: surface.height, z};
-        if (litter < 300 && (surface.weights.forest_floor ?? 0) > 0.4) add("leaf_litter", "ground", litter++, ground, surface.normal, surface.zone);
-        else if (holes < 200 && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) add("worm_hole", "ground", holes++, ground, surface.normal, surface.zone);
-        else if (burrows < 120 && surface.normal.y < 0.97 && surface.normal.y > 0.8 && surface.surface !== "rock" && surface.surface !== "snow") add("burrow", "ground", burrows++, ground, surface.normal, surface.zone, Math.atan2(surface.normal.x, surface.normal.z));
+        if (litter < 300 * wide.more && (surface.weights.forest_floor ?? 0) > 0.4) add("leaf_litter", "ground", litter++, ground, surface.normal, surface.zone);
+        else if (holes < 200 * wide.more && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) add("worm_hole", "ground", holes++, ground, surface.normal, surface.zone);
+        else if (burrows < 120 * wide.more && surface.normal.y < 0.97 && surface.normal.y > 0.8 && surface.surface !== "rock" && surface.surface !== "snow") add("burrow", "ground", burrows++, ground, surface.normal, surface.zone, Math.atan2(surface.normal.x, surface.normal.z));
     }
 
     // Ledges (added 2026-11-11 for the props lane, its own search and seed, so its ids are unchanged): steep ground
@@ -776,10 +798,11 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     // stands on the shelf); `forward` and the yaw face out from the cliff.
     const ledgeRandom = seeded(880011);
     let ledges = 0;
-    for (let i = 0; i < 2600 && ledges < 90; i++) {
+    const shelves = arkWorld() === "v2" ? {reach: TERRAIN_HALF * 0.85, more: 3} : {reach: 110, more: 1};
+    for (let i = 0; i < 2600 * shelves.more * shelves.more && ledges < 90 * shelves.more; i++) {
         if (i % 16 === 0) yield;
-        const x = (ledgeRandom() * 2 - 1) * 110;
-        const z = (ledgeRandom() * 2 - 1) * 110;
+        const x = (ledgeRandom() * 2 - 1) * shelves.reach;
+        const z = (ledgeRandom() * 2 - 1) * shelves.reach;
         const sample = sampleGround(x, z);
         if (sample.height < 1.2) continue;
         const zone = zoneAt(sample) as ArkZone;

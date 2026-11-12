@@ -49,6 +49,16 @@ export type WildItem = {
     shade: number;
     /** A rock's or a log's up, leaning into its slope (unit; absent: straight up). */
     up?: [number, number, number];
+    /**
+     * A tree's storey (P3, `decor-v2.ts`): the canopy's own trees (the motion pass's decor trees: obstacles and perches)
+     * or the understorey under them (its forest fill).
+     */
+    storey?: "canopy" | "under";
+    /**
+     * A tree's order (0…1): the canopy's by its priority (0 first, as `treeStands` decides between neighbours), the
+     * understorey's a hash of its place (the fill's rank: which trees a lighter tier draws).
+     */
+    rank?: number;
 };
 
 const frac = (v: number) => v - Math.floor(v);
@@ -161,7 +171,7 @@ function treeCandidate(i: number, j: number): Candidate {
     const real = (REAL_HEIGHT[t.kind] ?? info.height) / meanHeight(t.kind);
     const scale = Math.min(Math.max(real * t.size, 0.3), 3.2);
     const crown = (info.crown_radius ?? 2) * scale;
-    out.item = {kind: "tree", asset: id, x, y: s.height - 0.15, z, yaw: unit(x, z, 4) * Math.PI * 2, scale, height: info.height * scale, solid: (info.trunk_radius ?? 0.3) * scale, crown, chunk: wildChunkOf(x, z), shade: 0.88 + 0.24 * unit(x, z, 5)};
+    out.item = {kind: "tree", asset: id, x, y: s.height - 0.15, z, yaw: unit(x, z, 4) * Math.PI * 2, scale, height: info.height * scale, solid: (info.trunk_radius ?? 0.3) * scale, crown, chunk: wildChunkOf(x, z), shade: 0.88 + 0.24 * unit(x, z, 5), storey: "canopy", rank: 1 - prio};
     return out;
 }
 
@@ -233,7 +243,7 @@ function understorey(i: number, j: number): WildItem | null {
     if (!info) return null;
     const target = rainy ? (kind === "emergent" ? 10 + 8 * unit(x, z, 64) : 9 + 5 * unit(x, z, 64)) : 9 + 6 * unit(x, z, 64);
     const scale = target / info.height;
-    return {kind: "tree", asset: id, x, y: s.height - 0.15, z, yaw: unit(x, z, 65) * Math.PI * 2, scale, height: target, solid: (info.trunk_radius ?? 0.3) * scale, crown: (info.crown_radius ?? 2) * scale, chunk: wildChunkOf(x, z), shade: 0.85 + 0.2 * unit(x, z, 66)};
+    return {kind: "tree", asset: id, x, y: s.height - 0.15, z, yaw: unit(x, z, 65) * Math.PI * 2, scale, height: target, solid: (info.trunk_radius ?? 0.3) * scale, crown: (info.crown_radius ?? 2) * scale, chunk: wildChunkOf(x, z), shade: 0.85 + 0.2 * unit(x, z, 66), storey: "under", rank: unit(x, z, 67)};
 }
 
 // MARK: - The rest

@@ -65,8 +65,10 @@ export function realFactor(kind: string): number {
 }
 
 /** The asset tree for a decor (or forest-fill) tree, or null to keep its own shape. */
-export function treeAssetFor(item: Pick<DecorItem, "kind" | "x" | "z" | "scale">): TreeAsset | null {
+export function treeAssetFor(item: Pick<DecorItem, "kind" | "x" | "z" | "scale" | "asset">): TreeAsset | null {
     if (!ASSET_TREE_KINDS.has(item.kind)) return null;
+    // Chosen by its world's generator (the v2 island: `islands/wild/decor-v2.ts`): that asset, at its own scale.
+    if (item.asset !== undefined) return ASSETS[item.asset] ? {id: item.asset, scale: item.scale} : null;
     const zone = zoneAt(sampleGround(item.x, item.z));
     const r = unit(item.x, item.z, 1);
     const v = unit(item.x, item.z, 2);
@@ -112,7 +114,7 @@ export function treeAssetFor(item: Pick<DecorItem, "kind" | "x" | "z" | "scale">
  * The asset tree's trunk in the decor item's own metres (before the item's scale), in the shape micro.ts climbs
  * (vegetation.ts `Trunk`): a round trunk (a 12-sided prism) tapering to the crown.
  */
-export function assetTrunk(item: Pick<DecorItem, "kind" | "x" | "z" | "scale">): {height: number; radius: number; top: number; lean: number; sides: number; clear: number} | null {
+export function assetTrunk(item: Pick<DecorItem, "kind" | "x" | "z" | "scale" | "asset">): {height: number; radius: number; top: number; lean: number; sides: number; clear: number} | null {
     const asset = treeAssetFor(item);
     if (!asset) return null;
     const info = ASSETS[asset.id];
@@ -139,7 +141,7 @@ export type TreePlacement = {
     radius: number;
 };
 
-type Placeable = Pick<DecorItem, "kind" | "x" | "y" | "z" | "scale" | "rotation">;
+type Placeable = Pick<DecorItem, "kind" | "x" | "y" | "z" | "scale" | "rotation" | "asset">;
 
 /**
  * Where (and whether) the renderer draws a decor or forest-fill tree as its asset tree: null when it keeps its own
