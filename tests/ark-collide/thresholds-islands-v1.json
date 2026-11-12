@@ -1,0 +1,7 @@
+{
+ "about": "The collision audit's CI limits, islands mode on today's wild island (v1: the `wildIsland: \"v1\"` setting, the rollback path, decision 272: scripts/ark-collide-audit.mts --fixture --wild-island kept --world v1 --hours 2 --step 4; 5,328 animals, 4,267 measured), measured on ark-next 11901a6a (2026-11-13), the same as GitHub run 43275537669's islands numbers there. Pass-throughs and fence crossings stay at 0; cliffs (210) and overlaps (3,164,272: mostly perched and sleeping animals sharing crowns, held where they rest) at most today's. These are the limits thresholds-islands.json held for v1 until v2 became islands mode's island (W1), plus W1's shared behaviour changes (+38 overlap samples). A change that makes them worse fails the PR; a deliberate change updates them here, with why.",
+ "passThrough": 0,
+ "fenceCrossings": 0,
+ "cliffs": 210,
+ "overlaps": 3164272
+}
