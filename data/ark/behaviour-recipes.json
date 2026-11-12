@@ -45128,10 +45128,10 @@
    "nest": null,
    "recipes": [
     {
-     "id": "dabble",
-     "weight": 4,
+     "id": "surface_dive",
+     "weight": 6,
      "src": {
-      "rule": "family Anatidae on the water (ducks, swans, geese)"
+      "rule": "a diving duck (family Anatidae): dives from the surface"
      }
     },
     {
@@ -93629,6 +93629,20 @@
     ]
    },
    "recipes": [
+    {
+     "id": "dabble",
+     "weight": 5,
+     "src": {
+      "rule": "a coot (Rallidae on the water): up-ends for water plants"
+     }
+    },
+    {
+     "id": "surface_dive",
+     "weight": 5,
+     "src": {
+      "rule": "a coot (Rallidae on the water): short dives for water plants"
+     }
+    },
     {
      "id": "call_bout",
      "weight": 3,
@@ -147999,13 +148013,6 @@
    "nest": null,
    "recipes": [
     {
-     "id": "dabble",
-     "weight": 4,
-     "src": {
-      "rule": "family Anatidae on the water (ducks, swans, geese)"
-     }
-    },
-    {
      "id": "surface_dive",
      "weight": 6,
      "src": {
@@ -160945,13 +160952,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "dabble",
-     "weight": 4,
-     "src": {
-      "rule": "family Anatidae on the water (ducks, swans, geese)"
-     }
-    },
     {
      "id": "surface_dive",
      "weight": 6,
@@ -209216,6 +209216,13 @@
      }
     },
     {
+     "id": "surface_dive",
+     "weight": 6,
+     "src": {
+      "rule": "a diving duck (family Anatidae): dives from the surface"
+     }
+    },
+    {
      "id": "preen_stretch",
      "weight": 2,
      "src": {
@@ -211668,6 +211675,20 @@
     ]
    },
    "recipes": [
+    {
+     "id": "dabble",
+     "weight": 5,
+     "src": {
+      "rule": "a coot (Rallidae on the water): up-ends for water plants"
+     }
+    },
+    {
+     "id": "surface_dive",
+     "weight": 5,
+     "src": {
+      "rule": "a coot (Rallidae on the water): short dives for water plants"
+     }
+    },
     {
      "id": "wrestle",
      "weight": 4,
@@ -236394,10 +236415,10 @@
    "nest": null,
    "recipes": [
     {
-     "id": "dabble",
-     "weight": 4,
+     "id": "surface_dive",
+     "weight": 6,
      "src": {
-      "rule": "family Anatidae on the water (ducks, swans, geese)"
+      "rule": "a diving duck (family Anatidae): dives from the surface"
      }
     },
     {
@@ -278164,14 +278185,6 @@
    },
    "nest": null,
    "recipes": [
-    {
-     "id": "air_plunge",
-     "weight": 7,
-     "src": {
-      "field": "story",
-      "phrase": "The Wood Duck has colorful feathers and can dive quickly into the water to escape danger"
-     }
-    },
     {
      "id": "dabble",
      "weight": 4,

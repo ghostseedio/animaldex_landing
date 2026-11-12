@@ -514,6 +514,14 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         also.add(extra);
         src[`move.${extra}`] = {rule: `${prior!.name}: ${extra}`};
     }
+    // Coots live on the open water (the movement audit, lane MA3: the owner's coot ran on the lake): they swim first and
+    // walk the bank; rails, crakes and swamphens walk.
+    if (row.family_name === "Rallidae" && COOT.test(slug) && primary !== "swim") {
+        also.add(primary);
+        also.add("walk");
+        primary = "swim";
+        src.move = {rule: "family Rallidae, a coot: swims first"};
+    }
     // A bird its text puts on the ground walks first (and flies when it must).
     if (primary === "fly" && (plan === "flying_bird" || plan === "walking_bird")) {
         const ground = find(row, BEHAVIOUR_TEXT, /\b(ground[- ](dwelling|bird|forager)|terrestrial|walks (steadily|through|on)|forages? (mostly |mainly )?on the ground|feeds? (mostly |mainly )?on the ground|rarely flies|seldom flies|reluctant to fly|prefers to (walk|run))\b/i);
@@ -562,9 +570,32 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         also.add("climb");
         src.climb = {rule: `roost ${roost}: climbs to it`};
     }
+    // Waterfowl, grebes, loons and coots do not perch in trees (the movement audit: a mute swan landed 6 m up in a
+    // conifer), save the tree ducks their text says perch or roost in trees (whistling ducks, the wood duck, the
+    // mandarin, the muscovy); grebes and loons come ashore only to nest (their legs are set far back): they swim.
+    const family = row.family_name ?? "";
+    if (WATERFOWL.test(family) || (family === "Rallidae" && primary === "swim")) {
+        const perches = roost === "tree" || roost === "tree_hole" ? {rule: `roost ${roost}`} : PERCHING_DUCKS.test(slug) ? {rule: "a perching duck (Aix, Cairina, Dendrocygna, Chenonetta, Nettapus)"} : find(row, ALL, TREE_PERCH);
+        if (perches) src["move.perch"] = "rule" in perches ? perches : {field: perches.field, phrase: perches.phrase};
+        else if (also.delete("perch")) src["move.perch"] = {rule: `family ${family}: does not perch in trees`};
+    }
+    if (/^(Podicipedidae|Gaviidae)$/.test(family) && primary === "swim" && (also.has("walk") || also.has("hop"))) {
+        also.delete("walk");
+        also.delete("hop");
+        src["move.walk"] = {rule: `family ${family}: ashore only to nest (legs set far back)`};
+    }
     also.delete(primary);
     return {primary, also: [...also], src};
 }
+
+/** A coot (Fulica): swims first. */
+const COOT = /(?:^|-)coot$/;
+/** The waterfowl and the screamers. */
+const WATERFOWL = /^(Anatidae|Anhimidae|Anseranatidae|Podicipedidae|Gaviidae)$/;
+/** The perching ducks by name (their genera: the wood duck and the mandarin, the muscovy, the whistling ducks, the Australian wood duck, the pygmy geese). */
+const PERCHING_DUCKS = /(?:^|-)(wood-duck|whistling-duck|mandarin-duck|muscovy-duck|pygmy-goose)$/;
+/** A waterfowl's text that puts it up in the trees: it perches or roosts there (not only a nest hole). */
+const TREE_PERCH = /\b(perch(es|ing)? (readily |often )?(in|on|high in) (trees|branches|stumps|the trees|tree branches)|perches readily|roosts? (at night )?(in|high in) trees|roost(s|ing)? in trees)\b/i;
 
 type Social = "solitary" | "pair" | "group" | "herd" | "flock" | "school" | "colony" | "pack" | "troop" | "swarm";
 const GROUP_WORDS: Array<[RegExp, Social]> = [
@@ -746,11 +777,103 @@ type Profile = {
     breathes: boolean;
     /** Walks on the sea floor (crabs, lobsters, stars, urchins). */
     seabed: boolean;
+    /** How it is in the water (`waterKindOf`): its float line, posture and feeding there; null if it neither swims nor wades. */
+    water: WaterKind | null;
+    /** Its `fly` weight where its family or way of life sets it (`flightPropensity`), finer than the compact row's ninths. */
+    flight: number | null;
     src: Record<string, Source | Source[]>;
     defaults: string[];
 };
 
 const PREY_SIZE = 40;
+
+// MARK: Waterbirds and swimmers (the movement audit, lane MA3, 2026-11-13)
+
+/**
+ * A bird's appetite for flying (its `fly` weight) where its family or its way of life says it flies little: a bird
+ * that walks or swims first (0.03, as the rails, grebes, loons and gamebirds), the swans (0.03), geese (0.04) and
+ * ducks (0.06), a farmyard breed (0.01); the text's "rarely flies" halves it. Null: the body plan's own (0.5, a
+ * flying insect 0.6), as before.
+ */
+const LOW_FLIERS: Record<string, number> = {
+    Rallidae: 0.03, Podicipedidae: 0.03, Gaviidae: 0.03, Phasianidae: 0.03, Numididae: 0.03, Odontophoridae: 0.03, Megapodiidae: 0.03,
+    Meleagrididae: 0.03, Cracidae: 0.03, Tinamidae: 0.03, Turnicidae: 0.03, Otididae: 0.05, Anhimidae: 0.04, Anseranatidae: 0.06
+};
+const RARELY_FLIES = /\b(rarely|seldom|reluctant to|reluctantly) (fly|flies|takes? flight|takes? to the air)|\b(weak|poor) (flier|flyer)s?\b|\b(usually )?unable to fly far\b/i;
+function flightPropensity(row: Row, plan: string, primary: Move): {value: number; src: Source} | null {
+    if (!/Aves/.test(row.class_name ?? "")) return null;
+    const family = row.family_name ?? "";
+    const slug = row.slug ?? "";
+    let value: number | null = null;
+    let why = "";
+    if (family === "Anatidae") {
+        value = /(?:^|-)swan$/.test(slug) ? 0.03 : /(?:^|-)goose$/.test(slug) && !/pygmy-goose/.test(slug) ? 0.04 : 0.06;
+        why = `family Anatidae (${value === 0.03 ? "a swan" : value === 0.04 ? "a goose" : "a duck"}): flies a few times a day`;
+    } else if (LOW_FLIERS[family] !== undefined) {
+        value = LOW_FLIERS[family];
+        why = `family ${family}: walks or swims, flies little`;
+    } else if (primary === "walk" || primary === "swim") {
+        value = 0.03;
+        why = `${primary}s first: flies now and then`;
+    }
+    if (value === null) return null;
+    // A farmyard breed of duck, goose or fowl hardly flies.
+    if (/^(Anatidae|Phasianidae|Numididae|Meleagrididae)$/.test(family) && (row.parent_slug || /^domestic-/.test(slug) || row.zone === "farm_garden")) {
+        value = 0.01;
+        why = `a farmyard ${family === "Anatidae" ? "duck or goose" : "fowl"}: hardly flies`;
+    }
+    const rarely = find(row, ALL, RARELY_FLIES);
+    if (rarely && value > 0.01) value = Math.max(Math.round(value * 50) / 100, 0.01);
+    return {value, src: rarely ? {field: rarely.field, phrase: rarely.phrase} : {rule: why}};
+}
+
+/**
+ * How it is in the water, for the scene's float line, posture and feeding (`sea-depth.ts` swimDepth): a dabbling
+ * duck, a diving duck, a swan, a goose, a grebe or loon, a cormorant, a pelican, a coot, a wading bird, another bird
+ * on the water; an otter, another mammal; a crocodilian, a turtle, a lizard, a snake; an amphibian; a fish; a skater
+ * on the surface (whirligigs, fishing spiders); one on the bed. From the stored taxonomy (and the text's "dives" for
+ * the diving ducks); null for one that neither swims nor wades.
+ */
+type WaterKind = "dabbler" | "diver" | "swan" | "goose" | "grebe" | "cormorant" | "pelican" | "coot" | "wader" | "bird" | "penguin" | "otter" | "seal" | "mammal" | "croc" | "turtle" | "lizard" | "snake" | "amphibian" | "fish" | "skater" | "bed";
+const WADERS = /^(Ardeidae|Ciconiidae|Threskiornithidae|Phoenicopteridae|Gruidae|Aramidae|Jacanidae|Scolopacidae|Charadriidae|Recurvirostridae|Haematopodidae|Balaenicipitidae|Scopidae|Rallidae)$/;
+const DIVING_DUCK = /\b(diving ducks? (body|species)|(is|are) (a )?diving ducks?|rare \w+ diving duck|diving-duck|div(es|ing) (underwater|for (food|mollusks|aquatic|fish|small)|in short bouts)|dives? for (food|mollusks|aquatic|fish|small)|gathered by diving|they dive for)\b/i;
+function waterKindOf(row: Row, plan: string, primary: Move, all: Set<Move>): {value: WaterKind; src: Source} | null {
+    const cls = row.class_name ?? "";
+    const family = row.family_name ?? "";
+    const order = row.order_name ?? "";
+    const slug = row.slug ?? "";
+    const swims = all.has("swim") || primary === "swim";
+    const rule = (value: WaterKind, why: string) => ({value, src: {rule: why} as Source});
+    if (/Aves/.test(cls)) {
+        if (family === "Spheniscidae") return rule("penguin", "family Spheniscidae");
+        if (/^(Anatidae|Anhimidae|Anseranatidae)$/.test(family)) {
+            if (/(?:^|-)swan$/.test(slug)) return rule("swan", `family ${family}: a swan`);
+            if ((/(?:^|-)(goose|screamer)$/.test(slug) && !/pygmy-goose/.test(slug)) || family !== "Anatidae") return rule("goose", `family ${family}: a goose`);
+            const dives = find(row, ALL, DIVING_DUCK);
+            return dives ? {value: "diver", src: {field: dives.field, phrase: dives.phrase}} : rule("dabbler", "family Anatidae: a dabbling duck");
+        }
+        if (/^(Podicipedidae|Gaviidae)$/.test(family)) return rule("grebe", `family ${family}`);
+        if (/^(Phalacrocoracidae|Anhingidae)$/.test(family)) return rule("cormorant", `family ${family}`);
+        if (family === "Pelecanidae") return rule("pelican", "family Pelecanidae");
+        if (family === "Rallidae" && primary === "swim") return rule("coot", "family Rallidae: a coot");
+        if (WADERS.test(family)) return rule("wader", `family ${family}: wades in the shallows`);
+        return swims ? rule("bird", `${cls} that swims`) : null;
+    }
+    if (!swims) return null;
+    if (/Mammalia/.test(cls)) {
+        if (OTTER.test(slug)) return rule("otter", "an otter");
+        if (/^(Phocidae|Otariidae|Odobenidae)$/.test(family)) return rule("seal", `family ${family}`);
+        return rule("mammal", `${cls} that swims`);
+    }
+    if (/Crocodylia/.test(`${cls} ${order}`) || /^(Crocodylidae|Alligatoridae|Gavialidae)$/.test(family)) return rule("croc", `${family || order}: a crocodilian`);
+    if (/Testudines/.test(`${cls} ${order}`) || plan === "turtle") return rule("turtle", `${family || order}: a turtle`);
+    if (/Reptilia|Squamata/.test(cls)) return plan === "legless" ? rule("snake", `${cls}, legless`) : rule("lizard", `${cls} with legs`);
+    if (/Amphibia/.test(cls)) return rule("amphibian", "Amphibia");
+    if (/Actinopterygii|Chondrichthyes|Elasmobranchii|Sarcopterygii|Teleostei/.test(cls) || plan === "fish") return rule("fish", `${cls || plan}: a fish`);
+    if (plan === "insect" || plan === "flying_insect" || plan === "arachnid") return rule("skater", `plan ${plan}: on the surface`);
+    if (primary === "swim") return rule("fish", `plan ${plan}: swims in the water`);
+    return rule("bed", `plan ${plan}: on the bed`);
+}
 
 function profile(row: Row): Profile {
     const slug = row.slug!;
@@ -805,6 +928,12 @@ function profile(row: Row): Profile {
         // A deer, an antelope, a rhino or an elephant rests among trees, never in one.
         roost = {value: "ground_cover", src: {rule: `order ${row.order_name}: rests on the ground${"phrase" in roost.src ? ` ("${roost.src.phrase}")` : ""}`}};
     }
+    // A swimming bird whose sleep text puts it on the water sleeps there, whatever else the clause names (the coot's
+    // "roosting at night on the water, on nest platforms or among reeds": the reeds' rule came first).
+    if (moves.primary === "swim" && /Aves/.test(row.class_name ?? "") && roost.value !== "water") {
+        const onWater = find(row, ["sleep"], /\b(on (the )?(open )?water|afloat|floating on)\b/i);
+        if (onWater) roost = {value: "water", src: {field: onWater.field, phrase: onWater.phrase}};
+    }
 
     const src: Record<string, Source | Source[]> = {plan: planSrc, activity: activity.src, roost: roost.src, social: social.src, diet: diet.src, ...moves.src};
     if (rhythm.src.length) src.rhythm = rhythm.src;
@@ -826,7 +955,11 @@ function profile(row: Row): Profile {
     if (mobile) add("forage", 0.5);
     // Grazing only for a plant-eater whose food is grass (not a meat eater's "grassland rodents").
     if (diet.value === "grazer" || (diet.also.includes("grazer") && ["browser", "seeds", "omnivore"].includes(diet.value) && !all.has("fly"))) add("graze", 0.7, src.diet as Source);
-    if (all.has("fly")) add("fly", plan === "flying_insect" ? 0.6 : 0.5);
+    // How often it takes to the air (the movement audit, problem 2: every flyer had the same 5/9, a coot took off 27
+    // times an hour): by family and how it lives. A bird that walks or swims first flies little; its family's own
+    // rate is lower still (rails, grebes, gamebirds, swans), and its text's "rarely flies" halves it.
+    const flight = all.has("fly") ? flightPropensity(row, plan, moves.primary) : null;
+    if (all.has("fly")) add("fly", flight ? flight.value : plan === "flying_insect" ? 0.6 : 0.5, flight?.src);
     if (all.has("perch")) add("perch", 0.45);
     // (A swimmer's cruising is one of its states, not all of them: 0.55 against forage 0.5, so its days vary.)
     if (all.has("swim")) add("swim", moves.primary === "swim" ? 0.55 : 0.3);
@@ -913,6 +1046,8 @@ function profile(row: Row): Profile {
     if (all.has("swim") && !SEA_ZONES.has(zone) && moves.primary !== "swim") it.add("water_surface");
     if (zone === "coral_reef") it.add("reef");
     if (rhythm.value.includes("siesta")) it.add("shade");
+    const water = waterKindOf(row, plan, moves.primary, all);
+    if (water) src.water = water.src;
 
     return {
         slug,
@@ -946,6 +1081,8 @@ function profile(row: Row): Profile {
         surface,
         breathes,
         seabed,
+        water: water?.value ?? null,
+        flight: flight?.value ?? null,
         src,
         defaults
     };
@@ -990,11 +1127,14 @@ for (const p of profiles) {
     const behaviours = Object.entries(p.behaviours).map(([k, w]) => `${BEHAVIOURS.indexOf(k as Behaviour).toString(36)}${Math.round((w ?? 0) * 9)}`).join("");
     const interactions = p.interactions.map((i) => INTERACTIONS.indexOf(i).toString(36)).join("");
     const flags = [p.defaults.length ? "d" : "", p.breathes ? "b" : "", p.seabed ? "s" : "", p.surface === "upside" ? "u" : p.surface === "any" ? "a" : "", p.altitude ? p.altitude[0] : ""].join("");
-    compact[p.slug] = [p.move, p.moves.join(","), p.activity[0], p.rhythm.map((r) => r[0]).join(""), p.roost, p.social, p.diet, behaviours, interactions, flags, p.size ?? "", p.speed ?? "", p.dominance ?? "", p.gait ?? "", p.walkPace ?? "", p.runPace ?? ""].join("|");
+    // (Lane MA3: its water kind, and its fly weight in hundredths where its family sets it, `k:w` by behaviour index.)
+    const fine = p.flight !== null ? `${BEHAVIOURS.indexOf("fly").toString(36)}:${Math.round(p.flight * 100)}` : "";
+    const tail = p.water || fine ? [p.water ?? "", fine] : [];
+    compact[p.slug] = [p.move, p.moves.join(","), p.activity[0], p.rhythm.map((r) => r[0]).join(""), p.roost, p.social, p.diet, behaviours, interactions, flags, p.size ?? "", p.speed ?? "", p.dominance ?? "", p.gait ?? "", p.walkPace ?? "", p.runPace ?? "", ...tail].join("|");
 }
 fs.writeFileSync(
     path.join(root, "src/ark-scene/behaviours.json"),
-    `{"about":"Generated by scripts/ark-behaviour-profiles.mts (full profiles with source phrases: data/ark/behaviour-profiles.json). Rows: move|moves|activity d n c a|rhythm (t two peaks, s siesta)|roost|social|diet|behaviours (index base 36 + weight 0-9)|interactions (index base 36)|flags (d a default, b breathes air, s seabed, u/a surface upside/any, l/m/h flight band)|size|speed|dominance|gait (the rig's fastest ground clip, body lengths/s)|walk pace|run pace (the clips' own, ground_speed/duty). Decoded by behaviour-profile.ts.",\n"species":{\n${Object.entries(compact)
+    `{"about":"Generated by scripts/ark-behaviour-profiles.mts (full profiles with source phrases: data/ark/behaviour-profiles.json). Rows: move|moves|activity d n c a|rhythm (t two peaks, s siesta)|roost|social|diet|behaviours (index base 36 + weight 0-9)|interactions (index base 36)|flags (d a default, b breathes air, s seabed, u/a surface upside/any, l/m/h flight band)|size|speed|dominance|gait (the rig's fastest ground clip, body lengths/s)|walk pace|run pace (the clips' own, ground_speed/duty)[|water kind (how it is in the water: dabbler, diver, swan, goose, grebe, cormorant, pelican, coot, wader, bird, penguin, otter, seal, mammal, croc, turtle, lizard, snake, amphibian, fish, skater, bed)|fine weights (behaviour index base 36 : weight in hundredths, over the ninths)]. Decoded by behaviour-profile.ts.",\n"species":{\n${Object.entries(compact)
         .map(([slug, row]) => `${JSON.stringify(slug)}:${JSON.stringify(row)}`)
         .join(",\n")}\n}}\n`
 );

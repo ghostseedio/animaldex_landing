@@ -45,7 +45,10 @@ export function composeRecipes(s: SpeciesText, b: Record<string, Hit[]>, ctx: {s
     // MARK: Fishing birds
     if (bird) {
         // (An osprey's plunge is feet-first: its own recipe below.)
-        if (has(b, "plunge_dive") && !has(b, "feet_first") && !fam(s, "Pandionidae") && (fam(s, "Alcedinidae") || !has(b, "chase_fish"))) {
+        // (Lane MA3: a duck, a swan, a goose, a coot or a grebe dives from the surface, never from the air: the wood duck's
+        // "dive quickly into the water to escape danger" made it plunge from flight.)
+        const fromSurface = ["dabbler", "diver", "swan", "goose", "coot", "grebe"].includes(s.water ?? "");
+        if (has(b, "plunge_dive") && !has(b, "feet_first") && !fam(s, "Pandionidae") && !fromSurface && (fam(s, "Alcedinidae") || !has(b, "chase_fish"))) {
             if (fam(s, "Alcedinidae")) phrase("perch_plunge", "plunge_dive");
             else phrase("air_plunge", "plunge_dive");
         } else if (fam(s, "Alcedinidae") && fishEater(s)) rule("perch_plunge", "family Alcedinidae (kingfishers) that eat fish");
@@ -58,10 +61,17 @@ export function composeRecipes(s: SpeciesText, b: Record<string, Hit[]>, ctx: {s
         else if (fam(s, "Phoenicopteridae", "Recurvirostridae") || named(s, /spoonbill/i)) rule("bill_sweep", `family ${s.family} (sweeps or filters with the bill)`, 6);
         // (A swallow "scoops" insects out of the air: that is its hawking, not a pelican's pouch.)
         if ((has(b, "scoop") && !fam(s, "Hirundinidae", "Apodidae", "Hemiprocnidae")) || fam(s, "Pelecanidae")) has(b, "scoop") ? phrase("pouch_scoop", "scoop", 6) : rule("pouch_scoop", "family Pelecanidae (pelicans)", 6);
+        // (Lane MA3: a diving duck dives, it does not dabble unless its text says so (the audit's bufflehead dabbled); a
+        // coot up-ends and makes short dives for water plants.)
+        const divingDuck = s.water === "diver";
+        const coot = s.water === "coot";
         if (has(b, "dabble") || (fam(s, "Anatidae") && has(b, "bill_sweep"))) phrase("dabble", has(b, "dabble") ?? "bill_sweep", 6);
-        else if (fam(s, "Anatidae") && swims(s)) rule("dabble", "family Anatidae on the water (ducks, swans, geese)", 4);
+        else if (fam(s, "Anatidae") && swims(s) && !divingDuck) rule("dabble", "family Anatidae on the water (ducks, swans, geese)", 4);
+        else if (coot) rule("dabble", "a coot (Rallidae on the water): up-ends for water plants", 5);
         if (has(b, "surface_dive") && swims(s)) phrase("surface_dive", "surface_dive", 6);
         else if (fam(s, "Podicipedidae", "Phalacrocoracidae", "Gaviidae", "Anhingidae", "Alcidae")) rule("surface_dive", `family ${s.family} (dives from the surface)`, 6);
+        else if (divingDuck) rule("surface_dive", "a diving duck (family Anatidae): dives from the surface", 6);
+        else if (coot) rule("surface_dive", "a coot (Rallidae on the water): short dives for water plants", 5);
         if (has(b, "wing_dry")) phrase("wing_dry", "wing_dry", 5);
         else if (fam(s, "Phalacrocoracidae", "Anhingidae")) rule("wing_dry", `family ${s.family} (dries its wings spread)`, 5);
     }
