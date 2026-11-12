@@ -20,6 +20,7 @@
  * catalogue animal, which only disappears through a server meal event.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import table from "@/ark-scene/recipes.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
@@ -422,6 +423,10 @@ export function nestSourceFromProps(props: {sites: () => Array<{sitter: string |
 // MARK: Nests
 
 const nestSites = new Map<string, Spot | null>();
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    nestSites.clear();
+});
 
 /** The year of a nesting season (the season's first month's year), so a nest site is new each season. */
 function nestYear(species: SpeciesRecipes, epochSeconds: number): number {

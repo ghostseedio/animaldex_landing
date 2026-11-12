@@ -22,6 +22,7 @@ import {navGrid} from "@/ark-scene/behaviour-nav";
 import {maskWalkable} from "@/ark-scene/map/walk-mask";
 import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
 import {reservedAt, reservedNear} from "@/ark-scene/map/hamlet";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {inRock} from "@/ark-scene/map/rocks";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
@@ -172,7 +173,7 @@ class WorldSampler implements ArkMapSampler {
         const lakeDistance = Math.hypot(x - LAKE.x, z - LAKE.z);
         const riverWidth = 2 + 1.2 * Math.min(Math.max((z + 4) / 94, 0), 1);
         const inLake = lakeDistance < LAKE.r + 0.6 && s.height < 0.02;
-        const inGardenPond = Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius * 0.85;
+        const inGardenPond = !noHamlet() && Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius * 0.85;
         const inRiver = s.river < riverWidth + 0.6 && s.height < 0.02 && s.inland > -2;
         const mouth = Math.hypot(x - MOUTH[0], z - MOUTH[1]);
         const estuary = s.river < 11 && s.inland < 16 && s.inland > -10 && mouth < 40;
@@ -251,13 +252,18 @@ class WorldSampler implements ArkMapSampler {
             if (lakeDistance < LAKE.r + 3) add("lake", "marsh_reeds");
             if ((w.wetland ?? 0) > 0.35) add("marsh_reeds");
             if ((w.wetland ?? 0) > 0.35 && height < 0.35) add("pond");
-            if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.6) add("garden_pond");
-            // The house and the ground round it (its walls, its porch, the yard where the pets are).
-            if (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 4.5 && Math.abs(z - COTTAGE.z) < COTTAGE.depth / 2 + COTTAGE.porch.depth + 4.5) add("house");
-            if (farm && cottage < 16) add("garden");
-            if (this.near(x, z, "compost")) add("compost");
-            if (farm) add("farm_barn", "on_hosts");
-            if (farm && cottage >= 10) add("town_park");
+            if (noHamlet()) {
+                // Islands mode (`no-hamlet.ts`): nothing built; Home's district is meadow and grassland, no homestead.
+                if (farm) add("grassland");
+            } else {
+                if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.6) add("garden_pond");
+                // The house and the ground round it (its walls, its porch, the yard where the pets are).
+                if (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 4.5 && Math.abs(z - COTTAGE.z) < COTTAGE.depth / 2 + COTTAGE.porch.depth + 4.5) add("house");
+                if (farm && cottage < 16) add("garden");
+                if (this.near(x, z, "compost")) add("compost");
+                if (farm) add("farm_barn", "on_hosts");
+                if (farm && cottage >= 10) add("town_park");
+            }
             add("open_sky");
         }
         return {height, water, depth: Math.max(-height, 0), zone, tags};
@@ -280,8 +286,11 @@ class WorldSampler implements ArkMapSampler {
                 list.push({name: "canopy_tree", x: host.item.x, y: host.item.y, z: host.item.z, radius: 3, zone: host.zone, tags: ["canopy", "trunks_bark", "leaves", "host_nests", "bamboo"]});
             }
         }
-        list.push({name: "cottage", x: COTTAGE.x, y: COTTAGE.floor, z: COTTAGE.z, radius: 4, zone: "farm_garden", tags: ["house"]});
-        list.push({name: "garden_pond", x: GARDEN_POND.x, y: GARDEN_POND.y, z: GARDEN_POND.z, radius: GARDEN_POND.radius, zone: "farm_garden", tags: ["garden_pond", "pond"]});
+        // (Islands mode, `no-hamlet.ts`: no cottage, garden pond or compost heap.)
+        if (!noHamlet()) {
+            list.push({name: "cottage", x: COTTAGE.x, y: COTTAGE.floor, z: COTTAGE.z, radius: 4, zone: "farm_garden", tags: ["house"]});
+            list.push({name: "garden_pond", x: GARDEN_POND.x, y: GARDEN_POND.y, z: GARDEN_POND.z, radius: GARDEN_POND.radius, zone: "farm_garden", tags: ["garden_pond", "pond"]});
+        }
         // Fixtures the scenery does not draw yet: placed where the ground suits, from a fixed seed.
         const search = (name: string, count: number, radius: number, tags: MapTag[], seed: number, ok: (s: GroundSample, x: number, z: number) => boolean) => {
             const random = seeded(seed);
@@ -305,7 +314,7 @@ class WorldSampler implements ArkMapSampler {
         search("termite_mound", 4, 1.6, ["termite_ant_mounds"], 4103, (s, x, z) => ((s.weights.grassland ?? 0) > 0.5 || (s.weights.desert ?? 0) > 0.5) && s.height > 0.4 && riverDistance(x, z) > 6);
         search("dung_pat", 6, 1.2, ["dung"], 4104, (s, x, z) => ((s.weights.grassland ?? 0) > 0.5 || (s.weights.farm_garden ?? 0) > 0.5) && s.height > 0.4 && riverDistance(x, z) > 5);
         search("log", 8, 2, ["logs_deadwood", "carcass"], 4105, (s) => (s.weights.woodland ?? 0) + (s.weights.rainforest ?? 0) > 0.55 && s.height > 0.5);
-        at("compost", COTTAGE.x - 6, COTTAGE.z - 5, 1.4, ["compost", "garden"]);
+        if (!noHamlet()) at("compost", COTTAGE.x - 6, COTTAGE.z - 5, 1.4, ["compost", "garden"]);
         this.building = false;
         this.anchorList = list;
         return list;
@@ -424,6 +433,10 @@ function headingOf(n: [number, number, number], yaw: number, forward?: {x: numbe
 }
 
 let shared: WorldSampler | null = null;
+// Islands mode flips (`no-hamlet.ts`): the map's sampler is the other world's.
+onHamletSwitch(() => {
+    shared = null;
+});
 
 /** The stub sampler over today's world (one per page). */
 export function worldSampler(): ArkMapSampler {

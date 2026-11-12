@@ -15,6 +15,7 @@
  * target in; the tests drive it with numbers.
  */
 
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {Vector3} from "three";
 import {forestFill, worldDecor, type DecorItem, type DecorKind} from "@/ark-scene/decor";
 import {canopyTree, COTTAGE} from "@/ark-scene/micro-decor";
@@ -143,7 +144,8 @@ export class CameraObstacles {
 
     /** The scene's: the decor, the whole forest fill (with its ranks: `collideCamera` keeps a tier's share) and the cottage. */
     static forScene(): CameraObstacles {
-        return new CameraObstacles([...worldDecor(), ...forestFill()], [cottageObstacle()]);
+        // (Islands mode, `no-hamlet.ts`: no cottage.)
+        return new CameraObstacles([...worldDecor(), ...forestFill()], noHamlet() ? [] : [cottageObstacle()]);
     }
 
     near(x: number, z: number): CameraObstacle[] {

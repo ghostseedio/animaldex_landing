@@ -39,6 +39,7 @@ import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {inRock} from "@/ark-scene/map/rocks";
 import {bodyOf} from "@/ark-scene/map/species";
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {HAMLET_LANES, LANE_WIDTH, laneDistance, riverDistance, sampleGround, zoneAt, ZONE_SITES} from "@/ark-scene/world";
 
@@ -357,6 +358,8 @@ const SLOTS = (slotTable as unknown as {plots: HomePlot[]}).plots;
  * plots there are (and fewer of each are out at once).
  */
 export function homePlots(houseResidents: number, farmResidents: number): HomePlot[] {
+    // (Islands mode, `no-hamlet.ts`: no hamlet on the wild island; pets and livestock live on the town island.)
+    if (noHamlet()) return [];
     const houses = houseCount(houseResidents);
     const farms = smallholdingCount(farmResidents);
     const plots = defaultHomePlots();
@@ -367,6 +370,7 @@ export function homePlots(houseResidents: number, farmResidents: number): HomePl
 
 /** Every reserved plot (today's two and all the slots): their land is kept off the map's spawn cells. */
 export function reservedPlots(): HomePlot[] {
+    if (noHamlet()) return [];
     return [...defaultHomePlots(), ...SLOTS];
 }
 
@@ -388,6 +392,8 @@ function insideQuad(corners: ReadonlyArray<{x: number; z: number}>, x: number, z
 
 /** Is this point on a reserved plot's land (past today's two: their ground was the map's before)? */
 export function reservedAt(x: number, z: number): boolean {
+    // (Islands mode: no land is reserved; the map may place a wild animal where the hamlet stood.)
+    if (noHamlet()) return false;
     reserved ??= SLOTS.map((plot) => {
         const c = plotFootprint(plot);
         return {plot, corners: c, box: {x0: Math.min(...c.map((p) => p.x)), x1: Math.max(...c.map((p) => p.x)), z0: Math.min(...c.map((p) => p.z)), z1: Math.max(...c.map((p) => p.z))}};
@@ -416,6 +422,11 @@ export type PlotSpot = {x: number; y: number; z: number; /** Who may stand there
 export type PlotSpots = {plot: HomePlot; door: {x: number; y: number; z: number}; coopDoor?: {x: number; y: number; z: number}; window?: {x: number; y: number; z: number}; spots: PlotSpot[]};
 
 const spotCache = new Map<string, PlotSpots>();
+
+onHamletSwitch(() => {
+    obstacleList = null;
+    spotCache.clear();
+});
 
 /**
  * A house plot's outdoor spots (local, the cottage facing +z), in order of preference, more than it needs: the

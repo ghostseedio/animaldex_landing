@@ -21,6 +21,7 @@
  *   the landing (the jetty), never on a habitat.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {canopyPlace, canopyPoint, canopyTrees, burrowAt, speciesLayer, type Burrow, type CanopyPlace, type LayerMode} from "@/ark-scene/layers";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {surfacePoint, type MicroPlace, type MicroSpot} from "@/ark-scene/micro";
@@ -1003,6 +1004,14 @@ function lapSpots(cell: {x: number; z: number}, dry: (x: number, z: number) => b
 }
 
 let cove: {x: number; z: number} | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    points = null;
+    nearIndex = null;
+    rockHomeLists.clear();
+    lapSpotCache.clear();
+    cove = null;
+});
 /** The cold cove's middle (the graphics lane's named place). */
 function coldCove(): {x: number; z: number} {
     cove ??= (() => {

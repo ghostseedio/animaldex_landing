@@ -13,6 +13,7 @@
  * (`validate-hamlet.ts`) applies it before it counts.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {mapPoints} from "@/ark-scene/map/place";
 import {plotSpots, reservedPlots} from "@/ark-scene/map/hamlet";
 import {worldSampler} from "@/ark-scene/map/world-sampler";
@@ -22,6 +23,10 @@ import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 export const PER_CELL = 1;
 
 let table: Map<ArkZone, number> | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    table = null;
+});
 
 /** Runtime prebuild hook (runtime/prebuild.ts): the same table, computed in the places worker before the mount. */
 export function primeZoneCapacities(primed: Array<[ArkZone, number]>): void {

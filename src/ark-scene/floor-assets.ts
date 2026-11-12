@@ -12,6 +12,7 @@
  * animals stand), on steep ground or against a trunk.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import manifest from "@/ark-scene/assets-manifest.json";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {inRock} from "@/ark-scene/map/rocks";
@@ -39,6 +40,10 @@ function has(id: string): boolean {
 }
 
 let cached: FloorPlacement[] | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    cached = null;
+});
 
 /** Runtime prebuild hook (runtime/prebuild.ts): the same list, placed in the scenery worker before the mount. */
 export function primeFloorPlacements(items: FloorPlacement[]): void {

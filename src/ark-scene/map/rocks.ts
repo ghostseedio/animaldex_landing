@@ -14,6 +14,7 @@
  * walked over), each tagged with its `source`.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {worldDecor} from "@/ark-scene/decor";
 import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
@@ -27,6 +28,11 @@ export const ROCK_CELL = 4;
 const CELL = ROCK_CELL;
 let index: Map<string, DrawnRock[]> | null = null;
 let list: DrawnRock[] | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    index = null;
+    list = null;
+});
 
 /** Every decor rock as drawn (an asset rock's box; with the rock set missing, the procedural rock's footprint). */
 export function drawnRocks(): DrawnRock[] {

@@ -177,6 +177,8 @@ import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
+import {noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
+import {arkTwoIslands} from "@/lib/ark-islands";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import * as worldSampling from "@/ark-scene/world-sampler";
@@ -512,6 +514,9 @@ function groundQueryOf(height: (x: number, z: number) => number): (x: number, z:
 }
 
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
+    // Islands mode (decision 148, `no-hamlet.ts`): with two islands the wild island has no hamlet. Set before anything
+    // of the world is built (the page's `prepareArk` set the same from the same read).
+    setNoHamlet(noHamletFor(arkTwoIslands(options.snapshot)));
     // Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`), the animals
     // through this one pipeline. Absent: the wild island, built here exactly as before.
     const island = options.island ?? null;
