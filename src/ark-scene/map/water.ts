@@ -28,7 +28,8 @@ import {inHomeWater, waterHomeSpot, waterMotion, type DepthBand, type SpeciesDep
 import type {ArkMapSampler} from "@/ark-scene/map/sampler";
 import type {MapTag} from "@/ark-scene/map/tags";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import {hashString, ZONE_SITES} from "@/ark-scene/world";
+import {arkWorld, hashString, ZONE_SITES} from "@/ark-scene/world";
+import {inWildCoral, wildGiantCells} from "@/ark-scene/islands/wild/map-v2";
 
 /** A band's water class on the map: the band, or for the pond bands the lake. */
 export type WaterClass = "reef" | "seabed" | "deep" | "surface" | "upper" | "mid" | "lake" | "coast";
@@ -107,6 +108,8 @@ export function waterSuits(sampler: ArkMapSampler, cls: WaterClass, x: number, z
  * inside the coral (the floor under it is the sand's).
  */
 export function inCoral(x: number, z: number, margin: number): boolean {
+    // (v2, the bigger wild island: its own coral heads, `islands/wild/map-v2.ts`.)
+    if (arkWorld() === "v2") return inWildCoral(x, z, margin);
     const marks = reefLandmarks();
     if (Math.hypot(x - marks.cleaning.x, z - marks.cleaning.z) < marks.cleaning.radius + margin) return true;
     return marks.heads.some((head) => Math.hypot(x - head.x, z - head.z) < head.radius + margin);
@@ -163,6 +166,8 @@ export class WaterCells {
      */
     giantCells(): Map<ArkZone, Cell[]> {
         if (this.giants) return this.giants;
+        // v2 (decision 53 on the bigger wild island): the reserve's whale cells, the east drop-off's deepest water.
+        if (arkWorld() === "v2") return (this.giants = wildGiantCells(this.sampler));
         const out = new Map<ArkZone, Cell[]>();
         const open: Cell[] = [];
         this.build().forEach((cells, cls) => {

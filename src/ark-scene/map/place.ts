@@ -36,7 +36,8 @@ import {worldSampler} from "@/ark-scene/map/world-sampler";
 import {speciesDepth, waterHomeSpot} from "@/ark-scene/sea-depth";
 import {place as scenePlace} from "@/ark-scene/sampler";
 import {ARK_ZONES, type ArkAnimal, type ArkZone} from "@/ark-scene/types";
-import {hashString, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
+import {arkWorld, hashString, onArkWorld, VISITOR_LANDING, ZONE_SITES} from "@/ark-scene/world";
+import {rangeSpot, resetWildMapV2, takesRange, wildCoveCentre} from "@/ark-scene/islands/wild/map-v2";
 import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
 
 /** Where it sleeps (when that is not where it lives). */
@@ -429,7 +430,9 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
 
     // A canopy animal: a limb (or the trunk) of a canopy tree. The owner's rule (2026-11-11): hangers, leapers, and the canopy layer's
     // climbers and perchers (`layers.json`) grip a real limb, never the ground under it; never one too heavy for the limb.
-    if (arborealOf(species, animal.model_slug) && !heavy) {
+    // (v2, the bigger wild island: no canopy trees of today's island's kind; its tree animals are on its trees' own limbs,
+    // hang points and branches, above.)
+    if (arborealOf(species, animal.model_slug) && !heavy && arkWorld() !== "v2") {
         const canopyTag = tags.find((tag) => CANOPY_TAGS.has(tag)) ?? (species.move === "hang" || species.move === "leap" ? "canopy" : undefined);
         if (canopyTag) {
             const hostZone = canopyTrees(zone)[0]?.zone ?? zone;
@@ -463,6 +466,28 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         return !walker || !sampler.walkable || sampler.walkable(x, z, maxSlope);
     };
     const okFor = (tag: MapTag, wet: boolean) => okOn(wet, (tags) => tags.includes(tag));
+    // v2 (decision 54): a big land walker's home is one of its zone's ranges on its own ground, kept clear of every smaller
+    // animal's cell; its ground test is everyone's but the ranges' reservation, which is its own.
+    if (arkWorld() === "v2" && !species.small && takesRange(species.move, trueLength) && !wetOf(species, species.spawn)) {
+        const fits = (x: number, z: number) => {
+            const g = sampler.ground(x, z);
+            return g.water === null && g.tags.some((t) => species.allowed.has(t)) && !sampler.blocked(x, z, radius) && (!sampler.walkable || sampler.walkable(x, z, maxSlope));
+        };
+        const spot = rangeSpot(sampler, zone, species.allowed, slot, rank, Math.max(1.1, length * 0.85), fits);
+        if (spot) {
+            const here = spot.ground.tags;
+            // (Its own tags in its text's order; the range's ground may be its roost's, which they leave out.)
+            const tag = tags.find((t) => here.includes(t)) ?? Array.from(species.allowed).find((t) => here.includes(t))!;
+            const turn = ((ownHash >>> 4) % 1000) / 1000;
+            tracer()?.route("tag");
+            const placement: MapPlacement = {
+                x: spot.x, z: spot.z, ground: spot.ground.height, yaw: ((ownHash & 1) === 0 ? 1 : -1) * (0.35 + 0.95 * turn), water: false,
+                map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, roost: roostOf(species, all, spot.x, spot.z, trueLength, key, ownHash, null), key, level: spot.level}
+            };
+            if (species.attach === "burrow") placement.burrow = burrowAt(spot.x, spot.z, spot.ground.height, `${zone}#${slot}#${rank}`, length);
+            return placement;
+        }
+    }
     type Choice = {tag: MapTag; wet: boolean; pick: SlotPick; ok: (x: number, z: number) => boolean};
     /** Where it can stand for a pick: its lap's spot, else the nearest within a metre that suits it, else the same round its cell's middle. */
     const settle = ({pick, ok}: Choice): {x: number; z: number} | null => {
@@ -481,7 +506,11 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
     let chosen: (Choice & {at: {x: number; z: number}}) | null = null;
     let fallback: (Choice & {at: {x: number; z: number}}) | null = null;
     let first: Choice | null = null;
-    for (const tag of tags) {
+    // (v2: when nothing settles on its own tags' cells, a borrowed list on another zone's steep ground, its roost's own
+    // ground is its last choice before the search round its first pick, below. Today's island tries its tags alone.)
+    const roostTry = arkWorld() === "v2" && species.roost && species.allowed.has(species.roost) && !tags.includes(species.roost) ? [species.roost] : [];
+    for (const tag of [...tags, ...roostTry]) {
+        if (tag === species.roost && roostTry.length && (chosen || fallback)) break;
         const wet = wetOf(species, tag);
         const partition = all.partitionOf(tag, wet, zone);
         if (!partition.list.length) continue;
@@ -1008,15 +1037,21 @@ function lapSpots(cell: {x: number; z: number}, dry: (x: number, z: number) => b
 
 let cove: {x: number; z: number} | null = null;
 // Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
-onHamletSwitch(() => {
+const dropBuilt = () => {
     points = null;
     nearIndex = null;
     rockHomeLists.clear();
     lapSpotCache.clear();
     cove = null;
-});
+    resetWildMapV2();
+};
+onHamletSwitch(dropBuilt);
+// The world's switch (`world.ts` setArkWorld, Part C): built from the other world's terrain and scenery.
+onArkWorld(dropBuilt);
 /** The cold cove's middle (the graphics lane's named place). */
 function coldCove(): {x: number; z: number} {
+    // (v2: the bigger wild island's cove, its ice shelf's front in the north shore's inlet.)
+    if (arkWorld() === "v2") return wildCoveCentre();
     cove ??= (() => {
         const p = scenePlace("cold_cove");
         return {x: p.x, z: p.z};

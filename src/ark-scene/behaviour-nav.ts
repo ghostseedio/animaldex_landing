@@ -20,7 +20,7 @@ import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import {colliderDistance, type Collider, type ColliderSet} from "@/ark-scene/collide/colliders";
 import {chunked, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
-import {TERRAIN_HALF} from "@/ark-scene/world";
+import {onArkWorld, TERRAIN_HALF} from "@/ark-scene/world";
 
 export type NavPoint = {x: number; z: number};
 
@@ -111,6 +111,8 @@ export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cel
     const {size, x0, z0} = extentOf(sampler);
     const cells: NavCells = {version: sampler.version, size: size, walk: new Uint8Array(size * size), steep: new Float32Array(size * size), depth: new Float32Array(size * size), height: new Float32Array(size * size)};
     const {walk, steep, depth, height} = cells;
+    // (Part C, v2: the sampler's own water depth, whose lake and river stand above the sea; absent: the sea's, below 0.)
+    const waterDepth = sampler.waterDepth?.bind(sampler) ?? null;
     const heights = chunked(() => size, 1, (j) => {
         for (let i = 0; i < size; i++) {
             const x = x0 + (i + 0.5) * CELL;
@@ -118,7 +120,7 @@ export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cel
             const h = sampler.heightAt(x, z);
             const k = j * size + i;
             height[k] = h;
-            depth[k] = h < 0 ? -h : 0;
+            depth[k] = waterDepth ? Math.max(waterDepth(x, z), 0) : h < 0 ? -h : 0;
         }
     });
     const walkable = chunked(() => size - 2, 1, (row) => {
@@ -126,7 +128,7 @@ export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cel
         for (let i = 1; i < size - 1; i++) {
             const k = j * size + i;
             const h = height[k];
-            if (h <= 0.05) continue;
+            if (h <= 0.05 || (waterDepth && depth[k] > 0)) continue;
             const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + size] - height[k - size])) / (2 * CELL);
             steep[k] = slope;
             const x = x0 + (i + 0.5) * CELL;
@@ -722,6 +724,11 @@ function keep(made: NavGrid) {
 }
 // Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
 onHamletSwitch(() => {
+    grids.clear();
+    building.clear();
+});
+// The world's switch (Part C, `world.ts` setArkWorld): the same.
+onArkWorld(() => {
     grids.clear();
     building.clear();
 });
