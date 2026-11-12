@@ -382,15 +382,54 @@ geometric mean, 0.29 m long, 1.46×) and the California sea lion (2.88× against
 on its fore flippers at its 2 m length: not a bug). Breeds: a stored `length_m` wins (L4's rule), else the parent
 species' row; the live read sends no breed lengths today (the only kinds are moths, flies and Ankole-Watusi cattle).
 
+Drawn length against the stored length (the follow-up after L4):
+- **Jellyfish: a bug, fixed.** Every jellyfish's stored or generated size is its bell (or float) across ("Bell 25-50
+  cm", "Float 10-30 cm"), but `bodyAxisExtent` measured a jellyfish by its height with the tentacles (2.4× its bell):
+  a moon jellyfish's bell was drawn 14 cm, not 32. A jellyfish is now measured by its widest horizontal side (a hydra,
+  which stands up, by its height); `ark-stats.test.ts` holds both.
+- **Green basilisk, Asian water monitor, red tegu (0.37–0.57× of their total length): the rule working.** They are
+  drawn by the head and body where the rig found a tail (L4's `hb/tail`): the models' tails are short (the models are
+  0.43–0.71 as wide as long; a real basilisk's tail is two thirds of it), so the body is true (the basilisk's 22 cm
+  snout to vent) and the whole model is shorter than the animal. Drawn by the total, their bodies would be 2–3× too
+  big. A follow-up for whoever owns the true-scale generator: lizards drawn by their `total` with no rig tail (the
+  green iguana: 1.5 m along the whole model) may be the opposite case, their bodies too big.
+- **Military macaw (0.77× of its length): the rule working.** Its model stands up (2.1× taller than long), so it is
+  measured by its height, and the height check (its standing height 0.45 m) pulled it to the geometric mean: drawn
+  0.58 m tall, 1.29× its standing height. The umbrella cockatoo is the same.
+
 ### 12.4 Pets aboard, and where they are seen
 
 Real Ark: 1,063 pets (house area), 149 farm animals. Outdoors 829 (lawns 519, yards 318, the 1 left on a balcony);
 in a garden room 139 (tank 46, cage 36, vivarium 29, pond 28 in the garden beside it); on a balcony 39 and a patio 28;
 at a farm's paddock (livery) 19. The live budget (`live-budget.ts`, the runtime lane's) draws at most 1,200 / 400 / 200
 animals one by one on the high / medium / low tier, the rest resting out of sight on a shared rotation: of the 1,063
-pets, 391 / 225 / 25 are out at once (with this lane's held pins on high and medium). On the low tier (phones, the
-apps' embed) that is the runtime lane's call: a town share of the low budget, or the resting pets drawn as static
-figures (the herd path), would show more.
+pets, 391 / 225 / 25 are out at once (with this lane's held pins on high and medium). The rest are drawn as static
+figures since decision 255 (§12.5).
+
+### 12.5 Resting kept animals as static figures (decision 255)
+
+The animated budget is unchanged. Every kept town animal (house, farm, zoo) the budget rests is drawn as a static
+figure at its place through the herd path (`index.ts` `FigureGroup`, `restingGroups`, `planHerds`, `restingSpecks`):
+- a group per species with no badge, no count and nothing to tap; members within 150 m of the camera;
+- a tank's resident at its loop's point and depth at a fixed moment (`islands/scene.ts` `figurePose`), the rest where
+  they live (`figureBase`: the tank's water, a display's tray, a zoo house's floor, the drawn ground);
+- the nearest resting kinds in view (8 / 16 / 64 on low / medium / high) as their far models, at most 60 / 120 / 400
+  figures, nearest first, while 7 px or more on screen; their far models asked for (4 kinds a frame, ranked as seen)
+  within 70 m (each such kind is a draw call: with 32 kinds on low and 48 on medium the phone profile lost frames);
+- every other resting animal in reach, and any whose model is not in yet, a speck its size and shape from its measured
+  model (`grounding/model-base.json`), in the one speck mesh;
+- `window.__arkRestingOff = true` (development) turns them off, to compare.
+
+Measured on the phone profile (390 × 844 at 2×, CPU 4× throttled, the dev server, the real Ark), the same build with
+`__arkRestingOff` and without, four views (two gardens, the zoo, a farm) after 20 s each; "near" is every kept animal
+within 40 m of the view's middle and on screen:
+
+| Tier | Kept animals near and drawn: off → on | fps median of views: off → on | Heap after GC | Far models (GPU) | Draw calls |
+|---|---|---|---|---|---|
+| Low | 0/27, 0/32, 12/57, 1/34 → 27/27, 32/32, 57/57, 34/34 | 60, 60, 60, 52 → 60, 60, 60, 60 | 474 → 474 MB | 419 → 449 (50 → 54 MB) | +1 to +12 |
+| Medium | 7/27, 9/31, 53/55, 1/34 → 27/27, 32/32, 55/55, 34/34 | 46, 48, 32, 22 → 51, 31, 24, 56 (noisy on the shared Mac: the mean of four runs per view moves both ways, 40.5 → 42.5 overall) | 477 → 475 MB | (the rotation changes which kinds are in) | +1 to +17 |
+
+(The dev server's heap is far over a production page's; the comparison is like for like.)
 
 ## 13. Buildings, lit windows and cars (lane GB, branch `town-built`)
 
@@ -446,7 +485,7 @@ The models at true size; the parked cars clear of every building, wall, fence an
 
 **Left for L5:** an animal that walks or runs into a car (a dog darting under a bumper; one against a car waiting at a zebra or a light) is L5's to keep out once moving cars are among its obstacles (`TownIsland.vehicles.movingCars()` each frame, `carAnimalGap`). And a car more than 3 m behind its timetable when its 600 s window ends is put back on it (above: 3 of 72): a visible step, rare.
 
-### 13.7 Measured (2026-11-13)
+### 13.6 Measured (2026-11-13)
 
 **The real Ark, both islands in one world (v2).** 3,145 animals from the local snapshot read in place; the phone profile (360 × 800 at DPR 2, 4× CPU, Metal); `scripts/ark-runtime-measure.mjs --islands --world v2 --pan town --seconds 60`, one run each, before and after interleaved; before is lanes GA and TB merged without this lane (a worktree of its own); the Mac at a load of 10–43. As lane GA found, the heap is mostly garbage-collection timing (the before runs alone span 405–508 MB).
 
@@ -473,7 +512,7 @@ The models at true size; the parked cars clear of every building, wall, fence an
 - At street level the near facades' detail (sills, lintels, doors, railings) is the most of the +10–12 MB of GPU geometry, freed 20 s after the camera leaves; the cars and their two levels about 2 MB; the panes as before.
 - A first build of the detail a whole chunk a frame cost the phone 43 fps (p99 77 ms) on medium; a few buildings a frame (2 ms) brought it back.
 
-### 13.6 Decisions (lane GB)
+### 13.7 Decisions (lane GB)
 
 | # | Question | Options | Chosen | Why |
 |---|---|---|---|---|

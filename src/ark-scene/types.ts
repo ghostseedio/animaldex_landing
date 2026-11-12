@@ -195,6 +195,9 @@ export type ArkSceneStats = {
     modelsLoaded: number;
     /** Herds (A14): members drawn as the far model, and as the few-pixel figure. */
     herdFigures: number;
+    /** Lane TB (decision 255): the town's resting kept animals drawn this frame as figures, and as specks. */
+    restingFigures?: number;
+    restingSpecks?: number;
     herdSpecks: number;
     /** Animals drawn one by one (everyone outside a herd, and the herds' representatives). */
     live: number;
