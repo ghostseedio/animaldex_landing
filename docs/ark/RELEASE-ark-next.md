@@ -82,7 +82,8 @@ ecology are unchanged, except the islands (§5).
 
 ## 2. Checks
 
-On the release candidate's tree (03dfd120 = 5cd8efff):
+On the release head's code (412fa2e3: the candidate 03dfd120 plus L5's collide gate; later commits are this document
+and a workflow quoting fix):
 
 | Check | Result |
 |---|---|
@@ -91,9 +92,9 @@ On the release candidate's tree (03dfd120 = 5cd8efff):
 | lint | 0 errors |
 | The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
 | The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
-| The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | islands mode (what goes live): pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode: 0 / 0 / 861 / 3.07 M; both within their limits (`tests/ark-collide/thresholds-islands.json`, `thresholds.json`) |
+| The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | **green on GitHub** (run 43151583996): islands mode (what goes live) pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode 0 / 0 / 861 / 3.07 M; within `tests/ark-collide/thresholds-islands.json` and `thresholds.json` |
 | Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
-| The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.12 / 1.11; backwards 4.1% / 1.2%, nothing backwards for over 1 s; ground turns 0.8 / 1.8 a minute; over 1.5× its clip: an American alligator (2.3×), the harbour seal (2.5×, its flipper clip), the clawed frog (1.6×); no page errors |
+| The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.20 / 1.05; backwards 4.9% / 5.5%, nothing backwards for over 1 s; ground turns 1.8 / 2.0 a minute; over 1.5× its clip: American alligators (1.7–3.6×), the bullfrog (9.4–9.7×), an African rock python (1.6×), the clawed frog (1.7×) (the three causes in §6); no page errors |
 | The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
 
 ## 3. Before and after
@@ -196,16 +197,22 @@ Listed for the owner instead of polished today (decision 136):
   the baked clip even where the locomotion layer draws the feet (fixed in the tool in the same branch); and schedule
   trips too long for their slot are sped up past 1.2× (bullfrog, alligators, goats, the komodo dragon; being reworked
   under decision 202).
+- Ground turns of 2–4 a minute in the default view (lions, seals, zebras): the collisions layer's separation pushes
+  positions without turning the bodies (L5's facing fix comes after the release).
+- Some animals jump onto their roost at the night's first sleep slot (a camel by 2.6–41 m, an emperor penguin by
+  3.7–6 m).
+- Walking backwards: 0.2% at the release, 1–5% on this head (nothing over 1 s on the ground); the behaviour lane's fix
+  (`ark-behaviour-backwards` cef5c27d: a foal faces its way home, a sleeper keeps its heading across slots, no snapping
+  round) brings it to 3.2% in the replay and comes right after the release.
 - Perched sleepers share crowns: the collision audit's overlaps (3.2 M body samples over 2 hours) are mostly sleepers
   in their postures and perched animals held where they are; the limit is "at most today's".
 - Arriving at the town on the phone profile leaves two main-thread tasks of 0.5–0.6 s after the first frame (decision
   163): profile them on a real phone after the release.
 - The town's walk ways are new (T3): watch for town animals crossing garden fences in the first hours.
 
-Still open with a lane (**the coordinator decides** before approval):
-- Behaviour lane (`ark-behaviour-backwards`): the share of walking backwards in the default view (0.2% at the release,
-  1–5% on ark-next; nothing backwards for over 1 s on the ground). L1 found one zebra in a sleep-then-play bout, the
-  same with the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
+Right after the release (merged in this order, then a web-only deploy): L1's reactive pace cap (`ark-l1-pace`
+f21ad63b), the behaviour lane's backwards fix (cef5c27d), L1's schedule pace (decision 202), L5's separation facing, and
+the bigger wild island (W1, `ark-wild-island-next`).
 
 ## 7. Rollback
 
