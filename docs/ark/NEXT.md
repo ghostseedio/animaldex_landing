@@ -197,5 +197,8 @@ page errors. On 11901a6a: tsc 0, town tests 43/43. Production heap, the low phon
 snapshot, everything merged (2874e112): heap 214–286 MB, peak 265–300 MB against the 384 MB budget; 46.6 / 57.8 fps (run 0
 had 80 long tasks after the first frame on a loaded Mac, run 1 had 10; the longest after the first frame 189–220 ms).
 
-Deploy checks: `SUPABASE_SERVICE_ROLE_KEY` set on the VM (the food links); `cf-cache-status: HIT` on
-`/api/ark/landing/snapshot.bin`; `/ark/assets/town-v1/vehicles.bin` served (306 KB).
+Deploy checks:
+- Done (the coordinator, before the deploy): the live web container has `SUPABASE_SERVICE_ROLE_KEY` set (the food links;
+  the variable names checked, not their values).
+- After the deploy: `cf-cache-status: HIT` on `/api/ark/landing/snapshot.bin`; `/ark/assets/town-v1/vehicles.bin`
+  served (306 KB).
