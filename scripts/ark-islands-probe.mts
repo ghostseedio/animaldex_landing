@@ -19,7 +19,7 @@ const browser = await chromium.launch({executablePath: chromiumPath(), headless:
 const phone = process.env.ARK_PHONE === "1";
 const context = await browser.newContext(phone ? {viewport: {width: 360, height: 800}, deviceScaleFactor: 2, isMobile: true, hasTouch: true} : {viewport: {width: 1280, height: 800}, deviceScaleFactor: 1});
 const page = await context.newPage();
-if (phone) {
+if (phone && process.env.ARK_THROTTLE !== "0") {
     const cdp = await context.newCDPSession(page);
     await cdp.send("Emulation.setCPUThrottlingRate", {rate: 4});
 }
