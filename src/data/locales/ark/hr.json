@@ -15,6 +15,25 @@
         "foundersOne": "1 osnivač",
         "foundersOther": "osnivači ({count})",
         "myAnimals": "Moje životinje",
+        "islands": {
+            "label": "Otoci",
+            "wild": "Divlji otok",
+            "town": "Grad i zoološki vrt",
+            "both": "Oba otoka",
+            "atHome": "kod kuće",
+            "onFarm": "na farmi",
+            "inTown": "vrtovi i ulice",
+            "zoo": "Zoološki vrt",
+            "places": {
+                "homes": "Domovi",
+                "farms": "Farme",
+                "gardens": "Gradske divlje životinje · vrtovi i parkovi",
+                "water": "Gradske divlje životinje · kanal i jezerca",
+                "roofs": "Gradske divlje životinje · krovovi i tornjevi",
+                "walls": "Gradske divlje životinje · zidovi i strehe",
+                "streets": "Gradske divlje životinje · ulice i luka"
+            }
+        },
         "hint": "Povuci za razgledavanje. Zumiraj prstima ili kotačićem. Dodirni životinju da je upoznaš.",
         "loading": "Učitavanje Arka",
         "noWebgl": "Ovaj preglednik ne može prikazati Ark u 3D-u. Evo tko je na brodu.",

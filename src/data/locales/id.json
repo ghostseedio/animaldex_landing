@@ -4023,6 +4023,25 @@
     "foundersOne": "1 pendiri",
     "foundersOther": "{count} pendiri",
     "myAnimals": "Hewanku",
+    "islands": {
+      "label": "Pulau",
+      "wild": "Pulau liar",
+      "town": "Kota dan kebun binatang",
+      "both": "Kedua pulau",
+      "atHome": "di rumah",
+      "onFarm": "di peternakan",
+      "inTown": "kebun dan jalan",
+      "zoo": "Kebun binatang",
+      "places": {
+        "homes": "Rumah",
+        "farms": "Peternakan",
+        "gardens": "Satwa liar kota · kebun dan taman",
+        "water": "Satwa liar kota · kanal dan kolam",
+        "roofs": "Satwa liar kota · atap dan menara",
+        "walls": "Satwa liar kota · tembok dan teritisan",
+        "streets": "Satwa liar kota · jalan dan pelabuhan"
+      }
+    },
     "hint": "Seret untuk melihat sekeliling. Cubit atau gulir untuk memperbesar. Ketuk hewan untuk menemuinya.",
     "loading": "Menampilkan Ark",
     "noWebgl": "Browser ini tidak bisa menampilkan Ark dalam 3D. Ini daftar siapa saja yang ada di dalamnya.",

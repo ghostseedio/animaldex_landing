@@ -15,6 +15,25 @@
         "foundersOne": "1 người sáng lập",
         "foundersOther": "{count} người sáng lập",
         "myAnimals": "Con vật của tôi",
+        "islands": {
+            "label": "Các đảo",
+            "wild": "Đảo hoang dã",
+            "town": "Thị trấn và sở thú",
+            "both": "Cả hai đảo",
+            "atHome": "ở nhà",
+            "onFarm": "ở nông trại",
+            "inTown": "vườn và phố",
+            "zoo": "Sở thú",
+            "places": {
+                "homes": "Nhà",
+                "farms": "Nông trại",
+                "gardens": "Động vật hoang dã trong thị trấn · vườn và công viên",
+                "water": "Động vật hoang dã trong thị trấn · kênh và ao",
+                "roofs": "Động vật hoang dã trong thị trấn · mái nhà và tháp",
+                "walls": "Động vật hoang dã trong thị trấn · tường và mái hiên",
+                "streets": "Động vật hoang dã trong thị trấn · phố và bến cảng"
+            }
+        },
         "hint": "Kéo để nhìn xung quanh. Chụm hoặc cuộn để thu phóng. Chạm vào một con vật để gặp nó.",
         "loading": "Đang hiện Ark",
         "noWebgl": "Trình duyệt này không thể vẽ Ark ở dạng 3D. Đây là những con vật đang ở trên tàu.",

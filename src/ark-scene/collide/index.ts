@@ -12,10 +12,11 @@
  */
 
 import {behaviourHomePlots} from "@/ark-scene/world-sampler";
-import {colliderSetFor, type ColliderSet} from "@/ark-scene/collide/colliders";
+import {colliderSetFor, unionColliders, type ColliderSet} from "@/ark-scene/collide/colliders";
 
 export {bodyRadius, bodyShape, type BodyShape} from "@/ark-scene/collide/bodies";
 export type {Collider, ColliderKind, ColliderSet} from "@/ark-scene/collide/colliders";
+export {unionColliders} from "@/ark-scene/collide/colliders";
 
 /** The colliders for the hamlet's plots now. */
 export function colliders(): ColliderSet {
@@ -24,15 +25,17 @@ export function colliders(): ColliderSet {
 
 /**
  * Part C, one world (decision 141): another island's own collider set (the town's, `islands/town/colliders.ts`, from its
- * obstacle footprints at its world origin), answering for the points inside its square; the wild island's elsewhere.
- * Null: the wild island alone, exactly as before.
+ * obstacle footprints at its world origin). Every query asks both islands' sets as one (`unionColliders`): a run inside
+ * one island that crosses the other's square (a flyer's long leg) meets the other's buildings too. Null: the wild island
+ * alone, exactly as before.
  */
 let island: {contains: (x: number, z: number) => boolean; set: ColliderSet} | null = null;
 export function setIslandColliders(other: {contains: (x: number, z: number) => boolean; set: ColliderSet} | null): void {
     island = other;
 }
-function setAt(x: number, z: number): ColliderSet {
-    return island && island.contains(x, z) ? island.set : colliders();
+/** Every island's colliders as one set (the wild island's alone when no other island is set). */
+export function worldColliders(): ColliderSet {
+    return island ? unionColliders(colliders(), island.set) : colliders();
 }
 
 /**
@@ -41,22 +44,16 @@ function setAt(x: number, z: number): ColliderSet {
  * rails, it is clear.
  */
 export function collideBlocked(x: number, z: number, radius: number, base?: number, height?: number): boolean {
-    return setAt(x, z).blocked(x, z, radius, base ?? -Infinity, height ?? Infinity);
+    return worldColliders().blocked(x, z, radius, base ?? -Infinity, height ?? Infinity);
 }
 
 /** A straight run from a to b, for a body of radius `radius`, touches nothing solid. */
 export function collideSegmentClear(ax: number, az: number, bx: number, bz: number, radius: number): boolean {
-    if (!island) return colliders().segmentClear(ax, az, bx, bz, radius);
-    // (A run between the islands asks both sets: no run crosses the strait on foot, but a flyer's may.)
-    const a = setAt(ax, az);
-    const b = setAt(bx, bz);
-    return a.segmentClear(ax, az, bx, bz, radius) && (a === b || b.segmentClear(ax, az, bx, bz, radius));
+    return worldColliders().segmentClear(ax, az, bx, bz, radius);
 }
 
 /** How far along a → b a body of radius `radius` gets before it would touch something solid: the point and the fraction t. */
 export function collideClip(ax: number, az: number, bx: number, bz: number, radius: number): {x: number; z: number; t: number} {
-    const from = setAt(ax, az);
-    const to = setAt(bx, bz);
-    const t = from === to ? from.sweep(ax, az, bx, bz, radius) : Math.min(from.sweep(ax, az, bx, bz, radius), to.sweep(ax, az, bx, bz, radius));
+    const t = worldColliders().sweep(ax, az, bx, bz, radius);
     return {x: ax + (bx - ax) * t, z: az + (bz - az) * t, t};
 }

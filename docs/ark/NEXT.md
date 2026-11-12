@@ -39,6 +39,13 @@ the privacy text).
 | 15 | L5 collisions final | `ark-collisions` 512211ba, then 37de0b1d | a9af1cc8, 7930ec2e | conflicts: the debug handle (Part B's `library`, L3's grounding report, L5's `collisions` stats), the schedule test's import (`SAFE_MOST` and `bodyRadiusOf`), the walk mask (regenerated) |
 | 16 | L6 fix (open country's sparse fill, scree under 0.45 m not solid) | `ark-scenery` a7cee4a7 | 6a8cefe5 + 7fa9a4ca | the walk mask regenerated, the attach baseline updated, the leaf/bark/branch floors re-derived (below); a new validator failure: jacksons-chameleon's burrow entrance inside a drawn rock (routed: L6) |
 | 17 | L1 (`--start-at`, pinnipeds and sirenians keep their clips) | `ark-locomotion` a0d507a4 | aaad9473 | clean; `sampler.ts` keeps both imports |
+| 18 | L7 fix (the sitter, asserts with messages, the stags clear of a boulder) | `ark-chases` dddad0a0 | ce245fd8 | conflict in `walkable()`: L5's climb-foot check and L7's sitter rule (sitter first); recipes 28/29 (the mallard set-off) |
+| 19 | L6 fix (the chameleon by a hole lands on the hole, not in a rock) | `ark-scenery` 2d1d2895 | 0de78f61 | clean; spawn validator 15/15 (no bear, no chameleon) |
+| 20 | Positions atlas v2 (encounter lane) | `ark-positions-atlas` cba0594d | 342097c9 | clean; positions tests pass |
+| 21 | T3 (one world, town animals on the schedule, town colliders via `setIslandColliders`, zoo feeding, one sea; NavGrid per-island extents on L5's grid) | `ark-islands-scene` e76158a5 | 9df003b3 + 5388b309 (the foot ground per island in one world) | T3 resolved `behaviour-nav.ts` itself on ce245fd8; full suite 2,318/2,368: 45 locale tests, the mallard set-off, the frog pace, the emperor penguin's breaths, the barn swallow's miss (all routed); validator 0; motion all pass |
+| 22 | Part B multi-island streaming, the fog push | `ark-streaming-islands` 2f7f6fa3 | b9446a3d | clean; tsc 0 |
+| 23 | T3: the upright phone looks across to the town (decision 154), the director over both islands | `ark-islands-scene` 4468d2a4 | e043745b | clean |
+| 24 | L5 nav start | `ark-collisions-navstart` 7533ab4e | 7ab61a51 | clean; tsc 0 |
 
 ### Wirings and fixes the integrator made (allowed by the coordinator)
 

@@ -15,6 +15,25 @@
         "foundersOne": "1 pengasas",
         "foundersOther": "{count} pengasas",
         "myAnimals": "Haiwan saya",
+        "islands": {
+            "label": "Pulau",
+            "wild": "Pulau liar",
+            "town": "Pekan dan zoo",
+            "both": "Kedua-dua pulau",
+            "atHome": "di rumah",
+            "onFarm": "di ladang",
+            "inTown": "taman dan jalan",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Rumah",
+                "farms": "Ladang",
+                "gardens": "Hidupan liar pekan · laman dan taman",
+                "water": "Hidupan liar pekan · terusan dan kolam",
+                "roofs": "Hidupan liar pekan · bumbung dan menara",
+                "walls": "Hidupan liar pekan · dinding dan cucur atap",
+                "streets": "Hidupan liar pekan · jalan dan pelabuhan"
+            }
+        },
         "hint": "Seret untuk melihat sekeliling. Cubit atau tatal untuk zum. Ketik haiwan untuk mengenalinya.",
         "loading": "Memaparkan Ark",
         "noWebgl": "Pelayar ini tidak dapat melukis Ark dalam 3D. Inilah senarai yang ada di atas kapal.",

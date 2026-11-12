@@ -175,7 +175,7 @@ import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
-import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
+import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders, type ColliderSet} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {composedSampler, type ArkIslandScene} from "@/ark-scene/islands/scene";
@@ -1426,6 +1426,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Collisions (motion pass L5: `collide/`)
 
+    /** Every island's colliders as one set: the wild island's world's, with the town's world's when it has one. */
+    const sceneColliders = (wild: ScheduleWorld, town: ScheduleWorld | null): ColliderSet | null => {
+        const own = wild.sampler.colliders ?? null;
+        const other = town?.sampler.colliders ?? null;
+        return own && other ? unionColliders(own, other) : own ?? other;
+    };
     /** Its shared pose before the collisions: its schedule's, then liveliness's (young at heel, shelter, the tide), a pin. */
     const sharedBase = (entry: Entry, epoch: number, pin = sharedPins.size ? sharedPins.get(entry.animal.id) : undefined) => {
         const fromTrip = liveliness.sharedPose(entry, schedulePose(entry, epoch), epoch);
@@ -1461,7 +1467,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x: at.x, y: Math.max(heightAt(at.x, at.z), 0), z: at.z, yaw, aloft: false};
     };
     const collisions = new CollideLayer<Entry>({
-        colliders: () => (collisionsOn && world ? world.sampler.colliders ?? null : null),
+        // (Part C, one world: the wild island's colliders and the town's as one set, each island's animals among their own.)
+        colliders: () => (collisionsOn && world ? sceneColliders(world, townWorld) : null),
         body: (entry) => {
             const shape = bodyShape(entry.animal.model_slug, entry.full);
             return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social)};

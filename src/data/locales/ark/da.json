@@ -15,6 +15,25 @@
         "foundersOne": "1 grundlægger",
         "foundersOther": "{count} grundlæggere",
         "myAnimals": "Mine dyr",
+        "islands": {
+            "label": "Øer",
+            "wild": "Vild ø",
+            "town": "By og zoo",
+            "both": "Begge øer",
+            "atHome": "hjemme",
+            "onFarm": "på gården",
+            "inTown": "haver og gader",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Hjem",
+                "farms": "Gårde",
+                "gardens": "Byens dyreliv · haver og parker",
+                "water": "Byens dyreliv · kanal og damme",
+                "roofs": "Byens dyreliv · tage og tårne",
+                "walls": "Byens dyreliv · mure og tagudhæng",
+                "streets": "Byens dyreliv · gader og havn"
+            }
+        },
         "hint": "Træk for at se dig omkring. Knib eller rul for at zoome. Tryk på et dyr for at møde det.",
         "loading": "Henter Ark frem",
         "noWebgl": "Denne browser kan ikke vise Ark i 3D. Her er dem, der er om bord.",

@@ -15,6 +15,25 @@
         "foundersOne": "1 kurucu",
         "foundersOther": "{count} kurucu",
         "myAnimals": "Hayvanlarım",
+        "islands": {
+            "label": "Adalar",
+            "wild": "Vahşi ada",
+            "town": "Kasaba ve hayvanat bahçesi",
+            "both": "Her iki ada",
+            "atHome": "evde",
+            "onFarm": "çiftlikte",
+            "inTown": "bahçeler ve sokaklar",
+            "zoo": "Hayvanat bahçesi",
+            "places": {
+                "homes": "Evler",
+                "farms": "Çiftlikler",
+                "gardens": "Kasabanın yaban hayatı · bahçeler ve parklar",
+                "water": "Kasabanın yaban hayatı · kanal ve göletler",
+                "roofs": "Kasabanın yaban hayatı · çatılar ve kuleler",
+                "walls": "Kasabanın yaban hayatı · duvarlar ve saçaklar",
+                "streets": "Kasabanın yaban hayatı · sokaklar ve liman"
+            }
+        },
         "hint": "Etrafa bakmak için sürükle. Yakınlaştırmak için iki parmakla kıstır ya da kaydır. Tanışmak için bir hayvana dokun.",
         "loading": "Ark yükleniyor",
         "noWebgl": "Bu tarayıcı Ark'ı 3D çizemiyor. Gemide olanlar şunlar.",

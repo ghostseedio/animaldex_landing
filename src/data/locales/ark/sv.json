@@ -15,6 +15,25 @@
         "foundersOne": "1 grundare",
         "foundersOther": "{count} grundare",
         "myAnimals": "Mina djur",
+        "islands": {
+            "label": "Öar",
+            "wild": "Vild ö",
+            "town": "Stad och djurpark",
+            "both": "Båda öarna",
+            "atHome": "hemma",
+            "onFarm": "på gården",
+            "inTown": "trädgårdar och gator",
+            "zoo": "Djurpark",
+            "places": {
+                "homes": "Hem",
+                "farms": "Gårdar",
+                "gardens": "Stadens djurliv · trädgårdar och parker",
+                "water": "Stadens djurliv · kanal och dammar",
+                "roofs": "Stadens djurliv · tak och torn",
+                "walls": "Stadens djurliv · murar och takfötter",
+                "streets": "Stadens djurliv · gator och hamn"
+            }
+        },
         "hint": "Dra för att se dig omkring. Nyp eller skrolla för att zooma. Tryck på ett djur för att träffa det.",
         "loading": "Tar fram Ark",
         "noWebgl": "Den här webbläsaren kan inte visa Ark i 3D. Här är de som är ombord.",

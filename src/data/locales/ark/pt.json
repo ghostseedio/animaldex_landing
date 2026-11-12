@@ -15,6 +15,25 @@
         "foundersOne": "1 fundador",
         "foundersOther": "{count} fundadores",
         "myAnimals": "Meus animais",
+        "islands": {
+            "label": "Ilhas",
+            "wild": "Ilha selvagem",
+            "town": "Cidade e zoológico",
+            "both": "As duas ilhas",
+            "atHome": "em casa",
+            "onFarm": "na fazenda",
+            "inTown": "jardins e ruas",
+            "zoo": "Zoológico",
+            "places": {
+                "homes": "Casas",
+                "farms": "Fazendas",
+                "gardens": "Fauna da cidade · jardins e parques",
+                "water": "Fauna da cidade · canal e lagoas",
+                "roofs": "Fauna da cidade · telhados e torres",
+                "walls": "Fauna da cidade · muros e beirais",
+                "streets": "Fauna da cidade · ruas e porto"
+            }
+        },
         "hint": "Arraste para olhar em volta. Faça pinça ou role para dar zoom. Toque em um animal para conhecê-lo.",
         "loading": "A Ark está chegando",
         "noWebgl": "Este navegador não consegue mostrar a Ark em 3D. Veja quem está a bordo.",

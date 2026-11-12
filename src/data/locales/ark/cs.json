@@ -15,6 +15,25 @@
         "foundersOne": "1 zakladatel",
         "foundersOther": "zakladatelé ({count})",
         "myAnimals": "Moje zvířata",
+        "islands": {
+            "label": "Ostrovy",
+            "wild": "Divoký ostrov",
+            "town": "Město a zoo",
+            "both": "Oba ostrovy",
+            "atHome": "doma",
+            "onFarm": "na farmě",
+            "inTown": "zahrady a ulice",
+            "zoo": "Zoo",
+            "places": {
+                "homes": "Domácnosti",
+                "farms": "Farmy",
+                "gardens": "Divoká zvířata ve městě · zahrady a parky",
+                "water": "Divoká zvířata ve městě · kanál a rybníky",
+                "roofs": "Divoká zvířata ve městě · střechy a věže",
+                "walls": "Divoká zvířata ve městě · zdi a podstřeší",
+                "streets": "Divoká zvířata ve městě · ulice a přístav"
+            }
+        },
         "hint": "Táhni a rozhlédni se. Přibliž sevřením prstů nebo posunem. Klepni na zvíře a seznam se s ním.",
         "loading": "Načítání Ark",
         "noWebgl": "Tento prohlížeč neumí zobrazit Ark ve 3D. Tady je, kdo je na palubě.",

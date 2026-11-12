@@ -15,6 +15,25 @@
         "foundersOne": "1 grunnlegger",
         "foundersOther": "{count} grunnleggere",
         "myAnimals": "Dyrene mine",
+        "islands": {
+            "label": "Øyer",
+            "wild": "Vill øy",
+            "town": "By og dyrehage",
+            "both": "Begge øyene",
+            "atHome": "hjemme",
+            "onFarm": "på gården",
+            "inTown": "hager og gater",
+            "zoo": "Dyrehage",
+            "places": {
+                "homes": "Hjem",
+                "farms": "Gårder",
+                "gardens": "Byens dyreliv · hager og parker",
+                "water": "Byens dyreliv · kanal og dammer",
+                "roofs": "Byens dyreliv · tak og tårn",
+                "walls": "Byens dyreliv · murer og takskjegg",
+                "streets": "Byens dyreliv · gater og havn"
+            }
+        },
         "hint": "Dra for å se deg rundt. Knip eller rull for å zoome. Trykk på et dyr for å møte det.",
         "loading": "Henter fram Ark",
         "noWebgl": "Denne nettleseren kan ikke vise Ark i 3D. Her er de som er om bord.",
