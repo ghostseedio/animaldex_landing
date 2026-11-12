@@ -72,6 +72,9 @@
             "high_cold": "ऊँचा और ठंडा",
             "home": "घर"
         },
+        "wildIslandRegions": {
+            "home": "घास का मैदान"
+        },
         "hud": {
             "label": "कौन सवार है",
             "title": "सवार",

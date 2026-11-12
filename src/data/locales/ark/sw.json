@@ -72,6 +72,9 @@
             "high_cold": "Juu na baridi",
             "home": "Nyumbani"
         },
+        "wildIslandRegions": {
+            "home": "Mbuga ya majani"
+        },
         "hud": {
             "label": "Walio ndani",
             "title": "Ndani",

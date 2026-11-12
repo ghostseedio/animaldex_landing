@@ -72,6 +72,9 @@
             "high_cold": "ഉയരവും തണുപ്പും",
             "home": "വീട്"
         },
+        "wildIslandRegions": {
+            "home": "പുൽമേട്"
+        },
         "hud": {
             "label": "കപ്പലിൽ ആരൊക്കെ",
             "title": "കപ്പലിൽ",

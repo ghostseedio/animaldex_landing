@@ -72,6 +72,9 @@
             "high_cold": "Alto y frío",
             "home": "Hogar"
         },
+        "wildIslandRegions": {
+            "home": "Pradera"
+        },
         "hud": {
             "label": "Quién va a bordo",
             "title": "A bordo",

@@ -72,6 +72,9 @@
             "high_cold": "Hauteurs froides",
             "home": "Maison"
         },
+        "wildIslandRegions": {
+            "home": "Prairie"
+        },
         "hud": {
             "label": "Qui est à bord",
             "title": "À bord",

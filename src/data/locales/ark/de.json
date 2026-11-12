@@ -72,6 +72,9 @@
             "high_cold": "Hoch und kalt",
             "home": "Zuhause"
         },
+        "wildIslandRegions": {
+            "home": "Wiese"
+        },
         "hud": {
             "label": "Wer an Bord ist",
             "title": "An Bord",

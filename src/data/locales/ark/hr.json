@@ -72,6 +72,9 @@
             "high_cold": "Visoko i hladno",
             "home": "Dom"
         },
+        "wildIslandRegions": {
+            "home": "Livada"
+        },
         "hud": {
             "label": "Tko je na brodu",
             "title": "Na brodu",

@@ -72,6 +72,9 @@
             "high_cold": "مرتفع وبارد",
             "home": "المنزل"
         },
+        "wildIslandRegions": {
+            "home": "مرج"
+        },
         "hud": {
             "label": "من على المتن",
             "title": "على المتن",

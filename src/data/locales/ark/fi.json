@@ -72,6 +72,9 @@
             "high_cold": "Korkea ja kylmä",
             "home": "Koti"
         },
+        "wildIslandRegions": {
+            "home": "Niitty"
+        },
         "hud": {
             "label": "Keitä kyydissä on",
             "title": "Kyydissä",

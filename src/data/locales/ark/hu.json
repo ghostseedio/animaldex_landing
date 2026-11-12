@@ -72,6 +72,9 @@
             "high_cold": "Magas és hideg",
             "home": "Otthon"
         },
+        "wildIslandRegions": {
+            "home": "Rét"
+        },
         "hud": {
             "label": "Ki van a fedélzeten",
             "title": "A fedélzeten",

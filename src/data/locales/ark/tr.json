@@ -72,6 +72,9 @@
             "high_cold": "Yüksek ve soğuk",
             "home": "Ev"
         },
+        "wildIslandRegions": {
+            "home": "Çayır"
+        },
         "hud": {
             "label": "Gemide kimler var",
             "title": "Gemide",

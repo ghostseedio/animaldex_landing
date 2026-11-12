@@ -72,6 +72,9 @@
             "high_cold": "Altura i fred",
             "home": "Casa"
         },
+        "wildIslandRegions": {
+            "home": "Prat"
+        },
         "hud": {
             "label": "Qui hi ha a bord",
             "title": "A bord",

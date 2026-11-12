@@ -72,6 +72,9 @@
             "high_cold": "ઊંચું અને ઠંડું",
             "home": "ઘર"
         },
+        "wildIslandRegions": {
+            "home": "ઘાસનું મેદાન"
+        },
         "hud": {
             "label": "કોણ સવાર છે",
             "title": "સવાર",

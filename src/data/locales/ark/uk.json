@@ -72,6 +72,9 @@
             "high_cold": "Гори й полюси",
             "home": "Дім"
         },
+        "wildIslandRegions": {
+            "home": "Луг"
+        },
         "hud": {
             "label": "Хто на борту",
             "title": "На борту",

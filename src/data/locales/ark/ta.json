@@ -72,6 +72,9 @@
             "high_cold": "உயரமும் குளிரும்",
             "home": "வீடு"
         },
+        "wildIslandRegions": {
+            "home": "புல்வெளி"
+        },
         "hud": {
             "label": "கப்பலில் யார்",
             "title": "கப்பலில்",

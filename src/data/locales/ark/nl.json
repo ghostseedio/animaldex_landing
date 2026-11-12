@@ -72,6 +72,9 @@
             "high_cold": "Hoog en koud",
             "home": "Thuis"
         },
+        "wildIslandRegions": {
+            "home": "Weide"
+        },
         "hud": {
             "label": "Wie er aan boord is",
             "title": "Aan boord",

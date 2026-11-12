@@ -72,6 +72,9 @@
             "high_cold": "بلند و سرد",
             "home": "خانه"
         },
+        "wildIslandRegions": {
+            "home": "چمنزار"
+        },
         "hud": {
             "label": "سرنشینان",
             "title": "در کشتی",

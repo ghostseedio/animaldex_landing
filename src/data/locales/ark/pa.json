@@ -72,6 +72,9 @@
             "high_cold": "ਉੱਚਾ ਅਤੇ ਠੰਢਾ",
             "home": "ਘਰ"
         },
+        "wildIslandRegions": {
+            "home": "ਘਾਹ ਦਾ ਮੈਦਾਨ"
+        },
         "hud": {
             "label": "ਕੌਣ ਸਵਾਰ ਹੈ",
             "title": "ਸਵਾਰ",
