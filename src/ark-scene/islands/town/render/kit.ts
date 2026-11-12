@@ -24,6 +24,17 @@ export function tone(hex: string | Color, factor = 1): [number, number, number] 
     return [c.r * factor, c.g * factor, c.b * factor];
 }
 
+/**
+ * A building surface's kind (lane GB), carried in the vertex colour itself so it costs no attribute: the colour is
+ * rounded to 8 bits a channel and the kind (1-15) put in red's spare bits, with markers in green and blue
+ * (`buildings.ts` SURFACE, decoded by its building shader). 0: a plain colour, untouched.
+ */
+export function encodeColourTag(colour: [number, number, number], tag: number): [number, number, number] {
+    if (!tag) return colour;
+    const q = (v: number) => Math.min(Math.max(Math.round(v * 255), 0), 254);
+    return [(q(colour[0]) + (tag + 0.5) / 16) / 255, (q(colour[1]) + 0.5) / 255, (q(colour[2]) + 0.25) / 255];
+}
+
 export class Geo {
     readonly pos: number[] = [];
     readonly nor: number[] = [];
@@ -31,6 +42,8 @@ export class Geo {
     readonly extra: number[] = [];
     /** The value written to `extra` for the next triangles. */
     tag = 0;
+    /** A building surface's kind for the next triangles, in their colour (`encodeColourTag`; 0: none). */
+    surface = 0;
 
     get triangles(): number {
         return this.pos.length / 9;
@@ -50,11 +63,23 @@ export class Geo {
         nx /= length;
         ny /= length;
         nz /= length;
+        const col = this.surface ? encodeColourTag(colour, this.surface) : colour;
         for (const p of [a, b, c]) {
             this.pos.push(p[0], p[1], p[2]);
             this.nor.push(nx, ny, nz);
-            this.col.push(colour[0], colour[1], colour[2]);
+            this.col.push(col[0], col[1], col[2]);
             this.extra.push(this.tag);
+        }
+    }
+
+    /** Draws with a surface kind set (then puts it back). */
+    as(surface: number, draw: () => void) {
+        const before = this.surface;
+        this.surface = surface;
+        try {
+            draw();
+        } finally {
+            this.surface = before;
         }
     }
 
@@ -89,7 +114,7 @@ export class Geo {
     }
 
     /** A gable roof over a w × d footprint at height y (ridge along local x), with overhang and pitch (m of rise). */
-    gable(frame: Frame, lx: number, y: number, lz: number, w: number, d: number, rise: number, overhang: number, roofColour: [number, number, number], wallColour: [number, number, number], turn = 0, thickness = 0.14) {
+    gable(frame: Frame, lx: number, y: number, lz: number, w: number, d: number, rise: number, overhang: number, roofColour: [number, number, number], wallColour: [number, number, number], turn = 0, thickness = 0.14, wallSurface = -1) {
         const f = this.sub(frame, lx, y, lz, turn);
         const hw = w / 2 + overhang;
         const hd = d / 2 + overhang;
@@ -111,8 +136,12 @@ export class Geo {
         const gd = d / 2;
         const wl = [at(f, -gw, 0, gd), at(f, -gw, 0, -gd), at(f, -gw, rise * (1 - 0.0), 0)];
         const wr = [at(f, gw, 0, -gd), at(f, gw, 0, gd), at(f, gw, rise, 0)];
+        // (The gable ends are walls: their own surface kind when given.)
+        const roofSurface = this.surface;
+        if (wallSurface >= 0) this.surface = wallSurface;
         this.tri(wl[0], wl[2], wl[1], [wallColour[0] * 0.9, wallColour[1] * 0.9, wallColour[2] * 0.9]);
         this.tri(wr[0], wr[2], wr[1], [wallColour[0] * 0.93, wallColour[1] * 0.93, wallColour[2] * 0.93]);
+        this.surface = roofSurface;
     }
 
     /** A hipped roof over a w × d footprint (ridge along x, shortened by the hips). */
@@ -273,6 +302,11 @@ export class Geo {
         geometry.computeBoundingBox();
         return geometry;
     }
+}
+
+/** A Geo that keeps nothing (a building drawn for its windows alone, or its near detail alone). */
+export class NullGeo extends Geo {
+    override tri() {}
 }
 
 const spheres = new Map<number, {points: V3[]; faces: Array<[number, number, number]>}>();

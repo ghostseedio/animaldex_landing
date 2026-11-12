@@ -14,8 +14,8 @@ import {sampleTownGround, type TownSurface} from "@/ark-scene/islands/town/groun
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {binSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
-import {binsOut, boatIn, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
-import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
+import {binsOut, boatIn, clockHands, lampsOn, marketDay, washingOut, type TownClock} from "@/ark-scene/islands/town/people";
+import {BuildingDetail, buildBuilding, clockFaces, newBuildingChunk, paneGeometry, paneMaterial, patchBuildingSurfaces, windowState, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, boatGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {loadVehicles, TownVehicles, type TrafficAnimals, type VehicleModel} from "@/ark-scene/islands/town/render/vehicles";
@@ -237,7 +237,7 @@ export function townBuildData(zooOpen: readonly string[] = launchEnclosures(), s
         let c = perChunk.get(key);
         if (!c) {
             const sc = scenery.chunks.get(key);
-            c = {solid: sc?.solid ?? new Geo(), glass: sc?.glass ?? new Geo(), windows: []};
+            c = newBuildingChunk(sc);
             perChunk.set(key, c);
         }
         buildBuilding(c, b);
@@ -273,6 +273,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const grid = built?.grid ?? groundGrid();
     yield;
     const materials = {ground: groundMaterial(), decal: new MeshStandardMaterial({vertexColors: true, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), solid: new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), glass: glassMaterial(), net: netMaterial(), prop: propMaterial(), tree: new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), lampHead: new MeshStandardMaterial({color: new Color("#fff1c4"), emissive: new Color("#ffc878"), emissiveIntensity: 0, roughness: 0.4})};
+    // The buildings' surfaces and windows (lane GB): the solid material draws tagged faces' brick, tiles and weathering.
+    patchBuildingSurfaces(materials.solid);
+    const paneMat = paneMaterial();
 
     // Scenery and buildings, chunk by chunk (worked out already when `built` is given).
     const scenery = built?.scenery ?? buildScenery(plan);
@@ -285,7 +288,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             let c = perChunk.get(key);
             if (!c) {
                 const sc = scenery.chunks.get(key);
-                c = {solid: sc?.solid ?? new Geo(), glass: sc?.glass ?? new Geo(), windows: []};
+                c = newBuildingChunk(sc);
                 perChunk.set(key, c);
             }
             buildBuilding(c, b);
@@ -345,6 +348,16 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             triangles += glassGeo.triangles;
             glass = {attribute: lit, windows: bc?.windows ?? []};
         }
+        // The buildings' windows (lane GB): a pane a window, lit on the island clock (their records are the panes').
+        if (bc && bc.panes.pos.length) {
+            const {geometry, lit} = paneGeometry(bc.panes);
+            const mesh = new Mesh(geometry, paneMat);
+            mesh.name = "panes";
+            mesh.receiveShadow = true;
+            meshes.push(mesh);
+            triangles += bc.panes.pos.length / 9;
+            glass = {attribute: lit, windows: bc.windows};
+        }
         for (const mesh of meshes) group.add(mesh);
         spans.push({minY: Math.min(minY, -4), maxY: maxY + 6});
         if (meshes.length) {
@@ -355,6 +368,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     }
 
     let drawn: ((chunk: number) => boolean) | null = null;
+    // The buildings' near detail, by chunk round the camera (lane GB).
+    const detail = new BuildingDetail(plan, materials.solid, (key) => chunks[key]?.group ?? null, spans, tier);
     yield;
     // Water: the sea round the island and in the harbour, the fresh water.
     const depth = seaDepthMap(grid.heights, grid.size);
@@ -479,6 +494,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const update = (clock: TownClock) => {
         // The cars every frame (the moving ones on the island clock's seconds; the parked once a minute inside).
         vehicles.update(clock, ((clock.day - 4) * 24 + clock.hours) * 3600);
+        detail.update(vehicles.eye, typeof performance !== "undefined" ? performance.now() : 0, drawn);
         const minute = Math.floor(clock.day * 1440 + clock.hours * 60);
         if (minute === lastMinute) return;
         lastMinute = minute;
@@ -489,9 +505,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             if (!c?.glass) continue;
             const array = c.glass.attribute.array as Float32Array;
             for (const w of c.glass.windows) {
-                const lit = windowLit(w, clock);
-                if (lit > 0) litCount++;
-                for (let v = w.start; v < w.start + w.count; v++) array[v] = lit;
+                // (Lit, plus 2 with the curtains drawn: `buildings.ts` windowState.)
+                const state = windowState(w, clock);
+                if (state % 2 > 0) litCount++;
+                for (let v = w.start; v < w.start + w.count; v++) array[v] = state;
             }
             c.glass.attribute.needsUpdate = true;
         }
@@ -576,6 +593,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         });
         lastMinute = -1;
         vehicles.setTier(tier);
+        detail.setTier(tier);
         setShadows(TOWN_TIERS[tier].shadows > 0);
     };
 
@@ -603,7 +621,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         instances.moving_cars = traffic.moving;
         instances.bikes = traffic.bikes;
         for (const [level, n] of Object.entries(traffic.byLevel)) instances[`cars_${level}`] = n;
-        drawCalls += traffic.drawCalls;
+        drawCalls += traffic.drawCalls + detail.shown();
+        instances.detail_chunks = detail.shown();
+        instances.detail_triangles = detail.triangles;
         drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
         return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
@@ -634,6 +654,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         dispose: () => {
             disposed = true;
             vehicles.dispose();
+            detail.dispose();
+            paneMat.dispose();
             root.traverse((o) => {
                 const mesh = o as Mesh;
                 if (mesh.isMesh && mesh.geometry) mesh.geometry.dispose();

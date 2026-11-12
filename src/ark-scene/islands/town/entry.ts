@@ -58,7 +58,8 @@ function shots(): Shot[] {
         {id: "street_houses", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 10, day: 20407},
         {id: "street_houses_night", eye: [60, 4.4, 3], target: [100, 5.4, -10], hours: 22, day: 20407},
         {id: "parked_cars", eye: [126, 5.4, -50], target: [84, 3.4, -57], hours: 19.5, day: 20406},
-        {id: "terraces", eye: [150, 11.5, 26], target: [120, 5.5, 40], hours: 15, day: 20406}
+        {id: "terraces", eye: [150, 11.5, 26], target: [120, 5.5, 40], hours: 15, day: 20406},
+        {id: "debug_roof", eye: [140, 12.5, 30], target: [134, 9.5, 36], hours: 12, day: 20406}
     ];
 }
 

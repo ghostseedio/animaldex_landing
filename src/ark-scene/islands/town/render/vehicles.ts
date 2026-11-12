@@ -1003,6 +1003,11 @@ export class TownVehicles {
         this.sim.setAnimals(query);
     }
 
+    /** The camera's place as last drawn, in the town's frame (NaN before the first frame). */
+    get eye(): Vector3 {
+        return this.probe.eye;
+    }
+
     private build() {
         for (const set of [...Array.from(this.parked.values()), ...Array.from(this.moving.values()), ...this.bikeSets]) {
             this.group.remove(set.mesh);
