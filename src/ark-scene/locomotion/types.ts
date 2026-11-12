@@ -165,6 +165,8 @@ export type LocoInput = {
     /** A hint from the act (`acts.ts` ActPose.state/speed, L7): its state, and the speed it asks for (m/s). */
     actState?: string | null;
     actSpeed?: number | null;
+    /** On an air leg of the schedule (MA1): its stage (`flight.ts` AirStage: a run, the climb, level, the glide-in, a ski). */
+    airStage?: string | null;
 };
 
 /** One foot's target this frame (world space), for debug views, metrics and L3's checks. */

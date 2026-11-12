@@ -14,7 +14,7 @@
  */
 
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
-import {flightRigFrame, flightSpecOf, landingNow, newFlightMemory, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
+import {flightGate, flightRigFrame, flightSpecOf, landingNow, newFlightMemory, type FlightGateInput, type FlightMemory, type FlightRigFrame, type FlightRigInput, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {LEGLESS, leglessCycles, leglessMode, newLeglessMemory, sidewindYaw, type LeglessMemory} from "@/ark-scene/locomotion/legless";
 import {locoStyle, type LocoStyle} from "@/ark-scene/locomotion/styles";
 import {newSwimMemory, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
@@ -157,6 +157,11 @@ export function l2FlightFrame(motion: L2Motion, trueLength: number, input: Omit<
     motion.flight ??= newFlightMemory();
     if (input.open || !input.has("flap")) OPEN_WING_RIGS.add(motion.slug);
     return flightRigFrame({...input, spec: motion.flightSpec}, motion.flight);
+}
+
+/** The rig player's flying state this frame (`flight.ts` flightGate, MA1): take-off, landing, down. */
+export function l2FlightGate(input: FlightGateInput): ReturnType<typeof flightGate> {
+    return flightGate(input);
 }
 
 /** A flying rig should start its landing now (`flight.ts` landingNow): within the clip's reach of the ground, coming down. */

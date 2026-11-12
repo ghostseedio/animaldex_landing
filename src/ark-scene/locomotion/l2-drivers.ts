@@ -18,7 +18,7 @@
 import {Matrix4, Quaternion, Vector3} from "three";
 import {rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
-import {flightSpecOf, strokeToClipPhase, upstrokeFold, type FlightSpec} from "@/ark-scene/locomotion/flight";
+import {flightSpecOf, legTuck, strokeToClipPhase, upstrokeFold, type AirStage, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {leglessCycles, leglessMode, leglessPoint, leglessShape, newLeglessMemory, type LeglessMemory} from "@/ark-scene/locomotion/legless";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {newSwimMemory, SWIM, swimCycles, swimEnvelope, swimGain, tailBeatHz, type SwimMemory} from "@/ark-scene/locomotion/swim";
@@ -162,8 +162,10 @@ export const flightDriver: LocoDriver = {
             beatWing(rig, world, rig.wings.right, -1, angle);
             mode = spec.style === "flutter" ? "flutter" : "whir";
         }
-        // Feet back under the tail in the air (not in a take-off, a landing or a dive: legs push off, reach down, or stay in).
-        if (spec.kind !== "insect" && (clip === "flap" || clip === "glide" || clip === "soar" || clip === "bank_l" || clip === "bank_r")) tuckLegs(rig, world, 1);
+        // Feet back under the tail in the air (not in a dive: they stay in). MA1: up through the take-off once the push-off
+        // is done and down through the landing's first half to reach for the ground (`legTuck`); hanging on a run across
+        // the water or a ski onto it (the feet patter and plane).
+        if (spec.kind !== "insect") tuckLegs(rig, world, legTuck(clip, input.clipPhase, (input.airStage ?? null) as AirStage | null));
         // The head level with the horizon in a bank (birds and bats), up to 70% of the roll.
         if (spec.kind !== "insect") {
             const steady = rig.neck >= 0 ? rig.neck : rig.head;

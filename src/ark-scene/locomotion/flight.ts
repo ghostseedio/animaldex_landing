@@ -24,6 +24,7 @@
  */
 
 import {decodeFlight, locoStyle, type FlightStyle, type FlightStyleRow, type FlyerKind} from "@/ark-scene/locomotion/styles";
+import takeoffTable from "@/ark-scene/locomotion/takeoff.json";
 
 export const G = 9.81;
 /** The fastest wing beat shown (Hz). */
@@ -83,6 +84,8 @@ export type FlightSpec = {
     style: FlightStyle;
     kind: FlyerKind;
     stoops: boolean;
+    /** The family's wing-beat factor (over 1: heavy wings for its size, the auks, ducks, grebes and rails). */
+    factor: number;
     lengthM: number;
     massKg: number;
     trueHz: number;
@@ -138,6 +141,7 @@ export function flightSpecOf(row: FlightStyleRow | null, lengthM: number): Fligh
         style: row.style,
         kind: row.kind,
         stoops: row.stoops,
+        factor: row.factor || 1,
         lengthM,
         massKg: flyerMass(row.kind, lengthM),
         trueHz,
@@ -158,6 +162,197 @@ export function flightSpec(slug: string, lengthM: number, plan?: string | null):
 }
 
 export {decodeFlight};
+
+// MARK: Flights on the schedule (movement audit lane MA1)
+
+/**
+ * The hardest a flyer speeds up out of a take-off or slows into a landing (m/s², horizontal): half a g (the audit's
+ * limit; a pigeon's first beats reach about that, a swan's run far less).
+ */
+export const FLIGHT_ACCEL_MAX = 0.5 * G;
+
+/** How it gets off the ground (`takeoff.json`, by family): see `scripts/ark-flight-takeoff.mts`. */
+export type TakeoffClass = "w" | "wg" | "g" | "a" | "h";
+const TAKEOFF = (takeoffTable as {species: Record<string, string>}).species;
+export function takeoffClass(slug: string): TakeoffClass | null {
+    const c = TAKEOFF[slug];
+    return c === "w" || c === "wg" || c === "g" || c === "a" || c === "h" ? c : null;
+}
+
+/** A flyer's paces on the schedule's air legs: the speeds, how hard it speeds up and slows, how steeply it climbs and comes down, and whether it runs to take off or skis in to land. */
+export type AirPaces = {
+    kind: FlyerKind;
+    /** Level flight (m/s): L2's cruise. */
+    cruise: number;
+    /** A soar's glide (m/s). */
+    glide: number;
+    /** Speeding up out of a take-off, slowing into a landing (m/s², at most `FLIGHT_ACCEL_MAX`). */
+    accel: number;
+    brake: number;
+    /** Its steepest climb out of a take-off and its glide-in (radians). */
+    climb: number;
+    descent: number;
+    /** Its lift-off speed after a run across the water or along the ground (m/s); 0: it springs straight off. */
+    runWater: number;
+    runGround: number;
+    /** Its run's acceleration (m/s²: the feet slap the water, less than the wings alone give). */
+    runAccel: number;
+    /** Touch-down speed on the water (m/s): it skis in on its feet to a stop; 0: it stops in the air. */
+    skiWater: number;
+};
+
+/**
+ * A flyer's air paces from its spec and its take-off class. Acceleration half a g up to half a kilo, falling to about a
+ * third of a g for a swan (thrust over mass falls with size); braking about half a g (wings spread, tail fanned). The
+ * climb out of a take-off 45° for a small bird, about 20° for a swan, flatter for heavy wings (the family's beat factor);
+ * the glide-in about four fifths of that. A run to lift off at half its cruise; a ski in from a third of it.
+ */
+export function airPacesOf(spec: FlightSpec, cls: TakeoffClass | null): AirPaces {
+    const m = spec.massKg;
+    const insect = spec.kind === "insect";
+    const accel = FLIGHT_ACCEL_MAX * clamp((m / 0.5) ** -0.15, 0.55, 1);
+    const brake = FLIGHT_ACCEL_MAX * clamp(m ** -0.08, 0.75, 1);
+    const deg = Math.PI / 180;
+    const climb = insect ? 60 * deg : spec.kind === "bat" ? 40 * deg : clamp((45 - 12 * Math.log10(Math.max(m, 1e-4) / 0.1)) / Math.max(spec.factor, 1) ** 0.7, 14, 45) * deg;
+    const descent = insect ? 45 * deg : clamp(climb * 0.8, 10 * deg, 35 * deg);
+    const water = spec.kind === "bird" && (cls === "w" || cls === "wg" || (cls === "a" && m >= 1));
+    const ground = spec.kind === "bird" && (cls === "g" || cls === "wg" || (cls === "a" && m >= 3) || (cls === "h" && m >= 4));
+    const ski = spec.kind === "bird" && (cls === "w" || cls === "wg" || cls === "a");
+    return {
+        kind: spec.kind,
+        cruise: spec.cruise,
+        glide: spec.cruise * 0.8,
+        accel,
+        brake,
+        climb,
+        descent,
+        runWater: water ? 0.5 * spec.cruise : 0,
+        runGround: ground ? 0.45 * spec.cruise : 0,
+        runAccel: accel * 0.6,
+        skiWater: ski ? spec.cruise / 3 : 0
+    };
+}
+
+/** Its run, climb, cruise, descent and ski on an air leg (for the rig: a run patters, a ski lands). */
+export type AirStage = "run" | "climb" | "cruise" | "descend" | "ski";
+
+/**
+ * An air leg's plan: how long it takes, its speed through the leg (piecewise linear: up at its acceleration, level at
+ * its cruise, down at its braking), where along its route it lifts off and touches down, how far it climbs and comes
+ * down over, and how high it goes. Shares of the route are by its length; the speed is kept as shares of its peak, so
+ * a leg the trip later fits into less time keeps its shape.
+ */
+export type AirPlan = {
+    seconds: number;
+    /** [u, s, u, s, ...]: time shares and the speed then as a share of the peak, from (0, 0) to (1, 0). */
+    knots: number[];
+    /** Route shares: the run on the surface before lift-off; where it touches down (then it skis to a stop). */
+    liftoff: number;
+    touchdown: number;
+    /** Route shares it climbs over (from lift-off) and comes down over (to touch-down). */
+    rise: number;
+    fall: number;
+    /** Its height over the line between its ends (m): lower for a hop too short to climb to its band. */
+    height: number;
+    /** Its top speed (m/s). */
+    peak: number;
+    /** It ends in the air, joining its flock's leader (no landing). */
+    joins?: boolean;
+};
+
+/**
+ * Plan an air leg of `length` metres (the route's, level) at up to `pace` m/s: a run first when `run` is set (m/s, the
+ * lift-off speed), a ski at the end when `ski` is set (m/s, the touch-down speed); a leg too short to reach its pace
+ * peaks lower, one too short for its run or ski springs off and stops in the air. `height` is the band it climbs to.
+ */
+export function planAirLeg(paces: AirPaces, length: number, height: number, opts: {pace?: number; run?: number; ski?: number} = {}): AirPlan {
+    const L = Math.max(length, 0.01);
+    const a = paces.accel;
+    const b = paces.brake;
+    const ar = paces.runAccel;
+    let V = opts.pace ?? paces.cruise;
+    let lo = Math.min(opts.run ?? 0, V);
+    let td = Math.min(opts.ski ?? 0, V);
+    const fits = (v: number, l: number, t: number) => l * l / (2 * ar) + (v * v - l * l) / (2 * a) + (v * v - t * t) / (2 * b) + t * t / (2 * b) <= L;
+    if (!fits(V, lo, td)) {
+        // Peak lower: (V² - lo²)/2a + (V² - td²)/2b = L - lo²/2ar - td²/2b.
+        const room = L - (lo * lo) / (2 * ar) - (td * td) / (2 * b);
+        const v2 = (room + (lo * lo) / (2 * a) + (td * td) / (2 * b)) / (1 / (2 * a) + 1 / (2 * b));
+        if (room > 0 && v2 >= Math.max(lo, td) ** 2 * 1.2) V = Math.sqrt(v2);
+        else {
+            // Too short to run or to ski: it springs off and stops in the air.
+            lo = 0;
+            td = 0;
+            V = Math.min(V, Math.sqrt(L / (1 / (2 * a) + 1 / (2 * b))));
+        }
+    }
+    const dRun = (lo * lo) / (2 * ar);
+    const dUp = (V * V - lo * lo) / (2 * a);
+    const dDown = (V * V - td * td) / (2 * b);
+    const dSki = (td * td) / (2 * b);
+    const dLevel = Math.max(L - dRun - dUp - dDown - dSki, 0);
+    const t = [lo / ar, (V - lo) / a, dLevel / Math.max(V, 1e-6), (V - td) / b, td / b];
+    const seconds = Math.max(t.reduce((s, x) => s + x, 0), 0.05);
+    const speeds = [lo, V, V, td, 0];
+    const knots = [0, 0];
+    let at = 0;
+    for (let i = 0; i < 5; i++) {
+        if (t[i] <= 1e-6) continue;
+        at += t[i];
+        knots.push(Math.min(at / seconds, 1), speeds[i] / Math.max(V, 1e-6));
+    }
+    if (knots[knots.length - 2] < 1) knots.push(1, 0);
+    const liftoff = dRun / L;
+    const touchdown = 1 - dSki / L;
+    // Climb and come down by its angles, each a smoothstep (its steepest slope 1.5 times the mean: so 1.5 h / tan γ).
+    const air = Math.max((touchdown - liftoff) * L, 0.01);
+    const per = 1.5 / Math.tan(paces.climb) + 1.5 / Math.tan(paces.descent);
+    const h = Math.min(Math.max(height, 0), air / per);
+    return {seconds, knots, liftoff, touchdown, rise: Math.max((1.5 * h) / Math.tan(paces.climb) / L, 1e-4), fall: Math.max((1.5 * h) / Math.tan(paces.descent) / L, 1e-4), height: h, peak: V};
+}
+
+/** Where along the route (share of its length) a plan is at time share u, and its speed then (shares of the route a time share). */
+export function airProgress(knots: readonly number[], u: number): {share: number; rate: number} {
+    const x = clamp(u, 0, 1);
+    let total = 0;
+    let done = 0;
+    let rate = 0;
+    for (let i = 2; i < knots.length; i += 2) {
+        const u0 = knots[i - 2];
+        const s0 = knots[i - 1];
+        const u1 = knots[i];
+        const s1 = knots[i + 1];
+        const w = u1 - u0;
+        if (w <= 0) continue;
+        total += ((s0 + s1) / 2) * w;
+        if (x >= u1) done += ((s0 + s1) / 2) * w;
+        else if (x >= u0) {
+            const sx = s0 + ((s1 - s0) * (x - u0)) / w;
+            done += ((s0 + sx) / 2) * (x - u0);
+            rate = sx;
+        }
+    }
+    return {share: total > 0 ? Math.min(done / total, 1) : x, rate: total > 0 ? rate / total : 1};
+}
+
+/** The stage of a plan at a route share: on the surface before lift-off or after touch-down, else climbing, level or coming down. */
+export function airStage(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall" | "joins">, share: number): AirStage {
+    if (plan.joins) return share < 0.5 ? "climb" : "cruise";
+    if (share < plan.liftoff) return "run";
+    if (share > plan.touchdown) return "ski";
+    const up = (share - plan.liftoff) / plan.rise;
+    const down = (plan.touchdown - share) / plan.fall;
+    if (up < 1 && up <= down) return "climb";
+    if (down < 1) return "descend";
+    return "cruise";
+}
+
+/** Its height over its line at a route share (0 on the surface, 1 at its band): smoothsteps up from lift-off and down to touch-down. */
+export function airLift(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall">, share: number): number {
+    if (share <= plan.liftoff || share >= plan.touchdown) return 0;
+    const k = Math.min((share - plan.liftoff) / plan.rise, (plan.touchdown - share) / plan.fall, 1);
+    return k * k * (3 - 2 * k);
+}
 
 // MARK: The beat
 
@@ -305,6 +500,83 @@ export function landingNow(agl: number, climb: number, landHeight: number): bool
     return climb < -0.02 && agl < Math.max(landHeight, 0.05) && agl > -0.05;
 }
 
+/**
+ * The take-off and landing clips' own rise (`rig_ark.py`: the root lifts 1.2 H·(v − 0.25)^1.5 once the push-off is
+ * done, v the clip's progress; the landing is the take-off reversed), in drawn heights. The schedule's pose already
+ * carries the body up and down (MA1), so the rig takes this back off and only the limbs come from the clip: no double
+ * rise, no drop when the take-off hands over to the flap.
+ */
+export function clipRise(clip: "takeoff" | "land", phase: number): number {
+    const v = clip === "takeoff" ? clamp(phase, 0, 1) : 1 - clamp(phase, 0, 1);
+    return 1.2 * Math.max(v - 0.25, 0) ** 1.5;
+}
+
+/**
+ * How far its legs are drawn back under the tail (0-1, L2's `tuckLegs`; MA1: the baked flap leaves them hanging): not
+ * on a run across the water or a ski onto it (the feet patter and plane), coming up through the take-off once the
+ * push-off is done, all of flight, and letting down through the first half of the landing to reach for the ground.
+ */
+export function legTuck(clip: string, phase: number, stage: AirStage | null): number {
+    if (stage === "run" || stage === "ski") return 0;
+    if (clip === "takeoff") return smooth((phase - 0.35) / 0.35);
+    if (clip === "land") return 1 - smooth(phase / 0.45);
+    return clip === "flap" || clip === "glide" || clip === "soar" || clip === "bank_l" || clip === "bank_r" ? 1 : 0;
+}
+
+/**
+ * The rig player's flying state, frame by frame (MA1: out of `index.ts` rigFor so it can be tested): when it starts
+ * flying and plays its take-off, when the landing plays, and when it is down. `stage` is its air leg's (the schedule's
+ * pose), when it is on one.
+ * - A take-off plays leaving the ground, unless it comes into view already up, or it is on a run across the water or
+ *   the ground (it flaps from its first step: the spring is the jump of a bird that leaves standing).
+ * - The landing plays when the scene says it is coming down (`landing`), never on a run, a climb or level flight.
+ * - A landing clip left from a flight cut short (a clock jump, a new leg) is dropped the moment its pose climbs or flies
+ *   level again: it never plays on through the next flight (the audit's coot, rec3 `coot-takeoff`).
+ * `play`: a one-shot to start from its first frame; "flight": leave the one-shot for whatever the flight frame picks.
+ */
+export type FlightGateInput = {
+    flies: boolean;
+    flying: boolean;
+    inAir: boolean;
+    rising: boolean;
+    landing: boolean;
+    /** How far its state's air has eased in (0-1). */
+    air: number;
+    now: string | null;
+    phase: number;
+    stage: AirStage | null;
+    hasTakeoff: boolean;
+    hasLand: boolean;
+};
+export function flightGate(g: FlightGateInput): {flying: boolean; play: "takeoff" | "land" | "flight" | null; landed: boolean} {
+    let flying = g.flying;
+    let now = g.now;
+    let phase = g.phase;
+    let play: "takeoff" | "land" | "flight" | null = null;
+    const climbing = g.stage === "run" || g.stage === "climb" || g.stage === "cruise";
+    if (g.flies && !flying && g.inAir && g.rising) {
+        flying = true;
+        if (g.air < 0.35 && g.hasTakeoff && g.stage !== "run") play = "takeoff";
+        else if (now === "land" || now === "takeoff") play = "flight";
+    } else if (flying && (!g.flies || (!g.inAir && g.air <= 0.001)) && now !== "land") flying = false;
+    if (play === "takeoff") {
+        now = "takeoff";
+        phase = 0;
+    }
+    if (flying && now === "land" && climbing) {
+        play = "flight";
+        now = null;
+    }
+    const landing = g.landing && (g.stage === null || !climbing);
+    if (flying && landing && !(now === "takeoff" && phase < 1) && now !== "land" && g.hasLand) {
+        play = "land";
+        now = "land";
+        phase = 0;
+    }
+    if (flying && now === "land" && phase >= 1) return {flying: false, play, landed: true};
+    return {flying, play, landed: false};
+}
+
 export type FlightRigInput = {
     spec: FlightSpec;
     /** Whether the rig has a playable clip of that name, and that clip's own beat rate (flap_hz) where it has one. */
@@ -334,6 +606,10 @@ export type FlightRigInput = {
     drawnLength?: number;
     /** The landing clip's reach over the ground (m: its `rise_h` times the drawn height), for timing the touch-down. */
     landHeight?: number;
+    /** Its height as drawn (m): the take-off's and the landing's own rise are taken back off (`clipRise`). */
+    drawnHeight?: number;
+    /** Its air leg's stage on the schedule (MA1), when it is on one: a run patters at full effort, a ski holds the touch-down. */
+    stage?: AirStage | null;
 };
 
 export type FlightRigFrame = {
@@ -371,11 +647,14 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     const dt = Math.max(input.dt, 0);
     const levelBank = bankAngle(input.speed, input.turn, spec.bankMax);
     const out: FlightRigFrame = {clip: "flap", mode: "sync", phase: 0, rate: 1, pitch: -0.6 * input.climb, roll: -levelBank, heave: 0, fold: 0, beat: memory.beat, flightMode: "flap", bank: levelBank, hz: spec.hz};
-    // A take-off: the spring and the first beat from the clip (played quicker: a snap), then hard flaps take over.
+    const height = input.drawnHeight ?? 0;
+    // A take-off: the crouch, the spring and the first beats from the clip at its own pace, then hard flaps take over.
+    // (MA1: it was cut at 0.42 played half as fast again, 0.3 s. Now the whole spring; and for a bird whose wings beat
+    // slower than about 4.5 a second, the clip's own two beats too. The clip's rise is taken back off: the schedule lifts it.)
     if (input.oneShot === "takeoff") {
         memory.takeoffAt = input.clock;
-        if (input.phase < 0.42 || !has("flap")) {
-            Object.assign(out, {clip: "takeoff", mode: "time", rate: 1.5, flightMode: "takeoff", roll: 0, bank: 0});
+        if (input.phase < (spec.trueHz <= 4.5 ? 1 : 0.55) || !has("flap")) {
+            Object.assign(out, {clip: "takeoff", mode: "time", rate: 1, flightMode: "takeoff", roll: 0, bank: 0, heave: -clipRise("takeoff", input.phase) * height});
             memory.beat = 0;
             memory.wasClip = "takeoff";
             return out;
@@ -384,12 +663,18 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     if (input.oneShot === "land") {
         // The touch-down: the clip's phase follows the height left (legs reaching down as the ground comes up), never
         // going back, and finishes in time once down (the wings folding away).
+        // (MA1: on an air leg it touches down (0.8) only on its landing's surface, and holds there skiing across the
+        // water; the clip's own fall is taken back off, the schedule brings it down.)
         if (memory.wasClip !== "land") memory.landPhase = input.phase;
         const reach = Math.max(input.landHeight ?? 0, 0.05);
         const byHeight = input.landHeight ? 1 - Math.min(Math.max(input.agl, 0) / reach, 1) : 0;
-        const byTime = memory.landPhase + dt * (input.agl <= 0.02 ? 1.6 : 0.5);
-        memory.landPhase = Math.min(Math.max(byHeight * 0.8, byTime), 1);
-        Object.assign(out, {clip: "land", mode: "sync", phase: memory.landPhase, flightMode: "land", pitch: 0, roll: 0, bank: 0});
+        const down = input.agl <= 0.02;
+        let phase = Math.min(Math.max(byHeight * 0.8, memory.landPhase + dt * (down ? 1.6 : 0.5)), 1);
+        if (input.stage === "ski") phase = Math.min(Math.max(memory.landPhase, 0.78), 0.8);
+        else if (input.stage && !down) phase = Math.min(phase, 0.8);
+        memory.landPhase = phase;
+        // (The flare's nose-up eases out into the clip's own attitude.)
+        Object.assign(out, {clip: "land", mode: "sync", phase, flightMode: "land", pitch: -0.55 * memory.flare * (1 - smooth(phase / 0.8)), roll: 0, bank: 0, heave: -clipRise("land", phase) * height});
         memory.wasClip = "land";
         return out;
     }
@@ -413,11 +698,14 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         return out;
     }
     // Effort: a hard climb out of a take-off, a climb, cruise, a descent; a flare near the ground on the way down.
+    // (MA1: a run across the water or the ground is the take-off: hard flaps from its first step.)
+    if (input.stage === "run") memory.takeoffAt = input.clock;
     const sinceTakeoff = input.clock - memory.takeoffAt;
     const descending = input.climb < -0.06;
     const drawn = input.drawnLength ?? spec.lengthM;
     const flareHeight = Math.max(1.2, drawn * 3);
-    const wantFlare = descending && input.agl < flareHeight && input.agl > 0.02 ? 1 : 0;
+    // (MA1: on an air leg only on its glide-in, over the surface it lands on: never over a dip mid-flight.)
+    const wantFlare = descending && input.agl < flareHeight && input.agl > 0.02 && (!input.stage || input.stage === "descend") ? 1 : 0;
     memory.flare += (wantFlare - memory.flare) * Math.min(dt * 6, 1);
     const burst = input.actState === "fly" || input.actState === "flee" || input.actState === "chase";
     let effort: number = sinceTakeoff < 1.6 ? BEAT_EFFORT.takeoff : input.climb > 0.08 ? BEAT_EFFORT.climb : descending ? BEAT_EFFORT.descend : BEAT_EFFORT.cruise;

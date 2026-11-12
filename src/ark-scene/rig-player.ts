@@ -1119,6 +1119,8 @@ export type RigLiveInput = {
     /** The act's state and speed (L7's chases), if any. */
     actState?: string | null;
     actSpeed?: number | null;
+    /** Its air leg's stage on the schedule while it flies (MA1: the flight driver tucks its legs by it). */
+    airStage?: string | null;
     ground?: GroundQuery;
 };
 
@@ -1151,7 +1153,8 @@ export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInpu
             clipFrom: state.from?.name ?? null,
             clipPhase: state.now.phase,
             actState: input.actState ?? null,
-            actSpeed: input.actSpeed ?? null
+            actSpeed: input.actSpeed ?? null,
+            airStage: input.airStage ?? null
         },
         a,
         b,
