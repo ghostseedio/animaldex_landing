@@ -32,7 +32,7 @@ export const TOWN_LAMP_HEIGHT = 16;
 
 /** The street lamps' light, shared by every town material (set by `render/index.ts` and `render/furniture.ts`). */
 export const TOWN_LIGHT = {
-    /** RGBA8, nearest: per cell, R/G its nearest lamp head's offset from the cell's middle in x/z (±16 m as 0–1), B the head's height (0–16 m), A its light (0: none or a building in the way). */
+    /** RGBA8, filtered: per 1 m cell, R/G its nearest lamp head's offset from the cell's middle in x/z (±16 m as 0–1), B the head's height (0–16 m), A how much of it the cell sees (0: none, or a building in the way). */
     lampMap: {value: null as DataTexture | null},
     /** The map's square in the town's own frame: x0, z0, side (m), texels a side. */
     lampRect: {value: new Vector4(-TOWN_HALF, -TOWN_HALF, TOWN_HALF * 2, TOWN_LAMP_TEXELS)},
@@ -42,7 +42,7 @@ export const TOWN_LIGHT = {
     lampOn: {value: 0},
     lampColour: {value: new Color("#ffcf94")},
     /** The lamps' strength (three's physical units, tuned against the scene's moonlight and exposure). */
-    lampPower: {value: 26}
+    lampPower: {value: 90}
 };
 
 /** Noise and cloud shade, the wild ground's own functions (`glsl.ts` NOISE_GLSL, CLOUD_GLSL) under the town's names, so a material that already has the Ark's can take these too. */
@@ -124,12 +124,12 @@ export const TOWN_LAMP_LIGHT_GLSL = `
 #if defined( RE_Direct )
 if (townLampOn > 0.001) {
     vec2 townLocal = vTownWorld.xz - townOrigin;
-    vec2 townTexel = (townLocal - townLampRect.xy) / townLampRect.z * townLampRect.w;
-    if (townTexel.x >= 0.0 && townTexel.y >= 0.0 && townTexel.x < townLampRect.w && townTexel.y < townLampRect.w) {
-        vec4 lampTexel = texelFetch(townLampMap, ivec2(townTexel), 0);
-        if (lampTexel.a > 0.0) {
-            vec2 cell = (floor(townTexel) + 0.5) / townLampRect.w * townLampRect.z + townLampRect.xy + townOrigin;
-            vec3 lampAt = vec3(cell.x + (lampTexel.r * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)}, lampTexel.b * ${TOWN_LAMP_HEIGHT.toFixed(1)}, cell.y + (lampTexel.g * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)});
+    vec2 townUv = (townLocal - townLampRect.xy) / townLampRect.z;
+    if (townUv.x >= 0.0 && townUv.y >= 0.0 && townUv.x < 1.0 && townUv.y < 1.0) {
+        // Filtered: the offset from each cell's middle interpolates to the offset from this very point.
+        vec4 lampTexel = texture2D(townLampMap, townUv);
+        if (lampTexel.a > 0.004) {
+            vec3 lampAt = vec3(vTownWorld.x + (lampTexel.r * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)}, lampTexel.b * ${TOWN_LAMP_HEIGHT.toFixed(1)}, vTownWorld.z + (lampTexel.g * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)});
             vec3 toLamp = lampAt - vTownWorld;
             float d2 = dot(toLamp, toLamp);
             // A pool about 12 m across, fading out by 15 m (the map has nothing past 16 m).

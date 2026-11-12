@@ -150,13 +150,15 @@ function digest(value: unknown): string {
 /**
  * The town's prebuild on the fixture, digested before the speed work (ark-next bcb5eca9, the plain scans): the same
  * town after it. When the town is changed on purpose (the town lane), these are updated with the change.
+ * Lane GA (town-ground): the ground's texture weights and no per-vertex shade, the street surfaces and furniture, the
+ * drapes' tags (the plan, areas and places are unchanged: nothing moved).
  */
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     areas: "7a26937a126da351",
-    ground: "5554417fbd78537c",
-    sceneryAndBuildings: "6f46e448bd0dcb65",
-    zoo: "012c066a04201c09",
+    ground: "0fef400bcff22b82",
+    sceneryAndBuildings: "f1d58d27bdb4abdf",
+    zoo: "04414c07340b7095",
     places: "c9708c0cd0281d71"
 };
 

@@ -24,12 +24,12 @@ export const TOWN_LAYER = {asphalt: 0, slabs: 1, setts: 2, gravel: 3, blocks: 4,
 export const TOWN_LAYER_METRES = [3.0, 1.8, 2.4, 2.25, 1.81, 2.3];
 /** Each layer's mean colour (linear), from the packing: the shader divides by it, so the vertex colour keeps the hue. */
 export const TOWN_LAYER_MEANS: Array<[number, number, number]> = [
-    [0.0683, 0.0668, 0.0517],
-    [0.1806, 0.1324, 0.0816],
-    [0.1563, 0.1296, 0.0741],
-    [0.385, 0.2031, 0.0764],
-    [0.2018, 0.1836, 0.1449],
-    [0.0422, 0.0431, 0.0414]
+    [0.1069, 0.1052, 0.0926],
+    [0.2269, 0.1859, 0.1405],
+    [0.1976, 0.1749, 0.1266],
+    [0.3842, 0.256, 0.1444],
+    [0.2565, 0.2412, 0.216],
+    [0.0722, 0.074, 0.0754]
 ];
 
 export const TOWN_TEXTURES = {

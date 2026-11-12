@@ -256,3 +256,84 @@ export function floorUnder(corners: Array<{x: number; z: number}>): number {
     for (const c of corners) high = Math.max(high, townHeight(c.x, c.z));
     return high;
 }
+
+// MARK: - What the ground is made of, for its textures (lane GA)
+
+/** Every surface, in a fixed order (the ground grid's per-vertex index). */
+export const TOWN_SURFACES: readonly TownSurface[] = ["sea", "sand", "shore", "grass", "lawn", "park", "meadow", "wood", "field", "orchard", "paddock", "farmyard", "zoo", "allotment", "churchyard", "square", "bank", "water"];
+
+/**
+ * What a surface shows of the ground's texture layers (`render/surfaces.ts`): soil, sand, mud, leaf litter (the rest
+ * is grass), then mown lawn, trodden wear, and a bed under water. 0–1 each.
+ */
+export function surfaceWeights(surface: TownSurface): [number, number, number, number, number, number, number, number] {
+    switch (surface) {
+        case "sea":
+            return [0, 1, 0, 0, 0, 0, 1, 0];
+        case "sand":
+            return [0, 1, 0, 0, 0, 0, 0, 0];
+        case "shore":
+            return [0, 0.35, 0, 0, 0, 0, 0, 0];
+        case "lawn":
+        case "park":
+        case "zoo":
+            return [0, 0, 0, 0, 1, 0, 0, 0];
+        case "churchyard":
+            return [0, 0, 0, 0, 0.6, 0, 0, 0];
+        case "wood":
+            return [0, 0, 0, 1, 0, 0, 0, 0];
+        case "field":
+            return [0.7, 0, 0, 0, 0, 0, 0, 0];
+        case "orchard":
+            return [0, 0, 0, 0, 0, 0.2, 0, 0];
+        case "paddock":
+            return [0, 0, 0, 0, 0, 0.7, 0, 0];
+        case "farmyard":
+            return [1, 0, 0.35, 0, 0, 0, 0, 0];
+        case "allotment":
+            return [0.8, 0, 0, 0, 0, 0, 0, 0];
+        case "square":
+            return [1, 0, 0, 0, 0, 0, 0, 0];
+        case "bank":
+            return [0, 0, 0.8, 0, 0, 0, 0, 0];
+        case "water":
+            return [0, 0, 0.6, 0, 0, 0, 1, 0];
+        default:
+            return [0, 0, 0, 0, 0, 0, 0, 0];
+    }
+}
+
+/**
+ * The ground grid's weights, 8 bytes a vertex (0–255), from each vertex's surface (its index in `TOWN_SURFACES`),
+ * softened over its neighbours (a 3 × 3 box): the shader breaks the softened edge with noise, so a boundary reads as
+ * a ragged natural line, never as the grid's 1.1 m steps.
+ */
+export function townSurfaceWeights(size: number, surfaceIndex: Uint8Array): Uint8Array {
+    const table = TOWN_SURFACES.map((s) => surfaceWeights(s));
+    const raw = new Float32Array(size * size * 8);
+    for (let i = 0; i < size * size; i++) {
+        const w = table[surfaceIndex[i]] ?? table[3];
+        for (let k = 0; k < 8; k++) raw[i * 8 + k] = w[k];
+    }
+    const out = new Uint8Array(size * size * 8);
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
+            for (let k = 0; k < 8; k++) {
+                let sum = 0;
+                let n = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    const r = row + dr;
+                    if (r < 0 || r >= size) continue;
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const c = column + dc;
+                        if (c < 0 || c >= size) continue;
+                        sum += raw[(r * size + c) * 8 + k];
+                        n++;
+                    }
+                }
+                out[(row * size + column) * 8 + k] = Math.round((sum / n) * 255);
+            }
+        }
+    }
+    return out;
+}
