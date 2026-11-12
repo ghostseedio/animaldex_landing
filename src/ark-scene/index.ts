@@ -4842,7 +4842,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const dx = bodies.prey.x - bodies.predator.x;
         const dz = bodies.prey.z - bodies.predator.z;
         // (Side on, round to the nearest bearing with no tree between the camera and the chase: `clearBearing`.)
-        const azimuth = kind === "cutaway" ? undefined : clearBearing(stage.focus, stage.distance, stage.polar, sideOn(dx, dz), (x, z) => Boolean(world?.sampler.blocked(x, z, 2.4)));
+        const azimuth = kind === "cutaway" ? undefined : clearBearing(stage.focus, stage.distance, stage.polar, sideOn(dx, dz), (x, z, clearance) => Boolean(world?.sampler.blocked(x, z, clearance)), undefined, stage.places);
         toFrame(stage.focus, stage.distance, stage.polar, azimuth, stage.seconds, () => {
             let turned = false;
             run.step = (t, last, now) => {

@@ -106,6 +106,8 @@ export type MealStage = {
     turnAt?: number;
     /** The catch (s into the stage). */
     catchAt?: number;
+    /** Where the chase happens: the two at the start, the catch (for the camera's clear view). */
+    places?: Array<{x: number; y: number; z: number}>;
 };
 
 const smooth = (t: number) => {
@@ -760,7 +762,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
             const at = puffTime(run, i);
             return a <= at && at < b && puff.size > 0;
         }),
-        catchAt: run.tc
+        catchAt: run.tc,
+        places: [run.pred[0], run.prey[0], sampleAt(run.prey, run.tc)].map((p) => ({x: p.x, y: p.y + 0.5, z: p.z}))
     };
 }
 
@@ -790,24 +793,32 @@ function puffTime(run: Run, index: number): number {
 
 /**
  * The camera's bearing for a chase: side on (the scene's two choices first), else the nearest bearing round from it,
- * whichever has the fewest trees between the camera and the chase (`blocked`: a trunk within a crown's reach of a
- * point; only where the camera's line is still under the treetops). A tree's crown filled the first lion chase's frame.
+ * whichever has the fewest trees in the way (`blocked(x, z, clearance)`: a trunk within that much of a point): on the
+ * lines from the camera to each of the chase's places (where the two start, the catch), under the treetops, and a
+ * tree close under the camera itself (its crown fills the foreground). A tree's crown filled the first lion chase's
+ * frame.
  */
-export function clearBearing(focus: {x: number; y: number; z: number}, distance: number, polar: number, side: number, blocked: (x: number, z: number) => boolean, ground: (x: number, z: number) => number = groundAt): number {
+export function clearBearing(focus: {x: number; y: number; z: number}, distance: number, polar: number, side: number, blocked: (x: number, z: number, clearance: number) => boolean, ground: (x: number, z: number) => number = groundAt, places: Array<{x: number; y: number; z: number}> = []): number {
     const candidates = [side, side + Math.PI, side + 0.45, side - 0.45, side + Math.PI + 0.45, side + Math.PI - 0.45, side + 0.9, side - 0.9, side + Math.PI + 0.9, side + Math.PI - 0.9];
+    const targets = [focus, ...places];
     let best = side;
     let bestHits = Infinity;
     for (const bearing of candidates) {
+        const cam = {x: focus.x + Math.sin(polar) * Math.sin(bearing) * distance, y: focus.y + Math.cos(polar) * distance, z: focus.z + Math.sin(polar) * Math.cos(bearing) * distance};
         let hits = 0;
-        const n = 24;
-        for (let i = 2; i <= n; i++) {
-            const k = i / n;
-            const x = focus.x + Math.sin(polar) * Math.sin(bearing) * distance * k;
-            const z = focus.z + Math.sin(polar) * Math.cos(bearing) * distance * k;
-            const y = focus.y + Math.cos(polar) * distance * k;
-            // (Over the treetops, nothing is in the way.)
-            if (y - Math.max(ground(x, z), 0) > 10) continue;
-            if (blocked(x, z)) hits++;
+        // (A tree close under the camera: its crown would fill the bottom of the frame.)
+        if (cam.y - Math.max(ground(cam.x, cam.z), 0) < 16 && blocked(cam.x, cam.z, 7)) hits += 4;
+        for (const target of targets) {
+            const n = 20;
+            for (let i = 1; i < n; i++) {
+                const k = i / n;
+                const x = target.x + (cam.x - target.x) * k;
+                const z = target.z + (cam.z - target.z) * k;
+                const y = target.y + (cam.y - target.y) * k;
+                // (Over the treetops, nothing is in the way.)
+                if (y - Math.max(ground(x, z), 0) > 10) continue;
+                if (blocked(x, z, 2.4)) hits++;
+            }
         }
         if (hits < bestHits) {
             best = bearing;

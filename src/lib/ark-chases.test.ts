@@ -266,7 +266,7 @@ test("the server's positions: the hunter where the scene has it near its waypoin
 test("the chase's camera looks past the trees: of the side-on bearings, one with no trunk in its line", () => {
     const focus = {x: 0, y: 1, z: 0};
     // A tree 6 m out along the first side-on bearing (east): the camera takes the other side.
-    const tree = (x: number, z: number) => Math.hypot(x - 6, z) < 2.4;
+    const tree = (x: number, z: number, clearance: number) => Math.hypot(x - 6, z) < clearance;
     const b = clearBearing(focus, 20, 1.1, Math.PI / 2, tree, () => 0);
     assert.ok(Math.abs(Math.atan2(Math.sin(b + Math.PI / 2), Math.cos(b + Math.PI / 2))) < 1e-9, `west (${b})`);
     // Nothing in the way: side on as the scene asked.
