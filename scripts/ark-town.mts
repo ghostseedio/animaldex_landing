@@ -4,6 +4,7 @@
  * serves it, and drives it in headless Chromium.
  *
  *   npx tsx scripts/ark-town.mts stills  [--out dir] [--quality high] [--size 1280x720] [--only id,id] [--gpu metal|swiftshader]
+ *                                        [--device phone] (360×800 at 2×, touch)  [--hours 22.3] (every shot at that hour)
  *   npx tsx scripts/ark-town.mts fly     [--out dir] [--seconds 48] [--fps 24] [--quality high]   frames → mp4 (ffmpeg)
  *   npx tsx scripts/ark-town.mts perf    [--out dir] [--seconds 20]                               per tier and device
  *   npx tsx scripts/ark-town.mts visual  [--update]                                                SwiftShader, compare
@@ -53,7 +54,8 @@ writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta ch
 
 const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
-    const fromPublic = url.pathname.startsWith("/ark/graphics/");
+    // The sky and the asset library (the town's trees, shrubs and reeds: the GC lane).
+    const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "town.html");
     if (!file.startsWith(folder) || !existsSync(file)) return void response.writeHead(404).end();
@@ -110,15 +112,19 @@ const quality = arg("quality", "high");
 if (command === "stills") {
     const out = path.resolve(arg("out", path.join(root, ".ark-golden", "town", "stills")));
     mkdirSync(out, {recursive: true});
-    const {context, page} = await open(quality, {width, height, scale: 1, mobile: false});
+    const phone = arg("device", "desktop") === "phone";
+    const {context, page} = await open(quality, phone ? {width: 360, height: 800, scale: 2, mobile: true} : {width, height, scale: 1, mobile: false});
     const ids = (await page.evaluate(() => window.__arkTown!.shots.map((s) => s.id))) as string[];
     const only = arg("only", "") ? new Set(arg("only", "").split(",")) : null;
+    const hours = arg("hours", "") ? Number(arg("hours", "")) : null;
     for (const id of ids) {
         if (only && !only.has(id)) continue;
-        await page.evaluate((shot) => {
+        await page.evaluate(({shot, hours}) => {
             window.__arkTown!.shot(shot);
+            const s = window.__arkTown!.shots.find((x) => x.id === shot)!;
+            if (hours !== null) window.__arkTown!.view(s.eye, s.target, hours, s.day, s.fov);
             window.__arkTown!.render(3);
-        }, id);
+        }, {shot: id, hours});
         const png = await page.screenshot({type: "png"});
         await sharp(png).jpeg({quality: 88}).toFile(path.join(out, `${id}.jpg`));
         log("still", id);

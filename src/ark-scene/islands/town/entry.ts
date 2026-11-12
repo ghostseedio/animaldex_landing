@@ -16,6 +16,7 @@ import {buildTownIsland, TOWN_TIERS, type TownTier} from "@/ark-scene/islands/to
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import {local} from "@/ark-scene/islands/town/geom";
+import {townHeight} from "@/ark-scene/islands/town/ground";
 import type {TownClock} from "@/ark-scene/islands/town/people";
 
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
@@ -33,6 +34,9 @@ function shots(): Shot[] {
     const pFront = local(penguins, 3, penguins.d / 2 + 3.2);
     const aFront = local(aviary, -10, aviary.d / 2 + 7);
     const farm = plan.farms.find((f) => f.id === "farmstead-0")!.at;
+    const cats = slot("big_cats-1").at;
+    const cFront = local(cats, 4, cats.d / 2 + 9);
+    const aClose = local(aviary, 2, aviary.d / 2 + 6);
     return [
         {id: "island_far", eye: [70, 230, 470], target: [0, 0, -15], hours: 11},
         {id: "old_town", eye: [-6, 34, 92], target: [-18, 4, 2], hours: 10.5},
@@ -50,7 +54,12 @@ function shots(): Shot[] {
         {id: "square_market", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 10, day: 20408},
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
         {id: "town_night", eye: [-6, 34, 92], target: [-18, 4, 2], hours: 22.3},
-        {id: "homes_night", eye: [155, 42, 125], target: [92, 2, 22], hours: 21.5}
+        {id: "homes_night", eye: [155, 42, 125], target: [92, 2, 22], hours: 21.5},
+        // The nature lane's set (GC): a park, the canal at a bridge with boats, a zoo enclosure, the aviary close.
+        {id: "park", eye: [10, 9, -38], target: [-22, 1.5, -74], hours: 10.5},
+        {id: "canal_bridge", eye: [9, 6.5, 60], target: [4.5, 2.2, 26], hours: 15},
+        {id: "zoo_enclosure", eye: [cFront.x, townHeight(cFront.x, cFront.z) + 4.5, cFront.z], target: [cats.x - 1, townHeight(cats.x, cats.z) + 1, cats.z - 2], hours: 12},
+        {id: "aviary_close", eye: [aClose.x, townHeight(aClose.x, aClose.z) + 1.7, aClose.z], target: [aviary.x, townHeight(aviary.x, aviary.z) + 2.6, aviary.z - 2], hours: 10}
     ];
 }
 
