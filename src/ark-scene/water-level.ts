@@ -31,7 +31,13 @@ export function freshWaterAt(x: number, z: number): number {
 /** The fresh water's surface over a point (m): today's world's fixed level; v2's lake's or river's own level there (the river descends). */
 export function freshLevelAt(x: number, z: number): number {
     if (arkWorld() !== "v2") return FRESH_LEVEL;
-    return (sampleGround(x, z) as V2Fresh).freshLevel ?? FRESH_LEVEL;
+    return freshLevelFrom(sampleGround(x, z));
+}
+
+/** `freshLevelAt` from a ground sample already taken there (no second sample). */
+export function freshLevelFrom(sample: GroundSample): number {
+    if (arkWorld() !== "v2") return FRESH_LEVEL;
+    return (sample as V2Fresh).freshLevel ?? FRESH_LEVEL;
 }
 
 /**
