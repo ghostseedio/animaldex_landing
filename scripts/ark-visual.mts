@@ -40,7 +40,7 @@ const command = argv[0] && !argv[0].startsWith("--") ? argv[0] : "check";
 type Device = {width: number; height: number; deviceScaleFactor: number; mobile: boolean; quality: "high" | "medium" | "low"};
 type Shot = {device: string; place: string; time: "day" | "dusk" | "night"};
 type Config = {devices: Record<string, Device>; shots: Shot[]; tolerance?: Partial<VisualTolerance>; overrides?: Record<string, Partial<VisualTolerance>>};
-type Hook = {name: string; lane?: string; requires: string[]; command: string; artifacts?: string; enabled?: boolean};
+type Hook = {name: string; lane?: string; requires: string[]; command: string; artifacts?: string; enabled?: boolean; ci?: boolean; ciNote?: string};
 
 const visualDir = path.join(root, "tests", "ark-visual");
 const baselines = path.join(visualDir, "baselines");
@@ -83,8 +83,10 @@ if (command === "hooks") {
     let failed = 0;
     for (const hook of hooks) {
         const missing = hook.requires.filter((file) => !existsSync(path.join(root, file)));
-        if (hook.enabled === false || missing.length) {
-            log(`skip  ${hook.name}${missing.length ? ` (not landed: ${missing.join(", ")})` : " (disabled)"}`);
+        // (`ci: false`: runnable locally, skipped on GitHub's runners, with the hook's `ciNote` saying why.)
+        const ciSkip = hook.ci === false && Boolean(process.env.CI);
+        if (hook.enabled === false || ciSkip || missing.length) {
+            log(`skip  ${hook.name}${missing.length ? ` (not landed: ${missing.join(", ")})` : ciSkip ? ` (not in CI: ${hook.ciNote ?? "see hooks.json"})` : " (disabled)"}`);
             continue;
         }
         log(`run   ${hook.name}: ${hook.command}`);
