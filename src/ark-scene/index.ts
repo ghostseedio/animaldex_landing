@@ -644,6 +644,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         ARK_ENVIRONMENT.wind.value = env.wind;
         ARK_ENVIRONMENT.storm.value = env.storm;
         ARK_ENVIRONMENT.cloud.value = env.cloud;
+        ARK_ENVIRONMENT.rain.value = lookWeather.rain;
         const strength = 0.45 + 1.4 * env.wind + 2 * env.storm;
         ARK_WIND_VECTOR.value.set(Math.cos(env.windDirection), Math.sin(env.windDirection)).multiplyScalar(strength * 0.95);
         WATER_WIND.value = 0.6 + 1.2 * env.wind + 1.6 * env.storm;
