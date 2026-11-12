@@ -66,7 +66,7 @@ animal's seed, so every viewer sees the same.
   on the ground's height and slope. It stays locked there, keeping the heading it landed with, until it lifts.
   **Feet do not slide**, whatever the pace.
 - **Turning by stepping.** The body turns at its own pace, at most about 0.4·√(g/h) rad/s standing (slower for big
-  animals), and never more than 100° behind the drawn heading. While it turns or drifts standing, the foot furthest
+  animals), and never more than 35° behind the drawn heading (the head's looks are measured from it). While it turns or drifts standing, the foot furthest
   from under its hip steps, aimed ahead of the turn. Two feet can step together (diagonals, or three of six), and a
   foot that can't be reached steps at once. A fidget step comes now and then.
 - **Foot IK** (`ik.ts`): analytic two-bone IK. The knee bends toward its rest pole, carried with the body. The foot
@@ -146,5 +146,19 @@ its matrix is composed.
   loose.
 - **The mallard** and other ducks have legs dead straight at rest and long webbed feet. Running, they keep about 2% of
   slide; on slopes, 4%.
-- **The body's own turn** means the drawn body can lag the schedule's heading by up to 100° in a fast turn on the
+- **The body's own turn** means the drawn body can lag the schedule's heading by up to 35° in a fast turn on the
   spot. The position is unchanged; the body comes round within a second.
+- **The emperor penguin** and the other turned birds are never rigged in the scene today. Their rig files are turned
+  (`facing_deg`) but the live near models aren't yet (`publish_ark.py` waits for the release), so the rig player
+  keeps them procedural. The penguin's skeleton is in the CI set; the recordings use the domestic pigeon instead.
+
+## 7. Cost
+
+The layer runs only for rigged animals: at most 24 on desktop tiers and 8 in lite mode.
+
+- **CPU:** median time per animal per frame is 11–59 µs, about 35 µs typical (`scripts/ark-loco-bench.mts`, Node on
+  the shared M3 under a load average of about 100, 20 golden species). That is about 0.85 ms a frame for 24 rigged
+  animals and 0.3 ms for 8. A phone CPU 4× slower comes to about 1.1 ms for its 8, inside the 16.7 ms budget for
+  60 fps.
+- **Upload:** each species with rigged animals uploads one live texture a frame (bones × 3 texels × 32 rows,
+  RGBA32F). That is 29 KB for a 19-bone rig: at most about 350 KB a frame on desktop and 120 KB in lite mode.

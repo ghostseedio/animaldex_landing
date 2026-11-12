@@ -128,6 +128,25 @@ test("leg IK reaches a reachable target and keeps the knee bending its own way",
     }
 });
 
+test("standing on its feet, the body is drawn level whatever the instance's old root-motion tilt (no legs folding)", async () => {
+    const {leggedDriver} = await import("@/ark-scene/locomotion/legged");
+    const {Euler, Quaternion} = await import("three");
+    for (const slug of ["domestic-dog", "african-bush-elephant", "red-deer"]) {
+        const {rig, scale} = rigs.find((r) => r.rig.slug === slug)!;
+        const state = leggedDriver.init(rig);
+        const world = rig.bones.map((b) => b.restWorld.clone());
+        // The idle director's look-up: the instance pitched 0.35 rad nose up and lifted a little.
+        const instance = new Matrix4().compose(new Vector3(0, -rig.minY * scale + 0.05, 0), new Quaternion().setFromEuler(new Euler(-0.35, 0, 0)), new Vector3(scale, scale, scale));
+        for (let f = 0; f < 30; f++) {
+            rig.bones.forEach((b, i) => world[i].copy(b.restWorld));
+            leggedDriver.pose(rig, {instance, scale, yaw: 0, dt: 1 / 60, clock: 10 + f / 60, seed: 0.3, ground: () => ({height: 0, nx: 0, ny: 1, nz: 0}), grounded: true, clipNow: "idle", clipFrom: null, clipPhase: 0}, world, state);
+        }
+        const hipsWorld = new Matrix4().multiplyMatrices(instance, world[rig.hips]).multiply(rig.bones[rig.hips].restWorld.clone().invert());
+        const tilt = new Euler().setFromRotationMatrix(new Matrix4().extractRotation(hipsWorld));
+        assert.ok(Math.abs(tilt.x) < 0.06 && Math.abs(tilt.z) < 0.06, `${slug}: body tilt ${tilt.x.toFixed(2)} ${tilt.z.toFixed(2)}`);
+    }
+});
+
 test("springs: the same motion at 30, 60 and 144 fps (deterministic, frame-rate independent)", () => {
     const run = (fps: number) => {
         const s = newSpring();

@@ -25,6 +25,9 @@ import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChai
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {FootTarget, GaitName, GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 
+/** Act states under which the body is still stood level (moving acts: the act's attitude is its gait's). */
+export const LEVEL_ACTS: ReadonlySet<string> = new Set(["walk", "run", "stalk", "charge", "crawl", "carry", "push", "wade"]);
+
 /** Clips during which the legged driver walks the animal itself (its own gaits) or stands it (its own idle). */
 export const GAIT_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "hop", "idle"]);
 
@@ -234,9 +237,22 @@ export function poseLegged(rig: LocoRig, drawn: LocoInput, world: Matrix4[], s: 
     }
     const lag = wrapHalf((s.bodyYaw - drawn.yaw) / (Math.PI * 2)) * Math.PI * 2;
     const turnLag = new Matrix4().makeTranslation(lagPivot.x, 0, lagPivot.z).multiply(new Matrix4().makeRotationY(lag)).multiply(new Matrix4().makeTranslation(-lagPivot.x, 0, -lagPivot.z));
-    const input: LocoInput = {...drawn, instance: new Matrix4().multiplyMatrices(drawn.instance, turnLag), yaw: s.bodyYaw};
+    // On its own feet the body stands level on the ground: the instance's tilt and lift from the older shader-era root
+    // motions (the idle director's bobs and looks round, a glance's lift, the reactive crouch) would otherwise fold the
+    // planted legs (a dog "sitting up" as it looked round). The driver poses it on a level instance at the ground; the
+    // pose is turned back into the drawn instance's frame at the end, so it is drawn level. (An act's attitude, a
+    // recipe's pitch or roll, stays: `levelled`.)
+    const levelled = !drawn.actState || LEVEL_ACTS.has(drawn.actState);
+    const drawnPos = tmpV.setFromMatrixPosition(drawn.instance);
+    const scaleNow = Math.max(drawn.scale, 1e-6);
+    const level = levelled
+        ? new Matrix4().compose(new Vector3(drawnPos.x, drawn.ground(drawnPos.x, drawnPos.z).height - rig.minY * scaleNow, drawnPos.z), new Quaternion().setFromAxisAngle(Y, drawn.yaw), new Vector3(scaleNow, scaleNow, scaleNow))
+        : drawn.instance;
+    const input: LocoInput = {...drawn, instance: new Matrix4().multiplyMatrices(level, turnLag), yaw: s.bodyYaw};
     const result = poseInBodyFrame(rig, input, world, s);
-    if (Math.abs(lag) > 1e-5) for (const m of world) m.premultiply(turnLag);
+    // Body frame -> the drawn instance's mesh frame: drawn⁻¹ · level · lag.
+    const back = levelled ? new Matrix4().copy(drawn.instance).invert().multiply(level).multiply(turnLag) : turnLag;
+    for (const m of world) m.premultiply(back);
     return result;
 }
 
