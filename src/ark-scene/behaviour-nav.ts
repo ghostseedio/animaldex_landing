@@ -447,7 +447,13 @@ export class NavGrid {
         // (`onto`: b is on something's surface, a crevice in a rock's face, a burrow's mouth by a log: the last run goes
         // onto it, over what it is on, within ONTO of b.)
         const ontoSkip = onto && this.solid ? (c: Collider) => colliderDistance(c, b.x, b.z) < ONTO : undefined;
-        if (this.clear(a, b, kind, minDepth, maxSlope, r)) return [a, b];
+        // A start closer to something than its body (a duck's stay by a lake rock, a placement in a rock): its runs from a
+        // need come no closer to anything than a already is (2026-11-12, L7: a mallard folded back on the move).
+        const startClear = r > 0 ? this.clearanceAt(a.x, a.z) : Infinity;
+        const inside = r > 0 && startClear < r - 0.01;
+        const insideR = Math.max(startClear - 0.02, 0);
+        const fromA = inside ? insideR : r;
+        if (this.clear(a, b, kind, minDepth, maxSlope, fromA)) return [a, b];
         // A short way with something just in its line (a trunk beside a heron's step): one gentle bend round it, out to the
         // side at its middle, the least bend that clears (a grid route there turns sharply at a cell's middle, on the move).
         const span = Math.hypot(b.x - a.x, b.z - a.z);
@@ -459,7 +465,7 @@ export class NavGrid {
             for (const d of [0.25, 0.5, 0.8, 1.2, 1.8]) {
                 for (const side of [1, -1]) {
                     const w = {x: mx + nx * d * side, z: mz + nz * d * side};
-                    if (this.clear(a, w, kind, minDepth, maxSlope, r) && this.clear(w, b, kind, minDepth, maxSlope, r)) return [a, w, b];
+                    if (this.clear(a, w, kind, minDepth, maxSlope, fromA) && this.clear(w, b, kind, minDepth, maxSlope, r)) return [a, w, b];
                 }
             }
         }
@@ -479,9 +485,11 @@ export class NavGrid {
         const g = new Map<number, number>();
         const from = new Map<number, number>();
         const open = new Heap();
-        // Onto the grid from a: its own cell, or (colliders) any of the 9 round it whose straight run from a is clear;
-        // a start inside something solid (a placement in a rock) takes the nearest of them whatever is in the way.
-        const inside = r > 0 && this.clearanceAt(a.x, a.z) < r - 0.01;
+        // Onto the grid from a: its own cell, or (colliders) any round it within SEED_RING whose straight run from a is
+        // clear. From a start inside its body's clearance: any of them whose run comes no closer to anything than a is,
+        // each at its distance, so the search takes the one towards b (the nearest alone lay behind the mallard); none:
+        // the nearest of them, whatever is in the way.
+        let seeded = false;
         if (!r) {
             g.set(start, 0);
             open.push(Math.hypot(gi - si, gj - sj), start);
@@ -498,10 +506,15 @@ export class NavGrid {
                     const c = this.centre(i, j);
                     const d = Math.hypot(c.x - a.x, c.z - a.z) / CELL;
                     if (inside) {
-                        if (ok(k) && d < nearestD) {
+                        if (!ok(k)) continue;
+                        if (d < nearestD) {
                             nearestD = d;
                             nearest = k;
                         }
+                        if (!this.runClear(a, c, insideR)) continue;
+                        g.set(k, d);
+                        open.push(d + Math.hypot(gi - i, gj - j), k);
+                        seeded = true;
                         continue;
                     }
                     if (!ok(k) || !this.runClear(a, c, r)) continue;
@@ -509,7 +522,7 @@ export class NavGrid {
                     open.push(d + Math.hypot(gi - i, gj - j), k);
                 }
             }
-            if (inside && nearest >= 0) {
+            if (inside && !seeded && nearest >= 0) {
                 g.set(nearest, nearestD);
                 open.push(nearestD, nearest);
             }
@@ -573,7 +586,7 @@ export class NavGrid {
         if (!r && cells.length && cells[0] === start) cells.shift();
         else if (r && cells.length >= 2 && cells[0] === start) {
             const next = cells[1];
-            if (!via.has(next) && this.runClear(a, this.centre(next % this.size, Math.floor(next / this.size)), r)) cells.shift();
+            if (!via.has(next) && this.runClear(a, this.centre(next % this.size, Math.floor(next / this.size)), fromA)) cells.shift();
         }
         const raw: NavPoint[] = [a];
         for (const k of cells) {
@@ -592,9 +605,23 @@ export class NavGrid {
         while (at < raw.length - 1) {
             // (With colliders, each try is a swept run: no more than SMOOTH_AHEAD points ahead, a path's corners a few cells apart.)
             let next = r ? Math.min(raw.length - 1, at + SMOOTH_AHEAD) : raw.length - 1;
-            while (next > at + 1 && !this.clear(raw[at], raw[next], kind, minDepth, maxSlope, r)) next--;
+            while (next > at + 1 && !this.clear(raw[at], raw[next], kind, minDepth, maxSlope, at === 0 ? fromA : r)) next--;
             out.push(raw[next]);
             at = next;
+        }
+        // Its first corner pulled along the run after it: the furthest point of that run it reaches by a clear straight
+        // run from a (a grid route round a rock turns sharply at a cell's middle a step or two after it sets off, on the
+        // move: 2026-11-12, L7's mallard turned 1.8 rad as it swam off from beside a lake rock).
+        if (r && out.length >= 3) {
+            const c = out[1];
+            const n = out[2];
+            for (const f of [0.75, 0.5, 0.25]) {
+                const p = {x: c.x + (n.x - c.x) * f, z: c.z + (n.z - c.z) * f};
+                if (this.clear(a, p, kind, minDepth, maxSlope, fromA) && this.clear(p, n, kind, minDepth, maxSlope, r)) {
+                    out[1] = p;
+                    break;
+                }
+            }
         }
         return out;
     }
