@@ -343,7 +343,7 @@ export class NavGrid {
      */
     attachable(x: number, z: number, radius: number, maxSlope = MAX_SLOPE, onto = false): boolean {
         if (!this.solid) return true;
-        const skip = onto ? (c: Collider) => colliderDistance(c, x, z) < ONTO : undefined;
+        const skip = onto ? (c: Collider) => ONTO_KINDS.has(c.kind) && colliderDistance(c, x, z) < ONTO : undefined;
         const cls = navClass(radius);
         const r = NAV_RADII[cls];
         const [ci, cj] = this.cellOf(x, z);
@@ -447,7 +447,9 @@ export class NavGrid {
         const r = this.solid ? NAV_RADII[cls] : 0;
         // (`onto`: b is on something's surface, a crevice in a rock's face, a burrow's mouth by a log: the last run goes
         // onto it, over what it is on, within ONTO of b.)
-        const ontoSkip = onto && this.solid ? (c: Collider) => colliderDistance(c, b.x, b.z) < ONTO : undefined;
+        // (Only what such a place is on: a rock, a log, a trunk; never a fence or a wall beside it: 2026-11-12, an
+        // albatross walked through a garden's pickets to a rock's top 0.57 m off them.)
+        const ontoSkip = onto && this.solid ? (c: Collider) => ONTO_KINDS.has(c.kind) && colliderDistance(c, b.x, b.z) < ONTO : undefined;
         // A start closer to something than its body (a duck's stay by a lake rock, a placement in a rock): its runs from a
         // need come no closer to anything than a already is (2026-11-12, L7: a mallard folded back on the move).
         const startClear = r > 0 ? this.clearanceAt(a.x, a.z) : Infinity;
@@ -701,6 +703,8 @@ export class NavGrid {
 const CLEAR_CAP = 4;
 /** How far round a surface goal what it is on reaches (m): a rock's face, the log under its top (`collide/attach.ts`). */
 const ONTO = 0.6;
+/** What a surface place can be on (its rock, its log, its tree): a path's last run may go over these, nothing else. */
+const ONTO_KINDS: ReadonlySet<string> = new Set(["rock", "log", "trunk"]);
 /** How many rings of cells round a path's start and its goal it may join the grid from (by a clear straight run). */
 const SEED_RING = 2;
 /** How many of a path's points ahead its smoothing tries to join in one straight run (with colliders). */

@@ -1002,8 +1002,10 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     // A prey animal going off from a predator it watches (the shared wariness) goes, unless its way there would turn it
     // a full circle (the default view's zebra, 47 turns a minute on 3 m): then it watches from where it is.
     const retreat = placed.face !== undefined;
-    // Never off its own stretch of ground (pure in the goal: so wherever it is, it can walk to any goal it takes).
-    if (!retreat && !onItsGround(world, profile, animal, placed)) return false;
+    // Never off its own stretch of ground (pure in the goal: so wherever it is, it can walk to any goal it takes). A
+    // retreat too, where the colliders are known: off its ground its way would end straight through a fence (2026-11-12,
+    // an elephant watching a predator walked through a paddock's rails); it watches from where it is.
+    if ((!retreat || world.nav.colliders) && !onItsGround(world, profile, animal, placed)) return false;
     const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
     if (straight < 0.5 || straight > 25 || home) return true;
     // (The search its trip makes: `tripFor`'s ground.)
@@ -1568,6 +1570,20 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 if (edge) {
                     const out = {x: edge.x + Math.sin(edgeYaw(world, edge)) * Math.max(animal.length, 0.6), z: edge.z + Math.cos(edgeYaw(world, edge)) * Math.max(animal.length, 0.6)};
                     const offshore = waterSpot(world, profile, animal, out.x, out.z, () => 0.3);
+                    // (A slide in or a climb out is a few body lengths, never a straight run over land to water deep enough
+                    // somewhere else: 2026-11-12, a true-size crocodile "slid in" 45 m across a garden's pickets to the
+                    // nearest water deep enough for it. Then it walks and swims its way instead, below.)
+                    const slideReach = Math.max(4, animal.length * 3);
+                    if (Math.hypot(offshore.x - edge.x, offshore.z - edge.z) > slideReach) {
+                        if (toWet) {
+                            ground(from, edge);
+                            water(edge, to);
+                        } else {
+                            water(from, edge);
+                            ground(edge, to);
+                        }
+                        break;
+                    }
                     if (toWet) {
                         ground(from, edge);
                         const slide = Math.hypot(offshore.x - edge.x, offshore.z - edge.z);

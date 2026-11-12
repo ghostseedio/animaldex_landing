@@ -1,0 +1,7 @@
+{
+ "about": "The collision audit's CI limits, islands mode (decision 148: the wild island without its hamlet, its own animals only: --wild-island kept; 5,328 animals, 4,267 measured), measured on ark-next (5cd8efff + the gate fixes, 2026-11-12). Islands mode is what goes live. Pass-throughs and fence crossings stay at 0; cliffs and overlaps at most today's, measured as in thresholds.json (overlaps mostly perched sleepers sharing tree crowns).",
+ "passThrough": 0,
+ "fenceCrossings": 0,
+ "cliffs": 1276,
+ "overlaps": 3222835
+}
