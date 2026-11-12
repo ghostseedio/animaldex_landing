@@ -79,8 +79,10 @@ export class HuntingLayer {
         const st = this.state!;
         let h = this.homes.get(animal.id);
         if (h !== undefined) return h;
-        h = typeof animal.slot === "number" && animal.species_profile_id
-            ? homeOf(st.atlas, {zone: animal.zone, slug: animal.model_slug, speciesId: animal.species_profile_id, slot: animal.slot, rank: animal.slot_rank ?? 0})
+        // (Islands mode: the atlas is the wild island's; a town animal has no home in it, so it never walks a foray across
+        // the strait. The server sends it no next hunt either: the pool feeds it.)
+        h = typeof animal.slot === "number" && animal.species_profile_id && animal.island !== "town"
+            ? homeOf(st.atlas, {island: animal.island ?? "wild", zone: animal.zone, slug: animal.model_slug, speciesId: animal.species_profile_id, slot: animal.slot, rank: animal.slot_rank ?? 0})
             : null;
         this.homes.set(animal.id, h);
         return h;

@@ -10,6 +10,7 @@ import {join} from "node:path";
 import test from "node:test";
 import * as P from "@/ark-scene/positions/positions";
 import {placeAnimals} from "@/ark-scene/placement";
+import {setArkWorld} from "@/ark-scene/world";
 import type {ArkAnimal, ArkZone} from "@/ark-scene/types";
 
 const DIR = join(process.cwd(), "src/ark-scene/positions");
@@ -17,7 +18,8 @@ const read = (name: string) => readFileSync(join(DIR, name));
 const sha = (name: string) => createHash("sha256").update(read(name)).digest("hex");
 const pin = JSON.parse(read("PIN.json").toString("utf8"));
 const contract = JSON.parse(read("contract.json").toString("utf8"));
-const atlas = P.decodeAtlas(JSON.parse(read("atlas.json").toString("utf8")));
+const atlasJson = JSON.parse(read("atlas.json").toString("utf8")) as {world?: string};
+const atlas = P.decodeAtlas(atlasJson as never);
 const species = JSON.parse(read("test-species.json").toString("utf8")).species as Array<[string, string, ArkZone, string]>;
 
 function near(a: unknown, b: unknown, msg: string): void {
@@ -66,6 +68,9 @@ test("positions: every contract case answers as on the server", () => {
 });
 
 test("positions: homes are where the scene draws them (every recipe type, overrides included), within 2.6 m", () => {
+    // The atlas is made on one world (`world`: v2, the bigger wild island the page shows in islands mode): placed on it.
+    assert.equal(atlasJson.world, "v2");
+    setArkWorld("v2");
     const isl = atlas.islands.wild;
     const types = new Set<string>();
     let checked = 0;
