@@ -330,7 +330,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             maxY = Math.max(maxY, geometry.boundingBox!.max.y);
             return geometry;
         };
-        add(sc?.decal, materials.decal, "decal", false);
+        // (Decals carry their surface tag: `surface-tags.ts`, lane GA.)
+        add(sc?.decal, materials.decal, "decal", false, true);
         add(bc?.solid ?? sc?.solid, materials.solid, "solid", true);
         add(sc?.net, materials.net, "net", false);
         const glassGeo = bc?.glass ?? sc?.glass;
@@ -380,7 +381,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
             for (const [geo, material, name] of parts) {
                 if (!geo.triangles) continue;
-                const geometry = geo.toGeometry();
+                const geometry = geo.toGeometry(name === "decal");
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
                 const mesh = new Mesh(geometry, material);
                 mesh.name = `zoo:${name}`;
