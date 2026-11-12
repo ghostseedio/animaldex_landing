@@ -196,6 +196,7 @@ import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
+import {selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2FlightFrame, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
@@ -1868,9 +1869,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Part B: the chunks the animals live in hold content (the haze is on only while such a chunk lies beyond).
         places.forEach((place) => streamer.markContent(place.x, place.z));
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
-        const pins = new Set<string>(replayPins);
-        if (selectionPin) pins.add(selectionPin);
-        if (followId) pins.add(followId);
+        // (The selected animal too, while aboard: it stays drawn one by one as the town joins or a new read comes.)
+        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: replayPins});
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -1926,7 +1926,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         wireSchedules(next, snapshot.ark_day ?? null);
         applyHours();
         if (followId && !entryById.has(followId)) endFollow();
-        if (selectedId && !entryById.has(selectedId)) {
+        // (Deselected only when it is gone from the Ark, not when it merely left the live set: selection.ts.)
+        if (!selectionSurvives(selectedId, aboard, visitor?.animal.id ?? null)) {
             selectedId = null;
             options.onSelect?.(null);
         }
