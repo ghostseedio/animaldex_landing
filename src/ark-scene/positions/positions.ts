@@ -22,7 +22,8 @@
 // The player-control lane's hybrid world state plugs in through `HomeOverride` (homeOf's third argument): a stored
 // home (and island) replaces the formula's for an animal that is or has been controlled.
 
-export const POSITIONS_VERSION = 1;
+/** 2 (2026-11-12): the atlas regenerated on the web's ark-next (true scale, scenery, grounding, nav moved placement). */
+export const POSITIONS_VERSION = 2;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Time

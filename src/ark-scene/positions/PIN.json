@@ -3,13 +3,13 @@
   "source": {
     "repo": "lennybeadle/animaldex",
     "branch": "ark-encounter",
-    "commit": "2b1f37de",
+    "commit": "8f9bc465",
     "path": "supabase/functions/_shared/ark-positions/"
   },
-  "positionsVersion": 1,
+  "positionsVersion": 2,
   "sha256": {
-    "positions.ts": "999af5538175e6229ea2ce9bcf9613cda163839709447b6b3f0410e62f3f8af3",
-    "atlas.json": "7075b789b9a7ef29797e5a3ffd3b3ec5a010e90379b847a899d151c77e1f11e1",
-    "contract.json": "01ede82aeb92d15c9fd3257f1cb07c6924f17fb07fced7b04a5cff7a9b7852ed"
+    "positions.ts": "a79afc5daf208022ec6d52d230d679ebaae3aa037812c0535b267288cdd63dac",
+    "atlas.json": "1682b88a7204155f419a0ec5a1a6f600c62ef7761a8fc740d0fcd62a5ee08faa",
+    "contract.json": "7b99e08b2761f6f91e25e2479de791c0b8740a90cec93a12c824f8b1e5cfb92c"
   }
 }
