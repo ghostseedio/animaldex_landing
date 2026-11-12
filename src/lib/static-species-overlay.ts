@@ -17,6 +17,19 @@ export type StaticSpeciesOverlay = {
 };
 
 const overlays = (overlaySnapshot as unknown as {entries: Record<string, StaticSpeciesOverlay>}).entries;
+const overlayGeneratedAt = (overlaySnapshot as unknown as {generatedAt?: string}).generatedAt ?? null;
+
+/**
+ * When a species page's content last changed (its Article dateModified): the
+ * entry's own date, or, for a hand-coded entry whose field guide comes from
+ * the catalogue overlay, that snapshot's date when it is later (SEO lane S3:
+ * hand-coded entries kept their April date while their field guide was refreshed).
+ */
+export function speciesContentModifiedAt(entry: Pick<SpeciesEntry, "slug" | "updatedAt">): string {
+    const own = entry.updatedAt;
+    if (!overlayGeneratedAt || !overlays[entry.slug]) return own;
+    return Date.parse(overlayGeneratedAt) > Date.parse(own) ? overlayGeneratedAt : own;
+}
 
 export function getStaticSpeciesOverlay(slug: string): StaticSpeciesOverlay | null {
     return overlays[slug] ?? null;

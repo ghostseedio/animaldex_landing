@@ -81,6 +81,8 @@ import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast
 import {getScopedTranslator} from "@/loaders/translation";
 import {getPublishedEnglishAnimalStaticParams} from "@/lib/published-seo-page-data";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
+import {speciesTaxonJsonLd} from "@/lib/seo/structured-data";
+import {speciesContentModifiedAt} from "@/lib/static-species-overlay";
 import {STORY_MEDIA_REVALIDATE_SECONDS, getSpeciesStoryMedia} from "@/lib/species-story-media";
 import {buildSpeciesVideoSchemas, collectSpeciesVideoUrls} from "@/lib/species-video-schema";
 import {fetchAnimalPowerIconIndex, resolveAnimalPowerIcon} from "@/lib/animal-power-icons-server";
@@ -667,28 +669,26 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             }
         ]
     };
-    const thingSchema = {
-        "@context": "https://schema.org",
-        "@type": "Thing",
-        name: entry.name,
-        alternateName: entry.analysis.scientificName,
-        description: entry.analysis.summary,
-        category: entry.analysis.category,
-        ...(principleProfile ? {
-            additionalProperty: [
-                {"@type": "PropertyValue", name: "principle", value: principleProfile.principle},
-                {"@type": "PropertyValue", name: "coreLesson", value: principleProfile.coreLesson},
-                {"@type": "PropertyValue", name: "biologicalBasis", value: principleProfile.biologicalBasis}
-            ]
-        } : {})
-    };
+    // The species as a schema.org Taxon (SEO lane S3): its binomial, common name and genus, only when the
+    // scientific name is a binomial; otherwise a plain Thing with the names and summary (no unknown properties).
+    const taxonSchema = speciesTaxonJsonLd({scientificName: entry.analysis.scientificName, commonName: entry.name, url: pageUrl});
+    const thingSchema = taxonSchema
+        ? {...taxonSchema, description: entry.analysis.summary}
+        : {
+            "@context": "https://schema.org",
+            "@type": "Thing",
+            name: entry.name,
+            ...(entry.analysis.scientificName ? {alternateName: entry.analysis.scientificName} : {}),
+            description: entry.analysis.summary
+        };
     const articleSchema = {
         "@context": "https://schema.org",
         "@type": "Article",
         headline: entry.heroTitle,
         description: entry.analysis.summary,
         datePublished: entry.publishedAt,
-        dateModified: entry.updatedAt,
+        // The field guide's own date, or the catalogue snapshot it was last refreshed from when that is later.
+        dateModified: speciesContentModifiedAt(entry),
         image: getAbsoluteUrl(locale, getSpeciesImageRoute(entry.slug)),
         author: {
             "@type": "Organization",
@@ -699,16 +699,9 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
             name: "AnimalDex"
         },
         mainEntityOfPage: pageUrl,
-        about: [
-            {
-                "@type": "Thing",
-                name: entry.name
-            },
-            {
-                "@type": "Thing",
-                name: entry.analysis.scientificName
-            }
-        ],
+        about: taxonSchema
+            ? {"@type": "Taxon", name: taxonSchema.name, alternateName: entry.name}
+            : {"@type": "Thing", name: entry.name},
         ...(principleProfile ? {
             articleSection: ["Animal Principle", "Animal Symbolism & Meaning", "Field Guide"],
             keywords: [
@@ -716,11 +709,6 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                 `${entry.name} symbolism`,
                 `${entry.name} lesson`,
                 `${entry.name} behavior meaning`
-            ],
-            additionalProperty: [
-                {"@type": "PropertyValue", name: "principle", value: principleProfile.principle},
-                {"@type": "PropertyValue", name: "coreLesson", value: principleProfile.coreLesson},
-                {"@type": "PropertyValue", name: "biologicalBasis", value: principleProfile.biologicalBasis}
             ]
         } : {})
     };
@@ -1013,7 +1001,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
                     faqSchema,
                     animalBreadcrumbSchema,
                     ...videoSchemas
-                ])}}
+                ]).replace(/</g, "\\u003c")}}
             />
 
             <div className="flex flex-col gap-4 md:gap-5">
