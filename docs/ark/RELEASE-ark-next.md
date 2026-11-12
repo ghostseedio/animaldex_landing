@@ -82,15 +82,19 @@ ecology are unchanged, except the islands (§5).
 
 ## 2. Checks
 
-| Check | Result on `ark-next` |
+On the release candidate's tree (03dfd120 = 5cd8efff):
+
+| Check | Result |
 |---|---|
-| Unit and integration tests | **(pending the final head)**. On 3900a81d (L4, L6, L3): 2,289 of 2,296; the failures are listed in §6 |
+| Unit and integration tests (`npm test`, every `src/lib` test) | **2,381 of 2,382 pass, 0 fail** (1 skipped) |
 | tsc | clean (after `next lint` has written `next-env.d.ts`) |
 | lint | 0 errors |
-| The map's spawn validator | 1 failure, the known Asiatic black bear spot beside a leaned rock (§6) |
-| The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 21 numbers plus the L1, L2 and L6 tests |
-| Visual CI (GitHub Actions, decision 134; one render per shot plus a look, decision 136) | **(pending)** run 43137765861 |
-| The default view, twice | **(pending the final head)**. On 3900a81d: walk pace ratio median 1.00 / 0.94, backwards 5.3% / 4.9% (none over 1 s), ground turns 1.2 / 0.0 a minute |
+| The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
+| The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
+| The collision audit (`ark-collisions.yml`) | **(pending L5)**: pass-throughs 0; cliffs and overlaps over their limits |
+| Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
+| The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.12 / 1.11; backwards 4.1% / 1.2%, nothing backwards for over 1 s; ground turns 0.8 / 1.8 a minute; over 1.5× its clip: an American alligator (2.3×), the harbour seal (2.5×, its flipper clip), the clawed frog (1.6×); no page errors |
+| The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
 
 ## 3. Before and after
 
@@ -174,9 +178,9 @@ The scene side is in and inert while the server's `hunting` is `pool`. The serve
 ## 6. Known issues
 
 Listed for the owner instead of polished today (decision 136):
-- The African clawed frog's and the American bullfrog's pace: old length floors in `behaviour-recipes.ts` `pace()` /
-  `speedOf` and `behaviour-schedule.ts` `Math.max(length, 0.05)` meet true size (the walk-pace test fails on the frog,
-  1.44; the bullfrog walks at about 9× its clip in the default view).
+- Small animals' pace: old length floors in `behaviour-recipes.ts` `pace()` / `speedOf` and `behaviour-schedule.ts`
+  `Math.max(length, 0.05)` meet true size (L1 capped walking legs at 1.2× the walk pace, so the walk-pace test passes;
+  the clawed frog still reads 1.6× in the default view, the bullfrog more).
 - Carried prey sits off the beak.
 - `GaitState.feet` is not in the grounding check (not a one-line wiring: a planted foot's height carries a sole offset).
 - The rhino's wallow wobbles.
