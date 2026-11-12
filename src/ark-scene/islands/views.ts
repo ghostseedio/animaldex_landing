@@ -37,6 +37,9 @@ export type WildFrame = {
     reachIslands: number;
     /** With the town in the world, the idle drift sways ± this (rad) about where the view was; null: it goes round. */
     driftSway: number | null;
+    /** A region's view (`focusRegion`) from this polar angle (rad from straight down; null: the view's own), at least this far (m). */
+    regionPolar: number | null;
+    regionNearest: number;
 };
 
 /** The wild island's whole-view frame in the world in use. */
@@ -44,8 +47,8 @@ export function wildFrame(): WildFrame {
     // v2's upright view (decision rows, docs/ark/wild-island.md §9): from 950 m on every upright phone, looking down
     // a little more (0.9 rad from straight down) and aimed 130 m out toward the town, so the town's far shore stays inside
     // the low tier's 1,600 m map distance; the island fills the frame's width (its east and west tips just outside).
-    if (arkWorld() === "v2") return {radius: 204, radiusTall: 236, distanceTall: 950, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 130, polarTall: 0.9, reach: 1000, reachIslands: 1000, driftSway: 0.12};
-    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 0, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE, driftSway: null};
+    if (arkWorld() === "v2") return {radius: 204, radiusTall: 236, distanceTall: 950, target: {x: -10, z: 22}, targetTall: {x: -10, z: 0}, toTown: 70, toTownTall: 130, polarTall: 0.9, reach: 1000, reachIslands: 1000, driftSway: 0.12, regionPolar: 0.62, regionNearest: 110};
+    return {radius: 96, radiusTall: 114, distanceTall: null, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, toTownTall: 0, polarTall: 1.15, reach: CAMERA_RANGE.far, reachIslands: ISLANDS_MAX_DISTANCE, driftSway: null, regionPolar: null, regionNearest: 48};
 }
 
 export type WildHomeView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};

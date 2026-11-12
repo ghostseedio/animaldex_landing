@@ -6061,7 +6061,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             const centre = regionCentre(region);
-            fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, 48), 150), 1.6);
+            // (P6: on v2 a region is seen from further and a little more from above, over its taller canopy: `wildFrame()`.)
+            const frame = wildFrame();
+            fly(new Vector3(centre.x, Math.max(heightAt(centre.x, centre.z), 0), centre.z), Math.min(Math.max(centre.radius * 1.9, frame.regionNearest), 150), 1.6, frame.regionPolar ?? undefined);
         },
         stats: (): ArkSceneStats => ({
             drawCalls: renderer.info.render.calls,

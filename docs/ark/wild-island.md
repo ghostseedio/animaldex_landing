@@ -267,6 +267,20 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 - **The apps' embed** (`public/ark/embed.html`) mounts one island with `mountArk` and never calls `setArkWorld`: it stays v1 whatever islands mode says. With v2 the web default in islands mode, the apps and the web see different wild islands until the embed takes the archipelago (or `?world=v2`). That is the islands-on-the-apps lane's call; W1b checked only that `?world=v2` renders and frames the island alone there.
 - **The workbench renderer** (`islands/wild/render/index.ts`, `entry.ts`, `scripts/ark-wild.mts`, `tests/ark-visual/wild/`): kept until v2 is the default; then retire it with its baselines.
 
+### P7 results (W1b, 2026-11-12, `ark-wild-island-next` 4af53066)
+
+| Gate | Result |
+|---|---|
+| v1 byte-identical | 22 hashes against `ark-next` (sampleGround, the world's constants, ground arrays and keys, the ground shader's vertex, fragment and key, the water shader, tiles, decor, fill, grass, floor, drawn and mountain rocks, mounds, attach points, colliders, reef and landmarks, the islands' records, the validator's places), islands off and no-hamlet: all identical (`scratchpad/w1b-v1-hash.mts`) |
+| v1 tests | map, grounding, collide, behaviour build/recipes/schedule/state, islands, town, collide-town, streaming, wild island/scenery/map/frame, sea-depth, reef, prebuild, attach, no-hamlet, graphics: 216 pass, 0 fail (1 skipped) |
+| Map validator, v2 | synthetic 0 failures (B: 5,230 animals); live islands mode 0 (707 wild animals, 440 species) |
+| Collide audit, v2 (`--wild-island`, 2 h at 4 s) | live snapshot: pass-throughs 0, fences 0, cliffs 0, overlaps 21,115; **fixture (CI's): pass-throughs 34** (one common vampire bat at rest 0.17 m inside `rock:decor1273`, −71.2, −98.1), fences 0, cliffs 0, overlaps 1.07 M: with B |
+| Tests with `ARK_WORLD=v2` | 36 of 167 fail. Not applicable (v1 constants or v1 fixture homes): streaming's v1 grid and views, town-island's frame, the hamlet's fences and paddocks, the recipes' fixture homes (the kingfisher at −70, 22…), the "v1 stays today's" tests, the garden pond. **Open, with B:** behaviour-schedule (a mallard's 5.1 m slot jump, an alligator's 8.5 m, flyers 2.45 turns a minute, 3.9 % circling), sea-depth (114–116 keep v1's lake rule), behaviour-build (node out of memory), grounding (a tent-making bat in a crown), map 93 (a v1 terrain swap). The reef's two are fixed. `ark-wild-island.test.ts` under `ARK_WORLD=v2` trips the load-order trap below (not a gate: it tests the generator itself) |
+| tsc, eslint | 0; clean on the changed files |
+| Phone (4× CPU, 360 × 800, islands mode, the live 3,145 animals, prebuild workers, production bundle, 90 s) | v2 low: peak heap 361 MB of 384, GPU 126 of 192, 60 fps, first frame 15.4 s, longest task 3.5 s. v2 medium: 439 of 512, 127 of 320, 54 fps, 16.1 s, 3.6 s. v1: low 222 MB / 104 MB / 55 fps / 17.7 s; medium 224 / 165 / 19 fps / 17.9 s. (`scripts/ark-runtime-measure.mjs --islands --world v2 --prebuild --population-file …`.) The phone's default view draws v2 all in map style (950 m out). The floor's plants were not thinned: they draw only in chunks that are in, and their instances are a few hundred KB of the heap |
+| Stills | desktop and phone on the `/ark` page's own layout, day and night, the idle sway, underwater (lagoon, kelp), the biomes: `scratchpad/w1b-shots/` |
+| Town join | the town's prebuild worker 35–74 s on v2, 102 s on v1 (dev page, production workers, load 15–18): T3's, the same on both worlds |
+
 ### Next commands
 
 ```sh
