@@ -243,7 +243,9 @@ if (flag("island")) {
     log("island prepared", JSON.stringify({settled: prepared.settled, tier: prepared.stats.tier, near: prepared.stats.near, far: prepared.stats.far, rigged: prepared.stats.rigged}));
     const label = arg("label", "island");
     const stop = await record(cdp, label);
-    const {rows, stats} = await page.evaluate((sec) => window.__arkIsland.motion(sec), seconds);
+    // `--start-at <epoch ms>`: start sampling at that wall-clock moment (two runs side by side see the same schedule).
+    const startAt = Number(arg("start-at", "0")) || 0;
+    const {rows, stats} = await page.evaluate(([sec, at]) => window.__arkIsland.motion(sec, at), [seconds, startAt]);
     const video = await stop();
     await context.close();
     const movers = rows.filter((r) => r.moving > 1);
@@ -257,6 +259,9 @@ if (flag("island")) {
         movers: movers.length,
         movingSeconds: Math.round(sum("moving")),
         backwardsShare: Math.round((sum("backwards") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        // (As drawn: the body's own facing where the locomotion layer turns it, else the heading.)
+        backwardsVisibleShare: Math.round((sum("backwardsVisible") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
+        backwardsBy: movers.filter((r) => r.backwards > 0.2).map((r) => `${r.slug}(${r.backwards}s of ${r.moving}s, ${r.doing}, ${r.rigged > 0 ? "rigged" : "unrigged"})`),
         backwardsOver1s: movers.filter((r) => r.backRunMax > 1).map((r) => `${r.slug}(${r.backRunMax}s)`),
         glideShare: Math.round((sum("glide") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,
         glideNearShare: Math.round((sum("glideNear") / Math.max(sum("moving"), 1e-6)) * 1000) / 10,

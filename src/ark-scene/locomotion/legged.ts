@@ -25,6 +25,12 @@ import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChai
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {FootTarget, GaitName, GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 
+/**
+ * Seals, sea lions and walruses: their rigs' four "legs" are flippers, and on land they hump along on their bellies
+ * (no gait of legs), so they keep their baked clips (feet planted) here; a body-undulation driver (L2) may take them.
+ */
+export const FLIPPERED = /(seal|sea-lion|walrus|manatee|dugong)/;
+
 /** Act states under which the body is still stood level (moving acts: the act's attitude is its gait's). */
 export const LEVEL_ACTS: ReadonlySet<string> = new Set(["walk", "run", "stalk", "charge", "crawl", "carry", "push", "wade"]);
 
@@ -204,7 +210,7 @@ const worldPos = (m: Matrix4, out: Vector3) => out.setFromMatrixPosition(m);
 export const leggedDriver: LocoDriver = {
     name: "legged",
     takes(rig, input) {
-        return input.grounded && rig.legs.length >= 2 && !rig.sitting && rig.legHeight > 0 && GAIT_CLIPS.has(input.clipNow);
+        return input.grounded && rig.legs.length >= 2 && !rig.sitting && rig.legHeight > 0 && GAIT_CLIPS.has(input.clipNow) && !FLIPPERED.test(rig.slug);
     },
     init: initState,
     base: () => "rest",
