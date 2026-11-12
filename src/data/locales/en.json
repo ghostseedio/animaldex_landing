@@ -4046,7 +4046,16 @@
       "atHome": "at home",
       "onFarm": "on the farm",
       "inTown": "gardens and streets",
-      "zoo": "Zoo"
+      "zoo": "Zoo",
+      "places": {
+        "homes": "Homes",
+        "farms": "Farms",
+        "gardens": "Town wildlife · gardens and parks",
+        "water": "Town wildlife · canal and ponds",
+        "roofs": "Town wildlife · roofs and towers",
+        "walls": "Town wildlife · walls and eaves",
+        "streets": "Town wildlife · streets and harbour"
+      }
     },
     "hint": "Drag to look around. Pinch or scroll to zoom. Tap an animal to meet it.",
     "loading": "Bringing the Ark into view",

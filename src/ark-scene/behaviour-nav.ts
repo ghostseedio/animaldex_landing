@@ -24,7 +24,15 @@ import {TERRAIN_HALF} from "@/ark-scene/world";
 export type NavPoint = {x: number; z: number};
 
 const CELL = 2;
-const SIZE = Math.ceil((TERRAIN_HALF * 2) / CELL);
+
+/**
+ * The grid's extent (Part C, one world: decision 141): the sampler's own square (another island's, `ArkWorldSampler.half`
+ * and `centre`), else the wild island's terrain about (0, 0). Cells across, and the square's first corner in the world.
+ */
+function extentOf(sampler: ArkWorldSampler): {size: number; x0: number; z0: number} {
+    const half = sampler.half ?? TERRAIN_HALF;
+    return {size: Math.ceil((half * 2) / CELL), x0: (sampler.centre?.x ?? 0) - half, z0: (sampler.centre?.z ?? 0) - half};
+}
 /** Steeper than this (rise over run) is a cliff to a walker. */
 export const MAX_SLOPE = 0.9;
 /** A mountain animal's (goats, ibex, snow leopards): steep ground is theirs. */
@@ -99,28 +107,29 @@ export type NavCells = {version: string; size: number; walk: Uint8Array; steep: 
  * cell's slope and whether it can be walked. The same numbers in the same order as the build all at once.
  */
 export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cells: NavCells} {
-    const cells: NavCells = {version: sampler.version, size: SIZE, walk: new Uint8Array(SIZE * SIZE), steep: new Float32Array(SIZE * SIZE), depth: new Float32Array(SIZE * SIZE), height: new Float32Array(SIZE * SIZE)};
+    const {size, x0, z0} = extentOf(sampler);
+    const cells: NavCells = {version: sampler.version, size: size, walk: new Uint8Array(size * size), steep: new Float32Array(size * size), depth: new Float32Array(size * size), height: new Float32Array(size * size)};
     const {walk, steep, depth, height} = cells;
-    const heights = chunked(() => SIZE, 1, (j) => {
-        for (let i = 0; i < SIZE; i++) {
-            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+    const heights = chunked(() => size, 1, (j) => {
+        for (let i = 0; i < size; i++) {
+            const x = x0 + (i + 0.5) * CELL;
+            const z = z0 + (j + 0.5) * CELL;
             const h = sampler.heightAt(x, z);
-            const k = j * SIZE + i;
+            const k = j * size + i;
             height[k] = h;
             depth[k] = h < 0 ? -h : 0;
         }
     });
-    const walkable = chunked(() => SIZE - 2, 1, (row) => {
+    const walkable = chunked(() => size - 2, 1, (row) => {
         const j = row + 1;
-        for (let i = 1; i < SIZE - 1; i++) {
-            const k = j * SIZE + i;
+        for (let i = 1; i < size - 1; i++) {
+            const k = j * size + i;
             const h = height[k];
             if (h <= 0.05) continue;
-            const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + SIZE] - height[k - SIZE])) / (2 * CELL);
+            const slope = Math.max(Math.abs(height[k + 1] - height[k - 1]), Math.abs(height[k + size] - height[k - size])) / (2 * CELL);
             steep[k] = slope;
-            const x = -TERRAIN_HALF + (i + 0.5) * CELL;
-            const z = -TERRAIN_HALF + (j + 0.5) * CELL;
+            const x = x0 + (i + 0.5) * CELL;
+            const z = z0 + (j + 0.5) * CELL;
             if (sampler.blocked(x, z, 0.2)) continue;
             walk[k] = 1;
         }
@@ -128,9 +137,9 @@ export function navCellTasks(sampler: ArkWorldSampler): {tasks: BuildTask[]; cel
     // (Collisions: each cell middle's clearance from everything solid, a row at a time too: a phone's mount never waits on it.)
     const solid = sampler.colliders;
     if (!solid) return {tasks: [heights, walkable], cells};
-    const clear = (cells.clear = new Float32Array(SIZE * SIZE));
-    const clearance = chunked(() => SIZE, 2, (j) => {
-        for (let i = 0; i < SIZE; i++) clear[j * SIZE + i] = solid.distance(-TERRAIN_HALF + (i + 0.5) * CELL, -TERRAIN_HALF + (j + 0.5) * CELL, CLEAR_CAP);
+    const clear = (cells.clear = new Float32Array(size * size));
+    const clearance = chunked(() => size, 2, (j) => {
+        for (let i = 0; i < size; i++) clear[j * size + i] = solid.distance(x0 + (i + 0.5) * CELL, z0 + (j + 0.5) * CELL, CLEAR_CAP);
     });
     return {tasks: [heights, walkable, clearance], cells};
 }
@@ -148,6 +157,10 @@ export class NavGrid {
     private readonly solid: ColliderSet | null;
     /** Each cell middle's distance to the nearest solid thing (m, at most CLEAR_CAP), worked out when first asked. */
     private clr: Float32Array | null = null;
+    /** Cells across, and the square's first corner in the world (the sampler's island: Part C; else the wild island's). */
+    private readonly size: number;
+    private readonly x0: number;
+    private readonly z0: number;
     /** Per body class: each cell's 8 steps (`STEPS`), 0 not yet known, 1 clear, 2 through something solid. */
     private readonly steps = new Map<number, Uint8Array>();
 
@@ -160,6 +173,7 @@ export class NavGrid {
             cells = job.cells;
         }
         this.version = sampler.version;
+        ({size: this.size, x0: this.x0, z0: this.z0} = extentOf(sampler));
         this.walk = cells.walk;
         this.steep = cells.steep;
         this.depth = cells.depth;
@@ -170,7 +184,7 @@ export class NavGrid {
 
     /** The cells (read only: for the determinism tests and the scene stats). */
     get cells(): NavCells {
-        return {version: this.version, size: SIZE, walk: this.walk, steep: this.steep, depth: this.depth, height: this.height};
+        return {version: this.version, size: this.size, walk: this.walk, steep: this.steep, depth: this.depth, height: this.height};
     }
 
     /** The world's solid things the paths keep clear of (null: none known). */
@@ -179,22 +193,22 @@ export class NavGrid {
     }
 
     private cellOf(x: number, z: number): [number, number] {
-        return [Math.min(Math.max(Math.floor((x + TERRAIN_HALF) / CELL), 0), SIZE - 1), Math.min(Math.max(Math.floor((z + TERRAIN_HALF) / CELL), 0), SIZE - 1)];
+        return [Math.min(Math.max(Math.floor((x - this.x0) / CELL), 0), this.size - 1), Math.min(Math.max(Math.floor((z - this.z0) / CELL), 0), this.size - 1)];
     }
 
     private centre(i: number, j: number): NavPoint {
-        return {x: -TERRAIN_HALF + (i + 0.5) * CELL, z: -TERRAIN_HALF + (j + 0.5) * CELL};
+        return {x: this.x0 + (i + 0.5) * CELL, z: this.z0 + (j + 0.5) * CELL};
     }
 
     /** A cell middle's clearance (m, at most CLEAR_CAP). */
     private clearanceOf(k: number): number {
         if (!this.solid) return CLEAR_CAP;
         if (!this.clr) {
-            const clr = new Float32Array(SIZE * SIZE);
-            for (let j = 0; j < SIZE; j++) {
-                for (let i = 0; i < SIZE; i++) {
+            const clr = new Float32Array(this.size * this.size);
+            for (let j = 0; j < this.size; j++) {
+                for (let i = 0; i < this.size; i++) {
                     const c = this.centre(i, j);
-                    clr[j * SIZE + i] = this.solid.distance(c.x, c.z, CLEAR_CAP);
+                    clr[j * this.size + i] = this.solid.distance(c.x, c.z, CLEAR_CAP);
                 }
             }
             this.clr = clr;
@@ -216,18 +230,18 @@ export class NavGrid {
     private stepClear(k: number, d: number, cls: number): boolean {
         if (!this.solid) return true;
         let cache = this.steps.get(cls);
-        if (!cache) this.steps.set(cls, (cache = new Uint8Array(SIZE * SIZE * 8)));
+        if (!cache) this.steps.set(cls, (cache = new Uint8Array(this.size * this.size * 8)));
         const known = cache[k * 8 + d];
         if (known) return known === 1;
         const [di, dj] = STEPS[d];
-        const i = k % SIZE;
-        const j = (k - i) / SIZE;
-        const nk = (j + dj) * SIZE + (i + di);
+        const i = k % this.size;
+        const j = (k - i) / this.size;
+        const nk = (j + dj) * this.size + (i + di);
         const r = NAV_RADII[cls];
         const half = (di && dj ? Math.SQRT2 : 1) * CELL * 0.5;
         // (Distance is 1-Lipschitz: every point of the step is within half its length of one end.)
         let ok = Math.min(this.clearanceOf(k), this.clearanceOf(nk)) - half >= r;
-        if (!ok) ok = this.solid.sweepAll(-TERRAIN_HALF + (i + 0.5) * CELL, -TERRAIN_HALF + (j + 0.5) * CELL, -TERRAIN_HALF + (i + di + 0.5) * CELL, -TERRAIN_HALF + (j + dj + 0.5) * CELL, r) >= 1;
+        if (!ok) ok = this.solid.sweepAll(this.x0 + (i + 0.5) * CELL, this.z0 + (j + 0.5) * CELL, this.x0 + (i + di + 0.5) * CELL, this.z0 + (j + dj + 0.5) * CELL, r) >= 1;
         cache[k * 8 + d] = ok ? 1 : 2;
         cache[nk * 8 + ((d + 4) % 8)] = ok ? 1 : 2;
         return ok;
@@ -239,9 +253,9 @@ export class NavGrid {
      * reads) are not needed for it, so a path threads a paddock's gate and keeps to its body's width off a trunk.
      */
     private fitsCell(k: number, maxSlope: number, r: number): boolean {
-        const i = k % SIZE;
-        const j = (k - i) / SIZE;
-        if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1) return false;
+        const i = k % this.size;
+        const j = (k - i) / this.size;
+        if (i < 1 || j < 1 || i >= this.size - 1 || j >= this.size - 1) return false;
         return this.height[k] > 0.05 && this.steep[k] <= maxSlope && this.clearanceOf(k) >= r;
     }
 
@@ -258,8 +272,8 @@ export class NavGrid {
     fits(x: number, z: number, radius: number, maxSlope = MAX_SLOPE): boolean {
         if (!this.solid) return this.walkable(x, z, maxSlope);
         const [i, j] = this.cellOf(x, z);
-        const k = j * SIZE + i;
-        if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1 || this.height[k] <= 0.05 || this.steep[k] > maxSlope) return false;
+        const k = j * this.size + i;
+        if (i < 1 || j < 1 || i >= this.size - 1 || j >= this.size - 1 || this.height[k] <= 0.05 || this.steep[k] > maxSlope) return false;
         // (Nor on a cliff's face: the ground right there no steeper than its walk takes, a quarter again.)
         return this.clearanceAt(x, z) >= radius && this.sampler.heightAt(x, z) > 0.02 && this.localSlope(x, z) <= maxSlope * 1.25;
     }
@@ -289,7 +303,7 @@ export class NavGrid {
                 const out: Array<{k: number; d: number}> = [];
                 for (let dj = -1; dj <= 1; dj++) {
                     for (let di = -1; di <= 1; di++) {
-                        const k = (cj + dj) * SIZE + (ci + di);
+                        const k = (cj + dj) * this.size + (ci + di);
                         if (!this.fitsCell(k, maxSlope, r)) continue;
                         const c = this.centre(ci + di, cj + dj);
                         if (this.runClear(c, p, r)) out.push({k, d: Math.hypot(c.x - p.x, c.z - p.z) / CELL});
@@ -318,7 +332,7 @@ export class NavGrid {
     /** Dry, clear and no steeper than `maxSlope` (a mountain goat's is higher than a cow's). */
     walkable(x: number, z: number, maxSlope = MAX_SLOPE): boolean {
         const [i, j] = this.cellOf(x, z);
-        const k = j * SIZE + i;
+        const k = j * this.size + i;
         return this.walk[k] === 1 && this.steep[k] <= maxSlope;
     }
 
@@ -336,8 +350,8 @@ export class NavGrid {
             for (let di = -SEED_RING; di <= SEED_RING; di++) {
                 const i = ci + di;
                 const j = cj + dj;
-                if (i < 1 || j < 1 || i >= SIZE - 1 || j >= SIZE - 1) continue;
-                if (this.fitsCell(j * SIZE + i, maxSlope, r) && this.runClear({x, z}, this.centre(i, j), r, skip)) return true;
+                if (i < 1 || j < 1 || i >= this.size - 1 || j >= this.size - 1) continue;
+                if (this.fitsCell(j * this.size + i, maxSlope, r) && this.runClear({x, z}, this.centre(i, j), r, skip)) return true;
             }
         }
         return false;
@@ -351,12 +365,12 @@ export class NavGrid {
     /** Water at least this deep there. */
     swimmable(x: number, z: number, minDepth: number): boolean {
         const [i, j] = this.cellOf(x, z);
-        return this.depth[j * SIZE + i] >= minDepth;
+        return this.depth[j * this.size + i] >= minDepth;
     }
 
     depthAt(x: number, z: number): number {
         const [i, j] = this.cellOf(x, z);
-        return this.depth[j * SIZE + i];
+        return this.depth[j * this.size + i];
     }
 
     /**
@@ -367,7 +381,7 @@ export class NavGrid {
         const [ci, cj] = this.cellOf(x, z);
         const r = radius > 0 && this.solid ? radius : 0;
         const ok = (k: number) => (kind === "walk" ? (r ? this.fitsCell(k, maxSlope, r) : this.walk[k] === 1 && this.steep[k] <= maxSlope) : this.depth[k] >= minDepth && (!r || this.clearanceOf(k) >= r));
-        const k0 = cj * SIZE + ci;
+        const k0 = cj * this.size + ci;
         if (kind === "walk" ? (r ? this.fits(x, z, r, maxSlope) : this.walk[k0] === 1 && this.steep[k0] <= maxSlope) : this.depth[k0] >= minDepth && (!r || this.clearanceAt(x, z) >= r)) return {x, z};
         if (ok(k0)) return this.centre(ci, cj);
         for (let ring = 1; ring <= maxRing; ring++) {
@@ -378,7 +392,7 @@ export class NavGrid {
                     if (Math.max(Math.abs(di), Math.abs(dj)) !== ring) continue;
                     const i = ci + di;
                     const j = cj + dj;
-                    if (i < 0 || j < 0 || i >= SIZE || j >= SIZE || !ok(j * SIZE + i)) continue;
+                    if (i < 0 || j < 0 || i >= this.size || j >= this.size || !ok(j * this.size + i)) continue;
                     const c = this.centre(i, j);
                     const d = Math.hypot(c.x - x, c.z - z);
                     if (d < bestD) {
@@ -395,8 +409,8 @@ export class NavGrid {
     /** Dry ground no steeper than the slope (an inner cell): the ground's own rule, colliders aside. */
     private groundAt(x: number, z: number, maxSlope: number): boolean {
         const [i, j] = this.cellOf(x, z);
-        const k = j * SIZE + i;
-        return i >= 1 && j >= 1 && i < SIZE - 1 && j < SIZE - 1 && this.height[k] > 0.05 && this.steep[k] <= maxSlope;
+        const k = j * this.size + i;
+        return i >= 1 && j >= 1 && i < this.size - 1 && j < this.size - 1 && this.height[k] > 0.05 && this.steep[k] <= maxSlope;
     }
 
     private clear(a: NavPoint, b: NavPoint, kind: "walk" | "swim", minDepth: number, maxSlope = MAX_SLOPE, radius = 0): boolean {
@@ -452,13 +466,13 @@ export class NavGrid {
         const ok = (k: number) => (kind === "walk" ? (r ? this.fitsCell(k, maxSlope, r) : this.walk[k] === 1 && this.steep[k] <= maxSlope) : this.depth[k] >= minDepth && (!r || this.clearanceOf(k) >= r));
         const [si, sj] = this.cellOf(a.x, a.z);
         const [gi, gj] = this.cellOf(b.x, b.z);
-        const start = sj * SIZE + si;
-        const goal = gj * SIZE + gi;
+        const start = sj * this.size + si;
+        const goal = gj * this.size + gi;
         // Off the grid to b: from a cell next to b's (or b's own) whose straight run to b is clear. Without colliders, as
         // before: b's own cell, which may be blocked (a drinking spot by a pond, a rock's top), entered from open ground.
         const exits = (k: number) => {
-            const i = k % SIZE;
-            const j = (k - i) / SIZE;
+            const i = k % this.size;
+            const j = (k - i) / this.size;
             if (!r) return k === goal;
             return Math.max(Math.abs(i - gi), Math.abs(j - gj)) <= SEED_RING && this.runClear(this.centre(i, j), b, r, ontoSkip);
         };
@@ -478,8 +492,8 @@ export class NavGrid {
                 for (let di = -SEED_RING; di <= SEED_RING; di++) {
                     const i = si + di;
                     const j = sj + dj;
-                    if (i < 0 || j < 0 || i >= SIZE || j >= SIZE) continue;
-                    const k = j * SIZE + i;
+                    if (i < 0 || j < 0 || i >= this.size || j >= this.size) continue;
+                    const k = j * this.size + i;
                     if (!ok(k) && k !== goal) continue;
                     const c = this.centre(i, j);
                     const d = Math.hypot(c.x - a.x, c.z - a.z) / CELL;
@@ -510,8 +524,8 @@ export class NavGrid {
         while (open.size && expanded < maxNodes) {
             const k = open.pop();
             expanded++;
-            const i = k % SIZE;
-            const j = (k - i) / SIZE;
+            const i = k % this.size;
+            const j = (k - i) / this.size;
             const h = Math.hypot(gi - i, gj - j);
             if (h < bestH) {
                 bestH = h;
@@ -525,8 +539,8 @@ export class NavGrid {
                 const [di, dj] = STEPS[d];
                 const ni = i + di;
                 const nj = j + dj;
-                if (ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
-                const nk = nj * SIZE + ni;
+                if (ni < 0 || nj < 0 || ni >= this.size || nj >= this.size) continue;
+                const nk = nj * this.size + ni;
                 // (Without colliders: the goal's cell may be blocked, a drinking spot by a pond, a rock's top: it is entered
                 // from open ground, never straight from a blocked start, across whatever blocks them both: a dog crossed
                 // the garden pond from one drinking spot to the next.)
@@ -546,8 +560,8 @@ export class NavGrid {
                 g.set(jump.to, cost);
                 from.set(jump.to, k);
                 via.set(jump.to, jump.via);
-                const ti = jump.to % SIZE;
-                open.push(cost + Math.hypot(gi - ti, gj - (jump.to - ti) / SIZE), jump.to);
+                const ti = jump.to % this.size;
+                open.push(cost + Math.hypot(gi - ti, gj - (jump.to - ti) / this.size), jump.to);
             }
         }
         const end = reached >= 0 ? reached : best;
@@ -559,13 +573,13 @@ export class NavGrid {
         if (!r && cells.length && cells[0] === start) cells.shift();
         else if (r && cells.length >= 2 && cells[0] === start) {
             const next = cells[1];
-            if (!via.has(next) && this.runClear(a, this.centre(next % SIZE, Math.floor(next / SIZE)), r)) cells.shift();
+            if (!via.has(next) && this.runClear(a, this.centre(next % this.size, Math.floor(next / this.size)), r)) cells.shift();
         }
         const raw: NavPoint[] = [a];
         for (const k of cells) {
             const through = via.get(k);
             if (through) raw.push(through[0], through[1]);
-            raw.push(this.centre(k % SIZE, Math.floor(k / SIZE)));
+            raw.push(this.centre(k % this.size, Math.floor(k / this.size)));
         }
         // Reached: it ends at b itself (and still starts at a when both are in one cell: it used to lose a, and jump).
         if (reached >= 0) {
@@ -604,25 +618,25 @@ export class NavGrid {
         const key = `${maxSlope}|${r ? cls : -1}`;
         let ids = this.regions.get(key);
         if (!ids) {
-            ids = new Int32Array(SIZE * SIZE).fill(-1);
+            ids = new Int32Array(this.size * this.size).fill(-1);
             const ok = (k: number) => (r ? this.fitsCell(k, maxSlope, r) : this.walk[k] === 1 && this.steep[k] <= maxSlope);
             const jumps = r ? this.gateJumps(cls, maxSlope) : null;
             const stack: number[] = [];
             let next = 0;
-            for (let k0 = 0; k0 < SIZE * SIZE; k0++) {
+            for (let k0 = 0; k0 < this.size * this.size; k0++) {
                 if (ids[k0] >= 0 || !ok(k0)) continue;
                 ids[k0] = next;
                 stack.push(k0);
                 while (stack.length) {
                     const k = stack.pop()!;
-                    const i = k % SIZE;
-                    const j = (k - i) / SIZE;
+                    const i = k % this.size;
+                    const j = (k - i) / this.size;
                     for (let d = 0; d < 8; d++) {
                         const [di, dj] = STEPS[d];
                         const ni = i + di;
                         const nj = j + dj;
-                        if (ni < 0 || nj < 0 || ni >= SIZE || nj >= SIZE) continue;
-                        const nk = nj * SIZE + ni;
+                        if (ni < 0 || nj < 0 || ni >= this.size || nj >= this.size) continue;
+                        const nk = nj * this.size + ni;
                         if (ids[nk] >= 0 || !ok(nk)) continue;
                         if (r && !this.stepClear(k, d, cls)) continue;
                         ids[nk] = next;
@@ -639,15 +653,15 @@ export class NavGrid {
             this.regions.set(key, ids);
         }
         const [ci, cj] = this.cellOf(x, z);
-        const own = ids[cj * SIZE + ci];
+        const own = ids[cj * this.size + ci];
         if (own >= 0) return own;
         let best = -1;
         for (let dj = -1; dj <= 1; dj++) {
             for (let di = -1; di <= 1; di++) {
                 const i = ci + di;
                 const j = cj + dj;
-                if (i < 0 || j < 0 || i >= SIZE || j >= SIZE) continue;
-                const id = ids[j * SIZE + i];
+                if (i < 0 || j < 0 || i >= this.size || j >= this.size) continue;
+                const id = ids[j * this.size + i];
                 if (id >= 0 && (best < 0 || id < best)) best = id;
             }
         }
@@ -666,30 +680,42 @@ const SMOOTH_AHEAD = 10;
 /** A gate's two points, either side of its middle (m). */
 const GATE_REACH = 1.1;
 
-let grid: NavGrid | null = null;
-/** A grid being built a slice at a time (`navGridBuild`), finished at once if it is asked for before it is done. */
-let building: {sampler: ArkWorldSampler; build: SlicedBuild<NavGrid>} | null = null;
+/**
+ * The grids built, by sampler version (Part C: the wild island's and another island's, both in the one world, decision
+ * 141; at most a few kept), and the ones being built a slice at a time (`navGridBuild`), finished at once if asked for
+ * before they are done.
+ */
+const grids = new Map<string, NavGrid>();
+const building = new Map<ArkWorldSampler, SlicedBuild<NavGrid>>();
+function keep(made: NavGrid) {
+    grids.delete(made.version);
+    grids.set(made.version, made);
+    while (grids.size > 3) grids.delete(grids.keys().next().value as string);
+}
 /** The grid for this sampler, built once (and again when the sampler's version changes). */
 export function navGrid(sampler: ArkWorldSampler): NavGrid {
-    if (!grid || grid.version !== sampler.version) grid = building && building.sampler === sampler ? building.build.run() : new NavGrid(sampler);
-    return grid;
+    const known = grids.get(sampler.version);
+    if (known) return known;
+    const pending = building.get(sampler);
+    const made = pending ? pending.run() : new NavGrid(sampler);
+    keep(made);
+    return made;
 }
 
 /** The grid for this sampler built a row at a time (`SlicedBuild.step`); it becomes `navGrid`'s once done. */
 export function navGridBuild(sampler: ArkWorldSampler): SlicedBuild<NavGrid> {
-    if (grid && grid.version === sampler.version) {
-        const built = grid;
-        return new SlicedBuild<NavGrid>([], () => built);
-    }
-    if (building && building.sampler === sampler) return building.build;
+    const known = grids.get(sampler.version);
+    if (known) return new SlicedBuild<NavGrid>([], () => known);
+    const pending = building.get(sampler);
+    if (pending) return pending;
     const job = navCellTasks(sampler);
     const build = new SlicedBuild<NavGrid>(job.tasks, () => {
         const made = new NavGrid(sampler, job.cells);
-        grid = made;
-        if (building?.build === build) building = null;
+        keep(made);
+        if (building.get(sampler) === build) building.delete(sampler);
         return made;
     });
-    building = {sampler, build};
+    building.set(sampler, build);
     return build;
 }
 

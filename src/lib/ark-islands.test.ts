@@ -180,3 +180,83 @@ test("the older local snapshot with islands synthesised near T1's counts", {skip
         assert.ok(Math.abs(counts[key] - want) <= Math.max(12, want * 0.08), `${key}: ${counts[key]} near ${want}`);
     }
 });
+
+test("the town's panel by place: homes, farms, the zoo's types, town wildlife by niche (decision T3-6)", async () => {
+    const {arkTownGroupOf} = await import("@/lib/ark-islands");
+    const {arkPopulation} = await import("@/lib/ark-population");
+    const town = arkIslandSnapshot(islandsFixture(), "town");
+    const grouping = (animal: (typeof town.animals)[number]) => {
+        const g = arkTownGroupOf(animal);
+        return {key: g.key, order: g.order, label: g.key};
+    };
+    const population = arkPopulation(town, grouping);
+    const keys = population.regions.map((group) => group.place!.key);
+    assert.ok(keys.every((key) => /^(homes|farms|zoo:[a-z_]+|gardens|water|roofs|walls|streets)$/.test(key)), keys.join(","));
+    assert.equal(population.regions.reduce((n, g) => n + g.animals, 0), town.animals.length);
+    // No zoo animal is listed under a wild zone, and the zoo's groups come in its types' order after homes and farms.
+    for (const group of population.regions) for (const row of group.species) for (const a of row.animals) assert.equal(a.area === "zoo", group.place!.key.startsWith("zoo:"));
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "mallard", zone: "river_lake"}).group, "water");
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "peregrine-falcon", zone: "mountains"}).group, "roofs");
+    assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "brown-rat", zone: "farm_garden"}).group, "streets");
+    assert.equal(arkTownGroupOf({area: "zoo", enclosure: "aquarium-2", model_slug: "blue-tang", zone: "coral_reef"}).key, "zoo:aquarium");
+});
+
+test("the town on the behaviour schedule in the one world: its own walk grid at its origin, zoo trips inside the enclosure", async () => {
+    const {townWorldSampler} = await import("@/ark-scene/islands/town/sampler");
+    const {scheduleWorld, tripAt, poseOnTrip} = await import("@/ark-scene/behaviour-schedule");
+    const {behaviourProfile} = await import("@/ark-scene/behaviour-profile");
+    const {townWorldOrigin} = await import("@/ark-scene/islands");
+    const origin = townWorldOrigin();
+    const town = arkIslandSnapshot(islandsFixture(), "town");
+    const placed = placeTownAnimals(town.animals);
+    const sampler = townWorldSampler(placed.open, origin);
+    const world = scheduleWorld(sampler);
+    // The grid covers the town at its world origin: walkable land there, its ground the town's.
+    let walkable = 0;
+    for (let i = -100; i <= 100; i += 10) for (let j = -100; j <= 100; j += 10) if (world.nav.walkable(origin.x + i, origin.z + j)) walkable++;
+    assert.ok(walkable > 150, `the town's middle is walkable on its own grid (${walkable} of 441)`);
+    assert.equal(sampler.heightAt(origin.x, origin.z), (await import("@/ark-scene/islands/town/ground")).townHeight(0, 0));
+    assert.ok(sampler.attachPoints("grass", {x: origin.x, z: origin.z, r: 60}).length > 20, "places near the middle, in the world frame");
+    // Zoo animals' trips stay in (or within a step of) their enclosure; the same every time.
+    const hours = (epoch: number) => ((epoch / 3600) % 24 + 24) % 24;
+    let checked = 0;
+    let far = 0;
+    for (const animal of town.animals.filter((a) => a.area === "zoo").slice(0, 12)) {
+        const info = placed.town.get(animal.id)!;
+        if (info.still) continue;
+        const p = placed.places.get(animal.id)!;
+        const home = {x: p.x + origin.x, y: p.ground, z: p.z + origin.z};
+        const sched = {id: animal.id, zone: animal.zone, home, length: 1, sea: false, range: Math.max(info.range, 0.6) * 1.5};
+        const profile = behaviourProfile(animal.model_slug);
+        for (let t = 1_763_000_000; t < 1_763_000_000 + 1200; t += 97) {
+            const trip = tripAt(world, profile, sched, t, hours);
+            const at = poseOnTrip(world, trip, t);
+            const again = poseOnTrip(world, tripAt(world, profile, sched, t, hours), t);
+            assert.deepEqual({x: at.x, z: at.z}, {x: again.x, z: again.z});
+            const mask = info.enclosure!.mask;
+            if (!inPoly(mask, at.x - origin.x, at.z - origin.z) && !at.aloft) far++;
+            checked++;
+        }
+    }
+    assert.ok(checked > 50);
+    assert.ok(far / checked < 0.2, `zoo poses outside the mask before the scene's hard bound: ${far} of ${checked}`);
+});
+
+test("the zoo's day: feeding times on the island clock, the weekly and fast days, the station as home while fed", async () => {
+    const {zooFeedingAt, feedingHome, WEEKLY_FEED_DAY, FAST_DAY, FEED_HOURS} = await import("@/ark-scene/islands/town/zoo-life");
+    const {zooEnclosures} = await import("@/ark-scene/islands/town/areas");
+    const clock = (hours: number, weekday: number) => ({hours, day: 7 * 3000 + weekday});
+    assert.equal(zooFeedingAt("penguin_seal_pools", clock(11.1, 2))?.food, "fish");
+    assert.equal(zooFeedingAt("penguin_seal_pools", clock(11 + FEED_HOURS + 0.01, 2)), null);
+    assert.ok(Math.abs(zooFeedingAt("primate_house", clock(14.25, 1))!.eaten - 0.5) < 1e-9);
+    assert.equal(zooFeedingAt("reptile_house", clock(12.1, (WEEKLY_FEED_DAY + 1) % 7)), null, "snakes and crocodiles once a week");
+    assert.ok(zooFeedingAt("reptile_house", clock(12.1, WEEKLY_FEED_DAY)));
+    assert.equal(zooFeedingAt("big_cats", clock(16.1, FAST_DAY)), null, "the big cats' fast day");
+    assert.ok(zooFeedingAt("big_cats", clock(16.1, (FAST_DAY + 2) % 7)));
+    for (const e of zooEnclosures()) {
+        if (e.shared) continue;
+        const home = feedingHome(e, () => 0);
+        assert.ok(inPoly(e.mask, home.x, home.z) || inPoly(e.mask, (home.x + e.slot.at.x) / 2, (home.z + e.slot.at.z) / 2), `${e.id}: the station by its mask`);
+        assert.ok(home.range >= 2 && home.range <= 5);
+    }
+});

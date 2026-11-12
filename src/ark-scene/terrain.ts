@@ -30,6 +30,7 @@ import {
     UniformsLib,
     UniformsUtils,
     Vector3,
+    Vector4,
     DoubleSide,
     BufferGeometry,
     type Group
@@ -894,6 +895,10 @@ const WATER_FRAGMENT = `
 #include <fog_pars_fragment>
 uniform sampler2D depthMap;
 uniform float halfSize;
+// Part C, one sea for the one world (decision 143): another island's depth (its sea floor, r = depth / w m) over its
+// square (xy its middle, z half its side, w the depth scale; w 0: none, exactly as before).
+uniform sampler2D islandDepth;
+uniform vec4 islandPatch;
 uniform vec3 deep;
 uniform vec3 open;
 uniform vec3 shallow;
@@ -949,6 +954,9 @@ void main() {
     float flowing = smoothstep(0.42, 0.5, atFull.a) * inside;
     vec2 flowDir = vec2(cos((atFull.a - 0.5) * 6.2831853), sin((atFull.a - 0.5) * 6.2831853));
     float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
+    vec2 uvIsland = (vWorld.xz - islandPatch.xy + islandPatch.z) / (2.0 * islandPatch.z);
+    float onIsland = step(0.5, islandPatch.w) * step(0.0, uvIsland.x) * step(uvIsland.x, 1.0) * step(0.0, uvIsland.y) * step(uvIsland.y, 1.0) * (1.0 - inside);
+    depth = mix(depth, texture2D(islandDepth, clamp(uvIsland, 0.0, 1.0)).r * islandPatch.w + seaLevel, onIsland);
     float reefy = at.g * inside;
     float fresh = at.b * inside;
     // The lake and the river keep their own level; the sea, with the tide, is drawn everywhere else.
@@ -1033,6 +1041,8 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
             {
                 depthMap: {value: null},
                 halfSize: {value: TERRAIN_HALF},
+                islandDepth: {value: null},
+                islandPatch: {value: new Vector4(0, 0, 1, 0)},
                 deep: {value: srgb(WATER.deep)},
                 open: {value: srgb(WATER.open)},
                 shallow: {value: srgb(WATER.shallow)},

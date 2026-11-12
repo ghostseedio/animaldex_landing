@@ -20,21 +20,12 @@ import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
+import type {SpotWhere} from "@/ark-scene/islands/town/niche";
 
 export type TownArea = "house" | "farm" | "garden_wildlife" | "urban_wildlife" | "zoo";
 export type SpotSize = "small" | "medium" | "large";
 
-export type SpotWhere =
-    // Homes
-    | "lawn" | "yard" | "balcony" | "courtyard" | "window"
-    // Farms
-    | "paddock" | "farmyard" | "run"
-    // Town wildlife
-    | "garden" | "park" | "allotment" | "churchyard" | "wood" | "wild_corner" | "hedgerow" | "field_margin" | "canal" | "millpond" | "farm_pond" | "beach"
-    // Urban
-    | "roof" | "eave" | "ledge" | "tall" | "belfry" | "bin" | "drain" | "quay" | "square" | "lamp_wall"
-    // Zoo
-    | "enclosure" | "pool" | "indoor";
+export type {SpotWhere} from "@/ark-scene/islands/town/niche";
 
 export type TownSpot = {x: number; y: number; z: number; area: TownArea; where: SpotWhere; /** The parcel, farm, enclosure or habitat it belongs to. */ place: string; sizes: readonly SpotSize[]; protected: boolean};
 
@@ -521,49 +512,7 @@ export function townAreas(): TownAreas {
     return cached;
 }
 
-/**
- * The town's habitat for a wild species by its zone (islands plan §7.1, for encounter hunting's per-island slot atlas
- * and the urban rule's wildlife): where its spots are on the town island.
- */
-export const TOWN_HABITATS_BY_ZONE: Record<string, SpotWhere[]> = {
-    farm_garden: ["garden", "park", "allotment", "hedgerow", "wild_corner"],
-    woodland: ["park", "churchyard", "wood"],
-    rainforest: ["park", "churchyard", "wood"],
-    river_lake: ["canal", "millpond", "farm_pond"],
-    wetland: ["canal", "millpond", "farm_pond"],
-    seashore: ["roof", "quay", "beach"],
-    coral_reef: ["quay"],
-    open_ocean: ["quay"],
-    grassland: ["park", "field_margin", "garden"],
-    desert: ["field_margin", "wild_corner"],
-    mountains: ["tall", "roof", "ledge"],
-    polar: ["quay"]
-};
-
-/**
- * An urban species' niche by its kind (the plan's Appendix A list; peregrines on tall buildings, rats at bins and
- * drains, gulls on roofs and the quay…). Matched on the model slug's words; anything else falls back to its zone.
- */
-export function urbanNiche(slug: string, zone: string): SpotWhere[] {
-    const s = slug.toLowerCase();
-    if (/peregrine/.test(s)) return ["tall", "ledge"];
-    if (/kestrel|hawk|sparrowhawk|vulture/.test(s)) return ["tall", "roof", "park"];
-    if (/owl/.test(s)) return ["churchyard", "belfry", "wood"];
-    if (/rat\b|-rat|mouse/.test(s)) return ["bin", "drain", "canal"];
-    if (/bat\b|pipistrelle|-bat/.test(s)) return ["belfry", "eave"];
-    if (/gull/.test(s)) return ["roof", "quay"];
-    if (/pigeon|dove/.test(s)) return ["square", "roof", "ledge"];
-    if (/sparrow|swallow|swift|martin|hornero|wren|phoebe|kiskadee|sunbird/.test(s)) return ["eave", "garden", "roof"];
-    if (/magpie|crow|raven|jackdaw|rook/.test(s)) return ["roof", "tall", "park"];
-    if (/gecko|lizard|skink/.test(s)) return ["lamp_wall", "garden"];
-    if (/duck|mallard|goose|wagtail|tyrant|heron/.test(s)) return ["canal", "millpond"];
-    if (/monitor/.test(s)) return ["canal", "millpond"];
-    if (/squirrel|raccoon|civet|macaque|fox/.test(s)) return ["park", "garden", "bin"];
-    if (/deer|cottontail|groundhog|rabbit/.test(s)) return ["park", "field_margin", "garden"];
-    if (/galah|cockatoo|parrot/.test(s)) return ["park", "roof"];
-    if (/moth|hornet|wasp|yellowjacket|spider|combfoot|snail|fly/.test(s)) return ["lamp_wall", "eave", "garden"];
-    return TOWN_HABITATS_BY_ZONE[zone] ?? ["park"];
-}
+export {TOWN_HABITATS_BY_ZONE, urbanNiche} from "@/ark-scene/islands/town/niche";
 
 export {inBox};
 export type {Parcel};
