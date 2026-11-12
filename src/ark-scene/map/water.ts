@@ -108,8 +108,9 @@ export function waterSuits(sampler: ArkMapSampler, cls: WaterClass, x: number, z
  * inside the coral (the floor under it is the sand's).
  */
 export function inCoral(x: number, z: number, margin: number): boolean {
-    // (v2, the bigger wild island: its own coral heads, `islands/wild/map-v2.ts`.)
-    if (arkWorld() === "v2") return inWildCoral(x, z, margin);
+    // (v2, the bigger wild island: the generator's coral heads over its lagoon too, which the reef draws as its own beside
+    // its site's patch reefs, `reef.ts` reefGrowth; `islands/wild/map-v2.ts`.)
+    if (arkWorld() === "v2" && inWildCoral(x, z, margin)) return true;
     const marks = reefLandmarks();
     if (Math.hypot(x - marks.cleaning.x, z - marks.cleaning.z) < marks.cleaning.radius + margin) return true;
     return marks.heads.some((head) => Math.hypot(x - head.x, z - head.z) < head.radius + margin);
