@@ -397,6 +397,8 @@ type Entry = {
     crawl?: {along: number; dir: number; pause: number; turn: number; speed: number} | null;
     /** Its sleep (`sleep.ts`): how far into lying down, its posture this bout; null awake and up. */
     sleepNow?: SleepNow | null;
+    /** How much of a sleeper's stirred heading (`sleepDraw`) is drawn: none while it moves, eased back in when it stops. */
+    stirShare?: number;
     /** Its rig plays the lying clips now (`sleepClip`): the procedural lying gives way to them as the rig fades in. */
     sleepClipped?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
@@ -3803,7 +3805,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
             const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
             if (slept) {
-                where.yaw += slept.yaw;
+                // (Its stirred heading only while it keeps still: moving, a foal at its mother's heel say, it faces where
+                // it goes; eased out and in, so nothing snaps. 2026-11-12.)
+                const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
+                const stirWas = entry.stirShare ?? stirTarget;
+                entry.stirShare = reducedMotion ? stirTarget : stirWas + (stirTarget - stirWas) * Math.min(dt * 3, 1);
+                where.yaw += slept.yaw * entry.stirShare;
                 where.pitch += slept.pitch;
                 where.roll += slept.roll;
                 const box = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry.boundingBox ?? null;

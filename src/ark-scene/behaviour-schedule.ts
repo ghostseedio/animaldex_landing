@@ -1374,8 +1374,12 @@ function settle(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sche
 /** The heading it settles to at a goal: from the goal before (within about 10 degrees, seeded), else from home. */
 function arrivalYaw(animal: ScheduleAnimal, slot: number, now: Intent, before: Spot | null): number {
     const to = now.to!;
-    const roll = rng(hashString(`${animal.id}#yaw#${slot}`))();
-    const from = before && Math.hypot(to.x - before.x, to.z - before.z) > 0.5 ? before : animal.home;
+    // (Still where its last goal was, asleep at its roost slot after slot: the same heading as long as it stays, seeded by
+    // the place, not the slot. 2026-11-12: a sleeping zebra turned to a new heading every slot, and its foal at heel,
+    // whose place turns with hers, swung round her and slid backwards.)
+    const still = before !== null && Math.hypot(to.x - before.x, to.z - before.z) <= 0.5;
+    const roll = rng(hashString(still ? `${animal.id}#yaw#at#${Math.round(to.x * 2)},${Math.round(to.z * 2)}` : `${animal.id}#yaw#${slot}`))();
+    const from = before && !still ? before : animal.home;
     const away = Math.hypot(to.x - from.x, to.z - from.z);
     return now.face ?? (away > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
 }
@@ -1668,8 +1672,11 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const lastAt = settled.beats.length ? settled.beats[settled.beats.length - 1].at : 0;
     const squeeze = lastAt > room && lastAt > 0 ? room / lastAt : 1;
     let beats = settled.beats.map((b) => ({...b, at: b.at * squeeze + (after ? 2.6 : 0)}));
-    if (after) beats = [{at: 0, beat: after, x: to.x, z: to.z, yaw: settled.beats[0]?.yaw ?? 0}, ...beats];
-    const stay = {beats, finish: now.to ? settled.finish : from};
+    const finish = now.to ? settled.finish : from;
+    // (With no beats after it, a shake faces the way it settles: 2026-11-12, a penguin out of the sea shook facing north
+    // and snapped round at the next slot.)
+    if (after) beats = [{at: 0, beat: after, x: to.x, z: to.z, yaw: settled.beats[0]?.yaw ?? finish.yaw ?? 0}, ...beats];
+    const stay = {beats, finish};
     const mainLeg = legs.find((leg) => leg.mode === "ground" || leg.mode === "water") ?? null;
     return {
         ...base,
@@ -1941,7 +1948,17 @@ export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: n
     const lastPose = last ? legPose(world, last, 1, trip, epochSeconds) : null;
     const startYaw = lastPose ? lastPose.yaw : trip.from.yaw ?? stay[0]?.yaw ?? 0;
     const up = {nx: to.nx, ny: to.ny, nz: to.nz};
-    if (!stay.length) return {x: to.x, y: to.y, z: to.z, yaw: startYaw, moving: false, aloft: false, ...up, beat: trip.doing === "sleep" || trip.doing === "to_roost" ? "sleep" : "rest"};
+    if (!stay.length) {
+        // (No beats, asleep say: it turns where it lies to the heading it settles to, at TURN_RATE, so its slot ends facing
+        // the way the next one starts from. 2026-11-12: it kept the way it came in all slot and snapped round at the next.)
+        // (Not under a recipe, whose own steps start from the way it came in.)
+        const settleYaw = trip.recipe ? startYaw : trip.finish.yaw ?? startYaw;
+        let turn = settleYaw - startYaw;
+        while (turn > Math.PI) turn -= Math.PI * 2;
+        while (turn < -Math.PI) turn += Math.PI * 2;
+        const turned = Math.min(Math.max(since / Math.max(Math.abs(turn) / TURN_RATE, 0.8), 0), 1);
+        return {x: to.x, y: to.y, z: to.z, yaw: startYaw + turn * turned, moving: false, aloft: false, ...up, beat: trip.doing === "sleep" || trip.doing === "to_roost" ? "sleep" : "rest"};
+    }
     let i = 0;
     while (i + 1 < stay.length && stay[i + 1].at <= since) i++;
     const beat = stay[i];
