@@ -279,6 +279,8 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
+    /** Islands mode (`no-hamlet.ts`, decision 148): the wild island's region names where they differ (the former home area: "Meadow"). */
+    wildIslandRegionLabels?: Partial<Record<ArkRegion, string>>;
     /** Called once the first frame is drawn. */
     onReady?: () => void;
     /** Honour prefers-reduced-motion: no idle motion, no camera flights. */

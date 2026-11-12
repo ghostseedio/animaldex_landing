@@ -14,6 +14,7 @@
 
 import slotTable from "@/ark-scene/map/hamlet-slots.json";
 import footprintTable from "@/ark-scene/props/hamlet-footprints.json";
+import {noHamlet} from "@/ark-scene/no-hamlet";
 
 type Slot = {id: string; kind: "house" | "smallholding"; x: number; z: number; rotation: number};
 type Rect = {x0: number; x1: number; z0: number; z1: number};
@@ -43,6 +44,8 @@ function insideQuad(quad: Array<[number, number]>, x: number, z: number): boolea
 
 /** Where a point is on the reserved land: under a building's core, elsewhere on a lot, or not reserved. */
 export function hamletLandAt(x: number, z: number): "core" | "lot" | null {
+    // (Islands mode, `no-hamlet.ts`: nothing is reserved; the land is meadow.)
+    if (noHamlet()) return null;
     let found: "core" | "lot" | null = null;
     for (const slot of SLOTS) {
         // Into the slot's frame (three's rotation about y: local +z → (sin, cos)).
@@ -72,6 +75,11 @@ export function hamletKeeps(x: number, z: number, u: number): boolean {
 
 /** On a reserved plot's footprint (the crops keep off it: `fields.ts` cropAt and its shader twin). */
 export function hamletLotAt(x: number, z: number): boolean {
+    return !noHamlet() && villageLotAt(x, z);
+}
+
+/** On a reserved plot's footprint on today's island, whatever the switch (the decor keeps its draws in step: `decor.ts`). */
+export function villageLotAt(x: number, z: number): boolean {
     for (const quad of Object.values(FOOTPRINTS)) {
         const [x0, z0] = quad[0];
         if (Math.abs(x - x0) > 40 || Math.abs(z - z0) > 40) continue;
@@ -82,6 +90,7 @@ export function hamletLotAt(x: number, z: number): boolean {
 
 /** The footprints as GLSL (`fields.ts` arkField): true inside any, for the shader to paint them grass, not crop rows. */
 export function hamletLotsGlsl(): string {
+    if (noHamlet()) return "bool arkHamletLot(vec2 p) {\n    return false;\n}\n";
     const quads = Object.values(FOOTPRINTS);
     const edge = (a: [number, number], b: [number, number]) => `((${b[0].toFixed(3)} - ${a[0].toFixed(3)}) * (p.y - ${a[1].toFixed(3)}) - (${b[1].toFixed(3)} - ${a[1].toFixed(3)}) * (p.x - ${a[0].toFixed(3)}))`;
     const tests = quads.map((quad) => {

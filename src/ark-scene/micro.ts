@@ -15,6 +15,7 @@
  * the same wall.
  */
 
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import table from "@/ark-scene/microhabitats.json";
 import {rockSquash, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {assetTrunk} from "@/ark-scene/tree-assets";
@@ -248,6 +249,8 @@ type Pool = {points: Array<{x: number; z: number}>; y: number};
 
 const TREE_KINDS = new Set(["broadleaf", "rainforest", "orchard", "cactus"]);
 const hosts = new Map<string, unknown>();
+// Islands mode flips (`no-hamlet.ts`): the hosts (trees, flowers, stones, pools) are the other world's.
+onHamletSwitch(() => hosts.clear());
 
 function cached<T>(key: string, make: () => T): T {
     if (!hosts.has(key)) hosts.set(key, make());
@@ -354,7 +357,8 @@ function patchOf(items: MicroDecorItem[]): Patch {
  */
 function pool(zone: ArkZone): Pool {
     return cached(`pool#${zone}`, () => {
-        if (zone === "river_lake") {
+        // (Islands mode, `no-hamlet.ts`: no garden pond; every zone's pond dwellers sit on the lake's lily margin.)
+        if (zone === "river_lake" || noHamlet()) {
             const points: Array<{x: number; z: number}> = [];
             for (let k = 0; k < 64; k++) {
                 const angle = k / 64 * Math.PI * 2;
@@ -377,6 +381,9 @@ function pool(zone: ArkZone): Pool {
 
 // MARK: Places and points
 
+/** Islands mode's spots for the built ones (`microPlace`). */
+const WILD_SPOT: Partial<Record<MicroSpot, MicroSpot>> = {house: "rocks", lamp: "flowers"};
+
 const SURFACE_OF: Record<MicroSpot, MicroSurface> = {house: "wall", lamp: "post", bark: "bark", flowers: "flower", rocks: "rock", leaf_litter: "litter", pond_surface: "water"};
 
 /**
@@ -388,7 +395,10 @@ export function microPlace(slug: string, zone: ArkZone, slot: number, rank: numb
     const kind = microSpecies(slug);
     if (!kind) return null;
     const own = flags(slug);
-    const surface: MicroSurface = kind.spot === "house" ? (own.includes("a") ? "around" : own.includes("o") ? "roof" : "wall") : SURFACE_OF[kind.spot];
+    // Islands mode (`no-hamlet.ts`): no cottage and no lamp posts. A house dweller lives on its corner's stones (a crack
+    // in the rock, as in the wild), a lamp's moth on its corner's flowers.
+    const spot: MicroSpot = noHamlet() ? WILD_SPOT[kind.spot] ?? kind.spot : kind.spot;
+    const surface: MicroSurface = spot === "house" ? (own.includes("a") ? "around" : own.includes("o") ? "roof" : "wall") : SURFACE_OF[spot];
     const zoneIndex = Math.max(ARK_ZONES.indexOf(zone), 0);
     const index = slot * ARK_ZONES.length + zoneIndex;
     const [u, v] = r2(index);
@@ -419,7 +429,7 @@ export function microPlace(slug: string, zone: ArkZone, slot: number, rank: numb
         offAlong = Math.cos(angle) * r;
         offAcross = Math.sin(angle) * r;
     }
-    return {spot: kind.spot, surface, host, a, b, heading, offAlong, offAcross};
+    return {spot, surface, host, a, b, heading, offAlong, offAcross};
 }
 
 /**

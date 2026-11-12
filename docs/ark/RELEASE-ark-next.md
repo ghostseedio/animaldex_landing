@@ -20,18 +20,20 @@ Lane heads merged into `ark-next`:
 
 | Lane | Branch | Head | Merged as |
 |---|---|---|---|
-| L5 collisions | `ark-collisions` | 37de0b1d | 521c3de4 (API), a9af1cc8, 7930ec2e |
+| L5 collisions | `ark-collisions` 37de0b1d, `-navstart` 7533ab4e, `-town` 2d939850 | — | 521c3de4 (API), a9af1cc8, 7930ec2e, 7ab61a51, two-island colliders |
 | L4 true scale | `ark-true-scale` | f6a1e8f8 | 893832a7 |
-| L6 scenery | `ark-scenery` | 2d1d2895 | c579bc62, 6a8cefe5, 0de78f61 |
+| L6 scenery | `ark-scenery` | 017c5572 | c579bc62, 6a8cefe5, 0de78f61, 9d089ea4 |
 | L3 grounding and perching | `ark-grounding` | fda84235 | 8d90308a, generator 7 re-run 3900a81d |
-| L1 locomotion | `ark-locomotion` | a0d507a4 | e813bd21, aaad9473; wiring a9ecfffd, 07c3a64b, 5388b309 |
+| L1 locomotion | `ark-locomotion` a0d507a4, `ark-l1-fixes` 5cab18f6 | — | e813bd21, aaad9473, e922c08f; wiring a9ecfffd, 07c3a64b, 5388b309 |
 | L2 flight, swimming, legless | `ark-flight-swim` | 2cf309e3 | af146487 |
-| L7 chases | `ark-chases` | dddad0a0 | cc82a1bc, ce245fd8; wiring 356d0fc4 |
-| Part B streaming | `ark-streaming` | 366f985b | 77c3f2f5 |
+| L7 chases | `ark-chases` | 772d9bcb | cc82a1bc, ce245fd8, e43139cb; wiring 356d0fc4 |
+| Part B streaming | `ark-streaming` 366f985b, `ark-streaming-islands` 2f7f6fa3 | — | 77c3f2f5, b9446a3d |
 | Encounter hunting, scene side | `ark-encounter-scene` | 9fcbb049 | 93b9c1b1, 34524f02 |
 | The positions atlas v2 (encounter lane) | `ark-positions-atlas` | cba0594d | 342097c9 (pinned to AnimalDex `ark-encounter` 8f9bc465) |
 | The second island (T2) | `ark-town-island` | bdcd9ff1 | 084c07f6 |
-| Town animals, one world, the schedule, zoo feeding (T3) | `ark-islands-scene` | e76158a5 | 1c508857, 9df003b3 |
+| Town animals, one world, the schedule, zoo feeding, the town worker (T3) | `ark-islands-scene` | 57014b78 | 1c508857, 9df003b3, e043745b, 31fdcbcb, 5cd8efff |
+| The `ark.islands.*` and Meadow strings (i18n lane) | `ark-islands-i18n` | 33306e20 | 491a4692, 60f41b2f |
+| The wild island without its hamlet (islands mode) | `ark-wild-no-hamlet` | 98a30984 | f098c301, 03dfd120 |
 
 Player control is not in this release.
 
@@ -127,7 +129,10 @@ throttle) medium 42–52 fps, low 56–58 fps. L1's posing costs about 0.85 ms a
    sudo docker ps    # someone else deploying? (container only seconds old)
    curl -fsSL https://raw.githubusercontent.com/ghostseedio/animaldex_landing/main/scripts/deploy-selfhost.sh | sudo bash -s -- <full sha>
    ```
-4. Check on the VM: /ark and the embed load; the built workers in `public/ark/` are there; a whale and a mouse at their
+4. Check on the VM: /ark and the embed load; the built workers in `public/ark/` are there (`npm run build` runs
+   `prebuild`, which runs `scripts/build-ark-bundle.mjs`: `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js` and
+   the town's `ark-town-worker.js`; without the town worker the town builds on the main thread and phones stall 5–9 s);
+   a whale and a mouse at their
    sizes; the encounter atlas static file is served (the bundle build copies it).
 5. **Rollback:** the script prints the command; the previous known-good sha is **7764fe12** (landing `main` today).
 
@@ -185,11 +190,13 @@ Listed for the owner instead of polished today (decision 136):
 
 Routed to lanes, to be fixed or listed here before approval **(pending)**:
 - Behaviour lane (`ark-behaviour-backwards`): the share of walking backwards in the default view (0.2% at the release,
-  up to 5–9% on ark-next; nothing backwards for over 1 s). L1 found one zebra in a sleep-then-play bout, the same with
-  the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
-- L5: a mallard setting off after a recipe stay turns 1.8 rad on its way off (the nav's start).
-- The `ark.islands.*` strings in every locale (`ark-islands-i18n`).
-- The hamlet's removal from the wild island (`ark-wild-no-hamlet`).
+  1–5% on ark-next; nothing backwards for over 1 s on the ground). L1 found one zebra in a sleep-then-play bout, the
+  same with the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
+- L5: the collision audit (`ark-collisions.yml`) is red on ark-next: pass-throughs 0, but cliffs 7,913 (limit 2,466)
+  and overlaps 3.08 M (limit 2.04 M); the hamlet's fence crossings are gone in islands mode. A gate for the visual
+  accept run.
+- The town's first two tasks after the first frame (0.5–0.6 s on the phone profile, decision 163): profile on a real
+  phone after the release.
 
 ## 7. Rollback
 

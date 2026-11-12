@@ -13,6 +13,7 @@
  * bulbs, the glows, the posts, the pond's water and stones).
  */
 
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import {
     AdditiveBlending,
     BoxGeometry,
@@ -196,7 +197,9 @@ export function buildMicroScene(): MicroScene {
     const house = new Group();
     house.position.set(C.x, C.floor, C.z);
     house.rotation.y = C.rotation;
-    group.add(house);
+    // (Islands mode, `no-hamlet.ts`: no cottage, no garden pond, and no lamp posts in `microDecor`.)
+    const built = !noHamlet();
+    if (built) group.add(house);
 
     const stone = new Color("#9a9182");
     const random = seeded(77341);
@@ -272,7 +275,7 @@ export function buildMicroScene(): MicroScene {
     const waterMaterial = new MeshStandardMaterial({color: new Color("#3f6f78"), roughness: 0.08, metalness: 0.35, transparent: true, opacity: 0.92});
     const water = new Mesh(waterGeometry, waterMaterial);
     water.receiveShadow = true;
-    group.add(water);
+    if (built) group.add(water);
     const rim: BufferGeometry[] = [];
     const rimStones = 22;
     for (let k = 0; k < rimStones; k++) {
@@ -288,12 +291,12 @@ export function buildMicroScene(): MicroScene {
     const rimMesh = new Mesh(mergeGeometries(rim)!, material);
     rimMesh.castShadow = true;
     rimMesh.receiveShadow = true;
-    group.add(rimMesh);
+    if (built) group.add(rimMesh);
 
     const meshes = [houseMesh, rimMesh, postMesh];
     const materials: Material[] = [material, glassMaterial, bulbMaterial, glowMaterial, waterMaterial, postMesh.material as Material];
     const geometries = [houseGeometry, glassGeometry, bulbGeometry, waterGeometry, rimMesh.geometry, postGeometry, lampBulbGeometry];
-    const triangles = geometries.reduce((sum, geometry) => sum + (geometry.index ? geometry.index.count : geometry.getAttribute("position").count) / 3, 0);
+    const triangles = geometries.reduce((sum, geometry) => sum + (geometry.index ? geometry.index.count : geometry.getAttribute("position")?.count ?? 0) / 3, 0);
     const warm = new Color("#ffc679");
     const haloAt = new Vector3();
     return {

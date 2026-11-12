@@ -15,6 +15,7 @@
  * filter already keeps land, water and air apart.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import table from "@/ark-scene/layers.json";
 import {worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {canopyTree, CANOPY_TREES, DECOR_SINK, limbAt} from "@/ark-scene/micro-decor";
@@ -73,6 +74,10 @@ export type CanopyPlace = {
 
 export type CanopyHost = {item: DecorItem; zone: ArkZone};
 const treesByZone = new Map<ArkZone, CanopyHost[]>();
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    treesByZone.clear();
+});
 
 /** A zone's canopy trees, nearest its ground first (a zone without its own borrows the nearest zone's that has them). */
 export function canopyTrees(zone: ArkZone): CanopyHost[] {

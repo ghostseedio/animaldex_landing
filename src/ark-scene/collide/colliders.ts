@@ -22,6 +22,7 @@
  * Everything is a pure function of the world and the hamlet's plots: every viewer has the same colliders.
  */
 
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
 import {assetTrunk} from "@/ark-scene/tree-assets";
 import {trunkOf} from "@/ark-scene/vegetation";
@@ -413,7 +414,8 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
             out.push({shape: "circle", kind: "shrub", id: `shrub:${n}`, cx: item.x, cz: item.z, r, reach: r, y0: item.y - 0.2, y1: item.y + 1.2 * item.scale, gap: 0, soft: true});
         }
     });
-    {
+    // (Islands mode, `no-hamlet.ts`: no garden pond.)
+    if (!noHamlet()) {
         const g = sampleGround(GARDEN_POND.x, GARDEN_POND.z).height;
         const r = GARDEN_POND.radius + POND_STONES;
         out.push({shape: "circle", kind: "pond", id: "pond:garden", cx: GARDEN_POND.x, cz: GARDEN_POND.z, r, reach: r, y0: g - 1, y1: g + 0.4, gap: 0});
@@ -438,6 +440,10 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
 }
 
 let shared: {key: string; set: ColliderSet} | null = null;
+// Islands mode flips (`no-hamlet.ts`): the default plots' key is the same, the world is not.
+onHamletSwitch(() => {
+    shared = null;
+});
 
 /** The plots' key (the same `world-sampler.ts` keys its walk grid's rebuild by). */
 export function plotsKey(plots: HomePlot[] | null): string {

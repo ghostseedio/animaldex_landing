@@ -8,6 +8,7 @@
  * Pure: no three.js, no DOM.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {cropAt} from "@/ark-scene/fields";
 import {COTTAGE, microDecor} from "@/ark-scene/micro-decor";
@@ -32,6 +33,10 @@ const REACH: Record<string, number> = {
 export type GoldenObstacle = {x: number; z: number; radius: number};
 
 let cached: GoldenObstacle[] | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    cached = null;
+});
 
 export function goldenObstacles(): GoldenObstacle[] {
     if (cached) return cached;

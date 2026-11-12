@@ -14,9 +14,11 @@
  * position derived here (`placement.ts`) is the same for every viewer.
  */
 
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import {REGION_ZONES} from "@/ark-scene/types";
 import {sampleGroundV2, wildWorldV2} from "@/ark-scene/islands/wild/world-v2";
+import {setNoHamlet} from "@/ark-scene/no-hamlet";
 
 // MARK: - Which world (Part C, docs/ark/wild-island.md §Integration)
 
@@ -28,21 +30,25 @@ import {sampleGroundV2, wildWorldV2} from "@/ark-scene/islands/wild/world-v2";
  * With nothing chosen it is `v1`, exactly as before.
  */
 export type ArkWorldId = "v1" | "v2";
+// (On the global object, as the hamlet's switch (`no-hamlet.ts`): a script's loader may hold two copies of the scene's
+// modules, and every copy's bindings follow the one switch.)
+type WorldSwitch = {world: ArkWorldId; touched: boolean; listeners: Array<(world: ArkWorldId) => void>};
+const WORLD_KEY = "__arkWorldSwitch";
+const worldState: WorldSwitch = (((globalThis as Record<string, unknown>)[WORLD_KEY] as WorldSwitch | undefined) ??= {world: "v1", touched: false, listeners: []});
 let ACTIVE: ArkWorldId = "v1";
-let touched = false;
-const listeners: Array<(world: ArkWorldId) => void> = [];
 
 /** The world in use. */
 export function arkWorld(): ArkWorldId {
-    return ACTIVE;
+    return worldState.world;
 }
 
 /**
  * Run `listener` whenever the world changes (and never at registration): for a module that derives a value from the
- * world when it loads (`sea-depth.ts` LAKE_SWIM_RADIUS, the drawn ground's grid), so it follows the switch.
+ * world when it loads (`sea-depth.ts` LAKE_SWIM_RADIUS, the drawn ground's grid) or keeps something built from it, so
+ * it follows the switch.
  */
 export function onArkWorld(listener: (world: ArkWorldId) => void): void {
-    listeners.push(listener);
+    worldState.listeners.push(listener);
 }
 
 // MARK: - Noise
@@ -346,8 +352,16 @@ const VILLAGE_BOX = (() => {
     return xs.length ? {x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, z0: Math.min(...zs) - pad, z1: Math.max(...zs) + pad} : {x0: 0, x1: 0, z0: 0, z1: 0};
 })();
 
-/** Metres to the nearest lane's middle line. */
+/** Metres to the nearest lane's middle line (islands mode, `no-hamlet.ts`: there are no lanes, so never near one). */
 export function laneDistance(x: number, z: number): number {
+    return noHamlet() ? Infinity : villageLaneDistance(x, z);
+}
+
+/**
+ * The lanes' distance whatever the switch: the ground's shape keeps the village's gentle base in islands mode too (its
+ * meadow lies where the hamlet stood, so nothing that reads a height moves), and the decor keeps its draws in step.
+ */
+export function villageLaneDistance(x: number, z: number): number {
     let best = Infinity;
     for (const {points} of HAMLET_LANES) {
         for (let i = 1; i < points.length; i++) best = Math.min(best, distanceToSegment(x, z, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]));
@@ -423,7 +437,7 @@ function siteBase(zone: LandZone): number {
 }
 
 export function sampleGround(x: number, z: number): GroundSample {
-    touched = true;
+    worldState.touched = true;
     if (ACTIVE === "v2") return sampleGroundV2(x, z) as unknown as GroundSample;
     const theta = Math.atan2(z, x);
     const r = Math.hypot(x, z);
@@ -487,7 +501,7 @@ export function sampleGround(x: number, z: number): GroundSample {
     // The hamlet's village (home growth) lies on gentle ground: within reach of its lanes the land eases toward a
     // low, softly rolling base (the farm's own), so its cottages and smallholdings stand level.
     if (x > VILLAGE_BOX.x0 && x < VILLAGE_BOX.x1 && z > VILLAGE_BOX.z0 && z < VILLAGE_BOX.z1) {
-        const lane = laneDistance(x, z);
+        const lane = villageLaneDistance(x, z);
         if (lane < VILLAGE_REACH + 8) {
             // (Only the open ground the hamlet stands on: the ice, the mountain and the forests keep their shape.)
             const wild = (weights.polar ?? 0) + (weights.mountains ?? 0) + (weights.rainforest ?? 0) + (weights.woodland ?? 0);
@@ -562,8 +576,16 @@ const V1 = {ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES,
  * `ARK_WORLD=v2` or a call at its top.
  */
 export function setArkWorld(world: ArkWorldId): void {
-    if (world === ACTIVE) return;
-    if (touched && typeof console !== "undefined") console.warn(`setArkWorld(${world}) after the world was sampled: anything built from it already stays as built`);
+    if (world === worldState.world) return;
+    if (worldState.touched && typeof console !== "undefined") console.warn(`setArkWorld(${world}) after the world was sampled: anything built from it that does not follow onArkWorld stays as built`);
+    worldState.world = world;
+    // The v2 world is the islands mode's wild island: no hamlet on it (decision 148's switch, its resets with it).
+    if (world === "v2") setNoHamlet(true);
+    for (const listener of worldState.listeners) listener(world);
+}
+
+/** This copy of the module's bindings for a world. */
+function applyWorld(world: ArkWorldId): void {
     ACTIVE = world;
     if (world === "v2") {
         const v2 = wildWorldV2();
@@ -579,8 +601,11 @@ export function setArkWorld(world: ArkWorldId): void {
     } else {
         ({ZONE_SITES, LAKE, RIVER, RIVER_UPPER, VISITOR_LANDING, HAMLET_LANES, TERRAIN_HALF, TERRAIN_SEGMENTS, WORLD_RADIUS} = V1);
     }
-    for (const listener of listeners) listener(world);
 }
+// Every copy follows the one switch; a copy loaded after it was set starts there. (Registered first, so the world's own
+// bindings change before any module's listener reads them.)
+worldState.listeners.unshift(applyWorld);
+if (worldState.world !== "v1") applyWorld(worldState.world);
 
 /** The world asked for by the process: `globalThis.__ARK_WORLD__`, a worker's or page's `?world=v2`, or `ARK_WORLD=v2`. */
 function askedWorld(): ArkWorldId {

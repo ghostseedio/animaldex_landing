@@ -16,6 +16,7 @@
  */
 
 import type {ArkZone} from "@/ark-scene/types";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {LAKE, riverDistance, sampleGround, seeded, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 /** The cottage: its middle on the ground, its size (m), turned to face +z (the default camera). */
@@ -241,6 +242,12 @@ export function microDecor(): MicroDecorItem[] {
         const lamp = zoneLamp(zone);
         items.push({kind: "lamp", variant: 0, x: lamp.x, y: lamp.y, z: lamp.z, scale: 1, rotation: 0, color: "#2f2a26", zone});
     }
-    cached = items;
-    return items;
+    // Islands mode (`no-hamlet.ts`): nothing built, so no cottage, garden pond or lamp posts. The rest (the flower beds,
+    // the rockery, the tree and its litter, every zone's corner) stays: the same draws, so nothing else moves.
+    cached = noHamlet() ? items.filter((item) => item.kind !== "cottage" && item.kind !== "pond" && item.kind !== "lamp") : items;
+    return cached;
 }
+
+onHamletSwitch(() => {
+    cached = null;
+});

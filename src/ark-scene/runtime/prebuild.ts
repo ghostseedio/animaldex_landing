@@ -10,6 +10,8 @@
  */
 
 import {primeDecor} from "@/ark-scene/decor";
+import {noHamlet, noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
+import {arkTwoIslands} from "@/lib/ark-islands";
 import {placeAnimals, primePlaces, primePlacesFor, type Placement} from "@/ark-scene/placement";
 import {primeZoneCapacities} from "@/ark-scene/map/capacity";
 import {primeReefGrowth} from "@/ark-scene/reef";
@@ -97,13 +99,17 @@ function ask<T>(make: () => Worker, message: unknown, timeoutMs: number): Promis
  */
 export async function prepareArk(options: {snapshot?: ArkSnapshot | null; workerUrl?: string; placesWorkerUrl?: string; timeoutMs?: number} = {}): Promise<ArkPrepared> {
     const started = performance.now();
+    // Islands mode (`no-hamlet.ts`, decision 148): the wild island without its hamlet when the read has two islands
+    // (T3's `arkTwoIslands`). Set here first, so what is primed is the world `mountArk` (which sets the same) builds.
+    const wild = noHamletFor(arkTwoIslands(options.snapshot));
+    setNoHamlet(wild);
     if (typeof Worker === "undefined") return {where: "skipped", ms: 0, error: "no workers"};
     const animals = options.snapshot?.animals ?? null;
     const timeout = options.timeoutMs ?? 60_000;
-    const scenery = ask<ArkSceneryPrebuild>(() => new Worker(forWorld(options.workerUrl ?? "/ark/ark-prebuild-worker.js")), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier()}, timeout);
+    const scenery = ask<ArkSceneryPrebuild>(() => new Worker(forWorld(options.workerUrl ?? "/ark/ark-prebuild-worker.js")), {grass: GRASS_BUILD[arkStartTier()], tier: arkStartTier(), noHamlet: wild}, timeout);
     const big = Boolean(animals && animals.length >= PLACES_IN_WORKER_FROM);
     const places = big
-        ? ask<{places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>}>(() => new Worker(forWorld(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js")), {animals}, timeout)
+        ? ask<{places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>}>(() => new Worker(forWorld(options.placesWorkerUrl ?? "/ark/ark-prebuild-places-worker.js")), {animals, noHamlet: wild}, timeout)
         : Promise.resolve({data: null as {places: Array<[string, Placement]>; capacities?: Array<[ArkZone, number]>} | null, error: undefined});
     const [a, b] = await Promise.all([scenery, places]);
     try {
@@ -126,7 +132,7 @@ export async function prepareArk(options: {snapshot?: ArkSnapshot | null; worker
  */
 export async function prepareGhostPlaces(animals: ArkAnimal[], placesWorkerUrl = "/ark/ark-prebuild-places-worker.js"): Promise<boolean> {
     if (typeof Worker === "undefined" || !animals.length) return false;
-    const answer = await ask<{places: Array<[string, Placement]>}>(() => new Worker(forWorld(placesWorkerUrl)), {animals}, 30_000);
+    const answer = await ask<{places: Array<[string, Placement]>}>(() => new Worker(forWorld(placesWorkerUrl)), {animals, noHamlet: noHamlet()}, 30_000);
     if (!answer.data) return false;
     primePlacesFor(animals, new Map(answer.data.places));
     return true;
