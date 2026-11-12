@@ -363,7 +363,10 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             if (!trueMicro(species, animal.model_slug, trueLength)) {
                 // A bird, a bat, a small mammal, a lizard or a frog: its attach point is its perch (its home and its roost on the
                 // behaviour schedule, which flies, walks or hops it from there and back), not a micro animal's spot.
-                const at = surfacePoint(micro, zone);
+                let at = surfacePoint(micro, zone);
+                // Set down beside a hole in the ground a few body lengths out, never into a drawn rock beside it (a crag by a
+                // burrow, scenery lane): on the hole itself then, which keeps clear of the rocks (`world-sampler.ts`).
+                if ((point.tag === "burrow_entrance" || point.tag === "worm_hole") && inRock(at.x, at.z, Math.min(Math.max(trueLength * 0.2, 0.05), 0.3))) at = surfacePoint({...micro, offAlong: 0, offAcross: 0}, zone);
                 return {
                     x: at.x, z: at.z, ground: at.y, yaw: Math.atan2(at.tx, at.tz), water: false, perch: {...at, tag: point.tag, id: point.id},
                     map: {species, tag, area: TAG_AREA[tag], held: false, sea: false, attach: point, roost, key, level}
