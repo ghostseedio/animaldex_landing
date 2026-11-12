@@ -753,8 +753,9 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
         kind,
         seconds: run.seconds,
         focus: {x: (minX + maxX) / 2, y: Math.max(Math.max(prey.base, 0) + prey.height * 0.5, kind === "swoop" ? (minY + Math.min(maxY, minY + 6)) / 2 : (minY + maxY) / 2 + prey.height * 0.4), z: (minZ + maxZ) / 2},
-        // (Close enough that both fill the view; a long chase is framed a little tighter past its first 10 m, side on.)
-        distance: Math.max(6, Math.min(extent, 10) * 1.05 + Math.max(extent - 10, 0) * 0.72 + 2.5 + Math.max(prey.length, predator.length) * 1.6) + (kind === "swoop" ? 3 : 0),
+        // (Close enough that both fill the view, the whole chase in it: the camera may turn off side on to see past a
+        // tree, and a tighter frame lost the catch off its edge.)
+        distance: Math.max(6, extent * 1.05 + 2.5 + Math.max(prey.length, predator.length) * 1.6) + (kind === "swoop" ? 3 : 0),
         polar: kind === "swoop" ? 1.0 : kind === "dart" ? 0.85 : 1.1,
         predator: pose(predator, run.pred),
         prey: pose(prey, run.prey),
