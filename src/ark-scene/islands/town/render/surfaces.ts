@@ -192,7 +192,10 @@ const GROUND_COLOUR = `
     float clumps = townFbm(local * 0.45);
     tint *= 0.86 + 0.28 * clumps;
     tint = mix(tint, ${GROUND_TINTS.dry} * (0.8 + 0.3 * clumps), smoothstep(0.58, 0.82, townFbm(local * 0.06 + 9.0)) * 0.3 * (1.0 - ws.y));
-    float stripe = step(0.5, fract(local.x / 2.6 + 0.08 * townNoise(local * 0.2)));
+    // (Its edges a pixel soft, so the stripes never crawl.)
+    float stripeAt = local.x / 2.6 + 0.08 * townNoise(local * 0.2);
+    float stripeW = max(fwidth(stripeAt), 1e-4);
+    float stripe = smoothstep(0.5 - stripeW, 0.5 + stripeW, fract(stripeAt)) * (1.0 - smoothstep(1.0 - stripeW, 1.0, fract(stripeAt)));
     tint *= 1.0 + lawn * (stripe - 0.5) * 0.09 * (1.0 - smoothstep(60.0, 200.0, dist));
     // Paddocks worn to soil at the gates and along the fence.
     float wSoil = max(ws.x, worn * (1.0 - ws.y));
