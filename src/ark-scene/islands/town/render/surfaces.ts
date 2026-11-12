@@ -302,6 +302,8 @@ const PAVING_COLOUR = `
     if (layer >= 0.0 && townReady > 0.5) {
         vec4 t = townLayer(townAlbedo, layer, uv / metres, st);
         vec3 c = t.rgb / townMeans[int(layer)];
+        // Gravel reads by its stones: more of the texture's own contrast.
+        if (id == 5) c = max(mix(vec3(1.0), c, 1.6), vec3(0.2));
         if (near > 0.01) {
             vec3 d = townLayer(townAlbedo, layer, uv / metres * 4.1 + 0.37, 0.0).rgb / townMeans[int(layer)];
             c *= mix(1.0, dot(d, vec3(0.3333)), 0.22 * near);

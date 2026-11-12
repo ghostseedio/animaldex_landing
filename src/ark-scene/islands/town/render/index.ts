@@ -19,6 +19,7 @@ import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, boatGeometry, carGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
+import {buildTownNear} from "@/ark-scene/islands/town/render/near";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
@@ -33,6 +34,9 @@ export const TOWN_TIERS: Record<TownTier, {trees: number; props: number; shadows
     medium: {trees: 1, props: 1, shadows: 1024, pixelRatio: 1.5, paveNormals: true, anisotropy: 4},
     low: {trees: 0.6, props: 0.5, shadows: 0, pixelRatio: 1, paveNormals: false, anisotropy: 4}
 };
+
+/** The close-up detail's share per tier (as the wild island's near detail: 1 / 0.6 / 0.35). */
+const NEAR_SHARE: Record<TownTier, number> = {high: 1, medium: 0.6, low: 0.35};
 
 export type TownIsland = {
     root: Group;
@@ -454,6 +458,10 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const glow = furniture && furniture.heads.length ? lampGlow(furniture.heads) : null;
     if (glow) root.add(glow);
     if (furniture) TOWN_LIGHT.lampMap.value = lampMapTexture(furniture.lampMap);
+    // Close up: leaves, weeds, grit, daisies and the odd scrap round the camera when it comes down to the street.
+    const near = buildTownNear(plan, scenery.trees);
+    near.setShare(NEAR_SHARE[tier]);
+    root.add(near.group);
     const binColours = ["#2b4a2f", "#3a3d40", "#2a4a7a", "#7a4a2a"];
     const ground = (x: number, z: number) => sampleTownGround(x, z).height;
 
@@ -582,6 +590,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         lastMinute = -1;
         setShadows(TOWN_TIERS[tier].shadows > 0);
         if (seenRenderer) loadTownTextures(seenRenderer, {normals: TOWN_TIERS[tier].paveNormals, anisotropy: TOWN_TIERS[tier].anisotropy});
+        near.setShare(NEAR_SHARE[tier]);
     };
 
     const stats = () => {
@@ -634,6 +643,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
                 const mesh = o as Mesh;
                 if (mesh.isMesh && mesh.geometry) mesh.geometry.dispose();
             });
+            near.dispose();
             (lightsMesh?.material as Material | undefined)?.dispose();
             (glow?.material as Material | undefined)?.dispose();
             if (furniture && TOWN_LIGHT.lampMap.value) {
