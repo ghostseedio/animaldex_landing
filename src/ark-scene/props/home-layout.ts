@@ -20,6 +20,7 @@ import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {fieldCropAt} from "@/ark-scene/fields";
 import {inRock} from "@/ark-scene/map/rocks";
 import {COTTAGE} from "@/ark-scene/micro-decor";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {hashString, riverDistance, sampleGround, seeded} from "@/ark-scene/world";
 import type {CottageStyle} from "@/ark-scene/micro-scene";
 import type {BarnStyle} from "@/ark-scene/vegetation";
@@ -48,6 +49,8 @@ export type Vec3 = {x: number; y: number; z: number};
 
 /** Today's island: the cottage's plot and the barn's smallholding (the map lane's `homePlots()` replaces this). */
 export function defaultHomePlots(): HomePlot[] {
+    // (Islands mode, `no-hamlet.ts`: the wild island has no plots; its kept animals live on the town island.)
+    if (noHamlet()) return [];
     const plots: HomePlot[] = [{id: "house-0", kind: "house", x: COTTAGE.x, z: COTTAGE.z, rotation: 0, floor: COTTAGE.floor}];
     const barn = worldDecor().find((item) => item.kind === "barn");
     if (barn) plots.push({id: "smallholding-0", kind: "smallholding", x: barn.x, z: barn.z, rotation: barn.rotation, barn: true});
@@ -233,6 +236,11 @@ export function homeObstacles(): Array<{x: number; z: number; r: number}> {
 export type PaddockRect = {x0: number; x1: number; z0: number; z1: number};
 
 const paddockCache = new Map<string, PaddockRect>();
+
+onHamletSwitch(() => {
+    obstacleCache = null;
+    paddockCache.clear();
+});
 
 /**
  * The paddock's rectangle in the smallholding's frame: of the candidates

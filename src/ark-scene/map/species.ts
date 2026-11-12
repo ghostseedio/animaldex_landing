@@ -8,6 +8,7 @@
  * its zone's fallback tag, like the no-text species (decision 5).
  */
 
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import table from "@/ark-scene/map/species.json";
 import {speciesLayer} from "@/ark-scene/layers";
 import {MAP_ATTACHMENTS, MAP_MOVES, MAP_TAGS, type HostGroup, type MapAttachment, type MapMove, type MapRole, type MapTag} from "@/ark-scene/map/tags";
@@ -66,6 +67,18 @@ function fallbackTag(zone: ArkZone, slug: string): MapTag {
     }
 }
 
+/**
+ * Islands mode (`no-hamlet.ts`): the wild island has no homestead, so a tag of one reads as its wild equivalent: a
+ * house dweller's crevices are the rocks', a garden's and a park's flowers the meadow's, a compost heap's rot a fallen
+ * log's, a barn's ground the grassland's, a garden pond the wild pond's.
+ */
+const WILD_TAG: Partial<Record<MapTag, MapTag>> = {house: "rocks_boulders", garden: "flower_meadow", town_park: "flower_meadow", compost: "logs_deadwood", farm_barn: "grassland", garden_pond: "pond"};
+function wildTag(tag: MapTag): MapTag {
+    return noHamlet() ? WILD_TAG[tag] ?? tag : tag;
+}
+
+onHamletSwitch(() => known.clear());
+
 /** A species' map entry; `zone` is only for one the table does not list. Null when it is held. */
 export function mapSpecies(slug: string, zone: ArkZone): MapSpecies | null {
     const key = `${slug}#${zone}`;
@@ -76,11 +89,11 @@ export function mapSpecies(slug: string, zone: ArkZone): MapSpecies | null {
     else if (row) {
         const flags = row[7];
         out = {
-            spawn: MAP_TAGS[row[0]],
-            allowed: new Set(row[1].split(".").map((i) => MAP_TAGS[Number(i)])),
+            spawn: wildTag(MAP_TAGS[row[0]]),
+            allowed: new Set(row[1].split(".").map((i) => wildTag(MAP_TAGS[Number(i)]))),
             move: MAP_MOVES[row[2]],
             attach: MAP_ATTACHMENTS[row[3]],
-            roost: row[4] >= 0 ? MAP_TAGS[row[4]] : null,
+            roost: row[4] >= 0 ? wildTag(MAP_TAGS[row[4]]) : null,
             role: (row[5] || null) as MapRole | null,
             host: (row[6] || null) as HostGroup | null,
             colony: flags.includes("c"),
@@ -89,7 +102,7 @@ export function mapSpecies(slug: string, zone: ArkZone): MapSpecies | null {
             fish: flags.includes("f")
         };
     } else {
-        const tag = fallbackTag(zone, slug);
+        const tag = wildTag(fallbackTag(zone, slug));
         const layer = speciesLayer(slug);
         const sea = zone === "coral_reef" || zone === "open_ocean";
         out = {

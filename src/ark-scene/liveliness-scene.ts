@@ -14,12 +14,16 @@ import {Color, Group, Vector3, type Fog, type PerspectiveCamera, type WebGLRende
 import {ArkAudio, type ArkAudioAnimal, type ArkAudioBed} from "@/ark-scene/ark-audio";
 import {ambientCredits, AMBIENT_THUNDER, bedUrl, selectAmbientBeds, thunderClaps, type AmbientInput} from "@/ark-scene/ambient-beds";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {sizeOf} from "@/ark-scene/ark-variation";
 import type {QualityTier} from "@/ark-scene/post";
 import {attachPoints, type ArkEnvironment} from "@/ark-scene/sampler";
 
 /** The trunks (bark attach points) in 10 m cells, built once: an animal's cover is looked up near its home, not over all of them. */
 let trunkGrid: Map<string, Array<{x: number; z: number; nx: number; nz: number; id: string}>> | null = null;
+onHamletSwitch(() => {
+    trunkGrid = null;
+});
 function trunksNear(x: number, z: number, radius: number): Array<{x: number; z: number; nx: number; nz: number; id: string}> {
     if (!trunkGrid) {
         const grid = new Map<string, Array<{x: number; z: number; nx: number; nz: number; id: string}>>();
@@ -664,7 +668,8 @@ export function waterNear(x: number, z: number, seaLevel: number, heightAt: (x: 
     const lake = {distance: Math.max(lakeD - LAKE.r, 0), x: LAKE.x, z: LAKE.z};
     const pondD = Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z);
     const pond = {distance: Math.max(pondD - GARDEN_POND.radius, 0), x: GARDEN_POND.x, z: GARDEN_POND.z};
-    return {sea, river: Number.isFinite(river.distance) ? river : null, rapids: Number.isFinite(rapids.distance) ? rapids : null, waterfall: null, lake, pond};
+    // (Islands mode, `no-hamlet.ts`: no garden pond to hear.)
+    return {sea, river: Number.isFinite(river.distance) ? river : null, rapids: Number.isFinite(rapids.distance) ? rapids : null, waterfall: null, lake, pond: noHamlet() ? null : pond};
 }
 
 /** The sound tier for a quality tier (the lighter view hears as the low tier). */

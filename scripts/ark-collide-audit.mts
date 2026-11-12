@@ -9,6 +9,9 @@
  *   raw: the schedule and the hamlet's straight door walks, as drawn before the collisions; planned: this tree's paths
  *   and routed door walks; final (default): and the collisions' layer on top (collide/resolve.ts), as the scene draws.
  *
+ * `--wild-island <islands-routing.json | kept>`: islands mode (decision 148, `src/ark-scene/no-hamlet.ts`): the wild island
+ * without its hamlet, and only its animals (by the routing's ids, or "kept": all but the house, farm and zoo animals).
+ *
  * `--fixture` instead of `--snapshot`: the synthetic Ark (every species and a full hamlet: src/lib/ark-collide/fixture.ts),
  * what CI runs (.github/workflows/ark-collisions.yml, against tests/ark-collide/thresholds.json).
  *
@@ -20,9 +23,11 @@ import {mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
-type Job = {snapshot: string; from: number; seconds: number; step: number; mode: string; models: string | null};
+type Job = {snapshot: string; from: number; seconds: number; step: number; mode: string; models: string | null; wild?: string | null};
 
 async function runJob(job: Job) {
+    // Islands mode (`--wild-island`, decision 148): the wild island without its hamlet, set before anything is built.
+    if (job.wild) (await import("@/ark-scene/no-hamlet")).setNoHamlet(true);
     const {decodeArkSnapshot} = await import("@/ark-scene/snapshot");
     const {buildSim} = await import("@/lib/ark-collide/sim");
     const metrics = await import("@/lib/ark-collide/metrics");
@@ -32,6 +37,12 @@ async function runJob(job: Job) {
     const snapshot = job.snapshot === "fixture"
         ? {animals: (await import("@/lib/ark-collide/fixture")).collideFixture(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")), ark_day: null}
         : decodeArkSnapshot(JSON.parse(readFileSync(job.snapshot, "utf8")))!;
+    if (job.wild) {
+        // Only the wild island's animals: the routing's (T1's islands-routing.json, merged by id in memory), or with
+        // "kept" every animal not kept in a house, on a farm or in a zoo (the fixture's hamlet residents live in the town).
+        const routing = job.wild === "kept" ? null : new Map((JSON.parse(readFileSync(job.wild, "utf8")) as {animals: Array<{id: string; island: string}>}).animals.map((row) => [row.id, row.island]));
+        snapshot.animals = snapshot.animals.filter((a) => (routing ? routing.get(a.id) === "wild" : a.area !== "house" && a.area !== "farm" && a.area !== "zoo"));
+    }
     const data = job.models ? loadSceneData(job.models, Array.from(new Set(snapshot.animals.map((a) => a.model_slug)))) : null;
     const sim = buildSim(snapshot.animals, {planOf: (slug) => data?.modelPlan.get(slug) ?? null, arkDay: snapshot.ark_day ?? null});
     const {hamletPlotsFor} = await import("@/ark-scene/map/hamlet");
@@ -80,12 +91,14 @@ if (!isMainThread) {
     const out = path.resolve(opt("out", "ark-collide-out")!);
     const mode = opt("mode", "final")!;
     const models = opt("models", path.join(process.env.HOME ?? "", "animaldex-talking-models"))!;
+    // `--wild-island <islands-routing.json | kept>`: islands mode (no-hamlet.ts), the wild island's animals only.
+    const wild = opt("wild-island") ?? null;
     const start = Number(opt("from", String(Math.floor(Date.UTC(2026, 10, 12, 0, 0, 0) / 1000))));
     mkdirSync(out, {recursive: true});
     const total = hours * 3600;
     const per = Math.ceil(total / workers / 60) * 60;
     const jobs: Job[] = [];
-    for (let k = 0; k * per < total; k++) jobs.push({snapshot, from: start + k * per, seconds: Math.min(per, total - k * per), step, mode, models: models === "none" ? null : models});
+    for (let k = 0; k * per < total; k++) jobs.push({snapshot, from: start + k * per, seconds: Math.min(per, total - k * per), step, mode, models: models === "none" ? null : models, wild: wild && wild !== "kept" ? path.resolve(wild) : wild});
     const self = fileURLToPath(import.meta.url);
     const started = Date.now();
     const results = await Promise.all(jobs.map((job) => new Promise<import("@/lib/ark-collide/metrics").CollideReport>((resolve, reject) => {

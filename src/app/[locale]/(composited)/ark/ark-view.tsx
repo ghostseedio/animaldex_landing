@@ -380,6 +380,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         onTier: (_tier, lite) => setLiteOn(lite),
                         mineOnly: false,
                         regionLabels: words.regions,
+                        wildIslandRegionLabels: words.wildIslandRegions,
                         reducedMotion,
                         hours,
                         onFollowEnd: () => setFollowing(false),

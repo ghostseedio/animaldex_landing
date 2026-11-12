@@ -13,13 +13,14 @@
  */
 
 import {COTTAGE, GARDEN_POND, microDecor} from "@/ark-scene/micro-decor";
+import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {cropsGrowAt, ORCHARD} from "@/ark-scene/fields";
-import {hamletKeeps, hamletLotAt} from "@/ark-scene/props/hamlet-land";
+import {hamletKeeps, villageLotAt} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {treeBody, TreeSpacing} from "@/ark-scene/tree-spacing";
 import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
 import {allMounds, moundFoot} from "@/ark-scene/mounds";
-import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, villageLaneDistance, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
 export type DecorKind =
@@ -81,13 +82,22 @@ const GROWTH: Partial<Record<ArkZone, {density: number; pick: Pick}>> = {
 const MAX_DENSITY = 5;
 
 /**
+ * Islands mode (`no-hamlet.ts`): Home's district is natural land, a meadow with scattered shrubs and a few trees (the
+ * same tries, so the same spots: a pure pick, no extra draw), where today's farm grows mostly broadleaves.
+ */
+const MEADOW_PICK: Pick = (r) => (r < 0.3 ? "broadleaf" : "shrub");
+/** Islands mode: the share of the forest fill's offers kept where the village stood (the rest is open meadow). */
+const MEADOW_FILL_SHARE = 0.15;
+
+/**
  * Where nothing of the decor grows outside the forests (home growth): on the hamlet's lanes and their verges, and on
  * its reserved plots and a couple of metres round them (`props/hamlet-land.ts`, the baked footprints): the gardens,
  * yards and paddocks are the props' and the residents'. Trees stand between the plots and in the fields round them.
  */
 function inVillage(x: number, z: number): boolean {
-    if (laneDistance(x, z) < LANE_WIDTH / 2 + 2) return true;
-    for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (hamletLotAt(x + dx, z + dz)) return true;
+    // (Today's village whatever the switch: islands mode asks it to keep the scatter's draws in step, `worldDecor`.)
+    if (villageLaneDistance(x, z) < LANE_WIDTH / 2 + 2) return true;
+    for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) if (villageLotAt(x + dx, z + dz)) return true;
     return false;
 }
 
@@ -290,16 +300,19 @@ export function worldDecor(): DecorItem[] {
         const zone = zoneAt(sample);
         const growth = GROWTH[zone];
         if (!growth) continue;
+        const pickFor: Pick = zone === "farm_garden" && noHamlet() ? MEADOW_PICK : growth.pick;
         // Patchy, not even: groves and glades.
         const patch = 0.25 + 1.4 * fbm(x * 0.05 + 40, z * 0.05 - 40);
         if (roll > growth.density / MAX_DENSITY * patch) continue;
         const site = ZONE_SITES[zone];
         if (Math.hypot(x - site.x, z - site.z) < site.clearing) continue;
         if (riverDistance(x, z) < 4) continue;
-        // The hamlet's village (home growth): nothing grows on its lanes and the plots along them.
-        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
+        // The hamlet's village (home growth): nothing grows on its lanes and the plots along them. Islands mode: there
+        // is no village, so its trees and shrubs grow there too; a rock keeps the test (its cluster takes more draws, so
+        // letting it in would move every later item of the decor).
+        if (!FOREST_ZONES.has(zone) && inVillage(x, z) && (!noHamlet() || pickFor(pickRoll) === "rock")) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1.2) continue;
-        const kind = growth.pick(pickRoll);
+        const kind = pickFor(pickRoll);
         if (!kind) continue;
         // Reeds keep to the water's edge; trees thin out up the mountain; palms keep to the sand.
         if (kind === "reed" && sample.height > 1.3) continue;
@@ -396,8 +409,15 @@ export function worldDecor(): DecorItem[] {
         }
     }
 
-    // Home: a barn on the fields' edge, hay bales, an orchard in rows, and fences along the lanes.
+    // Home: a barn on the fields' edge, hay bales, an orchard in rows, and fences along the lanes (none in islands mode:
+    // the farm is meadow; these are the scatter's last draws, so nothing else moves).
     const farm = ZONE_SITES.farm_garden;
+    if (noHamlet()) {
+        const kept = items.filter((item) => item.scale > 0);
+        for (const item of microDecor()) kept.push({kind: item.kind, variant: item.variant, x: item.x, y: item.y, z: item.z, scale: item.scale, rotation: item.rotation, color: item.color});
+        cached = kept;
+        return kept;
+    }
     const onFarm = (x: number, z: number) => {
         const s = sampleGround(x, z);
         return s.height > 0.4 && s.land > 0.9 && zoneAt(s) === "farm_garden" && riverDistance(x, z) > 5 && Math.hypot(x - farm.x, z - farm.z) > farm.clearing + 1;
@@ -477,8 +497,8 @@ export function grassTufts(count: number): GrassTuft[] {
         const want = (meadow[zone] ?? 0) * nearAnimals * smoothstep(0.15, 0.5, fbm(x * 0.06 - 7, z * 0.06 + 3) + (nearAnimals > 1 ? 0.2 : 0));
         if (random() > want) continue;
         if (riverDistance(x, z) < 3) continue;
-        // Not through the garden pond's water or the cottage's floor.
-        if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2)) continue;
+        // Not through the garden pond's water or the cottage's floor (islands mode: there are none).
+        if (!noHamlet() && (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + 0.3 || (Math.abs(x - COTTAGE.x) < COTTAGE.width / 2 + 0.2 && Math.abs(z - COTTAGE.z - COTTAGE.porch.depth / 2) < COTTAGE.depth / 2 + COTTAGE.porch.depth / 2 + 0.2))) continue;
         // Not among the crops (graphics batch 5): meadow grass keeps to the fields' margins and the pasture. The draws
         // a tuft would take (scale, turn, dryness) are still taken, so the grass everywhere else stays where it was.
         // Nor on the hamlet's reserved plots: none under a house or a barn, about half on the rest of a plot
@@ -575,6 +595,13 @@ const FILL_OFFERED_IN: ReadonlySet<ArkZone> = new Set<ArkZone>(["rainforest", "w
 
 let fillCache: FillItem[] | null = null;
 
+// Islands mode flips (`no-hamlet.ts`): the decor, the fill and any primed grass are the other world's.
+onHamletSwitch(() => {
+    cached = null;
+    fillCache = null;
+    primedGrass = null;
+});
+
 export function forestFill(): FillItem[] {
     if (fillCache) return fillCache;
     const random = seeded(20261111);
@@ -635,11 +662,16 @@ export function forestFill(): FillItem[] {
         if (Math.hypot(x - site.x, z - site.z) < site.clearing + 2) continue;
         if (riverDistance(x, z) < 5) continue;
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 3) continue;
-        if (Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
-        if (!FOREST_ZONES.has(zone) && inVillage(x, z)) continue;
+        // (Islands mode, `no-hamlet.ts`: no cottage and no village to keep out of; the farm's clearing stays open. Where
+        // they stood is meadow with a few trees: a share of the offers by their own rank, no extra draw.)
+        const village = Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || (!FOREST_ZONES.has(zone) && inVillage(x, z));
+        if (Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
+        if (village && (!noHamlet() || rank > MEADOW_FILL_SHARE)) continue;
+        // (There, mostly shrubs: the meadow's own pick.)
+        const grown: DecorKind = village && zone === "farm_garden" ? MEADOW_PICK(pickRoll) ?? kind : kind;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
-        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
-        candidates.push({key, item: {kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank}});
+        const scale = grown === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[grown] ?? 1);
+        candidates.push({key, item: {kind: grown, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, grown, toneRoll), rank}});
     }
     // Settled as the decor's are (mature trees first, then younger ones, then shrubs), one to a grid cell. A fill tree
     // that cannot stand as a tree is left out (the decor's own shrubs are the understorey).

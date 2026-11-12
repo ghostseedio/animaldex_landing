@@ -371,6 +371,8 @@ export type ArkWords = {
     formerVoyager: string;
     zones: Record<ArkZone, string>;
     regions: Record<ArkRegion, string>;
+    /** Islands mode (decision 148): the wild island's region names where they differ from `regions` (the former home area). */
+    wildIslandRegions?: Partial<Record<ArkRegion, string>>;
     hud: ArkHudWords;
     story: ArkStoryWords;
     life: ArkLifeWords;

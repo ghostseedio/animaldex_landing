@@ -179,6 +179,8 @@ import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders,
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {composedSampler, type ArkIslandScene} from "@/ark-scene/islands/scene";
+import {noHamlet, noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
+import {arkTwoIslands} from "@/lib/ark-islands";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {inDepthBand, onBehaviourSchedule, scheduledWater} from "@/ark-scene/schedule-water";
 import * as worldSampling from "@/ark-scene/world-sampler";
@@ -515,6 +517,9 @@ function groundQueryOf(height: (x: number, z: number) => number): (x: number, z:
 }
 
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
+    // Islands mode (decision 148, `no-hamlet.ts`): with two islands the wild island has no hamlet. Set before anything
+    // of the world is built (the page's `prepareArk` set the same from the same read).
+    setNoHamlet(noHamletFor(arkTwoIslands(options.snapshot)));
     // Part C, one world (decisions 141-142): the town island beside the wild island, across the strait at its world origin
     // (`islands/scene.ts`), its animals through this one pipeline. Absent: the wild island alone, exactly as before.
     // (Decision 153: the town may come later, built off the first frame in idle slices: `attachIsland`.)
@@ -1023,7 +1028,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const labels = new Map<ArkRegion, HTMLSpanElement>();
     for (const region of ARK_REGIONS) {
-        const text = options.regionLabels?.[region];
+        // (Islands mode, `no-hamlet.ts`: the wild island's former home area is natural land, under its own name.)
+        const text = (noHamlet() ? options.wildIslandRegionLabels?.[region] : undefined) ?? options.regionLabels?.[region];
         if (!text) continue;
         const label = document.createElement("span");
         label.textContent = text;

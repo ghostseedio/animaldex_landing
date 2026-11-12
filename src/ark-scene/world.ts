@@ -14,6 +14,7 @@
  * position derived here (`placement.ts`) is the same for every viewer.
  */
 
+import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import {REGION_ZONES} from "@/ark-scene/types";
 
@@ -307,8 +308,16 @@ const VILLAGE_BOX = (() => {
     return xs.length ? {x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, z0: Math.min(...zs) - pad, z1: Math.max(...zs) + pad} : {x0: 0, x1: 0, z0: 0, z1: 0};
 })();
 
-/** Metres to the nearest lane's middle line. */
+/** Metres to the nearest lane's middle line (islands mode, `no-hamlet.ts`: there are no lanes, so never near one). */
 export function laneDistance(x: number, z: number): number {
+    return noHamlet() ? Infinity : villageLaneDistance(x, z);
+}
+
+/**
+ * The lanes' distance whatever the switch: the ground's shape keeps the village's gentle base in islands mode too (its
+ * meadow lies where the hamlet stood, so nothing that reads a height moves), and the decor keeps its draws in step.
+ */
+export function villageLaneDistance(x: number, z: number): number {
     let best = Infinity;
     for (const {points} of HAMLET_LANES) {
         for (let i = 1; i < points.length; i++) best = Math.min(best, distanceToSegment(x, z, points[i - 1][0], points[i - 1][1], points[i][0], points[i][1]));
@@ -446,7 +455,7 @@ export function sampleGround(x: number, z: number): GroundSample {
     // The hamlet's village (home growth) lies on gentle ground: within reach of its lanes the land eases toward a
     // low, softly rolling base (the farm's own), so its cottages and smallholdings stand level.
     if (x > VILLAGE_BOX.x0 && x < VILLAGE_BOX.x1 && z > VILLAGE_BOX.z0 && z < VILLAGE_BOX.z1) {
-        const lane = laneDistance(x, z);
+        const lane = villageLaneDistance(x, z);
         if (lane < VILLAGE_REACH + 8) {
             // (Only the open ground the hamlet stands on: the ice, the mountain and the forests keep their shape.)
             const wild = (weights.polar ?? 0) + (weights.mountains ?? 0) + (weights.rainforest ?? 0) + (weights.woodland ?? 0);

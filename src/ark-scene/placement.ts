@@ -25,6 +25,7 @@
  * others keep to as they swim or fly.
  */
 
+import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
@@ -354,6 +355,14 @@ export function primePlaces(animals: ArkAnimal[], places: Map<string, Placement>
 
 /** Runtime hook: places worked out in the places worker for a list with these ids in this order (a replay's ghosts). */
 let primedKeyed: {key: string; places: Map<string, Placement>} | null = null;
+// Islands mode flips (`no-hamlet.ts`): built from the other world's scenery.
+onHamletSwitch(() => {
+    obstacles = null;
+    grids.clear();
+    layouts.clear();
+    primedPlaces = null;
+    primedKeyed = null;
+});
 export function primePlacesFor(animals: ArkAnimal[], places: Map<string, Placement>): void {
     primedKeyed = {key: animals.map((animal) => animal.id).join("\n"), places};
 }
