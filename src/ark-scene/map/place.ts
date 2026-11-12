@@ -121,6 +121,19 @@ const SPOT_OF: Record<AttachTag, MicroSpot> = {
 let enabled = true;
 let points: MapPoints | null = null;
 
+/**
+ * The positions atlas's generator (scripts/ark-positions-atlas.mts; AnimalDex `_shared/ark-positions`) listens here:
+ * which way each place was found and, on an attach point, the list it was picked on, so the server's encounter
+ * hunting finds every home where the scene draws it. Null in the scene (nothing is ever told).
+ */
+export type MapPlaceTrace = {route(name: "shore" | "held" | "water" | "attach" | "canopy" | "tag" | "rocks"): void; attach(list: ReadonlyArray<{x: number; z: number}>, own: boolean): void};
+// (On the global object, not in this module: a script's loader may hold two copies of the scene's modules.)
+const TRACE_KEY = "__arkMapPlaceTrace";
+const tracer = (): MapPlaceTrace | null => ((globalThis as Record<string, unknown>)[TRACE_KEY] as MapPlaceTrace | undefined) ?? null;
+export function traceMapPlace(trace: MapPlaceTrace | null): void {
+    (globalThis as Record<string, unknown>)[TRACE_KEY] = trace;
+}
+
 /** The map on (default) or off (the zone placement as before: `?map=0`, for comparing). */
 export function setArkMapEnabled(on: boolean): void {
     enabled = on;
@@ -211,7 +224,10 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
     // (A tree's climber stays in its tree, a centipede on its limb: its den is a rock in reach, else its perch.)
     if (placed && !placed.water && !placed.canopy && !placed.micro && !placed.map.held && !placed.map.shore && !inTheTrees(placed, animal.model_slug) && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !rockInReach(placed.map, placed.perch ?? null, placed.x, placed.z)) {
         const moved = toTheRocks(placed, zone, slot, rank, length);
-        if (moved) return moved;
+        if (moved) {
+            tracer()?.route("rocks");
+            return moved;
+        }
     }
     return placed;
 }
@@ -260,6 +276,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const g = sampler.ground(spot.x, spot.z);
             const tag = SHORE_TAGS.find((t) => g.tags.includes(t)) ?? g.tags[0] ?? null;
             const held = isHeldOnMap(animal.model_slug);
+            tracer()?.route("shore");
             return {
                 x: spot.x, z: spot.z, ground: g.height, yaw: ((((ownHash >>> 4) % 1000) / 1000) - 0.5) * 1.6 + spot.toSea, water: false,
                 map: {species: held ? null : mapSpecies(animal.model_slug, zone), tag, area: tag ? TAG_AREA[tag] : null, held, sea: false, shore: shore === "cove" ? "cove" : "coast", roost: null, key, level: 0}
@@ -273,6 +290,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const spot = waterHomeSpot(depth.water === "fresh" ? depth : {...depth, home: "coast"}, depth.water === "fresh" ? zone : "seashore", 400 + (key % 400), rank, length);
             if (spot) {
                 const ground = mapPoints().sampler.ground(spot.x, spot.z);
+                tracer()?.route("held");
                 return {x: spot.x, z: spot.z, ground: ground.height, yaw: (((ownHash >>> 4) % 1000) / 1000) * Math.PI * 2, water: true, map: {species: null, tag: null, area: null, held: true, sea: depth.water === "salt", roost: null, key, level: 0}};
             }
         }
@@ -283,6 +301,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         const z = foot.z + Math.sin(VISITOR_LANDING.theta + Math.PI / 2) * along;
         const sampler = mapPoints().sampler;
         const ground = sampler.ground(x, z);
+        tracer()?.route("held");
         return {x, z, ground: ground.height, yaw: Math.atan2(-Math.sin(VISITOR_LANDING.theta), Math.cos(VISITOR_LANDING.theta)), water: ground.depth > 0, map: {species: null, tag: null, area: null, held: true, sea: false, roost: null, key, level: 0}};
     }
     const species = mapSpecies(animal.model_slug, zone);
@@ -301,6 +320,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             if (pools.length) {
                 const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), pools.length);
                 const point = pools[index];
+                tracer()?.attach(pools, found.own);
+                tracer()?.route("attach");
                 return {
                     x: point.x, z: point.z, ground: point.y, yaw: Math.atan2(point.tangent[0], point.tangent[2]), water: true, micro: attachPlace(point, key, level, rank, trueLength),
                     map: {species, tag: "rocky_shore", area: TAG_AREA.rocky_shore, held: false, sea: true, attach: point, roost: null, key, level}
@@ -309,6 +330,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         }
         const spot = waterSpot(all.water, depth, zone, slot, rank, length);
         if (spot) {
+            tracer()?.route("water");
             const ground = sampler.ground(spot.x, spot.z);
             const tag = waterTagAt(sampler, spot.cls, spot.x, spot.z);
             return {
@@ -343,6 +365,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
             let point = list[index];
+            tracer()?.attach(list, own);
+            tracer()?.route("attach");
             let memberRank = rank;
             const tiny = trueMicro(species, animal.model_slug, trueLength);
             if (rank > 0) {
@@ -386,6 +410,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         if (found.list.length) {
             const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), found.list.length);
             const point = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            tracer()?.attach(found.list, found.own);
+            tracer()?.route("attach");
             const n = point.normal;
             const t = point.tangent;
             const tag = tags.find((t2) => CANOPY_TAGS.has(t2)) ?? "canopy";
@@ -407,6 +433,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             if (place) {
                 place.zone = hostZone;
                 if (species.attach === "trunk") place.limb = -2;
+                tracer()?.route("canopy");
                 return {
                     x: 0, z: 0, ground: 0, yaw: 0, water: false, canopy: place,
                     map: {species, tag: canopyTag, area: TAG_AREA[canopyTag], held: false, sea: false, roost: null, key, level: 0}
@@ -547,6 +574,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         map: {species, tag: standsFor, area: TAG_AREA[standsFor], held: false, sea, roost: roostOf(species, all, x, z, trueLength, key, ownHash, null), key, level: pick.level}
     };
     if (species.attach === "burrow" && !wet) placement.burrow = burrowAt(x, z, ground.height, `${zone}#${slot}#${rank}`, length);
+    tracer()?.route("tag");
     return placement;
 }
 

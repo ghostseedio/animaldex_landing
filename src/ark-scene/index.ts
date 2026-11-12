@@ -183,6 +183,7 @@ import {heightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {arkOutside} from "@/ark-scene/live-budget";
+import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
@@ -1135,6 +1136,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             wireSchedules(list, arkDay);
         }
     };
+    /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
+    const hunting = new HuntingLayer();
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -1183,8 +1186,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const schedulePose = (entry: Entry, epoch: number): TripPose & {doing: ArkDoing} => {
         const own = entry.sched!;
-        const trip = tripFor(own, "trip", own.profile, own.animal, entry.animal.activity, epoch);
-        return {...poseOnTrip(scheduleWorldNow(), trip, epoch), doing: trip.doing};
+        const fromSchedule = () => {
+            const trip = tripFor(own, "trip", own.profile, own.animal, entry.animal.activity, epoch);
+            return {...poseOnTrip(scheduleWorldNow(), trip, epoch), doing: trip.doing};
+        };
+        // Encounter hunting (`hunting.ts`): a due, awake predator walks its forays, from the server's own positions.
+        if (hunting.active) {
+            const hunt = hunting.pose(entry.animal, epoch, entry.length, heightAt, fromSchedule);
+            if (hunt) return hunt;
+        }
+        return fromSchedule();
     };
     /**
      * After a snapshot: each group member keeps to its leader in the schedule (`ScheduleGroup`), the young are known,
@@ -5537,6 +5548,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setHours: (hours) => {
             pinnedHours = typeof hours === "number" && Number.isFinite(hours) ? hours : null;
             setLight();
+        },
+        setHunting: (read) => {
+            // Encounter hunting: the server's read, or null (off: everyone on their schedules, exactly as before).
+            if (!read || read.hunting !== "encounter") {
+                hunting.set(null, null, null);
+                return;
+            }
+            void loadPositionsAtlas()
+                .then((atlas) => {
+                    if (!disposed) hunting.set(read, atlas, voyageStart);
+                })
+                .catch(() => hunting.set(null, null, null));
         },
         setSound: (on) => liveliness.setSound(on),
         sound: () => ({on: liveliness.audio.playing, unlocked: liveliness.audio.unlocked, credits: liveliness.audio.credits()}),

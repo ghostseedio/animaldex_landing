@@ -6,6 +6,7 @@ import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
 import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import {arkNewArrivals} from "@/lib/ark-live-log";
+import {fetchArkHunting} from "@/lib/ark-hunting";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -631,6 +632,25 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
             document.removeEventListener("visibilitychange", onVisible);
         };
     }, [apply, fixture, growFrom, liveFeed, local]);
+
+    // Encounter hunting (`voyage_hunting_v1`): the server's read at the refresh's pace, from the moment the world is up.
+    // Nothing (the pool, the read missing, development's fixtures) leaves every animal on its schedule as before.
+    useEffect(() => {
+        if (!ready || fixture || liveFeed || local) return;
+        let stopped = false;
+        const run = () => {
+            if (document.visibilityState !== "visible") return;
+            void fetchArkHunting().then((read) => {
+                if (!stopped) sceneRef.current?.setHunting?.(read);
+            });
+        };
+        run();
+        const timer = setInterval(run, REFRESH_MS);
+        return () => {
+            stopped = true;
+            clearInterval(timer);
+        };
+    }, [ready, fixture, liveFeed, local]);
 
     useEffect(() => {
         if (!arrival) return;

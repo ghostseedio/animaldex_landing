@@ -15,6 +15,7 @@ import {prepareArk} from "@/ark-scene/runtime/prebuild";
 import {mountArkLiveHud} from "@/ark-scene/live";
 import {ArkLiveFixtureFeed} from "@/lib/ark-live-fixture";
 import {arkFoundersOf, decodeArkFounders} from "@/lib/ark-founders";
+import {fetchArkHunting} from "@/lib/ark-hunting";
 
 declare global {
     interface Window {
@@ -25,6 +26,8 @@ declare global {
             mountArkLiveHud: typeof mountArkLiveHud;
             arkFoundersOf: typeof arkFoundersOf;
             decodeArkFounders: typeof decodeArkFounders;
+            /** Encounter hunting's read (`/api/ark/hunting`), for the embed's refresh; null under the pool. */
+            fetchArkHunting: typeof fetchArkHunting;
             ArkLiveFixtureFeed?: typeof ArkLiveFixtureFeed;
         };
     }
@@ -37,5 +40,6 @@ window.AnimalDexArk = {
     mountArkLiveHud,
     arkFoundersOf,
     decodeArkFounders,
+    fetchArkHunting,
     ArkLiveFixtureFeed: process.env.NODE_ENV !== "production" ? ArkLiveFixtureFeed : undefined
 };
