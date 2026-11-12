@@ -1521,7 +1521,7 @@ VARIANTS = {
              (133, {"H": 13.5, "trunk.length": 10.8, "levels.0.count": (12, 14)})],
     "plane": [(141, {}), (142, {"H": 11.5, "trunk.length": 7.2, "levels.0.angle": 44, "levels.0.ratio": 0.56})],
     "yew": [(151, {}), (152, {"H": 7.5, "trunk.length": 3.2, "levels.0.abs_length": 3.4, "levels.0.count": (9, 11)})],
-    "cherry": [(161, {}), (162, {"fruit": None, "blossom": dict(count=260, colors=G("#f6c8d6", "#f0b2c6", "#fbe2ea")),
+    "cherry": [(161, {}), (165, {"fruit": None, "blossom": dict(count=260, colors=G("#f6c8d6", "#f0b2c6", "#fbe2ea")),
                                  "leaves.per_m": 18, "leaves.colors": G("#f2b4c8", "#eaa2bc", "#7a7a36", "#f8d0dc", "#5a7e34")})],
     "snag": [(121, {}), (122, {"H": 5, "trunk.length": 4.2, "levels.0.count": (3, 4), "holes": 2}),
              (123, {"trunk.length": 7.5, "trunk.radius": 0.36, "holes": 4, "brackets": 5,

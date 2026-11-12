@@ -143,7 +143,7 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 42,
-   "bytes": 6342772,
+   "bytes": 6340212,
    "lod0_tris_max": 9500
   }
  },
@@ -7199,14 +7199,14 @@
    "variant": "b",
    "bounds": {
     "min": [
-     -4.234,
-     -0.014,
-     -3.177
+     -3.809,
+     -0.012,
+     -3.311
     ],
     "max": [
-     3.744,
-     6.624,
-     1.858
+     2.792,
+     6.869,
+     4.387
     ]
    },
    "lods": [
@@ -7214,8 +7214,8 @@
      "level": "lod0",
      "file": "trees/cherry-b.lod0.glb",
      "tris": 7499,
-     "verts": 9582,
-     "bytes": 107860,
+     "verts": 9396,
+     "bytes": 105624,
      "doubleSided": true,
      "morph": false
     },
@@ -7223,8 +7223,8 @@
      "level": "lod1",
      "file": "trees/cherry-b.lod1.glb",
      "tris": 2200,
-     "verts": 2626,
-     "bytes": 32360,
+     "verts": 2600,
+     "bytes": 32124,
      "doubleSided": true,
      "morph": false
     },
@@ -7232,8 +7232,8 @@
      "level": "lod2",
      "file": "trees/cherry-b.lod2.glb",
      "tris": 596,
-     "verts": 736,
-     "bytes": 10940,
+     "verts": 724,
+     "bytes": 10852,
      "doubleSided": true,
      "morph": false
     },
@@ -7242,25 +7242,25 @@
      "file": "trees/cherry-b.card.glb",
      "tris": 280,
      "verts": 340,
-     "bytes": 5716,
+     "bytes": 5736,
      "doubleSided": false,
      "morph": false
     }
    ],
    "attach": 82,
    "wood_tris": [
-    4795,
-    1268,
-    314
+    5133,
+    1304,
+    332
    ],
-   "leaves": 1970,
-   "height": 6.62,
-   "crown_radius": 4.23,
+   "leaves": 2519,
+   "height": 6.87,
+   "crown_radius": 4.39,
    "trunk_radius": 0.221,
    "lod_distances": [
-    16.6,
-    39.7,
-    92.7
+    17.2,
+    41.2,
+    96.2
    ]
   },
   "emergent-a": {
@@ -9224,5 +9224,5 @@
    ]
   }
  },
- "totalBytes": 10046886
+ "totalBytes": 10044326
 }
