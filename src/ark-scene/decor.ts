@@ -87,7 +87,7 @@ const MAX_DENSITY = 5;
  */
 const MEADOW_PICK: Pick = (r) => (r < 0.3 ? "broadleaf" : "shrub");
 /** Islands mode: the share of the forest fill's offers kept where the village stood (the rest is open meadow). */
-const MEADOW_FILL_SHARE = 0.3;
+const MEADOW_FILL_SHARE = 0.15;
 
 /**
  * Where nothing of the decor grows outside the forests (home growth): on the hamlet's lanes and their verges, and on
@@ -667,9 +667,11 @@ export function forestFill(): FillItem[] {
         const village = Math.hypot(x - COTTAGE.x, z - COTTAGE.z) < 16 || (!FOREST_ZONES.has(zone) && inVillage(x, z));
         if (Math.hypot(x - ZONE_SITES.farm_garden.x, z - ZONE_SITES.farm_garden.z) < 22) continue;
         if (village && (!noHamlet() || rank > MEADOW_FILL_SHARE)) continue;
+        // (There, mostly shrubs: the meadow's own pick.)
+        const grown: DecorKind = village && zone === "farm_garden" ? MEADOW_PICK(pickRoll) ?? kind : kind;
         const key = `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
-        const scale = kind === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[kind] ?? 1);
-        candidates.push({key, item: {kind, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, kind, toneRoll), rank}});
+        const scale = grown === "shrub" ? 0.7 + 0.6 * sizeRoll : (0.7 + 0.65 * sizeRoll) * (TREE_SIZE[grown] ?? 1);
+        candidates.push({key, item: {kind: grown, variant, x, y: sample.height, z, scale, rotation, color: tone(zone, grown, toneRoll), rank}});
     }
     // Settled as the decor's are (mature trees first, then younger ones, then shrubs), one to a grid cell. A fill tree
     // that cannot stand as a tree is left out (the decor's own shrubs are the understorey).
