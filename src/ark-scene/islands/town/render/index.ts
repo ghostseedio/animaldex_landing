@@ -388,7 +388,12 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`. Nothing reads
         // their arrays back, so the page's copies go once they are on the GPU (phone heap).
         const foliage = add(sc?.foliage, materials.foliage, "foliage", true, true);
-        if (foliage) for (const name of Object.keys(foliage.attributes)) foliage.attributes[name].onUpload(releaseArray);
+        if (foliage) {
+            for (const name of Object.keys(foliage.attributes)) {
+                const attribute = foliage.attributes[name];
+                if (attribute instanceof BufferAttribute) attribute.onUpload(releaseArray);
+            }
+        }
         const glassGeo = bc?.glass ?? sc?.glass;
         if (glassGeo && glassGeo.triangles > 0) {
             const geometry = glassGeo.toGeometry();

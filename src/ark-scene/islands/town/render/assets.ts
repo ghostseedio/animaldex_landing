@@ -13,7 +13,7 @@
  * town's procedural stand-ins (`instanced.ts` treeGeometry) are shown meanwhile.
  */
 
-import {BufferGeometry, Color, Float32BufferAttribute, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
+import {BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {windMaterial} from "@/ark-scene/asset-trees";
@@ -134,7 +134,10 @@ export class TownAssets {
             // (The flowers' and lily pads' morph targets are their own sway, not drawn instanced.)
             if (Object.keys(g.morphAttributes).length) g.morphAttributes = {};
             // Nothing reads a tree's arrays back (no culling by bounds, no picking): the page's copies go once on the GPU.
-            for (const name of Object.keys(g.attributes)) g.attributes[name].onUpload(releaseArray);
+            for (const name of Object.keys(g.attributes)) {
+                const attribute = g.attributes[name];
+                if (attribute instanceof BufferAttribute) attribute.onUpload(releaseArray);
+            }
             g.index?.onUpload(releaseArray);
             this.makeMeshes(entry, lod.level as Level, g, lod.doubleSided, id);
         }).catch(() => {})));

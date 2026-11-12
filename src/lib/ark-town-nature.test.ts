@@ -53,7 +53,7 @@ test("town trees: no trunk in a building, no crown through a wall below its roof
 
 test("town trees: library trees at real heights, every level's file there", () => {
     const root = path.join(process.cwd(), "public", ASSET_BASE);
-    for (const id of new Set([...trees, ...zooTrees].map((t) => t.asset))) {
+    for (const id of Array.from(new Set([...trees, ...zooTrees].map((t) => t.asset)))) {
         for (const lod of ASSETS[id].lods) assert.ok(existsSync(path.join(root, lod.file)), `${lod.file}`);
     }
     const median = (kind: string) => {
