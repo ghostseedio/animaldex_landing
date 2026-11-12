@@ -8,8 +8,8 @@
  * (the wild island is the whole read, the town is empty), and the page is exactly as before.
  */
 
-import {ARK_ZONES, type ArkAnimal, type ArkIsland, type ArkIslandCounts, type ArkNestRow, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
-import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {ARK_REGIONS, ARK_ZONES, ZONE_REGION, type ArkAnimal, type ArkIsland, type ArkIslandCounts, type ArkNestRow, type ArkRegion, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
+import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {urbanNiche} from "@/ark-scene/islands/town/niche";
 
 export const ARK_ISLAND_IDS: readonly ArkIsland[] = ["wild", "town"];
@@ -205,4 +205,38 @@ export function arkTownGroupOf(animal: Pick<ArkAnimal, "area" | "enclosure" | "m
     }
     const group = NICHE_GROUP[urbanNiche(animal.model_slug, animal.zone)[0]] ?? "gardens";
     return {group, key: group, order: GROUP_ORDER[group], enclosure: null};
+}
+
+/** The words the islands' panels use (the Ark's `ark` namespace; `wildIslandRegions` comes with the hamlet's removal). */
+type IslandPanelWords = {
+    regions: Record<ArkRegion, string>;
+    wildIslandRegions?: Partial<Record<ArkRegion, string>>;
+    islands?: {wild?: string; zoo?: string; places?: Partial<Record<ArkTownGroup | "homes" | "farms", string>>};
+};
+
+/**
+ * A wild-island region's name. With two islands the wild island has no hamlet: its home petal is the Meadow
+ * (`ark.wildIslandRegions.home`, the same name the scene's map labels take), and every other region keeps its own.
+ */
+export function arkRegionName(words: IslandPanelWords, region: ArkRegion, twoIslands: boolean): string {
+    return (twoIslands ? words.wildIslandRegions?.[region] : undefined) ?? words.regions[region];
+}
+
+/**
+ * The panels' groups with two islands (decision T3-6): the wild island's regions first ("Wild island · Forest"), then the
+ * town's homes, farms, the zoo by enclosure type and town wildlife by niche. The population panel's "Both islands" and
+ * the page's about list.
+ */
+export function arkIslandsGrouping(words: IslandPanelWords): (animal: ArkAnimal) => {key: string; order: number; label: string} {
+    const places: Record<string, string> = {homes: "Homes", farms: "Farms", gardens: "Town wildlife · gardens and parks", water: "Town wildlife · canal and ponds", roofs: "Town wildlife · roofs and towers", walls: "Town wildlife · walls and eaves", streets: "Town wildlife · streets and harbour", ...words.islands?.places};
+    const zoo = words.islands?.zoo ?? "Zoo";
+    const wild = words.islands?.wild ?? "Wild island";
+    return (animal) => {
+        if (arkIslandOf(animal, true) === "wild") {
+            const region = ZONE_REGION[animal.zone] ?? "home";
+            return {key: `wild:${region}`, order: -10 + ARK_REGIONS.indexOf(region), label: `${wild} · ${arkRegionName(words, region, true)}`};
+        }
+        const place = arkTownGroupOf(animal);
+        return {key: place.key, order: place.order, label: place.group === "zoo" ? `${zoo} · ${place.enclosure ? ZOO_TYPES[place.enclosure].label : ""}` : places[place.group] ?? place.group};
+    };
 }

@@ -61,6 +61,8 @@ type Props = {
     scope?: React.ReactNode;
     /** Part C: on the town island, the list by place (homes, farms, the zoo's types, town wildlife), not by the wild regions. */
     byPlace?: ArkPlaceGrouping | null;
+    /** Part C: a region's name (with two islands the wild island's home petal is the Meadow); default `words.regions`. */
+    regionName?: (region: ArkRegion) => string;
 };
 
 function counted(count: number, one: string, other: string, locale: string): string {
@@ -77,7 +79,8 @@ function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark", scope = null, byPlace = null}: Props) {
+export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark", scope = null, byPlace = null, regionName}: Props) {
+    const named = (region: ArkRegion) => regionName?.(region) ?? words.regions[region];
     const hud = words.hud;
     const listRef = useRef<HTMLDivElement | null>(null);
     // An animal tapped in the world: its species' row comes into the column's view (desktop; the page never scrolls for it).
@@ -186,16 +189,16 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
                             type="button"
                             onClick={() => (group.place ? undefined : onRegion(group.region))}
                             aria-pressed={group.place ? undefined : region === group.region}
-                            aria-label={group.place ? group.place.label : fillArkWords(hud.flyTo, {region: words.regions[group.region]})}
+                            aria-label={group.place ? group.place.label : fillArkWords(hud.flyTo, {region: named(group.region)})}
                             title={group.place ? group.place.label : REGION_ZONES[group.region].map((zone) => words.zones[zone]).join(" · ")}
                             className={`${index >= PHONE_ROWS && !expanded ? "hidden md:flex" : "flex"} relative min-h-10 w-full items-center justify-between gap-3 border-b border-line-300 px-4 pt-3 pb-1.5 text-left transition-colors hover:text-white md:px-5 ${FOCUS} ${!group.place && region === group.region ? "text-white" : "text-ink-300"}`}
                         >
-                            <span id={`ark-region-${group.place?.key.replace(/[^a-z_]/g, "-") ?? group.region}`} className="text-[11px] font-bold uppercase tracking-[0.14em]">{group.place?.label ?? words.regions[group.region]}</span>
+                            <span id={`ark-region-${group.place?.key.replace(/[^a-z_]/g, "-") ?? group.region}`} className="text-[11px] font-bold uppercase tracking-[0.14em]">{group.place?.label ?? named(group.region)}</span>
                             <span className="flex items-center gap-1.5 text-[12px] tabular-nums text-ink-400"><ArkCountTrend count={group.animals} locale={locale} words={words} />{number(group.animals)}</span>
                             <ArkRegionBar share={group.place ? group.animals / placeMost : bars.region(group.region)} words={words} />
                         </button>
                         </h3>
-                        <ul aria-label={fillArkWords(words.a11y.regionCount, {region: group.place?.label ?? words.regions[group.region], count: number(group.animals)})}>
+                        <ul aria-label={fillArkWords(words.a11y.regionCount, {region: group.place?.label ?? named(group.region), count: number(group.animals)})}>
                             {group.species.map((row) => {
                                 const hidden = index++ >= PHONE_ROWS && !expanded;
                                 const selected = row.key === selectedKey;

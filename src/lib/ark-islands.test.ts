@@ -296,3 +296,18 @@ test("the town's prebuild (decision 153): worked out, packed, cloned across and 
     assert.equal(stepped.chunks, direct.chunks);
     assert.equal(stepped.windows, direct.windows);
 });
+
+test("with two islands the wild island's home petal is the Meadow in the panels; the about list goes by island and place", async () => {
+    const {arkRegionName, arkIslandsGrouping} = await import("@/lib/ark-islands");
+    const {arkPopulation} = await import("@/lib/ark-population");
+    const en = (await import("@/data/locales/en.json")).default as unknown as {ark: Parameters<typeof arkRegionName>[0]};
+    const words = en.ark;
+    assert.equal(arkRegionName(words, "home", false), words.regions.home, "one island: Home as before");
+    assert.equal(arkRegionName(words, "home", true), words.wildIslandRegions?.home ?? words.regions.home);
+    assert.equal(arkRegionName(words, "forest", true), words.regions.forest);
+    const whole = islandsFixture();
+    const groups = arkPopulation(whole, arkIslandsGrouping(words)).regions;
+    assert.ok(groups.every((g) => g.place), "every group by place");
+    assert.ok(!groups.some((g) => g.place!.key === "wild:home"), "no home region on the wild island");
+    assert.equal(groups.reduce((n, g) => n + g.animals, 0), whole.animals.length);
+});
