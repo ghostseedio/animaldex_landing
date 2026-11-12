@@ -1,4 +1,6 @@
 import {townPlan} from "@/ark-scene/islands/town/plan";
+import {townWorldOrigin} from "@/ark-scene/islands";
+const o = townWorldOrigin();
 const plan = townPlan();
 const slot = (id: string) => plan.zoo.slots.find((s) => s.id === id)!.at;
 const f = plan.farms.find((x) => x.id === "farmstead-0")!.at;
@@ -9,4 +11,8 @@ const views = {
   homes: {target: {x: 92, y: 2, z: 22}, distance: 55, polar: 0.9, azimuth: 0.7},
   farm: {target: {x: f.x, y: 2, z: f.z}, distance: 45, polar: 0.85, azimuth: 0.5}
 };
+for (const v of Object.values(views)) {
+    v.target.x += o.x;
+    v.target.z += o.z;
+}
 console.log(JSON.stringify(views));
