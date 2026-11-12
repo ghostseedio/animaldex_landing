@@ -57,6 +57,14 @@ export function bigRanges(): Range[] {
             if (zone === "farm_garden" || s.weights[zone] < 0.6 || !RANGE_WANT[zone]) continue;
             const slope = gridSlope(x, z);
             if (slope > 0.22) continue;
+            // The whole disc gentle (a range's laps stand 4 m round its middle) and dry.
+            let ring = true;
+            for (let k = 0; k < 8 && ring; k++) {
+                const px = x + Math.cos((k / 8) * Math.PI * 2) * 4.5;
+                const pz = z + Math.sin((k / 8) * Math.PI * 2) * 4.5;
+                ring = gridSlope(px, pz) <= 0.3 && !underWater(sampleWildGround(px, pz));
+            }
+            if (!ring) continue;
             // Clear of fresh water by its disc and a margin (a crocodile's range is its bank, not the river).
             if (s.river < s.riverHit.width + RANGE_CLEAR + 2) continue;
             // Never in the forests' deepest woods: a range is a clearing, preferring flat, open ground.
