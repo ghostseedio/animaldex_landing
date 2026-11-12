@@ -57,6 +57,8 @@ type Props = {
     onRegion: (region: ArkRegion | null) => void;
     /** The page's own path ("/ark", "/id/ark"): where a share link points. */
     shareLocalePath?: string;
+    /** Part C: the island switch over the totals (the island shown, or both islands' counts from data). */
+    scope?: React.ReactNode;
 };
 
 function counted(count: number, one: string, other: string, locale: string): string {
@@ -73,7 +75,7 @@ function PairMeter({count, status}: {count: number; status: ArkPairStatus}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark"}: Props) {
+export default function ArkPopulationHud({snapshot, words, locale, selectedKey, herdKeys, arrivalKey, region, folded, onFold, expanded, onExpand, beginning, onSpecies, onRegion, shareLocalePath = "/ark", scope = null}: Props) {
     const hud = words.hud;
     const listRef = useRef<HTMLDivElement | null>(null);
     // An animal tapped in the world: its species' row comes into the column's view (desktop; the page never scrolls for it).
@@ -117,6 +119,7 @@ export default function ArkPopulationHud({snapshot, words, locale, selectedKey, 
         <aside id="ark-aboard" aria-labelledby="ark-aboard-title" tabIndex={-1} className="flex flex-col outline-none border-t border-line-200 bg-canvas-950 md:h-full md:w-[21rem] md:shrink-0 md:border-l md:border-t-0 lg:w-[23rem]">
             {/* The totals. */}
             <div className="border-b border-line-200 px-4 pb-4 pt-4 md:px-5">
+                {scope}
                 <div className="flex items-center justify-between gap-3">
                     <h2 id="ark-aboard-title" className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300"><span className="sr-only">{hud.label}</span><span aria-hidden="true">{hud.title}</span></h2>
                     <div className="flex items-center gap-1">

@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
+import ArkMyAnimals from "@/app/[locale]/(composited)/ark/ark-my-animals";
 import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import {fetchArkHunting} from "@/lib/ark-hunting";
@@ -205,6 +206,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // Part C: the island loaded now, and whether a crossing is under way (one island at a time; `islands/archipelago.ts`).
     const [island, setIsland] = useState<ArkIsland>("wild");
     const [crossing, setCrossing] = useState(false);
+    /** Part C: the panel shows the island loaded, or both islands (counts from data; a species on the other island crosses to it). */
+    const [panelScope, setPanelScope] = useState<"island" | "both">("island");
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
     const [arrival, setArrival] = useState<ArkAnimal | null>(null);
@@ -831,6 +834,19 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                             )}
                         </div>
                     ) : null}
+                    {mineOnly && twoIslands && snapshot ? (
+                        <ArkMyAnimals
+                            snapshot={snapshot}
+                            island={island}
+                            words={words}
+                            locale={locale}
+                            onAnimal={(animal) => {
+                                returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                                sceneRef.current?.select(animal.id);
+                                showWorld();
+                            }}
+                        />
+                    ) : null}
                     <h1 id="ark-title" className="mt-1 max-w-4xl font-display text-[1.65rem] font-extrabold leading-[1.05] tracking-tight text-white [text-wrap:balance] sm:text-3xl md:text-[2.5rem]">
                         {words.title}
                     </h1>
@@ -970,7 +986,22 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
 
             {snapshot ? (
                 <ArkPopulationHud
-                    snapshot={shown ?? snapshot}
+                    snapshot={panelScope === "both" ? snapshot : shown ?? snapshot}
+                    scope={twoIslands ? (
+                        <div role="group" aria-label={islandWords.label} className="mb-3 flex gap-1">
+                            {(["island", "both"] as const).map((id) => (
+                                <button
+                                    key={id}
+                                    type="button"
+                                    aria-pressed={panelScope === id}
+                                    onClick={() => setPanelScope(id)}
+                                    className={`inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none ${panelScope === id ? "border-primary-400 text-white" : "border-line-200 text-ink-200 hover:border-line-100 hover:text-white"}`}
+                                >
+                                    {id === "both" ? words.islands?.both ?? "Both islands" : islandWords[island]}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
                     words={words}
                     locale={locale}
                     selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}

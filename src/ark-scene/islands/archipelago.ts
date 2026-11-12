@@ -17,6 +17,7 @@
 import type {ArkAnimal, ArkCameraView, ArkIsland, ArkSceneHandle, ArkSceneOptions, ArkSnapshot} from "@/ark-scene/types";
 import {arkIslandOf, arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
 import {ARK_ISLANDS, bearingBetween} from "@/ark-scene/islands";
+import {islandHours} from "@/lib/ark-clock";
 import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 
 export type ArkArchipelagoOptions = ArkSceneOptions & {
@@ -75,7 +76,17 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
 
     const haze = document.createElement("div");
     haze.setAttribute("aria-hidden", "true");
-    Object.assign(haze.style, {position: "absolute", inset: "0", pointerEvents: "none", opacity: "0", background: options.hazeColour ?? "radial-gradient(ellipse at 50% 60%, #e9eef0 0%, #d7e0e4 55%, #c4d0d6 100%)", zIndex: "2", transition: "none"});
+    Object.assign(haze.style, {position: "absolute", inset: "0", pointerEvents: "none", opacity: "0", zIndex: "2", transition: "none"});
+    /** The sea haze at the island's hour: pale by day, the night's deep blue after dark (the sky's horizon, roughly). */
+    const hazeAt = () => {
+        if (options.hazeColour) return options.hazeColour;
+        const hours = typeof options.hours === "number" ? options.hours : islandHours(Date.now(), 0);
+        const day = Math.min(Math.max(Math.sin((2 * Math.PI * (hours - 6)) / 24) * 1.8 + 0.35, 0), 1);
+        const mix = (a: number[], b: number[]) => a.map((v, i) => Math.round(v + (b[i] - v) * day));
+        const [r0, g0, b0] = mix([10, 24, 42], [222, 231, 234]);
+        const [r1, g1, b1] = mix([6, 15, 28], [190, 206, 214]);
+        return `radial-gradient(ellipse at 50% 60%, rgb(${r0},${g0},${b0}) 0%, rgb(${r1},${g1},${b1}) 100%)`;
+    };
     if (getComputedStyle(el).position === "static") el.style.position = "relative";
 
     const islandOfId = (id: string): ArkIsland | null => {
@@ -184,7 +195,9 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
         crossing = (async () => {
             // The other island's code and its scenery's modules are asked for now, while the camera climbs.
             const warm = to === "town" ? import("@/ark-scene/islands/scene").then(() => import("@/ark-scene/islands/town/render/index")) : import("@/ark-scene");
-            await Promise.all([rise(from, to), fadeTo(1, reduced() ? FADE_SECONDS : RISE_SECONDS * 0.95)]);
+            haze.style.background = hazeAt();
+            // (The haze thickens over the climb's second half: the turn out to sea is seen first.)
+            await Promise.all([rise(from, to), new Promise<void>((done) => setTimeout(done, reduced() ? 0 : RISE_SECONDS * 400)).then(() => fadeTo(1, reduced() ? FADE_SECONDS : RISE_SECONDS * 0.6))]);
             await warm.catch(() => undefined);
             // Fully hazed: the island is unloaded, the other one mounted.
             if (scene) {

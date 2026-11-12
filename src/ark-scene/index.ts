@@ -4608,7 +4608,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // The recipes' nests and fish (`behaviour-recipes.ts`): a builder carries to the props' nest for it while it grows
     // (`props/nest-growth.ts`, on the Ark day), and a hunter's chase or plunge goes to the reef's nearest school.
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
-    wireZoneCapacity(liveBudget);
+    // (Part C: the wild island's per-zone capacity is its own land's; another island's areas hold their animals.)
+    if (island) liveBudget.setArkZoneCapacity(null);
+    else wireZoneCapacity(liveBudget);
     setNestSource(options.props === false || island ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
     setFishSource(island ? null : (pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).

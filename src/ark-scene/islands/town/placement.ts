@@ -225,7 +225,10 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
         const off = info.still || HIGH_WHERE.has(base.where) ? {dx: 0, dz: 0} : offset(animal.id, length, rank);
         const bound = info.enclosure?.mask ?? null;
         const at = inside(bound, base.x + off.dx, base.z + off.dz, base.x, base.z);
-        const placement: Placement = {x: at.x, z: at.z, ground: base.y, yaw, water: WATER_WHERE.has(base.where), sea: false};
+        // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
+        // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
+        const placement: Placement = {x: at.x, z: at.z, ground: base.y, yaw, water: false, sea: false};
+        void WATER_WHERE;
         if (leader && leader !== animal.id) {
             placement.leader = leader;
             placement.rank = rank;
