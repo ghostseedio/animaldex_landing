@@ -228,7 +228,7 @@ export type ArkSceneStats = {
      * view, the edge haze (0…1), chunks drawn in full / as the map / not, the ground's tiles by level, animals skipped
      * past the distance this frame and drawn as map markers.
      */
-    streaming?: {renderDistance: number; renderScale: number; map: boolean; haze: number; chunks: {in: number; map: number; out: number; content: number}; changes: number; tiles: {full: number; map: number; hidden: number}; animalsSkipped: number; mapMarkers: number};
+    streaming?: {renderDistance: number; mapDistance?: number; renderScale: number; map: boolean; haze: number; chunks: {in: number; map: number; out: number; content: number}; changes: number; tiles: {full: number; map: number; hidden: number}; animalsSkipped: number; mapMarkers: number; /** Several islands (decision 141): the one the camera is over, each island's chunks, the base fog's reach. */ active?: string | null; islands?: Record<string, {in: number; map: number; out: number}>; fog?: {near: number; far: number}};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */

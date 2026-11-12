@@ -19,6 +19,12 @@ export type ArkHaze = {
     readonly state: {start: number; end: number; strength: number};
     /** The fog's own values (the weather's, the scene's), before the haze. */
     readonly base: {near: number; far: number};
+    /**
+     * Decision 142 (both islands side by side): the clear-weather fog's reach, pushed out from the scene's own (the
+     * values the fog had when installed). Only the clear part moves: weather closing in (rain, fog, a storm: the base
+     * pulled nearer) keeps its own distances, blended by how clear the base is.
+     */
+    setClear(near: number, far: number): void;
 };
 
 /** Past this many metres beyond the haze's end at strength 0 it can never be the nearer: the fog's own. */
@@ -27,13 +33,22 @@ const FADE_REACH = 4000;
 /** Install the haze on a linear fog (its `near` and `far` become accessors; the values set stay its base). */
 export function hazeFog(fog: LinearFog): ArkHaze {
     const base = {near: fog.near, far: fog.far};
+    // The scene's clear-weather fog (as installed), and where it is pushed to.
+    const installed = {near: fog.near, far: fog.far};
+    const clear = {near: fog.near, far: fog.far};
+    /** The base with its clear part pushed: 1 for clear weather, falling to 0 as the weather closes the fog in. */
+    const pushed = (value: number, which: "near" | "far") => {
+        if (clear.near === installed.near && clear.far === installed.far) return value;
+        const clearness = Math.min(Math.max(base.far / installed.far, 0), 1) ** 2;
+        return value + (clear[which] - installed[which]) * clearness;
+    };
     const state = {start: Infinity, end: Infinity, strength: 0};
     const near = () => (state.strength > 0 ? state.start + (1 - state.strength) * FADE_REACH : Infinity);
     const far = () => (state.strength > 0 ? state.end + (1 - state.strength) * FADE_REACH : Infinity);
     Object.defineProperty(fog, "near", {
         configurable: true,
         enumerable: true,
-        get: () => Math.min(base.near, near()),
+        get: () => Math.min(pushed(base.near, "near"), near()),
         set: (value: number) => {
             base.near = value;
         }
@@ -41,7 +56,7 @@ export function hazeFog(fog: LinearFog): ArkHaze {
     Object.defineProperty(fog, "far", {
         configurable: true,
         enumerable: true,
-        get: () => Math.min(base.far, Math.max(far(), Math.min(base.near, near()) + 1)),
+        get: () => Math.min(pushed(base.far, "far"), Math.max(far(), Math.min(pushed(base.near, "near"), near()) + 1)),
         set: (value: number) => {
             base.far = value;
         }
@@ -53,7 +68,11 @@ export function hazeFog(fog: LinearFog): ArkHaze {
             state.strength = Math.min(Math.max(strength, 0), 1);
         },
         state,
-        base
+        base,
+        setClear(nearTo: number, farTo: number) {
+            clear.near = nearTo;
+            clear.far = farTo;
+        }
     };
 }
 

@@ -809,8 +809,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const drawnAny = (chunk: number) => streamer.stateOf(chunk) !== STATE_OUT;
     const atIn = (x: number, z: number) => streamer.stateAt(x, z) === STATE_IN;
     const atAny = (x: number, z: number) => streamer.stateAt(x, z) !== STATE_OUT;
-    streamer.onChange((states) => {
-        const all = streamer.allIn;
+    streamer.onChange((states, allHere) => {
+        // (This island's own: with another island in the world, it is all in whenever its own chunks are.)
+        const all = allHere;
         landscape?.tiles.apply(states, performance.now() / 1000);
         // The ground's plants and the trees as the map too; the grass, the forest floor and the props only in full.
         vegetation?.setDrawn(all ? null : drawnAny, all ? null : drawnIn);
@@ -2000,8 +2001,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Part B: a herd wholly past the render distance is not drawn (its badge and count stay: they are data), unless
             // the map view sees its members big on screen (true scale: elephants across the island).
             if (!streamer.allIn) {
-                const beyond = cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius;
-                if (beyond > streamer.renderDistance && !(streamer.map && keepsModelBeyond(body.display, beyond, height, FOV))) continue;
+                // Past the render distance (map style) its figures only while big on screen; past the map distance none.
+                const state = streamer.stateAt(herdSphere.center.x, herdSphere.center.z);
+                const beyond = Math.max(cameraPosition.distanceTo(herdSphere.center) - herdSphere.radius, 0);
+                if (state === STATE_OUT || (state === STATE_MAP && !keepsModelBeyond(body.display, beyond, height, FOV))) continue;
             }
             herd.length = body.display;
             const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / herd.length, 0.25), 1);
@@ -5605,7 +5608,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         fitCloseUp();
         if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
-        streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now);
+        streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now, controls.target);
         landscape?.tiles.release(now);
         streamCull.step(now);
         stepLayers(elapsed);
@@ -5992,7 +5995,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveliness: liveliness.stats(),
             streaming: (() => {
                 const stream = streamer.stats();
-                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
+                return {renderDistance: stream.renderDistance, mapDistance: stream.mapDistance, active: stream.active, islands: stream.islands, fog: stream.fog, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
             })()
         }),
         dispose: () => {
