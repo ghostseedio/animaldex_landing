@@ -15,6 +15,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
+import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 
 export type ArkIslandScene = {
     id: "town";
@@ -44,6 +45,14 @@ export type ArkIslandScene = {
     townPlace: (id: string) => TownPlace | undefined;
     /** A zoo animal's hard bound: a world pose pulled back inside its enclosure's mask. */
     bound: (id: string, pose: {x: number; z: number}) => void;
+    /** Its behaviour world in the world frame (`islands/town/sampler.ts`): places, ground, walk grid, obstacles. */
+    sampler: () => ArkWorldSampler;
+    /** On the behaviour schedule (not one kept still at a window, behind the glass or in a tank or pool). */
+    scheduled: (id: string) => boolean;
+    /** The most its home range may reach (m): its garden, paddock or enclosure. */
+    rangeOf: (id: string) => number | null;
+    /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
+    kept: (id: string) => boolean;
     /** Its whole-island view: target (world) and the radius it fits. */
     home: {x: number; z: number; radius: number; radiusTall: number};
     /** The camera's target is kept within this of its middle. */
@@ -53,12 +62,13 @@ export type ArkIslandScene = {
 
 /** Builds the town for the scene (its modules on demand, so a one-island page does not carry them). */
 export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}}): Promise<ArkIslandScene> {
-    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures}, {inPoly, centroid}] = await Promise.all([
+    const [{buildTownIsland}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures}, {inPoly, centroid}, {townWorldSampler}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
         import("@/ark-scene/islands/town/areas"),
-        import("@/ark-scene/islands/town/geom")
+        import("@/ark-scene/islands/town/geom"),
+        import("@/ark-scene/islands/town/sampler")
     ]);
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
@@ -72,6 +82,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     town.root.updateMatrixWorld(true);
     let openKey = (open.length ? open : launchEnclosures()).join(",");
     let towned = new Map<string, TownPlace>();
+    let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
+    const STILL_WHERE = new Set(["window", "indoor", "pool"]);
     const half = def.half;
     return {
         id: "town",
@@ -118,8 +130,42 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             pose.x = origin.x + c.x + (lx - c.x) * lo;
             pose.z = origin.z + c.z + (lz - c.z) * lo;
         },
+        sampler: () => {
+            if (!sampler || sampler.key !== openKey) sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin)};
+            return sampler.sampler;
+        },
+        scheduled: (id) => {
+            const info = towned.get(id);
+            return Boolean(info) && !info!.still && !STILL_WHERE.has(info!.where);
+        },
+        rangeOf: (id) => {
+            const info = towned.get(id);
+            return info ? Math.max(info.range, 0.6) * 1.5 : null;
+        },
+        kept: (id) => {
+            const area = towned.get(id)?.area;
+            return area === "house" || area === "farm" || area === "zoo";
+        },
         home: {x: origin.x + def.home.target[0], z: origin.z + def.home.target[2], radius: 205, radiusTall: 230},
         worldRadius: half * 0.92,
         dispose: town.dispose
+    };
+}
+
+/**
+ * One sampler over the one world (decision 141): another island's inside its square (`contains`), the wild island's
+ * elsewhere. For what reads the world everywhere at once (the reactive layer's sight and cover); the schedules read
+ * each island's own.
+ */
+export function composedSampler(wild: ArkWorldSampler, other: ArkWorldSampler, contains: (x: number, z: number) => boolean): ArkWorldSampler {
+    const at = (x: number, z: number) => (contains(x, z) ? other : wild);
+    return {
+        version: `${wild.version}+${other.version}`,
+        heightAt: (x, z) => at(x, z).heightAt(x, z),
+        isWater: (x, z) => at(x, z).isWater(x, z),
+        slope: (x, z) => at(x, z).slope(x, z),
+        zoneAt: (x, z) => at(x, z).zoneAt(x, z),
+        attachPoints: (tag, near) => (near ? at(near.x, near.z).attachPoints(tag, near) : [...wild.attachPoints(tag), ...other.attachPoints(tag)]),
+        blocked: (x, z, clearance) => at(x, z).blocked(x, z, clearance)
     };
 }

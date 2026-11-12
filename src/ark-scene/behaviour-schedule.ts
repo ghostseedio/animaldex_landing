@@ -342,9 +342,16 @@ export function scheduleWorld(sampler: ArkWorldSampler): ScheduleWorld {
  * works for about its budget and returns the world once it is built; `spentMs` is the main-thread time it took.
  */
 export class ScheduleWorldBuild {
-    private sampler: SlicedBuild<ArkWorldSampler> | null = worldSamplerBuild();
+    private sampler: SlicedBuild<ArkWorldSampler> | null;
     private nav: SlicedBuild<NavGrid> | null = null;
     private world: ScheduleWorld | null = null;
+    /** Part C: another island's sampler (its own behaviour world in the one world, decision 141); absent: the shared one. */
+    private readonly own: ArkWorldSampler | null;
+
+    constructor(own?: ArkWorldSampler | null) {
+        this.own = own ?? null;
+        this.sampler = this.own ? new SlicedBuild<ArkWorldSampler>([], () => this.own!) : worldSamplerBuild();
+    }
     spentMs = 0;
     slices = 0;
     /** The longest single slice (ms): the graphics lane's `allAttachPoints`, one task, sets it unless it was built already. */
@@ -368,7 +375,7 @@ export class ScheduleWorldBuild {
         }
         if (this.nav && (left() > 0 || this.nav.done)) {
             const nav = this.nav.step(Math.max(left(), 0));
-            if (nav) this.world = {sampler: worldSampler(), nav};
+            if (nav) this.world = {sampler: this.own ?? worldSampler(), nav};
         }
         const took = (typeof performance !== "undefined" ? performance.now() : Date.now()) - started;
         this.spentMs += took;

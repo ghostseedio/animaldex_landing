@@ -200,3 +200,44 @@ test("the town's panel by place: homes, farms, the zoo's types, town wildlife by
     assert.equal(arkTownGroupOf({area: null, enclosure: null, model_slug: "brown-rat", zone: "farm_garden"}).group, "streets");
     assert.equal(arkTownGroupOf({area: "zoo", enclosure: "aquarium-2", model_slug: "blue-tang", zone: "coral_reef"}).key, "zoo:aquarium");
 });
+
+test("the town on the behaviour schedule in the one world: its own walk grid at its origin, zoo trips inside the enclosure", async () => {
+    const {townWorldSampler} = await import("@/ark-scene/islands/town/sampler");
+    const {scheduleWorld, tripAt, poseOnTrip} = await import("@/ark-scene/behaviour-schedule");
+    const {behaviourProfile} = await import("@/ark-scene/behaviour-profile");
+    const {townWorldOrigin} = await import("@/ark-scene/islands");
+    const origin = townWorldOrigin();
+    const town = arkIslandSnapshot(islandsFixture(), "town");
+    const placed = placeTownAnimals(town.animals);
+    const sampler = townWorldSampler(placed.open, origin);
+    const world = scheduleWorld(sampler);
+    // The grid covers the town at its world origin: walkable land there, its ground the town's.
+    let walkable = 0;
+    for (let i = -100; i <= 100; i += 10) for (let j = -100; j <= 100; j += 10) if (world.nav.walkable(origin.x + i, origin.z + j)) walkable++;
+    assert.ok(walkable > 150, `the town's middle is walkable on its own grid (${walkable} of 441)`);
+    assert.equal(sampler.heightAt(origin.x, origin.z), (await import("@/ark-scene/islands/town/ground")).townHeight(0, 0));
+    assert.ok(sampler.attachPoints("grass", {x: origin.x, z: origin.z, r: 60}).length > 20, "places near the middle, in the world frame");
+    // Zoo animals' trips stay in (or within a step of) their enclosure; the same every time.
+    const hours = (epoch: number) => ((epoch / 3600) % 24 + 24) % 24;
+    let checked = 0;
+    let far = 0;
+    for (const animal of town.animals.filter((a) => a.area === "zoo").slice(0, 12)) {
+        const info = placed.town.get(animal.id)!;
+        if (info.still) continue;
+        const p = placed.places.get(animal.id)!;
+        const home = {x: p.x + origin.x, y: p.ground, z: p.z + origin.z};
+        const sched = {id: animal.id, zone: animal.zone, home, length: 1, sea: false, range: Math.max(info.range, 0.6) * 1.5};
+        const profile = behaviourProfile(animal.model_slug);
+        for (let t = 1_763_000_000; t < 1_763_000_000 + 1200; t += 97) {
+            const trip = tripAt(world, profile, sched, t, hours);
+            const at = poseOnTrip(world, trip, t);
+            const again = poseOnTrip(world, tripAt(world, profile, sched, t, hours), t);
+            assert.deepEqual({x: at.x, z: at.z}, {x: again.x, z: again.z});
+            const mask = info.enclosure!.mask;
+            if (!inPoly(mask, at.x - origin.x, at.z - origin.z) && !at.aloft) far++;
+            checked++;
+        }
+    }
+    assert.ok(checked > 50);
+    assert.ok(far / checked < 0.2, `zoo poses outside the mask before the scene's hard bound: ${far} of ${checked}`);
+});

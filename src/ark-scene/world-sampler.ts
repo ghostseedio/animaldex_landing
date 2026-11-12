@@ -81,6 +81,8 @@ export interface ArkWorldSampler {
     readonly version: string;
     /** Part C: half the island's square (m) the walk grid covers; absent: the wild island's terrain (`TERRAIN_HALF`). */
     readonly half?: number;
+    /** Part C: the middle of that square in the world frame (another island across the strait); absent: (0, 0). */
+    readonly centre?: {x: number; z: number};
     heightAt(x: number, z: number): number;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;

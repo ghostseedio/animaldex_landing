@@ -102,12 +102,17 @@ const ZONE_BY_SURFACE: Record<TownSurface, ArkZone> = {
     water: "river_lake"
 };
 
-export type TownSampler = ArkWorldSampler & {readonly half: number};
+export type TownSampler = ArkWorldSampler & {readonly half: number; readonly centre: {x: number; z: number}};
 
-/** The town's behaviour world for these open enclosures (the snapshot's names, or the launch set). */
-export function townWorldSampler(open: readonly string[]): TownSampler {
+/**
+ * The town's behaviour world for these open enclosures (the snapshot's names, or the launch set), in the world frame:
+ * the town's local frame moved to `origin` (decision 141: one world, the town across the strait). (0, 0): its own frame.
+ */
+export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}): TownSampler {
     const plan = townPlan();
     const half = TOWN_HALF;
+    const ox = origin.x;
+    const oz = origin.z;
     const n = Math.ceil((half * 2) / RASTER);
     const solid = new Uint8Array(n * n);
     const cellOf = (x: number, z: number) => {
@@ -170,11 +175,12 @@ export function townWorldSampler(open: readonly string[]): TownSampler {
 
     // The places.
     const points: AttachPoint[] = [];
+    // (Places are made in the town's own frame and stored in the world's.)
     const add = (tag: AttachTag, id: string, x: number, y: number, z: number, nx = 0, ny = 1, nz = 0, yaw = 0) => {
         const size = SIZE_BY_TAG[tag] ?? [0.02, 4];
-        points.push({id, tag, x, y, z, nx, ny, nz, yaw, size: [size[0], size[1]], zone: zoneAt(x, z)});
+        points.push({id, tag, x: x + ox, y, z: z + oz, nx, ny, nz, yaw, size: [size[0], size[1]], zone: localZone(x, z)});
     };
-    const zoneAt = (x: number, z: number): ArkZone => {
+    const localZone = (x: number, z: number): ArkZone => {
         const g = sampleTownGround(x, z);
         return g.height < 0 ? "open_ocean" : ZONE_BY_SURFACE[g.surface] ?? "farm_garden";
     };
@@ -215,20 +221,23 @@ export function townWorldSampler(open: readonly string[]): TownSampler {
         if (!list) entry.buckets.set(key, (list = []));
         list.push(p);
     }
-    const version = `town:${open.join(",")}`;
+    const version = `town@${ox},${oz}:${open.join(",")}`;
     return {
         version,
         half,
-        heightAt: townHeight,
+        centre: {x: ox, z: oz},
+        heightAt: (x, z) => townHeight(x - ox, z - oz),
         isWater: (x, z) => {
-            const g = sampleTownGround(x, z);
+            const g = sampleTownGround(x - ox, z - oz);
             return g.surface === "water" || g.height < 0;
         },
         slope: (x, z) => {
             const d = 0.75;
-            return Math.max(Math.abs(townHeight(x + d, z) - townHeight(x - d, z)), Math.abs(townHeight(x, z + d) - townHeight(x, z - d))) / (2 * d);
+            const lx = x - ox;
+            const lz = z - oz;
+            return Math.max(Math.abs(townHeight(lx + d, lz) - townHeight(lx - d, lz)), Math.abs(townHeight(lx, lz + d) - townHeight(lx, lz - d))) / (2 * d);
         },
-        zoneAt,
+        zoneAt: (x, z) => localZone(x - ox, z - oz),
         attachPoints: (tag, near) => {
             const entry = byTag.get(tag);
             if (!entry) return [];
@@ -250,7 +259,7 @@ export function townWorldSampler(open: readonly string[]): TownSampler {
             const r = Math.max(clearance, 0);
             for (let dx = -r; dx <= r + 1e-9; dx += Math.max(r, 0.5)) {
                 for (let dz = -r; dz <= r + 1e-9; dz += Math.max(r, 0.5)) {
-                    const k = cellOf(x + dx, z + dz);
+                    const k = cellOf(x - ox + dx, z - oz + dz);
                     if (k >= 0 && solid[k]) return true;
                 }
             }
