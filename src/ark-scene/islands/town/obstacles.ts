@@ -9,7 +9,9 @@
  *   wall or fence: cats, squirrels, rats, geckos), `flyer` (over anything but a net). A zoo fence or net is `hard`
  *   for the zoo's own residents (they stay in their enclosure; decision 22, plan §5).
  * - `water`: the canal, the millpond, the farm pond, the harbour, the zoo's pools: walkers cross only by `bridges`.
- * - `tree`: a trunk (radius).
+ * - `tree`: a trunk (radius) as drawn (`trees.ts`: the library tree's trunk at its scale, lane GC; a shrub its stems'
+ *   clump, `soft`: paths go round it, a body may brush it), the zoo's own trees with their enclosures.
+ * - `prop`: a farm's bales, trough or hay shelter (`farm.ts`, lane GC): a closed footprint, its floor and top.
  * - `enclosure`: each zoo enclosure's mask, the hard bound for its residents (placement, behaviour, walk grid,
  *   player control).
  */
@@ -17,7 +19,9 @@
 import {corners, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, townPlan, type Hedge, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {zooEnclosures} from "@/ark-scene/islands/town/areas";
+import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
+import {townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
+import {townFarmProps, type FarmPropKind} from "@/ark-scene/islands/town/farm";
 
 export type Passer = "small" | "climber" | "flyer";
 
@@ -25,8 +29,9 @@ export type TownObstacle =
     | {id: string; kind: "building"; poly: Poly; floor: number; top: number}
     | {id: string; kind: "barrier"; line: Poly; height: number; thickness: number; barrier: Hedge["kind"]; passable: Passer[]; hard: boolean}
     | {id: string; kind: "water"; poly: Poly; level: number; fresh: boolean}
-    | {id: string; kind: "tree"; x: number; z: number; r: number}
-    | {id: string; kind: "enclosure"; poly: Poly; type: string; hard: true};
+    | {id: string; kind: "tree"; x: number; z: number; r: number; soft?: boolean}
+    | {id: string; kind: "enclosure"; poly: Poly; type: string; hard: true}
+    | {id: string; kind: "prop"; poly: Poly; floor: number; top: number; what: FarmPropKind};
 
 const PASS: Record<Hedge["kind"], {passable: Passer[]; thickness: number; hard: boolean}> = {
     hedge: {passable: ["small", "flyer"], thickness: 0.9, hard: false},
@@ -70,7 +75,8 @@ export function townObstacles(plan: TownPlan = townPlan(), open?: readonly strin
         const p = PASS[h.kind];
         out.push({id: h.id, kind: "barrier", line: h.line, height: h.height, thickness: p.thickness, barrier: h.kind, passable: p.passable, hard: p.hard});
     }
-    for (const e of zooEnclosures(plan, open)) {
+    const layout = zooLayout(open ?? launchEnclosures(), plan);
+    for (const e of layout.enclosures) {
         if (e.shared) continue;
         const k = corners(e.slot.at);
         const aviary = e.type === "aviaries";
@@ -84,7 +90,15 @@ export function townObstacles(plan: TownPlan = townPlan(), open?: readonly strin
         if (w.kind === "fountain") continue;
         out.push({id: w.id, kind: "water", poly: w.kind === "harbour" ? corners(HARBOUR_BASIN) : w.poly, level: w.level, fresh: w.kind !== "harbour"});
     }
-    for (const t of plan.trees) out.push({id: `tree-${t.seed}`, kind: "tree", x: t.x, z: t.z, r: t.kind === "hedge_shrub" ? 0.9 : t.kind === "birch" || t.kind === "apple" || t.kind === "cherry" ? 0.25 : 0.45 * t.scale + 0.1});
+    const trunk = (t: TownTree): TownObstacle => (t.low ? {id: `tree-${t.seed}`, kind: "tree", x: t.x, z: t.z, r: Math.max(0.35, t.crown * 0.55), soft: true} : {id: `tree-${t.seed}`, kind: "tree", x: t.x, z: t.z, r: Math.max(t.trunk, 0.12)});
+    for (const t of townTrees(plan)) out.push(trunk(t));
+    for (const t of townZooTrees(layout, plan)) out.push(trunk(t));
+    for (const p of townFarmProps(plan)) {
+        const poly = corners(p.at);
+        let floor = Infinity;
+        for (const c of poly) floor = Math.min(floor, townHeight(c.x, c.z));
+        out.push({id: p.id, kind: "prop", poly, floor: Math.round(floor * 100) / 100, top: Math.round((floor + p.top) * 100) / 100, what: p.kind});
+    }
     return out;
 }
 

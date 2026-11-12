@@ -430,3 +430,165 @@ within 40 m of the view's middle and on screen:
 | Medium | 7/27, 9/31, 53/55, 1/34 → 27/27, 32/32, 55/55, 34/34 | 46, 48, 32, 22 → 51, 31, 24, 56 (noisy on the shared Mac: the mean of four runs per view moves both ways, 40.5 → 42.5 overall) | 477 → 475 MB | (the rotation changes which kinds are in) | +1 to +17 |
 
 (The dev server's heap is far over a production page's; the comparison is like for like.)
+
+pets, 391 / 225 / 25 are out at once (with this lane's held pins on high and medium). On the low tier (phones, the
+apps' embed) that is the runtime lane's call: a town share of the low budget, or the resting pets drawn as static
+figures (the herd path), would show more.
+
+## 13. Trees, parks, canal, countryside, farm and the zoo's enclosures (lane GC, branch `town-nature`)
+
+The owner's brief of 2026-11-12 (decision 243), part 2: good-quality CC0 urban and park trees at true scale that never
+grow into each other and sway in the wind; parks and the canal; the countryside and the farms; real zoo barriers and
+aviaries whose netting the birds are seen through.
+
+### 13.1 Trees and shrubs (`islands/town/trees.ts`, `render/assets.ts`)
+
+- **The trees are the Ark's own asset library** (`public/ark/assets/v1`, made in this repo by `scripts/ark-assets/`,
+  CC0), the same Weber–Penn skeletons, real leaf blades, four levels of detail and wind weights as the wild island's. The
+  generator gained the town's four street and park species: the **common lime** (park, a street form with its crown lifted,
+  a big park tree), the **London plane**, the churchyard's **English yew** and the garden **cherry** (in leaf, in
+  blossom). The town also draws the library's oak, birch, willow, Scots pine, apple and umbrella thorn, and its holly and
+  hazel bushes for the shrubs.
+- **True scale.** Each kind at its real mean height (oak 18 m, lime 20, plane 22, birch 15, willow 12, pine 18, yew 12,
+  cherry 7, apple 5, a shrub 1.6) times the plan's size roll (0.5–1.2): a street lime 10–15 m, a park lime or plane to
+  21–24 m, a garden cherry 4–7 m.
+- **Never inside each other: L6's spacing** (`tree-spacing.ts`, decision 94, on each asset's measured crown). In the plan's
+  order, each tree at its planted size, then younger (×0.85 … ×0.5), else left out (decision 95's order, no shrub in a
+  tree's place). A crown also keeps out of every building and zoo plot below its roof or fence (an overhang of a quarter
+  of its radius allowed); a trunk 0.3 m off them. **293 of the plan's 331 trees stand** (the wood and the hedgerows
+  thinned most) and the zoo's own 35 (the savanna's acacias, the bears' pines, a shade oak in the hoofstock paddocks, a
+  birch under each aviary's net below 8 m, the closed plots' lawn trees) settle against them: **0 clashes**
+  (`src/lib/ark-town-nature.test.ts`).
+- **Every tier draws every tree** (they carry perches and colliders; the old low tier hid 40% while their perches stayed).
+  The tier pulls the levels of detail in instead, as the wild island's (reach 1 / 0.45 / 0.3): the full tree near the
+  camera, lighter ones further, the crossed card far away. Instanced per asset and level, by Part B's chunk.
+- **Wind:** the wild island's tree shader (`asset-trees.ts` windMaterial: trunk a little, branches more, leaves most,
+  each leaf on its own phase, stronger in wind and storms) with the town's weather kit (lane GA: rain darkens and glosses,
+  cloud shade, the lamps). The tree round the camera fades beside the lens as on the wild island.
+- **One reader for all:** the obstacles and colliders take each trunk at the drawn tree's own radius (a shrub is soft, as
+  on the wild island), and the perches (`sampler.ts`) sit on the drawn tree's own bark, branch tops and leaves (the
+  asset's attach points, placed as the tree is). Before, the perches were at guessed heights and the zoo's trees had no
+  colliders.
+
+### 13.2 Parks and the canal
+
+- **Hedges** (`render/nature.ts`): a garden hedge is a lumpy, round-topped mass of leaves; a field or farm hedgerow is
+  wider, taller and shaggy with clumps standing proud. They are one `foliage` mesh per chunk with a leaf grain in world
+  space and a sway by height. Their lines are the plan's, so the colliders (decision 149: a 0.3 m gap at the foot) match.
+- **Flower beds:** four round beds round the park's bandstand, a bed either side of the front path at about 70% of the
+  houses, raised planters at the zoo's gate.
+- **The millpond:** common reed and reedmace in clumps along half its margin, lily pads on its quieter half (the library's
+  plants, culled past ~70–140 m); reeds round the farm pond.
+- **The canal:** its walls stand 0.15 m inside the channel with a 0.55 m coping (before, the bank's ground poked up
+  through the water along both walls between the 1.1 m grid's vertices); the lock at the harbour has two pairs of timber
+  mitre gates with white-tipped balance beams.
+- **Boats at true size:** the canal's narrowboats are 2.08 m in the beam and 12–18 m long (before, a 7 m boat scaled
+  uniformly to 3.6 m wide), black hulls with a painted band and coach lines, panelled cabins with windows and portholes,
+  roof chimney, water can and plant pots, tiller; four liveries. The harbour's are small fishing boats with a wheelhouse.
+- **Ducks and pigeons** are the Ark's own (the real Ark's town has 20 mallards, 12 Muscovy ducks, 11 domestic pigeons,
+  wood pigeons and doves, placed on the canal, the millpond and the square by their niches, lane TB); no ambient birds
+  were added (the wild island has no ambient life layer).
+
+### 13.3 The countryside and the farms (`islands/town/farm.ts`, `render/nature.ts`)
+
+- **Crops** stand in their rows: cereal and maize as ragged-topped rows with a lighter band of ears or tassels, cabbages
+  and sprouts as rows of heads; tilled soil and pasture are the ground's own texture (lane GA's tags kept).
+- **Farm things** (each a collider: bales `hay`, the rest solid; `obstacles.ts` `prop`, `colliders.ts`): three round bales
+  (wrapped or straw, two more on top at a farmstead), a stack of small square bales, a galvanised trough by the paddock's
+  rails, a Dutch barn (steel stanchions, curved tin roof, bales under it) at each farmstead. Every box keeps clear of the
+  farm's buildings, paddock, yard, run and crops, so no animal's spot is inside one (tested).
+- **Five-bar gates** in every paddock's rails (its yard side) and every field's hedge (the side nearest a lane or track),
+  the hedge left open there. The barrier collider runs on unchanged: the gates are shut.
+
+### 13.4 The zoo's barriers (`render/zoo-barriers.ts`)
+
+On each outdoor plot's own boundary, which stays the hard collider (no gap) and keeps the residents' mask 0.4 m inside:
+
+| Enclosure | Barrier |
+|---|---|
+| Big cats | laminated glass viewing panels on a plinth to 3 m along the path, welded mesh above and round the rest to 4.5 m, its top cranked 1.4 m inwards |
+| Bears and wolves | a glass front on a stone plinth; rockwork walls with mesh on top along the sides and back; hot wires on stand-offs |
+| Savanna paddocks | a dry-stone wall with a low rail on the path side (a ha-ha seen from the path); timber posts, tensioned cables and a mesh skirt elsewhere |
+| Hoofstock paddocks, children's farm | timber post-and-rail (four rails / three) with stock mesh on the lower half |
+| Small mammals | a low brick wall with clear panels and an inward lip |
+| Penguin and seal pools | a glass balustrade on the front, rockwork round the rest |
+| Aviaries | green steel posts and ring beam, an arched roof frame, fine stainless netting on walls and roof, a keepers' porch |
+
+- **See-through netting** (`render/index.ts` netMaterial): the wires are drawn at their real thickness in the plane's own
+  coordinates (fine netting 2.5 cm, welded mesh 5 cm) and anti-aliased by their size on screen, so close up they are
+  wires and far away a faint veil of their coverage; the birds are seen inside. Clear glass is a faint tint, brighter at a
+  grazing angle.
+- **Signs** are plain coloured boards with a round pictogram: no text.
+- **The houses** (aquarium, reptile, insect, nocturnal and primate houses) are lane TB's (`render/zoo-houses.ts`: cut away
+  as the camera comes close, the primates' climbing frame inside).
+
+### 13.5 Measured
+
+**The real Ark in the apps' embed** (production bundles, 3,145 animals with T1's routing merged, the phone profile
+360×800 at 2× with 4× CPU, a forced tier, peak and resident JS heap after the town joined and 25 s more, fps over 10 s;
+this Mac at load 6–16 with other lanes' probes running, so fps swings ±10 between identical runs):
+
+| Build | Tier | Town joined | Peak heap | Heap at rest | fps |
+|---|---|---:|---:|---:|---:|
+| origin/main 970b0461 | low | 9.3 s | 382 MB | 297 MB | 58 |
+| this branch (with GA's and TB's merges), first cut | low | 9.7 s | 454 MB | 384 MB | 44 |
+| this branch, after the heap fixes below | low | 9.3 s | 408 MB | 336 MB | 52 |
+| the same, the town's library trees and foliage off (A/B) | low | 9.3–9.5 s | 388 MB | 302–328 MB | 46–60 |
+| origin/main 970b0461 | medium | 9.8 s | 403 MB | 307 MB | 49 |
+| this branch, after the heap fixes | medium | 9.7 s | 411 MB | 329 MB | 29–54 |
+| GA + TB latest (aba53bd2), without this lane | low / medium | 10.4 / 9.7 s | 429 / 387 MB | 429 / 358 MB | 29 / 60 |
+
+- **This lane's own cost** (the A/B on the same build): about +20 MB at the low tier's peak and +10–30 MB at rest, within
+  the runs' noise at medium. The library trees' decoded levels are 9.5 MB (32 assets; lod0 6.9 MB); the foliage 53k
+  triangles.
+- **The heap fixes** (they help every lane's geometry): the worker's copies of every chunk's arrays are let go once the
+  chunk's meshes are made (before, the whole town's decal, solid and glass arrays stayed twice in the page's heap, held by
+  the build data for the zoo's rebuilds); the trees' and the foliage's CPU arrays are dropped once on the GPU (nothing
+  reads them back); hedges and crop rows drawn lighter (foliage 78k → 53k triangles).
+- **The low tier's peak** is at the 384 MB budget on origin/main already (382 MB, decision 221's 94% figure was 361);
+  merged with GA and TB it is 408–429 MB. Part B's streamer pulls the render distance in under pressure (§3 of
+  `streaming.md`); a real phone's figure is still to be measured (the integrator's WebView run).
+
+**The town's workbench** (`scripts/ark-town.mts perf`, the whole town drawn, flying the route, 20 s; with GA's and TB's
+merges; load ~8):
+
+| Device, tier | fps | Median / p95 / p99 (ms) | Peak heap | Draw calls | Triangles |
+|---|---:|---|---:|---:|---:|
+| Desktop, high | 59.9 | 16.7 / 18.5 / 18.7 | 240 MB | 591 | 1.49 M |
+| Desktop, medium | 60.0 | 16.7 / 18.2 / 18.6 | 243 MB | 263 | 670 k |
+| Desktop, low | 58.0 | 16.7 / 18.4 / 18.6 | 202 MB | 202 | 464 k |
+| Phone (4× CPU), medium | 58.7 | 16.7 / 17.6 / 22.7 | 244 MB | 175 | 479 k |
+| Phone (4× CPU), low | 58.7 | 16.6 / 17.8 / 21.5 | 227 MB | 114 | 273 k |
+
+- The trees add a draw call per asset and level in use (32 assets; the far ones are cards); on the phone's low tier the
+  town is 114 calls (79 in §9's table before GA's, TB's and this lane's work).
+
+**Stills** (before/after, day and night, desktop and phone: the park, the canal at the High Street bridge with a
+narrowboat, the big cats' enclosure, the aviary close, the savanna paddock, the farmstead, the penguin pool; and on the
+live page with the real Ark: the farm with its animals, the aviary with its birds seen through the netting, the savanna,
+the big cats, the canal, the park): in the lane's handover folder.
+
+### 13.6 Decisions (lane GC)
+
+| # | Question | Options | Choice | Why |
+|---|---|---|---|---|
+| GC-1 | Which CC0 trees for the town | Poly Haven photoscans / Kenney or Quaternius low-poly packs / the Ark's own generated library, extended | **The Ark's own library, with four new town species** (lime, plane, yew, cherry: 9 variants) | The same look, wind weights, levels of detail and measured crowns as the wild island's (L6's spacing and the sway need them); vertex colour only, no textures, inside the phone budgets; CC0 by construction. The photoscans are 100k+ triangles with 2k–4k textures; the packs are another style |
+| GC-2 | Where the spacing runs | in `plan.ts` / one module everyone reads | **`trees.ts` `townTrees(plan)`**, settled once in the town's worker and handed to the page (`TownBuildData.trees`) | `plan.ts` cannot read the ground (`ground.ts` reads the plan); the renderer, obstacles, colliders and perches then agree on every tree |
+| GC-3 | A tree that would clash | drop / move / younger | **Younger (×0.85 … ×0.5), else left out**; no shrub in its place | Decision 95's order; nothing moves; 293 of 331 stand |
+| GC-4 | Crowns against buildings and zoo plots | ignore / keep clear | **Clear below the roof or fence, a quarter of the radius' overhang allowed; trunks 0.3 m off** | At true size a park plane's crown is 8+ m across: it grew through roofs and aviary nets |
+| GC-5 | The low tier's trees | keep its 60% share / every tree with the detail pulled in | **Every tree on every tier**, levels of detail at the wild island's reach (1 / 0.45 / 0.3) | Trees carry perches and colliders (an animal sat in a tree the low tier hid); "tune the tiers rather than remove detail" |
+| GC-6 | Real heights | the old shapes / per kind | **Per kind** (oak 18, lime 20, plane 22, birch 15, willow 12, pine 18, yew 12, cherry 7, apple 5, shrub 1.6 m) × the plan's roll 0.5–1.2 | Decision 34's rule on the wild island |
+| GC-7 | The zoo's trees | merged procedural, no colliders / the library's with colliders | **The library's, settled, trunks as colliders; a birch under each aviary's net (< 8 m)** | They were drawn with no collider; acacias and pines are the enclosures' own |
+| GC-8 | A second row of street limes drawn by the scenery (no colliders) | keep / remove | **Removed**: the plan's own street trees on those streets stay | Drawn trees without colliders, and in the plan's trees' places |
+| GC-9 | Where perches sit | guessed heights / on the drawn tree | **The asset's own attach points** (bark at climbing height, three branch tops round the crown, a leaf) | At true size the guessed limbs were in the air or inside crowns |
+| GC-10 | Ducks and pigeons | ambient birds / the Ark's own | **The Ark's own only**: 20 mallards, 12 Muscovy ducks, 11 domestic pigeons, wood pigeons and doves already live on the canal, the millpond and the square | No invented animals; the wild island has no ambient life layer |
+| GC-11 | Farm things as colliders | visual only / solid | **Solid** (`obstacles.ts` `prop`: bales `hay`, troughs and hay shelters boxes), placed clear of every spot | Decision 83 on the wild island (hay, troughs are solid); no animal's spot inside one (tested) |
+| GC-12 | Gates | open gaps / shut | **Shut**: drawn in the hedge or rails, the barrier collider runs on | Nothing changes for the animals or L5 |
+| GC-13 | Zoo barriers and the colliders | new lines (moats) / the plot's boundary | **The plot's boundary, hard as before; the barrier's look changes by type; no moats** | The ground is lane GA's and cannot dip; a moat inside the mask would have residents standing in it |
+| GC-14 | Glass and see-through netting | the windows' opaque glass / the net channel | **The net channel, tagged**: welded mesh, fine netting, clear glass; wires anti-aliased in the plane's own coordinates | The windows' glass material is opaque (lit windows); the old net's world grid turned whole planes into wire where an axis ran along them |
+| GC-15 | The workbench drew some trees black | — | **Instance colours set from a mesh's start** | A mesh first drawn without them kept a program variant that drew black through the post chain on the workbench (the live page was right) |
+| GC-16 | Boats | one geometry scaled uniformly / true beam | **True beam, stretched to the mooring's length; four narrowboat liveries as their own sets (+4 draw calls), a fishing boat for the harbour** | A 15 m boat was 3.6 m wide; the instance colour tints a whole boat, so liveries are painted on |
+| GC-17 | The blossoming cherry's attach points failed the attach tests (a leaf across its surface, a limb's chord) | loosen / another seed | **Seed 165** | Never loosen a test |
+| GC-18 | The bank's ground poking up through the canal | the ground (GA) / the walls | **The walls**: face 0.15 m inside the channel, coping 0.55 m | Canal walls are this lane's; the ground's heights stay |
+| GC-19 | Hedges | boxes / instanced bushes / leafy masses | **Leafy masses in one `foliage` mesh a chunk** (leaf grain, sway by height) | One draw call a chunk; instanced bushes along 1.4 km of hedge were ~600k triangles |
+| GC-20 | Climbing structures in the primate house | add outdoor ones / lane TB's house | **Lane TB's** (`render/zoo-houses.ts` draws the hall's climbing frame) | The house types' plots are their houses; their exteriors are styled in TB's module |

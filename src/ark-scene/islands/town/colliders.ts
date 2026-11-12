@@ -47,7 +47,19 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
     for (const o of townObstacles(plan, open)) {
         if (o.kind === "tree") {
             const g = townHeight(o.x, o.z);
-            out.push({shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
+            // (A shrub is soft, as on the wild island: paths go round it, brushing it is not a pass-through; lane GC.)
+            out.push(o.soft ? {shape: "circle", kind: "shrub", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 1.4, gap: 0, soft: true} : {shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
+            continue;
+        }
+        if (o.kind === "prop") {
+            // A farm's bales, trough or hay shelter (lane GC, `farm.ts`): a box from its floor to its top.
+            const [p0, p1, , p3] = o.poly;
+            const cx = (o.poly[0].x + o.poly[2].x) / 2;
+            const cz = (o.poly[0].z + o.poly[2].z) / 2;
+            const hw = Math.hypot(p1.x - p0.x, p1.z - p0.z) / 2;
+            const hd = Math.hypot(p3.x - p0.x, p3.z - p0.z) / 2;
+            const rotation = -Math.atan2(p1.z - p0.z, p1.x - p0.x);
+            out.push({shape: "box", kind: o.what === "round_bales" || o.what === "square_bales" ? "hay" : "building", id: `town:${o.id}`, cx: cx + ox, cz: cz + oz, cos: Math.cos(rotation), sin: Math.sin(rotation), hx0: -hw, hx1: hw, hz0: -hd, hz1: hd, y0: o.floor - 0.2, y1: o.top, reach: Math.hypot(hw, hd), gap: 0});
             continue;
         }
         if (o.kind !== "barrier") continue;

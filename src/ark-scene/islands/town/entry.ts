@@ -21,6 +21,7 @@ import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townChunkDistance, TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 import {local} from "@/ark-scene/islands/town/geom";
+import {townHeight} from "@/ark-scene/islands/town/ground";
 import type {TownClock} from "@/ark-scene/islands/town/people";
 
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
@@ -38,6 +39,9 @@ function shots(): Shot[] {
     const pFront = local(penguins, 3, penguins.d / 2 + 3.2);
     const aFront = local(aviary, -10, aviary.d / 2 + 7);
     const farm = plan.farms.find((f) => f.id === "farmstead-0")!.at;
+    const cats = slot("big_cats-1").at;
+    const cFront = local(cats, 4, cats.d / 2 + 9);
+    const aClose = local(aviary, 2, aviary.d / 2 + 6);
     return [
         {id: "island_far", eye: [70, 230, 470], target: [0, 0, -15], hours: 11},
         {id: "old_town", eye: [-6, 34, 92], target: [-18, 4, 2], hours: 10.5},
@@ -63,7 +67,12 @@ function shots(): Shot[] {
         {id: "street_wet_day", eye: [-40, 4.6, 31.5], target: [-14, 3.2, 26], hours: 13, wet: 1, rain: 0.5},
         {id: "pavement_close", eye: [-30, 4.3, 32.2], target: [-27.6, 2.75, 35.4], hours: 11},
         {id: "pavement_close_wet_night", eye: [-30, 4.3, 32.2], target: [-27.6, 2.75, 35.4], hours: 22.5, wet: 1, rain: 0.4},
-        {id: "square_night", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 23, wet: 0.6, rain: 0}
+        {id: "square_night", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 23, wet: 0.6, rain: 0},
+        // The nature lane's set (GC): a park, the canal at a bridge with boats, a zoo enclosure, the aviary close.
+        {id: "park", eye: [10, 9, -38], target: [-22, 1.5, -74], hours: 10.5},
+        {id: "canal_bridge", eye: [9, 6.5, 60], target: [4.5, 2.2, 26], hours: 15},
+        {id: "zoo_enclosure", eye: [cFront.x, townHeight(cFront.x, cFront.z) + 4.5, cFront.z], target: [cats.x - 1, townHeight(cats.x, cats.z) + 1, cats.z - 2], hours: 12},
+        {id: "aviary_close", eye: [aClose.x, townHeight(aClose.x, aClose.z) + 1.7, aClose.z], target: [aviary.x, townHeight(aviary.x, aviary.z) + 2.6, aviary.z - 2], hours: 10}
     ];
 }
 
@@ -111,6 +120,8 @@ export function mountTown(el: HTMLElement) {
     ARK_ENV.wetness.value = Number(params.get("wet") ?? 0);
     ARK_ENV.rain.value = Number(params.get("rain") ?? 0);
     scene.add(town.root);
+    // (The workbench's handle on the town's meshes, for probes.)
+    (window as unknown as {__arkTownRoot?: unknown}).__arkTownRoot = town.root;
     // (Lane TB: the zoo's houses, their tanks and halls, are drawn with the zoo's day, not the scenery.)
     town.root.add(buildZooHouses(zooLayout(launchEnclosures()).enclosures).group);
     const post = new ArkPost(renderer, scene, camera, tier);
@@ -192,7 +203,8 @@ export function mountTown(el: HTMLElement) {
 
     const list = shots();
     window.__arkTown = {
-        ready: true,
+        // (Ready once the asset library's trees, shrubs and reeds are in: a shot never races them, lane GC.)
+        ready: false,
         shots: list,
         mountMs: performance.now() - started,
         view: (eye, at, hours, day, fov) => {
@@ -246,6 +258,10 @@ export function mountTown(el: HTMLElement) {
         flyPose
     };
     frame();
+    void town.assetsReady().then(() => {
+        frame();
+        window.__arkTown!.ready = true;
+    });
 }
 
 function heapMB(): number | null {

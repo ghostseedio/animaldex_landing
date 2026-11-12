@@ -9,7 +9,6 @@ import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polyline
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
-import {treeGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
@@ -17,8 +16,14 @@ import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
 import {streetFurniture, type FurnitureOut} from "@/ark-scene/islands/town/render/furniture";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
+import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scene/islands/town/render/nature";
+import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
+import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
+import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {townTrees} from "@/ark-scene/islands/town/trees";
 
-export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo};
+/** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
+export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
 export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
 
 const H = (x: number, z: number) => townHeight(x, z);
@@ -26,7 +31,6 @@ const H = (x: number, z: number) => townHeight(x, z);
 const PATH = tone("#c4b48f");
 const STONE = tone("#a59c8a");
 const COPING = tone("#c9c0ac");
-const HEDGE = tone("#3d6a31");
 const BRICK = tone("#8c5a48");
 const FENCE = tone("#86684a");
 const IRON = tone("#2b2e31");
@@ -37,7 +41,7 @@ function chunkFor(out: SceneryOut, x: number, z: number): SceneryChunk {
     const key = townChunkOf(x, z);
     let c = out.chunks.get(key);
     if (!c) {
-        c = {decal: new Geo(), solid: new Geo(), glass: new Geo(), net: new Geo()};
+        c = {decal: new Geo(), solid: new Geo(), glass: new Geo(), net: new Geo(), foliage: new Geo()};
         out.chunks.set(key, c);
     }
     return c;
@@ -86,7 +90,9 @@ function streets(out: SceneryOut, plan: TownPlan) {
         const c = chunkFor(out, mid.x, mid.z);
         for (const side of [-1, 1]) {
             tagged(c.decal, SURF.gravel, Math.abs(part[part.length - 1].z - part[0].z) > Math.abs(part[part.length - 1].x - part[0].x), () => c.decal.ribbon(part, TOWPATH, (x, z) => (overCanal(x, z) ? TOWN_LEVEL : H(x, z)), 0.07, PATH, 2, side * (CANAL_WIDTH / 2 + 0.35 + TOWPATH / 2)));
-            wallAlong(c.solid, part, side * (CANAL_WIDTH / 2 + 0.15), CANAL_LEVEL - 1.8, TOWN_LEVEL + 0.18, 0.3, STONE, COPING);
+            // (Lane GC: the face 0.15 m inside the channel's edge, the coping 0.55 m wide to the towpath: the bank's ground,
+            // sloping down into the bed between the 1.1 m grid's vertices, poked up through the water along the walls.)
+            wallAlong(c.solid, part, side * (CANAL_WIDTH / 2 - 0.15), CANAL_LEVEL - 1.8, TOWN_LEVEL + 0.18, 0.55, STONE, COPING);
         }
     }
     // The fresh water: the canal, the millpond, the farm pond, the fountain.
@@ -204,6 +210,40 @@ function archFace(geo: Geo, deck: Frame, lx: number, span: number, waterY: numbe
     }
 }
 
+/**
+ * The lock where the canal meets the harbour (lane GC): a pair of timber mitre gates at each end of the chamber, their
+ * balance beams out over the towpath, a walkway on each gate.
+ */
+function lock(out: SceneryOut, plan: TownPlan) {
+    const box = plan.lock;
+    const near = polylineNearest(CANAL, box.x, box.z);
+    const dir = near.dir;
+    const nx = -dir.z;
+    const nz = dir.x;
+    const timber = tone("#5a4632");
+    const beam = tone("#e8e4da");
+    for (const end of [-1, 1]) {
+        const cx = box.x + dir.x * end * 3;
+        const cz = box.z + dir.z * end * 3;
+        const c = chunkFor(out, cx, cz);
+        for (const side of [-1, 1]) {
+            // A leaf from the wall to the middle, angled a little upstream (the mitre).
+            const hx = cx + nx * side * (CANAL_WIDTH / 2 - 0.15);
+            const hz = cz + nz * side * (CANAL_WIDTH / 2 - 0.15);
+            const mx = cx - dir.x * end * 0.6;
+            const mz = cz - dir.z * end * 0.6;
+            const len = Math.hypot(mx - hx, mz - hz);
+            const f: Frame = {x: (hx + mx) / 2, y: CANAL_LEVEL - 1.4, z: (hz + mz) / 2, rot: Math.atan2(-(mx - hx), mz - hz)};
+            c.solid.box(f, 0, 0, 0, 0.32, TOWN_LEVEL - CANAL_LEVEL + 1.55, len, timber);
+            c.solid.box(f, 0, TOWN_LEVEL - CANAL_LEVEL + 1.55, 0, 0.5, 0.08, len, tone("#7a6248"));
+            // The balance beam out over the towpath, white-tipped.
+            const bf: Frame = {x: hx + nx * side * 2.3, y: TOWN_LEVEL + 0.55, z: hz + nz * side * 2.3, rot: Math.atan2(-nx, nz)};
+            c.solid.box(bf, 0, 0, 0, 0.3, 0.3, 4.6, timber);
+            c.solid.box({...bf, x: hx + nx * side * 4.4, z: hz + nz * side * 4.4}, 0, 0, 0, 0.32, 0.32, 0.5, beam);
+        }
+    }
+}
+
 function harbour(out: SceneryOut) {
     const b = HARBOUR_BASIN;
     // Quay walls on the basin's west, north and east sides (the south is open to the sea).
@@ -283,18 +323,37 @@ function bench(geo: Geo, p: Pt, rot: number) {
 // MARK: - Boundaries
 
 function boundaries(out: SceneryOut, plan: TownPlan) {
-    for (const h of plan.hedges) boundary(out, h);
+    // The farms' gates stand in their hedges and rails (lane GC, `farm.ts`).
+    const gates = townFarmGates(plan);
+    for (const h of plan.hedges) boundary(out, h, gates);
+    for (const g of gates) fiveBarGate(chunkFor(out, g.x, g.z).solid, g);
 }
 
-function boundary(out: SceneryOut, h: Hedge) {
+/** Whether a point is in a gate's opening (with `margin` m either side). */
+function inGate(gates: readonly FarmGate[], x: number, z: number, margin = 0): boolean {
+    return gates.some((g) => Math.hypot(x - g.x, z - g.z) < g.width / 2 + margin);
+}
+
+function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     const r = rng(hashText(h.id));
+    if (h.kind === "hedge") {
+        // Leafy hedges (lane GC, `render/nature.ts`): a field's or a farm's boundary a shaggy hedgerow, a garden's
+        // clipped; each ~24 m piece into the chunk it lies in; open where a gate stands.
+        const hedgerow = h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead");
+        const open = gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2}));
+        for (const part of pieces(h.line, 24)) {
+            const mid = part[Math.floor(part.length / 2)];
+            hedgeAlong(chunkFor(out, mid.x, mid.z).foliage, part, h.height, hashText(h.id), hedgerow, open);
+        }
+        return;
+    }
     for (let i = 1; i < h.line.length; i++) {
         const a = h.line[i - 1];
         const b = h.line[i];
         const length = Math.hypot(b.x - a.x, b.z - a.z);
         if (length < 0.2) continue;
         const rot = Math.atan2(-(b.x - a.x), b.z - a.z);
-        const n = Math.max(1, Math.ceil(length / (h.kind === "hedge" ? 4 : 6)));
+        const n = Math.max(1, Math.ceil(length / 6));
         for (let k = 0; k < n; k++) {
             const t = (k + 0.5) / n;
             const x = a.x + (b.x - a.x) * t;
@@ -303,12 +362,6 @@ function boundary(out: SceneryOut, h: Hedge) {
             const c = chunkFor(out, x, z);
             const f: Frame = {x, y: H(x, z), z, rot};
             switch (h.kind) {
-                case "hedge": {
-                    const tall = h.height * (0.9 + r() * 0.2);
-                    c.solid.box(f, 0, -0.1, 0, 0.9, tall + 0.1, seg + 0.3, HEDGE.map((v) => v * (0.9 + r() * 0.2)) as [number, number, number]);
-                    c.solid.box(f, (r() - 0.5) * 0.2, tall - 0.1, (r() - 0.5) * seg * 0.3, 0.75, 0.3, seg * 0.6, HEDGE.map((v) => v * 1.1) as [number, number, number]);
-                    break;
-                }
                 case "wall":
                     c.solid.box(f, 0, -0.3, 0, 0.3, h.height + 0.3, seg + 0.02, BRICK);
                     c.solid.box(f, 0, h.height, 0, 0.38, 0.1, seg + 0.04, COPING);
@@ -323,6 +376,11 @@ function boundary(out: SceneryOut, h: Hedge) {
                     for (let q = 0; q < Math.floor(seg / 0.6); q++) c.solid.box(f, 0, 0, -seg / 2 + 0.3 + q * 0.6, 0.03, h.height, 0.03, IRON);
                     break;
                 case "paddock_rail":
+                    // (A gate hangs in its own opening: no rails there, lane GC.)
+                    if (inGate(gates, x, z, seg / 2 - 0.2)) {
+                        if (!inGate(gates, at(f, 0, 0, -seg / 2)[0], at(f, 0, 0, -seg / 2)[2])) c.solid.box(f, 0, 0, -seg / 2, 0.14, h.height + 0.1, 0.14, FENCE);
+                        break;
+                    }
                     c.solid.box(f, 0, 0, -seg / 2, 0.14, h.height + 0.1, 0.14, FENCE);
                     for (const yy of [0.45, 0.95]) c.solid.box(f, 0, yy, 0, 0.06, 0.12, seg, RAIL);
                     break;
@@ -382,25 +440,13 @@ function fields(out: SceneryOut, plan: TownPlan) {
         const [on, off, spacing] = crop;
         // (Lane GA: no per-cell shade; the crop and soil textures carry the variety.)
         tagged(c.decal, SURF.crop, alongZ(rot), () => c.decal.drape(f, w, d, H, 0.05, (_lx, lz) => tone(Math.floor((lz + d) / spacing) % 2 === 0 ? on : off), Math.min(spacing, 1.2)));
-        if (g.crop === "maize" || g.crop === "cereal") {
-            // Standing crop: low ridges of foliage along the rows.
-            for (let z = -d / 2 + spacing / 2; z < d / 2; z += spacing * 2) {
-                const a = local({x: centre.x, z: centre.z, w, d, rot}, -w / 2 + 0.5, z);
-                const b = local({x: centre.x, z: centre.z, w, d, rot}, w / 2 - 0.5, z);
-                c.solid.ribbon([a, b], spacing * 0.9, (x, zz) => H(x, zz) + (g.crop === "maize" ? 1.6 : 0.7), 0, tone(on, 0.95), 4);
-            }
-        }
+        // Standing crops in their rows (lane GC, `render/nature.ts`): cereal, maize, cabbages, sprouts.
+        cropRows(c.foliage, {x: centre.x, z: centre.z, w, d, rot}, g.crop ?? "pasture", hashText(g.id));
     }
-    // Hay bales and troughs on the farms; a tractor at each farmstead.
+    // The farms' bales, troughs and hay shelters (lane GC, `farm.ts`: they are colliders too); a tractor at each farmstead.
+    for (const p of townFarmProps(plan)) farmProp(chunkFor(out, p.at.x, p.at.z).solid, p);
     for (const farm of plan.farms) {
-        const r = rng(farm.seed);
         const c = chunkFor(out, farm.at.x, farm.at.z);
-        for (let k = 0; k < (farm.kind === "farmstead" ? 6 : 3); k++) {
-            const p = local(farm.at, -farm.at.w / 2 + 2 + r() * 4, -farm.at.d / 2 + 2 + k * 1.6);
-            c.solid.cylinder({x: p.x, y: H(p.x, p.z), z: p.z, rot: 0}, 0, 0, 0, 0.75, 0.75, 1.2, tone("#d1b76a"), 10);
-        }
-        const t = local(farm.paddock, farm.paddock.w / 2 - 2, 0);
-        c.solid.box({x: t.x, y: H(t.x, t.z), z: t.z, rot: farm.at.rot}, 0, 0, 0, 0.7, 0.55, 2.4, tone("#7a7f84"));
         if (farm.kind === "farmstead") tractor(c.solid, local(farm.yard, -farm.yard.w / 2 + 2.5, 0), farm.at.rot + 0.4);
     }
 }
@@ -429,19 +475,14 @@ export function buildZooScenery(layout: ZooLayout): SceneryOut {
     for (const e of layout.enclosures) if (!e.shared) enclosure(out, e);
     for (const plot of layout.closed) {
         const c = chunkFor(out, plot.at.x, plot.at.z);
-        const r = rng(hashText(plot.id));
-        for (let k = 0; k < 2 + Math.floor(r() * 2); k++) {
-            const p = local(plot.at, (r() - 0.5) * (plot.at.w - 4), (r() - 0.5) * (plot.at.d - 4));
-            out.trees.push({...p, kind: r() < 0.5 ? "lime" : "birch", scale: 0.7 + r() * 0.3, seed: hashText(`${plot.id}${k}`)});
-        }
+        // (Its lawn trees are the asset library's: `trees.ts` townZooTrees.)
+        const r = rng(hashText(`${plot.id}:shrubs`));
         for (let k = 0; k < 3; k++) {
             const p = local(plot.at, (r() - 0.5) * (plot.at.w - 2), (r() - 0.5) * (plot.at.d - 2));
             c.solid.blob(p.x, H(p.x, p.z) + 0.5, p.z, 1.2, 0.8, 1.2, tone("#4f7a3a"), hashText(`${plot.id}s${k}`), 0);
         }
         bench(c.solid, local(plot.at, 0, plot.at.d / 2 - 1.2), plot.at.rot + Math.PI);
     }
-    for (const t of out.trees) chunkFor(out, t.x, t.z).solid.addGeometry(treeGeometry(t.kind), t.x, H(t.x, t.z) - 0.1, t.z, (t.seed % 628) / 100, t.scale);
-    out.trees = [];
     return out;
 }
 
@@ -467,21 +508,13 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
-    // The fence: a hard boundary all round (glass along the front for the houses' outdoor parts and the pools).
-    const k = corners(s);
-    const fenceKind: Hedge["kind"] = spec.form === "aviary" ? "net" : "zoo_fence";
-    const height = spec.form === "aviary" ? 6.5 : e.type === "big_cats" ? 4.5 : e.type === "childrens_farm" || e.type === "small_mammals" ? 1.3 : 2.6;
-    if (spec.form !== "house") boundary(out, {id: `${e.slot.id}-fence`, line: [k[0], k[1], k[2], k[3], k[0]], height, kind: e.type === "childrens_farm" ? "picket" : fenceKind});
+    // The barrier on the plot's boundary, each type as a real zoo builds it (lane GC, `render/zoo-barriers.ts`): the
+    // boundary stays the hard collider; houses are their own bounds (lane TB's).
+    if (spec.form !== "house") zooBarrier(c, e);
     if (spec.form === "aviary") {
-        // The netted roof: a ridge frame over the aviary.
-        const f: Frame = {x: s.x, y: H(s.x, s.z), z: s.z, rot: s.rot};
-        c.net.quad(at(f, -s.w / 2, height, s.d / 2), at(f, s.w / 2, height, s.d / 2), at(f, s.w / 2, height + 1.6, 0), at(f, -s.w / 2, height + 1.6, 0), IRON);
-        c.net.quad(at(f, s.w / 2, height, -s.d / 2), at(f, -s.w / 2, height, -s.d / 2), at(f, -s.w / 2, height + 1.6, 0), at(f, s.w / 2, height + 1.6, 0), IRON);
-        c.solid.box(f, 0, height + 1.5, 0, s.w, 0.12, 0.12, ZOO_GREEN);
         // A dead tree for perches and a bathing pool.
         const t = local(s, -s.w / 4, -s.d / 6);
         deadTree(c.solid, t, e.slot.seed);
-        out.trees.push({...local(s, s.w / 4, -s.d / 4), kind: "birch", scale: 0.7, seed: e.slot.seed + 1});
     }
     if (spec.form === "house") zooHouse(out, e);
     if (e.pool) {
@@ -517,7 +550,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
             c.solid.gable(sf, 0, 2.6, 0, sw, 3.0, 1.0, 0.3, tone("#4a4440"), tone("#7a6a52"));
         }
         if (e.type === "savanna_paddocks") {
-            for (let i = 0; i < 2; i++) out.trees.push({...local(s, (r() - 0.5) * (s.w - 8), (r() - 0.5) * (s.d - 10)), kind: "acacia", scale: 1 + r() * 0.3, seed: e.slot.seed + i});
             const m = local(s, -s.w / 4, s.d / 6);
             c.solid.cylinder({x: m.x, y: H(m.x, m.z), z: m.z, rot: 0}, 0, 0, 0, 1.1, 0.3, 2.4, tone("#a9763e"), 7);
         }
@@ -527,7 +559,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
             for (const [lx, lz] of [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]] as const) df && c.solid.box(df, lx, 0, lz, 0.25, 2.4, 0.25, tone("#6a5038"));
             c.solid.box(df, 0, 2.4, 0, 3.6, 0.2, 3.6, tone("#8a6a48"));
         }
-        if (e.type === "bears_wolves") for (let i = 0; i < 2; i++) out.trees.push({...local(s, (r() - 0.5) * (s.w - 6), (r() - 0.5) * (s.d - 6)), kind: "pine", scale: 0.85, seed: e.slot.seed + 3 + i});
     }
     // The feeding hatch on the back fence.
     const hatch = back(-s.w / 2 + 2);
@@ -657,17 +688,8 @@ function lamps(out: SceneryOut, plan: TownPlan) {
         const z = MILLPOND.z + Math.sin(a) * (MILLPOND.rz + 5);
         out.lamps.push({x, y: H(x, z), z});
     }
-    // Street trees along the high street east and Park Road.
-    for (const id of ["high_street_east", "park_road", "harbour_road_east"]) {
-        const s = plan.streets.find((q) => q.id === id) as Street | undefined;
-        if (!s) continue;
-        const length = polylineLength(s.line);
-        for (let a = 15; a < length - 10; a += 32) {
-            const {point, dir} = polylineAt(s.line, a);
-            const off = (Math.floor(a / 32) % 2 ? 1 : -1) * (s.width / 2 + s.pavement - 0.6);
-            out.trees.push({x: point.x - dir.z * off, z: point.z + dir.x * off, kind: "lime", scale: 0.75, seed: hashText(`${id}${a}`)});
-        }
-    }
+    // (The street trees are the plan's own, `plan.ts` plant(): drawn by the asset library with their colliders, lane GC;
+    // a second row drawn here had none.)
     // A bandstand in the park.
     const bs = {x: -36, z: -56};
     const c = chunkFor(out, bs.x, bs.z);
@@ -678,18 +700,65 @@ function lamps(out: SceneryOut, plan: TownPlan) {
     for (const p of [{x: -30, z: -64}, {x: -6, z: -54}, {x: -40, z: -82}, {x: 2, z: -88}]) bench(chunkFor(out, p.x, p.z).solid, p, Math.atan2(MILLPOND.x - p.x, MILLPOND.z - p.z));
 }
 
+// MARK: - Flower beds (lane GC)
+
+/** Round beds round the park's bandstand, a bed either side of each front door's path (most houses), planters at the zoo's gate. */
+function beds(out: SceneryOut, plan: TownPlan) {
+    const soil = surfaceTag(SURF.earth);
+    const bandstand = {x: -36, z: -56};
+    for (let k = 0; k < 4; k++) {
+        const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+        const x = bandstand.x + Math.cos(a) * 7.5;
+        const z = bandstand.z + Math.sin(a) * 7.5;
+        const c = chunkFor(out, x, z);
+        flowerBed(c.foliage, c.decal, {x, y: 0, z, rot: 0}, 3.2, 3.2, hashText(`park-bed-${k}`), true, soil);
+    }
+    for (const p of plan.parcels) {
+        if (p.kind !== "house" || !p.front) continue;
+        const r = rng(p.seed + 11);
+        if (r() > 0.7) continue;
+        const b = plan.buildings.find((q) => q.id === p.building);
+        if (!b) continue;
+        const halfW = b.at.w / 2;
+        for (const side of [-1, 1]) {
+            const w = halfW - 1.0;
+            if (w < 0.8) continue;
+            const centre = local(b.at, side * (0.55 + w / 2), b.at.d / 2 + 0.5);
+            const bed: Box = {x: centre.x, z: centre.z, w, d: 0.7, rot: b.at.rot};
+            if (p.drive && corners(bed).some((q) => inBox(p.drive!, q.x, q.z, 0.2))) continue;
+            if (!inBox(p.at, centre.x, centre.z, -0.2)) continue;
+            const c = chunkFor(out, centre.x, centre.z);
+            flowerBed(c.foliage, c.decal, {x: centre.x, y: 0, z: centre.z, rot: b.at.rot}, w, 0.7, hashText(`${p.id}-bed${side}`), false, soil);
+        }
+    }
+    // Two raised planters either side of the zoo's gate.
+    const plaza = plan.zoo.plaza;
+    for (const side of [-1, 1]) {
+        const q = local(plaza, side * 5.2, -plaza.d / 2 + 2.4);
+        const c = chunkFor(out, q.x, q.z);
+        const f: Frame = {x: q.x, y: H(q.x, q.z) + 0.1, z: q.z, rot: plaza.rot};
+        c.solid.box(f, 0, 0, 0, 2.2, 0.5, 1.1, BRICK);
+        flowerBed(c.foliage, c.decal, {x: q.x, y: 0.5, z: q.z, rot: plaza.rot}, 2.0, 0.9, hashText(`zoo-planter-${side}`), false, soil);
+    }
+}
+
 // MARK: - All of it
 
 export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
-    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees: [...plan.trees], lamps: [], bridges: []};
+    // (`trees`: the trees as drawn, `trees.ts` townTrees (lane GC), their crowns' reach as `scale` × 5.5 m for the fallen
+    // leaves under them, lane GA's `near.ts`.)
+    const trees = townTrees(plan).filter((t) => !t.low).map((t) => ({x: t.x, z: t.z, kind: t.kind, scale: t.crown / 5.5, seed: t.seed}));
+    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees, lamps: [], bridges: []};
     streets(out, plan);
     bridges(out, plan);
     harbour(out);
+    lock(out, plan);
     square(out, plan);
     boundaries(out, plan);
     fields(out, plan);
     zooPlaza(out, plan);
     lamps(out, plan);
+    beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).
     out.furniture = streetFurniture(plan, out.lamps, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});
     // Drives: gravel or paving from the street to the house.

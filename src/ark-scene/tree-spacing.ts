@@ -130,6 +130,15 @@ export function treeBody(item: TreeLike): TreeBody | null {
     }
 }
 
+/**
+ * An asset tree placed directly by its asset id (the town island's trees, lane GC): its measured footprint at this foot,
+ * turn and scale (`low`: an understorey shrub). Null when the asset has no footprint.
+ */
+export function footprintBody(asset: string, item: {x: number; y: number; z: number; rotation: number}, scale: number, low = false): TreeBody | null {
+    const fp = FOOTPRINTS[asset];
+    return fp ? body(low ? "shrub" : "tree", asset, item, scale, fp, low) : null;
+}
+
 /** How far a crown reaches toward a world direction (radians, atan2(z, x)), as a share of its radius: sectors blended. */
 function reachToward(tree: TreeBody, angle: number): number {
     // World angle = local angle − yaw (three's turn), so the local angle is the world's plus the yaw.

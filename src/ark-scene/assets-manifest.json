@@ -142,8 +142,8 @@
   },
   "trees": {
    "attach": "trees/attach.json",
-   "assets": 33,
-   "bytes": 4948012,
+   "assets": 42,
+   "bytes": 6340212,
    "lod0_tris_max": 9500
   }
  },
@@ -7123,6 +7123,146 @@
     184.8
    ]
   },
+  "cherry-a": {
+   "set": "trees",
+   "kind": "cherry",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -2.914,
+     -0.01,
+     -3.059
+    ],
+    "max": [
+     3.916,
+     5.497,
+     2.685
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/cherry-a.lod0.glb",
+     "tris": 7499,
+     "verts": 10978,
+     "bytes": 135856,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/cherry-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2395,
+     "bytes": 31580,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/cherry-a.lod2.glb",
+     "tris": 598,
+     "verts": 647,
+     "bytes": 10800,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/cherry-a.card.glb",
+     "tris": 280,
+     "verts": 340,
+     "bytes": 5368,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "wood_tris": [
+    1707,
+    474,
+    100
+   ],
+   "leaves": 2567,
+   "height": 5.5,
+   "crown_radius": 3.92,
+   "trunk_radius": 0.221,
+   "lod_distances": [
+    13.7,
+    33.0,
+    77.0
+   ]
+  },
+  "cherry-b": {
+   "set": "trees",
+   "kind": "cherry",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -3.809,
+     -0.012,
+     -3.311
+    ],
+    "max": [
+     2.792,
+     6.869,
+     4.387
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/cherry-b.lod0.glb",
+     "tris": 7499,
+     "verts": 9396,
+     "bytes": 105624,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/cherry-b.lod1.glb",
+     "tris": 2200,
+     "verts": 2600,
+     "bytes": 32124,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/cherry-b.lod2.glb",
+     "tris": 596,
+     "verts": 724,
+     "bytes": 10852,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/cherry-b.card.glb",
+     "tris": 280,
+     "verts": 340,
+     "bytes": 5736,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 82,
+   "wood_tris": [
+    5133,
+    1304,
+    332
+   ],
+   "leaves": 2519,
+   "height": 6.87,
+   "crown_radius": 4.39,
+   "trunk_radius": 0.221,
+   "lod_distances": [
+    17.2,
+    41.2,
+    96.2
+   ]
+  },
   "emergent-a": {
    "set": "trees",
    "kind": "emergent",
@@ -7261,6 +7401,216 @@
     54.4,
     130.7,
     304.9
+   ]
+  },
+  "lime-a": {
+   "set": "trees",
+   "kind": "lime",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -5.26,
+     -0.01,
+     -5.891
+    ],
+    "max": [
+     4.57,
+     13.519,
+     5.723
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/lime-a.lod0.glb",
+     "tris": 7499,
+     "verts": 7922,
+     "bytes": 99444,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/lime-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2207,
+     "bytes": 30528,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/lime-a.lod2.glb",
+     "tris": 595,
+     "verts": 538,
+     "bytes": 9300,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/lime-a.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5460,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "wood_tris": [
+    2989,
+    716,
+    277
+   ],
+   "leaves": 7664,
+   "height": 13.52,
+   "crown_radius": 5.89,
+   "trunk_radius": 0.435,
+   "lod_distances": [
+    33.8,
+    81.1,
+    189.3
+   ]
+  },
+  "lime-b": {
+   "set": "trees",
+   "kind": "lime",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -2.421,
+     -0.012,
+     -3.239
+    ],
+    "max": [
+     2.716,
+     10.319,
+     2.254
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/lime-b.lod0.glb",
+     "tris": 7499,
+     "verts": 8526,
+     "bytes": 107204,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/lime-b.lod1.glb",
+     "tris": 2200,
+     "verts": 2213,
+     "bytes": 30912,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/lime-b.lod2.glb",
+     "tris": 600,
+     "verts": 602,
+     "bytes": 10404,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/lime-b.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5464,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "wood_tris": [
+    2831,
+    798,
+    186
+   ],
+   "leaves": 2104,
+   "height": 10.32,
+   "crown_radius": 3.24,
+   "trunk_radius": 0.435,
+   "lod_distances": [
+    25.8,
+    61.9,
+    144.5
+   ]
+  },
+  "lime-c": {
+   "set": "trees",
+   "kind": "lime",
+   "variant": "c",
+   "bounds": {
+    "min": [
+     -4.479,
+     -0.013,
+     -4.715
+    ],
+    "max": [
+     5.732,
+     14.174,
+     5.606
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/lime-c.lod0.glb",
+     "tris": 7499,
+     "verts": 7864,
+     "bytes": 99792,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/lime-c.lod1.glb",
+     "tris": 2200,
+     "verts": 2128,
+     "bytes": 29728,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/lime-c.lod2.glb",
+     "tris": 599,
+     "verts": 524,
+     "bytes": 9124,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/lime-c.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5512,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 40,
+   "wood_tris": [
+    2975,
+    820,
+    305
+   ],
+   "leaves": 10788,
+   "height": 14.17,
+   "crown_radius": 5.73,
+   "trunk_radius": 0.435,
+   "lod_distances": [
+    35.4,
+    85.0,
+    198.4
    ]
   },
   "mangrove-a": {
@@ -8033,6 +8383,146 @@
     195.9
    ]
   },
+  "plane-a": {
+   "set": "trees",
+   "kind": "plane",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -9.302,
+     -0.026,
+     -6.046
+    ],
+    "max": [
+     4.978,
+     12.115,
+     6.823
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/plane-a.lod0.glb",
+     "tris": 7500,
+     "verts": 6749,
+     "bytes": 83768,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/plane-a.lod1.glb",
+     "tris": 2199,
+     "verts": 2148,
+     "bytes": 29216,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/plane-a.lod2.glb",
+     "tris": 598,
+     "verts": 538,
+     "bytes": 9372,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/plane-a.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5468,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 49,
+   "wood_tris": [
+    4427,
+    782,
+    298
+   ],
+   "leaves": 5354,
+   "height": 12.12,
+   "crown_radius": 9.3,
+   "trunk_radius": 0.56,
+   "lod_distances": [
+    30.3,
+    72.7,
+    169.6
+   ]
+  },
+  "plane-b": {
+   "set": "trees",
+   "kind": "plane",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -4.598,
+     -0.021,
+     -4.892
+    ],
+    "max": [
+     4.715,
+     10.208,
+     4.694
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/plane-b.lod0.glb",
+     "tris": 7500,
+     "verts": 7171,
+     "bytes": 89640,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/plane-b.lod1.glb",
+     "tris": 2200,
+     "verts": 1984,
+     "bytes": 27612,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/plane-b.lod2.glb",
+     "tris": 600,
+     "verts": 544,
+     "bytes": 9436,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/plane-b.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5476,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 49,
+   "wood_tris": [
+    4201,
+    1083,
+    300
+   ],
+   "leaves": 2699,
+   "height": 10.21,
+   "crown_radius": 4.89,
+   "trunk_radius": 0.56,
+   "lod_distances": [
+    25.5,
+    61.2,
+    142.9
+   ]
+  },
   "snag-a": {
    "set": "trees",
    "kind": "snag",
@@ -8592,7 +9082,147 @@
     38.0,
     88.7
    ]
+  },
+  "yew-a": {
+   "set": "trees",
+   "kind": "yew",
+   "variant": "a",
+   "bounds": {
+    "min": [
+     -4.448,
+     -0.115,
+     -5.326
+    ],
+    "max": [
+     4.079,
+     8.803,
+     5.372
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/yew-a.lod0.glb",
+     "tris": 7499,
+     "verts": 7854,
+     "bytes": 94812,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/yew-a.lod1.glb",
+     "tris": 2200,
+     "verts": 2171,
+     "bytes": 28768,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/yew-a.lod2.glb",
+     "tris": 596,
+     "verts": 514,
+     "bytes": 8696,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/yew-a.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5332,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "wood_tris": [
+    3007,
+    746,
+    332
+   ],
+   "leaves": 12514,
+   "height": 8.8,
+   "crown_radius": 5.37,
+   "trunk_radius": 0.672,
+   "lod_distances": [
+    22.0,
+    52.8,
+    123.2
+   ]
+  },
+  "yew-b": {
+   "set": "trees",
+   "kind": "yew",
+   "variant": "b",
+   "bounds": {
+    "min": [
+     -4.081,
+     -0.034,
+     -3.712
+    ],
+    "max": [
+     3.46,
+     6.352,
+     3.409
+    ]
+   },
+   "lods": [
+    {
+     "level": "lod0",
+     "file": "trees/yew-b.lod0.glb",
+     "tris": 7499,
+     "verts": 8209,
+     "bytes": 98996,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod1",
+     "file": "trees/yew-b.lod1.glb",
+     "tris": 2200,
+     "verts": 2271,
+     "bytes": 30076,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "lod2",
+     "file": "trees/yew-b.lod2.glb",
+     "tris": 598,
+     "verts": 558,
+     "bytes": 9440,
+     "doubleSided": true,
+     "morph": false
+    },
+    {
+     "level": "card",
+     "file": "trees/yew-b.card.glb",
+     "tris": 288,
+     "verts": 348,
+     "bytes": 5256,
+     "doubleSided": false,
+     "morph": false
+    }
+   ],
+   "attach": 38,
+   "wood_tris": [
+    3115,
+    576,
+    262
+   ],
+   "leaves": 5480,
+   "height": 6.35,
+   "crown_radius": 4.08,
+   "trunk_radius": 0.672,
+   "lod_distances": [
+    15.9,
+    38.1,
+    88.9
+   ]
   }
  },
- "totalBytes": 8652126
+ "totalBytes": 10044326
 }

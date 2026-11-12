@@ -176,3 +176,15 @@ Six CC0 texture sets from Poly Haven for the paving, each at its measured real s
 
 Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0; only its ETC1S and UASTC LDR 4x4 codecs, which three's bundled transcoder reads), `sharp` (Apache-2.0, an existing dev dependency).
 
+
+### The town's trees, planting, farm and zoo barriers (lane GC, 2026-11-13)
+
+No third-party assets. Every tree, shrub, reed and lily pad on the town island is from the Ark's own asset library (above: generated in this repo by `scripts/ark-assets/`, CC0 1.0), and everything else is made in code. Downloaded tree models were looked at and not used: Poly Haven's photoscanned trees carry 2k–4k textures and hundreds of thousands of triangles each (over the phone tiers' budgets), and the stylised low-poly packs (Kenney's Nature Kit, Quaternius' nature packs, both CC0) do not match the chosen "detailed, slightly stylised natural" look; neither carries the wind weights, levels of detail and measured crowns the Ark's tree spacing and sway need.
+
+| Asset | Source | Licence | Author | Committed file(s) |
+|---|---|---|---|---|
+| Town trees: common lime (3 variants: park, street form with a lifted crown, a big park tree), London plane (2), English yew (2), garden cherry (2: in leaf, in blossom), each at four levels of detail with wind weights | generated: `scripts/ark-assets/trees.py` (four new species beside the wild island's twelve) | CC0 1.0 (made in this repo) | AnimalDex (lane GC, 2026-11-12) | `public/ark/assets/v1/trees/{lime,plane,yew,cherry}-*.glb`, their rows in `trees/attach.json`, `src/ark-scene/assets-manifest.json`, `tree-footprints.json`, `tree-attach.json` |
+| The library's oak, birch, willow, pine, apple and acacia trees; holly and hazel bushes; common reed, reedmace and lily pads (already in the library) | the asset library above | CC0 1.0 | AnimalDex (asset lane) | (existing files, reused) |
+| Leafy hedges and hedgerows, flower beds, standing crops, bales, troughs, hay shelters, five-bar gates, zoo barriers (glass, welded mesh, cranked tops, rockwork, dry-stone walls, timber and cable fences), aviary frames and netting, narrowboats and fishing boats, the canal lock's gates | made in code: `src/ark-scene/islands/town/render/{nature,zoo-barriers,instanced,scenery}.ts`, `islands/town/farm.ts` | CC0 1.0 (made in this repo) | AnimalDex (lane GC) | (code only) |
+
+The zoo's signs are plain boards with a round pictogram: no lettering, names or logos. The boats carry no names.
