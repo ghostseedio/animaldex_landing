@@ -8,13 +8,13 @@ import HomeSides from "@/app/[locale]/(composited)/(home)/_components/home-sides
 import HomeIdeaDemo, {type HomeIdeaDemoWords} from "@/app/[locale]/(composited)/(home)/_components/home-idea-demo";
 import HeroVariantGate from "@/app/[locale]/(composited)/(home)/_components/hero-variant-gate";
 import {default as downloads} from "@/data/downloads.json";
-import {formatAnimalCount} from "@/lib/animal-count";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
-import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import StoreLink from "@/components/store/store-link";
-import {socialProfileUrlList} from "@/lib/social-links";
 import {localeConfig} from "@/i18n";
+import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {homeFeatureList} from "@/lib/seo/home-features";
+import {homeJsonLd, jsonLdHtml} from "@/lib/seo/structured-data";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
@@ -97,7 +97,13 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
             title: fullTitle,
             description,
             siteName: "AnimalDex",
-            images: [{url: "/images/og-every-animal-has-a-lesson.png", width: 1200, height: 630, alt: fullTitle}]
+            images: [{url: ARK_RENDER_IMAGE, width: 1200, height: 630, alt: fullTitle}]
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: fullTitle,
+            description,
+            images: [{url: ARK_RENDER_IMAGE, alt: fullTitle}]
         }
     };
 }
@@ -111,12 +117,14 @@ export default async function Home({params}: HomePageProps) {
             getScopedTranslator(locale, "home"),
             loadLocaleMessages(locale)
         ]));
-    const siteUrl = getAbsoluteUrl(locale);
-    const rootSiteUrl = getSiteUrl();
-    const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
-    const socialImageUrl = new URL("/images/og-every-animal-has-a-lesson.png", rootSiteUrl).toString();
-    // SPEC section 1 (Nov 2026): a different take on any idea, from a real behaviour of the animal's kind.
-    const appSchemaDescription = `Take any idea, plan or decision to an animal and get a genuinely different take. Each of ${formatAnimalCount("en")} species answers from a real behaviour of its kind, its Power, how it lives and its field guide, and turns it into an angle you would not hear elsewhere. The animals remember you and the angles you have already heard, and every real animal you meet and photograph adds a new way of seeing. Steps that work bring animals into the Ark, a live, shared animal world whose rules are based on each animal's field guide.`;
+    // Structured data (SEO lane S3, S1's audit): one app entity in the world positioning, no SearchAction.
+    const homeSchema = homeJsonLd({
+        locale,
+        name: "AnimalDex",
+        description: String((messages.meta as {description?: unknown} | undefined)?.description ?? ""),
+        image: ARK_RENDER_IMAGE,
+        featureList: homeFeatureList(locale)
+    });
     const disagree = getDisagreeExample(locale, getSpeciesArtworkUrl);
     const orbitCenter: HomeOrbitAnimal = {slug: TRY_TALKING_SPECIES.slug, name: t("chatStill.animal"), image: TRY_TALKING_SPECIES.image};
     const orbitAnimals: HomeOrbitAnimal[] = heroOrbitAnimals.map(({slug, name}) => ({slug, name, image: getSpeciesArtworkUrl(slug)}));
@@ -160,104 +168,6 @@ export default async function Home({params}: HomePageProps) {
         {id: "lionProfile", href: "/animals/lion", image: "/images/blog/lion-symbolism/lion-symbolism-hero.webp", layout: "small"},
         {id: "tigerLion", href: "/comparisons/tiger-vs-lion", image: "/images/blog/tiger-symbolism/tiger-symbolism-hero.webp", layout: "wide"}
     ];
-    const webSiteSchema = {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        name: "AnimalDex",
-        url: rootSiteUrl,
-        image: socialImageUrl,
-        description: t("supporting"),
-        inLanguage: locale,
-        publisher: {
-            "@type": "Organization",
-            name: "AnimalDex",
-            url: rootSiteUrl,
-            logo: brandLogoUrl
-        },
-        potentialAction: {
-            "@type": "SearchAction",
-            target: `${siteUrl}/blog`,
-            "query-input": "required name=search_term_string"
-        }
-    };
-    // What AnimalDex is (SPEC section 1): no audiences or features it is not
-    // for (families, breeders, trading), and nothing clinical.
-    const mobileAppSchema = {
-        "@context": "https://schema.org",
-        "@type": "MobileApplication",
-        name: "AnimalDex",
-        operatingSystem: "iOS, Android",
-        applicationCategory: "EducationApplication",
-        url: rootSiteUrl,
-        installUrl: [appStoreUrl, googlePlayUrl],
-        downloadUrl: [appStoreUrl, googlePlayUrl],
-        image: socialImageUrl,
-        screenshot: socialImageUrl,
-        description: appSchemaDescription,
-        offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD"
-        },
-        audience: [
-            {"@type": "Audience", "audienceType": "People with an idea, a plan or a decision"},
-            {"@type": "Audience", "audienceType": "Curious minds who want a different take"},
-            {"@type": "Audience", "audienceType": "Animal lovers"},
-            {"@type": "Audience", "audienceType": "Wildlife learners"},
-            {"@type": "Audience", "audienceType": "Travelers"},
-            {"@type": "Audience", "audienceType": "Photographers"}
-        ],
-        featureList: [
-            "Take any idea, plan or decision to an animal for a genuinely different take",
-            "Each animal answers from a real behaviour of its species: its Power, how it lives and its field guide",
-            "Animals that remember you and the angles you have already heard",
-            "Hear two more of your animals on the same idea",
-            "One step to try, when you want one",
-            "Every animal you meet and photograph adds a new way of seeing",
-            // The Ark (AnimalDex docs/ark-next.md, Part 4d): said as it is, a simulation based on field guides.
-            "The Ark: a live, shared 3D animal world, where animals whose steps worked live, eat and raise young by rules based on each animal's field guide",
-            "AI animal identification and field-guide context",
-            "Collectible wildlife cards and journals",
-            "Respectful wildlife observation and habitat curiosity"
-        ],
-        about: [
-            {"@type": "Thing", "name": "A different take on your ideas"},
-            {"@type": "Thing", "name": "Talking to animals"},
-            {"@type": "Thing", "name": "Perspective-driven AI"},
-            {"@type": "Thing", "name": "Animal behaviour"},
-            {"@type": "Thing", "name": "Animal world simulation"},
-            {"@type": "Thing", "name": "Animal identification"},
-            {"@type": "Thing", "name": "Wildlife learning"},
-            {"@type": "Thing", "name": "Wildlife photography"}
-        ]
-    };
-    const softwareAppSchema = {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        name: "AnimalDex",
-        applicationCategory: "EducationApplication",
-        operatingSystem: "iOS, Android",
-        url: siteUrl,
-        installUrl: [appStoreUrl, googlePlayUrl],
-        downloadUrl: [appStoreUrl, googlePlayUrl],
-        image: socialImageUrl,
-        description: appSchemaDescription,
-        offers: {
-            "@type": "Offer",
-            price: "0",
-            priceCurrency: "USD"
-        },
-        featureList: mobileAppSchema.featureList
-    };
-    const organizationSchema = {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        name: "AnimalDex",
-        url: rootSiteUrl,
-        logo: brandLogoUrl,
-        image: brandLogoUrl,
-        sameAs: [...storeLinks.map((store) => store.href), ...socialProfileUrlList]
-    };
     const sectionTitle = "font-display text-4xl font-black uppercase leading-[0.94] tracking-[0.03em] text-white md:text-5xl lg:text-6xl";
     const heroStoreRow = (
         <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
@@ -284,7 +194,7 @@ export default async function Home({params}: HomePageProps) {
             {/* No FAQPage: the questions left the page (2026-11-01), and the markup has to match what is shown. */}
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{__html: JSON.stringify([organizationSchema, webSiteSchema, softwareAppSchema, mobileAppSchema])}}
+                dangerouslySetInnerHTML={{__html: jsonLdHtml(homeSchema)}}
             />
             {/* The hero test: marks <html> with this visitor's hero before either is painted. */}
             <script dangerouslySetInnerHTML={{__html: heroBootScript(heroSplit)}} />

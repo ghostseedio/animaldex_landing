@@ -1,5 +1,5 @@
 import type {Metadata} from "next";
-import {localeConfig} from "@/i18n";
+import {localeConfig} from "@/i18n-config";
 import {templateSafeTitle, withBrandSuffix} from "@/lib/brand-title";
 import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 import {getAbsoluteAssetUrl, getLocalePath, getMetadataLocale} from "@/lib/site";

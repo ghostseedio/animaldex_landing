@@ -2,6 +2,7 @@ import {remark} from "remark";
 import html from "remark-html";
 import Image from "next/image";
 import {DatabaseIcon, ShieldUserIcon} from "@/app/[locale]/_components/icons";
+import {legalMarkdownForPage} from "@/lib/legal-markdown";
 
 export type LegalPageProps = {
     content: string;
@@ -10,7 +11,7 @@ export type LegalPageProps = {
 export default function LegalPage({content}: LegalPageProps) {
     const processedContent = remark()
         .use(html)
-        .processSync(content);
+        .processSync(legalMarkdownForPage(content));
     const contentHtml = processedContent.toString();
 
     return (

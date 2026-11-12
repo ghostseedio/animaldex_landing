@@ -14,7 +14,7 @@ export function uniqueSitemapEntries<T extends {url: string}>(entries: T[]): T[]
     });
 }
 
-function escapeXml(value: string) {
+export function escapeSitemapXml(value: string) {
     return value
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -35,7 +35,7 @@ export function serializeSitemapXml(entries: SitemapXmlEntry[]) {
             ? `<priority>${entry.priority}</priority>`
             : "";
 
-        return `<url><loc>${escapeXml(entry.url)}</loc>${lastModified}${changeFrequency}${priority}</url>`;
+        return `<url><loc>${escapeSitemapXml(entry.url)}</loc>${lastModified}${changeFrequency}${priority}</url>`;
     }).join("");
 
     return `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;

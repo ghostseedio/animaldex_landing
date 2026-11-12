@@ -33,3 +33,10 @@ test("withBrandSuffix adds the brand once for social titles", () => {
     assert.equal(withBrandSuffix("Animal Species Guides | AnimalDex"), "Animal Species Guides | AnimalDex");
     assert.equal(withBrandSuffix("Import into AnimalDex"), "Import into AnimalDex");
 });
+
+test("templateSafeTitle drops the template's brand when the title is already long", () => {
+    assert.equal(renderTitle(templateSafeTitle("The Ark's Food Chain: Who Eats Whom")), "The Ark's Food Chain: Who Eats Whom | AnimalDex");
+    const long = "Animal Frequencies: The Science Behind Animal Behaviour Rhythms";
+    assert.deepEqual(templateSafeTitle(long), {absolute: long});
+    assert.deepEqual(templateSafeTitle(`${long} | AnimalDex`), {absolute: long});
+});

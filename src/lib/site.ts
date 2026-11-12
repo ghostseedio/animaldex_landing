@@ -1,4 +1,4 @@
-import {localeConfig} from "@/i18n";
+import {localeConfig} from "@/i18n-config";
 import {isCollapsedEnglishDetailPath} from "@/lib/english-detail-routes";
 
 const productionSiteUrl = "https://animaldex.app";

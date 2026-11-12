@@ -1,3 +1,4 @@
+import {legalMarkdownForPage} from "@/lib/legal-markdown";
 import {remark} from "remark";
 import html from "remark-html";
 import policy from "@/data/ai-and-safety.md";
@@ -17,7 +18,7 @@ const description = "The animals on AnimalDex are AI. How conversations work, wh
 
 /** /<locale>/legal/ai-and-safety: the same page as /legal/ai-and-safety, in the site's frame (the footer links here). */
 export default async function AiAndSafety() {
-    const contentHtml = (await remark().use(html).process(policy)).toString();
+    const contentHtml = (await remark().use(html).process(legalMarkdownForPage(policy))).toString();
     return (
         <div className="mx-auto my-16 w-full max-w-3xl px-4 text-ink-200">
             <div

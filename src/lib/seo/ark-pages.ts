@@ -15,11 +15,18 @@ export const ABOUT_PATH = "/about";
 export const ARK_PAGES_UPDATED = "2026-11-12";
 
 /**
- * A real render of the live Ark (the 3D world, read from production on
- * 2026-11-12; `docs/seo/ark-share-render.md`), 1200×630: the share image of
- * the Ark's text pages and the site's default card.
+ * Real renders of the live Ark (its 3D world with the animals aboard on
+ * 2026-11-12, read from the public snapshot; `scripts/ark-share-render.mjs`,
+ * `docs/seo/ark-share-render.md`), 1200×630. Nothing is staged: the camera and
+ * the light only.
+ *
+ * - `ARK_RENDER_IMAGE`: both islands across the strait. The share image of the
+ *   Ark's text pages, the home page and the site's default card.
+ * - `ARK_ISLAND_RENDER_IMAGE`: the wild island from the sea, with open water on
+ *   the right for the words: the background of `/api/og/ark.png`.
  */
 export const ARK_RENDER_IMAGE = "/images/og/ark-world-2026-11-12.jpg";
+export const ARK_ISLAND_RENDER_IMAGE = "/images/og/ark-island-2026-11-12.jpg";
 
 export function arkPageImage(): string {
     return ARK_RENDER_IMAGE;

@@ -5,9 +5,11 @@ import {getLocalePath} from "@/lib/site";
 import {getFoodChainWords, word} from "@/loaders/page-words";
 
 /**
- * The compact food chain (SEO lane S3, the interface agreed with S2):
+ * The compact food chain (SEO lane S3, the interface agreed with S2). An async
+ * server component, awaited as a function as the repo does (@types/react 18.0
+ * does not type async components as JSX):
  *
- *   <ArkFoodChainSection locale={locale} variant="compact" limit={6} headingLevel={2} className="…" />
+ *   {await ArkFoodChainSection({locale, variant: "compact", limit: 6, headingLevel: 2, className: "…"})}
  *
  * An async server component: it reads who is aboard and the featured species'
  * stored food links itself (cached a day, memoised per process), loads its own

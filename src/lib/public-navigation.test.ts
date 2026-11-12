@@ -10,6 +10,7 @@ import {
     animalWisdomLinks,
     blogNavLink,
     ANIMAL_TRIALS_HREF,
+    ARK_HREF,
     EARN_ON_ANIMALDEX_HREF,
     exploreAnimalLinks,
     FIND_YOUR_ANIMALS_HREF,
@@ -107,19 +108,20 @@ test("the header's primary action is Talk to an animal, with Get the app beside 
 
 test("the header is Talk · Find your animals · Get the app (Nov 2026), with the search hubs in the footer", () => {
     // Talk and Get the app are the header's two buttons; Find your animals is its one link.
-    assert.deepEqual(headerNavLinks.map((link) => link.href), [FIND_YOUR_ANIMALS_HREF]);
+    // The Ark leads (SEO lane S3, 2026-11-12: the world was in no navigation), then Find your animals.
+    assert.deepEqual(headerNavLinks.map((link) => link.href), [ARK_HREF, FIND_YOUR_ANIMALS_HREF]);
     assert.equal(FIND_YOUR_ANIMALS_HREF, "/what-animal-am-i");
     for (const hub of ["/comparisons", "/tier-list", "/pokemon-animals", "/talk-to-animals", HOW_IT_WORKS_HREF, "/animals", "/blog"]) {
         assert.ok(!headerNavLinks.some((link) => link.href === hub), `${hub} should not be in the header`);
     }
     // The pages stay live and in the footer: the search hubs most people arrive through.
     const footerHrefs = footerColumns.flatMap((column) => column.links ?? []).map((link) => link.href);
-    for (const hub of ["/animals", "/comparisons", "/tier-list", "/animal-hybrids", FIND_YOUR_ANIMALS_HREF, HOW_IT_WORKS_HREF]) {
+    for (const hub of ["/animals", "/comparisons", "/tier-list", "/animal-hybrids", FIND_YOUR_ANIMALS_HREF, HOW_IT_WORKS_HREF, ARK_HREF, "/ark/how-it-works", "/ark/food-chain", "/about"]) {
         assert.ok(footerHrefs.includes(hub), `${hub} should stay in the footer`);
     }
     assert.ok(!footerHrefs.includes("/talk-to-animals"), "one Talk entry in the footer");
     assert.equal(new Set(footerHrefs).size, footerHrefs.length, "the footer lists each page once");
-    assert.ok(footerHrefs.length <= 12, "the footer is cut to essentials");
+    assert.ok(footerHrefs.length <= 16, "the footer is cut to essentials (12, plus the Ark's four)");
     // The legal row carries the AI & safety page (SPEC 3.1).
     assert.deepEqual(footerLegalLinks.map((link) => link.href), ["/legal/privacy", "/legal/terms", "/legal/refunds", AI_AND_SAFETY_HREF]);
     assert.equal(AI_AND_SAFETY_HREF, "/legal/ai-and-safety");
@@ -134,7 +136,7 @@ test("header and footer consume the shared public navigation data", () => {
     assert.doesNotMatch(header, /mobileNavSections|headerDropdowns/);
     assert.match(footer, /footerColumns/);
     assert.match(footer, /footerLegalLinks/);
-    assert.equal(footerColumns.length, 3);
+    assert.equal(footerColumns.length, 4);
     // The dropdown is out of the header, and kept accessible for when a menu returns.
     assert.match(dropdown, /aria-expanded/);
     assert.match(dropdown, /aria-haspopup/);

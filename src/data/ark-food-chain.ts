@@ -67,11 +67,14 @@ async function readKindRows(aboard: ArkFoodChainAboard, kind: string, revalidate
     const list = looks.join(",");
     const [eats, eatenBy] = await Promise.all([readRows(`predator=in.(${list})`, revalidate), readRows(`prey=in.(${list})`, revalidate)]);
     if (!eats || !eatenBy) return null;
-    return [...eats, ...eatenBy];
+    // Kept per kind for a day, so only the rows between species aboard now (most of a diet's catalogue is not aboard):
+    // a species that comes aboard later shows in its links with the next read.
+    const aboardSide = (value: unknown) => typeof value === "string" && aboard.kindOf.has(value.toLowerCase());
+    return [...eats, ...eatenBy].filter((row) => aboardSide(row.predator) && aboardSide(row.prey) && row.realm_ok !== false && row.size_ok !== false);
 }
 
 type Memo<T> = {at: number; promise: Promise<T>};
-const MEMO_MAX = 4000;
+const MEMO_MAX = 1500;
 
 function remember<T>(memo: Map<string, Memo<T>>, key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
     const now = Date.now();

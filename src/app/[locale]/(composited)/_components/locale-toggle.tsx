@@ -50,7 +50,8 @@ export default function LocaleToggle({currentLocale, label = "Language"}: {curre
         <details className="relative group">
             <summary
                 className="flex h-9 items-center gap-1.5 list-none cursor-pointer rounded-full border border-line-200 bg-white/[0.02] px-3 text-ink-200 select-none transition-colors duration-150 hover:border-line-100 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none [&::-webkit-details-marker]:hidden"
-                aria-label={`${label}: ${localeNames[currentLocale] ?? currentLocale.toUpperCase()}`}
+                // The accessible name starts with the visible text ("EN"), as WCAG 2.5.3 asks (Lighthouse label-content-name-mismatch).
+                aria-label={`${currentLocale.toUpperCase()}, ${label}: ${localeNames[currentLocale] ?? currentLocale.toUpperCase()}`}
             >
                 <GlobeIcon />
                 <span className="text-[0.6875rem] font-bold uppercase tracking-[0.16em]">{currentLocale}</span>

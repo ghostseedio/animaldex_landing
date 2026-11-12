@@ -1,3 +1,4 @@
+import {legalMarkdownForPage} from "@/lib/legal-markdown";
 import {remark} from "remark";
 import html from "remark-html";
 import terms from "@/data/terms-of-service.md";
@@ -19,7 +20,7 @@ export function generateStaticParams() {
 export default async function TermsOfService() {
     const processedContent = await remark()
         .use(html)
-        .process(terms);
+        .process(legalMarkdownForPage(terms));
     const contentHtml = processedContent.toString();
 
     return (

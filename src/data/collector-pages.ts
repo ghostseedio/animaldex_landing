@@ -6,6 +6,8 @@ export type CollectorPageSection = {
 export type CollectorPageEntry = {
     slug: string;
     title: string;
+    /** The <title> (SEO lane S3, decision 246): the search phrase first, under 50 characters. */
+    metaTitle: string;
     heroTitle: string;
     description: string;
     searchIntents: string[];
@@ -16,8 +18,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "animal-collection-game",
         title: "Animal collection game with real-world sightings",
-        heroTitle: "Animal Collection Game — Collect Real Species, Not Fantasy Placeholders",
-        description: "AnimalDex is an animal collection game where real sightings become collectible progress, field-guide learning, and set-completion goals.",
+        metaTitle: "Animal Collection Game With Real Animals",
+        heroTitle: "An Animal Collection Game Where the Animals Are Real",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "An animal collection game with real animals: photograph one, talk to it as an AI companion, and watch its kind join the Ark, a shared 3D world.",
         searchIntents: [
             "animal collection game",
             "species collecting game",
@@ -44,8 +48,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "animal-card-collection",
         title: "Animal card collection app for species sets and progression",
-        heroTitle: "Animal Card Collection — Build Premium Species Cards From Real Sightings",
-        description: "AnimalDex turns each sighting into an animal card collection entry, helping users build albums, complete sets, and keep a richer species journal.",
+        metaTitle: "Animal Card Collection From Real Sightings",
+        heroTitle: "An Animal Card Collection Made From Real Sightings",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "Every animal you photograph becomes a card in your AnimalDex collection, an AI companion you can talk to, and one of its kind aboard the Ark, a shared 3D world.",
         searchIntents: [
             "animal card collection",
             "animal card collecting app",
@@ -73,9 +79,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "pokemon-like-animal-game",
         title: "Pokemon-like animal game centered on real species",
+        metaTitle: "Pokemon-Like Animal Game? Meet Real Animals",
         heroTitle: "Pokemon-Like Animal Game? Meet Real Animals That Talk Back",
-        // AnimalDex per the Nov 2026 positioning: the page answers the search, it is not a Pokemon-style game.
-        description: "Looking for a Pokemon-like game with real animals? AnimalDex is something else: take any idea to a real animal for a genuinely different take, and every animal you meet in the wild joins your collection.",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "Want a Pokemon-like game with real animals? Catch real ones with your camera, talk to them as AI companions, and watch their kind live in a shared 3D world.",
         searchIntents: [
             "Pokemon-like animal game",
             "Pokemon-like animal app",
@@ -103,8 +110,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "top-trumps-animal-game",
         title: "Top Trumps-style animal game with rarity and strategy",
-        heroTitle: "Top Trumps Animal Game — Strategy, Rarity, and Real Species Context",
-        description: "AnimalDex is a Top Trumps-style animal game experience with card-style comparison energy, progression mechanics, and real species insight.",
+        metaTitle: "Top Trumps Animal Game? Real Animals, Real Stats",
+        heroTitle: "Top Trumps-Style Animal Stats, From Real Animals",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "AnimalDex gives every real animal its stats, from size to speed. Meet them by photographing them: each becomes an AI companion, and its kind joins the Ark.",
         searchIntents: [
             "Top Trumps animal game",
             "Top Trumps-like animal app",
@@ -114,15 +123,15 @@ const collectorPageData: CollectorPageEntry[] = [
             {
                 title: "Card-strategy energy without losing educational value",
                 paragraphs: [
-                    "AnimalDex supports stat-minded players with progression and comparison loops that feel strategic and collectible.",
+                    "AnimalDex gives each species stats such as size, speed and strength, drawn from its field guide.",
                     "At the same time, each entry stays connected to real species data and field-guide context."
                 ]
             },
             {
-                title: "For collectors and competitive players",
+                title: "For people who like to compare animals",
                 paragraphs: [
-                    "If you like card games with ranking logic, rarity tension, and completion goals, AnimalDex fits that profile.",
-                    "It adds a learning layer so competition still grows your species awareness over time."
+                    "If you like comparing animals by their stats, AnimalDex lets you set any two species side by side.",
+                    "Every number comes with the field guide behind it, so a comparison teaches you something about how each animal really lives."
                 ]
             }
         ]
@@ -130,8 +139,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "collect-real-animals-app",
         title: "Collect real animals app for scanning, sets, and discovery",
-        heroTitle: "Collect Real Animals App — Scan, Discover, and Build Living Species Collections",
-        description: "AnimalDex is a collect real animals app that combines AI scanning, collectible progression, social discovery, and field-guide depth.",
+        metaTitle: "Collect Real Animals and Meet Them in a 3D World",
+        heroTitle: "Collect Real Animals, Then Meet Them in a 3D World",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "Collect real animals by photographing them: AnimalDex identifies each one, turns it into an AI companion and brings its kind aboard the Ark, a shared 3D world.",
         searchIntents: [
             "collect real animals app",
             "wildlife collection app",
@@ -158,8 +169,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "custom-animal-card-deck",
         title: "Custom animal card deck for pets, wildlife, and collections",
-        heroTitle: "Custom Animal Card Deck - Build Premium Decks From Real Animals",
-        description: "AnimalDex helps users turn pets, sightings, and curated species lists into custom animal card decks with collectible structure, stats, rarity, and story.",
+        metaTitle: "Custom Animal Cards From Your Own Photos",
+        heroTitle: "Custom Animal Cards From Your Own Photos",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "Each animal you photograph, from your pet to a wild bird, becomes a card in your AnimalDex collection with its field guide, its stats and an AI companion to talk to.",
         searchIntents: [
             "custom animal card deck",
             "animal card deck",
@@ -188,8 +201,10 @@ const collectorPageData: CollectorPageEntry[] = [
     {
         slug: "animal-card-deck-creator",
         title: "Animal card deck creator for making and sharing collectible cards",
-        heroTitle: "Animal Card Deck Creator - Make Cards People Want to Collect",
-        description: "AnimalDex is positioned for animal card creation workflows where users can build themed decks from pets, wildlife sightings, species profiles, and creator ideas.",
+        metaTitle: "Animal Card Creator: Cards From Real Animals",
+        heroTitle: "Make Animal Cards From the Real Animals You Meet",
+        // SEO lane S3, decision 246 (2026-11-12): the intro says what AnimalDex is now; the search phrase stays.
+        description: "Photograph an animal and AnimalDex makes its card: the species, its field guide and its stats. The animal becomes an AI companion, and its kind joins the Ark.",
         searchIntents: [
             "animal card deck creator",
             "create animal cards",
@@ -207,10 +222,10 @@ const collectorPageData: CollectorPageEntry[] = [
                 ]
             },
             {
-                title: "A foundation for creator and seller use cases",
+                title: "Cards with a living animal behind them",
                 paragraphs: [
-                    "Creators may want to sell pet decks, regional wildlife packs, classroom sets, photography cards, or themed animal collections.",
-                    "AnimalDex should be careful not to claim a live marketplace before it exists, but the SEO path can already target deck creation and creator-ready selling workflows."
+                    "Each card is more than a picture: the animal on it becomes an AI companion that talks from its own kind's point of view.",
+                    "And one of its kind comes aboard the Ark, a shared 3D world where animals live, eat and raise young by rules built from each animal's field guide."
                 ]
             }
         ]

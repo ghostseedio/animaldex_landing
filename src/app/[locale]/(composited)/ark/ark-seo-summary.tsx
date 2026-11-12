@@ -10,7 +10,10 @@ import {getPageWords, word} from "@/loaders/page-words";
  * readers without WebGL get it; below the canvas, apart from the scene's files.
  */
 export default async function ArkSeoSummary({locale}: {locale: string}) {
-    const seo = await getPageWords(locale, "seo");
+    const [seo, foodChain] = await Promise.all([
+        getPageWords(locale, "seo"),
+        ArkFoodChainSection({locale, limit: 6, headingLevel: 2, revalidate: 300, className: "mx-auto w-full max-w-[86rem] px-4 pb-12 md:px-8 md:pb-16", id: "ark-food-chain"})
+    ]);
     const cards = [
         {href: ARK_HOW_IT_WORKS_PATH, title: word(seo, "arkSummary.howTitle"), body: word(seo, "arkSummary.howBody")},
         {href: ARK_FOOD_CHAIN_PATH, title: word(seo, "arkSummary.foodTitle"), body: word(seo, "arkSummary.foodBody")},
@@ -35,7 +38,7 @@ export default async function ArkSeoSummary({locale}: {locale: string}) {
                     ))}
                 </ul>
             </section>
-            <ArkFoodChainSection locale={locale} limit={6} headingLevel={2} revalidate={300} className="mx-auto w-full max-w-[86rem] px-4 pb-12 md:px-8 md:pb-16" id="ark-food-chain" />
+            {foodChain}
         </div>
     );
 }

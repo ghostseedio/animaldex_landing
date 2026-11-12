@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {languageAlternates} from "@/lib/seo/page-metadata";
 import terms from "@/data/wildlife-guide-buyer-terms.md";
 import LegalPage from "@/app/legal/legal-page";
 import {getSiteUrl} from "@/lib/site";
@@ -11,7 +12,9 @@ export const metadata: Metadata = withOgCard({
     title: `AnimalDex ${title}`,
     description,
     alternates: {
-        canonical: "/legal/wildlife-guide-buyer-terms"
+        canonical: "/legal/wildlife-guide-buyer-terms",
+        // Written in English only: en and x-default (SEO lane S3).
+        languages: languageAlternates("/legal/wildlife-guide-buyer-terms", {englishOnly: true})
     },
     openGraph: {
         type: "website",

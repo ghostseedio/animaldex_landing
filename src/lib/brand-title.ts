@@ -20,8 +20,15 @@ export function stripBrandSuffix(title: string): string {
  */
 export function templateSafeTitle(title: string): string | {absolute: string} {
     const stripped = stripBrandSuffix(title);
-    return stripped.includes(BRAND) ? {absolute: stripped} : stripped;
+    if (stripped.includes(BRAND)) return {absolute: stripped};
+    // A long title would push the brand past what a result shows (about 60 characters): it goes without the suffix (SEO lane S3).
+    return stripped.length + BRAND_TEMPLATE_LENGTH > TITLE_MAX ? {absolute: stripped} : stripped;
 }
+
+/** " | AnimalDex", the layout template's tail. */
+const BRAND_TEMPLATE_LENGTH = ` | ${BRAND}`.length;
+/** About what a search result shows of a title. */
+export const TITLE_MAX = 62;
 
 /** A full title for openGraph/twitter (no layout template there) with the brand once. */
 export function withBrandSuffix(title: string): string {

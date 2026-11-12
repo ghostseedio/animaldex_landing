@@ -4,7 +4,6 @@ import Link from "@/app/[locale]/_components/link";
 import Button from "@/app/[locale]/_components/button";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import {collectorPages, getCollectorPage} from "@/data/collector-pages";
-import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import TakeBridge from "@/app/[locale]/(composited)/_components/take-bridge";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -18,17 +17,14 @@ type PositioningPageResult = {
 
 export async function generateCollectorMetadata(slug: string, locale: string): Promise<Metadata> {
     const entry = getCollectorPage(slug);
-    const messages = await loadLocaleMessages(locale);
-    const baseKeywords = Array.isArray(messages.meta?.keywords) ? messages.meta.keywords : [];
-
     if (!entry) {
         return {};
     }
 
     return withOgCard({
-        title: entry.heroTitle,
+        title: entry.metaTitle,
         description: entry.description,
-        keywords: [...baseKeywords, ...entry.searchIntents],
+        keywords: entry.searchIntents,
         alternates: {
             canonical: getLocalePath(locale, `/${entry.slug}`),
             languages: localeConfig.locales.reduce((acc, localeItem) => {
@@ -41,13 +37,13 @@ export async function generateCollectorMetadata(slug: string, locale: string): P
         openGraph: {
             type: "website",
             locale: getMetadataLocale(locale),
-            title: `${entry.heroTitle} | AnimalDex`,
+            title: `${entry.metaTitle} | AnimalDex`,
             description: entry.description,
             url: getLocalePath(locale, `/${entry.slug}`)
         },
         twitter: {
             card: "summary_large_image",
-            title: `${entry.heroTitle} | AnimalDex`,
+            title: `${entry.metaTitle} | AnimalDex`,
             description: entry.description
         }
     }, entry.heroTitle, "collector", entry.slug);

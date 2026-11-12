@@ -6,13 +6,12 @@ import DiscoverHome from "@/app/[locale]/(authenticated)/app/discover-home";
 import {PostShareBand, PostSharePanel, type PostShareLabels} from "@/app/[locale]/p/[postId]/post-share-cta";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
 import ShareReferralCapture from "@/components/store/share-referral-capture";
-import {getDiscoverPostById, type DiscoverTimelineItem} from "@/data/discover-timeline";
+import {getDiscoverPostById} from "@/data/discover-timeline";
+import {discoverPostJsonLd, discoverPostSeoFields} from "@/lib/discover-post-seo";
 import {getSpeciesImageRoute} from "@/data/species-images";
 import {
     discoverPostAnimal,
     discoverPostPath,
-    discoverPostShareDescription,
-    discoverPostShareTitle,
     normalizeDiscoverPostId,
     parseDiscoverPostId
 } from "@/lib/discover-post";
@@ -30,134 +29,11 @@ type DiscoverPostPageProps = {
     params: {locale: string; postId: string};
 };
 
-function postSeoFields(item: DiscoverTimelineItem) {
-    if (item.kind === "capture") {
-        return {
-            title: discoverPostShareTitle({
-                kind: item.kind,
-                animalName: item.animalName,
-                collectorName: item.collector.name,
-                contextLabel: item.contextLabel
-            }),
-            description: discoverPostShareDescription({
-                kind: item.kind,
-                animalName: item.animalName,
-                collectorName: item.collector.name,
-                collectorUsername: item.collector.username,
-                contextLabel: item.contextLabel,
-                locationLabel: item.locationLabel,
-                hasVideoMedia: item.hasVideoMedia,
-                scientificName: item.scientificName
-            }),
-            imageSrc: item.imageSrc,
-            publishedAt: item.date,
-            keywords: [
-                item.animalName,
-                item.scientificName,
-                item.contextLabel ? `${item.animalName} ${item.contextLabel.toLowerCase()}` : null,
-                item.contextLabel?.toLowerCase() === "wild" ? `${item.animalName} in the wild` : null,
-                item.hasVideoMedia ? `${item.animalName} video` : null,
-                "AnimalDex",
-                "animal identification"
-            ].filter((value): value is string => Boolean(value)),
-            video: item.mediaAssets.find((asset) => asset.kind === "video" || asset.kind === "loop") ?? null
-        };
-    }
-
-    if (item.kind === "alignment") {
-        return {
-            title: discoverPostShareTitle({
-                kind: item.kind,
-                animalName: item.rewardedAnimalName,
-                collectorName: item.collector.name
-            }),
-            description: discoverPostShareDescription({
-                kind: item.kind,
-                animalName: item.rewardedAnimalName,
-                collectorName: item.collector.name,
-                collectorUsername: item.collector.username
-            }),
-            imageSrc: item.imageSrc,
-            publishedAt: item.date,
-            keywords: [item.rewardedAnimalName, "AnimalDex", "daily alignment"],
-            video: null
-        };
-    }
-
-    if (item.kind === "fusion") {
-        return {
-            title: discoverPostShareTitle({kind: item.kind, collectorName: item.collector.name}),
-            description: discoverPostShareDescription({
-                kind: item.kind,
-                animalName: item.receiverAnimalName,
-                collectorName: item.collector.name,
-                collectorUsername: item.collector.username
-            }),
-            imageSrc: item.receiverImageSrc,
-            publishedAt: item.date,
-            keywords: [item.receiverAnimalName, item.donorAnimalName, "AnimalDex", "principle fusion"].filter(Boolean),
-            video: null
-        };
-    }
-
-    if (item.kind === "animal-trial") {
-        return {
-            title: discoverPostShareTitle({
-                kind: item.kind,
-                animalName: item.speciesName,
-                collectorName: item.collector.name
-            }),
-            description: discoverPostShareDescription({
-                kind: item.kind,
-                animalName: item.speciesName,
-                collectorName: item.collector.name,
-                collectorUsername: item.collector.username
-            }),
-            imageSrc: item.evidenceSrc ?? "/images/placeholders/species-no-image.svg",
-            publishedAt: item.date,
-            keywords: [item.speciesName, item.principleName, "AnimalDex", "animal trial"].filter(Boolean),
-            video: null
-        };
-    }
-
-    if (item.kind === "challenge") {
-        return {
-            title: discoverPostShareTitle({
-                kind: item.kind,
-                animalName: item.attacker.animalName,
-                collectorName: item.attacker.displayName
-            }),
-            description: item.activitySummary || discoverPostShareDescription({
-                kind: item.kind,
-                animalName: item.attacker.animalName,
-                collectorName: item.attacker.displayName,
-                collectorUsername: item.attacker.username
-            }),
-            imageSrc: item.attacker.imageSrc,
-            publishedAt: item.date,
-            keywords: [item.attacker.animalName, item.defender.animalName, "AnimalDex"].filter(Boolean),
-            video: null
-        };
-    }
-
-    return {
-        title: discoverPostShareTitle({
-            kind: item.kind,
-            animalName: item.offerer.animalName,
-            collectorName: item.offerer.name
-        }),
-        description: discoverPostShareDescription({
-            kind: item.kind,
-            animalName: item.offerer.animalName,
-            collectorName: item.offerer.name,
-            collectorUsername: item.offerer.username
-        }),
-        imageSrc: item.offerer.imageSrc,
-        publishedAt: item.date,
-        keywords: [item.offerer.animalName, item.receiver.animalName, "AnimalDex", "trade"].filter(Boolean),
-        video: null
-    };
-}
+/**
+ * Search and link previews name the animal, never the person or the place (owner decision 247):
+ * `discoverPostSeoFields`. The page below, for people who open the link, is unchanged.
+ */
+const postSeoFields = discoverPostSeoFields;
 
 export async function generateMetadata({params}: DiscoverPostPageProps): Promise<Metadata> {
     const rawPostId = normalizeDiscoverPostId(params.postId);
@@ -222,49 +98,7 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
     const imageUrl = getAbsoluteAssetUrl(seo.imageSrc);
     const videoUrl = seo.video ? getAbsoluteAssetUrl(seo.video.url) : null;
 
-    const jsonLd = [
-        {
-            "@context": "https://schema.org",
-            "@type": "SocialMediaPosting",
-            "@id": pageUrl,
-            url: pageUrl,
-            headline: seo.title,
-            datePublished: seo.publishedAt,
-            description: seo.description,
-            image: imageUrl,
-            author: {
-                "@type": "Person",
-                name: post.kind === "challenge"
-                    ? post.attacker.displayName
-                    : post.kind === "trade"
-                        ? post.offerer.name
-                        : "collector" in post
-                            ? post.collector.name
-                            : "AnimalDex collector"
-            },
-            isPartOf: {
-                "@type": "WebSite",
-                name: "AnimalDex",
-                url: getAbsoluteUrl(params.locale)
-            }
-        },
-        videoUrl
-            ? {
-                "@context": "https://schema.org",
-                "@type": "VideoObject",
-                name: seo.title,
-                description: seo.description,
-                thumbnailUrl: [imageUrl],
-                contentUrl: videoUrl,
-                uploadDate: seo.publishedAt,
-                publisher: {
-                    "@type": "Organization",
-                    name: "AnimalDex",
-                    url: getAbsoluteUrl(params.locale)
-                }
-            }
-            : null
-    ].filter(Boolean);
+    const jsonLd = discoverPostJsonLd(seo, {pageUrl, imageUrl, videoUrl, siteUrl: getAbsoluteUrl(params.locale)});
 
     // Somebody who opened a shared link: the app, and the animal's own page and voice.
     const animal = discoverPostAnimal(post);
@@ -306,7 +140,7 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
                 ) : null}
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd.length === 1 ? jsonLd[0] : jsonLd)}}
+                    dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd.length === 1 ? jsonLd[0] : jsonLd).replace(/</g, "\\u003c")}}
                 />
                 <DiscoverHome
                     locale={params.locale}
