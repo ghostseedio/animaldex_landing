@@ -5207,7 +5207,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             island: "wild",
             tier: (): LiveTier => (liteOn() ? "low" : tier),
             host: el,
-            sampler: () => world?.sampler ?? (scheduleOn ? null : worldSampler()),
+            // (The behaviour world's sampler when built; else built at once: control can start before the sliced build ends.)
+            sampler: () => world?.sampler ?? worldSampler(),
             words: options.live.words,
             insets: options.live.insets,
             client: options.live.client,

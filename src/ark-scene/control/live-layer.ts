@@ -89,6 +89,7 @@ export class LiveLayer {
     private terrain: Terrain | null = null;
     private readonly island: IslandId;
     lastMeter: MeterMessage | null = null;
+    private okWaiting: {m: Extract<TextToClient, {t: "control-ok"}>; facts: AnimalFacts} | null = null;
     private readonly npcTable: string[] = [];
     private readonly npcs = new Map<string, {from: NpcReaction; to: NpcReaction; at: number}>();
 
@@ -234,7 +235,12 @@ export class LiveLayer {
                 if (!facts) return;
                 const a = abilitiesOf(m.slug);
                 const terrain = this.terrainNow();
-                if (!terrain) return;
+                if (!terrain) {
+                    // (No ground to move on yet: finished on the first frame that has it, never dropped.)
+                    this.okWaiting = {m, facts};
+                    return;
+                }
+                this.okWaiting = null;
                 const state = this.own && this.own.sessionId === m.sessionId ? this.own.state : startMover(m.start, {a, facts, terrain, sig: null});
                 this.own = {state, facts, a, sessionId: m.sessionId, resumeToken: m.resumeToken, seq: this.own?.seq ?? 0, lastSent: 0, blend: null, meter: this.own?.meter ?? null};
                 this.events.onControl?.({animalId: m.animalId, slug: m.slug, sessionId: m.sessionId, sessionLeft: m.sessionLeft, dayLeft: m.dayLeft, stamina: m.stamina});
@@ -348,6 +354,12 @@ export class LiveLayer {
 
     /** One frame: the own animal moves by the input and its pose goes out at 10 Hz (1 Hz when still). */
     step(input: ControlInput | null, dt: number): void {
+        if (this.okWaiting && this.terrainNow()) {
+            const waiting = this.okWaiting;
+            this.okWaiting = null;
+            this.pendingStart = {ticket: "", start: waiting.m.start, facts: waiting.facts};
+            this.onText(waiting.m);
+        }
         const own = this.own;
         if (!own) return;
         const terrain = this.terrainNow();
