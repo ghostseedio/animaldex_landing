@@ -63,6 +63,11 @@ export class GridTerrain implements Terrain {
     height(x: number, z: number): number {
         return this.ground(x, z);
     }
+
+    /** The zoo's one enclosure here: pen 7. */
+    penOf(key: string): number | null {
+        return key === "big_cat-1" ? 7 : null;
+    }
 }
 
 export class FakeClock {

@@ -67,7 +67,8 @@ export type StoreAnimal = {
     species_profile_id?: string;
     slot?: number | null;
     slot_rank?: number | null;
-    enclosure_id: number | null;
+    /** A zoo animal's enclosure key (Part C: `voyage_animals.enclosure`, `<type>-<n>`), or null. */
+    enclosure: string | null;
     label: string;
     named: boolean;
     asleep_hint?: boolean;
@@ -485,7 +486,7 @@ export class Room {
             return this.deny(client, "sessile");
         }
         const a = abilitiesOf(animal.slug);
-        const facts: AnimalFacts = {id: animal.id, slug: animal.slug, zone: animal.zone, area: animal.area, enclosure: animal.enclosure_id};
+        const facts: AnimalFacts = {id: animal.id, slug: animal.slug, zone: animal.zone, area: animal.area, enclosure: animal.enclosure ?? null, pen: animal.enclosure ? this.o.terrain.penOf?.(animal.enclosure) ?? null : null};
         const home: AnimalHome = {zone: animal.zone, area: animal.area};
         const homeDisc = (this.o.homeOf ?? defaultHomeOf)(facts, a, state, {island: animal.island, speciesId: animal.species_profile_id ?? null, slot: animal.slot ?? null, rank: animal.slot_rank ?? null});
         const startPose = this.plausibleStart(start, a, facts, homeDisc, state?.zone ?? null);
@@ -616,7 +617,7 @@ export class Room {
             homeDisc: s.homeDisc,
             terrain: this.o.terrain,
             stamina: s.meters.stamina,
-            enclosure: s.facts.enclosure,
+            pen: s.facts.enclosure !== null ? s.facts.pen ?? -1 : null,
             crossed: crossed && crossed.strait ? {...crossed, strait: crossed.strait} : null
         });
         const client = s.clientId !== null ? this.clients.get(s.clientId) : null;

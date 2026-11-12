@@ -50,6 +50,8 @@ export interface Terrain {
     cell(x: number, z: number): TerrainCell | null;
     /** The ground's height at a point (m). */
     height(x: number, z: number): number;
+    /** A zoo enclosure's pen (1–99) by its key (`<type>-<n>`, Part C), or null when this island has none by that key. */
+    penOf?(key: string): number | null;
 }
 
 /** Tags a climber can hold on to, and how close (m) a cell's middle must be to one. */
@@ -61,7 +63,18 @@ const SOIL_ZONES = new Set<ArkZone>(["grassland", "woodland", "rainforest", "far
 /** A smallholding's yard round its origin, in its frame (`map/hamlet.ts`). */
 const YARD = {x0: -4.8, x1: 4.8, z0: -3.8, z1: 3.8};
 
-export type PenSource = {plots: HomePlot[]};
+/** The pens: the smallholdings' yards and paddocks, and (the town island, Part C) the zoo's enclosures by key. */
+export type PenSource = {plots: HomePlot[]; enclosures?: Array<{key: string; contains: (x: number, z: number) => boolean}>};
+
+function zooPenAt(x: number, z: number, pens: PenSource): number {
+    const list = pens.enclosures ?? [];
+    for (let i = 0; i < list.length && i < 99; i++) if (list[i].contains(x, z)) return i + 1;
+    return 0;
+}
+
+function penKeysOf(pens: PenSource | null): string[] {
+    return (pens?.enclosures ?? []).slice(0, 99).map((e) => e.key);
+}
 
 function farmPenAt(x: number, z: number, plots: HomePlot[]): number {
     let index = 0;
@@ -108,7 +121,7 @@ export function cellAt(sampler: ArkWorldSampler, x: number, z: number, pens: Pen
     }
     if (climbTop > 0.2) flags |= CELL.CLIMB;
     else climbTop = 0;
-    const pen = pens ? farmPenAt(x, z, pens.plots) : 0;
+    const pen = pens ? zooPenAt(x, z, pens) || farmPenAt(x, z, pens.plots) : 0;
     return {height, flags, zone, depth, water, slope, pen, climbTop};
 }
 
@@ -126,6 +139,9 @@ export class Atlas implements Terrain {
     readonly pen: Uint8Array;
     readonly climbTop: Uint8Array;
 
+    /** The zoo's enclosure keys, in pen order (pen = index + 1). */
+    penKeys: string[] = [];
+
     constructor(readonly island: IslandId, readonly half: number, readonly version: string) {
         this.n = Math.round((half * 2) / CELL_SIZE);
         const size = this.n * this.n;
@@ -142,6 +158,7 @@ export class Atlas implements Terrain {
     /** Bake every cell from the sampler (`onRow` reports progress). */
     static bake(island: IslandId, half: number, sampler: ArkWorldSampler, pens: PenSource | null, onRow?: (row: number, of: number) => void): Atlas {
         const atlas = new Atlas(island, half, sampler.version);
+        atlas.penKeys = penKeysOf(pens);
         for (let j = 0; j < atlas.n; j++) {
             for (let i = 0; i < atlas.n; i++) {
                 const x = -half + (i + 0.5) * CELL_SIZE;
@@ -162,6 +179,11 @@ export class Atlas implements Terrain {
         this.slope[k] = Math.min(255, Math.round(c.slope * 40));
         this.pen[k] = c.pen;
         this.climbTop[k] = Math.min(255, Math.round(c.climbTop * 10));
+    }
+
+    penOf(key: string): number | null {
+        const i = this.penKeys.indexOf(key);
+        return i < 0 ? null : i + 1;
     }
 
     index(x: number, z: number): number {
@@ -204,7 +226,7 @@ export class Atlas implements Terrain {
 
     /** The stored form: a header line, then the arrays (little-endian). */
     toBytes(): Uint8Array {
-        const header = new TextEncoder().encode(JSON.stringify({v: 1, island: this.island, half: this.half, n: this.n, version: this.version}) + "\n");
+        const header = new TextEncoder().encode(JSON.stringify({v: 1, island: this.island, half: this.half, n: this.n, version: this.version, pens: this.penKeys}) + "\n");
         const size = this.n * this.n;
         const body = size * 12;
         const out = new Uint8Array(header.length + body);
@@ -227,8 +249,9 @@ export class Atlas implements Terrain {
 
     static fromBytes(bytes: Uint8Array): Atlas {
         const nl = bytes.indexOf(10);
-        const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(0, nl))) as {v: number; island: IslandId; half: number; n: number; version: string};
+        const meta = JSON.parse(new TextDecoder().decode(bytes.subarray(0, nl))) as {v: number; island: IslandId; half: number; n: number; version: string; pens?: string[]};
         const atlas = new Atlas(meta.island, meta.half, meta.version);
+        atlas.penKeys = meta.pens ?? [];
         const size = atlas.n * atlas.n;
         let o = nl + 1;
         const take = (len: number) => {
@@ -273,6 +296,11 @@ export class LazyTerrain implements Terrain {
     }
 
     /** The ground's height, bilinear between cell middles: exactly the atlas's, so the page and the server agree. */
+    penOf(key: string): number | null {
+        const i = penKeysOf(this.pens).indexOf(key);
+        return i < 0 ? null : i + 1;
+    }
+
     height(x: number, z: number): number {
         const fx = (x + this.half) / CELL_SIZE - 0.5;
         const fz = (z + this.half) / CELL_SIZE - 0.5;

@@ -26,7 +26,7 @@ import {SupabaseStore} from "./store-supabase";
 import {Room, type ClientLink, type Store} from "@/ark-live/room";
 import {MemoryStore} from "@/ark-live/memory-store";
 import {Atlas} from "@/ark-live/terrain";
-import {ISLANDS, isIslandId, STRAITS, type IslandId} from "@/ark-live/islands";
+import {configureIsland, ISLANDS, isIslandId, STRAITS, type IslandId} from "@/ark-live/islands";
 import {MSG} from "@/ark-live/protocol";
 import {NpcWorld, type Released} from "@/ark-live/npc-world";
 import {NpcReactions} from "@/ark-live/npc-reactions";
@@ -84,7 +84,7 @@ function makeStore(): {store: Store; memory: MemoryStore | null} {
             const snapshot = JSON.parse(readFileSync(snapshotPath, "utf8")) as {animals?: DevAnimal[]};
             for (const a of snapshot.animals ?? []) {
                 if (!a.model_slug) continue;
-                memory.addAnimal({id: a.id, slug: a.model_slug, zone: a.zone, area: a.area ?? null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: []});
+                memory.addAnimal({id: a.id, slug: a.model_slug, zone: a.zone, area: a.area ?? null, island: "wild", enclosure: null, label: "Voyager", named: false, owners: []});
             }
             log(`development store: ${memory.animals.size} animals from the snapshot`);
         }
@@ -155,7 +155,10 @@ const rooms = new Map<IslandId, Room>();
 const userSessions = new Map<string, {island: IslandId; sessionId: string}>();
 const islands: IslandId[] = (env.ARK_LIVE_ISLANDS ?? "wild").split(",").filter(isIslandId);
 for (const island of islands) {
-    rooms.set(island, new Room({island, terrain: loadAtlas(island), ticketKey, store, now: Date.now, epochBase, straits: STRAITS, peers: () => rooms, userSessions, log, npc: () => (island === "wild" ? npc : null)}));
+    const terrain = loadAtlas(island);
+    // (The island's square from its own atlas: Part C's islands bring their own sizes.)
+    configureIsland(island, {half: terrain.half});
+    rooms.set(island, new Room({island, terrain, ticketKey, store, now: Date.now, epochBase, straits: STRAITS, peers: () => rooms, userSessions, log, npc: () => (island === "wild" ? npc : null)}));
 }
 
 // MARK: HTTP
@@ -189,7 +192,7 @@ async function devTicket(req: IncomingMessage, res: ServerResponse, url: URL): P
     const island = (url.searchParams.get("island") ?? "wild") as IslandId;
     // Development only: a made-up animal for the load test, or one from the snapshot given to any local user.
     const slug = url.searchParams.get("slug");
-    if (slug) memory.addAnimal({id: animal, slug, zone: (url.searchParams.get("zone") ?? "grassland") as ArkZone, area: null, island, enclosure_id: null, label: "Voyager", named: false, owners: [user]});
+    if (slug) memory.addAnimal({id: animal, slug, zone: (url.searchParams.get("zone") ?? "grassland") as ArkZone, area: null, island, enclosure: null, label: "Voyager", named: false, owners: [user]});
     const known = memory.animals.get(animal);
     if (known && !known.owners.includes(user)) known.owners.push(user);
     const minted = await memory.mint(user, animal, island, ticketKey);

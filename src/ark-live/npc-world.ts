@@ -141,7 +141,7 @@ export class NpcWorld {
     /** Kept at a house or a farm (never prey, islands decision #43), or born to nobody's account: what hunting must know. */
     keptOf(id: string): boolean {
         const a = this.holders.get(id)?.animal;
-        return Boolean(a && (a.area === "house" || a.area === "farm" || (a as {enclosure_id?: number | null}).enclosure_id));
+        return Boolean(a && (a.area === "house" || a.area === "farm" || (a as {enclosure?: string | null}).enclosure));
     }
 
     /** NPCs whose homes are within r (plus their own ranging) of a point: the candidates for a hot area. */

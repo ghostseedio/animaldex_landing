@@ -22,7 +22,7 @@ function input(slug: string, x: number, z: number, extra: Partial<ReleaseInput> 
         homeDisc: {x: -10, z: -30, r: 10},
         terrain,
         stamina: 1,
-        enclosure: null,
+        pen: null,
         ...extra
     };
 }
@@ -92,7 +92,7 @@ test("release: a sea fish cut off in the fresh lake searches, can't find salt wa
 });
 
 test("release: a zoo animal resumes its enclosure where it is; a flyer goes home in a straight line", () => {
-    assert.equal(planRelease(input("red-fox", -7.5, 32.5, {enclosure: 7})).plan.kind, "enclosure");
+    assert.equal(planRelease(input("red-fox", -7.5, 32.5, {pen: 7})).plan.kind, "enclosure");
     const eagle = planRelease(input("golden-eagle", 30, 30, {home: {zone: "mountains", area: null}, homeDisc: {x: -40, z: -40, r: 20}, pose: {x: 30, y: 10, z: 30, mode: "air"}}));
     assert.equal(eagle.plan.kind, "homing");
     assert.equal(eagle.plan.legs[0][3], modeIndex("air"));

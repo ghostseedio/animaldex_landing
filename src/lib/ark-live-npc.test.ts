@@ -89,7 +89,7 @@ test("room: shared reactions go out as npc offsets with their table, and Talk is
     const wolf = find("eurasian-wolf");
     const deer = find("roe-deer");
     const owner = "00000000-0000-4000-8000-0000000000aa";
-    store.addAnimal({id: wolf.id, slug: wolf.model_slug, zone: wolf.zone, area: null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: [owner]});
+    store.addAnimal({id: wolf.id, slug: wolf.model_slug, zone: wolf.zone, area: null, island: "wild", enclosure: null, label: "Voyager", named: false, owners: [owner]});
     const epochBase = clock.ms - 5000;
     const room = new Room({island: "wild", terrain, ticketKey: TEST_KEY, store, now: clock.now, epochBase, npc: () => ({world, reactions}), homeOf: (_f, a) => ({...world.poseAt(deer.id, clock.ms / 1000)!, r: homeRadius(a) + 200})});
     const at = world.poseAt(deer.id, clock.ms / 1000)!;
@@ -145,8 +145,8 @@ async function huntRoom(due: boolean | null) {
     const terrain = new LazyTerrain("wild", 132, sampler, {plots: defaultHomePlots()});
     const hunter = "00000000-0000-4000-8000-0000000000b1";
     const owner = "00000000-0000-4000-8000-0000000000b2";
-    store.addAnimal({id: wolf.id, slug: wolf.model_slug, zone: wolf.zone, area: null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: [hunter]});
-    store.addAnimal({id: deer.id, slug: deer.model_slug, zone: deer.zone, area: null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: [owner]});
+    store.addAnimal({id: wolf.id, slug: wolf.model_slug, zone: wolf.zone, area: null, island: "wild", enclosure: null, label: "Voyager", named: false, owners: [hunter]});
+    store.addAnimal({id: deer.id, slug: deer.model_slug, zone: deer.zone, area: null, island: "wild", enclosure: null, label: "Voyager", named: false, owners: [owner]});
     const room = new Room({island: "wild", terrain, ticketKey: TEST_KEY, store, now: clock.now, epochBase: clock.ms - 5000, npc: () => ({world, reactions}), hunting: () => ({due: () => due}), homeOf: (_f, a) => ({...world.poseAt(deer.id, clock.ms / 1000)!, r: homeRadius(a) + 200})});
     const at = world.poseAt(deer.id, clock.ms / 1000)!;
     let start = {x: at.x + 4, z: at.z};

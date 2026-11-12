@@ -44,7 +44,8 @@ export type ReleaseInput = {
     homeDisc: HomeDisc;
     terrain: Terrain;
     stamina: number;
-    enclosure: number | null;
+    /** A zoo animal's pen (its enclosure's cells; -1 when its island's terrain lacks it), or null for everyone else. */
+    pen: number | null;
     /** Arrived on this island by a crossing (two islands, §12.5): when, and where it came ashore. */
     crossed?: {arrivedAt: number; at: {x: number; z: number}; canCrossBack: boolean; strait: {farPoint: {x: number; z: number}; seconds: number; to: string}} | null;
 };
@@ -107,11 +108,11 @@ function paceOf(a: Abilities, travel: Travel, stamina: number): number {
     return Math.max(v * tired, 0.05);
 }
 
-function passable(a: Abilities, travel: Travel, terrain: Terrain, x: number, z: number, enclosure: number | null): boolean {
+function passable(a: Abilities, travel: Travel, terrain: Terrain, x: number, z: number, pen: number | null): boolean {
     const c = terrain.cell(x, z);
     if (!c) return false;
-    if (enclosure !== null && c.pen !== enclosure) return false;
-    if (enclosure === null && c.pen > 0 && c.pen < 100) return false;
+    if (pen !== null && c.pen !== pen) return false;
+    if (pen === null && c.pen > 0 && c.pen < 100) return false;
     switch (travel) {
         case "fly":
             return true;
@@ -262,10 +263,11 @@ function roundLegs(legs: PlanLeg[]): PlanLeg[] {
 }
 
 export function planRelease(input: ReleaseInput): ReleaseResult {
-    const {a, terrain, pose, releasedAt, home, homeDisc, enclosure} = input;
+    const {a, terrain, pose, releasedAt, home, homeDisc, pen} = input;
+    const enclosure = pen;
     const here = {x: pose.x, z: pose.z};
     const start: PlanLeg = [releasedAt, round2(pose.x), round2(pose.z), modeIndex(pose.mode === "air" || pose.mode === "swim" ? pose.mode : "ground")];
-    if (enclosure !== null) return {plan: {kind: "enclosure", legs: [start], settle_at: null, settle: null}, zone: null, strandedFrom: null};
+    if (pen !== null) return {plan: {kind: "enclosure", legs: [start], settle_at: null, settle: null}, zone: null, strandedFrom: null};
     const cell = terrain.cell(pose.x, pose.z);
     const s = suitability(a, home, cell).s;
     const dHome = Math.hypot(pose.x - homeDisc.x, pose.z - homeDisc.z);

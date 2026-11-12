@@ -166,7 +166,7 @@ test("validate: flight ceilings and the mode graph's switches take their clip's 
 });
 
 test("validate: pens are walls (a zoo animal stays in its enclosure, a farm animal in its paddock, nobody walks into the zoo)", () => {
-    const zoo = ctx("red-fox", {enclosure: 7});
+    const zoo = ctx("red-fox", {enclosure: "big_cat-1", pen: 7});
     const m = newMotion(start(-7.5, 32.5), T0);
     const out = walk(m, zoo, 40, 0, 0.1, 100);
     assert.ok(out.includes("reject"));

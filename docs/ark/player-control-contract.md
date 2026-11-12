@@ -54,7 +54,10 @@ RPCs:
 - `ark_live_start_v1(p_ticket_nonce uuid, p_session_id uuid, p_user_id uuid, p_animal_id uuid, p_island text, p_client text,
   p_app_version text) returns jsonb` (role `ark_live` only): redeems the nonce once, takes the lock (30 s TTL), inserts the
   session. Returns `{ok, reason?, animal: {id, slug, species_profile_id, kind_species_profile_id, zone, area, island,
-  enclosure_id, slot, slot_rank, label, named, asleep_hint}, quota: {session_limit_s, day_used_s, day_limit_s}, state}`
+  enclosure, slot, slot_rank, label, named, asleep_hint}, quota: {session_limit_s, day_used_s, day_limit_s}, state}`
+  (`island` and `enclosure` are Part C's `voyage_animals.island` (`wild` | `town`) and `voyage_animals.enclosure`
+  (`<type>-<n>`); `ark-live` resolves the enclosure to its island atlas's pen (`Terrain.penOf`): a zoo animal whose
+  enclosure the atlas lacks can't start)
   (`state`: the animal's stored record or null; slot, slot_rank and species_profile_id name its formula home, `HomeRef`).
 - `ark_live_heartbeat_v1(p_session_ids uuid[]) returns integer` (`ark_live`): extends each live lock by 30 s.
 - `ark_live_trace_v1(p_rows jsonb) returns integer` (`ark_live`): inserts trace rows; refuses a step at or before the

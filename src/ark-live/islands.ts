@@ -56,12 +56,23 @@ export type IslandConfig = {
     unit: number;
 };
 
+/**
+ * Each island's square and wire unit. Data, not code: `configureIsland` replaces an entry from the island's own data
+ * (its atlas header, Part C's chunk grid) when it is built. 1 cm covers ±327 m: enough for both islands as planned.
+ */
 export const ISLANDS: Record<IslandId, IslandConfig> = {
-    // Today's island (`world.ts` TERRAIN_HALF 132). Part C's bigger wild island (placeholder 800 m) will take a 2 cm unit.
+    // Today's island (`world.ts` TERRAIN_HALF 132). Part C's bigger wild island (12 ha in a 512 m square, decision #21)
+    // waits for Part B; configureIsland gives it its half (256) when its terrain exists.
     wild: {id: "wild", half: 132, unit: 0.01},
-    // Placeholder (design §12): a 500 m town island.
-    town: {id: "town", half: 250, unit: 0.01}
+    // The town island (Part C, `ark-town-island`): a 9 × 9 grid of 52.8 m chunks, 1.5 km east-north-east of the wild one.
+    town: {id: "town", half: (9 * 52.8) / 2, unit: 0.01}
 };
+
+/** Replace an island's square from its own data (an atlas's header, the island's chunk grid). */
+export function configureIsland(id: IslandId, config: {half: number; unit?: number}): void {
+    const unit = config.unit ?? (config.half <= 327 ? 0.01 : 0.02);
+    ISLANDS[id] = {id, half: config.half, unit};
+}
 
 /** No strait exists until Part C's islands plan defines the archipelago (DECISIONS.md #8: 300 m until then). */
 export const STRAITS: Strait[] = [];

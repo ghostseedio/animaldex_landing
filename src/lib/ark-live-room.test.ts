@@ -39,12 +39,12 @@ function world(extra: Partial<RoomOptions> = {}, island: IslandId = "wild") {
     const clock = new FakeClock();
     const store = new MemoryStore(clock.now);
     const add = (id: string, slug: string, zone: string, owners: string[], more: Record<string, unknown> = {}) =>
-        store.addAnimal({id, slug, zone: zone as never, area: null, island, enclosure_id: null, label: "Voyager 1", named: false, owners, ...more});
+        store.addAnimal({id, slug, zone: zone as never, area: null, island, enclosure: null, label: "Voyager 1", named: false, owners, ...more});
     add(ANIMAL_FOX, "red-fox", "grassland", [USER_A, USER_B]);
     add(ANIMAL_FOX2, "red-fox", "grassland", [USER_A]);
     add(ANIMAL_EAGLE, "golden-eagle", "mountains", [USER_A]);
     add(ANIMAL_SALMON, "atlantic-salmon", "open_ocean", [USER_A]);
-    add(ANIMAL_ZOO, "red-fox", "grassland", [USER_A], {enclosure_id: 7});
+    add(ANIMAL_ZOO, "red-fox", "grassland", [USER_A], {enclosure: "big_cat-1"});
     add(ANIMAL_GOAT, "domestic-goat", "farm_garden", [USER_A], {area: "farm"});
     add(ANIMAL_DOLPHIN, "spinner-dolphin", "open_ocean", [USER_A]);
     const room = new Room({island, terrain: new GridTerrain(island), ticketKey: TEST_KEY, store, now: clock.now, epochBase: EPOCH_BASE, homeOf, ...extra});
@@ -279,7 +279,7 @@ test("room: each viewer gets only the nearest controlled animals (the AOI cap) a
     for (let i = 0; i < 20; i++) {
         const id = `00000000-0000-4000-8000-${String(100 + i).padStart(12, "0")}`;
         const user = `00000000-0000-4000-9000-${String(100 + i).padStart(12, "0")}`;
-        store.addAnimal({id, slug: "red-fox", zone: "grassland", area: null, island: "wild", enclosure_id: null, label: "Voyager", named: false, owners: [user]});
+        store.addAnimal({id, slug: "red-fox", zone: "grassland", area: null, island: "wild", enclosure: null, label: "Voyager", named: false, owners: [user]});
         await control(room, store, user, id, {x: -20 + i, y: 0.5, z: -30, yaw: 0, mode: "ground"});
     }
     const low = new FakeLink();
@@ -308,7 +308,7 @@ function islands() {
     for (const island of ["wild", "town"] as const) {
         rooms.set(island, new Room({island, terrain: new GridTerrain(island), ticketKey: TEST_KEY, store, now: clock.now, epochBase: EPOCH_BASE, homeOf, straits: [STRAIT, BACK], peers: () => rooms, userSessions}));
     }
-    const add = (id: string, slug: string, zone: string, more: Record<string, unknown> = {}) => store.addAnimal({id, slug, zone: zone as never, area: null, island: "wild", enclosure_id: null, label: "Voyager 1", named: false, owners: [USER_A], ...more});
+    const add = (id: string, slug: string, zone: string, more: Record<string, unknown> = {}) => store.addAnimal({id, slug, zone: zone as never, area: null, island: "wild", enclosure: null, label: "Voyager 1", named: false, owners: [USER_A], ...more});
     add(ANIMAL_EAGLE, "golden-eagle", "mountains");
     add(ANIMAL_FOX, "red-fox", "grassland");
     add(ANIMAL_DOLPHIN, "spinner-dolphin", "open_ocean");

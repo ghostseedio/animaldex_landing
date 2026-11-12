@@ -19,8 +19,10 @@ export type AnimalFacts = {
     slug: string;
     zone: ArkZone;
     area: ArkArea | null;
-    /** A zoo animal's enclosure (Part C), or null. */
-    enclosure: number | null;
+    /** A zoo animal's enclosure key (Part C: `voyage_animals.enclosure`, `<type>-<n>`), or null. */
+    enclosure: string | null;
+    /** That enclosure's pen in the island's terrain (`Terrain.penOf`); null when the terrain doesn't know it (it can't move). */
+    pen?: number | null;
 };
 
 /** The minimum time each switch takes (s): its clip's length (design §4.5 step 5). */
@@ -102,7 +104,7 @@ export function cellAllows(a: Abilities, facts: AnimalFacts, mode: Mode, cell: T
     // Pens: a zoo animal only in its enclosure; a farm animal only in a smallholding's yard and paddock (DECISIONS #10);
     // no one else walks into a zoo enclosure.
     if (facts.enclosure !== null) {
-        if (cell.pen !== facts.enclosure) return {ok: false, reason: "enclosure"};
+        if (facts.pen === null || facts.pen === undefined || cell.pen !== facts.pen) return {ok: false, reason: "enclosure"};
     } else if (facts.area === "farm") {
         if (cell.pen < FARM_PEN_BASE) return {ok: false, reason: "enclosure"};
     } else if (cell.pen > 0 && cell.pen < FARM_PEN_BASE) {
