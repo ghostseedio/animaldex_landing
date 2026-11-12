@@ -1298,6 +1298,8 @@ export class BuildingDetail {
     private readonly byChunk = new Map<number, Building[]>();
     private readonly made = new Map<number, {mesh: Mesh; hiddenAt: number}>();
     private distance: number;
+    /** The chunk being built, a few buildings a frame. */
+    private job: {key: number; list: readonly Building[]; next: number; geo: Geo} | null = null;
     triangles = 0;
     built = 0;
 
@@ -1347,19 +1349,30 @@ export class BuildingDetail {
                 nearestD = d;
             }
         });
-        if (nearest < 0) return;
-        const group = this.groupOf(nearest);
-        const list = this.byChunk.get(nearest);
-        if (!group || !list) return;
-        const geo = chunkDetail(this.plan, list);
-        const geometry = geo.toGeometry();
-        const mesh = new Mesh(geometry, this.material);
+        // One chunk at a time, a few buildings a frame (at most ~2 ms), so walking down a street never stutters.
+        if (!this.job) {
+            if (nearest < 0) return;
+            const list = this.byChunk.get(nearest);
+            if (!list) return;
+            this.job = {key: nearest, list, next: 0, geo: new Geo()};
+        }
+        const job = this.job;
+        const started = typeof performance !== "undefined" ? performance.now() : 0;
+        const sink = new NullGeo();
+        while (job.next < job.list.length) {
+            buildBuilding({solid: sink, glass: sink, windows: [], panes: sink, detail: job.geo}, job.list[job.next++]);
+            if (started && performance.now() - started > 2) return;
+        }
+        this.job = null;
+        const group = this.groupOf(job.key);
+        if (!group) return;
+        const mesh = new Mesh(job.geo.toGeometry(), this.material);
         mesh.name = "buildings:detail";
         mesh.castShadow = true;
         mesh.receiveShadow = true;
         group.add(mesh);
-        this.made.set(nearest, {mesh, hiddenAt: now});
-        this.triangles += geo.triangles;
+        this.made.set(job.key, {mesh, hiddenAt: now});
+        this.triangles += job.geo.triangles;
         this.built++;
     }
 
@@ -1373,6 +1386,7 @@ export class BuildingDetail {
     }
 
     dispose() {
+        this.job = null;
         this.made.forEach((m) => {
             m.mesh.parent?.remove(m.mesh);
             m.mesh.geometry.dispose();

@@ -341,8 +341,8 @@ export type TrafficPath = {
     length: number;
     /** Where cars stop (m along) and for how long (s): give way before a turn, zebra crossings. */
     stops: Array<{at: number; seconds: number; kind: "give_way" | "crossing" | "signal"; phase?: number}>;
-    /** The timetable: seconds to reach each sample (including the stops); one lap's time. */
-    time: Float32Array;
+    /** The timetable: seconds to reach each sample (including the stops); one lap's time (whole minutes). */
+    time: Float64Array;
     lap: number;
 };
 
@@ -377,9 +377,25 @@ export function townTraffic(plan: TownPlan = townPlan()): TownTraffic {
     const paths = legsOf.map((legs, li) => buildPath(TOWN_LOOPS[li].id, legs, use, crossings, plan));
     const cars: TownTraffic["cars"] = [];
     TOWN_LOOPS.forEach((loop, li) => {
+        const path = paths[li];
+        // When on its timetable a car reaches its signal's line (the lap's time there), and that road's phase.
+        const signal = path.stops.find((s) => s.kind === "signal");
+        const atSignal = signal ? path.time[Math.min(path.time.length - 1, Math.round(signal.at / STEP))] : 0;
         for (let k = 0; k < loop.cars; k++) {
             const jitter = (hashText(`${loop.id}:${k}`) % 1000) / 1000;
-            cars.push({loop: li, phase: ((k + 0.35 * jitter) / loop.cars) * paths[li].lap, night: k < loop.night});
+            let phase = ((k + 0.35 * jitter) / loop.cars) * path.lap;
+            if (signal) {
+                // Shift it (under half a minute) so it reaches the line 10 s into its road's green, lap after lap.
+                // (Each car of a loop its own moment in the green, 8 s apart: 5, 13, 21 s in.)
+                const into = 5 + 8 * (k % 3);
+                const want = (((atSignal + (signal.phase ?? 0) * SIGNAL_CYCLE.offset - into) % SIGNAL_CYCLE.period) + SIGNAL_CYCLE.period) % SIGNAL_CYCLE.period;
+                const now = ((phase % SIGNAL_CYCLE.period) + SIGNAL_CYCLE.period) % SIGNAL_CYCLE.period;
+                let shift = want - now;
+                if (shift > SIGNAL_CYCLE.period / 2) shift -= SIGNAL_CYCLE.period;
+                if (shift < -SIGNAL_CYCLE.period / 2) shift += SIGNAL_CYCLE.period;
+                phase = (((phase + shift) % path.lap) + path.lap) % path.lap;
+            }
+            cars.push({loop: li, phase, night: k < loop.night});
         }
     });
     const traffic = {paths, use, crossings, cars};
@@ -588,11 +604,23 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
         for (let i = n - 2; i >= 0; i--) limit[i] = Math.min(limit[i], Math.sqrt(limit[i + 1] * limit[i + 1] + 2 * BRAKE * STEP));
         for (let i = 1; i < n; i++) limit[i] = Math.min(limit[i], Math.sqrt(limit[i - 1] * limit[i - 1] + 2 * BRAKE * STEP));
     }
-    const time = new Float32Array(n + 1);
+    // (In doubles: a lap's time is counted from 1970, so a float's rounding would drift the cars off the signals' minute.)
+    const time = new Float64Array(n + 1);
     const stopIndex = new Map<number, number>();
     for (const s of stopAt) if (s.seconds > 0) stopIndex.set(Math.min(n - 1, Math.round(s.at / STEP)), (stopIndex.get(Math.min(n - 1, Math.round(s.at / STEP))) ?? 0) + s.seconds);
+    // A lap a whole number of the signals' minutes (the spare seconds as a longer wait at the first give-way), so each
+    // car meets the lights at the same point of their cycle every lap (its phase is chosen for a green: `townTraffic`).
+    let drive = 0;
+    for (let i = 0; i < n; i++) drive += STEP / Math.max(limit[i], 0.4) + (stopIndex.get(i) ?? 0);
+    const spare = Math.ceil(drive / SIGNAL_CYCLE.period) * SIGNAL_CYCLE.period - drive;
+    const giveWay = stopAt.find((s) => s.kind === "give_way");
+    if (giveWay) {
+        const i = Math.min(n - 1, Math.round(giveWay.at / STEP));
+        stopIndex.set(i, (stopIndex.get(i) ?? 0) + spare);
+        giveWay.seconds += spare;
+    }
     for (let i = 0; i < n; i++) time[i + 1] = time[i] + STEP / Math.max(limit[i], 0.4) + (stopIndex.get(i) ?? 0);
-    return {id, step: STEP, x: X, z: Z, dx: DX, dz: DZ, speed: limit, offLo: LO, offHi: HI, offOver: OVER, length: n * STEP, stops: stopAt, time, lap: time[n]};
+    return {id, step: STEP, x: X, z: Z, dx: DX, dz: DZ, speed: limit, offLo: LO, offHi: HI, offOver: OVER, length: n * STEP, stops: stopAt, time, lap: Math.round(time[n] / SIGNAL_CYCLE.period) * SIGNAL_CYCLE.period};
 }
 
 /** On its timetable: how far round its loop a car is (m) at a lap time (s). */
