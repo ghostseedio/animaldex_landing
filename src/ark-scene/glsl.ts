@@ -25,9 +25,9 @@ export const ARK_RIM = {value: new Color(1.0, 0.82, 0.6).multiplyScalar(0.22)};
 export const ARK_WIND = {value: new Vector2(0.8, 0.35)};
 /**
  * The weather and tide the scene is drawn with (graphics pass; the island clock `src/lib/ark-clock.ts` drives them,
- * `ArkSceneHandle.setEnvironment` pins them): sea level (m), ground wetness, snow cover, wind and storm (0–1).
+ * `ArkSceneHandle.setEnvironment` pins them): sea level (m), ground wetness, snow cover, wind and storm (0–1), rain.
  */
-export const ARK_ENV = {seaLevel: {value: 0}, wetness: {value: 0}, snow: {value: 0}, wind: {value: 0.35}, storm: {value: 0}, cloud: {value: 0.3}};
+export const ARK_ENV = {seaLevel: {value: 0}, wetness: {value: 0}, snow: {value: 0}, wind: {value: 0.35}, storm: {value: 0}, cloud: {value: 0.3}, /** Rain falling now, 0–1 (the town's puddles ripple). */ rain: {value: 0}};
 
 export const NOISE_GLSL = `
 float arkHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
