@@ -537,9 +537,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return places;
     };
     // L1's foot IK on the drawn ground (L3's request, docs/ark/grounding.md): feet plant on the drawn triangles, not the
-    // analytic surface (they differ by metres at the cliff bands). On another island, its own ground (`island.heightAt`,
-    // the normal from its slope), never the wild island's.
-    setLocoGround(island ? groundQueryOf(island.heightAt) : drawnGround);
+    // analytic surface (they differ by metres at the cliff bands). On the town, its own ground (`island.heightAt`, the
+    // normal from its slope), never the wild island's.
+    // (One world, T3: the town beside the wild island, so each foot asks the ground of the island it stands on.)
+    const townGround = island ? groundQueryOf(island.heightAt) : null;
+    setLocoGround(island && townGround ? (x, z) => (island.contains(x, z) ? townGround(x, z) : drawnGround(x, z)) : drawnGround);
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
