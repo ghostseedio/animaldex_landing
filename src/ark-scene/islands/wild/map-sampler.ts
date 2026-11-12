@@ -141,7 +141,25 @@ class WildMapSampler implements ArkMapSampler {
         return false;
     }
 
+    /**
+     * The ground's answers, kept (P7: placement on the bigger island asks the same points many times over: the cells,
+     * the water's cells, the points' tags, the dens). A pure function of the point, so kept or not, the same answer.
+     */
+    private grounds = new Map<string, GroundSurface>();
+
     ground(x: number, z: number): GroundSurface {
+        if (this.building) return this.groundAt(x, z);
+        const key = `${x},${z}`;
+        let g = this.grounds.get(key);
+        if (!g) {
+            g = this.groundAt(x, z);
+            if (this.grounds.size >= GROUND_KEEP) this.grounds.clear();
+            this.grounds.set(key, g);
+        }
+        return g;
+    }
+
+    private groundAt(x: number, z: number): GroundSurface {
         const s = sampleWildGround(x, z);
         const w = s.weights;
         const tags: MapTag[] = [];
@@ -369,6 +387,9 @@ class WildMapSampler implements ArkMapSampler {
 }
 
 const frac = (v: number) => v - Math.floor(v);
+
+/** How many grounds the sampler keeps before it starts again (each a few hundred bytes). */
+const GROUND_KEEP = 120_000;
 
 /** Decision 55: an attach point takes any body down to 0.1 mm (a fairyfly); only limbs and hang points keep a least body. */
 const TINY = 0.0001;

@@ -812,8 +812,54 @@ function footFits(x: number, z: number): boolean {
     return denIsDry(x, z) && !inRock(x, z, 0.12) && !sampler.reserved?.(x, z) && !sampler.blocked(x, z, 0.12);
 }
 
+/**
+ * Every drawn rock's dry feet at `FOOT` (12 bearings a rock, in the rocks' order), found once and kept by 8 m square:
+ * `rockFeet`'s own candidates, so a search over them finds what one over the rocks finds (P7: the bigger island's
+ * placement asks thousands of times).
+ */
+const FEET_CELL = 8;
+let feetIndex: {sampler: ArkMapSampler; all: Array<{x: number; z: number; rock: DrawnRock; order: number}>; cells: Map<string, Array<{x: number; z: number; rock: DrawnRock; order: number}>>} | null = null;
+function dryFeet(): NonNullable<typeof feetIndex> {
+    const sampler = mapPoints().sampler;
+    if (feetIndex && feetIndex.sampler === sampler) return feetIndex;
+    const all: Array<{x: number; z: number; rock: DrawnRock; order: number}> = [];
+    const cells = new Map<string, Array<{x: number; z: number; rock: DrawnRock; order: number}>>();
+    for (const rock of drawnRocks()) {
+        for (let k = 0; k < 12; k++) {
+            const foot = rockFoot(rock, (k / 12) * Math.PI * 2, FOOT);
+            if (!footFits(foot.x, foot.z)) continue;
+            const entry = {...foot, rock, order: all.length};
+            all.push(entry);
+            const key = `${Math.floor(foot.x / FEET_CELL)},${Math.floor(foot.z / FEET_CELL)}`;
+            const list = cells.get(key);
+            if (list) list.push(entry);
+            else cells.set(key, [entry]);
+        }
+    }
+    feetIndex = {sampler, all, cells};
+    return feetIndex;
+}
+
 /** Dry rock feet round the drawn rocks within `reach` of a spot, nearest first (12 bearings a rock, `out` from its side). */
 function rockFeet(x: number, z: number, reach: number, keep: (x: number, z: number, rock: DrawnRock) => boolean = () => true, out0 = FOOT): Array<{x: number; z: number; d: number}> {
+    if (out0 === FOOT) {
+        // (From the kept feet: the same ones, in the same order before the sort.)
+        const index = dryFeet();
+        let candidates = index.all;
+        if (reach < 200) {
+            candidates = [];
+            for (let i = Math.floor((x - reach) / FEET_CELL); i <= Math.floor((x + reach) / FEET_CELL); i++) {
+                for (let j = Math.floor((z - reach) / FEET_CELL); j <= Math.floor((z + reach) / FEET_CELL); j++) candidates.push(...(index.cells.get(`${i},${j}`) ?? []));
+            }
+            candidates.sort((a, b) => a.order - b.order);
+        }
+        const found: Array<{x: number; z: number; d: number}> = [];
+        for (const foot of candidates) {
+            const d = Math.hypot(foot.x - x, foot.z - z);
+            if (d <= reach && keep(foot.x, foot.z, foot.rock)) found.push({x: foot.x, z: foot.z, d});
+        }
+        return found.sort((a, b) => a.d - b.d || a.x - b.x || a.z - b.z);
+    }
     const out: Array<{x: number; z: number; d: number}> = [];
     for (const rock of drawnRocks()) {
         if (Math.hypot(rock.x - x, rock.z - z) > reach + rock.reach + out0) continue;
@@ -1084,6 +1130,7 @@ const dropBuilt = () => {
     lapSpotCache.clear();
     cove = null;
     rockReach.clear();
+    feetIndex = null;
     resetWildMapV2();
 };
 onHamletSwitch(dropBuilt);
