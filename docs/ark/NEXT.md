@@ -64,7 +64,17 @@ the privacy text).
 |---|---|---|---|---|
 | 35 | L1 decisions 201–202 (reactions capped at 1.2× the walk or run pace; Froude walk and run floors for reach-limited rigs; goals out of a slot's reach not taken; unreachable roosts become a home-ground bed; a stay never jumps) | `ark-l1-walkpace` 86b15179 (contains `ark-l1-pace` f21ad63b) | c42708cb | clean |
 | 36 | Behaviour: backwards (a foal faces home, a sleeper keeps its heading, turns at TURN_RATE) | `ark-behaviour-backwards` cef5c27d | — | clean |
-| 37 | L5 decision 204: the separation push eased between 4 s moments, still bodies weigh more | `ark-collide-ease` 50760287 | 772f60e1 | clean; tsc 0; full gates running |
+| 37 | L5 decision 204: the separation push eased between 4 s moments, still bodies weigh more | `ark-collide-ease` 50760287 | 772f60e1 | clean; tsc 0; tests 2,385/2,387 (the dens test, fixed in 39) |
+| 38 | T3: the apps' embed mounts the archipelago | `ark-islands-embed` ca3d9098 | 4c1cf930 | clean; tsc 0 |
+| 39 | L1: 202c beds follow the den rule; the default view measures layer-drawn walks against the schedule's pace | `ark-l1-dens` 3224649c | 9757fe5b | map + schedule 42/42 |
+| 40 | L5: flights clear what they would cross low (the masked owl); a walk goal the body can't stand at is not taken (the tenkile) | `ark-collide-owl` 453ccb23 | ed508601 | suite 2,386/2,387, 0 fail; motion all pass; default view ×2: pace 1.02 / 0.97, backwards 1.2% / 0.7%, turns 0.6 / 0.5 a minute, only a zebra 1.6× once, no page errors; collisions: islands-mode overlaps +0.26% over L5's limit (L5 re-deriving on this tree) |
+
+| 41 | T3: the idle drift sways ±0.12 rad in islands mode (the phone kept the town in frame) | `ark-islands-drift` 9d820def | 0b082f91 | clean; tsc 0; golden shots unaffected (islands off, frozen clock) |
+
+- For W1's merge later: its drift lines conflict with 41; resolve with W1b's `wildFrame().driftSway` and set v1's
+  `driftSway` in `islands/views.ts` to 0.12 (null there today), or v1 in islands mode orbits again (T3).
+- Known: the clawed frog's `dive_in` leap reads 3.67× under the layer (a 0.5 s leap with no `enter_water` clip, drawn
+  as walk steps).
 
 - L1's 202c `roostOf` home-ground bed (a roost off the animal's own ground, or too far to walk in a slot, becomes a
   seeded bed on its home ground, the same for every caller) **replaces decision 205's plan** for the roost jumps.

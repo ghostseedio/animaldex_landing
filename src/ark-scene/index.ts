@@ -250,6 +250,10 @@ const LAID_SECONDS = 2.6;
 const CLOSE_POLAR = 1.13;
 /** Seconds without a touch before the view starts to drift. */
 const IDLE_DRIFT_AFTER = 9;
+/** The idle drift's speed (OrbitControls' autoRotateSpeed: 2π/60 rad/s per unit). */
+const DRIFT_SPEED = 0.18;
+/** Part C: with the town in the world (or coming), the idle drift sways ± this (rad) about where the view was. */
+const ISLANDS_DRIFT_SWAY = 0.12;
 const OPENING_SECONDS = 4.6;
 /** Within this distance (m) an animal glances at the camera now and then (more often the sharper it is). */
 const GLANCE_WITHIN = 14;
@@ -770,7 +774,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.panSpeed = 0.9;
     controls.screenSpacePanning = false;
     controls.zoomToCursor = true;
-    controls.autoRotateSpeed = 0.18;
+    controls.autoRotateSpeed = DRIFT_SPEED;
+    /** When the idle drift began (s; the two islands' sway is timed from it). */
+    let driftFrom = 0;
 
     const shadows = new ContactShadows();
     // The animal-look pass (`animal-look.ts`): surfaces, wet and dust, eyes, fur shells, close-up skins, contact shadows.
@@ -5685,7 +5691,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepInset();
         stepIslandNear();
         // Idle: after a while untouched, the view drifts slowly round.
-        if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) controls.autoRotate = true;
+        if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
+            if (!controls.autoRotate) driftFrom = now;
+            controls.autoRotate = true;
+        }
+        // Part C (W1b's rule for the v2 wild island, docs/ark/wild-island.md P6): with the town in the world, or coming
+        // (the view is the two-island view from the first frame), the drift sways ± ISLANDS_DRIFT_SWAY rad about where the
+        // view was instead of going round: going round, the town 500 m off the drift's centre left a phone's frame within
+        // about 20 s. With one island it goes round as before.
+        const sway = controls.autoRotate && (island || options.wildAnimals) ? ISLANDS_DRIFT_SWAY : null;
+        if (sway) controls.autoRotateSpeed = DRIFT_SPEED * Math.cos((now - driftFrom) * ((DRIFT_SPEED * Math.PI) / 30 / sway));
         runtime.controls(frameDt);
         controls.update();
         keepInWorld();

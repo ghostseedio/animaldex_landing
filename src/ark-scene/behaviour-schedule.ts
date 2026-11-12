@@ -33,6 +33,7 @@ import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
+import {DEN_DRY, SURF_REACH} from "@/ark-scene/map/points";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
@@ -109,6 +110,9 @@ export type Leg = {
     beat: ArkBeat;
     /** Air legs: cruising height above the ground. */
     cruise?: number;
+    /** Air legs: the share of the leg it climbs over (0.18 if not set) and comes down over (0.22): less to clear a fence. */
+    rise?: number;
+    fall?: number;
     /** A pause that is a turn on the spot before setting off (it turns over the whole pause, at TURN_RATE). */
     turn?: boolean;
     /** Ground and water legs: how far along its way it looks to face (m; 1.5 if not set). */
@@ -697,31 +701,63 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     // ground instead, the same every night, and the same for everyone who asks: the way there, its sleep, a night watch,
     // `restingAtRoost`, the props lane's den (decision 202: at its natural pace an alligator jumped 21 m into its sleep).
     // (A walker that swims too, a penguin, the same: its roost on land is one it climbs out to on its own ground, by an
-    // edge on it. A roost in the water it swims to.)
+    // edge on it. A roost in the water it swims to.) The bed is on dry land, as a den is (`denDry`: never in the sea, its
+    // tide or its surf), unless it sleeps on the shore anyway.
     if (walksGoals(profile) && !flies(profile) && !raised(world, spot)) {
         const fits = (to: Spot) => !wet(world, to) && onItsGround(world, profile, animal, {doing: "sleep", to, mode: "ground", stay: []});
         if (!wet(world, spot) && (!fits(spot) || tooFarOnFoot(world, profile, animal, spot))) {
-            // (The first of a few seeded spots round its home that fits, on land; else its home's own ground.)
+            const dry = (to: Spot) => profile.roost === "shore" || denDry(world, to.x, to.z);
+            const bedFits = (to: Spot) => dry(to) && fits(to) && !tooFarOnFoot(world, profile, animal, to);
+            // (The first of a few seeded spots round its home that fits, on dry land.)
             const random = rng(hashString(`${animal.id}#bed`));
             const onLand = {...profile, move: "walk" as const, seabed: false};
             const radius = Math.min(homeRadius(profile, animal), 2);
-            let found = false;
-            for (let k = 0; k < 8 && !found; k++) {
-                let bed = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
-                if (world.nav.colliders) bed = clearOfSolid(world, onLand, animal, bed, true);
-                if (fits(bed) && !tooFarOnFoot(world, profile, animal, bed)) {
-                    spot = bed;
-                    found = true;
+            let bed: Spot | null = null;
+            for (let k = 0; k < 8 && !bed; k++) {
+                let at = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
+                if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                if (bedFits(at)) bed = at;
+            }
+            // (Else the nearest that fits on its home ground: its home itself, then rings out from it, half a metre apart,
+            // to BED_REACH: a newt's home by the river's mouth gets a bed up the bank, never in the surf.)
+            for (let ring = 0; ring * 0.5 <= BED_REACH && !bed; ring++) {
+                const n = ring === 0 ? 1 : Math.min(Math.max(8, Math.round(Math.PI * 2 * ring)), 24);
+                for (let k = 0; k < n && !bed; k++) {
+                    const a = (k / n) * Math.PI * 2;
+                    const x = animal.home.x + Math.cos(a) * ring * 0.5;
+                    const z = animal.home.z + Math.sin(a) * ring * 0.5;
+                    if (world.sampler.heightAt(x, z) < 0 || !dry({x, z} as Spot)) continue;
+                    let at = groundSpot(world, x, z);
+                    if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                    if (bedFits(at)) bed = at;
                 }
             }
-            if (!found) {
-                const home = groundSpot(world, animal.home.x, animal.home.z);
-                if (fits(home)) spot = home;
-            }
+            // (None: its roost as it was.)
+            if (bed) spot = bed;
         }
     }
     byAnimal.set(animal, spot);
     return spot;
+}
+
+/** How far from its home a bed is looked for (m), when its roost is out of reach (`roostOf`). */
+const BED_REACH = 16;
+
+/**
+ * Dry land for a bed, as a den's (`map/points.ts` inSurf, DEN_DRY, SURF_REACH): not in the water, and not on ground
+ * lower than DEN_DRY within SURF_REACH of it, the sea's spring tide and its surf. Of any water here, not only the sea's
+ * (the map tells the river's mouth from the sea its own way: five amphibians' beds by the mouth were in its surf), and
+ * with a margin (a tenth of a metre up, a metre out, sampled every metre) for the walk grid's heights against the map's.
+ */
+function denDry(world: ScheduleWorld, x: number, z: number): boolean {
+    const height = world.sampler.heightAt(x, z);
+    if (height < 0) return false;
+    if (height >= DEN_DRY + 0.1) return true;
+    const reach = SURF_REACH + 1;
+    for (let d = 1; d <= reach; d++) {
+        for (let k = 0; k < 24; k++) if (world.sampler.heightAt(x + Math.cos((k / 24) * Math.PI * 2) * d, z + Math.sin((k / 24) * Math.PI * 2) * d) < 0) return false;
+    }
+    return true;
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
@@ -911,6 +947,19 @@ function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     return here === null ? placed : {...placed, to: here, mode: "ground", face: placed.doing === "watch" ? placed.face : undefined};
 }
 
+/**
+ * (Collisions.) Whether its body can stand at a goal on dry ground: a cliff's face with nowhere near to stand
+ * (`clearOfSolid` found none) is not gone to, nor started from (2026-11-12: a tenkile climbed to a shade spot on a
+ * mountain's face, raised over the walk grid's ground by the slope, and rested there on ground rising 2.1 in 1 for most of
+ * an hour). Surface places (a branch, a rock's top) and wet goals are their own.
+ */
+function standsAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent): boolean {
+    const to = placed.to;
+    // (A point above the walk grid's ground that is no surface, a shade spot on a steep face, is ground too.)
+    if (!to || !world.nav.colliders || !walksGoals(profile) || flies(profile) || placed.mode === "air" || onSurface(to.point) || (raised(world, to) && !to.point) || wet(world, to)) return true;
+    return world.nav.fits(to.x, to.z, bodyRadiusOf(animal, profile.slug), maxSlopeOf(animal));
+}
+
 /** Slots in a block of the walk chain (`walkChain`), and the blocks it runs before the block it decides. */
 const WALK_BLOCK = 6;
 const WALK_LEAD = 2;
@@ -929,8 +978,8 @@ function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
         for (let back = 1; back <= LOOK_BACK && !goal; back++) {
             const earlier = placedIntent(world, profile, animal, activity, start - back, hoursAt);
             if (earlier.follow) break;
-            // (Only a goal on its own stretch of ground: one it can ever walk to.)
-            if (earlier.to && onItsGround(world, profile, animal, earlier)) {
+            // (Only a goal on its own stretch of ground: one it can ever walk to, and one its body can stand at.)
+            if (earlier.to && onItsGround(world, profile, animal, earlier) && standsAt(world, profile, animal, earlier)) {
                 goal = earlier.to;
                 at = endOf(world, profile, animal, start - back, earlier, earlier.to, null);
             }
@@ -973,7 +1022,8 @@ function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
         // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
         // (Its roost is made clear once, by `roostOf`, the same for everyone who asks: not moved again here.)
-        if (planned.doing === "sleep" || planned.doing === "to_roost" || planned.doing === "watch") return planned;
+        // (A wary watch's spot off a predator is a goal like any other: made clear too.)
+        if (planned.doing === "sleep" || planned.doing === "to_roost" || (planned.doing === "watch" && planned.mode === "stay")) return planned;
         if (!perchFits(world, profile, animal, planned.to)) {
             const foot = world.nav.nearest(planned.to.x, planned.to.z, "walk", 0.5, 3, maxSlopeOf(animal), bodyReachOf(animal, profile.slug));
             if (foot) return {...planned, to: groundSpot(world, foot.x, foot.z), mode: planned.mode === "air" ? "air" : "ground"};
@@ -1003,6 +1053,7 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     // Not a climb home to its roost (going home to sleep may wind, as below: the chains of goals agree on its roost).
     const from0 = before ?? groundSpot(world, animal.home.x, animal.home.z);
     const homeward = placed.doing === "sleep" || placed.doing === "to_roost";
+    if (!homeward && placed.mode !== "stay" && !standsAt(world, profile, animal, placed)) return false;
     if (world.nav.colliders && !homeward && !flies(profile) && raised(world, to) && !raised(world, from0)) {
         const foot = climbFoot(world, profile, animal, to);
         if (!foot) return false;
@@ -1700,7 +1751,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                     route = [from, at(span * 0.5, bow * 0.15), at(span * 0.9, bow * 0.45), at(span * 0.85, bow * 0.85), at(span * 0.45, bow * 0.8), to];
                 }
                 const length = pathLength(route) + Math.abs(to.y - from.y);
-                legs.push({mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2});
+                legs.push(overSolids(world, {mode: "air", from, to, path: route, length, seconds: Math.max(length / (air * 0.8), SLOT_SECONDS * 0.55), beat: "glide", cruise: cruise * 1.2}, bodyR));
             } else {
                 // Its own line: bowed a little to one side by a seeded amount (a straight flight to where it is going, not
                 // a weaving one: problem 2's turns).
@@ -1708,7 +1759,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 const mid = {x: (from.x + to.x) / 2 + ((to.z - from.z) / (flat || 1)) * side, z: (from.z + to.z) / 2 - ((to.x - from.x) / (flat || 1)) * side};
                 const route = [from, mid, to];
                 const length = pathLength(route) + Math.abs(to.y - from.y);
-                legs.push({mode: "air", from, to, path: route, length, seconds: length / air, beat: "fly", cruise: flat < 4 ? Math.min(cruise, flat * 0.5 + 0.5) : cruise});
+                legs.push(overSolids(world, {mode: "air", from, to, path: route, length, seconds: length / air, beat: "fly", cruise: flat < 4 ? Math.min(cruise, flat * 0.5 + 0.5) : cruise}, bodyR));
             }
             break;
         }
@@ -1844,6 +1895,58 @@ export type TripPose = {
 };
 
 /** A point along a polyline route (x, z), smoothed through its middle points (a bowed line, an arc). */
+/** What a low flyer climbs over rather than through (the colliders' kinds: never a trunk, under its crown). */
+const FLOWN_OVER: ReadonlySet<string> = new Set(["fence", "building", "post", "hay", "log", "rock"]);
+
+/**
+ * A flight that clears what it takes off beside or comes down behind (collisions): where its climb or its descent would
+ * cross a fence, a wall, a hay bale or a rock below its top, it climbs (or comes down) over a shorter share of the leg,
+ * steeply enough to pass 0.15 m over it (2026-11-12: a masked owl took off low through a garden's pickets). Its route
+ * and its pace are as they were.
+ */
+function overSolids(world: ScheduleWorld, leg: Leg, bodyR: number): Leg {
+    const solid = world.nav.colliders;
+    const route = leg.path;
+    if (!solid || !route || leg.mode !== "air") return leg;
+    const cruise = leg.cruise ?? 0;
+    if (cruise <= 0.2) return leg;
+    let rise = 0.18;
+    let fall = 0.22;
+    const n = Math.min(Math.max(Math.ceil(leg.length / 0.5), 8), 120);
+    const inverse = (need: number) => {
+        // (The share of the climb (0-1) that lifts it `need` of its cruise: smoothstep's inverse.)
+        let lo = 0;
+        let hi = 1;
+        for (let k = 0; k < 14; k++) {
+            const m = (lo + hi) / 2;
+            if (m * m * (3 - 2 * m) < need) lo = m;
+            else hi = m;
+        }
+        return hi;
+    };
+    const scratch: Collider[] = [];
+    for (let j = 1; j < n; j++) {
+        const u = j / n;
+        // (Only its climb and its descent: in between it is at its cruise.)
+        if (u > rise && 1 - u > fall) continue;
+        const at = alongRoute(route, u);
+        let top = -Infinity;
+        for (const c of solid.near(at.x, at.z, bodyR + 0.01, scratch)) {
+            if (!FLOWN_OVER.has(c.kind) || c.soft || colliderDistance(c, at.x, at.z) >= bodyR) continue;
+            top = Math.max(top, c.y1);
+        }
+        if (top === -Infinity) continue;
+        const base = leg.from.y + (leg.to.y - leg.from.y) * u;
+        const ground = Math.max(world.sampler.heightAt(at.x, at.z), 0);
+        const need = (top + 0.15 - base) / (cruise + Math.max(ground - base, 0));
+        if (need <= 0 || need >= 0.98) continue;
+        const k = inverse(need);
+        if (u <= 0.5) rise = Math.max(Math.min(rise, u / k), 0.01);
+        else fall = Math.max(Math.min(fall, (1 - u) / k), 0.01);
+    }
+    return rise === 0.18 && fall === 0.22 ? leg : {...leg, rise, fall};
+}
+
 function alongRoute(route: NavPoint[], u: number): {x: number; z: number; yaw: number} {
     if (route.length === 3) {
         // A quadratic curve through the middle point.
@@ -1933,8 +2036,8 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             const base = from.y + (to.y - from.y) * u;
             const ground = Math.max(world.sampler.heightAt(at.x, at.z), 0);
             // Take off, climb to its band, cruise, and come down to land (gliding in on long legs).
-            const rise = Math.min(u / 0.18, 1);
-            const fall = Math.min((1 - u) / 0.22, 1);
+            const rise = Math.min(u / (leg.rise ?? 0.18), 1);
+            const fall = Math.min((1 - u) / (leg.fall ?? 0.22), 1);
             const k = Math.min(rise, fall);
             const lift = k * k * (3 - 2 * k);
             const floor = Math.min(ground, base);
