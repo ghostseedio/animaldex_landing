@@ -126,7 +126,7 @@ function placeRank(place: ArkPlace): number {
     if (place.kind === "house") return 100;
     if (place.kind === "farm") return 101;
     if (place.kind === "wildlife") return 102;
-    return 200 + (place.enclosure ? ZOO_ENCLOSURE_TYPES.indexOf(place.enclosure) : 99);
+    return 200 + (place.kind === "zoo" && place.enclosure ? ZOO_ENCLOSURE_TYPES.indexOf(place.enclosure) : 99);
 }
 
 export type ArkPlaceGroup = {key: string; place: ArkPlace; animals: ArkAnimal[]};
@@ -144,8 +144,9 @@ export function arkPlaceGroups(animals: readonly ArkAnimal[], twoIslands: boolea
         if (!group) groups.set(place.key, (group = {key: place.key, place, animals: []}));
         group.animals.push(animal);
     }
-    for (const group of groups.values()) group.animals.sort((a, b) => b.arrived_at.localeCompare(a.arrived_at) || a.id.localeCompare(b.id));
-    return Array.from(groups.values()).sort((a, b) => placeRank(a.place) - placeRank(b.place) || a.key.localeCompare(b.key));
+    const list = Array.from(groups.values());
+    for (const group of list) group.animals.sort((a, b) => b.arrived_at.localeCompare(a.arrived_at) || a.id.localeCompare(b.id));
+    return list.sort((a, b) => placeRank(a.place) - placeRank(b.place) || a.key.localeCompare(b.key));
 }
 
 /** `voyage_animal_where_v1`'s answer (`/api/ark/where/<id>`): where an animal lives, for `/ark?focus=<animal>`. */

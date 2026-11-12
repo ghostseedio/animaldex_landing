@@ -9,6 +9,7 @@ import type {ArkRestStatus} from "@/ark-scene/sleep";
 
 export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
+import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 
 /**
  * The shared Ark's data, as `voyage_public_v2` returns it (life v2 contract,
@@ -235,6 +236,12 @@ export type ArkHerdInfo = {key: string; slug: string; name: string; count: numbe
 
 export type ArkSceneOptions = ArkRuntimeOptions & {
     snapshot: ArkSnapshot;
+    /**
+     * Part C (islands plan §6): another island in place of the wild island's world (`islands/scene.ts`
+     * `loadTownScene`), its animals through the same pipeline; the snapshot is that island's slice. Absent: the wild
+     * island. One island is loaded at a time (`islands/archipelago.ts`).
+     */
+    island?: ArkIslandScene | null;
     /**
      * Part B: the device's memory in GB as the app knows it (iOS never tells the page; Chromium caps it at 8), for the
      * quality tier and its render distance and memory budget (`streaming/tiers.ts`). The embed also reads `?mem=`.

@@ -10,7 +10,7 @@ import {eats} from "@/ark-scene/food-links";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 
 /** The zoo houses whose kinds each live in their own tank, terrarium or cage (server: `ZOO_HOUSES`, decision 39). */
-export const ZOO_HOUSE_TYPES: ReadonlySet<ZooEnclosureType> = new Set(["aquarium", "reptile_house", "insect_house", "nocturnal_house", "aviaries"]);
+export const ZOO_HOUSE_TYPES: ReadonlySet<ZooEnclosureType> = new Set<ZooEnclosureType>(["aquarium", "reptile_house", "insect_house", "nocturnal_house", "aviaries"]);
 /** Enclosures open as animals arrive, up to about this many (decision 23; server `ZOO_MAX_ENCLOSURES`). */
 export const ZOO_MAX_ENCLOSURES = 40;
 
@@ -98,7 +98,7 @@ export function assignEnclosures(animals: readonly RoutedAnimal[], maxOpen = ZOO
 /** Open enclosures per type, from assigned names. */
 export function enclosuresPerType(names: Iterable<string>): Partial<Record<ZooEnclosureType, number>> {
     const out: Partial<Record<ZooEnclosureType, number>> = {};
-    for (const name of new Set(names)) {
+    for (const name of Array.from(new Set(names))) {
         const type = name.slice(0, name.lastIndexOf("-")) as ZooEnclosureType;
         if ((ZOO_ENCLOSURE_TYPES as readonly string[]).includes(type)) out[type] = (out[type] ?? 0) + 1;
     }

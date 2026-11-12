@@ -104,7 +104,7 @@ export function synthesiseArkIslands(raw: unknown, routing: SpeciesRouting): {sn
         const name = enclosures.get(String(animal.id));
         if (name) animal.enclosure = name;
     }
-    for (const name of new Set(enclosures.values())) {
+    for (const name of Array.from(new Set(enclosures.values()))) {
         const type = name.slice(0, name.lastIndexOf("-")) as ZooEnclosureType;
         counts.enclosures[type] = (counts.enclosures[type] ?? 0) + 1;
     }
