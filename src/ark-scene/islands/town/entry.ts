@@ -31,7 +31,7 @@ function shots(): Shot[] {
     const aviary = slot("aviaries-1").at;
     const sq = plan.square;
     const pFront = local(penguins, 3, penguins.d / 2 + 3.2);
-    const aFront = local(aviary, 3, aviary.d / 2 + 3.5);
+    const aFront = local(aviary, -10, aviary.d / 2 + 7);
     const farm = plan.farms.find((f) => f.id === "farmstead-0")!.at;
     return [
         {id: "island_far", eye: [70, 230, 470], target: [0, 0, -15], hours: 11},
@@ -45,7 +45,7 @@ function shots(): Shot[] {
         {id: "zoo", eye: [-40, 95, 70], target: [-125, 0, -60], hours: 11.5},
         {id: "zoo_savanna", eye: [savanna.x + 6, 14, savanna.z + 40], target: [savanna.x - 10, 2, savanna.z - 4], hours: 13},
         {id: "zoo_penguins", eye: [pFront.x, 5.5, pFront.z], target: [penguins.x, 2.4, penguins.z], hours: 11},
-        {id: "zoo_aviary", eye: [aFront.x, 9.5, aFront.z], target: [aviary.x, 1.5, aviary.z - 2], hours: 9},
+        {id: "zoo_aviary", eye: [aFront.x, 19, aFront.z], target: [aviary.x + 6, 1.5, aviary.z - 3], hours: 9},
         {id: "harbour", eye: [26, 32, 215], target: [14, 2, 128], hours: 17.5},
         {id: "square_market", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 10, day: 20408},
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
@@ -146,9 +146,11 @@ export function mountTown(el: HTMLElement) {
     const path = [
         {eye: [70, 230, 470], target: [0, 0, -15], hours: 8.5},
         {eye: [20, 40, 170], target: [14, 2, 120], hours: 9.5},
-        {eye: [11, 7, 74], target: [3, 2.5, 6], hours: 10.5},
-        {eye: [-58, 6.5, 33], target: [-10, 4.5, 26], hours: 11.5},
-        {eye: [-30, 30, 40], target: [-30, 3, -10], hours: 12.5},
+        {eye: [10, 8, 76], target: [4, 2.5, 6], hours: 10.2},
+        {eye: [6, 13, 44], target: [-20, 4, 28], hours: 10.8},
+        {eye: [-12, 10, 29], target: [-58, 4, 30], hours: 11.3},
+        {eye: [-46, 8, 30], target: [-30, 4, 10], hours: 11.8},
+        {eye: [-30, 30, 22], target: [-30, 3, -12], hours: 12.5},
         {eye: [-70, 60, -10], target: [-120, 2, -50], hours: 13.5},
         {eye: [-120, 40, -110], target: [-130, 2, -130], hours: 14.5},
         {eye: [-30, 40, -140], target: [30, 4, -150], hours: 15.5},
