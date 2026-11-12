@@ -120,7 +120,7 @@ if (!isMainThread) {
         return Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]));
     };
     const sum = (f: (r: import("@/lib/ark-collide/metrics").CollideReport) => number) => results.reduce((s, r) => s + f(r), 0);
-    const strip = <T extends {id?: string}>(list: T[]) => list.map(({id: _id, ...rest}) => rest);
+    const strip = <T extends {id?: string},>(list: T[]) => list.map(({id: _id, ...rest}) => rest);
     const report = {
         label,
         world,
