@@ -241,14 +241,18 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
         let x = at.x;
         let z = at.z;
         let y = at.y;
+        // (Lane MA3: in the water any swimmer has a band, `swimDepth`, a coot's as a duck's; with none, an animal over water
+        // stands on the bed, never on the surface. A tree from before MA3 has no swimDepth: its own band only.)
+        const swimDepth = (sea as {swimDepth?: (slug: string, zone: string) => typeof depth}).swimDepth;
+        const band = swimDepth ? swimDepth(animal.model_slug, animal.zone) : depth;
         if (water && depth && sea.waterMotion(depth) === "hole") {
             x = subject.home.x;
             z = subject.home.z;
             y = sea.fitInWater(sea.waterSpec(depth, heightAt(x, z), sea.depthSeed(animal.id), epoch, 0), subject.length * 0.6).base;
-        } else if (water && water.inDepthBand(depth, at, ground) && !(at as {act?: {own?: boolean}}).act?.own) {
+        } else if (water && water.inDepthBand(band, at, ground) && !(at as {act?: {own?: boolean}}).act?.own) {
             const breath = state.breathing ? sea.breathAt(sea.depthSeed(animal.id), epoch, state.asleep) : 0;
-            y = water.scheduledWater(depth!, ground, sea.depthSeed(animal.id), epoch, breath, subject.length * 0.6).base;
-        }
+            y = water.scheduledWater(band!, ground, sea.depthSeed(animal.id), epoch, breath, subject.length * 0.6).base;
+        } else if (swimDepth && !band && !at.aloft && ground < 0 && at.y >= ground - 0.01 && at.y <= 0.02) y = ground;
         const inWater = !at.aloft && (y < Math.max(heightAt(x, z), 0) - 0.01 || heightAt(x, z) < 0);
         // The rig player's choice (rigFor): no rig in the air; asleep its idle; by speed on the ground (walk/run); else idle.
         let chosen: string | null = null;
@@ -257,7 +261,7 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
         const speed = Math.hypot(at.x - before.x, at.z - before.z) / 0.25;
         if (!state.airborne && holder.air <= 0.001) {
             if (state.asleep) chosen = clip(subject.slug, "idle") ? "idle" : null;
-            else if (water && depth && inWater) chosen = sea.waterMotion(depth) === "walk" ? (clip(subject.slug, "walk") ? "walk" : null) : sea.waterMotion(depth) === "swim" ? (clip(subject.slug, "swim") ? "swim" : clip(subject.slug, "slither") ? "slither" : null) : clip(subject.slug, "idle") ? "idle" : null;
+            else if (water && band && inWater) chosen = sea.waterMotion(band) === "walk" ? (clip(subject.slug, "walk") ? "walk" : null) : sea.waterMotion(band) === "swim" ? (clip(subject.slug, "swim") ? "swim" : clip(subject.slug, "slither") ? "slither" : null) : sea.waterMotion(band) === "float" && clip(subject.slug, "paddle") ? "paddle" : clip(subject.slug, "idle") ? "idle" : null;
             else if (inWater && ZONE_SITES[animal.zone]?.kind === "sea") chosen = clip(subject.slug, "swim") ? "swim" : null;
             else {
                 // Model units a second (the model is about 1 unit long): the player's own test against each clip's ground speed.

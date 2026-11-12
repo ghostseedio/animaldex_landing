@@ -71,6 +71,8 @@ export type SpeciesText = {
     diet: string | null;
     roost: string | null;
     activityValue: string | null;
+    /** How it is in the water (the profiles' water kind, lane MA3: a dabbling or a diving duck, a coot); null if it neither swims nor wades. */
+    water?: string | null;
     /** The size stat (0–100) and the places it uses (the profiles'). */
     size: number | null;
     interactions: string[];

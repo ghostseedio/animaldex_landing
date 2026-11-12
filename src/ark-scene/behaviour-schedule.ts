@@ -402,13 +402,17 @@ export class ScheduleWorldBuild {
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
 
-/** Where a flyer lands to perch: its own kinds first (a seabird's rocks, ledges and posts, never a branch). */
+/**
+ * Where a flyer lands to perch: its own kinds first (a seabird's rocks, ledges and posts, never a branch). One with no
+ * perch of its own: a flyer anywhere; a bird that walks first a post or a rock top (a hen on the fence), never a branch
+ * (lane MA3: a mute swan landed 6 m up in a conifer).
+ */
 function perchTags(profile: ArkBehaviourProfile): AttachTag[] {
     const tags: AttachTag[] = [];
     if (profile.interactions.includes("perch_branch")) tags.push("branch");
     if (profile.interactions.includes("perch_rock")) tags.push("rock_top", "post");
     if (profile.interactions.includes("cliff_ledge")) tags.push("cliff_ledge");
-    return tags.length ? tags : ["branch", "post", "rock_top", "cliff_ledge"];
+    return tags.length ? tags : profile.move === "fly" ? ["branch", "post", "rock_top", "cliff_ledge"] : ["post", "rock_top"];
 }
 const flies = (profile: ArkBehaviourProfile) => profile.move === "fly" || profile.moves.includes("fly");
 const swims = (profile: ArkBehaviourProfile) => profile.move === "swim" || profile.moves.includes("swim");
@@ -484,12 +488,27 @@ const surfaceAt = (x: number, z: number) => waterLevelAt(x, z, 0);
 const raised = (world: ScheduleWorld, p: Spot) => p.y > topAt(world, p.x, p.z) + 0.4;
 const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < surfaceY(world, p.x, p.z);
 
+/**
+ * A body this long (m) or longer is too heavy for a limb that only half suits it (lane MA3: a perch's size against the
+ * body's mass, which grows as the length cubed: at 0.6 m a bird is 1-2 kg, a swan's 1.5 m is 10 kg). On a branch it
+ * takes only a limb that suits its whole length, never one in a crown.
+ */
+export const HEAVY_PERCH_LENGTH = 0.6;
+/** Whether a place suits a body this long: its size range (half again for a light body on a branch; none in a crown). */
+export function perchSuits(point: Pick<AttachPoint, "size" | "hidden" | "tag">, length: number): boolean {
+    if (length < point.size[0] * 0.5) return false;
+    const branch = point.tag === "branch" || point.tag === "canopy_hang";
+    if (branch && length >= HEAVY_PERCH_LENGTH) return !point.hidden && length <= point.size[1];
+    return length <= point.size[1] * (point.hidden ? 1.05 : 1.5);
+}
+
 /** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
 function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number): AttachPoint | null {
     for (const tag of tags) {
         const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius});
-        // (A place inside a tree's crown, on the bigger wild island: no body larger than its own small size.)
-        const fits = near.filter((p) => length >= p.size[0] * 0.5 && length <= p.size[1] * (p.hidden ? 1.05 : 1.5));
+        // (A place inside a tree's crown, on the bigger wild island: no body larger than its own small size; a heavy body
+        // only on a limb that suits all of it: `perchSuits`.)
+        const fits = near.filter((p) => perchSuits(p, length));
         // (Grounding, L3: never a tree perch that does not suit it, a pelican on a twig or a crane in a crown hidden in the
         // leaves; another goal instead.)
         const list = fits.length ? fits : near.filter((p) => p.tag !== "branch" && p.tag !== "canopy_hang");
@@ -1084,6 +1103,10 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     if (raised(world, from) || raised(world, to)) return true;
     const fromWet = wet(world, from);
     const toWet = wet(world, to);
+    // (Lane MA3: a bird that walks or swims first keeps off the roads the cars drive, the town's: no walk or swim of its
+    // ends on one, a duck under the Harbour Road bridge; it does what it came to do where it is. The walk-first rule had
+    // the town's pigeons walk their forage out across the high street among the moving cars: the town-cars check.)
+    if (flies(profile) && !home && world.sampler.roadway?.(to.x, to.z)) return false;
     if (fromWet && toWet) return true;
     if (fromWet !== toWet) {
         // Out of the water or into it (a seal, a polar bear): the walk is the part on land, from or to the edge it
@@ -1095,6 +1118,8 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
         if (toWet) goal = edge;
         else from = edge;
     }
+    // (Lane MA3: nor does it walk across one on the way, a pigeon foraging, a duck out to its bank: the land part.)
+    if (flies(profile) && !home && walksOntoRoad(world, from, goal)) return false;
     // A prey animal going off from a predator it watches (the shared wariness) goes, unless its way there would turn it
     // a full circle (the default view's zebra, 47 turns a minute on 3 m): then it watches from where it is.
     const retreat = placed.face !== undefined;
@@ -1124,6 +1149,25 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     };
     if (retreat) return turnsOn(0.05) < Math.PI * 2;
     return pathLength(path) <= straight * 1.3 + 2 && turnsOn(0.3) <= 2.2;
+}
+
+/**
+ * Whether a walk from `from` to `to` goes onto a road's carriageway (`ArkWorldSampler.roadway`, the town's): its goal on
+ * one, or its way stepping onto one once it is off the one it starts on (one that landed on a road walks off it). Its
+ * straight way, every half metre. False where the world has no roads.
+ */
+function walksOntoRoad(world: ScheduleWorld, from: {x: number; z: number}, to: {x: number; z: number}): boolean {
+    const roadway = world.sampler.roadway;
+    if (!roadway) return false;
+    if (roadway(to.x, to.z)) return true;
+    const steps = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.5);
+    let off = !roadway(from.x, from.z);
+    for (let k = 1; k < steps; k++) {
+        const on = roadway(from.x + ((to.x - from.x) * k) / steps, from.z + ((to.z - from.z) * k) / steps);
+        if (on && off) return true;
+        if (!on) off = true;
+    }
+    return false;
 }
 
 /** Whether it walks to its goals (a flyer flies there; a swimmer that never leaves the water swims). */
@@ -1339,7 +1383,18 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     else if (behaviour === "graze" || (behaviour === "forage" && profile.diet === "grazer")) doing = "graze";
     // A recipe from its stored behaviours may take this slot (a perch by the water to fish from, its nest, bare ground).
     const planned = recipeIntent({world, profile, animal, slug: profile.slug, slot, start, hours, behaviour, doing, centre, radius, kit: KIT});
-    if (planned) return {doing: planned.doing as ArkDoing, to: planned.to, mode: planned.mode, stay: [], recipe: planned.recipe};
+    // (Lane MA3: one that walks or swims first takes a recipe up by air, a nest in a tree, only as often as it flies.)
+    if (planned && !(planned.mode === "air" && !airAllowed(profile, animal, slot))) return {doing: planned.doing as ArkDoing, to: planned.to, mode: planned.mode, stay: [], recipe: planned.recipe};
+    // A wading bird (a heron, an egret, a stork, an ibis) stands in the shallows to fish and to rest, its legs in the
+    // water (lane MA3: the audit's herons were never in the water but for a minute's spear). Its own seeded stream.
+    if (profile.water === "wader" && WADING.has(behaviour) && rng(hashString(`${animal.id}#wade#${slot}`))() < WADE_SHARE) {
+        const shallows = shallowsNear(world, animal, centre, Math.min(Math.max(radius * 1.6, 8), 40), slot);
+        if (shallows) {
+            const wadeRandom = rng(hashString(`${animal.id}#wade-beats#${slot}`));
+            const far = Math.hypot(shallows.x - centre.x, shallows.z - centre.z) > Math.max(3, animal.length * 6);
+            return {doing: behaviour === "wander" ? "forage" : (behaviour as ArkDoing), to: shallows, mode: flyer && far ? "air" : "ground", stay: stayBeats(behaviour === "forage" || behaviour === "wander" ? "watch" : "rest", wadeRandom, null)};
+        }
+    }
     if (behaviour === "stalk" && !animal.prey) behaviour = "wander";
     if (behaviour === "stalk") {
         // Towards the edge of its own range on its prey's side, slowly, with pauses; never past its range.
@@ -1360,9 +1415,16 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
             // Water and lights may be a little beyond its usual ground: never more than half again its range (`rangeReach`).
-            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), cap), random());
+            // (Lane MA3: a duck, a goose or a swan out on its water looks for its bank to rest on up to 20 m off, a slot's
+            // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
+            // reach is its walk clip's, and it never came ashore.)
+            const bank = place === "shore" && aquatic(profile) && amphibious(profile) ? 20 : 0;
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random());
             if (point) {
                 const up = point.y > topAt(world, point.x, point.z) + 0.5;
+                // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
+                // otherwise it does what it came to do on the ground, the next of its places.)
+                if (up && flyer && !airAllowed(profile, animal, slot)) continue;
                 // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
                 // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
                 // point or standing in the ledges' even row.
@@ -1388,7 +1450,15 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         case "soar": {
             // A goal: a perch, a feeding spot on the ground, or (a floater) the water.
             const roll = random();
-            const perch = roll < 0.5 ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
+            // A waterbird's flights go from water to water (lane MA3: a coot or a swan never flies off its lake to a
+            // tree or a field; it swims to the bank and walks out). Further across its water than its swims go.
+            if (aquatic(profile) && flies(profile)) {
+                const water = waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius * 2.4, centre.z + (random() - 0.5) * radius * 2.4, random);
+                return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null)};
+            }
+            // (Lane MA3: one that walks first flies across its ground and comes down on it, never up to a perch: else it
+            // would fly twice, up and down again.)
+            const perch = roll < 0.5 && profile.move === "fly" ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
             return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "air", stay: stayBeats("forage", random, null)};
@@ -1406,7 +1476,8 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             return {
                 // (A swimmer feeding is foraging, cruising is swimming: its states stay its own, not all "swim".)
                 doing: profile.move === "swim" ? (behaviour === "wander" ? "swim" : doing) : behaviour === "wander" && profile.surface ? "crawl" : doing,
-                to: rangeSpot(world, profile, groupAnimal, own, radius * (group ? 0.3 : 1), random),
+                // (Lane MA3: one that walks first keeps its wanders within a walk, never a flight across its range.)
+                to: rangeSpot(world, profile, groupAnimal, own, flyer && profile.move === "walk" ? Math.min(radius * (group ? 0.3 : 1), walkReach(profile, animal) * 0.8) : radius * (group ? 0.3 : 1), random),
                 mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground",
                 stay: stayBeats(doing, random, null)
             };
@@ -1645,8 +1716,11 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (!now.to || (Math.hypot(to.x - from.x, to.z - from.z) < 0.05 && Math.abs(to.y - from.y) < 0.05)) mode = "stay";
     // Up off the ground at either end (a branch, a wall, a rock top): a flyer flies it, anything else climbs it.
     if ((mode === "ground" || mode === "water") && (raised(world, from) || raised(world, to))) mode = flies(profile) ? "air" : "surface";
-    // A bird walks a few steps; further than that it flies.
-    if (mode === "ground" && flies(profile) && Math.hypot(to.x - from.x, to.z - from.z) > Math.max(3, animal.length * 6)) mode = "air";
+    // A bird walks a few steps; further than that it flies. One that walks or swims first (a pigeon, a peafowl, a coot
+    // on the bank) walks wherever its feet take it in the slot, and flies only further (lane MA3: the audit's peafowl
+    // took off 34 times an hour).
+    // (Further than that, only as often as it flies: else it walks on, the long way a run.)
+    if (mode === "ground" && flies(profile) && Math.hypot(to.x - from.x, to.z - from.z) > (profile.move === "fly" ? Math.max(3, animal.length * 6) : walkReach(profile, animal)) && airAllowed(profile, animal, slot)) mode = "air";
 
     const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
     // (0.85-1.2 of its walk's own pace: its clip plays at 0.85-1.2 its rate.)
@@ -1889,6 +1963,79 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
  * harbour seal sliding in for 52 s).
  */
 const SLIDE_MOST = 5;
+
+/**
+ * How much of what a flyer does by air a bird that walks or swims first does by air (lane MA3): its appetite for flying
+ * against a flyer's 0.5, squared (a flight up to a perch is two take-offs, up and down again, and each is a choice to
+ * fly), so a pigeon (0.08) one in forty, a hen (0.01) none to speak of. 1 for a flyer, and for one that does not fly.
+ */
+export function airShare(profile: ArkBehaviourProfile): number {
+    if (profile.move === "fly" || !flies(profile)) return 1;
+    return Math.min((profile.weights.fly ?? 0) / 0.5, 1) ** 2;
+}
+/** Whether this slot may take it up by air (a perch, a raised place, a recipe in a tree): its own seeded roll against `airShare`. */
+function airAllowed(profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number): boolean {
+    const share = airShare(profile);
+    return share >= 1 || rng(hashString(`${animal.id}#air#${slot}`))() < share;
+}
+
+/** What a wading bird does standing in the shallows, and how often a slot of it is spent there (lane MA3). */
+const WADING: ReadonlySet<ArkBehaviour> = new Set<ArkBehaviour>(["forage", "rest", "wander", "groom"]);
+const WADE_SHARE = 0.55;
+
+/**
+ * Shallow water near a centre where a wading bird stands (lane MA3): out from its nearest water's edges, the first
+ * point at least 5 cm and at most a third of its length deep (half a metre at most: its legs), seeded per slot. Null
+ * where no water's edge is near. The scene keeps it standing on the bed there (`index.ts`, no band: never on the
+ * surface).
+ */
+function shallowsNear(world: ScheduleWorld, animal: ScheduleAnimal, centre: {x: number; z: number}, reach: number, slot: number): Spot | null {
+    const edges = world.sampler.attachPoints("water_edge", {x: centre.x, z: centre.z, r: reach});
+    if (!edges.length) return null;
+    const deepest = Math.min(Math.max(animal.length * 0.33, 0.12), 0.5);
+    const random = rng(hashString(`${animal.id}#shallows#${slot}`));
+    const sorted = [...edges].sort((m, n) => Math.hypot(m.x - centre.x, m.z - centre.z) - Math.hypot(n.x - centre.x, n.z - centre.z) || m.id.localeCompare(n.id));
+    const first = Math.floor(random() ** 1.4 * Math.min(sorted.length, 12));
+    for (let k = 0; k < Math.min(sorted.length, 12); k++) {
+        const edge = spotOf(sorted[(first + k) % Math.min(sorted.length, 12)]);
+        const yaw = edgeYaw(world, edge) + (random() - 0.5) * 0.8;
+        for (let d = 0.4; d <= 4; d += 0.3) {
+            const x = edge.x + Math.sin(yaw) * d;
+            const z = edge.z + Math.cos(yaw) * d;
+            const depth = surfaceY(world, x, z) - world.sampler.heightAt(x, z);
+            if (depth > deepest) break;
+            if (depth >= 0.05) return {x, y: world.sampler.heightAt(x, z), z, nx: 0, ny: 1, nz: 0, point: null, yaw};
+        }
+    }
+    return null;
+}
+
+/**
+ * How far a bird that walks first walks rather than flies (m, lane MA3): as far as its walk (at most its run, never
+ * past its pace cap) takes it in half a slot, the rest of the slot for what it came to do.
+ */
+function walkReach(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
+    const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
+    return Math.max(3, animal.length * 6, pace * Math.min(Math.max(runFactor(profile), 1), PACE_CAP) * SLOT_SECONDS * 0.5);
+}
+
+/**
+ * Where it is on its way into or out of the water now (lane MA3): the slide in ("enter") or the climb out ("exit") and
+ * how far along it (0-1), from its trip's legs at a world time; null on any other leg. The rig player plays the
+ * entry and exit clips by it, and the pose eases the body from standing to its float line over it.
+ */
+export function waterEdgeAt(trip: Trip, epochSeconds: number): {mode: "enter" | "exit"; u: number; seconds: number} | null {
+    let t = trip.start;
+    for (const leg of trip.legs) {
+        const end = t + leg.seconds;
+        if (epochSeconds < end) {
+            if (epochSeconds < t || (leg.mode !== "enter" && leg.mode !== "exit")) return null;
+            return {mode: leg.mode, u: leg.seconds > 0 ? Math.min(Math.max((epochSeconds - t) / leg.seconds, 0), 1) : 1, seconds: leg.seconds};
+        }
+        t = end;
+    }
+    return null;
+}
 
 /** The water's edge to cross at: the drinking and shore points nearest a spot. */
 function waterEdgeNear(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, p: Spot): Spot | null {

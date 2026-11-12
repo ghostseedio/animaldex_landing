@@ -18,7 +18,7 @@
 import type {ArkZone} from "@/ark-scene/types";
 import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {inPoly, polyEdgeDistance, type Poly} from "@/ark-scene/islands/town/geom";
+import {inPoly, polyEdgeDistance, polylineDistance, type Poly} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townHeight, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, townPlan} from "@/ark-scene/islands/town/plan";
 import {townAreas, zooLayout, zooSpotsFor, type SpotWhere, type TownSpot} from "@/ark-scene/islands/town/areas";
@@ -260,6 +260,9 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         list.push(p);
     }
     const version = `town@${ox},${oz}:${open.join(",")}`;
+    // (Lane MA3: the roads' carriageways, the high streets and the roads, where the cars drive and park; a quarter metre
+    // over their kerbs. Not the lanes, tracks, paths, the towpath, the quay nor the zoo's paths.)
+    const roads = townPlan().streets.filter((s) => s.kind === "high" || s.kind === "road").map((s) => ({line: s.line, reach: s.width / 2 + 0.25}));
     return {
         version,
         half,
@@ -270,6 +273,7 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         // (Lane TB: the canal's, the millpond's and the farm pond's own level, held by the lock; the sea's 0 elsewhere,
         // under every bit of the town's dry land. A swimmer floats on the water that is drawn, never 1 m under it.)
         waterSurface: (x, z) => townWaterSurface(x - ox, z - oz) ?? 0,
+        roadway: (x, z) => roads.some((road) => polylineDistance(road.line, x - ox, z - oz) <= road.reach),
         isWater: (x, z) => {
             const g = sampleTownGround(x - ox, z - oz);
             return g.surface === "water" || g.height < 0;
