@@ -97,12 +97,20 @@ export function iceShelf(x: number, z: number): number {
     return smoothstep(front - 1.2, front + 1.2, z) * (coveDistance(x, z) < 1.05 ? 1 : 0);
 }
 
-/** The beach's bearings (south and south-east) and how much of a cliff the rest of the coast is. */
+/**
+ * The town island lies across the strait to the east-north-east (decision 141: both islands in one world, the town
+ * about 250 m off this coast at the archipelago frame's 22.5° north of east, compass 67.5°). That coast faces it as
+ * shore and beach, never cliffs: the rocky coast keeps to the north-west and west.
+ */
+export const TOWN_SIDE_BEARING = 67.5 * DEG;
+
+/** How much of a cliff the coast is at a bearing (the north-west's rocky shore and the west's headland; none toward the town). */
 export function cliffAt(b: number, x: number, z: number): number {
-    const rocky = Math.min(1, 1.05 * bump(b, 312, 0.62) + 0.75 * bump(b, 32, 0.32) + 0.35 * bump(b, 262, 0.25));
+    const rocky = Math.min(1, 1.05 * bump(b, 312, 0.62) + 0.35 * bump(b, 262, 0.25));
     const broken = smoothstep(0.32, 0.62, noise(b * 3.1 + 4, 0.5));
     const cove = smoothstep(1.7, 1.15, coveDistance(x, z));
-    return rocky * (0.35 + 0.65 * broken) * (1 - cove);
+    const townSide = smoothstep(0.55, 1.0, Math.abs(bearingDiff(b, TOWN_SIDE_BEARING)));
+    return rocky * (0.35 + 0.65 * broken) * (1 - cove) * townSide;
 }
 
 // MARK: - Mountains

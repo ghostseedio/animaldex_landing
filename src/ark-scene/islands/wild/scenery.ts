@@ -14,7 +14,7 @@
 import manifest from "@/ark-scene/assets-manifest.json";
 import {fbm, hashString} from "@/ark-scene/world";
 import {sampleWildGround, underWater, type WildGroundSample} from "@/ark-scene/islands/wild/ground";
-import {gridSlope} from "@/ark-scene/islands/wild/terrain-cache";
+import {gridHeight, gridSlope} from "@/ark-scene/islands/wild/terrain-cache";
 import {inRange, nearWhale} from "@/ark-scene/islands/wild/reserves";
 import {COVE, ICE_FRONT_Z, coveDistance} from "@/ark-scene/islands/wild/fields";
 import {WILD_HALF, wildChunkOf} from "@/ark-scene/islands/wild/frame";
@@ -47,6 +47,8 @@ export type WildItem = {
     chunk: number;
     /** A colour shade (0.85…1.15). */
     shade: number;
+    /** A rock's or a log's up, leaning into its slope (unit; absent: straight up). */
+    up?: [number, number, number];
 };
 
 const frac = (v: number) => v - Math.floor(v);
@@ -85,7 +87,7 @@ function treeKind(s: WildGroundSample, r: number, r2: number): {kind: string; si
         ["grassland", w.grassland * 0.035],
         ["river_lake", w.river_lake * 0.22],
         ["wetland", w.wetland * 0.06],
-        ["seashore", w.seashore * (s.estuary > 0.2 ? 0.5 : s.temperature > 0.72 && s.cliff < 0.3 ? 0.07 : 0.01)],
+        ["seashore", w.seashore * (s.estuary > 0.2 ? 0.5 : s.temperature > 0.72 && s.cliff < 0.3 && s.moisture > 0.35 ? 0.07 : 0.004)],
         ["desert", w.desert * 0.008]
     ];
     const total = shares.reduce((sum, [, v]) => sum + v, 0);
@@ -204,6 +206,36 @@ function treeStands(i: number, j: number, depth = 0): boolean {
     return true;
 }
 
+// MARK: - The understorey
+
+/**
+ * The rainforest's and the woodland's lower storey (the canopy's own trees are far apart at their real crowns): young
+ * emergents and palms 10–18 m under the rainforest's canopy, birches, young beeches and snags under the woodland's, on
+ * their own grid and kept clear of the canopy's trunks.
+ */
+const UNDER_GRID = 6;
+function understorey(i: number, j: number): WildItem | null {
+    const h = hashString(`u${i},${j}`);
+    const x = i * UNDER_GRID + ((h & 0xffff) / 0xffff - 0.5) * UNDER_GRID * 0.85;
+    const z = j * UNDER_GRID + (((h >>> 16) & 0xffff) / 0xffff - 0.5) * UNDER_GRID * 0.85;
+    if (Math.abs(x) > WILD_HALF - 2 || Math.abs(z) > WILD_HALF - 2) return null;
+    const s = sampleWildGround(x, z);
+    if (s.height < 0.6 || s.inland < 5 || underWater(s) || s.ice > 0 || s.river < s.riverHit.width + 3 || gridSlope(x, z) > 0.8 || inRange(x, z, 2)) return null;
+    const rain = s.weights.rainforest;
+    const wood = s.weights.woodland * (s.height < 26 ? 1 : 0);
+    const r = unit(x, z, 61);
+    if (r > rain * 0.55 + wood * 0.3) return null;
+    const r2 = unit(x, z, 62);
+    const rainy = r < rain * 0.55;
+    const kind = rainy ? (r2 < 0.7 ? "emergent" : "palm") : r2 < 0.45 ? "birch" : r2 < 0.85 ? "beech" : "snag";
+    const id = variant(kind, unit(x, z, 63));
+    const info = ASSETS[id];
+    if (!info) return null;
+    const target = rainy ? (kind === "emergent" ? 10 + 8 * unit(x, z, 64) : 9 + 5 * unit(x, z, 64)) : 9 + 6 * unit(x, z, 64);
+    const scale = target / info.height;
+    return {kind: "tree", asset: id, x, y: s.height - 0.15, z, yaw: unit(x, z, 65) * Math.PI * 2, scale, height: target, solid: (info.trunk_radius ?? 0.3) * scale, crown: (info.crown_radius ?? 2) * scale, chunk: wildChunkOf(x, z), shade: 0.85 + 0.2 * unit(x, z, 66)};
+}
+
 // MARK: - The rest
 
 /** One of a cell's ground items: by its zone weights and what the ground is. */
@@ -299,6 +331,24 @@ export function wildScenery(): WildItem[] {
             if (c.item && treeStands(i, j)) out.push(c.item);
         }
     }
+    // The understorey, clear of the canopy's trunks by a few metres.
+    const canopy = new Map<string, WildItem[]>();
+    for (const t of out) {
+        const key = `${Math.floor(t.x / 8)},${Math.floor(t.z / 8)}`;
+        canopy.set(key, [...(canopy.get(key) ?? []), t]);
+    }
+    const u = Math.floor(WILD_HALF / UNDER_GRID);
+    for (let j = -u; j <= u; j++) {
+        for (let i = -u; i <= u; i++) {
+            const t = understorey(i, j);
+            if (!t) continue;
+            const cx = Math.floor(t.x / 8);
+            const cz = Math.floor(t.z / 8);
+            let clear = true;
+            for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) for (const o of canopy.get(`${cx + dx},${cz + dz}`) ?? []) if (Math.hypot(o.x - t.x, o.z - t.z) < o.solid + t.solid + 3.5) clear = false;
+            if (clear) out.push(t);
+        }
+    }
     const trunks = new Map<string, WildItem[]>();
     for (const t of out) {
         const key = `${Math.floor(t.x / 8)},${Math.floor(t.z / 8)}`;
@@ -328,6 +378,20 @@ export function wildScenery(): WildItem[] {
             if (item.kind === "kelp" && nearWhale(x, z)) continue;
             if ((item.kind === "shrub" || item.kind === "log") && (inRange(x, z, 1) || nearTrunk(x, z, 0.8))) continue;
             if (item.kind === "plant" || item.kind === "grass" || item.kind === "shrub") item.y -= 0.03;
+            if ((item.kind === "rock" || item.kind === "log") && item.asset) {
+                // Sat into its slope: leaning halfway to the ground's normal, sunk by its lean over its half-width and a
+                // fifth of its height, so no side stands off the ground.
+                const e = 1.5;
+                const gx = (gridHeight(x + e, z) - gridHeight(x - e, z)) / (2 * e);
+                const gz = (gridHeight(x, z + e) - gridHeight(x, z - e)) / (2 * e);
+                const n = [-gx, 1, -gz];
+                const l = Math.hypot(n[0], n[1], n[2]);
+                const up: [number, number, number] = [(n[0] / l) * 0.5, 0.5 + (n[1] / l) * 0.5, (n[2] / l) * 0.5];
+                const ul = Math.hypot(...up);
+                item.up = [up[0] / ul, up[1] / ul, up[2] / ul];
+                const half = 1.5 * item.scale;
+                item.y -= Math.min(slope, 1.2) * half * 0.55 + item.height * 0.18;
+            }
             out.push({...item, chunk: wildChunkOf(x, z), shade: 0.88 + 0.24 * unit(x, z, 23)});
         }
     }

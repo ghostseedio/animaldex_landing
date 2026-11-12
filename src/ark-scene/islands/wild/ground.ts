@@ -131,10 +131,13 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
         const w = river.width;
         const bank = river.level + 0.35 + 0.07 * Math.max(river.d - w, 0);
         const coastFade = smoothstep(-2, 5, inland);
-        if (river.d > w && height < bank) height += (bank - height) * smoothstep(w + 12, w + 1, river.d) * coastFade;
+        // (Not inside the lake: its own shore is the bank there, and a river's bank across it would wall it off.)
+        const outOfLake = smoothstep(edge - 1, edge + 4, lakeD);
+        if (river.d > w && height < bank) height += (bank - height) * smoothstep(w + 12, w + 1, river.d) * coastFade * outOfLake;
         const bed = river.level - river.depth * (1 - Math.min(river.d / Math.max(w, 0.1), 1) ** 2) - 0.05;
         const into = smoothstep(w + 1.4, w * 0.6, river.d);
-        height = height + (bed - height) * into * Math.max(coastFade, inland < 0 ? 0.6 : 0);
+        // (The channel only ever lowers the ground: inside the lake its bed is deeper than the river's.)
+        height = Math.min(height, height + (bed - height) * into * Math.max(coastFade, inland < 0 ? 0.6 : 0));
         if (river.d < w + 0.5 && inland > 1.5) {
             freshLevel = Math.max(freshLevel ?? -Infinity, river.level);
             fresh = Math.max(fresh, smoothstep(w + 0.5, w - 0.5, river.d) * smoothstep(1.5, 4, inland));
