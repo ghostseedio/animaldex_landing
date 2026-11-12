@@ -665,6 +665,8 @@ test("on the ground nothing moves backwards: never 5 s in a row going more than 
 });
 
 test("walking goes at its walk clip's own pace: a pace ratio of 0.8-1.3 (running, its run clip's), never a slow-motion walk", () => {
+    // (Its walk's pace is the clip's, or for a legged rig the locomotion layer draws whose clip was reach-limited, its
+    // natural pace: `scripts/ark-walk-pace.mts`, decision 202.)
     // (The integrator's default-view check, 2026-11-11: with the v2 rigs up, walkers held to 1.5 times a v1 walk's pace
     // walked at 0.35-0.45 of their clips. Sampled as the check samples: every 0.25 s, moving faster than 0.15 of its
     // length a second on the ground.)
@@ -680,7 +682,8 @@ test("walking goes at its walk clip's own pace: a pace ratio of 0.8-1.3 (running
             const p = poseOf(i, t);
             const speed = Math.hypot(p.x - last.x, p.z - last.z) / 0.25;
             const ground = !p.aloft && !last.aloft && p.y >= -0.01 && last.y >= -0.01;
-            if (ground && speed > Math.max(0.05, 0.15 * length) && (p.beat === "walk" || p.beat === "run" || p.beat === "step")) {
+            // (Down to slow walkers too, decision 202: a 0.05 m/s floor hid a bullfrog walking at 1.8 times its clip.)
+            if (ground && speed > Math.max(0.002, 0.15 * length) && (p.beat === "walk" || p.beat === "run" || p.beat === "step")) {
                 const clip = p.beat === "run" && i.profile.runPace ? i.profile.runPace : i.profile.walkPace!;
                 const ratio = speed / length / clip;
                 ratios.push(ratio);
@@ -859,4 +862,39 @@ test("a grazer drifts forward: its steps while grazing, browsing or foraging tur
     assert.ok(rows.length >= 10, `species ${rows.length}`);
     const over = rows.filter(([, v]) => v >= 2).map(([slug, v]) => `${slug} ${v.toFixed(1)}`);
     assert.deepEqual(over, [], "turns a minute of movement while feeding");
+});
+
+test("asleep where it lies, slot after slot, it keeps its heading (no turn at each slot)", () => {
+    // (2026-11-12: a sleeping zebra turned to a new heading every slot, so her foal at heel, placed by her heading,
+    // swung round her: the default view's backwards foal.)
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    let pairs = 0;
+    let edges = 0;
+    const turned: string[] = [];
+    const snapped: string[] = [];
+    // (Sixteen hours of a day: every animal's sleep, the day sleepers' and the night sleepers'.)
+    for (const i of animals) {
+        for (let k = 0; k < 45 * 16; k += 1) {
+            const t = DAY + 6 * 3600 + k * SLOT_SECONDS;
+            const trip = tripOf(i, t);
+            if (trip.doing !== "sleep" || trip.shadow) continue;
+            const start = slotStart(i.animal, trip.slot);
+            const before = poseOf(i, start - 0.05);
+            const after = poseOf(i, start + 0.05);
+            // (Not where its walk to its roost was given up on and the night's first slot puts it there: a known jump, its
+            // roost inside a rock's collider or off its own ground, reported 2026-11-12.)
+            if (Math.hypot(before.x - after.x, before.z - after.z) > 0.3) continue;
+            edges++;
+            if (Math.abs(wrap(before.yaw - after.yaw)) > 0.1) snapped.push(`${i.a.model_slug} ${tripOf(i, start - 1).doing} ${wrap(before.yaw - after.yaw).toFixed(2)}`);
+            const a = poseOf(i, start + 70);
+            const b = poseOf(i, start + 70 + SLOT_SECONDS);
+            if (tripOf(i, start + 70 + SLOT_SECONDS).doing !== "sleep" || a.moving || b.moving || a.aloft) continue;
+            if (Math.hypot(a.x - b.x, a.z - b.z) > 0.1) continue;
+            pairs++;
+            if (Math.abs(wrap(a.yaw - b.yaw)) > 0.05) turned.push(`${i.a.model_slug} ${wrap(a.yaw - b.yaw).toFixed(2)}`);
+        }
+    }
+    assert.ok(pairs > 500 && edges > 500, `pairs ${pairs}, slot starts ${edges}`);
+    assert.deepEqual(turned.slice(0, 8), [], `${turned.length} of ${pairs} turned`);
+    assert.deepEqual(snapped.slice(0, 8), [], `${snapped.length} of ${edges} snapped at a slot start`);
 });

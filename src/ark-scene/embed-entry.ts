@@ -16,6 +16,9 @@ import {mountArkLiveHud} from "@/ark-scene/live";
 import {ArkLiveFixtureFeed} from "@/lib/ark-live-fixture";
 import {arkFoundersOf, decodeArkFounders} from "@/lib/ark-founders";
 import {fetchArkHunting} from "@/lib/ark-hunting";
+import {mountArchipelago} from "@/ark-scene/islands/archipelago";
+import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
+import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 
 declare global {
     interface Window {
@@ -29,6 +32,16 @@ declare global {
             /** Encounter hunting's read (`/api/ark/hunting`), for the embed's refresh; null under the pool. */
             fetchArkHunting: typeof fetchArkHunting;
             ArkLiveFixtureFeed?: typeof ArkLiveFixtureFeed;
+            /**
+             * Part C (decisions 141-154): the one world with the town across the strait, the town built off the first frame,
+             * flights between the islands; with one island it is `mountArk` exactly as before.
+             */
+            mountArchipelago: typeof mountArchipelago;
+            /** Two islands in this read (the server's switch); the island to open on (decision 26). */
+            arkTwoIslands: typeof arkTwoIslands;
+            arkOpeningIsland: typeof arkOpeningIsland;
+            /** Development only: T1's routing merged into a local snapshot by id (`?islands=`); undefined in production. */
+            mergeArkIslandsRouting?: typeof mergeArkIslandsRouting;
         };
     }
 }
@@ -41,5 +54,9 @@ window.AnimalDexArk = {
     arkFoundersOf,
     decodeArkFounders,
     fetchArkHunting,
-    ArkLiveFixtureFeed: process.env.NODE_ENV !== "production" ? ArkLiveFixtureFeed : undefined
+    ArkLiveFixtureFeed: process.env.NODE_ENV !== "production" ? ArkLiveFixtureFeed : undefined,
+    mountArchipelago,
+    arkTwoIslands,
+    arkOpeningIsland,
+    mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined
 };

@@ -1,7 +1,7 @@
 {
- "about": "The collision audit's CI limits, islands mode (decision 148: the wild island without its hamlet, its own animals only: --wild-island kept; 5,328 animals, 4,267 measured), measured on ark-next (5cd8efff + the gate fixes, 2026-11-12). Islands mode is what goes live. Pass-throughs and fence crossings stay at 0; cliffs and overlaps at most today's, measured as in thresholds.json (overlaps mostly perched sleepers sharing tree crowns).",
+ "about": "The collision audit's CI limits, islands mode (decision 148: the wild island without its hamlet, its own animals only: --wild-island kept; 5,328 animals, 4,267 measured), measured on ark-next (5cd8efff + the gate fixes, 2026-11-12). Islands mode is what goes live. Pass-throughs and fence crossings stay at 0; cliffs and overlaps at most today's, measured as in thresholds.json (overlaps mostly perched sleepers sharing tree crowns). 2026-11-12, decision 204: the push between touching animals eased between the shared clock's 4 s moments (it never jumps: the default view's turns from separation gone) and still bodies holding their place against walkers; the eased push lags its moment, so overlaps rose about 0.2 per cent (islands: 3,222,835 to 3,228,997) and cliffs moved with the nudged positions (1276 to 1267).",
  "passThrough": 0,
  "fenceCrossings": 0,
- "cliffs": 1276,
- "overlaps": 3222835
+ "cliffs": 1267,
+ "overlaps": 3228997
 }

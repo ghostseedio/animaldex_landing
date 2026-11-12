@@ -4,8 +4,7 @@
 branch is landing `ark-next`. The previous web release, and the rollback, is landing `main` **7764fe12** (the release
 1323a70d plus the privacy text).
 
-Status of this draft: **(pending)** marks a part that waits for a lane: the final L5 collisions, T3's town animals and
-island switching (`ark-islands-scene`), the encounter lane's server activation, and the routed fixes in §6.
+Status: final for the owner's approval. The encounter server activation (§5.2) stays for later; everything else is in.
 
 ## 0. At a glance
 
@@ -93,7 +92,7 @@ and a workflow quoting fix):
 | The map's spawn validator | 0 failures (islands off and, per the hamlet lane, islands on) |
 | The motion summary (`npx tsx scripts/ark-motion-ci.mts`) | all pass: 42 rows (L1, L2, L5 and L6 tests and numbers) |
 | The collision audit (`ark-collisions.yml`; CI fixture, 2 island hours at 4 s) | **green on GitHub** (run 43151583996): islands mode (what goes live) pass-throughs 0, fence crossings 0, cliffs 1,276, overlaps 3.22 M; today's mode 0 / 0 / 861 / 3.07 M; within `tests/ark-collide/thresholds-islands.json` and `thresholds.json` |
-| Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | **(pending)**: the accept run on the release head, after a look at every shot |
+| Visual CI (GitHub Actions, decisions 134 and 147: Linux SwiftShader baselines) | the 19 golden shots and the town's 4 rendered on GitHub (run 43151429276 on 412fa2e3; T3's later warm-up guard changes no render), no page errors, every shot looked at (nothing broken; the caterpillar close-up frames its leaf with the 1.7 cm butterfly barely visible at true scale), accepted as the new baselines |
 | The default view, twice (`ark-rig-scenes.mjs --island`) | walk pace ratio median 1.20 / 1.05; backwards 4.9% / 5.5%, nothing backwards for over 1 s; ground turns 1.8 / 2.0 a minute; over 1.5× its clip: American alligators (1.7–3.6×), the bullfrog (9.4–9.7×), an African rock python (1.6×), the clawed frog (1.7×) (the three causes in §6); no page errors |
 | T3's warm-up guard (f0cf2f1f) | `ark-warm-shaders` + `ark-runtime-load` 8/8; the default view twice: no page errors (pace 1.01 / 0.97, backwards 6.0% / 4.5%, none over 1 s); islands on and the camera panned to the town (`ark-runtime-measure.mjs --islands --pan town`, desktop and phone): **no page errors**, the longest task after the first frame 152 ms (desktop) / 198 ms (phone) |
 | The production build emits the workers | `node scripts/build-ark-bundle.mjs` (the `prebuild` of `npm run build`): `ark-prebuild-worker.js`, `ark-prebuild-places-worker.js`, `ark-town-worker.js` (828 KB) |
@@ -175,7 +174,7 @@ byte-identical. What is left, in order:
 ### 5.2 Encounter hunting (lower priority today)
 
 The scene side is in and inert while the server's `hunting` is `pool`. The server activation (`20261118100000`,
-`110000` on `ark-encounter`, and its switch) comes from the encounter lane: **(pending)**.
+`110000` on `ark-encounter`, and its switch) is not part of this release: the encounter lane hands it over later.
 
 ## 6. Known issues
 

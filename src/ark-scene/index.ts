@@ -402,6 +402,8 @@ type Entry = {
     crawl?: {along: number; dir: number; pause: number; turn: number; speed: number} | null;
     /** Its sleep (`sleep.ts`): how far into lying down, its posture this bout; null awake and up. */
     sleepNow?: SleepNow | null;
+    /** How much of a sleeper's stirred heading (`sleepDraw`) is drawn: none while it moves, eased back in when it stops. */
+    stirShare?: number;
     /** Its rig plays the lying clips now (`sleepClip`): the procedural lying gives way to them as the rig fades in. */
     sleepClipped?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
@@ -1497,6 +1499,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         yaw: pose.yaw,
         aloft: pose.aloft,
         asleep: pose.doing === "sleep",
+        // (At its spot: it holds its place against one walking past, decision 204.)
+        still: !pose.aloft && !pose.moving,
         partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)
@@ -2517,6 +2521,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 size: e.sched.profile.size,
                 speed: e.sched.profile.speed,
                 gait: e.sched.profile.gait,
+                walkPace: e.sched.profile.walkPace,
+                runPace: e.sched.profile.runPace,
                 dominance: e.sched.profile.dominance,
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
@@ -3870,7 +3876,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
             const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
             if (slept) {
-                where.yaw += slept.yaw;
+                // (Its stirred heading only while it keeps still: moving, a foal at its mother's heel say, it faces where
+                // it goes; eased out and in, so nothing snaps. 2026-11-12.)
+                const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
+                const stirWas = entry.stirShare ?? stirTarget;
+                entry.stirShare = reducedMotion ? stirTarget : stirWas + (stirTarget - stirWas) * Math.min(dt * 3, 1);
+                where.yaw += slept.yaw * entry.stirShare;
                 where.pitch += slept.pitch;
                 where.roll += slept.roll;
                 const box = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry.boundingBox ?? null;
@@ -5992,7 +6003,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.air = 0;
             entry.arrivedAt = elapsedNow();
         },
-        attachIsland: (isl: ArkIslandScene, snapshot: ArkSnapshot) => {
+        attachIsland: (isl: ArkIslandScene, snapshot: ArkSnapshot, joined?: () => void) => {
             // Decision 153: the town built off the first frame joins the one world now (its meshes, sea floor, ground,
             // streaming, behaviour world and animals); the view goes on to the two-island default if it is still at home.
             if (island || disposed) return;
@@ -6017,27 +6028,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const townAnimals = snapshot.animals.filter((animal) => isl.has(animal));
             const wildAnimals = snapshot.animals.filter((animal) => !isl.has(animal));
             isl.joining(true);
-            let joined = 0;
+            let joinedCount = 0;
             const join = () => {
                 if (disposed || island !== isl) return;
-                joined = Math.min(joined + 450, townAnimals.length);
-                const done = joined >= townAnimals.length;
+                joinedCount = Math.min(joinedCount + 450, townAnimals.length);
+                const done = joinedCount >= townAnimals.length;
                 if (done) isl.joining(false);
-                setSnapshot(done ? snapshot : {...snapshot, animals: [...wildAnimals, ...townAnimals.slice(0, joined)].sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))}, false);
-                if (!done) {
+                setSnapshot(done ? snapshot : {...snapshot, animals: [...wildAnimals, ...townAnimals.slice(0, joinedCount)].sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))}, false);
+                if (done) joined?.();
+                else {
                     const ric = (globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback;
                     if (ric) ric(join, {timeout: 250});
                     else setTimeout(join, 32);
                 }
             };
-            join();
+            // (The view's flight first: a focus link waiting for the town (`joined`) flies on from it.)
             if (options.openIsland === "town") {
                 const view = islandView("town");
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.6, view.polar, view.azimuth);
-            } else if (atHome && !opening) {
+            } else if (atHome || opening) {
+                // (Still at home, or still on the opening flight: on to the two-island view.)
+                opening = false;
                 const view = homeView();
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
             }
+            join();
         },
         flyToIsland: (id: "wild" | "town") => {
             controls.autoRotate = false;

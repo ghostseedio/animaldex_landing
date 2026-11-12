@@ -46,6 +46,30 @@ the privacy text).
 | 22 | Part B multi-island streaming, the fog push | `ark-streaming-islands` 2f7f6fa3 | b9446a3d | clean; tsc 0 |
 | 23 | T3: the upright phone looks across to the town (decision 154), the director over both islands | `ark-islands-scene` 4468d2a4 | e043745b | clean |
 | 24 | L5 nav start | `ark-collisions-navstart` 7533ab4e | 7ab61a51 | clean; tsc 0 |
+| 25 | L7 swallow fix (the set-off test exclusion never landed, decision 155) | `ark-chases` 772d9bcb | e9c69cd2 (cherry-pick), e43139cb | chases 11/11 |
+| 26 | L5 two-island colliders | `ark-collisions-town` 2d939850 | 491a4692~ | collide + town 7/7 |
+| 27 | i18n: `ark.islands.*`, then Meadow | `ark-islands-i18n` 95193387, 33306e20 | 491a4692, 60f41b2f | ark-languages 49/49 |
+| 28 | L1 frog pace and penguin breaths | `ark-l1-fixes` 5cab18f6 | e922c08f | schedule + breath 28/28 |
+| 29 | T3 blocker 1: the town in a worker after the first frame | `ark-islands-scene` e21ae0a3 | 31fdcbcb | `npm run build` emits `ark-town-worker.js` |
+| 30 | L6 decision 155: the mallard's nook opened | `ark-scenery` 017c5572 | 9d089ea4 | set-off test passes |
+| 31 | The wild island without its hamlet (islands mode) | `ark-wild-no-hamlet` 7d3ee5b5, 98a30984 | f098c301, 03dfd120 | 18 locale conflicts: the i18n lane's words kept; no-hamlet + languages 54/54 |
+| 32 | T3 Meadow in the panels | `ark-islands-scene` 57014b78 | 5cd8efff | **the islands release candidate 03dfd120**: suite 2,381/2,382, 0 fail |
+| 33 | L5 collide gate (the audit green in both modes) | `ark-collide-gate` e056ef12 | 412fa2e3 (+ b22d4b4c: the workflow's YAML quoted) | suite 2,381/2,382, 0 fail; collisions workflow green on GitHub |
+| 34 | T3 warm-up guard | `ark-islands-scene` 0a98e0de | f0cf2f1f | 8/8; default view and the town probe: no page errors |
+| — | Linux visual baselines (decision 147), the intelligence hook CI-only skip (decision 209), the release doc | — | 1a2781af, 643a5d9f, cb91a9f1, **471c8d76 (the release head)** | 19 golden + 4 town shots looked at |
+
+## After the islands release (the next web-only deploy)
+
+| # | Lane | Branch head | `ark-next` head | Gates |
+|---|---|---|---|---|
+| 35 | L1 decisions 201–202 (reactions capped at 1.2× the walk or run pace; Froude walk and run floors for reach-limited rigs; goals out of a slot's reach not taken; unreachable roosts become a home-ground bed; a stay never jumps) | `ark-l1-walkpace` 86b15179 (contains `ark-l1-pace` f21ad63b) | c42708cb | clean |
+| 36 | Behaviour: backwards (a foal faces home, a sleeper keeps its heading, turns at TURN_RATE) | `ark-behaviour-backwards` cef5c27d | — | clean |
+| 37 | L5 decision 204: the separation push eased between 4 s moments, still bodies weigh more | `ark-collide-ease` 50760287 | 772f60e1 | clean; tsc 0; full gates running |
+
+- L1's 202c `roostOf` home-ground bed (a roost off the animal's own ground, or too far to walk in a slot, becomes a
+  seeded bed on its home ground, the same for every caller) **replaces decision 205's plan** for the roost jumps.
+- Held: W1 `ark-wild-island-next` (W1b clearing v2's gates); T3's embed islands support (`public/ark/embed.html`
+  ignores the islands today) comes next.
 
 ### Wirings and fixes the integrator made (allowed by the coordinator)
 

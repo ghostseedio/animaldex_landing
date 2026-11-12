@@ -550,6 +550,8 @@ async function mountIsland(el: HTMLElement) {
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     if (params.get("moverGait") === "0") (globalThis as {__arkMoverGait?: boolean}).__arkMoverGait = false;
+    // (`collide=0`: the collisions' layer off, the schedule's poses as they come: L5's floor for the turns measure.)
+    if (params.get("collide") === "0") (globalThis as {__arkCollideOff?: boolean}).__arkCollideOff = true;
     const snapshot = decodeArkSnapshot(fixture);
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
@@ -584,7 +586,7 @@ async function mountIsland(el: HTMLElement) {
             // (A wall-clock start shared by two runs, so a run with the layer and one without sample the same moment of
             // the schedule: `--start-at`.)
             while (startAt && Date.now() < startAt) await wait(50);
-            type Track = {backVisible?: number; byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            type Track = {ratiosBaked?: number[]; ratioWhy?: Map<string, number[]>; backVisible?: number; byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
             let last = t0;
@@ -681,7 +683,21 @@ async function mountIsland(el: HTMLElement) {
                             if (rigged) {
                                 tr.rigged += span;
                                 if (e.rig?.now) tr.clips.add(e.rig.now.name);
-                                if (e.rig?.ratio) tr.ratios.push(e.rig.ratio);
+                                if (e.rig?.ratio) {
+                                    tr.ratios.push(e.rig.ratio);
+                                    // Whether its feet are the baked clip's (played by distance: the pace ratio is what the
+                                    // eye sees) or the locomotion layer's (stride and cadence from the speed: the clip's own
+                                    // pace no longer matters), and what moved it (its schedule beat, a recipe act, the
+                                    // reactive layer's action).
+                                    const lc = (e.rig as unknown as {loco?: {driver?: string | null; share?: number}}).loco;
+                                    const layered = lc?.driver === "legged" && (lc.share ?? 0) > 0.5;
+                                    if (!layered) (tr.ratiosBaked ??= []).push(e.rig.ratio);
+                                    const act = (e.sched?.pose?.act as {state?: string} | null | undefined)?.state;
+                                    const why = `${layered ? "layer" : "baked"}:${e.rig.now?.name ?? "?"}:${act ? `act ${act}` : e.reactive?.action && e.reactive.action !== "none" ? `reactive ${e.reactive.action}` : `sched ${(e.sched?.pose as {beat?: string} | null | undefined)?.beat ?? "?"}`}`;
+                                    const list = (tr.ratioWhy ??= new Map()).get(why) ?? [];
+                                    list.push(e.rig.ratio);
+                                    tr.ratioWhy.set(why, list);
+                                }
                             } else {
                                 tr.glide += span;
                                 if (e.level === "near") tr.glideNear += span;
@@ -729,6 +745,8 @@ async function mountIsland(el: HTMLElement) {
                     rigged: Math.round(t.rigged * 10) / 10,
                     clips: Array.from(t.clips).join(","),
                     ratioMedian: sorted.length ? Math.round(sorted[Math.floor(sorted.length / 2)] * 100) / 100 : null,
+                    ratioBakedMedian: t.ratiosBaked?.length ? Math.round(t.ratiosBaked.slice().sort((a, b) => a - b)[t.ratiosBaked.length >> 1] * 100) / 100 : null,
+                    ratioWhy: Object.fromEntries(Array.from(t.ratioWhy ?? new Map<string, number[]>()).map(([k, v]) => [k, {n: v.length, median: Math.round(v.slice().sort((a, b) => a - b)[v.length >> 1] * 100) / 100}])),
                     ratioMax: sorted.length ? Math.round(sorted[sorted.length - 1] * 100) / 100 : null,
                     turnsPerMinute: t.moving > 0 ? Math.round(((t.turn / (Math.PI * 2)) / t.moving) * 60 * 10) / 10 : 0,
                     turnPerMetre: t.dist > 0 ? Math.round((t.turn / t.dist) * 100) / 100 : 0,

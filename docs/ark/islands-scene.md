@@ -67,6 +67,20 @@ Every spot is chosen by a hash of the animal's id (or of its cluster's key), so 
 - **Words:** `ark.islands.*` in `en.json`; other languages fall back to English.
 - **Development preview:** `/ark?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json` merges T1's routing (from a rolled-back switch-on) by id at read time. Both files live in the gitignored `public/ark-local/` and are never committed.
 
+## 5b. The apps' embed (`public/ark/embed.html`)
+
+- **Mount:** the embed mounts `mountArchipelago` (from the bundle's `window.AnimalDexArk`) with the same options as before, plus `openOn` (decision 26) and its own worker files (`./ark-prebuild-worker.js`, `./ark-prebuild-places-worker.js`, `./ark-town-worker.js`).
+  - With one island it is `mountArk` exactly as before.
+  - With two islands the wild island draws first without the hamlet (the Meadow labels, `wildIslandRegions`), and the town is built in its worker and joins across the strait. The phone's default view looks over the strait (decision 154).
+- **The apps' messages:**
+  - `ark:visible` and `ark:power` that arrive before the scene is up are held, then replayed (as before).
+  - `ark:select` (focus links), `ark:mine`, `ark:region`, `ark:herd`, `ark:lite` and `ark:reset` go to the world's handle while it mounts, which passes them on once the scene is up.
+  - A focus link sent before the first read is held for the mount.
+  - A focus link to a town animal waits until the town's animals have all joined (`attachIsland`'s `joined`), then flies across.
+  - `?lang=` and `?regions=1` are unchanged.
+- **Development preview:** `/ark/embed.html?snapshot=/ark-local/live.json&islands=/ark-local/islands-routing.json` (a dev bundle only; production ignores `?islands=`).
+- **Check:** `scripts/ark-islands-embed-check.mts` runs the embed at 390x844 with the Android bridge. It checks the held power message, visible/hidden, a launch focus link to a zoo animal, a select back to the wild island, reset, and that there are no page errors. Pass `ARK_IDS="<zoo id> <wild id>"`.
+
 ## 6. The director
 
 - **Recorder:** the clip recorder builds the town across the strait when the Ark has two islands.
