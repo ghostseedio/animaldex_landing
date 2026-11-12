@@ -1,6 +1,6 @@
 # SEO and positioning audit (lane S1, 2026-11-12)
 
-Audited against production `https://animaldex.app` running landing main `970b0461`, the iOS app on `/Users/lennybeadle/AnimalDex` main, the Android app on `/Users/lennybeadle/AnimalDex-android` main, and the ASO package in `~/Documents/animaldex/app-store-3.1` (2026-10-24).
+Audited against production `https://animaldex.app` running landing main `970b0461`, the iOS app on `/Users/lennybeadle/AnimalDex` main, the Android app on `/Users/lennybeadle/AnimalDex-android` main, the ASO packages in `~/Documents/animaldex/` (`app-store-3.1`, 2026-10-24; `app-store-3.2` and `google-play-3.2`, 2026-11-07), and the store listings live on 2026-11-12 (App Store 3.2, Google Play 3.1). The draft store listings are in `docs/store-listing-draft-2026-11.md`.
 
 **The new positioning (owner, 2026-11-12)**
 
