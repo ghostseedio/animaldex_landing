@@ -16,8 +16,12 @@
  * `src/lib/ark-attach.test.ts` holds this to terrain.ts's lines: change one, change the other.
  */
 
+import {arkWorld} from "@/ark-scene/world";
+
 /** The snow line (m) at no snow cover, and how far full cover brings it down. */
 export const SNOW_LINE = {base: 27, fall: 12};
+/** The bigger wild island's snow line (its peaks reach 85 m): terrain.ts draws its ground's snow from it (`WILD_SNOW_LINE`). */
+export const SNOW_LINE_V2 = 52;
 
 /** The shader's noise, measured over the island (its statistics, not its values): [mean, worst for snow]. */
 const NOISE = {
@@ -46,7 +50,7 @@ const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** The snow line (m) at this snow cover (0–1). */
 export function snowLine(cover: number): number {
-    return SNOW_LINE.base - SNOW_LINE.fall * cover;
+    return (arkWorld() === "v2" ? SNOW_LINE_V2 : SNOW_LINE.base) - SNOW_LINE.fall * cover;
 }
 
 /** The drawn cover at a height and slope (1 − the ground normal's y), the noise taken at its mean (0) or worst (1). */

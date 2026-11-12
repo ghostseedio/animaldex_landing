@@ -16,11 +16,13 @@ import {canopyTree, COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, LAMP, LEAF_L
 import {porchLight, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
 import {trunkOf} from "@/ark-scene/vegetation";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import {coastRadius, hashString, LAKE, noise, RIVER, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {arkWorld, coastRadius, hashString, LAKE, noise, onArkWorld, RIVER, riverDistance, sampleGround, seeded, TERRAIN_HALF, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
+import {wildMapSampler} from "@/ark-scene/islands/wild/map-sampler";
 import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
 import {navGrid} from "@/ark-scene/behaviour-nav";
 import {maskWalkable} from "@/ark-scene/map/walk-mask";
-import {allAttachPoints, type AttachTag as SceneryTag} from "@/ark-scene/sampler";
+import {allAttachPoints} from "@/ark-scene/sampler";
+import {SCENERY_TAG, sceneryMapPoint} from "@/ark-scene/map/scenery-points";
 import {reservedAt, reservedNear} from "@/ark-scene/map/hamlet";
 import {noHamlet, onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {inRock} from "@/ark-scene/map/rocks";
@@ -334,21 +336,11 @@ class WorldSampler implements ArkMapSampler {
         // litter, worm holes and burrows. Their ids and normals as they are, a heading from their yaw, and their largest body
         // (any smaller one fits: a 2 mm spider on a wall).
         for (const point of allAttachPoints()) {
-            const tag = SCENERY_TAG[point.tag];
-            if (!tag) continue;
+            if (!SCENERY_TAG[point.tag]) continue;
             // Nothing on or by the hamlet's reserved plots (their fences and gardens come and go with the plots: hamlet.ts).
             if (reservedNear(point.position.x, point.position.z, 1.2)) continue;
-            // A hole, a burrow's mouth or a fallen leaf on the ground never inside a drawn rock (the asset rocks, `rocks.ts`).
-            if ((GROUND_TAGS.has(tag) || point.tag === "leaf_litter") && inRock(point.position.x, point.position.z, 0.15)) continue;
-            // (Nor a ledge of the ground's own cliffs inside one: the scenery lane's outcrops sit on the slopes the ledges are
-            // on, and a ledge in an outcrop put its animal in the rock. Motion pass L5, at L6's ask.)
-            if (point.tag === "ledge" && point.host === "ground" && inRock(point.position.x, point.position.z, 0.15)) continue;
-            const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
-            // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
-            // (True scale, motion pass §3: down to 0.1 mm, a fairyfly's 0.16 mm or a mite's 0.5 mm; 1 mm was the old drawn floor.)
-            const min = tag === "limb" || tag === "canopy_hang" ? point.size[0] : Math.min(point.size[0], 0.0001);
-            const limb = point.radius !== undefined ? {radius: point.radius, load: point.load, clearAbove: point.clearAbove, clearBelow: point.clearBelow} : {};
-            points.push({id: point.id, tag, x: point.position.x, y: point.position.y, z: point.position.z, normal: n, tangent: headingOf(n, point.yaw, point.forward), size: {min, max: point.size[1]}, zone: point.zone ?? landZone(sampleGround(point.position.x, point.position.z)), ...(point.wind ? {source: point} : {}), ...limb});
+            const mapped = sceneryMapPoint(point, (x, z) => landZone(sampleGround(x, z)));
+            if (mapped) points.push(mapped);
         }
         // What the scenery interface does not offer yet: the reeds' and shrubs' tops (a reed warbler's, a dragonfly's perch).
         const decor = worldDecor();
@@ -390,56 +382,18 @@ class WorldSampler implements ArkMapSampler {
     }
 }
 
-/** The map's ground-level attach tags (a hole, a burrow's mouth, a fallen leaf): never inside a drawn rock. */
-const GROUND_TAGS: ReadonlySet<AttachTag> = new Set<AttachTag>(["worm_hole", "burrow_entrance"]);
-
-/** The scenery interface's attach tags as the map's (`sampler.ts` ATTACH_MEANS): a pond's surface is the water species' (`water.ts`), hang points not yet used. */
-const SCENERY_TAG: Partial<Record<SceneryTag, AttachTag>> = {
-    leaf: "leaf", branch: "branch", bark: "bark", flower_head: "flower_head", rock_face: "rock_face", tide_pool: "tide_pool",
-    house_wall: "house_wall", house_eave: "house_eave", porch_light: "porch_light", lamp: "porch_light", leaf_litter: "leaf",
-    worm_hole: "worm_hole", burrow: "burrow_entrance", canopy_perch: "branch", canopy_climb: "bark",
-    limb: "limb", canopy_hang: "canopy_hang", fence_post: "fence_post", roof_edge: "roof_edge", ledge: "ledge", tree_hollow: "tree_hollow"
-};
-
-/**
- * A point's heading along its surface: its `forward` where the scenery
- * gives one, else the sampler's own convention (graphics-interface.md: the
- * model's quaternion is setFromUnitVectors(+y, normal) · rotationY(yaw), so
- * its +z goes to that rotation of (sin yaw, 0, cos yaw)), laid square to
- * the normal.
- */
-function headingOf(n: [number, number, number], yaw: number, forward?: {x: number; y: number; z: number}): [number, number, number] {
-    let t: [number, number, number];
-    if (forward) t = [forward.x, forward.y, forward.z];
-    else {
-        // The rotation taking +y to n (axis +y × n, by the angle between them), applied to (sin yaw, 0, cos yaw).
-        const v: [number, number, number] = [Math.sin(yaw), 0, Math.cos(yaw)];
-        const axis: [number, number, number] = [n[2], 0, -n[0]];
-        const s = Math.hypot(...axis);
-        const c = n[1];
-        if (s < 1e-9) t = c > 0 ? v : [v[0], -v[1], -v[2]];
-        else {
-            const k: [number, number, number] = [axis[0] / s, axis[1] / s, axis[2] / s];
-            const dot = k[0] * v[0] + k[1] * v[1] + k[2] * v[2];
-            const cross: [number, number, number] = [k[1] * v[2] - k[2] * v[1], k[2] * v[0] - k[0] * v[2], k[0] * v[1] - k[1] * v[0]];
-            t = [0, 1, 2].map((i) => v[i] * c + cross[i] * s + k[i] * dot * (1 - c)) as [number, number, number];
-        }
-    }
-    const d = t[0] * n[0] + t[1] * n[1] + t[2] * n[2];
-    t = [t[0] - d * n[0], t[1] - d * n[1], t[2] - d * n[2]];
-    const l = Math.hypot(...t) || 1;
-    if (l < 1e-6) return Math.abs(n[2]) > 0.9 ? [1, 0, 0] : [0, 0, 1];
-    return [t[0] / l, t[1] / l, t[2] / l];
-}
-
 let shared: WorldSampler | null = null;
 // Islands mode flips (`no-hamlet.ts`): the map's sampler is the other world's.
 onHamletSwitch(() => {
     shared = null;
 });
+onArkWorld(() => {
+    shared = null;
+});
 
-/** The stub sampler over today's world (one per page). */
+/** The stub sampler over today's world (one per page); on the v2 world (Part C, P4), the bigger wild island's own. */
 export function worldSampler(): ArkMapSampler {
+    if (arkWorld() === "v2") return wildMapSampler();
     shared ??= new WorldSampler();
     return shared;
 }

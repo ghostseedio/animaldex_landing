@@ -30,7 +30,7 @@ import {canopyTree, COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
 import {drawnRocks} from "@/ark-scene/map/rocks";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {barnStyle, cottageStyle, defaultHomePlots, GARDEN, paddockFence, paddockRect, paddockSegments, PADDOCK_POST_TOP, picketRuns, PICKET_POST_TOP, plotFrame, plotKeepOuts, type HomePlot} from "@/ark-scene/props/home-layout";
-import {sampleGround} from "@/ark-scene/world";
+import {onArkWorld, sampleGround} from "@/ark-scene/world";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {POND_STONES} from "@/ark-scene/world-sampler";
 
@@ -442,6 +442,10 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
 let shared: {key: string; set: ColliderSet} | null = null;
 // Islands mode flips (`no-hamlet.ts`): the default plots' key is the same, the world is not.
 onHamletSwitch(() => {
+    shared = null;
+});
+// And the world (`world.ts`: the bigger wild island's scenery, P3).
+onArkWorld(() => {
     shared = null;
 });
 

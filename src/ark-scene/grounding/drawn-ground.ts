@@ -16,14 +16,22 @@
  * grid fails there first.
  */
 
-import {sampleGround, TERRAIN_HALF} from "@/ark-scene/world";
+import {onArkWorld, sampleGround, TERRAIN_HALF, TERRAIN_SEGMENTS} from "@/ark-scene/world";
 
-/** `terrain.ts` SEGMENTS: the drawn ground's cells along a side. */
-export const DRAWN_GROUND_SEGMENTS = 240;
-const SIZE = DRAWN_GROUND_SEGMENTS + 1;
-const SEGMENT = (TERRAIN_HALF * 2) / DRAWN_GROUND_SEGMENTS;
+/** `terrain.ts` SEGMENTS: the drawn ground's cells along a side (240 today; the v2 world's 480: world.ts TERRAIN_SEGMENTS). */
+export let DRAWN_GROUND_SEGMENTS = TERRAIN_SEGMENTS;
+let SIZE = DRAWN_GROUND_SEGMENTS + 1;
+let SEGMENT = (TERRAIN_HALF * 2) / DRAWN_GROUND_SEGMENTS;
 
 let heights: Float32Array | null = null;
+
+// The world's switch (docs/ark/wild-island.md §Integration): the grid follows it, and what was kept is let go.
+onArkWorld(() => {
+    DRAWN_GROUND_SEGMENTS = TERRAIN_SEGMENTS;
+    SIZE = DRAWN_GROUND_SEGMENTS + 1;
+    SEGMENT = (TERRAIN_HALF * 2) / DRAWN_GROUND_SEGMENTS;
+    heights = null;
+});
 
 /** A vertex's height, as the mesh stores it (its x and z rounded to float32 as `groundArrays` stores them, then sampled). */
 function vertex(column: number, row: number): number {

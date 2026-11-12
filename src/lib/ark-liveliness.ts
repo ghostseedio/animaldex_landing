@@ -437,8 +437,9 @@ export const HEEL_LAG_SECONDS = 0.6;
 // Tide
 
 /** A water animal's base fitted to a surface at `seaLevel` instead of 0: the column moves with the tide; its floor does not. */
-export function tideFit<S extends {floorY: number}>(spec: S, height: number, seaLevel: number, fit: (spec: S, height: number) => {base: number; middle: number}): {base: number; middle: number} {
-    if (!seaLevel) return fit(spec, height);
+export function tideFit<S extends {floorY: number; surface?: number}>(spec: S, height: number, seaLevel: number, fit: (spec: S, height: number) => {base: number; middle: number}): {base: number; middle: number} {
+    // (A column with a surface of its own, a lake or a river above the sea on the bigger wild island: the tide never moves it.)
+    if (!seaLevel || spec.surface) return fit(spec, height);
     const shifted = fit({...spec, floorY: spec.floorY - seaLevel}, height);
     return {base: shifted.base + seaLevel, middle: shifted.middle + seaLevel};
 }

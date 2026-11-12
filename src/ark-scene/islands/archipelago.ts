@@ -13,8 +13,11 @@ import type {ArkIsland, ArkSceneHandle, ArkSceneOptions, ArkSnapshot} from "@/ar
 import {arkIslandOf, arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
 import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 import type {TownPrepared, TownStart} from "@/ark-scene/islands/town/prebuild";
+import {setArkWorld} from "@/ark-scene/world";
 
 export type ArkArchipelagoOptions = ArkSceneOptions & {
+    /** Which wild island in islands mode: Part C's bigger one (`v2`, the default since its gates passed) or today's (`v1`). `?wild=` overrides. */
+    wildIsland?: "v1" | "v2";
     /** The island to open on (decision 26 is the page's: `arkOpeningIsland`); default the wild island. */
     openOn?: ArkIsland;
     /** The island the view is over (the switch's state); `crossing` while a flight between them is under way. */
@@ -48,6 +51,15 @@ export type ArkArchipelagoHandle = ArkSceneHandle & {
 
 /** The town's last idle waits (ms at most), as its build's (`islands/scene.ts` TOWN_IDLE_TIMEOUT_MS; not imported: that module loads on demand). */
 const TOWN_IDLE_TIMEOUT_MS = 34;
+/**
+ * The bigger wild island, in islands mode: the default since its gates passed (P7). `?wild=v1` or `?wild=v2` (review)
+ * wins, else the `wildIsland` setting: `v1` asks for today's island, exactly as it was.
+ */
+function wildIslandAsked(setting: "v1" | "v2" | undefined): boolean {
+    const url = typeof location !== "undefined" ? new URLSearchParams(location.search).get("wild") : null;
+    if (url === "v2" || url === "v1") return url === "v2";
+    return setting !== "v1";
+}
 
 /** A flight across the strait takes about this long (`flyToIsland`). */
 const CROSS_SECONDS = 3.4;
@@ -55,6 +67,9 @@ const CROSS_SECONDS = 3.4;
 export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions): ArkArchipelagoHandle {
     let whole: ArkSnapshot = options.snapshot;
     const two = arkTwoIslands(whole);
+    // P1 (docs/ark/wild-island.md §8): in islands mode, the bigger wild island when asked for (the `wildIsland` setting or
+    // `?wild=v2` for review), chosen before the scene's modules load. Islands off: today's world, untouched.
+    if (two && wildIslandAsked(options.wildIsland)) setArkWorld("v2");
     let near: ArkIsland = two ? options.openOn ?? "wild" : "wild";
     let scene: ArkSceneHandle | null = null;
     let town: ArkIslandScene | null = null;
