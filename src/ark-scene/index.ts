@@ -5774,7 +5774,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveliness: liveliness.stats(),
             streaming: (() => {
                 const stream = streamer.stats();
-                return {renderDistance: stream.renderDistance, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
+                return {renderDistance: stream.renderDistance, mapDistance: stream.mapDistance, active: stream.active, islands: stream.islands, fog: stream.fog, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers};
             })()
         }),
         dispose: () => {
