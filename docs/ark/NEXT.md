@@ -34,6 +34,11 @@ the privacy text).
 | 10 | Part B streaming | `ark-streaming` 366f985b | 77c3f2f5 | conflicts: `asset-trees.ts` (Part B's chunk cull, then L6's level hand-over by size), `index.ts` (entry: L2's `l2` and Part B's `streamAt`; the debug handle: Part B's `library` and L3's grounding report); tsc 0, lint 0 |
 | 11 | Encounter scene | `ark-encounter-scene` 35eb7d35 | 93b9c1b1 + 385e8921 (`Array.from` in `ark-hunting.test.ts`, TS2802) | clean; inert while the server's `hunting` is `pool` |
 | 12 | Town island (T2) | `ark-town-island` bdcd9ff1 | 084c07f6 | clean; new files under `src/ark-scene/islands/`, its own visual set in `tests/ark-visual/town/` |
+| 13 | Encounter scene (the same `Array.from` fix) | `ark-encounter-scene` 9fcbb049 | 34524f02 | clean |
+| 14 | T3 islands scene (town animals, one island at a time, the switch, `?focus=` and My animals across islands) | `ark-islands-scene` 439cd5f3 | 1c508857 | clean; tsc 0, lint 0; tests 2,280/2,332: 46 locale tests on the new `ark.islands.*` keys (routed: `ark-islands-i18n`), the positions atlas (routed: `ark-positions-atlas`), L7's file timeout, the L6 two, the known two |
+| 15 | L5 collisions final | `ark-collisions` 512211ba, then 37de0b1d | a9af1cc8, 7930ec2e | conflicts: the debug handle (Part B's `library`, L3's grounding report, L5's `collisions` stats), the schedule test's import (`SAFE_MOST` and `bodyRadiusOf`), the walk mask (regenerated) |
+| 16 | L6 fix (open country's sparse fill, scree under 0.45 m not solid) | `ark-scenery` a7cee4a7 | 6a8cefe5 + 7fa9a4ca | the walk mask regenerated, the attach baseline updated, the leaf/bark/branch floors re-derived (below); a new validator failure: jacksons-chameleon's burrow entrance inside a drawn rock (routed: L6) |
+| 17 | L1 (`--start-at`, pinnipeds and sirenians keep their clips) | `ark-locomotion` a0d507a4 | aaad9473 | clean; `sampler.ts` keeps both imports |
 
 ### Wirings and fixes the integrator made (allowed by the coordinator)
 
@@ -41,8 +46,13 @@ the privacy text).
 - L7's three (`docs/ark/chases.md`): `setRecipeColliders({segmentClear: collideSegmentClear, blocked: collideBlocked})`;
   `setChasePaces` from L1's `sprintPace`/`fleePace` (plan from the model library) and L2's `swimPaces(...).burst` (only for a
   species with a swim style) and `flightSpec(...).dive`; `!collideBlocked(x, z, 0.3)` in the meal's `chaseGround`.
+- `setLocoGround` per island: on another island, a ground query from the island's own `heightAt` (the normal from its
+  slope, 25 cm), never the wild island's drawn ground (07c3a64b).
+- The visual CI on GitHub (decisions 134, 147): golden shots up to 150 min, hooks up to 90 min, Chromium with its headless
+  shell for the hooks (the intelligence scenarios), the hooks artifact carries the town's own set.
 - Not done: `GaitState.feet` into L3's `groundingCheck` is not a one-liner (a planted foot's height carries a sole offset
   and needs its own record kind): a known issue.
+- Test-only: after L6 a7cee4a7, leaf/bark/branch 984/528/704 (> 835/450/600; decision 131's 990 failed at 984).
 - Test-only: the attach floors at about 15% under the merged counts (true-size trees plus generator 7): tree points 3,583
   (> 3,000), leaf/bark/branch 1,164/618/824 (> 990/525/700), limbs 649 (> 550), forest limbs 342 on 45 trees (> 290 on
   > 38), hangs 370 (> 310); the attach test composes the renderer's matrix from `assetTreePlacement(item).y` (L6 sinks a
@@ -85,6 +95,16 @@ until they do, a test-file check shows pass/fail per metric test.
 Under `~/animaldex-ark-handover-2026-11-11/ark/motion/next/` (none yet).
 
 ## Open issues
+
+- Fragile test (L6, for the map lane): stats "someone rare stands behind cover" depends on the snow leopard's mountain
+  spot (it passes with scree solid from 0.30 and from 0.45 m).
+- The town has no colliders yet: on another island the behaviour world is not built (`scheduleOn` is false), so L5's
+  layer and L7's recipe colliders pass through. When T3 puts town animals on the schedule, the colliders must be the
+  island's own.
+- The harbour seal walks at about 2.5× its flipper-legs clip (0.21 units/s) at true-scale speed; cosmetic now that seals
+  keep their baked clips (L1 a0d507a4).
+- The backwards share: L1 found it is one zebra (`e9779d`) in a sleep-then-play bout, the same with the layer on and off;
+  routed to the behaviour lane (`ark-behaviour-backwards`).
 
 - Routed: L6's three tests (stags, snow leopard, pigs/zebras asleep); L1's backwards share (0.2% at the release, ~5%
   since L6/L3 in the default view; nothing backwards over 1 s); L7's duck sitter and the recipes test file's timeout.
