@@ -174,7 +174,7 @@ byte-identical. What is left, in order:
 ### 5.2 Encounter hunting (lower priority today)
 
 The scene side is in and inert while the server's `hunting` is `pool`. The server activation (`20261118100000`,
-`110000` on `ark-encounter`, and its switch) comes from the encounter lane: **(pending)**.
+`110000` on `ark-encounter`, and its switch) is not part of this release: the encounter lane hands it over later.
 
 ## 6. Known issues
 
