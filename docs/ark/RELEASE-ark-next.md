@@ -196,16 +196,22 @@ Listed for the owner instead of polished today (decision 136):
   the baked clip even where the locomotion layer draws the feet (fixed in the tool in the same branch); and schedule
   trips too long for their slot are sped up past 1.2× (bullfrog, alligators, goats, the komodo dragon; being reworked
   under decision 202).
+- Ground turns of 2–4 a minute in the default view (lions, seals, zebras): the collisions layer's separation pushes
+  positions without turning the bodies (L5's facing fix comes after the release).
+- Some animals jump onto their roost at the night's first sleep slot (a camel by 2.6–41 m, an emperor penguin by
+  3.7–6 m).
+- Walking backwards: 0.2% at the release, 1–5% on this head (nothing over 1 s on the ground); the behaviour lane's fix
+  (`ark-behaviour-backwards` cef5c27d: a foal faces its way home, a sleeper keeps its heading across slots, no snapping
+  round) brings it to 3.2% in the replay and comes right after the release.
 - Perched sleepers share crowns: the collision audit's overlaps (3.2 M body samples over 2 hours) are mostly sleepers
   in their postures and perched animals held where they are; the limit is "at most today's".
 - Arriving at the town on the phone profile leaves two main-thread tasks of 0.5–0.6 s after the first frame (decision
   163): profile them on a real phone after the release.
 - The town's walk ways are new (T3): watch for town animals crossing garden fences in the first hours.
 
-Still open with a lane (**the coordinator decides** before approval):
-- Behaviour lane (`ark-behaviour-backwards`): the share of walking backwards in the default view (0.2% at the release,
-  1–5% on ark-next; nothing backwards for over 1 s on the ground). L1 found one zebra in a sleep-then-play bout, the
-  same with the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
+Right after the release (merged in this order, then a web-only deploy): L1's reactive pace cap (`ark-l1-pace`
+f21ad63b), the behaviour lane's backwards fix (cef5c27d), L1's schedule pace (decision 202), L5's separation facing, and
+the bigger wild island (W1, `ark-wild-island-next`).
 
 ## 7. Rollback
 
