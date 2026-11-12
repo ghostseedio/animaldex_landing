@@ -153,7 +153,8 @@ export class ControlHud {
         this.touch = typeof window !== "undefined" && (window.matchMedia?.("(pointer: coarse)").matches ?? false);
         this.root = el("div", "position:absolute;inset:0;pointer-events:none;z-index:30;");
         this.root.setAttribute("data-ark-control-ui", "");
-        const top = el("div", `position:absolute;left:12px;right:12px;top:calc(${insets.top}px + 10px + env(safe-area-inset-top));display:flex;gap:8px;justify-content:space-between;align-items:center;pointer-events:none;`);
+        // (Clear of the embed's own sound button at the top's end: 10 px in, 36 px wide.)
+        const top = el("div", `position:absolute;left:12px;right:58px;top:calc(${insets.top}px + 10px + env(safe-area-inset-top));display:flex;gap:8px;justify-content:space-between;align-items:center;pointer-events:none;`);
         this.viewButton = el("button", PILL + "pointer-events:auto;", words.firstPerson);
         this.viewButton.type = "button";
         this.viewButton.addEventListener("click", () => this.onView?.());

@@ -3153,19 +3153,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const entry of allEntries()) {
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
+            // Under control: drawn where its controller (or the server) has it from the first frame, awake, out of its
+            // den, whatever its schedule (still building, or asleep) would say (a woken sleeper, D3).
+            const controlledNow = control?.controlledIds().has(entry.animal.id) ?? false;
             if (entry.held || entry.act?.hidden) {
                 entry.middle = null;
                 continue;
             }
             // On the schedule, its world still building (the first moments): unseen until it can be where its schedule says
             // (with reduced motion too: until the spacing is worked out, a predator's place could be among its prey).
-            if ((!world || !entry.sched?.wired) && entry.sched && !entry.visitor && !entry.act && !entry.moment) {
+            if ((!world || !entry.sched?.wired) && entry.sched && !entry.visitor && !entry.act && !entry.moment && !controlledNow) {
                 entry.middle = null;
                 continue;
             }
             // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
             // for a frame with room for it (held where it was drawn; unseen if it never was).
-            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
+            if (controlledNow) {
+                // (Its schedule waits: nothing of it is drawn while it is controlled.)
+            } else if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
                 if (!entry.sched!.pose) {
                     entry.middle = null;
                     continue;
@@ -3191,12 +3196,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Woken here by the reactive layer (a threat, an alarm, the camera close: `reactive.ts`), it is up though the
             // shared layer has it asleep; then it lies down again (`sleep.ts`: the posture, the way down and up).
             const woke = Boolean(entry.reactive?.woke);
-            const restWant = woke ? 0 : targets.rest;
+            const restWant = woke || controlledNow ? 0 : targets.rest;
             if (!reducedMotion) entry.rest += (Math.max(restWant, headDown) - entry.rest) * Math.min(dt * (headDown ? 3 : woke ? 4 : 1.5), 1);
             // (Its first frame with its schedule: as it is now, already lying if asleep; it never lies down on load.)
-            entry.sleepNow = stepSleepNow(entry.sleepNow ?? null, {id: entry.animal.id, slug, length: entry.length, asleep: entry.state.asleep && !woke && !entry.act && !entry.visitor && !entry.moment, startled: Boolean(entry.reactive?.startled), epoch: epochNow, dt, reduced: reducedMotion || !entry.sleepStarted});
+            entry.sleepNow = stepSleepNow(entry.sleepNow ?? null, {id: entry.animal.id, slug, length: entry.length, asleep: entry.state.asleep && !woke && !controlledNow && !entry.act && !entry.visitor && !entry.moment, startled: Boolean(entry.reactive?.startled), epoch: epochNow, dt, reduced: reducedMotion || !entry.sleepStarted});
             entry.sleepStarted = true;
-            stepDen(entry, dt);
+            if (controlledNow) entry.denIn = 0;
+            else stepDen(entry, dt);
             // Loops (a swimmer's, a flyer's) slow almost to a stop asleep.
             const plan = model?.behaviour?.plan ?? "";
             const pace = 1 - 0.85 * entry.rest;
@@ -3227,7 +3233,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const where = pose(entry, model, modelHeight, now);
             // Only the layer the camera is in is drawn in full: under the sea nothing of the land; above it not the deep;
             // the underground only in the cutaway (or peeking out of its burrow).
-            const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
+            const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || controlledNow;
             const atSea = atSeaOf(entry) || entry.depth?.water === "salt";
             // The deep's are hidden from above while they are down there (an air-breather of the deep shows when it comes up).
             const down = entry.depth ? entry.depth.band === "deep" && where.base < -2.5 : entry.layer.layer === "deep";

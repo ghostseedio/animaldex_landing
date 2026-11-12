@@ -186,7 +186,7 @@
       onSelect: function (animal) { if (hud) hud.setSelected(animal ? animal.id : null); tell({type: "ark:selected", animal: animal, founders: foundersOf(animal)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
-      onReady: function () { tell({type: "ark:ready"}); },
+      onReady: function () { tell({type: "ark:ready"}); if (devBuild) window.__arkScene = scene; },
       live: liveOk ? {url: liveUrl, client: "app", insets: function () { return {top: insetNumber("insetTop"), bottom: insetNumber("insetBottom")}; }} : null,
       onControl: function (event) {
         if (event.kind === "live") tell({type: "ark:live", available: Boolean(event.available)});
