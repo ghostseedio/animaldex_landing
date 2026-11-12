@@ -322,6 +322,8 @@ export function measureCollisions(sim: Sim, set: ColliderSet, posesAt: PosesAt, 
                 // (Within the fence's height on both sides: a bird coming down onto its top, or off it, goes over it.)
                 if (c.kind !== "fence" || c.shape !== "segment" || !bodyMeets(c, s.body.radius) || !spansCollider(c, p.y, s.body.height) || !spansCollider(c, before.y, s.body.height)) continue;
                 if (!segmentsCross(before.x, before.z, p.x, p.z, c.ax, c.az, c.bx, c.bz)) continue;
+                // (Its middle within the fence's own thickness is on it: an owl perched along a fence's top, hopping on.)
+                if (colliderDistance(c, p.x, p.z) <= 0 || colliderDistance(c, before.x, before.z) <= 0) continue;
                 // (The chord between two samples of a run round a garden's corner cuts the corner: the run itself, finely
                 // sampled, must cross the fence to count.)
                 if (move > 0.5 && !crossesFinely(c, s, t - options.step, t, options.step)) continue;
