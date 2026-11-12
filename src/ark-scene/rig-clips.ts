@@ -149,13 +149,13 @@ export function rigPlayable(manifest: RigManifest | null | undefined, slug: stri
 /**
  * The rig set the scene reads first: `ark-rig/<version>/`. A re-made set
  * (new strides, more clips) goes up under a new version beside the old one
- * (`publish_rig.py --prefix ark-rig/v2`), and the release that is made for
+ * (`publish_rig.py --version v3`), and the release that is made for
  * it moves this, so a web build never reads a set it was not made for.
  * Until that set is up (its manifest missing, malformed or not its version)
  * every species reads the fallback set, and a species the new set does not
  * list reads it too.
  */
-export const ARK_RIG_VERSION = "v2";
+export const ARK_RIG_VERSION = "v3";   // v3 (MA2): the birds re-rigged (rig code v7: bills and skulls on the head bone, folding wings); every other species' file as v2
 /** The set every species falls back to: v1 is never overwritten or removed (contract section 6). */
 export const ARK_RIG_FALLBACK = "v1";
 

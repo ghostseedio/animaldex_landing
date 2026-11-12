@@ -67,12 +67,12 @@ test("rig clips: a sitting rest pose holds every moving clip, flight and water i
     for (const name of ["enter_water", "exit_water", "walk", "flap"]) assert.equal(rigClip(sitting, "agile-wallaby", name), null, name);
 });
 
-test("rig sets: v2 first, v1 for every species v2 does not list; a v2 folder's manifest counts only at version 2", () => {
-    assert.equal(ARK_RIG_VERSION, "v2");
+test("rig sets: the release's set (v3) first, v1 for every species it does not list; a v2 folder's manifest counts only at version 2", () => {
+    assert.equal(ARK_RIG_VERSION, "v3");
     assert.equal(ARK_RIG_FALLBACK, "v1");
     const models = "https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark";
     const rigRoot = "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig";
-    assert.deepEqual(rigBasesFrom(models), [`${rigRoot}/v2`, `${rigRoot}/v1`], "the release's set, then the fallback");
+    assert.deepEqual(rigBasesFrom(models), [`${rigRoot}/v3`, `${rigRoot}/v1`], "the release's set, then the fallback");
     assert.deepEqual(rigBasesFrom(models, null), [], "rigs off (?rig=0, reduced motion pages)");
     assert.deepEqual(rigBasesFrom(models, `${rigRoot}/v1`), [`${rigRoot}/v1`], "?rigv=v1: the v1 set alone");
     assert.deepEqual(rigBasesFrom(models, `${rigRoot}/v3/`), [`${rigRoot}/v3`, `${rigRoot}/v1`], "?rigv=v3: v3 then v1");
@@ -88,6 +88,9 @@ test("rig sets: v2 first, v1 for every species v2 does not list; a v2 folder's m
     assert.equal(decodeRigSet({kind: "ark-rig", species: {mallard: "aaaaaaaaaaaa"}, version: 2}, 2)?.flight, false, "no switch: no flight");
     assert.equal(decodeRigSet({kind: "ark-rig", species: {mallard: "aaaaaaaaaaaa"}, version: 1}, 2), null, "a v2 folder holding a v1 manifest: fall back");
     assert.equal(decodeRigSet({kind: "ark-rig", species: {}, version: 3}, 2), null);
+    // v3 (MA2's bird re-rig): a v3 folder counts only at version 3, flight as v2
+    assert.deepEqual(decodeRigSet({flight: true, kind: "ark-rig", species: {mallard: "dddddddddddd"}, version: 3}, 3), {version: 3, flight: true, index: {mallard: "dddddddddddd"}});
+    assert.equal(decodeRigSet({flight: true, kind: "ark-rig", species: {mallard: "dddddddddddd"}, version: 2}, 3), null, "a v3 folder holding a v2 manifest: fall back");
     assert.equal(decodeRigSet({kind: "something-else", species: {}, version: 2}, 2), null);
     assert.equal(decodeRigSet("<html>404</html>", 2), null, "malformed: fall back");
     // v1 (live): version 1, never flight, whatever it says.
