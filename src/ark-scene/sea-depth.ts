@@ -33,6 +33,7 @@ import table from "@/ark-scene/depth-bands.json";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
 import {arkWorld, coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
 import {wildWaterSurface} from "@/ark-scene/islands/wild/map-v2";
+import {islandWaterNow} from "@/ark-scene/water-level";
 
 export type DepthBand = "surface" | "upper" | "mid" | "seabed" | "reef" | "deep" | "pond_surface" | "pond_mid" | "pond_bed";
 export type WaterKind = "salt" | "fresh";
@@ -223,6 +224,9 @@ export type WaterSpec = {
 
 /** The water's surface over a point (Part C): v2's lake's and river's own level where they stand, else the sea's 0. */
 export function waterSurfaceAt(x: number, z: number): number {
+    // (Part C, lane TB: another island's own water at its own level, `water-level.ts` setIslandWater.)
+    const own = islandWaterNow()?.surface(x, z) ?? null;
+    if (own !== null) return own;
     return arkWorld() === "v2" ? wildWaterSurface(x, z) : 0;
 }
 

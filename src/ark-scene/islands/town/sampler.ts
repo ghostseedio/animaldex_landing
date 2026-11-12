@@ -18,12 +18,19 @@
 import type {ArkZone} from "@/ark-scene/types";
 import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {inPoly, type Poly} from "@/ark-scene/islands/town/geom";
+import {inPoly, polyEdgeDistance, type Poly} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townHeight, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, townPlan} from "@/ark-scene/islands/town/plan";
 import {townAreas, zooLayout, zooSpotsFor, type SpotWhere, type TownSpot} from "@/ark-scene/islands/town/areas";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
 import {townTreePerches, townTrees} from "@/ark-scene/islands/town/trees";
+import {townWaterSurface} from "@/ark-scene/islands/town/drawn-ground";
+import {homeSiteFootprints, inTownSolid} from "@/ark-scene/islands/town/tanks";
+import {corners} from "@/ark-scene/islands/town/geom";
+import {townHouseholds} from "@/ark-scene/islands/town/areas";
+
+/** Lane TB: spots on raised things (roofs, eaves, ledges, a balcony, a lamp-lit wall); every other spot is on the ground. */
+const RAISED_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
 
 const RASTER = 1;
 const BUCKET = 12;
@@ -125,20 +132,22 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         const j = Math.floor((z + half) / RASTER);
         return i < 0 || j < 0 || i >= n || j >= n ? -1 : j * n + i;
     };
-    const fillPoly = (poly: Poly) => {
+    // (Lane TB: `margin`: every cell within it of the footprint too, so a 1 m cell's centre test leaves no half-metre
+    // strip inside a building's wall for a small animal to rest in.)
+    const fillPoly = (poly: Poly, margin = 0) => {
         let x0 = Infinity;
         let z0 = Infinity;
         let x1 = -Infinity;
         let z1 = -Infinity;
         for (const p of poly) {
-            x0 = Math.min(x0, p.x);
-            z0 = Math.min(z0, p.z);
-            x1 = Math.max(x1, p.x);
-            z1 = Math.max(z1, p.z);
+            x0 = Math.min(x0, p.x - margin);
+            z0 = Math.min(z0, p.z - margin);
+            x1 = Math.max(x1, p.x + margin);
+            z1 = Math.max(z1, p.z + margin);
         }
         for (let x = Math.floor(x0); x <= x1; x += RASTER) {
             for (let z = Math.floor(z0); z <= z1; z += RASTER) {
-                if (!inPoly(poly, x + 0.5, z + 0.5)) continue;
+                if (!inPoly(poly, x + 0.5, z + 0.5) && !(margin > 0 && polyEdgeDistance(poly, x + 0.5, z + 0.5) < margin)) continue;
                 const k = cellOf(x + 0.5, z + 0.5);
                 if (k >= 0) solid[k] = 1;
             }
@@ -172,11 +181,13 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         }
     };
     for (const o of townObstacles(plan, open)) {
-        if (o.kind === "building") fillPoly(o.poly);
+        if (o.kind === "building") fillPoly(o.poly, 0.5);
         else if (o.kind === "tree") fillDisc(o.x, o.z, Math.max(o.r, 0.25));
         // (A zoo fence or net 2.5 m thick on the raster: the walk grid's 2 m cells have no way through it.)
         else if (o.kind === "barrier" && o.hard) fillLine(o.line, 2.5);
     }
+    // (Lane TB: the garden rooms and the raised garden ponds stand in the way too: nobody walks through their glass.)
+    for (const b of homeSiteFootprints(townHouseholds(plan), plan)) fillPoly(corners(b), 0.5);
 
     // The places.
     const points: AttachPoint[] = [];
@@ -193,8 +204,15 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
     spots.forEach((s, i) => {
         const tags = TAGS_BY_WHERE[s.where];
         if (!tags) return;
+        // (Lane TB: a place on the ground never in a building's footprint, a garden room's or a pond's: some gardens and
+        // bins lie under a block of flats; an animal going there rested inside its walls.)
+        if (!RAISED_WHERE.has(s.where) && s.area !== "zoo" && inTownSolid(s.x, s.z, 0.3)) return;
         const yaw = ((i * 2654435761) >>> 0) % 6283 / 1000;
-        for (const tag of tags) add(tag, `town:${s.where}:${i}:${tag}`, s.x, s.y, s.z, 0, 1, 0, yaw);
+        // (A place on the ground is on it, or on the water's surface over it: a drain's mouth, a bank's edge, never under them.)
+        const g = townHeight(s.x, s.z);
+        const water = townWaterSurface(s.x, s.z);
+        const y = RAISED_WHERE.has(s.where) || s.area === "zoo" ? s.y : water !== null && g < water ? water : Math.max(s.y, g);
+        for (const tag of tags) add(tag, `town:${s.where}:${i}:${tag}`, s.x, y, s.z, 0, 1, 0, yaw);
     });
     for (const e of zooLayout(open).enclosures) {
         if (e.shared) continue;
@@ -204,8 +222,8 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
     // Each tree's places on the drawn tree itself (its asset's bark, branch tops and leaves: `trees.ts`, lane GC), and its shade.
     townTrees(plan).forEach((t, i) => {
         if (t.low) return;
-        const ground = townHeight(t.x, t.z);
-        add("shade", `town:tree:${i}:shade`, t.x + 1.2, ground, t.z + 0.6);
+        // (Its shade on the ground beside it: never in a building's footprint, a garden room's or a pond's; lane TB.)
+        if (!inTownSolid(t.x + 1.2, t.z + 0.6, 0.3)) add("shade", `town:tree:${i}:shade`, t.x + 1.2, townHeight(t.x + 1.2, t.z + 0.6), t.z + 0.6);
         let limb = 0;
         for (const p of townTreePerches(t)) add(p.tag, p.tag === "branch" ? `town:tree:${i}:limb${limb++}` : `town:tree:${i}:${p.tag}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw);
     });
@@ -249,6 +267,9 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         // (L5: the walk grid's clearance and its paths exact against the town's own colliders, `colliders.ts`.)
         ...(colliders ? {colliders} : {}),
         heightAt: (x, z) => townHeight(x - ox, z - oz),
+        // (Lane TB: the canal's, the millpond's and the farm pond's own level, held by the lock; the sea's 0 elsewhere,
+        // under every bit of the town's dry land. A swimmer floats on the water that is drawn, never 1 m under it.)
+        waterSurface: (x, z) => townWaterSurface(x - ox, z - oz) ?? 0,
         isWater: (x, z) => {
             const g = sampleTownGround(x - ox, z - oz);
             return g.surface === "water" || g.height < 0;
