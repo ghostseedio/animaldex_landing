@@ -102,6 +102,11 @@ export function plantClipFeet(rig: LocoRig, input: LocoInput, world: Matrix4[], 
         const lifted = Math.max(sole.y - leg.contact[1], 0);
         const w = tA.copy(sole).applyMatrix4(input.instance);
         const g = input.ground(w.x, w.z);
+        // A foot the clip (or the act's attitude) holds well off the ground stays where it is: a rearing front, a raised paw.
+        if (w.y - g.height > 0.25 * rig.legHeight * input.scale) {
+            targets.push(new Vector3().setFromMatrixPosition(world[leg.foot]));
+            continue;
+        }
         w.y = g.height + lifted * input.scale;
         const target = w.clone().applyMatrix4(instInv);
         // The ankle above the sole as the clip holds it.

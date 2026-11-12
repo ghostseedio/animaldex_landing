@@ -1,0 +1,40 @@
+# The Ark's locomotion layer (lane L1, docs/ark/locomotion.md): gaits and their
+# quality metrics with thresholds on 20 real rig skeletons (foot sliding, stride
+# against speed, planted foot height, joint limits) over walk, run, turning on
+# the spot and a 15-degree slope, plus the gait, IK, spring and flee checks.
+name: Ark locomotion
+
+on:
+  pull_request:
+    paths:
+      - "src/ark-scene/locomotion/**"
+      - "src/ark-scene/rig-player.ts"
+      - "src/lib/ark-locomotion.test.ts"
+      - ".github/workflows/ark-locomotion.yml"
+  push:
+    branches: [main, ark-locomotion, ark-next]
+    paths:
+      - "src/ark-scene/locomotion/**"
+      - "src/ark-scene/rig-player.ts"
+      - "src/lib/ark-locomotion.test.ts"
+      - ".github/workflows/ark-locomotion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  metrics:
+    name: Locomotion metrics and checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Locomotion metrics (thresholds) and the rig player
+        run: npx tsx --test src/lib/ark-locomotion.test.ts src/lib/ark-rig.test.ts

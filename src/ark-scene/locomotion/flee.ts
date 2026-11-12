@@ -65,6 +65,9 @@ export function sprintPace(input: PaceInput): number {
         case "flying_bird":
             // On foot (a flyer takes off instead): a quick run.
             return Math.min(hirt * 0.5 * statK, 10 * L);
+        case "flightless_bird":
+            // Penguins waddle (about 2.5 km/h, a toboggan for more); ratites run.
+            return /penguin/.test(input.slug ?? "") ? Math.min(0.9 * statK, 2 * L) : hirt * statK;
         default:
             return hirt * statK;
     }

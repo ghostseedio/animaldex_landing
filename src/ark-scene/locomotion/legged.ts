@@ -19,11 +19,14 @@
  */
 
 import {Matrix4, Quaternion, Vector3} from "three";
-import {G, GAITS, gaitFor, gaitLadder, headBobs, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
+import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
 import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChain} from "@/ark-scene/locomotion/secondary";
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {FootTarget, GaitName, GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
+
+/** Act states under which the body is still stood level (moving acts: the act's attitude is its gait's). */
+export const LEVEL_ACTS: ReadonlySet<string> = new Set(["walk", "run", "stalk", "charge", "crawl", "carry", "push", "wade"]);
 
 /** Clips during which the legged driver walks the animal itself (its own gaits) or stands it (its own idle). */
 export const GAIT_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "hop", "idle"]);
@@ -44,12 +47,19 @@ type Foot = {
     nx: number;
     ny: number;
     nz: number;
+    /** The body's heading when it landed (a planted foot doesn't turn with the body), and when it lifted. */
+    yaw: number;
+    liftYaw: number;
+    /** Lift-offs counted on the gait's phase (a skipped swing still steps). */
+    lifts: number;
 };
 
 export type LeggedState = {
     started: boolean;
     last: Vector3;
     lastYaw: number;
+    /** The body's own heading (it turns no faster than its size allows, catching up with the drawn heading). */
+    bodyYaw: number;
     vel: Vector3;
     speed: number;
     accel: number;
@@ -80,6 +90,8 @@ export type LeggedState = {
     clock: number;
     /** Last frame's feet (world) and whether planted, for the metrics. */
     feetOut: FootTarget[];
+    /** How far each planted foot was from its leg's reach last frame (m): a foot that can't be reached steps. */
+    reachMiss: number[];
 };
 
 const tmpV = new Vector3();
@@ -110,6 +122,7 @@ function initState(rig: LocoRig): LeggedState {
         started: false,
         last: new Vector3(),
         lastYaw: 0,
+        bodyYaw: 0,
         vel: new Vector3(),
         speed: 0,
         accel: 0,
@@ -123,7 +136,7 @@ function initState(rig: LocoRig): LeggedState {
         stride: 0,
         duty: 1,
         froude: 0,
-        feet: rig.legs.map(() => ({planted: true, at: new Vector3(), from: new Vector3(), w0: 0, w: 0, free: false, freeDur: 0.2, to: new Vector3(), ground: 0, nx: 0, ny: 1, nz: 0})),
+        feet: rig.legs.map(() => ({planted: true, at: new Vector3(), from: new Vector3(), w0: 0, w: 0, free: false, freeDur: 0.2, to: new Vector3(), ground: 0, nx: 0, ny: 1, nz: 0, yaw: 0, liftYaw: 0, lifts: -1e10})),
         poles: rig.legs.map((leg) => new Vector3(...restPole(rig, leg))),
         tail: newChain(rig.tail.length),
         bob: newSpring(),
@@ -137,7 +150,8 @@ function initState(rig: LocoRig): LeggedState {
         fidgetSlot: -1,
         motion: 0,
         clock: 0,
-        feetOut: []
+        feetOut: [],
+        reachMiss: rig.legs.map(() => 0)
     };
 }
 
@@ -145,6 +159,29 @@ function initState(rig: LocoRig): LeggedState {
 function neutral(rig: LocoRig, legIndex: number, input: LocoInput, out: Vector3): Vector3 {
     const c = rig.legs[legIndex].contact;
     return out.set(c[0], c[1], c[2]).applyMatrix4(input.instance);
+}
+
+const sweeps = new WeakMap<LocoRig, number>();
+/**
+ * The longest sweep (mesh units) every leg reaches with the body lowered by at most 8% of its leg height: a leg
+ * nearly straight at rest (a duck's, a deer's) has little slack, so its stride is kept within it.
+ */
+export function sweepLimit(rig: LocoRig): number {
+    let out = sweeps.get(rig);
+    if (out === undefined) {
+        out = Infinity;
+        for (const leg of rig.legs) {
+            const reach = (leg.upperLength + leg.lowerLength) * 0.96;
+            const vertical = leg.hip[1] - leg.ankle[1] - 0.08 * rig.legHeight;
+            const slack = Math.sqrt(Math.max(reach * reach - vertical * vertical, 0));
+            // A sprawled leg reaches out sideways too: its sweep is the chord through its rest foot.
+            const side = Math.abs(leg.contact[0] - leg.hip[0]);
+            out = Math.min(out, 2 * Math.sqrt(Math.max(slack * slack - side * side * 0.5, slack * slack * 0.25)));
+        }
+        if (!Number.isFinite(out) || out <= 0) out = Infinity;
+        sweeps.set(rig, out);
+    }
+    return out;
 }
 
 /** A stand step's time (s): quick for small legs, about half a second for an elephant's. */
@@ -179,12 +216,67 @@ export const leggedDriver: LocoDriver = {
 /**
  * Pose a legged animal for this frame (world: mesh-space bone transforms from the rest pose, changed in place).
  */
-export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: LeggedState): GaitState {
+export function poseLegged(rig: LocoRig, drawn: LocoInput, world: Matrix4[], s: LeggedState): GaitState {
+    // The body turns at its own pace (a big animal can't spin on the spot as fast as a heading can change): everything
+    // below works in the body's own frame (the instance turned by the lag about the body's middle), and the whole pose
+    // is turned back into the instance's frame at the end.
+    const lagPivot = bodyPivot(rig);
+    const jumpedYaw = !s.started || drawn.instance.elements[12] !== drawn.instance.elements[12];
+    if (jumpedYaw) s.bodyYaw = drawn.yaw;
+    {
+        const hipNow = Math.max(rig.legHeight * Math.max(drawn.scale, 1e-6), 1e-3);
+        const lengthNow = Math.max(rig.length * drawn.scale, 1e-3);
+        const diff = wrapHalf((drawn.yaw - s.bodyYaw) / (Math.PI * 2)) * Math.PI * 2;
+        const rate = clamp(0.4 * Math.sqrt(G / hipNow), 0.6, 9) + (3 * s.speed) / lengthNow;
+        const dtNow = clamp(drawn.dt, 0, 0.1);
+        s.bodyYaw += Math.sign(diff) * Math.min(Math.abs(diff), rate * dtNow * clamp(Math.abs(diff) / 0.25, 0.3, 1));
+        // Never more than 35 degrees behind: the head's looks and the reactive layer's turns are measured from the drawn
+        // heading, so the body stays near it (the feet step round either way).
+        const behind = wrapHalf((drawn.yaw - s.bodyYaw) / (Math.PI * 2)) * Math.PI * 2;
+        if (Math.abs(behind) > 0.6) s.bodyYaw = drawn.yaw - Math.sign(behind) * 0.6;
+    }
+    const lag = wrapHalf((s.bodyYaw - drawn.yaw) / (Math.PI * 2)) * Math.PI * 2;
+    const turnLag = new Matrix4().makeTranslation(lagPivot.x, 0, lagPivot.z).multiply(new Matrix4().makeRotationY(lag)).multiply(new Matrix4().makeTranslation(-lagPivot.x, 0, -lagPivot.z));
+    // On its own feet the body stands level on the ground: the instance's tilt and lift from the older shader-era root
+    // motions (the idle director's bobs and looks round, a glance's lift, the reactive crouch) would otherwise fold the
+    // planted legs (a dog "sitting up" as it looked round). The driver poses it on a level instance at the ground; the
+    // pose is turned back into the drawn instance's frame at the end, so it is drawn level. (An act's attitude, a
+    // recipe's pitch or roll, stays: `levelled`.)
+    const levelled = !drawn.actState || LEVEL_ACTS.has(drawn.actState);
+    const drawnPos = tmpV.setFromMatrixPosition(drawn.instance);
+    const scaleNow = Math.max(drawn.scale, 1e-6);
+    const level = levelled
+        ? new Matrix4().compose(new Vector3(drawnPos.x, drawn.ground(drawnPos.x, drawnPos.z).height - rig.minY * scaleNow, drawnPos.z), new Quaternion().setFromAxisAngle(Y, drawn.yaw), new Vector3(scaleNow, scaleNow, scaleNow))
+        : drawn.instance;
+    const input: LocoInput = {...drawn, instance: new Matrix4().multiplyMatrices(level, turnLag), yaw: s.bodyYaw};
+    const result = poseInBodyFrame(rig, input, world, s);
+    // Body frame -> the drawn instance's mesh frame: drawn⁻¹ · level · lag.
+    const back = levelled ? new Matrix4().copy(drawn.instance).invert().multiply(level).multiply(turnLag) : turnLag;
+    for (const m of world) m.premultiply(back);
+    return result;
+}
+
+/** The middle of the body between its fore and hind hips (mesh space): what it turns about. */
+function bodyPivot(rig: LocoRig): {x: number; z: number} {
+    if (!rig.legs.length) return {x: 0, z: 0};
+    let x = 0;
+    let z = 0;
+    for (const leg of rig.legs) {
+        x += leg.hip[0];
+        z += leg.hip[2];
+    }
+    return {x: 0 * x, z: z / rig.legs.length};
+}
+
+function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: LeggedState): GaitState {
     const dt = clamp(input.dt, 0, 0.1);
     const scale = Math.max(input.scale, 1e-6);
-    const hipM = rig.legHeight * scale;
+    // The gait's length (the hip height; a sprawling leg's reach) in metres.
+    const hipM = rig.gaitLength * scale;
     const lengthM = Math.max(rig.length * scale, 1e-4);
-    const here = tmpV.setFromMatrixPosition(input.instance);
+    // Its velocity from the body's middle (the point the body's own turn keeps still), not the instance's origin.
+    const pv = bodyPivot(rig);
+    const here = tmpV.set(pv.x, 0, pv.z).applyMatrix4(input.instance);
     inv.copy(input.instance).invert();
     // Velocity (world, horizontal), eased; a jump (a new spot, an act's cut) puts the feet back under the body.
     const jumped = !s.started || here.distanceTo(s.last) > Math.max(lengthM * 4, 2);
@@ -204,6 +296,8 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
             f.nz = g.nz;
             f.planted = true;
             f.free = false;
+            f.yaw = input.yaw;
+            f.liftYaw = input.yaw;
         });
     } else if (dt > 0) {
         const vx = (here.x - s.last.x) / dt;
@@ -223,14 +317,22 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
 
     // Gait and its stride.
     const speed = s.speed;
-    s.moving = s.moving ? speed > 0.06 * hipM + 0.004 : speed > 0.12 * hipM + 0.008;
+    // Each hip's own speed over the ground: the body's, plus its turn about its middle (the outside legs of a turn,
+    // and every leg of a turn on the spot, travel further). The stride is set by the fastest hip, so no planted foot
+    // is left behind beyond its reach.
+    const hipVel = rig.legs.map((leg) => {
+        const r = tmpV2.set(leg.hip[0] - pv.x, 0, leg.hip[2] - pv.z).transformDirection(input.instance).multiplyScalar(Math.hypot(leg.hip[0] - pv.x, leg.hip[2] - pv.z) * scale);
+        return {x: s.vel.x + s.turn * r.z, z: s.vel.z - s.turn * r.x};
+    });
+    const legSpeed = hipVel.reduce((m, v) => Math.max(m, Math.hypot(v.x, v.z)), speed);
+    s.moving = s.moving ? legSpeed > 0.07 * hipM : legSpeed > 0.14 * hipM;
     s.froude = (speed * speed) / (G * Math.max(hipM, 1e-3));
     const gait: GaitName = s.moving ? gaitFor(s.ladder, s.froude, s.gait === "stand" ? null : s.gait) : "stand";
     s.gait = gait;
     const spec = GAITS[gait] ?? GAITS.walk;
     s.motion += ((s.moving ? 1 : 0) - s.motion) * Math.min(dt * 5, 1);
     if (s.moving) {
-        const st = strideFor(speed, hipM, spec);
+        const st = strideFor(legSpeed, hipM, spec, undefined, sweepLimit(rig) * scale);
         s.stride = st.stride;
         s.cadence = st.cadence;
         s.duty = st.duty;
@@ -255,11 +357,22 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
         if (s.moving && !f.free) {
             const u = frac(s.phase + s.offsets[i]);
             const stance = u < s.duty;
+            // Its step count (one a cycle, counted at lift-off): a whole swing passed between two frames (a fast,
+            // small animal) still steps, landing where that swing would have.
+            const lifts = Math.floor(s.phase + s.offsets[i] - s.duty);
+            if (f.planted && stance && lifts > f.lifts && f.lifts > -1e9) {
+                const cycle = s.cadence > 1e-6 ? 1 / s.cadence : 0;
+                const home2 = nStand(rig, i, input, tmpV2);
+                f.at.set(home2.x + hipVel[i].x * (s.duty * cycle) / 2, f.at.y, home2.z + hipVel[i].z * (s.duty * cycle) / 2);
+                land(f, input);
+            }
+            f.lifts = lifts;
             if (stance && !f.planted) {
                 // Lands: where its swing has brought it, on the ground.
                 land(f, input);
             } else if (!stance && f.planted) {
                 f.planted = false;
+                f.liftYaw = f.yaw;
                 f.from.copy(f.at);
                 f.w0 = clamp((u - s.duty) / Math.max(1 - s.duty, 1e-3), 0, 0.95);
             }
@@ -269,8 +382,8 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
                 // Where the hip will be over it at mid-stance: the body moves on for the rest of the swing and half the stance.
                 const cycle = s.cadence > 1e-6 ? 1 / s.cadence : 0;
                 const ahead = (1 - w) * (1 - s.duty) * cycle + (s.duty * cycle) / 2;
-                const tx = home.x + s.vel.x * ahead;
-                const tz = home.z + s.vel.z * ahead;
+                const tx = home.x + hipVel[i].x * ahead;
+                const tz = home.z + hipVel[i].z * ahead;
                 swingTo(f, tx, tz, w, swingH, input);
             }
         } else {
@@ -284,6 +397,7 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
             } else if (!f.planted) {
                 // Stopping mid-swing: the swing finishes as a step to under the hip.
                 f.free = true;
+                f.liftYaw = f.yaw;
                 f.from.copy(f.at);
                 f.to.set(home.x, 0, home.z);
                 f.w = 0;
@@ -293,44 +407,62 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
         feetOut.push({key: leg.key, x: f.at.x, y: f.at.y, z: f.at.z, planted: f.planted && !f.free, ground: f.ground});
     }
     if (!s.moving) {
-        // Turning or drifting while standing: the foot furthest from under its hip steps, one at a time (two for six
-        // or more legs), so the body turns by stepping rather than on the spot.
-        const most = rig.legs.length >= 6 ? 2 : 1;
-        if (freeCount() < most) {
+        // Turning or drifting while standing: the foot furthest from under its hip steps (two at once for a quick
+        // turn: diagonal pairs on four legs, a tripod's worth on six or more), landing where its hip will be as the
+        // body keeps turning, so the body turns by stepping rather than on the spot. A foot left too far to reach steps
+        // at once, whatever the others do.
+        const most = rig.legs.length >= 6 ? 3 : rig.legs.length === 4 ? 2 : 1;
+        const centre = tmpV.set(pv.x, 0, pv.z).applyMatrix4(input.instance);
+        const cx = centre.x;
+        const cz = centre.z;
+        for (let pass = 0; pass < most; pass++) {
+            if (freeCount() >= most) break;
             let worst = -1;
-            let worstD = 0.22 * hipM;
+            let worstD = 0.2 * hipM;
             for (let i = 0; i < rig.legs.length; i++) {
                 const f = s.feet[i];
                 if (f.free || !f.planted) continue;
-                // Not two neighbours at once (the same pair, or the same side's next leg).
-                const busy = s.feet.some((g, j) => g.free && (rig.legs[j].pair === rig.legs[i].pair || (rig.legs[j].side === rig.legs[i].side && Math.abs(rig.legs[j].pair - rig.legs[i].pair) === 1)));
-                if (busy) continue;
                 const home = nStand(rig, i, input, tmpV2);
                 const d = Math.hypot(f.at.x - home.x, f.at.z - home.z);
+                // Urgent: far from under its hip, or out of the leg's reach (a short leg on a rig fitted unevenly).
+                const urgent = d > 0.45 * hipM || s.reachMiss[i] > 0.04 * hipM;
+                // Not two neighbours at once (the same pair, or the same side's next leg); urgent feet go anyway.
+                const busy = s.feet.some((g, j) => g.free && (rig.legs[j].pair === rig.legs[i].pair || rig.legs[j].side === rig.legs[i].side));
+                if (busy && !urgent) continue;
                 if (d > worstD) {
                     worstD = d;
                     worst = i;
                 }
             }
             // A fidget now and then (the same moment for every viewer: from the clock and the animal's seed).
-            const period = 7 + 9 * hash01(input.seed * 13, 1);
-            const slot = Math.floor((input.clock + input.seed * 97) / period);
-            if (worst < 0 && slot !== s.fidgetSlot) {
-                if (s.fidgetSlot >= 0 && hash01(slot, input.seed * 31) < 0.55) worst = Math.floor(hash01(slot, input.seed * 53) * rig.legs.length) % rig.legs.length;
-                s.fidgetSlot = slot;
+            if (pass === 0) {
+                const period = 7 + 9 * hash01(input.seed * 13, 1);
+                const slot = Math.floor((input.clock + input.seed * 97) / period);
+                if (worst < 0 && slot !== s.fidgetSlot) {
+                    if (s.fidgetSlot >= 0 && hash01(slot, input.seed * 31) < 0.55) worst = Math.floor(hash01(slot, input.seed * 53) * rig.legs.length) % rig.legs.length;
+                    s.fidgetSlot = slot;
+                }
             }
-            if (worst >= 0) {
-                const f = s.feet[worst];
-                const home = nStand(rig, worst, input, tmpV2);
-                const a = hash01(s.fidgetSlot, worst + input.seed) * Math.PI * 2;
-                const nudge = worstD > 0.22 * hipM ? 0 : 0.04 * hipM;
-                f.free = true;
-                f.planted = false;
-                f.from.copy(f.at);
-                f.to.set(home.x + Math.cos(a) * nudge, 0, home.z + Math.sin(a) * nudge);
-                f.w = 0;
-                f.freeDur = tStep;
-            }
+            if (worst < 0) break;
+            const f = s.feet[worst];
+            const home = nStand(rig, worst, input, tmpV2);
+            const fidget = worstD <= 0.2 * hipM;
+            const a = hash01(s.fidgetSlot, worst + input.seed) * Math.PI * 2;
+            const nudge = fidget ? 0.04 * hipM : 0;
+            // Quicker the further it has to go; aimed ahead of the turn.
+            const dur = tStep * clamp((0.25 * hipM) / Math.max(worstD, 1e-6), 0.55, 1);
+            const ahead = clamp(s.turn * dur * 0.9, -0.8, 0.8);
+            const rx = home.x - cx;
+            const rz = home.z - cz;
+            const ca = Math.cos(ahead);
+            const sa = Math.sin(ahead);
+            f.free = true;
+            f.planted = false;
+            f.liftYaw = f.yaw;
+            f.from.copy(f.at);
+            f.to.set(cx + rx * ca + rz * sa + Math.cos(a) * nudge, 0, cz - rx * sa + rz * ca + Math.sin(a) * nudge);
+            f.w = 0;
+            f.freeDur = dur;
         }
     }
     s.feetOut = feetOut;
@@ -356,12 +488,26 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
     const span = fore.length && hind.length ? Math.max(fore[0].hip[2] - hind[0].hip[2], 1e-3) : 0;
     const quad = span > 0;
     // Bodies follow the slope most of the way (in mesh units, relative to where the instance stands).
-    const liftWant = (((quad ? hindY : (hindY + foreY) / 2) - baseY) / scale) * 0.92;
+    const liftWant = (((quad ? hindY : (hindY + foreY) / 2) - baseY) / scale) * (quad ? 0.92 : 1);
     const pitchWant = quad ? clamp(Math.atan2(((hindY - foreY) / scale) * 0.85, span), -0.45, 0.45) : 0;
     const lift = stepSpring(s.slopeLift, liftWant, dt, 6, 0.9);
     const slopePitch = stepSpring(s.slopePitch, pitchWant, dt, 4, 0.9);
-    // Crouch, bob and sway with the gait.
-    const crouch = stepSpring(s.crouch, spec.crouch * legH, dt, 3, 1);
+    // Crouch, bob and sway with the gait: at least as low as the legs need to reach both ends of their sweep.
+    let needed = 0;
+    if (s.moving) {
+        const half = (s.stride * s.duty) / scale / 2;
+        for (const leg of rig.legs) {
+            const reach = (leg.upperLength + leg.lowerLength) * 0.96;
+            const vertical = leg.hip[1] - leg.ankle[1];
+            needed = Math.max(needed, vertical - Math.sqrt(Math.max(reach * reach - half * half, 0)));
+        }
+    }
+    // (Legs locked straight at rest, as some rigs were fitted: a living animal stands with a little give in them.)
+    // (An elephant's columns stay straight: no give, a third of the gait's crouch.)
+    const columnar = columnarLegs(rig.slug);
+    const give = !columnar && rig.legs.some((l) => Math.hypot(l.hip[0] - l.ankle[0], l.hip[1] - l.ankle[1], l.hip[2] - l.ankle[2]) > 0.95 * (l.upperLength + l.lowerLength)) ? 0.07 * legH : 0;
+    // (Never a crawl: at most 15% of the leg lower. A foot past its reach misses the ground by a little instead.)
+    const crouch = stepSpring(s.crouch, Math.min(Math.max(spec.crouch * legH * (columnar ? 0.35 : 1), needed, give), 0.15 * legH), dt, 3, 1);
     let bobRaw = 0;
     let planted = 0;
     let sinSum = 0;
@@ -399,7 +545,10 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
 
     // The whole body: lift (slope, crouch, bob, sway), then pitch (slope, rock, acceleration), roll and yaw at the hips.
     const hips = rig.hips >= 0 ? rig.hips : 0;
-    translateSubtree(rig, world, hips, sway, lift - crouch + bob, 0);
+    // (A roll lifts one hip: the body comes down by as much, so that hip's foot still reaches the ground.)
+    const hipHalf = rig.legs.reduce((m, l) => Math.max(m, Math.abs(l.hip[0])), 0);
+    const listDrop = Math.abs(Math.sin(roll + lean)) * hipHalf;
+    translateSubtree(rig, world, hips, sway, lift - crouch + bob - listDrop, 0);
     pivot.setFromMatrixPosition(world[hips]);
     tmpQ.setFromAxisAngle(X, slopePitch + rock + accLean);
     tmpQ2.setFromAxisAngle(Z, roll + lean);
@@ -410,7 +559,10 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
     // The front body: spine flex (gallops, bounds) and the S-bend, the front leading into a turn.
     if (rig.chest >= 0) {
         pivot.setFromMatrixPosition(world[rig.chest]);
-        tmpQ.setFromAxisAngle(X, flex);
+        // (Breathing: the chest rises and settles, slower for big animals; strongest standing.)
+        const breathHz = clamp(0.32 / Math.sqrt(Math.max(lengthM, 0.05)), 0.2, 1.6);
+        const breath = (0.6 + 0.4 * motion) * 0.012 * Math.sin(Math.PI * 2 * (input.clock * breathHz + input.seed * 3));
+        tmpQ.setFromAxisAngle(X, flex - breath);
         tmpQ2.setFromAxisAngle(Y, chestYaw);
         tmpQ.premultiply(tmpQ2);
         rotateSubtree(rig, world, rig.chest, tmpQ, pivot);
@@ -434,11 +586,15 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
             thrust = clamp(Math.asin(clamp(offset / Math.max(neckLen, 1e-4), -0.6, 0.6)), -0.6, 0.6) * motion;
         }
         // (The neck carries the body's pitch: slope + rock + lean at the hips, flex at the chest. The head keeps the slope.)
-        const neckPitch = -steady * (rock + flex + 0.5 * accLean) + nod + lag * (1 - steady) + thrust;
+        // Standing, the head never quite still: small slow looks (the reactive layer's looks go on top, in the shader).
+        const idle = 1 - motion;
+        const glanceYaw = idle * 0.06 * (Math.sin(input.clock * 0.37 + input.seed * 11) + 0.6 * Math.sin(input.clock * 0.91 + input.seed * 5));
+        const glancePitch = idle * 0.035 * Math.sin(input.clock * 0.53 + input.seed * 7);
+        const neckPitch = -steady * (rock + flex + 0.5 * accLean) + nod + lag * (1 - steady) + thrust + glancePitch;
         tmpQ.setFromAxisAngle(X, neckPitch);
         tmpQ2.setFromAxisAngle(Z, -steady * (roll + lean) * 0.8);
         tmpQ.premultiply(tmpQ2);
-        tmpQ2.setFromAxisAngle(Y, clamp(0.1 * s.turn, -0.3, 0.3) - steady * hipsYaw - steady * 0.5 * chestYaw);
+        tmpQ2.setFromAxisAngle(Y, clamp(0.1 * s.turn, -0.3, 0.3) - steady * hipsYaw - steady * 0.5 * chestYaw + glanceYaw);
         tmpQ.premultiply(tmpQ2);
         rotateSubtree(rig, world, neck, tmpQ, pivot);
         if (rig.head >= 0 && rig.neck >= 0 && thrust !== 0) {
@@ -451,7 +607,9 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
     // The tail on springs: swings out of a turn, sways against the hips, rides up at speed.
     if (rig.tail.length) {
         const tailHz = clamp(1.6 / Math.sqrt(Math.max(lengthM, 0.15)), 0.8, 4);
-        const yawDrive = clamp(0.3 * s.turn, -0.7, 0.7) - 2.2 * hipsYaw - 1.5 * sway / Math.max(legH, 1e-4) * 0.1;
+        // Standing, a slow sway now and then (a swish comes and goes, the same for every viewer).
+        const swish = (1 - motion) * 0.22 * Math.sin(input.clock * 1.7 + input.seed * 9) * Math.max(Math.sin(input.clock * 0.21 + input.seed * 13), 0);
+        const yawDrive = clamp(0.3 * s.turn, -0.7, 0.7) - 2.2 * hipsYaw - 1.5 * sway / Math.max(legH, 1e-4) * 0.1 + swish;
         const pitchDrive = clamp(0.25 * Math.min(s.froude, 2), 0, 0.5) * motion - (bob / Math.max(legH, 1e-4)) * 2;
         const out = {yaw: [] as number[], pitch: [] as number[]};
         stepChain(s.tail, yawDrive, pitchDrive, dt, tailHz, 0.3, out);
@@ -479,20 +637,36 @@ export function poseLegged(rig: LocoRig, input: LocoInput, world: Matrix4[], s: 
         const d = hip.distanceTo(ankleT);
         if (d > reach) deficit = Math.max(deficit, Math.sqrt(Math.max(d * d - (hip.x - ankleT.x) ** 2 - (hip.z - ankleT.z) ** 2, 0)) - Math.sqrt(Math.max(reach * reach - (hip.x - ankleT.x) ** 2 - (hip.z - ankleT.z) ** 2, 0)));
     });
-    const drop = stepSpring(s.drop, Math.min(deficit, 0.3 * legH), dt, 10, 1);
+    const drop = stepSpring(s.drop, Math.min(deficit, 0.25 * legH), dt, 10, 1);
     if (drop > 1e-6) translateSubtree(rig, world, hips, 0, -drop, 0);
     const bodyTurn = tmpQ.setFromRotationMatrix(tmpM.extractRotation(world[hips])).multiply(tmpQ2.setFromRotationMatrix(tmpM.extractRotation(rig.bones[hips].restWorld)).invert());
     for (let i = 0; i < rig.legs.length; i++) {
         const leg = rig.legs[i];
         const f = s.feet[i];
-        // The foot turned to the ground (mesh-space normal), its toe tipped down in the swing.
+        // The foot turned to the ground (mesh-space normal), its toe tipped down in the swing; planted, it keeps the
+        // heading it landed with (the body turns over it), swinging, it comes round to the body's.
         const n = tmpV2.set(f.nx, f.ny, f.nz).transformDirection(inv);
-        const align = new Quaternion().setFromUnitVectors(Y, n).slerp(new Quaternion(), 0.3);
+        // (A long flat foot, a duck's web, turns less to the slope: turned fully, its heel would need a longer leg.)
+        const flat = Math.hypot(leg.contact[0] - leg.ankle[0], leg.contact[2] - leg.ankle[2]) > 1.5 * Math.abs(leg.ankle[1] - leg.contact[1]);
+        const align = new Quaternion().setFromUnitVectors(Y, n).slerp(new Quaternion(), flat ? 0.75 : 0.3);
+        const held = f.planted && !f.free ? wrapHalf((f.yaw - input.yaw) / (Math.PI * 2)) * Math.PI * 2 : wrapHalf((f.liftYaw - input.yaw) / (Math.PI * 2)) * Math.PI * 2 * (1 - smooth(f.w));
+        align.multiply(new Quaternion().setFromAxisAngle(Y, held));
         if (!f.planted) align.multiply(new Quaternion().setFromAxisAngle(X, 0.5 * Math.sin(Math.PI * f.w)));
+        // A long foot (a bird's tarsus, a hoofed leg's cannon) leans with the leg like a pendulum: its top behind the
+        // sole when the foot is ahead of the hip, ahead of it when the foot trails. The knee then bends less.
+        // (Only an upright foot: its ankle well above its sole. A flat foot, a duck's web, keeps the ground's turn.)
+        const footRise = leg.ankle[1] - leg.contact[1];
+        const share = clamp(footRise / Math.max(leg.height, 1e-6) - 0.1, 0, 0.5) * 2;
+        if (share > 0) {
+            const hipNow = worldPos(world[leg.upper], tmpV);
+            const ahead = targets[i].z - hipNow.z - (leg.contact[2] - leg.hip[2]);
+            align.multiply(new Quaternion().setFromAxisAngle(X, clamp(-0.8 * share * Math.atan2(ahead, leg.height), -0.7, 0.7)));
+        }
         const off = new Vector3(leg.contact[0] - leg.ankle[0], leg.contact[1] - leg.ankle[1], leg.contact[2] - leg.ankle[2]).applyQuaternion(align);
         const ankleTarget = targets[i].clone().sub(off);
         const pole = s.poles[i].clone().applyQuaternion(bodyTurn);
-        solveLeg(leg, world, ankleTarget, pole);
+        const solved = solveLeg(leg, world, ankleTarget, pole);
+        s.reachMiss[i] = f.planted && !f.free ? solved.miss * scale : 0;
         // Foot: its rest turn, aligned to the ground, at the ankle IK put it at.
         const at = worldPos(world[leg.foot], new Vector3());
         const restRot = new Quaternion().setFromRotationMatrix(tmpM.extractRotation(rig.bones[leg.foot].restWorld));
@@ -518,6 +692,7 @@ function footOffset(leg: LocoRig["legs"][number]): Vector3 {
 }
 
 function land(f: Foot, input: LocoInput) {
+    f.yaw = input.yaw;
     const g = input.ground(f.at.x, f.at.z);
     f.at.y = g.height;
     f.ground = g.height;

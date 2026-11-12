@@ -28,6 +28,7 @@ export type RawSkeleton = {
     weights: ArrayLike<number>;
 };
 
+const SPRAWLING: ReadonlySet<string> = new Set(["insect", "arachnid", "crustacean", "lizard", "amphibian", "turtle"]);
 const LEG = /^leg(\d+)([LR])_(upper|lower|foot)$/;
 const PLANS: ReadonlySet<string> = new Set(["quadruped", "primate", "walking_bird", "flying_bird", "flightless_bird", "bat", "flying_insect", "insect", "arachnid", "crustacean", "amphibian", "lizard", "turtle", "legless", "fish", "cephalopod_jelly", "other"]);
 
@@ -140,6 +141,7 @@ export function buildLocoRig(raw: RawSkeleton): LocoRig {
         width: maxX - minX,
         minY,
         legHeight: legs.length ? legs.reduce((s, l) => s + l.height, 0) / legs.length : 0,
+        gaitLength: legs.length ? legs.reduce((s, l) => s + (SPRAWLING.has(plan) ? dist(l.hip, l.contact) : l.height), 0) / legs.length : 0,
         missing: missingBones(raw.slug, plan, raw.bones),
         sitting: Boolean(raw.pose),
         below: bones.map((_, i) => descendants(bones, i))
