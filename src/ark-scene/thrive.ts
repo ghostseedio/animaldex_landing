@@ -40,7 +40,8 @@ export function arkThrive(value: unknown): ArkThrive | null {
 
 /** The server's area (`house | farm`), or null: the species' own zone. */
 export function arkArea(value: unknown): ArkArea | null {
-    return value === "house" || value === "farm" ? value : null;
+    // (Part C: 'zoo' too, sent only while the server's islands switch is on.)
+    return value === "house" || value === "farm" || value === "zoo" ? value : null;
 }
 
 /** How an arrived animal came aboard (`capture | step`), or null (born, or an older server). */

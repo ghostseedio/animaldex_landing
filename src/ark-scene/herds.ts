@@ -50,9 +50,12 @@ export function herdMicro(animal: Pick<ArkAnimal, "model_slug" | "zone">): boole
     return micro;
 }
 
-/** Who is never massed into a herd: a hamlet resident (its plot and the hamlet's rotation decide who is out), and a tiny animal. */
+/**
+ * Who is never massed into a herd: a hamlet resident (its plot and the hamlet's rotation decide who is out), a zoo
+ * animal (Part C: its enclosure holds it, up to the enclosure's capacity), and a tiny animal.
+ */
 export function herdless(animal: Pick<ArkAnimal, "area" | "model_slug" | "zone">): boolean {
-    return animal.area === "house" || animal.area === "farm" || herdMicro(animal);
+    return animal.area === "house" || animal.area === "farm" || animal.area === "zoo" || herdMicro(animal);
 }
 
 /** The same key as the population panel's (`arkSpeciesKey`). */

@@ -55,6 +55,9 @@ function animal(raw: unknown): ArkAnimal | null {
     if ("source" in row) life.source = arkArrivalSource(row.source);
     if ("thrive" in row) life.thrive = arkThrive(row.thrive);
     if ("area" in row) life.area = arkArea(row.area);
+    // Part C (islands on): its island and, in the zoo, its enclosure; each only when the server sent it.
+    if (row.island === "wild" || row.island === "town") life.island = row.island;
+    if ("enclosure" in row) life.enclosure = enclosure(row.enclosure);
     const generation = whole(row.generation);
     if (generation !== null) life.generation = generation;
     if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
@@ -97,6 +100,18 @@ function animal(raw: unknown): ArkAnimal | null {
         mine: row.mine === true,
         ...life
     };
+}
+
+/** A zoo enclosure's name (`<type>-<n>`, the server's `voyage_animals.enclosure`), or null. */
+function enclosure(value: unknown): string | null {
+    return typeof value === "string" && /^[a-z_]{1,40}-[0-9]{1,3}$/.test(value) ? value : null;
+}
+
+/** Part C: both islands' counts (`voyage_public_v3`'s `islands`), or null. */
+function islandCounts(value: unknown): {wild: number; town: number; zoo: number} | null {
+    if (!value || typeof value !== "object") return null;
+    const row = value as Record<string, unknown>;
+    return {wild: count(row.wild), town: count(row.town), zoo: count(row.zoo)};
 }
 
 function finite(value: unknown): number | null {
@@ -144,6 +159,9 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
         as_of: text(row.as_of),
         ...(typeof voyage.ark_day === "number" && Number.isFinite(voyage.ark_day) ? {ark_day: voyage.ark_day} : {}),
-        ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {})
+        ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {}),
+        // Part C: one island's read (`voyage_public_v3`): which island, and both islands' counts.
+        ...(row.island === "wild" || row.island === "town" ? {island: row.island} : {}),
+        ...(islandCounts(row.islands) ? {islands: islandCounts(row.islands)!} : {})
     };
 }
