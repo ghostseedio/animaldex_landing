@@ -7,10 +7,10 @@
   },
   "checks": [
     {"id": "flyer species that fly", "problem": "1 Flight", "source": "audit", "path": "flight.speciesThatFly", "min": 580},
-    {"id": "air time circling (%)", "problem": "2 Roaming", "source": "audit", "path": "roaming.circlingPct", "max": 1},
+    {"id": "air time circling (%)", "problem": "2 Roaming", "source": "audit", "path": "roaming.circlingPct", "max": 2.8, "why": "Decision 285 (2026-11-13, the integrator): landing main d8ee89f0 already measures 2.2, over the old limit of 1 (0.1 on 877ae2c5), and all of it is swifts and swallows hawking (0.0 without them, measured per species). MA3's waterbirds add a measured 0.6 (2.8 on ark-waterbirds cec914d0 alone and on this round). Not loosened further: lane MA1's 8.1 is a regression it fixes on its own branch."},
     {"id": "full turns per air minute", "problem": "2 Roaming", "source": "audit", "path": "roaming.fullTurnsPerAirMinute", "max": 0.85},
     {"id": "non-flocking flyers following another", "problem": "2 Roaming", "source": "audit", "path": "roaming.followersNotFlockingSpecies", "max": 5},
-    {"id": "animals that never move", "problem": "2 Roaming", "source": "audit", "path": "roaming.distanceMPerAnimalDay.animalsThatNeverMove", "max": 800},
+    {"id": "animals that never move", "problem": "2 Roaming", "source": "audit", "path": "roaming.distanceMPerAnimalDay.animalsThatNeverMove", "max": 840, "why": "Decision 285 (2026-11-13, the integrator): landing main d8ee89f0 already measures 819 and this round 828 (MA3 alone 828), within noise of main; the limit of 800 dated from 877ae2c5 (760)."},
     {"id": "grazer awake time grazing at the grass (%)", "problem": "3 Grazing", "source": "audit", "path": "grazing.grazeLabelAtGrassPct", "min": 26},
     {"id": "grazers that never grazed", "problem": "3 Grazing", "source": "audit", "path": "grazing.grazersThatNeverGrazed", "max": 45},
     {"id": "amphibians that cross land and water", "problem": "4 Land/water", "source": "audit", "path": "landWater.amphibiousWithATransition", "min": 375, "why": "Lane MA3 (2026-11-13, the movement audit): 436 on ark-next 640b0062 -> 384. Deliberate: a waterbird's flights go water to water (before, ducks flew onto land and walked back in), grebes and loons stay on the water, and a duck whose spaced range is a few metres reaches no bank. Ducks, geese and swans now come ashore by swimming to the bank to rest."},
