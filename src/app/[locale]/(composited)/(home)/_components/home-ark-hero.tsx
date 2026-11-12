@@ -115,7 +115,10 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
             id="top"
             data-phase={phase}
             data-exploring={exploring ? "true" : "false"}
-            onPointerLeave={() => setExploring(false)}
+            onPointerLeave={(event) => {
+                // (A finger lifting "leaves" too: only a mouse moving away ends exploring.)
+                if (event.pointerType === "mouse") setExploring(false);
+            }}
             className="theme-dark relative isolate -mt-8 flex min-h-[34rem] w-full flex-col justify-end overflow-hidden bg-[#0b1d2e] text-white [height:calc(100svh-4rem)] max-h-[60rem] sm:min-h-[38rem]"
         >
             {/* The real Ark, a frame of it: the page's largest paint. */}

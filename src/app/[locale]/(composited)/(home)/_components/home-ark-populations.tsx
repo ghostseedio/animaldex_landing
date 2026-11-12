@@ -83,7 +83,7 @@ function TotalChart({series, words, locale}: {series: ArkPopulationSeries; words
     return (
         <div ref={ref} className="relative w-full">
             {width > 0 ? (
-                <svg width={width} height={HEIGHT} role="img" aria-label={`${words.total}: ${series.total[last].toLocaleString(locale)}`} className="block overflow-visible">
+                <svg width={width} height={HEIGHT} role="img" className="block overflow-visible text-primary-400" aria-label={`${words.total}: ${series.total[last].toLocaleString(locale)}`} >
                     {ticks.map((tick) => (
                         <g key={tick}>
                             <line x1={PAD.left} x2={width - PAD.right} y1={y(tick)} y2={y(tick)} className="stroke-line-200" strokeWidth={1} />
@@ -92,9 +92,9 @@ function TotalChart({series, words, locale}: {series: ArkPopulationSeries; words
                             </text>
                         </g>
                     ))}
-                    <path d={area} className="fill-primary-400/10" />
-                    <path d={line} fill="none" className="stroke-primary-400" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-                    <circle cx={x(last)} cy={y(series.total[last])} r={4.5} className="fill-primary-400 stroke-canvas-950" strokeWidth={2} />
+                    <path d={area} fill="currentColor" fillOpacity={0.1} />
+                    <path d={line} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                    <circle cx={x(last)} cy={y(series.total[last])} r={4.5} fill="currentColor" className="stroke-canvas-950" strokeWidth={2} />
                     <text x={x(last) - 8} y={y(series.total[last]) - 12} textAnchor="end" className="fill-white text-[13px] font-bold [font-variant-numeric:tabular-nums]">
                         {series.total[last].toLocaleString(locale)}
                     </text>
@@ -112,7 +112,7 @@ function TotalChart({series, words, locale}: {series: ArkPopulationSeries; words
                     {hover !== null ? (
                         <g pointerEvents="none">
                             <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={y(0)} className="stroke-ink-300" strokeWidth={1} />
-                            <circle cx={x(hover)} cy={y(series.total[hover])} r={4} className="fill-primary-400 stroke-canvas-950" strokeWidth={2} />
+                            <circle cx={x(hover)} cy={y(series.total[hover])} r={4} fill="currentColor" className="stroke-canvas-950" strokeWidth={2} />
                         </g>
                     ) : null}
                     <rect
@@ -156,9 +156,9 @@ function Spark({times, values}: {times: number[]; values: number[]}) {
     return (
         <div ref={ref} className="w-full" aria-hidden="true">
             {width > 0 ? (
-                <svg width={width} height={h} className="block overflow-visible">
-                    <path d={d} fill="none" className="stroke-primary-400" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-                    <circle cx={x(values.length - 1)} cy={y(values[values.length - 1])} r={4} className="fill-primary-400 stroke-canvas-950" strokeWidth={2} />
+                <svg width={width} height={h} className="block overflow-visible text-primary-400">
+                    <path d={d} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                    <circle cx={x(values.length - 1)} cy={y(values[values.length - 1])} r={4} fill="currentColor" className="stroke-canvas-950" strokeWidth={2} />
                 </svg>
             ) : (
                 <div style={{height: h}} />

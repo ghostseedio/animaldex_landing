@@ -275,7 +275,7 @@ export default async function Home({params}: HomePageProps) {
         };
 
         const posterWide = (format: string) => [1280, 1920, 2400].map((width) => `${ART}/poster-wide-${width}.${format} ${width}w`).join(", ");
-        const posterTall = (format: string) => [640, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
+        const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
         const posterCaption = t("hero.poster", {time: islandClock(POSTER_AT, locale), date: shortDate(POSTER_AT, locale)});
         const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
         const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
@@ -319,7 +319,6 @@ export default async function Home({params}: HomePageProps) {
                                 sizes="100vw"
                                 alt={posterCaption}
                                 fetchPriority="high"
-                                decoding="async"
                                 className="h-full w-full object-cover object-[50%_40%] md:object-[38%_50%]"
                             />
                         </picture>

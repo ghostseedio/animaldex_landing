@@ -111,7 +111,7 @@ export default function HomeArkDay({frames, words, locale}: {frames: HomeArkDayF
 
     if (still) {
         return (
-            <ol className="mx-auto grid w-full max-w-[86rem] grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
+            <ol className="theme-dark mx-auto grid w-full max-w-[86rem] grid-cols-1 gap-4 px-4 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
                 {frames.map((frame) => (
                     <li key={frame.key} className="relative aspect-[4/3] overflow-hidden rounded-sm bg-[#0b1d2e]">
                         <Frame frame={frame} active eager={false} />
