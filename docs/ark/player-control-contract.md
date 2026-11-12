@@ -101,3 +101,27 @@ The WebView never holds the user's Supabase token.
 Implemented in `src/ark-live/protocol.ts` (pure, shared by the server and the page). Binary little-endian for the hot
 messages (ping, pong, pose, snapshot, correction, meter, npc), JSON text frames for the rare ones (hello, control,
 release, view, joined, left, events). The layouts are in that file's header comment.
+
+## 7. Phase 2: shared reactions and Talk
+
+- `ark-live` runs the shared behaviour schedule itself (`src/ark-live/npc-world.ts`, built from the public snapshot as
+  the scene builds its schedules) and the scene's reactive envelope (`reactive.ts`, with `focus` on the controlled
+  animals and no camera) for every NPC within 40 m of a controlled animal, at 5 Hz.
+- Wire: `{t: "npcs", base, ids}` (the room's NPC table, appended) and the binary `npc` message (idx, dx, dz, dyaw,
+  doing = `REACTIVE_ACTIONS` index, alarm, look). The scene applies them in place of its own local reaction for those
+  NPCs (eased over 200 ms, dropped after 600 ms of silence).
+- Talk: `{t: "talk-ready", animalId | null}` when another animal is within 4 m + half both lengths of the controller's.
+  The web opens `/talk/<species>?ark=<animal id>`; the embed tells the app `{type: "ark:talk", animal_id, slug}`.
+  The chat resolves owner / visitor / public on the server from `ark_animal_id` (F1) and names the owner by the Ark
+  label (F2): AnimalDex `ark-player-control-talk`, migration `20261119110000`.
+
+## 8. Phase 3: hunting
+
+- `ark-live` checks contact on its own poses and asks the database: `ark_live_meal_request_v1(p_session_id,
+  p_predator_id, p_prey_id, p_evidence) → {ok, id} | {ok: false, reason}` (`off`, `not_controlled`, `busy`,
+  `cap_hunter`, `cap_owner`, `cap_ark`), then polls `ark_live_meal_status_v1(p_id) → {status: pending | confirmed |
+  rejected | expired, reason?}` for up to 8 s. voyage-world's `player_meal` mode re-checks every rule with
+  `applyPlayerMeal` and commits the tick's meal shapes. Switch: `voyage_config.player_hunting` (off). AnimalDex
+  `ark-player-control-hunt`, migration `20261119120000`.
+- Wire: `{t: "hunt", phase: "contact" | "escaped" | "denied", preyId, reason?}` to the hunter; `{t: "hunt", phase:
+  "confirmed", preyId}` to everyone (never naming the hunter).

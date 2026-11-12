@@ -62,3 +62,12 @@ The existing web VM (e2-small, 2 vCPU shared, 0.5 vCPU sustained, 2 GB) already 
 | C. Cloudflare Durable Objects | $5/month base | egress free | Cheapest at scale; a new vendor and deploy path; the room core is ready to port. |
 
 The design's tables (§2.7) give 100 and 1,000 players. Measured egress matches its per-client figures, so they stand.
+
+## Phases 2 and 3 on the server
+
+- **Shared reactions (phase 2):** `ark-live` builds the NPC world from the snapshot (`ARK_LIVE_SNAPSHOT_URL`, the site's
+  public read) and re-builds it when the animals aboard change; released animals' records are read each minute. The
+  build takes about a second on a free desktop core (52 s measured on this overloaded Mac) and, for now, runs on the
+  server's own thread: **move it to a worker thread before production**, or the tick pauses while it builds.
+- **Hunting (phase 3):** contact is checked at 10 Hz on the server's poses; the database decides (see the contract §8).
+
