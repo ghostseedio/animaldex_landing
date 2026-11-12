@@ -24,6 +24,7 @@ import {drawnRocks, type DrawnRock} from "@/ark-scene/map/rocks";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {hashString, heightAt as groundHeight, LAKE, RIVER, TERRAIN_HALF} from "@/ark-scene/world";
+import {colliderDistance, ColliderSet, colliderSetFor} from "@/ark-scene/collide/colliders";
 
 /** The behaviour system's place tags. */
 export const ATTACH_TAGS = [
@@ -89,6 +90,8 @@ export interface ArkWorldSampler {
     attachPoints(tag: AttachTag, near?: {x: number; z: number; r: number}): readonly AttachPoint[];
     /** A solid obstacle there (a trunk, a rock, a wall) for something of this clearance. */
     blocked(x: number, z: number, clearance: number): boolean;
+    /** The world's solid things as drawn, for exact checks (`collide/colliders.ts`; the same plots as `blocked`). */
+    readonly colliders?: ColliderSet;
 }
 
 /** The scenery's tags as the behaviour system uses them (the hanging points under limbs: hangers only, `recipeRoostTags`). */
@@ -430,9 +433,23 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             for (const fence of fences) if (segmentDistance(x, z, fence.a, fence.b) < 0.9 + clearance) return true;
             return false;
         };
+        // The world's solid things as drawn (`collide/colliders.ts`): exact checks for the walk grid's edges and paths.
+        // What the walk grid's cells did not keep walkers off before (the farm's field fences, hay bales, lamp posts,
+        // the plots' solid props: compost, water butts, the hay shelter, troughs, coops) is added to its cells here, with
+        // the same margins as a fence (0.9 m off its line) and a building (ROCK_MARGIN off its sides).
+        const colliders = colliderSetFor(plots);
+        const added = new ColliderSet(colliders.list.filter((c) => c.id.startsWith("field-fence") || c.kind === "hay" || c.id.startsWith("lamp") || (c.kind === "building" && !c.id.startsWith("house:") && !c.id.startsWith("barn:"))), "cells");
+        const addedAt = (x: number, z: number, clearance: number) => {
+            for (const c of added.near(x, z, ROCK_MARGIN + clearance + 0.1)) {
+                const margin = c.shape === "box" ? ROCK_MARGIN : 0.9 - (c.shape === "segment" ? c.r : 0);
+                if (colliderDistance(c, x, z) < margin + clearance) return true;
+            }
+            return false;
+        };
         return {
-            // (The drawn rocks are in it too: a new rock set rebuilds the walk grid.)
-            version: `scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}`,
+            colliders,
+            // (The drawn rocks are in it too: a new rock set rebuilds the walk grid; and the colliders, any change of them.)
+            version: `scene:${items.length}:${scenery.length}:${counts}:rocks${rocks.length}${plotKey}:${colliders.version}`,
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
             isWater: (x, z) => surface(x, z).waterDepth > 0,
@@ -450,6 +467,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
                 // The garden pond and its stones, kept as clear as a rock (no walkable cell holds any of it): a land
                 // animal drinks at its edge, never walks in.
                 if (Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z) < GARDEN_POND.radius + POND_STONES + ROCK_MARGIN + clearance) return true;
+                if (addedAt(x, z, clearance)) return true;
                 return solids.length || fences.length ? solidAt(x, z, clearance) : false;
             }
         };

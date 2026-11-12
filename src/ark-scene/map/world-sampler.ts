@@ -331,6 +331,9 @@ class WorldSampler implements ArkMapSampler {
             if (reservedNear(point.position.x, point.position.z, 1.2)) continue;
             // A hole, a burrow's mouth or a fallen leaf on the ground never inside a drawn rock (the asset rocks, `rocks.ts`).
             if ((GROUND_TAGS.has(tag) || point.tag === "leaf_litter") && inRock(point.position.x, point.position.z, 0.15)) continue;
+            // (Nor a ledge of the ground's own cliffs inside one: the scenery lane's outcrops sit on the slopes the ledges are
+            // on, and a ledge in an outcrop put its animal in the rock. Motion pass L5, at L6's ask.)
+            if (point.tag === "ledge" && point.host === "ground" && inRock(point.position.x, point.position.z, 0.15)) continue;
             const n: [number, number, number] = [point.normal.x, point.normal.y, point.normal.z];
             // A limb or a hang point keeps its least body (it is for large climbers and hangers); any smaller body fits the rest.
             // (True scale, motion pass §3: down to 0.1 mm, a fairyfly's 0.16 mm or a mite's 0.5 mm; 1 mm was the old drawn floor.)
