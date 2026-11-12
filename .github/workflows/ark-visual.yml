@@ -95,6 +95,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ark-hooks
-          path: .ark-golden/ci
+          # (The town's own SwiftShader set writes .ark-golden/town/visual: its actual/ pictures are the ones accepted, decision 147.)
+          path: |
+            .ark-golden/ci
+            .ark-golden/town/visual
           if-no-files-found: ignore
           retention-days: 14
