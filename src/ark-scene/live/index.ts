@@ -8,6 +8,7 @@ import {ArkLive, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ArkBarsView, type ArkBarsWords} from "@/ark-scene/live/bars-view";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkActivityWords} from "@/lib/ark-animal-status";
 
 export {ArkLive} from "@/ark-scene/live/controller";
 
@@ -16,6 +17,8 @@ export type ArkHudWordsIn = {
     live?: Partial<ArkLiveWords> | null;
     replay?: Record<string, string> | null;
     showMe?: string | null;
+    /** The schedule's moments' words (decision 240). */
+    activity?: Partial<ArkActivityWords> | null;
     speciesOne?: string | null;
     speciesOther?: string | null;
     hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;

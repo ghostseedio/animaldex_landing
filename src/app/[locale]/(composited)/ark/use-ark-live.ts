@@ -40,7 +40,7 @@ export function useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, lo
     const liveRef = useRef<ArkLive | null>(null);
     const coveredRef = useRef(covered);
     coveredRef.current = covered;
-    const wordsIn = useCallback(() => ({live: words.live, replay: words.replay, showMe: words.showMe}), [words]);
+    const wordsIn = useCallback(() => ({live: words.live, replay: words.replay, showMe: words.showMe, activity: words.activity}), [words]);
     const wordsRef = useRef(wordsIn);
     wordsRef.current = wordsIn;
 

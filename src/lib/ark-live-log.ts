@@ -11,6 +11,11 @@
  *   (the recipes' courtship, rival contests, fishing catches of the ambient fish, nest building; the reactive
  *   layer's alarm calls). Said in the present tense, marked "Seen", never a server fact, and never a change in
  *   who is aboard.
+ * - **Now** (`now`, decision 240): the notable moments the behaviour schedule starts anywhere on the Ark, near the
+ *   camera or far from it (`src/ark-scene/animal-status.ts` pickMoment: a lion setting out to hunt, a weaver building
+ *   its nest, a herd going down to water, a young one playing; under encounter hunting, a predator's forays as the
+ *   server's next hunt comes). At most one a few seconds, chosen from the shared clock and the animals' ids, so every
+ *   viewer reads the same lines. Marked "Now", lighter than the record, never a server fact.
  *
  * Privacy: a line names species only. Never a bringer's label or name, never a person, never a place.
  *
@@ -19,15 +24,17 @@
  * come no more often than one every few seconds.
  */
 
-import type {ArkZone} from "@/ark-scene/types";
+import type {ArkHappening, ArkZone} from "@/ark-scene/types";
+import type {ScheduleMomentKind} from "@/ark-scene/animal-status";
 import type {ArkEvent, ArkEventAnimal} from "@/lib/ark-life";
+import {ARK_ACTIVITY_ENGLISH, type ArkActivityKey, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction";
 export type ArkLiveSeenKind = "courting" | "contest" | "fishing" | "nest" | "alarm";
-export type ArkLiveKind = ArkLiveServerKind | ArkLiveSeenKind | "more";
-export type ArkLiveSource = "server" | "seen";
+export type ArkLiveKind = ArkLiveServerKind | ArkLiveSeenKind | ScheduleMomentKind | "more";
+export type ArkLiveSource = "server" | "seen" | "now";
 
 /** Where a line's tap flies the camera: the animal itself when it is aboard, else one of its kind, else its zone. */
 export type ArkLiveFocus = {animalId: string | null; speciesId: string | null; zone: ArkZone | null};
@@ -47,6 +54,10 @@ export type ArkLiveItem = {
     count: number;
     /** A clutch's eggs, when the server says. */
     eggs: number | null;
+    /** A schedule moment's group (a herd going down to water): how many. */
+    group?: number | null;
+    /** A schedule moment's activity (`ark.activity`): what it set about. */
+    activity?: ArkActivityKey | null;
     focus: ArkLiveFocus;
 };
 
@@ -220,14 +231,32 @@ export function arkSeenItems(now: ArkSeenNow, memory: ArkSeenMemory): ArkLiveIte
     return items;
 }
 
+// MARK: Now (the schedule's moments)
+
+/**
+ * The schedule's moments as log items (`ArkSceneHandle.happening`): each said once. A group's size goes into its line
+ * ("12 Plains Zebras are heading to water"); repeats of one kind and species fold as any other line.
+ */
+export function arkNowItems(moments: readonly ArkHappening[], memory: ArkSeenMemory): ArkLiveItem[] {
+    const items: ArkLiveItem[] = [];
+    for (const moment of moments) {
+        if (memory.has(moment.id)) continue;
+        memory.add(moment.id);
+        const grouped = moment.kind === "toWater" || moment.kind === "home" || moment.kind === "flock" || moment.kind === "group";
+        items.push({id: moment.id, kind: moment.kind, source: "now", key: `now:${moment.kind}:${moment.activity}:${moment.speciesId}`, animal: moment.name, other: null, count: 1, eggs: null, group: grouped ? moment.count : null, activity: moment.activity, focus: {animalId: moment.animalId, speciesId: moment.speciesId, zone: moment.zone}});
+    }
+    return items;
+}
+
 // MARK: The log
 
 export type ArkLiveLogOptions = {
     /** Lines on screen at most. */
     maxLines: number;
-    /** How long a line of the record stays (ms), and a seen one. */
+    /** How long a line of the record stays (ms), a seen one, and one of the schedule's moments (its slot lasts 80 s). */
     serverLife: number;
     seenLife: number;
+    nowLife: number;
     /** A repeat within this long of a line (ms) folds into it. */
     groupWindow: number;
     /** At least this long between two lines (ms), and between two seen lines. */
@@ -241,10 +270,10 @@ export type ArkLiveLogOptions = {
     maxQueue: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
-const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, more: 8};
+const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
 
 /**
  * The log's state: the lines on screen and the items waiting. `push` takes new items, `step` lets the next one
@@ -306,25 +335,27 @@ export class ArkLiveLog {
     step(now: number): boolean {
         let changed = false;
         const before = this.lines.length;
-        this.lines = this.lines.filter((line) => now - line.updatedAt < (line.source === "seen" ? this.options.seenLife : this.options.serverLife));
+        this.lines = this.lines.filter((line) => now - line.updatedAt < (line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife : this.options.seenLife));
         if (this.lines.length !== before) changed = true;
         // Seen items that waited too long are no longer happening.
         const queued = this.queue.length;
-        this.queue = this.queue.filter((q) => q.source !== "seen" || now - q.queuedAt < this.options.seenStale);
+        this.queue = this.queue.filter((q) => q.source === "server" || now - q.queuedAt < this.options.seenStale);
         if (this.queue.length !== queued) changed = true;
         if (now - this.lastShown < this.options.gap) return changed;
-        // The record first, oldest first; a seen item only when none of the record waits and its own gap has passed.
+        // The record first, oldest first; a seen or now item only when none of the record waits and their gap has passed
+        // (seen near the camera before the schedule's moments elsewhere).
         let at = this.queue.findIndex((q) => q.source === "server" && q.kind !== "more");
         if (at < 0) at = this.queue.findIndex((q) => q.kind === "more");
         const alarmOk = now - this.lastAlarm >= this.options.alarmGap;
         if (at < 0 && now - this.lastSeen >= this.options.seenGap) at = this.queue.findIndex((q) => q.source === "seen" && (alarmOk || q.kind !== "alarm"));
+        if (at < 0 && now - this.lastSeen >= this.options.seenGap) at = this.queue.findIndex((q) => q.source === "now");
         if (at < 0) return changed;
         const [item] = this.queue.splice(at, 1);
         const {queuedAt: _queuedAt, ...line} = item;
         this.lines.push({...line, shownAt: now, updatedAt: now});
         if (this.lines.length > this.options.maxLines) this.lines.splice(0, this.lines.length - this.options.maxLines);
         this.lastShown = now;
-        if (item.source === "seen") this.lastSeen = now;
+        if (item.source !== "server") this.lastSeen = now;
         if (item.kind === "alarm") this.lastAlarm = now;
         return true;
     }
@@ -337,8 +368,8 @@ export class ArkLiveLog {
 
 // MARK: Words
 
-/** The words a line needs: the Ark's live words, and the replay's (articles, the meal, a death). */
-export type ArkLiveText = Pick<ArkWords, "live" | "replay">;
+/** The words a line needs: the Ark's live words, the replay's (articles, the meal, a death), and the schedule's moments'. */
+export type ArkLiveText = Pick<ArkWords, "live" | "replay"> & {activity?: ArkActivityWords | null};
 
 function capitalised(text: string): string {
     return text ? text[0].toLocaleUpperCase() + text.slice(1) : text;
@@ -355,7 +386,7 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs">, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
     const replay = words.replay;
     const many = line.count > 1;
@@ -363,6 +394,40 @@ export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "oth
     const aAnimal = capitalised(arkWithArticle(line.animal, words));
     const animals = isEnglish(locale) ? pluralAnimalName(line.animal) : line.animal;
     const times = (text: string) => (many ? `${text} ×${count}` : text);
+    // The schedule's moments (decision 240): their own words, or the seen lines' where they say the same.
+    if (line.source === "now") {
+        const now = {...ARK_ACTIVITY_ENGLISH.log, ...(words.activity?.log ?? {})};
+        const group = (line.group ?? 0).toLocaleString(locale);
+        switch (line.kind) {
+            case "courting":
+                return times(fillArkWords(live.courting, {aAnimal}));
+            case "contest":
+                return times(fillArkWords(live.contest, {animal: line.animal}));
+            case "nest":
+                return times(fillArkWords(live.nest, {aAnimal}));
+            case "hunting":
+            case "fishing":
+            case "eggs":
+            case "breathing":
+            case "calling":
+            case "bathing":
+            case "feeding":
+                return times(fillArkWords(now[line.kind], {aAnimal}));
+            case "playing":
+                return times(fillArkWords(now.playing, {animal: line.animal}));
+            case "toWater":
+            case "home":
+            case "flock":
+                return fillArkWords(now[line.kind], {count: group, animals});
+            case "doing":
+            case "group": {
+                const activity = line.activity ? words.activity?.[line.activity] ?? ARK_ACTIVITY_ENGLISH[line.activity] : "";
+                return line.kind === "group" ? fillArkWords(now.group, {count: group, animals, activity}) : times(fillArkWords(now.doing, {aAnimal, activity}));
+            }
+            default:
+                break;
+        }
+    }
     switch (line.kind) {
         case "arrival":
             return many ? fillArkWords(live.arrivalOther, {count, animals}) : fillArkWords(live.arrivalOne, {aAnimal});
@@ -397,5 +462,7 @@ export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "oth
             return times(fillArkWords(live.alarm, {aAnimal}));
         case "more":
             return fillArkWords(live.more, {count});
+        default:
+            return line.animal;
     }
 }
