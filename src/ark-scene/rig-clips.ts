@@ -68,6 +68,11 @@ export type RigClip = {
     /** v6 (contract 8.1): how far the lying clips lower the body (mesh heights), and a sleep or rest loop's breaths a second. */
     drop_h?: number;
     breath_hz?: number;
+    /** v3 (rig code v7, MA2, section 9): flap: the downstroke's share of the beat; every flight clip: how far it tucks the legs itself; takeoff: the lift-off; land: the touch-down (clip phases). */
+    downstroke?: number;
+    tuck?: number;
+    liftoff?: number;
+    touchdown?: number;
 };
 
 /** One bone of the look chain, in the rig's rest pose (glTF space: +y up, the animal faces +z, its left is +x). */

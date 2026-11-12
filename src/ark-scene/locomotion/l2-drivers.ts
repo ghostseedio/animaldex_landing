@@ -101,8 +101,11 @@ export function foldWing(rig: LocoRig, world: Matrix4[], wing: readonly number[]
     }
 }
 
-/** How far the legs swing back under the tail in level flight (radians at the hip), on top of the clip's own tuck. */
-export const LEG_TUCK = 0.6;
+/**
+ * How far the legs swing back under the tail in level flight (radians at the hip), on top of the clip's own tuck. (MA1:
+ * 0.6 left a coot's legs hanging down behind it in the flap; trailed along the body, as rails, waterfowl and herons fly.)
+ */
+export const LEG_TUCK = 1.1;
 const LATERAL = new Vector3(1, 0, 0);
 
 /**
@@ -147,10 +150,13 @@ export const flightDriver: LocoDriver = {
             // The clip's phase is the stroke (0 top, 0.5 bottom): the upstroke is its second half.
             const q = frac(input.clipPhase);
             beat = q;
-            const fold = q < 0.5 ? 0 : upstrokeFold(0.5 + (q - 0.5), 0.5);
-            const gain = spec.fold;
-            foldWing(rig, world, rig.wings.left, fold * gain);
-            foldWing(rig, world, rig.wings.right, fold * gain);
+            // (A v7 flap, MA2's v3 birds, bakes its own upstroke fold: not a second one. v2 files and bats as before.)
+            if (!input.clipBake) {
+                const fold = q < 0.5 ? 0 : upstrokeFold(0.5 + (q - 0.5), 0.5);
+                const gain = spec.fold;
+                foldWing(rig, world, rig.wings.left, fold * gain);
+                foldWing(rig, world, rig.wings.right, fold * gain);
+            }
         } else if ((clip === "glide" || clip === "bank_l" || clip === "bank_r" || clip === "soar") && spec.kind === "insect" && OPEN_WING_RIGS.has(rig.slug)) {
             // An insect holding open wings (no flap of its own): its wings beat on the shared clock (the same beat the
             // scene's heave uses: `flightRigFrame` for an open-winged flyer), a butterfly's slow flutter, the rest a whir.
@@ -165,7 +171,8 @@ export const flightDriver: LocoDriver = {
         // Feet back under the tail in the air (not in a dive: they stay in). MA1: up through the take-off once the push-off
         // is done and down through the landing's first half to reach for the ground (`legTuck`); hanging on a run across
         // the water or a ski onto it (the feet patter and plane).
-        if (spec.kind !== "insect") tuckLegs(rig, world, legTuck(clip, input.clipPhase, (input.airStage ?? null) as AirStage | null));
+        // (A v7 clip tucks its own: only what it leaves, none through its take-off and landing: `legTuck`.)
+        if (spec.kind !== "insect") tuckLegs(rig, world, legTuck(clip, input.clipPhase, (input.airStage ?? null) as AirStage | null, input.clipBake ?? null));
         // The head level with the horizon in a bank (birds and bats), up to 70% of the roll.
         if (spec.kind !== "insect") {
             const steady = rig.neck >= 0 ? rig.neck : rig.head;

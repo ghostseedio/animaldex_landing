@@ -17,7 +17,7 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {airPaces, FLIGHT_WORTH, flightLoss, groupSpread, homeRadius, poseOnTrip, rangeReach, scheduleWorld, SLOT_SECONDS, spaceHomes, tripAt, wireThreats, type ScheduleAnimal, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {airPacesOf, airProgress, clipRise, FLIGHT_ACCEL_MAX, flightGate, flightRigFrame, flightSpec, landingNow, legTuck, newFlightMemory, planAirLeg, takeoffClass, type AirStage, type FlightMemory, type FlightSpec} from "@/ark-scene/locomotion/flight";
+import {airPacesOf, airProgress, clipBakeOf, clipRise, FLIGHT_ACCEL_MAX, flightGate, flightRigFrame, flightSpec, landingNow, legTuck, newFlightMemory, planAirLeg, strokeToClipPhase, takeoffClass, type AirStage, type FlightMemory, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyleSlugs} from "@/ark-scene/locomotion/styles";
 import {recordMotionMetric} from "@/lib/ark-motion-metrics";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -402,4 +402,65 @@ test("MA1: the take-off spring plays whole (its own pace) and its rise and the l
     let phase = ski.phase;
     for (let k = 0; k < 30; k++) phase = flightRigFrame({...input, current: "land", phase, agl: 0, oneShot: "land", stage: null}, land).phase;
     assert.equal(phase, 1);
+});
+
+// MARK: v7 rigs (MA2's v3 birds, decision 278)
+
+test("MA1/v7: a v7 file's flight clips bake their own beat, fold and tuck; v2 files play exactly as before", () => {
+    // The rig code decides: v2's `v5+v6` bakes nothing of ours, v3's `v7+v6` does.
+    assert.equal(clipBakeOf("v5+v6", {downstroke: 0.55, tuck: 1}), null);
+    assert.equal(clipBakeOf(null, {tuck: 1}), null);
+    const flap = clipBakeOf("v7+v6", {downstroke: 0.6, tuck: 0.45})!;
+    assert.deepEqual(flap, {downstroke: 0.6, tuck: 0.45, liftoff: null, touchdown: null, riseH: null});
+    // The beat onto the flap: v2's symmetric cosine as before (no clip downstroke given)...
+    const v2 = (beat: number, down: number, stroke: number) => {
+        const b = beat - Math.floor(beat);
+        const s = b < down ? Math.cos((Math.PI * b) / down) : -Math.cos((Math.PI * (b - down)) / (1 - down));
+        const q = Math.acos(Math.min(Math.max(s * stroke, -1), 1)) / (2 * Math.PI);
+        return b < down ? q : 1 - q;
+    };
+    for (let k = 0; k < 200; k++) {
+        const beat = k / 200 + 0.0013;
+        for (const [down, stroke] of [[0.58, 1], [0.55, 0.6]]) assert.ok(Math.abs(strokeToClipPhase(beat, down, stroke) - v2(beat, down, stroke)) < 1e-12);
+        // ...and through a v7 flap's own downstroke: the same stroke position on the clip's own curve, and the beat itself
+        // when the bird's downstroke is the clip's.
+        for (const [down, stroke, clip] of [[0.58, 1, 0.55], [0.55, 0.6, 0.6], [0.6, 1, 0.6]]) {
+            const p = strokeToClipPhase(beat, down, stroke, clip);
+            const want = (beat < down ? Math.cos((Math.PI * beat) / down) : -Math.cos((Math.PI * (beat - down)) / (1 - down))) * stroke;
+            const got = p < clip ? Math.cos((Math.PI * p) / clip) : -Math.cos((Math.PI * (p - clip)) / (1 - clip));
+            assert.ok(Math.abs(got - want) < 1e-9, `stroke ${got} vs ${want}`);
+            if (down === clip && stroke === 1) assert.ok(Math.abs(p - beat) < 1e-9);
+            assert.equal(p < clip, beat < down, "the downstroke stays the downstroke");
+        }
+    }
+    // Legs: v2 as before; on a v7 flight clip only what the clip leaves; none through a v7 take-off or landing.
+    for (const [clip, phase] of [["flap", 0.3], ["glide", 0], ["takeoff", 0.8], ["takeoff", 0.2], ["land", 0.1], ["land", 0.9]] as const) {
+        assert.equal(legTuck(clip, phase, "cruise", null), legTuck(clip, phase, "cruise"));
+        if (clip === "takeoff" || clip === "land") assert.equal(legTuck(clip, phase, "climb", clipBakeOf("v7", {tuck: 1, liftoff: 0.25, touchdown: 0.75})), 0);
+    }
+    assert.equal(legTuck("flap", 0.3, "cruise", clipBakeOf("v7", {tuck: 1})), 0);
+    assert.ok(Math.abs(legTuck("flap", 0.3, "cruise", clipBakeOf("v7", {tuck: 0.45})) - 0.55) < 1e-12);
+    assert.ok(Math.abs(legTuck("glide", 0, "cruise", clipBakeOf("v7", {tuck: 0.25})) - 0.75) < 1e-12);
+    assert.equal(legTuck("flap", 0.3, "run", clipBakeOf("v7", {tuck: 0.25})), 0);
+    // The clips' root rise: v2's numbers; a v7 file's own lift-off, touch-down and rise where it gives them.
+    for (const p of [0, 0.3, 0.6, 1]) {
+        assert.equal(clipRise("takeoff", p, null), clipRise("takeoff", p));
+        assert.equal(clipRise("takeoff", p, clipBakeOf("v7", {liftoff: 0.25, rise_h: 1.2})), clipRise("takeoff", p));
+        assert.equal(clipRise("land", p, clipBakeOf("v7", {touchdown: 0.75, rise_h: 1.2})), clipRise("land", p));
+    }
+    assert.ok(clipRise("takeoff", 0.5, clipBakeOf("v7", {liftoff: 0.4, rise_h: 1})) < clipRise("takeoff", 0.5));
+    // The flight frame: the flap's phase through the clip's own downstroke on v7, as before on v2.
+    const s = spec("mute-swan", 1.5);
+    const base = {spec: s, has: () => true, clipHz: () => 2.5, current: "flap", phase: 0, climb: 0, turn: 0, speed: 12, agl: 30, clock: 20, seed: 0.2, dt: 1 / 60};
+    const a = newFlightMemory();
+    const b = newFlightMemory();
+    let maxDiff = 0;
+    for (let k = 0; k < 120; k++) {
+        const f2 = flightRigFrame({...base, clock: 20 + k / 60}, a);
+        const f7 = flightRigFrame({...base, clock: 20 + k / 60, bake: (name) => (name === "flap" ? clipBakeOf("v7+v6", {downstroke: 0.6, tuck: 1}) : null)}, b);
+        assert.equal(f2.clip, f7.clip);
+        if (f2.clip === "flap") maxDiff = Math.max(maxDiff, Math.abs(f2.phase - f7.phase));
+        assert.ok(f7.clip !== "flap" || f7.phase < 0.6 === f2.phase < 0.5, "a downstroke on both");
+    }
+    assert.ok(maxDiff > 0.01, "v7's phases are its own");
 });

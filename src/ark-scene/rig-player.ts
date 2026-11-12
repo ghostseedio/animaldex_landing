@@ -64,6 +64,7 @@ import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-sc
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
+import {clipBakeOf} from "@/ark-scene/locomotion/flight";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -88,6 +89,8 @@ export type RigModel = {
     flight: boolean;
     /** A flyer with no playable flap: in the air its wings are drawn open (an open-wing clip held, the shader flap on it). */
     flightOpen: boolean;
+    /** The file's rig code (`v5+v6`; MA2's v3 birds `v7+v6`): a v7 flight clip bakes what L2's drivers add to a v2 one (`clipBakeOf`). */
+    code: string | null;
     /** The head and neck chain the look turns (`rigLookChain`); null when the rig has no head bone. */
     look: RigLookChain | null;
     /** No look at all on this rig (a sitting rig whose chain is too low to turn a head): the shader's turn stays off too. */
@@ -495,6 +498,7 @@ export class RigLibrary {
             plan: typeof entry.plan === "string" ? entry.plan : null,
             flight,
             flightOpen: entry.flight_fallback_open === true,
+            code: typeof entry.code === "string" ? entry.code : null,
             look,
             lookOff: sitting.off,
             grips,
@@ -1154,7 +1158,8 @@ export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInpu
             clipPhase: state.now.phase,
             actState: input.actState ?? null,
             actSpeed: input.actSpeed ?? null,
-            airStage: input.airStage ?? null
+            airStage: input.airStage ?? null,
+            clipBake: clipBakeOf(model.code, now)
         },
         a,
         b,

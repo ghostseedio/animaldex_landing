@@ -204,7 +204,7 @@ import * as liveBudget from "@/ark-scene/live-budget";
 import {selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
-import {l2BodyChannel, l2BodyUniforms, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
+import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -3463,6 +3463,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 drawnHeight: entry.drawnHeight,
                 landHeight,
                 stage,
+                // (A v7 file's flight clips bake their own beat, fold and tuck: MA2's v3 birds.)
+                bake: (name) => l2ClipBake(rig.code, clip(name)),
                 beat: own?.pose?.beat ?? null,
                 soaring: own?.pose?.doing === "soar",
                 oneShot: oneShot("takeoff") ? "takeoff" : oneShot("land") ? "land" : null,

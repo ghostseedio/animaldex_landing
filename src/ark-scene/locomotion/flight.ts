@@ -361,14 +361,34 @@ export function airLift(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "
  * beat, the upstroke over the rest, each a half cosine stroke; `stroke` < 1 keeps the wings nearer the middle (a
  * whir). The clip is a cosine stroke itself (top at 0, bottom at 0.5), so the stroke position is mapped back through it.
  */
-export function strokeToClipPhase(beat: number, downstroke: number, stroke = 1): number {
+export function strokeToClipPhase(beat: number, downstroke: number, stroke = 1, clipDownstroke?: number | null): number {
     const b = frac(beat);
     const d = clamp(downstroke, 0.2, 0.8);
     const down = b < d;
     // The stroke position: +1 at the top, -1 at the bottom.
     const s = down ? Math.cos((Math.PI * b) / d) : -Math.cos((Math.PI * (b - d)) / (1 - d));
-    const q = Math.acos(clamp(s * clamp(stroke, 0, 1), -1, 1)) / (2 * Math.PI);
+    const a = Math.acos(clamp(s * clamp(stroke, 0, 1), -1, 1)) / Math.PI;
+    // A v7 flap (rig code v7, MA2's v3 birds) bakes its own beat: its downstroke over `clipDownstroke` of the clip, the
+    // stroke position cos(π p / c) on p < c, then −cos(π (p − c) / (1 − c)): mapped back through that, not v2's cosine.
+    if (clipDownstroke !== undefined && clipDownstroke !== null && Number.isFinite(clipDownstroke)) {
+        const c = clamp(clipDownstroke, 0.2, 0.8);
+        return down ? a * c : c + (1 - a) * (1 - c);
+    }
+    const q = a / 2;
     return down ? q : 1 - q;
+}
+
+/**
+ * What a rig's own flight clip already bakes (MA2's v3 birds, rig code v7: `docs/ark/rig-v2-manifest.md` section 9), so
+ * L2's drivers do not add it a second time: the flap's downstroke share, how far the clip itself tucks the legs (1, 0.7,
+ * 0.45 or 0.25), the take-off's lift-off and the landing's touch-down (clip phases), its rise (mesh heights). Null for a
+ * v2 file: everything plays as before.
+ */
+export type ClipBake = {downstroke: number | null; tuck: number | null; liftoff: number | null; touchdown: number | null; riseH: number | null};
+export function clipBakeOf(code: string | null | undefined, clip: {downstroke?: number; tuck?: number; liftoff?: number; touchdown?: number; rise_h?: number} | null | undefined): ClipBake | null {
+    if (!clip || typeof code !== "string" || !code.startsWith("v7")) return null;
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    return {downstroke: num(clip.downstroke), tuck: num(clip.tuck), liftoff: num(clip.liftoff), touchdown: num(clip.touchdown), riseH: num(clip.rise_h)};
 }
 
 /** How far the hand is flexed (0-1) at a point of the beat: 0 through the downstroke, a smooth bump on the upstroke. */
@@ -506,9 +526,11 @@ export function landingNow(agl: number, climb: number, landHeight: number): bool
  * carries the body up and down (MA1), so the rig takes this back off and only the limbs come from the clip: no double
  * rise, no drop when the take-off hands over to the flap.
  */
-export function clipRise(clip: "takeoff" | "land", phase: number): number {
+export function clipRise(clip: "takeoff" | "land", phase: number, bake?: ClipBake | null): number {
     const v = clip === "takeoff" ? clamp(phase, 0, 1) : 1 - clamp(phase, 0, 1);
-    return 1.2 * Math.max(v - 0.25, 0) ** 1.5;
+    // (v7 publishes its lift-off, touch-down and rise: v2's are 0.25, 0.75 and 1.2.)
+    const off = clip === "takeoff" ? bake?.liftoff ?? 0.25 : 1 - (bake?.touchdown ?? 0.75);
+    return (bake?.riseH ?? 1.2) * Math.max(v - off, 0) ** 1.5;
 }
 
 /**
@@ -516,11 +538,15 @@ export function clipRise(clip: "takeoff" | "land", phase: number): number {
  * on a run across the water or a ski onto it (the feet patter and plane), coming up through the take-off once the
  * push-off is done, all of flight, and letting down through the first half of the landing to reach for the ground.
  */
-export function legTuck(clip: string, phase: number, stage: AirStage | null): number {
+export function legTuck(clip: string, phase: number, stage: AirStage | null, bake?: ClipBake | null): number {
     if (stage === "run" || stage === "ski") return 0;
+    // (A v7 clip tucks its own legs: only what it leaves, `1 − tuck`, in flight; none through its take-off and landing,
+    // whose feet are planted before lift-off and after touch-down and tucked by the clip in between.)
+    if (bake && (clip === "takeoff" || clip === "land")) return 0;
+    const left = bake ? 1 - clamp(bake.tuck ?? 0, 0, 1) : 1;
     if (clip === "takeoff") return smooth((phase - 0.35) / 0.35);
     if (clip === "land") return 1 - smooth(phase / 0.45);
-    return clip === "flap" || clip === "glide" || clip === "soar" || clip === "bank_l" || clip === "bank_r" ? 1 : 0;
+    return clip === "flap" || clip === "glide" || clip === "soar" || clip === "bank_l" || clip === "bank_r" ? left : 0;
 }
 
 /**
@@ -610,6 +636,8 @@ export type FlightRigInput = {
     drawnHeight?: number;
     /** Its air leg's stage on the schedule (MA1), when it is on one: a run patters at full effort, a ski holds the touch-down. */
     stage?: AirStage | null;
+    /** What the rig's own clip bakes (`clipBakeOf`: a v7 file), or null (v2). */
+    bake?: (name: string) => ClipBake | null;
 };
 
 export type FlightRigFrame = {
@@ -654,7 +682,7 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     if (input.oneShot === "takeoff") {
         memory.takeoffAt = input.clock;
         if (input.phase < (spec.trueHz <= 4.5 ? 1 : 0.55) || !has("flap")) {
-            Object.assign(out, {clip: "takeoff", mode: "time", rate: 1, flightMode: "takeoff", roll: 0, bank: 0, heave: -clipRise("takeoff", input.phase) * height});
+            Object.assign(out, {clip: "takeoff", mode: "time", rate: 1, flightMode: "takeoff", roll: 0, bank: 0, heave: -clipRise("takeoff", input.phase, input.bake?.("takeoff")) * height});
             memory.beat = 0;
             memory.wasClip = "takeoff";
             return out;
@@ -671,12 +699,15 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         // (On an air leg, down once on its landing's surface and nearly stopped: it brakes its last metre or two on its
         // feet with its wings up, not running; up to a perch from below, not before it is there.)
         const down = input.agl <= 0.02 && (!input.stage || (input.agl >= -0.05 && input.speed < Math.max((input.drawnLength ?? spec.lengthM) * 1.5, 0.4)));
-        let phase = Math.min(Math.max(byHeight * 0.8, memory.landPhase + dt * (down ? 1.6 : 0.5)), 1);
-        if (input.stage === "ski") phase = Math.min(Math.max(memory.landPhase, 0.78), 0.8);
-        else if (input.stage && !down) phase = Math.min(phase, 0.8);
+        // (The clip's own touch-down a little in: v2's 0.75, so 0.8; a v7 file publishes it.)
+        const bake = input.bake?.("land") ?? null;
+        const touch = (bake?.touchdown ?? 0.75) + 0.05;
+        let phase = Math.min(Math.max(byHeight * touch, memory.landPhase + dt * (down ? 1.6 : 0.5)), 1);
+        if (input.stage === "ski") phase = Math.min(Math.max(memory.landPhase, touch - 0.02), touch);
+        else if (input.stage && !down) phase = Math.min(phase, touch);
         memory.landPhase = phase;
         // (The flare's nose-up eases out into the clip's own attitude.)
-        Object.assign(out, {clip: "land", mode: "sync", phase, flightMode: "land", pitch: -0.55 * memory.flare * (1 - smooth(phase / 0.8)), roll: 0, bank: 0, heave: -clipRise("land", phase) * height});
+        Object.assign(out, {clip: "land", mode: "sync", phase, flightMode: "land", pitch: -0.55 * memory.flare * (1 - smooth(phase / touch)), roll: 0, bank: 0, heave: -clipRise("land", phase, bake) * height});
         memory.wasClip = "land";
         return out;
     }
@@ -745,7 +776,7 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
         const down = input.climb > 0.08 || sinceTakeoff < 1.6 ? spec.downstroke - 0.03 : spec.downstroke;
         out.clip = "flap";
         out.mode = "sync";
-        out.phase = strokeToClipPhase(memory.beat, down, spec.stroke);
+        out.phase = strokeToClipPhase(memory.beat, down, spec.stroke, input.bake?.("flap")?.downstroke);
         out.beat = memory.beat;
         out.fold = spec.fold * upstrokeFold(memory.beat, down) * (1 - 0.6 * memory.flare);
         const heaveShare = spec.heave * (1 + 1.5 * Math.max(effort - 1, 0) / 0.35);
