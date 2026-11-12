@@ -94,11 +94,14 @@ if (process.argv.includes("--list-drawn")) {
 }
 for (const shot of shots) {
     if (only && !only.includes(shot.kind)) continue;
-    const context = await browser.newContext({viewport: {width, height}});
+    // (`--phone`: the phone tier as the scale runs take it: 360×800 at DPR 2, touch, the CPU throttled 4×, medium quality.)
+    const phone = process.argv.includes("--phone");
+    const context = phone ? await browser.newContext({viewport: {width: 360, height: 800}, deviceScaleFactor: 2, isMobile: true, hasTouch: true}) : await browser.newContext({viewport: {width, height}});
     const page = await context.newPage();
+    if (phone) await (await context.newCDPSession(page)).send("Emulation.setCPUThrottlingRate", {rate: 4});
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
-    await page.goto(`${base}?snapshot=snapshot.json&quality=${quality}&at=${shot.t - lead}`, {waitUntil: "domcontentloaded", timeout: 180000});
+    await page.goto(`${base}?snapshot=snapshot.json&quality=${process.argv.includes("--phone") ? "medium" : quality}&at=${shot.t - lead}`, {waitUntil: "domcontentloaded", timeout: 180000});
     await page.waitForFunction(() => window.__collide, null, {timeout: 400000});
     const dir = path.join(out, `${shot.kind}-${label}`);
     rmSync(dir, {recursive: true, force: true});

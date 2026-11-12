@@ -1273,7 +1273,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!own.pose || epoch - own.at >= every || epoch < own.at) {
             // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared); then
             // the collisions: out of anything solid, eased off its neighbours (`collide/`; shared).
-            const at = (own.pose = withCollisions(entry, sharedBase(entry, epoch, pin), epoch));
+            // (Drawn as a model, near or far: a dot far off is the same dot either way, so it skips them; the models round it
+            // still ease off its own pose, worked out exactly: `collide/layer.ts`.)
+            const base = sharedBase(entry, epoch, pin);
+            const at = (own.pose = entry.level === "near" || entry.level === "far" || watched ? withCollisions(entry, base, epoch) : base);
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
             const onLand = !at.aloft && own.ground > 0.02 && Math.abs(at.y - own.ground) < 0.05;
