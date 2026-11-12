@@ -278,6 +278,15 @@ const MAX_GRASS = TIER_SETTINGS.high.grass;
 /** Runtime (live budget): behaviour's resting-at-home test, looked up by name until it is in the release. */
 const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
 
+/**
+ * Lane TB (decision 255): the town's resting kept animals drawn as static figures: per tier how many as the far model
+ * (nearest first; the rest as specks), how near the camera a member must be to be drawn at all (m), and how near for its
+ * kind's far model to be asked for (m). Specks and figures are a copied matrix each: no schedule, no rig.
+ */
+const RESTING_FIGURE_BUDGET = {high: 600, medium: 400, low: 260} as const;
+const RESTING_DRAW_WITHIN = 150;
+const RESTING_LOAD_WITHIN = 70;
+
 type Level = "near" | "far" | "token";
 
 /** An animal on the behaviour schedule: its profile and home, its trip (and its leader's, for a group's follower), its pose now. */
@@ -465,6 +474,13 @@ type HerdDraw = {
     specks: number;
     height: number;
 };
+
+/**
+ * Lane TB (decision 255): the town's kept animals resting out of the live budget (in their rooms, tanks, ponds, yards,
+ * paddocks and enclosures), drawn as static figures through the herd path: a species' group with no badge, no count,
+ * nothing to tap. The animated budget is untouched; a figure costs a copied matrix.
+ */
+type FigureGroup = Omit<HerdDraw, "badge" | "info"> & {resting: true};
 
 const MINE = new Color("#b9f75a");
 const SELECTED = new Color("#fff4dc");
@@ -1020,6 +1036,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let current: ArkSnapshot = options.snapshot;
     let aboard = new Set<string>();
     let herds: HerdDraw[] = [];
+    /** Lane TB: the town's resting kept animals as figures, by species (`FigureGroup`). */
+    let restingGroups: FigureGroup[] = [];
     let selectedHerd: string | null = null;
     /** Pinned representatives: the one selected (a herd member promoted), and a replay's animals. */
     let selectionPin: string | null = null;
@@ -1715,6 +1733,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         sunElevation = lighting.daylight.elevation;
         for (const entry of allEntries()) refreshState(entry);
         for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
+        for (const group of restingGroups) for (const member of group.members) member.awake = isAwake(member.activity ?? null, sunElevation);
         tellState();
     };
 
@@ -1811,6 +1830,62 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (selectedHerd && !herds.some((herd) => herd.info.key === selectedHerd)) selectHerd(null, false);
     };
 
+    /** Lane TB (decision 255): the resting kept town animals, grouped by species, each at its figure's place. */
+    const buildRestingGroups = (animals: ArkAnimal[], places: Map<string, Placement>) => {
+        const isl = island;
+        const before = new Map(restingGroups.map((group) => [group.slug, group]));
+        const bySlug = new Map<string, ArkAnimal[]>();
+        for (const animal of animals) {
+            const list = bySlug.get(animal.model_slug);
+            if (list) list.push(animal);
+            else bySlug.set(animal.model_slug, [animal]);
+        }
+        const next: FigureGroup[] = [];
+        bySlug.forEach((list, slug) => {
+            const sample = list[0];
+            const body = arkBody(sample, library.get(slug)?.behaviour?.plan);
+            const members = list.map((animal) => {
+                const place = places.get(animal.id)!;
+                // (In a tank: at its loop's point and depth at a fixed moment, so a tank's figures spread through its water.)
+                const at = isl?.figurePose(animal.id, body.display) ?? null;
+                return {id: animal.id, x: at?.x ?? place.x, z: at?.z ?? place.z, ground: place.ground, yaw: at?.yaw ?? place.yaw, water: false, phase: phaseOf(animal.id), mine: animal.mine, awake: isAwake(animal.activity ?? null, sunElevation), activity: animal.activity ?? null};
+            });
+            let x0 = Infinity;
+            let x1 = -Infinity;
+            let z0 = Infinity;
+            let z1 = -Infinity;
+            for (const m of members) {
+                x0 = Math.min(x0, m.x);
+                x1 = Math.max(x1, m.x);
+                z0 = Math.min(z0, m.z);
+                z1 = Math.max(z1, m.z);
+            }
+            const old = before.get(slug);
+            next.push({
+                resting: true,
+                slug,
+                sample,
+                members,
+                centre: {x: (x0 + x1) / 2, z: (z0 + z1) / 2},
+                radius: Math.hypot(x1 - x0, z1 - z0) / 2,
+                anchor: 0,
+                length: body.display,
+                colour: old?.colour ?? null,
+                scale: 0,
+                figureMatrices: new Float32Array(members.length * 16),
+                speckMatrices: new Float32Array(members.length * 16),
+                order: Uint32Array.from(members.map((_, i) => i)),
+                sortedAt: 0,
+                sortedFrom: new Vector3(Infinity, 0, 0),
+                middles: new Float32Array(members.length * 3).fill(Number.NaN),
+                figures: 0,
+                specks: 0,
+                height: 1
+            });
+        });
+        restingGroups = next;
+    };
+
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
         if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
@@ -1886,6 +1961,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // schedule. On the low tier and the lighter view they take their turn in the budget like everyone.)
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
+        // (Lane TB, decision 255: the town's kept animals the budget rests, as figures where they live.)
+        buildRestingGroups(isl ? snapshot.animals.filter((animal) => isl.has(animal) && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo") && representatives.live.has(animal.id) && !outside.has(animal.id)) : [], places);
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
         for (const animal of snapshot.animals) {
@@ -2042,11 +2119,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const basisY = new Vector3();
     const basisZ = new Vector3();
     const basisMatrix = new Matrix4();
-    let counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
+    let counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0, restingFigures: 0, restingSpecks: 0};
     const DIM_SPECK = new Color("#cfc3ad");
 
     /** A herd this frame: how many members are drawn (nearest first), how many of them as models. */
-    type HerdPlan = {slug: string; order: Uint32Array; members: HerdDraw["members"]; figureMatrices: Float32Array; speckMatrices: Float32Array; colour: Color | null; drawn: number; figures: number; width: number; depth: number; herd: HerdDraw; shape: SpeckShape};
+    type HerdPlan = {slug: string; order: Uint32Array; members: HerdDraw["members"]; figureMatrices: Float32Array; speckMatrices: Float32Array; colour: Color | null; drawn: number; figures: number; width: number; depth: number; herd: HerdDraw | FigureGroup; shape: SpeckShape};
     const herdSphere = new Sphere();
     const herdPosition = new Vector3();
     const herdRotation = new Quaternion();
@@ -2062,14 +2139,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const planHerds = (cameraPosition: Vector3, exaggerate: number, now: number): HerdPlan[] => {
         const plans: HerdPlan[] = [];
-        if (!herds.length) return plans;
+        if (!herds.length && !restingGroups.length) return plans;
         const budgetTier: QualityTier = liteOn() ? "low" : tier;
-        let budget: number = HERD_FIGURE_BUDGET[budgetTier];
-        for (const herd of herds) {
+        let herdBudget: number = HERD_FIGURE_BUDGET[budgetTier];
+        // (Lane TB: the town's resting kept animals have a figure budget of their own, so a wild herd never takes it.)
+        let restingBudget: number = RESTING_FIGURE_BUDGET[budgetTier];
+        let restingAsks = 0;
+        const groups: Array<HerdDraw | FigureGroup> = restingGroups.length ? [...herds, ...restingGroups] : herds;
+        for (const herd of groups) {
+            const resting = "resting" in herd;
+            let budget = resting ? restingBudget : herdBudget;
             herd.middles.fill(Number.NaN);
             const model = library.get(herd.slug);
             const far = model?.far;
-            if (!model || !far) continue;
+            if (!model || !far) {
+                // (A resting kind's far model is asked for once one of it is in view close by: a few kinds a frame.)
+                if (resting && restingAsks < 4 && library.has(herd.slug)) {
+                    herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
+                    herdSphere.radius = herd.radius + herd.length * 2 + 4;
+                    if (frustum.intersectsSphere(herdSphere) && herd.members.some((m) => (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 < RESTING_LOAD_WITHIN ** 2)) {
+                        library.request(herd.slug, "far");
+                        restingAsks++;
+                    }
+                }
+                continue;
+            }
             herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
             herdSphere.radius = herd.radius + herd.length * 2 + 4;
             if (!frustum.intersectsSphere(herdSphere)) continue;
@@ -2144,14 +2238,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     figures++;
                     budget--;
                 }
+                if (resting && distance > RESTING_DRAW_WITHIN) break;
                 const i = herd.order[k];
                 herd.middles[i * 3] = m.x;
                 herd.middles[i * 3 + 1] = herd.figureMatrices[i * 16 + 13] + tall * 0.5 + model.minY * s;
                 herd.middles[i * 3 + 2] = m.z;
             }
+            if (resting) restingBudget = budget;
+            else herdBudget = budget;
+            // (A resting kind: only its members within reach are drawn at all, nearest first.)
+            let drawn = herd.members.length;
+            if (resting) {
+                drawn = 0;
+                for (let k = 0; k < herd.order.length; k++) {
+                    const m = herd.members[herd.order[k]];
+                    if ((m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 > RESTING_DRAW_WITHIN ** 2) break;
+                    drawn++;
+                }
+                figures = Math.min(figures, drawn);
+            }
             herd.figures = figures;
-            herd.specks = herd.members.length - figures;
-            plans.push({slug: herd.slug, order: herd.order, members: herd.members, figureMatrices: herd.figureMatrices, speckMatrices: herd.speckMatrices, colour: herd.colour, drawn: herd.members.length, figures, width, depth, herd, shape});
+            herd.specks = drawn - figures;
+            plans.push({slug: herd.slug, order: herd.order, members: herd.members, figureMatrices: herd.figureMatrices, speckMatrices: herd.speckMatrices, colour: herd.colour, drawn, figures, width, depth, herd, shape});
         }
         return plans;
     };
@@ -3715,7 +3823,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const shadowList: Shadow[] = [];
         const ringList: Ring[] = [];
         const dotList: FindDot[] = [];
-        counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0};
+        counts = {near: 0, far: 0, token: 0, herdFigures: 0, herdSpecks: 0, rigged: 0, restingFigures: 0, restingSpecks: 0};
 
         look.begin(lookWeather, worldMs());
         // Development: the sleep clips' page draws the same frame with the eyes open, to compare (`sleep-entry.ts`).
@@ -4097,11 +4205,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     look.figure(mesh, index);
                     setVary(mesh.geometry, index, member.id);
                     index++;
-                    counts.herdFigures++;
+                    if ("resting" in herd.herd) counts.restingFigures++;
+                    else counts.herdFigures++;
                     if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: Math.max(herd.width, 0.3), length: herd.depth, yaw: member.yaw, strength: 1});
                 } else if (colour) {
                     specks.push(herd.shape, herd.speckMatrices, i * 16, dim ? DIM_SPECK : colour);
-                    counts.herdSpecks++;
+                    if ("resting" in herd.herd) counts.restingSpecks++;
+                    else counts.herdSpecks++;
                 }
             }
             if (mesh && index > (perMesh.get(mesh) ?? 0)) {
@@ -6110,6 +6220,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             pixelRatio,
             modelsLoaded: library.loadedCount,
             herdFigures: counts.herdFigures,
+            restingFigures: counts.restingFigures,
+            restingSpecks: counts.restingSpecks,
             herdSpecks: counts.herdSpecks,
             live: entries.length,
             placeholders: library.placeholderCount,
