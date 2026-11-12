@@ -453,6 +453,11 @@ export function townPlan(): TownPlan {
     return cached;
 }
 
+/** The plan worked out elsewhere (the town's prebuild worker, decision 153): the same plan, not built again here. */
+export function primeTownPlan(plan: TownPlan): void {
+    cached ??= plan;
+}
+
 /** What the plan could not place (for the validator: empty when the plan is whole). */
 export function townPlanMisses(): string[] {
     townPlan();

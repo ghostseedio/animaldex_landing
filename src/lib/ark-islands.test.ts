@@ -271,3 +271,28 @@ test("the director covers both islands: the crossing shot plans from the two isl
     assert.ok(!one.cues.some((cue) => /zoo|town/i.test(cue.text)), "one island: no town in its words");
     void ArkShotUnavailable;
 });
+
+test("the town's prebuild (decision 153): worked out, packed, cloned across and primed, the same town in small steps", async () => {
+    const {townBuildData, townIslandSteps, buildTownIsland} = await import("@/ark-scene/islands/town/render/index");
+    const {packTownBuild, unpackTownBuild} = await import("@/ark-scene/islands/town/prebuild");
+    const {Geo} = await import("@/ark-scene/islands/town/render/kit");
+    const {launchEnclosures} = await import("@/ark-scene/islands/town/areas");
+    const open = launchEnclosures();
+    const direct = buildTownIsland({tier: "low", zooOpen: open}).stats();
+    const built = townBuildData(open);
+    const transfer = packTownBuild(built);
+    const across = structuredClone(built, {transfer});
+    unpackTownBuild(across, Geo.prototype);
+    const steps = townIslandSteps({tier: "low", zooOpen: open, built: across});
+    let count = 0;
+    let next = steps.next();
+    while (!next.done) {
+        count++;
+        next = steps.next();
+    }
+    const stepped = next.value.stats();
+    assert.ok(count > 80, `built in small steps (${count})`);
+    assert.equal(stepped.triangles, direct.triangles);
+    assert.equal(stepped.chunks, direct.chunks);
+    assert.equal(stepped.windows, direct.windows);
+});

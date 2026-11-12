@@ -503,6 +503,11 @@ export type TownAreas = {spots: TownSpot[]; households: Household[]; enclosures:
 
 let cached: TownAreas | null = null;
 
+/** The areas worked out elsewhere (the town's prebuild worker, decision 153). */
+export function primeTownAreas(areas: TownAreas): void {
+    cached ??= areas;
+}
+
 export function townAreas(): TownAreas {
     if (cached) return cached;
     const plan = townPlan();

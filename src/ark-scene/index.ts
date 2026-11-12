@@ -189,6 +189,7 @@ import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
+import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
@@ -516,21 +517,41 @@ function groundQueryOf(height: (x: number, z: number) => number): (x: number, z:
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
     // Part C, one world (decisions 141-142): the town island beside the wild island, across the strait at its world origin
     // (`islands/scene.ts`), its animals through this one pipeline. Absent: the wild island alone, exactly as before.
-    const island = options.island ?? null;
-    const heightAt = island ? (x: number, z: number) => (island.contains(x, z) ? island.heightAt(x, z) : wildHeightAt(x, z)) : wildHeightAt;
+    // (Decision 153: the town may come later, built off the first frame in idle slices: `attachIsland`.)
+    let island: ArkIslandScene | null = options.island ?? null;
+    const heightAt = (x: number, z: number) => {
+        const isl = island;
+        return isl && isl.contains(x, z) ? isl.heightAt(x, z) : wildHeightAt(x, z);
+    };
     /** Part C: the wild island's animals of a list (the town's are placed by the town). */
-    const wildOnly = (animals: ArkAnimal[]) => (island ? animals.filter((animal) => !island.has(animal)) : animals);
+    const wildOnly = (animals: ArkAnimal[]) => {
+        const isl = island;
+        return isl ? animals.filter((animal) => !isl.has(animal)) : animals;
+    };
+    /** The wild island's places last laid out, kept while its animals are the same (the town attaching re-places only the town). */
+    let lastWild: {animals: ArkAnimal[]; places: Map<string, Placement>} | null = null;
     /** Every animal's place: the wild island's by its map, the town's by its plan (in the world frame). */
     const placeAll = (animals: ArkAnimal[], ghosts = false): Map<string, Placement> => {
-        if (!island) return placeAnimals(animals);
+        const isl = island;
+        if (!isl) {
+            const places = placeAnimals(animals);
+            if (!ghosts) lastWild = {animals, places};
+            return places;
+        }
         const town: ArkAnimal[] = [];
         const wild: ArkAnimal[] = [];
-        for (const animal of animals) (island.has(animal) ? town : wild).push(animal);
-        // (The wild island's list as the page's prebuild was given it, so its places come from the worker when primed.)
-        const places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
-        island.place(town).forEach((place, id) => places.set(id, place));
+        for (const animal of animals) (isl.has(animal) ? town : wild).push(animal);
+        // (The wild island's list as the page's prebuild was given it, so its places come from the worker when primed; the
+        // same animals as last time keep last time's places.)
+        let places: Map<string, Placement>;
+        if (!ghosts && lastWild && lastWild.animals.length === wild.length && lastWild.animals.every((a, i) => a === wild[i])) places = new Map(lastWild.places);
+        else {
+            places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
+            if (!ghosts) lastWild = {animals: wild, places: new Map(places)};
+        }
+        isl.place(town).forEach((place, id) => places.set(id, place));
         // (The town's colliders for the motion pass, L5's per island: its enclosures follow the snapshot.)
-        setIslandColliders({contains: island.contains, set: island.colliders()});
+        setIslandColliders({contains: isl.contains, set: isl.colliders()});
         // (A replay's departed are added to the town's list; a snapshot's replace it.)
         if (ghosts) for (const animal of town) townIds.add(animal.id);
         else townIds = new Set(town.map((animal) => animal.id));
@@ -540,8 +561,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // analytic surface (they differ by metres at the cliff bands). On the town, its own ground (`island.heightAt`, the
     // normal from its slope), never the wild island's.
     // (One world, T3: the town beside the wild island, so each foot asks the ground of the island it stands on.)
-    const townGround = island ? groundQueryOf(island.heightAt) : null;
-    setLocoGround(island && townGround ? (x, z) => (island.contains(x, z) ? townGround(x, z) : drawnGround(x, z)) : drawnGround);
+    const applyLocoGround = () => {
+        const isl = island;
+        const townGround = isl ? groundQueryOf(isl.heightAt) : null;
+        setLocoGround(isl && townGround ? (x, z) => (isl.contains(x, z) ? townGround(x, z) : drawnGround(x, z)) : drawnGround);
+    };
+    applyLocoGround();
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
@@ -675,15 +700,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
     if (landscape) scene.add(landscape.ground, landscape.water);
-    if (island) {
-        scene.add(island.root);
-        // One sea for the one world (decision 143): the wild island's, reading the town's sea floor over its square.
+    /** The town's meshes in the scene and its sea floor in the one sea (decision 143). */
+    const addIslandWorld = (isl: ArkIslandScene) => {
+        scene.add(isl.root);
         const uniforms = (landscape.water.material as ShaderMaterial).uniforms;
-        if (uniforms.islandDepth && island.seaDepth) {
-            uniforms.islandDepth.value = island.seaDepth;
-            (uniforms.islandPatch.value as {set: (x: number, y: number, z: number, w: number) => void}).set(island.origin.x, island.origin.z, island.half, 16);
+        if (uniforms.islandDepth && isl.seaDepth) {
+            uniforms.islandDepth.value = isl.seaDepth;
+            (uniforms.islandPatch.value as {set: (x: number, y: number, z: number, w: number) => void}).set(isl.origin.x, isl.origin.z, isl.half, 16);
         }
-    }
+    };
+    if (island) addIslandWorld(island);
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
     const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
@@ -728,7 +754,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.dampingFactor = 0.075;
     controls.minDistance = CAMERA_RANGE.near;
     // (Part C: with two islands the camera reaches out over both: the town's whole view is ~600 m off.)
-    const maxDistance = island ? 900 : MAX_DISTANCE;
+    let maxDistance = island ? 900 : MAX_DISTANCE;
     controls.maxDistance = maxDistance;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
@@ -822,10 +848,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     });
     // Part C: the town's chunks on Part B's streamer, on its own grid at its world origin (the multi-island streamer,
     // `ark-streaming-islands`); until that is in, the town is drawn whole.
-    const islandStreamed = Boolean(island && (streamer as unknown as {registerIsland?: unknown}).registerIsland);
+    let islandStreamed = false;
+    /** The town being shown a few chunks a frame as it joins (decision 153). */
+    let townRevealing = false;
     /** A point's chunk state (Part C: until the multi-island streamer is in, the town's square counts as drawn in full). */
     const streamStateAt = (x: number, z: number) => (island && !islandStreamed && island.contains(x, z) ? STATE_IN : streamer.stateAt(x, z));
-    if (island) (streamer as unknown as {registerIsland?: (spec: {id: string; offset: {x: number; z: number}; grid: ArkIslandScene["grid"]; spans: ArkIslandScene["spans"]; content: Uint8Array; apply: (states: Uint8Array, allIn: boolean) => void}) => void}).registerIsland?.({id: "town", offset: island.origin, grid: island.grid, spans: island.spans, content: island.content, apply: island.applyStream});
+    const registerIslandStream = (isl: ArkIslandScene) => {
+        const register = (streamer as unknown as {registerIsland?: (spec: {id: string; offset: {x: number; z: number}; grid: ArkIslandScene["grid"]; spans: ArkIslandScene["spans"]; content: Uint8Array; apply: (states: Uint8Array, allIn: boolean) => void}) => void}).registerIsland;
+        islandStreamed = Boolean(register);
+        register?.call(streamer, {id: "town", offset: isl.origin, grid: isl.grid, spans: isl.spans, content: isl.content, apply: isl.applyStream});
+    };
+    if (island) registerIslandStream(island);
 
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
@@ -883,7 +916,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const species = new Map<string, SpeciesMeshes>();
     // Runtime (src/ark-scene/runtime): when to draw, power, the load order and budgets, the camera's body, the bar and reset.
     const runtime: ArkRuntime = createArkRuntime({
-        ...(island ? {groundAt: heightAt} : {}),
+        // (Part C: the ground of the island under the camera: the same heights as the wild island's with one island.)
+        groundAt: heightAt,
         el,
         canvas,
         renderer,
@@ -1113,6 +1147,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // frame, `islands/town/sampler.ts`), built after the wild island's; its animals' schedules read it, the wild island's
     // theirs. The two are ready together (`world` is set once both are).
     let townBuild: ScheduleWorldBuild | null = scheduleOn && island ? new ScheduleWorldBuild(island.sampler()) : null;
+    /** The town's animals waiting for its behaviour world: once it is built, their schedules are made and wired. */
+    const townWorldReady = () => {
+        const isl = island;
+        if (!isl) return;
+        for (const e of entries) if (!e.sched && townIds.has(e.animal.id)) e.sched = makeSched(e.animal, e.place, arkBody(e.animal, library.get(e.animal.model_slug)?.behaviour?.plan).display) ?? undefined;
+        wireSchedules(entries, current.ark_day ?? null);
+    };
     let townWorld: ScheduleWorld | null = null;
     /** The town's animals now (their schedules read the town's world). */
     let townIds = new Set<string>();
@@ -1188,6 +1229,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         };
     };
     const stepWorldBuild = (budgetMs: number) => {
+        // Part C: the town's world after the wild island's, a slice a frame too; its animals join the schedule when it is in.
+        if (world && townBuild) {
+            const town = options.recording ? townBuild.run() : townBuild.step(budgetMs);
+            behaviourBuildMs += townBuild.spentMs;
+            if (town) {
+                townWorld = town;
+                townBuild = null;
+                townWorldReady();
+            }
+            return;
+        }
         if (world || !worldBuild) return;
         // A recording (the marketing recorder, the golden shots) builds it at once on its first frame.
         if (!options.recording && !attachReady) {
@@ -1202,14 +1254,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         behaviourBuildSlices = worldBuild.slices;
         behaviourBuildLongestMs = worldBuild.longestMs;
         if (!built) return;
-        // Part C: then the town's, a slice a frame too; both are ready together.
-        if (townBuild) {
-            const town = options.recording ? townBuild.run() : townBuild.step(budgetMs);
-            behaviourBuildMs += townBuild.spentMs;
-            if (!town) return;
-            townWorld = town;
-            townBuild = null;
-        }
         world = built;
         worldBuild = null;
         // Runtime: who is resting at home is known now; the live budget sits them out first. (Only where behaviour has
@@ -1240,7 +1284,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
         // (Part C: a town animal kept still at a window, behind the glass or in a tank stays at its spot.)
         const inTown = Boolean(island?.has(animal));
-        if (inTown && !island!.scheduled(animal.id)) return null;
+        // (Until the town's behaviour world is in, its animals stand at their places: `townWorldReady` wires them then.)
+        if (inTown && (!island!.scheduled(animal.id) || !townWorld)) return null;
         const sea = !inTown && ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
@@ -1815,7 +1860,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Runtime: a big Ark draws at most the tier's live budget one by one, the rest resting out of sight by the
         // shared rotation (live-budget.ts); the counts and herds are untouched.
         // (Part C: the wild island's per-zone capacity is its own land's: the town's animals are counted as the town's.)
-        const candidates = island ? snapshot.animals.map((animal) => (island.has(animal) ? {...animal, zone: "town" as ArkAnimal["zone"]} : animal)) : snapshot.animals;
+        const isl = island;
+        const candidates = isl ? snapshot.animals.map((animal) => (isl.has(animal) ? {...animal, zone: "town" as ArkAnimal["zone"]} : animal)) : snapshot.animals;
         const outside = runtime.outside(candidates, representatives.live, pins, liteOn(), restingFor(snapshot, places));
         const next: Entry[] = [];
         const nextById = new Map<string, Entry>();
@@ -5612,6 +5658,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (landscape) landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
         // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
+        // Decision 153: the town shown a few chunks a frame as it joins.
+        if (townRevealing && island) townRevealing = island.stepReveal(3);
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         stepFlight(now);
         stepInset();
@@ -5958,6 +6006,53 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.held = false;
             entry.air = 0;
             entry.arrivedAt = elapsedNow();
+        },
+        attachIsland: (isl: ArkIslandScene, snapshot: ArkSnapshot) => {
+            // Decision 153: the town built off the first frame joins the one world now (its meshes, sea floor, ground,
+            // streaming, behaviour world and animals); the view goes on to the two-island default if it is still at home.
+            if (island || disposed) return;
+            const atHome = !selectedId && !followId && !replay && controls.target.distanceTo(homeView().target) < 12;
+            island = isl;
+            applyLocoGround();
+            addIslandWorld(isl);
+            // Its programs compiled off the frame (KHR_parallel_shader_compile where the GPU has it), then shown a few
+            // chunks a frame: no single long frame as the town comes in (decision 153).
+            // (The compile starts now, on what is visible; hidden from the next frame on, shown once compiled.)
+            const warm = warmShaders(renderer, isl.root, camera, 4000, scene);
+            isl.beginReveal();
+            const reveal = () => (townRevealing = true);
+            void warm.then(reveal, reveal);
+            registerIslandStream(isl);
+            maxDistance = 900;
+            controls.maxDistance = maxDistance;
+            reactiveQueries = null;
+            if (scheduleOn) townBuild = new ScheduleWorldBuild(isl.sampler());
+            applyTier(tier);
+            // Its animals join a few hundred at a time, each batch in an idle moment of its own (decision 153).
+            const townAnimals = snapshot.animals.filter((animal) => isl.has(animal));
+            const wildAnimals = snapshot.animals.filter((animal) => !isl.has(animal));
+            isl.joining(true);
+            let joined = 0;
+            const join = () => {
+                if (disposed || island !== isl) return;
+                joined = Math.min(joined + 450, townAnimals.length);
+                const done = joined >= townAnimals.length;
+                if (done) isl.joining(false);
+                setSnapshot(done ? snapshot : {...snapshot, animals: [...wildAnimals, ...townAnimals.slice(0, joined)].sort((a, b) => a.arrived_at.localeCompare(b.arrived_at))}, false);
+                if (!done) {
+                    const ric = (globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback;
+                    if (ric) ric(join, {timeout: 250});
+                    else setTimeout(join, 32);
+                }
+            };
+            join();
+            if (options.openIsland === "town") {
+                const view = islandView("town");
+                fly(view.target, view.distance, reducedMotion ? 0 : 2.6, view.polar, view.azimuth);
+            } else if (atHome && !opening) {
+                const view = homeView();
+                fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
+            }
         },
         flyToIsland: (id: "wild" | "town") => {
             controls.autoRotate = false;

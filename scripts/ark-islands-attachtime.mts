@@ -1,0 +1,24 @@
+// The main-thread pieces between the town's sliced build and its first frames (decision 153).
+const t = () => performance.now();
+const {launchEnclosures} = await import("@/ark-scene/islands/town/areas");
+const {townColliderList, townColliderSet} = await import("@/ark-scene/islands/town/colliders");
+const {townSamplerData, townWorldSampler} = await import("@/ark-scene/islands/town/sampler");
+const {buildTownIsland} = await import("@/ark-scene/islands/town/render/index");
+const {townClockAt} = await import("@/ark-scene/islands/town/people");
+const open = launchEnclosures();
+const origin = {x: 508.6, z: -210.7};
+const list = townColliderList(open, origin);
+const data = townSamplerData(open, origin);
+let a = t();
+const set = townColliderSet(open, origin, list);
+console.log("collider set from list", Math.round(t() - a), list.length);
+a = t();
+townWorldSampler(open, origin, set, data);
+console.log("sampler from data", Math.round(t() - a), data.points.length);
+const town = buildTownIsland({tier: "low", zooOpen: open});
+a = t();
+town.update(townClockAt(Date.UTC(2026, 10, 12, 18), 0));
+console.log("town first update", Math.round(t() - a));
+a = t();
+town.update(townClockAt(Date.UTC(2026, 10, 12, 18, 1), 0));
+console.log("town next update", Math.round(t() - a));

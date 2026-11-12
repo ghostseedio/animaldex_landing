@@ -16,7 +16,7 @@ import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ar
 import {binSpots, carSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {binsOut, boatIn, CAR_COLOURS, carAt, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
-import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
+import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, boatGeometry, carGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
@@ -75,7 +75,7 @@ const SURFACE_COLOUR: Record<TownSurface, string> = {
     water: "#5a6446"
 };
 
-type GroundGrid = {size: number; heights: Float32Array; colours: Float32Array};
+export type GroundGrid = {size: number; heights: Float32Array; colours: Float32Array};
 
 /** The ground's heights and colours at every vertex of the 1.1 m grid (433 × 433). */
 export function groundGrid(): GroundGrid {
@@ -201,17 +201,16 @@ function netMaterial(): MeshStandardMaterial {
 
 type ChunkMeshes = {group: Group; meshes: Mesh[]; glass: {attribute: BufferAttribute; windows: WindowRecord[]} | null};
 
-export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]} = {}): TownIsland {
-    const plan = townPlan();
-    let tier: TownTier = options.tier ?? "high";
-    const root = new Group();
-    root.name = "island:town";
-    const grid = groundGrid();
-    const materials = {ground: groundMaterial(), decal: new MeshStandardMaterial({vertexColors: true, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), solid: new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), glass: glassMaterial(), net: netMaterial(), prop: propMaterial(), tree: new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), lampHead: new MeshStandardMaterial({color: new Color("#fff1c4"), emissive: new Color("#ffc878"), emissiveIntensity: 0, roughness: 0.4})};
+/**
+ * The town's heavy, pure part (decision 153: built in the town's prebuild worker, off the page's main thread): the
+ * ground's grid, the scenery with every building in its chunk, and the zoo's scenery for the open enclosures.
+ */
+export type TownBuildData = {grid: GroundGrid; scenery: SceneryOut; perChunk: Map<number, BuildingChunk>; zoo: SceneryOut; zooOpen: string[]};
 
-    // Scenery and buildings, chunk by chunk.
+export function townBuildData(zooOpen: readonly string[] = launchEnclosures()): TownBuildData {
+    const plan = townPlan();
+    const grid = groundGrid();
     const scenery = buildScenery(plan);
-    const chunks: Array<ChunkMeshes | null> = new Array(TOWN_CHUNK_COUNT).fill(null);
     const perChunk = new Map<number, BuildingChunk>();
     for (const b of plan.buildings) {
         const key = townChunkOf(b.at.x, b.at.z);
@@ -222,6 +221,50 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
             perChunk.set(key, c);
         }
         buildBuilding(c, b);
+    }
+    return {grid, scenery, perChunk, zoo: buildZooScenery(zooLayout(zooOpen, plan)), zooOpen: [...zooOpen]};
+}
+
+export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): TownIsland {
+    const steps = townIslandSteps(options);
+    for (;;) {
+        const next = steps.next();
+        if (next.done) return next.value;
+    }
+}
+
+/**
+ * The town's build as steps (decision 153): each yield is a point the page may draw a frame at, so a caller can spread
+ * the build over idle slices (`islands/scene.ts`); `buildTownIsland` runs them all at once, exactly as before.
+ * `built`: the heavy part already worked out (the prebuild worker's `townBuildData`).
+ */
+export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): Generator<void, TownIsland> {
+    const plan = townPlan();
+    let tier: TownTier = options.tier ?? "high";
+    const root = new Group();
+    root.name = "island:town";
+    const built = options.built ?? null;
+    const grid = built?.grid ?? groundGrid();
+    yield;
+    const materials = {ground: groundMaterial(), decal: new MeshStandardMaterial({vertexColors: true, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), solid: new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), glass: glassMaterial(), net: netMaterial(), prop: propMaterial(), tree: new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), lampHead: new MeshStandardMaterial({color: new Color("#fff1c4"), emissive: new Color("#ffc878"), emissiveIntensity: 0, roughness: 0.4})};
+
+    // Scenery and buildings, chunk by chunk (worked out already when `built` is given).
+    const scenery = built?.scenery ?? buildScenery(plan);
+    if (!built) yield;
+    const chunks: Array<ChunkMeshes | null> = new Array(TOWN_CHUNK_COUNT).fill(null);
+    const perChunk = built?.perChunk ?? new Map<number, BuildingChunk>();
+    if (!built) {
+        for (const b of plan.buildings) {
+            const key = townChunkOf(b.at.x, b.at.z);
+            let c = perChunk.get(key);
+            if (!c) {
+                const sc = scenery.chunks.get(key);
+                c = {solid: sc?.solid ?? new Geo(), glass: sc?.glass ?? new Geo(), windows: []};
+                perChunk.set(key, c);
+            }
+            buildBuilding(c, b);
+        }
+        yield;
     }
     const content = new Uint8Array(TOWN_CHUNK_COUNT);
     const spans: TownChunkSpan[] = [];
@@ -281,9 +324,11 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
             root.add(group);
             chunks[key] = {group, meshes, glass};
         }
+        yield;
     }
 
     let drawn: ((chunk: number) => boolean) | null = null;
+    yield;
     // Water: the sea round the island and in the harbour, the fresh water.
     const depth = seaDepthMap(grid.heights, grid.size);
     const water: TownWater = buildTownWater(depth, scenery.fresh.triangles ? scenery.fresh.toGeometry() : null);
@@ -303,7 +348,8 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
             zooRoot.remove(mesh);
         }
         zooMeshes = [];
-        const zoo = buildZooScenery(zooLayout(open, plan));
+        // (The prebuild's zoo scenery when it was worked out for these very enclosures.)
+        const zoo = built && built.zooOpen.join(",") === open.join(",") ? built.zoo : buildZooScenery(zooLayout(open, plan));
         zoo.chunks.forEach((c, key) => {
             const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
             for (const [geo, material, name] of parts) {
@@ -328,6 +374,7 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
         }
     };
 
+    yield;
     // Trees: one set per kind.
     const treeSets = new Map<string, ChunkedSet>();
     const byKind = new Map<string, typeof scenery.trees>();
@@ -348,6 +395,7 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
         root.add(set.mesh);
     });
 
+    yield;
     // People-implied props.
     const cars = carSpots(plan);
     const bins = binSpots(plan);
@@ -378,6 +426,7 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
     const binColours = ["#2b4a2f", "#3a3d40", "#2a4a7a", "#7a4a2a"];
     const ground = (x: number, z: number) => sampleTownGround(x, z).height;
 
+    yield;
     // The church's and the town hall's clock hands.
     const faces = plan.buildings.flatMap((b) => clockFaces(b));
     const handGeo = new Geo();
@@ -523,7 +572,9 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
         return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
 
+    yield;
     buildZoo(zooOpenNow);
+    yield;
     void rng;
     return {
         setZooOpen: (enclosures) => {

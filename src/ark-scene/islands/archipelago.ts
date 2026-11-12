@@ -29,6 +29,10 @@ export type ArkArchipelagoHandle = ArkSceneHandle & {
     crossTo: (island: ArkIsland, then?: {select?: string | null; closeUp?: boolean}) => Promise<void>;
     /** A flight between the islands under way. */
     crossing: () => boolean;
+    /** The town is in the one world (decision 153: built after the wild island's first frame); true with one island. */
+    attached: () => boolean;
+    /** Development: where the town's time went (the worker, the sliced build, the attach). */
+    townTimings: () => Record<string, unknown> | null;
 };
 
 /** A flight across the strait takes about this long (`flyToIsland`). */
@@ -46,30 +50,81 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
     const pending: Array<[string, unknown[]]> = [];
     const tierGuess = (): "high" | "medium" | "low" => (window.matchMedia?.("(pointer: coarse)").matches ? "low" : "medium");
 
+    /** The town in the one world yet (decision 153: it is built after the wild island's first frame). */
+    let attached = false;
+    let timings: Record<string, unknown> | null = null;
+    let attaching = false;
+    let tier: "high" | "medium" | "low" = tierGuess();
+    /** The town: its heavy work in its worker, its meshes in idle slices, then into the live scene. */
+    const attachTown = async () => {
+        if (attaching || attached || disposed || !two) return;
+        attaching = true;
+        const [{prepareTown}, {loadTownScene}, {enclosuresIn, launchEnclosures}, {townWorldOrigin}] = await Promise.all([
+            import("@/ark-scene/islands/town/prebuild"),
+            import("@/ark-scene/islands/scene"),
+            import("@/ark-scene/islands/town/areas"),
+            import("@/ark-scene/islands")
+        ]);
+        const townAnimals = arkIslandSnapshot(whole, "town").animals;
+        const open = enclosuresIn(townAnimals);
+        const origin = townWorldOrigin();
+        const t0 = performance.now();
+        const prepared = await prepareTown({animals: townAnimals, origin, open: open.length ? open : launchEnclosures()});
+        if (disposed) return;
+        const t1 = performance.now();
+        town = await loadTownScene({tier, animals: townAnimals, origin, prepared, sliceMs: 8});
+        if (disposed || !scene?.attachIsland) {
+            town?.dispose();
+            return;
+        }
+        // (Its behaviour world's places and its colliders, each in an idle moment of its own, before it joins.)
+        const idle = () => new Promise<void>((resolve) => ((globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 16)))(() => resolve(), {timeout: 120}));
+        await idle();
+        town.colliders();
+        await idle();
+        town.sampler();
+        await idle();
+        if (disposed || !scene?.attachIsland) {
+            town.dispose();
+            return;
+        }
+        const t2 = performance.now();
+        scene.attachIsland(town, whole);
+        attached = true;
+        // (Development: where the town's time went: the worker, the sliced build, the one attach task.)
+        timings = {prebuild: Math.round(t1 - t0), where: prepared.where, build: Math.round(t2 - t1), attach: Math.round(performance.now() - t2), attachAt: Math.round(t2), builtAt: Math.round(t1)};
+        if (pendingSelect) {
+            const {id, closeUp} = pendingSelect;
+            pendingSelect = null;
+            scene.select(id, closeUp);
+        }
+    };
+
     const mount = async () => {
         const wild = arkIslandSnapshot(whole, "wild");
-        if (two) {
-            const {loadTownScene} = await import("@/ark-scene/islands/scene");
-            town = await loadTownScene({tier: tierGuess(), animals: arkIslandSnapshot(whole, "town").animals});
-            if (disposed) {
-                town.dispose();
-                return;
-            }
-        }
         const [{mountArk}, {prepareArk}] = await Promise.all([import("@/ark-scene"), import("@/ark-scene/runtime/prebuild")]);
         if (disposed) return;
         // The wild island's heavy seeded work (decor, forest, grass, places) in the runtime's worker first (runtime.md §7).
         await prepareArk({snapshot: wild}).catch(() => undefined);
         if (disposed) return;
+        // The wild island draws its first frame exactly as with one island; the town comes when it is built (decision 153).
         scene = mountArk(el, {
             ...options,
-            snapshot: whole,
-            island: town,
+            snapshot: two ? wild : whole,
+            island: null,
             wildAnimals: two ? wild.animals : null,
             openIsland: near,
             onIslandNear: (island) => {
                 near = island;
                 options.onIsland?.(island, flying);
+            },
+            onTier: (next, lite) => {
+                tier = next;
+                options.onTier?.(next, lite);
+            },
+            onReady: () => {
+                options.onReady?.();
+                void attachTown();
             }
         });
         for (const [key, args] of pending.splice(0)) (scene as unknown as Record<string, (...a: unknown[]) => unknown>)[key]?.(...args);
@@ -106,15 +161,20 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
         island: () => near,
         twoIslands: () => two,
         crossing: () => flying,
+        attached: () => !two || attached,
+        townTimings: () => timings,
         crossTo,
         update: (snapshot: ArkSnapshot) => {
             // (The server's switch turning on or off under an open page: kept as mounted until the next visit.)
             if (arkTwoIslands(snapshot) !== two) return;
             whole = snapshot;
-            scene?.update(snapshot);
+            // (Until the town is in, the scene holds the wild island's animals only.)
+            scene?.update(two && !attached ? arkIslandSnapshot(snapshot, "wild") : snapshot);
         },
         select: (id: string | null, closeUp?: boolean) => {
-            if (!scene) {
+            const animal = id ? whole.animals.find((a) => a.id === id) : null;
+            // (A town animal before the town is in: chosen now, flown to once it is.)
+            if (!scene || (two && !attached && animal && arkIslandOf(animal, true) === "town")) {
                 pendingSelect = id ? {id, closeUp} : null;
                 return;
             }
@@ -127,7 +187,6 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
             town = null;
         }
     };
-    void arkIslandOf;
     void town;
 
     return new Proxy(own as ArkArchipelagoHandle, {

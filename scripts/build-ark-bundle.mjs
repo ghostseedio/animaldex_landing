@@ -40,9 +40,11 @@ console.log(`public/ark/ark-scene.js: ${(bytes / 1024).toFixed(0)} KB`);
 copyFileSync(path.join(root, "src/ark-scene/positions/atlas.json"), path.join(root, "public/ark/positions-atlas.json"));
 console.log(`public/ark/positions-atlas.json: ${(statSync(path.join(root, "public/ark/positions-atlas.json")).size / 1024).toFixed(0)} KB`);
 // The runtime's prebuild workers (src/ark-scene/runtime/prebuild.ts): the scenery (~20 KB) and a big Ark's places.
-for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
+// Part C (decision 153): the town's prebuild worker (src/ark-scene/islands/town/prebuild.ts): its plan, ground, scenery,
+// places, behaviour world and colliders, off the page's main thread.
+for (const [entry, out] of [["runtime/prebuild-worker.ts", "ark-prebuild-worker.js"], ["runtime/prebuild-places-worker.ts", "ark-prebuild-places-worker.js"], ["islands/town/prebuild-worker.ts", "ark-town-worker.js"]]) {
     const worker = await build({
-        entryPoints: [path.join(root, "src/ark-scene/runtime", entry)],
+        entryPoints: [path.join(root, "src/ark-scene", entry)],
         outfile: path.join(root, "public/ark", out),
         bundle: true,
         format: "iife",
