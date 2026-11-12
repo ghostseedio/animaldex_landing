@@ -169,7 +169,7 @@ import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
-import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
+import {collideBlocked, collideSegmentClear, setIslandColliders} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {composedSampler, type ArkIslandScene} from "@/ark-scene/islands/scene";
@@ -510,6 +510,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (The wild island's list as the page's prebuild was given it, so its places come from the worker when primed.)
         const places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
         island.place(town).forEach((place, id) => places.set(id, place));
+        // (The town's colliders for the motion pass, L5's per island: its enclosures follow the snapshot.)
+        setIslandColliders({contains: island.contains, set: island.colliders()});
         // (A replay's departed are added to the town's list; a snapshot's replace it.)
         if (ghosts) for (const animal of town) townIds.add(animal.id);
         else townIds = new Set(town.map((animal) => animal.id));
@@ -5948,6 +5950,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (island) {
                 scene.remove(island.root);
                 island.dispose();
+                setIslandColliders(null);
             }
             for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();

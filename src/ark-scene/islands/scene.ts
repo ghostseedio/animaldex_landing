@@ -17,6 +17,7 @@ import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import type {ColliderSet} from "@/ark-scene/collide/colliders";
 
 export type ArkIslandScene = {
     id: "town";
@@ -48,6 +49,8 @@ export type ArkIslandScene = {
     bound: (id: string, pose: {x: number; z: number}) => void;
     /** Its behaviour world in the world frame (`islands/town/sampler.ts`): places, ground, walk grid, obstacles. */
     sampler: () => ArkWorldSampler;
+    /** Its colliders in the world frame (`islands/town/colliders.ts`, through L5's `collide/` per island). */
+    colliders: () => ColliderSet;
     /** On the behaviour schedule (not one kept still at a window, behind the glass or in a tank or pool). */
     scheduled: (id: string) => boolean;
     /** The most its home range may reach (m): its garden, paddock or enclosure. */
@@ -80,6 +83,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/behaviour-schedule"),
         import("@/ark-scene/islands/town/ground")
     ]);
+    const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -99,6 +103,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
+    let collidersMemo: {key: string; set: ColliderSet} | null = null;
     const STILL_WHERE = new Set(["window", "indoor", "pool"]);
     const half = def.half;
     return {
@@ -157,6 +162,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         sampler: () => {
             if (!sampler || sampler.key !== openKey) sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin)};
             return sampler.sampler;
+        },
+        colliders: () => {
+            if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin)};
+            return collidersMemo.set;
         },
         scheduled: (id) => {
             const info = towned.get(id);

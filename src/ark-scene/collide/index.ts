@@ -23,21 +23,40 @@ export function colliders(): ColliderSet {
 }
 
 /**
+ * Part C, one world (decision 141): another island's own collider set (the town's, `islands/town/colliders.ts`, from its
+ * obstacle footprints at its world origin), answering for the points inside its square; the wild island's elsewhere.
+ * Null: the wild island alone, exactly as before.
+ */
+let island: {contains: (x: number, z: number) => boolean; set: ColliderSet} | null = null;
+export function setIslandColliders(other: {contains: (x: number, z: number) => boolean; set: ColliderSet} | null): void {
+    island = other;
+}
+function setAt(x: number, z: number): ColliderSet {
+    return island && island.contains(x, z) ? island.set : colliders();
+}
+
+/**
  * A body of radius `radius` (m) standing at (x, z) overlaps a fence, a building, a trunk, a rock, a log or a hay bale.
  * With `base` and `height` (m), only what its height span reaches into: on top of a rock or a log, or under a fence's
  * rails, it is clear.
  */
 export function collideBlocked(x: number, z: number, radius: number, base?: number, height?: number): boolean {
-    return colliders().blocked(x, z, radius, base ?? -Infinity, height ?? Infinity);
+    return setAt(x, z).blocked(x, z, radius, base ?? -Infinity, height ?? Infinity);
 }
 
 /** A straight run from a to b, for a body of radius `radius`, touches nothing solid. */
 export function collideSegmentClear(ax: number, az: number, bx: number, bz: number, radius: number): boolean {
-    return colliders().segmentClear(ax, az, bx, bz, radius);
+    if (!island) return colliders().segmentClear(ax, az, bx, bz, radius);
+    // (A run between the islands asks both sets: no run crosses the strait on foot, but a flyer's may.)
+    const a = setAt(ax, az);
+    const b = setAt(bx, bz);
+    return a.segmentClear(ax, az, bx, bz, radius) && (a === b || b.segmentClear(ax, az, bx, bz, radius));
 }
 
 /** How far along a → b a body of radius `radius` gets before it would touch something solid: the point and the fraction t. */
 export function collideClip(ax: number, az: number, bx: number, bz: number, radius: number): {x: number; z: number; t: number} {
-    const t = colliders().sweep(ax, az, bx, bz, radius);
+    const from = setAt(ax, az);
+    const to = setAt(bx, bz);
+    const t = from === to ? from.sweep(ax, az, bx, bz, radius) : Math.min(from.sweep(ax, az, bx, bz, radius), to.sweep(ax, az, bx, bz, radius));
     return {x: ax + (bx - ax) * t, z: az + (bz - az) * t, t};
 }

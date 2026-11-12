@@ -22,6 +22,7 @@ import {arkBody} from "@/ark-scene/stats";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {hashText, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
+import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
@@ -227,7 +228,9 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
         const at = inside(bound, base.x + off.dx, base.z + off.dz, base.x, base.z);
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
-        const placement: Placement = {x: at.x, z: at.z, ground: base.y, yaw, water: false, sea: false};
+        // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
+        const pool = base.where === "pool" && info.enclosure?.pool ? Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45 : null;
+        const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw, water: false, sea: false};
         void WATER_WHERE;
         if (leader && leader !== animal.id) {
             placement.leader = leader;
