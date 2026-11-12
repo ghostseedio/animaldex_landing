@@ -14,6 +14,49 @@
         "src/lib/ark-motion-l2-drivers.test.ts"
       ],
       "metricTests": "metric|upstroke|insect|slip|surface|wing-beat|tail beat|bank"
+    },
+    {
+      "name": "l6-scenery",
+      "lane": "L6 scenery",
+      "requires": [
+        "scripts/ark-scenery-metrics.mts",
+        "src/lib/ark-scenery.test.ts"
+      ],
+      "tests": [
+        "src/lib/ark-scenery.test.ts"
+      ],
+      "metricTests": "overlap|float|intersect|inside|in each other",
+      "command": "npx tsx scripts/ark-scenery-metrics.mts --json \"$ARK_MOTION_METRICS_DIR/scenery.json\"",
+      "output": "$ARK_MOTION_METRICS_DIR/scenery.json",
+      "metrics": [
+        {
+          "id": "tree_overlaps",
+          "label": "Trees growing into each other (overlapping pairs)",
+          "path": "trees.pairs",
+          "max": 0,
+          "before": 971
+        },
+        {
+          "id": "trees_drawn",
+          "label": "Trees drawn",
+          "path": "trees.trees",
+          "before": 375
+        },
+        {
+          "id": "props_floating",
+          "label": "Props floating",
+          "path": "props.floating",
+          "max": 0,
+          "before": 284
+        },
+        {
+          "id": "props_intersecting",
+          "label": "Props standing in each other",
+          "path": "props.intersections",
+          "max": 0,
+          "before": 14
+        }
+      ]
     }
   ]
 }
