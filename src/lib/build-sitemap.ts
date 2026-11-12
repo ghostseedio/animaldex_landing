@@ -38,6 +38,13 @@ import {getAllPublicWildlifeGuides} from "@/data/virtual-wildlife-guides";
 import {locationsWithGuides} from "@/data/wildlife-guide-locations";
 import {MIN_INDEXABLE_GUIDE_LIST, guidePath} from "@/lib/virtual-wildlife-guides";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
+import {ABOUT_PATH, ARK_FOOD_CHAIN_PATH, ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED} from "@/lib/seo/ark-pages";
+
+/** The Ark changes all day (an hourly world tick): its lastmod is the day the sitemap was built. */
+function arkLastModified() {
+    const now = new Date();
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
 
 /** Pages 2..n of a paged hub; page 1 is the hub URL listed on its own. */
 function hubPageEntries(locale: string, pagination: HubPagination, total: number) {
@@ -146,7 +153,11 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 // Talk (docs/rich-chat/SPEC.md, section 4.1): a real Indonesian page too.
                 {url: getAbsoluteUrl(locale, "/talk")},
                 // The Ark (AnimalDex docs/ark-next.md, Part 4d): its words are in Indonesian too.
-                {url: getAbsoluteUrl(locale, "/ark")},
+                {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified()},
+                // SEO lane S3: the pages that explain it, written in Indonesian too.
+                {url: getAbsoluteUrl(locale, ARK_HOW_IT_WORKS_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
+                {url: getAbsoluteUrl(locale, ARK_FOOD_CHAIN_PATH), lastModified: arkLastModified()},
+                {url: getAbsoluteUrl(locale, ABOUT_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
                 ...getLocalPrincipleSlugs().map((slug) => ({
                     url: getAbsoluteUrl(locale, `/qualities/${slug}`)
                 }))
@@ -157,8 +168,12 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale)},
             // The full-screen chat. /talk/<slug> is noindex (its canonical is the species page), so only /talk.
             {url: getAbsoluteUrl(locale, "/talk")},
-            // The shared Ark: live, so no lastModified.
-            {url: getAbsoluteUrl(locale, "/ark")},
+            // The shared Ark: live (an hourly tick), so its lastmod is the build day.
+            {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified()},
+            // SEO lane S3: how the Ark works, who eats whom (its counts are live), and what AnimalDex is.
+            {url: getAbsoluteUrl(locale, ARK_HOW_IT_WORKS_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
+            {url: getAbsoluteUrl(locale, ARK_FOOD_CHAIN_PATH), lastModified: arkLastModified()},
+            {url: getAbsoluteUrl(locale, ABOUT_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
             {url: getAbsoluteUrl(locale, "/how-it-works"), lastModified: new Date(HOW_IT_WORKS_UPDATED)},
             {url: getAbsoluteUrl(locale, "/advice-fatigue"), lastModified: new Date(ADVICE_FATIGUE_UPDATED)},
             {url: getAbsoluteUrl(locale, "/what-animal-am-i"), lastModified: new Date(WHAT_ANIMAL_AM_I_UPDATED_AT)},

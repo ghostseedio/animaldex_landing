@@ -1,4 +1,6 @@
 import type {Metadata} from "next";
+import {withBrandSuffix} from "@/lib/brand-title";
+import {breadcrumbJsonLd, jsonLdHtml, talkJsonLd} from "@/lib/seo/structured-data";
 import {localeConfig} from "@/i18n";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -47,13 +49,14 @@ export async function generateMetadata({params}: {params: {locale: string}}): Pr
         openGraph: {
             type: "website",
             locale: getMetadataLocale(params.locale),
-            title: words.metaTitle,
+            title: withBrandSuffix(words.metaTitle),
             description: words.metaDescription,
             url: getLocalePath(params.locale, path),
+            siteName: "AnimalDex",
             images: [{url: image, width: 1200, height: 630, alt: words.ogAlt}]
         },
         // Its own title and card, never the home page's (WEB-14).
-        twitter: {card: "summary_large_image", title: `${words.metaTitle} | AnimalDex`, description: words.metaDescription, images: [{url: image, alt: words.ogAlt}]}
+        twitter: {card: "summary_large_image", title: withBrandSuffix(words.metaTitle), description: words.metaDescription, images: [{url: image, alt: words.ogAlt}]}
     };
 }
 
@@ -63,11 +66,20 @@ export default async function TalkPage({params}: {params: {locale: string}}) {
         getTalkPickerRows().catch(() => ({popular: [], disagree: []})),
         loadAppFeatureFlags().catch(() => ({}))
     ]);
+    const words = talkWords(messages?.talkPage);
+    // The chat as schema.org says it (S1's audit: /talk had none): a free web application, part of the app.
+    const schema = [
+        talkJsonLd({locale: params.locale, name: words.metaTitle, description: words.metaDescription, image: ogImagePath("talk")}),
+        breadcrumbJsonLd(params.locale, [{name: "AnimalDex", path: "/"}, {name: words.metaTitle, path: "/talk"}])
+    ];
     return (
+        <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLdHtml(schema)}} />
         <TalkPicker
-            words={talkWords(messages?.talkPage)}
+            words={words}
             initial={rows}
             frontDoor={{enabled: isAppFeatureOn(flags, TALK_FRONT_DOOR_FLAG), words: talkFrontDoorWords(messages?.talkFrontDoor)}}
         />
+        </>
     );
 }

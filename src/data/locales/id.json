@@ -1935,8 +1935,8 @@
     "eyebrow": "Berdampingan",
     "title": "Dua hewan, berdampingan",
     "description": "Pilih dua spesies dan lihat cara masing-masing bertahan hidup: tabel statistik, situasi tempat masing-masing unggul, dan biologi yang berdasar. Pasangan apa pun bisa.",
-    "metaTitle": "Bandingkan Dua Hewan Apa Pun — Siapa yang Menang? | AnimalDex",
-    "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan. Pilih dua spesies dari ribuan pilihan dan dapatkan verdict langsung dengan stat, breakdown skenario, tingkat keyakinan, dan FAQ — dibangun dari biologi nyata.",
+    "metaTitle": "Bandingkan Dua Hewan Apa Pun Secara Berdampingan | AnimalDex",
+    "metaDescription": "Bandingkan dua hewan apa pun secara berdampingan: stat demi stat, situasi di mana masing-masing unggul, dan biologi di baliknya, dari panduan lapangan setiap spesies.",
     "statAnimals": "Hewan untuk dibandingkan",
     "statComparisons": "Perbandingan yang terbit",
     "builder": {
@@ -2576,9 +2576,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Bawa Ide Apa Pun ke Seekor Hewan. Setiap Hewan Punya Pelajaran",
+    "fullTitle": "AnimalDex: Tangkap Hewan Nyata Jadi Teman AI di Dunia 3D",
     "title": "AnimalDex",
-    "description": "Bicara dengan hewan tentang ide, rencana, atau keputusan apa pun dan dapatkan sudut pandang yang benar-benar berbeda. Setiap hewan menjawab dari perilaku nyata jenisnya, dan setiap hewan yang kamu temui menambah cara pandang baru. Langkah yang berhasil membawa hewan ke Ark, sebuah dunia hewan bersama.",
+    "description": "Tangkap hewan di dunia nyata dan jadikan mereka teman AI di dunia 3D: Ark, simulasi bersama yang dibangun dari panduan lapangan setiap hewan.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -3426,7 +3426,7 @@
     "stats": "Statistik"
   },
   "talkPage": {
-    "metaTitle": "Bicara dengan hewan",
+    "metaTitle": "Bicara dengan Hewan: Chat AI dari Sudut Pandangnya",
     "metaDescription": "Bicara dengan hewan mana pun di AnimalDex, gratis. Masing-masing menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup, jadi kamu mendengar sudut pandang yang nyata, bukan sekadar persetujuan.",
     "animalTitleA": "Bicara dengan {animal}",
     "animalTitleAn": "Bicara dengan {animal}",
@@ -4399,13 +4399,13 @@
       "aboutEyebrow": "Tentang Ark",
       "aboutTitle": "Dunia hewan bersama, disimulasikan dari panduan lapangan",
       "aboutBody": "Ark adalah satu dunia hewan yang dibagi semua orang dan terlihat sama bagi siapa pun. Ini simulasi yang bisa kamu jelajahi dalam 3D: ketuk seekor hewan untuk berkenalan, ikuti ia, atau baca kisah hidupnya.",
-      "liveCounts": "Saat ini {animals} dari {species} hidup di Ark. Dunianya punya tujuh wilayah, dari laut lepas sampai es kutub.",
+      "liveCounts": "Saat ini {animals} dari {species} hidup di Ark. Dunianya punya dua pulau: pulau liar dengan wilayah dari laut lepas sampai es kutub, dan kota dengan rumah, peternakan, dan kebun binatang.",
       "arriveTitle": "Bagaimana hewan datang",
       "arriveBody": "Tidak ada yang menaruh hewan dengan tangan. Saat seseorang menangkap seekor hewan dengan AnimalDex, satu dari jenisnya naik ke Ark, sampai sepasang untuk setiap orang, dan tetap di sana. Bicara dengan seekor hewan tentang sesuatu yang nyata dalam hidupmu dan mencoba langkah yang ia sarankan membuat hewan-hewanmu berkembang: setiap langkah yang berhasil membuat kondisi mereka lebih baik. Ark menampilkan spesies dan jumlahnya; di mana seekor hewan ditangkap dan apa yang dibicarakan siapa pun tidak pernah ditampilkan.",
       "lifeTitle": "Bagaimana makanan dan perkembangbiakan menggerakkannya",
       "lifeBody": "Hidup setiap spesies di Ark didasarkan pada panduan lapangannya di AnimalDex: apa yang ia makan, berapa banyak anaknya dan berapa lama mereka lahir, kapan ia terjaga, apakah ia hidup sendiri, berpasangan, atau berkelompok, dan berapa lama ia hidup di alam liar.",
       "lifeRules": "Predator hanya memakan hewan yang disebut sebagai makanan dalam panduan lapangannya, atau kelompok tempat hewan itu termasuk, seperti burung, dan lebih dulu memangsa hewan dengan kondisi paling lemah. Dua hewan dewasa dari satu jenis membesarkan anak saat ada makanan, paling banyak satu kelahiran per masa berkembang biak: hewan dalam kondisi prima berkembang biak setiap masa, yang biasa lebih jarang. Hewan dengan umur liar yang diketahui menjadi tua, dan pemburu yang terlalu lama lapar mati kelaparan. Satu tahun Ark berlalu setiap 14 hari nyata.",
-      "lifeNote": "Aturannya disederhanakan agar dunia bersama yang kecil bisa berjalan. Ark adalah permainan berdasarkan panduan lapangan setiap hewan, bukan model ilmiah.",
+      "lifeNote": "Aturannya disederhanakan agar dunia bersama yang kecil bisa berjalan. Ark adalah simulasi yang dibangun dari panduan lapangan setiap hewan, bukan model ilmiah.",
       "listTitle": "Siapa saja yang ada di Ark",
       "listIntro": "Setiap spesies di Ark, menurut wilayah, dengan jumlahnya.",
       "listAboard": "{count} di Ark",
@@ -4421,18 +4421,7 @@
       "eats": "Makanannya, menurut panduan lapangannya",
       "eatenBy": "Dimangsa oleh",
       "see": "Lihat {animal} di Ark",
-      "seeArk": "Lihat Ark",
-      "trendLine": "Sejak {date}: {changes}.",
-      "trendNone": "Tidak ada yang naik ke Ark atau pergi sejak {date}.",
-      "trendArrived": "{count} naik ke Ark",
-      "trendBorn": "{count} lahir",
-      "trendEaten": "{count} dimangsa",
-      "trendDiedOld": "{count} mati karena usia",
-      "trendStarved": "{count} mati kelaparan",
-      "trendSeparator": ", ",
-      "arkEats": "Di Ark ia bisa memakan",
-      "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
-      "foodChain": "Lihat siapa memangsa siapa di Ark"
+      "seeArk": "Lihat Ark"
     },
     "herd": {
       "badge": "{count}",
@@ -4711,6 +4700,21 @@
       "linkHow": "Cara kerja Ark",
       "linkFood": "Siapa memangsa siapa",
       "linkTalk": "Bicara dengan hewan"
+    }
+  },
+  "species": {
+    "inTheArk": {
+      "trendLine": "Sejak {date}: {changes}.",
+      "trendNone": "Tidak ada yang naik ke Ark atau pergi sejak {date}.",
+      "trendArrived": "{count} naik ke Ark",
+      "trendBorn": "{count} lahir",
+      "trendEaten": "{count} dimangsa",
+      "trendDiedOld": "{count} mati karena usia",
+      "trendStarved": "{count} mati kelaparan",
+      "trendSeparator": ", ",
+      "arkEats": "Di Ark ia bisa memakan",
+      "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
+      "foodChain": "Lihat siapa memangsa siapa di Ark"
     }
   }
 }

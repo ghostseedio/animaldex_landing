@@ -24,6 +24,7 @@ import {ogImagePath, withOgCard} from "@/lib/og/og-image";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {TRY_TALKING_SPECIES} from "@/lib/try-talking";
 import {drawFlow} from "@/lib/text-diagram";
+import {clampMetaDescription} from "@/lib/seo/page-metadata";
 
 export function generateStaticParams() {
     return [{locale: "en"}, {locale: "id"}];
@@ -39,10 +40,12 @@ export async function generateMetadata({params}: PageProps): Promise<Metadata> {
     const locale = pageLocale(params.locale);
     const content = getHowItWorksContent(locale);
     const url = getLocalePath(locale, HOW_IT_WORKS_PATH);
+    // What a result shows of it (S1's audit: 173 characters).
+    const description = clampMetaDescription(content.metaDescription);
 
     return withOgCard({
         title: templateSafeTitle(content.metaTitle),
-        description: content.metaDescription,
+        description,
         alternates: {
             canonical: url,
             languages: localeConfig.locales.reduce((languages, item) => {
@@ -54,14 +57,14 @@ export async function generateMetadata({params}: PageProps): Promise<Metadata> {
             type: "website",
             locale: getMetadataLocale(locale),
             title: withBrandSuffix(content.metaTitle),
-            description: content.metaDescription,
+            description,
             url,
             siteName: "AnimalDex"
         },
         twitter: {
             card: "summary_large_image",
             title: withBrandSuffix(content.metaTitle),
-            description: content.metaDescription
+            description
         }
     }, content.metaTitle, "page", "how-it-works");
 }
@@ -243,7 +246,16 @@ export default async function HowItWorksPage({params}: PageProps) {
                 {/* Your step, Trials and Debates. */}
                 <section aria-label={`${yourStep.eyebrow}, ${trials.eyebrow}, ${debates.eyebrow}`} className="flex flex-col gap-16">
                     <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
-                        <DetailCopy detail={yourStep} />
+                        <DetailCopy detail={yourStep}>
+                            <p className="flex flex-wrap gap-x-6 gap-y-2">
+                                <Link href="/ark" className="inline-flex min-h-11 w-fit items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-200 transition-colors hover:text-white">
+                                    {content.arkLink} <span aria-hidden="true">→</span>
+                                </Link>
+                                <Link href="/ark/how-it-works" className="inline-flex min-h-11 w-fit items-center gap-2 font-display text-sm font-bold uppercase tracking-[0.14em] text-primary-200 transition-colors hover:text-white">
+                                    {content.arkHowLink} <span aria-hidden="true">→</span>
+                                </Link>
+                            </p>
+                        </DetailCopy>
                         <HomeChatStill
                             image={TRY_TALKING_SPECIES.image}
                             words={{

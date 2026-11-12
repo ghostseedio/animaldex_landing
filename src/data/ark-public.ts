@@ -48,6 +48,14 @@ export function readPublicArk(revalidate = 300): Promise<ArkSnapshot | null> {
     const now = Date.now();
     const hit = publicArkMemo.get(revalidate);
     if (hit && now - hit.at < revalidate * 1000) return hit.promise;
+    // A read made for a shorter window is fresh enough for a longer one: one parsed snapshot in memory, not one per
+    // window (SEO lane S3: the Ark pages read it at 5 minutes and an hour, the species pages at a day).
+    for (const [window, entry] of Array.from(publicArkMemo.entries())) {
+        if (window < revalidate && now - entry.at < window * 1000) return entry.promise;
+    }
+    for (const [window, entry] of Array.from(publicArkMemo.entries())) {
+        if (now - entry.at >= window * 1000) publicArkMemo.delete(window);
+    }
     const promise = loadPublicArk(revalidate).then((snapshot) => {
         if (!snapshot) publicArkMemo.delete(revalidate);
         return snapshot;

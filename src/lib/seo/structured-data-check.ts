@@ -13,11 +13,22 @@
 type Spec = {props: string[]; required?: string[]; urls?: string[]};
 
 const THING = ["@context", "@type", "@id", "name", "alternateName", "description", "url", "image", "sameAs", "identifier", "mainEntityOfPage", "subjectOf", "additionalType", "disambiguatingDescription", "potentialAction"];
-const CREATIVE_WORK = [...THING, "about", "author", "publisher", "inLanguage", "isPartOf", "hasPart", "dateModified", "datePublished", "headline", "keywords", "mainEntity", "isAccessibleForFree", "offers", "genre", "audience", "license", "text", "thumbnailUrl", "mentions"];
+const CREATIVE_WORK = [...THING, "about", "author", "publisher", "inLanguage", "isPartOf", "hasPart", "dateModified", "datePublished", "headline", "keywords", "mainEntity", "isAccessibleForFree", "offers", "genre", "audience", "license", "text", "thumbnailUrl", "mentions", "isFamilyFriendly", "creator", "copyrightHolder", "dateCreated"];
 const SOFTWARE_APP = [...CREATIVE_WORK, "applicationCategory", "applicationSubCategory", "operatingSystem", "installUrl", "downloadUrl", "featureList", "screenshot", "softwareVersion", "aggregateRating", "review"];
 
 export const STRUCTURED_DATA_SPECS: Record<string, Spec> = {
-    Organization: {props: [...THING, "logo", "email", "contactPoint", "founder", "foundingDate", "legalName", "address"], required: ["name", "url"], urls: ["url", "logo", "sameAs"]},
+    // `url` is recommended, not required: a publisher named inline ({name: "AnimalDex"}) is valid.
+    Organization: {props: [...THING, "logo", "email", "contactPoint", "founder", "foundingDate", "legalName", "address"], required: ["name"], urls: ["url", "logo", "sameAs"]},
+    Person: {props: [...THING, "givenName", "familyName", "jobTitle", "affiliation"], required: ["name"], urls: ["url", "image"]},
+    Article: {props: [...CREATIVE_WORK, "articleSection", "articleBody", "wordCount", "speakable"], required: ["headline"], urls: ["url", "image", "mainEntityOfPage"]},
+    SocialMediaPosting: {props: [...CREATIVE_WORK, "articleSection", "articleBody", "sharedContent"], required: ["headline"], urls: ["url", "image"]},
+    FAQPage: {props: [...CREATIVE_WORK, "breadcrumb"], required: ["mainEntity"]},
+    Question: {props: [...CREATIVE_WORK, "acceptedAnswer", "suggestedAnswer", "answerCount"], required: ["name", "acceptedAnswer"]},
+    Answer: {props: [...CREATIVE_WORK], required: ["text"]},
+    ImageObject: {props: [...CREATIVE_WORK, "contentUrl", "width", "height", "caption", "encodingFormat", "uploadDate", "representativeOfPage"], urls: ["url", "contentUrl"]},
+    VideoObject: {props: [...CREATIVE_WORK, "contentUrl", "embedUrl", "duration", "uploadDate", "thumbnailUrl", "width", "height", "caption", "transcript", "encodingFormat"], required: ["name", "thumbnailUrl", "uploadDate"], urls: ["url", "contentUrl", "embedUrl", "thumbnailUrl"]},
+    ProfilePage: {props: [...CREATIVE_WORK, "breadcrumb"], required: ["mainEntity"]},
+    PropertyValue: {props: [...THING, "value", "propertyID", "unitText"], required: ["name"]},
     WebSite: {props: [...CREATIVE_WORK], required: ["name", "url"], urls: ["url"]},
     WebPage: {props: [...CREATIVE_WORK, "breadcrumb", "primaryImageOfPage", "lastReviewed", "significantLink", "relatedLink"], required: ["name", "url"], urls: ["url", "image"]},
     AboutPage: {props: [...CREATIVE_WORK, "breadcrumb", "primaryImageOfPage", "lastReviewed", "significantLink", "relatedLink"], required: ["name", "url"], urls: ["url", "image"]},

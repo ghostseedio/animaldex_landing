@@ -9,11 +9,11 @@ import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
 import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import StoreLink from "@/components/store/store-link";
-import {formatAnimalCount} from "@/lib/animal-count";
-import {getAbsoluteUrl, getLocalePath, getMetadataLocale, getSiteUrl} from "@/lib/site";
-import {appStoreUrl, googlePlayUrl, storeLinks} from "@/lib/store-links";
-import {socialProfileUrlList} from "@/lib/social-links";
+import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
+import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {homeFeatureList} from "@/lib/seo/home-features";
+import {homeJsonLd, jsonLdHtml} from "@/lib/seo/structured-data";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator, type ScopedTranslator} from "@/loaders/translation";
 import {createDevRequestTimer, finishDevRequestTimer, timeDevStep} from "@/lib/dev-request-timing";
@@ -94,7 +94,13 @@ export async function generateMetadata({params}: HomePageProps): Promise<Metadat
             title: fullTitle,
             description,
             siteName: "AnimalDex",
-            images: [{url: "/images/og-every-animal-has-a-lesson.png", width: 1200, height: 630, alt: fullTitle}]
+            images: [{url: ARK_RENDER_IMAGE, width: 1200, height: 630, alt: fullTitle}]
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: fullTitle,
+            description,
+            images: [{url: ARK_RENDER_IMAGE, alt: fullTitle}]
         }
     };
 }
@@ -184,95 +190,18 @@ export default async function Home({params}: HomePageProps) {
     const locale = localeConfig.locales.includes(params.locale) ? params.locale : localeConfig.defaultLocale;
 
     try {
-        const [t, home] = await timeDevStep(timer, "translations", () => Promise.all([
+        const [t, messages] = await timeDevStep(timer, "translations", () => Promise.all([
             getScopedTranslator(locale, "landing"),
-            getScopedTranslator(locale, "home")
+            loadLocaleMessages(locale)
         ]));
-        const siteUrl = getAbsoluteUrl(locale);
-        const rootSiteUrl = getSiteUrl();
-        const brandLogoUrl = new URL("/images/logo.webp", rootSiteUrl).toString();
-        const socialImageUrl = new URL("/images/og-every-animal-has-a-lesson.png", rootSiteUrl).toString();
-        // (Structured data: SEO lane S3 owns its wording and builders; kept as it was until S3's home pass.)
-        const appSchemaDescription = `Take any idea, plan or decision to an animal and get a genuinely different take. Each of ${formatAnimalCount("en")} species answers from a real behaviour of its kind, its Power, how it lives and its field guide, and turns it into an angle you would not hear elsewhere. The animals remember you and the angles you have already heard, and every real animal you meet and photograph adds a new way of seeing. Steps that work bring animals into the Ark, a live, shared animal world whose rules are based on each animal's field guide.`;
-        const webSiteSchema = {
-            "@context": "https://schema.org",
-            "@type": "WebSite",
+        // Structured data (SEO lane S3, S1's audit): one app entity in the world positioning, no SearchAction.
+        const homeSchema = homeJsonLd({
+            locale,
             name: "AnimalDex",
-            url: rootSiteUrl,
-            image: socialImageUrl,
-            description: home("supporting"),
-            inLanguage: locale,
-            publisher: {"@type": "Organization", name: "AnimalDex", url: rootSiteUrl, logo: brandLogoUrl},
-            potentialAction: {"@type": "SearchAction", target: `${siteUrl}/blog`, "query-input": "required name=search_term_string"}
-        };
-        const featureList = [
-            "Take any idea, plan or decision to an animal for a genuinely different take",
-            "Each animal answers from a real behaviour of its species: its Power, how it lives and its field guide",
-            "Animals that remember you and the angles you have already heard",
-            "Hear two more of your animals on the same idea",
-            "One step to try, when you want one",
-            "Every animal you meet and photograph adds a new way of seeing",
-            "The Ark: a live, shared 3D animal world, where animals whose steps worked live, eat and raise young by rules based on each animal's field guide",
-            "AI animal identification and field-guide context",
-            "Collectible wildlife cards and journals",
-            "Respectful wildlife observation and habitat curiosity"
-        ];
-        const mobileAppSchema = {
-            "@context": "https://schema.org",
-            "@type": "MobileApplication",
-            name: "AnimalDex",
-            operatingSystem: "iOS, Android",
-            applicationCategory: "EducationApplication",
-            url: rootSiteUrl,
-            installUrl: [appStoreUrl, googlePlayUrl],
-            downloadUrl: [appStoreUrl, googlePlayUrl],
-            image: socialImageUrl,
-            screenshot: socialImageUrl,
-            description: appSchemaDescription,
-            offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
-            audience: [
-                {"@type": "Audience", "audienceType": "People with an idea, a plan or a decision"},
-                {"@type": "Audience", "audienceType": "Curious minds who want a different take"},
-                {"@type": "Audience", "audienceType": "Animal lovers"},
-                {"@type": "Audience", "audienceType": "Wildlife learners"},
-                {"@type": "Audience", "audienceType": "Travelers"},
-                {"@type": "Audience", "audienceType": "Photographers"}
-            ],
-            featureList,
-            about: [
-                {"@type": "Thing", "name": "A different take on your ideas"},
-                {"@type": "Thing", "name": "Talking to animals"},
-                {"@type": "Thing", "name": "Perspective-driven AI"},
-                {"@type": "Thing", "name": "Animal behaviour"},
-                {"@type": "Thing", "name": "Animal world simulation"},
-                {"@type": "Thing", "name": "Animal identification"},
-                {"@type": "Thing", "name": "Wildlife learning"},
-                {"@type": "Thing", "name": "Wildlife photography"}
-            ]
-        };
-        const softwareAppSchema = {
-            "@context": "https://schema.org",
-            "@type": "SoftwareApplication",
-            name: "AnimalDex",
-            applicationCategory: "EducationApplication",
-            operatingSystem: "iOS, Android",
-            url: siteUrl,
-            installUrl: [appStoreUrl, googlePlayUrl],
-            downloadUrl: [appStoreUrl, googlePlayUrl],
-            image: socialImageUrl,
-            description: appSchemaDescription,
-            offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
-            featureList
-        };
-        const organizationSchema = {
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: "AnimalDex",
-            url: rootSiteUrl,
-            logo: brandLogoUrl,
-            image: brandLogoUrl,
-            sameAs: [...storeLinks.map((store) => store.href), ...socialProfileUrlList]
-        };
+            description: String((messages.meta as {description?: unknown} | undefined)?.description ?? ""),
+            image: ARK_RENDER_IMAGE,
+            featureList: homeFeatureList(locale)
+        });
 
         const posterWide = (format: string) => [1280, 1920, 2400].map((width) => `${ART}/poster-wide-${width}.${format} ${width}w`).join(", ");
         const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
@@ -288,10 +217,7 @@ export default async function Home({params}: HomePageProps) {
         return (
             <>
                 {/* No FAQPage: the questions left the page (2026-11-01), and the markup has to match what is shown. */}
-                <script
-                    type="application/ld+json"
-                    dangerouslySetInnerHTML={{__html: JSON.stringify([organizationSchema, webSiteSchema, softwareAppSchema, mobileAppSchema])}}
-                />
+                <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLdHtml(homeSchema)}} />
 
                 {/* 1. The live Ark. */}
                 <HomeArkHero

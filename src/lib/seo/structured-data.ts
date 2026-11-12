@@ -165,8 +165,53 @@ export function arkJsonLd(input: {locale: string; name: string; description: str
     };
 }
 
+/** /talk as schema.org says it: a free chat in the browser with animals, each from its own field guide; part of the app. */
+export function talkJsonLd(input: {locale: string; name: string; description: string; image: string}): JsonLd {
+    const site = getSiteUrl();
+    return {
+        "@context": CONTEXT,
+        "@type": "WebApplication",
+        "@id": `${getAbsoluteUrl("en", "/talk")}#talk`,
+        name: input.name,
+        url: getAbsoluteUrl(input.locale, "/talk"),
+        description: input.description,
+        inLanguage: input.locale,
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Any (web browser)",
+        isAccessibleForFree: true,
+        image: getAbsoluteAssetUrl(input.image),
+        offers: {"@type": "Offer", price: "0", priceCurrency: "USD"},
+        publisher: organizationRef(),
+        isPartOf: {"@type": "MobileApplication", "@id": `${site}/#app`, name: "AnimalDex", url: `${site}/`}
+    };
+}
+
 /** What the Ark is about, for search: said as topics, never as claims. */
 export const ARK_TOPICS = ["Ecosystem simulation", "Food chain", "Animal behaviour", "Wildlife", "Population dynamics"];
+
+/**
+ * The home page's structured data (S1's audit: one app entity, no invalid
+ * SearchAction, the world positioning): the organisation, the website and the
+ * app. `words` are the page's own (`meta.*`), in its locale.
+ */
+export function homeJsonLd(input: {locale: string; name: string; description: string; image: string; featureList: string[]}): JsonLd[] {
+    const site = getSiteUrl();
+    return [
+        organizationJsonLd(),
+        {
+            "@context": CONTEXT,
+            "@type": "WebSite",
+            "@id": `${site}/#website`,
+            name: "AnimalDex",
+            url: `${site}/`,
+            description: input.description,
+            inLanguage: input.locale,
+            image: getAbsoluteAssetUrl(input.image),
+            publisher: organizationRef()
+        },
+        animalDexAppJsonLd({description: input.description, image: input.image, featureList: input.featureList, inLanguage: input.locale})
+    ];
+}
 
 /** One or more JSON-LD objects as the text of a script tag (`<` escaped, so no string can close the tag). */
 export function jsonLdHtml(data: JsonLd | JsonLd[]): string {

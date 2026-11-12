@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {languageAlternates} from "@/lib/seo/page-metadata";
 import policy from "@/data/refund-policy.md";
 import LegalPage from "@/app/legal/legal-page";
 import {getSiteUrl} from "@/lib/site";
@@ -10,7 +11,9 @@ export const metadata: Metadata = withOgCard({
     title: "AnimalDex Refund Policy",
     description,
     alternates: {
-        canonical: "/legal/refunds"
+        canonical: "/legal/refunds",
+        // Written in English only: en and x-default (SEO lane S3).
+        languages: languageAlternates("/legal/refunds", {englishOnly: true})
     },
     openGraph: {
         type: "website",

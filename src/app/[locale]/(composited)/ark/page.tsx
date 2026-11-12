@@ -3,6 +3,7 @@ import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkAbout from "@/app/[locale]/(composited)/ark/ark-about";
 import ArkSeoSummary from "@/app/[locale]/(composited)/ark/ark-seo-summary";
 import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {clampMetaDescription} from "@/lib/seo/page-metadata";
 import {arkJsonLd, breadcrumbJsonLd, jsonLdHtml, type JsonLd} from "@/lib/seo/structured-data";
 import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readPublicArk} from "@/data/ark-public";
@@ -157,7 +158,8 @@ export async function generateMetadata({params, searchParams}: Props): Promise<M
     const species = focus ? arkSpeciesShare(snapshot, focus) : null;
     const focusName = species?.name ?? null;
     const title = focusName ? fillArkWords(seo.metaFocusTitle, {animal: focusName}) : seo.metaTitle;
-    const description = focusName ? fillArkWords(seo.metaFocusDescription, {animal: focusName}) : seo.metaDescription;
+    // Cut to what a result shows (the Indonesian one ran to 172 characters).
+    const description = clampMetaDescription(focusName ? fillArkWords(seo.metaFocusDescription, {animal: focusName}) : seo.metaDescription);
     const canonical = getLocalePath(locale, "/ark");
     const image = focusName && focus ? arkOgImagePath(focus, species?.count ?? 0) : arkOgImagePath(null, snapshot?.counts.animals ?? 0);
     const alt = focusName ?? words.eyebrow;
@@ -521,7 +523,6 @@ export default async function ArkPage({params, searchParams}: Props) {
             liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
-        {/* (Called, not mounted: an async server component as JSX fails this React's types, TS2786.) */}
         {await ArkSeoSummary({locale})}
         </>
     );

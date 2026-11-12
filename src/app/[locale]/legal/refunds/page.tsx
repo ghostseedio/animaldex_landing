@@ -1,3 +1,4 @@
+import {legalMarkdownForPage} from "@/lib/legal-markdown";
 import {remark} from "remark";
 import html from "remark-html";
 import policy from "@/data/refund-policy.md";
@@ -17,7 +18,7 @@ export function generateStaticParams() {
 }
 
 export default async function RefundPolicy() {
-    const processedContent = await remark().use(html).process(policy);
+    const processedContent = await remark().use(html).process(legalMarkdownForPage(policy));
 
     return (
         <div className="mx-auto my-16 w-full max-w-3xl px-4 text-center text-ink-200">

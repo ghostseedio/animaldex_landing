@@ -1945,8 +1945,8 @@
     "eyebrow": "Side by side",
     "title": "Two animals, side by side",
     "description": "Pick two species and see how each one survives: stat-by-stat tables, the settings where each has the edge, and grounded biology. Any pairing works.",
-    "metaTitle": "Compare Any Two Animals — Who Would Win? | AnimalDex",
-    "metaDescription": "Compare any two animals side by side. Pick two species from thousands and get an instant head-to-head verdict with stats, scenario breakdowns, a confidence rating and FAQ — built from real biology.",
+    "metaTitle": "Compare Any Two Animals Side by Side | AnimalDex",
+    "metaDescription": "Compare any two animals side by side: stat by stat, the settings where each has the edge, and the biology behind it, from each species' field guide.",
     "statAnimals": "Animals to compare",
     "statComparisons": "Published side-by-sides",
     "builder": {
@@ -2587,9 +2587,9 @@
     }
   },
   "meta": {
-    "fullTitle": "AnimalDex: Take Any Idea to an Animal. Every Animal Has a Lesson",
+    "fullTitle": "AnimalDex: Catch Real Animals as AI Companions in a 3D World",
     "title": "AnimalDex",
-    "description": "Talk to animals about any idea, plan or decision and get a genuinely different take. Each one answers from a real behaviour of its kind, and every animal you meet adds a new way of seeing. Steps that work bring animals into the Ark, a shared animal world.",
+    "description": "Catch animals in real life and turn them into AI companions in a 3D world: the Ark, a shared simulation built from each animal's field guide.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -3441,7 +3441,7 @@
     "stats": "Stats"
   },
   "talkPage": {
-    "metaTitle": "Talk to an animal",
+    "metaTitle": "Talk to Animals: AI Chat From Their Point of View",
     "metaDescription": "Talk to any animal in AnimalDex, free. Each one answers from its own Power, a lesson from how its kind survives, so you hear a real side, not agreement.",
     "animalTitleA": "Talk to a {animal}",
     "animalTitleAn": "Talk to an {animal}",
@@ -4491,13 +4491,13 @@
       "aboutEyebrow": "About the Ark",
       "aboutTitle": "A shared animal world, simulated from field guides",
       "aboutBody": "The Ark is one animal world that everyone shares and sees the same way. It is a simulation you can look around in 3D: tap an animal to meet it, follow it, or read its life story.",
-      "liveCounts": "Right now {animals} of {species} live aboard. Its world has seven regions, from the open ocean to the polar ice.",
+      "liveCounts": "Right now {animals} of {species} live aboard. Its world has two islands: a wild one with regions from the open ocean to the polar ice, and a town with houses, farms and a zoo.",
       "arriveTitle": "How animals arrive",
       "arriveBody": "Nobody places an animal by hand. When someone captures an animal with AnimalDex, one of its kind comes aboard, up to a pair for each person, and stays. Talking with an animal about something real in your life and trying the step it suggests keeps your animals thriving: each step that works puts them in better condition. The Ark shows species and counts; where an animal was captured and what anyone talked about are never shown.",
       "lifeTitle": "How diets and breeding drive it",
       "lifeBody": "Each species' life on the Ark is based on its field guide in AnimalDex: what it eats, how many young it has and how long they take, when it is awake, whether it lives alone, in pairs or in groups, and how long it lives in the wild.",
       "lifeRules": "A predator eats only animals its field guide names as food, or a group they belong to, such as birds, and takes the animals in the weakest condition first. Two adults of a kind raise young when there is food, at most one litter per breeding period: animals in prime condition breed every period, ordinary ones less often. Animals with a known wild lifespan grow old, and a hunter that stays hungry too long starves. One Ark year passes every 14 real days.",
-      "lifeNote": "The rules are simplified so that a small shared world can run. The Ark is a game based on each animal's field guide, not a scientific model.",
+      "lifeNote": "The rules are simplified so that a small shared world can run. The Ark is a simulation built from each animal's field guide, not a scientific model.",
       "listTitle": "Who is aboard",
       "listIntro": "Every species on the Ark, by region, with how many are aboard.",
       "listAboard": "{count} aboard",
@@ -4513,18 +4513,7 @@
       "eats": "Eats, by its field guide",
       "eatenBy": "Eaten by",
       "see": "See the {animal} in the Ark",
-      "seeArk": "See the Ark",
-      "trendLine": "Since {date}: {changes}.",
-      "trendNone": "None have come aboard or left since {date}.",
-      "trendArrived": "{count} came aboard",
-      "trendBorn": "{count} born",
-      "trendEaten": "{count} eaten",
-      "trendDiedOld": "{count} died of old age",
-      "trendStarved": "{count} starved",
-      "trendSeparator": ", ",
-      "arkEats": "On the Ark it can eat",
-      "arkEatenBy": "On the Ark it can be eaten by",
-      "foodChain": "See who eats whom in the Ark"
+      "seeArk": "See the Ark"
     },
     "founders": {
       "settings": {
@@ -4726,6 +4715,21 @@
       "linkHow": "How the Ark works",
       "linkFood": "Who eats whom",
       "linkTalk": "Talk to an animal"
+    }
+  },
+  "species": {
+    "inTheArk": {
+      "trendLine": "Since {date}: {changes}.",
+      "trendNone": "None have come aboard or left since {date}.",
+      "trendArrived": "{count} came aboard",
+      "trendBorn": "{count} born",
+      "trendEaten": "{count} eaten",
+      "trendDiedOld": "{count} died of old age",
+      "trendStarved": "{count} starved",
+      "trendSeparator": ", ",
+      "arkEats": "On the Ark it can eat",
+      "arkEatenBy": "On the Ark it can be eaten by",
+      "foodChain": "See who eats whom in the Ark"
     }
   }
 }

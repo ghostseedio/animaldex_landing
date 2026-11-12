@@ -46,7 +46,7 @@ const frequencyExplainerItems: FrequencyExplainerItem[] = FREQUENCY_LESSONS.flat
     }];
 });
 
-const TITLE = "Animal Frequencies: The Science Behind Animal Behaviour Rhythms and Signatures";
+const TITLE = "Animal Frequencies: Behaviour Rhythms and Signatures";
 const DESCRIPTION =
     "Animal frequencies explained — the tempo an animal runs at, the rhythm its body commits to, "
     + "and what \"animal frequency\" means when you measure behaviour instead of guessing at it. "

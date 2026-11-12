@@ -15,8 +15,8 @@ export function generateStaticParams() {
 }
 
 export const metadata: Metadata = {
-    title: "Animal Videos: Battles, Rankings and Wild Facts in Under a Minute",
-    description: "Short animal videos from AnimalDex: who would win, the fastest and strongest animals ranked, imagined hybrids and the wildest facts, each with its full story and sources.",
+    title: "Short Animal Videos: Rankings, Hybrids and Wild Facts",
+    description: "Short animal videos from AnimalDex: the fastest and strongest animals ranked, imagined hybrids and the wildest facts, each with its full story and sources.",
     alternates: {canonical: "/videos"}
 };
 
