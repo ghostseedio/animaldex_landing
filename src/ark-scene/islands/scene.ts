@@ -61,6 +61,11 @@ export type ArkIslandScene = {
     joining: (on: boolean) => void;
     /** Every frame: the world's clock (epoch ms), for the people implied and the zoo's day. */
     update: (epochMs: number) => void;
+    /**
+     * Lane GB: the scene's answer for the town's moving cars (world frame, epoch seconds): the animals near a point at a
+     * moment (their shared poses and L5's body radius), null while the town's schedules are not wired yet.
+     */
+    setTrafficAnimals: (query: ((x: number, z: number, radius: number, epochSeconds: number) => Array<{x: number; z: number; r: number}> | null) | null) => void;
     setShadows: (on: boolean) => void;
     setTier: (tier: "high" | "medium" | "low") => void;
     /** Its animals' places in the world frame (the snapshot's animals of this island). */
@@ -275,6 +280,18 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const clock = clockAt(epochMs);
             town.update(clock);
             zooLife.update(clock);
+        },
+        setTrafficAnimals: (query) => {
+            // (The town's cars ask in its own frame and on the island clock's seconds: the world's frame and epoch here.)
+            const shift = (options.offsetHours ?? 0) * 3600;
+            town.setTrafficAnimals(
+                query
+                    ? (x, z, radius, islandSeconds) => {
+                          const found = query(x + origin.x, z + origin.z, radius, islandSeconds - shift);
+                          return found && found.map((a) => ({x: a.x - origin.x, z: a.z - origin.z, r: a.r}));
+                      }
+                    : null
+            );
         },
         setShadows: town.setShadows,
         setTier: town.setTier,

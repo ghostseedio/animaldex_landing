@@ -1538,6 +1538,40 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (A resident walks its door route over a door beat: never faster than 3 m/s.)
         speed: (entry) => (entry.sched ? bodyLengthsPerSecond(entry.sched.profile) * Math.max(entry.full, 0.05) * Math.max(runFactor(entry.sched.profile), 1) * 1.5 : 3)
     });
+    // Lane GB: the town's moving cars stop short of its animals. The town's animals near a point at a moment: their shared
+    // poses (the schedule's, the same for every viewer, whatever each draws) and L5's bodies; null until they are wired.
+    let trafficCells: {of: Entry[]; count: number; cells: Map<number, Entry[]>} | null = null;
+    const trafficCell = (x: number, z: number) => (Math.floor(x / 16) + 4096) * 8192 + (Math.floor(z / 16) + 4096);
+    const trafficAnimals = (x: number, z: number, radius: number, epoch: number): Array<{x: number; z: number; r: number}> | null => {
+        const isl = island;
+        if (!isl || !townWorld) return null;
+        if (!trafficCells || trafficCells.of !== entries || trafficCells.count !== entries.length) {
+            const cells = new Map<number, Entry[]>();
+            for (const entry of entries) {
+                if (!townIds.has(entry.animal.id) || entry.visitor) continue;
+                const k = trafficCell(entry.place.x, entry.place.z);
+                const list = cells.get(k);
+                if (list) list.push(entry);
+                else cells.set(k, [entry]);
+            }
+            trafficCells = {of: entries, count: entries.length, cells};
+        }
+        const out: Array<{x: number; z: number; r: number}> = [];
+        const reach = radius + 18;
+        for (let i = Math.floor((x - reach) / 16); i <= Math.floor((x + reach) / 16); i++) {
+            for (let j = Math.floor((z - reach) / 16); j <= Math.floor((z + reach) / 16); j++) {
+                for (const entry of trafficCells.cells.get((i + 4096) * 8192 + (j + 4096)) ?? []) {
+                    const range = isl.rangeOf(entry.animal.id) ?? 12;
+                    if (Math.hypot(entry.place.x - x, entry.place.z - z) > radius + range + 3) continue;
+                    const pose = entry.sched?.wired ? sharedBase(entry, epoch) : entry.place;
+                    const r = bodyShape(entry.animal.model_slug, entry.full).radius;
+                    if (Math.hypot(pose.x - x, pose.z - z) < radius + r) out.push({x: pose.x, z: pose.z, r});
+                }
+            }
+        }
+        return out;
+    };
+    let trafficHooked: ArkIslandScene | null = null;
     /** Its pose with the collisions (the same pose when nothing moved it; on the ground, at the ground's height where it moved to). */
     const withCollisions = <P extends TripPose & {doing: ArkDoing}>(entry: Entry, base: P, epoch: number): P => {
         if (!collisionsOn || !world) return base;
@@ -5655,6 +5689,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
         // Decision 153: the town shown a few chunks a frame as it joins.
         if (townRevealing && island) townRevealing = island.stepReveal(3);
+        if (island && trafficHooked !== island) {
+            island.setTrafficAnimals?.(trafficAnimals);
+            trafficHooked = island;
+        }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         stepFlight(now);
         stepInset();
