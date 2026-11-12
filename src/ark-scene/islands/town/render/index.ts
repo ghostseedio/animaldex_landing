@@ -13,11 +13,12 @@ import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
-import {binSpots, carSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
-import {binsOut, boatIn, CAR_COLOURS, carAt, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
+import {binSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
+import {binsOut, boatIn, clockHands, lampsOn, marketDay, washingOut, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {buildBuilding, clockFaces, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
-import {binGeometry, boatGeometry, carGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {binGeometry, boatGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {loadVehicles, TownVehicles, type TrafficAnimals, type VehicleModel} from "@/ark-scene/islands/town/render/vehicles";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 
@@ -47,6 +48,13 @@ export type TownIsland = {
     update: (clock: TownClock) => void;
     setShadows: (on: boolean) => void;
     setTier: (tier: TownTier) => void;
+    /**
+     * The scene's answer for the moving cars (lane GB): the animals near a point at a moment, in the town's frame and on
+     * the island clock's seconds (`render/vehicles.ts` TrafficAnimals). Null: no animals (the town's own page).
+     */
+    setTrafficAnimals: (query: TrafficAnimals | null) => void;
+    /** The cars and bicycles (parked, moving, by level). */
+    vehicles: TownVehicles;
     heightAt: (x: number, z: number) => number;
     stats: () => {chunks: number; drawnChunks: number; triangles: number; drawCalls: number; instances: Record<string, number>; windows: number; litWindows: number; zooOpen: number};
     dispose: () => void;
@@ -240,7 +248,10 @@ export function townBuildData(zooOpen: readonly string[] = launchEnclosures(), s
     return {grid, scenery, perChunk, zoo, zooOpen: [...zooOpen]};
 }
 
-export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): TownIsland {
+/** `vehicles`: the car models already read (null: proxies only); left out, they are read from `VEHICLE_FILE`. */
+type TownIslandOptions = {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData; vehicles?: Map<string, VehicleModel> | null};
+
+export function buildTownIsland(options: TownIslandOptions = {}): TownIsland {
     const steps = townIslandSteps(options);
     for (;;) {
         const next = steps.next();
@@ -253,7 +264,7 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
  * the build over idle slices (`islands/scene.ts`); `buildTownIsland` runs them all at once, exactly as before.
  * `built`: the heavy part already worked out (the prebuild worker's `townBuildData`).
  */
-export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): Generator<void, TownIsland> {
+export function* townIslandSteps(options: TownIslandOptions = {}): Generator<void, TownIsland> {
     const plan = townPlan();
     let tier: TownTier = options.tier ?? "high";
     const root = new Group();
@@ -412,11 +423,17 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
 
     yield;
     // People-implied props.
-    const cars = carSpots(plan);
+    // The cars and bicycles (lane GB: `render/vehicles.ts`), parked and moving, their models read once for the page.
+    const vehicles = new TownVehicles(plan, tier);
+    root.add(vehicles.group);
+    let disposed = false;
+    if (options.vehicles !== undefined) vehicles.setModels(options.vehicles);
+    else void loadVehicles().then((models) => {
+        if (!disposed) vehicles.setModels(models);
+    });
     const bins = binSpots(plan);
     const washingLines = plan.parcels.filter((p) => (p.kind === "house" || p.kind === "terrace_home") && p.back && p.back.d > 4);
     const stallSpots = Array.from({length: 10}, (_, i) => local(plan.square, -plan.square.w / 2 + 5 + (i % 5) * 7, i < 5 ? -6 : 6));
-    const carSet = new ChunkedSet(carGeometry(), materials.prop, cars.length, true);
     const binSet = new ChunkedSet(binGeometry(), materials.prop, bins.length, true);
     const washSet = new ChunkedSet(washingGeometry(), materials.prop, washingLines.length);
     const boatSet = new ChunkedSet(boatGeometry(), materials.prop, plan.moorings.length, true);
@@ -424,7 +441,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     const lamp = lampGeometry();
     const lampSet = new ChunkedSet(lamp.post, materials.solid, scenery.lamps.length);
     const lampHeadSet = new ChunkedSet(lamp.head, materials.lampHead, scenery.lamps.length);
-    for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet], ["lamp_heads", lampHeadSet]] as const) {
+    for (const [name, set] of [["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet], ["lamp_heads", lampHeadSet]] as const) {
         set.mesh.name = `props:${name}`;
         set.mesh.castShadow = name !== "lamp_heads";
         set.mesh.receiveShadow = true;
@@ -459,6 +476,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     });
 
     const update = (clock: TownClock) => {
+        // The cars every frame (the moving ones on the island clock's seconds; the parked once a minute inside).
+        vehicles.update(clock, ((clock.day - 4) * 24 + clock.hours) * 3600);
         const minute = Math.floor(clock.day * 1440 + clock.hours * 60);
         if (minute === lastMinute) return;
         lastMinute = minute;
@@ -475,13 +494,6 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             }
             c.glass.attribute.needsUpdate = true;
         }
-        // Cars: on the spot, nose along the street (kerbs) or towards the house (drives).
-        cars.forEach((spot, i) => {
-            const car = carAt(spot, clock);
-            colour.set(CAR_COLOURS[car.colour]);
-            carSet.set(i, placeMatrix(spot.x, ground(spot.x, spot.z) + 0.12, spot.z, spot.turn), car.parked && (hashText(spot.id) % 1000) / 1000 < Math.max(share, 0.6), colour);
-        });
-        carSet.write();
         bins.forEach((b, i) => {
             const out = binsOut(b.street, b.id, clock);
             const p = out ? b.kerb : b.home;
@@ -542,7 +554,8 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         chunks.forEach((c, key) => {
             if (c) c.group.visible = !next || next(key);
         });
-        for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet, lampSet, lampHeadSet]) set.setDrawn(next);
+        for (const set of [...Array.from(treeSets.values()), binSet, washSet, boatSet, stallSet, lampSet, lampHeadSet]) set.setDrawn(next);
+        vehicles.setDrawn(next);
         for (const {key, mesh} of zooMeshes) if (key >= 0) mesh.visible = !next || next(key);
     };
 
@@ -561,6 +574,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             set.write();
         });
         lastMinute = -1;
+        vehicles.setTier(tier);
         setShadows(TOWN_TIERS[tier].shadows > 0);
     };
 
@@ -579,10 +593,15 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             instances[`tree:${kind}`] = set.shown;
             drawCalls++;
         });
-        for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet]] as const) {
+        for (const [name, set] of [["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet]] as const) {
             instances[name] = set.shown;
             drawCalls++;
         }
+        const traffic = vehicles.stats();
+        instances.cars = traffic.parked;
+        instances.moving_cars = traffic.moving;
+        instances.bikes = traffic.bikes;
+        drawCalls += traffic.drawCalls;
         drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
         return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4, instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
@@ -606,9 +625,13 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         update,
         setShadows,
         setTier,
+        setTrafficAnimals: (query) => vehicles.setAnimals(query),
+        vehicles,
         heightAt: ground,
         stats,
         dispose: () => {
+            disposed = true;
+            vehicles.dispose();
             root.traverse((o) => {
                 const mesh = o as Mesh;
                 if (mesh.isMesh && mesh.geometry) mesh.geometry.dispose();
