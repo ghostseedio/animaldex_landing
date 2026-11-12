@@ -28,8 +28,12 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_WIDTH, TOWN_LEVEL, townPlan, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {carAt, chance, weekday, type CarSpot, type TownClock} from "@/ark-scene/islands/town/people";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
+import {townColliderSet} from "@/ark-scene/islands/town/colliders";
+import {launchEnclosures} from "@/ark-scene/islands/town/areas";
 import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {townWeather} from "@/ark-scene/islands/town/render/materials";
+import {CROSSINGS} from "@/ark-scene/islands/town/render/streets";
+import {BUS_STOPS} from "@/ark-scene/islands/town/render/furniture";
 
 // MARK: - The models
 
@@ -260,15 +264,25 @@ export const TOWN_LOOPS: Array<{id: string; legs: Leg[]; cars: number; night: nu
     {id: "east_north", legs: [{street: "park_road", dir: -1}, {street: "mill_lane_east", dir: 1}, {street: "east_road", dir: 1}, {street: "high_street_east", dir: -1}], cars: 1, night: 0}
 ];
 
-/** Zebra crossings (people implied: a car stops at an empty one, as if someone had just crossed): street and distance along it. */
-export const TOWN_CROSSING_SPOTS: Array<{street: string; x: number; z: number}> = [
-    {street: "high_street", x: -57, z: 30.6},
-    {street: "high_street", x: -22, z: 30.5},
-    {street: "park_road", x: 52, z: 66},
-    {street: "high_street_east", x: 86, z: -1},
-    {street: "harbour_road", x: 12, z: 89},
-    {street: "harbour_road_east", x: 85, z: 51.25}
-];
+/**
+ * The traffic signals (lane GA's, `render/furniture.ts`): where the High Street meets Park Road, the two roads on
+ * opposite phases of a 60 s cycle on the shared clock (green 26 s, amber 3 s, red 31 s; Park Road 30 s behind).
+ */
+export const SIGNAL_CYCLE = {period: 60, green: 26, offset: 30} as const;
+
+/** Whether a signal shows green to a road's phase at a moment (epoch seconds; the island clock's whole minutes are the same). */
+export function signalGreen(phase: number, epochSeconds: number): boolean {
+    const t = (((epochSeconds + phase * SIGNAL_CYCLE.offset) % SIGNAL_CYCLE.period) + SIGNAL_CYCLE.period) % SIGNAL_CYCLE.period;
+    return t < SIGNAL_CYCLE.green;
+}
+
+/** The signalled junctions: their middle, and each road's phase by the way it runs (x: the High Street, z: Park Road). */
+export function townSignals(plan: TownPlan = townPlan()): Array<{x: number; z: number; phaseAlongX: number; phaseAlongZ: number}> {
+    const high = plan.streets.find((s) => s.id === "high_street");
+    if (!high || !plan.streets.some((s) => s.id === "park_road")) return [];
+    const end = high.line[high.line.length - 1];
+    return [{x: end.x, z: end.z, phaseAlongX: 0, phaseAlongZ: 1}];
+}
 
 export type Crossing = {street: string; along: number; x: number; z: number; dir: Pt; width: number};
 
@@ -278,13 +292,16 @@ function streetOf(plan: TownPlan, id: string): Street {
     return s;
 }
 
-/** The crossings on their streets (for the cars, and the ground lane's stripes). */
+/** The zebra crossings on their streets (lane GA's `CROSSINGS`, drawn with their beacons): the cars stop at each. */
 export function townCrossings(plan: TownPlan = townPlan()): Crossing[] {
-    return TOWN_CROSSING_SPOTS.map((c) => {
-        const s = streetOf(plan, c.street);
-        const n = polylineNearest(s.line, c.x, c.z);
-        return {street: c.street, along: n.along, x: n.point.x, z: n.point.z, dir: n.dir, width: s.width};
-    });
+    const out: Crossing[] = [];
+    for (const c of CROSSINGS) {
+        const s = plan.streets.find((q) => q.id === c.street);
+        if (!s) continue;
+        const {point, dir} = polylineAt(s.line, c.at);
+        out.push({street: c.street, along: c.at, x: point.x, z: point.z, dir, width: s.width});
+    }
+    return out;
 }
 
 /** Where two streets meet: the distance along `a` nearest `b` (its crossing, or the end of one on the other). */
@@ -316,9 +333,14 @@ export type TrafficPath = {
     dx: Float32Array;
     dz: Float32Array;
     speed: Float32Array;
+    /** How far a car may stand off its lane here (m, + to its right), to pass something at the kerb: within the carriageway, clear of the parked cars and the oncoming lane. */
+    offLo: Float32Array;
+    offHi: Float32Array;
+    /** On a two-way stretch, how far it may go over into the oncoming lane when that is empty (to pass a sleeping cat). */
+    offOver: Float32Array;
     length: number;
     /** Where cars stop (m along) and for how long (s): give way before a turn, zebra crossings. */
-    stops: Array<{at: number; seconds: number; kind: "give_way" | "crossing"}>;
+    stops: Array<{at: number; seconds: number; kind: "give_way" | "crossing" | "signal"; phase?: number}>;
     /** The timetable: seconds to reach each sample (including the stops); one lap's time. */
     time: Float32Array;
     lap: number;
@@ -399,10 +421,12 @@ export function laneOffset(street: Street, use: StreetUse | undefined, along: nu
 type LegBuild = {leg: Leg; street: Street; from: number; to: number; prev: Street; next: Street};
 
 function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, crossings: Crossing[], plan: TownPlan): TrafficPath {
-    void plan;
     const xs: number[] = [];
     const zs: number[] = [];
     const sp: number[] = [];
+    const los: number[] = [];
+    const his: number[] = [];
+    const overs: number[] = [];
     const stops: TrafficPath["stops"] = [];
     const CORNER = 7.5;
     const cruiseOf = (s: Street) => (s.kind === "high" ? 4.8 : 6.2);
@@ -410,15 +434,29 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
         const dir = l.leg.dir;
         const start = l.from + dir * CORNER;
         const end = l.to - dir * CORNER;
-        const pts: Array<{x: number; z: number; dx: number; dz: number}> = [];
+        const pts: Array<{x: number; z: number; dx: number; dz: number; lo: number; hi: number; over: number}> = [];
         const length = Math.abs(end - start);
         const n = Math.max(1, Math.ceil(length / STEP));
         for (let k = 0; k <= n; k++) {
             const along = start + ((end - start) * k) / n;
             const {point, dir: d} = polylineAt(l.street.line, along);
-            const off = laneOffset(l.street, use.get(l.street.id), along, dir);
+            const u = use.get(l.street.id);
+            const off = laneOffset(l.street, u, along, dir);
+            // What the car may stand off its lane: the carriageway less the parked cars, and on a two-way stretch no
+            // nearer the oncoming lane than a car's width and a quarter metre.
+            const sides = parkingSides(l.street, u, along);
+            const half = l.street.width / 2;
+            const nLo = -half + (sides.includes(-1) ? PARK_STRIP : 0) + CAR_HALF_WIDTH + 0.12;
+            const nHi = half - (sides.includes(1) ? PARK_STRIP : 0) - CAR_HALF_WIDTH - 0.12;
+            const twoWay = Boolean(u && within(u.plus, along, 8) && within(u.minus, along, 8));
+            let lo = dir > 0 ? nLo - off : -(nHi - off);
+            let hi = dir > 0 ? nHi - off : -(nLo - off);
+            const over = Math.max(hi, 0);
+            if (twoWay) hi = Math.min(hi, Math.max((nHi - nLo + 2 * CAR_HALF_WIDTH + 0.24) / 2 - 2 * CAR_HALF_WIDTH - 0.25, 0));
+            lo = Math.min(lo, 0);
+            hi = Math.max(hi, 0);
             // (+ to the right of the line: the right normal of (dx, dz) is (-dz, dx).)
-            pts.push({x: point.x - d.z * off, z: point.z + d.x * off, dx: d.x * dir, dz: d.z * dir});
+            pts.push({x: point.x - d.z * off, z: point.z + d.x * off, dx: d.x * dir, dz: d.z * dir, lo, hi, over});
         }
         return {pts, cruise: cruiseOf(l.street), leg: l};
     });
@@ -434,6 +472,9 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
             xs.push(p.x);
             zs.push(p.z);
             sp.push(lp.cruise);
+            los.push(p.lo);
+            his.push(p.hi);
+            overs.push(p.over);
         }
         // Crossings on this leg (the car stops 3 m short of the stripes).
         for (const c of crossings) {
@@ -447,7 +488,9 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
         // The corner to the next leg: a curve between this leg's end and the next one's start; give way before it.
         const next = legPoints[(i + 1) % legPoints.length].pts[0];
         const end = lp.pts[lp.pts.length - 1];
-        stops.push({at: xs.length * STEP - STEP * 2, seconds: 1.8, kind: "give_way"});
+        // (At a signalled junction the signal decides, not a give-way.)
+        const signalled = townSignals(plan).some((g) => Math.hypot(end.x - g.x, end.z - g.z) < 14);
+        if (!signalled) stops.push({at: xs.length * STEP - STEP * 2, seconds: 1.8, kind: "give_way"});
         const chord = Math.hypot(next.x - end.x, next.z - end.z);
         const k = chord * 0.55;
         const b0 = {x: end.x, z: end.z};
@@ -465,6 +508,9 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
             xs.push(x);
             zs.push(z);
             sp.push(2.8);
+            los.push(0);
+            his.push(0);
+            overs.push(0);
         }
     });
     // Resample at even steps (so the index is the distance along).
@@ -472,16 +518,21 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
     const cum = new Float32Array(raw + 1);
     for (let i = 1; i <= raw; i++) cum[i] = cum[i - 1] + Math.hypot(xs[i % raw] - xs[i - 1], zs[i % raw] - zs[i - 1]);
     const length = cum[raw];
-    const n = Math.floor(length / STEP);
+    // (A whole number of samples round the loop, so it closes evenly: sample i is i × STEP along, near enough.)
+    const n = Math.max(8, Math.round(length / STEP));
+    const spacing = length / n;
     const X = new Float32Array(n);
     const Z = new Float32Array(n);
     const DX = new Float32Array(n);
     const DZ = new Float32Array(n);
     const S = new Float32Array(n);
+    const LO = new Float32Array(n);
+    const HI = new Float32Array(n);
+    const OVER = new Float32Array(n);
     let j = 0;
-    const scale = raw * STEP > 0 ? length / (raw * STEP) : 1;
+    const scale = raw * STEP > 0 ? (n * STEP) / (raw * STEP) : 1;
     for (let i = 0; i < n; i++) {
-        const s = i * STEP;
+        const s = i * spacing;
         while (j < raw - 1 && cum[j + 1] < s) j++;
         const seg = cum[j + 1] - cum[j] || 1;
         const t = (s - cum[j]) / seg;
@@ -490,6 +541,9 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
         X[i] = xs[a] + (xs[b] - xs[a]) * t;
         Z[i] = zs[a] + (zs[b] - zs[a]) * t;
         S[i] = sp[a];
+        LO[i] = Math.max(los[a], los[b]);
+        HI[i] = Math.min(his[a], his[b]);
+        OVER[i] = Math.min(overs[a], overs[b]);
     }
     for (let i = 0; i < n; i++) {
         const a = (i + n - 1) % n;
@@ -500,12 +554,25 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
         DX[i] = dx / l;
         DZ[i] = dz / l;
     }
-    // Slow into corners and stops (and out of them): no faster than a gentle braking curve allows.
-    const BRAKE = 1.1;
+    // The signals' stop lines: 9 m short of the junction's middle, coming towards it; the phase by the way the car runs.
     const stopAt = stops.map((s) => ({...s, at: s.at * scale}));
+    for (const g of townSignals(plan)) {
+        for (let i = 1; i < n; i++) {
+            const d0 = Math.hypot(X[i - 1] - g.x, Z[i - 1] - g.z);
+            const d1 = Math.hypot(X[i] - g.x, Z[i] - g.z);
+            if (d0 >= 9 && d1 < 9) {
+                const alongX = Math.abs(DX[i]) > Math.abs(DZ[i]);
+                stopAt.push({at: i * STEP, seconds: 0, kind: "signal", phase: alongX ? g.phaseAlongX : g.phaseAlongZ});
+            }
+        }
+    }
+    stopAt.sort((a, b) => a.at - b.at);
+    // Slow into corners and stops (and out of them): no faster than a gentle braking curve allows (a signal only when red).
+    const BRAKE = 1.1;
     const limit = new Float32Array(n);
     for (let i = 0; i < n; i++) limit[i] = S[i];
     for (const s of stopAt) {
+        if (s.kind === "signal") continue;
         const i0 = Math.round(s.at / STEP);
         for (let k = 0; k < 40; k++) {
             const i = (i0 - k + n) % n;
@@ -521,9 +588,9 @@ function buildPath(id: string, legs: LegBuild[], use: Map<string, StreetUse>, cr
     }
     const time = new Float32Array(n + 1);
     const stopIndex = new Map<number, number>();
-    for (const s of stopAt) stopIndex.set(Math.min(n - 1, Math.round(s.at / STEP)), (stopIndex.get(Math.round(s.at / STEP)) ?? 0) + s.seconds);
+    for (const s of stopAt) if (s.seconds > 0) stopIndex.set(Math.min(n - 1, Math.round(s.at / STEP)), (stopIndex.get(Math.min(n - 1, Math.round(s.at / STEP))) ?? 0) + s.seconds);
     for (let i = 0; i < n; i++) time[i + 1] = time[i] + STEP / Math.max(limit[i], 0.4) + (stopIndex.get(i) ?? 0);
-    return {id, step: STEP, x: X, z: Z, dx: DX, dz: DZ, speed: limit, length: n * STEP, stops: stopAt, time, lap: time[n]};
+    return {id, step: STEP, x: X, z: Z, dx: DX, dz: DZ, speed: limit, offLo: LO, offHi: HI, offOver: OVER, length: n * STEP, stops: stopAt, time, lap: time[n]};
 }
 
 /** On its timetable: how far round its loop a car is (m) at a lap time (s). */
@@ -546,6 +613,13 @@ export function timetableAt(path: TrafficPath, lapTime: number): number {
     return (lo + Math.min(Math.max(frac, 0), 1)) * STEP;
 }
 
+/** How far a car may stand off its lane at a distance round its loop (m, + to its right). */
+export function offRange(path: TrafficPath, s: number, over = false): [number, number] {
+    const n = path.x.length;
+    const i = Math.floor((((s / STEP) % n) + n) % n);
+    return [path.offLo[i], over ? Math.max(path.offHi[i], path.offOver[i]) : path.offHi[i]];
+}
+
 /** A point on a path at a distance round it (m): position and heading. */
 export function pathAt(path: TrafficPath, s: number): {x: number; z: number; dx: number; dz: number} {
     const n = path.x.length;
@@ -561,20 +635,51 @@ export function pathAt(path: TrafficPath, s: number): {x: number; z: number; dx:
 
 // MARK: - The run (shared clock)
 
-/** An animal in the way, as the scene answers (its shared pose and L5's body radius), in the town's frame. */
-export type TrafficAnimal = {x: number; z: number; r: number};
+/**
+ * An animal in the way, as the scene answers (its shared pose and L5's body radius, and its height: one lower than a
+ * car's underside, a slug or a beetle, may be under a car between its wheels), in the town's frame.
+ */
+export type TrafficAnimal = {x: number; z: number; r: number; h?: number};
+
+/** A car's underside clears this (m): anything lower may pass under it between the wheels. */
+export const CAR_CLEARANCE = 0.16;
+
+/**
+ * How far a car (its body, or for a low animal only its wheels) is from an animal: m, negative when they overlap.
+ * The car is a box of `CAR_HALF_LENGTH` × `CAR_HALF_WIDTH` round (x, z), heading (dx, dz).
+ */
+export function carAnimalGap(car: {x: number; z: number; dx: number; dz: number}, a: TrafficAnimal): number {
+    const lx = (a.x - car.x) * car.dx + (a.z - car.z) * car.dz;
+    const lz = -(a.x - car.x) * car.dz + (a.z - car.z) * car.dx;
+    if ((a.h ?? 1) < CAR_CLEARANCE) {
+        let best = Infinity;
+        for (const wx of [-1, 1]) for (const wz of [-1, 1]) {
+            const ex = Math.max(Math.abs(lx - wx * (CAR_HALF_LENGTH - 0.85)) - 0.34, 0);
+            const ez = Math.max(Math.abs(lz - wz * (CAR_HALF_WIDTH - 0.15)) - 0.13, 0);
+            best = Math.min(best, Math.hypot(ex, ez) - a.r);
+        }
+        return best;
+    }
+    return Math.hypot(Math.max(Math.abs(lx) - CAR_HALF_LENGTH, 0), Math.max(Math.abs(lz) - CAR_HALF_WIDTH, 0)) - a.r;
+}
 /** The animals near a point at a moment (town frame, epoch seconds); null while their poses are not known yet. */
 export type TrafficAnimals = (x: number, z: number, radius: number, epochSeconds: number) => TrafficAnimal[] | null;
 
 /** The run is worked out from the timetable afresh every this many seconds (every car on its timetable then). */
-export const TRAFFIC_WINDOW = 180;
+export const TRAFFIC_WINDOW = 600;
 const TICK = 0.25;
 const ACCEL = 1.2;
 const DECEL = 2.6;
 export const CAR_HALF_WIDTH = 0.98;
 export const CAR_HALF_LENGTH = 2.3;
 
-export type MovingCar = {index: number; loop: number; x: number; z: number; dx: number; dz: number; speed: number; braking: boolean; s: number; active: boolean; lag: number; served: number; dwell: number};
+export type MovingCar = {index: number; loop: number; x: number; z: number; dx: number; dz: number; speed: number; braking: boolean; s: number; active: boolean; lag: number; served: number; dwell: number; off: number};
+
+/** Where a car's nose region starts (m ahead of its middle): only what is ahead of it stops the car. */
+const NOSE = CAR_HALF_LENGTH - 0.4;
+
+/** How fast a car moves across (m/s) to pass something at the kerb, and back. */
+const LATERAL = 0.7;
 
 /** A car's lap: which lap it is on at a moment and whether it drives that lap (fewer cars late at night). */
 function lapOf(path: TrafficPath, car: {phase: number; night: boolean}, epoch: number, offsetHours: number): {lap: number; active: boolean} {
@@ -597,6 +702,8 @@ export class TrafficSim {
     private blockedSeconds = 0;
     /** Ticks worked out since the start (for the measurements). */
     ticks = 0;
+    /** What last held each car up (for the measurements): "car", "animal", "animal soon", "signal", "stop". */
+    readonly heldBy: string[] = [];
     constructor(
         readonly traffic: TownTraffic,
         private animals: TrafficAnimals | null = null,
@@ -608,20 +715,28 @@ export class TrafficSim {
         this.window = Number.NaN;
     }
 
-    /** The cars at a moment (epoch seconds). Null while the animals' poses are not known (cars are not drawn then). */
-    at_(epoch: number): MovingCar[] | null {
+    /**
+     * The cars at a moment (epoch seconds). Null while the animals' poses are not known, or while the run is still being
+     * worked out up to now within `budgetMs` a call (a page opening mid-window: the rest next call); cars are not drawn then.
+     */
+    at_(epoch: number, budgetMs = Infinity): MovingCar[] | null {
         const window = Math.floor(epoch / TRAFFIC_WINDOW) * TRAFFIC_WINDOW;
         if (window !== this.window || epoch < this.at - 1e-6) {
             if (!this.start(window)) return null;
         }
-        while (this.at + TICK <= epoch + 1e-9) if (!this.tick()) return null;
+        const started = budgetMs < Infinity && typeof performance !== "undefined" ? performance.now() : 0;
+        let n = 0;
+        while (this.at + TICK <= epoch + 1e-9) {
+            if (!this.tick()) return null;
+            if (started && ++n % 4 === 0 && performance.now() - started > budgetMs) return null;
+        }
         // Between ticks: ease forward along the path.
         const dt = epoch - this.at;
         return this.cars.map((c) => {
             if (!c.active) return c;
             const path = this.traffic.paths[c.loop];
             const p = pathAt(path, c.s + c.speed * dt);
-            return {...c, x: p.x, z: p.z, dx: p.dx, dz: p.dz};
+            return {...c, x: p.x - p.dz * c.off, z: p.z + p.dx * c.off, dx: p.dx, dz: p.dz};
         });
     }
 
@@ -634,52 +749,110 @@ export class TrafficSim {
             const s = timetableAt(path, window + car.phase) + lap * path.length;
             const p = pathAt(path, s);
             const ahead = timetableAt(path, window + car.phase + 1) + lap * path.length;
-            return {index, loop: car.loop, x: p.x, z: p.z, dx: p.dx, dz: p.dz, speed: Math.max(0, Math.min(ahead - s, path.speed[Math.floor((s % path.length) / STEP)])), braking: false, s, active, lag: 0, served: -1, dwell: 0};
+            return {index, loop: car.loop, x: p.x, z: p.z, dx: p.dx, dz: p.dz, speed: Math.max(0, Math.min(ahead - s, path.speed[Math.floor((s % path.length) / STEP)])), braking: false, s, active, lag: 0, served: -1, dwell: 0, off: 0};
         });
         return true;
     }
 
-    /** Free distance ahead of a car (m) before something is in its way, looking `reach` m along its path. */
-    private freeAhead(car: MovingCar, reach: number, epoch: number): number | null {
+    /**
+     * Free distance ahead of a car (m) before something is in its way, looking `reach` m along its path, and where it
+     * should stand off its lane (m) to pass an animal at the kerb (its own lane's room only; never into parked cars or
+     * the oncoming lane). An animal it cannot pass blocks it.
+     */
+    private freeAhead(car: MovingCar, reach: number, epoch: number): {free: number; off: number; lockLo: number; lockHi: number} | null {
         const path = this.traffic.paths[car.loop];
         let free = reach;
         // Other cars (as they are this tick): one in the corridor ahead blocks, unless both block each other and it is behind in order.
         for (const other of this.cars) {
             if (other === car || !other.active) continue;
-            const gap = this.gapTo(path, car.s, reach, other.x, other.z, CAR_HALF_WIDTH + 0.25, CAR_HALF_LENGTH + 0.6);
-            if (gap === null || gap >= free) continue;
+            const gap = this.gapTo(path, car.s, car.off, reach, other.x, other.z, CAR_HALF_WIDTH + 0.25, CAR_HALF_LENGTH + 0.6);
+            if (gap === null || gap.gap >= free) continue;
             const otherPath = this.traffic.paths[other.loop];
-            const mutual = this.gapTo(otherPath, other.s, reach, car.x, car.z, CAR_HALF_WIDTH + 0.25, CAR_HALF_LENGTH + 0.6);
+            const mutual = this.gapTo(otherPath, other.s, other.off, reach, car.x, car.z, CAR_HALF_WIDTH + 0.25, CAR_HALF_LENGTH + 0.6);
             if (mutual !== null && other.index > car.index) continue;
-            free = gap;
+            free = gap.gap;
+            this.heldBy[car.index] = "car";
         }
+        let off = 0;
+        // What is alongside fixes how far across it may move (never sideways into an animal beside it).
+        let lockLo = -Infinity;
+        let lockHi = Infinity;
         if (this.animals) {
             const mid = pathAt(path, car.s + reach / 2);
-            const found = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 2, epoch);
+            const found = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 3, epoch);
             if (found === null) return null;
-            for (const a of found) {
-                const gap = this.gapTo(path, car.s, reach, a.x, a.z, CAR_HALF_WIDTH + a.r + 0.25, a.r + 0.4);
-                if (gap !== null && gap < free) free = gap;
+            // Those ahead or alongside, nearest first: pass each by standing off the lane if the lane has room.
+            // (And where each will be in a moment, too: a dog trotting out into the road is passed, or waited for, now.)
+            const soon = this.animals(mid.x, mid.z, reach / 2 + CAR_HALF_LENGTH + 3, epoch + 1.2) ?? [];
+            const ahead: Array<{a: TrafficAnimal; gap: number; across: number; at: number}> = [];
+            for (const [list, ends] of [[found, 0.4], [soon, 0.7]] as const) {
+                for (const a of list) {
+                    const g = this.gapTo(path, car.s, 0, reach, a.x, a.z, CAR_HALF_WIDTH + a.r + 3, a.r + ends, -CAR_HALF_LENGTH - 0.6);
+                    if (g) ahead.push({a, gap: g.gap, across: g.across, at: g.at});
+                }
+            }
+            ahead.sort((p, q) => p.gap - q.gap);
+            // The oncoming lane is free when no car coming the other way is within 45 m: then it may go over into it to pass.
+            const over = !this.cars.some((o) => o !== car && o.active && o.dx * car.dx + o.dz * car.dz < -0.3 && Math.hypot(o.x - car.x, o.z - car.z) < 45);
+            let lo = -Infinity;
+            let hi = Infinity;
+            for (const h of ahead) {
+                const d = h.at - car.s;
+                if (d < NOSE) {
+                    // Alongside (or under its front): it may not move across towards it, nor on if it is against it.
+                    const s2 = CAR_HALF_WIDTH + h.a.r + 0.05;
+                    if (car.off <= h.across - s2) lockHi = Math.min(lockHi, h.across - s2);
+                    else if (car.off >= h.across + s2) lockLo = Math.max(lockLo, h.across + s2);
+                    else {
+                        lockLo = Math.max(lockLo, car.off);
+                        lockHi = Math.min(lockHi, car.off);
+                        if (d >= 0) free = 0;
+                    }
+                    continue;
+                }
+                const side = CAR_HALF_WIDTH + h.a.r + 0.15;
+                // Already clear at the lane's own line.
+                if (Math.abs(h.across) >= side && lo <= 0 && hi >= 0) continue;
+                const [rLo, rHi] = offRange(path, h.at, over);
+                // The offsets that clear it: left of it or right of it, within the lane's room and what earlier ones need.
+                const left: [number, number] = [Math.max(rLo, lo), Math.min(h.across - side, rHi, hi)];
+                const right: [number, number] = [Math.max(h.across + side, rLo, lo), Math.min(rHi, hi)];
+                const options = [left, right].filter(([a, b]) => a <= b);
+                if (!options.length) {
+                    // (Only what is ahead of its nose stops it: beside it, stopping helps nothing; driving on does.)
+                    if (h.at - car.s >= NOSE && h.gap < free) {
+                        free = h.gap;
+                        this.heldBy[car.index] = "animal";
+                    }
+                    continue;
+                }
+                // The one nearer where the car stands now.
+                const pick = options.map(([a, b]) => ({a, b, to: Math.min(Math.max(car.off, a), b)})).sort((p, q) => Math.abs(p.to - car.off) - Math.abs(q.to - car.off))[0];
+                lo = pick.a;
+                hi = pick.b;
+                off = pick.to;
+                // Not across in time: slow so the step aside is done before the nose reaches it.
+                const need = Math.abs(off - car.off);
+                if (need > 0.03 && h.at - car.s >= NOSE) free = Math.min(free, Math.max(h.gap - 0.2, 0) + (need < 0.15 ? 1 : 0));
             }
         }
-        return free;
+        return {free, off, lockLo, lockHi};
     }
 
     /**
-     * How far along a path from `s` the car's nose may go before a body at (x, z) is within `side` of its line and `ends`
-     * of its nose (m), looking up to `reach` ahead (null: not in the way).
+     * Something at (x, z) ahead of a car on its path at `s`, the car `off` its lane: how far its nose may go before the
+     * thing is within `side` of the car's line and `ends` of its nose, where it is across the lane's line (m, + right)
+     * and how far round the loop it is (null: not within `side`, or not within `reach`). `from`: look from here (m,
+     * negative: alongside the car too).
      */
-    private gapTo(path: TrafficPath, s: number, reach: number, x: number, z: number, side: number, ends: number): number | null {
+    private gapTo(path: TrafficPath, s: number, off: number, reach: number, x: number, z: number, side: number, ends: number, from = 0): {gap: number; across: number; at: number} | null {
         const here = pathAt(path, s);
         if (Math.hypot(x - here.x, z - here.z) > reach + CAR_HALF_LENGTH + 6) return null;
-        for (let d = 0; d <= reach + CAR_HALF_LENGTH; d += 0.5) {
+        for (let d = from; d <= reach + CAR_HALF_LENGTH; d += 0.5) {
             const p = pathAt(path, s + d);
             const along = (x - p.x) * p.dx + (z - p.z) * p.dz;
-            const across = Math.abs(-(x - p.x) * p.dz + (z - p.z) * p.dx);
-            if (across < side && Math.abs(along) < 0.5) {
-                const gap = d - CAR_HALF_LENGTH - ends;
-                return Math.max(gap, 0);
-            }
+            const across = -(x - p.x) * p.dz + (z - p.z) * p.dx;
+            if (Math.abs(across - off) < side && Math.abs(along) < 0.5) return {gap: Math.max(d - CAR_HALF_LENGTH - ends, 0), across, at: s + d};
         }
         return null;
     }
@@ -712,9 +885,12 @@ export class TrafficSim {
             const road = path.speed[Math.min(i, path.speed.length - 1)];
             // Its timetable's pace, eased onto the timetable: behind, up to a quarter faster than its road allows.
             let want = Math.min(Math.max(pace + car.lag * 0.6, 0), road * (car.lag > 1 ? 1.25 : 1.05));
+            // The timetable waiting (a stop's dwell) and the car just short of it: it stops there, crisply.
+            if (pace < 0.05 && car.lag < 1.5) want = 0;
             const reach = Math.max((car.speed * car.speed) / (2 * DECEL) + 4, 6);
-            const free = this.freeAhead(car, reach, epoch);
-            if (free === null) return false;
+            const ahead = this.freeAhead(car, reach, epoch);
+            if (ahead === null) return false;
+            const free = ahead.free;
             // Its stops: a car behind its timetable still stops at each (for a moment), never runs through.
             const into = ((car.s % path.length) + path.length) % path.length;
             const lapNow = Math.floor(car.s / path.length);
@@ -722,6 +898,17 @@ export class TrafficSim {
                 const stop = path.stops[k];
                 let ahead = stop.at - into;
                 if (ahead < -1) ahead += path.length;
+                // A signal: red or amber, the car stops at its line (unless too close to stop); green, it goes.
+                if (stop.kind === "signal") {
+                    const look = (car.speed * car.speed) / (2 * 1.4) + 10;
+                    if (ahead > look || ahead < 0 || signalGreen(stop.phase ?? 0, epoch)) continue;
+                    // (Just turned amber and too close to stop gently: it goes on, as drivers do.)
+                    const gentle = Math.sqrt(2 * 1.6 * Math.max(ahead - 0.3, 0));
+                    if (signalGreen(stop.phase ?? 0, epoch - 2.5) && car.speed > gentle + 0.4) continue;
+                    want = Math.min(want, gentle);
+                    this.heldBy[car.index] = "signal";
+                    continue;
+                }
                 const key = (lapNow + (stop.at - into < -1 ? 1 : 0)) * 1000 + k;
                 if (car.served === key || ahead > reach || car.lag <= 2) continue;
                 if (ahead < 0.6 && car.speed < 0.15) {
@@ -741,9 +928,16 @@ export class TrafficSim {
             car.braking = car.speed < before - 0.05 || (car.speed < 0.1 && free < reach);
             if (free < reach && car.speed < 0.1) this.blockedSeconds += TICK;
             car.s += car.speed * TICK;
+            // Standing off the lane to pass, and back, at walking pace across; never beyond the lane's room here.
+            const [rLo, rHi] = offRange(path, car.s, true);
+            const was = car.off;
+            car.off += Math.min(Math.max(ahead.off - car.off, -LATERAL * TICK), LATERAL * TICK);
+            car.off = Math.min(Math.max(car.off, rLo), rHi);
+            // (Never sideways into what is alongside: within its locks, or where it was.)
+            car.off = Math.min(Math.max(car.off, Math.min(ahead.lockLo, was)), Math.max(ahead.lockHi, was));
             const p = pathAt(path, car.s);
-            car.x = p.x;
-            car.z = p.z;
+            car.x = p.x - p.dz * car.off;
+            car.z = p.z + p.dx * car.off;
             car.dx = p.dx;
             car.dz = p.dz;
         }
@@ -763,8 +957,10 @@ export type ParkingSpot = CarSpot & {street?: string; side?: number};
 
 /** Every parking place: drives, kerb bays, the farms' yards, the harbour's car park (pure in the plan). */
 export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
+    if (parkingMemo && parkingMemo.plan === plan) return parkingMemo.spots;
     const traffic = townTraffic(plan);
-    const out: ParkingSpot[] = [];
+    const raw: ParkingSpot[] = [];
+    const out = raw;
     const drives: Pt[] = [];
     for (const p of plan.parcels) {
         if (!p.drive) continue;
@@ -787,6 +983,7 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
                 // Not in a junction's mouth, on a crossing, by a drive's dropped kerb, on a bridge or by the harbour's quay.
                 if (plan.streets.some((o) => o.id !== s.id && o.kind !== "path" && o.kind !== "zoo_path" && o.kind !== "towpath" && polylineWithin(o.line, x, z, o.width / 2 + o.pavement + 7))) continue;
                 if (crossings.some((c) => Math.hypot(c.x - x, c.z - z) < 9)) continue;
+                if (BUS_STOPS.some((b) => b.street === s.id && Math.abs(b.at - a) < 15)) continue;
                 if (drives.some((d) => Math.hypot(d.x - x, d.z - z) < 3.6)) continue;
                 if (polylineWithin(CANAL, x, z, CANAL_WIDTH / 2 + 8)) continue;
                 // Facing the way the traffic on that side goes (the left side along the line).
@@ -800,8 +997,29 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
         out.push({id: `farm:${f.id}`, kind: "farm", x: s.x, z: s.z, turn: f.at.rot + Math.PI / 2});
     }
     for (let i = 0; i < 8; i++) out.push({id: `harbour:${i}`, kind: "harbour", x: 31.5 + (i % 4) * 2.7, z: 109 + Math.floor(i / 4) * 6.2, turn: Math.floor(i / 4) ? Math.PI : 0});
-    return out;
+    // Every car clear of what stands round it (L5's colliders: a garden's tree, a front fence, a wall): slid along its
+    // bay up to 0.6 m, else the spot is left empty.
+    const set = townColliderSet(launchEnclosures(), {x: 0, z: 0});
+    const clear = (x: number, z: number, turn: number) => {
+        const dx = Math.sin(turn);
+        const dz = Math.cos(turn);
+        const g = townHeight(x, z);
+        for (const t of [-1.4, -0.47, 0.47, 1.4]) if (set.blocked(x + dx * t, z + dz * t, CAR_HALF_WIDTH - 0.05, g + 0.1, 1.4)) return false;
+        return true;
+    };
+    const spots: ParkingSpot[] = [];
+    for (const s of raw) {
+        const dx = Math.sin(s.turn);
+        const dz = Math.cos(s.turn);
+        const shift = [0, 0.3, -0.3, 0.6, -0.6].find((d) => clear(s.x + dx * d, s.z + dz * d, s.turn));
+        if (shift === undefined) continue;
+        spots.push({...s, x: s.x + dx * shift, z: s.z + dz * shift});
+    }
+    parkingMemo = {plan, spots};
+    return spots;
 }
+
+let parkingMemo: {plan: TownPlan; spots: ParkingSpot[]} | null = null;
 
 /** A parked car now: there or not, its kind and colour (by the spot and the day for kerbs, the month for drives). */
 export function parkedCar(spot: ParkingSpot, clock: TownClock, kinds: readonly CarKind[] = CAR_KINDS): {parked: boolean; kind: CarKind; paint: string} {
@@ -973,6 +1191,8 @@ export class TownVehicles {
     private lastWrite = 0;
     private dirty = true;
     readonly sim: TrafficSim;
+    /** The moving cars' run worked out at most this long a frame (ms) when catching up (a page opening mid-window). */
+    budgetMs = 3;
     private now: {parked: Array<{spot: number; kind: CarKind; paint: Color}>; bikes: number[]} = {parked: [], bikes: []};
     private colour = new Color();
     private movingNow: MovingCar[] | null = null;
@@ -1142,7 +1362,7 @@ export class TownVehicles {
 
     private writeMoving(clock: TownClock, epochSeconds: number, eye: Vector3) {
         this.moving.forEach((set) => set.begin());
-        const cars = this.sim.at_(epochSeconds);
+        const cars = this.sim.at_(epochSeconds, this.budgetMs);
         this.movingNow = cars;
         if (cars) {
             const kinds = VEHICLE_TIERS[this.tier].kinds;

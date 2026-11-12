@@ -116,6 +116,8 @@ export function mountTown(el: HTMLElement) {
     if (params.get("sky") !== "0") lighting.loadDaySky("/ark/graphics/sky-day.hdr");
     lighting.setShadows(renderer, TOWN_TIERS[tier].shadows);
     const town = buildTownIsland({tier});
+    // (The workbench pins its clock shot by shot: the cars' run is worked out whole each time, never sliced.)
+    town.vehicles.budgetMs = Infinity;
     ARK_ENV.wetness.value = Number(params.get("wet") ?? 0);
     ARK_ENV.rain.value = Number(params.get("rain") ?? 0);
     scene.add(town.root);
