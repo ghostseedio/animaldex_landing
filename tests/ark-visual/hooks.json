@@ -27,7 +27,9 @@
       "requires": ["scripts/ark-intelligence-scenarios.mjs", "src/ark-scene/intelligence-entry.ts"],
       "command": "node scripts/ark-intelligence-scenarios.mjs --out .ark-golden/ci/intel --seconds 6",
       "artifacts": ".ark-golden/ci/intel",
-      "browser": true
+      "browser": true,
+      "ci": false,
+      "ciNote": "decision 209: never passed on GitHub's SwiftShader runners (first the missing headless shell, then a 30 s page.screenshot timeout on the high tier); runnable locally; to be fixed after the islands release"
     },
     {
       "name": "scenery checks and numbers (tree overlaps, props floating or in each other, the mountain's rocks)",

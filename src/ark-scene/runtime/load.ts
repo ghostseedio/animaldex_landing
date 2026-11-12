@@ -82,33 +82,58 @@ export class LoadPlanner {
 /**
  * Compile every shader the scene has now, in parallel where the browser can (KHR_parallel_shader_compile), and
  * resolve when they are ready or after `timeoutMs` (a driver without the extension: the first frame compiles the
- * rest, as before). Never rejects.
+ * rest, as before). Never rejects, and never throws later: three's own `compileAsync` polls `currentProgram.isReady()`
+ * on a timer and throws (uncaught) when a material it is waiting on is disposed or loses its program meanwhile (the
+ * town joining the one world, decision 153: a release fix). So the polling is done here, guarded: a material with no
+ * program (or one whose check throws) is nothing to wait for, and the polling stops when this settles.
  */
 export function warmShaders(renderer: WebGLRenderer, scene: Object3D, camera: Camera, timeoutMs = 5000, lightsFrom: Object3D | null = null): Promise<"ready" | "timeout" | "failed"> {
     return new Promise((resolve) => {
         let settled = false;
+        let poll: ReturnType<typeof setTimeout> | null = null;
         const finish = (how: "ready" | "timeout" | "failed") => {
             if (settled) return;
             settled = true;
+            clearTimeout(timer);
+            if (poll !== null) clearTimeout(poll);
             resolve(how);
         };
         const timer = setTimeout(() => finish("timeout"), timeoutMs);
         try {
-            const compile = (renderer as WebGLRenderer & {compileAsync?: (scene: Object3D, camera: Camera, target?: Object3D | null) => Promise<unknown>}).compileAsync;
-            if (typeof compile !== "function") {
-                clearTimeout(timer);
+            const gl = renderer as unknown as {
+                compile?: (scene: Object3D, camera: Camera, target?: Object3D | null) => unknown;
+                properties?: {get: (material: object) => {currentProgram?: {isReady?: () => boolean} | null} | undefined};
+            };
+            if (typeof gl.compile !== "function" || !gl.properties) {
                 finish("failed");
                 return;
             }
-            compile.call(renderer, scene, camera, lightsFrom).then(() => {
-                clearTimeout(timer);
-                finish("ready");
-            }, () => {
-                clearTimeout(timer);
+            // (Programs created now, compiling in the driver's own time where it can.)
+            const compiled = gl.compile.call(renderer, scene, camera, lightsFrom);
+            if (!(compiled instanceof Set)) {
                 finish("failed");
-            });
+                return;
+            }
+            const pending = new Set<object>(compiled as Set<object>);
+            const check = () => {
+                poll = null;
+                if (settled) return;
+                pending.forEach((material) => {
+                    let ready = true;
+                    try {
+                        const program = gl.properties!.get(material)?.currentProgram;
+                        // (Disposed or replaced while it warmed: no program to wait for.)
+                        ready = !program || typeof program.isReady !== "function" || program.isReady();
+                    } catch {
+                        ready = true;
+                    }
+                    if (ready) pending.delete(material);
+                });
+                if (pending.size === 0) finish("ready");
+                else poll = setTimeout(check, 10);
+            };
+            poll = setTimeout(check, 0);
         } catch {
-            clearTimeout(timer);
             finish("failed");
         }
     });
