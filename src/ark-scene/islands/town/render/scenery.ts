@@ -555,8 +555,14 @@ function deadTree(geo: Geo, p: Pt, seed: number) {
     }
 }
 
+/** Lane TB: the zoo houses are `render/zoo-houses.ts`'s (the aquarium's tanks seen through the glass, walls cut away close by). */
+const ZOO_HOUSES_ELSEWHERE = true;
+
 /** A zoo house: walls, a glass front onto the path the visitors see into, a flat or curved roof, tanks inside. */
 function zooHouse(out: SceneryOut, e: ZooEnclosure) {
+    // (Lane TB: the zoo houses, their walls, glass and roofs cut away close by, their tanks and halls, are drawn with
+    // the zoo's day, `render/zoo-houses.ts`: so their residents are seen inside. Nothing of them is drawn here.)
+    if (ZOO_HOUSES_ELSEWHERE) return;
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const f = buildingFrame(s);

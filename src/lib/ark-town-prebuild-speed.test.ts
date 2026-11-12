@@ -156,10 +156,13 @@ function digest(value: unknown): string {
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     areas: "7a26937a126da351",
+    // (Merged on ark-next: GA's newer ground and street surfaces with TB's zoo houses, displays and places.)
     ground: "9f6d9fa1b00ec782",
+    // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
+    // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings.)
     sceneryAndBuildings: "f1d58d27bdb4abdf",
-    zoo: "04414c07340b7095",
-    places: "c9708c0cd0281d71"
+    zoo: "f38cd89b62c1d0ec",
+    places: "fb1159793f083105"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

@@ -34,7 +34,31 @@ export function freshLevelAt(x: number, z: number): number {
     return (sampleGround(x, z) as V2Fresh).freshLevel ?? FRESH_LEVEL;
 }
 
+/**
+ * Part C (lane TB): another island's own water, inside its square: its surface over a point (the town's canal, ponds and
+ * pools at their own levels), its ground's height where there is no water, or null where its water is the sea's.
+ * Unset (one island, or before the town is in): every answer below is exactly as before.
+ */
+export type IslandWater = {
+    /** Trip planning (`waterLevelAt`): the water's level, the ground's height on dry land, null at sea (the tide's). */
+    level: (x: number, z: number) => number | null;
+    /** Every frame (`sea-depth.ts` waterSurfaceAt): the water's level, or null (the sea's, and dry land's: no water over it). */
+    surface: (x: number, z: number) => number | null;
+};
+
+let islandWater: IslandWater | null = null;
+
+export function setIslandWater(water: IslandWater | null): void {
+    islandWater = water;
+}
+
+export function islandWaterNow(): IslandWater | null {
+    return islandWater;
+}
+
 /** The water's surface over a point: the lake's or river's level there, else the sea's level now. */
 export function waterLevelAt(x: number, z: number, seaLevel: number): number {
+    const own = islandWater ? islandWater.level(x, z) : null;
+    if (own !== null) return own;
     return freshWaterAt(x, z) >= 0.5 ? freshLevelAt(x, z) : seaLevel;
 }
