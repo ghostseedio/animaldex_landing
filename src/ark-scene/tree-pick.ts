@@ -154,7 +154,13 @@ export function assetTreePlacement(item: Placeable): TreePlacement | null {
         if (slope > 0.8) return null;
     }
     const info = ASSETS[asset.id];
-    return {id: asset.id, scale: asset.scale, x: item.x, y: item.y - DECOR_SINK, z: item.z, rotation: item.rotation, height: info.height * asset.scale, radius: info.crown_radius * asset.scale};
+    // Into the slope (scenery lane): the trunk's foot all in the ground, never a side of it in the air downhill (at real
+    // size a trunk is a metre and more across).
+    const foot = info.trunk_radius * asset.scale * 0.8;
+    let lowest = Infinity;
+    for (let k = 0; k < 8; k++) lowest = Math.min(lowest, heightAt(item.x + Math.cos((k * Math.PI) / 4) * foot, item.z + Math.sin((k * Math.PI) / 4) * foot));
+    const y = Math.min(item.y - DECOR_SINK, lowest - 0.02);
+    return {id: asset.id, scale: asset.scale, x: item.x, y, z: item.z, rotation: item.rotation, height: info.height * asset.scale, radius: info.crown_radius * asset.scale};
 }
 
 // MARK: - Which forest fill every tier draws (shared with the attach points)

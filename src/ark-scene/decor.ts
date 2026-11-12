@@ -17,6 +17,8 @@ import {cropsGrowAt, ORCHARD} from "@/ark-scene/fields";
 import {hamletKeeps, hamletLotAt} from "@/ark-scene/props/hamlet-land";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {treeBody, TreeSpacing} from "@/ark-scene/tree-spacing";
+import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
+import {allMounds, moundFoot} from "@/ark-scene/mounds";
 import {fbm, LAKE, LANE_WIDTH, laneDistance, noise, riverDistance, sampleGround, seeded, smoothstep, TERRAIN_HALF, VILLAGE_REACH, ZONE_SITES, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 
@@ -185,14 +187,17 @@ function shrubAt(spacing: TreeSpacing, under: DecorItem, aside: boolean): DecorI
     }
     if (!aside) return null;
     const small = {...under, scale: under.scale * SMALLER_SHRUB[SMALLER_SHRUB.length - 1]};
+    // Away from the trunk it stands in; or, on a rock or a mound, a metre or two out from where it was.
     const first = spacing.clashes(treeBody(small)!)[0]?.other;
-    if (!first) return null;
-    const away = Math.atan2(small.z - first.z, small.x - first.x);
-    for (const turn of [0, 1, -1, 2, -2, 3]) {
-        const angle = away + turn * (Math.PI / 3);
-        const reach = Math.max(first.trunk + 0.75 * 0.65 * small.scale + 0.15, 0.6);
-        const x = first.x + Math.cos(angle) * reach;
-        const z = first.z + Math.sin(angle) * reach;
+    const away = first ? Math.atan2(small.z - first.z, small.x - first.x) : 0;
+    const steps: Array<{x: number; z: number}> = [];
+    for (const reach of first ? [Math.max(first.trunk + 0.75 * 0.65 * small.scale + 0.15, 0.6)] : [1, 2]) {
+        for (const turn of [0, 1, -1, 2, -2, 3]) {
+            const angle = away + turn * (Math.PI / 3);
+            steps.push(first ? {x: first.x + Math.cos(angle) * reach, z: first.z + Math.sin(angle) * reach} : {x: small.x + Math.cos(angle) * reach, z: small.z + Math.sin(angle) * reach});
+        }
+    }
+    for (const {x, z} of steps) {
         const ground = sampleGround(x, z);
         if (ground.height < 0.3 || ground.land < 0.45 || riverDistance(x, z) < 3 || Math.hypot(x - LAKE.x, z - LAKE.z) < LAKE.r + 1) continue;
         const moved = {...small, x, y: ground.height, z};
@@ -227,6 +232,20 @@ function settle(spacing: TreeSpacing, pending: Pending[], aside: boolean, free: 
         if (out[i]) take(i);
     });
     return out as Array<DecorItem | null>;
+}
+
+/** A decor rock as drawn (`rock-assets.ts`), for the trees to keep their trunks out of. */
+function addRockTo(spacing: TreeSpacing, item: DecorItem) {
+    const placed = rockAssetFor(item);
+    if (placed) spacing.addRock(rockBox(placed));
+}
+
+/** The termite mounds (`mounds.ts`), as square-ish rocks of their foot: no trunk grows out of one. */
+function addMoundsTo(spacing: TreeSpacing) {
+    for (const mound of allMounds()) {
+        const r = moundFoot(mound);
+        spacing.addRock({x: mound.x, z: mound.z, cos: 1, sin: 0, hx0: -r, hx1: r, hz0: -r, hz1: r});
+    }
 }
 
 /** The decor kinds that are trees or shrubs as drawn (kept apart by `settle`). */
@@ -314,6 +333,9 @@ export function worldDecor(): DecorItem[] {
         }
     }
 
+    // The scatter's rocks as drawn, and the termite mounds: no trunk stands in one (scenery lane, the props check).
+    for (const item of items) if (item.kind === "rock") addRockTo(spacing, item);
+    addMoundsTo(spacing);
     // The scatter's trees and shrubs, settled (mature trees, then younger ones, then the shrubs). One that nothing fits
     // keeps its slot as an empty mark, dropped at the end, so the indices up to there hold.
     const settled = settle(spacing, pending, true);
@@ -577,7 +599,9 @@ export function forestFill(): FillItem[] {
     for (const item of worldDecor()) {
         const body = treeBody(item);
         if (body) spacing.add(body);
+        if (item.kind === "rock") addRockTo(spacing, item);
     }
+    addMoundsTo(spacing);
     const tries = 220000;
     for (let i = 0; i < tries; i++) {
         const x = (random() * 2 - 1) * TERRAIN_HALF;

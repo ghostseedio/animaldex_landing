@@ -15,7 +15,7 @@
  */
 
 import {worldDecor} from "@/ark-scene/decor";
-import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {rockAssetFor, rockBox} from "@/ark-scene/rock-assets";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
 import {allMountainRocks, pieceBox, SOLID_ACROSS} from "@/ark-scene/rock-layout";
 
@@ -36,13 +36,9 @@ export function drawnRocks(): DrawnRock[] {
         if (item.kind !== "rock") continue;
         const placed = rockAssetFor(item);
         if (placed) {
-            const b = rockAssetInfo(placed.id).bounds;
-            const s = placed.scale;
-            const hx0 = b.min[0] * s;
-            const hx1 = b.max[0] * s;
-            const hz0 = b.min[2] * s;
-            const hz1 = b.max[2] * s;
-            list.push({x: placed.x, z: placed.z, cos: Math.cos(placed.yaw), sin: Math.sin(placed.yaw), hx0, hx1, hz0, hz1, y0: placed.y + b.min[1] * s, y1: placed.y + b.max[1] * s, reach: Math.hypot(Math.max(-hx0, hx1), Math.max(-hz0, hz1)), source: "decor"});
+            // The asset rock's box, turned and leaned with its slope as drawn (rock-assets.ts rockBox).
+            const box = rockBox(placed);
+            list.push({...box, reach: Math.hypot(Math.max(-box.hx0, box.hx1), Math.max(-box.hz0, box.hz1)), source: "decor"});
         } else {
             // vegetation.ts rock(): about 1.9 × 1.6 m at scale 1, about 1 m tall.
             const r = 0.9 * item.scale;

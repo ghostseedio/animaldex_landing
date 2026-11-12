@@ -34,6 +34,8 @@ import * as shapes from "@/ark-scene/props/shapes";
 import {microCorner} from "@/ark-scene/micro-decor";
 import {LAKE, RIVER, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
+// The active termite mounds (scenery lane: one list shared with the obstacles, each seated on its slope).
+import {activeTermiteMounds} from "@/ark-scene/mounds";
 
 /** A web: its centre, the way its face looks, its radius. Its threads and dew are drawn by `buildWebs`. */
 export type WebSpot = {x: number; y: number; z: number; facing: number; radius: number};
@@ -420,20 +422,7 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
     yield;
     // MARK: Termites: more mounds on the savanna and the desert's edge
     if (has("termites")) {
-        const random = propRandom("termites");
-        const items: PropInstance[] = [];
-        for (const zone of ["grassland", "desert"] as ArkZone[]) {
-            const site = ZONE_SITES[zone];
-            for (let k = 0; k < 6; k++) {
-                const a = random() * Math.PI * 2;
-                const d = site.clearing + 2 + random() * 14;
-                const x = site.x + Math.cos(a) * d;
-                const z = site.z + Math.sin(a) * d;
-                if (sampleGround(x, z).land < 0.9) continue;
-                items.push({x, y: groundAt(x, z) - 0.05, z, turn: random() * 6, scale: 0.8 + random() * 0.6});
-            }
-        }
-        add(new LodBatch("termite-mounds-active", items, shapes.termiteMound(2.2, 3), shapes.termiteMoundFar(2.2), warm, {cap: 16, reach: 1.6, shadow: true}));
+        add(new LodBatch("termite-mounds-active", activeTermiteMounds(), shapes.termiteMound(2.2, 3), shapes.termiteMoundFar(2.2), warm, {cap: 16, reach: 1.6, shadow: true}));
     }
 
     yield;

@@ -24,7 +24,7 @@
  * capped by tier (`kit.ts`).
  */
 
-import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, MeshStandardMaterial, SphereGeometry, Vector3} from "three";
+import {BoxGeometry, BufferGeometry, Color, ConeGeometry, CylinderGeometry, Group, IcosahedronGeometry, Matrix4, MeshStandardMaterial, Quaternion, SphereGeometry, Vector3} from "three";
 import {worldDecor} from "@/ark-scene/decor";
 import {COTTAGE, GARDEN_POND} from "@/ark-scene/micro-decor";
 import {roofHeight, ROOF_THICKNESS} from "@/ark-scene/micro";
@@ -37,9 +37,10 @@ import * as shapes from "@/ark-scene/props/shapes";
 import {barnBase, buildHamletBuildings, type HamletBuildings} from "@/ark-scene/props/hamlet-buildings";
 import {barnStyle, bedsOrigin, chimneyTop, COMPOST, cottageStyle, coopSpot, GARDEN_BEDS, troughSpots, defaultHomePlots, GARDEN, PADDOCK_POST_TOP, paddockFence, paddockRect, PICKET_POST_TOP, picketPostsFor, picketRuns, plotFrame, type HomePlot} from "@/ark-scene/props/home-layout";
 import {inRock} from "@/ark-scene/map/rocks";
+import {activeTermiteMounds, moundFoot, savannaMounds} from "@/ark-scene/mounds";
 import {rockGeometry, rockMaterial} from "@/ark-scene/asset-rocks";
-import {mountainRocks, type RockPiece} from "@/ark-scene/rock-layout";
-import {cachedRock, ROCK_DETAIL, type RockStyle} from "@/ark-scene/rock-shapes";
+import {mountainRocks, SOLID_ACROSS, type RockPiece} from "@/ark-scene/rock-layout";
+import {cachedRock, ROCK_DETAIL} from "@/ark-scene/rock-shapes";
 import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
 
 export type Areas = {
@@ -399,16 +400,28 @@ function barnMark(): Record<string, {x: number; y: number; z: number}> {
 
 // MARK: - Mountain and the ice
 
-/** The crags', boulders' and scree's instances (`rock-layout.ts`), by style and variant. */
-function rockInstances(pieces: RockPiece[]): Map<string, PropInstance[]> {
-    const by = new Map<string, PropInstance[]>();
+/** The mountain's rocks by area (`ROCK_CLUSTER` m squares): each area one merged piece, near and far. */
+const ROCK_CLUSTER = 32;
+
+/** A cluster's rocks merged into one geometry: each at its own place, tilt and turn, its shade in its colours. */
+function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
+    const parts: BufferGeometry[] = [];
+    const matrix = new Matrix4();
+    const quaternion = new Quaternion();
+    const yawTurn = new Quaternion();
+    const up = new Vector3(0, 1, 0);
     for (const piece of pieces) {
-        const key = `${piece.style}:${piece.variant}`;
-        const list = by.get(key) ?? [];
-        list.push({x: piece.x, y: piece.y, z: piece.z, turn: piece.yaw, scale: piece.scale, up: new Vector3(...piece.up), tint: new Color(piece.shade, piece.shade, piece.shade)});
-        by.set(key, list);
+        // Far: only what an animal would walk round (small scree is not seen from there).
+        if (level === 2 && piece.across < SOLID_ACROSS) continue;
+        // A copy: the cached shape's own arrays stay as they are (every piece of the shape shares them).
+        const geometry = rockGeometry(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][level])).clone();
+        quaternion.setFromUnitVectors(up, new Vector3(...piece.up)).multiply(yawTurn.setFromAxisAngle(up, piece.yaw));
+        geometry.applyMatrix4(matrix.compose(new Vector3(piece.x, piece.y, piece.z), quaternion, new Vector3(piece.scale, piece.scale, piece.scale)));
+        const colours = geometry.getAttribute("color");
+        for (let i = 0; i < colours.count; i++) colours.setXYZ(i, colours.getX(i) * piece.shade, colours.getY(i) * piece.shade, colours.getZ(i) * piece.shade);
+        parts.push(geometry);
     }
-    return by;
+    return parts.length ? merge(parts) : null;
 }
 
 function* mountain(): Generator<void, {rocks: RockPiece[]; drifts: PropInstance[]; polarDrifts: PropInstance[]; icicles: PropInstance[]}, void> {
@@ -503,15 +516,24 @@ function* grassland(): Generator<void, {tussocks: PropInstance[][]; flowers: Pro
         }
     }
     // Old mounds on the savanna (shared scenery, map plan: they stay when no termites are aboard).
-    const mounds: PropInstance[] = [];
-    for (const [dx, dz, s] of [[-site.clearing - 6, 8, 1.2], [site.clearing + 8, -5, 0.9], [4, -site.clearing - 9, 1.05]] as const) {
-        const x = site.x + dx;
-        const z = site.z + dz;
-        mounds.push({x, y: groundAt(x, z) - 0.05, z, turn: dx, scale: s});
-    }
+    const mounds = savannaMounds();
     // Not on the hamlet's reserved plots (props/hamlet-land.ts): no tussock under a house or a barn, no wildflowers on
     // a plot; filtered after the draws, so every other one stays where it was.
     return {tussocks: tussocks.map((list) => list.filter((item) => hamletLandAt(item.x, item.z) !== "core")), flowers: flowers.filter((item) => !hamletLandAt(item.x, item.z)), mounds};
+}
+
+/** A termite mound as an obstacle: its middle, the radius of its foot, its top (world), and whether it is always there. */
+export type MoundFootprint = {x: number; z: number; radius: number; top: number; /** False: drawn only while termites are aboard (`homes.ts`). */ always: boolean};
+
+/**
+ * Every termite mound's footprint (scenery lane, for the collisions lane; read only, nothing laid out differently): the
+ * savanna's three old mounds (`shapes.termiteMound(2.4)`) and the active ones `homes.ts` raises while termites are
+ * aboard (`shapes.termiteMound(2.2)`). The foot is the mound's lumpy base, 0.55 of its height across each way.
+ */
+export function termiteMoundFootprints(): MoundFootprint[] {
+    const out: MoundFootprint[] = savannaMounds().map((m) => ({x: m.x, z: m.z, radius: moundFoot(m), top: m.y + m.h * m.scale, always: true}));
+    for (const m of activeTermiteMounds()) out.push({x: m.x, z: m.z, radius: moundFoot(m), top: m.y + m.h * m.scale, always: false});
+    return out;
 }
 
 /** All the areas at once (the tests): `buildAreasSteps` run to its end. */
@@ -586,23 +608,23 @@ export function* buildAreasSteps(tier: PropsTier, plots: HomePlot[] = defaultHom
         mountainStep = mountainSteps.next();
     }
     const m = mountainStep.value;
-    // The mountain's rocks (scenery lane): one batch per shape, the full rock near and a light one (its coarsest mesh)
-    // far, so the crags stand on the mountain from the island view too. Made a shape a step (a few ms each).
-    // One material for every rock (asset-rocks.ts: high ones dusted with snow by their height).
+    // The mountain's rocks (scenery lane): merged by area, so the whole mountain is a few draw calls whatever its
+    // variety (every crag its own shape); the full rocks near, their coarsest meshes far (no small scree). One area a step.
     const bareRock = rockMaterial();
-    const reaches: Record<RockStyle, {cap: number; reach: number; farReach?: number; shadow: boolean}> = {
-        crag: {cap: 24, reach: 1.2, farReach: 1.5, shadow: true},
-        boulder: {cap: 60, reach: 1, farReach: 0.8, shadow: true},
-        slab: {cap: 40, reach: 1, farReach: 0.8, shadow: true},
-        scree: {cap: 500, reach: 0.7, shadow: false}
-    };
-    for (const [key, items] of Array.from(rockInstances(m.rocks))) {
+    const areasOf = new Map<string, RockPiece[]>();
+    for (const rock of m.rocks) {
+        const key = `${Math.floor(rock.x / ROCK_CLUSTER)},${Math.floor(rock.z / ROCK_CLUSTER)}`;
+        const list = areasOf.get(key) ?? [];
+        list.push(rock);
+        areasOf.set(key, list);
+    }
+    for (const [key, rocks] of Array.from(areasOf)) {
         yield;
-        const [style, variant] = key.split(":") as [RockStyle, string];
-        const detail = ROCK_DETAIL[style];
-        const how = reaches[style];
-        const far = how.farReach ? rockGeometry(cachedRock(style, Number(variant), detail[2])) : null;
-        addBatch(new LodBatch(`rock-${key}`, items, rockGeometry(cachedRock(style, Number(variant), detail[0])), far, bareRock, {cap: how.cap, reach: how.reach, farReach: how.farReach, shadow: how.shadow}));
+        const near = mergedRocks(rocks, 0);
+        if (!near) continue;
+        const centre = rocks.reduce((sum, rock) => sum.add(new Vector3(rock.x, rock.y, rock.z)), new Vector3()).multiplyScalar(1 / rocks.length);
+        // Seen near from as far as a crag is a few pixels' detail; far to the island view.
+        addPiece(new LodPiece(`rocks:${key}`, centre, near, mergedRocks(rocks, 2), bareRock, {near: 64, far: 320, shadow: true}));
     }
     const drifts = addBatch(new LodBatch("snow-drifts", m.drifts, shapes.snowDrift(2.4), null, snow, {cap: 60, reach: 1.6}));
     addBatch(new LodBatch("polar-drifts", m.polarDrifts, shapes.snowDrift(2.4, 2), null, snow, {cap: 60, reach: 1.6}));

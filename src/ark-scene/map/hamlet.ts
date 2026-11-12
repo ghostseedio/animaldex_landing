@@ -67,7 +67,8 @@ const FOOTPRINT = {
 } as const;
 /** The part that must be clear of every tree, rock and building: the house, the barn. */
 const CORE = {
-    house: {x0: -3.6, x1: 3.6, z0: -2.9, z1: 3.2},
+    // The cottage at its real size (decision 34: 6.5 × 5 m, the roof 0.4 m past the walls, the porch 1.6 m deep).
+    house: {x0: -4.3, x1: 4.3, z0: -3.4, z1: 3.7},
     smallholding: {x0: -4.8, x1: 4.8, z0: -3.8, z1: 3.8}
 } as const;
 
@@ -423,9 +424,10 @@ const spotCache = new Map<string, PlotSpots>();
  */
 const HOUSE_SPOTS: Array<{x: number; z: number; sizes: readonly SpotSize[]; where: PlotSpot["where"]}> = [
     ...[3.9, 5.5, 7.1].flatMap((z) => [-3.6, -2, 1.8, 3.4].map((x) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const}))),
-    ...[[3.9, -0.9], [3.9, 0.9], [-3.6, -1], [-3.6, 1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const})),
-    ...[[-2.6, -3.6], [-0.8, -3.6], [1, -3.6], [-1.8, -4.7]].map(([x, z]) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const})),
-    ...[[0.2, -4.7], [-3.6, 3], [3.9, -2.4], [-3.4, -2.6]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const}))
+    // Beside and behind the cottage, out from its walls (it grew to its real 6.5 × 5 m, decision 34).
+    ...[[4.2, -0.9], [4.2, 0.9], [-4.1, -1], [-4.1, 1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const})),
+    ...[[-2.6, -4.0], [-0.8, -4.0], [1, -4.0], [-1.8, -4.9]].map(([x, z]) => ({x, z, sizes: ["small", "medium", "large"] as const, where: "lawn" as const})),
+    ...[[0.2, -4.9], [-4.0, 3], [4.2, -2.6], [-4.0, -3.1]].map(([x, z]) => ({x, z, sizes: ["small", "medium"] as const, where: "lawn" as const}))
 ];
 /** How many outdoor spots each plot keeps (its capacity out of doors). */
 export const HOUSE_SPOT_COUNT = 20;
@@ -482,7 +484,8 @@ export function plotSpots(plot: HomePlot): PlotSpots {
         out = {
             plot,
             door: at(0, halfD + 0.3, frame.floor),
-            window: at(1.6 * k, halfD + 0.05, frame.floor + 1.2 * k),
+            // The front window right of the door (micro-scene.ts: at x 2.1 on the real-size cottage).
+            window: at(2.1 * k, halfD + 0.05, frame.floor + 1.2 * k),
             spots: take(HOUSE_SPOTS, HOUSE_SPOT_COUNT)
         };
     } else {

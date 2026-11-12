@@ -150,3 +150,23 @@ test("scenery rocks: no rock in a tree's trunk; every solid one (0.3 m and more)
     const listed = drawnRocks().filter((rock) => rock.source && rock.source !== "decor");
     assert.equal(listed.length, pieces.filter((piece) => piece.across >= SOLID_ACROSS).length);
 });
+
+// MARK: - Props
+
+import {sceneryProblems} from "@/ark-scene/scenery-check";
+import {termiteMoundFootprints} from "@/ark-scene/props/areas";
+
+test("scenery props: nothing floats and nothing stands in anything (rocks, trunks, logs, bales, mounds, the barn, the cottage)", () => {
+    const {floating, intersections, solids} = sceneryProblems();
+    assert.ok(solids > 600, `${solids} solids`);
+    const say = (p: {what: string; a: string; b?: string; x: number; z: number; by: number}) => `${p.what} ${p.a} ${p.b ?? ""} at ${p.x.toFixed(1)},${p.z.toFixed(1)} by ${p.by.toFixed(2)} m`;
+    assert.deepEqual(floating.slice(0, 10).map(say), [], `${floating.length} floating`);
+    assert.deepEqual(intersections.slice(0, 10).map(say), [], `${intersections.length} standing in each other`);
+});
+
+test("scenery props: every termite mound's footprint for the collisions lane (the savanna's always, the active ones with termites)", () => {
+    const mounds = termiteMoundFootprints();
+    assert.equal(mounds.filter((m) => m.always).length, 3);
+    assert.ok(mounds.filter((m) => !m.always).length >= 6);
+    for (const m of mounds) assert.ok(m.radius > 0.5 && m.top > heightAt(m.x, m.z) + 1, JSON.stringify(m));
+});

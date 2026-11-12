@@ -8,6 +8,8 @@
 import {writeFileSync} from "node:fs";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {treeBody, TreeSpacing, type TreeBody} from "@/ark-scene/tree-spacing";
+import {sceneryProblems} from "@/ark-scene/scenery-check";
+import {allMountainRocks} from "@/ark-scene/rock-layout";
 
 const arg = (name: string) => {
     const at = process.argv.indexOf(`--${name}`);
@@ -48,6 +50,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`trees drawn: ${t.trees} (decor ${t.decorTrees}, fill ${t.fillTrees}), shrubs ${t.shrubs}`);
     console.log(`overlapping pairs: ${t.pairs}  ${JSON.stringify(t.byKind)}  trees involved: ${t.treesInvolved}`);
     for (const p of t.worst.slice(0, list)) console.log(`  ${p.a} ${p.b} ${p.kind} ${p.depth.toFixed(2)} m ${p.kinds}`);
+    const props = sceneryProblems();
+    const count = (list: Array<{what: string}>) => list.reduce((m: Record<string, number>, x) => ((m[x.what] = (m[x.what] ?? 0) + 1), m), {});
+    console.log(`props (${props.solids} solids): floating ${props.floating.length} ${JSON.stringify(count(props.floating))}, standing in each other ${props.intersections.length} ${JSON.stringify(count(props.intersections))}`);
+    for (const p of [...props.floating, ...props.intersections].slice(0, list)) console.log(`  ${p.what} ${p.a} ${p.b ?? ""} at ${p.x.toFixed(1)},${p.z.toFixed(1)} by ${p.by.toFixed(2)} m`);
+    const rocks = allMountainRocks();
+    console.log(`mountain rocks: ${rocks.filter((r) => r.role === "crag").length} crags, ${rocks.filter((r) => r.role === "boulder").length} boulders, ${rocks.filter((r) => r.role === "scree").length} scree`);
     const out = arg("json");
-    if (out) writeFileSync(out, JSON.stringify({trees: {...t, worst: t.worst.slice(0, 50)}}, null, 2));
+    if (out) writeFileSync(out, JSON.stringify({trees: {...t, worst: t.worst.slice(0, 50)}, props: {solids: props.solids, floating: props.floating.length, intersections: props.intersections.length, byKind: {...count(props.floating), ...count(props.intersections)}}}, null, 2));
 }

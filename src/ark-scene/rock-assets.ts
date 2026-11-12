@@ -15,7 +15,8 @@
 import manifest from "@/ark-scene/assets-manifest.json";
 import rockAttach from "../../public/ark/assets/v1/rocks/attach.json";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
-import {sampleGround, zoneAt} from "@/ark-scene/world";
+import {baseOutline, cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, rockAttachRows, tiltedBox} from "@/ark-scene/rock-shapes";
+import {heightAt, sampleGround, zoneAt} from "@/ark-scene/world";
 
 type RockInfo = {kind: string; height: number; bounds: {min: [number, number, number]; max: [number, number, number]}; lod_distances: [number, number, number]; lods: Array<{level: "lod0" | "lod1" | "lod2"; file: string; tris: number; doubleSided: boolean}>};
 type Row = {tag: string; p: [number, number, number]; n: [number, number, number]; size: [number, number]; spot?: string};
@@ -26,8 +27,47 @@ const ATTACH = rockAttach as unknown as Record<string, Row[]>;
 /** The rock assets this mapping uses (cliff faces, scree, pebbles and stalagmites are for other places). */
 export const ROCK_ASSET_IDS = ["boulder-a", "boulder-b", "boulder-cluster-a", "boulder-cluster-b", "boulder-mossy-a", "boulder-cluster-mossy-a", "boulder-cluster-barnacle-a", "boulder-cluster-barnacle-b", "tide-pool-rock-a", "tide-pool-rock-b"].filter((id) => ASSETS[id]);
 
+/**
+ * The decor's rocks on the mountain and the ice are made in code (scenery lane, the motion 100x pass: `rock-shapes.ts`
+ * boulders and slabs, angular like the mountain's crags, not the asset set's round boulders): "gen-<style>-<variant>".
+ * Their levels of detail are the shape's own meshes ("gen:<style>:<variant>:<detail>"), built, not loaded.
+ */
+const GENERATED = /^gen-(boulder|slab)-(\d+)$/;
+
+/** How many of each style's shapes the decor's rocks use. */
+const DECOR_SHAPES = {boulder: 3, slab: 2} as const;
+
+function generated(id: string): {style: "boulder" | "slab"; variant: number} | null {
+    const m = GENERATED.exec(id);
+    return m ? {style: m[1] as "boulder" | "slab", variant: Number(m[2])} : null;
+}
+
+const generatedInfo = new Map<string, RockInfo>();
+
 export function rockAssetInfo(id: string): RockInfo {
-    return ASSETS[id];
+    const made = generated(id);
+    if (!made) return ASSETS[id];
+    let info = generatedInfo.get(id);
+    if (!info) {
+        const detail = ROCK_DETAIL[made.style];
+        const near = cachedRock(made.style, made.variant, detail[0]);
+        info = {
+            kind: made.style,
+            height: near.bounds.max[1],
+            bounds: near.bounds,
+            // The asset boulders' own distances.
+            lod_distances: [14.4, 31, 76],
+            lods: (["lod0", "lod1", "lod2"] as const).map((level, k) => ({level, file: `gen:${made.style}:${made.variant}:${detail[k]}`, tris: cachedRock(made.style, made.variant, detail[k]).triangles, doubleSided: false}))
+        };
+        generatedInfo.set(id, info);
+    }
+    return info;
+}
+
+/** A level's file that is a rock made here: its shape and detail (`asset-rocks.ts` builds it instead of loading). */
+export function generatedRockFile(file: string): {style: "boulder" | "slab"; variant: number; detail: number} | null {
+    const m = /^gen:(boulder|slab):(\d+):(\d+)$/.exec(file);
+    return m ? {style: m[1] as "boulder" | "slab", variant: Number(m[2]), detail: Number(m[3])} : null;
 }
 
 /** The procedural rock's footprint at scale 1 (vegetation.ts rock(): about 1.9 × 1.6 m across). */
@@ -43,7 +83,7 @@ function pick(list: string[], r: number): string {
     return usable[Math.min(Math.floor(r * usable.length), usable.length - 1)];
 }
 
-export type RockPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number};
+export type RockPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number; /** Tilted to lie along its slope (scenery lane): its up. */ up?: [number, number, number]};
 
 type RockItem = {kind: string; x: number; y: number; z: number; scale: number; rotation: number};
 
@@ -59,25 +99,86 @@ export function rockAssetFor(item: RockItem): RockPlacement | null {
         id = r < 0.45 ? pick(["tide-pool-rock-a", "tide-pool-rock-b"], unit(item.x, item.z, 6)) : r < 0.8 ? pick(["boulder-cluster-barnacle-a", "boulder-cluster-barnacle-b"], unit(item.x, item.z, 6)) : pick(["boulder-a", "boulder-b"], unit(item.x, item.z, 6));
     } else if (zone === "woodland" || zone === "rainforest" || zone === "wetland" || zone === "river_lake") {
         id = r < 0.45 ? "boulder-mossy-a" : r < 0.75 ? "boulder-cluster-mossy-a" : pick(["boulder-a", "boulder-b"], unit(item.x, item.z, 6));
+    } else if (zone === "mountains" || zone === "polar") {
+        // The mountain's and the ice's rocks: broken blocks and shelves made here, like the crags round them.
+        // Five shapes (three boulders, two slabs; each a draw call per level in use), turned, leaned and sized apiece.
+        const style = r < 0.72 ? "boulder" : "slab";
+        const shapes = Math.min(DECOR_SHAPES[style], ROCK_VARIANTS[style]);
+        id = `gen-${style}-${Math.min(Math.floor(unit(item.x, item.z, 6) * shapes), shapes - 1)}`;
     } else {
         id = r < 0.55 ? pick(["boulder-a", "boulder-b"], unit(item.x, item.z, 6)) : pick(["boulder-cluster-a", "boulder-cluster-b"], unit(item.x, item.z, 6));
     }
     if (!id) return null;
-    const b = ASSETS[id].bounds;
+    const b = rockAssetInfo(id).bounds;
     const footprint = ((b.max[0] - b.min[0]) + (b.max[2] - b.min[2])) / 2;
     const scale = (OLD_FOOTPRINT * item.scale) / footprint;
-    return {id, x: item.x, y: item.y - DECOR_SINK, z: item.z, yaw: item.rotation, scale};
+    // Leaned most of the way with its slope; a rock that would still hang over the downhill side lies fully along it.
+    let up = lieAlong(item.x, item.z, footprint * scale * 0.4, LEAN);
+    let placed = seat(item, b, scale, up);
+    if (!placed.seated) {
+        up = lieAlong(item.x, item.z, footprint * scale * 0.4, 1);
+        placed = seat(item, b, scale, up);
+    }
+    // On a cliff's edge even that hangs over: deeper in, the rock showing through the ground there.
+    if (!placed.seated) placed = seat(item, b, scale, up, 0.9);
+    return {id, x: item.x, y: placed.y, z: item.z, yaw: item.rotation, scale, up};
+}
+
+/** How much a rock leans with its ground (scenery lane): most of the way, as a rock that has settled on a slope. */
+const LEAN = 0.75;
+
+/** The ground's slope under a rock (over `reach` m), leaned into by LEAN: the rock's up. */
+function lieAlong(x: number, z: number, reach: number, lean: number): [number, number, number] {
+    const e = Math.max(reach, 0.5);
+    const dx = (heightAt(x + e, z) - heightAt(x - e, z)) / (2 * e);
+    const dz = (heightAt(x, z + e) - heightAt(x, z - e)) / (2 * e);
+    const l = Math.hypot(dx, 1, dz);
+    const u = [(-dx / l) * lean, 1 - lean + (1 / l) * lean, (-dz / l) * lean];
+    const m = Math.hypot(u[0], u[1], u[2]);
+    return [u[0] / m, u[1] / m, u[2] / m];
+}
+
+/** A placed rock's box as the map keeps rocks (`map/rocks.ts`, the decor's trees): turned, the tilt folded in. */
+export function rockBox(placement: RockPlacement): {x: number; z: number; cos: number; sin: number; hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number} {
+    const b = rockAssetInfo(placement.id).bounds;
+    return {x: placement.x, z: placement.z, cos: Math.cos(placement.yaw), sin: Math.sin(placement.yaw), ...tiltedBox(b, placement.scale, placement.up ?? [0, 1, 0], placement.yaw, placement.y)};
+}
+
+/** A placed rock's base outline (world), every point of which is in the ground (`scenery-check.ts`). */
+export function rockBase(placement: RockPlacement): Array<[number, number, number]> {
+    const b = rockAssetInfo(placement.id).bounds;
+    return baseOutline(b, placement.scale, placement.up ?? [0, 1, 0], placement.yaw, 0.85).map(([dx, dy, dz]) => [placement.x + dx, placement.y + dy, placement.z + dz]);
+}
+
+/**
+ * Where a decor rock's origin goes so it sits into its slope (scenery lane): leaned with the ground (`lieAlong`), then
+ * sunk until every point of its base's outline is under the ground by a few centimetres, so no edge hangs over the
+ * downhill side; never higher than the decor's own sink, never sunk past `SINK_MOST` of its height (a rock on a cliff
+ * keeps showing).
+ */
+const SINK_MOST = 0.55;
+
+function seat(item: RockItem, b: {min: [number, number, number]; max: [number, number, number]}, scale: number, up: [number, number, number], most = SINK_MOST): {y: number; seated: boolean} {
+    const ground = heightAt(item.x, item.z);
+    let need = 0;
+    for (const [dx, dy, dz] of baseOutline(b, scale, up, item.rotation, 0.85)) need = Math.max(need, ground + dy - heightAt(item.x + dx, item.z + dz) + 0.04);
+    const deepest = ground - most * b.max[1] * scale;
+    const y = Math.min(item.y - DECOR_SINK, ground - need);
+    return {y: Math.max(y, Math.min(item.y - DECOR_SINK, deepest)), seated: y >= deepest};
 }
 
 export type RockAttach = {tag: string; spot: string; position: {x: number; y: number; z: number}; normal: {x: number; y: number; z: number}; size: [number, number]};
 
 /** A placed rock's attach points (attach.json, measured on the drawn lod0 surface), in the world. */
 export function rockAttachPoints(placement: RockPlacement): RockAttach[] {
-    const rows = ATTACH[placement.id] ?? [];
-    const c = Math.cos(placement.yaw);
-    const s = Math.sin(placement.yaw);
-    // three.js turns about +y by yaw: x' = x cos + z sin, z' = -x sin + z cos.
-    const turn = (v: [number, number, number]) => ({x: v[0] * c + v[2] * s, y: v[1], z: -v[0] * s + v[2] * c});
+    const made = generated(placement.id);
+    const rows: Row[] = made ? rockAttachRows(made.style, made.variant) : ATTACH[placement.id] ?? [];
+    // The renderer's tilt then turn (three.js turns about +y by yaw: x' = x cos + z sin, z' = -x sin + z cos).
+    const rotate = orient(placement.up ?? [0, 1, 0], placement.yaw);
+    const turn = (v: [number, number, number]) => {
+        const [x, y, z] = rotate(v[0], v[1], v[2]);
+        return {x, y, z};
+    };
     return rows.map((row) => {
         const p = turn(row.p);
         return {
@@ -99,7 +200,7 @@ export function rockFaceToward(placement: RockPlacement, angle: number, up: numb
     const points = rockAttachPoints(placement);
     const want = {x: Math.sin(angle) * (1 - up), y: up, z: Math.cos(angle) * (1 - up)};
     // The rock's half-width in the world: a face this near its middle is inside a cluster, among its own stones.
-    const b = ASSETS[placement.id].bounds;
+    const b = rockAssetInfo(placement.id).bounds;
     const half = (((b.max[0] - b.min[0]) + (b.max[2] - b.min[2])) / 4) * placement.scale;
     const facts = points.map((point) => {
         const d = {x: point.position.x - placement.x, y: point.position.y - placement.y, z: point.position.z - placement.z};

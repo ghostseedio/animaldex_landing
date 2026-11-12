@@ -14,7 +14,8 @@
  */
 
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {cachedRock, ROCK_DETAIL, ROCK_VARIANTS, type RockStyle} from "@/ark-scene/rock-shapes";
+import {cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, tiltedBox, type RockStyle} from "@/ark-scene/rock-shapes";
+import {allMounds, moundFoot} from "@/ark-scene/mounds";
 import {snowCover} from "@/ark-scene/snow";
 import {treeBody} from "@/ark-scene/tree-spacing";
 import {fbm, heightAt, riverDistance, sampleGround, seeded, smoothstep, ZONE_SITES, zoneAt} from "@/ark-scene/world";
@@ -51,26 +52,6 @@ function normalAt(x: number, z: number): [number, number, number] {
     const dz = (heightAt(x, z + STEP) - heightAt(x, z - STEP)) / (2 * STEP);
     const l = Math.hypot(dx, 1, dz);
     return [-dx / l, 1 / l, -dz / l];
-}
-
-/** Rotation of (x, y, z) by the tilt-then-turn the renderer composes: quaternion(up) · quaternion(yaw about y). */
-function orient(up: [number, number, number], yaw: number): (x: number, y: number, z: number) => [number, number, number] {
-    const c = Math.cos(yaw);
-    const s = Math.sin(yaw);
-    // The shortest arc from +y to `up` (three's setFromUnitVectors), as a matrix.
-    const [ux, uy, uz] = up;
-    const k = 1 / (1 + uy);
-    const m = [
-        [uy + uz * uz * k, ux, -ux * uz * k],
-        [-ux, uy, -uz],
-        [-ux * uz * k, uz, uy + ux * ux * k]
-    ];
-    return (x, y, z) => {
-        // Turn about y first (three: x' = x cos + z sin, z' = -x sin + z cos), then tilt.
-        const tx = x * c + z * s;
-        const tz = -x * s + z * c;
-        return [m[0][0] * tx + m[0][1] * y + m[0][2] * tz, m[1][0] * tx + m[1][1] * y + m[1][2] * tz, m[2][0] * tx + m[2][1] * y + m[2][2] * tz];
-    };
 }
 
 /** The rock's footprint corners and middle, its base's points in the world for an origin at height 0. */
@@ -113,10 +94,13 @@ class Grid {
             else this.cells.set(key, [o]);
         }
     }
+    /** Whether a circle reaches any obstacle: every cell the circle covers (an obstacle is listed in each cell it covers). */
     hits(x: number, z: number, r: number): boolean {
-        const i = Math.floor(x / this.size);
-        const j = Math.floor(z / this.size);
-        for (const o of this.cells.get(`${i},${j}`) ?? []) if (Math.hypot(o.x - x, o.z - z) < o.r + r) return true;
+        for (let i = Math.floor((x - r) / this.size); i <= Math.floor((x + r) / this.size); i++) {
+            for (let j = Math.floor((z - r) / this.size); j <= Math.floor((z + r) / this.size); j++) {
+                for (const o of this.cells.get(`${i},${j}`) ?? []) if (Math.hypot(o.x - x, o.z - z) < o.r + r) return true;
+            }
+        }
         return false;
     }
 }
@@ -135,6 +119,8 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
     }
     const decorRocks = new Grid(4);
     for (const item of worldDecor()) if (item.kind === "rock") decorRocks.add({x: item.x, z: item.z, r: 0.9 * item.scale});
+    // The termite mounds keep their ground too.
+    for (const mound of allMounds()) decorRocks.add({x: mound.x, z: mound.z, r: moundFoot(mound)});
     const placed = new Grid(6);
     const site = ZONE_SITES.mountains;
     const clearOf = (x: number, z: number, r: number) => !trunks.hits(x, z, r) && !decorRocks.hits(x, z, r) && !placed.hits(x, z, r) && Math.hypot(x - site.x, z - site.z) > site.clearing + 2 + r && riverDistance(x, z) > 4 + r;
@@ -180,9 +166,12 @@ export function mountainRocks(): {crags: RockPiece[]; boulders: RockPiece[]; scr
             // As big as the spot allows: a tree's trunk or another rock near, and the crag is a smaller one.
             // Bigger where the ground is steeper (the rock the slope is made of shows most there).
             const full = (1.2 + 1.8 * sizeRoll * sizeRoll) * (0.85 + 0.6 * smoothstep(0.2, 0.6, slope));
-            const scale = [1, 0.75, 0.55].map((f) => full * f).find((size) => clearOf(x, z, 1.6 * size));
+            // Its reach: the furthest its blocks go from its middle (a crag of four blocks is wider than one).
+            const b = cachedRock("crag", variant, ROCK_DETAIL.crag[0]).bounds;
+            const extent = Math.hypot(Math.max(-b.min[0], b.max[0]), Math.max(-b.min[2], b.max[2]));
+            const scale = [1, 0.75, 0.55].map((f) => full * f).find((size) => clearOf(x, z, extent * size));
             if (scale === undefined) continue;
-            const r = 1.6 * scale;
+            const r = extent * scale;
             // Along the contour: the crag's long side (its x) across the slope.
             const fall = Math.hypot(n[0], n[2]) || 1;
             const contour = [-n[2] / fall, n[0] / fall];
@@ -288,24 +277,7 @@ export function allMountainRocks(): RockPiece[] {
  * into the box): half-extents along its x and z, its foot and top.
  */
 export function pieceBox(piece: RockPiece): {hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number} {
-    const b = cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds;
-    const rotate = orient(piece.up, piece.yaw);
-    const c = Math.cos(piece.yaw);
-    const s = Math.sin(piece.yaw);
-    let hx0 = Infinity, hx1 = -Infinity, hz0 = Infinity, hz1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    for (const x of [b.min[0], b.max[0]]) for (const y of [b.min[1], b.max[1]]) for (const z of [b.min[2], b.max[2]]) {
-        const [dx, dy, dz] = rotate(x * piece.scale, y * piece.scale, z * piece.scale);
-        // Into the frame map/rocks.ts uses: local x = dx cos − dz sin, local z = dx sin + dz cos.
-        const lx = dx * c - dz * s;
-        const lz = dx * s + dz * c;
-        hx0 = Math.min(hx0, lx);
-        hx1 = Math.max(hx1, lx);
-        hz0 = Math.min(hz0, lz);
-        hz1 = Math.max(hz1, lz);
-        y0 = Math.min(y0, piece.y + dy);
-        y1 = Math.max(y1, piece.y + dy);
-    }
-    return {hx0, hx1, hz0, hz1, y0, y1};
+    return tiltedBox(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds, piece.scale, piece.up, piece.yaw, piece.y);
 }
 
 /** A rock-space point of the piece in the world (the renderer's matrix, by hand). */

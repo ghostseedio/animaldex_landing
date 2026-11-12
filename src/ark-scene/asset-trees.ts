@@ -288,9 +288,10 @@ export class AssetTrees {
             const d2 = entry.distances[2] * Math.max(this.reach, CARD_REACH_MIN);
             for (const instance of entry.instances) {
                 if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
-                // A tree's levels hand over at distances for its own size (decision 34: trees at their real heights,
-                // twice the library's and more): a 40 m emergent keeps its detail as far as it looks the same size.
-                const size = Math.max(instance.scale, 1);
+                // A tree's levels hand over further for a bigger tree (decision 34: trees at their real heights, twice
+                // the library's and more), by the square root of its size: a 40 m emergent keeps its detail further, and
+                // each asset's trees stay in few levels (each level in use is a draw call).
+                const size = Math.sqrt(Math.max(instance.scale, 1));
                 if (entry.near) {
                     const across = Math.hypot(instance.x - camera.x, instance.z - camera.z);
                     const above = camera.y - instance.y;

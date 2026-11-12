@@ -254,6 +254,11 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
         items = [...worldDecor(), ...forestFill()];
         rocks = drawnRocks();
         for (const rock of rocks) rockOf.set(`${rock.x},${rock.z}`, rock);
+        // The mountain's crags and boulders (scenery lane, rock-layout.ts): their tops too, to bask and perch on.
+        for (const rock of rocks) {
+            if (!rock.source || rock.source === "decor") continue;
+            add({tag: "rock_top", x: rock.x, y: rock.y1, z: rock.z, ...UP, yaw: 0, size: [0.02, Math.min(rock.hx1 - rock.hx0, rock.hz1 - rock.hz0) * 0.7], zone: surface(rock.x, rock.z).zone});
+        }
     }));
     tasks.push(chunked(() => items.length, 60, (i) => {
         const item = items[i];

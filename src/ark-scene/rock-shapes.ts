@@ -192,10 +192,11 @@ const RECIPES: Record<RockStyle, Recipe> = {
 
 /** The stone's tones (linear-ish rgb before the material's lift): grey granite, warmer sandstone. */
 const STONE: Record<RockStyle, [number, number, number]> = {
-    boulder: [0.135, 0.128, 0.117],
-    crag: [0.145, 0.136, 0.122],
-    slab: [0.155, 0.142, 0.122],
-    scree: [0.14, 0.134, 0.124]
+    // A touch darker and warmer than bare grey: the mountain's own rock (terrain.ts) round them.
+    boulder: [0.118, 0.109, 0.096],
+    crag: [0.124, 0.113, 0.098],
+    slab: [0.132, 0.12, 0.1],
+    scree: [0.122, 0.114, 0.102]
 };
 
 /** How far an ellipsoid of these radii reaches along a unit direction (its support). */
@@ -456,9 +457,26 @@ export function rockMesh(style: RockStyle, variant: number, detail: number): Roc
             max[k] = Math.max(max[k], p[i + k]);
         }
     }
-    const sequence = new Uint32Array(faces * 3);
-    for (let i = 0; i < sequence.length; i++) sequence[i] = i;
-    return {positions: outP, normals: outN, colors: outC, index: sequence, bounds: {min, max}, triangles: faces};
+    // Shared again where corners agree (the same vertex, the same normal): a joint face's corners are one vertex each.
+    const seen = new Map<string, number>();
+    const index2 = new Uint32Array(faces * 3);
+    const keepP: number[] = [];
+    const keepN: number[] = [];
+    const keepC: number[] = [];
+    for (let c = 0; c < faces * 3; c++) {
+        const o = c * 3;
+        const key = `${index[c]}:${Math.round(outN[o] * 1e4)},${Math.round(outN[o + 1] * 1e4)},${Math.round(outN[o + 2] * 1e4)}`;
+        let id = seen.get(key);
+        if (id === undefined) {
+            id = keepP.length / 3;
+            seen.set(key, id);
+            keepP.push(outP[o], outP[o + 1], outP[o + 2]);
+            keepN.push(outN[o], outN[o + 1], outN[o + 2]);
+            keepC.push(outC[o], outC[o + 1], outC[o + 2]);
+        }
+        index2[c] = id;
+    }
+    return {positions: new Float32Array(keepP), normals: new Float32Array(keepN), colors: new Float32Array(keepC), index: index2, bounds: {min, max}, triangles: faces};
 }
 
 /** Faces meeting at more than this (radians) keep their own normals: a joint's edge. */
@@ -480,7 +498,144 @@ export function cachedRock(style: RockStyle, variant: number, detail: number): R
 }
 
 /** How many shapes of each style the island draws (each a mesh per detail; every rock of the style is one of them). */
-export const ROCK_VARIANTS: Record<RockStyle, number> = {boulder: 5, crag: 4, slab: 3, scree: 3};
+export const ROCK_VARIANTS: Record<RockStyle, number> = {boulder: 6, crag: 8, slab: 3, scree: 4};
 
 /** The detail of each level of detail (near, middle, far). */
 export const ROCK_DETAIL: Record<RockStyle, [number, number, number]> = {boulder: [3, 2, 1], crag: [3, 2, 1], slab: [3, 2, 1], scree: [1, 1, 0]};
+
+// MARK: - Attach points on a rock made here
+
+/** An attach point on a rock's own surface (asset space, as `public/ark/assets/v1/rocks/attach.json` rows). */
+export type RockAttachRow = {tag: "ledge" | "rock_face"; p: [number, number, number]; n: [number, number, number]; size: [number, number]; spot: "rocks"};
+
+const rowCache = new Map<string, RockAttachRow[]>();
+
+/**
+ * Where small animals can sit on a rock made here, on its drawn near mesh: ledges (the highest faces that look up,
+ * spread apart) and rock faces (the sides, round the rock and at two heights). Deterministic, in the rock's own metres.
+ */
+export function rockAttachRows(style: RockStyle, variant: number): RockAttachRow[] {
+    const key = `${style}:${variant}`;
+    const known = rowCache.get(key);
+    if (known) return known;
+    const mesh = cachedRock(style, variant, ROCK_DETAIL[style][0]);
+    const p = mesh.positions;
+    const height = mesh.bounds.max[1];
+    const width = Math.min(mesh.bounds.max[0] - mesh.bounds.min[0], mesh.bounds.max[2] - mesh.bounds.min[2]);
+    const cx = (mesh.bounds.min[0] + mesh.bounds.max[0]) / 2;
+    const cz = (mesh.bounds.min[2] + mesh.bounds.max[2]) / 2;
+    type Face = {c: [number, number, number]; n: [number, number, number]; area: number};
+    const faces: Face[] = [];
+    const ix = mesh.index;
+    for (let t = 0; t < ix.length; t += 3) {
+        const [a, b, c] = [ix[t] * 3, ix[t + 1] * 3, ix[t + 2] * 3];
+        const e1 = [p[b] - p[a], p[b + 1] - p[a + 1], p[b + 2] - p[a + 2]];
+        const e2 = [p[c] - p[a], p[c + 1] - p[a + 1], p[c + 2] - p[a + 2]];
+        const n = [e1[1] * e2[2] - e1[2] * e2[1], e1[2] * e2[0] - e1[0] * e2[2], e1[0] * e2[1] - e1[1] * e2[0]];
+        const l = Math.hypot(n[0], n[1], n[2]);
+        if (l < 1e-9) continue;
+        faces.push({c: [(p[a] + p[b] + p[c]) / 3, (p[a + 1] + p[b + 1] + p[c + 1]) / 3, (p[a + 2] + p[b + 2] + p[c + 2]) / 3], n: [n[0] / l, n[1] / l, n[2] / l], area: l / 2});
+    }
+    const r3 = (v: number) => Math.round(v * 1000) / 1000;
+    const row = (tag: RockAttachRow["tag"], f: Face, size: number): RockAttachRow => ({tag, p: [r3(f.c[0]), r3(f.c[1]), r3(f.c[2])], n: [r3(f.n[0]), r3(f.n[1]), r3(f.n[2])], size: [0.005, r3(size)], spot: "rocks"});
+    const rows: RockAttachRow[] = [];
+    // Ledges: up-facing faces high on the rock, highest first, at least a third of its width apart.
+    const tops = faces.filter((f) => f.n[1] >= 0.8 && f.c[1] > height * 0.55).sort((a, b) => b.c[1] - a.c[1]);
+    const ledges: Face[] = [];
+    for (const f of tops) {
+        if (ledges.length >= 4) break;
+        if (ledges.some((l) => Math.hypot(l.c[0] - f.c[0], l.c[2] - f.c[2]) < width / 3)) continue;
+        ledges.push(f);
+        rows.push(row("ledge", f, Math.min(1.2, width * 0.55)));
+    }
+    // Rock faces: the sides, in eight directions round the rock's middle at a low and a high band, the face nearest
+    // each direction that looks out.
+    for (const band of [0.3, 0.65]) {
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            const want = [Math.cos(a), Math.sin(a)];
+            let best: Face | null = null;
+            let score = -Infinity;
+            for (const f of faces) {
+                if (Math.abs(f.n[1]) > 0.5 || Math.abs(f.c[1] / height - band) > 0.18) continue;
+                const dx = f.c[0] - cx;
+                const dz = f.c[2] - cz;
+                const l = Math.hypot(dx, dz) || 1;
+                const outward = (f.n[0] * dx + f.n[2] * dz) / l;
+                if (outward < 0.3) continue;
+                const s = (dx * want[0] + dz * want[1]) / l + 0.3 * outward;
+                if (s > score) {
+                    score = s;
+                    best = f;
+                }
+            }
+            if (best && !rows.some((r) => r.tag === "rock_face" && Math.hypot(r.p[0] - best!.c[0], r.p[1] - best!.c[1], r.p[2] - best!.c[2]) < 0.05)) rows.push(row("rock_face", best, Math.min(0.8, height * 0.5)));
+        }
+    }
+    rowCache.set(key, rows);
+    return rows;
+}
+
+// MARK: - Placing a rock (shared by the layout, the decor's rocks, the map's boxes and the checks)
+
+/** Rotation of (x, y, z) by the tilt-then-turn the renderer composes: quaternion(up) · quaternion(yaw about y). */
+export function orient(up: [number, number, number], yaw: number): (x: number, y: number, z: number) => [number, number, number] {
+    const c = Math.cos(yaw);
+    const s = Math.sin(yaw);
+    // The shortest arc from +y to `up` (three's setFromUnitVectors), as a matrix (Rodrigues).
+    const [ux, uy, uz] = up;
+    const k = 1 / (1 + uy);
+    const m00 = uy + uz * uz * k;
+    const m02 = -ux * uz * k;
+    const m22 = uy + ux * ux * k;
+    return (x, y, z) => {
+        // Turn about y first (three: x' = x cos + z sin, z' = -x sin + z cos), then tilt.
+        const tx = x * c + z * s;
+        const tz = -x * s + z * c;
+        return [m00 * tx + ux * y + m02 * tz, -ux * tx + uy * y - uz * tz, m02 * tx + uz * y + m22 * tz];
+    };
+}
+
+/**
+ * A placed rock's box as `map/rocks.ts` keeps rocks: in its turned frame on the ground (local x = dx cos − dz sin,
+ * local z = dx sin + dz cos), the tilt folded in; its foot and top (world).
+ */
+export function tiltedBox(bounds: {min: number[]; max: number[]}, scale: number, up: [number, number, number], yaw: number, y: number): {hx0: number; hx1: number; hz0: number; hz1: number; y0: number; y1: number} {
+    const rotate = orient(up, yaw);
+    const c = Math.cos(yaw);
+    const s = Math.sin(yaw);
+    let hx0 = Infinity, hx1 = -Infinity, hz0 = Infinity, hz1 = -Infinity;
+    for (const x of [bounds.min[0], bounds.max[0]]) for (const yy of [bounds.min[1], bounds.max[1]]) for (const z of [bounds.min[2], bounds.max[2]]) {
+        const [dx, , dz] = rotate(x * scale, yy * scale, z * scale);
+        const lx = dx * c - dz * s;
+        const lz = dx * s + dz * c;
+        hx0 = Math.min(hx0, lx);
+        hx1 = Math.max(hx1, lx);
+        hz0 = Math.min(hz0, lz);
+        hz1 = Math.max(hz1, lz);
+    }
+    // Its top and foot: of the ellipsoid inside its bounds (a rock is round-ish), not the turned box's corners, which
+    // stand well above a leaning rock's real top. Unleaned, exactly the bounds' top and bottom.
+    const half = [0, 1, 2].map((k) => ((bounds.max[k] - bounds.min[k]) / 2) * scale);
+    const [, cy] = rotate(((bounds.min[0] + bounds.max[0]) / 2) * scale, ((bounds.min[1] + bounds.max[1]) / 2) * scale, ((bounds.min[2] + bounds.max[2]) / 2) * scale);
+    // The world y of each of the rock's own axes (the rotation's second row).
+    const ax = rotate(1, 0, 0)[1];
+    const ay = rotate(0, 1, 0)[1];
+    const az = rotate(0, 0, 1)[1];
+    const reach = Math.hypot(half[0] * ax, half[1] * ay, half[2] * az);
+    return {hx0, hx1, hz0, hz1, y0: y + cy - reach, y1: y + cy + reach};
+}
+
+/** A rock's base outline (an ellipse inside its bounds' footprint, `inset` of it) and middle, offsets from its origin. */
+export function baseOutline(bounds: {min: number[]; max: number[]}, scale: number, up: [number, number, number], yaw: number, inset = 0.9): Array<[number, number, number]> {
+    const rotate = orient(up, yaw);
+    const points: Array<[number, number, number]> = [];
+    for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const x = ((Math.cos(a) * 0.5 + 0.5) * (bounds.max[0] - bounds.min[0]) + bounds.min[0]) * inset;
+        const z = ((Math.sin(a) * 0.5 + 0.5) * (bounds.max[2] - bounds.min[2]) + bounds.min[2]) * inset;
+        points.push(rotate(x * scale, 0, z * scale));
+    }
+    points.push(rotate(((bounds.min[0] + bounds.max[0]) / 2) * scale, 0, ((bounds.min[2] + bounds.max[2]) / 2) * scale));
+    return points;
+}

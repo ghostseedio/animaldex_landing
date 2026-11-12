@@ -184,11 +184,45 @@ export function treesClash(a: TreeBody, b: TreeBody): Clash | null {
     return null;
 }
 
-/** A spatial index of placed trees: each listed in every cell its crown and trunk reach. */
+/** A rock as drawn, for trees to keep their trunks out of (`map/rocks.ts` DrawnRock's shape: its turned box). */
+export type RockBox = {x: number; z: number; cos: number; sin: number; hx0: number; hx1: number; hz0: number; hz1: number};
+
+/** Does a circle (x, z, r) reach into a rock's box (its own frame: local x = dx cos − dz sin, local z = dx sin + dz cos)? */
+function inBox(rock: RockBox, x: number, z: number, r: number): boolean {
+    const dx = x - rock.x;
+    const dz = z - rock.z;
+    const lx = dx * rock.cos - dz * rock.sin;
+    const lz = dx * rock.sin + dz * rock.cos;
+    return lx > rock.hx0 - r && lx < rock.hx1 + r && lz > rock.hz0 - r && lz < rock.hz1 + r;
+}
+
+/** A spatial index of placed trees (each listed in every cell its crown and trunk reach), and of rocks to stay out of. */
 export class TreeSpacing {
     private readonly cells = new Map<number, TreeBody[]>();
+    private readonly rocks = new Map<number, RockBox[]>();
     private static readonly CELL = 6;
     readonly bodies: TreeBody[] = [];
+
+    /** A rock no trunk may stand in, and no shrub may grow out of. */
+    addRock(rock: RockBox) {
+        const c = TreeSpacing.CELL;
+        const reach = Math.hypot(Math.max(-rock.hx0, rock.hx1), Math.max(-rock.hz0, rock.hz1));
+        for (let i = Math.floor((rock.x - reach) / c); i <= Math.floor((rock.x + reach) / c); i++) for (let j = Math.floor((rock.z - reach) / c); j <= Math.floor((rock.z + reach) / c); j++) {
+            const key = TreeSpacing.key(i, j);
+            const list = this.rocks.get(key);
+            if (list) list.push(rock);
+            else this.rocks.set(key, [rock]);
+        }
+    }
+
+    /** Whether a tree's trunk (or a shrub's middle) stands in a rock. */
+    private inRock(tree: TreeBody): boolean {
+        const list = this.rocks.get(TreeSpacing.key(Math.floor(tree.x / TreeSpacing.CELL), Math.floor(tree.z / TreeSpacing.CELL)));
+        if (!list) return false;
+        // A trunk keeps a hand's width off the rock; a shrub's middle off it (its leaves may lean on the stone).
+        const r = tree.low ? 0.05 : tree.trunk + 0.15;
+        return list.some((rock) => inBox(rock, tree.x, tree.z, r));
+    }
 
     private static key(i: number, j: number): number {
         return (i + 4096) * 8192 + (j + 4096);
@@ -228,8 +262,9 @@ export class TreeSpacing {
         return out;
     }
 
-    /** Whether this tree would clash with any placed one. */
+    /** Whether this tree would clash with any placed one (or stand in a rock). */
     fits(tree: TreeBody): boolean {
+        if (this.inRock(tree)) return false;
         let ok = true;
         const seen = new Set<TreeBody>();
         this.span(tree, (key) => {

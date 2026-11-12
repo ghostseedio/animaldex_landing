@@ -160,8 +160,8 @@ export function cottageGeometry(style: CottageStyle = COTTAGE_STYLE): {house: Bu
         parts.push(shaded(box(0.13, 0.04, 0.13, C.light.x, C.light.y + 0.12, C.light.z + 0.1), new Color("#2f2a26")));
     }
     const windows: Array<{x: number; z: number; w: number; h: number; y: number; turn: number}> = [
-        {x: -1.75, z: halfD, w: 0.85, h: 0.75, y: 1.35, turn: 0},
-        {x: 1.8, z: halfD, w: 0.8, h: 0.75, y: 1.35, turn: 0},
+        {x: -2.05, z: halfD, w: 0.85, h: 0.75, y: 1.35, turn: 0},
+        {x: 2.1, z: halfD, w: 0.8, h: 0.75, y: 1.35, turn: 0},
         {x: halfW, z: 0.4, w: 0.8, h: 0.7, y: 1.4, turn: Math.PI / 2},
         {x: -halfW, z: -0.4, w: 0.8, h: 0.7, y: 1.4, turn: -Math.PI / 2},
         {x: 0.6, z: -halfD, w: 0.8, h: 0.7, y: 1.4, turn: Math.PI}

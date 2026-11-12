@@ -14,6 +14,13 @@
       "command": "node scripts/ark-intelligence-scenarios.mjs --out .ark-golden/ci/intel --seconds 6",
       "artifacts": ".ark-golden/ci/intel",
       "browser": true
+    },
+    {
+      "name": "scenery checks and numbers (tree overlaps, props floating or in each other, the mountain's rocks)",
+      "lane": "ark-scenery",
+      "requires": ["src/lib/ark-scenery.test.ts", "scripts/ark-scenery-metrics.mts"],
+      "command": "npx tsx --test src/lib/ark-scenery.test.ts && mkdir -p .ark-golden/ci/scenery && npx tsx scripts/ark-scenery-metrics.mts --json .ark-golden/ci/scenery/metrics.json",
+      "artifacts": ".ark-golden/ci/scenery"
     }
   ]
 }

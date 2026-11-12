@@ -18,7 +18,8 @@ import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js"
 import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
-import {rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {generatedRockFile, rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {cachedRock} from "@/ark-scene/rock-shapes";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 
@@ -44,8 +45,13 @@ export function rockMaterial(): MeshStandardMaterial {
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", "#include <common>\nvarying vec3 vRockW;\nvarying vec3 vRockN;")
             .replace("#include <worldpos_vertex>", `#include <worldpos_vertex>
+#ifdef USE_INSTANCING
 vRockW = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
-vRockN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);`);
+vRockN = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal);
+#else
+vRockW = (modelMatrix * vec4(transformed, 1.0)).xyz;
+vRockN = normalize(mat3(modelMatrix) * objectNormal);
+#endif`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying vec3 vRockW;
@@ -83,8 +89,9 @@ float rockWet = 0.0;`)
     rockWet = max(wet, envWetness * 0.7);
     c *= mix(1.0, 0.72, envWetness * (1.0 - wet));
     // High up, snow lying on the ledges and tops, in drifts that follow the rock's own grain.
-    float snowy = smoothstep(${ROCK_DUST_FROM.toFixed(1)}, ${ROCK_DUST_FULL.toFixed(1)}, w.y) * smoothstep(0.45, 0.8, n.y) * smoothstep(0.3, 0.6, arkFbm(w.xz * 1.7 + w.y * 0.6));
-    c = mix(c, vec3(0.86, 0.88, 0.9), clamp(snowy * 1.4, 0.0, 1.0));
+    // Only the flatter tops and ledges hold it, in patches; the faces stay rock (a dusted crag, not a white one).
+    float snowy = smoothstep(${ROCK_DUST_FROM.toFixed(1)}, ${ROCK_DUST_FULL.toFixed(1)}, w.y) * smoothstep(0.68, 0.92, n.y) * smoothstep(0.42, 0.62, arkFbm(w.xz * 1.7 + w.y * 0.6));
+    c = mix(c, vec3(0.86, 0.88, 0.9), clamp(snowy * 0.9, 0.0, 0.9));
     diffuseColor.rgb = c;
 }`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
@@ -99,6 +106,7 @@ export function rockGeometry(mesh: RockMesh): BufferGeometry {
     geometry.setAttribute("position", new BufferAttribute(mesh.positions, 3));
     geometry.setAttribute("normal", new BufferAttribute(mesh.normals, 3));
     geometry.setAttribute("color", new BufferAttribute(mesh.colors, 3));
+    geometry.setIndex(new BufferAttribute(mesh.index, 1));
     geometry.computeBoundingSphere();
     return geometry;
 }
@@ -151,11 +159,18 @@ export class AssetInstances {
             for (const lod of entry.info.lods) {
                 const level = lod.level as Level;
                 if (!LEVELS.includes(level)) continue;
-                jobs.push(loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
-                    let geometry: BufferGeometry | null = null;
-                    gltf.scene.traverse((object) => {
-                        if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
-                    });
+                // A rock made here (rock-assets.ts "gen:…"): its mesh is built, not loaded.
+                const made = generatedRockFile(lod.file);
+                const source: Promise<BufferGeometry | null> = made
+                    ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail)))
+                    : loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
+                          let found: BufferGeometry | null = null;
+                          gltf.scene.traverse((object) => {
+                              if (!found && (object as Mesh).isMesh) found = (object as Mesh).geometry as BufferGeometry;
+                          });
+                          return found;
+                      });
+                jobs.push(source.then((geometry) => {
                     if (!geometry) return;
                     const mesh = new InstancedMesh(geometry, lod.doubleSided ? this.materials.double : this.materials.front, entry.instances.length);
                     mesh.count = 0;
