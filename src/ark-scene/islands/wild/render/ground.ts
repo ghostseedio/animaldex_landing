@@ -46,6 +46,8 @@ export function freshWaterGeometry(ground: GroundArrays & {freshLevels: Float32A
 export type WildGround = GroundArrays & {
     /** Each vertex's fresh-water surface (NaN where there is none), for the lake's and the river's water. */
     freshLevels: Float32Array;
+    /** The same with no gaps (a bank vertex takes its neighbours' level, else 0): the ground shader's fresh bed. */
+    freshBed: Float32Array;
 };
 
 export function wildGroundArrays(): WildGround {
@@ -217,5 +219,27 @@ export function wildGroundArrays(): WildGround {
         normals[i * 3 + 1] /= l;
         normals[i * 3 + 2] /= l;
     }
-    return {size, positions, normals, uvs, index, colors, layers, layers2, rock, depth, freshLevels};
+    // The fresh water's surface under each vertex for the ground shader's bed (P2): its own level where it has one, else
+    // its neighbours' (so the level stays the water's across the bank's triangles, where the fresh weight crosses 0.5),
+    // else the fixed level (0: the sea's rule applies there anyway).
+    const freshBed = new Float32Array(count);
+    for (let row = 0; row < size; row++) {
+        for (let column = 0; column < size; column++) {
+            const i = row * size + column;
+            let level = freshLevels[i];
+            if (Number.isNaN(level)) {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        const rr = row + dr;
+                        const cc = column + dc;
+                        if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+                        const near = freshLevels[rr * size + cc];
+                        if (!Number.isNaN(near) && (Number.isNaN(level) || near > level)) level = near;
+                    }
+                }
+            }
+            freshBed[i] = Number.isNaN(level) ? 0 : level;
+        }
+    }
+    return {size, positions, normals, uvs, index, colors, layers, layers2, rock, depth, freshLevels, freshBed};
 }

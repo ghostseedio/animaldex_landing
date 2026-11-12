@@ -192,6 +192,18 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 - **`sea-depth.ts`:** `LAKE_SWIM_RADIUS` follows the switch. Its lake test `height < −0.9` still assumes a surface at 0; helper B fixes that against `freshLevelAt`.
 - **`grounding/drawn-ground.ts`:** `DRAWN_GROUND_SEGMENTS`, the grid and its kept heights follow the switch.
 - **`runtime/prebuild.ts`:** the worker URLs carry the world.
+- **P2, second half (W1b):**
+  - **The one sea** takes v2's depth field as it stands: the wild island's water material reads `halfSize` = TERRAIN_HALF (264) and the depth map from v2's ground arrays at build, and T3's town patch (`islandDepth`/`islandPatch`) lies outside v2's square (the town's square starts at x 363.6). Checked in stills: the lagoon and its crest, the drop-off and the strait read as before. On v2 the sea plane is 12 km across (v1 4 km): the whole views stand ~220 m up, so the frame's top meets the sea ~2.5 km out, past the old plane's edge.
+  - **The fresh-water bed:** the ground shader's bed rule (underwater tint, caustics, the dull wet bed) uses each vertex's own fresh level on v2: `GroundArrays.freshBed` (`render/ground.ts`, a bank vertex takes its neighbours' level) as the `arkFreshLevel` attribute, which `streaming/ground-tiles.ts` copies only when the arrays carry it. Program key `ark-ground-3-snow52-bed`. v1's shader text, arrays and tiles are unchanged (hashed).
+- **P6 (W1b):**
+  - `islands/index.ts` `ARK_ISLANDS.wild` is a getter: v1's record, or v2's (half 264, 10 chunks, 11.9 ha, `WILD_ISLAND.home`). `ARK_ISLANDS.town` is a getter too, its `archipelago` the town's origin in the world in use (v1 508.6, −210.7; v2 601.2, −249), memoised per world.
+  - **The default views** are a pure function now, `islands/views.ts` `wildHomeView(aspect, fov, town)`, with the frame per world in `wildFrame()`; `index.ts` homeView calls it. v1's numbers are today's, to the bit. v2:
+    - desktop: fits a 204 m circle round (−10, 22), moved 70 m toward the town, turned 45 % of the way to it (the town upper right), polar 1.15;
+    - upright phone: from 950 m whatever its width, aimed 130 m out from (−10, 0) toward the town, polar 0.9 (a little more from above): the island fills the lower part, the town the upper, and the town's far shore stays inside the low tier's 1,600 m map distance;
+    - the camera's reach is 1,000 m on v2 from the first frame (v1: 340, then 900 with the town);
+    - v2 opens on the two-island view: the town's place is known before it is built, so nothing moves when it joins.
+  - `src/lib/ark-wild-frame.test.ts` holds it: v1's records, v2's records, the desktop view holding the whole coast and the town's land, the phone's across the strait, and no chunk of either island out or hazed from the default views on high, medium and low.
+- **The reef on v2 (W1b, after P3):** `reef.ts` keeps its own patch reefs and the anemone and cleaning-station anchors round v2's reef site (−162, 154; 34 m), and on v2 adds the island generator's coral heads over the whole lagoon, its kelp in the cold north-west and its seagrass, each under the reef's own rules (corals on hard ground 1.9–10 m by depth band with their cover, seagrass 1.2–3.5 m, kelp reaching 0.4–1.2 m under the surface along the coast). v1's beach seagrass and cliff kelp (sections 3 and 4) are v1's only. The reef, its landmarks and the coast's cliffs drop on `onArkWorld`. v2: 5,023 items (v1 2,215).
 
 ### The split of the remaining work
 
@@ -221,6 +233,16 @@ Unchanged: `zoneAt`, the noise and hash functions, `regionCentre`.
 | Fresh water | At its own levels, the river descending; a lighter lake colour | A 6 m lake and a river from 21 m |
 | Attach points | Any body down to 0.1 mm (decision 55) on the island's points | The common rotifer |
 | The world switch | Inside `world.ts`: global state, live bindings, `onArkWorld`, v2 implies no hamlet | About 60 modules import `world.ts` directly; no parallel scene |
+| The fresh-water bed on v2 (W1b) | A per-vertex level (`freshBed`, attribute `arkFreshLevel`), over a uniform per mesh or sampling the depth map in the ground shader | The river descends from 21 m: one level per mesh is wrong; the attribute keeps v1's shader text and arrays as they are |
+| `ARK_ISLANDS` on v2 (W1b) | Getters on `arkWorld()` over a v2 twin record | Callers keep `ARK_ISLANDS.wild`/`.town`; the town's origin read at use, not at module load (the world is chosen after the module loads) |
+| The default views (W1b) | A pure `islands/views.ts` (`wildFrame`, `wildHomeView`) over keeping the math inside `mountArk` | Testable: the tests project the coast and the town through it and run Part B's streamer from its eye |
+| v2's desktop view (W1b) | 204 m circle round (−10, 22), 70 m toward the town, polar 1.15 | The whole 411 m island and the town's land in frame, the town upper right, as v1's composition |
+| v2's upright phone view (W1b) | 950 m out, aimed 130 m toward the town, polar 0.9 | Fitting the island's whole width puts the town's far shore past the low tier's 1,600 m map distance (hazed); this frames the island's width on a 390 × 557 canvas and keeps the town whole on every tier |
+| v2's camera reach (W1b) | 1,000 m from the first frame (v1 unchanged: 340, then 900) | The phone's default view is 950 m out; v2 is islands mode only |
+| v2 opens on the two-island view (W1b) | The town's origin is used before the town is built | No camera flight when the town joins a few seconds after the first frame |
+| v2's sea plane (W1b) | 12 km (v1 4 km) | The whole views stand ~220 m up; the old plane's corners showed at the top of the frame |
+| The reef on v2 (W1b) | The generator's lagoon-wide coral, kelp and seagrass through `reef.ts`, under its rules; the reef site's patch reefs and anchors kept | One path (`reef-render.ts`, `fish-schools.ts`, the map's landmarks) as A did the decor; the generator's own reef and kelp fields are v2's design |
+| The workbench renderer (W1b) | `islands/wild/render/index.ts` kept for now | `scripts/ark-wild.mts` and the visual baselines (`tests/ark-visual/wild/`) use it; it is not on the page's path (only `loadWildIsland`'s dynamic import). Drop it with those after v2 is the default |
 
 ## 10. Handover (W1, 2026-11-12): state, what is left, the next commands, the traps
 

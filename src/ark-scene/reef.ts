@@ -24,7 +24,8 @@
  *   the red out (the material, as the sea floor does).
  */
 
-import {ZONE_SITES, coastRadius, fbm, noise, sampleGround, seeded, smoothstep, type GroundSample} from "@/ark-scene/world";
+import {ZONE_SITES, arkWorld, coastRadius, fbm, hashString, noise, onArkWorld, sampleGround, seeded, smoothstep, type GroundSample} from "@/ark-scene/world";
+import {wildScenery} from "@/ark-scene/islands/wild/scenery";
 
 export const REEF_KINDS = ["branching", "table", "brain", "massive", "encrusting", "fan", "anemone", "barrel_sponge", "tube_sponge", "ball_sponge", "kelp", "seagrass"] as const;
 export type ReefKind = typeof REEF_KINDS[number];
@@ -241,6 +242,13 @@ export function reefLandmarks(): ReefLandmarks {
 
 let cached: ReefItem[] | null = null;
 
+// The world's switch (docs/ark/wild-island.md §8): the reef, its landmarks and the coast's cliffs are the world's own.
+onArkWorld(() => {
+    cached = null;
+    landmarks = null;
+    coastCliffs.clear();
+});
+
 /** Runtime prebuild hook (runtime/prebuild.ts): the same list, placed in the scenery worker before the mount. */
 export function primeReefGrowth(items: ReefItem[]): void {
     cached = items;
@@ -351,8 +359,11 @@ export function reefGrowth(): ReefItem[] {
         if (bed.depth >= CORAL_MIN_DEPTH) put("massive", marks.cleaning.x, marks.cleaning.z, bed, random, 1.6);
     }
 
+    // The bigger wild island (v2): beyond its reef site's patch reefs, the island's own lagoon, kelp and seagrass (5).
+    const v2 = arkWorld() === "v2";
+
     // 3. Seagrass off the beach: patchy meadows on its sand, 1.4–3.5 m, never in the swash.
-    {
+    if (!v2) {
         const random = seeded(55_2026);
         const beach = ZONE_SITES.seashore;
         const theta0 = Math.atan2(beach.z, beach.x);
@@ -376,7 +387,7 @@ export function reefGrowth(): ReefItem[] {
     }
 
     // 4. Kelp forests off the cliff coasts: on rock, 2.2–9 m, in stands with gaps; a few anemones and sponges at their feet.
-    {
+    if (!v2) {
         const random = seeded(31_2026);
         for (let theta = -Math.PI; theta < Math.PI; theta += 0.022) {
             if (coastCliff(theta) < 0.3) continue;
@@ -408,6 +419,47 @@ export function reefGrowth(): ReefItem[] {
                     put(roll > 0.975 ? "anemone" : "ball_sponge", x, z, bed, local);
                 }
             }
+        }
+    }
+
+    // 5. The bigger wild island (v2, P3's shared path): the island's generator (`islands/wild/scenery.ts`) lays its coral
+    // heads over the whole lagoon (its reef field), its kelp in the cold north-west (its kelp field) and its seagrass in
+    // the warm shallows; each becomes the reef's own, under the reef's rules here (corals on hard ground 1.9–10 m by
+    // depth band with their cover, seagrass 1.2–3.5 m, kelp reaching to 0.4–1.2 m under the surface along the coast).
+    // The reef site's patch reefs (1, 2) keep their circle; the generator's heads inside it are left to them.
+    if (v2) {
+        const half = 34;
+        for (const item of wildScenery()) {
+            if (item.kind !== "coral" && item.kind !== "kelp" && item.kind !== "seagrass") continue;
+            const {x, z} = item;
+            const local = seeded(hashString(`reef-v2:${item.kind}:${x.toFixed(2)},${z.toFixed(2)}`));
+            const ground = sampleGround(x, z);
+            if (item.kind === "kelp") {
+                const bed = bedFrom(x, z, ground, 0);
+                if (bed.depth < 2.2) continue;
+                const reach = bed.depth - 0.4 - local() * 0.8;
+                const variant = reach < 3.6 ? 0 : reach < 6 ? 1 : 2;
+                const along = -(Math.atan2(z, x) + Math.PI / 2) + (local() - 0.5) * 0.5;
+                items.push({kind: "kelp", variant, x, y: bed.height, z, scale: Math.min(Math.max(reach / KELP_HEIGHTS[variant], 0.7), 1.12), rotation: along, tilt: 0, color: colour("kelp", local()), depth: bed.depth, substrate: "rock"});
+                continue;
+            }
+            const bed = bedFrom(x, z, ground, bedSlope(x, z));
+            if (item.kind === "seagrass") {
+                if (bed.depth < 1.2 || bed.depth > 3.5) continue;
+                put("seagrass", x, z, bed, local);
+                continue;
+            }
+            if (Math.hypot(x - reef.x, z - reef.z) <= half || bed.depth < CORAL_MIN_DEPTH || bed.depth > 10) continue;
+            // A head on the lagoon's hard ground: the reef's framework where it is, else the generator's head is its own knoll.
+            const hard: SeaBed = bed.substrate === "sand" || bed.substrate === "rubble" ? {...bed, substrate: "reef"} : bed;
+            if (local() < 0.5) {
+                const ex = x + (local() - 0.5) * 0.6;
+                const ez = z + (local() - 0.5) * 0.6;
+                const under = bedFrom(ex, ez, sampleGround(ex, ez), bed.slope);
+                put("encrusting", ex, ez, {...under, substrate: hard.substrate}, local);
+            }
+            const band = BANDS.find((b) => hard.depth < b.to) ?? BANDS[BANDS.length - 1];
+            put(pick(band.mix, local()), x, z, hard, local);
         }
     }
 

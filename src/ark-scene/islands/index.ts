@@ -10,7 +10,7 @@
 
 import type {Group} from "three";
 import {arkWorld} from "@/ark-scene/world";
-import {wildReachToward} from "@/ark-scene/islands/wild/index";
+import {WILD_ISLAND, wildReachToward} from "@/ark-scene/islands/wild/index";
 
 export type ArkIslandId = "wild" | "town";
 
@@ -59,15 +59,28 @@ export function townWorldOrigin(wildReach = wildReachNow(), townReach = TOWN_REA
     return {x: Math.round(Math.cos(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10, z: Math.round(Math.sin(ARCHIPELAGO_TOWN_ANGLE) * distance * 10) / 10};
 }
 
+/** Today's wild island (v1). */
+const WILD_V1: ArkIslandDef = {id: "wild", half: WILD_HALF, chunks: 5, landHa: 2.38, archipelago: {x: 0, z: 0}, home: {target: [0, 0, 0], eye: [0, 160, 300]}};
+/** The bigger wild island (v2, `islands/wild/index.ts` WILD_ISLAND: 528 m, 10 × 10 chunks, 11.9 ha). */
+const WILD_V2: ArkIslandDef = {id: "wild", half: WILD_ISLAND.half, chunks: WILD_ISLAND.chunks, landHa: WILD_ISLAND.landHa, archipelago: {x: 0, z: 0}, home: WILD_ISLAND.home};
+const TOWN_HOME: ArkIslandDef["home"] = {target: [10, 0, -10], eye: [40, 190, 430]};
+/** The town's record per world (its origin moves out with the bigger wild island). */
+const townDefs = new Map<string, ArkIslandDef>();
+
+/**
+ * The islands in the world in use (P6, docs/ark/wild-island.md): `wild` is v1's or v2's record and the town's
+ * `archipelago` its origin across the strait from that island, both read at use (the world is chosen before the scene
+ * builds, after this module may have loaded).
+ */
 export const ARK_ISLANDS: Record<ArkIslandId, ArkIslandDef> = {
-    wild: {id: "wild", half: WILD_HALF, chunks: 5, landHa: 2.38, archipelago: {x: 0, z: 0}, home: {target: [0, 0, 0], eye: [0, 160, 300]}},
-    town: {
-        id: "town",
-        half: TOWN_HALF_M,
-        chunks: 9,
-        landHa: 12.4,
-        archipelago: townWorldOrigin(),
-        home: {target: [10, 0, -10], eye: [40, 190, 430]}
+    get wild(): ArkIslandDef {
+        return arkWorld() === "v2" ? WILD_V2 : WILD_V1;
+    },
+    get town(): ArkIslandDef {
+        const world = arkWorld();
+        let def = townDefs.get(world);
+        if (!def) townDefs.set(world, (def = {id: "town", half: TOWN_HALF_M, chunks: 9, landHa: 12.4, archipelago: townWorldOrigin(), home: TOWN_HOME}));
+        return def;
     }
 };
 

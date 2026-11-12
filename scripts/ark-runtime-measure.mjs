@@ -19,6 +19,9 @@
  * The models come from the public model bucket (read only), as on the site; `--network 4g` throttles them to a
  * mid 4G link (9 Mbit/s down, 60 ms) through the DevTools protocol.
  *
+ * Part C: `--world v2` mounts the bigger wild island (`world.ts` reads `?world=v2` before anything builds; with
+ * `--islands`, the town across the strait from it).
+ *
  * Part B (docs/ark/streaming.md): `--render <m>` / `--render-scale <share>` set the render distance; `--tour` takes
  * the camera down into each region and back; `--mem <GB>` is the app's memory figure; `--models-dir <dir>` serves a
  * local model set (the far-model pack, the far-ark files: scripts/ark-model-pack.mjs) at /models/ after
@@ -251,7 +254,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}`, {waitUntil: "commit", timeout: 120_000});
         // `--repeat`: this load only primes the page's caches; the measured one is a second visit in the same browser.
