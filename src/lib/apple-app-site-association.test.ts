@@ -16,8 +16,8 @@ test("the Ark opens in the app: /ark, /ark/*, /u/*/ark, and their /id twins (Ark
     }
 });
 
-test("every prefixed locale the site has is covered (src/i18n-config.ts)", () => {
-    const config = readFileSync(fileURLToPath(new URL("../i18n-config.ts", import.meta.url)), "utf8");
+test("every prefixed locale the site has is covered (src/i18n.ts)", () => {
+    const config = readFileSync(fileURLToPath(new URL("../i18n.ts", import.meta.url)), "utf8");
     const list = config.match(/locales:\s*\[([^\]]*)\]/)?.[1] ?? "";
     const locales = list.split(",").map((item) => item.trim().replace(/^['"]|['"]$/g, "")).filter(Boolean);
     const fallback = config.match(/defaultLocale:\s*['"]([a-z-]+)['"]/)?.[1];

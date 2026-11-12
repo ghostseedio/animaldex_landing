@@ -4402,18 +4402,7 @@
       "eats": "Eats, by its field guide",
       "eatenBy": "Eaten by",
       "see": "See the {animal} in the Ark",
-      "seeArk": "See the Ark",
-      "trendLine": "Since {date}: {changes}.",
-      "trendNone": "None have come aboard or left since {date}.",
-      "trendArrived": "{count} came aboard",
-      "trendBorn": "{count} born",
-      "trendEaten": "{count} eaten",
-      "trendDiedOld": "{count} died of old age",
-      "trendStarved": "{count} starved",
-      "trendSeparator": ", ",
-      "arkEats": "On the Ark it can eat",
-      "arkEatenBy": "On the Ark it can be eaten by",
-      "foodChain": "See who eats whom in the Ark"
+      "seeArk": "See the Ark"
     },
     "founders": {
       "settings": {
@@ -4615,6 +4604,21 @@
       "linkHow": "How the Ark works",
       "linkFood": "Who eats whom",
       "linkTalk": "Talk to an animal"
+    }
+  },
+  "species": {
+    "inTheArk": {
+      "trendLine": "Since {date}: {changes}.",
+      "trendNone": "None have come aboard or left since {date}.",
+      "trendArrived": "{count} came aboard",
+      "trendBorn": "{count} born",
+      "trendEaten": "{count} eaten",
+      "trendDiedOld": "{count} died of old age",
+      "trendStarved": "{count} starved",
+      "trendSeparator": ", ",
+      "arkEats": "On the Ark it can eat",
+      "arkEatenBy": "On the Ark it can be eaten by",
+      "foodChain": "See who eats whom in the Ark"
     }
   }
 }

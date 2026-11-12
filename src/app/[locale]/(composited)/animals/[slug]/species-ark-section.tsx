@@ -9,6 +9,7 @@ import {arkSpeciesTrendLine, arkSpeciesTrendOf} from "@/lib/ark-species-trend";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getArkWords} from "@/loaders/ark-words";
+import {getPageWords, word} from "@/loaders/page-words";
 
 /**
  * "In the Ark" on a species page (AnimalDex docs/ark-next.md, Part 4d): how
@@ -33,8 +34,12 @@ import {getArkWords} from "@/loaders/ark-words";
 const REVALIDATE_SECONDS = 86400;
 
 /** What the section shows, read on the server with the page (null: say nothing about the Ark). */
+/** The section's own words beyond the Ark's (`species.inTheArk.*`: species pages are English only). */
+export type SpeciesArkExtraWords = {arkEats: string; arkEatenBy: string; foodChain: string};
+
 export type SpeciesArk = {
     words: ArkWords;
+    extra?: SpeciesArkExtraWords;
     count: number;
     focusSlug: string;
     canBoard: boolean | null;
@@ -52,12 +57,13 @@ function trendDate(since: string): string {
 }
 
 export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; speciesProfileId: string | null}): Promise<SpeciesArk | null> {
-    const [{words}, snapshot, links, canBoard, read] = await Promise.all([
+    const [{words}, snapshot, links, canBoard, read, inTheArk] = await Promise.all([
         getArkWords("en"),
         readPublicArk(REVALIDATE_SECONDS),
         speciesProfileId ? readArkFoodLinks(speciesProfileId, REVALIDATE_SECONDS) : Promise.resolve(null),
         readArkCanBoard({speciesProfileId, slug}, REVALIDATE_SECONDS),
-        readArkFoodChainAboard(REVALIDATE_SECONDS)
+        readArkFoodChainAboard(REVALIDATE_SECONDS),
+        getPageWords("en", "species.inTheArk")
     ]);
     // Before the Ark is open (or when it cannot be read) the page says nothing about it.
     if (!snapshot) return null;
@@ -69,21 +75,21 @@ export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; sp
         read && kind ? readArkFoodChainEntry(read, kind, REVALIDATE_SECONDS).catch(() => null) : Promise.resolve(null),
         read ? readArkSpeciesTrends(read.aboard, TREND_DAYS, REVALIDATE_SECONDS).catch(() => null) : Promise.resolve(null)
     ]);
-    const copy = words.species as ArkWords["species"] & Partial<Record<string, string>>;
     const keys = [speciesProfileId, ...(read && kind ? arkFoodChainLooks(read.aboard, kind) : [])].filter((value): value is string => Boolean(value));
-    const trend = trends && keys.length && copy.trendLine
+    const trend = trends && keys.length && word(inTheArk, "trendLine")
         ? arkSpeciesTrendLine(arkSpeciesTrendOf(trends.trends, keys), {
-            line: copy.trendLine,
-            none: copy.trendNone ?? "",
-            arrived: copy.trendArrived ?? "",
-            born: copy.trendBorn ?? "",
-            eaten: copy.trendEaten ?? "",
-            diedOld: copy.trendDiedOld ?? "",
-            starved: copy.trendStarved ?? "",
-            separator: copy.trendSeparator ?? ", "
+            line: word(inTheArk, "trendLine"),
+            none: word(inTheArk, "trendNone"),
+            arrived: word(inTheArk, "trendArrived"),
+            born: word(inTheArk, "trendBorn"),
+            eaten: word(inTheArk, "trendEaten"),
+            diedOld: word(inTheArk, "trendDiedOld"),
+            starved: word(inTheArk, "trendStarved"),
+            separator: word(inTheArk, "trendSeparator") || ", "
         }, trendDate(trends.since), "en")
         : null;
-    return {words, count: aboard.count, focusSlug: aboard.animals[0]?.model_slug ?? slug, canBoard, links: links ?? [], foodChain, trend};
+    const extra = {arkEats: word(inTheArk, "arkEats"), arkEatenBy: word(inTheArk, "arkEatenBy"), foodChain: word(inTheArk, "foodChain")};
+    return {words, extra, count: aboard.count, focusSlug: aboard.animals[0]?.model_slug ?? slug, canBoard, links: links ?? [], foodChain, trend};
 }
 
 type Props = {slug: string; speciesProfileId: string | null; name: string; ark: SpeciesArk | null};
@@ -139,7 +145,7 @@ export default function SpeciesArkSection({slug, speciesProfileId, name, ark}: P
     const copy = words.species;
     const eats = ark.links.filter((link) => link.direction === "eats");
     const eatenBy = ark.links.filter((link) => link.direction === "eatenBy");
-    const extra = copy as ArkWords["species"] & Partial<Record<string, string>>;
+    const extra = ark.extra ?? {arkEats: "", arkEatenBy: "", foodChain: ""};
     const chain = ark.foodChain && !ark.foodChain.kept ? ark.foodChain : null;
     const arkPrey = chain ? uniqueSpecies(chain.eats.flatMap((rule) => rule.prey)) : [];
     const arkPredators = chain ? uniqueSpecies(chain.eatenBy.map((item) => item.predator)) : [];

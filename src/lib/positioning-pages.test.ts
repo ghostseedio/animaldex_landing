@@ -253,9 +253,10 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
 
     const en = JSON.parse(readRepo("src/data/locales/en.json"));
     const id = JSON.parse(readRepo("src/data/locales/id.json"));
-    // SPEC section 1 (Nov 2026): the main line, with the slogan kept everywhere.
-    assert.equal(en.meta.fullTitle, "AnimalDex: Take Any Idea to an Animal. Every Animal Has a Lesson");
-    assert.match(id.meta.fullTitle, /Setiap Hewan Punya Pelajaran$/);
+    // The owner's positioning (2026-11-12, SEO lane S3): catch real animals, AI companions, a 3D world.
+    assert.equal(en.meta.fullTitle, "AnimalDex: Catch Real Animals as AI Companions in a 3D World");
+    assert.match(id.meta.fullTitle, /Teman AI di Dunia 3D$/);
+    assert.ok(en.meta.description.length <= 160 && id.meta.description.length <= 160, "the default descriptions fit a result");
     assert.equal(en.home.heroIdeaLead, "Take any idea to an animal.");
     // Hero A, the test's control, keeps its words.
     assert.equal(en.home.heroTalkLead, "Talk to animals.");
@@ -273,7 +274,9 @@ test("the Pokemon-like search landings keep their topic but never describe Anima
     const collector = getCollectorPage("pokemon-like-animal-game")!;
     assert.match(answer.heroTitle, /Pokemon-like/i, "the page still answers the search");
     assert.match(answer.metaDescription, /take any idea to a real animal/);
-    assert.match(collector.description, /take any idea to a real animal/);
+    // SEO lane S3, decision 246: the collector intro says what AnimalDex is now.
+    assert.match(collector.description, /real animals/);
+    assert.match(collector.description, /AI companions/);
     for (const text of [
         answer.metaDescription, answer.intro, ...answer.directAnswer, ...answer.comparisonAnimalDex, ...answer.whoItsFor,
         ...answer.faq.map((item) => item.answer), collector.heroTitle, collector.description,

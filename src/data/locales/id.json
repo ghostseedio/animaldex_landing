@@ -4310,18 +4310,7 @@
       "eats": "Makanannya, menurut panduan lapangannya",
       "eatenBy": "Dimangsa oleh",
       "see": "Lihat {animal} di Ark",
-      "seeArk": "Lihat Ark",
-      "trendLine": "Sejak {date}: {changes}.",
-      "trendNone": "Tidak ada yang naik ke Ark atau pergi sejak {date}.",
-      "trendArrived": "{count} naik ke Ark",
-      "trendBorn": "{count} lahir",
-      "trendEaten": "{count} dimangsa",
-      "trendDiedOld": "{count} mati karena usia",
-      "trendStarved": "{count} mati kelaparan",
-      "trendSeparator": ", ",
-      "arkEats": "Di Ark ia bisa memakan",
-      "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
-      "foodChain": "Lihat siapa memangsa siapa di Ark"
+      "seeArk": "Lihat Ark"
     },
     "herd": {
       "badge": "{count}",
@@ -4600,6 +4589,21 @@
       "linkHow": "Cara kerja Ark",
       "linkFood": "Siapa memangsa siapa",
       "linkTalk": "Bicara dengan hewan"
+    }
+  },
+  "species": {
+    "inTheArk": {
+      "trendLine": "Sejak {date}: {changes}.",
+      "trendNone": "Tidak ada yang naik ke Ark atau pergi sejak {date}.",
+      "trendArrived": "{count} naik ke Ark",
+      "trendBorn": "{count} lahir",
+      "trendEaten": "{count} dimangsa",
+      "trendDiedOld": "{count} mati karena usia",
+      "trendStarved": "{count} mati kelaparan",
+      "trendSeparator": ", ",
+      "arkEats": "Di Ark ia bisa memakan",
+      "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
+      "foodChain": "Lihat siapa memangsa siapa di Ark"
     }
   }
 }
