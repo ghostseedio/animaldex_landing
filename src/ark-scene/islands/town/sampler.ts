@@ -17,6 +17,7 @@
 
 import type {ArkZone} from "@/ark-scene/types";
 import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
+import type {ColliderSet} from "@/ark-scene/collide/colliders";
 import {inPoly, type Poly} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townHeight, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, townPlan} from "@/ark-scene/islands/town/plan";
@@ -108,7 +109,7 @@ export type TownSampler = ArkWorldSampler & {readonly half: number; readonly cen
  * The town's behaviour world for these open enclosures (the snapshot's names, or the launch set), in the world frame:
  * the town's local frame moved to `origin` (decision 141: one world, the town across the strait). (0, 0): its own frame.
  */
-export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}): TownSampler {
+export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}, colliders?: ColliderSet): TownSampler {
     const plan = townPlan();
     const half = TOWN_HALF;
     const ox = origin.x;
@@ -226,6 +227,8 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         version,
         half,
         centre: {x: ox, z: oz},
+        // (L5: the walk grid's clearance and its paths exact against the town's own colliders, `colliders.ts`.)
+        ...(colliders ? {colliders} : {}),
         heightAt: (x, z) => townHeight(x - ox, z - oz),
         isWater: (x, z) => {
             const g = sampleTownGround(x - ox, z - oz);

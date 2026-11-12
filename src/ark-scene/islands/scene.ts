@@ -160,7 +160,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             pose.z = origin.z + c.z + (lz - c.z) * lo;
         },
         sampler: () => {
-            if (!sampler || sampler.key !== openKey) sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin)};
+            if (!sampler || sampler.key !== openKey) {
+                if (!collidersMemo || collidersMemo.key !== openKey) collidersMemo = {key: openKey, set: townColliderSet(openKey ? openKey.split(",") : [], origin)};
+                sampler = {key: openKey, sampler: townWorldSampler(openKey ? openKey.split(",") : [], origin, collidersMemo.set)};
+            }
             return sampler.sampler;
         },
         colliders: () => {

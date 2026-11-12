@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, kthNearest, withLazyRoost, amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SAFE_MOST, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, kthNearest, withLazyRoost, amphibious, awakeAt, bodyRadiusOf, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SAFE_MOST, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {hashString} from "@/ark-scene/world";
 import {eats} from "@/ark-scene/food-links";
@@ -319,7 +319,10 @@ test("walkers stay on walkable ground, swimmers in the water", () => {
             const leg = trip.legs.find((l) => l.mode === "ground");
             if (leg && pose.moving && pose.beat === "walk" && !amphibious(i.profile)) {
                 walking++;
-                if (!world.nav.walkable(pose.x, pose.z, maxSlopeOf(i.animal)) && Math.hypot(pose.x - trip.from.x, pose.z - trip.from.z) > 3 && Math.hypot(pose.x - trip.to.x, pose.z - trip.to.z) > 3) off.push(i.a.model_slug);
+                // (Collisions, motion pass L5: a path keeps its body's width off everything solid, exactly, not the walk grid's
+                // margins round it, so it may go where a margin is (by a trunk, through a gate): walkable or fitting its body.)
+                const fitsThere = world.nav.walkable(pose.x, pose.z, maxSlopeOf(i.animal)) || world.nav.fits(pose.x, pose.z, bodyRadiusOf(i.animal, i.profile.slug) * 0.95, maxSlopeOf(i.animal));
+                if (!fitsThere && Math.hypot(pose.x - trip.from.x, pose.z - trip.from.z) > 3 && Math.hypot(pose.x - trip.to.x, pose.z - trip.to.z) > 3) off.push(i.a.model_slug);
             }
             if (i.profile.move === "swim" && pose.beat === "swim" && world.sampler.heightAt(pose.x, pose.z) < 0) assert.ok(pose.y <= 0.01, `${i.a.model_slug} out of the water`);
         }

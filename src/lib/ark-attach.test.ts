@@ -125,8 +125,9 @@ test("attach: the trees' points sit on the trees as the renderer places them, on
     assert.ok(points.length > 3000, `${points.length} tree points`);
     const byTag: Record<string, number> = {};
     for (const point of points) byTag[point.tag] = (byTag[point.tag] ?? 0) + 1;
-    // (Merged: leaf 1,164, bark 618, branch 824; floors about 15% under.)
-    assert.ok(byTag.leaf > 990 && byTag.bark > 525 && byTag.branch > 700, JSON.stringify(byTag));
+    // (Merged: leaf 1,164, bark 618, branch 824; with L6's sparse open country (a7cee4a7) leaf 984, bark 528, branch
+    // 704; floors about 15% under those.)
+    assert.ok(byTag.leaf > 835 && byTag.bark > 450 && byTag.branch > 600, JSON.stringify(byTag));
     const position = new Vector3();
     const rotation = new Quaternion();
     const scale = new Vector3();

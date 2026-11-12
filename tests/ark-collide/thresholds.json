@@ -1,0 +1,7 @@
+{
+ "about": "The collision audit's CI limits (scripts/ark-collide-audit.mts --fixture --hours 2 --step 4: the synthetic Ark of every species and the hamlet at 1x, 6,526 animals, 4,516 measured, 7.7 M body samples). Pass-throughs and fence crossings stay at 0 (a climber on its climb, a bird coming down onto a fence's top or perched along it, goes over it). Cliffs and overlaps at most today's (2026-11-12, ark-collisions); the overlaps are mostly sleepers in their postures (perched ones are held where they are). A change that makes them worse fails the PR; a deliberate change updates them here, with why.",
+ "passThrough": 0,
+ "fenceCrossings": 0,
+ "cliffs": 2466,
+ "overlaps": 2037453
+}

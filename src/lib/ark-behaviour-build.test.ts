@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import test from "node:test";
 import {NavGrid, navGridBuild, type NavCells} from "@/ark-scene/behaviour-nav";
+import {colliderSetFor} from "@/ark-scene/collide/colliders";
 import {ScheduleWorldBuild, scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {ATTACH_TAGS, POND_STONES, ROCK_MARGIN, resetWorldSampler, sceneSampler, sceneSamplerTasks, setBehaviourHomePlots, worldSampler, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
@@ -157,7 +158,8 @@ function referencePlaces(): {version: string; points: Map<AttachTag, AttachPoint
         }
     }
     const counts = ATTACH_TAGS.map((tag) => points.get(tag)?.length ?? 0).join(".");
-    return {version: `scene:${items.length}:${scenery.length}:${counts}:rocks${drawnRocks().length}`, points};
+    // (Collisions, motion pass L5: the colliders' own version follows, so any change of them rebuilds the walk grid.)
+    return {version: `scene:${items.length}:${scenery.length}:${counts}:rocks${drawnRocks().length}:${colliderSetFor(null).version}`, points};
 }
 
 const bytes = (cells: Pick<NavCells, "walk" | "steep" | "depth" | "height">) => [cells.walk, cells.steep, cells.depth, cells.height].map((a) => Buffer.from(a.buffer, a.byteOffset, a.byteLength));
