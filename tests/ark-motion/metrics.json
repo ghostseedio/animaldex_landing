@@ -20,13 +20,74 @@
       "requires": [
         "src/lib/ark-motion-l2.test.ts",
         "src/lib/ark-motion-l2-drivers.test.ts",
-        "src/lib/ark-motion-l2-thresholds.ts"
+        "src/lib/ark-motion-l2-thresholds.ts",
+        "scripts/ark-motion-l2-metrics.mts"
       ],
       "tests": [
         "src/lib/ark-motion-l2.test.ts",
         "src/lib/ark-motion-l2-drivers.test.ts"
       ],
-      "metricTests": "metric|upstroke|insect|slip|surface|wing-beat|tail beat|bank"
+      "metricTests": "metric|upstroke|insect|slip|surface|wing-beat|tail beat|bank",
+      "command": "npx tsx scripts/ark-motion-l2-metrics.mts --json | tail -1 > \"$ARK_MOTION_METRICS_DIR/l2.json\"",
+      "output": "$ARK_MOTION_METRICS_DIR/l2.json",
+      "metrics": [
+        {
+          "id": "wingbeat_slope",
+          "label": "Wing-beat rate against length, fitted exponent (651 birds; literature about -0.96)",
+          "path": "wingbeat.slopeAfter",
+          "min": -1.1,
+          "max": -0.8,
+          "before": -0.598
+        },
+        {
+          "id": "bank_error",
+          "label": "Bank against the coordinated turn tan φ = vω/g, worst error (rad)",
+          "path": "bank.maxErrorRadAfter",
+          "max": 0.01,
+          "before": 0.397
+        },
+        {
+          "id": "burst_ratio",
+          "label": "Tail-beat burst over cruise (dolphin; follows speed 2.2x)",
+          "path": "tailbeat.burstOverCruiseAfter",
+          "min": 1.5,
+          "before": 1
+        },
+        {
+          "id": "surface_breaches",
+          "label": "Up-and-down swimmers breaking the surface not breathing (of 39)",
+          "path": "surface.breachingAfter",
+          "max": 0,
+          "before": 35
+        },
+        {
+          "id": "upstroke_mallard",
+          "label": "Upstroke span over downstroke, mallard rig",
+          "path": "rigs.upstrokeOverDownstrokeSpan.mallard.after",
+          "max": 0.85,
+          "before": 1
+        },
+        {
+          "id": "upstroke_eagle",
+          "label": "Upstroke span over downstroke, golden eagle rig",
+          "path": "rigs.upstrokeOverDownstrokeSpan.golden-eagle.after",
+          "max": 0.85,
+          "before": 1
+        },
+        {
+          "id": "head_roll",
+          "label": "Head roll in a 0.5 rad bank (rad)",
+          "path": "rigs.headRollIn05RadBank.after",
+          "max": 0.25,
+          "before": 0.5
+        },
+        {
+          "id": "legless_slip",
+          "label": "Lateral undulation slip (share of the swing)",
+          "path": "rigs.lateralSlipModel",
+          "max": 0.02
+        }
+      ]
     },
     {
       "name": "l6-scenery",
