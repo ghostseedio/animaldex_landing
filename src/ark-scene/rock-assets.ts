@@ -111,7 +111,7 @@ export function rockAssetFor(item: RockItem): RockPlacement | null {
     if (!id) return null;
     const b = rockAssetInfo(id).bounds;
     const footprint = ((b.max[0] - b.min[0]) + (b.max[2] - b.min[2])) / 2;
-    const scale = (OLD_FOOTPRINT * item.scale) / footprint;
+    const scale = ((OLD_FOOTPRINT * item.scale) / footprint) * (TRIMMED.get(`${Math.round(item.x * 100)},${Math.round(item.z * 100)}`) ?? 1);
     // Leaned most of the way with its slope; a rock that would still hang over the downhill side lies fully along it.
     let up = lieAlong(item.x, item.z, footprint * scale * 0.4, LEAN);
     let placed = seat(item, b, scale, up);
@@ -123,6 +123,14 @@ export function rockAssetFor(item: RockItem): RockPlacement | null {
     if (!placed.seated) placed = seat(item, b, scale, up, 0.9);
     return {id, x: item.x, y: placed.y, z: item.z, yaw: item.rotation, scale, up};
 }
+
+/**
+ * Rocks drawn smaller than the decor's size for them (decision 155), by where they stand (centimetres): the two shore
+ * rocks by the rainforest's coast, `rock:decor265` and `rock:decor276`, leaned onto their steep shelf, closed the nook
+ * of water west of them on a mallard's dabbling (every straight way north or east ran into them). Three quarters of
+ * their size opens it; they still lean with the shelf, sit in it and stand out of the water.
+ */
+const TRIMMED: ReadonlyMap<string, number> = new Map([["-7735,1701", 0.75], ["-7740,1678", 0.75]]);
 
 /** How much a rock leans with its ground (scenery lane): most of the way, as a rock that has settled on a slope. */
 const LEAN = 0.75;
