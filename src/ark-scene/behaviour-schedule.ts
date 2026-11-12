@@ -1405,7 +1405,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         const path = world.nav.path(a, b, "swim", 0.3, 900, MAX_SLOPE, bodyR);
         const last = path[path.length - 1];
         // (Two waters no water joins, for one that walks too: it walks between them, round the fences, never swims over land.)
-        if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01 && world.nav.colliders && walks(profile) && !aquatic(profile)) {
+        if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01 && world.nav.colliders && (amphibious(profile) || (walks(profile) && !aquatic(profile)))) {
             ground(a, b, "walk");
             return;
         }
