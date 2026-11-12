@@ -188,7 +188,8 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
-import {arkWorld, heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {warmShaders} from "@/ark-scene/runtime/load";
@@ -240,22 +241,7 @@ const LOAD_NEAR_WITHIN = 48;
  */
 const STREAM_RECHECK_SECONDS = 2;
 const FOV = 38;
-/** True scale (motion pass §3): the camera's reach is `runtime/camera.ts` CAMERA_RANGE. */
-const MAX_DISTANCE = CAMERA_RANGE.far;
-/** With two islands in the world, the camera reaches out over both (the town's whole view is ~600 m off). */
-const ISLANDS_MAX_DISTANCE = 900;
-
-/**
- * The wild island's whole view, per world (P6, docs/ark/wild-island.md): the circle it fits (wide screens, upright
- * phones), where it looks (wide, upright), how far it moves toward the town with two islands, and the camera's reach.
- * v1: today's (home growth's 96 and 114 m round a point south-east of the lake). v2: the bigger island's land
- * (x −217…198, z −199…195, `islands/wild/index.ts` wildLandBounds) with the town about 651 m out; it is islands
- * mode only, so the camera has the two islands' reach from the start (the town joins after the first frame).
- */
-function wildFrame(): {radius: number; radiusTall: number; target: {x: number; z: number}; targetTall: {x: number; z: number}; toTown: number; reach: number} {
-    if (arkWorld() === "v2") return {radius: 196, radiusTall: 236, target: {x: -10, z: 22}, targetTall: {x: -6, z: 30}, toTown: 70, reach: ISLANDS_MAX_DISTANCE};
-    return {radius: 96, radiusTall: 114, target: {x: 12, z: 14}, targetTall: {x: 16, z: 24}, toTown: 45, reach: MAX_DISTANCE};
-}
+// (True scale, motion pass §3: the camera's reach is `runtime/camera.ts` CAMERA_RANGE, per world in `islands/views.ts` wildFrame.)
 const ENTRANCE_SECONDS = 1.6;
 const RIPPLE_SECONDS = 2.6;
 /** A clutch being laid, in a replay. */
@@ -774,7 +760,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.minDistance = CAMERA_RANGE.near;
     // (Part C: with two islands the camera reaches out over both: the town's whole view is ~600 m off. The v2 island
     // is islands mode only: the reach is the two islands' from the start.)
-    let maxDistance = island ? ISLANDS_MAX_DISTANCE : wildFrame().reach;
+    let maxDistance = island ? wildFrame().reachIslands : wildFrame().reach;
     controls.maxDistance = maxDistance;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
@@ -4201,30 +4187,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     // MARK: Part C, two islands in one world (decisions 141-142)
 
-    /** The default view with the town beside the wild island: turned toward it and raised a little, the town across the strait. */
-    const twoIslandHome = (aspect: number, distance: number) => {
-        const o = island!.origin;
-        const length = Math.hypot(o.x, o.z) || 1;
-        const ux = o.x / length;
-        const uz = o.z / length;
-        // Upright phones (decision 154): the narrow frame looks straight across the strait, the wild island the subject in
-        // the middle and the town in the upper part beyond it. Wider screens: turned 45% of the way, the town upper right.
-        const tall = aspect < 0.8;
-        const frame = wildFrame();
-        const tx = tall ? frame.targetTall.x : frame.target.x + ux * frame.toTown;
-        const tz = tall ? frame.targetTall.z : frame.target.z + uz * frame.toTown;
-        let fx = ux * 0.45;
-        let fz = -1 + (uz + 1) * 0.45;
-        if (tall) {
-            const dx = o.x - tx;
-            const dz = o.z - tz;
-            const d = Math.hypot(dx, dz) || 1;
-            fx = dx / d;
-            fz = dz / d;
-        }
-        const azimuth = Math.atan2(-fx, -fz);
-        return {target: new Vector3(tx, 0, tz), distance: distance * (tall ? 1.0 : 1.12), polar: 1.15, azimuth};
-    };
     /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
     const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
         const o = island!.origin;
@@ -4261,23 +4223,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {target: new Vector3(island.home.x, 0, island.home.z), distance: distance * 0.94, polar: 1.0, azimuth: 0};
     };
 
-    /** The whole world in view, from the south and above. */
+    /** The whole world in view, from the south and above (`islands/views.ts`: per world, with the town or without). */
     const homeView = () => {
-        const aspect = width / Math.max(height, 1);
-        const vertical = FOV * Math.PI / 180;
-        const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
-        const fit = Math.min(vertical, horizontal);
-        // Home growth (2026-11-11): the island reaches about 30 m further south and east (the hamlet's district), so the
-        // view centres a little south-east of the lake and fits a wider circle. (P6: the v2 island's own, `wildFrame`.)
-        const frame = wildFrame();
-        const radius = aspect < 0.8 ? frame.radiusTall : frame.radius;
-        const distance = Math.min(radius / Math.sin(fit / 2) * 0.8, frame.reach);
-        // Part C, one world: the wild island as before, turned and raised a little so the town stands across the strait
-        // beyond its far shore (decision 142).
-        if (island) return twoIslandHome(aspect, distance);
-        // Low enough to see the horizon over the island's far shore.
-        const at = aspect < 0.8 ? frame.targetTall : frame.target;
-        return {target: new Vector3(at.x, 0, at.z), distance: distance * 0.94, polar: 1.06, azimuth: 0};
+        const view = wildHomeView(width / Math.max(height, 1), FOV, island ? island.origin : null);
+        return {target: new Vector3(view.target.x, view.target.y, view.target.z), distance: view.distance, polar: view.polar, azimuth: view.azimuth};
     };
 
     // Keep the view over the world and above the ground.
@@ -6047,7 +5996,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const reveal = () => (townRevealing = true);
             void warm.then(reveal, reveal);
             registerIslandStream(isl);
-            maxDistance = ISLANDS_MAX_DISTANCE;
+            maxDistance = wildFrame().reachIslands;
             controls.maxDistance = maxDistance;
             reactiveQueries = null;
             if (scheduleOn) townBuild = new ScheduleWorldBuild(isl.sampler());

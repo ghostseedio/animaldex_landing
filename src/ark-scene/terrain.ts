@@ -1100,7 +1100,9 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
     material.uniforms.daylight = ARK_DAYLIGHT;
     material.uniforms.seaLevel = fresh ? {value: FRESH_LEVEL} : ARK_ENV.seaLevel;
     material.uniforms.windStrength = WATER_WIND;
-    const geometry = fresh ? new PlaneGeometry(FRESH_AREA.maxX - FRESH_AREA.minX, FRESH_AREA.maxZ - FRESH_AREA.minZ, 1, 1) : new PlaneGeometry(4000, 4000, 1, 1);
+    // (The v2 world's whole views stand ~220 m up, so the frame's top meets the sea ~2.5 km out: its sea reaches 6 km.)
+    const seaSize = arkWorld() === "v2" ? 12000 : 4000;
+    const geometry = fresh ? new PlaneGeometry(FRESH_AREA.maxX - FRESH_AREA.minX, FRESH_AREA.maxZ - FRESH_AREA.minZ, 1, 1) : new PlaneGeometry(seaSize, seaSize, 1, 1);
     geometry.rotateX(-Math.PI / 2);
     if (fresh) geometry.translate((FRESH_AREA.minX + FRESH_AREA.maxX) / 2, FRESH_LEVEL, (FRESH_AREA.minZ + FRESH_AREA.maxZ) / 2);
     const mesh = new Mesh(geometry, material);
