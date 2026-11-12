@@ -19,7 +19,8 @@ import {hashText, inPoly} from "@/ark-scene/islands/town/geom";
  * functions of the island clock; the placement areas hold their animals and never move.
  */
 
-const SNAPSHOT = "/private/tmp/claude-501/-Users-lennybeadle-AnimalDex/7421b37c-3c90-44f1-9509-5a92e292d95d/scratchpad/wt-view/public/ark-local/real.json";
+/** The real snapshot, read in place for its house and farm counts only (never copied); skipped where it is not. */
+const SNAPSHOT = process.env.ARK_REAL_SNAPSHOT ?? "/private/tmp/claude-501/-Users-lennybeadle-AnimalDex/7421b37c-3c90-44f1-9509-5a92e292d95d/scratchpad/wt-view/public/ark-local/real.json";
 
 test("the plan is whole: every home, farm and enclosure placed", () => {
     assert.deepEqual(townPlanMisses(), []);

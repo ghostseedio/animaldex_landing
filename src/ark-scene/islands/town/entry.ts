@@ -31,7 +31,7 @@ function shots(): Shot[] {
     const aviary = slot("aviaries-1").at;
     const sq = plan.square;
     const pFront = local(penguins, 3, penguins.d / 2 + 3.2);
-    const aFront = local(aviary, 6, aviary.d / 2 + 11);
+    const aFront = local(aviary, 3, aviary.d / 2 + 3.5);
     const farm = plan.farms.find((f) => f.id === "farmstead-0")!.at;
     return [
         {id: "island_far", eye: [70, 230, 470], target: [0, 0, -15], hours: 11},
@@ -45,7 +45,7 @@ function shots(): Shot[] {
         {id: "zoo", eye: [-40, 95, 70], target: [-125, 0, -60], hours: 11.5},
         {id: "zoo_savanna", eye: [savanna.x + 6, 14, savanna.z + 40], target: [savanna.x - 10, 2, savanna.z - 4], hours: 13},
         {id: "zoo_penguins", eye: [pFront.x, 5.5, pFront.z], target: [penguins.x, 2.4, penguins.z], hours: 11},
-        {id: "zoo_aviary", eye: [aFront.x, 13, aFront.z], target: [aviary.x, 2, aviary.z], hours: 9},
+        {id: "zoo_aviary", eye: [aFront.x, 9.5, aFront.z], target: [aviary.x, 1.5, aviary.z - 2], hours: 9},
         {id: "harbour", eye: [26, 32, 215], target: [14, 2, 128], hours: 17.5},
         {id: "square_market", eye: [sq.x + 26, 16, sq.z + 30], target: [sq.x, 3, sq.z], hours: 10, day: 20408},
         {id: "town_dusk", eye: [70, 160, 330], target: [10, 0, -10], hours: 18.6},
