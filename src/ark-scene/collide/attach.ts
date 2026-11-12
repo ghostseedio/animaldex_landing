@@ -56,6 +56,9 @@ export function onSurface(point: string | null | undefined, tagOf?: (id: string)
 /** Places on a rock: the rocks touching such a place (within ROCK_TOUCH) are its surface too. */
 const ROCKY: ReadonlySet<string> = new Set(["rock_face", "rock_top", "cliff_ledge", "ledge", "cave_mouth", "den", "rock_foot"]);
 const ROCK_TOUCH = 0.6;
+/** On a fallen log's top: the whole log (its colliders are circles along it) is its surface. */
+const LOGS: ReadonlySet<string> = new Set(["log_top", "log"]);
+const LOG_TOUCH = 1.3;
 function tagOfPoint(point: string | null | undefined): string {
     if (!point) return "";
     return (point.startsWith("map:") ? point.slice(4) : point).split(":")[0];
@@ -103,8 +106,8 @@ export function attachedOn(trip: TripLike, epoch: number): Array<{x: number; z: 
         // (The whole of the tree or rock it is on: a bird on a branch beside its trunk. On a rock's face or top, the rocks
         // touching it too: a toad in the crevice between two, a lizard across two tops.)
         const host = hostOf(spot.point);
-        const rocky = ROCKY.has(tagOfPoint(spot.point));
-        const reach = Math.max(r ?? 0, rocky ? ROCK_TOUCH : 0);
+        const tag = tagOfPoint(spot.point);
+        const reach = Math.max(r ?? 0, ROCKY.has(tag) ? ROCK_TOUCH : LOGS.has(tag) ? LOG_TOUCH : 0);
         out.push({x: spot.x, z: spot.z, ...(reach ? {r: reach} : {}), ...(host ? {host} : {})});
     };
     const phase = tripPhase(trip, epoch);

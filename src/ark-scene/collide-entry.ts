@@ -89,6 +89,11 @@ async function main() {
             const spent = realPerfNow() - started;
             return {frames, meanFrameMs: spent / Math.max(frames, 1), collisionsMsPerFrame: before && after ? (after.ms - before.ms) / Math.max(frames, 1) : null, pushedPerFrame: before && after ? (after.pushed - before.pushed) / Math.max(frames, 1) : null, easedPerFrame: before && after ? (after.eased - before.eased) / Math.max(frames, 1) : null, stats: handle.stats()};
         },
+        /** Every animal drawn one by one now (its id and species). */
+        drawn: () => {
+            const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string; model_slug: string}; middle?: unknown}>}}).__arkDebug;
+            return (debug?.entries() ?? []).filter((entry) => entry.middle).map((entry) => ({id: entry.animal.id, slug: entry.animal.model_slug}));
+        },
         /** The drawn animal of this species nearest a point (its id), or null. */
         find: (slug: string, x: number, z: number) => {
             const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string; model_slug: string}; middle?: {x: number; z: number} | null}>}}).__arkDebug;

@@ -555,8 +555,9 @@ function clearOfSolid(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
     const nav = world.nav;
     if (!nav.colliders || onSurface(spot.point) || raised(world, spot) || wet(world, spot)) return spot;
     const r = bodyReachOf(animal, profile.slug);
-    if (nav.clearanceAt(spot.x, spot.z) >= r) return spot;
     const slope = maxSlopeOf(animal);
+    // (Clear of everything solid, and not on a cliff's face.)
+    if (nav.fits(spot.x, spot.z, r, slope)) return spot;
     for (let ring = 1; ring <= 16; ring++) {
         const d = ring * 0.25;
         const n = Math.max(8, Math.round((Math.PI * 2 * d) / 0.25));
@@ -1409,6 +1410,11 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const water = (a: Spot, b: Spot) => {
         const path = world.nav.path(a, b, "swim", 0.3, 900, MAX_SLOPE, bodyR);
         const last = path[path.length - 1];
+        // (Two waters no water joins, for one that walks too: it walks between them, round the fences, never swims over land.)
+        if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01 && world.nav.colliders && walks(profile) && !aquatic(profile)) {
+            ground(a, b, "walk");
+            return;
+        }
         if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01) path.push({x: b.x, z: b.z});
         const length = pathLength(path) + Math.abs(b.y - a.y);
         legs.push({mode: "water", from: a, to: b, path, length, seconds: length / (freeSpeed * 1.4), beat: "swim"});

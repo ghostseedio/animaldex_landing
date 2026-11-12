@@ -77,6 +77,21 @@ const executablePath = path.join(cache, chromiumDir, "chrome-mac-arm64", "Google
 const {chromium} = createRequire(path.join(root, "node_modules", "x.js"))("playwright-core");
 const browser = await chromium.launch({executablePath, headless: true, args: ["--use-angle=metal", "--ignore-gpu-blocklist"]});
 const summary = [];
+if (process.argv.includes("--list-drawn")) {
+    // Who the scene draws one by one at a moment (`--at <epoch>`): the shots' finder keeps to them.
+    const context = await browser.newContext({viewport: {width, height}});
+    const page = await context.newPage();
+    const at = Number(arg("at"));
+    await page.goto(`${base}?snapshot=snapshot.json&quality=${quality}&at=${at}`, {waitUntil: "domcontentloaded", timeout: 180000});
+    await page.waitForFunction(() => window.__collide, null, {timeout: 400000});
+    await page.evaluate(async (epoch) => window.__collide.frame(epoch, {target: {x: 0, y: 0, z: 0}, distance: 120, polar: 0.9, azimuth: 0}), at);
+    const drawn = await page.evaluate(() => window.__collide.drawn());
+    writeFileSync(path.join(out, `drawn-${at}.json`), JSON.stringify(drawn));
+    console.log("drawn", drawn.length);
+    await browser.close();
+    server.close();
+    process.exit(0);
+}
 for (const shot of shots) {
     if (only && !only.includes(shot.kind)) continue;
     const context = await browser.newContext({viewport: {width, height}});

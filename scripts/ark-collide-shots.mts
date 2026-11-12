@@ -29,15 +29,17 @@ const set = colliderSetFor(hamletPlotsFor(snapshot.animals));
 const posesAt = rawPosesAt(sim, false);
 type Shot = {kind: string; id: string; slug: string; t: number; x: number; y: number; z: number; length: number; source: string; collider: string};
 const wanted = (opt("kinds") ?? "fence,rock,forest,building,cliff").split(",");
+/** Only these animals (`--only <drawn.json>`: who the scene draws one by one then, `ark-collide-clips.mjs --list-drawn`). */
+const only = opt("only") ? new Set((JSON.parse(readFileSync(opt("only")!, "utf8")) as Array<{id: string}>).map((d) => d.id)) : null;
 /** Open ground round a spot (no trunk within 6 m): a camera sees it, not leaves. */
 const open = (x: number, z: number) => !set.list.some((c) => c.kind === "trunk" && Math.hypot(c.cx - x, c.cz - z) < 6);
 const shots = new Map<string, Shot>();
 const used = new Set<string>();
 // (Walking or running on the ground, a body big enough to see; not a climb, which is a climber's own way up.)
 const walking = (source: string) => /^(ground|hamlet:door|shadow|stay):(walk|run|step|stalk)?/.test(source) && !source.startsWith("surface");
-for (let t = from + 60; t < from + hours * 3600 && shots.size < wanted.length; t += 2) {
+for (let t = from + Number(opt("skip", "60")); t < from + hours * 3600 && shots.size < wanted.length; t += 2) {
     for (const {s, p} of posesAt(t, sim.animals)) {
-        if (p.aloft || !p.moving || used.has(s.a.id) || s.body.length < 0.6 || !walking(p.source)) continue;
+        if (p.aloft || !p.moving || used.has(s.a.id) || s.body.length < 0.6 || !walking(p.source) || (only && !only.has(s.a.id))) continue;
         let kind: string | null = null;
         let collider = "";
         const hit = bodyHit(set, s, p);
