@@ -131,6 +131,17 @@
           "before": 14
         }
       ]
+    },
+    {
+      "name": "l5-collisions",
+      "lane": "L5 collisions",
+      "requires": [
+        "src/lib/ark-collide.test.ts"
+      ],
+      "tests": [
+        "src/lib/ark-collide.test.ts"
+      ],
+      "metricTests": "pass|through|overlap|fence|clear|cross"
     }
   ]
 }

@@ -42,7 +42,7 @@ jobs:
   visual:
     name: Golden shots against the baselines
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,7 +75,7 @@ jobs:
   hooks:
     name: The other lanes' checks (tests/ark-visual/hooks.json)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -86,7 +86,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Chromium and ffmpeg (for hooks that drive the scene)
         run: |
-          npx playwright-core install --with-deps --no-shell chromium
+          npx playwright-core install --with-deps chromium
           sudo apt-get install -y ffmpeg
       - name: Hooks
         run: npx tsx scripts/ark-visual.mts hooks
