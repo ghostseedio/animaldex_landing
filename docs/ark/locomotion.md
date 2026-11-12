@@ -178,3 +178,8 @@ The layer runs only for rigged animals: at most 24 on desktop tiers and 8 in lit
   60 fps.
 - **Upload:** each species with rigged animals uploads one live texture a frame (bones × 3 texels × 32 rows,
   RGBA32F). That is 29 KB for a 19-bone rig: at most about 350 KB a frame on desktop and 120 KB in lite mode.
+- **In the browser** (`scripts/ark-rig-scenes.mjs --perf`, the crowd of 24 grazers; the shared Mac under heavy load):
+  desktop high tier, 15 rigged: 60 fps either way, the frame's own work 4.5 ms with the layer against 3.7 ms
+  without. Phone profile (4× CPU throttle, medium tier, 12 rigged): 60 fps either way, 12.0 ms against 13.2 ms, so
+  no difference above the noise. The default view (`--island`, 30 s, high tier) stays at 60 fps with or without the
+  layer.

@@ -235,7 +235,7 @@ if (flag("island")) {
     const errors = [];
     page.on("pageerror", (error) => errors.push(String(error)));
     const cdp = await context.newCDPSession(page);
-    await page.goto(`${base}/rig.html?island=1${arg("quality", "") ? `&quality=${arg("quality", "")}` : ""}${arg("view", "") ? `&view=${arg("view", "")}` : ""}${flag("no-mover-gait") ? "&moverGait=0" : ""}`);
+    await page.goto(`${base}/rig.html?island=1${arg("quality", "") ? `&quality=${arg("quality", "")}` : ""}${arg("view", "") ? `&view=${arg("view", "")}` : ""}${flag("no-mover-gait") ? "&moverGait=0" : ""}${arg("query", "") ? `&${arg("query", "")}` : ""}`);
     await page.waitForFunction(() => window.__arkIsland || window.__arkRigError, null, {timeout: 240_000});
     const failed = await page.evaluate(() => window.__arkRigError);
     if (failed) throw new Error(failed);
