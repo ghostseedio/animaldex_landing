@@ -20,17 +20,18 @@ Lane heads merged into `ark-next`:
 
 | Lane | Branch | Head | Merged as |
 |---|---|---|---|
-| L5 collisions (API) | `ark-collisions` | 39adcbd8 | 521c3de4 (final L5: **pending**) |
+| L5 collisions | `ark-collisions` | 37de0b1d | 521c3de4 (API), a9af1cc8, 7930ec2e |
 | L4 true scale | `ark-true-scale` | f6a1e8f8 | 893832a7 |
-| L6 scenery | `ark-scenery` | c5812a75 | c579bc62 |
+| L6 scenery | `ark-scenery` | 2d1d2895 | c579bc62, 6a8cefe5, 0de78f61 |
 | L3 grounding and perching | `ark-grounding` | fda84235 | 8d90308a, generator 7 re-run 3900a81d |
-| L1 locomotion | `ark-locomotion` | 314927d0 | e813bd21, wiring a9ecfffd |
+| L1 locomotion | `ark-locomotion` | a0d507a4 | e813bd21, aaad9473; wiring a9ecfffd, 07c3a64b, 5388b309 |
 | L2 flight, swimming, legless | `ark-flight-swim` | 2cf309e3 | af146487 |
-| L7 chases | `ark-chases` | 30dbbf9e | cc82a1bc, wiring 356d0fc4 |
+| L7 chases | `ark-chases` | dddad0a0 | cc82a1bc, ce245fd8; wiring 356d0fc4 |
 | Part B streaming | `ark-streaming` | 366f985b | 77c3f2f5 |
 | Encounter hunting, scene side | `ark-encounter-scene` | 9fcbb049 | 93b9c1b1, 34524f02 |
+| The positions atlas v2 (encounter lane) | `ark-positions-atlas` | cba0594d | 342097c9 (pinned to AnimalDex `ark-encounter` 8f9bc465) |
 | The second island (T2) | `ark-town-island` | bdcd9ff1 | 084c07f6 |
-| Town animals and island switching (T3) | `ark-islands-scene` | 439cd5f3 | 1c508857 (more T3 commits **pending**: the behaviour schedule, zoo feeding) |
+| Town animals, one world, the schedule, zoo feeding (T3) | `ark-islands-scene` | e76158a5 | 1c508857, 9df003b3 |
 
 Player control is not in this release.
 
@@ -55,9 +56,11 @@ ecology are unchanged, except the islands (§5).
   curve, floor or cap (humpback 3.5 → 14 m, blue whale 6.7 → 25 m, house mouse 0.28 → 0.15 m, ladybird 0.18 m → 7.5 mm).
   Find-dots for small animals, "My animals" and `?focus=` meet a beetle from 12 cm, camera ranges and the sea reserved for
   big swimmers.
-- **Collisions (L5).** The collide API (colliders from fences, buildings, solid props, trunks, rocks, logs, hay, lamp
-  posts; body shapes from each model), used by L7's chases. The runtime separation and the walk-grid changes are in the
-  final L5 (**pending**).
+- **Collisions (L5).** Colliders from fences, buildings, solid props, trunks, rocks, logs, hay and lamp posts, and body
+  shapes from each model; baked into navigation (paths round them, climbs only for climbers, walk cells for fences, hay,
+  lamp posts and plot props, routed hamlet doors) and a runtime layer that keeps animals out of anything solid and eases
+  them off each other (about 0.8 ms a frame at 1,200 animals on desktop). Its 2-hour audit runs in `ark-collisions.yml`.
+  The town's colliders come through `setIslandColliders` (T3).
 - **Scenery (L6).** Trees at real heights, kept apart by trunk and crown, rocks made in code that sit into their slopes
   (crags, boulders, scree), nothing floating or standing in anything, the real-size cottage and fence.
 - **Chases (L7, `docs/ark/chases.md`).** Visual hunts of ambient prey (cats pounce, raptors stoop, herons strike, dolphins
@@ -70,9 +73,10 @@ ecology are unchanged, except the islands (§5).
   hunting read. Inert while the server's `hunting` is `pool`.
 - **The second island (T2, `docs/ark/town-island.md`).** The town, countryside and zoo island under
   `src/ark-scene/islands/` (12.4 ha: canal, old town, 119 buildings, 10 farms, the zoo's 35 plots), loaded only when a
-  crossing asks. **T3:** town animals placed and drawn (households, farms, zoo enclosures), one island loaded at a time
-  with the crossing, the toolbar switch, `?focus=` across islands, the population panel's "Both islands", "My animals"
-  across both. With the islands off the scene is the wild island as before.
+  crossing asks. **T3:** one world with both islands (the town across a 250 m strait, one sea, the view panning over
+  both; decisions 141–143), town animals placed and on the behaviour schedule (households, farms, zoo enclosures with
+  feeding and enrichment), the toolbar switch, `?focus=` across islands, the population panel's "Both islands", "My
+  animals" across both. With `islands` off on the server the town is empty and the wild island is as before.
 
 ## 2. Checks
 
@@ -106,7 +110,8 @@ Before is the live release (7764fe12), after is `ark-next`. The per-lane detail 
 | Overlapping pairs (real snapshot) / in the open ocean | 96 / 1 | 63 / 0 |
 | Trees growing into each other | 971 pairs | 0 |
 | Props floating / standing in each other | 284 / 14 | 0 / 0 |
-| Pass-throughs of fences and rocks | — | **(pending the final L5)** |
+| Pass-throughs of solid things (true scale, real snapshot, 2 h / 1 h) | 194,000 samples | 0 |
+| Fence crossings (2 h) | 638 | 3 in 1 h (a perched bird on a fence top no longer counts; CI limit 0) |
 
 Performance per tier (Part B, the real Ark, headless Chromium with Metal; `docs/ark/streaming.md` §7): desktop high /
 medium / low 59 / 60 / 60 fps, view complete 10.4–10.9 / 8.3–9.0 / 5.6–9.0 s; the phone profile (360×800, DPR 2, 4× CPU
@@ -173,17 +178,18 @@ Listed for the owner instead of polished today (decision 136):
 - Cranes and storks perch on limbs.
 - The house cricket lies on its back.
 - Emergent trees stand as tall as the mountain.
-- The Asiatic black bear's validator spot is beside a leaned rock (the spawn validator's one failure).
 - Dolphins overlap in chases.
 - The osprey's and the swallow's poses.
-- Fences and rocks can be walked through until the final L5 lands **(pending)**.
+- The harbour seal walks at about 2.5× its flipper-legs clip at true-scale speed (cosmetic: seals keep their clips).
+- The town's walk ways are new (T3): watch for town animals crossing garden fences in the first hours.
 
 Routed to lanes, to be fixed or listed here before approval **(pending)**:
-- L6: three tests fail on L6's own head: stags clash 5.23 m apart, a snow leopard within 15 m of a goat (safe 20 m),
-  piled pigs vs a zebra herd asleep (1.08 vs 1.53 body lengths).
-- L1: the share of walking backwards in the default view (0.2% at the release, about 5% since the scenery and grounding
-  merges; nothing backwards for over 1 s). One of the owner's original complaints, so not listed as known yet.
-- L7: the duck sitter (on the merged tree the mallard never takes its nest trip) and the recipes test file's timeout.
+- Behaviour lane (`ark-behaviour-backwards`): the share of walking backwards in the default view (0.2% at the release,
+  up to 5–9% on ark-next; nothing backwards for over 1 s). L1 found one zebra in a sleep-then-play bout, the same with
+  the locomotion layer on and off. One of the owner's original complaints, so not listed as known.
+- L5: a mallard setting off after a recipe stay turns 1.8 rad on its way off (the nav's start).
+- The `ark.islands.*` strings in every locale (`ark-islands-i18n`).
+- The hamlet's removal from the wild island (`ark-wild-no-hamlet`).
 
 ## 7. Rollback
 
