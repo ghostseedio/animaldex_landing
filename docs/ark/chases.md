@@ -60,7 +60,9 @@ npx tsx scripts/ark-behaviour-recipes.mts <behaviour/inputs/species.json> <recip
 - **In the water** (dart): a burst (`swim`, `strike`).
 - **Raptors** (swoop): over, high, then the stoop (`plunge`, then `strike_feet`) onto where the prey will be; the prey bolts or takes off 0.6–0.85 s before. A small prey is carried off, a big one mantled.
 - **Cut-aways** are unchanged.
-- **Paces** (`chasePace`): the locomotion lanes' where wired (`setChasePaces`), otherwise provisional: (0.3 + 14.5·(stat/100)^1.2)·L^0.25 m/s, capped by the rig's gait. A cheetah runs at about 16 m/s, a lion 13, a fox 8.5.
+- **Paces** (`chasePace`): the locomotion lanes' where wired (`setChasePaces`), otherwise provisional: (0.3 + 14.5·(stat/100)^1.2)·L^0.25 m/s. A cheetah runs at about 16 m/s, a lion 13, a fox 8.5. Today's rig clips do not cap it: a lion's fastest clip is its walk (1.1 m/s), and L1's gait engine gives it a gallop.
+- **Steps:** each runner steps on its heading where that is clear. Where it is blocked, it swerves to the nearest clear way within a right angle (`stepOn`). Boxed in, it goes on anyway, so a chase always ends. Past 14 s it lunges whatever lies between, and the catch follows (`maxT`; the first scene chase never ended without this).
+- **Camera:** side on, turned to the nearest bearing with no tree in the lines to where the two start and to the catch, and none close under the camera (`clearBearing`). A long chase is framed a little tighter past its first 10 m.
 - **Encounter positions:** `mealEncounter(act)` reads `act.encounter` or `payload.encounter` `{t, predator{x,z}, prey{x,z,r}}`. `encounterBodies` uses the scene's pose of the hunter when it is within `ENCOUNTER_AGREE` (5 m) of the waypoint, else the waypoint; the prey where the scene has it when that is inside its disc, else the disc's nearest point. With `exact` the hunter starts there (up to 40 m), closing the gap in its stalk.
 - **Act poses carry:**
   - `state`: the recipe state names `ARK_RECIPE_STATES`, so the rig contract (70 states) is unchanged;
