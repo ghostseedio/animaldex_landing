@@ -30,9 +30,37 @@ export function tone(hex: string | Color, factor = 1): [number, number, number] 
  * (`buildings.ts` SURFACE, decoded by its building shader). 0: a plain colour, untouched.
  */
 export function encodeColourTag(colour: [number, number, number], tag: number): [number, number, number] {
-    if (!tag) return colour;
+    if (!tag) return plainColour(colour);
     const q = (v: number) => Math.min(Math.max(Math.round(v * 255), 0), 254);
     return [(q(colour[0]) + (tag + 0.5) / 16) / 255, (q(colour[1]) + 0.5) / 255, (q(colour[2]) + 0.25) / 255];
+}
+
+/** How near a channel's fraction (× 255) must be to a marker to count (the building shader's own number). */
+export const COLOUR_TAG_TOLERANCE = 0.006;
+
+/**
+ * A surface kind read back from a colour (the building shader's arithmetic): 0 unless all three agree (green's fraction
+ * at 0.5, blue's at 0.25, red's on one of the 16 kinds' centres), each within `COLOUR_TAG_TOLERANCE`.
+ */
+export function decodeColourTag(r: number, g: number, b: number, tolerance = COLOUR_TAG_TOLERANCE): number {
+    const fr = r * 255 - Math.floor(r * 255);
+    const fg = g * 255 - Math.floor(g * 255);
+    const fb = b * 255 - Math.floor(b * 255);
+    if (Math.abs(fg - 0.5) >= tolerance || Math.abs(fb - 0.25) >= tolerance) return 0;
+    const slot = fr * 16 - 0.5;
+    if (Math.abs(slot - Math.round(slot)) * (1 / 16) >= tolerance) return 0;
+    return Math.round(slot);
+}
+
+/**
+ * A plain colour (no surface kind) kept clear of the markers: one that would read as tagged by chance has its blue
+ * moved a quarter of a step (0.1 % of a channel: unseen). Every colour the kit writes goes through it, so lane GA's and
+ * lane GC's plain colours on the shared solid material never pick up a building's surface.
+ */
+export function plainColour(colour: [number, number, number]): [number, number, number] {
+    // (A wider net than the shader's, so a float's rounding on the way to the GPU never brings one back.)
+    if (!decodeColourTag(colour[0], colour[1], colour[2], COLOUR_TAG_TOLERANCE * 2)) return colour;
+    return [colour[0], colour[1], colour[2] + (colour[2] < 0.5 ? 0.25 : -0.25) / 255];
 }
 
 export class Geo {
@@ -63,7 +91,7 @@ export class Geo {
         nx /= length;
         ny /= length;
         nz /= length;
-        const col = this.surface ? encodeColourTag(colour, this.surface) : colour;
+        const col = this.surface ? encodeColourTag(colour, this.surface) : plainColour(colour);
         for (const p of [a, b, c]) {
             this.pos.push(p[0], p[1], p[2]);
             this.nor.push(nx, ny, nz);
@@ -281,7 +309,8 @@ export class Geo {
             const nx = n ? n.getX(i) : 0;
             const nz = n ? n.getZ(i) : 0;
             this.nor.push(nx * cos - nz * sin, n ? n.getY(i) : 1, nx * sin + nz * cos);
-            this.col.push(c ? c.getX(i) : 1, c ? c.getY(i) : 1, c ? c.getZ(i) : 1);
+            const plain = plainColour([c ? c.getX(i) : 1, c ? c.getY(i) : 1, c ? c.getZ(i) : 1]);
+            this.col.push(plain[0], plain[1], plain[2]);
             this.extra.push(this.tag);
         }
         if (flat !== geometry) flat.dispose();
