@@ -1,0 +1,7 @@
+{
+  "about": "The wild island's visual check (docs/ark/wild-island.md): its own page (src/ark-scene/islands/wild/entry.ts) on SwiftShader, the clock frozen per shot (ARK_TIME 120, the shot's hour), without the photographed sky; the asset library's models are awaited before the first shot. Run: npx tsx scripts/ark-wild.mts visual [--update]. Same measures and default limits as the Ark's visual CI (runtime/visual-compare.ts).",
+  "width": 800,
+  "height": 500,
+  "quality": "medium",
+  "shots": ["island_far", "cove_peaks", "lagoon_rainforest", "savanna"]
+}
