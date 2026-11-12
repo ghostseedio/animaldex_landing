@@ -21,19 +21,22 @@ for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
     const scale = 1.5 / Math.max(rig.length, rig.height);
     const inst = new Matrix4();
     const frames = 60 * 6;
-    // Warm up, then time.
-    for (let pass = 0; pass < 2; pass++) {
-        const t0 = performance.now();
+    // Warm up, then time every frame on its own: the median frame (a shared, loaded machine preempts whole passes).
+    const times: number[] = [];
+    for (let pass = 0; pass < 3; pass++) {
         for (let f = 0; f < frames; f++) {
             const t = f / 60;
             const p = scenarioPath(f < 180 ? "walk" : "run", rig.gaitLength * scale, rig.length * scale, t);
             const x = 30 + p.x, z = -40 + p.z;
             inst.compose(new Vector3(x, terrainGround(x, z).height - rig.minY * scale, z), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), p.yaw), new Vector3(scale, scale, scale));
-            layer.pose(animal, {instance: inst, scale, yaw: p.yaw, dt: 1 / 60, clock: 1000 + t, seed: 0.4, ground: terrainGround, grounded: true, clipNow: "walk", clipFrom: null, clipPhase: 0}, [0, 1, 0.5], null, 0, 0);
+            const t0 = performance.now();
+            layer.pose(animal, {instance: inst, scale, yaw: p.yaw, dt: 1 / 60, clock: 1000 + t + pass * 100, seed: 0.4, ground: terrainGround, grounded: true, clipNow: "walk", clipFrom: null, clipPhase: 0}, [0, 1, 0.5], null, 0, 0);
+            if (pass > 0) times.push((performance.now() - t0) * 1000);
         }
-        const us = ((performance.now() - t0) * 1000) / frames;
-        if (pass === 1) rows.push({slug: rig.slug, bones: rig.bones.length, legs: rig.legs.length, usPerFrame: Math.round(us * 10) / 10});
     }
+    times.sort((a, b) => a - b);
+    const best = times[Math.floor(times.length / 2)];
+    rows.push({slug: rig.slug, bones: rig.bones.length, legs: rig.legs.length, usPerFrame: Math.round(best * 10) / 10, p90: Math.round(times[Math.floor(times.length * 0.9)] * 10) / 10} as (typeof rows)[number]);
 }
 const sorted = rows.map((r) => r.usPerFrame).sort((a, b) => a - b);
 console.table(rows);

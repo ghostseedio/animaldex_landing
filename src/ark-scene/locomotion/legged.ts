@@ -227,9 +227,10 @@ export function poseLegged(rig: LocoRig, drawn: LocoInput, world: Matrix4[], s: 
         const rate = clamp(0.4 * Math.sqrt(G / hipNow), 0.6, 9) + (3 * s.speed) / lengthNow;
         const dtNow = clamp(drawn.dt, 0, 0.1);
         s.bodyYaw += Math.sign(diff) * Math.min(Math.abs(diff), rate * dtNow * clamp(Math.abs(diff) / 0.25, 0.3, 1));
-        // Never more than 100 degrees behind (a cut, a flee's turn round): the body comes round with it.
+        // Never more than 35 degrees behind: the head's looks and the reactive layer's turns are measured from the drawn
+        // heading, so the body stays near it (the feet step round either way).
         const behind = wrapHalf((drawn.yaw - s.bodyYaw) / (Math.PI * 2)) * Math.PI * 2;
-        if (Math.abs(behind) > 1.75) s.bodyYaw = drawn.yaw - Math.sign(behind) * 1.75;
+        if (Math.abs(behind) > 0.6) s.bodyYaw = drawn.yaw - Math.sign(behind) * 0.6;
     }
     const lag = wrapHalf((s.bodyYaw - drawn.yaw) / (Math.PI * 2)) * Math.PI * 2;
     const turnLag = new Matrix4().makeTranslation(lagPivot.x, 0, lagPivot.z).multiply(new Matrix4().makeRotationY(lag)).multiply(new Matrix4().makeTranslation(-lagPivot.x, 0, -lagPivot.z));

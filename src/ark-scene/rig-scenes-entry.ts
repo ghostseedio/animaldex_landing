@@ -52,6 +52,9 @@ const COURSE_CAST: Array<{slug: string; plan: string}> = (new URLSearchParams(ty
         const [slug, plan] = item.split(":");
         return {slug, plan: plan ?? "quadruped"};
     });
+// With a course cast, only the course's animals (a species also in the scenes' cast would be one of a herd, drawn as
+// its representative's figure, and never be found).
+if (COURSE_CAST.length) CAST.splice(0, CAST.length);
 COURSE_CAST.forEach((c, i) => {
     if (!SPECIES[c.slug]) SPECIES[c.slug] = {name: c.slug.replace(/-/g, " "), zone: "grassland", activity: "any", sociality: null};
     CAST.push([`c${i}`, c.slug, 1]);
@@ -283,6 +286,11 @@ async function mountScenes(el: HTMLElement) {
         };
         debug().setHome(id, centre.x + radius, centre.z);
         pinPose(id, (epoch: number) => {
+            const pose = coursePose(epoch);
+            courseYaw.set(id, pose.yaw);
+            return pose;
+        });
+        function coursePose(epoch: number) {
             const k = Math.max(epoch - start, 0);
             // Distance along the circle, then straight off it after the turn.
             let s = 0;
@@ -308,17 +316,20 @@ async function mountScenes(el: HTMLElement) {
             const moving = speed > 0.02 * len();
             const run = speed > at(1.5);
             return {x, z, y: ground(x, z), yaw, moving, aloft: false, doing: moving ? "wander" : "rest", beat: moving ? (run ? "run" : "walk") : "rest"};
-        });
+        }
     };
+    /** The course's own heading per animal (the camera follows it, not the drawn heading, which turns to look at the camera). */
+    const courseYaw = new Map<string, number>();
     /** The camera follows an animal from its left side (its heading + 90 degrees), a little above. */
     const trackSide = (id: string, polar: number) => {
         const token = ++tracking;
-        debug().controls.minDistance = 0.3;
+        debug().controls.minDistance = 0.1;
         const step = () => {
             if (token !== tracking) return;
             const a = handle.locate(id);
             // (A small animal from higher up: from its side the grass hides it.)
-            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * 3.2, 0.6), polar: a.length < 0.4 ? Math.min(polar, 0.9) : polar, azimuth: a.yaw + Math.PI / 2});
+            // (A tiny one, an ant or a spider, nearly from above and close: the plants are trees at its size.)
+            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * (a.length < 0.1 ? 5 : 3.2), 0.25), polar: a.length < 0.1 ? 0.55 : a.length < 0.4 ? Math.min(polar, 0.9) : polar, azimuth: (courseYaw.get(id) ?? a.yaw) + Math.PI / 2});
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
