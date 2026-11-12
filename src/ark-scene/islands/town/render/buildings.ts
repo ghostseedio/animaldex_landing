@@ -1099,7 +1099,7 @@ vec3 paneInside = paneRoom;
 paneInside = mix(paneInside, paneCloth * 0.5, paneCurtain);
 paneInside = mix(paneInside, vec3(0.5), paneNets * 0.32 * (1.0 - paneCurtain));
 paneInside = mix(paneInside, vec3(0.58, 0.56, 0.52) * paneSlat, paneBlind * (1.0 - paneCurtain));
-paneInside = mix(paneInside, paneGoodsCol * 0.7, paneGoods * paneOnShelf);
+paneInside = mix(paneInside, paneGoodsCol * 0.3 + paneRoom, paneGoods * paneOnShelf);
 diffuseColor.rgb = mix(paneFrame, paneInside, paneGlass);
 // Lit: the room's light (warm; a television's blue in a few; a shop's brighter white), through curtains and blinds.
 vec3 paneWarm = paneKind > 2.5 && paneKind < 3.5 ? vec3(1.0, 0.86, 0.66) : mix(vec3(1.0, 0.6, 0.28), vec3(1.0, 0.78, 0.5), paneR1);
@@ -1179,7 +1179,7 @@ const BUILDING_MAIN = `
         vec2 bldT = normalize(vec2(-bldN.z, bldN.x) + vec2(1e-5, 0.0));
         float bldH = dot(bldW.xz, bldT);
         float bldPx = fwidth(bldW.y) + fwidth(bldH);
-        float bldFade = 1.0 - smoothstep(0.01, 0.045, bldPx);
+        float bldFade = 1.0 - smoothstep(0.014, 0.05, bldPx);
         bool bldWall = abs(bldN.y) < 0.5;
         vec3 bldBase = diffuseColor.rgb;
         vec3 bldOut = bldBase;
@@ -1204,7 +1204,7 @@ const BUILDING_MAIN = `
             float edge = (1.0 - step(0.05, f.x)) * 0.55 + (1.0 - smoothstep(0.0, 0.3, f.y)) * 0.45;
             float tint = bldHash(vec2(floor(jx), row));
             vec3 tile = bldBase * (0.86 + 0.24 * tint) * (1.0 - 0.32 * edge);
-            bldOut = mix(bldBase, tile, bldFade);
+            bldOut = mix(bldBase, tile, 1.0 - smoothstep(0.025, 0.09, bldPx));
             float moss = smoothstep(0.6, 0.82, bldNoise(bldW.xz * 0.32 + 3.1)) * (1.0 - smoothstep(4.5, 9.5, bldW.y));
             bldOut = mix(bldOut, vec3(0.09, 0.12, 0.04), moss * 0.45);
         } else if (bldKind < 5.5) {

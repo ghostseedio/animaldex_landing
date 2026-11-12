@@ -136,3 +136,100 @@ Today: **0 errors, 5 warnings**. The warnings are aviary, savanna, children's fa
 - The crossing and the horizon silhouette; `?island=` and `?focus=`; My animals and the population panel across islands; the director (the islands-on-the-web lane). It builds on `islands/index.ts`.
 - The server's island, area and enclosure fields and the routing (`ark-islands-server`). This lane reads `island: wild | town`, `area: house | farm | zoo` and `enclosure: <type>-<n>` with the server's 13 type ids.
 - Animals on the town island: placement reads `areas.ts`; the behaviour and nav lanes read the spots, masks and footprints.
+
+## 11. Ground, streets, lighting and close-up detail (lane GA, branch `town-ground`)
+
+The owner's brief of 2026-11-12 (decision 243): bug 4, "the ground looks like giant pixels"; then pavements, crossings, signals, lamps, benches, bins, bikes, bus stops, signs, covers and planters; the wild island's light, weather and night on the town; close-up detail.
+
+### 11.1 The giant pixels: the cause, before and after
+
+**Before.** The town had no textures at all, so this was not a filtering, mipmap or UV problem. All of its colour came from geometry, one colour per grid cell:
+- **The drapes** (`Geo.drape`) gave each 1–2 m cell its own flat colour (`tri()` writes one colour per face). That covered the market square's setts (two greys in 1.6 m bands), the zoo's paddock floors (a sine shade per 2 m cell), the fields (a shade per 1.2 m cell), the plaza (a 1 m checker) and the drives. Every pattern was quantised into flat squares a metre or two across: literally giant pixels.
+- **The ground tiles** had only a vertex colour on the 1.1 m grid, plus a random ±2.5 % shade per vertex (`hashText(column|row)`). That made a 1.1 m speckle, and edges between surfaces (lawn and farmyard, grass and sand) stepped with the grid.
+- The only finer detail was a 0.6 m value noise.
+
+**After.**
+- Every decal vertex carries its surface (`render/surface-tags.ts`). The drapes keep one tint, and the texture carries the variety.
+- The ground tiles carry per-vertex texture weights (`ground.ts` `surfaceWeights`, softened over a 3 × 3 box). The shader breaks the softened edge with noise, so a boundary is a ragged line, never the grid.
+- Everything draws tiled PBR at true scale (`render/surfaces.ts`). The textures have mipmaps and anisotropic filtering (8× high, 4× medium and low).
+- The per-vertex shade is gone.
+- `src/lib/ark-town-ground.test.ts` keeps it fixed: every decal is tagged, the setts are one tint, and a lawn's colour has no per-vertex speckle.
+
+### 11.2 Materials
+
+| Surface | Texture (`render/textures.ts`, true size) | What the shader adds |
+|---|---|---|
+| Asphalt (high street, roads, lanes) | asphalt_02, 3.0 m, texture-bombed | Polished wheel tracks, an oil line down each lane, gutters with grime and blown leaves, repair patches. A slow tone drift, so no two stretches match |
+| Paint (centre lines, double yellows, zebras) | the asphalt under it | Worn away in flakes and in the wheel tracks |
+| Slabs (pavements, garden paths) | concrete_pavement, 1.8 m | Odd slabs replaced, chewing gum, the kerb side dirtier |
+| Granite setts (the square) | cobblestone_floor_03, 2.4 m | — |
+| Kerbs, quay flags, church walks | granite_tile, 2.3 m | The kerbs are real geometry: a 0.16 m top and a face down to the road, mapped along the street and up |
+| Gravel (towpaths, zoo paths, gravel drives) | gravel_floor, 2.25 m, bombed | More of its own contrast |
+| Block paving (drives, the zoo plaza) | patterned_brick_floor, 1.81 m | — |
+| Earth tracks, zoo paddocks | the wild ground's soil and mud | Two ruts and a grassy crown; mud in the low places |
+| Sand (savanna, big cats) | the wild ground's sand | — |
+| Crops, allotments | the wild ground's grass and tilled soil, by the row's colour | — |
+| Manhole covers, gully gratings | made in code | Iron with a diamond tread or bars over the dark drain, rust, polished middles, metal. Snapped to a 0.7 m / 0.5 m grid along the street, so the shader finds their edges |
+| The ground (lawns, parks, gardens, meadows, the wood, farmyards, banks, beach) | the wild ground's grass, leaf litter, soil, mud, sand and wet sand | Clumps, dry patches, mown stripes on the lawns, worn paddocks, muddy farmyards, wet sand at the water, beds darker under water |
+
+- **Anti-tiling.** The stochastic layers (asphalt, gravel, grass, soil) are texture-bombed: two grids of 2-tile cells half a cell apart, each cell randomly offset, blended so each grid fades out at its own cell edges. Gradients are taken once.
+- **Patterned layers** (slabs, setts, kerbs, blocks) are read once, so their joints stay straight.
+- **Mapping.** The paving is mapped in the town's own frame along each street's dominant axis (the `alongZ` bit of the tag). Every street in the plan is axis-aligned or nearly so.
+- **Close up** (inside ~20 m): a 4.1× finer sample of the same layer's grain on top, as the wild ground's near grain.
+- **The low tier** samples each layer once and draws no normal maps, close-up grain or ripples. It keeps the textures, the puddles and the lamps.
+
+### 11.3 Weather and night: the shared kit (`render/materials.ts`)
+
+`townWeather(material, {soak, wetRoughness, lamps, cloud})` is for every town lane. GA wraps `materials.solid` (0.35), `materials.prop` (0.1) and `materials.tree` (0.3); the ground and the paving do the same themselves.
+- **Rain** (`ARK_ENV.wetness`, the wild ground's own uniform): soaked surfaces darken and gloss, and faces turned to the sky shine most.
+  - **Puddles** gather in the gutters, the wheel ruts, the tracks' ruts, the gravel and the farmyards. Each is a dark mirror (roughness 0.04) of the sky's light and of the lamps.
+  - **Ripples:** while it rains (`ARK_ENV.rain`, new), drops ring the puddles near the camera.
+- **Cloud shade:** the wild ground's drifting cloud shadows, with the same noise and the same clock.
+- **The street lamps:** each surface is lit by its nearest lamp, through three's own direct light (`RE_Direct`, diffuse and GGX specular). So the wet street mirrors the lamps in long streaks, with no point lights added to the scene.
+  - **The lamp map** (`TOWN_LIGHT.lampMap`, RGBA8, 476² cells of 1 m, filtered) holds each cell's nearest lamp head, its height, and how much of it the cell sees.
+  - The map is built in the prebuild worker with 4 samples a cell. A building between a cell and its lamp blocks it, so a street lamp never lights the garden behind a house.
+  - The lamps light from dusk (`people.ts` `lampsOn`). A soft additive glow sits round each lit head (one instanced draw).
+
+### 11.4 Streets and furniture (`render/streets.ts`, `render/furniture.ts`)
+
+- **Surfaces:**
+  - asphalt carriageways tagged kerb to kerb;
+  - slab pavements, and granite kerbs with faces;
+  - a dashed centre line, and double yellows on the high street;
+  - six zebra crossings (`CROSSINGS`), with their studs;
+  - a manhole cover on the crown every 45 m, and a gully grating in each gutter every 24 m;
+  - towpaths in gravel.
+- **Lamps:** 84 lamp spots (`scenery.ts` lamps). Heritage cast-iron lanterns (4.2 m) stand in the old town, by the canal, on the quays and in the park. Steel columns (5.8 m, the arm out over the road) stand on the other roads.
+- **Furniture:**
+  - five bus shelters with a plain red-and-white flag and timetable case (no operator's name);
+  - signals at the high street and park road junction: four poles, the two roads on opposite phases of a 60 s cycle on the shared clock (green 26 s, amber 3 s, red-amber before green);
+  - Belisha beacons at every zebra, flashing once a second;
+  - litter bins every 34 m (52 m off the high street), benches and planters on the high street;
+  - bollards along the square, Sheffield stands with three bikes, and a no-vehicles sign at the square's walk;
+  - give-way signs and blank name plates where a road ends at another.
+- **Placement** is seeded and pure. Nothing is placed by the camera, and a spot near another, or on a drive, is left out.
+- **Draw calls:**
+  - the bodies go into each chunk's solid mesh (no draw calls added; they stream and cast shadows with their chunk);
+  - the shelters' panes into the chunk's glass;
+  - all lights into one mesh (`lightsMaterial`).
+- **Not obstacles yet.** The furniture is not in the nav footprints (`obstacles.ts`, TB/L5); the old lamps were not either.
+
+### 11.5 Close-up detail (`render/near.ts`)
+
+As the wild island's `near-detail.ts`, the detail exists only round the point the camera looks at, when it is within 38 m:
+- fallen leaves under the trees and blown into the gutters;
+- weeds in the slab joints, the setts and along the kerbs;
+- grit and stones on the roads, the gravel and the farm ground;
+- daisies in the lawns;
+- the odd plain scrap of paper.
+
+It is seeded per 2 m cell from what lies there, and cells are built 10 a frame (all at once after a jump). One draw call per kind while near; none from afar. The share is 1 / 0.6 / 0.35 a tier. The camera is read from the meshes' own render callback, so the scene's hooks are unchanged.
+
+### 11.6 Tests and the workbench
+
+- **Tests:** `npx tsx --test src/lib/ark-town-ground.test.ts` (7). The prebuild's digests (`ark-town-prebuild-speed.test.ts`) were updated for the intended ground, scenery and zoo change; the plan, areas and places are unchanged, so nothing moved.
+- **The workbench:**
+  - `scripts/ark-town.mts stills` now waits for the textures;
+  - `?wet=&rain=` and `__arkTown.weather(w, r)` pin the weather;
+  - new shots: `street_level`, `street_night`, `street_wet_night`, `street_wet_day`, `pavement_close`, `pavement_close_wet_night`, `square_night`.
+- **The town's visual set** (`tests/ark-visual/town/*.webp`, 4 shots) changes by design. It needs re-accepting through the visual CI run.
