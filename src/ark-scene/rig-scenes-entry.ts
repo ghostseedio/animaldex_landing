@@ -663,7 +663,9 @@ async function mountIsland(el: HTMLElement) {
                             // The body as drawn: the locomotion layer's own turn (it lags the heading by at most 35
                             // degrees while it steps round), when the legged driver poses it.
                             const loco = (e.rig as unknown as {loco?: {driver?: string | null; share?: number; states?: Map<string, {state: {bodyYaw?: number}}>}} | undefined)?.loco;
-                            const bodyYaw = loco?.driver === "legged" && (loco.share ?? 0) > 0.5 ? loco.states?.get("legged")?.state.bodyYaw : undefined;
+                            // (Only while its rig is drawn: a rig let go keeps its last state, from minutes ago.)
+                            const drawn = (e.rig?.weight ?? 0) > 0.5 && e.rig?.now && ["walk", "run", "hop", "idle"].includes(e.rig.now.name);
+                            const bodyYaw = drawn && loco?.driver === "legged" && (loco.share ?? 0) > 0.5 ? loco.states?.get("legged")?.state.bodyYaw : undefined;
                             if (bodyYaw !== undefined) {
                                 let seen = way - bodyYaw;
                                 while (seen > Math.PI) seen -= Math.PI * 2;
