@@ -171,3 +171,31 @@ Under `~/animaldex-ark-handover-2026-11-11/ark/motion/next/` (none yet).
 - L1 (observation, for the lane): with no driver taking an animal, `LocoLayer.pose` still runs `plantClipFeet` for grounded
   clip feet, so "no driver" is not byte-for-byte the baked pose (within the visual tolerances so far). The driver's share
   ramps by frame `dt`, which is 0 with reduced motion and in the frozen-clock golden shots.
+
+## Web deploy: decision 264's round (SEO, the landing page, the minimal /ark, the town's look)
+
+From landing main 970b0461 (live). Head: see the last row; rollback: redeploy **970b0461**.
+
+| # | Lane | Branch head | `ark-next` head | Notes |
+|---|---|---|---|---|
+| 48 | S3: SEO pages and technical fixes | `seo-pages` de6f815f | d2e72e51 | clean |
+| 49 | Two keys in the 43 Ark bundles | `seo-ark-i18n` 07f453cb | 408cc350 | clean |
+| 50 | S2: the landing page | `landing-redesign` 8b4808c3 | 577ef598 | clean |
+| 51 | U1: full-screen /ark, minimal overlay, performance (with U2's card activity) | `ark-hud-minimal` af26ba4d | b63a19fe | clean |
+| 52 | U2's keys in 44 languages | `ark-card-i18n` 08a0b340 | 9a98a11c | clean |
+| 53 | GA: the town's ground, streets and night light | `town-ground` e0fa6b62 | ff8f6b9e | clean |
+| 54 | TB: aquarium, pets, grounding, resting figures, jellyfish size | `town-bugs` 0cc0b50a, aba53bd2 | c5b8efa5, 61d92813~ | the town doc (GA §11, TB §12) and the town prebuild digests resolved to the merged tree's values |
+| 55 | U1's 8 `ark.hud.*` keys | `ark-hud-i18n` e53dd177 | 61d92813 | clears the 45 locale failures |
+| 56 | T3: the selection kept when the town joins | `ark-keep-selection` ffd115de | 3612966f + 3c8fe38a (`Array.from` in its test, TS2802) | |
+| 57 | GC: trees, hedges, canal, farm, zoo barriers, heap releases | `town-nature` cb62a642 | 64f40fde | digests: GC's, with TB's places |
+| 58 | GB: cars, parking, moving traffic, facades, windows, shopfronts | `town-built` 6e0c9277 | 2874e112 | combined with GC in `render/index.ts` and `entry.ts` (vehicles replace the old car set; narrowboats and library trees kept; `townWeather` then `patchBuildingSurfaces`); GB's section numbered 14; merged digests |
+| 59 | GB's review fix: surface markers can't misread a plain colour | `town-built-review` 68bf07d4 | 11901a6a | `sceneryAndBuildings` ba0d2904 |
+
+Gates on 2874e112: suite 2,494/2,496, 0 fail (the quoted glob); tsc 0; lint 0; motion all pass; default view ×2 pace
+1.01 / 0.99, backwards 1.6% / 1.5% (a capybara 1.9 s, a clawed frog 2.9 s, a zebra 1.9 s), turns 1.1 / 1.4 a minute, no
+page errors. On 11901a6a: tsc 0, town tests 43/43. Production heap, the low phone profile, islands on, the real
+snapshot, everything merged (2874e112): heap 214–286 MB, peak 265–300 MB against the 384 MB budget; 46.6 / 57.8 fps (run 0
+had 80 long tasks after the first frame on a loaded Mac, run 1 had 10; the longest after the first frame 189–220 ms).
+
+Deploy checks: `SUPABASE_SERVICE_ROLE_KEY` set on the VM (the food links); `cf-cache-status: HIT` on
+`/api/ark/landing/snapshot.bin`; `/ark/assets/town-v1/vehicles.bin` served (306 KB).
