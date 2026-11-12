@@ -26,7 +26,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import type {Building, TownPlan} from "@/ark-scene/islands/town/plan";
 import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
-import {at, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
 import {ARK_TIME} from "@/ark-scene/glsl";
 
@@ -1174,8 +1174,11 @@ const BUILDING_MAIN = `
 {
     vec3 bldC = vColor * 255.0;
     vec3 bldF = fract(bldC);
-    if (abs(bldF.g - 0.5) < 0.03 && abs(bldF.b - 0.25) < 0.03) {
-        float bldKind = floor(bldF.r * 16.0);
+    // (Tagged only when all three agree, as the kit's decodeColourTag: green at 0.5, blue at 0.25, red on a kind's
+    // centre; the kit keeps every plain colour off them, so no other lane's colour reads as a building surface.)
+    float bldSlot = bldF.r * 16.0 - 0.5;
+    if (abs(bldF.g - 0.5) < ${COLOUR_TAG_TOLERANCE} && abs(bldF.b - 0.25) < ${COLOUR_TAG_TOLERANCE} && abs(bldSlot - floor(bldSlot + 0.5)) / 16.0 < ${COLOUR_TAG_TOLERANCE}) {
+        float bldKind = floor(bldSlot + 0.5);
         vec3 bldN = normalize(vBldNormal);
         vec3 bldW = vBldWorld;
         vec2 bldT = normalize(vec2(-bldN.z, bldN.x) + vec2(1e-5, 0.0));

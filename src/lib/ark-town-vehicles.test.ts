@@ -26,7 +26,10 @@ import {
     type TrafficAnimals
 } from "@/ark-scene/islands/town/render/vehicles";
 import {buildBuilding, curtainsDrawn, newBuildingChunk, paneSizeCode, paneStyle, windowState} from "@/ark-scene/islands/town/render/buildings";
-import {encodeColourTag, Geo} from "@/ark-scene/islands/town/render/kit";
+import {decodeColourTag, encodeColourTag, Geo, tone} from "@/ark-scene/islands/town/render/kit";
+import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
+import {zooLayout} from "@/ark-scene/islands/town/areas";
+import {SURFACE} from "@/ark-scene/islands/town/render/buildings";
 
 /**
  * The town's vehicles and buildings (lane GB, docs/ark/town-island.md §13): true-size CC0 cars; parked cars in bays and
@@ -345,3 +348,48 @@ test("buildings: faces carry their surface kinds in the colour; panes carry thei
     assert.equal(drawn[0], false, "open in the afternoon");
     assert.ok(windowState(w, {hours: 12, day: 20410}) < 2, "no curtains drawn at noon");
 });
+
+test("no other lane's plain colour reads as a building surface on the shared solid material (lanes GA, GC, TB)", () => {
+    // Every triangle's colour as the GPU gets it (float32), read with the shader's own rule.
+    const tagsOf = (geo: Geo) => {
+        const col = Float32Array.from(geo.col);
+        const out = new Map<number, number>();
+        for (let i = 0; i < col.length; i += 9) {
+            const tag = decodeColourTag(col[i], col[i + 1], col[i + 2]);
+            out.set(tag, (out.get(tag) ?? 0) + 1);
+        }
+        return out;
+    };
+    // The scenery alone (streets' kerbs and furniture, walls, hedges, the canal and lock, farm things and gates, the zoo's
+    // barriers and houses): not one tagged triangle.
+    const scenery = buildScenery(plan);
+    let plainTriangles = 0;
+    scenery.chunks.forEach((chunk, key) => {
+        const tags = tagsOf(chunk.solid);
+        plainTriangles += tags.get(0) ?? 0;
+        assert.equal(tags.size <= 1 && (tags.size === 0 || tags.has(0)), true, `chunk ${key}'s scenery reads as a building surface: ${JSON.stringify(Array.from(tags.entries()))}`);
+    });
+    const zoo = buildZooScenery(zooLayout(launchEnclosures(), plan));
+    zoo.chunks.forEach((chunk, key) => {
+        const tags = tagsOf(chunk.solid);
+        plainTriangles += tags.get(0) ?? 0;
+        assert.ok(tags.size === 0 || (tags.size === 1 && tags.has(0)), `zoo chunk ${key} reads as a building surface`);
+    });
+    assert.ok(plainTriangles > 50_000, `${plainTriangles} plain triangles scanned`);
+    // Any colour at all, shaded as the kit shades faces, stays plain; and the buildings' own tags read back as written.
+    const g = new Geo();
+    for (let i = 0; i < 20_000; i++) {
+        const c: [number, number, number] = [((i * 7919) % 1000) / 1000, ((i * 104729) % 1000) / 1000, ((i * 1299709) % 1000) / 1000];
+        g.box({x: 0, y: 0, z: 0, rot: 0}, 0, 0, 0, 1, 1, 1, c);
+    }
+    g.box({x: 0, y: 0, z: 0, rot: 0}, 0, 0, 0, 1, 1, 1, tone("#4e535a"));
+    assert.deepEqual(Array.from(tagsOf(g).keys()), [0]);
+    const house = plan.buildings.find((b) => b.kind === "house")!;
+    const chunk = newBuildingChunk(null);
+    buildBuilding(chunk, house);
+    const kinds = tagsOf(chunk.solid);
+    const valid = new Set<number>([0, ...Object.values(SURFACE)]);
+    for (const k of Array.from(kinds.keys())) assert.ok(valid.has(k), `kind ${k}`);
+    assert.ok((kinds.get(SURFACE.brick) ?? 0) + (kinds.get(SURFACE.render) ?? 0) > 10 && (kinds.get(SURFACE.slate) ?? 0) + (kinds.get(SURFACE.tile) ?? 0) > 2, "a house's walls and roof carry their surfaces");
+});
+

@@ -162,8 +162,9 @@ const TOWN_DIGESTS = {
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
-    // panes, `render/buildings.ts`. Merged on ark-next.)
-    sceneryAndBuildings: "4f395c8500061f1c",
+    // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
+    // a quarter step, `kit.ts` plainColour).)
+    sceneryAndBuildings: "ba0d29043f1600e7",
     zoo: "3beecdb300adce0f",
     places: "fb1159793f083105"
 };
