@@ -3614,23 +3614,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     mode = "distance";
                 }
             }
-        } else if (where.edge && !entry.visitor) {
+        } else if (where.edge && !entry.visitor && clip(where.edge.mode === "enter" ? "enter_water" : "exit_water")) {
             // Into the water or out of it (lane MA3, the movement audit's goose: it paddled down the bank and through the
             // slide, and its entry played for 0.13 s once afloat): its entry or exit clip by how far along the slide it is,
-            // the pose settling it from standing to its float line the while (`fromSchedule`). With no such clip, it walks
-            // the bank and paddles once afloat.
-            const name = where.edge.mode === "enter" ? "enter_water" : "exit_water";
-            if (clip(name)) {
-                want = name;
-                mode = "sync";
-                sync = where.edge.u;
-            } else {
-                const move = where.edge.k > 0.5 ? clip("paddle") ?? clip("swim") : clip("walk");
-                if (moving(move)) {
-                    want = move.name;
-                    mode = "distance";
-                }
-            }
+            // the pose settling it from standing to its float line the while (`fromSchedule`). A rig with no such clip
+            // (a seal, an otter: MA2's list) plays its gait by its speed, as before.
+            want = where.edge.mode === "enter" ? "enter_water" : "exit_water";
+            mode = "sync";
+            sync = where.edge.u;
         } else if (!entry.visitor && where.underwater) {
             // Lane MA3: under the surface in its own dive: its swim, else its paddle, by the distance it covers (its dive clip
             // plays from the recipe below), never a walk on the bed.
