@@ -83,7 +83,8 @@ export function groundGrid(): GroundGrid {
     const step = (TOWN_HALF * 2) / TOWN_SEGMENTS;
     const heights = new Float32Array(size * size);
     const colours = new Float32Array(size * size * 3);
-    const c = new Color();
+    // (Each surface's colour parsed once, not at every vertex: the same numbers.)
+    const parsed = new Map<TownSurface, Color>();
     for (let row = 0; row < size; row++) {
         const z = -TOWN_HALF + row * step;
         for (let column = 0; column < size; column++) {
@@ -91,7 +92,8 @@ export function groundGrid(): GroundGrid {
             const g = sampleTownGround(x, z);
             const i = row * size + column;
             heights[i] = g.height;
-            c.set(SURFACE_COLOUR[g.surface]);
+            let c = parsed.get(g.surface);
+            if (!c) parsed.set(g.surface, (c = new Color().set(SURFACE_COLOUR[g.surface])));
             // Mottling, and the sea floor darker with depth.
             const n = 0.9 + 0.2 * (Math.sin(x * 0.37 + z * 0.11) * 0.5 + Math.sin(x * 0.07 - z * 0.23) * 0.5) * 0.5 + ((hashText(`${column}|${row}`) % 100) / 100 - 0.5) * 0.05;
             const deep = g.height < 0 ? Math.max(0.45, 1 + g.height * 0.05) : 1;
@@ -207,10 +209,20 @@ type ChunkMeshes = {group: Group; meshes: Mesh[]; glass: {attribute: BufferAttri
  */
 export type TownBuildData = {grid: GroundGrid; scenery: SceneryOut; perChunk: Map<number, BuildingChunk>; zoo: SceneryOut; zooOpen: string[]};
 
-export function townBuildData(zooOpen: readonly string[] = launchEnclosures()): TownBuildData {
+export function townBuildData(zooOpen: readonly string[] = launchEnclosures(), steps?: Record<string, number>): TownBuildData {
     const plan = townPlan();
+    // (`steps`: each part's time (ms), for the worker's measurements.)
+    let mark = performance.now();
+    const took = (name: string) => {
+        if (!steps) return;
+        const now = performance.now();
+        steps[name] = Math.round(now - mark);
+        mark = now;
+    };
     const grid = groundGrid();
+    took("ground");
     const scenery = buildScenery(plan);
+    took("scenery");
     const perChunk = new Map<number, BuildingChunk>();
     for (const b of plan.buildings) {
         const key = townChunkOf(b.at.x, b.at.z);
@@ -222,7 +234,10 @@ export function townBuildData(zooOpen: readonly string[] = launchEnclosures()): 
         }
         buildBuilding(c, b);
     }
-    return {grid, scenery, perChunk, zoo: buildZooScenery(zooLayout(zooOpen, plan)), zooOpen: [...zooOpen]};
+    took("buildings");
+    const zoo = buildZooScenery(zooLayout(zooOpen, plan));
+    took("zoo");
+    return {grid, scenery, perChunk, zoo, zooOpen: [...zooOpen]};
 }
 
 export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): TownIsland {

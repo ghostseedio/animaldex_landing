@@ -22,7 +22,7 @@ import {
     local,
     polylineAt,
     polylineLength,
-    polylineNearest,
+    polylineWithin,
     rng,
     smoothLine,
     sub,
@@ -383,11 +383,11 @@ function boxClearWhy(ctx: Full, b: Box, options: {coastMargin?: number; streetMa
     for (const p of pts) {
         if (inland(p.x, p.z) < coastMargin) return `coast ${p.x.toFixed(0)},${p.z.toFixed(0)}`;
         if (inBox(HARBOUR_BASIN, p.x, p.z, 3)) return "harbour";
-        if (polylineNearest(CANAL, p.x, p.z).distance < CANAL_WIDTH / 2 + TOWPATH + 0.5) return "canal";
+        if (polylineWithin(CANAL, p.x, p.z, CANAL_WIDTH / 2 + TOWPATH + 0.5)) return "canal";
         if (Math.hypot((p.x - MILLPOND.x) / (MILLPOND.rx + 4), (p.z - MILLPOND.z) / (MILLPOND.rz + 4)) < 1) return "millpond";
         for (const s of ctx.streets) {
             if (options.ignoreStreets?.includes(s.id)) continue;
-            if (polylineNearest(s.line, p.x, p.z).distance < s.width / 2 + s.pavement + streetMargin) return `street ${s.id}`;
+            if (polylineWithin(s.line, p.x, p.z, s.width / 2 + s.pavement + streetMargin)) return `street ${s.id}`;
         }
         for (const w of ctx.waters) if (inPoly(w.poly, p.x, p.z)) return `water ${w.id}`;
     }
@@ -844,8 +844,8 @@ function plant(ctx: Full) {
             const off = side * (s.width / 2 + s.pavement - 0.55);
             const px = point.x - dir.z * off;
             const pz = point.z + dir.x * off;
-            if (ctx.streets.some((o) => o.id !== s.id && polylineNearest(o.line, px, pz).distance < o.width / 2 + o.pavement + 3)) continue;
-            if (polylineNearest(CANAL, px, pz).distance < CANAL_WIDTH / 2 + 6) continue;
+            if (ctx.streets.some((o) => o.id !== s.id && polylineWithin(o.line, px, pz, o.width / 2 + o.pavement + 3))) continue;
+            if (polylineWithin(CANAL, px, pz, CANAL_WIDTH / 2 + 6)) continue;
             if (ctx.parcels.some((p) => p.drive && inBox(p.drive, px, pz, 1.5))) continue;
             if (ctx.trees.some((t) => Math.hypot(t.x - px, t.z - pz) < 7)) continue;
             add(px, pz, "lime", 0.62 + r() * 0.15, `street-${id}-${a}`);

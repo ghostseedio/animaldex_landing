@@ -15,7 +15,7 @@
  * Nothing here depends on who lives in the town: the town is complete from launch, so a spot never moves.
  */
 
-import {corners, hashText, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
@@ -108,9 +108,11 @@ export function townHouseholds(plan: TownPlan = townPlan()): Household[] {
 export function householdOf(animalId: string, keptIndoors: boolean, households: Household[] = townHouseholds()): Household {
     let best: Household = households[0];
     let bestScore = -1;
+    // (`hashText(`${animalId}|${h.id}`)`, the animal's part hashed once.)
+    const prefix = hashTextPrefix(`${animalId}|`);
     for (const h of households) {
         if (!keptIndoors && h.kind === "flat") continue;
-        const score = hashText(`${animalId}|${h.id}`);
+        const score = hashTextOn(prefix, h.id);
         if (score > bestScore) {
             bestScore = score;
             best = h;

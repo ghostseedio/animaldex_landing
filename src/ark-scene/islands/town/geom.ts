@@ -111,24 +111,151 @@ export function segmentDistance(x: number, z: number, ax: number, az: number, bx
     return Math.hypot(x - ax - dx * t, z - az - dz * t);
 }
 
+// MARK: - Polylines: the nearest point, fast
+//
+// The plan, the ground and the scenery ask for the nearest point of the canal and the streets millions of times (the
+// ground's 433 x 433 grid alone). Each line's segments get their bounds once (`segmentsOf`); a search skips a segment
+// whose bounds are farther than the best found so far, and a "within" question skips the whole line when its bounds
+// are out of reach. The answers are exactly the plain scan's, to the bit: a skipped segment could never have won
+// (it is farther than the best, or than the limit, by more than `SKIP_SLACK`, far beyond rounding), the arithmetic of
+// every segment that is looked at is the scan's own, and ties still go to the first segment.
+
+/** A polyline's segments: their bounds (x0, x1, z0, z1 each), lengths, and the distance walked to each one's start. */
+type Segments = {count: number; bounds: Float64Array; lengths: Float64Array; walked: Float64Array; x0: number; x1: number; z0: number; z1: number};
+
+/** Each line's segments, worked out on its first search (the plan's lines are never changed once made). */
+const SEGMENTS = new WeakMap<Poly, Segments>();
+
+/** How much farther than the best (m) a segment's bounds must be to skip it: far more than any rounding. */
+const SKIP_SLACK = 1e-6;
+
+function segmentsOf(line: Poly): Segments {
+    const known = SEGMENTS.get(line);
+    if (known && known.count === line.length) return known;
+    const n = Math.max(line.length - 1, 0);
+    const bounds = new Float64Array(n * 4);
+    const lengths = new Float64Array(n);
+    const walked = new Float64Array(n);
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    let sum = 0;
+    for (let i = 1; i < line.length; i++) {
+        const a = line[i - 1];
+        const b = line[i];
+        const o = (i - 1) * 4;
+        bounds[o] = Math.min(a.x, b.x);
+        bounds[o + 1] = Math.max(a.x, b.x);
+        bounds[o + 2] = Math.min(a.z, b.z);
+        bounds[o + 3] = Math.max(a.z, b.z);
+        x0 = Math.min(x0, bounds[o]);
+        x1 = Math.max(x1, bounds[o + 1]);
+        z0 = Math.min(z0, bounds[o + 2]);
+        z1 = Math.max(z1, bounds[o + 3]);
+        // (The scan's own sums, in its order: `along` comes out the same.)
+        const length = Math.hypot(b.x - a.x, b.z - a.z);
+        lengths[i - 1] = length;
+        walked[i - 1] = sum;
+        sum += length;
+    }
+    const out = {count: line.length, bounds, lengths, walked, x0, x1, z0, z1};
+    SEGMENTS.set(line, out);
+    return out;
+}
+
+/** The squared gap from (x, z) to a box (0 inside or touching; with NaN anywhere, 0: never skipped). */
+function boxGap2(x0: number, x1: number, z0: number, z1: number, x: number, z: number): number {
+    const gx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0;
+    const gz = z < z0 ? z0 - z : z > z1 ? z - z1 : 0;
+    return gx * gx + gz * gz;
+}
+
 /** Nearest point of a polyline: its distance, the distance along it, the segment's direction. */
 export function polylineNearest(line: Poly, x: number, z: number): {distance: number; along: number; dir: Pt; point: Pt} {
-    let best = {distance: Infinity, along: 0, dir: {x: 1, z: 0}, point: {x: line[0].x, z: line[0].z}};
-    let walked = 0;
+    const first = line[0];
+    const seg = segmentsOf(line);
+    const bounds = seg.bounds;
+    let bestDistance = Infinity;
+    let found = false;
+    let bestAlong = 0;
+    let bestPx = 0;
+    let bestPz = 0;
+    let bestDx = 0;
+    let bestDz = 0;
+    let bestLength = 0;
     for (let i = 1; i < line.length; i++) {
+        const o = (i - 1) * 4;
+        if (found) {
+            const reach = bestDistance + SKIP_SLACK;
+            if (boxGap2(bounds[o], bounds[o + 1], bounds[o + 2], bounds[o + 3], x, z) > reach * reach) continue;
+        }
         const a = line[i - 1];
         const b = line[i];
         const dx = b.x - a.x;
         const dz = b.z - a.z;
-        const length = Math.hypot(dx, dz);
+        const length = seg.lengths[i - 1];
         const t = length > 0 ? Math.min(Math.max(((x - a.x) * dx + (z - a.z) * dz) / (length * length), 0), 1) : 0;
         const px = a.x + dx * t;
         const pz = a.z + dz * t;
         const distance = Math.hypot(x - px, z - pz);
-        if (distance < best.distance) best = {distance, along: walked + length * t, dir: {x: dx / (length || 1), z: dz / (length || 1)}, point: {x: px, z: pz}};
-        walked += length;
+        if (distance < bestDistance) {
+            found = true;
+            bestDistance = distance;
+            bestAlong = seg.walked[i - 1] + length * t;
+            bestPx = px;
+            bestPz = pz;
+            bestDx = dx;
+            bestDz = dz;
+            bestLength = length;
+        }
+    }
+    if (!found) return {distance: Infinity, along: 0, dir: {x: 1, z: 0}, point: {x: first.x, z: first.z}};
+    return {distance: bestDistance, along: bestAlong, dir: {x: bestDx / (bestLength || 1), z: bestDz / (bestLength || 1)}, point: {x: bestPx, z: bestPz}};
+}
+
+/** The distance from (x, z) to a polyline: exactly `polylineNearest(line, x, z).distance`. */
+export function polylineDistance(line: Poly, x: number, z: number): number {
+    const seg = segmentsOf(line);
+    const bounds = seg.bounds;
+    let best = Infinity;
+    for (let i = 1; i < line.length; i++) {
+        const o = (i - 1) * 4;
+        if (best !== Infinity) {
+            const reach = best + SKIP_SLACK;
+            if (boxGap2(bounds[o], bounds[o + 1], bounds[o + 2], bounds[o + 3], x, z) > reach * reach) continue;
+        }
+        const a = line[i - 1];
+        const b = line[i];
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const length = seg.lengths[i - 1];
+        const t = length > 0 ? Math.min(Math.max(((x - a.x) * dx + (z - a.z) * dz) / (length * length), 0), 1) : 0;
+        const distance = Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t));
+        if (distance < best) best = distance;
     }
     return best;
+}
+
+/** Whether (x, z) is nearer than `limit` to a polyline: exactly `polylineNearest(line, x, z).distance < limit`. */
+export function polylineWithin(line: Poly, x: number, z: number, limit: number): boolean {
+    const seg = segmentsOf(line);
+    const reach = limit + SKIP_SLACK;
+    const reach2 = reach * reach;
+    if (boxGap2(seg.x0, seg.x1, seg.z0, seg.z1, x, z) > reach2) return false;
+    const bounds = seg.bounds;
+    for (let i = 1; i < line.length; i++) {
+        const o = (i - 1) * 4;
+        if (boxGap2(bounds[o], bounds[o + 1], bounds[o + 2], bounds[o + 3], x, z) > reach2) continue;
+        const a = line[i - 1];
+        const b = line[i];
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const length = seg.lengths[i - 1];
+        const t = length > 0 ? Math.min(Math.max(((x - a.x) * dx + (z - a.z) * dz) / (length * length), 0), 1) : 0;
+        if (Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t)) < limit) return true;
+    }
+    return false;
 }
 
 export function polylineLength(line: Poly): number {
@@ -249,6 +376,26 @@ export function rng(seed: number): () => number {
 /** FNV-1a of a string. */
 export function hashText(value: string): number {
     let h = 0x811c9dc5;
+    for (let i = 0; i < value.length; i++) {
+        h ^= value.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+}
+
+/** `hashText` part way: its state after `prefix`, to go on with `hashTextOn` (FNV-1a runs left to right). */
+export function hashTextPrefix(prefix: string): number {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < prefix.length; i++) {
+        h ^= prefix.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+    }
+    return h;
+}
+
+/** Exactly `hashText(prefix + value)`, from `hashTextPrefix(prefix)`: a prefix shared by many keys is hashed once. */
+export function hashTextOn(state: number, value: string): number {
+    let h = state;
     for (let i = 0; i < value.length; i++) {
         h ^= value.charCodeAt(i);
         h = Math.imul(h, 0x01000193);

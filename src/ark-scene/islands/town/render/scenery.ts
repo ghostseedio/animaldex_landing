@@ -5,7 +5,7 @@
  * and aviary nets), the fields and allotments, the zoo's enclosures, the farms' yards, the street furniture.
  */
 
-import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, polylineWithin, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
@@ -72,7 +72,7 @@ function pieces(line: Poly, piece = 24): Poly[] {
 
 /** Whether a point is over the canal's water (bridges carry the street there at the bank's level). */
 function overCanal(x: number, z: number): boolean {
-    return polylineNearest(CANAL, x, z).distance < CANAL_WIDTH / 2 + 0.6;
+    return polylineWithin(CANAL, x, z, CANAL_WIDTH / 2 + 0.6);
 }
 
 /** The street's surface height: the ground's, but held at the bank's level over the canal (a bridge deck). */

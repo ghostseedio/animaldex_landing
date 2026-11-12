@@ -24,6 +24,8 @@ import type {TownIsland} from "@/ark-scene/islands/town/render/index";
 
 export type ArkIslandScene = {
     id: "town";
+    /** How its build went on the main thread: the slices, their work (ms) and the longest one, and its wall time. */
+    buildStats?: {slices: number; workMs: number; longestMs: number; wallMs: number};
     /** Its local origin in the world frame. */
     origin: {x: number; z: number};
     /** Its meshes, already at the origin. */
@@ -84,20 +86,55 @@ export type ArkIslandScene = {
 };
 
 /** Builds the town for the scene (its modules on demand, so a one-island page does not carry them). */
+/**
+ * How long a slice of the town's build waits for an idle moment at most (ms). The live scene draws every frame, so
+ * idle moments are rare and a slice mostly runs at this timeout: about two frames, not 120 ms (decision 153's town
+ * took 13 such waits, 1.2-2.4 s, for under 0.2 s of work).
+ */
+export const TOWN_IDLE_TIMEOUT_MS = 34;
+
 /** The next idle moment (or the next frame's time where the browser has no idle callbacks). */
 function idle(): Promise<void> {
     return new Promise((resolve) => {
         const ric = (globalThis as {requestIdleCallback?: (cb: () => void, options?: {timeout: number}) => number}).requestIdleCallback;
-        if (ric) ric(() => resolve(), {timeout: 120});
+        if (ric) ric(() => resolve(), {timeout: TOWN_IDLE_TIMEOUT_MS});
         else setTimeout(resolve, 16);
     });
 }
 
 /**
- * `prepared`: the town's prebuild worker's answer (`islands/town/prebuild.ts`, decision 153). `sliceMs`: the build runs
- * in idle slices of about this long (its meshes chunk by chunk), never one long task; absent: all at once.
+ * The next task: the slice ends, the browser draws a frame if one is due, then the next slice. Once the live scene draws,
+ * its frames leave few idle moments and an idle wait ran late (about 1.2 s for one on the phone profile); so did a
+ * plain task (0.9-1.2 s: the page's loading work goes first), so where the browser has the Prioritized Task Scheduling
+ * API the next slice is a user-blocking task. Between tasks the frames still come first.
  */
-export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number}): Promise<ArkIslandScene> {
+export function nextTask(): Promise<void> {
+    return new Promise((resolve) => {
+        const scheduler = (globalThis as {scheduler?: {postTask?: (cb: () => void, options?: {priority?: string}) => Promise<unknown>}}).scheduler;
+        if (scheduler?.postTask) {
+            scheduler.postTask(resolve, {priority: "user-blocking"}).catch(() => resolve());
+            return;
+        }
+        if (typeof MessageChannel === "undefined") {
+            setTimeout(resolve, 0);
+            return;
+        }
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => {
+            channel.port1.close();
+            resolve();
+        };
+        channel.port2.postMessage(null);
+    });
+}
+
+/**
+ * `prepared`: the town's prebuild worker's answer (`islands/town/prebuild.ts`, decision 153). `sliceMs`: the build runs
+ * in slices of about this long (its meshes chunk by chunk), never one long task; absent: all at once. `between`: what
+ * a slice waits for: an idle moment (default; before the live scene draws) or the next task (`nextTask`, once it does).
+ */
+export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number; between?: "idle" | "task"}): Promise<ArkIslandScene> {
+    const pause = options.between === "task" ? nextTask : idle;
     const [{townIslandSteps}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {zooFeedingAt, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
@@ -120,17 +157,26 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const steps = townIslandSteps({tier: options.tier, zooOpen, built: prepared?.built ?? undefined});
     const sliced = options.sliceMs !== undefined;
     let town: TownIsland;
+    const buildStats = {slices: 0, workMs: 0, longestMs: 0, wallMs: 0};
+    const wallStart = performance.now();
+    const counted = (from: number) => {
+        const ms = performance.now() - from;
+        buildStats.slices++;
+        buildStats.workMs += ms;
+        buildStats.longestMs = Math.max(buildStats.longestMs, ms);
+    };
     for (;;) {
         const sliceStart = performance.now();
         let next = steps.next();
         while (!next.done && (!sliced || performance.now() - sliceStart < options.sliceMs!)) next = steps.next();
+        counted(sliceStart);
         if (next.done) {
             town = next.value;
             break;
         }
-        await idle();
+        await pause();
     }
-    if (sliced) await idle();
+    if (sliced) await pause();
     town.root.position.set(origin.x, 0, origin.z);
     // What Part B's streamer draws, and how much of the town is shown yet as it joins (decision 153).
     let streamDrawn: ((chunk: number) => boolean) | null = null;
@@ -151,9 +197,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     // (The prebuild's sampler and colliders are for the enclosures open when it ran.)
     const preparedKey = prepared?.built?.zooOpen.join(",") ?? null;
     // The zoo's day: its enrichment and the food at its stations (`render/zoo-life.ts`), in the town's frame.
+    const zooStart = performance.now();
     let zooLife = buildZooLife(zooLayout(openKey.split(",")).enclosures, townHeight);
     town.root.add(zooLife.group);
-    if (sliced) await idle();
+    counted(zooStart);
+    if (sliced) await pause();
+    buildStats.wallMs = performance.now() - wallStart;
+    for (const key of ["workMs", "longestMs", "wallMs"] as const) buildStats[key] = Math.round(buildStats[key]);
     const clockAt = (ms: number) => townClockAt(ms, options.offsetHours ?? 0);
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
@@ -164,6 +214,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const half = def.half;
     return {
         id: "town",
+        buildStats,
         origin,
         root: town.root,
         half: def.half,

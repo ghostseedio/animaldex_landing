@@ -12,6 +12,7 @@
 import type {ArkIsland, ArkSceneHandle, ArkSceneOptions, ArkSnapshot} from "@/ark-scene/types";
 import {arkIslandOf, arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
 import type {ArkIslandScene} from "@/ark-scene/islands/scene";
+import type {TownPrepared, TownStart} from "@/ark-scene/islands/town/prebuild";
 
 export type ArkArchipelagoOptions = ArkSceneOptions & {
     /** The island to open on (decision 26 is the page's: `arkOpeningIsland`); default the wild island. */
@@ -36,11 +37,17 @@ export type ArkArchipelagoHandle = ArkSceneHandle & {
     crossing: () => boolean;
     /** The town is in the one world (decision 153: built after the wild island's first frame); true with one island. */
     attached: () => boolean;
-    /** Development: where the town's time went (the worker, the sliced build, the attach). */
+    /**
+     * Where the town's time went (the worker and each of its steps, the sliced build, the attach), ms from the page's
+     * start; also marked as `ark:town:joined` (performance.mark, its detail) for a production build's measurements.
+     */
     townTimings: () => Record<string, unknown> | null;
     /** Resolves once the scene is up (the wild island's first mount); the apps' embed hands its held messages over then. */
     mounted: () => Promise<void>;
 };
+
+/** The town's last idle waits (ms at most), as its build's (`islands/scene.ts` TOWN_IDLE_TIMEOUT_MS; not imported: that module loads on demand). */
+const TOWN_IDLE_TIMEOUT_MS = 34;
 
 /** A flight across the strait takes about this long (`flyToIsland`). */
 const CROSS_SECONDS = 3.4;
@@ -64,35 +71,82 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
     let timings: Record<string, unknown> | null = null;
     let attaching = false;
     let tier: "high" | "medium" | "low" = tierGuess();
-    /** The town: its heavy work in its worker, its meshes in idle slices, then into the live scene. */
+    /**
+     * The town's worker, started with the wild island's prebuild (it is another thread). Its answer is held in the
+     * worker until the main thread is free for it: while it only waits for the wild island's workers, else after the
+     * first frame (`makeTown`).
+     */
+    let townWork: Promise<{start: TownStart; animals: ArkSnapshot["animals"]; origin: {x: number; z: number}; at: number}> | null = null;
+    const startTownWork = () =>
+        (townWork ??= Promise.all([import("@/ark-scene/islands/town/prebuild"), import("@/ark-scene/islands/town/areas"), import("@/ark-scene/islands")]).then(([{startTown}, {enclosuresIn, launchEnclosures}, {townWorldOrigin}]) => {
+            const animals = arkIslandSnapshot(whole, "town").animals;
+            const open = enclosuresIn(animals);
+            const origin = townWorldOrigin();
+            const at = performance.now();
+            const start = startTown({animals, origin, open: open.length ? open : launchEnclosures()}, options.workers?.town ? {workerUrl: options.workers.town} : {});
+            return {start, animals, origin, at};
+        }));
+    /**
+     * The town's meshes, made from its worker's answer in idle slices of about 8 ms (`loadTownScene`): while the wild
+     * island's own workers run when the answer is in by then (the main thread only waits for them), else after the
+     * first frame. It joins the live scene only after the first frame (`attachTown`). Its tier is set again then.
+     */
+    let townMade: Promise<{built: ArkIslandScene; prepared: TownPrepared; t0: number; t1: number; tLoaded: number; tDone: number; collidersMs: number; samplerMs: number} | null> | null = null;
+    /** The wild island's first frame drawn (the town's slices then go between tasks, not idle moments). */
+    let firstFrame = false;
+    let firstFrameDrawn: () => void = () => undefined;
+    const firstFrameSeen = new Promise<void>((resolve) => (firstFrameDrawn = resolve));
+    /** When the wild island's prebuild was done (ms from the page's start). */
+    let wildPreparedAt = 0;
+    /** An idle moment, or about two frames at most. */
+    const idle = () => new Promise<void>((resolve) => ((globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 16)))(() => resolve(), {timeout: TOWN_IDLE_TIMEOUT_MS}));
+    const makeTown = () =>
+        (townMade ??= (async () => {
+            const [{loadTownScene, nextTask}, work] = await Promise.all([import("@/ark-scene/islands/scene"), startTownWork()]);
+            const prepared = await work.start.collect();
+            // (Without the worker's answer the town is all worked out on the main thread: never before the first frame.)
+            if (prepared.where !== "worker" && !firstFrame) await firstFrameSeen;
+            if (disposed) return null;
+            const t1 = performance.now();
+            // (Before the live scene draws, its idle moments; after, between its tasks: idle moments are rare then.)
+            const between = firstFrame ? "task" : "idle";
+            const pause = firstFrame ? nextTask : idle;
+            const built = await loadTownScene({tier, animals: work.animals, origin: work.origin, prepared, sliceMs: 8, between});
+            const tLoaded = performance.now();
+            // (Its colliders and its behaviour world's places, each in a slice of its own.)
+            await pause();
+            let tc = performance.now();
+            if (!disposed) built.colliders();
+            const collidersMs = performance.now() - tc;
+            await pause();
+            tc = performance.now();
+            if (!disposed) built.sampler();
+            const samplerMs = performance.now() - tc;
+            if (disposed) {
+                built.dispose();
+                return null;
+            }
+            return {built, prepared, t0: work.at, t1, tLoaded, tDone: performance.now(), collidersMs, samplerMs};
+        })());
+    /** The town into the live scene after the wild island's first frame (made by then, or made now), in a task of its own. */
     const attachTown = async () => {
         if (attaching || attached || disposed || !two) return;
         attaching = true;
-        const [{prepareTown}, {loadTownScene}, {enclosuresIn, launchEnclosures}, {townWorldOrigin}] = await Promise.all([
-            import("@/ark-scene/islands/town/prebuild"),
-            import("@/ark-scene/islands/scene"),
-            import("@/ark-scene/islands/town/areas"),
-            import("@/ark-scene/islands")
-        ]);
-        const townAnimals = arkIslandSnapshot(whole, "town").animals;
-        const open = enclosuresIn(townAnimals);
-        const origin = townWorldOrigin();
-        const t0 = performance.now();
-        const prepared = await prepareTown({animals: townAnimals, origin, open: open.length ? open : launchEnclosures()}, options.workers?.town ? {workerUrl: options.workers.town} : {});
-        if (disposed) return;
-        const t1 = performance.now();
-        town = await loadTownScene({tier, animals: townAnimals, origin, prepared, sliceMs: 8});
+        firstFrame = true;
+        firstFrameDrawn();
+        const ready = performance.now();
+        const made = await makeTown();
+        if (!made) return;
+        const {prepared, t0, t1, tLoaded, tDone, collidersMs, samplerMs} = made;
+        town = made.built;
         if (disposed || !scene?.attachIsland) {
             town?.dispose();
             return;
         }
-        // (Its behaviour world's places and its colliders, each in an idle moment of its own, before it joins.)
-        const idle = () => new Promise<void>((resolve) => ((globalThis as {requestIdleCallback?: (cb: () => void, o?: {timeout: number}) => number}).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 16)))(() => resolve(), {timeout: 120}));
-        await idle();
-        town.colliders();
-        await idle();
-        town.sampler();
-        await idle();
+        // (Then the attach, a task of its own right after the first frame's (`nextTask`): an idle wait here ran about 1.2 s
+        // late on the phone profile, the live scene's frames leaving no idle moments.)
+        const tMade = performance.now();
+        await (await import("@/ark-scene/islands/scene")).nextTask();
         if (disposed || !scene?.attachIsland) {
             town.dispose();
             return;
@@ -108,16 +162,54 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
             }
         });
         attached = true;
-        // (Development: where the town's time went: the worker, the sliced build, the one attach task.)
-        timings = {prebuild: Math.round(t1 - t0), where: prepared.where, build: Math.round(t2 - t1), attach: Math.round(performance.now() - t2), attachAt: Math.round(t2), builtAt: Math.round(t1)};
+        // (Where the town's time went: the worker and its steps, the sliced build, the one attach task.)
+        const t3 = performance.now();
+        timings = {
+            prebuild: Math.round(t1 - t0),
+            where: prepared.where,
+            worker: prepared.worker ?? null,
+            // (From the answer to the made town: its meshes, colliders and behaviour world.)
+            build: Math.round(tDone - t1),
+            load: town.buildStats ?? null,
+            loadWall: Math.round(tLoaded - t1),
+            // (From the first frame: waiting for the made town, if it was not made by then; then the wait for the attach.)
+            afterFirstFrame: {waitedForMeshes: Math.round(tMade - ready), toAttach: Math.round(t2 - tMade)},
+            colliders: Math.round(collidersMs),
+            sampler: Math.round(samplerMs),
+            attach: Math.round(t3 - t2),
+            askedAt: Math.round(t0),
+            builtAt: Math.round(t1),
+            meshesAt: Math.round(tLoaded),
+            wildPreparedAt: Math.round(wildPreparedAt),
+            firstFrameAt: Math.round(ready),
+            attachAt: Math.round(t2),
+            joinedAt: Math.round(t3)
+        };
+        try {
+            performance.mark("ark:town:joined", {detail: timings});
+        } catch {
+            // (No User Timing detail here: the timings stay on the handle.)
+        }
     };
 
     const mount = async () => {
         const wild = arkIslandSnapshot(whole, "wild");
         const [{mountArk}, {prepareArk}] = await Promise.all([import("@/ark-scene"), import("@/ark-scene/runtime/prebuild")]);
         if (disposed) return;
+        // The town's worker starts now, beside the wild island's prebuild. Its answer is held in the worker; taken now
+        // if it is ready while the main thread only waits for the wild island's workers, else after the first frame.
+        let wildPrepared = false;
+        if (two) {
+            void startTownWork().then((work) =>
+                work.start.ready.then((done) => {
+                    if (done && !wildPrepared && !disposed) void makeTown();
+                })
+            );
+        }
         // The wild island's heavy seeded work (decor, forest, grass, places) in the runtime's worker first (runtime.md §7).
         await prepareArk({snapshot: wild, ...(options.workers?.scenery ? {workerUrl: options.workers.scenery} : {}), ...(options.workers?.places ? {placesWorkerUrl: options.workers.places} : {})}).catch(() => undefined);
+        wildPrepared = true;
+        wildPreparedAt = performance.now();
         if (disposed) return;
         // The wild island draws its first frame exactly as with one island; the town comes when it is built (decision 153).
         scene = mountArk(el, {
@@ -196,6 +288,8 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
         },
         dispose: () => {
             disposed = true;
+            // (A town worker still at work is stopped.)
+            void townWork?.then((work) => work.start.cancel());
             scene?.dispose();
             scene = null;
             town = null;
