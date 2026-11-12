@@ -170,6 +170,7 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
+import {modelBase} from "@/ark-scene/grounding/base";
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
@@ -283,9 +284,13 @@ const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
  * (nearest first; the rest as specks), how near the camera a member must be to be drawn at all (m), and how near for its
  * kind's far model to be asked for (m). Specks and figures are a copied matrix each: no schedule, no rig.
  */
-const RESTING_FIGURE_BUDGET = {high: 600, medium: 400, low: 260} as const;
+const RESTING_FIGURE_BUDGET = {high: 400, medium: 120, low: 60} as const;
 const RESTING_DRAW_WITHIN = 150;
 const RESTING_LOAD_WITHIN = 70;
+/** How many resting kinds (nearest the camera) are drawn as their models: each one a draw call and a far model. */
+const RESTING_FIGURE_KINDS = {high: 64, medium: 16, low: 8} as const;
+/** A resting speck's tint before its kind's model is in (by body plan). */
+const RESTING_SPECK_COLOURS: Record<string, Color> = {"": new Color("#8f8670"), mammal: new Color("#8f7f66"), bird: new Color("#9a8a72"), fish: new Color("#7f97a3"), reptile: new Color("#7d8660"), turtle: new Color("#7d8660")};
 
 type Level = "near" | "far" | "token";
 
@@ -2137,6 +2142,57 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * a few pixels, as the far model standing still; the rest as specks. The
      * matrices are worked out again only when the drawn scale changes.
      */
+    const restingPoint = new Vector3();
+    /** Lane TB: a resting kind with no far model in yet: its members as specks, sized and shaped from its measured model. */
+    const restingSpecks = (group: FigureGroup, cameraPosition: Vector3, now: number): HerdPlan | null => {
+        const measured = modelBase(group.slug);
+        if (!measured) return null;
+        herdSphere.center.set(group.centre.x, 0, group.centre.z);
+        herdSphere.radius = group.radius + group.length * 2 + 4;
+        if (!frustum.intersectsSphere(herdSphere)) return null;
+        const s = group.length / Math.max(bodyAxisExtent(group.slug, measured.plan, measured.size), 0.05);
+        const tall = measured.size.y * s;
+        const width = measured.size.x * s;
+        const depth = measured.size.z * s;
+        const shape: SpeckShape = measured.plan === "mammal" || measured.plan === "reptile" || !measured.plan ? "four-legged" : "oval";
+        if (group.scale !== -s) {
+            // (A negative scale: worked out without the model; the model's arrival works them out again.)
+            group.scale = -s;
+            group.height = tall;
+            group.members.forEach((member, i) => {
+                const base = island?.figureBase(member.id, member.x, member.z, member.ground, tall) ?? member.ground;
+                herdRotation.setFromAxisAngle(up, member.yaw);
+                if (shape === "oval") {
+                    herdPosition.set(member.x, base + tall * 0.2, member.z);
+                    herdMatrix.compose(herdPosition, herdRotation, herdScale.set(width * 0.7, tall * 0.6, depth * 0.85));
+                } else {
+                    herdPosition.set(member.x, base, member.z);
+                    herdMatrix.compose(herdPosition, herdRotation, herdScale.set(width * 0.9, tall * 0.95, depth * 0.95));
+                }
+                herdMatrix.toArray(group.speckMatrices, i * 16);
+            });
+        }
+        if (group.sortedFrom.distanceToSquared(cameraPosition) > 4 || now - group.sortedAt > 0.5) {
+            group.sortedFrom.copy(cameraPosition);
+            group.sortedAt = now;
+            const d = new Float32Array(group.members.length);
+            group.members.forEach((m, i) => {
+                d[i] = (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2;
+            });
+            group.order.sort((a, b) => d[a] - d[b]);
+        }
+        let drawn = 0;
+        for (let k = 0; k < group.order.length; k++) {
+            const m = group.members[group.order[k]];
+            if ((m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 > RESTING_DRAW_WITHIN ** 2) break;
+            drawn++;
+        }
+        group.figures = 0;
+        group.specks = drawn;
+        const colour = RESTING_SPECK_COLOURS[measured.plan ?? ""] ?? RESTING_SPECK_COLOURS[""];
+        return {slug: group.slug, order: group.order, members: group.members, figureMatrices: group.figureMatrices, speckMatrices: group.speckMatrices, colour, drawn, figures: 0, width, depth, herd: group, shape};
+    };
+
     const planHerds = (cameraPosition: Vector3, exaggerate: number, now: number): HerdPlan[] => {
         const plans: HerdPlan[] = [];
         if (!herds.length && !restingGroups.length) return plans;
@@ -2145,23 +2201,50 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Lane TB: the town's resting kept animals have a figure budget of their own, so a wild herd never takes it.)
         let restingBudget: number = RESTING_FIGURE_BUDGET[budgetTier];
         let restingAsks = 0;
-        const groups: Array<HerdDraw | FigureGroup> = restingGroups.length ? [...herds, ...restingGroups] : herds;
+        // (Development: `window.__arkRestingOff = true` draws no resting figures, to compare against.)
+        const restingOff = process.env.NODE_ENV !== "production" && (globalThis as {__arkRestingOff?: boolean}).__arkRestingOff === true;
+        const groups: Array<HerdDraw | FigureGroup> = restingGroups.length && !restingOff ? [...herds, ...restingGroups] : herds;
+        // (Lane TB: only the resting kinds nearest the camera are drawn as their models: a draw call and a far model each;
+        // every other resting animal in reach is a speck, one mesh for all.)
+        const figureKinds = new Set<string>();
+        if (!restingOff && restingGroups.length) {
+            const nearest: Array<[string, number]> = [];
+            for (const group of restingGroups) {
+                group.figures = 0;
+                group.specks = 0;
+                // (Its nearest member in view: a kind behind the camera never takes a model's place.)
+                let d = Infinity;
+                for (const m of group.members) {
+                    const dm = (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2;
+                    if (dm >= d || dm > RESTING_LOAD_WITHIN ** 2) continue;
+                    restingPoint.set(m.x, Math.max(m.ground, 0) + group.height * 0.5, m.z);
+                    if (frustum.containsPoint(restingPoint)) d = dm;
+                }
+                if (d < RESTING_LOAD_WITHIN ** 2) nearest.push([group.slug, d]);
+            }
+            nearest.sort((a, b) => a[1] - b[1]);
+            for (const [slug, d] of nearest.slice(0, RESTING_FIGURE_KINDS[budgetTier])) {
+                figureKinds.add(slug);
+                // (Ranked for loading as a kind seen this frame at its nearest resting member's distance.)
+                runtime.see(slug, Math.sqrt(d), true);
+            }
+        }
         for (const herd of groups) {
             const resting = "resting" in herd;
-            let budget = resting ? restingBudget : herdBudget;
+            let budget = resting ? (figureKinds.has(herd.slug) ? restingBudget : 0) : herdBudget;
             herd.middles.fill(Number.NaN);
             const model = library.get(herd.slug);
             const far = model?.far;
             if (!model || !far) {
-                // (A resting kind's far model is asked for once one of it is in view close by: a few kinds a frame.)
-                if (resting && restingAsks < 4 && library.has(herd.slug)) {
-                    herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
-                    herdSphere.radius = herd.radius + herd.length * 2 + 4;
-                    if (frustum.intersectsSphere(herdSphere) && herd.members.some((m) => (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 < RESTING_LOAD_WITHIN ** 2)) {
-                        library.request(herd.slug, "far");
-                        restingAsks++;
-                    }
+                if (!resting) continue;
+                // (A resting kind's far model is asked for once it is among the nearest in view: a few kinds a frame.)
+                if (figureKinds.has(herd.slug) && restingAsks < 4 && library.has(herd.slug)) {
+                    library.request(herd.slug, "far");
+                    restingAsks++;
                 }
+                // Meanwhile (and for every kind past the nearest) a speck its size and shape, from its measured model.
+                const plan = restingSpecks(herd as FigureGroup, cameraPosition, now);
+                if (plan) plans.push(plan);
                 continue;
             }
             herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
@@ -2244,8 +2327,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 herd.middles[i * 3 + 1] = herd.figureMatrices[i * 16 + 13] + tall * 0.5 + model.minY * s;
                 herd.middles[i * 3 + 2] = m.z;
             }
-            if (resting) restingBudget = budget;
-            else herdBudget = budget;
+            // (A resting kind past the nearest had no budget of its own: the shared one stays as it was.)
+            if (resting) {
+                if (figureKinds.has(herd.slug)) restingBudget = budget;
+            } else herdBudget = budget;
             // (A resting kind: only its members within reach are drawn at all, nearest first.)
             let drawn = herd.members.length;
             if (resting) {
@@ -4193,7 +4278,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const instance = mesh ? mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute : null;
             const target = mesh ? mesh.instanceMatrix.array as Float32Array : null;
             let index = mesh ? perMesh.get(mesh) ?? 0 : 0;
-            const colour = herd.herd.colour ?? (herd.herd.colour = model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null);
+            const colour = herd.herd.colour ?? (herd.herd.colour = model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null) ?? herd.colour;
             for (let k = 0; k < herd.drawn; k++) {
                 const i = herd.order[k];
                 const member = herd.members[i];
@@ -5923,6 +6008,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
+        // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
+        resting: () => restingGroups.flatMap((group) => Array.from(group.members, (member, i) => {
+            const k = group.order.indexOf(i);
+            return {id: member.id, slug: group.slug, x: member.x, z: member.z, drawn: k >= 0 && k < group.figures + group.specks, figure: k >= 0 && k < group.figures};
+        })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
         rigState: (id: string) => {
