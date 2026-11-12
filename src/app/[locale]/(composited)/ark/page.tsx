@@ -521,7 +521,8 @@ export default async function ArkPage({params, searchParams}: Props) {
             liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
-        <ArkSeoSummary locale={locale} />
+        {/* (Called, not mounted: an async server component as JSX fails this React's types, TS2786.) */}
+        {await ArkSeoSummary({locale})}
         </>
     );
     // Another language than the site's: its own lang and direction, so screen readers and right-to-left scripts read it right.

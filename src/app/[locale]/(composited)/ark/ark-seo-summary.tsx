@@ -35,7 +35,8 @@ export default async function ArkSeoSummary({locale}: {locale: string}) {
                     ))}
                 </ul>
             </section>
-            <ArkFoodChainSection locale={locale} limit={6} headingLevel={2} revalidate={300} className="mx-auto w-full max-w-[86rem] px-4 pb-12 md:px-8 md:pb-16" id="ark-food-chain" />
+            {/* (Called, not mounted: an async server component as JSX fails this React's types, TS2786.) */}
+            {await ArkFoodChainSection({locale, limit: 6, headingLevel: 2, revalidate: 300, className: "mx-auto w-full max-w-[86rem] px-4 pb-12 md:px-8 md:pb-16", id: "ark-food-chain"})}
         </div>
     );
 }
