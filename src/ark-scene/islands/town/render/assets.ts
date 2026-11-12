@@ -20,6 +20,7 @@ import {windMaterial} from "@/ark-scene/asset-trees";
 import {ASSETS, ASSET_BASE} from "@/ark-scene/tree-pick";
 import {NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
+import {townWeather} from "@/ark-scene/islands/town/render/materials";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = (typeof LEVELS)[number];
@@ -139,6 +140,8 @@ export class TownAssets {
     private makeMeshes(entry: Entry, level: Level, geometry: BufferGeometry, doubleSided: boolean, id: string) {
         const capacity = Math.max(entry.instances.length, 1);
         const mesh = new InstancedMesh(geometry, this.materialFor(doubleSided, false, entry.conifer), capacity);
+        // (The instance colours exist from the start, so the first program made for a mesh is the one it keeps.)
+        mesh.setColorAt(0, WHITE);
         mesh.count = 0;
         mesh.frustumCulled = false;
         mesh.castShadow = level !== "card" && this.shadows;
@@ -149,6 +152,7 @@ export class TownAssets {
         this.group.add(mesh);
         if (level === "lod0") {
             const near = new InstancedMesh(geometry, this.materialFor(doubleSided, true, entry.conifer), capacity);
+            near.setColorAt(0, WHITE);
             near.count = 0;
             near.visible = false;
             near.frustumCulled = false;
@@ -301,6 +305,8 @@ export class TownAssets {
     }
 }
 
+const WHITE = new Color(1, 1, 1);
+
 function frac(value: number): number {
     return value - Math.floor(value);
 }
@@ -310,11 +316,7 @@ const windCache = new Map<string, Material>();
 function cachedWind(doubleSided: boolean, near: boolean, conifer: boolean): Material {
     const key = `${doubleSided}|${near}|${conifer}`;
     let m = windCache.get(key);
-    if (!m) {
-        const material = windMaterial(doubleSided, near, conifer);
-        const base = material.customProgramCacheKey.bind(material);
-        material.customProgramCacheKey = () => `${base()}-town`;
-        windCache.set(key, (m = material));
-    }
+    // (The town's weather on them too, lane GA's kit: rain darkens and glosses the bark and leaves, cloud shade, the lamps.)
+    if (!m) windCache.set(key, (m = townWeather(windMaterial(doubleSided, near, conifer), {soak: 0.3})));
     return m;
 }
