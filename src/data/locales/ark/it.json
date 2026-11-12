@@ -98,7 +98,15 @@
             "bring": "Parla con un animale",
             "herdTag": "branco",
             "breeds": "razze: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} a bordo",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} nelle ultime 24 ore",
+            "changeWindow": "24 h",
+            "allSpecies": "Tutte le {count} specie a bordo",
+            "listIntro": "Tutte le specie dell'Ark, prima le più numerose, con quanti esemplari sono a bordo.",
+            "openList": "Vedile sopra l'Ark",
+            "listLabel": "Tutte le specie a bordo, prima le più numerose"
         },
         "story": {
             "generic": "Salito a bordo dopo un passo che ha funzionato",

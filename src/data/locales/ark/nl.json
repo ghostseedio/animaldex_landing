@@ -98,7 +98,15 @@
             "bring": "Praat met een dier",
             "herdTag": "kudde",
             "breeds": "rassen: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} aan boord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} in de afgelopen 24 uur",
+            "changeWindow": "24 u",
+            "allSpecies": "Alle {count} soorten aan boord",
+            "listIntro": "Elke soort op de Ark, de talrijkste eerst, met hoeveel er aan boord zijn.",
+            "openList": "Bekijk ze boven de Ark",
+            "listLabel": "Alle soorten aan boord, de talrijkste eerst"
         },
         "story": {
             "generic": "Kwam aan boord na een stap die werkte",

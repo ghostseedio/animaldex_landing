@@ -98,7 +98,15 @@
             "bring": "Tal med et dyr",
             "herdTag": "flok",
             "breeds": "racer: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} om bord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} de seneste 24 timer",
+            "changeWindow": "24 t",
+            "allSpecies": "Alle {count} arter om bord",
+            "listIntro": "Alle arter på Ark, de talrigeste først, med hvor mange der er om bord.",
+            "openList": "Se dem over Ark",
+            "listLabel": "Alle arter om bord, de talrigeste først"
         },
         "story": {
             "generic": "Kom om bord efter et skridt, der virkede",

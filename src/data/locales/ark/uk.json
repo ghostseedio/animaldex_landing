@@ -98,7 +98,15 @@
             "bring": "Поговорити з твариною",
             "herdTag": "стадо",
             "breeds": "породи: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} на борту",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} за останні 24 години",
+            "changeWindow": "24 год",
+            "allSpecies": "Усі види на борту ({count})",
+            "listIntro": "Усі види на Ark, починаючи з найчисленніших, із кількістю особин на борту.",
+            "openList": "Показати поверх Ark",
+            "listLabel": "Усі види на борту, починаючи з найчисленніших"
         },
         "story": {
             "generic": "На борту після кроку, який спрацював",

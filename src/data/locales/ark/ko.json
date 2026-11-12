@@ -98,7 +98,15 @@
             "bring": "동물에게 말 걸기",
             "herdTag": "무리",
             "breeds": "품종: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count}마리 탑승 중",
+            "rowCount": "{animal}: {count}",
+            "change24h": "지난 24시간 동안 {change}",
+            "changeWindow": "24시간",
+            "allSpecies": "탑승한 {count}종 모두",
+            "listIntro": "Ark에 있는 모든 종을 수가 많은 순서로, 탑승한 수와 함께 보여 줘요.",
+            "openList": "Ark 위에서 보기",
+            "listLabel": "탑승한 모든 종, 수가 많은 순"
         },
         "story": {
             "generic": "효과가 있었던 할 일 덕분에 탑승했어요",

@@ -98,7 +98,15 @@
             "bring": "एखाद्या प्राण्याशी बोला",
             "herdTag": "कळप",
             "breeds": "जाती: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "जहाजावर {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "गेल्या 24 तासांत {change}",
+            "changeWindow": "24 तास",
+            "allSpecies": "जहाजावरील सर्व {count} प्रजाती",
+            "listIntro": "Ark वरील प्रत्येक प्रजाती, सर्वाधिक संख्येची आधी, जहाजावर किती आहेत त्यासह.",
+            "openList": "Ark वर पाहा",
+            "listLabel": "जहाजावरील प्रत्येक प्रजाती, सर्वाधिक संख्येची आधी"
         },
         "story": {
             "generic": "उपयोगी पडलेल्या पावलानंतर जहाजावर चढला",

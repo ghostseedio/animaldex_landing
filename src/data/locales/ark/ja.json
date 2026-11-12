@@ -98,7 +98,15 @@
             "bring": "動物と話す",
             "herdTag": "群れ",
             "breeds": "品種：{breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count}匹が乗船中",
+            "rowCount": "{animal}：{count}",
+            "change24h": "過去24時間で{change}",
+            "changeWindow": "24時間",
+            "allSpecies": "乗船中の全{count}種",
+            "listIntro": "Arkにいるすべての種を、数の多い順に、乗船している数とともに並べています。",
+            "openList": "Arkの上で見る",
+            "listLabel": "乗船中のすべての種（数の多い順）"
         },
         "story": {
             "generic": "うまくいったステップのあとに乗り込みました",

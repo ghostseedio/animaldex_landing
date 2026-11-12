@@ -98,7 +98,15 @@
             "bring": "Parla amb un animal",
             "herdTag": "ramat",
             "breeds": "races: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} a bord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} en les últimes 24 hores",
+            "changeWindow": "24 h",
+            "allSpecies": "Les {count} espècies a bord",
+            "listIntro": "Totes les espècies de l'Ark, primer les més nombroses, amb quants exemplars hi ha a bord.",
+            "openList": "Veure-les sobre l'Ark",
+            "listLabel": "Totes les espècies a bord, primer les més nombroses"
         },
         "story": {
             "generic": "Va pujar a bord després d'un pas que va funcionar",

@@ -98,7 +98,15 @@
             "bring": "ஒரு விலங்குடன் பேசு",
             "herdTag": "மந்தை",
             "breeds": "வகைகள்: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "கப்பலில் {count}",
+            "rowCount": "{animal}: {count}",
+            "change24h": "கடந்த 24 மணி நேரத்தில் {change}",
+            "changeWindow": "24 மணி",
+            "allSpecies": "கப்பலில் உள்ள அனைத்து {count} இனங்கள்",
+            "listIntro": "Ark-இல் உள்ள ஒவ்வொரு இனமும், எண்ணிக்கை அதிகமானவை முதலில், கப்பலில் எத்தனை உள்ளன என்பதுடன்.",
+            "openList": "Ark-இன் மேலே பார்க்கவும்",
+            "listLabel": "கப்பலில் உள்ள ஒவ்வொரு இனமும், எண்ணிக்கை அதிகமானவை முதலில்"
         },
         "story": {
             "generic": "பலன் தந்த ஒரு படிக்குப் பிறகு Ark-இல் ஏறியது",

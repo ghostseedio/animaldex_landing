@@ -98,7 +98,15 @@
             "bring": "Parler à un animal",
             "herdTag": "troupeau",
             "breeds": "races : {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} à bord",
+            "rowCount": "{animal} : {count}",
+            "change24h": "{change} ces dernières 24 heures",
+            "changeWindow": "24 h",
+            "allSpecies": "Les {count} espèces à bord",
+            "listIntro": "Toutes les espèces de l'Ark, les plus nombreuses d'abord, avec leur nombre à bord.",
+            "openList": "Les voir sur l'Ark",
+            "listLabel": "Toutes les espèces à bord, les plus nombreuses d'abord"
         },
         "story": {
             "generic": "Monté à bord après une étape qui a marché",

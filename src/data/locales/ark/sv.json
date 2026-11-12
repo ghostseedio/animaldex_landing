@@ -98,7 +98,15 @@
             "bring": "Prata med ett djur",
             "herdTag": "flock",
             "breeds": "raser: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} ombord",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} senaste 24 timmarna",
+            "changeWindow": "24 h",
+            "allSpecies": "Alla {count} arter ombord",
+            "listIntro": "Alla arter på Ark, de talrikaste först, med hur många som är ombord.",
+            "openList": "Se dem över Ark",
+            "listLabel": "Alla arter ombord, de talrikaste först"
         },
         "story": {
             "generic": "Kom ombord efter ett steg som fungerade",

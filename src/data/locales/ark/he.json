@@ -98,7 +98,15 @@
             "bring": "דבר עם חיה",
             "herdTag": "עדר",
             "breeds": "גזעים: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} על הסיפון",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} ב-24 השעות האחרונות",
+            "changeWindow": "24 שעות",
+            "allSpecies": "כל המינים על הסיפון ({count})",
+            "listIntro": "כל מין ב-Ark, הנפוצים ביותר קודם, עם מספר הפרטים שעל הסיפון.",
+            "openList": "לצפייה מעל Ark",
+            "listLabel": "כל המינים על הסיפון, הנפוצים ביותר קודם"
         },
         "story": {
             "generic": "עלה לסיפון אחרי צעד שהצליח",

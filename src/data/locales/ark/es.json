@@ -98,7 +98,15 @@
             "bring": "Habla con un animal",
             "herdTag": "manada",
             "breeds": "razas: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} a bordo",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} en las últimas 24 horas",
+            "changeWindow": "24 h",
+            "allSpecies": "Las {count} especies a bordo",
+            "listIntro": "Todas las especies del Ark, primero las más numerosas, con cuántos hay a bordo.",
+            "openList": "Verlas sobre el Ark",
+            "listLabel": "Todas las especies a bordo, primero las más numerosas"
         },
         "story": {
             "generic": "Subió a bordo tras un paso que funcionó",

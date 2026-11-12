@@ -98,7 +98,15 @@
             "bring": "Porozmawiaj ze zwierzęciem",
             "herdTag": "stado",
             "breeds": "rasy: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} na pokładzie",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} w ciągu ostatnich 24 godzin",
+            "changeWindow": "24 h",
+            "allSpecies": "Wszystkie gatunki na pokładzie ({count})",
+            "listIntro": "Wszystkie gatunki w Ark, od najliczniejszych, z liczbą osobników na pokładzie.",
+            "openList": "Zobacz je nad Ark",
+            "listLabel": "Wszystkie gatunki na pokładzie, od najliczniejszych"
         },
         "story": {
             "generic": "Weszło na pokład po kroku, który zadziałał",

@@ -98,7 +98,15 @@
             "bring": "صحبت با یک جانور",
             "herdTag": "گله",
             "breeds": "نژادها: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} در کشتی",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} در ۲۴ ساعت گذشته",
+            "changeWindow": "۲۴ ساعت",
+            "allSpecies": "همهٔ {count} گونهٔ سرنشین",
+            "listIntro": "همهٔ گونه‌های Ark، از پرشمارترین، همراه با شمار هر کدام در کشتی.",
+            "openList": "دیدن آن‌ها روی Ark",
+            "listLabel": "همهٔ گونه‌های سرنشین، از پرشمارترین"
         },
         "story": {
             "generic": "پس از قدمی که جواب داد سوار شد",

@@ -98,7 +98,15 @@
             "bring": "કોઈ પ્રાણી સાથે વાત કરો",
             "herdTag": "ટોળું",
             "breeds": "જાતો: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} સવાર",
+            "rowCount": "{animal}: {count}",
+            "change24h": "છેલ્લા 24 કલાકમાં {change}",
+            "changeWindow": "24 કલાક",
+            "allSpecies": "સવાર બધી {count} પ્રજાતિઓ",
+            "listIntro": "Ark ની દરેક પ્રજાતિ, સૌથી વધુ સંખ્યાવાળી પહેલાં, અને દરેકની કેટલી સવાર છે તે સાથે.",
+            "openList": "Ark ઉપર જુઓ",
+            "listLabel": "સવાર દરેક પ્રજાતિ, સૌથી વધુ સંખ્યાવાળી પહેલાં"
         },
         "story": {
             "generic": "કામ કરી ગયેલા પગલા પછી સવાર થયું",

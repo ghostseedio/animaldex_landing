@@ -98,7 +98,15 @@
             "bring": "Trò chuyện với một con vật",
             "herdTag": "đàn",
             "breeds": "giống: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} con trên tàu",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} trong 24 giờ qua",
+            "changeWindow": "24 giờ",
+            "allSpecies": "Tất cả {count} loài trên tàu",
+            "listIntro": "Mọi loài trên Ark, loài đông nhất trước, kèm số lượng trên tàu.",
+            "openList": "Xem trên Ark",
+            "listLabel": "Mọi loài trên tàu, loài đông nhất trước"
         },
         "story": {
             "generic": "Lên Ark sau một bước đã thành công",

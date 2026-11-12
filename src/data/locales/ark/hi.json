@@ -98,7 +98,15 @@
             "bring": "किसी जानवर से बात करें",
             "herdTag": "झुंड",
             "breeds": "नस्लें: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} सवार",
+            "rowCount": "{animal}: {count}",
+            "change24h": "पिछले 24 घंटों में {change}",
+            "changeWindow": "24 घंटे",
+            "allSpecies": "सवार सभी {count} प्रजातियाँ",
+            "listIntro": "Ark की हर प्रजाति, सबसे ज़्यादा संख्या वाली पहले, साथ में कि कितने सवार हैं।",
+            "openList": "Ark के ऊपर देखें",
+            "listLabel": "सवार हर प्रजाति, सबसे ज़्यादा संख्या वाली पहले"
         },
         "story": {
             "generic": "एक कामयाब कदम के बाद सवार हुआ",

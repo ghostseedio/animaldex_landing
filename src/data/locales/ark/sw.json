@@ -98,7 +98,15 @@
             "bring": "Ongea na mnyama",
             "herdTag": "kundi",
             "breeds": "mbari: {breeds}",
-            "countStatus": "{count} · {status}"
+            "countStatus": "{count} · {status}",
+            "chip": "{count} ndani",
+            "rowCount": "{animal}: {count}",
+            "change24h": "{change} katika saa 24 zilizopita",
+            "changeWindow": "saa 24",
+            "allSpecies": "Spishi zote {count} zilizo ndani",
+            "listIntro": "Kila spishi kwenye Ark, zenye wanyama wengi kwanza, pamoja na idadi yao ndani.",
+            "openList": "Waone juu ya Ark",
+            "listLabel": "Kila spishi iliyo ndani, zenye wanyama wengi kwanza"
         },
         "story": {
             "generic": "Alipanda baada ya hatua iliyofanikiwa",
