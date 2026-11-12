@@ -121,10 +121,12 @@ test("attach: tree-attach.json is built from today's attach.json and lod0 trees 
 
 test("attach: the trees' points sit on the trees as the renderer places them, only on trees every tier draws", () => {
     const points = treePoints();
-    assert.ok(points.length > 4000, `${points.length} tree points`);
+    // Floors about 15% under the merged count (ark-next: true-size trees, L6, with tree-attach generator 7, L3): 3,583.
+    assert.ok(points.length > 3000, `${points.length} tree points`);
     const byTag: Record<string, number> = {};
     for (const point of points) byTag[point.tag] = (byTag[point.tag] ?? 0) + 1;
-    assert.ok(byTag.leaf > 1500 && byTag.bark > 800 && byTag.branch > 1000, JSON.stringify(byTag));
+    // (Merged: leaf 1,164, bark 618, branch 824; floors about 15% under.)
+    assert.ok(byTag.leaf > 990 && byTag.bark > 525 && byTag.branch > 700, JSON.stringify(byTag));
     const position = new Vector3();
     const rotation = new Quaternion();
     const scale = new Vector3();
@@ -134,8 +136,10 @@ test("attach: the trees' points sit on the trees as the renderer places them, on
         if (item.rank !== undefined) assert.ok(fillDrawnOnEveryTier(item, EVERY_TIER_FILL), `${point.id} on fill the low tier leaves out`);
         const asset = treeAssetFor(item)!;
         assert.equal(point.asset, asset.id, point.id);
-        // asset-trees.ts's own instance matrix, composed here from the decor item.
-        const matrix = new Matrix4().compose(position.set(item.x, item.y - DECOR_SINK, item.z), rotation.setFromAxisAngle(new Vector3(0, 1, 0), item.rotation), scale.setScalar(asset.scale));
+        // asset-trees.ts's own instance matrix, composed here from the decor item at the renderer's placement (its foot
+        // sunk into a slope since the scenery lane's real-size trees: `assetTreePlacement`).
+        const placed = assetTreePlacement(item)!;
+        const matrix = new Matrix4().compose(position.set(item.x, placed.y, item.z), rotation.setFromAxisAngle(new Vector3(0, 1, 0), item.rotation), scale.setScalar(asset.scale));
         const w = point.wind!;
         const world = new Vector3(w.local.x, w.local.y, w.local.z).applyMatrix4(matrix);
         assert.ok(world.distanceTo(new Vector3(point.position.x, point.position.y, point.position.z)) < 1e-6, `${point.id} placed off its tree`);
@@ -492,10 +496,12 @@ test("attach: no point moves unless the scenery it stands on changed (a baseline
 
 test("attach: limbs for large climbers lie on thick drawn wood, with the radius a chord through it gives, room, and load", async () => {
     const limbs = allAttachPoints().filter((point) => point.tag === "limb");
-    assert.ok(limbs.length > 1000, `${limbs.length} limb points`);
+    // Floor about 15% under the merged count (ark-next: true-size trees, L6, with tree-attach generator 7, L3): 649.
+    assert.ok(limbs.length > 550, `${limbs.length} limb points`);
     // Spread over the real forest, not 16 canopy trees.
     const forest = limbs.filter((point) => point.zone === "rainforest" || point.zone === "woodland");
-    assert.ok(forest.length > 300 && new Set(forest.map((point) => point.host)).size > 60, `${forest.length} in the forests`);
+    // (Merged: 342 on 45 forest trees; floors about 15% under.)
+    assert.ok(forest.length > 290 && new Set(forest.map((point) => point.host)).size > 38, `${forest.length} in the forests`);
     assert.ok(limbs.filter((point) => point.radius! >= 0.06).length > 150, "limbs for an orangutan");
     const trees = new Map<string, Tree>();
     for (const point of limbs) {
@@ -541,7 +547,8 @@ test("attach: limbs for large climbers lie on thick drawn wood, with the radius 
 
 test("attach: hang points are under thick limbs with a clear drop (bats), on the canopy trees and the asset trees", () => {
     const hangs = allAttachPoints().filter((point) => point.tag === "canopy_hang");
-    assert.ok(hangs.length > 500, `${hangs.length} hang points`);
+    // Floor about 15% under the merged count (ark-next: true-size trees, L6, with tree-attach generator 7, L3): 370.
+    assert.ok(hangs.length > 310, `${hangs.length} hang points`);
     const decor = worldDecor();
     for (const point of hangs) {
         assert.ok(point.normal.y < -0.99 && point.radius! >= 0.03, `${point.id} under a thick limb`);
