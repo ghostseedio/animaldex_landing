@@ -114,7 +114,23 @@ steps. Speeds are by Froude number, capped at the species' top speed.
 
 Insects, spiders and crabs are held to loose thresholds (§6).
 
-The before and after numbers for all 20 species and 8 scenarios are in
+Before (the baked clips played by distance, as the scene played them) and after, median over the vertebrates of the
+20 golden species (planted-foot slide per step, mm):
+
+| Scenario | Slide before → after | Worst before → after | Planted sole height, median before → after (mm) |
+|---|---|---|---|
+| walk | 19 → 0.05 | 2,160 → 3.2 | 1.2 → 0 |
+| trot | 12.3 → 0.04 | 4,320 → 5.0 | 1.3 → 0.01 |
+| run | 9.3 → 0.24 | 7,200 → 6.8 | 1.4 → 0.06 |
+| speeding up and slowing down | 17.6 → 0.47 | 4,800 → 4.2 | 1.3 → 0.17 |
+| a turning walk | 41 → 0.04 | 1,975 → 3.3 | 1.2 → 0 |
+| turning half round on the spot | 622 → 0.26 | 2,959 → 3.2 | 0.9 → 0.03 |
+| a 15° slope over a ridge | 1,200 → 4.0 | 5,795 → 33 | 80 → 1.2 |
+| smooth steps | 62 → 1.1 | 1,379 → 4.8 | 12 → 0.4 |
+
+(The worst before is the emperor penguin, which has no walk clip and glides along still.)
+
+The numbers for every species and scenario are in
 `~/animaldex-ark-handover-2026-11-11/ark/motion/L1/metrics/metrics-final.json`; the summary is in the lane's report.
 
 ## 5. Interface for the other lanes (`locomotion/index.ts`)

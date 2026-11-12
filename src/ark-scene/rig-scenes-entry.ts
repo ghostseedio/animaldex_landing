@@ -329,7 +329,7 @@ async function mountScenes(el: HTMLElement) {
             const a = handle.locate(id);
             // (A small animal from higher up: from its side the grass hides it.)
             // (A tiny one, an ant or a spider, nearly from above and close: the plants are trees at its size.)
-            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * (a.length < 0.1 ? 5 : 3.2), 0.25), polar: a.length < 0.1 ? 0.55 : a.length < 0.4 ? Math.min(polar, 0.9) : polar, azimuth: (courseYaw.get(id) ?? a.yaw) + Math.PI / 2});
+            if (a) handle.setView({target: {x: a.x, y: a.y, z: a.z}, distance: Math.max(a.length * (a.length < 0.1 ? 9 : 3.2), a.length < 0.1 ? 0.1 : 0.25), polar: a.length < 0.1 ? 0.55 : a.length < 0.4 ? Math.min(polar, 0.9) : polar, azimuth: (courseYaw.get(id) ?? a.yaw) + Math.PI / 2});
             requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
