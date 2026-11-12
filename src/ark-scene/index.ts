@@ -157,7 +157,8 @@ import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
-import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
+import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
+import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
@@ -474,6 +475,9 @@ function forcedTier(): QualityTier | null {
 }
 
 export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHandle {
+    // L1's foot IK on the drawn ground (L3's request, docs/ark/grounding.md): feet plant on the drawn triangles, not the
+    // analytic surface (they differ by metres at the cliff bands).
+    setLocoGround(drawnGround);
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor();
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
