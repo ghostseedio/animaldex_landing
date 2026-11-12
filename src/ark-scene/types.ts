@@ -365,6 +365,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     islandNear?: () => ArkIsland;
     /** Part C: an island's whole view (the director's crossing shot). */
     islandView?: (island: ArkIsland) => ArkCameraView;
+    /** Part C (decision 153): the town, built off the first frame, joins the one world with the whole Ark's snapshot. */
+    attachIsland?: (island: ArkIslandScene, snapshot: ArkSnapshot) => void;
     /** A newer snapshot: animals not seen before come aboard with an entrance. */
     update: (snapshot: ArkSnapshot) => void;
     setMineOnly: (mineOnly: boolean) => void;

@@ -110,8 +110,42 @@ const HIGH_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry"
  * Every town animal's place. `animals` is the town island's slice of the read (`voyage_public_v3('town')`); the open
  * enclosures are the snapshot's own names (the plan's 26 at launch until the server sends any).
  */
-export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements {
-    const open = enclosuresIn(animals);
+/** Each animal's own spot and step off it, by its fields and the open enclosures (remembered across snapshots). */
+const MEMO = new Map<string, {placement: Placement; info: TownPlace; rank: number}>();
+
+/** Placements worked out elsewhere (the town's prebuild worker, decision 153), for exactly this list. */
+let primed: {key: string; result: TownPlacements} | null = null;
+export function townPlacementKey(animals: readonly ArkAnimal[]): string {
+    return animals.map((a) => `${a.id}|${a.area ?? ""}|${a.enclosure ?? ""}|${a.slot ?? ""}|${a.slot_rank ?? ""}|${a.zone}|${a.model_slug}`).join("\n");
+}
+export function primeTownPlacements(key: string, result: TownPlacements, animals?: readonly ArkAnimal[]): void {
+    primed = {key, result};
+    // Each animal's own spot remembered too, so any part of the list (the town's animals joining a few at a time) is free.
+    if (!animals) return;
+    const openKey = result.open.join(",");
+    for (const animal of animals) {
+        const placement = result.places.get(animal.id);
+        const info = result.town.get(animal.id);
+        if (!placement || !info) continue;
+        const own = hashText(animal.id);
+        const rank = animal.area === "zoo" ? 1 + ((own >>> 7) % 4) : !animal.area ? animal.slot_rank ?? 0 : (own >>> 9) % 3;
+        const core: Placement = {...placement};
+        delete core.leader;
+        delete core.rank;
+        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`, {placement: core, info, rank});
+    }
+}
+
+export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
+    if (primed) {
+        const hit = primed.key === townPlacementKey(animals) ? primed.result : null;
+        if (hit) {
+            primed = null;
+            return hit;
+        }
+    }
+    // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
+    const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();
     const layout = zooLayout(openNames);
     const enclosures = new Map(layout.enclosures.map((e) => [e.id, e] as [string, ZooEnclosure]));
@@ -164,7 +198,31 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
         }
     }
     const clusterSpots = new Map<string, TownSpot | null>();
+    const openKey = openNames.join(",");
+    if (MEMO.size > 20000) MEMO.clear();
     for (const animal of animals) {
+        // Who it keeps to (a zoo kind's first in its enclosure; a wildlife cluster's first): the only part that depends on
+        // who else is aboard, worked out fresh. Its spot and its step off it are its own (remembered across snapshots).
+        let leader: string | undefined;
+        if (animal.area === "zoo") {
+            const lead = zooLeads.get(`${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`);
+            if (lead && lead.count > 1) leader = lead.leader;
+        } else if (!animal.area) {
+            const cluster = clusters.get(clusterKey(animal));
+            if (cluster && cluster.count > 1) leader = cluster.leader;
+        }
+        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`;
+        const hit = MEMO.get(memoKey);
+        if (hit) {
+            const placement: Placement = {...hit.placement};
+            if (leader) {
+                placement.leader = leader;
+                placement.rank = leader === animal.id ? 0 : hit.rank;
+            }
+            places.set(animal.id, placement);
+            town.set(animal.id, hit.info);
+            continue;
+        }
         const length = arkBody(animal).metres;
         const size = sizeOf(length);
         const slug = animal.model_slug;
@@ -172,7 +230,6 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
         const yaw = ((own >>> 4) % 6283) / 1000;
         let spot: TownSpot | null = null;
         let info: TownPlace;
-        let leader: string | undefined;
         let rank = 0;
         if (animal.area === "house") {
             const indoors = KEPT_INDOORS.test(slug) && length < 0.6;
@@ -200,14 +257,11 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
             const swims = SWIMMER.test(slug);
             const list = inner.filter((s) => (swims && host?.pool ? s.where === "pool" : s.where !== "pool" || !host?.pool));
             spot = pick(list.length ? list : inner, animal.id, (s, i) => `${s.where}${i}`);
-            const lead = zooLeads.get(`${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`);
-            if (lead && lead.count > 1) leader = lead.leader;
             // (Its step off the spot never depends on who leads: a leader leaving moves nobody.)
             rank = 1 + ((own >>> 7) % 4);
             info = {area: "zoo", where: spot?.where ?? "enclosure", place: enclosure?.id ?? `${type}-1`, enclosure: host, range: host ? inradius(host.mask) : 2, still: Boolean(host?.indoor) && length < 0.25};
         } else {
             const key = clusterKey(animal);
-            const cluster = clusters.get(key)!;
             const wheres = urbanNiche(slug, animal.zone);
             const candidates = wheres.flatMap((w) => byWhere.get(w) ?? []).filter((s) => s.sizes.includes(size));
             const list = candidates.length ? candidates : wheres.flatMap((w) => byWhere.get(w) ?? []);
@@ -215,10 +269,8 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
             const memo = `${key}|${slug}|${size}`;
             if (!clusterSpots.has(memo)) clusterSpots.set(memo, pick(list, `${key}|${slug}`, (s, i) => `${s.place}${s.where}${i}`));
             spot = clusterSpots.get(memo)!;
-            if (cluster.count > 1) {
-                leader = cluster.leader;
-                rank = animal.slot_rank ?? 1;
-            }
+            // (Its place in its cluster is the server's rank, whoever else is there.)
+            rank = animal.slot_rank ?? 0;
             const area: TownArea = spot?.area ?? "garden_wildlife";
             info = {area, where: spot?.where ?? "park", place: spot?.place ?? "park", enclosure: null, range: HIGH_WHERE.has(spot?.where ?? "park") ? 1.5 : 8, still: false};
         }
@@ -231,6 +283,7 @@ export function placeTownAnimals(animals: readonly ArkAnimal[]): TownPlacements 
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
         const pool = base.where === "pool" && info.enclosure?.pool ? Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45 : null;
         const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw, water: false, sea: false};
+        MEMO.set(memoKey, {placement: {...placement}, info, rank});
         void WATER_WHERE;
         if (leader && leader !== animal.id) {
             placement.leader = leader;

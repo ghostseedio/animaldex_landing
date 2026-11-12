@@ -26,6 +26,15 @@ if (phone && process.env.ARK_THROTTLE !== "0") {
 page.setDefaultTimeout(900_000);
 page.on("pageerror", (e) => console.log("pageerror:", e.message));
 page.on("console", (m) => { if (m.type() === "error" || /\[ark\]/.test(m.text())) console.log("console:", m.text().slice(0, 300)); });
+// The page's long main-thread tasks (decision 153: the town's build must not stall it), from navigation on.
+await page.addInitScript(() => {
+    (window as any).__longTasks = [];
+    try {
+        new PerformanceObserver((list) => {
+            for (const e of list.getEntries()) (window as any).__longTasks.push({at: Math.round(e.startTime), ms: Math.round(e.duration)});
+        }).observe({type: "longtask", buffered: true});
+    } catch {}
+});
 const t0 = Date.now();
 const log = (...a: unknown[]) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...a);
 await page.goto(`${base}/ark?${query}`, {waitUntil: "domcontentloaded", timeout: 1_800_000});
@@ -34,6 +43,15 @@ await page.waitForFunction(() => Boolean((window as any).__arkScene), null, {tim
 log("scene handle");
 const ready = async () => page.waitForFunction(() => { const s = (window as any).__arkScene; try { return s && s.island && !s.crossing() && s.stats && s.stats().drawCalls > 0; } catch { return false; } }, null, {timeout: 900_000});
 await ready();
+if (process.env.ARK_WAIT_ATTACH === "1") {
+    await page.waitForFunction(() => { const s = (window as any).__arkScene; return s && s.attached && s.attached(); }, null, {timeout: 900_000});
+    log("town attached");
+    await page.waitForTimeout(5000);
+    const tasks = await page.evaluate(() => (window as any).__longTasks as Array<{at: number; ms: number}>);
+    const sorted = [...tasks].sort((a, b) => b.ms - a.ms); const timing = await page.evaluate(() => (window as any).__arkScene.townTimings?.()); if (timing?.attachAt) log("tasks round the attach", JSON.stringify(tasks.filter((t) => Math.abs(t.at - timing.attachAt) < 3000)));
+    log("long tasks", tasks.length, "longest", JSON.stringify(sorted.slice(0, 8)));
+    log("town timings", JSON.stringify(await page.evaluate(() => (window as any).__arkScene.townTimings?.())));
+}
 await page.waitForTimeout(Number(process.env.ARK_SETTLE ?? 9000));
 const stats = async () => page.evaluate(() => { const s = (window as any).__arkScene; const st = s.stats(); const heap = Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576); return {island: s.island(), live: st.live, near: st.near, far: st.far, sprites: st.sprites, drawCalls: st.drawCalls, tier: st.tier, models: st.modelsLoaded, scheduled: st.scheduled, behaviourMs: st.behaviourMs, buildMs: st.behaviourBuildMs, frameMs: st.frameMs, intervalMs: st.intervalMs, heapMB: heap, streaming: st.streaming ? {distance: st.streaming.renderDistance, chunks: st.streaming.chunks} : null}; });
 log("first island", JSON.stringify(await stats()));

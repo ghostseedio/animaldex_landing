@@ -102,10 +102,7 @@ export type ArkRuntimeContext = {
     fillShare: (tier: QualityTier) => number;
     /** The render target the scene's materials draw into (the post chain's), for the shader warm-up. */
     renderTarget: () => WebGLRenderTarget | null;
-    /**
-     * Part C: another island's ground (the town's), for the camera's floor; its own buildings are not camera
-     * obstacles yet, and the wild island's trees and rocks are not there. Absent: the wild island's ground and scenery.
-     */
+    /** Part C: the one world's ground (the town's inside its square), for the camera's floor; absent: the wild island's. */
     groundAt?: (x: number, z: number) => number;
 };
 
@@ -406,7 +403,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          */
         collide(target: Vector3, dt: number, closeUp: boolean) {
             // Built once (every fill tree, with its rank); a tier's share is applied at the query.
-            obstacles ??= ctx.groundAt ? new CameraObstacles([]) : CameraObstacles.forScene();
+            obstacles ??= CameraObstacles.forScene();
             const fill = ctx.fillShare(ctx.tier());
             // The scene's rules (keepInWorld): under the sea it keeps its own floor; the eye's height over the ground
             // is a quarter of the view distance, 3 cm to 1.2 m.

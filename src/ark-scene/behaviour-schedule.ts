@@ -26,7 +26,7 @@
  * slot. Nothing here decides anything in the Ark (the server does that).
  */
 
-import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
@@ -1132,11 +1132,34 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
         // (About a breath's swim away at its own pace, any way round: at true size a 14 m humpback reached a breath ±4 m
         // away in a second and floated through it. Motion pass §3.)
+        // (2026-11-12, motion pass: a breath's swim and its set-off, about 16 s, so the 15 s breath is taken on the move,
+        // and out in open water: a penguin on the polar shelf was sent to a "swim" cell it could walk to over the ice,
+        // and came up for air standing on it; another to the cell it was in. The first of eight bearings round from its
+        // own that gives open water at least most of the way out.)
         const pace = freeBodyLengthsPerSecond(profile) * swimPaceLength(animal.length);
         const bearing = random() * Math.PI * 2;
-        const away = Math.max(4, pace * 12 * (0.75 + 0.5 * random()));
-        const near = world.nav.nearest(animal.home.x + Math.cos(bearing) * away, animal.home.z + Math.sin(bearing) * away, "swim", 0.6) ?? animal.home;
-        return {doing: "breathe", to: {x: near.x, y: surfaceAt(near.x, near.z), z: near.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
+        const away = Math.max(4, pace * 16 * (0.9 + 0.3 * random()));
+        // (And one its body can swim to from its home water: at true size a 1.15 m emperor penguin no longer fitted the
+        // polar cove's narrow leads, its swim path stopped short, and the trip turned into a walk over the shelf.)
+        const bodyR = bodyRadiusOf(animal, profile.slug);
+        const homeWater = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.3);
+        const swimsTo = (cell: NavPoint) => {
+            if (!homeWater) return true;
+            const path = world.nav.path(homeWater, cell, "swim", 0.3, 600, MAX_SLOPE, bodyR);
+            const end = path[path.length - 1];
+            return Boolean(end) && Math.hypot(end.x - cell.x, end.z - cell.z) < 0.01;
+        };
+        let near: NavPoint | null = null;
+        let fallback: NavPoint | null = null;
+        for (let k = 0; k < 8 && !near; k++) {
+            const b = bearing + (k * Math.PI) / 4;
+            const cell = world.nav.nearest(animal.home.x + Math.cos(b) * away, animal.home.z + Math.sin(b) * away, "swim", 0.6);
+            if (!cell) continue;
+            fallback ??= cell;
+            if (!world.nav.walkable(cell.x, cell.z) && Math.hypot(cell.x - animal.home.x, cell.z - animal.home.z) >= 0.6 * away && swimsTo(cell)) near = cell;
+        }
+        const spot = near ?? fallback ?? animal.home;
+        return {doing: "breathe", to: {x: spot.x, y: surfaceAt(spot.x, spot.z), z: spot.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
@@ -1658,8 +1681,18 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         leg.beat = "run";
     }
     travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
-    if (travel > SLOT_SECONDS * 0.8) for (const leg of legs) leg.seconds *= (SLOT_SECONDS * 0.8) / travel;
-    travel = Math.min(travel, SLOT_SECONDS * 0.8);
+    // Too long for four fifths of the slot: quicker, but on foot never past its clip's pace cap (PACE_CAP: faster, its
+    // feet slide; a clawed frog with no run walked at 1.37 of its walk); past that the way takes more of the slot
+    // (its stay beats are fitted into what is left), and only a way longer than all but 6 s of it goes faster still.
+    if (travel > SLOT_SECONDS * 0.8) {
+        let k = (SLOT_SECONDS * 0.8) / travel;
+        const onFoot = legs.some((leg) => leg.mode === "ground");
+        // (To 1.2 of its pace at most, a margin under the cap: the walk's own pace already varies 0.85-1.2.)
+        if (onFoot) k = Math.max(k, speed / pace / Math.min(PACE_CAP, 1.2));
+        if (travel * k > SLOT_SECONDS - 6) k = (SLOT_SECONDS - 6) / travel;
+        for (const leg of legs) leg.seconds *= k;
+        travel *= k;
+    }
     const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt) ?? {beats: [], finish: to};
     // Its beats fitted into the time left (all of them, so it ends where `finishOf` says); a shake first after a swim.
     const left = SLOT_SECONDS - travel;
