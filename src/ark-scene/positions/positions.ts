@@ -22,8 +22,12 @@
 // The player-control lane's hybrid world state plugs in through `HomeOverride` (homeOf's third argument): a stored
 // home (and island) replaces the formula's for an animal that is or has been controlled.
 
-/** 2 (2026-11-12): the atlas regenerated on the web's ark-next (true scale, scenery, grounding, nav moved placement). */
-export const POSITIONS_VERSION = 2;
+/**
+ * 2 (2026-11-12): the atlas regenerated on the web's ark-next (true scale, scenery, grounding, nav moved placement).
+ * 3 (2026-11-12): the atlas regenerated on world v2, the bigger wild island the page shows in islands mode (the web's
+ * ark-wild-island-next 75419a2c, no hamlet); the town has no atlas (its predators keep the pool's meal).
+ */
+export const POSITIONS_VERSION = 3;
 
 // ---------------------------------------------------------------------------------------------------------------
 // Time

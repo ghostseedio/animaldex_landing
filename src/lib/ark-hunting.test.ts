@@ -105,6 +105,13 @@ test("forays: a due predator is at the module's waypoint at every step, walks be
     const end = layer.pose(animal, epochAt((k0 + 1) / 96 - 1e-9), 1, ground, sched)!;
     const first = forayAt(atlas, home, animal.id, k0 + 1);
     assert.ok(Math.hypot(end.x - first.x, end.z - first.z) < 0.01, "it arrives at its first waypoint");
+    // Islands mode: the same animal on the town island has no home in the (wild island's) atlas: never a foray.
+    for (const island of ["town", "wild"] as const) {
+        const islandLayer = new HuntingLayer();
+        islandLayer.set({hunting: "encounter", startedAtMs: START, arkDay: null, tickedTo: null, predators: new Map([[animal.id, 80]]), meals: []}, atlas, START);
+        const pose = islandLayer.pose({...animal, island}, epochAt(7750 / 96), 1, ground, sched);
+        assert.equal(pose === null, island === "town", `${island}: ${pose ? "a foray" : "no foray"}`);
+    }
     // Off again: the read gone.
     layer.set(null, null, null);
     assert.equal(layer.active, false);

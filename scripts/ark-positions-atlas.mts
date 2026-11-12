@@ -5,7 +5,7 @@
  * and the coasts' spots), so the server's shared position module (`src/ark-scene/positions/positions.ts`, a pinned copy
  * of AnimalDex `supabase/functions/_shared/ark-positions/positions.ts`) finds each home where the scene draws it.
  *
- *   npx tsx scripts/ark-positions-atlas.mts --catalogue <voyage_species.json> --slots <zone-slots.json> --out <part.json> [--shard k/n] [--limit N]
+ *   ARK_WORLD=v2 npx tsx scripts/ark-positions-atlas.mts --catalogue <voyage_species.json> --slots <zone-slots.json> --out <part.json> [--shard k/n] [--limit N]
  *   npx tsx scripts/ark-positions-atlas.mts --merge <part.json,part.json,...> --out <atlas.json> [--report <r.json>]
  *
  * - catalogue: [[species_profile_id, model_slug, zone], ...] (production's voyage_species, public catalogue data).
@@ -16,20 +16,29 @@
  * about twice today's highest): where the module's home is more than EPS from the scene's own spot (rank 0), that slot
  * gets an override (the scene's spot); a recipe missing on more than a fifth of them is replaced by an explicit table.
  * Past the covered slots the recipe answers alone. Shards run in parallel; --merge joins them and adds the mask.
+ *
+ * The world: the wild island the page shows in islands mode (v2 since P7, no hamlet), so run it (and the merge) with
+ * ARK_WORLD=v2; the atlas records which world it was made on (`world`). The town has no atlas: its predators keep the
+ * pool's meal (AnimalDex decision 121).
  */
 import {readFileSync, writeFileSync} from "node:fs";
-import {placeAnimals, slotKind} from "../src/ark-scene/placement.ts";
-import {mapPoints, traceMapPlace, wetOf} from "../src/ark-scene/map/place.ts";
-import {mapSpecies} from "../src/ark-scene/map/species.ts";
-import {waterClassOf} from "../src/ark-scene/map/water.ts";
-import {speciesDepth, waterHomeSpot, inHomeWater, LAKE_SWIM_RADIUS} from "../src/ark-scene/sea-depth.ts";
-import {behaviourProfile} from "../src/ark-scene/behaviour-profile.ts";
-import {amphibious, aquatic, homeRadius} from "../src/ark-scene/behaviour-schedule.ts";
-import {displayLength} from "../src/ark-scene/sizes.ts";
-import {arkStats} from "../src/ark-scene/stats.ts";
-import {LAKE, ZONE_SITES} from "../src/ark-scene/world.ts";
-import {ARK_ZONES, type ArkAnimal, type ArkZone} from "../src/ark-scene/types.ts";
-import {decodeAtlas, homeCentre} from "../src/ark-scene/positions/positions.ts";
+import type {ArkAnimal, ArkZone} from "../src/ark-scene/types.ts";
+// The world first (docs/ark/wild-island.md §10, the load-order trap): with ARK_WORLD=v2 `world.ts` applies v2 at load, which
+// samples the wild generator, so it must load before any module under islands/wild/. Dynamic imports, in this order: a
+// static import of the scene's (CommonJS) modules from this ES module goes through tsx's export preparse, a second copy
+// that loads the generator first.
+const {arkWorld, LAKE, ZONE_SITES} = await import("../src/ark-scene/world.ts");
+const {placeAnimals, slotKind} = await import("../src/ark-scene/placement.ts");
+const {mapPoints, traceMapPlace, wetOf} = await import("../src/ark-scene/map/place.ts");
+const {mapSpecies} = await import("../src/ark-scene/map/species.ts");
+const {waterClassOf} = await import("../src/ark-scene/map/water.ts");
+const {speciesDepth, waterHomeSpot, inHomeWater, LAKE_SWIM_RADIUS} = await import("../src/ark-scene/sea-depth.ts");
+const {behaviourProfile} = await import("../src/ark-scene/behaviour-profile.ts");
+const {amphibious, aquatic, homeRadius} = await import("../src/ark-scene/behaviour-schedule.ts");
+const {displayLength} = await import("../src/ark-scene/sizes.ts");
+const {arkStats} = await import("../src/ark-scene/stats.ts");
+const {ARK_ZONES} = await import("../src/ark-scene/types.ts");
+const {decodeAtlas, homeCentre} = await import("../src/ark-scene/positions/positions.ts");
 
 const args = new Map<string, string>();
 for (let i = 2; i < process.argv.length; i += 2) args.set(process.argv[i].replace(/^--/, ""), process.argv[i + 1]);
@@ -287,7 +296,7 @@ if (!merging) {
         if (++done % 50 === 0) console.error(`shard ${shard}/${shards}: ${done} species, ${Math.round((performance.now() - started) / 1000)} s, ${JSON.stringify(counts)}`);
     });
     writeFileSync(args.get("out")!, JSON.stringify(out));
-    console.log(JSON.stringify({shard, species: done, counts, seconds: Math.round((performance.now() - started) / 1000)}));
+    console.log(JSON.stringify({world: arkWorld(), shard, species: done, counts, seconds: Math.round((performance.now() - started) / 1000)}));
 } else {
     // ---------------------------------------------------------------------------------------------------------------
     // Merge the parts; the mask: medium per 2 m cell (0 land, 1 fresh water, 2 sea under 1.5 m, 3 deep sea)
@@ -345,13 +354,14 @@ if (!merging) {
         v: 1,
         about: "Ark positions atlas (encounter hunting): per species its sheet and, per zone, the recipe that finds its clusters' spots on the scene's own lists, with the scene's own spot wherever the recipe misses. Generated by animaldex_landing scripts/ark-positions-atlas.mts from the scene's population-independent grid; read by positions.ts (AnimalDex _shared/ark-positions, pinned copy in the web). Never edit by hand.",
         eps: EPS,
+        world: arkWorld(),
         zones: [...ARK_ZONES],
         islands: {wild: {mask: {x0: -half, z0: -half, cell: CELL, nx, nz: nx, data: mask.toString("base64")}, lists, recipes, species: speciesOut, sheets, overrides: overridesOut}}
     };
     const text = JSON.stringify(atlas) + "\n";
     writeFileSync(args.get("out")!, text);
     worst.sort((a, b) => a - b);
-    const report = {species: Object.keys(parts).length, recipes: counts, routes, lists: lists.length, recipeRows: recipes.length, sheets: sheets.length, bytes: text.length, slotsChecked: checked, overridden: misses, withinEps: {p50: worst[worst.length >> 1], p99: worst[Math.floor(worst.length * 0.99)], max: worst[worst.length - 1]}, tables};
+    const report = {world: arkWorld(), species: Object.keys(parts).length, recipes: counts, routes, lists: lists.length, recipeRows: recipes.length, sheets: sheets.length, bytes: text.length, slotsChecked: checked, overridden: misses, withinEps: {p50: worst[worst.length >> 1], p99: worst[Math.floor(worst.length * 0.99)], max: worst[worst.length - 1]}, tables};
     if (args.get("report")) writeFileSync(args.get("report")!, JSON.stringify(report, null, 1));
     console.log(JSON.stringify({...report, tables: tables.length}));
 }
