@@ -1604,6 +1604,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         entries = next;
         entryById = nextById;
+        // (The collisions' bodies and speeds follow the entries' sizes: worked out again.)
+        collisions.reset();
         // The underground's burrows and molehills, and the burrow mouths of the ground's diggers.
         const burrows = next.flatMap((entry) => (entry.place.burrow ? [entry.place.burrow] : []));
         const molehills = next.flatMap((entry) => {

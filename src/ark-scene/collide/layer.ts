@@ -27,6 +27,8 @@ export type CollideHooks<E> = {
 const CELL = 4;
 /** The most the search widens for how far a neighbour could have gone since it was last placed (m). */
 const MOST_TRAVEL = 30;
+/** How long a laid grid serves (s): every entry is listed as far as it could go by then. */
+const GRID_HOLD = 0.3;
 const key = (i: number, j: number) => (i + 32768) * 65536 + (j + 32768);
 
 export class CollideLayer<E> {
@@ -46,6 +48,8 @@ export class CollideLayer<E> {
     /** Forget bodies (a snapshot changed sizes or groups). */
     reset() {
         this.bodies.clear();
+        this.speeds.clear();
+        this.gridEpoch = Number.NaN;
         this.placedNow.clear();
         this.resolvedNow.clear();
         this.epoch = Number.NaN;
@@ -64,27 +68,40 @@ export class CollideLayer<E> {
         return b;
     }
 
+    /** When the grid was last laid (s), and each entry's top speed (m/s, worked out once). */
+    private gridEpoch = Number.NaN;
+    private readonly speeds = new Map<E, number>();
+    private speedOf(e: E): number {
+        let v = this.speeds.get(e);
+        if (v === undefined) this.speeds.set(e, (v = this.hooks.speed(e)));
+        return v;
+    }
+
     /**
-     * A new moment: who is where, roughly. Each is listed in every cell its body could reach now: round where it was last
-     * worked out, as far as its body reaches plus how far it could have gone since (so a search needs only its own reach).
+     * A new moment: who is where, roughly. Each is listed in every cell its body could reach until GRID_HOLD from now:
+     * round where it was last worked out, as far as its body reaches plus how far it could have gone by then (so a
+     * search needs only its own reach). The grid is laid again every GRID_HOLD seconds, not every frame.
      */
     private begin(epoch: number) {
         if (epoch === this.epoch) return;
         this.epoch = epoch;
-        this.grid.clear();
         this.placedNow.clear();
         this.resolvedNow.clear();
-        for (const e of this.hooks.everyone()) {
-            const last = this.hooks.last(e);
-            if (!last) continue;
-            const body = this.bodyOf(e);
-            const r = body.half + body.radius + Math.min(this.hooks.speed(e) * Math.abs(epoch - last.at), MOST_TRAVEL) + 0.05;
-            for (let i = Math.floor((last.x - r) / CELL); i <= Math.floor((last.x + r) / CELL); i++) {
-                for (let j = Math.floor((last.z - r) / CELL); j <= Math.floor((last.z + r) / CELL); j++) {
-                    const k = key(i, j);
-                    const list = this.grid.get(k);
-                    if (list) list.push(e);
-                    else this.grid.set(k, [e]);
+        if (!(epoch >= this.gridEpoch && epoch <= this.gridEpoch + GRID_HOLD)) {
+            this.gridEpoch = epoch;
+            this.grid.clear();
+            for (const e of this.hooks.everyone()) {
+                const last = this.hooks.last(e);
+                if (!last) continue;
+                const body = this.bodyOf(e);
+                const r = body.half + body.radius + Math.min(this.speedOf(e) * (Math.abs(epoch - last.at) + GRID_HOLD), MOST_TRAVEL) + 0.05;
+                for (let i = Math.floor((last.x - r) / CELL); i <= Math.floor((last.x + r) / CELL); i++) {
+                    for (let j = Math.floor((last.z - r) / CELL); j <= Math.floor((last.z + r) / CELL); j++) {
+                        const k = key(i, j);
+                        const list = this.grid.get(k);
+                        if (list) list.push(e);
+                        else this.grid.set(k, [e]);
+                    }
                 }
             }
         }
@@ -120,7 +137,7 @@ export class CollideLayer<E> {
                     seen.add(other);
                     const last = this.hooks.last(other)!;
                     const ob = this.bodyOf(other);
-                    const could = body.half + body.radius + ob.half + ob.radius + Math.min(this.hooks.speed(other) * Math.abs(epoch - last.at), MOST_TRAVEL) + 0.05;
+                    const could = body.half + body.radius + ob.half + ob.radius + Math.min(this.speedOf(other) * Math.abs(epoch - last.at), MOST_TRAVEL) + 0.05;
                     if (Math.abs(last.x - self.x) > could || Math.abs(last.z - self.z) > could) continue;
                     const pose = this.placed(other, epoch);
                     if (pose && inContact(body, self, ob, pose)) out.push(other);
