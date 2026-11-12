@@ -5,6 +5,7 @@
  * the same thing.
  *
  * Lines of the Ark's record are solid; lines seen near the camera are lighter, dashed, with an eye and a "Seen"
+ * tag; the behaviour schedule's moments anywhere on the Ark (decision 240) are as light, with a pulse and a "Now"
  * tag. The chip folds the lines away (remembered per reader when the host gives a storage key). While a card
  * covers the foot of the world, the whole log steps aside.
  */
@@ -34,9 +35,11 @@ const DOT: Record<string, string> = {
 };
 
 const EYE = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>`;
+/** A now line's marker: a ring with its dot (happening now, on the shared clock). */
+const PULSE = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.5" opacity="0.55"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>`;
 const CHEVRON = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 15l6-6 6 6"/></svg>`;
 
-export type ArkLiveLogLabels = {title: string; show: string; hide: string; logLabel: string; seen: string; seenNote: string; showMe: string};
+export type ArkLiveLogLabels = {title: string; show: string; hide: string; logLabel: string; seen: string; seenNote: string; /** The schedule's moments' tag ("Now") and what it means. */ now: string; nowNote: string; showMe: string};
 
 export type ArkLiveLogViewOptions = {
     labels: ArkLiveLogLabels;
@@ -44,9 +47,10 @@ export type ArkLiveLogViewOptions = {
     text: (line: ArkLiveLine) => string;
     onTap: (line: ArkLiveLine) => void;
     reducedMotion: boolean;
-    /** How long a line of the record and a seen one stay (ms): they fade over the last part. */
+    /** How long a line of the record, a seen one and a now one stay (ms): they fade over the last part. */
     serverLife: number;
     seenLife: number;
+    nowLife?: number;
     collapsed: boolean;
     onCollapsed?: (collapsed: boolean) => void;
 };
@@ -60,7 +64,7 @@ export class ArkLiveLogView {
     private readonly chip: HTMLButtonElement;
     private readonly dot: HTMLSpanElement;
     private readonly chipLabel: HTMLSpanElement;
-    private readonly rows = new Map<string, {el: HTMLButtonElement; text: HTMLSpanElement; count: number; seen: boolean}>();
+    private readonly rows = new Map<string, {el: HTMLButtonElement; text: HTMLSpanElement; count: number; seen: boolean; source: ArkLiveLine["source"]}>();
     private collapsed: boolean;
     private covered = false;
     private labels: ArkLiveLogLabels;
@@ -161,8 +165,9 @@ export class ArkLiveLogView {
         for (const row of Array.from(this.rows.values())) {
             const tag = row.el.querySelector<HTMLElement>("[data-ark-live-seen]");
             if (tag) {
-                tag.textContent = labels.seen;
-                tag.title = labels.seenNote;
+                const now = row.source === "now";
+                tag.textContent = now ? labels.now : labels.seen;
+                tag.title = now ? labels.nowNote : labels.seenNote;
             }
         }
     }
@@ -210,7 +215,7 @@ export class ArkLiveLogView {
                 row.el.setAttribute("aria-label", this.lineLabel(line));
                 if (!this.options.reducedMotion) row.el.animate?.([{backgroundColor: "rgba(255, 252, 244, 0.28)"}, {backgroundColor: row.seen ? "rgba(14, 20, 14, 0.42)" : "rgba(14, 20, 14, 0.66)"}], {duration: 700, easing: "ease-out"});
             }
-            const life = line.source === "seen" ? this.options.seenLife : this.options.serverLife;
+            const life = line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife ?? this.options.seenLife : this.options.seenLife;
             const left = life - (now - line.updatedAt);
             row.el.style.opacity = String(Math.max(Math.min(left / FADE_MS, 1), 0));
         }
@@ -222,11 +227,13 @@ export class ArkLiveLogView {
 
     private lineLabel(line: ArkLiveLine): string {
         const text = this.options.text(line);
-        return line.source === "seen" ? `${this.labels.seen}: ${text}. ${this.labels.showMe}` : `${text}. ${this.labels.showMe}`;
+        return line.source === "seen" ? `${this.labels.seen}: ${text}. ${this.labels.showMe}` : line.source === "now" ? `${this.labels.now}: ${text}. ${this.labels.showMe}` : `${text}. ${this.labels.showMe}`;
     }
 
     private makeRow(line: ArkLiveLine) {
-        const seen = line.source === "seen";
+        // (Seen and now lines are drawn alike, lighter and dashed: neither is the Ark's record.)
+        const now = line.source === "now";
+        const seen = line.source === "seen" || now;
         const el = document.createElement("button");
         el.type = "button";
         el.dataset.arkLiveKind = line.kind;
@@ -252,8 +259,8 @@ export class ArkLiveLogView {
         const marker = document.createElement("span");
         marker.setAttribute("aria-hidden", "true");
         if (seen) {
-            marker.innerHTML = EYE;
-            Object.assign(marker.style, {display: "inline-flex", flex: "0 0 auto", color: "#a8d8e8"});
+            marker.innerHTML = now ? PULSE : EYE;
+            Object.assign(marker.style, {display: "inline-flex", flex: "0 0 auto", color: now ? "#f2d98a" : "#a8d8e8"});
         } else {
             Object.assign(marker.style, {flex: "0 0 auto", width: "8px", height: "8px", borderRadius: "999px", background: DOT[line.kind] ?? DOT.more});
         }
@@ -263,11 +270,11 @@ export class ArkLiveLogView {
         el.append(marker, text);
         if (seen) {
             const tag = document.createElement("span");
-            tag.dataset.arkLiveSeen = "1";
-            tag.textContent = this.labels.seen;
-            tag.title = this.labels.seenNote;
+            tag.dataset.arkLiveSeen = now ? "now" : "1";
+            tag.textContent = now ? this.labels.now : this.labels.seen;
+            tag.title = now ? this.labels.nowNote : this.labels.seenNote;
             tag.setAttribute("aria-hidden", "true");
-            Object.assign(tag.style, {flex: "0 0 auto", padding: "1px 5px", borderRadius: "999px", border: "1px solid rgba(168, 216, 232, 0.55)", color: "#cfe9f2", font: `700 9.5px/1.3 ${FONT}`, letterSpacing: "0.08em", textTransform: "uppercase"});
+            Object.assign(tag.style, {flex: "0 0 auto", padding: "1px 5px", borderRadius: "999px", border: now ? "1px solid rgba(242, 217, 138, 0.55)" : "1px solid rgba(168, 216, 232, 0.55)", color: now ? "#f6e7b4" : "#cfe9f2", font: `700 9.5px/1.3 ${FONT}`, letterSpacing: "0.08em", textTransform: "uppercase"});
             el.append(tag);
         }
         el.setAttribute("aria-label", this.lineLabel(line));
@@ -275,7 +282,7 @@ export class ArkLiveLogView {
             const current = this.lineOf?.(line.id) ?? line;
             this.options.onTap(current);
         });
-        return {el, text, count: line.count, seen};
+        return {el, text, count: line.count, seen, source: line.source};
     }
 
     /** The newest copy of a line (its focus can move to the latest of a folded group). */

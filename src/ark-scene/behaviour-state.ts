@@ -101,10 +101,9 @@ export function animationTargets(state: ArkBehaviourState): {rest: 0 | 1; air: 0
     return {rest: state.asleep ? 1 : 0, air: state.airborne ? 1 : 0};
 }
 
-/** What the tap card says of a state: "Asleep now" or nothing. */
-export function cardSaysAsleep(state: ArkBehaviourState | null | undefined): boolean {
-    return Boolean(state?.asleep);
-}
+// What the tap card says of a state ("Asleep now" or nothing) lives in `behaviour-card.ts`, so the page reads it
+// without the scene's sea and map modules (decision 246).
+export {cardSaysAsleep} from "@/ark-scene/behaviour-card";
 
 export function sameBehaviour(a: ArkBehaviourState | null | undefined, b: ArkBehaviourState | null | undefined): boolean {
     return a?.kind === b?.kind;

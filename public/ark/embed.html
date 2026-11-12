@@ -48,7 +48,8 @@
  * town across the strait (window.AnimalDexArk.mountArchipelago): the wild island draws first, the town joins when built
  * in its worker (./ark-town-worker.js); ark:select flies to an animal on either island. With one island, as before.
  * ?islands=<url> (a development build of the bundle only): T1's routing merged into ?snapshot= by id (the preview).
- * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard as bars), ?hud=log or ?hud=bars
+ * ?hud=1 the live HUD over the world (the log of what happens, and who is aboard: a chip that opens to every species
+ * biggest first with its 24-hour change, from /api/ark/events), ?hud=log or ?hud=bars
  * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
  * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
  * From the host (postMessage or window.AnimalDexArkHost):
@@ -67,10 +68,13 @@
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
  *   {type: "ark:activity"}                                       the reader did something on the host page (for ?idle=)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
- * To the host: {type: "ark:selected", animal, founders}, where founders is that animal's named founders and shared story
+ * To the host: {type: "ark:selected", animal, founders, status}, where founders is that animal's named founders and shared story
  * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
  * {display_name, handle, avatar_url}; null while the server's founder_names switch is off or the animal has none), so the
- * host's card can show "@handle" and open /u/{handle}; {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
+ * host's card can show "@handle" and open /u/{handle}, and status is what it is doing (decision 240: src/lib/ark-animal-status.ts
+ * ArkAnimalStatus, {id, activity, since, goal, log, bars}, plus text: {now, next, log, bars} in ?lang's words), then
+ * {type: "ark:status", id, status} whenever the selected animal's status changes (about once a second at most);
+ * {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
@@ -136,6 +140,12 @@
     })
     .catch(function () {})]);
 
+  // An animal's status for the host, its lines in the app's words (English until they read).
+  function statusOut(status) {
+    if (!status) return null;
+    return Ark.arkStatusForHost ? Ark.arkStatusForHost(status, words, document.documentElement.lang || lang || "en") : status;
+  }
+
   function fill(template, values) {
     return String(template).replace(/\{(\w+)\}/g, function (match, key) { return key in values ? String(values[key]) : match; });
   }
@@ -186,7 +196,14 @@
         var number = count.toLocaleString(lang);
         return words && words.herd && words.herd.badge ? fill(words.herd.badge, {count: number}) : number;
       },
-      onSelect: function (animal) { if (hud) hud.setSelected(animal ? animal.id : null); tell({type: "ark:selected", animal: animal, founders: foundersOf(animal)}); },
+      onSelect: function (animal) {
+        if (hud) hud.setSelected(animal ? animal.id : null);
+        var live = scene || mounting;
+        var status = animal && live && live.animalStatus ? live.animalStatus(animal.id) : null;
+        tell({type: "ark:selected", animal: animal, founders: foundersOf(animal), status: statusOut(status)});
+      },
+      // Decision 240: the selected animal's status as it changes (what it is doing, its next goal, its log, its bars).
+      onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       onReady: function () { tell({type: "ark:ready"}); }
@@ -219,6 +236,7 @@
         words: words,
         locale: document.documentElement.lang || lang || "en",
         eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
+        iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
         log: hudLog,
         bars: hudBars,
         reducedMotion: motion.matches

@@ -677,6 +677,13 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
     .rows-in { animation: none; }
 }
 
+/* /ark's island switch over the world (decision 239): under 380 px the islands' names keep the room and their
+   counts step aside (they are in who is aboard). */
+.ark-island-count { display: none; }
+@media (min-width: 380px) {
+    .ark-island-count { display: inline; }
+}
+
 /* The Talk front door's "to" line: a new animal fades in over 180 ms when
    the suggestion or a Change tap picks it (talk front door SPEC 4.3). */
 @keyframes frontDoorFade {

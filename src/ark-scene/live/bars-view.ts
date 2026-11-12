@@ -1,40 +1,49 @@
 /**
- * Who is aboard, as bars, over the world: the apps' embed's counterpart of /ark's population column
- * (`ark-population-hud.tsx` with `ark-live-bars.tsx`). Each region a bar against the biggest region, each species
- * (inside its open region) a bar against the biggest of its region, with the pair line marked and the pair status
- * as the bar's colour. When a count changes the bar glides to its new length and an arrow says by how much.
+ * Who is aboard, over the world: the apps' embed's counterpart of /ark's population overlay (`ark-population-hud.tsx`,
+ * decision 239). A chip at the top start corner ("3,152 aboard ▾", folded at first, every time: nothing is
+ * remembered in the apps' panel) that opens to a small glass panel: the total and its 24-hour change, then every
+ * species biggest first as a thin bar with its icon, name, count and 24-hour change (green ▲ / red ▼; nothing when the
+ * same). The count 24 hours ago is worked out from the event log (`lib/ark-population-change.ts`). A count that
+ * changes glides its bar to the new length.
  *
- * A region's row flies there and opens its species; a species' row goes to one of its animals (the host hears
- * `ark:selected` as for any tap). Plain DOM, folded at first on a narrow panel.
+ * A row goes to one of that species' animals (the host hears `ark:selected` as for any tap) and folds the panel so
+ * the animal shows. Plain DOM; the whole Ark (both islands), as the apps' panel shows one world.
  */
 
-import {arkBars, arkCountChanges, arkDeltaText, arkPopulationCounts, ARK_TREND_MS} from "@/lib/ark-live-bars";
-import {arkPickAnimal, arkPopulation, type ArkPairStatus, type ArkPopulation, type ArkSpeciesRow} from "@/lib/ark-population";
+import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
+import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
+import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, readArkPopulationThen, type ArkChange, type ArkPopulationThen} from "@/lib/ark-population-change";
+import {arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords} from "@/lib/ark-words";
-import type {ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
-
-export const ARK_STATUS_COLOURS: Record<ArkPairStatus, string> = {
-    single: "#e9c77b",
-    pair: "rgb(200, 250, 99)",
-    more: "rgb(167, 244, 50)",
-    crowded: "#ee9f6c"
-};
+const GLASS = {background: "rgba(14, 20, 14, 0.72)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.14)", color: "rgba(255, 252, 244, 0.96)"};
+const UP = "#86e08f";
+const DOWN = "#ff8a7a";
+const LIME = "#c8fa63";
+/** The 24-hour change is worked out this long after the first snapshot, so its read never competes with the scene's. */
+const CHANGE_READ_AFTER_MS = 1500;
+/** Rows built at a time: the first ones when the panel first opens, more as the list is scrolled near its end. */
+const ROWS_STEP = 48;
 
 export type ArkBarsWords = {
-    title: string;
+    /** "{count} aboard": the chip and the panel's heading. */
+    chip: string;
     show: string;
     hide: string;
-    barsNote: string;
-    up: string;
-    down: string;
-    regions: Record<ArkRegion, string>;
-    status: Record<ArkPairStatus, string>;
-    /** "{animal}: {count}, {status}" */
-    rowLabel: string;
-    /** "{region}: {count} animals" */
-    regionCount: string;
+    /** "{animal}: {count}" */
+    rowCount: string;
+    /** "{change} in the last 24 hours" */
+    change24h: string;
+    /** "24 h" */
+    changeWindow: string;
+    /** "{count} species" (and its one) */
+    speciesOne: string;
+    speciesOther: string;
+    yours: string;
+    herdTag: string;
+    list: string;
 };
 
 export type ArkBarsViewOptions = {
@@ -43,37 +52,62 @@ export type ArkBarsViewOptions = {
     locale: string;
     reducedMotion: boolean;
     collapsed: boolean;
+    /** `/api/ark/events`, for the 24-hour change; null (development's fixtures): no change said. */
+    eventsUrl?: string | null;
+    /**
+     * A species' icon, from the host (the embed's own icon folder): the bundle has no site environment to build one
+     * from. Without it, and for a species with no Ark model (A13), the Ark's generic figure.
+     */
+    iconUrl?: ((slug: string) => string) | null;
 };
 
-type Row = {el: HTMLElement; button: HTMLButtonElement; fill: HTMLSpanElement; count: HTMLSpanElement; trend: HTMLSpanElement; notch: HTMLSpanElement | null; name: HTMLSpanElement};
+type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; slug: string};
 
-function bar(reducedMotion: boolean, height: number): {track: HTMLSpanElement; fill: HTMLSpanElement} {
-    const track = document.createElement("span");
-    track.setAttribute("aria-hidden", "true");
-    Object.assign(track.style, {position: "relative", display: "block", height: `${height}px`, borderRadius: "999px", background: "rgba(255, 255, 255, 0.12)", overflow: "visible"});
-    const fill = document.createElement("span");
-    Object.assign(fill.style, {position: "absolute", insetInlineStart: "0", top: "0", bottom: "0", width: "0%", borderRadius: "999px", transition: reducedMotion ? "none" : "width 900ms cubic-bezier(.2,.8,.2,1), background-color 400ms ease, box-shadow 400ms ease"});
-    track.appendChild(fill);
-    return {track, fill};
+const CARET = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 7.5l5 5 5-5"/></svg>`;
+
+function caret(up: boolean, reducedMotion: boolean): HTMLSpanElement {
+    const span = document.createElement("span");
+    span.innerHTML = CARET;
+    Object.assign(span.style, {display: "inline-flex", opacity: "0.75", transform: up ? "rotate(180deg)" : "none", transition: reducedMotion ? "none" : "transform 200ms ease"});
+    return span;
+}
+
+/** "▲ +12%" / "▼ −3%", coloured; empty when there is nothing to say. */
+function drawChange(el: HTMLSpanElement, change: ArkChange | null, words: ArkBarsWords, locale: string) {
+    const said = arkChangeText(change, locale);
+    el.textContent = said ? `${said.up ? "▲" : "▼"} ${said.text}` : "";
+    el.style.display = said ? "inline" : "none";
+    el.style.color = said?.up ? UP : DOWN;
+    el.title = said ? fillArkWords(words.change24h, {change: said.text}) : "";
 }
 
 export class ArkBarsView {
     readonly root: HTMLDivElement;
-    private readonly header: HTMLButtonElement;
-    private readonly total: HTMLSpanElement;
-    private readonly body: HTMLDivElement;
-    private readonly regions = new Map<string, Row & {list: HTMLDivElement}>();
-    private readonly species = new Map<string, Row>();
-    private population: ArkPopulation | null = null;
-    private counts = new Map<string, number>();
-    private readonly trends = new Map<string, {delta: number; at: number}>();
-    private open: ArkRegion | null = null;
+    private readonly chip: HTMLButtonElement;
+    private readonly chipText: HTMLSpanElement;
+    private readonly chipChange: HTMLSpanElement;
+    private readonly panel: HTMLDivElement;
+    private readonly title: HTMLSpanElement;
+    private readonly totalChange: HTMLSpanElement;
+    private readonly windowLabel: HTMLSpanElement;
+    private readonly subline: HTMLSpanElement;
+    private readonly close: HTMLButtonElement;
+    private readonly list: HTMLUListElement;
+    private readonly rows = new Map<string, Row>();
+    private snapshot: ArkSnapshot | null = null;
+    private ranked: ArkSpeciesRow[] = [];
+    private then: ArkPopulationThen | null = null;
+    private asked = false;
     private collapsed: boolean;
+    /** How many rows are built (none until the panel is first opened). */
+    private built = 0;
     private selectedId: string | null = null;
-    private timer: ReturnType<typeof setInterval> | null = null;
+    private timer: ReturnType<typeof setTimeout> | null = null;
+    private disposed = false;
 
     constructor(host: HTMLElement, private options: ArkBarsViewOptions) {
         this.collapsed = options.collapsed;
+        const reduced = options.reducedMotion;
         const root = document.createElement("div");
         root.dataset.arkLive = "bars";
         Object.assign(root.style, {
@@ -83,220 +117,256 @@ export class ArkBarsView {
             // embed's `?insetTop=`: the iOS panel's close button and title).
             top: "calc(10px + env(safe-area-inset-top, 0px) + var(--ark-inset-top, 0px))",
             zIndex: "2",
-            width: "min(17.5rem, calc(100% - 66px))",
+            width: "min(18rem, calc(100% - 66px))",
             // Clear of the log at the foot of the world (its chip and a few lines).
             maxHeight: "calc(100% - 210px - env(safe-area-inset-top, 0px) - var(--ark-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--ark-inset-bottom, 0px))",
             display: "flex",
             flexDirection: "column",
-            borderRadius: "14px",
-            background: "rgba(14, 20, 14, 0.66)",
-            backdropFilter: "blur(10px)",
-            border: "1px solid rgba(255, 255, 255, 0.14)",
-            color: "rgba(255, 252, 244, 0.96)",
+            alignItems: "flex-start",
+            pointerEvents: "none",
             font: `600 12px/1.25 ${FONT}`,
-            overflow: "hidden",
             WebkitTapHighlightColor: "transparent"
         });
-        const header = document.createElement("button");
-        header.type = "button";
-        Object.assign(header.style, {display: "flex", alignItems: "center", gap: "8px", minHeight: "36px", padding: "6px 12px", border: "0", background: "transparent", color: "inherit", font: `700 10.5px/1 ${FONT}`, letterSpacing: "0.14em", textTransform: "uppercase", cursor: "pointer", textAlign: "start"});
+
+        // Folded: the chip.
+        const chip = document.createElement("button");
+        chip.type = "button";
+        Object.assign(chip.style, {...GLASS, pointerEvents: "auto", display: "inline-flex", alignItems: "center", gap: "8px", minHeight: "44px", padding: "0 12px 0 14px", borderRadius: "999px", font: `700 13px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 10px 30px -12px rgba(0, 0, 0, 0.55)"});
+        const chipText = document.createElement("span");
+        const chipChange = document.createElement("span");
+        Object.assign(chipChange.style, {font: `700 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
+        chip.append(chipText, chipChange, caret(false, reduced));
+        chip.addEventListener("click", () => this.setCollapsed(false));
+
+        // Open: the panel.
+        const panel = document.createElement("div");
+        Object.assign(panel.style, {...GLASS, pointerEvents: "auto", display: "flex", flexDirection: "column", width: "100%", minHeight: "0", borderRadius: "16px", overflow: "hidden", boxShadow: "0 10px 30px -12px rgba(0, 0, 0, 0.55)"});
+        const head = document.createElement("div");
+        Object.assign(head.style, {display: "flex", alignItems: "flex-start", gap: "4px", padding: "8px 4px 8px 14px"});
+        const heading = document.createElement("div");
+        Object.assign(heading.style, {flex: "1", minWidth: "0", paddingTop: "4px"});
+        const line = document.createElement("div");
+        Object.assign(line.style, {display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "2px 8px"});
         const title = document.createElement("span");
-        title.textContent = options.words.title;
-        title.style.flex = "1";
-        const total = document.createElement("span");
-        Object.assign(total.style, {font: `800 14px/1 ${FONT}`, letterSpacing: "0", fontVariantNumeric: "tabular-nums"});
-        const chevron = document.createElement("span");
-        chevron.setAttribute("aria-hidden", "true");
-        chevron.textContent = "▾";
-        Object.assign(chevron.style, {opacity: "0.7", transition: options.reducedMotion ? "none" : "transform 200ms ease"});
-        header.append(title, total, chevron);
-        header.addEventListener("click", () => this.setCollapsed(!this.collapsed));
-        const body = document.createElement("div");
-        body.setAttribute("role", "group");
-        body.title = options.words.barsNote;
-        Object.assign(body.style, {overflowY: "auto", overscrollBehavior: "contain", padding: "0 0 6px"});
-        root.append(header, body);
+        Object.assign(title.style, {font: `800 15px/1.2 ${FONT}`, fontVariantNumeric: "tabular-nums", letterSpacing: "-0.01em"});
+        const totalChange = document.createElement("span");
+        Object.assign(totalChange.style, {font: `700 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
+        const windowLabel = document.createElement("span");
+        Object.assign(windowLabel.style, {font: `600 10.5px/1 ${FONT}`, opacity: "0.45"});
+        windowLabel.setAttribute("aria-hidden", "true");
+        line.append(title, totalChange, windowLabel);
+        const subline = document.createElement("span");
+        Object.assign(subline.style, {display: "block", marginTop: "3px", font: `500 11.5px/1.2 ${FONT}`, opacity: "0.6"});
+        heading.append(line, subline);
+        const close = document.createElement("button");
+        close.type = "button";
+        close.setAttribute("aria-expanded", "true");
+        Object.assign(close.style, {flex: "0 0 auto", width: "44px", height: "44px", display: "flex", alignItems: "center", justifyContent: "center", border: "0", borderRadius: "999px", background: "transparent", color: "inherit", cursor: "pointer", padding: "0"});
+        close.appendChild(caret(true, reduced));
+        close.addEventListener("click", () => this.setCollapsed(true));
+        head.append(heading, close);
+        const list = document.createElement("ul");
+        // More rows as the end of the list comes into view.
+        list.addEventListener("scroll", () => {
+            if (this.built >= this.ranked.length || list.scrollTop + list.clientHeight < list.scrollHeight - 240) return;
+            this.built += ROWS_STEP;
+            this.draw();
+        }, {passive: true});
+        Object.assign(list.style, {listStyle: "none", margin: "0", padding: "4px 0", minHeight: "0", flex: "1 1 auto", overflowY: "auto", overscrollBehavior: "contain", borderTop: "1px solid rgba(255, 255, 255, 0.08)", scrollbarWidth: "thin"});
+        panel.append(head, list);
+
+        root.append(chip, panel);
         host.appendChild(root);
         this.root = root;
-        this.header = header;
-        this.total = total;
-        this.body = body;
+        this.chip = chip;
+        this.chipText = chipText;
+        this.chipChange = chipChange;
+        this.panel = panel;
+        this.title = title;
+        this.totalChange = totalChange;
+        this.windowLabel = windowLabel;
+        this.subline = subline;
+        this.close = close;
+        this.list = list;
         this.applyCollapsed();
-        // The arrows fade on their own time.
-        this.timer = setInterval(() => this.fadeTrends(), 400);
     }
 
     private applyCollapsed() {
-        this.body.style.display = this.collapsed ? "none" : "block";
-        this.header.setAttribute("aria-expanded", this.collapsed ? "false" : "true");
-        const label = this.collapsed ? this.options.words.show : this.options.words.hide;
-        this.header.setAttribute("aria-label", `${this.options.words.title} ${this.total.textContent ?? ""}: ${label}`);
-        this.header.title = label;
-        const chevron = this.header.lastElementChild as HTMLElement | null;
-        if (chevron) chevron.style.transform = this.collapsed ? "rotate(-90deg)" : "none";
+        this.chip.style.display = this.collapsed ? "inline-flex" : "none";
+        this.panel.style.display = this.collapsed ? "none" : "flex";
+        const words = this.options.words;
+        this.chip.setAttribute("aria-expanded", "false");
+        this.chip.setAttribute("aria-label", [this.chipText.textContent, this.chipChange.title, words.show].filter(Boolean).join(", "));
+        this.chip.title = words.show;
+        this.close.setAttribute("aria-label", words.hide);
+        this.close.title = words.hide;
     }
 
     setCollapsed(collapsed: boolean) {
         this.collapsed = collapsed;
+        // The rows are built the first time the panel opens (a folded chip costs the page nothing).
+        if (!collapsed && !this.built && this.snapshot) {
+            this.built = ROWS_STEP;
+            this.draw();
+        }
         this.applyCollapsed();
     }
 
     setWords(words: ArkBarsWords, locale: string) {
         this.options = {...this.options, words, locale};
-        (this.header.firstElementChild as HTMLElement).textContent = words.title;
-        this.body.title = words.barsNote;
-        if (this.population) this.draw(this.population);
+        if (this.snapshot) this.draw();
         this.applyCollapsed();
     }
 
     /** The animal the host or a tap selected (a species' row walks through its animals from it). */
     setSelected(id: string | null) {
         this.selectedId = id;
+        if (this.snapshot) this.drawSelected();
     }
 
     update(snapshot: ArkSnapshot) {
-        const population = arkPopulation(snapshot);
-        const counts = arkPopulationCounts(population);
-        const now = performance.now();
-        // The first reading sets the counts; changes after it get an arrow.
-        if (this.population) arkCountChanges(this.counts, counts).forEach((delta, key) => this.trends.set(key, {delta: (this.trends.get(key) && now - this.trends.get(key)!.at < ARK_TREND_MS ? this.trends.get(key)!.delta : 0) + delta, at: now}));
-        this.counts = counts;
-        this.population = population;
-        this.draw(population);
+        this.snapshot = snapshot;
+        this.ranked = arkRankedSpecies(snapshot);
+        if (!this.collapsed && !this.built) this.built = ROWS_STEP;
+        this.draw();
+        // The 24-hour change: the log read once, a moment after the first snapshot (kept a few minutes per device).
+        if (!this.asked && this.options.eventsUrl) {
+            this.asked = true;
+            const url = this.options.eventsUrl;
+            this.timer = setTimeout(() => {
+                if (this.disposed || !this.snapshot) return;
+                let storage: Storage | null = null;
+                try {
+                    storage = window.localStorage;
+                } catch {
+                    storage = null;
+                }
+                void readArkPopulationThen(url, this.snapshot, {fetch: (asked) => fetch(asked), storage}).then((then) => {
+                    if (this.disposed || !then) return;
+                    this.then = then;
+                    this.draw();
+                });
+            }, CHANGE_READ_AFTER_MS);
+        }
     }
 
-    private makeRow(kind: "region" | "species", onTap: () => void): Row {
-        const el = document.createElement("div");
+    private makeRow(key: string): Row {
+        const el = document.createElement("li");
         const button = document.createElement("button");
         button.type = "button";
-        const species = kind === "species";
-        Object.assign(button.style, {display: "block", width: "100%", padding: species ? "5px 12px 6px 22px" : "7px 12px 7px", border: "0", background: "transparent", color: "inherit", font: "inherit", textAlign: "start", cursor: "pointer"});
-        const line = document.createElement("span");
-        Object.assign(line.style, {display: "flex", alignItems: "baseline", gap: "6px", marginBottom: "4px"});
-        const name = document.createElement("span");
-        Object.assign(name.style, {flex: "1", minWidth: "0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", ...(species ? {} : {font: `700 10.5px/1.2 ${FONT}`, letterSpacing: "0.12em", textTransform: "uppercase", opacity: "0.85"})});
-        const trend = document.createElement("span");
-        trend.setAttribute("aria-hidden", "true");
-        Object.assign(trend.style, {font: `800 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", opacity: "0", transition: this.options.reducedMotion ? "none" : "opacity 500ms ease"});
-        const count = document.createElement("span");
-        Object.assign(count.style, {font: `800 ${species ? 13 : 12}px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", minWidth: "1.4em", textAlign: "end"});
-        line.append(name, trend, count);
-        const {track, fill} = bar(this.options.reducedMotion, species ? 6 : 4);
-        let notch: HTMLSpanElement | null = null;
-        if (species) {
-            notch = document.createElement("span");
-            Object.assign(notch.style, {position: "absolute", top: "-2px", bottom: "-2px", width: "1.5px", background: "rgba(255, 252, 244, 0.55)", borderRadius: "1px", transition: this.options.reducedMotion ? "none" : "inset-inline-start 900ms ease"});
-            track.appendChild(notch);
-        }
-        button.append(line, track);
-        button.addEventListener("click", onTap);
-        el.appendChild(button);
-        return {el, button, fill, count, trend, notch, name};
-    }
-
-    private setTrend(row: Row, key: string, now: number) {
-        const trend = this.trends.get(key);
-        const live = trend && now - trend.at < ARK_TREND_MS && trend.delta !== 0;
-        if (live) {
-            row.trend.textContent = `${trend!.delta > 0 ? "▲" : "▼"}${arkDeltaText(trend!.delta, this.options.locale)}`;
-            row.trend.style.color = trend!.delta > 0 ? "rgb(200, 250, 99)" : "#ee9f6c";
-            row.trend.title = fillArkWords(trend!.delta > 0 ? this.options.words.up : this.options.words.down, {count: Math.abs(trend!.delta).toLocaleString(this.options.locale)});
-        }
-        row.trend.style.opacity = live ? "1" : "0";
-        row.fill.style.boxShadow = live ? `0 0 8px ${trend!.delta > 0 ? "rgba(200, 250, 99, 0.7)" : "rgba(238, 159, 108, 0.7)"}` : "none";
-    }
-
-    private fadeTrends() {
-        if (!this.population || !this.trends.size) return;
-        const now = performance.now();
-        let any = false;
-        this.trends.forEach((trend, key) => {
-            if (now - trend.at >= ARK_TREND_MS + 600) this.trends.delete(key);
-            else any = true;
+        Object.assign(button.style, {display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "44px", padding: "4px 14px", border: "0", background: "transparent", color: "inherit", font: "inherit", textAlign: "start", cursor: "pointer", transition: this.options.reducedMotion ? "none" : "background-color 200ms ease"});
+        const badge = document.createElement("span");
+        Object.assign(badge.style, {flex: "0 0 auto", width: "24px", height: "24px", borderRadius: "999px", background: "#f6f1e7", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden"});
+        const icon = document.createElement("img");
+        icon.alt = "";
+        icon.width = 24;
+        icon.height = 24;
+        icon.loading = "lazy";
+        icon.decoding = "async";
+        Object.assign(icon.style, {width: "84%", height: "84%", objectFit: "contain"});
+        icon.addEventListener("error", () => {
+            if (!icon.src.endsWith(ARK_PLACEHOLDER_ICON)) icon.src = ARK_PLACEHOLDER_ICON;
         });
-        this.regions.forEach((row, region) => this.setTrend(row, `region:${region}`, now));
-        this.species.forEach((row, key) => this.setTrend(row, key, now));
-        if (!any) this.trends.clear();
+        badge.appendChild(icon);
+        const middle = document.createElement("span");
+        Object.assign(middle.style, {flex: "1", minWidth: "0", display: "block"});
+        const top = document.createElement("span");
+        Object.assign(top.style, {display: "flex", alignItems: "center", gap: "6px"});
+        const name = document.createElement("span");
+        Object.assign(name.style, {minWidth: "0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: `600 13px/1.2 ${FONT}`});
+        const mine = document.createElement("span");
+        mine.setAttribute("aria-hidden", "true");
+        Object.assign(mine.style, {flex: "0 0 auto", width: "6px", height: "6px", borderRadius: "999px", background: LIME, display: "none"});
+        top.append(name, mine);
+        const track = document.createElement("span");
+        track.setAttribute("aria-hidden", "true");
+        Object.assign(track.style, {display: "block", height: "3px", marginTop: "5px", borderRadius: "999px", background: "rgba(255, 255, 255, 0.09)"});
+        const fill = document.createElement("span");
+        Object.assign(fill.style, {display: "block", height: "100%", width: "0%", borderRadius: "999px", background: "rgba(255, 252, 244, 0.6)", transition: this.options.reducedMotion ? "none" : "width 700ms cubic-bezier(.2,.8,.2,1)"});
+        track.appendChild(fill);
+        middle.append(top, track);
+        const change = document.createElement("span");
+        change.setAttribute("aria-hidden", "true");
+        Object.assign(change.style, {flex: "0 0 auto", font: `700 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap"});
+        const count = document.createElement("span");
+        Object.assign(count.style, {flex: "0 0 auto", minWidth: "2em", textAlign: "end", font: `700 13px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
+        button.append(badge, middle, change, count);
+        button.addEventListener("click", () => this.pick(key));
+        el.appendChild(button);
+        return {el, button, icon, name, mine, fill, change, count, slug: ""};
     }
 
-    private draw(population: ArkPopulation) {
+    private draw() {
+        const snapshot = this.snapshot;
+        if (!snapshot) return;
         const words = this.options.words;
         const locale = this.options.locale;
-        const now = performance.now();
-        const bars = arkBars(population);
-        const total = population.regions.reduce((sum, group) => sum + group.animals, 0);
-        this.total.textContent = total.toLocaleString(locale);
-        const seenRegions = new Set<string>();
-        const seenSpecies = new Set<string>();
-        for (const group of population.regions) {
-            const model = bars.regions.find((r) => r.region === group.region)!;
-            seenRegions.add(group.region);
-            let row = this.regions.get(group.region);
+        const number = (value: number) => value.toLocaleString(locale);
+        const total = fillArkWords(words.chip, {count: number(snapshot.counts.animals)});
+        const totalChange = arkTotalChange(snapshot.animals.length, this.then, "both");
+        this.chipText.textContent = total;
+        drawChange(this.chipChange, totalChange, words, locale);
+        this.title.textContent = total;
+        drawChange(this.totalChange, totalChange, words, locale);
+        this.windowLabel.textContent = arkChangeText(totalChange, locale) ? words.changeWindow : "";
+        const species = snapshot.counts.species;
+        this.subline.textContent = species === 1 ? words.speciesOne : words.speciesOther.replace("{count}", number(species));
+        this.list.setAttribute("aria-label", words.list);
+        const ceiling = arkBarCeiling(this.ranked[0]?.count ?? 0);
+        const seen = new Set<string>();
+        for (const species of this.ranked.slice(0, this.built)) {
+            seen.add(species.key);
+            let row = this.rows.get(species.key);
             if (!row) {
-                const region = group.region;
-                const made = this.makeRow("region", () => {
-                    this.open = this.open === region ? null : region;
-                    this.options.scene()?.focusRegion(region);
-                    if (this.population) this.draw(this.population);
-                });
-                const list = document.createElement("div");
-                made.el.appendChild(list);
-                row = {...made, list};
-                this.regions.set(region, row);
+                row = this.makeRow(species.key);
+                this.rows.set(species.key, row);
             }
-            this.body.appendChild(row.el);
-            row.name.textContent = words.regions[group.region] ?? group.region;
-            row.count.textContent = group.animals.toLocaleString(locale);
-            row.fill.style.width = `${(model.share * 100).toFixed(1)}%`;
-            row.fill.style.background = "rgba(255, 252, 244, 0.72)";
-            row.button.setAttribute("aria-expanded", this.open === group.region ? "true" : "false");
-            row.button.setAttribute("aria-label", fillArkWords(words.regionCount, {region: words.regions[group.region] ?? group.region, count: group.animals.toLocaleString(locale)}));
-            this.setTrend(row, `region:${group.region}`, now);
-            const open = this.open === group.region;
-            row.list.style.display = open ? "block" : "none";
-            if (!open) continue;
-            for (const species of group.species) {
-                const share = model.rows.find((r) => r.key === species.key)?.share ?? 0;
-                seenSpecies.add(species.key);
-                let srow = this.species.get(species.key);
-                if (!srow) {
-                    const key = species.key;
-                    srow = this.makeRow("species", () => this.pick(key));
-                    this.species.set(key, srow);
-                }
-                row.list.appendChild(srow.el);
-                this.drawSpecies(srow, species, share, model.pairShare, now);
+            // In rank order (appending an attached node moves it).
+            this.list.appendChild(row.el);
+            if (row.slug !== species.slug) {
+                row.slug = species.slug;
+                row.icon.src = this.options.iconUrl && !isArkPlaceholderSlug(species.slug) ? this.options.iconUrl(species.slug) : ARK_PLACEHOLDER_ICON;
             }
+            row.name.textContent = species.name;
+            row.mine.style.display = species.mine ? "inline-block" : "none";
+            row.count.textContent = number(species.count);
+            row.fill.style.width = `${(arkBarShare(species.count, ceiling) * 100).toFixed(1)}%`;
+            const change = arkChangeOf(species.count, this.then, species.key, "both");
+            drawChange(row.change, change, words, locale);
+            const said = arkChangeText(change, locale);
+            row.button.setAttribute("aria-label", [
+                fillArkWords(words.rowCount, {animal: species.name, count: number(species.count)}),
+                said ? fillArkWords(words.change24h, {change: said.text}) : null,
+                species.mine ? words.yours : null
+            ].filter(Boolean).join(", "));
         }
-        this.regions.forEach((row, key) => {
-            if (seenRegions.has(key)) return;
+        this.rows.forEach((row, key) => {
+            if (seen.has(key)) return;
             row.el.remove();
-            this.regions.delete(key);
+            this.rows.delete(key);
         });
-        this.species.forEach((row, key) => {
-            if (seenSpecies.has(key)) return;
-            row.el.remove();
-            this.species.delete(key);
-        });
+        this.drawSelected();
         this.applyCollapsed();
     }
 
-    private drawSpecies(row: Row, species: ArkSpeciesRow, share: number, pairShare: number, now: number) {
-        const words = this.options.words;
-        const locale = this.options.locale;
-        row.name.textContent = species.name;
-        row.count.textContent = species.count.toLocaleString(locale);
-        row.fill.style.width = `${(share * 100).toFixed(1)}%`;
-        row.fill.style.background = ARK_STATUS_COLOURS[species.status];
-        if (row.notch) row.notch.style.insetInlineStart = `calc(${(pairShare * 100).toFixed(1)}% - 0.75px)`;
-        row.button.setAttribute("aria-label", fillArkWords(words.rowLabel, {animal: species.name, count: species.count.toLocaleString(locale), status: words.status[species.status]}));
-        this.setTrend(row, species.key, now);
+    private drawSelected() {
+        const animal = this.selectedId ? this.snapshot?.animals.find((one) => one.id === this.selectedId) ?? null : null;
+        const key = animal ? arkSpeciesKey(animal) : null;
+        this.rows.forEach((row, rowKey) => {
+            const selected = rowKey === key;
+            row.button.style.background = selected ? "rgba(255, 255, 255, 0.10)" : "transparent";
+            row.fill.style.background = selected ? LIME : "rgba(255, 252, 244, 0.6)";
+            if (selected) row.button.setAttribute("aria-current", "true");
+            else row.button.removeAttribute("aria-current");
+        });
     }
 
     private pick(key: string) {
-        const row = this.population?.regions.flatMap((group) => group.species).find((species) => species.key === key);
+        const row = this.ranked.find((species) => species.key === key);
         const scene = this.options.scene();
         if (!row || !scene) return;
+        // On the apps' small panel the open list would cover the animal it flies to: it folds.
+        this.setCollapsed(true);
         const herdKey = [row.key, ...row.breeds.map((breed) => breed.key)].find((k) => scene.selectHerd(k));
         if (herdKey) return;
         const animal = arkPickAnimal(row.animals, this.selectedId);
@@ -306,7 +376,8 @@ export class ArkBarsView {
     }
 
     dispose() {
-        if (this.timer) clearInterval(this.timer);
+        this.disposed = true;
+        if (this.timer) clearTimeout(this.timer);
         this.root.remove();
     }
 }

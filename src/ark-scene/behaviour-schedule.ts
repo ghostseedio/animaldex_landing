@@ -1566,6 +1566,19 @@ export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     });
 }
 
+/**
+ * What it sets out to do in the slot at a world time: the slot's goal (its doing and recipe, as its trip will have
+ * them), not the route there, so it costs no path. The tap card's "Now" and "Next", its own log and the live log's
+ * moments read this (`animal-status.ts`). Pure, the same for every viewer; remembered with the trips.
+ */
+export type SlotPlan = {slot: number; start: number; end: number; doing: ArkDoing; recipe: string | null; mode: TripMode; follow: boolean; /** Watching a predator it saw (the shared wariness). */ wary: boolean};
+export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): SlotPlan {
+    const slot = slotOf(animal, epochSeconds);
+    const plan = placedIntent(world, profile, animal, activity, slot, hoursAt);
+    const start = slotStart(animal, slot);
+    return {slot, start, end: start + SLOT_SECONDS, doing: plan.doing, recipe: plan.recipe ?? null, mode: plan.mode, follow: Boolean(plan.follow), wary: plan.doing === "watch" && plan.face !== undefined};
+}
+
 // MARK: Memo
 
 /**

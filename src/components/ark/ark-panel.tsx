@@ -30,7 +30,7 @@ import Link from "@/app/[locale]/_components/link";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
-import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder";
+import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {arkBringerLabel} from "@/lib/ark-life";
 import {arkFoundersOf, ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-founders";
 import {ArkFounderAvatar, ArkFounderLink, ArkFounderStoryBlock, arkTemplateParts} from "@/components/ark/ark-founder-bits";

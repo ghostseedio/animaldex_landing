@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import {useState} from "react";
-import {ARK_PLACEHOLDER_ICON} from "@/ark-scene/placeholder";
+import {ARK_PLACEHOLDER_ICON} from "@/ark-scene/placeholder-icon";
 
 /**
  * A species' icon art in the Ark's list and selection card. A missing or

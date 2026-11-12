@@ -19,6 +19,7 @@ import {fetchArkHunting} from "@/lib/ark-hunting";
 import {mountArchipelago} from "@/ark-scene/islands/archipelago";
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
+import {arkStatusForHost} from "@/lib/ark-animal-status";
 
 declare global {
     interface Window {
@@ -42,6 +43,8 @@ declare global {
             arkOpeningIsland: typeof arkOpeningIsland;
             /** Development only: T1's routing merged into a local snapshot by id (`?islands=`); undefined in production. */
             mergeArkIslandsRouting?: typeof mergeArkIslandsRouting;
+            /** Decision 240: an animal's status for the host (`ark:selected`, `ark:status`), its lines in the app's language. */
+            arkStatusForHost: typeof arkStatusForHost;
         };
     }
 }
@@ -58,5 +61,6 @@ window.AnimalDexArk = {
     mountArchipelago,
     arkTwoIslands,
     arkOpeningIsland,
-    mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined
+    mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined,
+    arkStatusForHost
 };

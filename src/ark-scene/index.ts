@@ -142,6 +142,7 @@ import {
     ARK_REGIONS,
     type ArkAnimal,
     type ArkCameraView,
+    type ArkHappening,
     type ArkHerdInfo,
     type ArkReplayRun,
     type ArkRegion,
@@ -165,6 +166,9 @@ import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
+import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {ArkSelectionBars} from "@/ark-scene/selection-bars";
+import {arkActivityKey, arkDayOf, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
@@ -1716,6 +1720,139 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const entry of allEntries()) refreshState(entry);
         for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
         tellState();
+    };
+
+    // MARK: An animal's status (decision 240): the tap card's "Now" and "Next", its log, and the bars over it
+
+    /** Record lines noted for animals' logs (the page's life story, the live log's events), newest first, a few each. */
+    const records = new Map<string, ArkRecordNote[]>();
+    const noteRecord = (notes: readonly ArkRecordNote[]) => {
+        for (const note of notes) {
+            const list = records.get(note.animalId) ?? [];
+            if (list.some((known) => known.id === note.id)) continue;
+            list.push(note);
+            list.sort((a, b) => b.at - a.at);
+            if (list.length > 12) list.length = 12;
+            records.delete(note.animalId);
+            records.set(note.animalId, list);
+            if (records.size > 4000) records.delete(records.keys().next().value as string);
+        }
+        statusAt = -Infinity;
+    };
+    /** Its schedule as the status reads it (on it and wired), with a zoo's feeding time (Part C). */
+    const subjectOf = (entry: Entry): ScheduleSubject | null => {
+        const own = entry.sched;
+        if (!own || !world || !own.wired || entry.visitor) return null;
+        const town = island && townIds.has(entry.animal.id) ? island : null;
+        return {
+            id: entry.animal.id,
+            world: worldOf(own.animal),
+            profile: own.profile,
+            animalAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch) : () => own.animal,
+            feedingAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch) !== own.animal : null,
+            activity: entry.animal.activity,
+            hoursAt: scheduleHours
+        };
+    };
+    const statusOf = (entry: Entry): ArkAnimalStatus => {
+        const epoch = worldMs() / 1000;
+        const animal = entry.animal;
+        const subject = scheduled(entry) && !entry.act ? subjectOf(entry) : null;
+        const huntingNow = Boolean(subject && hunting.active && hunting.hunting(animal, epoch));
+        const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
+        // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
+        const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
+        const notes = records.get(animal.id) ?? [];
+        const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
+        const meal = notes.find((note) => note.kind === "meal");
+        return {
+            id: animal.id,
+            activity,
+            since: plan?.since ?? null,
+            goal: plan?.goal ?? null,
+            log: arkStatusLog(plan?.log ?? [], record),
+            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), lastMealDay: meal ? arkDayOf(meal.at, voyageStart) : null})
+        };
+    };
+    /** The selected animal's status as last worked out (about once a second), and what was last told. */
+    let selectedStatus: ArkAnimalStatus | null = null;
+    let statusAt = -Infinity;
+    let toldStatus = "";
+    let selectionBars: ArkSelectionBars | null = null;
+    const tellStatus = (now: number) => {
+        const entry = selectedId ? findEntry(selectedId) : null;
+        if (!entry) {
+            selectedStatus = null;
+            toldStatus = "";
+            selectionBars?.set(null);
+            return;
+        }
+        const same = selectedStatus?.id === entry.animal.id;
+        if (same && now - statusAt < 1000) return;
+        if (!same) toldStatus = "";
+        statusAt = now;
+        selectedStatus = statusOf(entry);
+        const signature = arkStatusSignature(selectedStatus);
+        if (signature === toldStatus) return;
+        toldStatus = signature;
+        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars);
+        options.onStatus?.(entry.animal.id, selectedStatus);
+    };
+    const barsPoint = new Vector3();
+    /** The bars over the selected animal's head, each frame. */
+    const placeSelectionBars = () => {
+        if (!selectionBars) return;
+        const entry = selectedId ? findEntry(selectedId) : null;
+        const middle = entry?.middle;
+        if (!entry || !middle || entry.held || selectedStatus?.id !== entry.animal.id) return selectionBars.hide();
+        barsPoint.copy(middle).setY(middle.y + entry.drawnHeight * 0.55 + 0.1).project(camera);
+        const visible = barsPoint.z < 1 && Math.abs(barsPoint.x) < 1.02 && Math.abs(barsPoint.y) < 1.02;
+        // (Kept above the page's card at the foot of the view, `setViewInset`: over it when the animal is behind the card.)
+        selectionBars.place(((barsPoint.x + 1) / 2) * width, ((1 - barsPoint.y) / 2) * height, visible, {width, height: Math.max(height - insetTarget, 60)});
+    };
+
+    // The live log's moments (`animal-status.ts` pickMoment): who can be named, worked out again when the animals change
+    // and every half minute (schedules are wired a slice at a time, the town's once its world is in).
+    let momentSubjects: MomentSubject[] | null = null;
+    let momentsFor: Entry[] | null = null;
+    let momentsAt = -Infinity;
+    const momentSubjectsNow = (): MomentSubject[] => {
+        if (momentSubjects && momentsFor === entries && performance.now() - momentsAt < 30_000) return momentSubjects;
+        const leads = new Map<Entry, number>();
+        for (const e of entries) if (e.leader && e.leader !== e && e.leader.animal.model_slug === e.animal.model_slug) leads.set(e.leader, (leads.get(e.leader) ?? 1) + 1);
+        const list: MomentSubject[] = [];
+        for (const e of entries) {
+            const subject = subjectOf(e);
+            if (!subject || e.place.micro) continue;
+            list.push({...subject, young: Boolean(e.sched!.animal.young), leads: leads.get(e) ?? 0, surfaces: Boolean(e.sched!.profile.breathes && e.depth && e.trueLength >= 1.2)});
+        }
+        momentSubjects = list;
+        momentsFor = entries;
+        // (Until every schedule is wired, again at the next call.)
+        momentsAt = entries.every((e) => !e.sched || e.sched.wired) ? performance.now() : -Infinity;
+        return list;
+    };
+    const happening = (after: number | null): {window: number; moments: ArkHappening[]} => {
+        const done = Math.floor(worldMs() / 1000 / MOMENT_WINDOW_SECONDS) - 1;
+        if (!world || reducedMotion || !scheduleOn) return {window: done, moments: []};
+        // Two windows a call at most; a caller far behind (a hidden tab) skips to now.
+        const from = after === null || after < done - 2 ? done - 1 : after + 1;
+        const subjects = from <= done ? momentSubjectsNow() : [];
+        const moments: ArkHappening[] = [];
+        for (let w = from; w <= done; w++) {
+            const start = w * MOMENT_WINDOW_SECONDS;
+            // Encounter hunting: a predator whose forays begin in this window (the server's next hunt came, and it is awake).
+            const forays = hunting.active ? subjects.filter((s) => {
+                const animal = findEntry(s.id)?.animal;
+                return animal ? hunting.hunting(animal, start + MOMENT_WINDOW_SECONDS) && !hunting.hunting(animal, start) : false;
+            }).map((subject) => ({subject, at: start})) : [];
+            const moment = pickMoment(w, subjects, forays);
+            const entry = moment ? findEntry(moment.animalId) : null;
+            if (!moment || !entry) continue;
+            const a = entry.animal;
+            moments.push({id: moment.id, kind: moment.kind, activity: moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at});
+        }
+        return {window: Math.max(done, after ?? done), moments};
     };
 
     /** The badge over a herd: its count, tappable (the population panel is the way in for the keyboard). */
@@ -5754,6 +5891,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         placeLabels();
         placeVisitorLabel();
         placeBadges();
+        // Decision 240: the selected animal's status (about once a second) and its bars over it (every frame).
+        tellStatus(startedAt);
+        placeSelectionBars();
         runtime.drawnFrame(startedAt, inset);
 
         const spent = performance.now() - startedAt;
@@ -5852,6 +5992,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setReducedMotion: (reduced) => {
             if (reduced === reducedMotion) return;
             reducedMotion = reduced;
+            selectionBars?.setReducedMotion(reduced);
             liveliness.setReducedMotion(reduced);
             for (const sceneModule of modules) sceneModule.setReducedMotion(reduced);
             motes.points.visible = !reducedMotion && !liteOn();
@@ -5961,6 +6102,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const entry = findEntry(id);
             return entry ? restOf(entry) : null;
         },
+        animalStatus: (id) => {
+            const entry = findEntry(id);
+            if (!entry) return null;
+            return selectedStatus?.id === id && performance.now() - statusAt < 1000 ? selectedStatus : statusOf(entry);
+        },
+        noteRecord,
+        happening,
         reactive: (id) => {
             const r = findEntry(id)?.reactive;
             return r ? {...r} : null;
@@ -6182,6 +6330,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             renderer.dispose();
             renderer.forceContextLoss();
             canvas.remove();
+            selectionBars?.dispose();
             labelLayer.remove();
         }
     };

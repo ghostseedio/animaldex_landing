@@ -24,8 +24,9 @@
 import table from "@/ark-scene/species-stats.json";
 import type {TalkingBehaviour} from "@/lib/talking-models/behaviour";
 
-export type ArkStats = {size: number; speed: number; dominance: number; rarity: number; intelligence: number};
-export const ARK_STAT_KEYS = ["size", "speed", "dominance", "rarity", "intelligence"] as const;
+import {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stat-keys";
+
+export {ARK_STAT_KEYS, type ArkStats} from "@/ark-scene/stat-keys";
 
 /** An animal's own stats and stored length, as the snapshot may carry them. */
 export type ArkStatsSource = {model_slug: string; stats?: Partial<ArkStats> | null; length_m?: number | null};

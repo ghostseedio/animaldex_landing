@@ -19,7 +19,7 @@ import {decodeArkLineage, decodeArkThriveField, type ArkLineage} from "@/lib/ark
 import {ARK_ZONES} from "@/ark-scene/types";
 import {arkActivity, type ArkActivity} from "@/lib/ark-daylight";
 import {decodeArkStory, type ArkAnimalStory} from "@/lib/ark-story";
-import {arkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {arkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkLabelHasFounderKey, arkLabelText, decodeArkFounder, decodeArkFounderStory, type ArkFounder, type ArkFounderStory} from "@/lib/ark-founders";
 
 /**

@@ -7,6 +7,7 @@
 
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
+import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 
 export type ArkHudWords = {
     label: string;
@@ -35,6 +36,20 @@ export type ArkHudWords = {
     breeds: string;
     /** "12 · crowded": a count and its pair status. */
     countStatus: string;
+    /** The population overlay (decision 239): "3,152 aboard", its folded chip and its heading. */
+    chip: string;
+    /** A row's accessible name: "Plains Zebra: 12" (its 24-hour change follows when there is one). */
+    rowCount: string;
+    /** "+12% in the last 24 hours": a count's change, as a tooltip and for a screen reader. */
+    change24h: string;
+    /** The window beside the total's change ("24 h"). */
+    changeWindow: string;
+    /** About's compact list of every species: "All 953 species aboard", what it is, and the link up to the overlay. */
+    allSpecies: string;
+    listIntro: string;
+    openList: string;
+    /** The overlay's list, for a screen reader. */
+    listLabel: string;
 };
 
 /** `generic`: an animal a step brought (before captures did); `capture`: one a capture brought (captures + thrive). */
@@ -382,6 +397,10 @@ export type ArkWords = {
     lite: ArkLiteWords;
     /** The live log over the world and the population bars (owner, 2026-11-11). */
     live: ArkLiveWords;
+    /** The tap card's "Now" and "Next", its log and bars (decision 240). */
+    card: ArkCardWords;
+    /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
+    activity: ArkActivityWords;
     sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;

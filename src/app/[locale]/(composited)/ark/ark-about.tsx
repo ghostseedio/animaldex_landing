@@ -1,7 +1,7 @@
-import Link from "@/app/[locale]/_components/link";
 import type {ArkSnapshot} from "@/ark-scene/types";
-import {arkPopulation} from "@/lib/ark-population";
-import {arkIslandsGrouping, arkTwoIslands} from "@/lib/ark-islands";
+import {arkRankedSpecies} from "@/lib/ark-population-change";
+import {localeConfig} from "@/i18n";
+import {getLocalePath} from "@/lib/site";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 /**
@@ -10,6 +10,12 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
  * and every species aboard with a link to its page. Search engines and
  * readers without WebGL get the Ark from here; the 3D world above is the
  * same Ark drawn.
+ *
+ * Decision 239: the population overlay over the world is the list of who is aboard now, so the long list by region
+ * that stood here is a compact one, folded: every species biggest first with its count, each linked to its page
+ * (for search and for readers without WebGL), and a link up to the overlay. The list is one HTML string (decision
+ * 246): a thousand server-rendered rows would otherwise be a thousand nodes in the page's payload for React to walk
+ * on load; as a string it is one prop, never hydrated row by row.
  *
  * Counts and species only: never who brought an animal, never a problem or a chat.
  */
@@ -22,14 +28,18 @@ type Props = {
     speciesPages: ReadonlySet<string>;
 };
 
+function escaped(text: string): string {
+    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function counted(count: number, one: string, other: string, locale: string): string {
     return count === 1 ? one : other.replace("{count}", count.toLocaleString(locale));
 }
 
 export default function ArkAbout({snapshot, words, locale, speciesPages}: Props) {
     const seo = words.seo;
-    // Part C: with two islands, the wild island's regions, then the town's homes, farms, zoo and wildlife (decision T3-6).
-    const population = arkPopulation(snapshot, arkTwoIslands(snapshot) ? arkIslandsGrouping(words) : null);
+    const species = arkRankedSpecies(snapshot);
+    const siteLocale = localeConfig.locales.includes(locale) ? locale : localeConfig.defaultLocale;
     const number = (value: number) => value.toLocaleString(locale);
     const live = !snapshot
         ? words.unavailable
@@ -63,36 +73,27 @@ export default function ArkAbout({snapshot, words, locale, speciesPages}: Props)
 
                 <div className="min-w-0">
                     <h3 className="font-display text-xl font-extrabold text-white">{seo.listTitle}</h3>
-                    {population.species ? (
+                    {species.length ? (
                         <>
-                            <p className="mt-2 text-[14px] leading-relaxed text-ink-300">{seo.listIntro}</p>
-                            <div className="mt-4 flex flex-col gap-5">
-                                {population.regions.map((group) => (
-                                    <div key={group.place?.key ?? group.region}>
-                                        <h4 className="flex items-baseline justify-between border-b border-line-300 pb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-ink-300">
-                                            <span>{group.place?.label ?? words.regions[group.region]}</span>
-                                            <span className="tabular-nums font-semibold tracking-normal text-ink-400">{number(group.animals)}</span>
-                                        </h4>
-                                        <ul className="mt-1">
-                                            {group.species.map((row) => (
-                                                <li key={row.key} className="flex items-baseline justify-between gap-3 border-b border-line-300/60 py-2 text-[14px]">
-                                                    {speciesPages.has(row.slug) ? (
-                                                        <Link href={`/animals/${row.slug}`} className="font-bold text-white underline-offset-4 hover:text-primary-200 hover:underline">
-                                                            {row.name}
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="font-bold text-white">{row.name}</span>
-                                                    )}
-                                                    <span className="shrink-0 text-ink-300">
-                                                        {fillArkWords(seo.listAboard, {count: number(row.count)})}
-                                                        <span className="text-ink-400"> · {words.hud[row.status]}</span>
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                ))}
-                            </div>
+                            <p className="mt-2 text-[14px] leading-relaxed text-ink-300">
+                                {words.hud.listIntro}{" "}
+                                {/* The overlay over the world opens at its hash (`ark-population-hud.tsx`). */}
+                                <a href="#ark-aboard" className="inline-flex min-h-6 items-center whitespace-nowrap font-bold text-primary-300 underline-offset-4 hover:underline">
+                                    {words.hud.openList}
+                                    <span aria-hidden="true"> ↑</span>
+                                </a>
+                            </p>
+                            <details className="group mt-4 border-y border-line-300">
+                                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-2 text-[14px] font-bold text-white [&::-webkit-details-marker]:hidden">
+                                    {fillArkWords(words.hud.allSpecies, {count: number(species.length)})}
+                                    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 7.5l5 5 5-5" /></svg>
+                                </summary>
+                                {/* Biggest first, in columns: a name (linked to its page when it has one) and its count per line. */}
+                                <ul
+                                    className="columns-2 gap-x-6 pb-3 text-[13px] leading-6 sm:columns-3 [&_a]:min-w-0 [&_a]:truncate [&_a]:text-ink-100 [&_a]:underline-offset-4 [&_a:hover]:text-primary-200 [&_a:hover]:underline [&_b]:min-w-0 [&_b]:truncate [&_b]:font-normal [&_b]:text-ink-100 [&_i]:shrink-0 [&_i]:not-italic [&_i]:tabular-nums [&_i]:text-ink-400 [&_li]:flex [&_li]:min-h-6 [&_li]:break-inside-avoid [&_li]:items-baseline [&_li]:justify-between [&_li]:gap-2"
+                                    dangerouslySetInnerHTML={{__html: species.map((row) => `<li>${speciesPages.has(row.slug) ? `<a href="${escaped(getLocalePath(siteLocale, `/animals/${row.slug}`))}">${escaped(row.name)}</a>` : `<b>${escaped(row.name)}</b>`}<i>${escaped(number(row.count))}</i></li>`).join("")}}
+                                />
+                            </details>
                         </>
                     ) : (
                         <p className="mt-2 text-[14px] leading-relaxed text-ink-300">{snapshot ? words.empty : words.unavailable}</p>

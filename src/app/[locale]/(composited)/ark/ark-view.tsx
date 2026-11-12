@@ -4,30 +4,29 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
-import ArkMyAnimals from "@/app/[locale]/(composited)/ark/ark-my-animals";
+import {ArkPoster, ArkToast, ArkWorldTools, ARK_GLASS} from "@/app/[locale]/(composited)/ark/ark-world-tools";
 import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
+import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-population-change";
+import type {ArkPageSummary} from "@/lib/ark-page-summary";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import {fetchArkHunting} from "@/lib/ark-hunting";
-import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
-import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
+import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
-import {arkIslandCounts, arkIslandsGrouping, arkIslandSnapshot, arkOpeningIsland, arkRegionName, arkTwoIslands} from "@/lib/ark-islands";
-import type {ArkPlaceGrouping} from "@/lib/ark-population";
+import {arkIslandCounts, arkIslandSnapshot, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {arkHerdKeys} from "@/ark-scene/herds";
-import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
-import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkPopulation, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
-import {cardSaysAsleep, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
-import {arkRestIsSleep, arkRestWords} from "@/lib/ark-rest-words";
-import {arkBringerLabel, arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
+import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
+import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
+import {arkRankedSpecies} from "@/lib/ark-population-change";
+import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
+import {cardSaysAsleep} from "@/ark-scene/behaviour-card";
+import {arkJoinLabels, arkSinceWhen, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay, readArkLastVisit, writeArkLastVisit, type ArkAct, type ArkLife, type ArkReplaySummary} from "@/lib/ark-life";
 import {fixtureArkStory} from "@/lib/ark-story";
-import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkAnimalFounders, type ArkFounder, type ArkFounders, type ArkFounderStory} from "@/lib/ark-founders";
-import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
+import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-founders";
+import {ArkBringerNames, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
-import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
-import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 
@@ -38,7 +37,13 @@ export type ArkFixtureLife = {events: unknown; lives: Record<string, unknown>};
 
 type Props = {
     locale: string;
+    /**
+     * The Ark handed over as props: development's modes only (fixtures, `?snapshot=`, the recorder). Otherwise null,
+     * and the client reads the live Ark itself after the first paint (decision 246: it was 4 MB of inline payload).
+     */
     initial: ArkSnapshot | null;
+    /** The counts and the islands' sizes for the first paint, before the Ark is read (`lib/ark-page-summary.ts`). */
+    summary?: ArkPageSummary | null;
     /**
      * The named founders and shared stories beside the snapshot (founders
      * contract): none while the server's `founder_names` switch is off.
@@ -80,8 +85,10 @@ const REFRESH_MS = 45_000;
 const GROW_REFRESH_MS = 8_000;
 /** Under this many animals the Ark reads as just beginning. */
 const BEGINNING_BELOW = 24;
-/** The desktop HUD's fold, kept per reader. */
-const FOLD_KEY = "ark.hud.folded";
+/** The 24-hour change is worked out this long after the world is up, so its read never competes with the scene's. */
+const CHANGE_READ_AFTER_MS = 1500;
+/** ...and this long after the page opened when the world is slow to come up (a slow device). */
+const CHANGE_READ_ANYWAY_MS = 8000;
 /** The lighter view (A18), when the reader chose: "1" on, "0" off; absent: decided by the device. */
 const LITE_KEY = "ark.lite";
 
@@ -189,13 +196,17 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
+    const sceneOf = useCallback(() => sceneRef.current, []);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(initial);
     const [founders, setFounders] = useState<ArkFounders>(initialFounders);
     const snapshotRef = useRef(snapshot);
+    const hasSnapshot = Boolean(snapshot);
+    /** The client's read of the live Ark failed (or the Ark is not there yet): "opens soon". */
+    const [unavailable, setUnavailable] = useState(false);
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
     /** What the selected animal is doing now, as the scene animates it (never worked out here from a clock of the page's own). */
     const [selectedState, setSelectedState] = useState<{id: string; state: ArkBehaviourState} | null>(null);
@@ -212,9 +223,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
     const [arrival, setArrival] = useState<ArkAnimal | null>(null);
-    const [region, setRegion] = useState<ArkRegion | null>(null);
-    const [folded, setFolded] = useState(false);
-    const [expanded, setExpanded] = useState(false);
+    /** Each species' count 24 hours ago, from the event log (decision 239); null until read, or when it can't be. */
+    const [then, setThen] = useState<ArkPopulationThen | null>(null);
     const [life, setLife] = useState<LifeState | null>(null);
     const livesRef = useRef(new Map<string, ArkLife | null>());
     const [following, setFollowing] = useState(false);
@@ -240,7 +250,19 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // Where focus goes back to when a card opened from the keyboard (the panel's row) closes.
     const returnFocusRef = useRef<HTMLElement | null>(null);
     const lastMetRef = useRef<string | null>(null);
-    const herdKeys = useMemo(() => arkHerdKeys(snapshot?.animals ?? []), [snapshot]);
+    // The species drawn as herds (A14), worked out by the scene's own rule, loaded with it (not in the page's first JavaScript).
+    const [herdKeys, setHerdKeys] = useState<ReadonlySet<string>>(() => new Set());
+    useEffect(() => {
+        const animals = snapshot?.animals;
+        if (!animals?.length) return;
+        let stale = false;
+        void import("@/ark-scene/herds").then(({arkHerdKeys}) => {
+            if (!stale) setHerdKeys(arkHerdKeys(animals));
+        });
+        return () => {
+            stale = true;
+        };
+    }, [snapshot]);
     // The selected herd's row in the panel: its kind's (A1).
     const herdAnimal = herd ? snapshot?.animals.find((animal) => arkLookKey(animal) === herd.key) ?? null : null;
     const herdSpeciesKey = herdAnimal ? arkSpeciesKey(herdAnimal) : null;
@@ -275,38 +297,22 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     }, []);
     useEffect(() => {
         // Only a real Ark is a visit: not the "opens soon" page before the migration.
-        if (!initial) return;
+        if (!hasSnapshot) return;
         try {
             sourceRef.current = arkPageSource(new URLSearchParams(window.location.search).get("from"));
         } catch {
             sourceRef.current = "ark_page";
         }
         return startArkSession(sourceRef.current);
-        // One visit per page.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-        try {
-            if (window.localStorage.getItem(FOLD_KEY) === "1") setFolded(true);
-        } catch {
-            // No storage (a private window): the HUD starts open.
-        }
-    }, []);
-    const fold = useCallback((next: boolean) => {
-        setFolded(next);
-        try {
-            window.localStorage.setItem(FOLD_KEY, next ? "1" : "0");
-        } catch {
-            // Remembered for this visit only.
-        }
-    }, []);
+        // One visit per page (from the moment the Ark is read).
+    }, [hasSnapshot]);
 
     const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, {day: "numeric", month: "long", year: "numeric"}), [locale]);
     const hasMine = Boolean(snapshot?.animals.some((animal) => animal.mine));
     // Part C: two islands once the server's switch is on; the panel shows the island loaded (its own slice of the read).
-    const twoIslands = arkTwoIslands(snapshot);
-    const islandCounts = useMemo(() => (snapshot && twoIslands ? arkIslandCounts(snapshot) : null), [snapshot, twoIslands]);
+    // (Before the Ark is read, the page's summary says: decision 246.)
+    const twoIslands = snapshot ? arkTwoIslands(snapshot) : Boolean(pageSummary?.islands);
+    const islandCounts = useMemo(() => (snapshot ? (twoIslands ? arkIslandCounts(snapshot) : null) : pageSummary?.islands ?? null), [snapshot, twoIslands, pageSummary]);
     const shown = useMemo(() => (snapshot && twoIslands ? arkIslandSnapshot(snapshot, island) : snapshot), [snapshot, twoIslands, island]);
     const crossTo = (next: ArkIsland) => {
         const scene = sceneRef.current as ArkArchipelagoHandle | null;
@@ -314,19 +320,17 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         void scene.crossTo(next);
     };
     const islandWords = {wild: words.islands?.wild ?? "Wild island", town: words.islands?.town ?? "Town and zoo", label: words.islands?.label ?? "Islands"};
-    // Decision T3-6: on the town island the panel lists by place (homes, farms, the zoo's types, town wildlife by niche);
-    // on the wild island by its regions, as before; both islands: the wild regions first, then the town's places.
-    const byPlace = useMemo<ArkPlaceGrouping | null>(() => {
-        if (!twoIslands || (panelScope === "island" && island === "wild")) return null;
-        return arkIslandsGrouping(words);
-    }, [twoIslands, panelScope, island, words]);
     const showMineToggle = hasMine && (signedIn || Boolean(session.user) || fixture);
+    // The population overlay lists the island shown or both (biggest first), or with "My animals" on only the reader's own.
+    const listedAll = panelScope === "both" || !twoIslands ? snapshot : shown;
+    const listed = useMemo(() => (listedAll && mineOnly ? {...listedAll, animals: listedAll.animals.filter((animal) => animal.mine)} : listedAll), [listedAll, mineOnly]);
 
     // MARK: The scene
 
     useEffect(() => {
         const el = mountRef.current;
-        if (!el || !initial) return;
+        const first = snapshotRef.current;
+        if (!el || !first) return;
         let disposed = false;
         let handle: ArkSceneHandle | null = null;
         const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -337,11 +341,13 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         } catch {
             // The device decides.
         }
-        import("@/ark-scene/islands/archipelago")
+        // Behind the poster (decision 246): the scene's code is fetched and run once the browser is idle after the first
+        // paint, never in the page's first JavaScript.
+        const start = () => import("@/ark-scene/islands/archipelago")
             .then(async ({mountArchipelago}) => {
                 if (disposed) return;
                 // (The mount's heavy seeded work runs in the runtime's worker first, inside the archipelago: docs/ark/runtime.md §7.)
-                const opening = snapshotRef.current ?? initial;
+                const opening = snapshotRef.current ?? first;
                 const focusedFirst = arkPickAnimal(arkFocusAnimals(opening, focusOn), null);
                 try {
                     handle = mountArchipelago(el, {
@@ -351,7 +357,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                             setIsland(next);
                             setCrossing(moving);
                         },
-                        snapshot: snapshotRef.current ?? initial,
+                        snapshot: snapshotRef.current ?? first,
                         modelBase,
                         ...(rigBase !== undefined ? {rigBase} : {}),
                         // Development: `?behaviour=0` turns the behaviour schedule off (the placed spots, as before).
@@ -377,7 +383,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                     });
                     sceneRef.current = handle;
                     // "See it in the Ark" (`?focus=`): straight to that animal or species, the reader's own first, on its island.
-                    const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? initial, focusOn), null);
+                    const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? first, focusOn), null);
                     if (focused) {
                         // The page's own flight to `?focus=` is not a tap.
                         autoSelecting.current = true;
@@ -386,9 +392,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                     }
                     if (process.env.NODE_ENV !== "production") {
                         (window as unknown as {__arkScene?: ArkSceneHandle}).__arkScene = handle;
-                        (window as unknown as {__arkSnapshot?: ArkSnapshot | null}).__arkSnapshot = snapshotRef.current ?? initial;
+                        (window as unknown as {__arkSnapshot?: ArkSnapshot | null}).__arkSnapshot = snapshotRef.current ?? first;
                         // Development: every act in the fixture's log, to play one by hand (`__arkScene.play([__arkActs[i]])`).
-                        if (fixtureLife) (window as unknown as {__arkActs?: ArkAct[]}).__arkActs = planArkReplay(decodeArkEvents(fixtureLife.events, snapshotRef.current ?? initial), 1000).acts;
+                        if (fixtureLife) (window as unknown as {__arkActs?: ArkAct[]}).__arkActs = planArkReplay(decodeArkEvents(fixtureLife.events, snapshotRef.current ?? first), 1000).acts;
                     }
                 } catch (error) {
                     console.warn("[ark] the scene could not start", error);
@@ -396,31 +402,43 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 }
             })
             .catch(() => setFailed(true));
+        const idle = window.requestIdleCallback ? window.requestIdleCallback(() => void start(), {timeout: 1500}) : null;
+        const timer = idle === null ? window.setTimeout(() => void start(), 150) : null;
         return () => {
             disposed = true;
+            if (idle !== null) window.cancelIdleCallback?.(idle);
+            if (timer !== null) clearTimeout(timer);
             handle?.dispose();
             sceneRef.current = null;
         };
-        // The scene is built once; later snapshots go through update().
+        // The scene is built once, when the Ark is first read; later snapshots go through update().
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [hasSnapshot]);
 
     useEffect(() => {
         sceneRef.current?.setMineOnly(mineOnly);
     }, [mineOnly]);
 
-    // On a phone the tap band covers the foot of the world: the view moves up so the animal stays above it.
+    // The tap card covers the foot of the world: the view moves up so the animal (and its bars) stay above it (on a
+    // desktop too since decision 240: the world there is short enough for the card to cover the animal).
+    // (And the overlays over the world keep clear of it: `--ark-card-h`, decision 239.)
     const bandRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
         const band = bandRef.current;
         const scene = sceneRef.current;
-        if (!scene) return;
+        const card = (height: number) => worldRef.current?.style.setProperty("--ark-card-h", `${Math.round(height)}px`);
         if (!(selected || herd) || !band) {
-            scene.setViewInset(0);
+            card(0);
+            scene?.setViewInset(0);
             return;
         }
+        if (!scene) return;
         const phone = window.matchMedia("(max-width: 767px)");
-        const apply = () => scene.setViewInset(phone.matches ? band.getBoundingClientRect().height : 0);
+        const apply = () => {
+            const height = band.getBoundingClientRect().height;
+            card(height);
+            scene.setViewInset(height);
+        };
         apply();
         const observer = new ResizeObserver(apply);
         observer.observe(band);
@@ -588,6 +606,36 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         });
     }, [ready, since, fixtureLife, focusOn, words, locale]);
 
+    // The population overlay's 24-hour change (decision 239): the event log read once per page load (kept a few minutes
+    // per device), a moment after the world is up, or a while after the page opened if the world is slow to come up.
+    // Development's fixtures: their own log, whatever its times.
+    const changeAsked = useRef(false);
+    const mounted = useRef(true);
+    useEffect(() => {
+        mounted.current = true;
+        return () => {
+            mounted.current = false;
+        };
+    }, []);
+    useEffect(() => {
+        if (changeAsked.current || !hasSnapshot) return;
+        const timer = setTimeout(() => {
+            const now = snapshotRef.current;
+            if (!now || changeAsked.current) return;
+            changeAsked.current = true;
+            const done = (read: ArkPopulationThen | null) => {
+                if (mounted.current) setThen(read);
+            };
+            if (fixtureLife) {
+                void import("@/lib/ark-population-change").then(({arkPopulationThen}) => done(arkPopulationThen(now, fixtureLife.events, Date.now(), "")));
+                return;
+            }
+            if (fixture) return;
+            void readArkPopulationThen("/api/ark/events", now, {fetch: (url) => fetch(url), storage: storage()}).then(done);
+        }, ready ? CHANGE_READ_AFTER_MS : CHANGE_READ_ANYWAY_MS);
+        return () => clearTimeout(timer);
+    }, [ready, hasSnapshot, fixture, fixtureLife]);
+
     // The reader's own animals aboard, once the world is on screen: their arrival seen (and again after a refresh brings one).
     useEffect(() => {
         if (ready && snapshot && !fixture) noteArkArrivalsSeen(snapshot.animals, sourceRef.current);
@@ -612,6 +660,46 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         sceneRef.current?.update(next);
         if (before && fresh.length) setArrival(fresh[fresh.length - 1]);
     }, [observeLive]);
+
+    // The live Ark, read by the client after the first paint (decision 246), as the visitor (their own come back `mine`):
+    // never handed over as props in production.
+    useEffect(() => {
+        if (initial) return;
+        let stopped = false;
+        const read = () => fetch("/api/ark/voyage")
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {snapshot?: unknown; founders?: unknown} | null) => {
+                const next = decodeArkSnapshot(body?.snapshot);
+                if (stopped) return;
+                if (!next) {
+                    if (!snapshotRef.current) setUnavailable(true);
+                    return;
+                }
+                setFounders(decodeArkFounders(body?.founders));
+                apply(next);
+            })
+            .catch(() => {
+                if (!stopped && !snapshotRef.current) setUnavailable(true);
+            });
+        // Once the page has loaded (the poster painted) and the browser is idle: the read's parse (thousands of animals)
+        // never holds up the first paint.
+        let idle: number | null = null;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const whenIdle = () => {
+            if (window.requestIdleCallback) idle = window.requestIdleCallback(() => void read(), {timeout: 1000});
+            else timer = setTimeout(() => void read(), 50);
+        };
+        if (document.readyState === "complete") whenIdle();
+        else window.addEventListener("load", whenIdle, {once: true});
+        return () => {
+            stopped = true;
+            window.removeEventListener("load", whenIdle);
+            if (idle !== null) window.cancelIdleCallback?.(idle);
+            if (timer) clearTimeout(timer);
+        };
+        // Once per page; the refresh below keeps it current.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if ((fixture && !growFrom) || liveFeed || local) return;
@@ -695,8 +783,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     // MARK: Words
 
     const status = (() => {
-        if (!snapshot) return words.unavailable;
-        const {animals, species, founders} = snapshot.counts;
+        const counts = snapshot?.counts ?? pageSummary?.counts ?? null;
+        if (!counts) return unavailable ? words.unavailable : words.loading;
+        const {animals, species, founders} = counts;
         if (animals === 0) return words.empty;
         const values = {
             animals: counted(animals, words.animalsOne, words.animalsOther, locale),
@@ -707,7 +796,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         return template.replace(/\{(\w+)\}/g, (match, key: keyof typeof values) => values[key] ?? match);
     })();
 
-    // On a phone the HUD sits under the world: a tap there brings the world back into view.
+    // A tap in a list off the world (the reader scrolled down): the world comes back into view.
     const showWorld = () => {
         const world = worldRef.current;
         if (!world || !window.matchMedia("(max-width: 767px)").matches) return;
@@ -715,16 +804,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         if (top < 0 || top > window.innerHeight * 0.4) window.scrollTo({top: window.scrollY + top - 64, behavior: "smooth"});
     };
 
-    const focus = (next: ArkRegion | null) => {
-        setRegion(next);
-        sceneRef.current?.focusRegion(next);
-        showWorld();
-    };
-
     const pickSpecies = (row: ArkSpeciesRow) => {
         // From the panel: focus comes back to its row when the card closes.
         returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setRegion(null);
         // A herd (A14): the species, with its count (a kind's row: its herd of a breed, A1).
         const herdKey = [row.key, ...row.breeds.map((breed) => breed.key)].find((key) => herdKeys.has(key));
         if (herdKey && sceneRef.current?.selectHerd(herdKey)) {
@@ -747,144 +829,30 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         sceneRef.current?.select(animal.id);
     };
 
-    const beginning = Boolean(snapshot && snapshot.counts.animals < BEGINNING_BELOW);
-
     return (
         <div className="-mt-8">
-            {/* Band 1: what this is, and how many are aboard. */}
-            <section aria-labelledby="ark-title" className="border-b border-line-200 bg-canvas-950">
-                <div className="mx-auto w-full max-w-[86rem] px-4 py-5 md:px-8 md:py-7">
-                    <div className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                        <p className="whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.16em] text-primary-300">{words.eyebrow}</p>
-                        <div className="ml-auto flex shrink-0 items-center gap-2">
-                        {snapshot ? (
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={liteChoice ?? liteOn}
-                                aria-describedby="ark-lite-hint"
-                                onClick={toggleLite}
-                                title={words.lite.hint}
-                                className={`${pill} min-h-9 shrink-0 border px-3 text-[13px] ${(liteChoice ?? liteOn) ? "border-primary-400/70 text-primary-100" : "border-line-100 text-ink-200 hover:border-primary-400"}`}
-                            >
-                                <span aria-hidden="true" className={`relative inline-block h-4 w-7 rounded-full transition-colors motion-reduce:transition-none ${(liteChoice ?? liteOn) ? "bg-primary-400/80" : "bg-white/20"}`}>
-                                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-[left] duration-200 motion-reduce:transition-none ${(liteChoice ?? liteOn) ? "left-[0.875rem]" : "left-0.5"}`} />
-                                </span>
-                                {words.lite.label}
-                                {liteChoice === null && liteOn ? <span className="hidden text-[11px] font-semibold text-ink-400 sm:inline">· {words.lite.auto}</span> : null}
-                                <span id="ark-lite-hint" className="sr-only">{words.lite.hint}</span>
-                            </button>
-                        ) : null}
-                        {snapshot ? (
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={soundOn}
-                                aria-describedby="ark-sound-hint"
-                                onClick={() => setSound(!soundOn)}
-                                title={words.sound.hint}
-                                className={`${pill} min-h-9 shrink-0 border px-3 text-[13px] ${soundOn ? "border-primary-400/70 text-primary-100" : "border-line-100 text-ink-200 hover:border-primary-400"}`}
-                            >
-                                <span aria-hidden="true" className={`relative inline-block h-4 w-7 rounded-full transition-colors motion-reduce:transition-none ${soundOn ? "bg-primary-400/80" : "bg-white/20"}`}>
-                                    <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-[left] duration-200 motion-reduce:transition-none ${soundOn ? "left-[0.875rem]" : "left-0.5"}`} />
-                                </span>
-                                {words.sound.label}
-                                <span id="ark-sound-hint" className="sr-only">{words.sound.hint}</span>
-                            </button>
-                        ) : null}
-                        {soundOn ? (
-                            <button type="button" aria-expanded={creditsOpen} aria-controls="ark-sound-credits" onClick={() => setCreditsOpen((open) => !open)} className="min-h-9 shrink-0 px-1 text-[12px] font-semibold text-ink-300 underline-offset-4 hover:text-white hover:underline">
-                                {words.sound.credits}
-                            </button>
-                        ) : null}
-                        {twoIslands && islandCounts ? (
-                            <div role="group" aria-label={islandWords.label} className="flex shrink-0 overflow-hidden rounded-full border border-line-100">
-                                {(["wild", "town"] as const).map((id) => (
-                                    <button
-                                        key={id}
-                                        type="button"
-                                        aria-pressed={island === id}
-                                        disabled={crossing}
-                                        onClick={() => crossTo(id)}
-                                        className={`min-h-9 px-3 font-sans text-[13px] font-bold leading-none transition-colors motion-reduce:transition-none ${island === id ? "bg-primary-400 text-canvas-950" : "text-ink-100 hover:bg-white/10"} disabled:cursor-wait`}
-                                    >
-                                        {islandWords[id]} <span className="font-semibold opacity-75">{(id === "wild" ? islandCounts.wild : islandCounts.town).toLocaleString(locale)}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        ) : null}
-                        {showMineToggle ? (
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={mineOnly}
-                                onClick={() => setMineOnly((value) => !value)}
-                                className={`${pill} min-h-9 shrink-0 border px-4 text-[13px] ${mineOnly ? "border-primary-400 bg-primary-400 text-canvas-950 hover:bg-primary-100" : "border-line-100 text-ink-100 hover:border-primary-400"}`}
-                            >
-                                <span aria-hidden="true" className={`relative inline-block h-4 w-7 rounded-full transition-colors ${mineOnly ? "bg-canvas-950/80" : "bg-white/20"}`}>
-                                    <span className={`absolute top-0.5 h-3 w-3 rounded-full transition-[left] duration-200 ${mineOnly ? "left-[0.875rem] bg-primary-400" : "left-0.5 bg-white"}`} />
-                                </span>
-                                {words.myAnimals}
-                            </button>
-                        ) : null}
-                        </div>
-                    </div>
-                    {soundOn && creditsOpen ? (
-                        <div id="ark-sound-credits" className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-line-200 bg-canvas-900/80 px-3 py-2 text-[12px] leading-relaxed text-ink-200">
-                            {credits.length ? (
-                                <ul>
-                                    {credits.map((line) => (
-                                        <li key={line.text}>{line.page ? <a href={line.page} target="_blank" rel="noreferrer noopener" className="underline-offset-2 hover:underline">{line.text}</a> : line.text}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p>{words.sound.empty}</p>
-                            )}
-                        </div>
-                    ) : null}
-                    {mineOnly && twoIslands && snapshot ? (
-                        <ArkMyAnimals
-                            snapshot={snapshot}
-                            island={island}
-                            words={words}
-                            locale={locale}
-                            onAnimal={(animal) => {
-                                returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-                                sceneRef.current?.select(animal.id);
-                                showWorld();
-                            }}
-                        />
-                    ) : null}
-                    <h1 id="ark-title" className="mt-1 max-w-4xl font-display text-[1.65rem] font-extrabold leading-[1.05] tracking-tight text-white [text-wrap:balance] sm:text-3xl md:text-[2.5rem]">
-                        {words.title}
-                    </h1>
-                    <p className="mt-2 text-sm leading-relaxed text-ink-200 md:text-base" aria-live="polite">{status}</p>
-                    {/* "Name now, ask age after": once, inline, for someone signed in whose @username shows and whose year isn't stored. */}
-                    {signedIn || Boolean(session.user) ? <ArkAgeAsk words={words.age} className="mt-4 max-w-xl" /> : <ArkAgeAskDev words={words.age} />}
-                </div>
-            </section>
+            {/* The world fills the screen under the site's header (decision 239): the title and the counts line stay for a
+                screen reader (the counts are also the overlay's heading). */}
+            <h1 id="ark-title" className="sr-only">{words.eyebrow}</h1>
+            <p className="sr-only" aria-live="polite">{status}</p>
 
             {/* What a screen reader hears as it happens (A18): arrivals, a card opening, the replay's summary. */}
             <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</p>
-            {snapshot ? (
+            {snapshot || pageSummary ? (
                 <a href="#ark-aboard" className="sr-only focus:not-sr-only focus:absolute focus:z-10 focus:m-2 focus:rounded-full focus:bg-primary-400 focus:px-4 focus:py-2 focus:text-sm focus:font-bold focus:text-canvas-950">
                     {words.a11y.skipToList}
                 </a>
             ) : null}
 
-            {/* Band 2: the world, edge to edge, and who is aboard (beside it on a desktop, under it on a phone). */}
-            <div className="w-full md:flex md:h-[max(30rem,min(calc(100svh-18.5rem),56rem))]">
-            <section ref={worldRef} aria-label={words.eyebrow} className="relative h-[max(26rem,min(66svh,48rem))] w-full overflow-hidden bg-[#ecdcc4] md:h-full md:min-w-0 md:flex-1">
+            {/* The world, edge to edge and as tall as the screen under the header; who is aboard over it. */}
+            <section ref={worldRef} aria-label={words.eyebrow} className="relative h-[calc(100svh-4.0625rem)] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
                 {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
                 {snapshot && !failed ? <div ref={liveHostRef} className="pointer-events-none absolute inset-0" /> : null}
 
-                {snapshot && !failed && !ready ? (
-                    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#ecdcc4]">
-                        <p className="animate-pulse text-sm font-semibold text-[#5b5340] motion-reduce:animate-none">{words.loading}</p>
-                    </div>
-                ) : null}
+                {/* A real render of the Ark's opening view until the world is up (decision 246): the page's largest paint. */}
+                {!failed && !(unavailable && !snapshot) ? <ArkPoster ready={ready} loading={words.loading} /> : null}
 
-                {!snapshot ? (
+                {!snapshot && unavailable ? (
                     <div className="absolute inset-0 flex items-center justify-center px-4 text-center">
                         <p className="max-w-md font-display text-xl font-bold text-[#3d3829]">{words.unavailable}</p>
                     </div>
@@ -895,7 +863,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         <p className="text-sm text-ink-200">{words.noWebgl}</p>
                         {/* By species with its count (a thousand of one kind is one row, A14). */}
                         <ul className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {arkPopulation(snapshot).regions.flatMap((group) => group.species).map((row) => (
+                            {arkRankedSpecies(snapshot).map((row) => (
                                 <li key={row.key} className="flex items-baseline justify-between gap-3 border-b border-line-300 py-2 text-sm">
                                     <span className="min-w-0"><span className="font-bold text-white">{row.name}</span> <span className="text-ink-400">· {words.zones[row.zone]}</span></span>
                                     <span className="shrink-0 tabular-nums text-ink-200">{fillArkWords(words.hud.countStatus, {count: row.count.toLocaleString(locale), status: words.hud[row.status]})}</span>
@@ -905,54 +873,137 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                     </div>
                 ) : null}
 
-                {replay ? (
-                    <div role="status" aria-live="polite" className="rows-in absolute inset-x-0 top-0 z-[1] border-b border-line-200 bg-canvas-950/[0.9] backdrop-blur-xl">
-                        <div className="mx-auto flex w-full max-w-[86rem] items-center gap-3 px-4 py-2.5 md:px-8">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary-300">
-                                    {words.replay.title}
-                                    <span className="ml-2 font-semibold normal-case tracking-normal text-ink-400">{fillArkWords(words.replay.progress, {n: replay.index + 1, total: replay.acts.length})}</span>
-                                </p>
-                                <p key={replay.index} className="rows-in mt-0.5 text-sm font-semibold leading-snug text-white [text-wrap:balance]">{actCaption(replay.acts[replay.index], words, locale, snapshot?.animals ?? [], founders)}</p>
+                {/* Over the world (decision 239): the toolbar (top start), the notices under it, who is aboard (top end; under
+                    the toolbar on a phone). Clear of the live log and the reset button at the foot, and of an open card
+                    (`--ark-card-h`, from the band's height). */}
+                {(snapshot || pageSummary) && !failed ? (
+                    <div className="pointer-events-none absolute inset-0 z-[2] grid grid-cols-[minmax(0,1fr)_auto] grid-rows-[auto_auto_minmax(0,1fr)] gap-2 p-3 pb-[calc(4rem+var(--ark-card-h,0px))] md:grid-rows-[auto_minmax(0,1fr)] md:gap-x-3">
+                        <ArkWorldTools
+                            words={words}
+                            locale={locale}
+                            islands={twoIslands && islandCounts ? {island, counts: islandCounts, crossing, names: islandWords, onCross: crossTo} : null}
+                            lite={{on: liteChoice ?? liteOn, auto: liteChoice === null && liteOn, onToggle: toggleLite}}
+                            sound={{on: soundOn, onToggle: () => setSound(!soundOn)}}
+                        />
+
+                        <div className="pointer-events-none col-span-2 row-start-3 flex min-w-0 flex-col items-start gap-2 self-start md:col-span-1 md:row-start-2">
+                            {replay ? (
+                                <ArkToast role="status" aria-live="polite">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#c8fa63]">
+                                            {words.replay.title}
+                                            <span className="ml-2 font-semibold normal-case tracking-normal text-white/50">{fillArkWords(words.replay.progress, {n: replay.index + 1, total: replay.acts.length})}</span>
+                                        </p>
+                                        <p key={replay.index} className="rows-in mt-0.5 text-[13px] font-semibold leading-snug [text-wrap:balance]">{actCaption(replay.acts[replay.index], words, locale, snapshot?.animals ?? [], founders)}</p>
+                                    </div>
+                                    <button type="button" onClick={() => {
+                                        replaySkipped.current = true;
+                                        replayRef.current?.skip();
+                                    }} className="inline-flex h-9 shrink-0 items-center rounded-full border border-white/20 px-3.5 text-[12.5px] font-bold transition-colors hover:border-[#c8fa63] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63]">
+                                        {words.replay.skip}
+                                    </button>
+                                </ArkToast>
+                            ) : null}
+
+                            {summary && !replay && !selected && !herd ? (
+                                <ArkToast>
+                                    <p className="min-w-0 flex-1 text-[13px] leading-snug">
+                                        <span className="mr-2 text-[10.5px] font-bold uppercase tracking-[0.14em] text-[#c8fa63]">{words.replay.title}</span>
+                                        <span className="font-semibold">{summary}</span>
+                                        {reducedMotion ? <span className="mt-0.5 block text-[12px] text-white/55">{words.a11y.motionReduced}</span> : null}
+                                    </p>
+                                    <button type="button" onClick={() => setSummary(null)} aria-label={words.replay.dismiss} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63]">
+                                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                    </button>
+                                </ArkToast>
+                            ) : null}
+
+                            {arrival && !selected && !herd && !replay && !summary ? (
+                                <ArkToast className="!w-auto">
+                                    <p className="min-w-0 truncate text-[13px] font-semibold">{words.newArrival.replace("{animal}", arrival.name)}</p>
+                                    <button type="button" onClick={() => sceneRef.current?.select(arrival.id)} className="inline-flex h-9 shrink-0 items-center rounded-full px-2.5 text-[13px] font-bold text-[#c8fa63] underline-offset-4 hover:underline">
+                                        {words.showMe}
+                                    </button>
+                                </ArkToast>
+                            ) : null}
+
+                            {soundOn ? (
+                                <div className="pointer-events-auto flex max-w-[22rem] flex-col items-start gap-1.5">
+                                    <button type="button" aria-expanded={creditsOpen} aria-controls="ark-sound-credits" onClick={() => setCreditsOpen((open) => !open)} className={`${ARK_GLASS} inline-flex h-9 items-center rounded-full px-3 text-[12px] font-semibold text-white/80 hover:text-white md:h-8`}>
+                                        {words.sound.credits}
+                                    </button>
+                                    {creditsOpen ? (
+                                        <div id="ark-sound-credits" className={`${ARK_GLASS} max-h-40 overflow-y-auto rounded-xl px-3 py-2 text-[12px] leading-relaxed text-white/80`}>
+                                            {credits.length ? (
+                                                <ul>
+                                                    {credits.map((line) => (
+                                                        <li key={line.text}>{line.page ? <a href={line.page} target="_blank" rel="noreferrer noopener" className="underline-offset-2 hover:underline">{line.text}</a> : line.text}</li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p>{words.sound.empty}</p>
+                                            )}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
+
+                            {/* "Name now, ask age after": once, for someone signed in whose @username shows and whose year isn't stored. */}
+                            <div className="pointer-events-auto w-full max-w-[26rem] overflow-hidden rounded-2xl bg-[rgba(14,20,14,0.9)] backdrop-blur-xl">
+                                {signedIn || Boolean(session.user) ? <ArkAgeAsk words={words.age} className="rounded-2xl" /> : <ArkAgeAskDev words={words.age} />}
                             </div>
-                            <button type="button" onClick={() => {
-                                replaySkipped.current = true;
-                                replayRef.current?.skip();
-                            }} className={`${pill} min-h-9 shrink-0 border border-line-100 px-4 text-[13px] text-ink-100 hover:border-primary-400`}>
-                                {words.replay.skip}
-                            </button>
                         </div>
-                    </div>
-                ) : null}
 
-                {summary && !replay && !selected && !herd ? (
-                    <div className="rows-in absolute inset-x-0 top-0 z-[1] border-b border-line-200 bg-canvas-950/[0.9] backdrop-blur-xl">
-                        <div className="mx-auto flex w-full max-w-[86rem] items-center gap-3 px-4 py-2.5 md:px-8">
-                            <p className="min-w-0 flex-1 text-sm leading-snug text-ink-100">
-                                <span className="mr-2 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-300">{words.replay.title}</span>
-                                <span className="font-semibold text-white">{summary}</span>
-                                {reducedMotion ? <span className="mt-0.5 block text-[12px] text-ink-400">{words.a11y.motionReduced}</span> : null}
-                            </p>
-                            <button type="button" onClick={() => setSummary(null)} aria-label={words.replay.dismiss} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white">
-                                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                            </button>
-                        </div>
-                    </div>
-                ) : null}
-
-                {arrival && !selected && !herd && !replay && !summary ? (
-                    <div className="rows-in absolute inset-x-0 top-0 border-b border-line-200 bg-canvas-950/[0.92] backdrop-blur-xl">
-                        <div className="mx-auto flex w-full max-w-[86rem] items-center justify-between gap-3 px-4 py-2.5 md:px-8">
-                            <p className="min-w-0 truncate text-sm font-semibold text-white">{words.newArrival.replace("{animal}", arrival.name)}</p>
-                            <button type="button" onClick={() => sceneRef.current?.select(arrival.id)} className="shrink-0 text-sm font-bold text-primary-300 underline-offset-4 hover:underline">
-                                {words.showMe}
-                            </button>
-                        </div>
+                        <ArkPopulationHud
+                            snapshot={snapshot}
+                            counts={snapshot?.counts ?? pageSummary?.counts ?? {animals: 0, species: 0, founders: 0}}
+                            listed={listed}
+                            scope={panelScope === "both" || !twoIslands ? "both" : island}
+                            then={mineOnly ? null : then}
+                            totalThen={then}
+                            words={words}
+                            locale={locale}
+                            selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}
+                            herdKeys={herdKeys}
+                            arrivalKey={arrival ? arkSpeciesKey(arrival) : null}
+                            onSpecies={pickSpecies}
+                            shareLocalePath={shareLocalePath}
+                            filters={twoIslands || showMineToggle ? (
+                                <>
+                                    {twoIslands ? (
+                                        <div role="group" aria-label={islandWords.label} className="flex rounded-full bg-white/[0.07] p-0.5">
+                                            {(["island", "both"] as const).map((id) => (
+                                                <button
+                                                    key={id}
+                                                    type="button"
+                                                    aria-pressed={panelScope === id}
+                                                    onClick={() => setPanelScope(id)}
+                                                    className={`inline-flex h-10 items-center rounded-full px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none md:h-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] ${panelScope === id ? "bg-white/[0.16] text-white" : "text-white/60 hover:text-white"}`}
+                                                >
+                                                    {id === "both" ? words.islands?.both ?? "Both islands" : islandWords[island]}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                    {showMineToggle ? (
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={mineOnly}
+                                            onClick={() => setMineOnly((value) => !value)}
+                                            className={`inline-flex h-11 items-center rounded-full px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none md:h-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] ${mineOnly ? "bg-[#a7f432] text-canvas-950" : "bg-white/[0.07] text-white/70 hover:text-white"}`}
+                                        >
+                                            {words.myAnimals}
+                                        </button>
+                                    ) : null}
+                                </>
+                            ) : null}
+                        />
                     </div>
                 ) : null}
 
                 {selected ? (
-                    <ArkAnimalBand
+                    <ArkAnimalCard
                         bandRef={bandRef}
                         animal={selected}
                         words={words}
@@ -962,6 +1013,8 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         life={life?.id === selected.id ? life : null}
                         founders={founders.animals[selected.id] ?? null}
                         arkDay={snapshot?.ark_day ?? null}
+                        voyageStart={snapshot?.voyage.started_at ?? null}
+                        scene={sceneOf}
                         asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
                         rest={selectedRest?.id === selected.id ? selectedRest.rest : sceneRef.current?.rest(selected.id) ?? null}
                         following={following}
@@ -992,44 +1045,6 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                 ) : null}
             </section>
 
-            {snapshot ? (
-                <ArkPopulationHud
-                    snapshot={panelScope === "both" ? snapshot : shown ?? snapshot}
-                    byPlace={byPlace}
-                    regionName={(region) => arkRegionName(words, region, twoIslands)}
-                    scope={twoIslands ? (
-                        <div role="group" aria-label={islandWords.label} className="mb-3 flex gap-1">
-                            {(["island", "both"] as const).map((id) => (
-                                <button
-                                    key={id}
-                                    type="button"
-                                    aria-pressed={panelScope === id}
-                                    onClick={() => setPanelScope(id)}
-                                    className={`inline-flex h-8 items-center rounded-full border px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none ${panelScope === id ? "border-primary-400 text-white" : "border-line-200 text-ink-200 hover:border-line-100 hover:text-white"}`}
-                                >
-                                    {id === "both" ? words.islands?.both ?? "Both islands" : islandWords[island]}
-                                </button>
-                            ))}
-                        </div>
-                    ) : null}
-                    words={words}
-                    locale={locale}
-                    selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}
-                    herdKeys={herdKeys}
-                    arrivalKey={arrival ? arkSpeciesKey(arrival) : null}
-                    region={region}
-                    folded={folded}
-                    onFold={fold}
-                    expanded={expanded}
-                    onExpand={setExpanded}
-                    beginning={beginning}
-                    onSpecies={pickSpecies}
-                    onRegion={focus}
-                    shareLocalePath={shareLocalePath}
-                />
-            ) : null}
-            </div>
-
             {/* Band 3: how an animal comes aboard, and the way to start. */}
             <section aria-labelledby="ark-how" className="border-b border-line-200">
                 <div className="mx-auto grid w-full max-w-[86rem] grid-cols-1 items-center gap-6 px-4 py-10 md:grid-cols-[minmax(0,1fr)_auto] md:px-8 md:py-14">
@@ -1043,205 +1058,6 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                     </Link>
                 </div>
             </section>
-        </div>
-    );
-}
-
-type BandProps = {
-    bandRef: React.Ref<HTMLDivElement>;
-    animal: ArkAnimal;
-    words: ArkWords;
-    locale: string;
-    talk: string;
-    arrived: string;
-    life: LifeState | null;
-    /** This animal's founders from the snapshot (shown before its life story reads). */
-    founders: ArkAnimalFounders | null;
-    arkDay: number | null;
-    asleep: boolean;
-    /** How it rests now (`sleep.ts` restStatus), shown in plain words in its state chip. */
-    rest: string | null;
-    following: boolean;
-    onFollow: () => void;
-    storyOpen: boolean;
-    onStory: () => void;
-    onClose: () => void;
-    /** Opened from the keyboard (the panel's row): focus moves to the card's heading. */
-    focusOnOpen: boolean;
-    /** Share this animal's kind on the Ark: the page's path and the words that go with the link. */
-    share: {localePath: string; text: string};
-};
-
-/** A card's heading takes focus when it opened from the keyboard; Escape inside the card closes it (A18). */
-function useCardFocus(key: string, focusOnOpen: boolean, onClose: () => void) {
-    const headingRef = useRef<HTMLHeadingElement | null>(null);
-    useEffect(() => {
-        if (focusOnOpen) headingRef.current?.focus({preventScroll: true});
-        // Only when another card opens.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key]);
-    const onKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key !== "Escape") return;
-        event.stopPropagation();
-        onClose();
-    };
-    return {headingRef, onKeyDown};
-}
-
-/** What the band knows about an animal's life: the life story when the server sent one, else the snapshot's v2 fields. */
-function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | null, locale: string, former: string, named: ArkAnimalFounders | null = null) {
-    const born = life ? life.origin.kind === "born" : animal.origin === "born";
-    const parentsBy = life?.origin.kind === "born" ? life.origin.born_to : animal.bringers?.map((b) => b.label) ?? [];
-    // Founders: the life story's when it carries them (names on), else the snapshot's.
-    const fromLife = Boolean(life?.founders.names);
-    const broughtByLabel = life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label;
-    const founder: ArkFounder | null = born ? null : fromLife ? life?.founders.brought_by ?? null : named?.brought_by ?? null;
-    const parentFounders: Array<ArkFounder | null> = fromLife ? life?.founders.born_to ?? [] : named?.bringers ?? [];
-    const bringerEntries: ArkBringerEntry[] = born
-        ? parentsBy.map((label, index) => ({label, founder: parentFounders[index] ?? null}))
-        : [{label: broughtByLabel, founder}];
-    const story: ArkFounderStory | null = born ? null : fromLife ? life?.founder_story ?? null : named?.story ?? null;
-    const ageDays = life?.ark_age_days ?? (arkDay !== null && typeof animal.born_ark_day === "number" ? Math.max(arkDay - animal.born_ark_day, 0) : null);
-    // Captures + thrive: how well kept it is (the life story's once read; it has none once it has died), and how it came aboard.
-    const thrive = life ? life.thrive : animal.thrive ?? null;
-    const source = life?.origin.kind === "arrived" ? life.origin.source ?? animal.source ?? null : animal.source ?? null;
-    return {
-        thrive,
-        source,
-        lineage: life?.lineage ?? null,
-        born,
-        hatched: life?.origin.kind === "born" && life.origin.from_egg,
-        bringers: arkJoinLabels(born ? parentsBy : [life?.origin.kind === "arrived" ? life.origin.brought_by ?? animal.brought_by.label : animal.brought_by.label], locale, former),
-        generation: life ? life.generation : animal.generation ?? null,
-        ageDays,
-        condition: life?.condition ?? animal.condition ?? null,
-        founder,
-        bringerEntries,
-        anyFounder: bringerEntries.some((entry) => entry.founder !== null),
-        ancestorFounder: life?.founders.ancestor ?? null,
-        story
-    };
-}
-
-function ageText(days: number, words: ArkWords, locale: string): string {
-    if (days < 365) {
-        const whole = Math.max(Math.round(days), 0);
-        return whole === 1 ? words.life.ageDay : fillArkWords(words.life.ageDays, {days: whole.toLocaleString(locale)});
-    }
-    const years = days / 365;
-    if (Math.abs(years - 1) < 0.05) return words.life.ageYear;
-    return fillArkWords(words.life.ageYears, {years: years.toLocaleString(locale, {maximumFractionDigits: years < 10 ? 1 : 0})});
-}
-
-/**
- * The tapped animal, as a band along the scene's foot: who it is, its life
- * in a line (and in full under "Life story", in the band itself), and the
- * next moves: talking to it, or following it.
- */
-function ArkAnimalBand({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, arkDay, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: BandProps) {
-    const life = state?.life ?? null;
-    const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
-    // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
-    const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
-    const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
-    const restChip = arkRestWords(rest, words.life.rest) ?? (asleep ? words.life.asleep : null);
-    const restNight = Boolean(restChip) && (arkRestIsSleep(rest) || (!rest && asleep));
-    // Its condition in plain words first ("In prime condition", "In good condition", "Ordinary"): the only place a band shows as text.
-    const thriveChip = facts.thrive ? arkThriveWords(facts.thrive, words.life) : null;
-    const chips = [
-        thriveChip,
-        facts.generation !== null && facts.generation > 0 ? fillArkWords(words.life.generationShort, {n: facts.generation}) : null,
-        facts.ageDays !== null ? ageText(facts.ageDays, words, locale) : null,
-        facts.condition ? words.life[facts.condition] : null,
-        // Right now: how it rests in plain words ("Asleep in its den", "Keeping watch"), else "Asleep now" or nothing.
-        restChip
-    ].filter((chip): chip is string => Boolean(chip));
-    const hasLife = Boolean(life) || animal.origin !== undefined;
-    return (
-        <div ref={bandRef} onKeyDown={onKeyDown} className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-labelledby={`ark-card-${animal.id}`}>
-            <div className="mx-auto w-full max-w-[86rem] px-4 py-3.5 md:px-8 md:py-4">
-                <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4rem_minmax(0,1fr)_auto] md:gap-x-5">
-                    <span className="flex h-[3.25rem] w-[3.25rem] items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-16 md:w-16">
-                        <ArkSpeciesIcon src={arkIconUrl(animal.model_slug)} size={64} className="h-[82%] w-[82%] object-contain" />
-                    </span>
-                    <div className="min-w-0">
-                        <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="truncate font-display text-lg font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-xl">{animal.name}</h2>
-                        {/* On a phone the open life story needs the room: the name in Latin and the chips (said again below) step aside. */}
-                        {animal.scientific_name ? <p className={`truncate text-[13px] italic text-ink-400 ${storyOpen ? "hidden md:block" : ""}`}>{animal.scientific_name}</p> : null}
-                        <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[13px]">
-                            <div className="flex gap-1.5"><dt className="text-ink-400">{words.lives}</dt><dd className="font-semibold text-ink-100">{words.zones[animal.zone]}</dd></div>
-                            {facts.born && facts.anyFounder ? (
-                                <div className="flex min-w-0 gap-1.5"><dt className="shrink-0 text-ink-400">{words.life.bornTo}</dt><dd className="min-w-0 font-semibold text-ink-100"><ArkFilled template={words.life.bornToValue} name="bringers"><ArkBringerNames entries={facts.bringerEntries} locale={locale} former={words.formerVoyager} /></ArkFilled></dd></div>
-                            ) : facts.born ? (
-                                <div className="flex min-w-0 gap-1.5"><dt className="shrink-0 text-ink-400">{words.life.bornTo}</dt><dd className="min-w-0 font-semibold text-ink-100">{fillArkWords(words.life.bornToValue, {bringers: facts.bringers})}</dd></div>
-                            ) : facts.founder ? (
-                                // A named founder (founders contract, section 5): "Brought by {name}", linked to their profile, with their photo.
-                                <div className="flex min-w-0 gap-1.5"><dt className="sr-only">{words.broughtBy}</dt><dd className="min-w-0"><ArkBroughtByFounder template={words.founders.card.broughtBy} founder={facts.founder} /></dd></div>
-                            ) : (
-                                <div className="flex gap-1.5"><dt className="text-ink-400">{words.broughtBy}</dt><dd className="font-semibold text-ink-100">{facts.bringers}</dd></div>
-                            )}
-                            <div className="flex gap-1.5"><dt className="text-ink-400">{facts.hatched ? words.life.hatched : facts.born ? words.life.born : words.arrived}</dt><dd className="font-semibold text-ink-100">{arrived}</dd></div>
-                            {/* Its family line, credited to its bringers (anonymous by default): "2 young, 1 grandchild". */}
-                            {arkLineageHasAny(facts.lineage) ? (
-                                <div className="flex min-w-0 gap-1.5" data-testid="ark-card-lineage"><dt className="shrink-0 text-ink-400">{words.life.lineage}</dt><dd className="min-w-0 font-semibold text-ink-100">{arkLineageLine(facts.lineage, words.life, locale)}</dd></div>
-                            ) : null}
-                        </dl>
-                        {chips.length ? (
-                            <p className={`mt-1.5 flex-wrap gap-1.5 ${storyOpen ? "hidden md:flex" : "flex"}`}>
-                                {chips.map((chip) => (
-                                    <span key={chip} data-testid={chip === thriveChip ? "ark-card-thrive" : undefined} data-thrive={chip === thriveChip ? facts.thrive ?? undefined : undefined} className={`rounded-full px-2 py-0.5 text-[12px] font-semibold ${chip === thriveChip && facts.thrive !== "ordinary" ? "bg-primary-400/15 text-primary-200" : chip === words.life.hungry ? "bg-[#5a3a1e] text-[#ffd8a8]" : chip === restChip && restNight ? "bg-[#26304a] text-[#c9d6ff]" : "bg-white/[0.08] text-ink-100"}`}>{chip}</span>
-                                ))}
-                            </p>
-                        ) : null}
-                        <ArkStoryLine state={state} born={facts.born} hatched={facts.hatched} story={facts.story} capture={facts.source === "capture"} founder={facts.founder} words={words} />
-                        {placeholder ? <p className="mt-1 text-[12px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
-                    </div>
-                    <button type="button" onClick={onClose} aria-label={words.close} className="flex h-10 w-10 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
-                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                    </button>
-                </div>
-
-                {storyOpen ? <ArkLifeStory animal={animal} life={life} facts={facts} words={words} locale={locale} rest={arkRestWords(rest, words.life.rest)} /> : null}
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 md:pl-[5.25rem]">
-                    {placeholder ? null : (
-                        <Link href={`/talk/${animal.model_slug}`} className={`${pill} w-full bg-primary-400 text-canvas-950 hover:bg-primary-100 sm:w-auto`}>
-                            {talk}
-                            <span aria-hidden="true">→</span>
-                        </Link>
-                    )}
-                    <button
-                        type="button"
-                        aria-pressed={following}
-                        onClick={onFollow}
-                        title={following ? words.life.followHint : undefined}
-                        className={`${pill} flex-1 border px-4 sm:flex-none ${following ? "border-primary-400 bg-primary-400/15 text-primary-100" : "border-line-100 text-ink-100 hover:border-primary-400"}`}
-                    >
-                        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" aria-hidden="true">
-                            <circle cx="10" cy="10" r="3" fill={following ? "currentColor" : "none"} />
-                            <path d="M10 1.8v3M10 15.2v3M1.8 10h3M15.2 10h3" />
-                        </svg>
-                        {words.life.follow}
-                    </button>
-                    {hasLife ? (
-                        <button type="button" aria-expanded={storyOpen} onClick={onStory} className={`${pill} flex-1 border border-line-100 px-4 text-ink-100 hover:border-primary-400 sm:flex-none`}>
-                            {storyOpen ? words.life.hideStory : words.life.showStory}
-                            <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform ${storyOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l5-5 5 5" /></svg>
-                        </button>
-                    ) : null}
-                    <ArkShareButton
-                        target="tap_card"
-                        look="pill"
-                        localePath={share.localePath}
-                        slug={animal.model_slug}
-                        title={animal.name}
-                        text={share.text}
-                        label={words.share.shareAnimal}
-                        copied={words.share.copied}
-                        className={`${pill} w-11 shrink-0 border border-line-100 !px-0 text-ink-100 hover:border-primary-400 disabled:opacity-60 sm:w-auto sm:!px-4`}
-                    />
-                </div>
-            </div>
         </div>
     );
 }
@@ -1294,96 +1110,8 @@ function ArkHerdBand({bandRef, herd, zone, words, locale, talk, onMeet, onClose,
     );
 }
 
-/** The life story in full, inside the band: every line from the server's log. */
-function ArkLifeStory({animal, life, facts, words, locale, rest = null}: {animal: ArkAnimal; life: ArkLife | null; facts: ReturnType<typeof lifeFacts>; words: ArkWords; locale: string; /** How it rests now, in words (the sleep lane): first in "Right now". */ rest?: string | null}) {
-    const w = words.life;
-    const rows: Array<[string, React.ReactNode]> = [];
-    if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
-    if (facts.ageDays !== null) rows.push([w.age, ageText(facts.ageDays, words, locale)]);
-    // "Condition" is how well kept it is (its thrive band); its hunger and age now go under "Right now".
-    if (facts.thrive) rows.push([w.condition, arkThriveWords(facts.thrive, w)]);
-    // Right now: how it rests (the sleep lane: "Asleep in its den"), then its hunger and age ("Asleep in its den · Well-fed").
-    const now = [rest, facts.condition ? w[facts.condition] : null].filter((part): part is string => Boolean(part));
-    if (now.length) rows.push([w.now, now.join(" · ")]);
-    if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : w.endedOld]);
-    // A young one whose breeding the server estimated (its record gives none, or only part): said so.
-    if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {
-        rows.push([w.breeding, life.origin.breeding_source === "estimate" ? w.breedingEstimated : w.breedingPartial]);
-    }
-    if (life && life.meals > 0) {
-        const last = life.last_meal;
-        const detail = last ? ` · ${fillArkWords(w.lastMeal, {prey: withArticle(last.prey, words)})}${last.phrase ? ` (${fillArkWords(w.dietSays, {phrase: last.phrase})})` : ""}` : "";
-        rows.push([w.meals, `${life.meals.toLocaleString(locale)}${detail}`]);
-    }
-    // Its family line by generation when the server counts it (captures + thrive), else the young it raised.
-    if (life?.lineage) rows.push([w.lineage, arkLineageLine(life.lineage, w, locale)]);
-    else if (life) rows.push([w.young, life.young_raised > 0 ? life.young_raised.toLocaleString(locale) : w.noYoung]);
-    if (life && life.milestones.count > 0) rows.push([w.milestones, fillArkWords(w.milestonesValue, {count: life.milestones.count.toLocaleString(locale)})]);
-    // Its line, further back than its parents (the third generation on).
-    if (facts.born && (facts.generation ?? 0) >= 2 && life?.ancestor_brought_by) {
-        // Its first ancestor's bringer: their @username linked when named, else their Voyager label.
-        rows.push([w.line, facts.ancestorFounder
-            ? <ArkFilled template={w.lineValue} name="bringer"><ArkFounderLink founder={facts.ancestorFounder} /></ArkFilled>
-            : fillArkWords(w.lineValue, {bringer: arkBringerLabel(life.ancestor_brought_by, words.formerVoyager)})]);
-    }
-    // A3: the step that brought it was revised after it arrived; it stays aboard.
-    if (life?.revision) rows.push([w.revised, life.revision.worked ? w.revisedWorked : w.revisedNot]);
-    return (
-        <div className="rows-in mt-3 max-h-[24svh] overflow-y-auto overscroll-contain border-t border-line-300 pt-2.5 md:max-h-[30svh] md:pl-[5.25rem]" aria-label={`${w.showStory}: ${animal.name}`}>
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2 xl:grid-cols-4">
-                {rows.map(([label, value]) => (
-                    <div key={label} className="flex min-w-0 gap-2 border-b border-line-300/60 pb-1.5">
-                        <dt className="w-[6.5rem] shrink-0 text-ink-400">{label}</dt>
-                        <dd className="min-w-0 font-semibold text-ink-100">{value}</dd>
-                    </div>
-                ))}
-            </dl>
-        </div>
-    );
-}
-
-/**
- * How it got aboard: the founder's own story when they shared it (founders
- * contract); otherwise "Came aboard with a capture" (captures + thrive), or
- * "Came aboard after a step that worked" for one a step brought before
- * captures did (or a server that doesn't say), the same for everyone (or
- * "Born on the Ark"). Never where or when it was captured. The public debate's problem and the way
- * that worked only when the life story carries `story_public`, which the
- * server sends only while its `public_story` flag is on. Never anything private.
- */
-function ArkStoryLine({state, born, hatched, story, capture, founder, words}: {state: LifeState | null; born: boolean; hatched: boolean; story: ArkFounderStory | null; capture: boolean; founder: ArkFounder | null; words: ArkWords}) {
-    // Founders: the story its founder chose to share, in their words (shown whether or not the founder is named), their @username beside its header.
-    // D6: on an animal a capture brought, the shared story is of a step that keeps it thriving.
-    if (story) return <ArkFounderStoryBlock story={story} founder={founder} title={capture ? words.founders.card.howThriving : words.founders.card.howAboard} className="rows-in mt-1.5" />;
-    if (!state || state.loading) return <p aria-hidden="true" className="mt-1.5 h-[1.125rem]" />;
-    const told = state.life?.story_public ?? null;
-    return (
-        <p className="rows-in mt-1.5 flex items-start gap-1.5 text-[13px] leading-snug text-ink-200">
-            <svg viewBox="0 0 16 16" className="mt-[3px] h-3 w-3 shrink-0 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
-            <span className="min-w-0">
-                {told ? fillArkWords(words.story.debate, {problem: told.problem, animal: told.way.animal, power: told.way.power}) : hatched ? words.life.hatchedAboard : born ? words.life.bornAboard : capture ? words.story.capture : words.story.generic}
-                {told?.debate_id ? (
-                    <>
-                        {" "}
-                        <Link href={`/app/debates/${encodeURIComponent(told.debate_id)}`} className="whitespace-nowrap font-bold text-primary-300 underline-offset-4 hover:underline">
-                            {words.story.openDebate}
-                        </Link>
-                    </>
-                ) : null}
-            </span>
-        </p>
-    );
-}
-
 /** Development's `?arkage=1` without a session: the same question, nothing sent (the component shows only then). */
 function ArkAgeAskDev({words}: {words: ArkWords["age"]}) {
     if (process.env.NODE_ENV !== "development") return null;
-    return <ArkAgeAsk words={words} className="mt-4 max-w-xl" />;
-}
-
-/** A template with `{name}` filled by a node (a linked name), the words around it as the reader's language has them. */
-function ArkFilled({template, name, children}: {template: string; name: string; children: React.ReactNode}) {
-    const at = template.indexOf(`{${name}}`);
-    if (at < 0) return <>{template}</>;
-    return <>{template.slice(0, at)}{children}{template.slice(at + name.length + 2)}</>;
+    return <ArkAgeAsk words={words} className="rounded-2xl" />;
 }

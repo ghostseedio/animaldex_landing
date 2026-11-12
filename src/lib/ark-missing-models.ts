@@ -6,7 +6,7 @@
  * manifest.
  */
 
-import {isArkPlaceholderSlug} from "@/ark-scene/placeholder";
+import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import type {ArkSnapshot} from "@/ark-scene/types";
 
 export type ArkMissingModel = {
