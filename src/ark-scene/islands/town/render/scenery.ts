@@ -9,7 +9,6 @@ import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polyline
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
-import {treeGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
@@ -465,19 +464,14 @@ export function buildZooScenery(layout: ZooLayout): SceneryOut {
     for (const e of layout.enclosures) if (!e.shared) enclosure(out, e);
     for (const plot of layout.closed) {
         const c = chunkFor(out, plot.at.x, plot.at.z);
-        const r = rng(hashText(plot.id));
-        for (let k = 0; k < 2 + Math.floor(r() * 2); k++) {
-            const p = local(plot.at, (r() - 0.5) * (plot.at.w - 4), (r() - 0.5) * (plot.at.d - 4));
-            out.trees.push({...p, kind: r() < 0.5 ? "lime" : "birch", scale: 0.7 + r() * 0.3, seed: hashText(`${plot.id}${k}`)});
-        }
+        // (Its lawn trees are the asset library's: `trees.ts` townZooTrees.)
+        const r = rng(hashText(`${plot.id}:shrubs`));
         for (let k = 0; k < 3; k++) {
             const p = local(plot.at, (r() - 0.5) * (plot.at.w - 2), (r() - 0.5) * (plot.at.d - 2));
             c.solid.blob(p.x, H(p.x, p.z) + 0.5, p.z, 1.2, 0.8, 1.2, tone("#4f7a3a"), hashText(`${plot.id}s${k}`), 0);
         }
         bench(c.solid, local(plot.at, 0, plot.at.d / 2 - 1.2), plot.at.rot + Math.PI);
     }
-    for (const t of out.trees) chunkFor(out, t.x, t.z).solid.addGeometry(treeGeometry(t.kind), t.x, H(t.x, t.z) - 0.1, t.z, (t.seed % 628) / 100, t.scale);
-    out.trees = [];
     return out;
 }
 
@@ -516,7 +510,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         // A dead tree for perches and a bathing pool.
         const t = local(s, -s.w / 4, -s.d / 6);
         deadTree(c.solid, t, e.slot.seed);
-        out.trees.push({...local(s, s.w / 4, -s.d / 4), kind: "birch", scale: 0.7, seed: e.slot.seed + 1});
     }
     if (spec.form === "house") zooHouse(out, e);
     if (e.pool) {
@@ -552,7 +545,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
             c.solid.gable(sf, 0, 2.6, 0, sw, 3.0, 1.0, 0.3, tone("#4a4440"), tone("#7a6a52"));
         }
         if (e.type === "savanna_paddocks") {
-            for (let i = 0; i < 2; i++) out.trees.push({...local(s, (r() - 0.5) * (s.w - 8), (r() - 0.5) * (s.d - 10)), kind: "acacia", scale: 1 + r() * 0.3, seed: e.slot.seed + i});
             const m = local(s, -s.w / 4, s.d / 6);
             c.solid.cylinder({x: m.x, y: H(m.x, m.z), z: m.z, rot: 0}, 0, 0, 0, 1.1, 0.3, 2.4, tone("#a9763e"), 7);
         }
@@ -562,7 +554,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
             for (const [lx, lz] of [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]] as const) df && c.solid.box(df, lx, 0, lz, 0.25, 2.4, 0.25, tone("#6a5038"));
             c.solid.box(df, 0, 2.4, 0, 3.6, 0.2, 3.6, tone("#8a6a48"));
         }
-        if (e.type === "bears_wolves") for (let i = 0; i < 2; i++) out.trees.push({...local(s, (r() - 0.5) * (s.w - 6), (r() - 0.5) * (s.d - 6)), kind: "pine", scale: 0.85, seed: e.slot.seed + 3 + i});
     }
     // The feeding hatch on the back fence.
     const hatch = back(-s.w / 2 + 2);
@@ -686,17 +677,8 @@ function lamps(out: SceneryOut, plan: TownPlan) {
         const z = MILLPOND.z + Math.sin(a) * (MILLPOND.rz + 5);
         out.lamps.push({x, y: H(x, z), z});
     }
-    // Street trees along the high street east and Park Road.
-    for (const id of ["high_street_east", "park_road", "harbour_road_east"]) {
-        const s = plan.streets.find((q) => q.id === id) as Street | undefined;
-        if (!s) continue;
-        const length = polylineLength(s.line);
-        for (let a = 15; a < length - 10; a += 32) {
-            const {point, dir} = polylineAt(s.line, a);
-            const off = (Math.floor(a / 32) % 2 ? 1 : -1) * (s.width / 2 + s.pavement - 0.6);
-            out.trees.push({x: point.x - dir.z * off, z: point.z + dir.x * off, kind: "lime", scale: 0.75, seed: hashText(`${id}${a}`)});
-        }
-    }
+    // (The street trees are the plan's own, `plan.ts` plant(): drawn by the asset library with their colliders, lane GC;
+    // a second row drawn here had none.)
     // A bandstand in the park.
     const bs = {x: -36, z: -56};
     const c = chunkFor(out, bs.x, bs.z);
@@ -710,6 +692,7 @@ function lamps(out: SceneryOut, plan: TownPlan) {
 // MARK: - All of it
 
 export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
+    // (`trees`: the plan's candidates; what is drawn is `trees.ts` townTrees, lane GC.)
     const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees: [...plan.trees], lamps: [], bridges: []};
     streets(out, plan);
     bridges(out, plan);

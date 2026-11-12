@@ -182,7 +182,8 @@ export function mountTown(el: HTMLElement) {
 
     const list = shots();
     window.__arkTown = {
-        ready: true,
+        // (Ready once the asset library's trees, shrubs and reeds are in: a shot never races them, lane GC.)
+        ready: false,
         shots: list,
         mountMs: performance.now() - started,
         view: (eye, at, hours, day, fov) => {
@@ -225,6 +226,10 @@ export function mountTown(el: HTMLElement) {
         flyPose
     };
     frame();
+    void town.assetsReady().then(() => {
+        frame();
+        window.__arkTown!.ready = true;
+    });
 }
 
 function heapMB(): number | null {

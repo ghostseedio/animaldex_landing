@@ -23,6 +23,7 @@ import {sampleTownGround, townHeight, type TownSurface} from "@/ark-scene/island
 import {TOWN_HALF, townPlan} from "@/ark-scene/islands/town/plan";
 import {townAreas, zooLayout, zooSpotsFor, type SpotWhere, type TownSpot} from "@/ark-scene/islands/town/areas";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
+import {townTreePerches, townTrees} from "@/ark-scene/islands/town/trees";
 
 const RASTER = 1;
 const BUCKET = 12;
@@ -200,18 +201,13 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         add("grass", `town:feed:${e.id}`, e.feeding.x, townHeight(e.feeding.x, e.feeding.z), e.feeding.z);
         e.enrichment.forEach((r, k) => add(r.what === "logs" ? "log_top" : "grass", `town:enrich:${e.id}:${k}`, r.at.x, townHeight(r.at.x, r.at.z) + (r.what === "logs" ? 0.5 : 0), r.at.z));
     }
-    plan.trees.forEach((t, i) => {
-        if (t.kind === "hedge_shrub") return;
+    // Each tree's places on the drawn tree itself (its asset's bark, branch tops and leaves: `trees.ts`, lane GC), and its shade.
+    townTrees(plan).forEach((t, i) => {
+        if (t.low) return;
         const ground = townHeight(t.x, t.z);
-        const height = (t.kind === "pine" || t.kind === "poplar" ? 12 : t.kind === "apple" || t.kind === "cherry" ? 4.5 : 9) * t.scale;
         add("shade", `town:tree:${i}:shade`, t.x + 1.2, ground, t.z + 0.6);
-        add("bark", `town:tree:${i}:bark`, t.x + 0.3, ground + 1.4, t.z, 1, 0, 0, 0);
-        for (let k = 0; k < 3; k++) {
-            const a = (k / 3) * Math.PI * 2 + (t.seed % 7);
-            const r = height * 0.18;
-            add("branch", `town:tree:${i}:limb${k}`, t.x + Math.cos(a) * r, ground + height * (0.55 + k * 0.08), t.z + Math.sin(a) * r, 0, 1, 0, a);
-        }
-        add("leaf", `town:tree:${i}:leaf`, t.x, ground + height * 0.8, t.z);
+        let limb = 0;
+        for (const p of townTreePerches(t)) add(p.tag, p.tag === "branch" ? `town:tree:${i}:limb${limb++}` : `town:tree:${i}:${p.tag}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw);
     });
     return {solid, points};
 }

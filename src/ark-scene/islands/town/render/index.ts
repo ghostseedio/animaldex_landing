@@ -20,14 +20,20 @@ import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/island
 import {binGeometry, boatGeometry, carGeometry, ChunkedSet, lampGeometry, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
+import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene/islands/town/render/assets";
+import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 
 export type TownTier = "high" | "medium" | "low";
 
-/** Per tier: the share of trees and small props drawn, shadows. (The render distance is Part B's.) */
-export const TOWN_TIERS: Record<TownTier, {trees: number; props: number; shadows: number; pixelRatio: number}> = {
-    high: {trees: 1, props: 1, shadows: 2048, pixelRatio: 2},
-    medium: {trees: 1, props: 1, shadows: 1024, pixelRatio: 1.5},
-    low: {trees: 0.6, props: 0.5, shadows: 0, pixelRatio: 1}
+/**
+ * Per tier: the share of small props drawn, how far the trees' detail reaches (lane GC: every tree is drawn on every
+ * tier, as it carries perches and a collider; the tier pulls its levels of detail in instead), shadows. (The render
+ * distance is Part B's.)
+ */
+export const TOWN_TIERS: Record<TownTier, {trees: number; reach: number; props: number; shadows: number; pixelRatio: number}> = {
+    high: {trees: 1, reach: TOWN_ASSET_REACH.high, props: 1, shadows: 2048, pixelRatio: 2},
+    medium: {trees: 1, reach: TOWN_ASSET_REACH.medium, props: 1, shadows: 1024, pixelRatio: 1.5},
+    low: {trees: 1, reach: TOWN_ASSET_REACH.low, props: 0.5, shadows: 0, pixelRatio: 1}
 };
 
 export type TownIsland = {
@@ -48,6 +54,8 @@ export type TownIsland = {
     setShadows: (on: boolean) => void;
     setTier: (tier: TownTier) => void;
     heightAt: (x: number, z: number) => number;
+    /** Resolves once the library's trees, shrubs and reeds are loaded and drawn (the procedural stand-ins until then). */
+    assetsReady: () => Promise<void>;
     stats: () => {chunks: number; drawnChunks: number; triangles: number; drawCalls: number; instances: Record<string, number>; windows: number; litWindows: number; zooOpen: number};
     dispose: () => void;
 };
@@ -207,7 +215,7 @@ type ChunkMeshes = {group: Group; meshes: Mesh[]; glass: {attribute: BufferAttri
  * The town's heavy, pure part (decision 153: built in the town's prebuild worker, off the page's main thread): the
  * ground's grid, the scenery with every building in its chunk, and the zoo's scenery for the open enclosures.
  */
-export type TownBuildData = {grid: GroundGrid; scenery: SceneryOut; perChunk: Map<number, BuildingChunk>; zoo: SceneryOut; zooOpen: string[]};
+export type TownBuildData = {grid: GroundGrid; scenery: SceneryOut; perChunk: Map<number, BuildingChunk>; zoo: SceneryOut; zooOpen: string[]; /** The trees as settled (lane GC). */ trees: TownTree[]};
 
 export function townBuildData(zooOpen: readonly string[] = launchEnclosures(), steps?: Record<string, number>): TownBuildData {
     const plan = townPlan();
@@ -237,10 +245,10 @@ export function townBuildData(zooOpen: readonly string[] = launchEnclosures(), s
     took("buildings");
     const zoo = buildZooScenery(zooLayout(zooOpen, plan));
     took("zoo");
-    return {grid, scenery, perChunk, zoo, zooOpen: [...zooOpen]};
+    return {grid, scenery, perChunk, zoo, zooOpen: [...zooOpen], trees: townTrees(plan)};
 }
 
-export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): TownIsland {
+export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData; assetBase?: string} = {}): TownIsland {
     const steps = townIslandSteps(options);
     for (;;) {
         const next = steps.next();
@@ -253,12 +261,13 @@ export function buildTownIsland(options: {tier?: TownTier; zooOpen?: readonly st
  * the build over idle slices (`islands/scene.ts`); `buildTownIsland` runs them all at once, exactly as before.
  * `built`: the heavy part already worked out (the prebuild worker's `townBuildData`).
  */
-export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData} = {}): Generator<void, TownIsland> {
+export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly string[]; built?: TownBuildData; /** The asset library's base (`ArkMountOptions.assetBase`). */ assetBase?: string} = {}): Generator<void, TownIsland> {
     const plan = townPlan();
     let tier: TownTier = options.tier ?? "high";
     const root = new Group();
     root.name = "island:town";
     const built = options.built ?? null;
+    if (built?.trees) primeTownTrees(plan, built.trees);
     const grid = built?.grid ?? groundGrid();
     yield;
     const materials = {ground: groundMaterial(), decal: new MeshStandardMaterial({vertexColors: true, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), solid: new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), glass: glassMaterial(), net: netMaterial(), prop: propMaterial(), tree: new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), lampHead: new MeshStandardMaterial({color: new Color("#fff1c4"), emissive: new Color("#ffc878"), emissiveIntensity: 0, roughness: 0.4})};
@@ -357,6 +366,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     root.add(zooRoot);
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
+    let assetsMade = false;
     const buildZoo = (open: readonly string[]) => {
         for (const {mesh} of zooMeshes) {
             mesh.geometry.dispose();
@@ -365,6 +375,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         zooMeshes = [];
         // (The prebuild's zoo scenery when it was worked out for these very enclosures.)
         const zoo = built && built.zooOpen.join(",") === open.join(",") ? built.zoo : buildZooScenery(zooLayout(open, plan));
+        if (assetsMade) assets.setPlacements([...planTrees, ...zooTreesFor(open)]);
         zoo.chunks.forEach((c, key) => {
             const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"]];
             for (const [geo, material, name] of parts) {
@@ -390,24 +401,38 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
     };
 
     yield;
-    // Trees: one set per kind.
+    // Trees and shrubs (lane GC): the asset library's, settled by L6's spacing (`trees.ts`), instanced per asset and level
+    // of detail (`render/assets.ts`); the zoo's own with its enclosures. Until they load, the procedural stand-ins.
+    const placementOf = (t: TownTree): TownAssetPlacement => ({asset: t.asset, x: t.x, y: t.y, z: t.z, rotation: t.rotation, scale: t.scale, shade: 0.9 + 0.2 * (((t.seed >>> 5) % 1000) / 1000)});
+    const planTrees = townTrees(plan).map(placementOf);
+    const zooTreesFor = (open: readonly string[]) => townZooTrees(zooLayout(open, plan), plan).map(placementOf);
+    const assets = new TownAssets([...planTrees, ...zooTreesFor(options.zooOpen ?? launchEnclosures())], options.assetBase, "town:trees");
+    assets.setTier(TOWN_TIERS[tier].reach, TOWN_TIERS[tier].shadows > 0);
+    root.add(assets.group);
     const treeSets = new Map<string, ChunkedSet>();
-    const byKind = new Map<string, typeof scenery.trees>();
-    for (const t of scenery.trees) {
+    const byKind = new Map<string, TownTree[]>();
+    for (const t of townTrees(plan)) {
         const list = byKind.get(t.kind) ?? [];
         list.push(t);
         byKind.set(t.kind, list);
     }
-    const treeShare = (seed: number) => (seed % 1000) / 1000;
     byKind.forEach((list, kind) => {
         const set = new ChunkedSet(treeGeometry(kind), materials.tree, list.length);
         set.mesh.castShadow = true;
         set.mesh.receiveShadow = true;
         set.mesh.name = `trees:${kind}`;
-        list.forEach((t, i) => set.set(i, placeMatrix(t.x, sampleTownGround(t.x, t.z).height - 0.1, t.z, (t.seed % 628) / 100, t.scale), treeShare(t.seed) < TOWN_TIERS[tier].trees));
+        // (The stand-in drawn at the settled tree's height: the procedural shapes are about 11 m at scale 1.)
+        list.forEach((t, i) => set.set(i, placeMatrix(t.x, t.y, t.z, t.rotation, t.height / standInHeight(kind))));
         set.write();
         treeSets.set(kind, set);
         root.add(set.mesh);
+    });
+    const assetsReady = assets.whenReady().then(() => {
+        treeSets.forEach((set) => {
+            root.remove(set.mesh);
+            set.dispose();
+        });
+        treeSets.clear();
     });
 
     yield;
@@ -543,6 +568,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             if (c) c.group.visible = !next || next(key);
         });
         for (const set of [...Array.from(treeSets.values()), carSet, binSet, washSet, boatSet, stallSet, lampSet, lampHeadSet]) set.setDrawn(next);
+        assets.setDrawn(next);
         for (const {key, mesh} of zooMeshes) if (key >= 0) mesh.visible = !next || next(key);
     };
 
@@ -551,15 +577,12 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         treeSets.forEach((set) => {
             set.mesh.castShadow = on;
         });
+        assets.setShadows(on);
     };
 
     const setTier = (next: TownTier) => {
         tier = next;
-        treeSets.forEach((set, kind) => {
-            const list = byKind.get(kind)!;
-            list.forEach((t, i) => set.setShown(i, treeShare(t.seed) < TOWN_TIERS[tier].trees));
-            set.write();
-        });
+        assets.setTier(TOWN_TIERS[tier].reach, TOWN_TIERS[tier].shadows > 0);
         lastMinute = -1;
         setShadows(TOWN_TIERS[tier].shadows > 0);
     };
@@ -579,6 +602,9 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             instances[`tree:${kind}`] = set.shown;
             drawCalls++;
         });
+        const trees = assets.stats();
+        for (const [id, n] of Object.entries(trees.instances)) instances[`tree:${id}`] = n;
+        drawCalls += trees.drawCalls;
         for (const [name, set] of [["cars", carSet], ["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ["lamps", lampSet]] as const) {
             instances[name] = set.shown;
             drawCalls++;
@@ -589,6 +615,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
 
     yield;
     buildZoo(zooOpenNow);
+    assetsMade = true;
     yield;
     void rng;
     return {
@@ -607,6 +634,7 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
         setShadows,
         setTier,
         heightAt: ground,
+        assetsReady: () => assetsReady,
         stats,
         dispose: () => {
             root.traverse((o) => {
@@ -616,9 +644,15 @@ export function* townIslandSteps(options: {tier?: TownTier; zooOpen?: readonly s
             Object.values(materials).forEach((m) => m.dispose());
             depth.dispose();
             water.dispose();
+            assets.dispose();
             hands.dispose();
         }
     };
 }
 
 export type {TownPlan};
+
+/** The procedural stand-ins' height at scale 1 (`instanced.ts` treeGeometry), for drawing them at a settled tree's height. */
+function standInHeight(kind: string): number {
+    return kind === "pine" ? 13 : kind === "poplar" ? 16.5 : kind === "yew" ? 7 : kind === "willow" ? 9.8 : kind === "birch" ? 12.3 : kind === "apple" || kind === "cherry" ? 5.3 : kind === "acacia" ? 7.2 : kind === "palm" ? 8.3 : kind === "hedge_shrub" ? 2 : 12;
+}

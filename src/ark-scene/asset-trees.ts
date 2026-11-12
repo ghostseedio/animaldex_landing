@@ -36,8 +36,8 @@ type Instance = {x: number; y: number; z: number; scale: number; height: number;
 /** The least reach of the lod2 → card hand-over (the medium tier's), see `update`. */
 const CARD_REACH_MIN = 0.45;
 
-/** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). */
-function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
+/** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). Also the town's. */
+export function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
     material.customProgramCacheKey = () => `ark-asset-tree-b6-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {

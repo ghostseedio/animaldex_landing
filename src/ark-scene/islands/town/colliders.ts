@@ -47,7 +47,8 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
     for (const o of townObstacles(plan, open)) {
         if (o.kind === "tree") {
             const g = townHeight(o.x, o.z);
-            out.push({shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
+            // (A shrub is soft, as on the wild island: paths go round it, brushing it is not a pass-through; lane GC.)
+            out.push(o.soft ? {shape: "circle", kind: "shrub", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 1.4, gap: 0, soft: true} : {shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
             continue;
         }
         if (o.kind !== "barrier") continue;
