@@ -10,6 +10,7 @@
 
 import {ARK_ZONES, type ArkAnimal, type ArkIsland, type ArkIslandCounts, type ArkNestRow, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {urbanNiche} from "@/ark-scene/islands/town/niche";
 
 export const ARK_ISLAND_IDS: readonly ArkIsland[] = ["wild", "town"];
 
@@ -171,4 +172,37 @@ export function arkWhereOf(raw: unknown): ArkWhere | null {
 /** An animal id as the server writes it (a uuid): `?focus=` may be one, besides a species id or slug. */
 export function arkLooksLikeAnimalId(value: string | null | undefined): boolean {
     return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
+/** The town island's groups in the population panel (decision T3-6): homes, farms, the zoo by type, town wildlife by niche. */
+export type ArkTownGroup = "homes" | "farms" | "zoo" | "water" | "roofs" | "walls" | "streets" | "gardens";
+
+const NICHE_GROUP: Record<string, ArkTownGroup> = {
+    canal: "water",
+    millpond: "water",
+    farm_pond: "water",
+    beach: "water",
+    roof: "roofs",
+    tall: "roofs",
+    ledge: "roofs",
+    belfry: "roofs",
+    eave: "walls",
+    lamp_wall: "walls",
+    bin: "streets",
+    drain: "streets",
+    square: "streets",
+    quay: "streets"
+};
+const GROUP_ORDER: Record<ArkTownGroup, number> = {homes: 0, farms: 1, zoo: 2, gardens: 30, water: 31, roofs: 32, walls: 33, streets: 34};
+
+/** Where a town animal is listed: its home, farm, zoo enclosure type (ordered as the zoo's types), or its wildlife niche. */
+export function arkTownGroupOf(animal: Pick<ArkAnimal, "area" | "enclosure" | "model_slug" | "zone">): {group: ArkTownGroup; key: string; order: number; enclosure: ZooEnclosureType | null} {
+    if (animal.area === "house") return {group: "homes", key: "homes", order: GROUP_ORDER.homes, enclosure: null};
+    if (animal.area === "farm") return {group: "farms", key: "farms", order: GROUP_ORDER.farms, enclosure: null};
+    if (animal.area === "zoo") {
+        const enclosure = arkEnclosureType(animal.enclosure);
+        return {group: "zoo", key: `zoo:${enclosure ?? "zoo"}`, order: 2 + (enclosure ? ZOO_ENCLOSURE_TYPES.indexOf(enclosure) : 14) / 100, enclosure};
+    }
+    const group = NICHE_GROUP[urbanNiche(animal.model_slug, animal.zone)[0]] ?? "gardens";
+    return {group, key: group, order: GROUP_ORDER[group], enclosure: null};
 }

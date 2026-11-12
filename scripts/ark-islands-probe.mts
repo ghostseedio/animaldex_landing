@@ -15,9 +15,14 @@ function chromiumPath(): string | undefined {
     }
 }
 const {chromium} = await import("playwright-core");
-const browser = await chromium.launch({executablePath: chromiumPath(), headless: true, args: ["--headless=new", "--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]});
-const context = await browser.newContext({viewport: {width: 1280, height: 800}, deviceScaleFactor: 1});
+const browser = await chromium.launch({executablePath: chromiumPath(), headless: true, args: ["--headless=new", "--enable-precise-memory-info", "--enable-gpu", "--ignore-gpu-blocklist", "--use-angle=metal", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]});
+const phone = process.env.ARK_PHONE === "1";
+const context = await browser.newContext(phone ? {viewport: {width: 360, height: 800}, deviceScaleFactor: 2, isMobile: true, hasTouch: true} : {viewport: {width: 1280, height: 800}, deviceScaleFactor: 1});
 const page = await context.newPage();
+if (phone && process.env.ARK_THROTTLE !== "0") {
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", {rate: 4});
+}
 page.setDefaultTimeout(900_000);
 page.on("pageerror", (e) => console.log("pageerror:", e.message));
 page.on("console", (m) => { if (m.type() === "error" || /\[ark\]/.test(m.text())) console.log("console:", m.text().slice(0, 300)); });
@@ -30,7 +35,7 @@ log("scene handle");
 const ready = async () => page.waitForFunction(() => { const s = (window as any).__arkScene; try { return s && s.island && !s.crossing() && s.stats && s.stats().drawCalls > 0; } catch { return false; } }, null, {timeout: 900_000});
 await ready();
 await page.waitForTimeout(Number(process.env.ARK_SETTLE ?? 9000));
-const stats = async () => page.evaluate(() => { const s = (window as any).__arkScene; const st = s.stats(); return {island: s.island(), live: st.live, near: st.near, far: st.far, sprites: st.sprites, drawCalls: st.drawCalls, tier: st.tier, models: st.modelsLoaded}; });
+const stats = async () => page.evaluate(() => { const s = (window as any).__arkScene; const st = s.stats(); const heap = Math.round(((performance as any).memory?.usedJSHeapSize ?? 0) / 1048576); return {island: s.island(), live: st.live, near: st.near, far: st.far, sprites: st.sprites, drawCalls: st.drawCalls, tier: st.tier, models: st.modelsLoaded, scheduled: st.scheduled, behaviourMs: st.behaviourMs, buildMs: st.behaviourBuildMs, frameMs: st.frameMs, intervalMs: st.intervalMs, heapMB: heap, streaming: st.streaming ? {distance: st.streaming.renderDistance, chunks: st.streaming.chunks} : null}; });
 log("first island", JSON.stringify(await stats()));
 const world = page.locator("canvas").first();
 await world.screenshot({path: `${out}/1-first.png`});

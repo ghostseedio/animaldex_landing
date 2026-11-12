@@ -62,11 +62,33 @@ const round = (value: number) => Math.round(value * 10) / 10;
     try {
         // `?population=<file>`: a scale snapshot (scripts/ark-scale-fixture.mts) instead of the fixture.
         const population = params.get("population");
-        const snapshot = decodeArkSnapshot(population ? await (await fetch(population)).json() : fixture);
-        if (!snapshot) throw new Error("fixture did not decode");
+        const decoded = decodeArkSnapshot(population ? await (await fetch(population)).json() : fixture);
+        if (!decoded) throw new Error("fixture did not decode");
+        let snapshot = decoded;
+        // `?islands=1` (decision 141): both islands in one world, mounted as the archipelago mounts them. A snapshot from
+        // before the island column: the kept animals (house, farm, zoo) live on the town, as `arkIslandOf` reads them.
+        const islands = params.get("islands") === "1";
+        let islandOptions: Record<string, unknown> = {};
+        let prebuildSnapshot = snapshot;
+        if (islands) {
+            const kept = new Set(["house", "farm", "zoo"]);
+            snapshot = {...snapshot, animals: snapshot.animals.map((animal) => {
+                const own = animal as typeof animal & {island?: string | null; area?: string | null};
+                return {...animal, island: own.island ?? (own.area && kept.has(own.area) ? "town" : "wild")} as typeof animal;
+            })};
+            const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
+            const split = arkIslandSnapshot as unknown as (s: typeof snapshot, island: "wild" | "town") => typeof snapshot;
+            const townTier = quality === "high" || quality === "medium" || quality === "low" ? quality : "medium";
+            const town = await (loadTownScene as unknown as (o: {tier: string; animals: unknown[]}) => Promise<unknown>)({tier: townTier, animals: split(snapshot, "town").animals});
+            const wild = split(snapshot, "wild");
+            prebuildSnapshot = wild;
+            islandOptions = {island: town, wildAnimals: wild.animals, openIsland: "wild"};
+        }
+        // `?pan=town`: after the opening, the camera flies to the town (and stays).
+        const pan = params.get("pan");
         // `?prebuild=1`: the mount's heavy work in the prebuild worker first (runtime/prebuild.ts).
         let prepared: ArkPrepared | null = null;
-        if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"});
+        if (params.get("prebuild") === "1") prepared = await prepareArk({snapshot: prebuildSnapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"});
         const el = document.getElementById("ark") as HTMLElement;
         let firstFrame = 0;
         const mountStart = performance.now();
@@ -75,6 +97,9 @@ const round = (value: number) => Math.round(value * 10) / 10;
             // `?models=<base>`: the model files from elsewhere (the measure script's simulated cached CDN).
             modelBase: params.get("models") ?? MODELS,
             deviceMemoryGB: memoryGB,
+            // `?hour=<0-24>`: the island's hour pinned (a still by daylight).
+            ...(params.get("hour") !== null && Number.isFinite(Number(params.get("hour"))) ? {hours: Number(params.get("hour"))} : {}),
+            ...islandOptions,
             iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
             onReady: () => {
                 firstFrame = performance.now();
@@ -127,6 +152,10 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 handle.select(visits[visit++ % visits.length]);
             }
             const stats = handle.stats();
+            if (pan && performance.now() > nextRegion && region === 0) {
+                region = 1;
+                (handle as unknown as {flyToIsland?: (island: string) => void}).flyToIsland?.(pan);
+            }
             if (focus && performance.now() > nextRegion && region === 0) {
                 region = 1;
                 (handle as unknown as {focusRegion?: (region: string | null) => void}).focusRegion?.(focus);

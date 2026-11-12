@@ -189,8 +189,9 @@ test("the islands: which island an animal lives on, where the page opens, the ar
     assert.equal(islandOfAnimal({area: null}), "wild");
     assert.equal(openingIsland([]), "wild");
     assert.equal(openingIsland([{area: "house"}, {area: "house"}, {area: null}]), "town");
+    // Decision 141: one world, the town across a 250 m strait of sea between the coasts (it was 1.5 km off, decision 69).
     const t = toArchipelago("town", 0, 0);
-    assert.ok(Math.abs(Math.hypot(t.x, t.z) - 1500) < 2, "the town ~1.5 km off");
+    assert.ok(Math.abs(Math.hypot(t.x, t.z) - (90.25 + 250 + 210.25)) < 0.2, "the town across the strait");
     assert.ok(t.x > 0 && t.z < 0, "east-north-east");
     assert.equal(ARK_ISLANDS.town.chunks, 9);
 });

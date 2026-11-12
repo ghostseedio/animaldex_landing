@@ -15,6 +15,11 @@ export type StreamTier = {
     renderDistance: number;
     /** An `in` chunk goes only past the distance plus this (m). */
     hysteresis: number;
+    /**
+     * Past the render distance, chunks are drawn in map style out to this (m), on every island (decision 141: both
+     * islands visible side by side): the other island across the strait always reads as an island, never hazed out.
+     */
+    mapDistance: number;
     /** The haze starts at this share of the distance and is whole at the distance (only while something lies beyond). */
     hazeStart: number;
     /** What the page may hold (MB): past either, the render distance pulls in (then the tier drops). */
@@ -24,12 +29,12 @@ export type StreamTier = {
 export const ARK_STREAM_TIERS: Record<StreamTierName, StreamTier> = {
     // Budgets: about twice the peaks measured on the real Ark (3,137 animals, docs/ark/streaming.md §7), so today's
     // island never pulls its distance in; a bigger island reaches them only where it holds more than this one does.
-    high: {renderDistance: 960, hysteresis: 40, hazeStart: 0.7, memory: {heapMB: 768, gpuMB: 512}},
-    medium: {renderDistance: 640, hysteresis: 32, hazeStart: 0.7, memory: {heapMB: 512, gpuMB: 320}},
-    low: {renderDistance: 440, hysteresis: 26, hazeStart: 0.7, memory: {heapMB: 384, gpuMB: 192}}
+    high: {renderDistance: 960, hysteresis: 40, mapDistance: 3000, hazeStart: 0.7, memory: {heapMB: 768, gpuMB: 512}},
+    medium: {renderDistance: 640, hysteresis: 32, mapDistance: 2200, hazeStart: 0.7, memory: {heapMB: 512, gpuMB: 320}},
+    low: {renderDistance: 440, hysteresis: 26, mapDistance: 1600, hazeStart: 0.7, memory: {heapMB: 384, gpuMB: 192}}
 };
 
-/** The camera this far (m) or more from what it looks at is the map view: beyond the render distance is drawn as the map. */
+/** The camera this far (m) or more from what it looks at is the map view: no haze at all there. */
 export const MAP_VIEW_FROM = 150;
 /** Memory pressure pulls the render distance in by steps of this share, never below `MIN_RENDER_SCALE` of the tier's. */
 export const RENDER_SCALE_STEP = 0.85;
@@ -135,4 +140,10 @@ export function screenPixelsAt(length: number, distance: number, viewportHeight:
 /** Whether an animal past the render distance, seen from the map view, keeps its model (big enough on screen). */
 export function keepsModelBeyond(length: number, distance: number, viewportHeight: number, fovDegrees: number): boolean {
     return screenPixelsAt(length, distance, viewportHeight, fovDegrees) >= MAP_MODEL_PIXELS;
+}
+
+/** Development: `window.__arkMapDistance` (m) before mounting (with a small render distance, to see the map style end). */
+export function forcedMapDistance(): number | null {
+    const g = globalThis as {__arkMapDistance?: unknown};
+    return typeof g.__arkMapDistance === "number" && g.__arkMapDistance > 0 ? g.__arkMapDistance : null;
 }

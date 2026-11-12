@@ -45,7 +45,16 @@ export type ArkSpeciesRow = {
     breeds: ArkBreed[];
 };
 
-export type ArkRegionGroup = {region: ArkRegion; animals: number; species: ArkSpeciesRow[]};
+export type ArkRegionGroup = {
+    region: ArkRegion;
+    animals: number;
+    species: ArkSpeciesRow[];
+    /** Part C: a group by place instead of region (the town island: homes, farms, the zoo's types, town wildlife). */
+    place?: {key: string; label: string};
+};
+
+/** Part C: the group an animal is listed under on the town island (its key, order and label), instead of its region. */
+export type ArkPlaceGrouping = (animal: ArkAnimal) => {key: string; order: number; label: string};
 
 export type ArkPopulation = {
     regions: ArkRegionGroup[];
@@ -66,11 +75,17 @@ export function arkLookKey(animal: Pick<ArkAnimal, "species_profile_id" | "model
     return animal.species_profile_id || `slug:${animal.model_slug}`;
 }
 
-export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
+export function arkPopulation(snapshot: ArkSnapshot | null, byPlace?: ArkPlaceGrouping | null): ArkPopulation {
     const bySpecies = new Map<string, ArkSpeciesRow>();
+    const places = new Map<string, {key: string; order: number; label: string}>();
+    const placeOfRow = new Map<ArkSpeciesRow, string>();
     for (const animal of snapshot?.animals ?? []) {
         const key = arkSpeciesKey(animal);
-        let row = bySpecies.get(key);
+        // (Part C: on the town island a kind is listed in each place it lives: dogs at home and at the children's farm.)
+        const place = byPlace ? byPlace(animal) : null;
+        if (place && !places.has(place.key)) places.set(place.key, place);
+        const rowKey = place ? `${place.key}|${key}` : key;
+        let row = bySpecies.get(rowKey);
         if (!row) {
             row = {
                 key,
@@ -85,7 +100,8 @@ export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
                 animals: [],
                 breeds: []
             };
-            bySpecies.set(key, row);
+            bySpecies.set(rowKey, row);
+            if (place) placeOfRow.set(row, place.key);
         }
         row.count++;
         if (animal.mine) row.mine++;
@@ -112,7 +128,15 @@ export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
             if (own) row.slug = own.model_slug;
         }
     }
-    const regions = ARK_REGIONS
+    const regions = byPlace
+        ? Array.from(places.values())
+              .sort((a, b) => a.order - b.order || a.key.localeCompare(b.key))
+              .map((place) => {
+                  const species = rows.filter((row) => placeOfRow.get(row) === place.key).sort((a, b) => a.name.localeCompare(b.name));
+                  return {region: "home" as ArkRegion, animals: species.reduce((sum, row) => sum + row.count, 0), species, place: {key: place.key, label: place.label}};
+              })
+              .filter((group) => group.species.length > 0)
+        : ARK_REGIONS
         .map((region) => {
             const species = rows.filter((row) => row.region === region).sort((a, b) => a.name.localeCompare(b.name));
             return {region, animals: species.reduce((sum, row) => sum + row.count, 0), species};
@@ -120,7 +144,8 @@ export function arkPopulation(snapshot: ArkSnapshot | null): ArkPopulation {
         .filter((group) => group.species.length > 0);
     return {
         regions,
-        species: rows.length,
+        // (A kind listed in two places is one species.)
+        species: byPlace ? new Set(rows.map((row) => row.key)).size : rows.length,
         paired: rows.filter((row) => row.count >= 2).length,
         single: rows.filter((row) => row.count === 1).length
     };

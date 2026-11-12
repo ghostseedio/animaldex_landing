@@ -105,6 +105,12 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 const to: ArkCameraView = {target: home.target, distance: home.distance * 0.62, polar: 1.13, azimuth: home.azimuth + 1.35};
                 return lerpView(from, to, k);
             }
+            case "islands": {
+                // Part C: the wild island's view, up over the strait, down onto the town (the scene's own island views).
+                const town = handle.islandView?.("town") ?? home;
+                const over: ArkCameraView = {target: {x: (home.target.x + town.target.x) / 2, y: 0, z: (home.target.z + town.target.z) / 2}, distance: Math.max(home.distance, town.distance) * 1.25, polar: 0.95, azimuth: lerp(home.azimuth, town.azimuth, 0.5) + 0.35};
+                return u < 0.5 ? lerpView(home, over, ease(u * 2)) : lerpView(over, town, ease(u * 2 - 1));
+            }
             case "follow":
             case "meet": {
                 const centre = track(d.kind === "follow" ? 0.3 : 0.14) ?? anchor.target;
