@@ -33,6 +33,7 @@ import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
+import {DEN_DRY, SURF_REACH} from "@/ark-scene/map/points";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
@@ -697,31 +698,63 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
     // ground instead, the same every night, and the same for everyone who asks: the way there, its sleep, a night watch,
     // `restingAtRoost`, the props lane's den (decision 202: at its natural pace an alligator jumped 21 m into its sleep).
     // (A walker that swims too, a penguin, the same: its roost on land is one it climbs out to on its own ground, by an
-    // edge on it. A roost in the water it swims to.)
+    // edge on it. A roost in the water it swims to.) The bed is on dry land, as a den is (`denDry`: never in the sea, its
+    // tide or its surf), unless it sleeps on the shore anyway.
     if (walksGoals(profile) && !flies(profile) && !raised(world, spot)) {
         const fits = (to: Spot) => !wet(world, to) && onItsGround(world, profile, animal, {doing: "sleep", to, mode: "ground", stay: []});
         if (!wet(world, spot) && (!fits(spot) || tooFarOnFoot(world, profile, animal, spot))) {
-            // (The first of a few seeded spots round its home that fits, on land; else its home's own ground.)
+            const dry = (to: Spot) => profile.roost === "shore" || denDry(world, to.x, to.z);
+            const bedFits = (to: Spot) => dry(to) && fits(to) && !tooFarOnFoot(world, profile, animal, to);
+            // (The first of a few seeded spots round its home that fits, on dry land.)
             const random = rng(hashString(`${animal.id}#bed`));
             const onLand = {...profile, move: "walk" as const, seabed: false};
             const radius = Math.min(homeRadius(profile, animal), 2);
-            let found = false;
-            for (let k = 0; k < 8 && !found; k++) {
-                let bed = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
-                if (world.nav.colliders) bed = clearOfSolid(world, onLand, animal, bed, true);
-                if (fits(bed) && !tooFarOnFoot(world, profile, animal, bed)) {
-                    spot = bed;
-                    found = true;
+            let bed: Spot | null = null;
+            for (let k = 0; k < 8 && !bed; k++) {
+                let at = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
+                if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                if (bedFits(at)) bed = at;
+            }
+            // (Else the nearest that fits on its home ground: its home itself, then rings out from it, half a metre apart,
+            // to BED_REACH: a newt's home by the river's mouth gets a bed up the bank, never in the surf.)
+            for (let ring = 0; ring * 0.5 <= BED_REACH && !bed; ring++) {
+                const n = ring === 0 ? 1 : Math.min(Math.max(8, Math.round(Math.PI * 2 * ring)), 24);
+                for (let k = 0; k < n && !bed; k++) {
+                    const a = (k / n) * Math.PI * 2;
+                    const x = animal.home.x + Math.cos(a) * ring * 0.5;
+                    const z = animal.home.z + Math.sin(a) * ring * 0.5;
+                    if (world.sampler.heightAt(x, z) < 0 || !dry({x, z} as Spot)) continue;
+                    let at = groundSpot(world, x, z);
+                    if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                    if (bedFits(at)) bed = at;
                 }
             }
-            if (!found) {
-                const home = groundSpot(world, animal.home.x, animal.home.z);
-                if (fits(home)) spot = home;
-            }
+            // (None: its roost as it was.)
+            if (bed) spot = bed;
         }
     }
     byAnimal.set(animal, spot);
     return spot;
+}
+
+/** How far from its home a bed is looked for (m), when its roost is out of reach (`roostOf`). */
+const BED_REACH = 16;
+
+/**
+ * Dry land for a bed, as a den's (`map/points.ts` inSurf, DEN_DRY, SURF_REACH): not in the water, and not on ground
+ * lower than DEN_DRY within SURF_REACH of it, the sea's spring tide and its surf. Of any water here, not only the sea's
+ * (the map tells the river's mouth from the sea its own way: five amphibians' beds by the mouth were in its surf), and
+ * with a margin (a tenth of a metre up, a metre out, sampled every metre) for the walk grid's heights against the map's.
+ */
+function denDry(world: ScheduleWorld, x: number, z: number): boolean {
+    const height = world.sampler.heightAt(x, z);
+    if (height < 0) return false;
+    if (height >= DEN_DRY + 0.1) return true;
+    const reach = SURF_REACH + 1;
+    for (let d = 1; d <= reach; d++) {
+        for (let k = 0; k < 24; k++) if (world.sampler.heightAt(x + Math.cos((k / 24) * Math.PI * 2) * d, z + Math.sin((k / 24) * Math.PI * 2) * d) < 0) return false;
+    }
+    return true;
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
