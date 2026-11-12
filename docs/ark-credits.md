@@ -151,5 +151,28 @@ Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0, `brew install b
 
 ## Town island (`src/ark-scene/islands/`, lane T2)
 
-No third-party assets. Every building, street, fence, tree, car, bin, boat, stall and zoo enclosure on the town, countryside and zoo island is generated in code (`src/ark-scene/islands/town/render/`), coloured by vertex colours, with no textures, models or scans downloaded. Made for AnimalDex; no attribution needed. The town reuses the Ark's existing CC0 day sky (`public/ark/graphics/sky-day.hdr`, credited under Graphics above) and its shared lighting.
+Every building, street, fence, tree, car, bin, boat, stall and zoo enclosure on the town, countryside and zoo island is generated in code (`src/ark-scene/islands/town/render/`), coloured by vertex colours, with no models or scans downloaded. Made for AnimalDex; no attribution needed. The town reuses the Ark's existing CC0 day sky (`public/ark/graphics/sky-day.hdr`, credited under Graphics above) and its shared lighting.
+
+### The town's ground and paving (lane GA, 2026-11-12)
+
+Six CC0 texture sets from Poly Haven for the paving, each at its measured real size (true scale). The licence was checked on each asset's page before download: "CC0" on every page; polyhaven.com/license, "CC0 means absolute freedom", checked 2026-11-12. The 1k JPGs were kept outside the repo. Only the processed arrays are committed.
+
+| Asset | Source | Licence | Real size | Used as | Committed file(s) |
+|---|---|---|---|---|---|
+| asphalt_02 | https://polyhaven.com/a/asphalt_02 | CC0 | 3.0 m | carriageways, under worn paint | `public/ark/graphics/town-albedo.ktx2`, `town-normal.ktx2` (layer 0) |
+| concrete_pavement | https://polyhaven.com/a/concrete_pavement | CC0 | 1.8 m | pavement slabs, garden paths | same arrays, layer 1 |
+| cobblestone_floor_03 | https://polyhaven.com/a/cobblestone_floor_03 | CC0 | 2.4 m | the market square's granite setts | layer 2 |
+| gravel_floor | https://polyhaven.com/a/gravel_floor | CC0 | 2.25 m | towpaths, zoo paths, gravel drives | layer 3 |
+| patterned_brick_floor | https://polyhaven.com/a/patterned_brick_floor | CC0 | 1.81 m | block-paved drives, the zoo plaza | layer 4 |
+| granite_tile | https://polyhaven.com/a/granite_tile | CC0 | 2.3 m | kerbs (top and face), quay flags, church walks | layer 5 |
+
+- **Processing** (`scripts/ark-town-textures.mjs`):
+  - the diffuse map is half high-passed (the light drift of a wrapped blur is divided out, so the repeats don't show) and resized to 512 px; the roughness map goes into its alpha;
+  - the OpenGL normal map is resized to 512 px;
+  - each set becomes one layer of a KTX2 2D array: the albedo in ETC1S (sRGB, 556 KB), the normals in UASTC with Zstandard (1,346 KB), both with mipmaps.
+- **The rest of the town's ground** (grass, soil, mud, sand, wet sand, leaf litter, tilled soil) reads the wild ground's existing Poly Haven strips (Graphics, above). Nothing new is downloaded for them.
+- **Decals and close-up detail:** the cracks are the asphalt's own. The stains, puddles, ripples, wheel tracks, repair patches, manhole and grating patterns, leaves, weeds, stones, daisies and litter are made in code (`render/surfaces.ts`, `render/near.ts`).
+- **Street furniture, lamps and signs** are made in code (`render/furniture.ts`). The signs and the bus stop flags carry no text, names or logos.
+
+Tools (not shipped): `basisu` 2.50 (Basis Universal, Apache-2.0; only its ETC1S and UASTC LDR 4x4 codecs, which three's bundled transcoder reads), `sharp` (Apache-2.0, an existing dev dependency).
 

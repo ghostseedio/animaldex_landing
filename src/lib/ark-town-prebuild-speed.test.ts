@@ -150,14 +150,16 @@ function digest(value: unknown): string {
 /**
  * The town's prebuild on the fixture, digested before the speed work (ark-next bcb5eca9, the plain scans): the same
  * town after it. When the town is changed on purpose (the town lane), these are updated with the change.
+ * Lane GA (town-ground): the ground's texture weights and no per-vertex shade, the street surfaces and furniture, the
+ * drapes' tags (the plan, areas and places are unchanged: nothing moved).
  */
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     areas: "7a26937a126da351",
-    ground: "5554417fbd78537c",
-    // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
-    // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings.)
-    sceneryAndBuildings: "3b7087a0eb3ca73e",
+    ground: "9f6d9fa1b00ec782",
+    // (Lane GA's street surfaces and ground; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`;
+    // the pets kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings.)
+    sceneryAndBuildings: "f1d58d27bdb4abdf",
     zoo: "f38cd89b62c1d0ec",
     places: "fb1159793f083105"
 };
