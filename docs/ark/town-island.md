@@ -592,3 +592,101 @@ the big cats, the canal, the park): in the lane's handover folder.
 | GC-18 | The bank's ground poking up through the canal | the ground (GA) / the walls | **The walls**: face 0.15 m inside the channel, coping 0.55 m | Canal walls are this lane's; the ground's heights stay |
 | GC-19 | Hedges | boxes / instanced bushes / leafy masses | **Leafy masses in one `foliage` mesh a chunk** (leaf grain, sway by height) | One draw call a chunk; instanced bushes along 1.4 km of hedge were ~600k triangles |
 | GC-20 | Climbing structures in the primate house | add outdoor ones / lane TB's house | **Lane TB's** (`render/zoo-houses.ts` draws the hall's climbing frame) | The house types' plots are their houses; their exteriors are styled in TB's module |
+
+## 14. Buildings, lit windows and cars (lane GB, branch `town-built`)
+
+The owner's brief of 2026-11-12 (decision 243), part 2: CC0 cars, parked properly and a few moving slowly on the shared clock through L5's colliders; varied facades with real detail and weathering; generic shops; warm lit windows at night; people implied, never shown.
+
+### 14.1 Buildings (`render/buildings.ts`, `render/kit.ts`)
+
+Each chunk's buildings are drawn in three parts.
+
+| Part | What | Drawn |
+|---|---|---|
+| **solid** (the chunk's merged solid mesh) | walls, roofs with ridge tiles, chimneys with pots, gutters and downpipes, doors and steps, porches (a hood or a little gabled porch), bay windows, dormers, shopfronts, balconies, the civic buildings | always |
+| **panes** (one mesh a chunk, `paneMaterial`) | one quad a window: its frame, its glazing bars (sash, casement, modern, shop, leaded, civic, works, plain), the glass with the sky in it, the room behind (curtains, nets, blinds, a shop's shelves of goods), lit on the island clock | always |
+| **detail** (`BuildingDetail`) | sills, stone lintels or painted surrounds, door panels, knobs and letterboxes, quoins, bargeboards, TV aerials, balcony railings with a chair and a pot plant, hanging signs, the awnings' stripes and valances | built per chunk when the camera comes within 150 / 105 / 62 m (high / medium / low) of the chunk, one chunk a frame, nearest first; freed 20 s after it goes out of range |
+
+- **Surfaces in the colour.** A face's surface (brick, render, slate, clay tile, stone, timber boards, paint, metal, felt, concrete) is carried in its vertex colour (`kit.ts` `encodeColourTag`: the colour rounded to 8 bits, the kind in red's spare bits, markers in green and blue), so it costs no attribute and no memory. `patchBuildingSurfaces` (chained after lane GA's `townWeather` on `materials.solid`) draws stretcher-bond brick with each brick its own shade, slate and tile courses with moss towards the eaves, ashlar stone, boards, concrete panel joints, and weathering on walls: damp at the foot and rain streaks. Patterns fade out by screen footprint, so far walls never shimmer. Untagged faces (other lanes' scenery) are untouched.
+- **Panes.** `aWin` (metres across the pane, its style: seed, kind, swatch, blinds) and `aWinSize` (its size) are the pane's own data; the frame and bars are drawn in the shader, so a window far off still reads framed and barred at two triangles. Curtains match within a household (downstairs one cloth, the bedrooms another).
+- **Shops.** A stall riser, pilasters with consoles, a fascia in the shop's colour with a raised sign panel carrying its trade's pictogram (a loaf, a cup, a key, books, a flower, scissors, a fish), a cornice, display windows of goods, a glazed door with a fanlight, a striped awning; a hanging sign on some. No words, no brands, no readable clutter. The pub: its dark green front, hanging sign, door lanterns and flower baskets.
+- **Homes.** Brick or painted render (quoins on most rendered houses), sash or casement windows, door colours, fanlights, porches, bays (three panes), dormers on some houses and terrace homes, chimney stacks between terrace homes, painted terrace fronts so a row reads as four; flats in brick or concrete with floor bands, a stair window up the front, balconies (back, and the front of half the blocks), parapets with felt, coping and roof plant.
+- **Farm buildings** (barns, stables, coops, sheds, farmhouses) are lane GC's; their code is kept as it was and picks up the new windows and doors.
+
+### 14.2 Lit windows and curtains (people implied)
+
+- Lit: `people.ts` `windowLit` as before (a household's evening, bedrooms later, dark mornings, away days; shops, the pub, the church, the farms, the lighthouse).
+- **Curtains drawn** (`curtainsDrawn`): after dark, from the household's own hour (19:24–22:36) until it opens them (6:48–8:24); a quarter never draw them. A drawn curtain glows with the room's light through its cloth, with a gap of light where it meets.
+- The room's light is warm (2,700 K-ish, each window its own), a television's flickering blue in about one home window in eight, a shop's brighter white over its goods; brighter at night than by day (lane GA's `TOWN_LIGHT.lampOn`, not a clock of its own).
+- `windowState` gives the pane its light plus 2 when its curtains are drawn.
+
+### 14.3 Cars and bicycles (`render/vehicles.ts`)
+
+- **Models** (docs/ark-credits.md): Quaternius's CC0 *Cars* (six: saloon from the taxi with its roof sign cut off, hatchback, city car, SUV, coupe, estate) and the *Public Transport* bicycle, made by `scripts/ark-town-vehicles.mts` into `public/ark/assets/town-v1/vehicles.bin` (318 KB, 158 KB gzipped): turned to face +z, true length (4.6, 4.15, 3.6, 4.5, 4.35, 4.4 m; bicycle 1.75 m), materials in classes (the paint each car's own colour tints; dark trim and tyres; grey wheels; glass; head and tail lamps), positions in millimetres, a second level simplified by meshoptimizer. Read once for the page; until it is in (or if it fails), every car is its proxy.
+- **Levels:** the full model within 30 / 22 / 12 m (high / medium / low), the second level to 80 / 60 / 36 m, then a proxy made from the model's own box and glass line (~90 triangles) to 900 / 700 / 480 m. Only the full level casts shadows. The low tier draws three kinds (hatchback, saloon, SUV); the others six.
+- **Colours** as a British town has them: greys, silvers, black and white most, then blues, reds, greens, a few bright ones (`CAR_PAINTS`).
+- **Parked** (`townParking`, 268 spots): every drive whose car fits (46 of 72: a garden's tree or a front fence stands in the others), kerb bays 6 m apart (210), the farms' yards, the harbour's car park (8). Bays never: on the high streets (lane GA's double yellow lines), within 7 m of a junction's mouth, 9 m of a zebra or 15 m of a bus stop, across a drive's dropped kerb, on a bridge; one kerb on a one-way stretch (the traffic's right, so it keeps left), none on a two-way 6 m street that cars drive down, both where none drives. Every car checked clear of L5's colliders (slid up to 0.6 m along its bay, else the bay is left empty). Who is parked: `people.ts` `carAt` (drives full at night, a third in working hours; kerbs busier in the evening); the kind and colour by the spot and the day (kerbs) or the month (drives).
+- **Moving** (`townTraffic`, `TrafficSim`): six cars on three loops of the plan's road graph (the old town: the High Street, Park Road, Harbour Road one way west, West Street; the new town's south and north blocks), driving on the left at 17–22 km/h, 10 km/h round corners; two of them run all night, the others 05:30–00:30.
+  - They give way before each turn, stop 3.5 s at lane GA's zebras (people implied: someone has just crossed), and obey lane GA's signals at the High Street and Park Road (the same 60 s cycle on the shared clock). Each loop's lap is a whole number of minutes (counted in doubles: from 1970 a float's rounding would drift), and each car's phase is set so that, on its timetable, it reaches the lights 5, 13 or 21 s into its road's green, lap after lap.
+  - **The shared clock:** each car has a timetable round its loop; the run is worked out from the timetable at the start of each 600 s window, in 0.25 s ticks, so every viewer sees the same cars in the same places (a page opening mid-window works the run out at most 3 ms a frame; its cars appear when it is done).
+  - **Never through anything:** a car keeps a car's length behind any car ahead; it stops short of an animal in its way (the scene's shared poses of the town's animals and L5's bodies, now and, when one is near, 1.2 s ahead; asked every other tick, each animal's pose worked out once a moment), steps round one at the kerb within its own lane's room (never into the parked cars or the oncoming lane), overtakes into the oncoming lane when nothing is coming, never moves sideways into one alongside, then catches up with its timetable (a quarter faster). Its lanes never cross a building, wall, fence or trunk (L5's colliders, every sample).
+  - **Lamps:** headlamps from dusk, tail lamps brighter when braking.
+- **Bicycles** (people implied): by a third of the front doors, two thirds of the terraces, the flats' doors and some shops; the always-out ones, more on dry daytimes and weekends, a few in the evening by the pub (`bikeOut`). Lane GA's stands at the square have their own.
+
+### 14.4 Hooks
+
+- `TownIsland.setTrafficAnimals(query)` (town frame, the island clock's seconds), `islands/scene.ts` `setTrafficAnimals` (world frame, epoch seconds), wired by `src/ark-scene/index.ts` once the town's schedules are in: the town's animals near a point at a moment, their shared base poses and L5's body radius and height (a slug or a beetle, lower than a car's underside, may be under it between the wheels).
+- `TownIsland.vehicles`: the cars (`movingCars()`, `stats()`, `budgetMs`).
+- `townCrossings`, `townSignals`, `townParking`, `TOWN_LOOPS`: for the ground lane's markings and anyone else.
+
+### 14.5 Tests (`src/lib/ark-town-vehicles.test.ts`)
+
+The models at true size; the parked cars clear of every building, wall, fence and trunk, never overlapping one another or a moving lane, drives fuller at night; every moving lane's car footprint clear of L5's colliders, the loops closed, stops at the zebras, no car into the signalled junction on a red; two runs (one stepped all along, one joining late) identical, no two moving cars touching, no moving car into a parked one; a cat in the lane and a fox crossing: the car stops short and drives on; the real Ark's town animals on their own schedules for 20 minutes (192 animals within reach of a lane): a moving car touched one in 2 of 14,400 car samples (a dog running into it, 0.08 m), an animal against a waiting car in 33 (bounds 4 and 3 %); the buildings' surface kinds, panes, detail and curtains. The town digests (`ark-town-prebuild-speed.test.ts`) are updated for the facades.
+
+**Two hours of the real Ark** (the evening, `scratchpad` probe, the same run as the test's): no moving car touched an animal; one was against a waiting car in 19 of 86,400 car samples; 69 of 72 car-windows ended within 3 m of the timetable, 3 more than 50 m behind (the worst 83 m: a car held long at the High Street).
+
+**Left for L5:** an animal that walks or runs into a car (a dog darting under a bumper; one against a car waiting at a zebra or a light) is L5's to keep out once moving cars are among its obstacles (`TownIsland.vehicles.movingCars()` each frame, `carAnimalGap`). And a car more than 3 m behind its timetable when its 600 s window ends is put back on it (above: 3 of 72): a visible step, rare.
+
+### 14.6 Measured (2026-11-13)
+
+**The real Ark, both islands in one world (v2).** 3,145 animals from the local snapshot read in place; the phone profile (360 × 800 at DPR 2, 4× CPU, Metal); `scripts/ark-runtime-measure.mjs --islands --world v2 --pan town --seconds 60`, one run each, before and after interleaved; before is lanes GA and TB merged without this lane (a worktree of its own); the Mac at a load of 10–43. As lane GA found, the heap is mostly garbage-collection timing (the before runs alone span 405–508 MB).
+
+| Tier | Run | Peak JS heap | Peak GPU est | fps | p95 frame | Long tasks after the first frame |
+|---|---|---|---|---|---|---|
+| low | before ×3 | 405 / 508 / 427 MB | 130.5–135.8 MB | 35.0 / 26.7 / 33.5 | 33 / 67 / 33 ms | 21 / 129 / 26 |
+| low | after ×2 | 421 / 430 MB | 135.9 MB | 32.6 / 34.2 | 33 / 33 ms | 17 / 22 |
+| medium | before | 396 MB | 135.9 MB | 29.0 | 50 ms | 58 |
+| medium | after | 440 MB | 136.0 MB | 30.0 | 33 ms | 28 |
+
+- From the town's whole view the cars are proxies and no facade detail is built: +0.1 MB of GPU geometry. An earlier build, asking about the animals every tick, ran the low tier at 27 fps with 73 long tasks; asking every other tick, only ahead in time when something is near, with each pose worked out once a moment, brought it back within the before runs' spread.
+- The cars' run: about 2 ms of CPU a second steady (Node, desktop); catching up a whole window at a page's opening, 0.2–1.2 s, spread at 3 ms a frame (on a phone ~4×: the cars appear a few seconds after the town).
+
+**The town's own page** (`scripts/ark-town.mts perf`, the 20 s flythrough, much of it at street level; before is the same GA + TB worktree).
+
+| Device, tier | fps before → after | p99 frame | Peak heap | GPU est | Draw calls | Triangles | Detail chunks |
+|---|---|---|---|---|---|---|---|
+| desktop high | 60.0 → 60.0 | 17.7 → 18.6 ms | 195 → 183 MB | 31.4 → 43.0 MB | 423 → 499 | 1.17 M → 1.29 M | 22 |
+| desktop medium | 60.0 → 60.0 | 17.7 → 18.6 ms | 191 → 197 MB | 31.4 → 43.0 MB | 206 → 236 | 586 k → 618 k | 13 |
+| desktop low | 60.0 → 60.0 | 17.7 → 18.6 ms | 152 → 196 MB | 31.4 → 41.9 MB | 155 → 166 | 357 k → 371 k | 6 |
+| phone medium | 58.4 → 58.5 | 20.7 → 22.1 ms | 196 → 211 MB | 31.4 → 43.0 MB | 133 → 157 | 430 k → 453 k | 13 |
+| phone low | 58.5 → 58.8 | 20.2 → 22.0 ms | 192 → 180 MB | 31.4 → 41.9 MB | 82 → 88 | 201 k → 208 k | 6 |
+
+- At street level the near facades' detail (sills, lintels, doors, railings) is the most of the +10–12 MB of GPU geometry, freed 20 s after the camera leaves; the cars and their two levels about 2 MB; the panes as before.
+- A first build of the detail a whole chunk a frame cost the phone 43 fps (p99 77 ms) on medium; a few buildings a frame (2 ms) brought it back.
+
+### 14.7 Decisions (lane GB)
+
+| # | Question | Options | Chosen | Why |
+|---|---|---|---|---|
+| GB-1 | Where the cars come from | Kenney Car Kit (CC0), Quaternius Cars (CC0), made in code | **Quaternius Cars**, plus its Public Transport bicycle | True proportions and material colours that sit with "detailed, slightly stylised natural"; Kenney's are toys (big wheels, stubby). No logos; the taxi's roof sign cut off. |
+| GB-2 | How they ship | GLB through GLTFLoader, a TS module, a small binary | **One binary** (`vehicles.bin`, quantised mm, two levels, 158 KB gzipped), the proxies until it is in | No new loader path, no bundle weight, the town never waits for it. |
+| GB-3 | Car levels and the low tier | one model, LOD by chunk, per car by distance | **Per car by distance** (full / simplified / proxy), three kinds on low | The town is mostly seen from 600–900 m: proxies there; detail only round the camera. Fewer distinct models on low, as the brief asks. |
+| GB-4 | Where cars park | the old alternating kerb spots, bays with rules | **Bays with the Highway Code's sense** (not on double yellows, junction mouths, zebras, bus stops, dropped kerbs, bridges; one-way stretches on the traffic's right), drives where the car fits | "Parked properly in spaces and along kerbs"; the old spots alternated sides every 6.5 m in the lane. |
+| GB-5 | How moving cars stay the same for every viewer | pure timetable only, a run from fixed moments | **A timetable plus a run worked out from every 600 s window's start**, sliced 3 ms a frame | A pure timetable can't stop for an animal; the run can, and anyone joining works out the same run. |
+| GB-6 | Cars and animals | cars ignore them, animals pushed out of cars (L5), cars stop and step round | **Cars stop, step round, overtake when clear**, from the animals' shared poses now and 1.2 s ahead; L5 to keep animals out of waiting cars later | Pushing animals out of moving cars would shove a cat along ahead of the bumper. What remains is measured and bounded (13.5). |
+| GB-7 | The signals and zebras | the lane's own, lane GA's | **Lane GA's** (`CROSSINGS`, the 60 s cycle) | One town: cars stop where the stripes and beacons are and obey the lights the page shows. |
+| GB-8 | Surfaces on buildings | textures, a new attribute, tags in the colour | **Tags in the vertex colour**, patterns in the solid material's shader | Real brick, tiles and weathering for no memory: the phone's low tier is near its heap budget. |
+| GB-9 | The facades' small parts | all in the solid mesh, a far mesh too, built near on demand | **Built per chunk near the camera, freed when far** | 2,840 windows of sills, lintels and frames cost memory only round the camera; far, the panes' own frames and bars carry the look. |
+| GB-10 | Lit windows' night | the lane's own clock, lane GA's `TOWN_LIGHT.lampOn` | **Lane GA's**, with `people.ts` `windowLit` for whose light is on | The coordinator's rule: one night state for the town. |
+| GB-11 | Shop signs | names, nothing, pictograms | **A pictogram of the trade** on a sign panel, no words | Generic and readable as a shop, never a brand or clutter. |
+| GB-12 | Farm buildings | improve them, leave them | **Left as they were** (they take the new windows and doors) | They are lane GC's. |

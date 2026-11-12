@@ -161,9 +161,10 @@ const TOWN_DIGESTS = {
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
-    // aviaries, the zoo's trees drawn by the asset library, not merged.)
-    sceneryAndBuildings: "8a491615aff8f081",
-    zoo: "f7d9bb4d11ad15c9",
+    // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
+    // panes, `render/buildings.ts`. Merged on ark-next.)
+    sceneryAndBuildings: "4f395c8500061f1c",
+    zoo: "3beecdb300adce0f",
     places: "fb1159793f083105"
 };
 

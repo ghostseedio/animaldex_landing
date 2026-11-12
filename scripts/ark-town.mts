@@ -54,7 +54,7 @@ writeFileSync(path.join(site, "town.html"), `<!doctype html><html><head><meta ch
 
 const server = createServer((request, response) => {
     const url = new URL(request.url ?? "/", "http://localhost");
-    // The sky, the KTX2 transcoder (GA) and the asset library (the town's trees, shrubs and reeds: the GC lane).
+    // The sky, the KTX2 transcoder (GA) and the asset library (the town's trees, shrubs and reeds: the GC lane; the cars, `town-v1/vehicles.bin`: the GB lane).
     const fromPublic = url.pathname.startsWith("/ark/graphics/") || url.pathname.startsWith("/ark/basis/") || url.pathname.startsWith("/ark/assets/");
     const folder = fromPublic ? path.join(root, "public") : site;
     const file = path.join(folder, path.normalize(url.pathname).replace(/^\/+/, "") || "town.html");
