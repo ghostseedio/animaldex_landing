@@ -3023,7 +3023,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Grounding: held on a raised point (a branch, a limb, bark, a wall), drawn on it: its back along the surface's
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
-        const perch = groundingRules() === "grounded" ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
+        const perch = groundingRules() === "grounded" ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value, standGround) : null;
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         return {
             x: at.x,
@@ -4361,7 +4361,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // (A behaviour recipe's state too: its attitude, a crouch or a rear, stays on the body.)
                 const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? null;
                 // (Lane TB: one held in a cage, a vivarium or a zoo house keeps its clip's feet: its floor may be over another.)
-                const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id));
+                // (On the ground only, by grounding's own test: a pose held up on something the drawn ground does not know, a
+                // rock's top, a log, a climb's ramp, is no ground for the feet; the legged driver would stand its body on the
+                // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
+                const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null}, index);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
