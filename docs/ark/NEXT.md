@@ -190,6 +190,11 @@ From landing main 970b0461 (live). Head: see the last row; rollback: redeploy **
 | 57 | GC: trees, hedges, canal, farm, zoo barriers, heap releases | `town-nature` cb62a642 | 64f40fde | digests: GC's, with TB's places |
 | 58 | GB: cars, parking, moving traffic, facades, windows, shopfronts | `town-built` 6e0c9277 | 2874e112 | combined with GC in `render/index.ts` and `entry.ts` (vehicles replace the old car set; narrowboats and library trees kept; `townWeather` then `patchBuildingSurfaces`); GB's section numbered 14; merged digests |
 | 59 | GB's review fix: surface markers can't misread a plain colour | `town-built-review` 68bf07d4 | 11901a6a | `sceneryAndBuildings` ba0d2904 |
+| 60 | L5: the collision audit takes `--world`; CI audits islands v2 (live), islands v1 (rollback) and today's mode | `ark-collide-limits2` 88731319 | 640b0062 | collisions workflow green in all three modes (run 43279200835) |
+| — | The town set's Linux baselines | — | b9200c87 | all 4 town shots changed by design, looked at |
+
+Visual (run 43276477553 on 11901a6a): the 19 golden shots are unchanged (at most 0.06% against 9cbc3871, no page errors), so
+their baselines stay; the town's 4 re-accepted. /ark's layout and the landing page are not in the golden set.
 
 Gates on 2874e112: suite 2,494/2,496, 0 fail (the quoted glob); tsc 0; lint 0; motion all pass; default view ×2 pace
 1.01 / 0.99, backwards 1.6% / 1.5% (a capybara 1.9 s, a clawed frog 2.9 s, a zebra 1.9 s), turns 1.1 / 1.4 a minute, no
