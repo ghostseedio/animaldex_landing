@@ -584,7 +584,7 @@ async function mountIsland(el: HTMLElement) {
             // (A wall-clock start shared by two runs, so a run with the layer and one without sample the same moment of
             // the schedule: `--start-at`.)
             while (startAt && Date.now() < startAt) await wait(50);
-            type Track = {byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            type Track = {backVisible?: number; byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
             let last = t0;
@@ -660,6 +660,16 @@ async function mountIsland(el: HTMLElement) {
                             let off = way - (e.yawNow ?? at.yaw);
                             while (off > Math.PI) off -= Math.PI * 2;
                             while (off < -Math.PI) off += Math.PI * 2;
+                            // The body as drawn: the locomotion layer's own turn (it lags the heading by at most 35
+                            // degrees while it steps round), when the legged driver poses it.
+                            const loco = (e.rig as unknown as {loco?: {driver?: string | null; share?: number; states?: Map<string, {state: {bodyYaw?: number}}>}} | undefined)?.loco;
+                            const bodyYaw = loco?.driver === "legged" && (loco.share ?? 0) > 0.5 ? loco.states?.get("legged")?.state.bodyYaw : undefined;
+                            if (bodyYaw !== undefined) {
+                                let seen = way - bodyYaw;
+                                while (seen > Math.PI) seen -= Math.PI * 2;
+                                while (seen < -Math.PI) seen += Math.PI * 2;
+                                if (Math.abs(seen) > Math.PI / 2) tr.backVisible = (tr.backVisible ?? 0) + span;
+                            } else if (Math.abs(off) > Math.PI / 2) tr.backVisible = (tr.backVisible ?? 0) + span;
                             if (Math.abs(off) > Math.PI / 2) {
                                 tr.backwards += span;
                                 tr.backRun += span;
@@ -710,6 +720,7 @@ async function mountIsland(el: HTMLElement) {
                     doing: Array.from(t.doing).join(","),
                     moving: Math.round(t.moving * 10) / 10,
                     backwards: Math.round(t.backwards * 10) / 10,
+                    backwardsVisible: Math.round((t.backVisible ?? 0) * 10) / 10,
                     backRunMax: Math.round(t.backRunMax * 10) / 10,
                     glide: Math.round(t.glide * 10) / 10,
                     glideNear: Math.round(t.glideNear * 10) / 10,
