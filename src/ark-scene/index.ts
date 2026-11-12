@@ -202,7 +202,7 @@ import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
-import {selectionPins, selectionSurvives} from "@/ark-scene/selection";
+import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
@@ -5194,14 +5194,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 fly(new Vector3(middle.x, burrow.ground - 0.7, middle.z), 5.5 + entry.length * 2, 1.4, 1.2, Math.atan2(Math.sin(burrow.direction + Math.PI / 2), Math.cos(burrow.direction + Math.PI / 2)));
                 return;
             }
-            // Where it will rest: its own spot (a flyer lands; a swimmer is followed).
-            const middle = entry.middle;
-            const target = middle ? new Vector3(middle.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, middle.z) : new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + entry.drawnHeight * 0.4, entry.place.z);
+            // Where it is drawn now, not its snapshot place: from the wide view an animal on its schedule may be metres from
+            // that place (the film lane's close-up landed 4.6 m past a Komodo). When it is not drawn yet (streamed out),
+            // its schedule's pose; and the flight keeps aiming at it as it moves.
+            const aimNow = () => {
+                const at = selectAim(middleNow(entry), entry.drawnHeight);
+                return new Vector3(at.x, at.y, at.z);
+            };
+            const target = aimNow();
+            const follow = () => {
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? aimNow() : null);
+            };
             if (close) {
                 // Face to face: low, near, from three-quarters in front, where its mouth can be seen.
                 // A visitor is seen from along the beach, with the jetty beside it rather than under the camera.
                 if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
                 fly(target, entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                follow();
                 return;
             }
             // True scale (motion pass §3): a small one close enough to see, a whale or an elephant far enough back to see whole.
@@ -5210,6 +5219,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const distanceTo = entry.length < 0.3 ? meet : distance > 40 ? Math.max(10 + entry.length * 4, meet) : Math.min(distance, Math.max(10 + entry.length * 6, meet));
             // One partly behind a tree or a rock from the south is seen from the side or the north, wherever the ground leaves a clear view.
             fly(target, distanceTo, 1.3, CLOSE_POLAR, entry.place.covered ? clearAzimuth(target, distanceTo, CLOSE_POLAR, entry.phase) : undefined);
+            follow();
         }
     };
 

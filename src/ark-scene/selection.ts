@@ -23,3 +23,13 @@ export function selectionPins(aboard: ReadonlySet<string>, keep: {selected: stri
 export function selectionSurvives(selected: string | null, aboard: ReadonlySet<string>, visitor: string | null): boolean {
     return !selected || aboard.has(selected) || selected === visitor;
 }
+
+/**
+ * Where the camera aims, flying to a selected animal at rest on the ground or the water (`index.ts` select): where it
+ * is drawn now (`at`, its middle; its schedule's pose when it is not drawn yet), 0.4 of its drawn height up from its
+ * feet, never below 0.4 of that height over the sea's level. Not its snapshot place: from the wide view an animal on its
+ * schedule can be metres from it (the film lane's close-up landed 4.6 m past a Komodo dragon).
+ */
+export function selectAim(at: {x: number; y: number; z: number}, drawnHeight: number): {x: number; y: number; z: number} {
+    return {x: at.x, y: Math.max(at.y - drawnHeight * 0.1, drawnHeight * 0.4), z: at.z};
+}
