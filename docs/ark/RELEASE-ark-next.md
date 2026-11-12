@@ -189,8 +189,13 @@ Listed for the owner instead of polished today (decision 136):
 - Emergent trees stand as tall as the mountain.
 - Dolphins overlap in chases.
 - The osprey's and the swallow's poses.
-- In the default view the American alligator (about 2.3×), the harbour seal (about 2.5×, its flipper-legs clip; seals
-  keep their clips) and the clawed frog (about 1.6×) move faster than their clips.
+- In the default view some animals move faster than their clips: the American alligator (about 2.3×), the clawed frog
+  (about 1.6×), the bullfrog, and the harbour seal (about 2.5×, its flipper-legs clip; seals keep their baked clips).
+  Three causes (L1): the reactive layer moves reactions in metres with no cap from the animal's own clips (fixed after
+  the release: `ark-l1-pace` f21ad63b caps them at 1.2× the walk or run pace); the default-view metric compares with
+  the baked clip even where the locomotion layer draws the feet (fixed in the tool in the same branch); and schedule
+  trips too long for their slot are sped up past 1.2× (bullfrog, alligators, goats, the komodo dragon; being reworked
+  under decision 202).
 - Perched sleepers share crowns: the collision audit's overlaps (3.2 M body samples over 2 hours) are mostly sleepers
   in their postures and perched animals held where they are; the limit is "at most today's".
 - Arriving at the town on the phone profile leaves two main-thread tasks of 0.5–0.6 s after the first frame (decision
