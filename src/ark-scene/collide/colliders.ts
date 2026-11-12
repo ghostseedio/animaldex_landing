@@ -339,6 +339,20 @@ function plotColliders(out: Collider[], plots: HomePlot[]) {
     }
 }
 
+/**
+ * Two collider sets as one (Part C, one world: the wild island's and another island's, each in the world frame and apart
+ * across the strait): every query near a point answers from what is near it on either island. The same object for the
+ * same two sets (a scene's frame asks it each time).
+ */
+const unions = new WeakMap<ColliderSet, WeakMap<ColliderSet, ColliderSet>>();
+export function unionColliders(a: ColliderSet, b: ColliderSet): ColliderSet {
+    let byOther = unions.get(a);
+    if (!byOther) unions.set(a, (byOther = new WeakMap()));
+    let both = byOther.get(b);
+    if (!both) byOther.set(b, (both = new ColliderSet([...a.list, ...b.list], `${a.version}+${b.version}`, [...a.gates, ...b.gates])));
+    return both;
+}
+
 /** The plots' gates: each house's garden gate (`GARDEN`), each paddock's (`paddockSegments`' gate). */
 export function buildGates(plots: HomePlot[] | null): Gate[] {
     const out: Gate[] = [];
