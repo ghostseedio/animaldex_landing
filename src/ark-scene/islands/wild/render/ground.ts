@@ -7,7 +7,7 @@
  * Plain typed arrays and three's Color as math only: it can be built in a worker. Pure.
  */
 
-import {Color} from "three";
+import {BufferAttribute, BufferGeometry, Color} from "three";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, smoothstep} from "@/ark-scene/world";
 import type {GroundArrays} from "@/ark-scene/terrain";
@@ -17,6 +17,30 @@ import {WILD_HALF, WILD_SEGMENTS} from "@/ark-scene/islands/wild/frame";
 
 function srgb(hex: string): Color {
     return new Color(hex).convertSRGBToLinear();
+}
+
+/** The snow line on the wild island's taller mountains (the Ark ground material's own is 27 m, for today's peaks). */
+export const WILD_SNOW_LINE = 52;
+/** Its lake's water colour (linear): a clearer, lighter teal than today's small lake (seen from above it read as ink). */
+export const WILD_LAKE_COLOUR = new Color(0.16, 0.42, 0.36);
+
+/** The lake's and the river's water: the ground's quads with fresh water over them, at each vertex's own level. */
+export function freshWaterGeometry(ground: GroundArrays & {freshLevels: Float32Array}): BufferGeometry {
+    const size = ground.size;
+    const positions: number[] = [];
+    for (let row = 0; row < size - 1; row++) {
+        for (let column = 0; column < size - 1; column++) {
+            const corners = [row * size + column, row * size + column + 1, (row + 1) * size + column + 1, (row + 1) * size + column];
+            const levels = corners.map((i) => ground.freshLevels[i]);
+            if (levels.every((l) => Number.isNaN(l))) continue;
+            const top = Math.max(...levels.filter((l) => !Number.isNaN(l)));
+            const at = corners.map((i, k) => [ground.positions[i * 3], Number.isNaN(levels[k]) ? top : levels[k], ground.positions[i * 3 + 2]]);
+            positions.push(...at[0], ...at[3], ...at[1], ...at[3], ...at[2], ...at[1]);
+        }
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    return geometry;
 }
 
 export type WildGround = GroundArrays & {

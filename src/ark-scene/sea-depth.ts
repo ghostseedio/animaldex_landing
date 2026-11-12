@@ -31,7 +31,7 @@
 
 import table from "@/ark-scene/depth-bands.json";
 import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
-import {coastRadius, hashString, LAKE, sampleGround, ZONE_SITES} from "@/ark-scene/world";
+import {coastRadius, hashString, LAKE, sampleGround, ZONE_SITES, onArkWorld} from "@/ark-scene/world";
 
 export type DepthBand = "surface" | "upper" | "mid" | "seabed" | "reef" | "deep" | "pond_surface" | "pond_mid" | "pond_bed";
 export type WaterKind = "salt" | "fresh";
@@ -335,7 +335,11 @@ export function safeLoopRadius(x: number, z: number, radius: number): number {
 
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 /** The lake's swimmers keep this far inside its middle (m): its edge wanders by a metre, and the shallows are the lily pads'. */
-export const LAKE_SWIM_RADIUS = LAKE.r - 3;
+export let LAKE_SWIM_RADIUS = LAKE.r - 3;
+// (Follows the world's switch: the v2 world's lake is bigger. docs/ark/wild-island.md §Integration.)
+onArkWorld(() => {
+    LAKE_SWIM_RADIUS = LAKE.r - 3;
+});
 const LAKE_SPACING = 2.1;
 const COAST_SPACING = 3;
 const COAST_OUT = 12;
