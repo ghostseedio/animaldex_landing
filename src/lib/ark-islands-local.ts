@@ -110,3 +110,25 @@ export function synthesiseArkIslands(raw: unknown, routing: SpeciesRouting): {sn
     }
     return {snapshot: {...body, animals}, counts};
 }
+
+/**
+ * Development only: T1's routing file (`islands-routing.json`: `{animals: [{id, island, area, enclosure}]}`, from a
+ * rolled-back switch-on on production) merged by id into a whole-Ark read (`/api/ark/voyage`'s `{snapshot, founders}`
+ * or the bare snapshot) at read time, so the preview shows the real animals on both islands as the server will send
+ * them once `voyage_config.islands` is on. Returns a copy; animals the file does not name are left as they are.
+ */
+export function mergeArkIslandsRouting(raw: unknown, routing: unknown): {merged: unknown; matched: number} {
+    const rows = (routing && typeof routing === "object" && Array.isArray((routing as Raw).animals) ? (routing as {animals: Raw[]}).animals : []) as Raw[];
+    const byId = new Map(rows.map((row) => [String(row.id), row]));
+    const wrapped = raw && typeof raw === "object" && "snapshot" in (raw as Raw);
+    const body = (wrapped ? (raw as {snapshot: unknown}).snapshot : raw) as Raw;
+    let matched = 0;
+    const animals = ((body?.animals as Raw[] | undefined) ?? []).map((animal) => {
+        const row = byId.get(String(animal.id));
+        if (!row) return animal;
+        matched++;
+        return {...animal, island: row.island === "town" ? "town" : "wild", area: row.area === "house" || row.area === "farm" || row.area === "zoo" ? row.area : null, enclosure: typeof row.enclosure === "string" ? row.enclosure : null};
+    });
+    const next = {...body, animals};
+    return {merged: wrapped ? {...(raw as Raw), snapshot: next} : next, matched};
+}

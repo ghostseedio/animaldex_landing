@@ -4670,7 +4670,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // From the island's edge looking in, so the world (the lake, the trees, the mountain) stands behind it.
         fly(new Vector3(entry.place.x, Math.max(entry.place.ground, 0) + 0.6, entry.place.z), 9 + entry.length * 2.6, 2.8, 1.22, Math.atan2(entry.place.x, entry.place.z));
     };
-    if (opening) {
+    if (opening && options.arrival) {
+        // Part C, a crossing (`islands/archipelago.ts`): in from over the sea the way the camera came, down onto the island.
+        const from = options.arrival.from;
+        controls.target.set(from.target.x, from.target.y, from.target.z);
+        spherical.set(Math.min(from.distance, maxDistance), from.polar, from.azimuth);
+        camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
+        controls.update();
+        fly(home.target, home.distance, options.arrival.seconds, home.polar, home.azimuth, afterOpening);
+    } else if (opening) {
         // The opening: from high over the sea, a slow descent and arc onto the island.
         controls.target.copy(home.target).add(new Vector3(0, 0, -10));
         spherical.set(maxDistance * 0.98, 0.62, -0.95);

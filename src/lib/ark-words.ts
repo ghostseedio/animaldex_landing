@@ -351,6 +351,8 @@ export type ArkWords = {
     foundersOne: string;
     foundersOther: string;
     myAnimals: string;
+    /** Part C: the two islands (the switch, My animals' groups). Optional: an older bundle lacks them. */
+    islands?: {label: string; wild: string; town: string; both: string; atHome: string; onFarm: string; inTown: string; zoo: string};
     hint: string;
     loading: string;
     noWebgl: string;

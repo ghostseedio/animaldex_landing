@@ -242,6 +242,8 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * island. One island is loaded at a time (`islands/archipelago.ts`).
      */
     island?: ArkIslandScene | null;
+    /** Part C, the end of a crossing: the opening flight starts from this view (over the sea, facing in) instead of its own. */
+    arrival?: {from: ArkCameraView; seconds: number} | null;
     /**
      * Part B: the device's memory in GB as the app knows it (iOS never tells the page; Chromium caps it at 8), for the
      * quality tier and its render distance and memory budget (`streaming/tiers.ts`). The embed also reads `?mem=`.

@@ -84,7 +84,7 @@ import {rigBaseFrom} from "@/ark-scene/rig-clips";
 
 export const dynamic = "force-dynamic";
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -108,7 +108,7 @@ function fixtureMode(searchParams: Props["searchParams"]): FixtureMode | null {
  * Development's `?snapshot=<path under /public>`: that file read as the Ark's answer (`src/lib/ark-local-snapshot.ts`),
  * or null (production, a path that is not a plain .json under /public, a file that is missing or does not decode).
  */
-async function readLocalArk(asked: string | undefined): Promise<{snapshot: ArkSnapshot; founders: ArkFounders} | null> {
+async function readLocalArk(asked: string | undefined, islandsAsked?: string): Promise<{snapshot: ArkSnapshot; founders: ArkFounders} | null> {
     const local = arkLocalSnapshotPath(asked, process.env.NODE_ENV === "development");
     if (!local) return null;
     const [{readFile}, path] = await Promise.all([import("fs/promises"), import("path")]);
@@ -116,7 +116,18 @@ async function readLocalArk(asked: string | undefined): Promise<{snapshot: ArkSn
     const file = path.join(root, local);
     if (!file.startsWith(root + path.sep)) return null;
     try {
-        return arkLocalSnapshotOf(JSON.parse(await readFile(file, "utf8")));
+        const raw = JSON.parse(await readFile(file, "utf8"));
+        // Part C preview, development only: `&islands=/ark-local/islands-routing.json` (T1's routing from a rolled-back
+        // switch-on) merged by id at read time, as the server's read will carry it once `islands` is on. Never written.
+        const routing = arkLocalSnapshotPath(islandsAsked, true);
+        const routingFile = routing ? path.join(root, routing) : null;
+        if (routingFile && routingFile.startsWith(root + path.sep)) {
+            const {mergeArkIslandsRouting} = await import("@/lib/ark-islands-local");
+            const {merged, matched} = mergeArkIslandsRouting(raw, JSON.parse(await readFile(routingFile, "utf8")));
+            console.info(`/ark?snapshot=${local}&islands=${routing}: ${matched} animals given their island`);
+            return arkLocalSnapshotOf(merged);
+        }
+        return arkLocalSnapshotOf(raw);
     } catch (error) {
         console.warn(`/ark?snapshot=${local}: not read (${(error as Error).message}); the live Ark instead`);
         return null;
@@ -493,7 +504,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     const locale = pageLocale(params.locale);
     const development = process.env.NODE_ENV === "development";
     // A local snapshot (development) is real data: it takes the place of the live read, and of any fixture asked for.
-    const local = await readLocalArk(searchParams.snapshot);
+    const local = await readLocalArk(searchParams.snapshot, searchParams.islands);
     const mode = local ? null : fixtureMode(searchParams);
     const hour = development && searchParams.hour !== undefined ? Number(searchParams.hour) : NaN;
     const since = development && searchParams.since && !Number.isNaN(Date.parse(searchParams.since)) ? searchParams.since : null;
@@ -531,6 +542,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             modelBase={modelBase(searchParams)}
             rigBase={rigOverride(searchParams)}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
+            island={searchParams.island === "wild" || searchParams.island === "town" ? searchParams.island : null}
             fixtureLife={fixtureLife}
             hours={Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 24) : null}
             since={since}

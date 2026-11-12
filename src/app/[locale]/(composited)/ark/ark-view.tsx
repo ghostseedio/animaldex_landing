@@ -8,7 +8,9 @@ import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import {fetchArkHunting} from "@/lib/ark-hunting";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
-import type {ArkAnimal, ArkHerdInfo, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkRegion, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
+import {arkIslandCounts, arkIslandSnapshot, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkHerdKeys} from "@/ark-scene/herds";
 import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
@@ -54,8 +56,10 @@ type Props = {
     modelBase: string;
     /** Development's `?rig=`: another rig folder, or null for no rigs; absent: beside the model set. */
     rigBase?: string | null;
-    /** `?focus=`: a species_profile_id or slug to fly to once the Ark is in view. */
+    /** `?focus=`: an animal's id, a species_profile_id or slug to fly to once the Ark is in view (on its island). */
     focus?: string | null;
+    /** Part C, `?island=wild|town`: the island to open on (else decision 26: the one with most of the viewer's animals). */
+    island?: string | null;
     fixtureLife?: ArkFixtureLife | null;
     /** Development's `?hour=`: the light's hour pinned; otherwise the reader's clock. */
     hours?: number | null;
@@ -183,7 +187,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
+export default function ArkView({locale, initial, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -198,6 +202,9 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
     const [selectedRest, setSelectedRest] = useState<{id: string; rest: string | null} | null>(null);
     const onRest = useCallback((id: string, rest: string | null) => setSelectedRest({id, rest}), []);
     const [mineOnly, setMineOnly] = useState(false);
+    // Part C: the island loaded now, and whether a crossing is under way (one island at a time; `islands/archipelago.ts`).
+    const [island, setIsland] = useState<ArkIsland>("wild");
+    const [crossing, setCrossing] = useState(false);
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
     const [arrival, setArrival] = useState<ArkAnimal | null>(null);
@@ -293,6 +300,16 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
 
     const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, {day: "numeric", month: "long", year: "numeric"}), [locale]);
     const hasMine = Boolean(snapshot?.animals.some((animal) => animal.mine));
+    // Part C: two islands once the server's switch is on; the panel shows the island loaded (its own slice of the read).
+    const twoIslands = arkTwoIslands(snapshot);
+    const islandCounts = useMemo(() => (snapshot && twoIslands ? arkIslandCounts(snapshot) : null), [snapshot, twoIslands]);
+    const shown = useMemo(() => (snapshot && twoIslands ? arkIslandSnapshot(snapshot, island) : snapshot), [snapshot, twoIslands, island]);
+    const crossTo = (next: ArkIsland) => {
+        const scene = sceneRef.current as ArkArchipelagoHandle | null;
+        if (!scene?.crossTo || next === island || crossing) return;
+        void scene.crossTo(next);
+    };
+    const islandWords = {wild: words.islands?.wild ?? "Wild island", town: words.islands?.town ?? "Town and zoo", label: words.islands?.label ?? "Islands"};
     const showMineToggle = hasMine && (signedIn || Boolean(session.user) || fixture);
 
     // MARK: The scene
@@ -310,14 +327,20 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
         } catch {
             // The device decides.
         }
-        Promise.all([import("@/ark-scene"), import("@/ark-scene/runtime/prebuild")])
-            .then(async ([{mountArk}, {prepareArk}]) => {
+        import("@/ark-scene/islands/archipelago")
+            .then(async ({mountArchipelago}) => {
                 if (disposed) return;
-                // Runtime: the mount's heavy seeded work (decor, forest, grass, places) in a worker first (docs/ark/runtime.md §7).
-                await prepareArk({snapshot: snapshotRef.current ?? initial});
-                if (disposed) return;
+                // (The mount's heavy seeded work runs in the runtime's worker first, inside the archipelago: docs/ark/runtime.md §7.)
+                const opening = snapshotRef.current ?? initial;
+                const focusedFirst = arkPickAnimal(arkFocusAnimals(opening, focusOn), null);
                 try {
-                    handle = mountArk(el, {
+                    handle = mountArchipelago(el, {
+                        // Part C: the island to open on (decision 26), the island shown as it changes.
+                        openOn: arkOpeningIsland(opening, {asked: islandAsked, focus: focusedFirst}),
+                        onIsland: (next, moving) => {
+                            setIsland(next);
+                            setCrossing(moving);
+                        },
                         snapshot: snapshotRef.current ?? initial,
                         modelBase,
                         ...(rigBase !== undefined ? {rigBase} : {}),
@@ -342,7 +365,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                         onReady: () => setReady(true)
                     });
                     sceneRef.current = handle;
-                    // "See it in the Ark" (`?focus=`): straight to that species, the reader's own first.
+                    // "See it in the Ark" (`?focus=`): straight to that animal or species, the reader's own first, on its island.
                     const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? initial, focusOn), null);
                     if (focused) {
                         // The page's own flight to `?focus=` is not a tap.
@@ -763,6 +786,22 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
                                 {words.sound.credits}
                             </button>
                         ) : null}
+                        {twoIslands && islandCounts ? (
+                            <div role="group" aria-label={islandWords.label} className="flex shrink-0 overflow-hidden rounded-full border border-line-100">
+                                {(["wild", "town"] as const).map((id) => (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        aria-pressed={island === id}
+                                        disabled={crossing}
+                                        onClick={() => crossTo(id)}
+                                        className={`min-h-9 px-3 font-sans text-[13px] font-bold leading-none transition-colors motion-reduce:transition-none ${island === id ? "bg-primary-400 text-canvas-950" : "text-ink-100 hover:bg-white/10"} disabled:cursor-wait`}
+                                    >
+                                        {islandWords[id]} <span className="font-semibold opacity-75">{(id === "wild" ? islandCounts.wild : islandCounts.town).toLocaleString(locale)}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
                         {showMineToggle ? (
                             <button
                                 type="button"
@@ -931,7 +970,7 @@ export default function ArkView({locale, initial, founders: initialFounders = AR
 
             {snapshot ? (
                 <ArkPopulationHud
-                    snapshot={snapshot}
+                    snapshot={shown ?? snapshot}
                     words={words}
                     locale={locale}
                     selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}
