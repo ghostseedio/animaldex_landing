@@ -3,7 +3,7 @@ import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {ARK_BEHAVIOURS, ARK_INTERACTIONS, behaviourProfile, decodeBehaviourRow, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, kthNearest, withLazyRoost, amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
+import {forgetSchedules, kthNearest, withLazyRoost, amphibious, awakeAt, groupSpread, homeRadius, rangeReach, maxSlopeOf, poseOnTrip, restingAtRoost, roostOf, scheduleWorld, spaceHomes, spaceHomesTasks, SAFE_METRES, SAFE_MOST, SLOT_SECONDS, slotStart, threatAt, tripAt, waryRange, wireThreats, WARY_METRES, type HomeInput, type ScheduleAnimal, type SpacedHome, type Trip} from "@/ark-scene/behaviour-schedule";
 import {SlicedBuild} from "@/ark-scene/behaviour-build";
 import {hashString} from "@/ark-scene/world";
 import {eats} from "@/ark-scene/food-links";
@@ -250,7 +250,8 @@ test("predators keep a safe distance from the animals they eat", () => {
     let samples = 0;
     for (const p of predators) {
         const prey = animals.filter((q) => eats(p.a.model_slug, q.a.model_slug));
-        const safe = Math.max(SAFE_METRES, p.animal.length * 6);
+        // (Six body lengths, at most SAFE_MOST: a true-size whale's would be more sea than the island has.)
+        const safe = Math.max(SAFE_METRES, Math.min(p.animal.length * 6, SAFE_MOST));
         for (let k = 0; k < 24 * 45; k += 13) {
             const t = DAY + k * SLOT_SECONDS + 7;
             const at = poseOf(p, t);
@@ -487,7 +488,7 @@ test("resting at home: asleep at its roost by night, and a den animal often in i
     console.log(`asleep at roost ${nightAtRoost}/${night}; den animals in the den while awake ${dayDen}/${dens}`);
 });
 
-/** The spacing as it was before it was cut into tasks (2026-11-11, ark-behaviour 5f985348), verbatim: the reference. */
+/** The spacing as it was before it was cut into tasks (2026-11-11, ark-behaviour 5f985348), verbatim but for true scale's SAFE_MOST cap: the reference. */
 function referenceSpaceHomes(animals: HomeInput[], eatsOf: (predator: string, prey: string) => boolean, reachOf: (id: string) => number): Map<string, SpacedHome> {
     const out = new Map<string, SpacedHome>();
     const home = new Map(animals.map((a) => [a.id, {...a.home}]));
@@ -497,7 +498,7 @@ function referenceSpaceHomes(animals: HomeInput[], eatsOf: (predator: string, pr
         const prey = animals.filter((other) => other.id !== predator.id && eatsOf(predator.slug, other.slug));
         if (!prey.length) continue;
         const enemies = animals.filter((other) => other.id !== predator.id && (eatsOf(predator.slug, other.slug) || eatsOf(other.slug, predator.slug)));
-        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.max(predator.length, other.length) * 6);
+        const safeTo = (other: HomeInput) => Math.max(SAFE_METRES, Math.min(Math.max(predator.length, other.length) * 6, SAFE_MOST));
         const need = (other: HomeInput) => safeTo(other) + reach.get(predator.id)! + reach.get(other.id)!;
         const clearance = (x: number, z: number) => Math.min(...enemies.map((o) => Math.hypot(home.get(o.id)!.x - x, home.get(o.id)!.z - z) - need(o)));
         const start = home.get(predator.id)!;

@@ -91,7 +91,7 @@ import {buildMotes} from "@/ark-scene/life";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Shadow} from "@/ark-scene/marks";
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
-import {microDrawnLength, microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
+import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
@@ -109,7 +109,8 @@ import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident}
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
 import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
-import {displayLength, SWIMMING_PLANS} from "@/ark-scene/sizes";
+import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
+import {CAMERA_RANGE, fitWhole, meetDistance} from "@/ark-scene/runtime/camera";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape} from "@/ark-scene/terrain";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
@@ -207,7 +208,8 @@ const RIG_KEEP_SECONDS = 45;
 const RIG_KEEP = 24;
 const LOAD_NEAR_WITHIN = 48;
 const FOV = 38;
-const MAX_DISTANCE = 340;
+/** True scale (motion pass §3): the camera's reach is `runtime/camera.ts` CAMERA_RANGE. */
+const MAX_DISTANCE = CAMERA_RANGE.far;
 const ENTRANCE_SECONDS = 1.6;
 const RIPPLE_SECONDS = 2.6;
 /** A clutch being laid, in a replay. */
@@ -219,22 +221,12 @@ const IDLE_DRIFT_AFTER = 9;
 const OPENING_SECONDS = 4.6;
 /** Within this distance (m) an animal glances at the camera now and then (more often the sharper it is). */
 const GLANCE_WITHIN = 14;
-/** Drawn smaller than this on screen (CSS px), an animal also gets a marker so it can be found. */
-const MARKER_BELOW_PIXELS = 5;
-/**
- * Small animals at their microhabitats (`micro.ts`): drawn true to size
- * (their body length L, no floor) close by, never smaller on screen than
- * this (CSS px) as the camera draws back, until that reaches their usual
- * drawn length (the floor) and the marker comes back: the floor and the
- * marker are only for a view from afar.
- */
-const MICRO_MIN_PIXELS = 16;
 /** Past this distance (m) a small animal's model is not drawn (its marker is), unless it is someone's own or selected. */
 const MICRO_DRAW_WITHIN = 42;
 /** Within this distance (m) of a small animal the camera may come right up to it. */
 const MICRO_CLOSE_WITHIN = 3.5;
 /** How close the camera may come to a small animal (m). */
-const MICRO_MIN_DISTANCE = 0.08;
+const MICRO_MIN_DISTANCE = CAMERA_RANGE.close;
 
 /** Birds that take to the air above their zone. */
 const FLYERS = ARK_FLYERS;
@@ -645,7 +637,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
-    controls.minDistance = 4;
+    controls.minDistance = CAMERA_RANGE.near;
     controls.maxDistance = MAX_DISTANCE;
     controls.minPolarAngle = 0.12;
     controls.maxPolarAngle = 1.36;
@@ -860,7 +852,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (tokenPoint.z > 1) continue;
                 const sx = (tokenPoint.x + 1) / 2 * width;
                 const sy = (1 - tokenPoint.y) / 2 * height;
-                const pixels = entry.level === "token" ? tokens.pixelSize(Math.max(entry.length * 1.1, 1.6), camera.position.distanceTo(entry.middle)) : 16;
+                const pixels = entry.level === "token" ? tokens.pixelSize(iconSize(entry.length), camera.position.distanceTo(entry.middle)) : 16;
                 taken.push([sx - pixels / 2, sy - pixels, sx + pixels / 2, sy + 4]);
             }
         }
@@ -3064,8 +3056,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         frustum.setFromProjectionMatrix(projection);
         const cameraPosition = camera.position;
         const viewDistance = cameraPosition.distanceTo(controls.target);
-        // Seen from far, animals are drawn a little larger, like figures on a model; close up, true to size.
-        const exaggerate = 1 + Math.min(Math.max((viewDistance - 40) / 120, 0), 1.3);
+        // True scale (motion pass §3): drawn at their true size from every distance (small ones get their marker).
+        const exaggerate = 1;
 
         type Candidate = {entry: Entry; distance: number; model: SpeciesModel | undefined; visible: boolean; pose: Pose; modelHeight: number; modelScale: number; skip: boolean; rig: RigModel | null};
         const epochNow = worldMs() / 1000;
@@ -3139,9 +3131,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const want = entry.awake && night > 0.35 && !reducedMotion ? 1 : 0;
                     entry.toLight = (entry.toLight ?? 0) + (want - (entry.toLight ?? 0)) * Math.min(dt * 0.5, 1);
                 }
-                // True to size close by; never smaller on screen than MICRO_MIN_PIXELS; the usual length (and the marker) from afar.
+                // True to size at every distance (motion pass §3): its marker when it is a few pixels across.
                 const near = cameraPosition.distanceTo(position.set(entry.place.x, entry.place.ground, entry.place.z));
-                entry.length = microDrawnLength(entry.trueLength, entry.full, near, height, FOV, MICRO_MIN_PIXELS);
+                entry.length = entry.full;
                 const own = entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id;
                 skip = near > MICRO_DRAW_WITHIN && !own && !entry.recipeAct;
                 if (!skip && library.has(slug) && !model) library.request(slug, "far");
@@ -3163,7 +3155,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (In the water at its own depth: a seabed animal is culled and loaded by where it is, not the surface over it.)
             position.set(where.x, where.water ? where.base : Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
-            if (distance < LOAD_NEAR_WITHIN && library.has(slug)) library.request(slug, "near");
+            // (Or large on screen at true size: a whale or an elephant across the bay, motion pass §3.)
+            if ((distance < LOAD_NEAR_WITHIN || nearBySize(entry.length, distance, height, FOV)) && library.has(slug)) library.request(slug, "near");
             // A walker on the move with a rig: its near model too, from the island view (it is drawn rigged, near).
             else if (moverGait && distance < MOVING_RIG_WITHIN && !reducedMotion && entry.air <= 0.001 && gaitMoving(entry.gait, entry.length) && rigs.available(slug) && library.has(slug)) library.request(slug, "near");
             sphere.center.copy(position);
@@ -3206,8 +3199,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             !reducedMotion &&
             rigs.walks(c.entry.animal.model_slug) && c.entry.air <= 0.001 && !c.entry.visitor && !c.pose.afloat && gaitMoving(c.entry.gait, c.entry.length) && rigs.available(c.entry.animal.model_slug);
         const nearWanted = candidates
-            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN))))
-            .sort((a, b) => a.distance - b.distance);
+            .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN)) || nearBySize(c.entry.length, c.distance, height, FOV)))
+            // (Largest on screen first at true size: a whale far off before a beetle near by.)
+            .sort((a, b) => screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
         const cap = caps();
@@ -3219,8 +3213,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearIds.add(candidate.entry.animal.id);
         }
         runtime.usedNear(nearSpecies);
-        // Models for the nearest MODEL_CAP in view; past that, icons.
-        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => a.distance - b.distance).slice(0, cap.models).map((c) => c.entry.animal.id));
+        // Models for the MODEL_CAP largest on screen (true scale: a whale far off before a beetle near by); past that, icons.
+        const modelled = new Set(candidates.filter((c) => c.visible && !c.skip && c.model?.far).sort((a, b) => screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance)).slice(0, cap.models).map((c) => c.entry.animal.id));
 
         // Rigs: the viewer's own, the one looked at or followed, then the nearest, within the caps (none with reduced motion).
         rigs.caps = liteOn() ? RIG_CAPS_LITE : RIG_CAPS;
@@ -3370,13 +3364,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             const rest = Math.max(entry.place.ground, 0);
             const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
-            // Too small to find on its own (at the size floor, or a few pixels across from far): a soft dot over it, and its icon once tapped.
-            // A small animal at its microhabitat only from afar: close by it is drawn true to size, and found by looking.
+            // Too small to find on its own (a few pixels across: from far, or a beetle a few metres off): a soft dot over it,
+            // and its icon once tapped. Close by it is drawn true to size, and found by looking. (True scale, motion pass §3.)
             const fromAfar = !entry.micro || entry.length >= entry.full * 0.999;
-            if ((level !== "token" || candidate.skip) && !entry.act && fromAfar) {
-                const perPixel = 2 * Math.tan(FOV * Math.PI / 360) * candidate.distance / height;
-                const pixels = entry.length * sizeUp / perPixel;
-                if (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip) {
+            const perPixel = 2 * Math.tan(FOV * Math.PI / 360) * candidate.distance / height;
+            const pixels = entry.length * sizeUp / perPixel;
+            // Past the model cap, one too small on screen for its icon to mean anything is its marker instead.
+            const dotNotIcon = level === "token" && markerNotIcon(pixels);
+            if ((level !== "token" || candidate.skip || dotNotIcon) && !entry.act && fromAfar) {
+                if (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip || dotNotIcon) {
                     const top = where.base + lift + modelHeight + Math.max(perPixel * 7, 0.08);
                     dotList.push({x: where.x, y: Math.max(top, rest + 0.1), z: where.z, pixels: marked === 2 ? 11 : 8, alpha: dim ? 0.35 : 1});
                     if (marked === 2 && tokens.loaded(animal.model_slug)) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(top, rest + 0.1) + perPixel * 20, z: where.z, size: 0.5, dim: 0, ring: 2, grow});
@@ -3387,7 +3383,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (candidate.skip) continue;
             if (level === "token") {
                 counts.token++;
-                tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: Math.max(entry.length * 1.1, 1.6), dim, ring: marked, grow});
+                if (!dotNotIcon) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: iconSize(entry.length), dim, ring: marked, grow});
                 continue;
             }
 
@@ -3902,8 +3898,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const distance = camera.position.distanceTo(entry.middle);
             let radius: number;
             if (entry.level === "token") {
-                const pixels = tokens.pixelSize(Math.max(entry.length * 1.1, 1.6), distance);
-                radius = pixels / 2 + 4;
+                const pixels = tokens.pixelSize(iconSize(entry.length), distance);
+                // (At true scale an icon may be a few pixels across: it is still picked within 20 px, like the rest.)
+                radius = Math.max(pixels / 2 + 4, 20);
                 const d = Math.hypot(x - sx, y - (sy - pixels / 4));
                 if (d < radius && d / radius < bestScore) {
                     best = entry;
@@ -4136,7 +4133,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
-                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : Math.min(3 + entry.length * 2.2, 14);
+                // (A whale far enough back to be seen whole: true scale.)
+                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : Math.max(Math.min(3 + entry.length * 2.2, 14), fitWhole(entry.length, width / Math.max(height, 1), FOV));
                 if (entry.trueLength < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
                 fly(under(), away, distance > 30 ? 2 : 1.4, entry.trueLength < 0.3 ? 1.1 : 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
@@ -4191,10 +4189,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (close) {
                 // Face to face: low, near, from three-quarters in front, where its mouth can be seen.
                 // A visitor is seen from along the beach, with the jetty beside it rather than under the camera.
-                fly(target, 3.5 + entry.length * 2, 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
+                fly(target, entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
                 return;
             }
-            const distanceTo = distance > 40 ? 10 + entry.length * 4 : Math.min(distance, 10 + entry.length * 6);
+            // True scale (motion pass §3): a small one close enough to see, a whale or an elephant far enough back to see whole.
+            const meet = meetDistance(entry.length, width / Math.max(height, 1), FOV);
+            if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
+            const distanceTo = entry.length < 0.3 ? meet : distance > 40 ? Math.max(10 + entry.length * 4, meet) : Math.min(distance, Math.max(10 + entry.length * 6, meet));
             // One partly behind a tree or a rock from the south is seen from the side or the north, wherever the ground leaves a clear view.
             fly(target, distanceTo, 1.3, CLOSE_POLAR, entry.place.covered ? clearAzimuth(target, distanceTo, CLOSE_POLAR, entry.phase) : undefined);
         }

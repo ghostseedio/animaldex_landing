@@ -40,7 +40,7 @@ import {behaviourState} from "@/ark-scene/behaviour-state";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
 import {arborealOf, atRock, CANOPY_LIMB_LOAD, CANOPY_TAGS, climbsTrees, denKindOf, inTheTrees, mapPoints, onSchedule, rockHomes, scheduleRoost, shoreOf, wetOf} from "@/ark-scene/map/place";
 import {attachFits} from "@/ark-scene/map/sampler";
-import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, trueMicro} from "@/ark-scene/map/species";
+import {bodyOf, mapSlugs, mapSpecies, mapSpeciesStored, MICRO_MAX_LENGTH, trueMicro} from "@/ark-scene/map/species";
 import {FRESH_TAGS, SEA_TAGS, type MapTag} from "@/ark-scene/map/tags";
 import {inCoral, onFloor, waterSuits} from "@/ark-scene/map/water";
 import {SHORE_REACH} from "@/ark-scene/map/points";
@@ -233,7 +233,8 @@ export function validateMap(): {failures: ValidatorFailure[]; animals: number; s
             continue;
         }
         // A small flyer with no perch that fits it in reach lands on its ground or its water (section 2: "only at valid perches, the ground or the water").
-        if (species.small && species.move !== "fly" && species.move !== "perch" && !["water", "floor", "surface", "fixed", "air", "station", "anemone", "ice"].includes(species.attach)) fail("small_not_on_attach_point", `on ${place.canopy ? "a canopy limb" : "the ground"} (${map.tag})`);
+        // (Small by its size stat, and small at true size too: a 1.4 m ladder snake of size 15 lives on the ground. Motion pass §3.)
+        if (species.small && length <= MICRO_MAX_LENGTH && species.move !== "fly" && species.move !== "perch" && !["water", "floor", "surface", "fixed", "air", "station", "anemone", "ice"].includes(species.attach)) fail("small_not_on_attach_point", `on ${place.canopy ? "a canopy limb" : "the ground"} (${map.tag})`);
         if (place.canopy) {
             const trees = canopyTrees(place.canopy.zone ?? animal.zone);
             const tree = trees[place.canopy.tree % trees.length].item;

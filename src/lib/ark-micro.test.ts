@@ -2,11 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import table from "@/ark-scene/microhabitats.json";
 import {COTTAGE} from "@/ark-scene/micro-decor";
-import {MICRO_SPOTS, microDrawnLength, microPlace, microSpecies, surfacePoint} from "@/ark-scene/micro";
+import {MICRO_SPOTS, microPlace, microSpecies, surfacePoint} from "@/ark-scene/micro";
 import {placeAnimals} from "@/ark-scene/placement";
-import {ARK_SIZE_FLOOR} from "@/ark-scene/stats";
+import {arkBody} from "@/ark-scene/stats";
+import {MARKER_BELOW_PIXELS, markerNotIcon, screenPixels} from "@/ark-scene/sizes";
+import {meetDistance} from "@/ark-scene/runtime/camera";
 import type {ArkAnimal} from "@/ark-scene/types";
 
+const near = (actual: number, expected: number, within: number, what: string) => assert.ok(Math.abs(actual - expected) <= within, `${what}: ${actual} not ${expected}`);
 const rows = (table as unknown as {species: Record<string, string[]>}).species;
 
 test("microhabitats: every row is a known spot with its reason; the owner's examples are where he put them", () => {
@@ -78,18 +81,20 @@ test("microhabitats: nobody moves when another small animal arrives or leaves", 
     before.forEach((place, id) => assert.deepEqual(more.get(id), place));
 });
 
-test("microhabitats: true size close by, never under the minimum on screen, the usual length (and the marker) from afar", () => {
-    const L = 0.005;
-    const full = ARK_SIZE_FLOOR;
-    let last = 0;
-    for (let d = 0.05; d < 200; d *= 1.15) {
-        const drawn = microDrawnLength(L, full, d, 800, 38, 16);
-        assert.ok(drawn >= L && drawn <= full);
-        assert.ok(drawn >= last - 1e-12, "it grows (in the world) as the camera draws back, never pops");
-        last = drawn;
-    }
-    assert.equal(microDrawnLength(L, full, 0.1, 800, 38, 16), L);
-    assert.equal(microDrawnLength(L, full, 150, 800, 38, 16), full);
+test("small animals are true size at every distance (motion pass §3): the marker from afar, met close enough to see", () => {
+    // A black ant (5 mm): drawn its own size close by and far off; a marker once it is under 5 px; never an icon past the model cap.
+    const ant = arkBody({model_slug: "black-ant"});
+    assert.ok(ant.display < 0.01 && !ant.floor, `an ant is drawn ${ant.display} m`);
+    const pixelsAt = (distance: number) => screenPixels(ant.display, distance, 800, 38);
+    assert.ok(pixelsAt(0.12) > 40, "close by it fills a good part of the view");
+    assert.ok(pixelsAt(3) < MARKER_BELOW_PIXELS, "a few metres off it is found by its marker");
+    assert.ok(markerNotIcon(pixelsAt(40)), "far off it is a dot, not a 1.6 m icon");
+    // "My animals" and ?focus= fly to it: close enough that it is a fifth of the view or so.
+    const met = meetDistance(ant.display, 0.45);
+    assert.ok(met <= 0.15 && pixelsAt(met) >= MARKER_BELOW_PIXELS * 6, `met from ${met} m`);
+    // A mouse from about a metre, a whale from far enough back to see it whole on an upright phone.
+    near(meetDistance(arkBody({model_slug: "house-mouse"}).display, 0.45), 1.05, 0.3, "mouse");
+    assert.ok(meetDistance(arkBody({model_slug: "blue-whale"}).display, 0.45) > 100, "blue whale");
 });
 
 test("rigged clips: passed rigs, a partial rig's own passing clips; never flight, never a sitting rig's movement, never a fallback", async () => {

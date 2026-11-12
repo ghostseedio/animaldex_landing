@@ -4,39 +4,57 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {mealStage, type ActBody} from "@/ark-scene/acts";
 import {allocateArkPlaces, placeAnimals, slotKind, zoneLayout} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {ARK_SIZE_CAP, ARK_SIZE_FLOOR, arkBody, bodyAxisExtent, arkIdleBehaviour, arkStats, bodyLengthsPerSecond, glance, glancePeriod, massFromSize, moveSpeed, screenLength} from "@/ark-scene/stats";
+import {arkBody, bodyAxisExtent, arkIdleBehaviour, arkStats, bodyLengthsPerSecond, glance, glancePeriod, massFromSize, moveSpeed} from "@/ark-scene/stats";
+import sizesTable from "@/ark-scene/species-stats.json";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {ZONE_SITES} from "@/ark-scene/world";
 
 const near = (actual: number, expected: number, within: number, what: string) => assert.ok(Math.abs(actual - expected) <= within, `${what}: ${actual} not ${expected}`);
 
-test("size: the stored length where there is one, else the size stat through mass; drawn at 1.2·L^0.6 between the floor and the cap", () => {
-    // The addendum's table (docs/ark-next.md), from the live catalogue.
+test("size is true to life (motion pass §3): the stored length, else the data-gap value, else the size stat; no curve, no floor, no cap", () => {
+    // From the live catalogue and the data-gap lengths (scripts/ark-species-stats.mts; docs/ark/true-scale.md).
     const ladybird = arkBody({model_slug: "seven-spot-ladybird"});
-    near(ladybird.metres, 0.005, 0.001, "ladybird length");
-    assert.equal(ladybird.source, "estimate");
-    assert.equal(ladybird.display, ARK_SIZE_FLOOR);
-    assert.ok(ladybird.floor, "the ladybird gets a marker");
+    assert.ok(ladybird.metres > 0.004 && ladybird.metres < 0.01, `ladybird ${ladybird.metres}`);
+    assert.ok(ladybird.display < 0.012, "a ladybird is drawn its own size, not at a floor");
+    assert.equal(ladybird.floor, false);
     const mouse = arkBody({model_slug: "house-mouse"});
     assert.equal(mouse.source, "stored");
-    near(mouse.metres, 0.09, 0.005, "mouse (7.5-10 cm)");
-    near(mouse.display, 0.28, 0.01, "mouse on screen");
-    assert.ok(!mouse.floor);
-    near(arkBody({model_slug: "house-sparrow"}).display, 0.36, 0.01, "sparrow");
-    near(arkBody({model_slug: "eurasian-wolf"}).display, 1.44, 0.02, "wolf");
+    near(mouse.metres, 0.09, 0.005, "mouse head and body (7.5-10 cm)");
+    assert.ok(mouse.display > 0.09 && mouse.display < 0.25, `mouse drawn with its tail ${mouse.display}`);
+    // The humpback was drawn 3.5 m (its size stat is the elephant's); true to life it is about 14 m.
+    const humpback = arkBody({model_slug: "humpback-whale"});
+    assert.ok(humpback.display > 12 && humpback.display < 17, `humpback ${humpback.display}`);
+    const blue = arkBody({model_slug: "blue-whale"});
+    assert.ok(blue.display > 22, `a blue whale is no longer capped at 9 m: ${blue.display}`);
+    const elephant = arkBody({model_slug: "african-bush-elephant"});
+    assert.ok(blue.display > elephant.display * 3, "a blue whale is several elephants long");
+    assert.ok(elephant.display > mouse.display * 20, "an elephant dwarfs a mouse");
     near(arkBody({model_slug: "polar-bear"}).metres, 2.5, 0.001, "polar bear stored");
-    near(arkBody({model_slug: "african-bush-elephant"}).display, 3.51, 0.02, "elephant");
-    near(arkBody({model_slug: "fin-whale"}).display, 6.27, 0.03, "fin whale");
-    // The mass anchors read the other way: elephant 92 is 6 t.
+    // The mass anchors read the other way: elephant 92 is 6 t (only an estimate, for species with no known length).
     near(massFromSize(92), 6000, 1, "size 92");
     near(massFromSize(100), 150_000, 1, "size 100");
-    assert.equal(screenLength(80), ARK_SIZE_CAP);
-    assert.equal(screenLength(0.0001), ARK_SIZE_FLOOR);
-    // The snapshot's own values win over the catalogue's.
-    assert.equal(arkBody({model_slug: "house-mouse", length_m: 0.2}).metres, 0.2);
-    assert.ok(arkBody({model_slug: "domestic-cat", stats: {size: 92}}).display > 3);
+    // The snapshot's own stored length wins; it is drawn in the table's proportion (its tail).
+    const ownMouse = arkBody({model_slug: "house-mouse", length_m: 0.2});
+    assert.equal(ownMouse.metres, 0.2);
+    near(ownMouse.display / 0.2, mouse.display / mouse.metres, 1e-9, "drawn in the same proportion");
+    // A known length wins over a size stat (which only estimates one); a species with only stats is estimated.
+    near(arkBody({model_slug: "domestic-cat", stats: {size: 92}}).display, arkBody({model_slug: "domestic-cat"}).display, 1e-9, "the cat stays a cat");
+    const unknown = arkBody({model_slug: "no-such-animal", stats: {size: 26}});
+    assert.equal(unknown.source, "estimate");
+    near(unknown.metres, 0.33 * Math.cbrt(5), 0.01, "size 26 is 5 kg");
     // A species the catalogue lacks: its body plan, labelled as such.
     assert.equal(arkBody({model_slug: "no-such-animal"}, "bird").source, "plan");
+});
+
+test("every species in the table has a true size and a source", () => {
+    const table = sizesTable as unknown as {lengths: Record<string, [number, number, number]>; sources: string[]};
+    const rows = Object.entries(table.lengths);
+    assert.ok(rows.length > 2500, `${rows.length} sized`);
+    for (const [slug, [drawn, metres, source]] of rows) {
+        assert.ok(drawn > 0 && metres > 0, `${slug} has a length`);
+        assert.ok(table.sources[source], `${slug} has a source`);
+        assert.ok(drawn < 40 && metres < 40, `${slug}: ${drawn} m drawn, ${metres} m`);
+    }
 });
 
 test("size is a body length: models are scaled along their head-to-tail axis, so tall ones stand tall and upright ones by their height", () => {

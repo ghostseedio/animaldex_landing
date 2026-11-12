@@ -18,8 +18,9 @@ import {mapPoints} from "@/ark-scene/map/place";
 function apart(p: Placement, q: Placement, lengthP: number, lengthQ: number): boolean {
     // (A perched bird or lizard is on its attach point like a micro animal: its body clear of the others in 3D.)
     if (!p.micro && !q.micro && !p.perch && !q.perch) return Math.hypot(p.x - q.x, p.z - q.z) > 0.9;
-    // A small one on its attach point: their bodies do not overlap (centres further apart than their half-lengths).
-    return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max((lengthP + lengthQ) / 2, 0.02);
+    // A small one on its attach point: their bodies do not overlap (centres at least their half-lengths apart; at true size three
+    // 0.3 m puffins on one ledge stand a body apart, touching, which is a colony, not an overlap).
+    return Math.hypot(p.x - q.x, p.ground - q.ground, p.z - q.z) > Math.max((lengthP + lengthQ) / 2, 0.02) - 1e-6;
 }
 
 const full = decodeArkSnapshot(fixture)!;
