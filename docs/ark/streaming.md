@@ -250,3 +250,51 @@ Screenshots: `scratchpad/streaming/haze-full.png`, `haze-150.png` (the coast at 
   - read the WebView renderer's PSS (`dumpsys meminfo`) and the WebContent footprint as the Ark fills.
 - **The 2 GB AVD on a quiet Mac.** This lane's runs never reached a first frame on a starved emulator (§7). The same `ArkStreamingLowMem` AVD with `-gpu host -qemu -m 2048` and `scripts/ark-webview-host/` can repeat it in a few minutes once the load is down.
 - **The pack on a real network.** See §7.2.
+
+## 9. Both islands in one world (decisions 141–142)
+
+The owner's decision: both islands are visible side by side and pannable in one world, not loaded one at a time. T3 (`ark-islands-scene`) places the town across a 250 m strait in one world frame: the wild island at (0, 0), the town's origin at (508.6, −210.7), `islands/index.ts` `townWorldOrigin`. The streamer takes every island.
+
+**The interface** (`streaming/index.ts`; world coordinates unless noted):
+```ts
+streamer.registerIsland({id, offset, reach?, grid, spans, content, apply})   // grid/spans/content in the island's own frame
+streamer.unregisterIsland(id)
+streamer.update(eye, toTarget, fov, aspect, now, target)                     // target: the camera's (picks the active island)
+streamer.stateAt(x, z) / islandAt(x, z) / islandStateOf(id, chunk) / activeIsland / markContent(x, z)
+```
+- The scene's own island is the first (the constructor's grid, id `wild`). Its `onChange` listeners get its states and its own all-in flag, so the wild island is drawn exactly as built whenever its own chunks are all in, whatever the town is doing.
+- `apply(states, allIn)` is the island's own drawing: `in` in full, `map` in map style, `out` hidden. T3's town draws every non-`out` chunk in full until it draws a real map style (ground, buildings and trees; no small props or people).
+
+**The rules:**
+- **The active island** is the one the camera's target is over: the one whose coast is nearest (distance to its middle less its land reach: 90.25 m wild, 210.25 m town). It changes only when another coast is nearer by 30 m, so a target in the middle of the strait keeps the island it came from.
+- The active island's chunks go `in` within the render distance (960 / 640 / 440 m) and `map` out to the new **map distance** (3,000 / 2,200 / 1,600 m), then `out`. Every other island is at most `map`.
+  - From the wild island the town is map style; a pan to the town makes the town the one in full and the wild island map style.
+- **Haze** only past the map distance (and never in the map view). Both islands lie within ~1.1 km of any view over them, so the haze never hides the other island.
+- **The base fog is pushed out** (decision 142, "visibly next to each other") while more than one island is registered: the clear-weather 420 → 1,700 m grows with the islands' spread (`arkFogReach`: from one island's middle to the farthest corner of another's grid, beyond 700 m, in proportion). For T3's layout that is ~520 → ~2,110 m.
+  - The town's near half, from the wild island's default view, is under 20 % fog (the test checks its corners and middle). Before, it was up to about 15–45 % across the near half, and more on the far half.
+  - The wild island itself is unchanged: its far shore is ~415 m off, with no fog either way.
+  - Weather closing in (rain, fog, a storm) keeps its own distances: only the clear part of the fog is pushed, blended by how clear the weather's fog is.
+  - With one island (today's production, and the golden shots) the fog is exactly as before.
+- **Animals** of the island the camera is not over are map style: a marker, or their model while at least 6 px on screen (true scale). They are not stepped. Herds go by their chunk's state the same way.
+
+**Measured with T3's one world** (`ark-islands-scene` 279e9c55 merged locally on top of this branch; the merge is clean).
+- The real Ark: 3,137 animals, the kept ones on the town. Phone profile (4× CPU), 1 run each, Mac load ~30–45.
+- `scripts/ark-runtime-measure.mjs --islands [--pan town]`.
+
+| Run | Tier | Peak JS heap | Peak GPU est | fps (p50) | Frame CPU (median) | First frame | Chunks in | Animals as markers |
+|---|---|---|---|---|---|---|---|---|
+| wild island alone | medium | 179 MB | 122 MB | 23 (50 ms) | 34 ms | 10.9 s | 25 | 0 |
+| both, default view | medium | 214 MB | 153 MB | 40 (17 ms) | 28 ms | 14.5 s | wild 25, town 0 (81 map) | 47 |
+| both, after a pan to the town | medium | 209 MB | 100 MB | 45 (17 ms) | 15 ms | 14.1 s | 6 (the phone frames the whole town from ~600 m) | 399 |
+| both, default view | low | 207 MB | 103 MB | 59 (17 ms) | 17 ms | 16.3 s | 25 | 25 |
+| both, after a pan | low | 190 MB | 90 MB | 43 (17 ms) | 10 ms | 27.8 s | 0 | 200 |
+| both, default view (desktop) | medium | 227 MB | 189 MB | 60 | 11 ms | 6.4 s | 25 | 51 |
+
+- **Both islands fit the tiers' budgets as they are.** On medium they use 42 % of the heap budget and 48 % of the GPU budget; on low, 54 % of each. The town adds ~35 MB of heap and ~31 MB of GPU from the wild island's view.
+- **Wall times on this busy Mac are noisy.** The wild-alone run's lower fps is load, not the town.
+- **The town's build blocks the page before its first frame** (T3's to move): `loadTownScene` → `buildTownIsland` is one main-thread task of 4.9–9.3 s on the phone profile. It could move to a worker or be sliced, as the wild island's prebuild was.
+- **Stills** (GPU, medium, midday; `scratchpad/streaming/islands/still-*.png`):
+  - Desktop default view: the town reads clearly across the strait, with buildings, trees and its shore, and fog `522 → 2,114` m.
+  - The wild island alone: fog 420 → 1,700 m as before.
+  - After the pan: the town in full, the wild island in map style behind the camera.
+  - **The phone's upright default view does not show the town**: it is off frame to the east-north-east, since T3 turns the default view toward it only on desktop. That framing is T3's call.
