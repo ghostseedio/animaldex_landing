@@ -9,6 +9,8 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {ColliderSet} from "@/ark-scene/collide/colliders";
 import {CollideLayer} from "@/ark-scene/collide/layer";
 import type {ResolveBody, ResolvePose} from "@/ark-scene/collide/resolve";
+import {BackSide, BoxGeometry, DoubleSide, FrontSide, Group, Mesh, MeshStandardMaterial} from "three";
+import {splitTwoSided} from "@/ark-scene/runtime/two-sided";
 
 /**
  * A device for the pacer: each frame's script work (ms) and its GPU's time at full resolution (ms, going with the pixels:
@@ -156,4 +158,35 @@ test("the collisions' memo: the same answers as working each out afresh, moment 
         const epoch = 1_000_000 + k * 0.25;
         for (const e of animals) assert.deepEqual(kept(e, epoch), afresh(e, epoch), `${e.id} at ${epoch}`);
     }
+});
+
+test("two-sided transparent meshes: the back faces then the front, as three's two passes draw them, nothing else changed", () => {
+    const root = new Group();
+    const glass = new MeshStandardMaterial({transparent: true, opacity: 0.2, side: DoubleSide, depthWrite: false});
+    glass.customProgramCacheKey = () => "glass-key";
+    const patch = () => undefined;
+    glass.onBeforeCompile = patch;
+    const pane = new Mesh(new BoxGeometry(1, 1, 0.01), glass);
+    pane.renderOrder = 4;
+    const caster = new Mesh(new BoxGeometry(), new MeshStandardMaterial({transparent: true, side: DoubleSide}));
+    caster.castShadow = true;
+    const solid = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+    root.add(pane, caster, solid);
+    assert.equal(splitTwoSided(root), 1);
+    const back = pane.material as MeshStandardMaterial;
+    const front = pane.children[0] as Mesh;
+    assert.equal(back.side, BackSide);
+    assert.equal((front.material as MeshStandardMaterial).side, FrontSide);
+    assert.equal(front.geometry, pane.geometry, "the same geometry");
+    assert.ok(front.id > pane.id, "drawn right after it (the transparent sort's last word is the id)");
+    assert.equal(front.renderOrder, 4);
+    for (const copy of [back, front.material as MeshStandardMaterial]) {
+        assert.equal(copy.opacity, 0.2);
+        assert.equal(copy.customProgramCacheKey(), "glass-key");
+        assert.equal(copy.onBeforeCompile, patch);
+    }
+    // A shadow caster and an opaque mesh are left as they are; nothing is split twice.
+    assert.equal(caster.children.length, 0);
+    assert.equal(solid.children.length, 0);
+    assert.equal(splitTwoSided(root), 0);
 });

@@ -23,6 +23,7 @@ import type {TownPrepared} from "@/ark-scene/islands/town/prebuild";
 import type {TownIsland} from "@/ark-scene/islands/town/render/index";
 import type {WaterSpec} from "@/ark-scene/sea-depth";
 import type {PetHomes} from "@/ark-scene/islands/town/render/pet-homes";
+import {splitTwoSided} from "@/ark-scene/runtime/two-sided";
 
 export type ArkIslandScene = {
     id: "town";
@@ -255,6 +256,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     drawnMask.magFilter = NearestFilter;
     drawnMask.minFilter = NearestFilter;
     drawnMask.needsUpdate = true;
+    let splitAt = -Infinity;
     const applyDrawn = () => {
         const stream = streamDrawn;
         const upTo = revealed;
@@ -378,6 +380,14 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const clock = clockAt(epochMs);
             town.update(clock);
             zooLife.update(clock);
+            // Mobile performance lane: its transparent double-sided meshes (the zoo's glass, cage bars and nets) as two
+            // meshes each, the same picture without three's two program look-ups a frame for each (`runtime/two-sided.ts`);
+            // looked for every few seconds, for what is built or rebuilt later (an enclosure opening).
+            const now = typeof performance !== "undefined" ? performance.now() : 0;
+            if (now - splitAt > 3000) {
+                splitAt = now;
+                splitTwoSided(town.root);
+            }
         },
         setTrafficAnimals: (query) => {
             // (The town's cars ask in its own frame and on the island clock's seconds: the world's frame and epoch here.)
