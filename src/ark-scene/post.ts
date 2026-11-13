@@ -22,6 +22,7 @@ import {FXAAShader} from "three/examples/jsm/shaders/FXAAShader.js";
 import {HorizontalTiltShiftShader} from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
 import {VerticalTiltShiftShader} from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
 import {chooseTier, deviceSignals} from "@/ark-scene/streaming/tiers";
+import {arkCpuScore, tierForCpu} from "@/ark-scene/runtime/pace";
 
 export type QualityTier = "high" | "medium" | "low";
 
@@ -31,7 +32,19 @@ export type QualityTier = "high" | "medium" | "low";
  */
 export function tierFor(appMemoryGB?: number | null): QualityTier {
     if (typeof window === "undefined") return "medium";
-    return chooseTier(deviceSignals(appMemoryGB));
+    const signals = deviceSignals(appMemoryGB);
+    const tier = chooseTier(signals);
+    // Mobile performance lane: on a touch device, a slow main thread starts on the low tier (a short benchmark, once a
+    // page: the prebuild and the mount ask the same question and must get the same answer).
+    if (!signals.coarse) return tier;
+    cpuScoreMs ??= arkCpuScore();
+    return tierForCpu(tier, cpuScoreMs);
+}
+
+/** This page's main-thread benchmark (`runtime/pace.ts` arkCpuScore), once. */
+let cpuScoreMs: number | null = null;
+export function arkCpuScoreMs(): number | null {
+    return cpuScoreMs;
 }
 
 export function lowerTier(tier: QualityTier): QualityTier {

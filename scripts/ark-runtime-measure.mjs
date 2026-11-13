@@ -34,6 +34,18 @@
  * `--latency <ms>` (default 180, the bucket's measured time to first byte); `--serve <port>` serves the page on
  * the loopback for a WebView (the iOS Simulator, an Android emulator) without a browser of its own: the page posts its
  * result to /report and it is written to the output folder (open `/measure.html?…&report=/report&label=<name>`).
+ *
+ * Mobile performance lane (docs/ark/perf-audit-mobile-2026-11.md):
+ *   --devices phone-low       a low phone: 360×800 at DPR 2, 6× CPU throttle, 4 cores / 3 GB reported (the low tier)
+ *   --throttle <n>            the CPU throttle for every device in the run (default: the device's own)
+ *   --interact                a reader touching the world throughout (a pointer move every 200 ms: the full frame rate,
+ *                             the idle drift still turning the view) instead of an untouched page (30 fps after 5 s)
+ *   --page embed|hero         `/ark/embed.html` (the apps' panel, the archipelago mount with its workers; the bundle is
+ *                             built first) or the home page's hero (the embed in an iframe the hero's size, its
+ *                             refresh=600&idle=900) instead of the measurement page; with `--population-file` as the snapshot
+ *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
+ * Every page: each drawn frame's main-thread time and interval (requestAnimationFrame wrapped before the page's own
+ * script), the heap's growth between frames (allocation per second), and the bytes received before the first frame.
  */
 
 import {createServer} from "node:http";
@@ -59,7 +71,20 @@ const DEVICES = {
         isMobile: true,
         hasTouch: true,
         cpuThrottle: 4,
-        userAgent: "Mozilla/5.0 (Linux; Android 14; SM-A356B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36"
+        userAgent: "Mozilla/5.0 (Linux; Android 14; SM-A356B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+        cores: 8,
+        memoryGB: 4
+    },
+    // A low phone (a 3 GB Android, an older iPhone's class of CPU): the low tier from its memory, 6× throttle.
+    "phone-low": {
+        viewport: {width: 360, height: 800},
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+        cpuThrottle: 6,
+        userAgent: "Mozilla/5.0 (Linux; Android 13; SM-A145F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36",
+        cores: 4,
+        memoryGB: 3
     }
 };
 const NETWORKS = {
@@ -77,6 +102,10 @@ const quality = arg("quality", "auto");
 const gpu = arg("gpu", "metal");
 
 const buildEnv = flag("production") ? "production" : "development";
+const throttle = Number(arg("throttle", "0"));
+const interact = flag("interact");
+const pageKind = arg("page", "measure");
+const perfOn = flag("perf");
 const gcPoints = flag("gc-points");
 const gcSteadyMs = Number(arg("gc-steady", "80")) * 1000;
 
@@ -113,6 +142,21 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 <style>html,body{margin:0;height:100%;background:#ecdcc4;overflow:hidden}#ark{position:fixed;inset:0}</style>
 </head><body><div id="ark"></div><script src="./measure.js"></script></body></html>
 `);
+
+// `--page embed|hero`: the apps' bundle and workers into public/ark/ (gitignored), as the site's build makes them.
+if (pageKind !== "measure") {
+    const {execFileSync} = await import("node:child_process");
+    execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") ? ["--names"] : [])], {stdio: "inherit"});
+    // The home page's hero (home-ark-hero.tsx): the embed in a frame the hero's size (the viewport less the 4rem header).
+    writeFileSync(path.join(site, "hero.html"), `<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ark hero</title>
+<style>html,body{margin:0;background:#0b1d2e}header{height:64px}section{position:relative;height:calc(100svh - 64px);max-height:60rem;min-height:34rem}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}</style>
+</head><body><header></header><section><iframe id="hero" title="Ark"></iframe></section>
+<script>document.getElementById("hero").src = "/ark/embed.html" + location.search;</script></body></html>
+`);
+}
 
 const populationFile = arg("population-file", "");
 if (populationFile && !existsSync(populationFile)) throw new Error(`--population-file ${populationFile}: no such file`);
@@ -257,12 +301,57 @@ for (const deviceName of devices) {
                 // No long-animation-frame timing here.
             }
         });
-        if (deviceName === "phone") {
-            await context.addInitScript(() => {
-                Object.defineProperty(navigator, "hardwareConcurrency", {get: () => 8});
-                Object.defineProperty(navigator, "deviceMemory", {get: () => 4});
-            });
+        if (device.cores) {
+            await context.addInitScript(([cores, memoryGB]) => {
+                Object.defineProperty(navigator, "hardwareConcurrency", {get: () => cores});
+                Object.defineProperty(navigator, "deviceMemory", {get: () => memoryGB});
+            }, [device.cores, device.memoryGB]);
         }
+        // Every page and frame: each display frame's requestAnimationFrame work (the scene's frame is one callback),
+        // the heap at its end; the host messages an app would get (`ark:ready`, `ark:tier`) through `AndroidArk`; and,
+        // with `interact=1` in the URL, a pointer move on the world every 200 ms (the runtime's input: the full rate).
+        await context.addInitScript(() => {
+            const MAX = 40000;
+            const rec = {n: 0, t: new Float64Array(MAX), cpu: new Float64Array(MAX), heap: new Float64Array(MAX), ready: 0, tier: null};
+            window.__arkRec = rec;
+            const native = window.requestAnimationFrame.bind(window);
+            let frameTs = -1;
+            window.requestAnimationFrame = (callback) => native((ts) => {
+                const s = performance.now();
+                try {
+                    callback(ts);
+                } finally {
+                    const d = performance.now() - s;
+                    if (ts !== frameTs) {
+                        frameTs = ts;
+                        if (rec.n < MAX) {
+                            rec.t[rec.n] = ts;
+                            rec.cpu[rec.n] = 0;
+                            rec.n++;
+                        }
+                    }
+                    if (rec.n && rec.n <= MAX) {
+                        rec.cpu[rec.n - 1] += d;
+                        rec.heap[rec.n - 1] = performance.memory?.usedJSHeapSize ?? 0;
+                    }
+                }
+            });
+            window.AndroidArk = {postMessage: (text) => {
+                try {
+                    const message = JSON.parse(text);
+                    if (message.type === "ark:ready" && !rec.ready) rec.ready = performance.now();
+                    if (message.type === "ark:tier") rec.tier = message.tier;
+                } catch {
+                    // Not ours.
+                }
+            }};
+            if (/[?&]interact=1/.test(location.search)) {
+                setInterval(() => {
+                    const canvas = document.querySelector("canvas");
+                    canvas?.dispatchEvent(new PointerEvent("pointermove", {bubbles: true, clientX: 100, clientY: 100, pointerType: "touch"}));
+                }, 200);
+            }
+        });
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", (error) => errors.push(String(error)));
@@ -270,11 +359,13 @@ for (const deviceName of devices) {
             if (message.type() === "error") errors.push(message.text());
         });
         const cdp = await context.newCDPSession(page);
-        if (device.cpuThrottle > 1) await cdp.send("Emulation.setCPUThrottlingRate", {rate: device.cpuThrottle});
-        if (network) {
-            await cdp.send("Network.enable");
-            await cdp.send("Network.emulateNetworkConditions", network);
-        }
+        const cpuThrottle = throttle > 0 ? throttle : device.cpuThrottle;
+        if (cpuThrottle > 1) await cdp.send("Emulation.setCPUThrottlingRate", {rate: cpuThrottle});
+        // The bytes received, as each response finishes (node's clock), for the bytes before the first frame.
+        const received = [];
+        await cdp.send("Network.enable");
+        cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0}));
+        if (network) await cdp.send("Network.emulateNetworkConditions", network);
         if (flag("profile")) {
             await cdp.send("Profiler.enable");
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
@@ -283,7 +374,18 @@ for (const deviceName of devices) {
         const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         let navigated = Date.now();
-        await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}`, {waitUntil: "commit", timeout: 120_000});
+        const lane = `${interact ? "&interact=1" : ""}${perfOn ? "&perf=1" : ""}`;
+        if (pageKind === "measure") {
+            await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}${lane}`, {waitUntil: "commit", timeout: 120_000});
+        } else {
+            // The embed (the apps' panel) or the hero: the snapshot file as the API's answer; the tier pinned with --quality
+            // (the embed reads `__arkQuality` as the measurement page does: set before its script runs).
+            if (quality !== "auto") await context.addInitScript((q) => { window.__arkQuality = q; }, quality);
+            const query = `snapshot=${encodeURIComponent(populationFile ? "/population-file.json" : "/ark-missing.json")}${pageKind === "hero" ? "&refresh=600&idle=900" : ""}${modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : ""}${lane}`;
+            await page.goto(`${base}/${pageKind === "hero" ? "hero.html" : "ark/embed.html"}?${query}`, {waitUntil: "commit", timeout: 120_000});
+        }
+        /** The frame the scene runs in (the hero's iframe). */
+        const sceneFrame = async () => (pageKind === "hero" ? page.frames().find((f) => f.url().includes("/ark/embed.html")) ?? page.mainFrame() : page.mainFrame());
         // `--repeat`: this load only primes the page's caches; the measured one is a second visit in the same browser.
         if (flag("repeat")) {
             await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
@@ -292,17 +394,100 @@ for (const deviceName of devices) {
         }
         // `--gc-points`: the first frame (the page notes it when the scene first drew, after the prebuild), then steady play.
         let gc = null;
+        if (pageKind !== "measure") {
+            // No measurement page: the first frame is the embed's `ark:ready`; then `seconds` of play.
+            const deadline = Date.now() + 240_000;
+            let readyAt = 0;
+            while (!readyAt && Date.now() < deadline) {
+                await page.waitForTimeout(250);
+                readyAt = await (await sceneFrame()).evaluate(() => window.__arkRec?.ready ?? 0).catch(() => 0);
+            }
+            if (!readyAt) throw new Error(`${pageKind}: no ark:ready in 240 s`);
+        }
         if (gcPoints) {
             await cdp.send("HeapProfiler.enable");
-            await page.waitForFunction(() => Boolean(window.__arkMeasure?.firstFrameAt || window.__arkMeasure?.done), null, {timeout: 180_000, polling: 100});
+            if (pageKind === "measure") await page.waitForFunction(() => Boolean(window.__arkMeasure?.firstFrameAt || window.__arkMeasure?.done), null, {timeout: 180_000, polling: 100});
             const firstFrame = await forcedGc(page, cdp, navigated);
             const wait = gcSteadyMs - (Date.now() - navigated);
             if (wait > 0) await page.waitForTimeout(wait);
             gc = {firstFrame, steady: await forcedGc(page, cdp, navigated)};
             log(deviceName, `run ${run}: forced GC at the first frame (${firstFrame.t} s) ${firstFrame.beforeGcMB} -> ${firstFrame.afterGcMB} MB, in steady play (${gc.steady.t} s) ${gc.steady.beforeGcMB} -> ${gc.steady.afterGcMB} MB`);
         }
-        await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
-        const measured = await page.evaluate(() => window.__arkMeasure);
+        // The scene's own profiler (`--perf`): its rolling report every 5 s from 20 s after the first frame, averaged.
+        const perfReports = [];
+        const frame = await sceneFrame();
+        const pollPerf = async () => {
+            if (!perfOn) return;
+            const report = await frame.evaluate(() => window.__arkPerfReport?.() ?? null).catch(() => null);
+            if (report) perfReports.push({...report, at: Date.now() - navigated});
+        };
+        let measured;
+        if (pageKind === "measure") {
+            const until = Date.now() + (seconds + 120) * 1000;
+            while (!(await page.evaluate(() => window.__arkMeasure?.done)) && Date.now() < until) {
+                await page.waitForTimeout(5000);
+                const firstAt = await page.evaluate(() => window.__arkMeasure?.firstFrameAt ?? 0);
+                if (firstAt) await pollPerf();
+            }
+            measured = await page.evaluate(() => window.__arkMeasure);
+        } else {
+            const readyAt = await frame.evaluate(() => window.__arkRec.ready);
+            const end = navigated + readyAt + seconds * 1000;
+            while (Date.now() < end) {
+                await page.waitForTimeout(5000);
+                await pollPerf();
+            }
+            const stats = await frame.evaluate(() => window.__arkPerfReport?.() ?? null).catch(() => null);
+            measured = {result: {firstFrameMs: readyAt, firstFrameFromNavigation: readyAt, mountMs: null, inViewMs: null, world: null, stats: {tier: await frame.evaluate(() => window.__arkRec.tier), modelsLoaded: null, drawCalls: stats?.gpu.calls ?? null, triangles: stats?.gpu.triangles ?? null}, memory: null, heapMB: stats?.heapMB ?? null}};
+        }
+        // Drawn frames: display frames whose callbacks took over 1 ms (a skipped frame returns at once), from 20 s after the
+        // first frame (past the opening and the first models) to the end.
+        const rec = await frame.evaluate(() => {
+            const r = window.__arkRec;
+            return {n: r.n, t: Array.from(r.t.subarray(0, r.n)), cpu: Array.from(r.cpu.subarray(0, r.n)), heap: Array.from(r.heap.subarray(0, r.n))};
+        });
+        const firstFrameAt = measured.result?.firstFrameFromNavigation ?? 0;
+        const steadyFrom = firstFrameAt + Number(arg("steady-from", "20")) * 1000;
+        const drawnFrames = [];
+        for (let i = 0; i < rec.n; i++) if (rec.t[i] >= steadyFrom && rec.cpu[i] > 1) drawnFrames.push(i);
+        const intervals = [];
+        let alloc = 0;
+        let gcs = 0;
+        for (let k = 1; k < drawnFrames.length; k++) {
+            const a = drawnFrames[k - 1];
+            const b = drawnFrames[k];
+            intervals.push(rec.t[b] - rec.t[a]);
+            const grew = rec.heap[b] - rec.heap[a];
+            if (grew > 0) alloc += grew;
+            else if (grew < -1024 * 1024) gcs++;
+        }
+        const steadySeconds = drawnFrames.length > 1 ? (rec.t[drawnFrames[drawnFrames.length - 1]] - rec.t[drawnFrames[0]]) / 1000 : 0;
+        const q = (list, share) => {
+            const sorted = [...list].sort((x, y) => x - y);
+            return sorted.length ? Math.round(sorted[Math.min(sorted.length - 1, Math.floor(share * sorted.length))] * 10) / 10 : null;
+        };
+        const cpuList = drawnFrames.map((i) => rec.cpu[i]);
+        const steady = {
+            seconds: Math.round(steadySeconds),
+            frames: drawnFrames.length,
+            fps: steadySeconds ? Math.round((drawnFrames.length / steadySeconds) * 10) / 10 : null,
+            interval: {p50: q(intervals, 0.5), p95: q(intervals, 0.95), p99: q(intervals, 0.99), over16: intervals.length ? Math.round((intervals.filter((v) => v > 17.7).length / intervals.length) * 1000) / 10 : null, over33: intervals.length ? Math.round((intervals.filter((v) => v > 34.4).length / intervals.length) * 1000) / 10 : null},
+            cpu: {p50: q(cpuList, 0.5), p95: q(cpuList, 0.95), p99: q(cpuList, 0.99), mean: cpuList.length ? Math.round((cpuList.reduce((s, v) => s + v, 0) / cpuList.length) * 10) / 10 : null},
+            allocMBps: steadySeconds ? Math.round((alloc / 2 ** 20 / steadySeconds) * 10) / 10 : null,
+            gcDrops: gcs
+        };
+        const bytesBeforeFirstFrame = received.filter((r) => r.at <= navigated + firstFrameAt).reduce((sum, r) => sum + r.bytes, 0);
+        // The profiler's sections and counts, averaged over its reports.
+        const perfAvg = perfReports.length ? (() => {
+            const sections = {};
+            const late = perfReports.filter((r) => r.at >= steadyFrom);
+            const used = late.length ? late : perfReports.slice(-1);
+            for (const report of used) for (const [name, ms] of Object.entries(report.sections)) sections[name] = (sections[name] ?? 0) + ms / used.length;
+            for (const name of Object.keys(sections)) sections[name] = Math.round(sections[name] * 100) / 100;
+            const last = perfReports[perfReports.length - 1];
+            const first = perfReports[0];
+            return {reports: perfReports.length, inViewAt: last.inViewAt ?? null, timeline: perfReports.map((r) => ({at: r.at, fps: r.fps, cpu: r.cpu.mean, drawn: r.drawn, tier: r.tier, dpr: r.dpr, world: r.sections.world ?? 0, schedule: r.sections.schedule ?? 0, scenery: r.sections.scenery ?? 0, resting: r.sections.resting ?? 0, render: r.sections.render ?? 0, heapMB: r.heapMB})), sections, gpu: last.gpu, tier: last.tier, dpr: last.dpr, scale: last.scale, drawn: last.drawn, rigged: last.rigged, mode: last.mode, hudRendersPerSecond: perfReports.length > 1 ? Math.round(((last.hudRenders - first.hudRenders) / ((perfReports.length - 1) * 5)) * 10) / 10 : null};
+        })() : null;
         if (flag("profile")) {
             const {profile} = await cdp.send("Profiler.stop");
             writeFileSync(path.join(out, `${deviceName}-${run}.cpuprofile`), JSON.stringify(profile));
@@ -328,6 +513,12 @@ for (const deviceName of devices) {
         const after = tasks.filter((task) => r.firstFrameFromNavigation && task.start >= r.firstFrameFromNavigation);
         const row = {
             device: deviceName,
+            page: pageKind,
+            throttle: cpuThrottle,
+            interact,
+            steady,
+            perf: perfAvg,
+            bytesBeforeFirstFrame,
             run,
             world: r.world ?? null,
             build: buildEnv,
@@ -354,19 +545,20 @@ for (const deviceName of devices) {
             streaming: r.streaming ?? null,
             jsHeapUsedMB: metrics.JSHeapUsedSize ? Math.round(metrics.JSHeapUsedSize / 2 ** 20) : null,
             memory: r.memory,
-            tier: r.stats.tier,
-            models: r.stats.modelsLoaded,
-            drawCalls: r.stats.drawCalls,
-            triangles: r.stats.triangles,
+            tier: r.stats?.tier ?? null,
+            models: r.stats?.modelsLoaded ?? null,
+            drawCalls: r.stats?.drawCalls ?? null,
+            triangles: r.stats?.triangles ?? null,
             runtime: r.runtime,
             prepared: r.prepared,
             animals: r.animals,
             tasks,
             longFrames: frames.filter((frame) => frame.blocking > 0 || frame.ms > 100).slice(0, 40),
-            samples: r.samples,
+            samples: r.samples ?? null,
             errors: errors.filter((e) => !/Failed to load resource/.test(e)).slice(0, 8)
         };
         results.push(row);
+        log(deviceName, `run ${run} [${pageKind}, ${cpuThrottle}x, ${interact ? "touched" : "untouched"}, ${row.tier}] steady ${steady.fps} fps, interval p50/p95/p99 ${steady.interval.p50}/${steady.interval.p95}/${steady.interval.p99} ms, >16.7 ${steady.interval.over16}%, >33 ${steady.interval.over33}%, cpu p50/p95 ${steady.cpu.p50}/${steady.cpu.p95} ms, alloc ${steady.allocMBps} MB/s (${steady.gcDrops} GC drops), ${Math.round(bytesBeforeFirstFrame / 1024)} KB before the first frame${perfAvg ? `, sections ${JSON.stringify(perfAvg.sections)}, calls ${perfAvg.gpu.calls}, tris ${perfAvg.gpu.triangles}, programs ${perfAvg.gpu.programs}, textures ${perfAvg.gpu.textures}, dpr ${perfAvg.dpr}, drawn ${perfAvg.drawn}, rigged ${perfAvg.rigged}, mode ${perfAvg.mode}` : ""}`);
         log(deviceName, `run ${run} (world ${row.world}):`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms (${row.inViewBy ?? "-"}), frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB (peak ${row.peakHeapMB}), GPU peak ${row.peakGpuMB} MB, requests to view ${row.inViewRequests} (pack ${row.library?.packHits ?? "-"}/${(row.library?.packHits ?? 0) + (row.library?.fileHits ?? 0)}), chunks in ${row.streaming?.chunks?.in ?? "-"}, skipped ${row.streaming?.animalsSkipped ?? "-"}, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
         await context.close();
     }
@@ -388,6 +580,14 @@ const lines = [
 for (const deviceName of devices) {
     const rows = results.filter((r) => r.device === deviceName);
     lines.push(`| ${deviceName} | ${median(rows.map((r) => r.firstFrameMs))} | ${median(rows.map((r) => r.mountMs))} | ${median(rows.map((r) => r.inViewMs))} | ${median(rows.map((r) => r.inViewRequests))} | ${median(rows.map((r) => r.longestTaskMs))} | ${median(rows.map((r) => r.longTasks))} | ${median(rows.map((r) => r.longestAfterFirstFrameMs))} | ${median(rows.map((r) => r.heapMB))} | ${median(rows.map((r) => r.peakHeapMB))} | ${median(rows.map((r) => r.peakGpuMB))} | ${median(rows.map((r) => r.frameRate?.fps))} | ${median(rows.map((r) => r.frameRate?.p50Ms))} | ${median(rows.map((r) => r.frameRate?.p95Ms))} | ${median(rows.map((r) => r.memory?.geometryMB))} | ${median(rows.map((r) => r.memory?.textureMB))} | ${median(rows.map((r) => r.models))} | ${rows[0]?.tier} |${gcPoints ? ` ${median(rows.map((r) => r.gc?.firstFrame.afterGcMB))} | ${median(rows.map((r) => r.gc?.steady.afterGcMB))} |` : ""}`);
+}
+// The lane's steady-play table (frames from 20 s after the first frame).
+lines.push("", `| device | page | throttle | touched | tier | fps | interval p50 / p95 / p99 ms | > 16.7 ms % | > 33 ms % | frame CPU p50 / p95 ms | alloc MB/s | GC drops | KB before 1st frame | first frame ms |${perfOn ? " calls | triangles | programs | textures | top sections (ms/frame) |" : ""}`, `|---|---|---|---|---|---|---|---|---|---|---|---|---|---|${perfOn ? "---|---|---|---|---|" : ""}`);
+for (const deviceName of devices) {
+    const rows = results.filter((r) => r.device === deviceName);
+    const m = (pick) => median(rows.map(pick));
+    const top = rows[0]?.perf ? Object.entries(rows[0].perf.sections).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => `${k} ${v}`).join(", ") : "";
+    lines.push(`| ${deviceName} | ${pageKind} | ${rows[0]?.throttle}x | ${interact ? "yes" : "no"} | ${rows[0]?.tier ?? rows[0]?.perf?.tier} | ${m((r) => r.steady.fps)} | ${m((r) => r.steady.interval.p50)} / ${m((r) => r.steady.interval.p95)} / ${m((r) => r.steady.interval.p99)} | ${m((r) => r.steady.interval.over16)} | ${m((r) => r.steady.interval.over33)} | ${m((r) => r.steady.cpu.p50)} / ${m((r) => r.steady.cpu.p95)} | ${m((r) => r.steady.allocMBps)} | ${m((r) => r.steady.gcDrops)} | ${Math.round((m((r) => r.bytesBeforeFirstFrame) ?? 0) / 1024)} | ${m((r) => r.firstFrameMs)} |${perfOn ? ` ${m((r) => r.perf?.gpu.calls)} | ${m((r) => r.perf?.gpu.triangles)} | ${m((r) => r.perf?.gpu.programs)} | ${m((r) => r.perf?.gpu.textures)} | ${top} |` : ""}`);
 }
 writeFileSync(path.join(out, "runtime.md"), lines.join("\n") + "\n");
 log("wrote", path.join(out, "runtime.md"));

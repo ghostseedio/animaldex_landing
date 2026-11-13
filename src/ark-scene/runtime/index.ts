@@ -397,6 +397,16 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             return governor.uncapped(performance.now() / 1000);
         },
 
+        /** Full rate but for the frame pacing's own cap (`runtime/pace.ts` measures these). */
+        drawsFull(): boolean {
+            return governor.drawsFull(performance.now() / 1000);
+        },
+
+        /** The frame pacing's cap: 0, or a steady lower rate's ms between frames. */
+        setPaceCap(ms: number) {
+            governor.setPaceCap(ms);
+        },
+
         /** OrbitControls' damping for this frame (per second, not per frame) and the wheel's glide. */
         controls(dt: number) {
             ctx.controls.dampingFactor = dampingFor(dt);

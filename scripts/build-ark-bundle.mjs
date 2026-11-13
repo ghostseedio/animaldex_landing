@@ -17,6 +17,8 @@ import {build} from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dev = process.argv.includes("--dev");
+// `--names`: a production build with its names kept (a readable CPU profile: scripts/ark-runtime-measure.mjs --profile).
+const minify = !dev && !process.argv.includes("--names");
 
 const result = await build({
     entryPoints: [path.join(root, "src/ark-scene/embed-entry.ts")],
@@ -25,7 +27,7 @@ const result = await build({
     format: "iife",
     platform: "browser",
     target: ["es2020", "safari15"],
-    minify: !dev,
+    minify,
     sourcemap: dev,
     tsconfig: path.join(root, "tsconfig.json"),
     define: {"process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production")},
@@ -50,7 +52,7 @@ for (const [entry, out] of [["runtime/prebuild-worker.ts", "ark-prebuild-worker.
         format: "iife",
         platform: "browser",
         target: ["es2020", "safari15"],
-        minify: !dev,
+        minify,
         tsconfig: path.join(root, "tsconfig.json"),
         define: {"process.env.NODE_ENV": JSON.stringify(dev ? "development" : "production")},
         legalComments: "none",

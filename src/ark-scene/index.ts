@@ -110,7 +110,9 @@ import {gripPoint} from "@/ark-scene/map/grip";
 import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
-import {ArkPost, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
+import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
+import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
+import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {CAMERA_RANGE, fitWhole, meetDistance} from "@/ark-scene/runtime/camera";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
@@ -198,6 +200,7 @@ import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF,
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
+import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
@@ -317,6 +320,8 @@ type Sched = {
     wired?: boolean;
     /** Its schedule worked out once since it was wired (the first step is the costly one: a few a frame, `WARM_MS`). */
     warm?: boolean;
+    /** Its pose was last worked out with the collisions (drawn as a model): one drawn again is worked out with them at once. */
+    collided?: boolean;
 };
 
 /** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
@@ -562,21 +567,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The wild island's places last laid out, kept while its animals are the same (the town attaching re-places only the town). */
     let lastWild: {animals: ArkAnimal[]; places: Map<string, Placement>} | null = null;
+    /** The same animals in the same order, each the very same or a new read of it field for field (`runtime/same.ts`). */
+    const sameAnimalList = (a: readonly ArkAnimal[], b: readonly ArkAnimal[]) => a.length === b.length && a.every((animal, i) => animal === b[i] || sameJson(animal, b[i]));
+    /** A new read's wild animals as `placeAll` will place them, or null when last time's places serve. */
+    const wildToPlace = (snapshot: ArkSnapshot): ArkAnimal[] | null => {
+        const isl = island;
+        const wild = isl ? snapshot.animals.filter((animal) => !isl.has(animal)) : snapshot.animals;
+        return lastWild && sameAnimalList(lastWild.animals, wild) ? null : wild;
+    };
     /** Every animal's place: the wild island's by its map, the town's by its plan (in the world frame). */
     const placeAll = (animals: ArkAnimal[], ghosts = false): Map<string, Placement> => {
         const isl = island;
         if (!isl) {
+            // (The same animals as last time, read again, keep last time's places: a place depends only on the animals.)
+            if (!ghosts && lastWild && sameAnimalList(lastWild.animals, animals)) return new Map(lastWild.places);
             const places = placeAnimals(animals);
-            if (!ghosts) lastWild = {animals, places};
+            if (!ghosts) lastWild = {animals, places: new Map(places)};
             return places;
         }
         const town: ArkAnimal[] = [];
         const wild: ArkAnimal[] = [];
         for (const animal of animals) (isl.has(animal) ? town : wild).push(animal);
         // (The wild island's list as the page's prebuild was given it, so its places come from the worker when primed; the
-        // same animals as last time keep last time's places.)
+        // same animals as last time keep last time's places: the very same, or a new read of them, field for field.)
         let places: Map<string, Placement>;
-        if (!ghosts && lastWild && lastWild.animals.length === wild.length && lastWild.animals.every((a, i) => a === wild[i])) places = new Map(lastWild.places);
+        if (!ghosts && lastWild && sameAnimalList(lastWild.animals, wild)) places = new Map(lastWild.places);
         else {
             places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
             if (!ghosts) lastWild = {animals: wild, places: new Map(places)};
@@ -618,7 +633,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     renderer.toneMappingExposure = 0.66;
     renderer.shadowMap.type = PCFSoftShadowMap;
     let pixelRatio = Math.min(window.devicePixelRatio || 1, TIER_SETTINGS[tier].pixelRatio);
-    renderer.setPixelRatio(pixelRatio);
+    /**
+     * Mobile performance lane (`runtime/pace.ts`): on a touch device, the frame rate (the display's, or a steady 30), the
+     * drawing buffer's scale on the tier's pixel ratio and, as a last resort, the tier, from the frames as they are drawn.
+     * Elsewhere (a desktop) and in a recording: none of it (the tier check as before, the scale 1).
+     */
+    // (The low tier starts at a steady 30 when the main thread is slow, `tierForCpu`; otherwise at the display's rate.)
+    const pacer = !options.recording && Boolean(window.matchMedia?.("(pointer: coarse)").matches) ? new ArkFramePacer(tier, performance.now() / 1000, tier === "low" && (arkCpuScoreMs() ?? 0) > SLOW_CPU_MS) : null;
+    let resolutionScale = 1;
+    /** The drawing buffer's pixels per CSS pixel: the tier's pixel ratio at the pacing's scale. */
+    const drawRatio = () => pixelRatio * resolutionScale;
+    renderer.setPixelRatio(drawRatio());
+    // The frame profiler and its overlay (`?perf=1`, runtime/perf.ts): off, every mark is one early return.
+    const perf = new ArkPerf(arkPerfAsked());
+    /** The shared collisions' time in the current `stepSchedule` call (the profiler's "collide"). */
+    let collideCallMs = 0;
     const canvas = renderer.domElement;
     canvas.style.display = "block";
     canvas.style.width = "100%";
@@ -941,7 +970,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sceneModule.setShadows(settings.shadows > 0);
         }
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
-        renderer.setPixelRatio(pixelRatio);
+        renderer.setPixelRatio(drawRatio());
+        if (pacer) {
+            pacer.setTier(tier, performance.now() / 1000);
+            if (runtime.ready) runtime.setPaceCap(pacer.interval);
+        }
         motes.points.visible = !reducedMotion && !liteOn();
         resize();
         options.onTier?.(tier, liteOn());
@@ -1250,34 +1283,64 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const REST_STEP = 300;
     const restingMemo = new Map<string, boolean>();
     let restingWarm: {step: number; queue: string[]} | null = null;
-    let warmIds: {snapshot: ArkSnapshot; byId: Map<string, ArkAnimal>} | null = null;
+    /** The warm-up's asks owed (fractional, spread over the step's frames). */
+    let restingCredit = 0;
+    let warmIds: {snapshot: ArkSnapshot; byId: Map<string, ArkAnimal>; scheds: Map<string, Sched | null>; worlds: [unknown, unknown]} | null = null;
     /** In the minute before a rotation step, the next step's resting answers a few milliseconds a frame. */
     const prewarmResting = () => {
         if (!world || !scheduleOn || !(behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST]) return;
         const seconds = worldMs() / 1000;
         const next = Math.floor(seconds / REST_STEP) + 1;
-        if (next * REST_STEP - seconds > 60) return;
+        // (Mobile performance lane: spread evenly over the step from its first seconds, so it is done a minute before the
+        // next, then up to 6 ms a frame for anything left in its last minute. It was 6 ms a frame in the last minute only,
+        // and one ask overruns that on a phone: 8–19 ms a frame for a minute on the phone profiles. The same answers,
+        // remembered per step, only asked sooner and fewer a frame.)
+        const ahead = next * REST_STEP - seconds;
+        if (ahead > REST_STEP - 10) return;
         if (!restingWarm || restingWarm.step !== next) {
             for (const key of Array.from(restingMemo.keys())) if (!key.endsWith(`|${next - 1}`)) restingMemo.delete(key);
             restingWarm = {step: next, queue: current.animals.map((animal) => animal.id)};
         }
         const ask = restingForStep(current, placedAll, next);
+        if (!ask) return;
+        if (ahead > 60) {
+            // Its share this frame: what is left over the frames left until a minute before the step (at 20 a second).
+            restingCredit += restingWarm.queue.length / Math.max((ahead - 60) * 20, 1);
+            while (restingCredit >= 1 && restingWarm.queue.length) {
+                ask(restingWarm.queue.pop()!);
+                restingCredit--;
+            }
+            return;
+        }
+        restingCredit = 0;
         const started = performance.now();
-        while (ask && restingWarm.queue.length && performance.now() - started < 6) ask(restingWarm.queue.pop()!);
+        while (restingWarm.queue.length && performance.now() - started < 6) ask(restingWarm.queue.pop()!);
     };
     /** `restingFor` at a given step (the warm-up's). */
     const restingForStep = (snapshot: ArkSnapshot, places: Map<string, Placement>, step: number) => {
         const resting = (behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST] as undefined | ((world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epoch: number, hoursAt: HoursAt, activity?: ArkAnimal["activity"]) => {resting: boolean});
         if (!resting || !world) return null;
-        if (!warmIds || warmIds.snapshot !== snapshot) warmIds = {snapshot, byId: new Map(snapshot.animals.map((animal) => [animal.id, animal]))};
+        if (!warmIds || warmIds.snapshot !== snapshot) warmIds = {snapshot, byId: new Map(snapshot.animals.map((animal) => [animal.id, animal])), scheds: new Map(), worlds: [world, townWorld]};
+        // (An animal not drawn one by one has no schedule of its own: the one made for it is kept for the next steps, for
+        // this snapshot, its places and the behaviour worlds it was made in, instead of made again every five minutes.)
+        if (warmIds.worlds[0] !== world || warmIds.worlds[1] !== townWorld) warmIds = {...warmIds, scheds: new Map(), worlds: [world, townWorld]};
         const byId = warmIds.byId;
+        const scheds = warmIds.scheds;
         return (id: string) => {
             const key = `${id}|${step}`;
             if (restingMemo.has(key)) return;
             const animal = byId.get(id);
             const place = places.get(id);
             if (!animal || !place) return;
-            const sched = entryById.get(id)?.sched ?? makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
+            // (As before: an entry's own schedule when it has one, else one made for it.)
+            let sched: Sched | null | undefined = entryById.get(id)?.sched ?? undefined;
+            if (sched === undefined) {
+                sched = places === placedAll ? scheds.get(id) : undefined;
+                if (sched === undefined) {
+                    sched = makeSched(animal, place, arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display);
+                    if (places === placedAll) scheds.set(id, sched);
+                }
+            }
             restingMemo.set(key, sched ? resting(worldOf(sched.animal), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false);
         };
     };
@@ -1635,13 +1698,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pin = sharedPins.size ? sharedPins.get(entry.animal.id) : undefined;
         // Every frame close by (its near model, the one looked at, or a pinned one); twice a second as a far model; once a second as an icon.
         const every = entry.level === "near" || watched || pin ? 0 : entry.level === "far" ? 0.5 : 1;
-        if (!own.pose || epoch - own.at >= every || epoch < own.at) {
+        const modelled = entry.level === "near" || entry.level === "far" || watched;
+        // (Drawn as a model again after a while as a dot or out of sight: its pose with the collisions now, not up to half a
+        // second later, so what it is drawn at is the shared pose from its first frame.)
+        if (!own.pose || epoch - own.at >= every || epoch < own.at || (modelled && !own.collided)) {
             // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared); then
             // the collisions: out of anything solid, eased off its neighbours (`collide/`; shared).
             // (Drawn as a model, near or far: a dot far off is the same dot either way, so it skips them; the models round it
             // still ease off its own pose, worked out exactly: `collide/layer.ts`.)
             const base = sharedBase(entry, epoch, pin);
-            const at = (own.pose = entry.level === "near" || entry.level === "far" || watched ? withCollisions(entry, base, epoch) : base);
+            const collideAt = perf.on ? performance.now() : 0;
+            const at = (own.pose = modelled ? withCollisions(entry, base, epoch) : base);
+            own.collided = modelled;
+            if (perf.on) collideCallMs += performance.now() - collideAt;
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
             const onLand = !at.aloft && own.ground > 0.02 && Math.abs(at.y - own.ground) < 0.05;
@@ -3989,6 +4058,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         };
         const skipStreamed = (entry: Entry, at: {x: number; y: number; z: number}) => {
             entry.middle = null;
+            // (Not drawn as a model: its schedule at an icon's rate and without the collisions, as for one out of view.)
+            entry.level = "token";
             // Back in range it is drawn as it is then (never lying down on arrival).
             entry.sleepStarted = false;
             streamSkipped++;
@@ -4021,8 +4092,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             } else if (scheduled(entry)) {
                 const started = performance.now();
+                collideCallMs = 0;
                 stepSchedule(entry, epochNow, dt);
                 const spent = performance.now() - started;
+                perf.carve("schedule", spent - collideCallMs);
+                perf.carve("collide", collideCallMs);
                 behaviourFrameMs += spent;
                 if (!entry.sched!.warm) {
                     warmFrameMs += spent;
@@ -4111,8 +4185,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         // The page's tap card says what the selected animal is doing now, from the same state.
         tellState();
+        perf.lap("animals");
         // The local reactive layer first (its offsets and turns go onto the poses keepApart and the grass then read).
         if (scheduleOn && !reducedMotion) stepReactive(candidates, dt);
+        perf.lap("reactive");
         if (scheduleOn && !reducedMotion) {
             const started = performance.now();
             keepApart(candidates, dt);
@@ -4133,6 +4209,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
+        perf.lap("apart");
         // Every visible animal's gait (its pace by the distance it covers): which movers get a rig from far off, and
         // the cheap gait of those that don't.
         for (const c of candidates) if (c.visible && !c.skip) c.entry.gait = stepGait(c.entry.gait, c.pose.x, c.pose.z, dt, c.entry.length);
@@ -4194,6 +4271,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             candidate.rig = rigFor(entry, model, candidate.pose, candidate.modelScale, dt);
             if (candidate.rig) rigged++;
         }
+        perf.lap("rigs");
 
         const perMesh = new Map<InstancedMesh, number>();
         const used = new Set<InstancedMesh>();
@@ -4232,6 +4310,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const rig = need.rig ? rigs.get(slug) : undefined;
             if (rig) instancedRigFor(model, rig, need.rig);
         });
+        perf.lap("herds");
 
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
@@ -4480,7 +4559,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // rock's top, a log, a climb's ramp, is no ground for the feet; the legged driver would stand its body on the
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
+                const locoAt = perf.on ? performance.now() : 0;
                 const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null}, index);
+                if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
@@ -4573,6 +4654,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         }
 
+        perf.lap("instances");
         // The herds' figures after their species' representatives, in the same far mesh (one draw call); the specks in one mesh for all.
         specks.begin();
         for (const herd of herdPlans) {
@@ -4658,6 +4740,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dots.set(dotList);
         shadows.set(shadowList);
         rings.set(ringList);
+        perf.lap("herds");
     };
 
     // MARK: Camera
@@ -5347,10 +5430,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyInset();
         tokens.setViewport(FOV, height, width < 640);
         dots.setViewport(FOV, height);
-        post.setSize(width, height, pixelRatio);
-        motes.setPixelRatio(pixelRatio);
-        dust.setPixelRatio(pixelRatio);
-        liveliness.setPixelRatio(pixelRatio);
+        post.setSize(width, height, drawRatio());
+        motes.setPixelRatio(drawRatio());
+        dust.setPixelRatio(drawRatio());
+        liveliness.setPixelRatio(drawRatio());
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(el);
@@ -6137,12 +6220,90 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const frameTimes: number[] = [];
     const frameIntervals: number[] = [];
     let lastDrawn = 0;
+    /**
+     * Mobile performance lane: a new read whose wild animals changed is placed in the places worker first (as the mount's
+     * and a replay's are: `prepareGhostPlaces`, primed for exactly that list), then laid out; meanwhile the world goes
+     * on as it was. A newer read arriving meanwhile replaces it. A recording, or no worker, lays it out at once as before.
+     */
+    let readPending: ArkSnapshot | null = null;
+    let readPlacing = false;
+    let afterRead: Array<() => void> = [];
+    const layRead = (snapshot: ArkSnapshot) => {
+        // Runtime: the entrances play at the full frame rate.
+        runtime.busyFor(ENTRANCE_SECONDS + 1);
+        setSnapshot(snapshot, true);
+        const calls = afterRead;
+        afterRead = [];
+        for (const call of calls) call();
+    };
+    const placeRead = () => {
+        const snapshot = readPending;
+        if (!snapshot || disposed) return;
+        const wild = options.recording || typeof Worker === "undefined" ? null : wildToPlace(snapshot);
+        if (!wild || !wild.length) {
+            readPending = null;
+            layRead(snapshot);
+            return;
+        }
+        readPlacing = true;
+        void prepareGhostPlaces(wild).then(() => {
+            readPlacing = false;
+            if (disposed) return;
+            // (A newer read came meanwhile: that one, placed in turn.)
+            if (readPending !== snapshot) {
+                placeRead();
+                return;
+            }
+            readPending = null;
+            layRead(snapshot);
+        });
+    };
     let ready = false;
     let raf = 0;
     let lastTracked: Vector3 | null = null;
     const followAim = new Vector3();
+    /**
+     * Mobile performance lane: on a touch device the sun's shadow map is drawn again every other frame while its box
+     * stands still (the view drifting or turning round what it looks at), and every frame whenever the box moves (a pan,
+     * a zoom, the sun's hour), so no shadow ever swims; elsewhere every frame as before. The shadow pass is a second draw
+     * of everything that casts one: on the medium tier about a quarter of the frame's draw calls.
+     */
+    const shadowKey = new Float64Array(4).fill(Number.NaN);
+    let shadowFrames = 0;
+    const stepShadowMap = () => {
+        if (!pacer) return;
+        const map = renderer.shadowMap;
+        if (!map.enabled) {
+            map.autoUpdate = true;
+            return;
+        }
+        map.autoUpdate = false;
+        const sun = lighting.sun;
+        const box = sun.shadow.camera.right;
+        const moved = sun.position.x !== shadowKey[0] || sun.position.y !== shadowKey[1] || sun.position.z !== shadowKey[2] || box !== shadowKey[3] || !sun.shadow.map;
+        shadowFrames++;
+        if (moved || shadowFrames % 2 === 0) {
+            map.needsUpdate = true;
+            shadowKey[0] = sun.position.x;
+            shadowKey[1] = sun.position.y;
+            shadowKey[2] = sun.position.z;
+            shadowKey[3] = box;
+        }
+    };
     /** The tier check: frames over two seconds once the models are in; a tier lower if they run long. */
     let measureFrom = 0;
+    /** When the first frame was drawn (s), and whether the start is over (the pacing may drop a tier only then). */
+    let readyAt = 0;
+    let settledYet = false;
+    let settledAskedAt = 0;
+    const paceSettled = (nowS: number) => {
+        if (settledYet) return true;
+        if (nowS - settledAskedAt < 1) return false;
+        settledAskedAt = nowS;
+        // The behaviour world built (the town's too) and spaced, and the first view's models in (or 20 s on).
+        settledYet = Boolean(world) && !townBuild && !spacing && (nowS - readyAt > 20 || runtime.handle.runtime().viewComplete);
+        return settledYet;
+    };
     const measured: number[] = [];
 
     const frame = () => {
@@ -6156,6 +6317,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         raf = requestAnimationFrame(frame);
         if (step === "skip" || !onScreen || document.hidden) return;
         const startedAt = performance.now();
+        perf.begin(startedAt);
         const frameDt = lastDrawn ? Math.min((startedAt - lastDrawn) / 1000, 0.1) : 1 / 60;
         runtime.activity(Boolean(flight || followId || replay || opening || talking.target?.active || lastTracked), reducedMotion);
         const now = startedAt / 1000;
@@ -6171,6 +6333,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         applyEnvironment();
         if (landscape) landscape.water.position.y = ARK_ENVIRONMENT.seaLevel.value;
+        perf.lap("world");
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
         // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
         // Decision 153: the town shown a few chunks a frame as it joins.
@@ -6180,6 +6343,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             trafficHooked = island;
         }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
+        perf.lap("town");
         stepFlight(now);
         stepInset();
         stepIslandNear();
@@ -6198,10 +6362,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         keepInWorld();
         fitCloseUp();
         if (!options.recording) runtime.collide(controls.target, frameDt, controls.minDistance < 1);
+        perf.lap("camera");
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
         streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now, controls.target);
         landscape?.tiles.release(now);
         streamCull.step(now);
+        perf.lap("stream");
         stepLayers(elapsed);
         foldTrees(elapsed);
         micro?.step(camera.position);
@@ -6214,13 +6380,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         stepReplay(now);
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
+        perf.lap("scenery");
         if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
         else prewarmResting();
+        perf.lap("resting");
         updateInstances(elapsed);
         dust.step(now);
         liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => (world ? entries.filter((e) => Boolean(e.sched)) : []), routeOf);
+        perf.lap("particles");
         recipeScene.step(now);
         nests.step(now);
+        perf.lap("recipes");
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).
         const followed = followId ? findEntry(followId) : null;
         if (followed?.middle && !flight && pointers === 0) {
@@ -6257,6 +6427,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         } else {
             lastTracked = null;
         }
+        perf.lap("camera");
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail?.update(controls.target, viewDistance);
         assetTrees?.update(camera.position);
@@ -6272,19 +6443,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             vegetation?.hideKinds(ASSET_TREE_KINDS);
         }
         lighting.fitShadow(controls.target, viewDistance);
+        stepShadowMap();
         // The miniature's soft top and bottom, gentler on a tall phone screen where it covers more of the picture.
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
+        perf.lap("plants");
         renderer.info.reset();
         post.render();
+        perf.lap("render");
         placeLabels();
         placeVisitorLabel();
         placeBadges();
         // Decision 240: the selected animal's status (about once a second) and its bars over it (every frame).
         tellStatus(startedAt);
         placeSelectionBars();
+        perf.lap("labels");
         runtime.drawnFrame(startedAt, inset);
+        perf.lap("runtime");
 
         const spent = performance.now() - startedAt;
+        perf.end(spent);
         frameTimes.push(spent);
         if (frameTimes.length > 60) frameTimes.shift();
         if (lastDrawn) {
@@ -6295,7 +6472,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 frameIntervals.push(interval);
                 if (frameIntervals.length > 60) frameIntervals.shift();
             }
-            if (interval < 2000) {
+            if (interval < 2000 && pacer) {
+                // A touch device: the pacing (runtime/pace.ts) instead of the tier check. A tier pinned for measuring
+                // (`__arkQuality`) is never dropped; the start (the world being built, the first models) never judged for a drop.
+                const decision = pacer.step(startedAt / 1000, interval, spent, runtime.drawsFull(), !forced && paceSettled(startedAt / 1000));
+                if (decision.changed) {
+                    runtime.setPaceCap(decision.interval);
+                    if (decision.scale !== resolutionScale) {
+                        resolutionScale = decision.scale;
+                        renderer.setPixelRatio(drawRatio());
+                        resize();
+                    }
+                    if (decision.dropTier && !forced && tier !== "low") applyTier(lowerTier(tier));
+                }
+            } else if (interval < 2000) {
                 if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom && runtime.uncapped()) {
                     measured.push(interval);
                     if (startedAt - measureFrom > 2000) {
@@ -6315,7 +6505,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lastDrawn = startedAt;
         if (!ready) {
             ready = true;
+            readyAt = startedAt / 1000;
             measureFrom = performance.now() + 1500;
+            // (The low tier starts at a steady 30 on a touch device.)
+            if (pacer) runtime.setPaceCap(pacer.interval);
             options.onReady?.();
         }
     };
@@ -6323,6 +6516,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!raf && !disposed) raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
+    perf.attach(el, () => ({
+        gpu: {calls: renderer.info.render.calls, triangles: renderer.info.render.triangles, programs: renderer.info.programs?.length ?? 0, textures: renderer.info.memory.textures, geometries: renderer.info.memory.geometries},
+        tier,
+        dpr: renderer.getPixelRatio(),
+        scale: resolutionScale,
+        drawn: counts.near + counts.far + counts.token,
+        rigged: counts.rigged,
+        mode: runtime.handle.runtime().mode,
+        inView: Boolean(world) && runtime.handle.runtime().viewComplete
+    }));
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
@@ -6359,14 +6562,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     return {
         ...runtime.handle,
         update: whenAnimals((snapshot: ArkSnapshot) => {
-            // Runtime: the entrances play at the full frame rate.
-            runtime.busyFor(ENTRANCE_SECONDS + 1);
-            setSnapshot(snapshot, true);
+            // Mobile performance lane: a read that changes nothing laid out (the apps read every 45 s) is not laid out again.
+            if (sameArkRead(readPending ?? current, snapshot)) return;
+            readPending = snapshot;
+            if (!readPlacing) placeRead();
         }),
         setMineOnly: (value) => {
             mineOnly = value;
         },
-        select: whenAnimals((id: string | null, closeUp?: boolean) => select(id, true, Boolean(closeUp))),
+        select: whenAnimals((id: string | null, closeUp?: boolean) => {
+            // (An animal a read just brought aboard, while that read is being placed: selected once it is laid out.)
+            if (id && readPlacing && !aboard.has(id)) {
+                afterRead.push(() => select(id, true, Boolean(closeUp)));
+                return;
+            }
+            select(id, true, Boolean(closeUp));
+        }),
         // (Before the animals are in, a herd is not known yet: false, as for any unknown key.)
         selectHerd: (key) => (animalsIn ? selectHerd(key, true) : false),
         setLite: (lite) => {
@@ -6668,6 +6879,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             disposed = true;
             cancelAnimationFrame(raf);
             runtime.dispose();
+            perf.dispose();
             resizeObserver.disconnect();
             visibility.disconnect();
             canvas.removeEventListener("pointerdown", onPointerDown);
