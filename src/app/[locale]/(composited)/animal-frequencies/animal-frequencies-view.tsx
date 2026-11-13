@@ -105,6 +105,10 @@ const FAQ: Array<{question: string; answer: string}> = [
 
 export function buildAnimalFrequenciesMetadata(locale: string, page: number): Metadata {
     const path = pagination.pagePath(page);
+    // Pages 2..n are noindex, follow with the hub as canonical (Search
+    // Console, Nov 2026: "discovered, not indexed" was led by these URLs).
+    // Their links are still crawled; the hub is the one URL that ranks.
+    const canonicalPath = page === 1 ? path : pagination.pagePath(1);
     const pageEntries = pagination.slice(behaviourSignatures, page);
     const title = page === 1 ? TITLE : `Animal Frequency Signatures – Page ${page} of ${animalFrequenciesPageCount}`;
     const description = page === 1
@@ -125,12 +129,13 @@ export function buildAnimalFrequenciesMetadata(locale: string, page: number): Me
             "animal behaviour patterns",
             "why animals behave the way they do"
         ],
+        ...(page > 1 ? {robots: {index: false, follow: true}} : {}),
         alternates: {
-            canonical: getLocalePath(locale, path),
+            canonical: getLocalePath(locale, canonicalPath),
             languages: localeConfig.locales.reduce((all, item) => {
-                all[item] = getLocalePath(item, path);
+                all[item] = getLocalePath(item, canonicalPath);
                 return all;
-            }, {"x-default": getLocalePath(localeConfig.defaultLocale, path)} as Record<string, string>)
+            }, {"x-default": getLocalePath(localeConfig.defaultLocale, canonicalPath)} as Record<string, string>)
         },
         openGraph: {
             type: "website",

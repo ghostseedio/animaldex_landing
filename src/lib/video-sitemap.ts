@@ -1,4 +1,4 @@
-import type {VideoSourceType} from "@/lib/content-video/plan";
+import {isVideoSourceType, type VideoSourceType} from "@/lib/content-video/plan";
 import {sourcePath} from "@/lib/content-video/source-paths";
 import type {PublishedContentVideoListing} from "@/lib/content-video/store";
 
@@ -38,6 +38,10 @@ export function serializeVideoSitemapXml(siteUrl: string, videos: PublishedConte
     const byPage = new Map<string, PublishedContentVideoListing>();
     for (const video of videos) {
         if (!video.posterUrl) continue;
+        // Only a video whose watch page exists: /videos/<type>/<slug> 404s for
+        // a source type the route does not know, and the <loc> is never the
+        // article the video came from (Google: "not on a watch page").
+        if (!isVideoSourceType(video.type)) continue;
         const page = videoWatchUrl(siteUrl, video.type, video.slug);
         if (!byPage.has(page)) byPage.set(page, video);
     }

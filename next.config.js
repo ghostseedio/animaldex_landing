@@ -358,6 +358,15 @@ module.exports = withNextIntl({
                     {key: "Cache-Control", value: "private, no-store"}
                 ]
             })),
+            // No /api response is a page: JSON, streams, redirects and the
+            // share-card images under /api/og. robots.ts disallows the prefix;
+            // this covers anything a crawler already holds a link to (Search
+            // Console, Nov 2026: 647 of 1,000 sampled crawled-not-indexed URLs
+            // were /api). Handlers that set their own X-Robots-Tag keep it.
+            {
+                source: "/api/:path*",
+                headers: [{key: "X-Robots-Tag", value: "noindex, nofollow"}]
+            },
             // Signed-in and per-person pages (WEB-22). Next sends no Cache-Control
             // on these dynamic routes, and a CDN rule that caches HTML would then
             // fall back to its own default TTL and could serve one person's page
