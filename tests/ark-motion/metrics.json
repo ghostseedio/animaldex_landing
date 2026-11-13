@@ -142,6 +142,321 @@
         "src/lib/ark-collide.test.ts"
       ],
       "metricTests": "pass|through|overlap|fence|clear|cross"
+    },
+    {
+      "name": "ma1-flight",
+      "lane": "MA1 bird flight, take-off and landing",
+      "requires": [
+        "src/lib/ark-flight-physics.test.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "tests": [
+        "src/lib/ark-flight-physics.test.ts"
+      ],
+      "metricTests": "MA1 metric",
+      "output": "$ARK_MOTION_METRICS_DIR/ma1.jsonl",
+      "metrics": [
+        {
+          "id": "air_speed_ratio_median",
+          "label": "Air-leg speed over L2's cruise, median over species (fixture Ark, v2 island; the audit's real snapshot was 0.20)",
+          "path": "air_speed_ratio_median",
+          "min": 0.6,
+          "before": 0.199
+        },
+        {
+          "id": "air_speed_ratio_min",
+          "label": "Air-leg speed over L2's cruise, the slowest species (the audit's coot 0.045)",
+          "path": "air_speed_ratio_min",
+          "min": 0.35,
+          "before": 0.045
+        },
+        {
+          "id": "takeoff_landing_accel_share_of_cap",
+          "label": "Worst take-off or landing acceleration over its mass's cap (0 to cruise in one frame before; 8% for sampling)",
+          "path": "takeoff_landing_accel_share_of_cap",
+          "max": 1.08
+        },
+        {
+          "id": "takeoff_landing_accel_big_birds_g",
+          "label": "Worst take-off or landing acceleration, birds of a kilo or more",
+          "path": "takeoff_landing_accel_big_birds_g",
+          "max": 0.54,
+          "unit": "g"
+        },
+        {
+          "id": "land_clip_in_flight_frames",
+          "label": "Landing clip in a run, climb or level-flight frame (through clock jumps)",
+          "path": "land_clip_in_flight_frames",
+          "max": 0
+        }
+      ]
+    },
+    {
+      "name": "ma3-waterbirds",
+      "lane": "MA3 waterbirds and swimmers",
+      "requires": [
+        "src/lib/ark-waterbirds.test.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "tests": [
+        "src/lib/ark-waterbirds.test.ts"
+      ],
+      "metricTests": "waterbirds",
+      "output": "$ARK_MOTION_METRICS_DIR/ma3.jsonl",
+      "metrics": [
+        {
+          "id": "swimmers_without_band",
+          "label": "Swimming species with no water band (they ran on the surface: the audit's coot)",
+          "path": "swimmers_without_band",
+          "max": 0,
+          "before": 70
+        },
+        {
+          "id": "ground_birds_air_share_worst",
+          "label": "Birds that walk or swim first: the worst share of an island day aloft (the audit's coot 11%)",
+          "path": "ground_birds_air_share_worst",
+          "max": 0.02,
+          "before": 0.11
+        },
+        {
+          "id": "ground_birds_takeoffs_worst",
+          "label": "Birds that walk or swim first: the worst take-offs per awake hour (the audit's peafowl 34)",
+          "path": "ground_birds_takeoffs_worst",
+          "max": 3,
+          "before": 34
+        },
+        {
+          "id": "coot_water_share",
+          "label": "The coot's share of the day on the water (the audit's 18%)",
+          "path": "coot_water_share",
+          "min": 0.6,
+          "before": 0.18
+        }
+      ]
+    },
+    {
+      "name": "ma4-motion",
+      "lane": "MA4 head-bob, seals, frogs, rig coverage",
+      "requires": [
+        "src/lib/ark-motion-ma4.test.ts",
+        "src/lib/ark-rig-coverage.test.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "tests": [
+        "src/lib/ark-motion-ma4.test.ts",
+        "src/lib/ark-rig-coverage.test.ts"
+      ],
+      "metricTests": "MA4",
+      "output": "$ARK_MOTION_METRICS_DIR/ma4.jsonl",
+      "metrics": [
+        {
+          "id": "headbob_misfiled",
+          "label": "Birds whose head-bob disagrees with their family's stored flag",
+          "path": "headbob_misfiled",
+          "max": 0
+        },
+        {
+          "id": "headbob_wrong_family",
+          "label": "Birds of a non-bobbing family (raptors, parrots, waterfowl, gulls...) that bob (the audit's name matches: 18)",
+          "path": "headbob_wrong_family",
+          "max": 0,
+          "before": 18
+        },
+        {
+          "id": "galumph_ground_gap_max",
+          "label": "A true seal galumphing: its lowest point off or into the ground, worst (share of its length)",
+          "path": "galumph_ground_gap_max",
+          "max": 0.02
+        },
+        {
+          "id": "galumph_hump",
+          "label": "A true seal galumphing: the back's hump at its top (share of its length; a quadruped walk on flippers before: 0)",
+          "path": "galumph_hump",
+          "min": 0.03,
+          "before": 0
+        },
+        {
+          "id": "galumph_hind_flipper_clearance",
+          "label": "A true seal galumphing: its hind flippers' webs off the ground, lowest (share of its length)",
+          "path": "galumph_hind_flipper_clearance",
+          "min": 0.005
+        },
+        {
+          "id": "flipper_walk_slide_max",
+          "label": "Sea lion and walrus on four flippers: planted-foot slide, worst (share of the hip; L1's strict limit 0.02)",
+          "path": "flipper_walk_slide_max",
+          "max": 0.02
+        },
+        {
+          "id": "leap_hop_length_ratio",
+          "label": "A leaping frog: median hop over its natural hop (2.2 lengths)",
+          "path": "leap_hop_length_ratio",
+          "min": 0.8,
+          "max": 1.35
+        },
+        {
+          "id": "leap_air_lift",
+          "label": "A leaping frog: its lowest point's best height in a hop (share of its length; a gait cycle before)",
+          "path": "leap_air_lift",
+          "min": 0.12
+        },
+        {
+          "id": "leap_sit_slide",
+          "label": "A leaping frog: planted feet drifting while it sits (share of its length)",
+          "path": "leap_sit_slide",
+          "max": 0.02
+        },
+        {
+          "id": "leap_lag_max",
+          "label": "A leaping frog: furthest from its place (lengths; it lands on its place each hop)",
+          "path": "leap_lag_max",
+          "max": 3.2
+        },
+        {
+          "id": "leap_settled",
+          "label": "A leaping frog: from its place once stopped (lengths)",
+          "path": "leap_settled",
+          "max": 0.25
+        },
+        {
+          "id": "hop_hop_length_ratio",
+          "label": "A toad hopping: median hop over its natural hop (0.9 lengths)",
+          "path": "hop_hop_length_ratio",
+          "min": 0.8,
+          "max": 1.35
+        },
+        {
+          "id": "hop_air_lift",
+          "label": "A toad hopping: its lowest point's best height in a hop (share of its length)",
+          "path": "hop_air_lift",
+          "min": 0.04
+        },
+        {
+          "id": "hop_sit_slide",
+          "label": "A toad hopping: planted feet drifting while it sits (share of its length)",
+          "path": "hop_sit_slide",
+          "max": 0.02
+        },
+        {
+          "id": "hop_lag_max",
+          "label": "A toad hopping: furthest from its place (lengths)",
+          "path": "hop_lag_max",
+          "max": 1.9
+        },
+        {
+          "id": "hop_settled",
+          "label": "A toad hopping: from its place once stopped (lengths)",
+          "path": "hop_settled",
+          "max": 0.25
+        },
+        {
+          "id": "frog_hind_foot_over_hip",
+          "label": "A frog or toad on a winding way: its hind foot's highest against its hip, in the body's frame (share of the leg; above 0 is over its back)",
+          "path": "frog_hind_foot_over_hip",
+          "max": 0
+        },
+        {
+          "id": "frog_hops_pushing_while_turning",
+          "label": "Hops pushed off while turning more than 0.4 rad (it turns where it sits first)",
+          "path": "frog_hops_pushing_while_turning",
+          "max": 0
+        },
+        {
+          "id": "rig_frozenWings",
+          "label": "Flight-approved flyers with no flap and no open-wing clip (v2 set; the audit's aboard: 13; v3: 1)",
+          "path": "rig_frozenWings",
+          "max": 18,
+          "before": 18
+        },
+        {
+          "id": "rig_noTakeoffLanding",
+          "label": "Flight-approved birds and bats with no take-off or landing clip (v2; v3: 0)",
+          "path": "rig_noTakeoffLanding",
+          "max": 7,
+          "before": 7
+        },
+        {
+          "id": "rig_fliesUnapproved",
+          "label": "Birds and bats flying on the schedule without flight approval (v2; the audit's aboard: 11; v3: 0)",
+          "path": "rig_fliesUnapproved",
+          "max": 12,
+          "before": 12
+        },
+        {
+          "id": "rig_swimmersNoStroke",
+          "label": "Legged swimmers with no paddle or swim clip (v2; a rigging pass, decision 281)",
+          "path": "rig_swimmersNoStroke",
+          "max": 70,
+          "before": 70
+        },
+        {
+          "id": "rig_swimmersNoEntry",
+          "label": "Legged swimmers without enter_water and exit_water clips (v2; v3 109: one new species)",
+          "path": "rig_swimmersNoEntry",
+          "max": 108,
+          "before": 108
+        }
+      ]
+    },
+    {
+      "name": "ma4-time-budget",
+      "lane": "MA4 the movement audit's time budget (validator Ark, v2 island)",
+      "requires": [
+        "scripts/ark-time-budget.mts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "command": "npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-time-budget.mts --validator --step 10 --record ma4-tb > \"$ARK_MOTION_METRICS_DIR/ma4-time-budget.log\"",
+      "output": "$ARK_MOTION_METRICS_DIR/ma4-tb.jsonl",
+      "metrics": [
+        {
+          "id": "tb_air_speed_ratio_median",
+          "label": "Air-leg speed over L2's cruise, median over flying bird and bat species (the audit's real snapshot: 0.20)",
+          "path": "air_speed_ratio_median",
+          "min": 0.6,
+          "before": 0.199
+        },
+        {
+          "id": "tb_air_speed_ratio_p10",
+          "label": "Air-leg speed over L2's cruise, tenth percentile over species",
+          "path": "air_speed_ratio_p10",
+          "min": 0.4
+        },
+        {
+          "id": "tb_species_under_035",
+          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges)",
+          "path": "species_under_035",
+          "max": 20,
+          "before": 91
+        },
+        {
+          "id": "tb_ground_birds_air_share_worst",
+          "label": "Birds that walk or swim first: worst share of the day aloft (target 0.02; 0.083 is the wood pigeon's murmuration recipe, decision 283)",
+          "path": "ground_birds_air_share_worst",
+          "max": 0.084,
+          "before": 0.11
+        },
+        {
+          "id": "tb_ground_birds_takeoffs_worst",
+          "label": "Birds that walk or swim first: worst take-offs per awake hour (target 3; 3.43 the smew)",
+          "path": "ground_birds_takeoffs_worst",
+          "max": 3.5,
+          "before": 34
+        },
+        {
+          "id": "tb_coot_water_share",
+          "label": "The coot's share of the day on the water",
+          "path": "coot_water_share",
+          "min": 0.6,
+          "before": 0.18
+        },
+        {
+          "id": "tb_grebe_water_share",
+          "label": "The great crested grebe's share of the day on the water",
+          "path": "grebe_water_share",
+          "min": 0.6,
+          "before": 0.92
+        }
+      ]
     }
   ]
 }

@@ -14,6 +14,8 @@
  * Eight: a back-to-front wave on each side, the sides half a cycle apart; faster, the alternating tetrapod.
  */
 
+import landTable from "@/ark-scene/locomotion/land-gaits.json";
+import {locoStyle} from "@/ark-scene/locomotion/styles";
 import type {BodyPlan, GaitName, LocoLeg, LocoRig} from "@/ark-scene/locomotion/types";
 
 export const G = 9.81;
@@ -141,18 +143,34 @@ const BOUNDERS = /(mouse|rat\b|-rat|vole|lemming|hamster|gerbil|squirrel|chipmun
 const CATS = /(cat\b|cat$|-cat|lion|tiger|leopard|cheetah|jaguar|puma|cougar|lynx|caracal|serval|ocelot|margay|bobcat|panther)/;
 const DOGS = /(dog|wolf|fox|jackal|coyote|dingo|dhole|hyena|aardwolf|raccoon)/;
 const HOOFED = /(deer|elk|moose|caribou|reindeer|horse|zebra|donkey|ass\b|pony|antelope|gazelle|impala|springbok|kudu|eland|oryx|addax|gnu|wildebeest|buffalo|bison|cattle|cow|ox\b|yak|goat|ibex|sheep|mouflon|chamois|takin|muskox|pig|boar|hog|warthog|peccary|tapir|rhino|hippo|bongo|nyala|duiker|dik-dik|klipspringer|pronghorn|saiga|chevrotain)/;
-const HOP_FROGS = /(frog|bullfrog)/;
-const HEAD_BOB = /(pigeon|dove|chicken|hen\b|rooster|junglefowl|pheasant|quail|partridge|grouse|turkey|peafowl|peacock|guineafowl|moorhen|coot|rail|gallinule|crake|heron|egret|bittern|ibis|stork|crane|hoopoe|starling|myna|crow|raven|rook|jackdaw|magpie|jay|wagtail|plover|lapwing)/;
-const WADDLERS = /(penguin|duck|goose|swan|mallard|teal|wigeon|eider|scoter|merganser|shelduck|pochard|puffin|auk|guillemot|murre)/;
-const HOPPERS = /(sparrow|finch|robin|tit\b|tit$|-tit|chickadee|wren|thrush|blackbird|warbler|bunting|canary|budgerigar|lovebird|weaver|munia|waxbill|siskin|goldfinch|chaffinch|bullfinch|redstart|chat\b|flycatcher|nuthatch|kinglet|goldcrest|dunnock|accentor|sunbird|white-eye|bulbul|tanager|cardinal|grosbeak|junco|towhee)/;
+
+/**
+ * How a seal, sea lion, walrus, frog, toad, newt or salamander moves on land, by family from the stored taxonomy
+ * (`land-gaits.json`, `scripts/ark-land-gaits.mts`; movement audit MA4): `galumph` true seals (on the belly: the
+ * galumph driver, `land-drivers.ts`), `flipper_gallop` sea lions and fur seals and `flipper_walk` the walrus (four
+ * flippers: the legged gaits), `leap` and `hop` frogs and toads (the saltation driver; toads walk when slow), `walk`
+ * frogs that walk, `crawl` newts and salamanders. Null for everyone else.
+ */
+export type LandGait = "galumph" | "flipper_gallop" | "flipper_walk" | "leap" | "hop" | "walk" | "crawl";
+const LAND = (landTable as {species: Record<string, LandGait>}).species;
+export function landGait(slug: string): LandGait | null {
+    return LAND[slug] ?? null;
+}
 
 /** Columnar legs (elephants): nearly straight at every gait, no give, shorter strides. */
 export function columnarLegs(slug: string): boolean {
     return AMBLERS.test(slug);
 }
 
+/**
+ * Whether a bird bobs its head as it walks: by its family, from the stored taxonomy (the ground code's `b` in
+ * `styles.json`, decided per family by `scripts/ark-locomotion-styles.mts`: pigeons and doves, gamebirds, rails and
+ * cranes, herons, storks and ibises, crows, starlings, wagtails...; Necker 2007), the way decision 110 set the wing-beat
+ * factors. (It matched slug names: "crow" bobbed the crowned eagle and three crowned parrots, "turkey" the turkey vulture,
+ * "magpie" the magpie goose; movement audit finding 10.)
+ */
 export function headBobs(slug: string, plan: BodyPlan): boolean {
-    return (plan === "walking_bird" || plan === "flying_bird" || plan === "flightless_bird") && HEAD_BOB.test(slug);
+    return (plan === "walking_bird" || plan === "flying_bird" || plan === "flightless_bird") && Boolean(locoStyle(slug, plan).ground?.bob);
 }
 
 /** The gaits a species uses, slowest first. */
@@ -162,9 +180,14 @@ export function gaitLadder(rig: Pick<LocoRig, "plan" | "slug" | "legs">): GaitLa
     const plan = rig.plan;
     if (legs === 0) return [["stand", 0]];
     if (legs === 2) {
-        if (WADDLERS.test(slug) && /(penguin)/.test(slug)) return [["waddle", 0]];
-        if (HOPPERS.test(slug) && plan === "flying_bird") return [["hop", 0]];
-        if (WADDLERS.test(slug)) return [["waddle", 0], ["biped_run", 0.5]];
+        // A bird's gait on the ground by its family, from the stored taxonomy (the ground code in `styles.json`: small
+        // passerines hop, waterfowl, seabirds, grebes, loons, cormorants and pelicans waddle; MA4). Penguins (the
+        // flightless waddlers) only waddle. (It matched slug names: "sparrow" hopped the sparrowhawk, "blackbird" the
+        // red-winged blackbird.)
+        const ground = locoStyle(slug, plan).ground?.gait;
+        if (ground === "waddle" && plan === "flightless_bird") return [["waddle", 0]];
+        if (ground === "hop" && plan === "flying_bird") return [["hop", 0]];
+        if (ground === "waddle") return [["waddle", 0], ["biped_run", 0.5]];
         return [["biped_walk", 0], ["biped_run", 0.55]];
     }
     if (legs === 6) return [["wave", 0], ["tripod", 0.03]];
@@ -172,7 +195,19 @@ export function gaitLadder(rig: Pick<LocoRig, "plan" | "slug" | "legs">): GaitLa
     // Four legs.
     if (plan === "lizard") return [["sprawl", 0], ["sprawl_run", 0.35]];
     if (plan === "turtle") return [["ds_walk", 0]];
-    if (plan === "amphibian") return HOP_FROGS.test(slug) && !/toad/.test(slug) ? [["hop", 0]] : [["sprawl", 0], ["hop", 0.6]];
+    if (plan === "amphibian") {
+        // By family (`landGait`): a frog that leaps hops at every pace; a toad walks, then hops; walkers and newts never hop.
+        // (The saltation driver, `land-drivers.ts`, draws the leaps and hops themselves; these are the legged driver's.)
+        const land = landGait(slug);
+        if (land === "leap") return [["hop", 0]];
+        if (land === "hop") return [["sprawl", 0], ["hop", 0.6]];
+        return [["sprawl", 0], ["sprawl_run", 0.35]];
+    }
+    // Sea lions, fur seals and the walrus walk on four flippers (lateral sequence); eared seals gallop with the hind
+    // flippers together when fast (Beentjes 1990). (True seals galumph on the belly: not on legs.)
+    const flippers = landGait(slug);
+    if (flippers === "flipper_gallop") return [["walk", 0], ["half_bound", 0.9]];
+    if (flippers === "flipper_walk") return [["walk", 0]];
     if (plan === "primate") return [["ds_walk", 0], ["half_bound", 0.8], ["bound", 2.2]];
     if (AMBLERS.test(slug)) return [["walk", 0], ["amble", 0.25]];
     if (PACERS.test(slug)) return [["walk", 0], ["pace", 0.4], ["rotary", 2.0]];

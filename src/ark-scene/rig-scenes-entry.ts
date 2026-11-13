@@ -667,7 +667,8 @@ async function mountIsland(el: HTMLElement) {
                             const loco = (e.rig as unknown as {loco?: {driver?: string | null; share?: number; states?: Map<string, {state: {bodyYaw?: number}}>}} | undefined)?.loco;
                             // (Only while its rig is drawn: a rig let go keeps its last state, from minutes ago.)
                             const drawn = (e.rig?.weight ?? 0) > 0.5 && e.rig?.now && ["walk", "run", "hop", "idle"].includes(e.rig.now.name);
-                            const bodyYaw = drawn && loco?.driver === "legged" && (loco.share ?? 0) > 0.5 ? loco.states?.get("legged")?.state.bodyYaw : undefined;
+                            // (MA4: a frog's hop driver turns its body too, between hops.)
+                            const bodyYaw = drawn && (loco?.driver === "legged" || loco?.driver === "saltation") && (loco.share ?? 0) > 0.5 ? loco.states?.get(loco.driver)?.state.bodyYaw : undefined;
                             if (bodyYaw !== undefined) {
                                 let seen = way - bodyYaw;
                                 while (seen > Math.PI) seen -= Math.PI * 2;
@@ -689,7 +690,8 @@ async function mountIsland(el: HTMLElement) {
                                     // pace no longer matters), and what moved it (its schedule beat, a recipe act, the
                                     // reactive layer's action).
                                     const lc = (e.rig as unknown as {loco?: {driver?: string | null; share?: number}}).loco;
-                                    const layered = lc?.driver === "legged" && (lc.share ?? 0) > 0.5;
+                                    // (MA4: a true seal's galumph and a frog's hops follow the speed too.)
+                                    const layered = (lc?.driver === "legged" || lc?.driver === "galumph" || lc?.driver === "saltation") && (lc.share ?? 0) > 0.5;
                                     // Under the layer, against the pace it is driven at: its schedule's walk (its run's on
                                     // the run clip), in body lengths a second (`behaviours.json`, decision 202's natural
                                     // paces). The baked clip's ground speed (`rig.ratio`) is the reach-limited clip's: a

@@ -19,17 +19,29 @@
  */
 
 import {Matrix4, Quaternion, Vector3} from "three";
-import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
+import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, landGait, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
 import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChain} from "@/ark-scene/locomotion/secondary";
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {FootTarget, GaitName, GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 
 /**
- * Seals, sea lions and walruses: their rigs' four "legs" are flippers, and on land they hump along on their bellies
- * (no gait of legs), so they keep their baked clips (feet planted) here; a body-undulation driver (L2) may take them.
+ * True seals (Phocidae, by family: `landGait` "galumph"): their rigs' four "legs" are flippers and on land they hump
+ * along on their bellies, so the legged gaits never take them (the galumph driver does, `land-drivers.ts`; without it
+ * their baked clips play, feet planted). Sea lions, fur seals and the walrus walk on their four flippers: they take
+ * the legged gaits (`gaitLadder`). (Decision 145 kept all three on their baked clips; movement audit MA4.)
  */
-export const FLIPPERED = /(seal|sea-lion|walrus|manatee|dugong)/;
+export const flippered = (slug: string): boolean => landGait(slug) === "galumph";
+
+/**
+ * Sea lions, fur seals and the walrus at rest keep their own baked idle (and lie, groom...): propped on their fore
+ * flippers, head up. The legged gaits draw them only while they travel (MA4 follow-up; the legged rest pose is a
+ * quadruped's stance, wrong for them).
+ */
+export const restsOnClip = (slug: string): boolean => {
+    const land = landGait(slug);
+    return land === "flipper_gallop" || land === "flipper_walk";
+};
 
 /** Act states under which the body is still stood level (moving acts: the act's attitude is its gait's). */
 export const LEVEL_ACTS: ReadonlySet<string> = new Set(["walk", "run", "stalk", "charge", "crawl", "carry", "push", "wade"]);
@@ -210,7 +222,7 @@ const worldPos = (m: Matrix4, out: Vector3) => out.setFromMatrixPosition(m);
 export const leggedDriver: LocoDriver = {
     name: "legged",
     takes(rig, input) {
-        return input.grounded && rig.legs.length >= 2 && !rig.sitting && rig.legHeight > 0 && GAIT_CLIPS.has(input.clipNow) && !FLIPPERED.test(rig.slug);
+        return input.grounded && rig.legs.length >= 2 && !rig.sitting && rig.legHeight > 0 && GAIT_CLIPS.has(input.clipNow) && !flippered(rig.slug) && !(input.clipNow === "idle" && restsOnClip(rig.slug));
     },
     init: initState,
     base: () => "rest",

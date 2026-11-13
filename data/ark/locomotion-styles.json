@@ -15,11 +15,12 @@
    "t": 7
   },
   "ground": {
-   "w": 231,
+   "w": 232,
    "a": 106,
-   "wb": 180,
-   "r": 54,
-   "h": 109
+   "wb": 179,
+   "r": 50,
+   "h": 109,
+   "rb": 4
   },
   "swim": {
    "an": 33,
@@ -611,8 +612,8 @@
     "why": "Motacillidae: small passerine-type flap-bounding (bursts, then wings closed); beat factor 1"
    },
    "ground": {
-    "code": "r",
-    "why": "Motacillidae: runs and stops"
+    "code": "rb",
+    "why": "Motacillidae: runs and stops, head-bobbing as it walks"
    }
   },
   "australasian-swamphen": {
@@ -3773,8 +3774,8 @@
     "why": "Motacillidae: small passerine-type flap-bounding (bursts, then wings closed); beat factor 1"
    },
    "ground": {
-    "code": "r",
-    "why": "Motacillidae: runs and stops"
+    "code": "rb",
+    "why": "Motacillidae: runs and stops, head-bobbing as it walks"
    }
   },
   "fork-tailed-drongo": {
@@ -4571,8 +4572,8 @@
     "why": "Motacillidae: small passerine-type flap-bounding (bursts, then wings closed); beat factor 1"
    },
    "ground": {
-    "code": "r",
-    "why": "Motacillidae: runs and stops"
+    "code": "rb",
+    "why": "Motacillidae: runs and stops, head-bobbing as it walks"
    }
   },
   "greylag-goose": {
@@ -8187,8 +8188,8 @@
     "why": "Sagittariidae: soars and glides, flaps to climb; beat factor 0.8; dives or stoops onto prey (Sagittariidae)"
    },
    "ground": {
-    "code": "wb",
-    "why": "Sagittariidae: walks, head-bobbing as it walks"
+    "code": "w",
+    "why": "Sagittariidae: walks"
    }
   },
   "sedge-warbler": {
@@ -9655,8 +9656,8 @@
     "why": "Motacillidae: small passerine-type flap-bounding (bursts, then wings closed); beat factor 1"
    },
    "ground": {
-    "code": "r",
-    "why": "Motacillidae: runs and stops"
+    "code": "rb",
+    "why": "Motacillidae: runs and stops, head-bobbing as it walks"
    }
   },
   "whale-shark": {
