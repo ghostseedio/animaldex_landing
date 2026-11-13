@@ -493,6 +493,11 @@ export function flightLoss(paces: AirPaces, run: number, ski: number): number {
     return Math.max(V * time - covered, 0);
 }
 export const FLIGHT_WORTH = 1.5;
+/** The shortest flight worth its take-off and its landing (m): FLIGHT_WORTH times what they lose (`flyAwaySpot`). */
+function flightWorth(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
+    const paces = airPaces(profile, animal.length);
+    return FLIGHT_WORTH * flightLoss(paces, paces.runGround, 0);
+}
 
 /**
  * Its home range's radius: by how it moves and its size; never more than half what it can cover in a slot (so
@@ -784,18 +789,22 @@ function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
     const paces = airPaces(profile, animal.length);
     // (A bird or a bat: a flying insect keeps to its plants, as its range does.)
     if (paces.kind === "insect") return null;
-    const worth = FLIGHT_WORTH * flightLoss(paces, paces.runGround, 0);
+    const worth = flightWorth(profile, animal);
     const far = Math.min(Math.max(paces.cruise * FLY_AWAY_SECONDS, worth), FLY_AWAY_MOST);
     // (Never past its range's cap: a predator kept clear of its prey's ranges stays clear, `spaceHomes`. And never down by
     // a predator that eats it: clear of each threat's whole range and a safe distance more.)
     const outer = Math.min(far * 1.15, rangeCap(profile, animal));
-    if (outer < Math.max(radius, 3)) return null;
+    // (Nothing worth the flight inside its cap: a round instead (MA1's own rule), never a flight of a few metres that
+    // never gets up to its cruise. Lane MA3 water 2: a black-necked swan on its river, its range capped at 13 m, flew 9
+    // to 18 m at a quarter of its cruise.)
+    if (outer < Math.max(radius, 3, worth)) return null;
     const safe = Math.max(SAFE_METRES, Math.min(animal.length * 6, SAFE_MOST));
     const clear = (x: number, z: number) => !(animal.threats ?? []).some((t) => Math.hypot(x - t.animal.home.x, z - t.animal.home.z) < (t.animal.range ?? rangeReach(t.profile, t.animal)) + Math.max(safe, Math.max(SAFE_METRES, Math.min(t.animal.length * 6, SAFE_MOST))));
     const a0 = random() * Math.PI * 2;
     const r0 = Math.min(far, outer) * (0.8 + 0.2 * random());
     for (const share of [1, 0.7, 0.45]) {
         const r = Math.max(r0 * share, radius);
+        if (r < worth) continue;
         for (let k = 0; k < 8; k++) {
             const a = a0 + k * (Math.PI / 4);
             const x = centre.x + Math.cos(a) * r;
@@ -1568,6 +1577,13 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                 // round: out over the island and back down on its own water, a duck's circuit of its pond. Before,
                 // it hopped a metre or two across its pond, up and down like a helicopter, and at its true take-off a
                 // hop is swum instead: it never flew at all. `roundRoute`.)
+                // (One that swims first with room for a hop inside its range's cap but not for a flight worth its take-off
+                // flies MA1's round, at its cruise, only as often as it flies (MA3's `airAllowed`), and else swims there, as
+                // its hops across mostly were (`tripFor`): as rounds every time a coot flew off its water 20 times a day.
+                // With no room at all, MA1's round, as before.)
+                // (Its own range, before a floater's room (`rangeCap`): with none of its own, MA1's round as before.)
+                const ownRange = animal.range ?? Infinity;
+                if (!group && behaviour === "fly" && profile.move !== "fly" && ownRange >= Math.max(radius, 3) && ownRange < flightWorth(profile, animal) && !airAllowed(profile, animal, slot)) return {doing: "swim", to: water, mode: "water", stay: stayBeats("rest", random, null)};
                 if (!group && behaviour === "fly") return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null), round: true};
                 return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null)};
             }
