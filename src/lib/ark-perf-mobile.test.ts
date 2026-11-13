@@ -79,6 +79,17 @@ test("pacing: a GPU too slow for 60 even at the floor holds a steady 30; its tri
     assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR && !d.dropTier));
 });
 
+test("pacing: sporadic late frames with short work (a collection, another task) lock the rate but never cost resolution", () => {
+    const pacer = new ArkFramePacer("medium", 0);
+    let t = 0;
+    for (let k = 0; k < 3000; k++) {
+        const interval = Math.max(pacer.interval, k % 3 === 0 ? 45 : 16.7);
+        t += interval / 1000;
+        pacer.step(t, interval, 6, true, false);
+    }
+    assert.equal(pacer.resolution, 1);
+});
+
 test("pacing: the start is forgotten when it ends: a phone locked by it is back at 60 within seconds, and stays", () => {
     const pacer = new ArkFramePacer("medium", 0);
     // The start: the world being built, 24 ms of work a frame.

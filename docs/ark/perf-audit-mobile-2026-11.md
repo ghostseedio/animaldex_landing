@@ -73,13 +73,20 @@ Ranked by the measured win. Everything that is not a picture choice is exact: th
    of the time). A test compares it with a layer that forgets, moment after moment. **Animals past the render distance
    are sampled as icons** (once a second, without the collisions, as an animal out of view already was) and worked out
    with them at once when drawn as a model again. *13.3 → 0.2 ms a frame on the low phone; the 300–600 ms spikes gone.*
-3. **Frame pacing on phones** (`runtime/pace.ts`, touch devices only; desktops keep the old check): GPU-bound frames
-   (long frames, short work) give up resolution first, 0.1 at a time to 0.7 of the tier's pixel ratio, never back to a
-   scale found too high at that rate for 90 s; script-bound frames lock to a **steady 30** (it tries the display's rate
-   again only when frames are light, waiting 8, 16, 32 … 120 s after each failed try); a tier drops only once the start
-   is over (the world built, the first view in) and only if 30 cannot be held, or the script keeps it at 30 for 15 s
-   (a phone then trades the tier's finish for 60). The start tier on a touch device takes a 2 ms CPU benchmark into
-   account (a main thread slower than ~5× a desktop core starts on the low tier, at a steady 30).
+3. **Frame pacing on phones** (`runtime/pace.ts`, touch devices only; desktops and recordings keep the old check),
+   fed every drawn frame's interval and work, judged once a second on the last 45 frames:
+   - *resolution first*: when a quarter of the frames are late but their work is short (the GPU is the limit: fill
+     rate, the finish's passes), the drawing buffer's scale steps down 0.1 at a time to 0.7 of the tier's pixel ratio;
+     back up after 6 s on time, never to a scale found too high at that rate in the last 90 s (no bouncing);
+   - *then a steady 30*: when a quarter of the frames still miss 60 (a jittery 40–50), the rate locks to 30; it tries 60
+     again after 8 s and waits twice as long after each try that fails at once (8, 16, 32 … 120 s);
+   - *the start is forgotten when it ends* (the world built and spaced, the first view in or 20 s on): measurements
+     restart and 60 is tried again within 2 s. The old check judged the first 2 s after the first frame, while the
+     world was being built, and dropped a tier for good (the phone profile lost the medium tier every time);
+   - *a tier down only after the start*: locked at 30 and at the lowest scale and still missing 30 for 3 s, or held at
+     30 by the script's own work for 15 s on end (a phone then trades the tier's finish for 60);
+   - *the start tier*: on a touch device a 2 ms CPU benchmark (best of three) adds to the device's own answer: a main
+     thread slower than ~5× a desktop core starts on the low tier, at a steady 30.
 4. **The resting warm-up spread over its step**, at the rate frames are drawn, done half a minute before the step:
    about one ask every other frame. The schedules made for animals not drawn one by one are kept per snapshot (and per
    behaviour world) instead of made again every five minutes.
@@ -173,6 +180,8 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 | A read that does change | lay out at once on the main thread; place in the worker first | the places worker first, `select` of a new animal deferred | The mount and replays already do; the main-thread placement was the 21 s stall. |
 | Where the pacing applies | everywhere; touch devices; phones by UA | touch devices (`pointer: coarse`), never a recording | Desktops and the golden shots keep today's behaviour and picture. |
 | What a slow phone gives up first | the tier; the frame rate; the resolution | resolution (GPU-bound), then a steady 30 (script-bound), then the tier | Least visible first; a steady 30 beats a jittery 45; the tier only when 30 cannot be held, or when the script alone keeps it at 30 for 15 s after the start (then 60 at the lower tier). |
+| When the rate counts as not held | the median interval over 19 ms; the 75th percentile | the 75th percentile (a quarter of the frames late) | The median missed judder: the low phone at 42 fps had its median at 16.7 ms with 31% of frames late. |
+| When to try 60 again | when the frames are light; by backoff alone | by backoff alone (8 → 120 s), and soon after the start ends | The frames' work measured at 30 reads heavier than at 60 (much of it is per second): a phone that held 59 fps on low was kept at 30 by the light-work rule (measured, then fixed). |
 | The resolution floor and steps | 0.5; 0.6; 0.7 | 0.7 of the tier's pixel ratio, 0.1 steps, 1.5 s apart, 90 s ceilings | Below 0.7 the medium tier's 1.5 becomes ~1, visibly soft on a 3× phone. |
 | The start tier | the device's answer only; a warm-up of the scene; a CPU benchmark | the device's answer, then a 3×-repeated 2 ms benchmark on touch devices: over 9.5 ms → low | A slow phone no longer builds the medium tier's scenery to drop it; calibrated on the throttled profiles (1× 1.9, 4× 7.6, 6× 11.7 ms). |
 | The low tier's rate | 60 like the others; a steady 30 always | a steady 30 only on a slow main thread; else the display's, locked if needed | A phone dropped to low to reach 60 must get the chance. |

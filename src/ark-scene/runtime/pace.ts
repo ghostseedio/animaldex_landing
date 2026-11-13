@@ -6,8 +6,8 @@
  * built and its models coming in) and, if long, a whole tier down for good (no shadows, no finish, less grass). Now,
  * on a touch device, one small controller fed every drawn frame's interval and main-thread work:
  *
- * 1. **The resolution.** When a quarter of the frames run late but their own work is short (the GPU, not the script,
- *    is the bottleneck: fill rate, the finish's passes), the drawing buffer's scale steps down by 0.1 (to 0.7 of the
+ * 1. **The resolution.** When the frames run late as a rule (the median) but their own work is short (the GPU, not the
+ *    script, is the bottleneck: fill rate, the finish's passes), the drawing buffer's scale steps down by 0.1 (to 0.7 of the
  *    tier's pixel ratio at most); it steps back up after 6 s of frames on time, never to a scale found too high at that
  *    rate in the last 90 s. The picture stays whole; it is only softer.
  * 2. **The rate.** Held at the display's rate while it can (a GPU-bound phone first gives up resolution); when a
@@ -148,19 +148,23 @@ export class ArkFramePacer {
         this.count = Math.min(this.count + 1, WINDOW);
         if (this.count < MIN_SAMPLES || now - this.judgedAt < JUDGE_EVERY_S) return keep();
         this.judgedAt = now;
-        // (The interval at its 75th percentile: a quarter of the frames late is a jittery rate, even when the median is on time.)
+        // (The interval at its 75th percentile: a quarter of the frames late is a jittery rate, even when the median is on
+        // time. A GPU too slow for the picture makes every frame late: the median. Sporadic late frames, a collection or
+        // another task, lock the rate but never cost resolution.)
         const interval = percentile(this.intervals, this.count, LATE_SHARE);
+        const typical = percentile(this.intervals, this.count, 0.5);
         const work = percentile(this.work, this.count, 0.5);
         const rate: Rate = this.locked ? "locked" : "full";
         const target = this.locked ? PACE_LOCK_MS : 1000 / 60;
-        const late = interval > (this.locked ? target * 1.12 : HOLD_60_MS);
+        const limit = this.locked ? target * 1.12 : HOLD_60_MS;
+        const late = interval > limit;
         const cooled = now - this.changedScaleAt > SCALE_COOLDOWN_S;
 
         if (late) {
             this.onTimeSince = null;
             // 1. The resolution: late frames with short work (the GPU's, not the script's) give up a step of resolution
             // first; that scale stays out of reach at this rate for a while (no bouncing).
-            if (work < target * 0.6 && this.scale > SCALE_FLOOR + 1e-6) {
+            if (typical > limit && work < target * 0.6 && this.scale > SCALE_FLOOR + 1e-6) {
                 if (!cooled) return keep();
                 this.ceiling[rate] = {scale: this.scale, until: now + CEILING_HOLD_S};
                 this.scale = Math.max(round2(this.scale - SCALE_STEP), SCALE_FLOOR);
@@ -175,13 +179,13 @@ export class ArkFramePacer {
                 // (A try at the display's rate that failed at once: wait longer before the next.)
                 if (now - this.triedAt < RETRY_FIRST_S + 10) this.failures++;
                 // (The GPU too slow for 60 even at the lowest resolution: no quick retries.)
-                if (this.scale <= SCALE_FLOOR + 1e-6 && work < target * 0.6) this.failures = Math.max(this.failures, 2);
+                if (this.scale <= SCALE_FLOOR + 1e-6 && typical > limit && work < target * 0.6) this.failures = Math.max(this.failures, 2);
                 this.retryAt = now + Math.min(RETRY_FIRST_S * 2 ** this.failures, RETRY_MOST_S);
                 this.reset(now);
                 return keep(true);
             }
             // 3. The tier: locked, as low as the resolution goes (or the script is the bottleneck), still not holding 30.
-            if (settled && this.tier !== "low" && this.droppedFor !== this.tier && interval > HOLD_30_MS) {
+            if (settled && this.tier !== "low" && this.droppedFor !== this.tier && typical > HOLD_30_MS) {
                 this.slowSince ??= now;
                 if (now - this.slowSince >= TIER_AFTER_S) {
                     this.droppedFor = this.tier;
