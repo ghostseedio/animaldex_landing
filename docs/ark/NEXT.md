@@ -279,11 +279,29 @@ On 4474ab0f (the v3 rigs): suite 2,518/2,520, 0 fail; tsc 0; lint 0; motion all 
 fallback list (as on v2), and no v1 rig file is fetched. The flight scene's mallard plays idle → takeoff → flap → glide
 → land → walk → graze on its v3 rig, no page errors.
 
-Production heap: see "The heap gate measured v1" below; the `ark-next` fast-forward waits for it.
+Visual (accept run 43345256555 on 4474ab0f, hooks job green): all 19 golden shots within the limits (at most 0.26%
+against main's baselines, at most 0.07% against 352cf903: the birds by the pond and the house on their v3 rigs), looked
+at, no page errors; the baselines stay.
+
+Production heap (decision 292: the budget is the post-GC heap at the first frame after the prebuild and in steady
+play; the low phone profile, islands, the v2 world, the prebuild, the real snapshot read in place; 2 runs each, the
+other lanes' jobs still running, load average 5–14):
+
+| | First frame (post-GC) | Steady, ~130 s (post-GC) | 30 s later (post-GC) | Pre-GC peak (information) |
+|---|---|---|---|---|
+| main 486cb701 (live) | 195.5 / 195.4 MB | 262.9 / 267.6 MB | – | 330 / 396 MB |
+| 4474ab0f (this round) | 193.4 / 195.2 MB | 262.8 / 267.6 MB | 262.9 MB (+0.4 MB retained, compiled code) | 317 / 409 MB |
+
+Both points well under the 384 MB budget and the same as live. Heap snapshots 30 s apart in steady play retain no
+growth on either (main 275.6 → 276.1 → 275.5 MB post-GC over 100 s): the pre-GC climb to 400–450 MB on a busy Mac is
+headless Chrome putting off its major GC, not a leak. The measure page's own "in view" never completes on v2 (the
+runtime's `viewComplete`), so its "in view" times read null there.
 
 ### The heap gate measured v1 (decision 287)
 
 The measure page (`src/ark-scene/runtime/measure-entry.ts`) mounts `mountArk` directly, not through
 `mountArchipelago`, so `--islands` alone never switched to the v2 wild island (only `?world=v2` does): every
 heap gate since the v2 release measured the v1 island with the town (about 150 models, 10–25 chunks), not what is
-live (v2 and the prebuild: about 80 models). The integrator's gate now runs `--islands --world v2 --prebuild`, 90 s.
+live (v2 and the prebuild: about 80 models). The integrator's gate now runs `--islands --world v2 --prebuild`, 90 s,
+and (decision 292) judges the budget on the post-GC heap at the first frame and in steady play. Routed: the harness's
+`--islands` default to v2 (`measure-entry.ts`).
