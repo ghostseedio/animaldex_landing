@@ -41,7 +41,7 @@ node scripts/ark-runtime-measure.mjs --label lowphone --page embed --devices pho
 
 **Caveats.** The CPU throttle slows the main thread only: the Mac's GPU draws every frame, so fill rate (DPR, the finish's
 passes, shadows) is not measured here; that is what the on-device overlay is for (§5). The Mac ran 15+ other agents
-(load average 55–165 during the runs), so wall times swing; every before/after pair was run back to back on the same
+(load average 30–460 during the runs), so wall times swing; every before/after pair was run back to back on the same
 profile, and the per-frame sections (the scene's own work) are steadier than the intervals.
 
 ## 2. Where the time went (before)
@@ -73,8 +73,11 @@ Ranked by the measured win. Everything that is not a picture choice is exact: th
    time; the Ark day may move up to 0.05 day (~2.7 minutes) before it counts as new (the young's ages and the nests read
    it). A read that does change the wild animals is **placed in the places worker first** (as the mount's and a
    replay's are) and laid out when the answer is in; a newer read meanwhile replaces it; `select` of an animal that read
-   brings waits for it. A read of the same animals keeps their places (they depend only on the animals). A recording
-   lays out at once, as before. *The 21 s / 15 s stall and the 0.5 s every 45 s are gone.*
+   brings waits for it. The places worker is kept a minute after it answers (its map sampler built once): measured, an
+   arrival read and selected at once is placed in ~5 s off the main thread the first time (it froze the page before) and
+   ~0.1 s for the next within the minute. A read of the same animals keeps their places (they depend only on the
+   animals). A recording lays out at once, as before. *The 21 s / 15 s stall and the 0.5 s every 45 s are gone; a read
+   of the same Ark sent to a running embed: no long task at all.*
 2. **Collisions: the same answer is not worked out twice** (`collide/layer.ts`). `pushOut` is a pure function of the
    colliders, the body and the pose's place, height, heading, surface points and hold; the layer keeps each animal's last
    answer and its inputs, and gives it back when they are the same (a resting or wedged animal, most of the island most
@@ -116,7 +119,65 @@ Ranked by the measured win. Everything that is not a picture choice is exact: th
 
 ## 4. Before and after
 
-<!-- MATRIX -->
+Every pair below ran back to back (base = `origin/main` 9f123c9c, after = the branch), one run each: the Mac's load
+average swung between 30 and 460 during them (other agents), so read the shape rather than the last digit, and the
+stalls (worst task, tasks over 200 ms) more than the fps. *fps* counts drawn frames; *> 16.7 / > 33 ms* are the share of
+intervals past one and two 60 Hz frames; *frame work* is the frame's own main-thread time; *main thread busy* is that
+work a second. Steady play from 60–70 s after the first frame; the worst task covers the whole run (the base's is the
+first snapshot refresh).
+
+**The final branch** (dc5dc78b), the touched profiles and the low phone's heap:
+
+| Profile | Build | Tier at end | fps | Interval p50 / p95 / p99 ms | > 16.7 ms | > 33 ms | Frame work p50 / p95 ms | Main thread busy | Alloc MB/s | Worst task after 1st frame | Tasks > 200 ms after | First frame s | KB before 1st frame |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Low phone 6×, auto (low), touched | base | low | 49.2 | 16.7 / 33.4 / 66.7 | 11.5% | 3.8% | 15.8 / 32.4 | 92% | 46.7 | 20.8 s | 11 | 14.0 | 21,387 |
+|  | after | low | 36 | 33.3 / 33.4 / 33.5 | 65.5% | 1% | 17.2 / 23.8 | 64% | 16.8 | 1.5 s | 7 | 13.9 | 21,912 |
+| Phone 4×, auto, touched | base | low | 46.6 | 16.7 / 50 / 99.9 | 14.6% | 5.6% | 11.4 / 44.1 | 80% | 77.6 | 13.7 s | 10 | 10.0 | 18,884 |
+|  | after | low | 59.9 | 16.7 / 16.7 / 16.8 | 0.1% | 0.1% | 11.8 / 15.8 | 72% | 28.4 | 1.0 s | 3 | 10.1 | 19,665 |
+| Phone 4×, low | base | low | 45.9 | 16.7 / 49.9 / 66.7 | 20.8% | 5.4% | 13.8 / 40.6 | 86% | 79.9 | 13.4 s | 5 | 10.2 | 18,751 |
+|  | after | low | 52.8 | 16.7 / 33.4 / 33.4 | 13.4% | 0.2% | 11.6 / 15.7 | 64% | 23.7 | 1.1 s | 2 | 10.8 | 21,532 |
+| Phone 4×, medium | base | medium | 20.9 | 33.4 / 100 / 250 | 90.2% | 45.5% | 34.1 / 96.5 | 93% | 61.2 | 16.5 s | 32 | 10.2 | 18,799 |
+|  | after | medium | 30.1 | 33.3 / 33.4 / 50 | 96.9% | 2.4% | 21.5 / 26.9 | 65% | 23.5 | 1.5 s | 4 | 11.3 | 18,768 |
+
+**Every profile** (base against 9d2a7ee9, the branch before the warm-up asked only the step's own questions: its rows
+still carry 4–7 ms a frame of warm-up at 4–6×, which the final branch removes, as the rows above show):
+
+| Profile | Build | Tier at end | fps | Interval p50 / p95 / p99 ms | > 16.7 ms | > 33 ms | Frame work p50 / p95 ms | Main thread busy | Alloc MB/s | Worst task after 1st frame | Tasks > 200 ms after | First frame s | KB before 1st frame |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Low phone 6×, auto, untouched | base | low | 25.4 | 33.4 / 50.1 / 83.4 | 92.2% | 32.6% | 21.7 / 39.5 | 61% | 26.7 | 26.7 s | 16 | 12.5 | 18,751 |
+|  | after | low | 25 | 33.4 / 50.1 / 100 | 95.7% | 33.4% | 19.3 / 51.8 | 62% | 33.3 | 1.8 s | 9 | 12.3 | 19,042 |
+| Phone 4×, high | base | high | 12.1 | 66.7 / 133.4 / 250 | 100% | 99.9% | 68.8 / 135.9 | 95% | 71.9 | 19.5 s | 19 | 10.0 | 18,935 |
+|  | after | high | 16.8 | 50 / 83.4 / 133.3 | 100% | 97.1% | 54.1 / 84.9 | 98% | 77.1 | 5.0 s | 9 | 10.1 | 19,103 |
+| Phone 6×, medium | base | medium | 25 | 33.3 / 50.1 / 316.7 | 88.5% | 20.3% | 32.6 / 50.1 | 94% | 36.6 | 20.2 s | 34 | 12.2 | 18,772 |
+|  | after | medium | 22.5 | 33.4 / 66.7 / 116.7 | 96.8% | 49.7% | 38.3 / 69.5 | 95% | 31.5 | 2.4 s | 15 | 14.6 | 19,108 |
+| Phone 6×, high | base | high | 8.3 | 100 / 216.7 / 383.3 | 100% | 100% | 94.1 / 202.4 | 92% | 40.6 | 24.0 s | 37 | 16.2 | 22,323 |
+|  | after | high | 9.5 | 100 / 166.7 / 216.7 | 100% | 100% | 92.8 / 161.2 | 96% | 54.2 | 7.3 s | 19 | 14.3 | 22,339 |
+| Home hero, desktop 1×, untouched | base | high | 30 | 33.3 / 33.4 / 33.4 | 99.9% | 0.3% | 12.7 / 16 | 40% | 139.4 | 0.2 s | 1 | 6.2 | 18,713 |
+|  | after | high | 30.3 | 33.3 / 33.4 / 50 | 96.7% | 1.4% | 12.4 / 22.5 | 42% | 148.9 | 0.2 s | 1 | 6.1 | 18,857 |
+| Home hero, phone 4×, untouched | base | medium | 29.1 | 33.3 / 50 / 50.1 | 99.7% | 6.4% | 16.7 / 22.6 | 51% | 32.2 | 1.2 s | 2 | 9.6 | 18,824 |
+|  | after | low | 27.6 | 33.3 / 50 / 66.7 | 96.5% | 16.9% | 20.6 / 42.5 | 65% | 49.5 | 1.0 s | 6 | 9.9 | 18,836 |
+
+**The scene's own sections** on the final branch (ms a frame; draw calls of every pass):
+
+| Profile | Tier | Calls | Triangles | Programs | Textures | Top sections (ms a frame) |
+|---|---|---|---|---|---|---|
+| Low phone 6×, auto (low), touched | low | 442 | 1.09 M | 106 | 330 | render 13.65, herds 1.41, animals 0.89, plants 0.44, camera 0.4, schedule 0.31 |
+| Phone 4×, auto, touched | low | 446 | 1.10 M | 107 | 327 | render 8.77, herds 0.94, animals 0.6, camera 0.3, plants 0.29, town 0.19 |
+| Phone 4×, low | low | 437 | 1.09 M | 106 | 338 | render 9.12, herds 0.96, animals 0.51, camera 0.29, plants 0.28, schedule 0.24 |
+| Phone 4×, medium | medium | 495 | 1.28 M | 154 | 324 | render 14.87, animals 2.52, herds 0.88, instances 0.46, schedule 0.44, camera 0.43 |
+
+
+**The heap budget** (low phone, forced collections; decision 292: post-GC ≤ 384 MB): final branch **301 MB** at the
+first frame and **286 MB** in steady play (base 297 / 314 MB; the branch before the warm-up fix 280 / 309 MB). Before a
+collection the steady heap is 315 MB on the branch against 362 MB on the base (less garbage).
+
+**Bytes before the first frame** (~18–21 MB, unchanged by this lane): the first view's models ~10 MB, the bundle
+`ark-scene.js` 5.1 MB, the snapshot 1.6 MB, icons and textures 1.6 MB, the rest 0.4 MB.
+
+**Time until animals are in view** (the behaviour world built: animals are hidden until then), from the profiler's
+timeline: the low phone ~83 s before (the first refresh's 21 s stall fell in the middle of the build), ~55 s after; the
+phone ~37–42 s both.
+
 
 ## 5. The overlay: `?perf=1`
 
@@ -141,6 +202,11 @@ render 2.8  resting 1.3      the costliest sections, ms a frame
 animals 0.5  herds 0.2
 ```
 
+Remembered per site and per app: once on in Safari or Chrome at animaldex.app it also shows in the home page's hero;
+the apps' panel keeps its own (the five taps). On an iPhone the `heap` line reads `n/a` (WebKit does not say), and the
+tier line is worth reading: Safari reports neither memory nor (always) the real core count, so an iPhone may run the
+low tier; a fast one there with `cpu` well under 8 ms could carry the medium tier (a choice for the owner, §7).
+
 What to read back: the first four lines and `calls`, standing still and while dragging, on the iPhone (Safari and the
 panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's lock holding; `dpr` under the tier's
 (`x0.8`) means the phone's GPU is the limit; a large `render` with many `calls` is the draw-call cost (§7).
@@ -151,13 +217,13 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 |---|---|
 | Types (`npx tsc --noEmit -p tsconfig.json`) | clean |
 | Lint (`npm run lint`) | exit 0 (only the known `<img>` warnings, none in the changed files) |
-| Unit and integration (`npx tsx --test 'src/lib/**/*.test.ts'`) | 2,631 tests: 2,629 pass, 0 fail, 2 skipped (the lane's own: `src/lib/ark-perf-mobile.test.ts`, 13: the pacing on model devices, the start tier, a read that changes nothing, the collisions' memo against a layer that forgets it, the two-sided split) |
+| Unit and integration (`npx tsx --test 'src/lib/**/*.test.ts'`) | 2,633 tests: 2,631 pass, 0 fail, 2 skipped (the lane's own: `src/lib/ark-perf-mobile.test.ts`, 14: the pacing on model devices, the start tier, a read that changes nothing, the collisions' memo against a layer that forgets it, the two-sided split, the warm-up's list) |
 | Collision audit, three modes (CI's commands: islands v2, islands v1, today's) | base and branch **identical** (every report the same but its timings); all three checks pass |
 | Behaviour audit (CI's command) and encounters | base and branch **identical** (but the commit and the timings); "All 25 checks hold" |
 | Motion CI, the default view ×2 (`ark-rig-scenes.mjs --island --seconds 60`) | branch: pace ratio median 1.01 / 1.06, backwards 2.4% / 0.7%, over 1 s 2 / 0, ground turns 1.0 / 0.3 a minute; main the same minutes: 0.98 / 1.07, 0.8% / 2.1%, 1 / 1, 0.5 / 1.4. The same spread (the clock picks what moves); recordings take none of the pacing |
-| Visual CI on GitHub (run 43463825786, dispatched on d7e20c23: every change to what is drawn) | <!-- VISUAL --> |
+| Visual CI on GitHub (run 43463825786, dispatched on d7e20c23: every change to what is drawn) | **green**: 19/19 golden shots within tolerance (worst: 0.14% of pixels changed), the other lanes' checks green. Later commits change only what touch devices and new reads do, never a recording |
 | Motion metrics (a visual-CI hook) | green in that run's hooks job |
-| Heap budget (low phone, `--gc-points`: post-GC ≤ 384 MB at the first frame and in steady play) | <!-- HEAP --> |
+| Heap budget (low phone, `--gc-points`: post-GC ≤ 384 MB at the first frame and in steady play) | **301 MB** at the first frame, **286 MB** in steady play (final branch; base 297 / 314 MB) |
 | Rendering throttles change no shared result | the audits above; the memo's test; the read skip is a deep equality; placement in the worker is the mount's own (`src/lib/ark-prebuild.test.ts` compares every place) |
 
 
