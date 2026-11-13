@@ -291,17 +291,30 @@
   }
   ["pointerdown", "keydown", "wheel", "touchstart"].forEach(function (kind) { window.addEventListener(kind, activity, {passive: true}); });
 
+  // The last read's validator (`ETag`), when the server gave one.
+  var lastTag = null;
   function read() {
     if (feeding) return Promise.resolve();
     lastRead = Date.now();
     var routing = islandsUrl ? fetch(islandsUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
-    return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead, routing])
+    // (Revalidated, not refetched: an anonymous read carries the server's validator, and an unchanged Ark answers 304,
+    // the browser keeping the body it has. The same validator as last read: nothing to parse or lay out.)
+    var same = {};
+    return Promise.all([fetch(snapshotUrl, {cache: "no-cache"}).then(function (r) {
+      if (!r.ok) return null;
+      var tag = r.headers.get("ETag");
+      if (tag && tag === lastTag && shown) return same;
+      lastTag = tag;
+      return r.json();
+    }), wordsRead, routing])
       .then(function (both) {
         var body = both[0];
-        if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
-        var raw = body && body.snapshot ? body.snapshot : body;
-        founders = foundersFrom(body, raw);
-        show(Ark.decodeArkSnapshot(raw));
+        if (body !== same) {
+          if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
+          var raw = body && body.snapshot ? body.snapshot : body;
+          founders = foundersFrom(body, raw);
+          show(Ark.decodeArkSnapshot(raw));
+        }
         // Encounter hunting: the server's read with the live snapshot only (never a fixture or a given snapshot);
         // kept for the scene when it is not up yet (`mount` hands it over).
         if (Ark.fetchArkHunting && !fixtureAsked && !params.get("snapshot")) {

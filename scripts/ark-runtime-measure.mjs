@@ -57,6 +57,7 @@ import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {build} from "esbuild";
 import {gzipSync} from "node:zlib";
+import {createHash} from "node:crypto";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name, fallback) => {
@@ -185,6 +186,8 @@ async function cdn(request, response, pathname) {
 const modelsDir = arg("models-dir", "") ? path.resolve(arg("models-dir", "")) : "";
 const latency = Number(arg("latency", "180"));
 const reports = [];
+/** The snapshot file's reads: answered whole, or 304 (unchanged). */
+const reads = {full: 0, notModified: 0};
 const server = createServer((request, response) => {
     if (request.method === "POST" && request.url.startsWith("/report")) {
         const chunks = [];
@@ -218,8 +221,17 @@ const server = createServer((request, response) => {
     }
     const url = new URL(request.url, "http://localhost");
     if (populationFile && url.pathname === "/population-file.json") {
-        // (Compressed as the site's CDN serves the read: `/api/ark/voyage` goes out brotli'd, gzip here.)
-        sendText(request, response, readFileSync(populationFile), "application/json");
+        // (Compressed as the site's CDN serves the read: `/api/ark/voyage` goes out brotli'd, gzip here. With a validator
+        // as the anonymous voyage read has one: an unchanged file answers 304, counted in `reads`.)
+        const body = readFileSync(populationFile);
+        const tag = `W/"pop-${createHash("sha1").update(body).digest("base64url")}"`;
+        if (String(request.headers["if-none-match"] ?? "").split(",").some((t) => t.trim().replace(/^W\//, "") === tag.replace(/^W\//, ""))) {
+            reads.notModified++;
+            response.writeHead(304, {ETag: tag, "Cache-Control": "public, s-maxage=30"}).end();
+            return;
+        }
+        reads.full++;
+        sendText(request, response, body, "application/json", {ETag: tag, "Cache-Control": "public, s-maxage=30"});
         return;
     }
     const fromPublic = url.pathname.startsWith("/ark/");
@@ -240,15 +252,15 @@ const server = createServer((request, response) => {
  * them as they are. Compressed once per file and kept.
  */
 const gzipped = new Map();
-function sendText(request, response, body, type) {
+function sendText(request, response, body, type, headers = {"Cache-Control": "no-store"}) {
     if (flag("raw") || !/\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))) {
-        response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(body);
+        response.writeHead(200, {"Content-Type": type, ...headers}).end(body);
         return;
     }
     const key = `${type}:${body.length}:${body.subarray(0, 64).toString("base64")}`;
     let zipped = gzipped.get(key);
     if (!zipped) gzipped.set(key, (zipped = gzipSync(body, {level: 6})));
-    response.writeHead(200, {"Content-Type": type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": "no-store"}).end(zipped);
+    response.writeHead(200, {"Content-Type": type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", ...headers}).end(zipped);
 }
 const servePort = Number(arg("serve", "0"));
 // (Loopback only, also for the WebViews: the iOS Simulator shares the Mac's loopback, and an Android emulator reaches
@@ -637,4 +649,5 @@ for (const deviceName of devices) {
 }
 writeFileSync(path.join(out, "runtime.md"), lines.join("\n") + "\n");
 log("wrote", path.join(out, "runtime.md"));
+if (populationFile) log(`snapshot reads: ${reads.full} whole, ${reads.notModified} unchanged (304)`);
 console.log(lines.join("\n"));
