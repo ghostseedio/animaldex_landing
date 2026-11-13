@@ -2641,6 +2641,23 @@
       "shared animal world"
     ]
   },
+  "inlineAsk": {
+    "eyebrowTierList": "Ask the #1 animal",
+    "eyebrowComparison": "Ask the animal with the edge",
+    "eyebrowHub": "Ask the animal from the most-read matchup",
+    "title": "Ask the {animal}",
+    "hint": "It answers as itself, from how it lives.",
+    "quota": "{limit} free messages a day. More in the app.",
+    "remaining": "{remaining} of {limit} messages left today",
+    "limitReached": "You’ve used today’s messages. Keep going in the app, free.",
+    "placeholder": "Ask the {animal} anything…",
+    "submit": "Ask",
+    "moreQuestions": "Or ask",
+    "installTitle": "Talk to the {animal} in the app, free",
+    "installBody": "Every animal has a lesson.",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  },
   "askAnimalDex": {
     "launcher": "Talk to an animal",
     "title": "Ask AnimalDex",
@@ -2674,6 +2691,12 @@
     "limitCta": "Sign in to keep talking",
     "limitAppCta": "Get the app",
     "limitHref": "/#download",
+    "limitPanelBody": "Today’s free messages are used. They come back tomorrow — or keep going now.",
+    "limitAppFree": "Keep talking in the app, free",
+    "limitProWeek": "Pro for a week",
+    "limitProNote": "100 messages a day with any animal. Opens AnimalDex checkout.",
+    "limitOpenApp": "Already have the app? Open it there",
+    "limitHandoffNote": "Your last messages come with you.",
     "disclaimer": "Biology is fact. The way the animal reads it for you is AnimalDex’s interpretation.",
     "speakLauncher": "Talk to the {animal}",
     "inOwnWords": "In its own words",

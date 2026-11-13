@@ -26,6 +26,10 @@ import {getSystemsIntelligenceEntriesForSpeciesSlugs} from "@/data/species-syste
 import {resolveLocalSpeciesStats} from "@/data/species-stats";
 import {getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import InlineAskBox from "@/components/ask-animaldex/inline-ask-box";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {comparisonAskTarget} from "@/lib/tier-list-ask";
+import {getInlineAskWords} from "@/loaders/inline-ask-words";
 
 // The full comparison article, shared by the static /comparisons/[slug] pages
 // and the on-demand /compare/[slug] route (pairs generated since the
@@ -111,6 +115,18 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
     const voteTally = EMPTY_VOTE_TALLY;
     const comments: ComparisonComment[] = [];
 
+    // The inline Ask box (CC 2): the animal the page's own scenario column
+    // favours speaks, asked how it would beat the other. The page itself
+    // still names no winner (WEB-9).
+    const askTarget = comparisonAskTarget({
+        animalA: {slug: animalA.slug, name: animalA.name},
+        animalB: {slug: animalB.slug, name: animalB.name},
+        scenarios: challenge.scenarioBreakdown,
+        stats: challenge.statCategories
+    });
+    const askWords = await getInlineAskWords(locale);
+    const askAvatarUrl = getSpeciesArtworkRoute(askTarget.target.slug);
+
     const pageUrl = getAbsoluteUrl(locale, `/comparisons/${challenge.slug}`);
     const schemas = [
         {
@@ -157,12 +173,15 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
 
     return (
         <article className="mx-auto flex w-full max-w-[88rem] flex-col gap-9 px-4 pb-12 pt-5 md:px-8 md:pb-20 md:pt-8">
-            {/* Two animals, so the page stays a general subject and the reader's
-                question decides which one the answer is about. */}
+            {/* The animal with the edge speaks for itself (CC 2): the inline box
+                under the hero is addressed to it, and so is the drawer. */}
             <AskSubjectBridge
-                slug={animalA.slug}
-                title={sideBySideTitle}
+                scope="species"
+                slug={askTarget.target.slug}
+                name={askTarget.target.name}
+                title={askTarget.target.name}
                 summary={`${animalA.name} and ${animalB.name}: two ways of surviving.`}
+                avatarUrl={askAvatarUrl}
             />
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify(schemas)}} />
             <Link
@@ -176,6 +195,17 @@ export async function renderComparisonArticle({locale, challenge}: ComparisonArt
             </Link>
 
             <ChallengeHero challenge={challenge} title={sideBySideTitle} comparisonTypeLabel={t(`comparisonTypes.${challenge.comparisonType}`)} animalAName={animalA.name} animalBName={animalB.name} updatedLabel={t("updated")} updatedValue={formatDate(locale, challenge.updatedAt || challenge.publishedAt)} readTimeLabel={t("minuteRead", {minutes: readMinutes})} quickVerdictLabel={t("twoWaysEyebrow")} />
+
+            <InlineAskBox
+                slug={askTarget.target.slug}
+                name={askTarget.target.name}
+                question={askTarget.question}
+                avatarUrl={askAvatarUrl}
+                eyebrow={askWords.eyebrowComparison}
+                pageKind="comparison"
+                pageSlug={challenge.slug}
+                words={askWords}
+            />
 
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">

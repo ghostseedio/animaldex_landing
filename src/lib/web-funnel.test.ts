@@ -12,8 +12,9 @@ import {
 const VID = "c0ffee00c0ffee00c0ffee00";
 
 describe("web funnel reports", () => {
-    it("are the seven steps of the spec", () => {
-        assert.deepEqual([...WEB_FUNNEL_EVENTS], ["hero_view", "demo_start", "demo_reply", "second_message", "share_take", "signup", "store_click"]);
+    it("are the seven steps of the spec, plus the Ask limit's store tap", () => {
+        assert.deepEqual([...WEB_FUNNEL_EVENTS], ["hero_view", "demo_start", "demo_reply", "second_message", "share_take", "signup", "store_click", "store_click_ask_limit"]);
+        assert.equal(normalizeWebFunnelReport({event: "store_click_ask_limit", variant: "a", vid: VID, path: "/tier-list/strongest-animals"})?.event, "store_click_ask_limit");
     });
 
     it("take a known step, a variant and a visitor id; the chip kind only on a start; the path alone", () => {
@@ -90,7 +91,7 @@ describe("the admin's funnel", () => {
         assert.deepEqual(a.starts, {idea: 0, problem: 0, typed: 1, suggested: 0});
         assert.equal(b.viewers, 2);
         assert.deepEqual(b.steps.map((step) => [step.event, step.visitors]), [
-            ["demo_start", 2], ["demo_reply", 2], ["second_message", 1], ["share_take", 1], ["signup", 1], ["store_click", 1]
+            ["demo_start", 2], ["demo_reply", 2], ["second_message", 1], ["share_take", 1], ["signup", 1], ["store_click", 1], ["store_click_ask_limit", 0]
         ]);
         assert.deepEqual(b.starts, {idea: 1, problem: 1, typed: 0, suggested: 0});
         assert.equal(b.shareOfReplies, 50);

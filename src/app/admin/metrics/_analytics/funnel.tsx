@@ -12,6 +12,7 @@ const STEP_LABELS: Record<WebFunnelStep["event"], { label: string; info: string 
   share_take: { label: "Shared a take", info: "Shared an animal's reply." },
   signup: { label: "Signed up", info: "Made an account on the web (Google or Apple sign-in) within half an hour of the callback." },
   store_click: { label: "Tapped a store link", info: "Went to the App Store or Google Play from any page." },
+  store_click_ask_limit: { label: "Store tap at the Ask limit", info: "Tapped \"Keep talking in the app, free\" on the Ask limit panel (also counted in the store step)." },
 };
 
 const START_LABELS: Record<WebFunnelChipKind, string> = { idea: "Idea chips", problem: "Problem chip", typed: "Own words", suggested: "A suggestion" };

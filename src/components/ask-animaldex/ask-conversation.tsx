@@ -102,6 +102,8 @@ import {AiNotice, AiTag, useAiLongSession} from "@/components/ai-gate/ai-notices
 import {noteFunnelMessage, noteFunnelReply, trackFunnel} from "@/lib/web-funnel-client";
 import {rememberStorePlacement} from "@/lib/store-links";
 import {SPECIES_ASK_FUNNEL_EVENTS, SPECIES_ASK_SIGNED_IN_LIMIT} from "@/lib/species-ask";
+import AskLimitPanel from "@/components/ask-animaldex/ask-limit-panel";
+import type {AskLimitProPlan} from "@/lib/ask-handoff";
 import {
     EMPTY_COMPANION_LOOP,
     companionDisplayName,
@@ -294,6 +296,13 @@ export type AskDrawerLabels = {
     limitBodySignedIn: string;
     limitCtaSignedIn: string;
     limitHrefSignedIn: string;
+    /** The limit panel (CC 2): its body and its two actions, the deep link and the hand-off note. */
+    limitPanelBody: string;
+    limitAppFree: string;
+    limitProWeek: string;
+    limitProNote: string;
+    limitOpenApp: string;
+    limitHandoffNote: string;
     /** A Pro account: nothing to sell, just when the messages come back. */
     limitBodyPro: string;
     /** Past the allowance, a Pro reader with credits: "Keep talking for {cost} credit per message? Balance: {balance}". */
@@ -578,6 +587,8 @@ type AskContextPayload = {
     ownerName?: string | null;
     /** This animal's chat on the Talk page (its catalog slug), for Full screen (WEB-1). */
     talkSlug?: string | null;
+    /** The Pro plan the website can sell at the limit (yearly first), for the limit panel (CC 2). */
+    webProPlan?: AskLimitProPlan | null;
 };
 
 const THINKING_PHASE_MS = 2200;
@@ -2860,7 +2871,7 @@ function AskConversation({
     // Today's messages are spent: what to say and the reader's next step. A
     // card under the site-wide assistant's answers; in the animal's thread it
     // takes the composer's place, flush in its band, as in the apps.
-    const limitNoticeContent = (
+    const limitNoticeText = (
         <>
             <p className="text-sm font-semibold text-white">{labels.limitTitle}</p>
             <p className="mt-1.5 text-sm leading-6 text-ink-100">
@@ -2894,37 +2905,22 @@ function AskConversation({
                     </Link>
                 </>
             ) : null}
-            {limitTier === "pro" || creditOffer ? null : limitTier === "free" ? (
-                <Link
-                    href={labels.limitHrefSignedIn}
-                    onClick={() => trackLimitStep("drawer_limit_pro")}
-                    className={`${outOfCredits ? "ml-2 " : ""}mt-3 inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500`}
-                >
-                    {labels.limitCtaSignedIn}
-                </Link>
-            ) : (
-                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                    <Link
-                        href={signInHref}
-                        onClick={() => trackLimitStep("drawer_limit_sign_in")}
-                        className="inline-flex rounded-full bg-primary-400 px-4 py-2 text-xs font-bold text-canvas-950 transition-colors hover:bg-primary-300 active:bg-primary-500"
-                    >
-                        {labels.limitCta}
-                    </Link>
-                    <Link
-                        href={labels.limitHref}
-                        onClick={() => {
-                            trackLimitStep("drawer_limit_app");
-                            // The store button on /#download credits the chat.
-                            rememberStorePlacement("chat_limit");
-                        }}
-                        className="text-xs font-semibold text-primary-200 underline-offset-2 transition-colors hover:text-primary-100 hover:underline"
-                    >
-                        {labels.limitAppCta}
-                    </Link>
-                </div>
-            )}
         </>
+    );
+    // The limit moment is the install moment (CC 2): a free reader, signed in
+    // or not, gets the one panel with its two actions (the app, free; Pro)
+    // in place of the sign-in and Pro links. Pro readers and readers with
+    // Credits to spend keep the notice above.
+    const limitNoticeContent = limitTier === "pro" || creditOffer ? limitNoticeText : (
+        <AskLimitPanel
+            slug={resolvedSubject.slug ?? null}
+            speciesProfileId={context?.speciesProfileId ?? null}
+            messages={messages}
+            signedIn={limitTier === "free"}
+            webProPlan={context?.webProPlan ?? null}
+            labels={labels}
+            onStep={trackLimitStep}
+        />
     );
 
     const panelLabel = animalName ? labels.aboutAnimal.replace("{animal}", animalName) : labels.title;

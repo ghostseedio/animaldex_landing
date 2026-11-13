@@ -2626,6 +2626,23 @@
       "simulasi ekosistem hewan"
     ]
   },
+  "inlineAsk": {
+    "eyebrowTierList": "Tanya hewan nomor 1",
+    "eyebrowComparison": "Tanya hewan yang unggul",
+    "eyebrowHub": "Tanya hewan dari duel paling banyak dibaca",
+    "title": "Tanya {animal}",
+    "hint": "Ia menjawab sebagai dirinya sendiri, dari cara hidupnya.",
+    "quota": "{limit} pesan gratis per hari. Lebih banyak di app.",
+    "remaining": "{remaining} dari {limit} pesan tersisa hari ini",
+    "limitReached": "Pesan hari ini sudah habis. Lanjutkan di app, gratis.",
+    "placeholder": "Tanya apa saja pada {animal}…",
+    "submit": "Tanya",
+    "moreQuestions": "Atau tanyakan",
+    "installTitle": "Bicara dengan {animal} di app, gratis",
+    "installBody": "Setiap hewan punya pelajaran.",
+    "appStore": "App Store",
+    "googlePlay": "Google Play"
+  },
   "askAnimalDex": {
     "launcher": "Bicara dengan hewan",
     "title": "Tanya AnimalDex",
@@ -2659,6 +2676,12 @@
     "limitCta": "Masuk untuk terus bicara",
     "limitAppCta": "Dapatkan app",
     "limitHref": "/#download",
+    "limitPanelBody": "Pesan gratis hari ini sudah habis. Besok kembali lagi — atau lanjutkan sekarang.",
+    "limitAppFree": "Lanjutkan di app, gratis",
+    "limitProWeek": "Pro selama seminggu",
+    "limitProNote": "100 pesan sehari dengan hewan mana pun. Membuka checkout AnimalDex.",
+    "limitOpenApp": "Sudah punya app-nya? Buka di sana",
+    "limitHandoffNote": "Pesan terakhirmu ikut dibawa.",
     "disclaimer": "Biologi adalah fakta. Cara hewan membacanya untukmu adalah interpretasi AnimalDex.",
     "speakLauncher": "Bicara dengan {animal}",
     "inOwnWords": "Dengan kata-katanya sendiri",

@@ -3,9 +3,11 @@ import test from "node:test";
 import {
     appStoreCampaignToken,
     appStoreLink,
+    detectStorePlatform,
     buildStoreUrl,
     googlePlayLink,
     isWebsiteStoreSource,
+    orderedStores,
     pageStorePlacement,
     shareReferralCode,
     SOCIAL_BIO_PLATFORMS,
@@ -108,4 +110,37 @@ test("only a plausible referral code is read from a query string", () => {
     // Nothing that could add another key to the install referrer.
     assert.equal(shareReferralCode("?ref=abc%26utm_campaign%3Dx"), null);
     assert.equal(shareReferralCode(`?ref=${"a".repeat(41)}`), null);
+});
+
+test("a fixed utm_content names the button on both stores, and a hand-off rides the Play referrer (CC 2)", () => {
+    assert.equal(
+        googlePlayLink("tierlist", null, "/tier-list/strongest-animals", {content: "tierlist_strongest-animals"}),
+        `${PLAY}utm_source%3Danimaldex_web%26utm_medium%3Dtierlist%26utm_campaign%3D%252Ftier-list%252Fstrongest-animals%26utm_content%3Dtierlist_strongest-animals`
+    );
+    // Apple reads only pt/ct/mt, so the App Store link is the campaign link, or the bare page without a token.
+    assert.equal(appStoreLink("tierlist", "", {content: "tierlist_strongest-animals"}), "https://apps.apple.com/app/6761607780");
+    assert.equal(appStoreLink("tierlist", "123456", {content: "tierlist_strongest-animals"}), "https://apps.apple.com/app/6761607780?pt=123456&ct=tierlist&mt=8");
+    const id = "6f1d2c3b-4a5e-4f60-8b7c-9d0e1f2a3b4c";
+    assert.equal(
+        storeHref("google_play", "ask_limit", null, "/animals/blue-whale", {content: "ask_limit", handoff: id}),
+        `${PLAY}utm_source%3Danimaldex_web%26utm_medium%3Dask_limit%26utm_campaign%3D%252Fanimals%252Fblue-whale%26utm_content%3Dask_limit%26handoff%3D${id}`
+    );
+    // A bad id, or none, changes nothing; the existing links are byte for byte what they were.
+    assert.equal(storeHref("google_play", "ask_limit", null, null, {handoff: "<script>"}), googlePlayLink("ask_limit"));
+    assert.equal(storeHref("app_store", "ask_limit", null, null, {}), appStoreLink("ask_limit"));
+    assert.equal(googlePlayLink("page_animals", null, "/animals/red-fox", {content: "  "}), googlePlayLink("page_animals", null, "/animals/red-fox"));
+});
+
+test("the store is chosen from the user agent after hydration: iOS to the App Store, Android to Play, a desktop to neither", () => {
+    assert.equal(detectStorePlatform("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"), "app_store");
+    assert.equal(detectStorePlatform("Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)"), "app_store");
+    // iPadOS Safari says Macintosh; touch gives it away.
+    assert.equal(detectStorePlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15", 5), "app_store");
+    assert.equal(detectStorePlatform("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15", 0), null);
+    assert.equal(detectStorePlatform("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/130 Mobile Safari/537.36"), "google_play");
+    assert.equal(detectStorePlatform("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130"), null);
+    assert.equal(detectStorePlatform(null), null);
+    assert.deepEqual(orderedStores("google_play"), ["google_play", "app_store"]);
+    assert.deepEqual(orderedStores("app_store"), ["app_store", "google_play"]);
+    assert.deepEqual(orderedStores(null), ["app_store", "google_play"]);
 });

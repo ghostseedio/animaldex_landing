@@ -1,4 +1,5 @@
 import {splitLocalePath} from "@/lib/request-routing";
+import {storePlatformFromUserAgent} from "@/lib/store-platform";
 
 /** The bare store pages: the app's identity (structured data, sameAs). Links people click carry a placement. */
 export const appStoreUrl = "https://apps.apple.com/app/6761607780";
@@ -41,7 +42,38 @@ export type StorePlacement =
     | "import_result"
     | "post"
     | "not_found"
+    /** The install buttons on the big tier lists (CC 2, Nov 2026); `utm_content` names the list. */
+    | "tierlist"
+    /** The Ask limit panel's "Keep talking in the app, free" (CC 2, Nov 2026). */
+    | "ask_limit"
     | `page_${string}`;
+
+/**
+ * Extras a store link can carry besides its placement (CC 2, Nov 2026).
+ * Additive: every existing caller passes none and gets the same link.
+ *
+ * - `content`: a fixed `utm_content` ("tierlist_strongest-animals",
+ *   "ask_limit") instead of the page path the click would otherwise add.
+ * - `handoff`: a web Ask hand-off id (lib/ask-handoff), in the Play install
+ *   referrer so the Android app can pick the conversation up after install.
+ */
+export type StoreLinkOptions = {
+    content?: string | null;
+    handoff?: string | null;
+};
+
+const UTM_CONTENT_MAX = 120;
+const HANDOFF_ID = /^[0-9a-f-]{8,40}$/i;
+
+function cleanContent(content: string | null | undefined) {
+    const value = (content ?? "").trim().replace(/[^A-Za-z0-9_./-]/g, "").slice(0, UTM_CONTENT_MAX);
+    return value || null;
+}
+
+function cleanHandoff(handoff: string | null | undefined) {
+    const value = (handoff ?? "").trim();
+    return HANDOFF_ID.test(value) ? value : null;
+}
 
 /**
  * App Store Connect's provider token (App Analytics → Campaigns). Apple
@@ -102,6 +134,8 @@ export type StoreUrlInput = {
     referral?: string | null;
     /** App Store Connect's provider token; the environment's by default. */
     providerToken?: string;
+    /** A web Ask hand-off id (lib/ask-handoff): in the Play install referrer only, so the Android app can resume the conversation (CC 2). */
+    handoff?: string | null;
 };
 
 /**
@@ -134,14 +168,16 @@ export function buildStoreUrl(input: StoreUrlInput): string {
     if (page) parts.push(`utm_campaign=${encodeURIComponent(page)}`);
     parts.push(`utm_content=${encodeURIComponent(button)}`);
     if (input.referral && REFERRAL_CODE_PATTERN.test(input.referral)) parts.push(`ref=${input.referral}`);
+    const handoff = cleanHandoff(input.handoff);
+    if (handoff) parts.push(`handoff=${handoff}`);
     const url = new URL(googlePlayUrl);
     url.searchParams.set("referrer", parts.join("&"));
     return url.toString();
 }
 
 /** The App Store link for a surface (older callers: the page and button are not known here). */
-export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN) {
-    return buildStoreUrl({store: "app_store", surface: placement, button: "link", providerToken});
+export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN, options: StoreLinkOptions = {}) {
+    return buildStoreUrl({store: "app_store", surface: placement, button: cleanContent(options.content) ?? "link", providerToken});
 }
 
 /**
@@ -149,12 +185,29 @@ export function appStoreLink(placement: StorePlacement, providerToken: string = 
  * link's `?ref=`; `path` is the page the button is on (`utm_campaign`), so
  * /admin/metrics can name the exact page an Android install came from.
  */
-export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null) {
-    return buildStoreUrl({store: "google_play", surface: placement, page: path, button: "link", referral});
+export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null, options: StoreLinkOptions = {}) {
+    // A fixed content ("tierlist_<slug>", "ask_limit") names the button (CC 2); a hand-off id rides the referrer.
+    return buildStoreUrl({store: "google_play", surface: placement, page: path, button: cleanContent(options.content) ?? "link", referral, handoff: options.handoff});
 }
 
-export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null) {
-    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral, path);
+export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null, options: StoreLinkOptions = {}) {
+    return store === "app_store" ? appStoreLink(placement, APP_STORE_PROVIDER_TOKEN, options) : googlePlayLink(placement, referral, path, options);
+}
+
+/**
+ * Which store a browser's user agent belongs to: iPhone, iPad and iPod (and
+ * iPadOS Safari, which says "Macintosh" with touch) go to the App Store,
+ * Android to Google Play, and anything else (a desktop) to neither, so a
+ * page shows both buttons. Decided in the browser after hydration: the pages
+ * that use it are static.
+ */
+export function detectStorePlatform(userAgent: string | null | undefined, maxTouchPoints = 0): AppStoreName | null {
+    return storePlatformFromUserAgent(userAgent, maxTouchPoints);
+}
+
+/** The buttons in the order a page shows them: the reader's own store first, the other after it. */
+export function orderedStores(platform: AppStoreName | null): AppStoreName[] {
+    return platform === "google_play" ? ["google_play", "app_store"] : ["app_store", "google_play"];
 }
 
 /** The social profiles whose bio carries a store link. */
