@@ -658,7 +658,7 @@ export default function CaptureDetailClient({
                                 />
                             </div>
                         ) : null}
-                        {/* The Ark: is this species aboard, and the next move (see it, or a step that brings one). */}
+                        {/* The Ark: is this species aboard, and the next move (see it, or a capture that brings one). */}
                         {arkWords && !capture.hasUncertaintyFallback && (speciesProfileId || speciesSlug) ? (
                             <div className="-mx-5">
                                 <ArkCaptureBand

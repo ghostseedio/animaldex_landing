@@ -21,7 +21,7 @@ import {getPageWords, word} from "@/loaders/page-words";
  * - The diet line comes only from `voyage_food_links` (each link taken from
  *   the species' field guide). While that table is not live, or holds nothing
  *   for this species, the line is not shown: never an invented diet.
- * - "One comes aboard when a step works" only for a species that can board
+ * - "One comes aboard when someone captures it" only for a species that can board
  *   (it has an Ark model).
  * - SEO lane S3: how its numbers changed over the last week (the event log,
  *   `readArkSpeciesTrends`), what it can eat and be eaten by among the animals
