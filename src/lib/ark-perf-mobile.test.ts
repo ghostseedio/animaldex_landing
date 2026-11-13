@@ -37,12 +37,26 @@ test("pacing: a phone that holds 60 stays at 60 and full resolution", () => {
     assert.equal(pacer.resolution, 1);
 });
 
-test("pacing: script-bound frames that cannot hold 60 lock to a steady 30, resolution untouched", () => {
+test("pacing: script-bound frames that cannot hold 60 lock to a steady 30, resolution untouched, tries rarer each time", () => {
     const pacer = new ArkFramePacer("medium", 0);
-    const {decisions} = simulate(pacer, 0, 30, 24, 10, false);
-    assert.equal(decisions.length, 1, JSON.stringify(decisions));
+    const {decisions, lockedShare} = simulate(pacer, 0, 120, 24, 10, false);
+    assert.equal(decisions[0].interval, PACE_LOCK_MS);
     assert.equal(pacer.interval, PACE_LOCK_MS);
     assert.equal(pacer.resolution, 1);
+    assert.ok(lockedShare > 0.9, `locked ${Math.round(lockedShare * 100)}%`);
+    assert.ok(decisions.length <= 10, JSON.stringify(decisions));
+});
+
+test("pacing: a jittery rate (a third of the frames missing 60) locks to a steady 30, though the median is on time", () => {
+    const pacer = new ArkFramePacer("medium", 0);
+    let t = 0;
+    let locked = false;
+    for (let k = 0; k < 400 && !locked; k++) {
+        const interval = pacer.interval || (k % 3 === 0 ? 33.4 : 16.7);
+        t += interval / 1000;
+        locked = pacer.step(t, interval, 14, true, false).interval > 0;
+    }
+    assert.ok(locked);
 });
 
 test("pacing: GPU-bound frames give up a step of resolution and hold 60 there, with no bouncing", () => {
@@ -65,16 +79,17 @@ test("pacing: a GPU too slow for 60 even at the floor holds a steady 30; its tri
     assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR && !d.dropTier));
 });
 
-test("pacing: back to 60 once the frames are light again, and it stays there", () => {
+test("pacing: the start is forgotten when it ends: a phone locked by it is back at 60 within seconds, and stays", () => {
     const pacer = new ArkFramePacer("medium", 0);
-    simulate(pacer, 0, 10, 24, 10, false);
+    // The start: the world being built, 24 ms of work a frame.
+    const start = simulate(pacer, 0, 40, 24, 10, false);
     assert.equal(pacer.interval, PACE_LOCK_MS);
-    // Still heavy (and the start not over): no try, however long.
-    const heavy = simulate(pacer, 10, 60, 24, 10, false);
-    assert.equal(heavy.decisions.length, 0);
-    const light = simulate(pacer, heavy.t, 60, 5, 10, false);
-    assert.equal(pacer.interval, 0);
-    assert.equal(light.decisions.length, 1, JSON.stringify(light.decisions));
+    // Over: 12 ms a frame, which holds 60.
+    const after = simulate(pacer, start.t, 60, 12, 10, true);
+    assert.equal(pacer.interval, 0, JSON.stringify(after.decisions));
+    const back = after.decisions.find((d) => d.interval === 0);
+    assert.ok(back && back.t - start.t < 5, `back at 60 after ${back ? (back.t - start.t).toFixed(1) : "never"} s`);
+    assert.ok(after.decisions.every((d) => !d.dropTier));
 });
 
 test("pacing: a slow phone's low tier starts locked at 30; a tier drops only once settled and still not holding 30", () => {

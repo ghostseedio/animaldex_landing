@@ -6,16 +6,17 @@
  * built and its models coming in) and, if long, a whole tier down for good (no shadows, no finish, less grass). Now,
  * on a touch device, one small controller fed every drawn frame's interval and main-thread work:
  *
- * 1. **The resolution.** When the frames run long but their own work is short (the GPU, not the script, is the
- *    bottleneck: fill rate, the finish's passes), the drawing buffer's scale steps down by 0.1 (to 0.7 of the tier's
- *    pixel ratio at most); it steps back up after 6 s of frames on time, and after a step up that had to be undone the
- *    next step up waits a minute. The picture stays whole; it is only softer.
- * 2. **The rate.** Held at the display's rate while it can (a GPU-bound phone first gives up resolution); when the
- *    median interval over a second still runs past 19 ms, locked to 30 frames a second (a steady 30 beats a jittery
- *    45). It tries the display's rate again only when the frames are light (their work under 9 ms), and waits longer
- *    each time a try fails (8, 16, 32 … 120 s): it never oscillates. The low tier starts locked.
- * 3. **The tier.** Only once the start is over (the scene says `settled`), locked at 30 and at the lowest scale, a
- *    median past 40 ms for 3 s drops a tier, as the old check did.
+ * 1. **The resolution.** When a quarter of the frames run late but their own work is short (the GPU, not the script,
+ *    is the bottleneck: fill rate, the finish's passes), the drawing buffer's scale steps down by 0.1 (to 0.7 of the
+ *    tier's pixel ratio at most); it steps back up after 6 s of frames on time, never to a scale found too high at that
+ *    rate in the last 90 s. The picture stays whole; it is only softer.
+ * 2. **The rate.** Held at the display's rate while it can (a GPU-bound phone first gives up resolution); when a
+ *    quarter of the frames still miss it (a jittery 40–50), locked to a steady 30. It tries the display's rate again
+ *    after 8 s, and waits twice as long after each try that fails at once (8, 16, 32 … 120 s): it never oscillates. The
+ *    start (the world being built, the first models) is forgotten when it ends, and the display's rate tried again.
+ *    The low tier on a slow main thread starts locked.
+ * 3. **The tier.** Only once the start is over: locked at 30 and as low as the resolution goes, still missing 30 for
+ *    3 s; or locked at 30 by the script's own work for 15 s on end (a phone then trades the tier's finish for 60).
  *
  * Pure: the clock is passed in. The scene applies what `step` returns.
  */
@@ -35,10 +36,10 @@ export type PaceDecision = {
 };
 
 export const PACE_LOCK_MS = 1000 / 30;
-/** The median interval over which the display's rate is not being held (60 Hz: 16.7 ms; a little room for jitter). */
+/** A frame interval over this misses the display's 60 Hz (16.7 ms, a little room for jitter). */
 const HOLD_60_MS = 19;
-/** Frames whose own work is under this (72% of a 60 Hz frame) may try the display's rate again. */
-const LIGHT_WORK_MS = 12;
+/** The share of frames that may miss before the rate counts as not held (judged on the frames' 75th percentile). */
+const LATE_SHARE = 0.75;
 /** A locked frame later than this (median) is not holding 30 either. */
 const HOLD_30_MS = 40;
 const WINDOW = 45;
@@ -80,10 +81,13 @@ export class ArkFramePacer {
     private lockedSince: number | null = null;
     /** The start was over at the last frame (its frames, the world being built, say nothing of the frames to come). */
     private wasSettled = false;
+    /** Started locked (the low tier on a slow main thread): no try at the display's rate before the start is over. */
+    private slowStart = false;
 
     /** `startLocked`: the low tier on a slow main thread (`tierForCpu`) starts at a steady 30. */
     constructor(private tier: PaceTier, now: number, startLocked = tier === "low") {
         this.locked = startLocked;
+        this.slowStart = startLocked;
         this.lockedSince = startLocked ? now : null;
         this.judgedAt = now;
         this.retryAt = now + RETRY_FIRST_S;
@@ -130,10 +134,13 @@ export class ArkFramePacer {
         const keep = (changed = false): PaceDecision => ({interval: this.interval, scale: this.scale, dropTier: false, changed});
         if (!full || !(intervalMs > 0) || intervalMs > 250) return keep();
         if (settled && !this.wasSettled) {
-            // The start just ended: what was measured during it is forgotten, and a lock counts from now.
+            // The start just ended: what was measured during it is forgotten, a lock counts from now, and the display's
+            // rate is tried again soon (its earlier failures were the start's).
             this.wasSettled = true;
             this.reset(now);
             if (this.locked) this.lockedSince = now;
+            this.failures = 0;
+            this.retryAt = Math.min(this.retryAt, now + 2);
         }
         this.intervals[this.at] = intervalMs;
         this.work[this.at] = workMs;
@@ -141,8 +148,9 @@ export class ArkFramePacer {
         this.count = Math.min(this.count + 1, WINDOW);
         if (this.count < MIN_SAMPLES || now - this.judgedAt < JUDGE_EVERY_S) return keep();
         this.judgedAt = now;
-        const interval = median(this.intervals, this.count);
-        const work = median(this.work, this.count);
+        // (The interval at its 75th percentile: a quarter of the frames late is a jittery rate, even when the median is on time.)
+        const interval = percentile(this.intervals, this.count, LATE_SHARE);
+        const work = percentile(this.work, this.count, 0.5);
         const rate: Rate = this.locked ? "locked" : "full";
         const target = this.locked ? PACE_LOCK_MS : 1000 / 60;
         const late = interval > (this.locked ? target * 1.12 : HOLD_60_MS);
@@ -205,7 +213,8 @@ export class ArkFramePacer {
             this.droppedFor = this.tier;
             return {interval: this.interval, scale: this.scale, dropTier: true, changed: true};
         }
-        if (this.locked && now >= this.retryAt && work < LIGHT_WORK_MS) {
+        // (Not judged by the frames' work at 30: much of it is per second, not per frame, so it reads heavier than it is at 60.)
+        if (this.locked && now >= this.retryAt && !(this.tier === "low" && this.slowStart && !this.wasSettled)) {
             this.locked = false;
             this.lockedSince = null;
             this.triedAt = now;
@@ -223,9 +232,9 @@ export class ArkFramePacer {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-function median(values: Float64Array, count: number): number {
+function percentile(values: Float64Array, count: number, share: number): number {
     const sorted = Array.from(values.subarray(0, count)).sort((a, b) => a - b);
-    return sorted[Math.floor(sorted.length / 2)] ?? 0;
+    return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * share))] ?? 0;
 }
 
 /**
