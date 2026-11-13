@@ -1506,7 +1506,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         const shallows = shallowsNear(world, animal, centre, Math.min(Math.max(radius * 1.6, 8), 40), slot);
         if (shallows) {
             const wadeRandom = rng(hashString(`${animal.id}#wade-beats#${slot}`));
-            const far = Math.hypot(shallows.x - centre.x, shallows.z - centre.z) > Math.max(3, animal.length * 6);
+            // (One that walks first, a rail, a gallinule, walks to its shallows within its walk's reach, and flies further
+            // only as often as it flies: lane MA3, a water rail hopped 4-10 m to the shallows 36 times a day.)
+            const way = Math.hypot(shallows.x - centre.x, shallows.z - centre.z);
+            const far = profile.move === "fly" ? way > Math.max(3, animal.length * 6) : way > walkReach(profile, animal) && airAllowed(profile, animal, slot);
             return {doing: behaviour === "wander" ? "forage" : (behaviour as ArkDoing), to: shallows, mode: flyer && far ? "air" : "ground", stay: stayBeats(behaviour === "forage" || behaviour === "wander" ? "watch" : "rest", wadeRandom, null)};
         }
     }

@@ -199,10 +199,10 @@ export const RIVER_LOWER: readonly RiverPoint[] = (() => {
     ];
 })();
 
-export type RiverHit = {d: number; level: number; width: number; depth: number; along: number; upper: boolean; dx: number; dz: number};
+export type RiverHit = {d: number; level: number; width: number; depth: number; along: number; upper: boolean; dx: number; dz: number; /** How fast its surface falls there (m a metre downstream). */ fall: number; /** Its valley's level: its own profile's, before the mouth comes down to the lake (`toTheLake`). */ valley: number};
 
 function nearestOn(list: readonly RiverPoint[], x: number, z: number, upper: boolean, total: {length: number}): RiverHit {
-    let best: RiverHit = {d: Infinity, level: 0, width: 1, depth: 0.5, along: 0, upper, dx: 0, dz: 1};
+    let best: RiverHit = {d: Infinity, level: 0, width: 1, depth: 0.5, along: 0, upper, dx: 0, dz: 1, fall: 0, valley: 0};
     let before = 0;
     let length = 0;
     for (let i = 1; i < list.length; i++) length += Math.hypot(list[i].x - list[i - 1].x, list[i].z - list[i - 1].z);
@@ -212,7 +212,7 @@ function nearestOn(list: readonly RiverPoint[], x: number, z: number, upper: boo
         const b = list[i];
         const seg = Math.hypot(b.x - a.x, b.z - a.z);
         const {d, t} = distanceToSegment(x, z, a.x, a.z, b.x, b.z);
-        if (d < best.d) best = {d, level: lerp(a.level, b.level, t), width: lerp(a.width, b.width, t), depth: lerp(a.depth, b.depth, t), along: (before + t * seg) / length, upper, dx: (b.x - a.x) / seg, dz: (b.z - a.z) / seg};
+        if (d < best.d) best = {d, level: lerp(a.level, b.level, t), width: lerp(a.width, b.width, t), depth: lerp(a.depth, b.depth, t), along: (before + t * seg) / length, upper, dx: (b.x - a.x) / seg, dz: (b.z - a.z) / seg, fall: (a.level - b.level) / seg, valley: lerp(a.level, b.level, t)};
         before += seg;
     }
     return best;
@@ -225,7 +225,43 @@ const lowerLength = {length: 0};
 export function riverAt(x: number, z: number): RiverHit {
     const upper = nearestOn(RIVER_UPPER, x, z, true, upperLength);
     const lower = nearestOn(RIVER_LOWER, x, z, false, lowerLength);
-    return upper.d <= lower.d ? upper : lower;
+    return upper.d <= lower.d ? toTheLake(upper) : lower;
+}
+
+/**
+ * The upper river's mouth (lane MA3, the river mouth): its points reach the lake's level only at the last, 15 m inside the
+ * lake, so its last stretch across the lake's south-west was drawn 2 to 4 m above the lake, a raised tongue of water with
+ * walls (and a goose's swims there read as perches). Its surface now comes down to the lake's level by the lake's shore:
+ * what it still had to fall there, spread along its whole course from its spring (left where it is) to the shore, so it
+ * falls a little faster all the way (about a third of a metre a metre at most) rather than in one cascade; inside the
+ * lake it is the lake. Its banks stand clear of it by its fall (`ground.ts`).
+ */
+let upperMouth: {along: number; drop: number} | null = null;
+/** Where the upper river crosses the lake's shore (m along it from its spring) and how far its own profile is above the lake there. */
+export function upperRiverMouth(): {along: number; drop: number} {
+    if (upperMouth) return upperMouth;
+    let before = 0;
+    for (let i = 1; i < RIVER_UPPER.length; i++) {
+        const a = RIVER_UPPER[i - 1];
+        const b = RIVER_UPPER[i];
+        const seg = Math.hypot(b.x - a.x, b.z - a.z);
+        const steps = Math.ceil(seg / 0.25);
+        for (let k = 0; k <= steps; k++) {
+            const t = k / steps;
+            const x = lerp(a.x, b.x, t);
+            const z = lerp(a.z, b.z, t);
+            if (Math.hypot(x - LAKE.x, z - LAKE.z) < lakeEdge(x, z)) return (upperMouth = {along: before + t * seg, drop: Math.max(lerp(a.level, b.level, t) - LAKE.level, 0)});
+        }
+        before += seg;
+    }
+    return (upperMouth = {along: before, drop: 0});
+}
+function toTheLake(hit: RiverHit): RiverHit {
+    const mouth = upperRiverMouth();
+    const along = hit.along * upperLength.length;
+    if (along >= mouth.along) return {...hit, level: LAKE.level, fall: 0};
+    const k = Math.max(along / mouth.along, 0);
+    return {...hit, level: hit.level - mouth.drop * k, fall: hit.fall + mouth.drop / mouth.along};
 }
 
 /** How far along the whole river (0 at the spring, 1 at the mouth), for the rapids (the upper third) and the estuary. */

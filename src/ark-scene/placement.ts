@@ -30,6 +30,7 @@ import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
 import {mapPlace, mapPoints, settleRoosts, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
+import {inRock} from "@/ark-scene/map/rocks";
 import {hamletPlotsFor, plotOf, plotSpots} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {isHost} from "@/ark-scene/map/species";
@@ -550,8 +551,24 @@ function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
         // Across and along the host's heading (yaw 0 faces +z).
         const c = Math.cos(best.place.yaw);
         const sn = Math.sin(best.place.yaw);
-        const dx = side * c + along * sn;
-        const dz = -side * sn + along * c;
+        let dx = side * c + along * sn;
+        let dz = -side * sn + along * c;
+        // (Beside it on the ground, never inside a drawn rock, as the spawn validator asks (`inside_rock`): its other side, or
+        // level with the host, where that one is. Lane MA3's river mouth: a medicinal leech came up in a boulder by its host.)
+        if (role !== "rider" && !best.place.water) {
+            const L = arkBody(animal).metres;
+            const inside = (x: number, z: number) => inRock(x, z, Math.min(Math.max(L * 0.2, 0.05), 0.6), mapPoints().sampler.ground(x, z).height, Math.max(L * 0.5, 0.05));
+            if (inside(best.place.x + dx, best.place.z + dz)) {
+                for (const [s2, a2] of [[-side, along], [side, 0], [-side, 0], [side, -along], [-side, -along]]) {
+                    const tx = s2 * c + a2 * sn;
+                    const tz = -s2 * sn + a2 * c;
+                    if (inside(best.place.x + tx, best.place.z + tz)) continue;
+                    dx = tx;
+                    dz = tz;
+                    break;
+                }
+            }
+        }
         // A rider on its back (the host's drawn height, about half its length for a grazer); a remora just under a shark's belly.
         const lift = role === "rider" ? (best.place.water ? -0.25 * hostLength : 0.42 * hostLength) : 0;
         place.host = {id: best.animal.id, role, dx, dz, lift};
