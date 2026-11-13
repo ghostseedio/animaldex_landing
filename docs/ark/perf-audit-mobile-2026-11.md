@@ -252,7 +252,10 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
    the same Ark) or the parse in a worker would remove it.
 7. **On-device numbers.** Read the overlay on the owner's iPhone and Android (§5); if `dpr` sits at its floor, lower the
    medium tier's pixel-ratio cap from 1.5 for phones, or move post passes (the tilt-shift's two passes) off the medium
-   tier on phones.
+   tier on phones. If an iPhone shows `low` with `cpu` well under 8 ms and a steady 60, the start tier could let a fast
+   touch device up to medium (`tierForCpu` never raises today: a fidelity choice for the owner, not a smoothness one).
+8. **The first view's ~10 MB of models before the first frame** (streaming): unchanged here; on a phone's cellular link
+   that is most of the wait.
 
 ## 8. Decisions
 
@@ -268,6 +271,8 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 | What a slow phone gives up first | the tier; the frame rate; the resolution | resolution (GPU-bound), then a steady 30 (script-bound), then the tier | Least visible first; a steady 30 beats a jittery 45; the tier only when 30 cannot be held, or when the script alone keeps it at 30 for 15 s after the start (then 60 at the lower tier). |
 | When the rate counts as not held | the median interval over 19 ms; the 75th percentile | the 75th percentile (a quarter of the frames late) | The median missed judder: the low phone at 42 fps had its median at 16.7 ms with 31% of frames late. |
 | When to try 60 again | when the frames are light; by backoff alone | by backoff alone (8 → 120 s), and soon after the start ends | The frames' work measured at 30 reads heavier than at 60 (much of it is per second): a phone that held 59 fps on low was kept at 30 by the light-work rule (measured, then fixed). |
+| What says the GPU is the limit | the 75th percentile late with short work; the median late with short work | the median (frames late as a rule) | On the loaded Mac, preemption made a quarter of the frames late with short work and the first version scaled resolution to its floor; a slow GPU makes every frame late, a collection or another task only some. |
+| The places worker for new reads | a fresh worker each read; one kept for the page; one kept a minute | kept a minute after each answer | A fresh one rebuilds its map sampler (~5 s here) for every arrival; kept for good it holds that heap in the apps' panel; a minute covers an arrival and the next. |
 | The resolution floor and steps | 0.5; 0.6; 0.7 | 0.7 of the tier's pixel ratio, 0.1 steps, 1.5 s apart, 90 s ceilings | Below 0.7 the medium tier's 1.5 becomes ~1, visibly soft on a 3× phone. |
 | The start tier | the device's answer only; a warm-up of the scene; a CPU benchmark | the device's answer, then a 3×-repeated 2 ms benchmark on touch devices: over 9.5 ms → low | A slow phone no longer builds the medium tier's scenery to drop it; calibrated on the throttled profiles (1× 1.9, 4× 7.6, 6× 11.7 ms). |
 | The low tier's rate | 60 like the others; a steady 30 always | a steady 30 only on a slow main thread; else the display's, locked if needed | A phone dropped to low to reach 60 must get the chance. |
