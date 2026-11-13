@@ -2305,6 +2305,16 @@ const HOP_LENGTHS = 6;
 const ROUND_SECONDS = 36;
 /** A round's bank at its far end, at most (rad: 35°, a pull of 0.7 g). */
 const ROUND_BANK = (35 * Math.PI) / 180;
+/**
+ * A flight this high over its line (its plan's height, m) or more keeps it over the woods' crowns (decision 287): the
+ * mid and high flyers' cruise (6 and 14 m), a soar's. A low one (1.6 m, a ground bird's) and a short hop fly under the
+ * leaves. Under means its height there under the crowns' lowest leaves by CANOPY_UNDER (m) or more.
+ */
+const CANOPY_FLIGHT = 3;
+const CANOPY_UNDER = 1;
+/** A flight's floor is sampled along its route about this often (m), at most FLOOR_SAMPLES times (`overFloor`). */
+const FLOOR_STEP = 1;
+const FLOOR_SAMPLES = 320;
 /** How far out a soar sweeps at most (m; MA1: at a true glide, 60 m filled a soar's time at a crawl). */
 const SOAR_REACH = 140;
 /** A short way a flyer walks, wades or swims rather than flies, if it gets there that way in no longer than this (s). */
@@ -2380,6 +2390,70 @@ function airLeg(world: ScheduleWorld, paces: AirPaces, from: Spot, to: Spot, rou
     // (Its speed along its way up or down as well: a hop up to a perch 3 m over it is 3 m of flight, not half a metre.)
     const plan = planAirLeg(paces, Math.hypot(flat, to.y - from.y), height, {pace: opts.pace, run, ski: opts.ski});
     return overSolids(world, {mode: "air", from, to, path: route, length: flat + Math.abs(to.y - from.y), seconds: plan.seconds, beat, cruise: plan.height, plan}, bodyR);
+}
+
+/**
+ * How far a planned flight's line must rise along its route to keep its height over what is under it (MA1 follow-up,
+ * decision 287), worked out once a leg; its height over that (`plan.height`) rides on top as before:
+ * - over the ground, and the drawn rocks' tops where they stand (`flightFloor`);
+ * - over the woods' crowns (`canopyTop`) wherever its line at its height would be in their leaves or over them, for a
+ *   flight at CANOPY_FLIGHT or more over its line that soars, or that crosses a wood from open ground or water to open
+ *   ground or water: a raptor soaring at 17 m over 25 m trees flew through their leaves. A lower one (a ground bird's,
+ *   a hop), and one within a wood (from a perch in its crowns or from under them, or to one), keep to their height
+ *   through it as before: a forest bird's way from tree to tree is through the trees;
+ * - eased: towards a higher floor it rises at no more than its climb's slope and after one comes down at no more than
+ *   its glide-in's (its plan's own angles, 50° at most), and never more than it can climb since its lift-off or come
+ *   down before its touch-down. Before, the rise was the floor's own, times the take-off's and the landing's smoothsteps:
+ *   a soar's height jumped where a rock's top began and fell 50 m in the last second of a glide off a ridge (80 m/s).
+ * Sampled every FLOOR_STEP m (FLOOR_SAMPLES at most: 1.3 kB a leg) and read between samples.
+ */
+const OVER_FLOOR = new WeakMap<Leg, Float32Array>();
+function overFloor(world: ScheduleWorld, leg: Leg): Float32Array {
+    const known = OVER_FLOOR.get(leg);
+    if (known) return known;
+    const route = leg.path ?? [leg.from, leg.to];
+    const plan = leg.plan!;
+    const L = Math.max(routeLength(route), 0.01);
+    const n = Math.min(Math.max(Math.ceil(L / FLOOR_STEP), 8), FLOOR_SAMPLES);
+    const over = new Float32Array(n + 1);
+    const sampler = world.sampler;
+    const top = sampler.canopyTop;
+    const under = (p: Spot) => (top ? top(p.x, p.z) > p.y + 0.5 : false);
+    const crosses = plan.height >= CANOPY_FLIGHT && (leg.beat === "glide" || (!under(leg.from) && !under(leg.to)));
+    const woods = crosses && top && sampler.canopyBase ? {top, base: sampler.canopyBase} : null;
+    const span = Math.max(plan.touchdown - plan.liftoff, 1e-6);
+    for (let i = 0; i <= n; i++) {
+        const share = i / n;
+        const at = alongRouteBy(route, share);
+        // (Its line there, as `poseOnTrip` draws it.)
+        const base = leg.from.y + (leg.to.y - leg.from.y) * Math.min(Math.max((share - plan.liftoff) / span, 0), 1);
+        let floor = sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
+        const crown = woods ? woods.top(at.x, at.z) : -Infinity;
+        // (In the leaves or over them at its height there: over the crowns.)
+        if (crown > floor && base + plan.height + Math.max(floor - base, 0) > woods!.base(at.x, at.z) - CANOPY_UNDER) floor = crown;
+        over[i] = Math.max(floor - base, 0);
+    }
+    // (Its climb's slope from its plan: it climbs its height over `rise` of the route, the steepest part 1.5 times the
+    // mean, at its climb angle (`planAirLeg`); its glide-in's the same over `fall`.)
+    const steepest = Math.tan((50 * Math.PI) / 180);
+    const climb = plan.height > 0.05 ? Math.min((1.5 * plan.height) / Math.max(plan.rise * L, 1e-3), steepest) : Math.tan((35 * Math.PI) / 180);
+    const descent = plan.height > 0.05 ? Math.min((1.5 * plan.height) / Math.max(plan.fall * L, 1e-3), steepest) : climb;
+    const ds = L / n;
+    for (let i = 1; i <= n; i++) over[i] = Math.max(over[i], over[i - 1] - descent * ds);
+    for (let i = n - 1; i >= 0; i--) over[i] = Math.max(over[i], over[i + 1] - climb * ds);
+    for (let i = 0; i <= n; i++) {
+        const share = i / n;
+        over[i] = Math.min(over[i], climb * Math.max(share - plan.liftoff, 0) * L, descent * Math.max(plan.touchdown - share, 0) * L);
+    }
+    OVER_FLOOR.set(leg, over);
+    return over;
+}
+
+/** A leg's rise over its line (`overFloor`) a share of its route along. */
+function overAt(over: Float32Array, share: number): number {
+    const f = Math.min(Math.max(share, 0), 1) * (over.length - 1);
+    const i = Math.min(Math.floor(f), over.length - 2);
+    return over[i] + (over[i + 1] - over[i]) * (f - i);
 }
 
 /**
@@ -2604,10 +2678,11 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             // Its line from where it lifts off to where it touches down, a hump over it to its height (smoothsteps at its
             // climb's and its glide-in's angles), and over the ground and the rocks' tops where they stand higher.
             const base = from.y + (to.y - from.y) * Math.min(Math.max((share - plan.liftoff) / Math.max(plan.touchdown - plan.liftoff, 1e-6), 0), 1);
-            // (v2: over the drawn rocks' tops too, `flightFloor`: the bigger island's mountain is rock-strewn.)
+            // (v2: over the drawn rocks' tops too, `flightFloor`: the bigger island's mountain is rock-strewn. Its line rises
+            // over the floor along its route as eased once for the leg, the woods it flies over in it: `overFloor`.)
             const ground = world.sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), world.sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
             const lift = airLift(plan, share);
-            const y = Math.max(base + (plan.height + Math.max(ground - base, 0)) * lift, Math.min(ground, base) + 0.05 * lift);
+            const y = Math.max(base + plan.height * lift + overAt(overFloor(world, leg), share), Math.min(ground, base) + 0.05 * lift);
             // (Joining its leader it is up as soon as it is off the ground: its hump comes back to its line in the air.)
             const aloft = moving && (plan.joins ? y > ground + 0.05 : lift > 0.05);
             return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly", air};
