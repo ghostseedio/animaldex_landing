@@ -1,5 +1,5 @@
 ## AnimalDex Terms of Use
-#### Effective November 12, 2026
+#### Effective November 13, 2026
 
 These Terms of Use ("Terms") govern access to AnimalDex ("AnimalDex," "we," "our," or "the app"), operated by GHOSTSEED LTD. By creating an account, using the app, uploading content, buying credits, subscribing to AnimalDex Pro, or using community features, you accept these Terms. If you do not accept them, do not use AnimalDex.
 
@@ -31,7 +31,7 @@ AnimalDex may let you upload animal photos, videos, notes, profile content, mess
 
 By submitting content, you give AnimalDex permission to host, store, process, analyze, display, distribute, moderate, and use that content as needed to operate, improve, secure, and support the service. You keep ownership of your content.
 
-When your step brings an animal aboard the shared Ark, your username (linked to your profile), display name and avatar are shown on that animal by default, as described in the Privacy Policy, even if your profile is private. You can turn this off in Settings ("Show my name on my Ark animals"). When you confirm "I'm 18 or over" to share a story, you confirm that this is true; AnimalDex may hide stories, or restrict features, where a confirmation appears to be false. A story you choose to share on the Ark is public: only share what you are comfortable with everyone reading, and do not include other people's private information.
+When your capture brings an animal aboard the shared Ark, your username (linked to your profile), display name and avatar are shown on that animal by default, as described in the Privacy Policy, even if your profile is private. You can turn this off in Settings ("Show my name on my Ark animals"). Steps that work with an animal keep your animals of that kind thriving on the Ark. When you confirm "I'm 18 or over" to share a story, you confirm that this is true; AnimalDex may hide stories, or restrict features, where a confirmation appears to be false. A story you choose to share on the Ark is public: only share what you are comfortable with everyone reading, and do not include other people's private information.
 
 ## Zero-Tolerance UGC Policy
 AnimalDex has zero tolerance for objectionable user-generated content or abusive conduct. You may not submit, send, display, list, trade, challenge with, or otherwise share content that is objectionable, abusive, harassing, hateful, sexual, violent, illegal, infringing, exploitative, deceptive, threatening, or unsafe.
