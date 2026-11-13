@@ -17,7 +17,7 @@
     "maps:locations": "tsx scripts/generateLocationHabitatMaps.ts",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test src/lib/**/*.test.ts",
+    "test": "tsx --test 'src/lib/**/*.test.ts'",
     "audit:public-cache": "node scripts/audit-public-cache.mjs",
     "refresh:animal-fusions": "tsx scripts/refreshPublishedAnimalFusions.mts && tsx scripts/refreshClosedSeoNamespaceSlugs.mts",
     "refresh:published-seo-slugs": "tsx scripts/refreshPublishedSeoSlugs.mjs",
