@@ -153,7 +153,7 @@ test("cars: an empty set is not drawn; the models are read only near the town", 
     const {townBoxDistance, VEHICLES_FROM} = await import("@/ark-scene/islands/town/render/index");
     const vehicles = new TownVehicles(townPlan(), "low");
     vehicles.budgetMs = Infinity;
-    const meshes = () => vehicles.group.children.filter((o) => (o as {isInstancedMesh?: boolean}).isInstancedMesh) as Array<{visible: boolean; count: number}>;
+    const meshes = () => vehicles.group.children.filter((o) => (o as {isInstancedMesh?: boolean}).isInstancedMesh) as unknown as Array<{visible: boolean; count: number}>;
     vehicles.eye.set(0, 900, 2000);
     vehicles.update({day: 20406, hours: 12}, 20406 * 86400 + 12 * 3600);
     assert.ok(meshes().every((m) => !m.visible && m.count === 0), "beyond the far distance: no car, no set drawn");

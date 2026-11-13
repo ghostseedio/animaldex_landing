@@ -8,7 +8,7 @@
  * the market's stalls, the street lamps, the church clock's hands.
  */
 
-import {BufferAttribute, BufferGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
+import {BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
 import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -27,7 +27,7 @@ import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene
 import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/nature";
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
-import {batchedVariant, disposeBatchedVariant, TownBandParts, TownBatch, townBandOf, townBatchEnabled} from "@/ark-scene/islands/town/render/batches";
+import {batchedVariant, disposeBatchedVariant, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -503,7 +503,11 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const zooRoot = new Group();
     zooRoot.name = "town:zoo";
     root.add(zooRoot);
-    /** Its decals, solids, glass and foliage as batches (one instance a chunk), its nets and pools as meshes. */
+    /**
+     * Its decals, solids, glass and foliage as batches (one instance a chunk); its nets as two (their back faces, then their
+     * front faces, sharing one geometry: as three's two passes draw a two-sided transparent mesh); its pools a mesh.
+     */
+    const netSides = {back: sidedCopy(materials.net, BackSide), front: sidedCopy(materials.net, FrontSide)};
     let zooBatches: TownBatch[] = [];
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
@@ -526,22 +530,16 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
                 if (!geo.triangles) continue;
                 const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
-                if (name !== "net") {
-                    parts.add(name, key, geometry);
-                    continue;
-                }
-                const mesh = new Mesh(geometry, materials.net);
-                mesh.name = "zoo:net";
-                mesh.receiveShadow = true;
-                mesh.visible = !drawn || drawn(key);
-                zooRoot.add(mesh);
-                zooMeshes.push({key, mesh});
+                parts.add(name, key, geometry);
             }
         });
-        for (const [name, material] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["foliage", materials.foliage]] as Array<[string, Material]>) {
-            const list = parts.take(name);
-            if (!list.length) continue;
-            const batch = new TownBatch(list, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true});
+        const nets = parts.take("net");
+        for (const [name, material, list] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["net", netSides.back, nets], ["net:front", netSides.front, nets], ["foliage", materials.foliage]] as Array<[string, Material, TownBatchPart[] | undefined]>) {
+            const from = list ?? parts.take(name);
+            if (!from.length) continue;
+            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true});
+            // (The front faces' batch draws the back faces' geometry: one copy, as the two meshes of a split shared it.)
+            if (name === "net:front") batch.shareGeometry(zooBatches[zooBatches.length - 1]);
             batch.setDrawn(drawn);
             zooRoot.add(batch.mesh);
             zooBatches.push(batch);
@@ -866,7 +864,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             }
             for (const {batch} of batches) batch.dispose();
             for (const batch of zooBatches) batch.dispose();
-            for (const m of [...Object.values(materials), paneMat]) disposeBatchedVariant(m);
+            for (const m of [...Object.values(materials), paneMat, netSides.back, netSides.front]) disposeBatchedVariant(m);
+            netSides.back.dispose();
+            netSides.front.dispose();
             Object.values(materials).forEach((m) => m.dispose());
             depth.dispose();
             water.dispose();

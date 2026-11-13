@@ -20,7 +20,7 @@
  *   batches are let in one at a time (`TownBatch.enabled`), never all in one frame (decision 153).
  */
 
-import {BatchedMesh, BufferGeometry, Material, type BufferAttribute, MeshDepthMaterial, RGBADepthPacking, type WebGLProgramParametersWithUniforms, type WebGLRenderer} from "three";
+import {BatchedMesh, BufferGeometry, Material, type BufferAttribute, MeshDepthMaterial, RGBADepthPacking, type BackSide, type FrontSide, type WebGLProgramParametersWithUniforms, type WebGLRenderer} from "three";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 
 /** Rows of chunks a band holds (3 bands of 27 chunks: each band's ground fits 16-bit indices). */
@@ -63,6 +63,18 @@ export function batchedVariant<T extends Material>(material: T): T {
     // (`customProgramCacheKey` is the material's own, or by default its `onBeforeCompile` as text.)
     copy.customProgramCacheKey = () => `${material.customProgramCacheKey()}|town-batch-identity`;
     variants.set(material, copy);
+    return copy;
+}
+
+/**
+ * A one-sided copy of a two-sided transparent material (its patches and key kept): its back faces' batch drawn, then its
+ * front faces', as three's two passes and `runtime/two-sided.ts` draw such a mesh, with no program look-ups between.
+ */
+export function sidedCopy<T extends Material>(material: T, side: typeof BackSide | typeof FrontSide): T {
+    const copy = material.clone() as T;
+    copy.onBeforeCompile = material.onBeforeCompile;
+    copy.customProgramCacheKey = material.customProgramCacheKey;
+    copy.side = side;
     return copy;
 }
 
@@ -149,6 +161,13 @@ export class TownBatch {
             for (const attributeName of Object.keys(geometry.attributes)) (geometry.attributes[attributeName] as BufferAttribute).onUpload(releaseArray);
             geometry.index?.onUpload(releaseArray);
         }
+    }
+
+    /** Draws `other`'s geometry (the same parts, in the same order): one copy of the arrays, uploaded once for both. */
+    shareGeometry(other: TownBatch) {
+        if (other.mesh.geometry === this.mesh.geometry) return;
+        this.mesh.geometry.dispose();
+        this.mesh.geometry = other.mesh.geometry;
     }
 
     /** The chunk's instance in this batch (−1: not in it). */
