@@ -1161,6 +1161,8 @@ class CarSet {
         }
         this.mesh.count = 0;
         this.mesh.frustumCulled = false;
+        // (Hidden while empty: three still sets up an empty instanced mesh's program and uniforms every frame.)
+        this.mesh.visible = false;
         this.mesh.name = name;
     }
     begin() {
@@ -1175,6 +1177,7 @@ class CarSet {
     }
     end() {
         this.mesh.count = this.n;
+        this.mesh.visible = this.n > 0;
         this.mesh.instanceMatrix.needsUpdate = true;
         if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
         if (this.lights) this.lights.needsUpdate = true;
@@ -1252,6 +1255,11 @@ export class TownVehicles {
     /** Where a parked or moving car's wheels are: on the carriageway (or the drive), never under the ground. */
     private yAt(x: number, z: number): number {
         return roadHeight(x, z) + 0.03;
+    }
+
+    /** The models are in (or were given). */
+    get hasModels(): boolean {
+        return this.models !== null;
     }
 
     /** The models arrived: the levels are made and the sets rebuilt. */

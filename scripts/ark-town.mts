@@ -121,10 +121,14 @@ if (command === "stills") {
     const hours = arg("hours", "") ? Number(arg("hours", "")) : null;
     for (const id of ids) {
         if (only && !only.has(id)) continue;
-        await page.evaluate(({shot, hours}) => {
-            window.__arkTown!.shot(shot);
+        await page.evaluate(async ({shot, hours}) => {
+            // (The shot waits for the trees' nearer levels its view asks for: the town reads them as the camera comes near.)
+            await window.__arkTown!.shot(shot);
             const s = window.__arkTown!.shots.find((x) => x.id === shot)!;
-            if (hours !== null) window.__arkTown!.view(s.eye, s.target, hours, s.day, s.fov);
+            if (hours !== null) {
+                window.__arkTown!.view(s.eye, s.target, hours, s.day, s.fov);
+                await window.__arkTown!.settle();
+            }
             window.__arkTown!.render(3);
         }, {shot: id, hours});
         const png = await page.screenshot({type: "png"});
@@ -202,8 +206,8 @@ if (command === "visual") {
     let failed = 0;
     const report: string[] = ["| shot | result | changed | mean | block |", "|---|---|---|---|---|"];
     for (const id of config.shots) {
-        await page.evaluate((shot) => {
-            window.__arkTown!.shot(shot, 20406);
+        await page.evaluate(async (shot) => {
+            await window.__arkTown!.shot(shot, 20406);
             window.__arkTown!.render(3);
         }, id);
         const png = await page.screenshot({type: "png"});
