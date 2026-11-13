@@ -29,7 +29,8 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
 
 /**
  * /ark: the shared Ark (Ark v1 contract, section 5). Every animal in it came
- * aboard because someone's step from that animal's way worked.
+ * aboard with someone's capture (or, before captures did, after a step that
+ * worked); steps keep them thriving.
  *
  * Public. The server renders from the public read (cached, decision 246); the
  * client then reads the Ark as the visitor (their own animals come back

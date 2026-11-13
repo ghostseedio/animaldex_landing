@@ -131,7 +131,7 @@ const id: HowItWorksContent = {
             paragraphs: [
                 "Bawakan hewan yang sudah kamu tangkap sesuatu yang nyata: keputusan, kebiasaan, percakapan yang terus kamu tunda. Ia mengatakan ke arah mana ia akan pergi dan mengapa, dari hidupnya sendiri, lalu memberimu satu langkah untuk dicoba di duniamu sendiri.",
                 "Lakukan, ketuk Sudah saya lakukan, lalu ceritakan hasilnya. Langkah pertama yang kalian selesaikan bersama memberimu Kekuatannya, dan kartunya menunjukkan bagaimana kamu mendapatkannya. Saat taruhannya nyata, seperti pekerjaan atau uang, langkahnya adalah langkah yang masih bisa kamu tarik kembali.",
-                "Saat sebuah langkah berhasil, satu dari jenis hewan itu bergabung dengan Bahtera: satu dunia hewan bersama, terbuka untuk semua orang di animaldex.app/ark, tempat ia hidup, makan, dan membesarkan anak dengan aturan berdasarkan panduan lapangannya."
+                "Saat kamu menangkap seekor hewan, satu dari jenisnya bergabung dengan Bahtera: satu dunia hewan bersama, terbuka untuk semua orang di animaldex.app/ark, tempat ia hidup, makan, dan membesarkan anak dengan aturan berdasarkan panduan lapangannya. Setiap langkah bersamanya yang berhasil membuat hewan-hewanmu dari jenis itu berkembang."
             ]
         },
         {
