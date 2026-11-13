@@ -21,7 +21,7 @@ import {gaitLadder, headBobs, landGait} from "@/ark-scene/locomotion/gaits";
 import {galumphDriver, GALUMPH_STRIDE, HOPS, hopClassOf, saltationDriver, TOAD_HOP_PACE, type GalumphState, type SaltationState} from "@/ark-scene/locomotion/land-drivers";
 import {leggedDriver} from "@/ark-scene/locomotion/legged";
 import {leggedPoser, simulate, type Scenario} from "@/ark-scene/locomotion/sim";
-import {buildLocoRig, restInverses, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
+import {bonePointNow, buildLocoRig, restInverses, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
 import type {LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 import {recordMotionMetric} from "@/lib/ark-motion-metrics";
 
@@ -293,4 +293,47 @@ test("MA4: a toad walks when slow (the legged gaits, a sprawl) and hops when fas
     const creep = run(frog, 0.08, 0.4, 6, 0.5, saltationDriver);
     assert.ok(creep.frames.every((x) => x.gait !== "sprawl"));
     assert.ok((creep.state as SaltationState).hops >= 1);
+});
+
+test("MA4 metric: a frog on a winding way turns where it sits before it hops, and its hind feet never come over its back", () => {
+    let worst = -Infinity;
+    let twisted = 0;
+    for (const [slug, L] of [["common-frog", 0.08], ["cane-toad", 0.15], ["common-toad", 0.09]] as const) {
+        const rig = buildLocoRig(fixture(slug));
+        const scale = L / Math.max(rig.length, rig.height);
+        const state = saltationDriver.init(rig) as SaltationState;
+        // A circle of two body lengths' radius at 1.6 lengths a second: it changes heading all the time.
+        const r = 2 * L;
+        const v = 1.6 * L;
+        let pushYaw: number | null = null;
+        for (let fr = 0; fr <= 60 * 8; fr++) {
+            const t = fr / 60;
+            const a = (v * t) / r;
+            const instance = new Matrix4().compose(new Vector3(r - r * Math.cos(a), -rig.minY * scale, r * Math.sin(a)), new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), a), new Vector3(scale, scale, scale));
+            const world = rig.bones.map((b) => b.restWorld.clone());
+            saltationDriver.pose(rig, {instance, scale, yaw: a, dt: 1 / 60, clock: 50 + t, seed: 0.2, ground: flat, grounded: true, clipNow: "walk", clipFrom: null, clipPhase: 0}, world, state);
+            if (state.walking) continue;
+            // Pushing off: the body already faces its hop (it turned while it sat).
+            if (state.phase === "push" && pushYaw === null) {
+                pushYaw = state.hop.yaw;
+                if (Math.abs(Math.atan2(Math.sin(state.hop.yaw - state.hop.yaw0), Math.cos(state.hop.yaw - state.hop.yaw0))) > 0.4) twisted++;
+            }
+            if (state.phase !== "push") pushYaw = null;
+            // Each hind foot's ankle and toes against its hip, in the hips' own frame (up = the body's up).
+            const hipsTurn = new Quaternion().setFromRotationMatrix(new Matrix4().extractRotation(world[rig.hips])).multiply(new Quaternion().setFromRotationMatrix(new Matrix4().extractRotation(rig.bones[rig.hips].restWorld)).invert());
+            for (const leg of rig.legs.filter((l) => l.end === "hind")) {
+                const hip = new Vector3().setFromMatrixPosition(world[leg.upper]);
+                const toes = bonePointNow(rig, world, leg.foot, leg.contact, new Vector3());
+                for (const p of [new Vector3().setFromMatrixPosition(world[leg.foot]), toes]) {
+                    const rel = p.sub(hip).applyQuaternion(hipsTurn.clone().invert());
+                    worst = Math.max(worst, rel.y / (leg.upperLength + leg.lowerLength));
+                }
+            }
+        }
+        assert.ok(state.hops >= 4, `${slug}: ${state.hops} hops`);
+    }
+    recordMotionMetric("ma4", "frog_hind_foot_over_hip", worst, "share of the leg");
+    recordMotionMetric("ma4", "frog_hops_pushing_while_turning", twisted);
+    assert.ok(worst < 0, `a hind foot ${worst.toFixed(2)} of its leg above its hip`);
+    assert.equal(twisted, 0);
 });

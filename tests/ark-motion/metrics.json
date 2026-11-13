@@ -350,6 +350,18 @@
           "max": 0.25
         },
         {
+          "id": "frog_hind_foot_over_hip",
+          "label": "A frog or toad on a winding way: its hind foot's highest against its hip, in the body's frame (share of the leg; above 0 is over its back)",
+          "path": "frog_hind_foot_over_hip",
+          "max": 0
+        },
+        {
+          "id": "frog_hops_pushing_while_turning",
+          "label": "Hops pushed off while turning more than 0.4 rad (it turns where it sits first)",
+          "path": "frog_hops_pushing_while_turning",
+          "max": 0
+        },
+        {
           "id": "rig_frozenWings",
           "label": "Flight-approved flyers with no flap and no open-wing clip (v2 set; the audit's aboard: 13; v3: 1)",
           "path": "rig_frozenWings",

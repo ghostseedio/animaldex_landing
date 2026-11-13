@@ -191,6 +191,8 @@ export const HOPS: Record<HopClass, {lengths: number; angle: number; sit: number
     leap: {lengths: 2.2, angle: (32 * Math.PI) / 180, sit: 0.18, push: 0.09, land: 0.22},
     hop: {lengths: 0.9, angle: (22 * Math.PI) / 180, sit: 0.1, push: 0.07, land: 0.15}
 };
+/** How fast a frog turns where it sits before a hop that changes its heading (radians a second). */
+export const HOP_TURN_RATE = 5;
 /** A walker-hopper (a toad) walks below this pace (body lengths a second) and hops above it (hysteresis below). */
 export const TOAD_HOP_PACE = 1.0;
 
@@ -359,6 +361,17 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
             s.bodyYaw += Math.sign(turn) * Math.min(Math.abs(turn), 1.2 * dt);
             if (Math.abs(turn) > 0.02 || lag > 1e-4) sitFeet(rig, input, s, s.bx, s.bz, s.bodyYaw);
         }
+        // A hop that turns it more than about 20 degrees: it first turns where it sits (small quick steps, its feet
+        // re-set under it), then pushes off straight (pushing off planted hind feet while it spins would twist its legs).
+        if (go) {
+            const want = Math.atan2(go.tx - s.bx, go.tz - s.bz);
+            const turn = wrapPi(want - s.bodyYaw);
+            if (Math.abs(turn) > 0.35) {
+                s.bodyYaw += Math.sign(turn) * Math.min(Math.abs(turn), HOP_TURN_RATE * dt);
+                sitFeet(rig, input, s, s.bx, s.bz, s.bodyYaw);
+                go = null;
+            }
+        }
         if (go) {
             let dx = go.tx - s.bx;
             let dz = go.tz - s.bz;
@@ -372,7 +385,6 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
             }
             const t = hopTiming(cls, lengthM, d);
             s.hop = {fx: s.bx, fz: s.bz, tx: s.bx + dx, tz: s.bz + dz, yaw: Math.atan2(dx, dz), yaw0: s.bodyYaw, ...t, length: d};
-            // (A hop straight back would turn it about first: it faces its hop.)
             s.phase = "push";
             s.t = 0;
             s.hops++;
@@ -418,6 +430,10 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
     let pitch = 0;
     let trail = 0;
     let reach = 0;
+    // (Leaving the ground, the hind legs stay out straight toward where the toes last pushed for a moment.)
+    let toesOff = 0;
+    // (The body's pitch turns about its hips while it pushes, about its middle by the time it lands.)
+    let pivotShare = 0;
     const dirX = (h.tx - h.fx) / Math.max(h.length, 1e-6);
     const dirZ = (h.tz - h.fz) / Math.max(h.length, 1e-6);
     const groundAt = (x: number, z: number) => input.ground(x, z).height;
@@ -431,6 +447,7 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
         pitch = 0.32 * u;
         trail = 0.6 * u;
         reach = 0.5 * u;
+        pivotShare = 1;
     } else if (s.phase === "air") {
         const u = clamp(s.t / h.air, 0, 1);
         const flight = Math.max(h.length - h.dPush - h.dLand, 0);
@@ -444,6 +461,8 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
         pitch = 0.32 - 0.52 * u;
         trail = 0.6 + 0.4 * smooth(u / 0.3);
         reach = 0.5 + 0.5 * u;
+        toesOff = 1 - smooth(u / 0.3);
+        pivotShare = 1 - smooth(u / 0.5);
     } else if (s.phase === "land") {
         const u = smooth(s.t / h.land);
         bx = h.tx - dirX * h.dLand * (1 - u);
@@ -466,7 +485,7 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
     const mz = (wx * sn + wz * c) / scale;
     const lift = (groundAt(bx, bz) - groundAt(rx, rz) + rise) / scale;
     const hipsZ = rig.legs.filter((l) => l.end === "hind").reduce((a, l, _, all) => a + l.hip[2] / all.length, 0);
-    const pivotZ = s.phase === "push" ? hipsZ : 0;
+    const pivotZ = hipsZ * pivotShare;
     const frame = new Matrix4().makeTranslation(mx, lift, mz)
         .multiply(mA.makeRotationY(wrapPi(yaw - input.yaw)))
         .multiply(new Matrix4().makeTranslation(0, rig.minY, pivotZ))
@@ -496,13 +515,38 @@ export function poseSaltation(rig: LocoRig, input: LocoInput, world: Matrix4[], 
             const back = leg.end === "hind" ? trail : 0;
             const ahead = leg.end === "fore" ? reach : 0;
             const sit = vB.set(leg.ankle[0], leg.ankle[1], leg.ankle[2]).applyMatrix4(frame);
-            // (Behind and a little below the body line, so that pitched nose-down to land they still trail level, not over the back.)
-            const dir = leg.end === "hind" ? new Vector3(leg.side * 0.2, -0.45, -1).normalize() : new Vector3(leg.side * 0.1, -0.8, 0.6).normalize();
+            // (Back and down, about 35 degrees under the body line: the rigs skin the rear of the body to the hind legs'
+            // upper bones, so a leg swung up level with the back drags the skin over it like a fin.)
+            const dir = leg.end === "hind" ? new Vector3(leg.side * 0.25, -0.7, -1).normalize() : new Vector3(leg.side * 0.1, -0.8, 0.6).normalize();
             dir.applyQuaternion(bodyTurn);
             const out = hip.clone().addScaledVector(dir, legLen);
             target = sit.clone().lerp(out, leg.end === "hind" ? back : ahead);
+            if (leg.end === "hind") {
+                if (toesOff > 0) target.lerp(vC.set(s.feet[i].x, s.feet[i].y, s.feet[i].z).applyMatrix4(inv).setY(vC.y + ankleUp), toesOff);
+                // Never over its back: a hind foot stays below its hip (in the body's own frame) whatever the pitch.
+                const rel = target.clone().sub(hip).applyQuaternion(bodyTurn.clone().invert());
+                if (rel.y > -0.3 * legLen) {
+                    rel.y = -0.3 * legLen;
+                    target.copy(hip).add(rel.applyQuaternion(bodyTurn));
+                }
+            }
         }
         solveLeg(leg, world, target, pole);
+        // The foot: planted, flat as it rests (IK turned it with the shin); a hind foot trailing in the air, its toes
+        // out behind in line with the shin (turned with the shin they would stand up over the back like a fin).
+        const at = vB.setFromMatrixPosition(world[leg.foot]);
+        const rest = qA.setFromRotationMatrix(mA.extractRotation(rig.bones[leg.foot].restWorld));
+        if (plantedNow) world[leg.foot].makeRotationFromQuaternion(rest).setPosition(at);
+        else if (leg.end === "hind") {
+            const footTurn = new Quaternion().setFromRotationMatrix(mA.extractRotation(world[leg.foot])).multiply(rest.clone().invert());
+            const toes = new Vector3(leg.contact[0] - leg.ankle[0], leg.contact[1] - leg.ankle[1], leg.contact[2] - leg.ankle[2]).applyQuaternion(footTurn).normalize();
+            const shin = new Vector3().subVectors(at, vC.setFromMatrixPosition(world[leg.lower])).normalize();
+            const share = clamp(trail, 0, 1);
+            if (toes.lengthSq() > 0.5 && shin.lengthSq() > 0.5 && share > 0) {
+                const turn = new Quaternion().setFromUnitVectors(toes, shin).slerp(new Quaternion(), 1 - share);
+                world[leg.foot].makeRotationFromQuaternion(turn.multiply(footTurn).multiply(rest)).setPosition(at);
+            }
+        }
     });
     const hz = s.phase === "sit" ? 0 : 1 / Math.max(h.push + h.air + h.land, 1e-3);
     return {gait: s.phase === "sit" ? "sit" : cls, phase: s.hops, cadence: hz, stride: h.length, duty: 0, speed, accel: 0, turn: 0, froude: (speed * speed) / (G * Math.max(legH, 1e-3)), feet: s.feet.map((f, i) => ({key: rig.legs[i].key, x: f.x, y: f.y, z: f.z, planted: s.phase === "sit", ground: f.y}))};
