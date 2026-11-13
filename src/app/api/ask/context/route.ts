@@ -35,6 +35,14 @@ import {availableAskProviders} from "@/lib/ask-animaldex/providers";
 import {getScopedTranslator} from "@/loaders/translation";
 import {localeConfig} from "@/i18n";
 import {talkSlugForSpeciesPage} from "@/data/talk-animals";
+import {askLimitProPlan} from "@/lib/ask-handoff";
+import {assertPaddleProductCheckoutConfigured, paddlePriceIdForProduct} from "@/lib/paddle-server";
+
+/** The Pro plan the limit panel can sell on the web (CC 2): a plan only counts with Paddle fully configured for it. */
+function webProPlanOnSale() {
+    const onSale = (code: "pro_annual" | "pro_upgrade") => (assertPaddleProductCheckoutConfigured(code) ? null : paddlePriceIdForProduct(code));
+    return askLimitProPlan({annual: onSale("pro_annual"), monthly: onSale("pro_upgrade")});
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -93,6 +101,8 @@ export async function POST(request: Request) {
         nickname: card && !isVisit ? card.nickname : null,
         ownerName: isVisit ? ownerName : null,
         talkSlug,
+        // The limit panel's "Pro for a week": which plan the website sells, if any (CC 2).
+        webProPlan: webProPlanOnSale(),
         // Claude counts on a species page, where the animal itself speaks.
         available: availableAskProviders({animalVoice: resolvedSubject.scope === "species"}).length > 0
     }, {headers: ASK_RESPONSE_HEADERS});

@@ -29,6 +29,11 @@ import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {contentThumb} from "@/data/content-thumbnails";
 import {formatAnimalCount, ROUNDED_ANIMAL_COUNT} from "@/lib/animal-count";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
+import InlineAskBox from "@/components/ask-animaldex/inline-ask-box";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {comparisonAskTarget} from "@/lib/tier-list-ask";
+import {getInlineAskWords} from "@/loaders/inline-ask-words";
 
 
 export const revalidate = 86400;
@@ -259,16 +264,55 @@ export default async function ComparisonsIndexPage({params}: ComparisonsIndexPag
         .map((slug) => allEntries.find((entry) => entry.slug === slug))
         .filter((entry): entry is ChallengeEntry => Boolean(entry))
         .slice(0, 6);
+    // The inline Ask box (CC 2): the hub speaks to the animal with the edge
+    // in its most-read matchup (the first popular pair), by the same rule the
+    // pair's own page uses. Its words are the locale's; its data loads in the browser.
+    const hubPair = popularPairs[0] ?? null;
+    const hubAsk = hubPair ? (() => {
+        const animalA = getSpeciesBySlug(hubPair.animalASlug);
+        const animalB = getSpeciesBySlug(hubPair.animalBSlug);
+        if (!animalA || !animalB) return null;
+        return comparisonAskTarget({
+            animalA: {slug: animalA.slug, name: animalA.name},
+            animalB: {slug: animalB.slug, name: animalB.name},
+            scenarios: hubPair.scenarioBreakdown,
+            stats: hubPair.statCategories
+        });
+    })() : null;
+    const askWords = hubAsk ? await getInlineAskWords(locale) : null;
 
     return (
         <div className="mx-auto w-full max-w-[92rem] px-4 pb-20 pt-10 md:px-8 md:pb-28 md:pt-14">
             <script type="application/ld+json" dangerouslySetInnerHTML={{__html: JSON.stringify([collectionSchema, itemListSchema, faqSchema])}} />
+            {hubAsk ? (
+                <AskSubjectBridge
+                    scope="species"
+                    slug={hubAsk.target.slug}
+                    name={hubAsk.target.name}
+                    title={hubAsk.target.name}
+                    avatarUrl={getSpeciesArtworkRoute(hubAsk.target.slug)}
+                />
+            ) : null}
 
             <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-12">
                 <header className="max-w-[42rem]">
                     <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary-200">{t("eyebrow")}</p>
                     <h1 className="mt-3 font-display text-4xl font-bold tracking-[-0.035em] text-white md:text-5xl">{t("title")}</h1>
                     <p className="mt-3 text-base leading-7 text-ink-200 md:text-lg">{t("description")}</p>
+                    {hubAsk && askWords ? (
+                        <div className="mt-6">
+                            <InlineAskBox
+                                slug={hubAsk.target.slug}
+                                name={hubAsk.target.name}
+                                question={hubAsk.question}
+                                avatarUrl={getSpeciesArtworkRoute(hubAsk.target.slug)}
+                                eyebrow={askWords.eyebrowHub}
+                                pageKind="comparisons_hub"
+                                pageSlug={hubPair?.slug ?? "comparisons"}
+                                words={askWords}
+                            />
+                        </div>
+                    ) : null}
                     <dl className="mt-6 flex flex-wrap gap-x-8 gap-y-3">
                         <div>
                             <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-400">{t("statAnimals")}</dt>

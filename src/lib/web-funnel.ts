@@ -13,13 +13,17 @@
  * - share_take: they shared an animal's take.
  * - signup: they made an account on the web (recorded by the server).
  * - store_click: they tapped through to the App Store or Google Play.
+ * - store_click_ask_limit: that tap was the Ask limit panel's "Keep talking
+ *   in the app, free" (CC 2, Nov 2026; landing migration 20261113180000
+ *   widens the table's check). It is sent alongside store_click, so the
+ *   store_click step is unchanged.
  *
  * Pure, so the request rules and the counting are tested.
  */
 
 import type {HeroVariant} from "@/lib/hero-variant";
 
-export const WEB_FUNNEL_EVENTS = ["hero_view", "demo_start", "demo_reply", "second_message", "share_take", "signup", "store_click"] as const;
+export const WEB_FUNNEL_EVENTS = ["hero_view", "demo_start", "demo_reply", "second_message", "share_take", "signup", "store_click", "store_click_ask_limit"] as const;
 export type WebFunnelEvent = (typeof WEB_FUNNEL_EVENTS)[number];
 
 /**

@@ -40,7 +40,38 @@ export type StorePlacement =
     | "import_result"
     | "post"
     | "not_found"
+    /** The install buttons on the big tier lists (CC 2, Nov 2026); `utm_content` names the list. */
+    | "tierlist"
+    /** The Ask limit panel's "Keep talking in the app, free" (CC 2, Nov 2026). */
+    | "ask_limit"
     | `page_${string}`;
+
+/**
+ * Extras a store link can carry besides its placement (CC 2, Nov 2026).
+ * Additive: every existing caller passes none and gets the same link.
+ *
+ * - `content`: a fixed `utm_content` ("tierlist_strongest-animals",
+ *   "ask_limit") instead of the page path the click would otherwise add.
+ * - `handoff`: a web Ask hand-off id (lib/ask-handoff), in the Play install
+ *   referrer so the Android app can pick the conversation up after install.
+ */
+export type StoreLinkOptions = {
+    content?: string | null;
+    handoff?: string | null;
+};
+
+const UTM_CONTENT_MAX = 120;
+const HANDOFF_ID = /^[0-9a-f-]{8,40}$/i;
+
+function cleanContent(content: string | null | undefined) {
+    const value = (content ?? "").trim().replace(/[^A-Za-z0-9_./-]/g, "").slice(0, UTM_CONTENT_MAX);
+    return value || null;
+}
+
+function cleanHandoff(handoff: string | null | undefined) {
+    const value = (handoff ?? "").trim();
+    return HANDOFF_ID.test(value) ? value : null;
+}
 
 /**
  * App Store Connect's provider token (App Analytics → Campaigns). Apple
@@ -49,11 +80,15 @@ export type StorePlacement =
  */
 export const APP_STORE_PROVIDER_TOKEN = process.env.NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN?.trim() ?? "";
 
-export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN) {
+export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN, options: StoreLinkOptions = {}) {
     const url = new URL(appStoreUrl);
     if (providerToken) url.searchParams.set("pt", providerToken);
     url.searchParams.set("ct", placement);
     if (providerToken) url.searchParams.set("mt", "8");
+    // Apple reads pt/ct/mt only; a fixed utm_content still rides along so the
+    // same link names the same page on both stores (and in GA's referrer).
+    const content = cleanContent(options.content);
+    if (content) url.searchParams.set("utm_content", content);
     return url.toString();
 }
 
@@ -65,16 +100,42 @@ export function appStoreLink(placement: StorePlacement, providerToken: string = 
  * on (`utm_content`), so /admin/metrics can name the exact page an Android
  * install came from; it is added on click, never at render.
  */
-export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null) {
+export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null, options: StoreLinkOptions = {}) {
     const url = new URL(googlePlayUrl);
     const ref = referral ? `&ref=${referral}` : "";
-    const content = path ? `&utm_content=${encodeURIComponent(path.slice(0, 120))}` : "";
-    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${content}${ref}`);
+    // A fixed content wins over the page path (CC 2); without either, nothing.
+    const fixed = cleanContent(options.content);
+    const content = fixed
+        ? `&utm_content=${encodeURIComponent(fixed)}`
+        : path ? `&utm_content=${encodeURIComponent(path.slice(0, UTM_CONTENT_MAX))}` : "";
+    const handoff = cleanHandoff(options.handoff);
+    const handoffPart = handoff ? `&handoff=${handoff}` : "";
+    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${content}${ref}${handoffPart}`);
     return url.toString();
 }
 
-export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null) {
-    return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral, path);
+export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null, options: StoreLinkOptions = {}) {
+    return store === "app_store" ? appStoreLink(placement, APP_STORE_PROVIDER_TOKEN, options) : googlePlayLink(placement, referral, path, options);
+}
+
+/**
+ * Which store a browser's user agent belongs to: iPhone, iPad and iPod (and
+ * iPadOS Safari, which says "Macintosh" with touch) go to the App Store,
+ * Android to Google Play, and anything else (a desktop) to neither, so a
+ * page shows both buttons. Decided in the browser after hydration: the pages
+ * that use it are static.
+ */
+export function detectStorePlatform(userAgent: string | null | undefined, maxTouchPoints = 0): AppStoreName | null {
+    const agent = userAgent ?? "";
+    if (/iPhone|iPad|iPod/i.test(agent)) return "app_store";
+    if (/Macintosh/i.test(agent) && maxTouchPoints > 1) return "app_store";
+    if (/Android/i.test(agent)) return "google_play";
+    return null;
+}
+
+/** The buttons in the order a page shows them: the reader's own store first, the other after it. */
+export function orderedStores(platform: AppStoreName | null): AppStoreName[] {
+    return platform === "google_play" ? ["google_play", "app_store"] : ["app_store", "google_play"];
 }
 
 /** A referral code as the app's share links carry it: letters, digits, `-` and `_`. */

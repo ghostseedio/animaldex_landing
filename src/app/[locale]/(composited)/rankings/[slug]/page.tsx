@@ -39,6 +39,12 @@ import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
 import {RankingStatLessonSection} from "@/app/[locale]/(composited)/rankings/_components/stat-lessons-section";
 import {statForRanking} from "@/lib/stat-lessons";
+import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
+import InlineAskBox from "@/components/ask-animaldex/inline-ask-box";
+import InstallButtons from "@/components/store/install-buttons";
+import {getSpeciesArtworkRoute} from "@/data/species-artwork";
+import {hasTierListAskBox, hasTierListInstallButtons, tierListAskQuestion, tierListUtmContent} from "@/lib/tier-list-ask";
+import {getInlineAskWords} from "@/loaders/inline-ask-words";
 
 type RankingPageProps = {
     params: {
@@ -213,6 +219,28 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
     const immediateAnswer = leader
         ? `${leader.species.name} ranks #1 in this AnimalDex list. ${leader.shortReason}`
         : ranking.quickAnswer;
+    // The inline Ask box (CC 2): the twelve biggest lists speak to their #1
+    // animal, with one question built from the list's own headline. Its
+    // quota and openers load in the browser; the page stays static.
+    const askBox = leader && hasTierListAskBox(ranking.slug) ? {
+        slug: leader.species.slug,
+        name: leader.species.name,
+        question: tierListAskQuestion(title),
+        avatarUrl: getSpeciesArtworkRoute(leader.species.slug),
+        words: await getInlineAskWords(locale),
+        install: hasTierListInstallButtons(ranking.slug)
+    } : null;
+    const installButtons = askBox?.install ? (position: "top" | "after_first") => (
+        <InstallButtons
+            placement="tierlist"
+            utmContent={tierListUtmContent(ranking.slug)}
+            uiSource="tierlist"
+            position={position}
+            title={askBox.words.installTitle.replace("{animal}", askBox.name)}
+            body={askBox.words.installBody}
+            labels={{appStore: askBox.words.appStore, googlePlay: askBox.words.googlePlay}}
+        />
+    ) : null;
     const fastestHighlights = ranking.slug === "fastest-animals"
         ? [
             {label: t("fastestFlyingAnimal"), speciesSlug: "peregrine-falcon"},
@@ -375,6 +403,29 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 methodologyLabel={t("methodologyLink")}
             />
 
+            {askBox ? (
+                <>
+                    <AskSubjectBridge
+                        scope="species"
+                        slug={askBox.slug}
+                        name={askBox.name}
+                        title={askBox.name}
+                        avatarUrl={askBox.avatarUrl}
+                    />
+                    <InlineAskBox
+                        slug={askBox.slug}
+                        name={askBox.name}
+                        question={askBox.question}
+                        avatarUrl={askBox.avatarUrl}
+                        eyebrow={askBox.words.eyebrowTierList}
+                        pageKind="tier_list"
+                        pageSlug={ranking.slug}
+                        words={askBox.words}
+                    />
+                    {installButtons?.("top")}
+                </>
+            ) : null}
+
             {locale === "en" ? (
                 <div className="editorial [&>section]:mb-0">
                     <PageVideo
@@ -405,6 +456,9 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 readSpeciesLabel={t("readSpecies")}
                 items={tableItems.slice(0, 3)}
             />
+
+            {/* Again after the #1 entry (the quick answer names it), for the reader who scrolled past the top. */}
+            {installButtons?.("after_first")}
 
             {fastestHighlights.length > 0 ? (
                 <section className="rounded-lg border border-line-300 bg-surface-900/75 p-5 md:p-6">
