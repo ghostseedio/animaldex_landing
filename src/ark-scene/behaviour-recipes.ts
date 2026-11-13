@@ -25,7 +25,7 @@ import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import table from "@/ark-scene/recipes.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
-import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, swimSpeedOf, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMode, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
@@ -599,7 +599,7 @@ function pace(profile: ArkBehaviourProfile, length: number): number {
  */
 function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number, fast = false): number {
     const runs = Math.min(runFactor(profile), 2.3);
-    const swim = fast ? swimBurst(profile, length) : freeBodyLengthsPerSecond(profile) * Math.max(length, 0.05) * 1.4;
+    const swim = fast ? swimBurst(profile, length) : swimCruise(profile, length);
     switch (block.id) {
         case "run":
         case "flee":
@@ -643,10 +643,18 @@ export const FLY_BURST = 1.6;
 export const RUN_SPRINT = 1.3;
 /** A burst is at least a body length a second (the rigs' swim clips are slow: a seal cruises at 0.17 m/s on its clip). */
 export const SWIM_BURST_BL = 1;
+/**
+ * A recipe's swimming pace (m/s): its free pace times 1.4; a floater's its own swimming pace (`swimSpeedOf`, lane MA3
+ * water 2: a coot dabbled at 0.15 m/s, its walk clip's).
+ */
+export function swimCruise(profile: ArkBehaviourProfile, length: number): number {
+    const free = freeBodyLengthsPerSecond(profile) * Math.max(length, 0.05) * 1.4;
+    return length <= 2 ? swimSpeedOf(profile, length) : free;
+}
 /** A swimmer's burst at its prey (m/s): twice its cruise, at least a body length a second. */
 export function swimBurst(profile: ArkBehaviourProfile, length: number): number {
     const l = Math.max(length, 0.05);
-    return Math.max(freeBodyLengthsPerSecond(profile) * l * 1.4 * SWIM_BURST, l * SWIM_BURST_BL);
+    return Math.max(swimCruise(profile, length) * SWIM_BURST, l * SWIM_BURST_BL);
 }
 
 /** The block a "go" step resolves to: its own way of getting there. */

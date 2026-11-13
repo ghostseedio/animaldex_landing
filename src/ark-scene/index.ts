@@ -3002,6 +3002,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return Math.max(Math.min(Math.atan2(back - front, half * 2), 0.45), -0.45);
     };
 
+    /**
+     * The water's surface over a point as the scene draws it (lane MA3): the higher of the drawn lattice's surface and the
+     * schedule's own water level (`waterLevelAt`; the lattice reads the sea's 0 at points by a lake's shore). The sea's 0
+     * at sea and on dry land; the bigger wild island's lake and river at their own level; another island's own water.
+     */
+    const waterTopAt = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
+
     /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
     const fromSchedule = (entry: Entry, modelHeight: number): Pose => {
         const own = entry.sched!;
@@ -3014,7 +3021,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Part C: the water's surface there, the sea's 0 or the bigger wild island's lake and river at their own level.)
         // (Lane MA3: the higher of the drawn lattice's surface and the schedule's own water level, `waterLevelAt`: the
         // lattice reads the sea's 0 at points by a lake's shore, and a goose sliding in sank to the sea's level.)
-        const surfaceHere = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
+        const surfaceHere = waterTopAt;
         const waterTop = surfaceHere(at.x, at.z);
         // (Lane MA3: anything that swims has a band while its schedule has it in the water, a coot, an otter, a crocodile
         // as well as a duck: `swimDepth`; a water species its own band, with its kind's float line.)
@@ -3085,7 +3092,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
             pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
             roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
-            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || diving,
+            // (Over water: the sea's below 0, or (lane MA3 water 2) a lake's or a river's above its bed, the v2 lake at 6 m: it
+            // read as dry ground there, and a swimmer out of its band was stood on the bed by its feet, a metre down.)
+            afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || ground < waterTop - 0.02 || diving,
             ...(diving ? {underwater: true} : {})
         };
     };
@@ -4334,7 +4343,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const under = groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true);
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
                 if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
-                if (marked) ringList.push({x: where.x, y: where.afloat ? 0 : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                // (Afloat: on the water's surface there, the sea's 0, the v2 lake's 6 m: lane MA3 water 2, it was under the lake's bed.)
+                if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
                 counts.near++;
                 continue;
             }
@@ -4544,8 +4554,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
             if (marked && !entry.micro) {
-                // On the ground under it now (its home spot's height floated the ring over one that had walked downhill).
-                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : 0) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, 0);
+                // On the ground under it now (its home spot's height floated the ring over one that had walked downhill); on the
+                // water's surface over a swimmer or a wader (lane MA3 water 2: the sea's 0 as before; the v2 lake's 6 m, where it
+                // was drawn at 0, under the lake's bed).
+                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
                 ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.

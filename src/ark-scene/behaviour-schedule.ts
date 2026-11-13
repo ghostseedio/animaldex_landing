@@ -26,7 +26,7 @@
  * slot. Nothing here decides anything in the Ark (the server does that).
  */
 
-import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, swimPaceLength, swimSpeedOf, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
@@ -409,6 +409,8 @@ export class ScheduleWorldBuild {
     }
 }
 
+export {swimPaceLength, swimSpeedOf};
+
 const FLOCKING = new Set(["flock", "school", "swarm"]);
 
 /**
@@ -442,14 +444,6 @@ export function floats(profile: ArkBehaviourProfile): boolean {
     return profile.move === "swim" ? profile.moves.includes("fly") && !profile.breathes : profile.roost === "water";
 }
 
-/**
- * The length (m) a swimmer's pace is counted in, at true size: its own up to 2 m (a seal, a dolphin), then growing as
- * √L (cruising speed grows far slower than length: a 14 m humpback cruises at about 6 m/s, not 16). Motion pass §3.
- */
-export function swimPaceLength(length: number): number {
-    const L = Math.max(length, 0.05);
-    return L <= 2 ? L : 2 * Math.sqrt(L / 2);
-}
 
 /** How far it can go in one slot at its own pace (ground, water; a flyer at its cruise). */
 export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
@@ -462,7 +456,8 @@ export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): n
     }
     const flyer = profile.move === "fly";
     // (On foot at its walk's pace; in the air and the water at its own: the walk clip governs only walking.)
-    return (flyer || profile.move === "swim" ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * (profile.move === "swim" ? swimPaceLength(animal.length) : Math.max(animal.length, 0.05)) * (flyer ? 4 : profile.move === "swim" ? 1.4 : 1) * SLOT_SECONDS * 0.75;
+    if (profile.move === "swim") return swimSpeedOf(profile, animal.length) * SLOT_SECONDS * 0.75;
+    return (flyer ? freeBodyLengthsPerSecond(profile) : bodyLengthsPerSecond(profile)) * Math.max(animal.length, 0.05) * (flyer ? 4 : 1) * SLOT_SECONDS * 0.75;
 }
 
 /**
@@ -503,12 +498,28 @@ export const FLIGHT_WORTH = 1.5;
  * Its home range's radius: by how it moves and its size; never more than half what it can cover in a slot (so
  * every trip in it is done in its time at its own pace), nor more than its `range` (a predator near prey).
  */
+/**
+ * Its range cap as its goals read it (`spaceHomes`). A bird that swims first, a duck, a goose, a swan, a coot, never under
+ * ROOM_LEAST m or three of its lengths (lane MA3 water 2: where a predator's ground left no clear home both ranges shrank
+ * to half a metre, a group's leader's was halved again, and a duck flock's every goal was inside 0.25 m: it never moved).
+ * The spacing keeps its own; only the floater's goals get room. Anything else keeps its own (given room, a bat roosted
+ * in a crown, a monitor lizard and a ribbon worm walked into the rocks).
+ */
+const ROOM_LEAST = 1.5;
+export function rangeCap(profile: Pick<ArkBehaviourProfile, "move" | "moves" | "breathes">, animal: Pick<ScheduleAnimal, "range" | "length">): number {
+    if (animal.range === null || animal.range === undefined) return Infinity;
+    // (A bird that swims first: not an otter, whose water roost makes it a floater elsewhere; given room it ran into the
+    // rocks of the bigger island's cliffs.)
+    const floater = profile.move === "swim" && profile.moves.includes("fly") && !profile.breathes;
+    return floater ? Math.max(animal.range, ROOM_LEAST, animal.length * 3) : animal.range;
+}
+
 export function homeRadius(profile: ArkBehaviourProfile, animal: ScheduleAnimal): number {
     const flyer = profile.move === "fly";
     const base = flyer ? 18 : profile.move === "swim" ? 14 : 6;
     const wanted = Math.min(Math.max(base + animal.length * 5, 3), flyer ? 40 : 26);
     // A range cap (`spaceHomes`) is the whole reach, water and roost included: its everyday range is two thirds of it.
-    return Math.max(Math.min(wanted, reachOf(profile, animal) / 2, (animal.range ?? Infinity) / 1.5), 0.4);
+    return Math.max(Math.min(wanted, reachOf(profile, animal) / 2, rangeCap(profile, animal) / 1.5), 0.4);
 }
 
 function spotOf(point: AttachPoint): Spot {
@@ -531,9 +542,13 @@ function groundSpot(world: ScheduleWorld, x: number, z: number): Spot {
 /**
  * The water's surface where the schedule puts something on it (graphics batch 6, `water-level.ts`): the lake's and the
  * river's fixed level, the sea's mean (0; the scene's depth bands follow the tide). Read when a trip is planned, not
- * every frame (it samples the ground).
+ * every frame (it samples the ground). Where the world has its own surface (`ArkWorldSampler.waterSurface`: the bigger
+ * island, the town), that one, the surface `topAt` and `raised` read (lane MA3 water 2: on v2 the two disagreed where
+ * the upper river's falls run into the lake, 8.8 m against the lake's 6 a metre off, and a goose's swims there were
+ * "raised" and flown, a 1 to 10 m hop at a fifth of its cruise). Never under the ground: where no water was found, a
+ * floater's water roost was the sea's 0 on dry land, and a mottled duck slept 1.7 m under its grass.
  */
-const surfaceAt = (x: number, z: number) => waterLevelAt(x, z, 0);
+const surfaceAt = (world: ScheduleWorld, x: number, z: number) => Math.max(world.sampler.waterSurface ? surfaceY(world, x, z) : waterLevelAt(x, z, 0), world.sampler.heightAt(x, z));
 
 const raised = (world: ScheduleWorld, p: Spot) => p.y > topAt(world, p.x, p.z) + 0.4;
 const wet = (world: ScheduleWorld, p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < surfaceY(world, p.x, p.z);
@@ -731,7 +746,7 @@ function waterSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     const water = world.nav.nearest(x, z, "swim", Math.max(animal.length * 0.6, 0.4)) ?? world.nav.nearest(x, z, "swim", 0.2, 20) ?? {x, z};
     const floor = world.sampler.heightAt(water.x, water.z);
     // (On the surface: the lake's and river's fixed level, the sea's mean: the scene's depth bands follow the tide.)
-    const level = surfaceAt(water.x, water.z);
+    const level = surfaceAt(world, water.x, water.z);
     // (Its depth under the surface: below the sea's 0 there, under the lake's or the river's own level on the bigger island.)
     const y = floats(profile) || (!aquatic(profile) && !profile.breathes) ? level : profile.seabed ? floor : Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - random() * Math.max(surfaceY(world, water.x, water.z) - floor - animal.length, 0), level - 0.2));
     return {x: water.x, y: Math.min(y, level), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
@@ -773,7 +788,7 @@ function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
     const far = Math.min(Math.max(paces.cruise * FLY_AWAY_SECONDS, worth), FLY_AWAY_MOST);
     // (Never past its range's cap: a predator kept clear of its prey's ranges stays clear, `spaceHomes`. And never down by
     // a predator that eats it: clear of each threat's whole range and a safe distance more.)
-    const outer = Math.min(far * 1.15, animal.range ?? Infinity);
+    const outer = Math.min(far * 1.15, rangeCap(profile, animal));
     if (outer < Math.max(radius, 3)) return null;
     const safe = Math.max(SAFE_METRES, Math.min(animal.length * 6, SAFE_MOST));
     const clear = (x: number, z: number) => !(animal.threats ?? []).some((t) => Math.hypot(x - t.animal.home.x, z - t.animal.home.z) < (t.animal.range ?? rangeReach(t.profile, t.animal)) + Math.max(safe, Math.max(SAFE_METRES, Math.min(t.animal.length * 6, SAFE_MOST))));
@@ -792,7 +807,7 @@ function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
             }
             // (A swimmer, a puffin or a duck, comes down on the water there as well; a waterbird only there.)
             const wet = water || swims(profile) ? world.nav.nearest(x, z, "swim", 0.5, 12) : null;
-            if (wet && Math.hypot(wet.x - centre.x, wet.z - centre.z) >= r * 0.8 && clear(wet.x, wet.z)) return {x: wet.x, y: surfaceAt(wet.x, wet.z), z: wet.z, nx: 0, ny: 1, nz: 0, point: null};
+            if (wet && Math.hypot(wet.x - centre.x, wet.z - centre.z) >= r * 0.8 && clear(wet.x, wet.z)) return {x: wet.x, y: surfaceAt(world, wet.x, wet.z), z: wet.z, nx: 0, ny: 1, nz: 0, point: null};
         }
     }
     return null;
@@ -912,14 +927,14 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
     // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
     const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
-    const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, animal.range ?? Infinity), seed) : null;
+    const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
         const top = surfaceY(world, water.x, water.z);
-        const y = profile.roost === "water" && floats(profile) ? surfaceAt(water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max((top - floor) * 0.5, 0.4), top - 0.3);
+        const y = profile.roost === "water" && floats(profile) ? surfaceAt(world, water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max((top - floor) * 0.5, 0.4), top - 0.3);
         return {x: water.x, y, z: water.z, nx: 0, ny: 1, nz: 0, point: null};
     }
     return {...groundSpot(world, animal.home.x, animal.home.z)};
@@ -1398,7 +1413,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         // and out in open water: a penguin on the polar shelf was sent to a "swim" cell it could walk to over the ice,
         // and came up for air standing on it; another to the cell it was in. The first of eight bearings round from its
         // own that gives open water at least most of the way out.)
-        const pace = freeBodyLengthsPerSecond(profile) * swimPaceLength(animal.length);
+        const pace = swimSpeedOf(profile, animal.length) / 1.4;
         const bearing = random() * Math.PI * 2;
         const away = Math.max(4, pace * 16 * (0.9 + 0.3 * random()));
         // (And one its body can swim to from its home water: at true size a 1.15 m emperor penguin no longer fitted the
@@ -1421,12 +1436,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             if (!world.nav.walkable(cell.x, cell.z) && Math.hypot(cell.x - animal.home.x, cell.z - animal.home.z) >= 0.6 * away && swimsTo(cell)) near = cell;
         }
         const spot = near ?? fallback ?? animal.home;
-        return {doing: "breathe", to: {x: spot.x, y: surfaceAt(spot.x, spot.z), z: spot.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
+        return {doing: "breathe", to: {x: spot.x, y: surfaceAt(world, spot.x, spot.z), z: spot.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
-    const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), (group.leader.range ?? Infinity) / 2) : homeRadius(profile, animal);
+    const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), rangeCap(group.profile, group.leader) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;
     // Its own side of the group (a member's goals are looked for close round a point on its own bearing from the
     // leader's place, not anywhere round the place itself): four members picking spots at random round one point stood
@@ -1504,7 +1519,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             if (!profile.interactions.includes(place) && !(behaviour === "rest" && place === "shade") && doing !== "browse") continue;
             const tags = INTERACTION_TAGS[place] ?? [];
             const far = place === "drink_edge" || place === "porch_light";
-            const cap = Math.min(animal.range ?? Infinity, group ? (group.leader.range ?? Infinity) / 2 : Infinity);
+            const cap = Math.min(rangeCap(profile, animal), group ? rangeCap(group.profile, group.leader) / 2 : Infinity);
             // Water and lights may be a little beyond its usual ground: never more than half again its range (`rangeReach`).
             // (Lane MA3: a duck, a goose or a swan out on its water looks for its bank to rest on up to 20 m off, a slot's
             // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
@@ -1905,7 +1920,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         const flatWay = Math.hypot(to.x - from.x, to.z - from.z);
         const paces = airPaces(profile, animal.length);
         const swimming = wetFrom && wetTo && swimsThere && !(wadesThere && !swims(profile));
-        const own = swimming ? freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * 1.4 : pace;
+        // (Swimming at its own swimming pace, `swimSpeedOf`, lane MA3 water 2: at its walk clip's, a coot's 0.15 m/s,
+        // anything over 3 m was flown, a teal hopping 6 m across its stream.)
+        const own = swimming ? swimSpeedOf(profile, animal.length) : pace;
         const walkMost = firstFlyer ? Math.max(1, animal.length * HOP_LENGTHS) : Math.max(3, animal.length * HOP_LENGTHS, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * WALK_INSTEAD));
         // A bird walks a few steps; further than that it flies. One that walks or swims first (a pigeon, a peafowl, a coot
         // on the bank) walks wherever its feet take it in the slot, and flies only further, and only as often as it flies
@@ -1930,6 +1947,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     // In the air and the water at its own pace (the walk clip's cap is for its feet).
     // (A swimmer over a metre long at true size: counted in √L, not L, or a 14 m humpback cruised at 16 m/s. Motion pass §3.)
     const freeSpeed = freeBodyLengthsPerSecond(profile) * (profile.move === "swim" ? swimPaceLength(animal.length) : Math.max(animal.length, 0.05)) * (speed / pace);
+    // (In the water at its own swimming pace, not its walk clip's: `swimSpeedOf`, lane MA3 water 2.)
+    const swimSpeed = swimSpeedOf(profile, animal.length) * (speed / pace);
     const legs: Leg[] = [];
     /** A walk's path; one its search gave up on (a long way round) on the same stretch of ground is searched further. */
     // (Its body's width: every run of its paths keeps clear of everything solid for it: collisions.)
@@ -1975,7 +1994,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         }
         if (Math.hypot(last.x - b.x, last.z - b.z) > 0.01) path.push({x: b.x, z: b.z});
         const length = pathLength(path) + Math.abs(b.y - a.y);
-        legs.push({mode: "water", from: a, to: b, path, length, seconds: length / (freeSpeed * 1.4), beat: "swim"});
+        legs.push({mode: "water", from: a, to: b, path, length, seconds: length / swimSpeed, beat: "swim"});
     };
     /** The water's edge to cross at: the drinking and shore points nearest a spot. */
     const edgeNear = (p: Spot): Spot | null => waterEdgeNear(world, profile, animal, p);
