@@ -391,3 +391,19 @@ test("streaming islands: the base fog is pushed out so the town reads across the
     fog.far = 170;
     assert.ok(fog.far < 200, `storm fog far ${fog.far}`);
 });
+
+test("streaming islands: the town expected from the mount gives the fog both islands' reach at once, the same as once it registers", async () => {
+    const {TOWN_GRID} = await import("@/ark-scene/islands/town/chunks");
+    const content = new Uint8Array(chunkCount(grid)).fill(1);
+    const fog = new Fog(0xffffff, 420, 1700);
+    const haze = hazeFog(fog);
+    const streamer = new ArkStreamer({grid, spans, content, tier: "medium", haze});
+    streamer.registerIsland({id: "wild", offset: {x: 0, z: 0}, reach: 90.25, grid, spans, content});
+    const alone = {near: fog.near, far: fog.far};
+    streamer.expectIsland({id: "town", offset: TOWN_OFFSET, grid: TOWN_GRID});
+    const expected = {near: fog.near, far: fog.far};
+    assert.ok(expected.near > alone.near && expected.far > alone.far, `${JSON.stringify(alone)} -> ${JSON.stringify(expected)}`);
+    const townSpans = Array.from({length: chunkCount(TOWN_GRID)}, () => ({minY: -4, maxY: 30}));
+    streamer.registerIsland({id: "town", offset: TOWN_OFFSET, reach: 210.25, grid: TOWN_GRID, spans: townSpans, content: new Uint8Array(chunkCount(TOWN_GRID)).fill(1)});
+    assert.deepEqual({near: fog.near, far: fog.far}, expected, "no change when the town registers");
+});

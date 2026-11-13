@@ -198,6 +198,8 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
+import {townWorldOrigin} from "@/ark-scene/islands";
+import {TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuild";
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
@@ -938,6 +940,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         register?.call(streamer, {id: "town", offset: isl.origin, grid: isl.grid, spans: isl.spans, content: isl.content, apply: isl.applyStream});
     };
     if (island) registerIslandStream(island);
+    // (The town coming, built after the first frame: the fog reads both islands from the first frame, `expectIsland`.)
+    else if (options.wildAnimals) streamer.expectIsland({id: "town", offset: townWorldOrigin(), grid: TOWN_GRID});
 
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
@@ -2258,7 +2262,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 : newEntry(animal, place, entrances ? now : null);
             next.push(entry);
             nextById.set(animal.id, entry);
-            tokens.ensure(animal.model_slug);
+            // (Payload lane: on a touch device an icon is fetched when its kind is first drawn as an icon,
+            // `updateInstances`: the phone's opening view draws markers, and 256 icons were 3.4 MB of its first minute on
+            // slow 4G. A desktop and a recording ask for every icon at once, as before.)
+            if (!pacer) tokens.ensure(animal.model_slug);
         }
         entries = next;
         entryById = nextById;
@@ -2299,7 +2306,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Small animals' models wait until the camera comes close: they are not drawn from afar. Herds' far models are.)
         const byDistance = Array.from(new Set([...next.filter((entry) => !entry.micro || entry.animal.mine).map((entry) => entry.animal.model_slug), ...herds.map((herd) => herd.slug)]));
         // Runtime: a big Ark asks up front only for the kinds nearest the view; the rest as they come into view.
-        const firstFar = runtime.upfrontFar(byDistance, next.map((entry) => ({slug: entry.animal.model_slug, x: entry.place.x, z: entry.place.z})), herds.map((herd) => herd.slug));
+        // (Payload lane: a touch device, on a phone's link and its data plan, asks up front only for the herds' kinds,
+        // whose figures are drawn from afar; every other kind when it comes into view, as the rest always were. The
+        // opening view's own models come first either way: they are the ones it draws.)
+        const firstFar = pacer ? Array.from(new Set(herds.map((herd) => herd.slug))) : runtime.upfrontFar(byDistance, next.map((entry) => ({slug: entry.animal.model_slug, x: entry.place.x, z: entry.place.z})), herds.map((herd) => herd.slug));
         library.ready().then(() => {
             for (const slug of firstFar) if (library.has(slug)) library.request(slug, "far");
         });
@@ -4415,6 +4425,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (entry.floor || pixels < MARKER_BELOW_PIXELS || candidate.skip || dotNotIcon) {
                     const top = where.base + lift + modelHeight + Math.max(perPixel * 7, 0.08);
                     dotList.push({x: where.x, y: Math.max(top, rest + 0.1), z: where.z, pixels: marked === 2 ? 11 : 8, alpha: dim ? 0.35 : 1});
+                    if (marked === 2) tokens.ensure(animal.model_slug);
                     if (marked === 2 && tokens.loaded(animal.model_slug)) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(top, rest + 0.1) + perPixel * 20, z: where.z, size: 0.5, dim: 0, ring: 2, grow});
                 }
             }
@@ -4423,7 +4434,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (candidate.skip) continue;
             if (level === "token") {
                 counts.token++;
-                if (!dotNotIcon) tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: iconSize(entry.length), dim, ring: marked, grow});
+                if (!dotNotIcon) {
+                    tokens.ensure(animal.model_slug);
+                    tokenList.push({slug: animal.model_slug, x: where.x, y: Math.max(where.base + modelHeight * 0.75, rest + 0.4), z: where.z, size: iconSize(entry.length), dim, ring: marked, grow});
+                }
                 continue;
             }
 

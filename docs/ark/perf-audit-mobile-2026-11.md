@@ -280,3 +280,141 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 | Shadows on phones | every frame; half rate; static only | every other frame while the shadow box stands still, every frame when it moves | Saves half the shadow pass with nothing swimming; animals' contact shadows are separate. |
 | The overlay in the apps' panel | a host message; a URL flag; a gesture | `?perf=1` remembered, and five taps on the top-left corner | The panel's URL cannot be changed by hand; no app release needed. |
 | The town's draw calls | merge now; a far proxy; leave to the town lane | the town lane, with the plan and numbers (§7) | Its chunks feed streaming, near detail and window lighting; a merge belongs with its owners and its visual gate. |
+
+## 9. Round 2 (`ark-perf-2`): the first frame and the payload
+
+### The `onReady` frame was a fog wash
+
+The archipelago mounts the wild island first and the town after the first frame (decision 153), but the camera opens
+on the two-island view. The fog's clear reach is pushed out for two islands only when the town registers with the
+streamer (`updateFog`, decision 142), so the first drawn frames showed the ~900 m view in the one island's fog (near
+420 m, far 1,700 m: a wash) until the town came, ~230 ms later on the desktop and ~670 ms on the phone profile. Now the
+scene, mounted with the town coming (`wildAnimals`), tells the streamer where the town will be (`expectIsland`:
+`townWorldOrigin()` and `TOWN_GRID`, the very values the archipelago builds it with), so the fog has both islands'
+reach (812 / 3,288 m) from the first drawn frame, and does not move when the town registers (a test checks both).
+Measured on the embed, first eight drawn frames, desktop and phone profile: the same fog in every one. The page can
+take the `onReady` frame as the real view; `arkWhenSettled`'s wait for the second frame is no longer needed for this.
+
+### What a phone downloads, measured as the site serves it
+
+The first round's "18–21 MB before the first frame" was the harness serving everything uncompressed on an open
+link and counting what had finished by then. The site serves text compressed (Cloudflare: the bundle and workers
+gzip, the API brotli), so the harness now gzips text the same way, has a slow 4G profile (`--network slow4g`:
+1.6 Mbit/s, 150 ms, Lighthouse's) and logs every request and the bytes on the wire at the first frame. Phone profile,
+slow 4G, the real Ark:
+
+- **On the wire at the first frame: ~3.2–3.3 MB**, almost all on the first frame's own path: the bundle 1,578 KB (8 s
+  of the link), the snapshot 235 KB, the wild island's prebuild and places workers ~660 KB, the town's worker ~485 KB
+  (the town lane's). Models were 0.2 MB of it: they are asked for after the mount and mostly arrive after the frame.
+- **The first frame at ~25 s**: the bundle (8 s), the snapshot (1.5 s), the workers and their work (~12 s), the mount
+  and the shaders (~3 s, the main thread at 4×).
+- **After it, the first minute**: 256 icons (3.4 MB) for every live kind, though the phone's opening view draws
+  markers; then the up-front far models (the medium tier asks for its 120 nearest kinds, ~62 KB each: ~7.4 MB in all);
+  the opening view's own scenery (the asset trees' levels) queued behind them, complete only at 83–98 s.
+
+### What changed (phones only; a desktop and a recording load as before)
+
+- **Icons when drawn**: a touch device fetches a kind's icon when an animal of it is first drawn as an icon (or
+  selected), not every live kind's at layout.
+- **Up front, only the herds' far models**: a touch device asks up front only for the herds' kinds (their figures are
+  drawn from afar); every other kind's far model when it comes into view, as the rest already were. The view's own
+  models come first either way.
+- **The 45 s read revalidated**: an anonymous `/api/ark/voyage` answer carries a content validator
+  (`lib/ark-voyage-etag.ts`: everything but the read's own time, the Ark day in 0.05 steps, as `sameArkRead` treats a
+  read), an unchanged Ark answers 304, and the embed revalidates (`cache: "no-cache"`) and does not even parse the same
+  Ark again. The apps' panel read ~400 KB (brotli) every 45 s whatever happened: ~32 MB an hour with the panel open; now
+  only when the Ark changes. Signed-in answers stay `no-store` (a reader's own marks are never kept in a cache). The
+  page's own reads revalidate by themselves.
+
+### Before and after (phone profile, slow 4G, two pairs back to back)
+
+| Run | First frame (s) | On the wire at the first frame (KB) | First 60 s: icons KB (files) | Models KB (files) | Opening scenery KB | Total KB | Opening scenery all in (s) |
+|---|---|---|---|---|---|---|---|
+| before 1 | 25.0 | 3,184 | 3,325 (256) | 1,108 (14) | 168 | 6,540 | 82.9 |
+| after 1 | 25.0 | 3,211 | 5 (1) | 1,365 (19) | 754 | 4,590 | 74.0 |
+| before 2 | 24.7 | 3,276 | 3,417 (256) | 1,445 (19) | 71 | 6,873 | 97.7 |
+| after 2 | 25.3 | 3,285 | 0 (0) | 0 (0) | 752 | 3,200 | 66.4 |
+
+The 45 s read in the embed (phone profile, 110 s, the harness answering as the route now does): 1 whole read, then 2
+unchanged reads answered 304, no body.
+
+The first frame did not move, and on these changes it should not: what it waits for is code (the bundle and the
+workers) and the main thread, not models or icons. What did move is everything a phone downloads in its first minute
+that it did not draw (−30 to −53%), and the opening view's own scenery, no longer queued behind them (9–31 s sooner).
+
+### The embed's first paint (the apps' iOS panel)
+
+`/ark/embed.html` loaded the scene's code with a `<script>` in the body, which WebKit (the apps' iOS panel) holds its
+first paint behind: nothing drew until the ~1.6 MB (gzip) bundle had downloaded and run, so the loading screen's
+blurred frame and card (the loading lane's, merged here from `ark-loading`) could not show, and on slow 4G the panel
+showed the app's spinner for the whole download. Now:
+
+- the bundle is preloaded in the head (`<link rel="preload" as="script">`: its download starts with the page, as
+  before, nothing waits on it) and inserted as an async script only once two animation frames have been drawn (or after
+  250 ms when the page draws none, hidden); the embed's own script runs on its load (`AnimalDexArkStart`). Nothing
+  blocks the parser any more;
+- the first `ark:progress` goes to the host only after two drawn frames (a frame with the loading screen on it), not
+  at parse time;
+- the host's messages before the scene's code runs (an app may speak as soon as the page has loaded, which can now come
+  first) are kept by the loading screen's script and handed over in order (`AnimalDexArkEarly`): an `ark:visible false`
+  sent before the code ran still held the drawing, and the world drew once it was told `true`.
+
+Measured in Chromium (phone profile, slow 4G, two pairs): first paint 220 / 236 ms before, 260 / 228 ms after; the first
+`ark:progress` 208 / 225 ms before (before the first paint), 240 / 255 ms after (after it); the bundle fetched once
+(the preload reused), done at 9.2–9.3 s both; the first 3D frame 24.4–26.7 s both. Chromium already painted ahead of the
+blocking script, so its numbers barely move; WebKit is the case that changes (from the end of the bundle's download, ~9 s
+on slow 4G, to the first frames), and there is no WebKit to measure with here (Playwright's WebKit is not installed and
+Safari's automation is off): the owner's iPhone, or the iOS lane's own trace, should confirm it.
+
+`/ark` and the home hero: neither blocks. The `/ark` page imports the scene's code dynamically after its first paint
+(decision 246); the hero is the embed in an iframe (now non-blocking too), and the home page paints its own poster
+whatever the frame does.
+
+### What would move the first frame (owner or other lanes)
+
+1. **Brotli for the scripts** (deploy): the scripts go out gzip; precompressed brotli (quality 11) would be the bundle
+   1,578 → 1,194 KB, the places worker 513 → 393 KB, the prebuild worker 144 → 119 KB: −529 KB on the first frame's path,
+   **~2.6 s on slow 4G**, no change to anything drawn. Cloudflare compresses with brotli on the fly when the origin
+   sends text uncompressed (as it already does for the API: `next.config.js` `compress: false` would make the scripts
+   ~1,394 KB, −184 KB, site-wide); precompressed `.br` files served by the origin get the full saving.
+2. **The bundle's data tables** (scene lanes): ~2.9 MB of the bundle's 5.1 MB raw is JSON (food links 319 KB, model
+   bases 315, behaviours 249, tree attach 232, recipes 230, species 199, intelligence 195, stats 170 …). Those the first
+   frame does not need (food links, recipes, intelligence) could come as their own files after it; a split bundle (ES
+   modules) would let the town's code (304 KB) come with the town.
+3. **The far skins** (model-set publish, owner): a far model is 62 KB, 49.5 KB of it its 512² WebP skin, which phones
+   then fit to 256² on the device; the near file carries the same skin again. A 256² far skin (or a tier-sized set)
+   would cut far models by ~55% (~3 MB of the ~7 MB a phone's view can ask for), and a shared skin file the near level's
+   duplicate. Textures are already WebP and meshes meshopt-quantized; KTX2 would cut GPU memory, not bytes.
+4. **The snapshot** (API, owner and apps): the live read is ~406 KB brotli (Cloudflare's on-the-fly level); at
+   quality 11 the same JSON is ~40% smaller (the anonymised real Ark: 235 KB gzip, 142 KB br11). Per-species fields
+   repeated on every animal (species id, model slug, names, scientific names, sociality: ~470 KB of the 1.68 MB) could be
+   one table, and `brought_by` repeats `bringers`: a contract change for the apps, so not here.
+5. **The town's worker** (~485 KB) downloads beside the wild island's workers on the first frame's path: the town lane
+   (`ark-town-draws`).
+
+### Gates (round 2)
+
+| Gate | Result |
+|---|---|
+| Types | clean |
+| Lint | `npm run lint` exit 0 (only the known `<img>` warnings, none in the changed files) |
+| Unit and integration | after the merge with `ark-loading`: 2,651 tests, 2,649 pass, 0 fail, 2 skipped (new: the expected fog, the voyage validator) |
+| Collision audit, three modes | base (`ark-perf-2` before the payload changes) and branch identical: islands v2, islands v1 and today's mode, every report the same |
+| Behaviour audit and encounters | identical; "All 25 checks hold" |
+| Motion CI, the default view ×2 | pace 1.03 / 0.93, backwards 0.8% / 2.4%, none over 1 s, ground turns 2.6 / 1.7 a minute; the base the same minutes: 0.96 / 1.05, 1.4% / 0.4%, none, 0.1 / 0.5. The default view's mount touches none of this round's code (no town coming, a desktop): the spread is the clock's |
+| Visual CI on GitHub | run 43486664319 on 58e8850b (every change to what is drawn this round): **green**, 19/19 golden shots within tolerance (worst 0.29% of pixels), the other lanes' checks (motion metrics) green. The later commits change only the embed page and the merge brings the loading lane's own, gated with it |
+
+
+### Decisions (round 2)
+
+| Question | Options | Choice | Why |
+|---|---|---|---|
+| The fog-wash frame | wait for the second frame (page side); push the fog when the town is built; expect the town from the mount | the scene expects the town (`expectIsland`) from the mount | Fixed at the source: the first frame is the real view, the fog never moves when the town comes. |
+| How to measure bytes | uncompressed; as the site serves them | gzip as the CDN does, slow 4G, every request timed, bytes on the wire at the first frame | The first round's 18–21 MB overstated the first frame's path ~6×; models are not on it. |
+| Icons | all live kinds at layout; when drawn | when drawn, on touch devices | 3.4 MB of a phone's first minute for markers it never drew; desktop keeps its prefetch (no icon pops in). |
+| Up-front far models on phones | the tier's nearest kinds; herds only; none | herds only | Their figures are drawn from afar; the rest come as they come into view, as most kinds already did. |
+| The 45 s read | as is; skip parsing only; validator and 304 | a content ETag on anonymous reads, revalidated by the embed | The panel's cellular data: ~400 KB every 45 s whatever happened; signed-in reads untouched (no-store). |
+| Brotli, the bundle split, far skins, the snapshot's shape | do here; recommend | recommend, with numbers | Site-wide deploy config, a model-set publish, an API contract: the owner's or other lanes'. |
+| The embed's blocking script | `defer`; `async`; a module; preload and run after the first frames | preload in the head, inserted after two drawn frames (250 ms when hidden), the main script on its load | `defer` still runs before `DOMContentLoaded` and WebKit may hold the paint for it; the preload keeps the download where it was (measured: done at the same 9.2 s), only the run moves. |
+| Host messages before the code runs | lost, as an app speaking before the bundle ran lost them before; kept | kept by the loading screen's script, handed over in order | Running the code later must not drop an app's early `ark:visible`/`ark:power`. |
+| Building on the loading lane's embed | wait for its merge; merge it here | merged `origin/ark-loading` into `ark-perf-2` (conflicts: the embed's read, `ArkView`'s props) | The loader card and `ark:progress` live there; the integrator merges both lanes in the same round. |

@@ -66,6 +66,9 @@
   /* While the card shows, the scene's own quiet loading bar at the foot steps aside (the card says the same). */
   body.ark-loading [data-ark-runtime="loading"] { opacity: 0 !important; }
 </style>
+<!-- The scene's code: fetched from the start, run only once the page has painted (the script at the foot): a script
+     tag here or in the body held WebKit's first paint (the apps' iOS panel) for the whole ~1.6 MB download. -->
+<link rel="preload" href="./ark-scene.js" as="script">
 </head>
 <body>
 <div id="ark"></div>
@@ -120,7 +123,14 @@
   }
   // Reading its own snapshot (not the app's ark:snapshot, not development's fixture): asked for now, beside the code.
   var snapshotUrl = params.get("fixture") ? null : params.get("snapshot") || "/api/ark/voyage";
-  var snapshotRead = snapshotUrl ? fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
+  // (Revalidated, as every later read: the server's validator kept for the script below, `snapshotTag`.)
+  var snapshotTag = null;
+  var snapshotRead = snapshotUrl ? fetch(snapshotUrl, {cache: "no-cache"}).then(function (r) {
+    if (!r.ok) return null;
+    snapshotTag = r.headers.get("ETag");
+    if (window.AnimalDexArkLoader) window.AnimalDexArkLoader.snapshotTag = snapshotTag;
+    return r.json();
+  }).catch(function () { return null; }) : null;
   function say(words) {
     if (said || !on) return;
     said = words;
@@ -213,11 +223,49 @@
   } else {
     document.body.classList.add("ark-loading");
   }
-  tell({type: "ark:progress", stage: "data", progress: 0});
-  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, words: words, snapshotRead: snapshotRead, on: on};
+  // (The first progress once a frame with the loading screen on it has really been drawn: two animation frames, so the
+  // host shows the page instead of its own spinner only when there is something on it. A hidden page draws no frame:
+  // nothing is said until it shows.)
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () { tell({type: "ark:progress", stage: "data", progress: 0}); });
+  });
+  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, words: words, snapshotRead: snapshotRead, snapshotTag: snapshotTag, on: on};
+  // The host's messages before the scene's code runs (it runs after the first paint now): kept, and handed to the
+  // script below when it starts (`AnimalDexArkEarly`), so an app that speaks as soon as the page has loaded loses nothing.
+  var early = [];
+  function keep(event) { early.push(event.data); }
+  window.addEventListener("message", keep);
+  window.AnimalDexArkHost = {send: function (message) { early.push(message); }};
+  window.AnimalDexArkEarly = function () {
+    window.removeEventListener("message", keep);
+    var kept = early;
+    early = [];
+    return kept;
+  };
 })();
 </script>
-<script src="./ark-scene.js"></script>
+<script>
+/*
+ * The scene's code after the first paint (preloaded in the head, so its download began with the page): inserted once
+ * two animation frames have been drawn, or after 250 ms when the page draws none (hidden), then the script below runs
+ * (`window.AnimalDexArkStart`). Nothing here blocks the parser, so WebKit paints the loading screen at once.
+ */
+(function () {
+  var started = false;
+  function load() {
+    if (started) return;
+    started = true;
+    var script = document.createElement("script");
+    script.src = "./ark-scene.js";
+    script.async = true;
+    script.onload = function () { if (window.AnimalDexArkStart) window.AnimalDexArkStart(); };
+    document.body.appendChild(script);
+  }
+  requestAnimationFrame(function () { requestAnimationFrame(load); });
+  setTimeout(function () { if (document.hidden) load(); }, 250);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) requestAnimationFrame(function () { requestAnimationFrame(load); }); });
+})();
+</script>
 <script>
 /*
  * The shared Ark, bare, for the apps' WebView (Ark v1 contract, section 5).
@@ -271,12 +319,14 @@
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
- * {type: "ark:progress", stage, progress} as the load goes (first at the first paint; stage "data" | "world" |
+ * {type: "ark:progress", stage, progress} as the load goes (first once a frame of the loading screen is drawn; stage "data" | "world" |
  * "animals" | "done", progress 0…1 from real steps only: src/lib/ark-loading.ts),
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
-(function () {
+window.AnimalDexArkStart = function () {
+  if (window.AnimalDexArkStarted) return;
+  window.AnimalDexArkStarted = true;
   var params = new URLSearchParams(location.search);
   var Ark = window.AnimalDexArk;
   // Made-up data only in a development build of the bundle (its feed is there only then); a production build ignores ?fixture=.
@@ -556,21 +606,36 @@
   }
   ["pointerdown", "keydown", "wheel", "touchstart"].forEach(function (kind) { window.addEventListener(kind, activity, {passive: true}); });
 
+  // The last read's validator (`ETag`), when the server gave one.
+  var lastTag = null;
   function read() {
     if (feeding) return Promise.resolve();
     lastRead = Date.now();
     var routing = islandsUrl ? fetch(islandsUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
-    // (The first read was asked for by the loading screen's script, beside the code: taken once.)
+    // (Revalidated, not refetched: an anonymous read carries the server's validator, and an unchanged Ark answers 304,
+    // the browser keeping the body it has. The same validator as last read: nothing to parse or lay out.)
+    var same = {};
+    // (The first read was asked for by the loading screen's script, beside the code: taken once, its validator with it.)
     var first = loader.snapshotRead;
     loader.snapshotRead = null;
-    var snapshotBody = first && !fixtureAsked ? first : fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; });
+    var snapshotBody = first && !fixtureAsked
+      ? first.then(function (body) { lastTag = loader.snapshotTag || null; return body; })
+      : fetch(snapshotUrl, {cache: "no-cache"}).then(function (r) {
+        if (!r.ok) return null;
+        var tag = r.headers.get("ETag");
+        if (tag && tag === lastTag && shown) return same;
+        lastTag = tag;
+        return r.json();
+      });
     return Promise.all([snapshotBody, wordsRead, routing])
       .then(function (both) {
         var body = both[0];
-        if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
-        var raw = body && body.snapshot ? body.snapshot : body;
-        founders = foundersFrom(body, raw);
-        show(Ark.decodeArkSnapshot(raw));
+        if (body !== same) {
+          if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
+          var raw = body && body.snapshot ? body.snapshot : body;
+          founders = foundersFrom(body, raw);
+          show(Ark.decodeArkSnapshot(raw));
+        }
         // Encounter hunting: the server's read with the live snapshot only (never a fixture or a given snapshot);
         // kept for the scene when it is not up yet (`mount` hands it over).
         if (Ark.fetchArkHunting && !fixtureAsked && !params.get("snapshot")) {
@@ -620,6 +685,8 @@
   if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
   window.AnimalDexArkHost = {send: receive};
   window.addEventListener("message", function (event) { receive(event.data); });
+  // (What the host said before this script ran, kept by the loading screen's script: said now, in order.)
+  if (window.AnimalDexArkEarly) window.AnimalDexArkEarly().forEach(receive);
 
   read();
   setInterval(function () {
@@ -627,7 +694,7 @@
     if (idleMs && Date.now() - lastActive >= idleMs) return;
     read();
   }, refreshMs);
-})();
+};
 </script>
 </body>
 </html>
