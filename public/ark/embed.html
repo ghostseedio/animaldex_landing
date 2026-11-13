@@ -43,7 +43,9 @@
      the phone profile; the dot's slow pulse is the only thing that moves, and it is cheap). */
   #ark-loader .bar .sheen { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; width: 0; background: rgba(200, 250, 99, 0.2); }
   #ark-loader .facts { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); min-width: 0; }
-  #ark-loader .icon { flex: none; width: 36px; height: 36px; border-radius: 18px; background: #f6f1e7; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  /* The icon's circle: a placeholder's grey until the icon is in, then the cream the Ark's icons sit on. */
+  #ark-loader .icon { flex: none; width: 36px; height: 36px; border-radius: 18px; background: rgba(255, 255, 255, 0.12); display: flex; align-items: center; justify-content: center; overflow: hidden; transition: background-color 300ms ease-out; }
+  #ark-loader .icon.in { background: #f6f1e7; }
   #ark-loader .icon img { width: 82%; height: 82%; object-fit: contain; opacity: 0; transition: opacity 300ms ease-out; }
   #ark-loader .icon img.in { opacity: 1; }
   #ark-loader .lines { min-width: 0; flex: 1; height: 52px; display: flex; flex-direction: column; justify-content: center; }
@@ -58,7 +60,7 @@
   #ark-loader .icon.skel-icon { background: rgba(255, 255, 255, 0.12); }
   @keyframes arkLoaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   @media (prefers-reduced-motion: reduce) {
-    #ark-loader .poster, #ark-loader .card, #ark-loader .bar .fill, #ark-loader .icon img { transition: none; }
+    #ark-loader .poster, #ark-loader .card, #ark-loader .bar .fill, #ark-loader .icon, #ark-loader .icon img { transition: none; }
     #ark-loader .stage .dot { animation: none; }
   }
   /* While the card shows, the scene's own quiet loading bar at the foot steps aside (the card says the same). */
@@ -162,7 +164,7 @@
       img.alt = "";
       img.decoding = "async";
       img.onerror = function () { img.remove(); };
-      img.onload = function () { img.classList.add("in"); };
+      img.onload = function () { img.classList.add("in"); icon.classList.add("in"); };
       icon.appendChild(img);
       iconImage = img;
       var lines = document.createElement("span");

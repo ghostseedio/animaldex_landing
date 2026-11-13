@@ -28,7 +28,8 @@ const FADE_MS = 450;
  * a progressbar with the stage as its text.
  */
 export default function ArkLoaderCard({state, words, newest, locale}: {state: ArkLoadState; words: ArkWords; newest: ArkLoaderNewest | null; locale: string}) {
-    // The icon is asked for once the world is drawn (17 KB was 0.1 s to the first frame on slow 4G): until then its circle.
+    // The icon is asked for once the world is drawn (17 KB was 0.1 s to the first frame on slow 4G): until then its
+    // circle in the placeholder's grey.
     const showIcon = state.frame;
     const stage = arkLoadStage(state);
     const progress = arkLoadProgress(state);
@@ -69,7 +70,7 @@ export default function ArkLoaderCard({state, words, newest, locale}: {state: Ar
             </div>
             {newest ? (
                 <div className="mt-2.5 flex min-w-0 items-center gap-2.5 border-t border-white/10 pt-2.5">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full transition-colors duration-300 motion-reduce:transition-none ${showIcon ? "bg-[#f6f1e7]" : "bg-white/[0.12]"}`}>
                         {showIcon ? <ArkSpeciesIcon src={newest.slug ? arkIconUrl(newest.slug) : ARK_PLACEHOLDER_ICON} size={36} className="rows-in h-[82%] w-[82%] object-contain" /> : null}
                     </span>
                     <span className="min-w-0 flex-1 leading-tight">
