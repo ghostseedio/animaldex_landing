@@ -18,6 +18,7 @@ import {gridHeight, gridSlope} from "@/ark-scene/islands/wild/terrain-cache";
 import {inRange, nearWhale} from "@/ark-scene/islands/wild/reserves";
 import {COVE, ICE_FRONT_Z, coveDistance} from "@/ark-scene/islands/wild/fields";
 import {WILD_HALF, wildChunkOf} from "@/ark-scene/islands/wild/frame";
+import {SCENERY_APPENDED, appendLast, ledgerKey} from "@/ark-scene/islands/wild/ledger";
 
 type AssetInfo = {kind: string; height: number; crown_radius?: number; trunk_radius?: number; bounds?: {min: [number, number, number]; max: [number, number, number]}};
 const ASSETS = (manifest as unknown as {assets: Record<string, AssetInfo>}).assets;
@@ -448,8 +449,10 @@ export function wildScenery(): WildItem[] {
         out.push({kind: "cave", asset: unit(k, 13, 53) < 0.5 ? "cave-mouth-a" : "cave-mouth-b", x, y: s.height - 0.6, z, yaw: Math.atan2(-gx, -gz), scale: 1.3, height: 6, solid: 2.5, crown: 0, chunk: wildChunkOf(x, z), shade: 1});
         caves++;
     }
-    items = out;
-    return out;
+    // Append-only across terrain fixes (decision 303, `ledger.ts`): what a fix added goes at the end, so every other
+    // item keeps its place in the list (and the decor's hosts and the map's points theirs).
+    items = appendLast(out, (item) => ledgerKey(item.kind, item.x, item.z), SCENERY_APPENDED);
+    return items;
 }
 
 /** The scenery by Part B chunk. */

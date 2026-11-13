@@ -124,3 +124,48 @@ test("the spawn validator: every wild species placed at its own and its zone's y
     assert.deepEqual(report.failures.slice(0, 5), []);
     assert.equal(report.failures.length, 0);
 });
+
+test("the upper river meets the lake flush (lane MA3, the river mouth): no water stands above the lake inside it, the river comes down to its level by the shore, and its banks hold it", async () => {
+    const {lakeEdge, riverAt, upperRiverMouth} = await import("@/ark-scene/islands/wild/fields");
+    // (It was drawn 2-4 m above the lake over its last 20 m, a raised tongue of water across the lake's south-west.)
+    for (let x = LAKE.x - 40; x <= LAKE.x + 40; x += 1) {
+        for (let z = LAKE.z - 40; z <= LAKE.z + 40; z += 1) {
+            if (Math.hypot(x - LAKE.x, z - LAKE.z) > lakeEdge(x, z) - 1) continue;
+            const s = sampleWildGround(x, z);
+            assert.ok(s.freshLevel === null || s.freshLevel <= LAKE.level + 1e-9, `water at ${s.freshLevel?.toFixed(2)} m in the lake at ${x},${z}`);
+        }
+    }
+    // Down its course to the shore, never climbing, at the lake's level there.
+    const mouth = upperRiverMouth();
+    assert.ok(mouth.along > 20 && mouth.drop > 1, JSON.stringify(mouth));
+    let last = Infinity;
+    for (let i = 1; i < RIVER_UPPER.length; i++) {
+        const a = RIVER_UPPER[i - 1];
+        const b = RIVER_UPPER[i];
+        for (let t = 0; t <= 1; t += 0.05) {
+            const level = riverAt(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t).level;
+            assert.ok(level <= last + 1e-9, `the river climbs to ${level.toFixed(2)} m`);
+            last = level;
+        }
+    }
+    assert.equal(last, LAKE.level);
+    // Its banks hold it: the drawn water (`freshWaterGeometry`, a cell's highest corner) over a dry corner by 25 cm at most.
+    const {wildGroundArrays} = await import("@/ark-scene/islands/wild/render/ground");
+    const g = wildGroundArrays();
+    const over: string[] = [];
+    for (let row = 0; row < g.size - 1; row++) {
+        for (let col = 0; col < g.size - 1; col++) {
+            const corners = [row * g.size + col, row * g.size + col + 1, (row + 1) * g.size + col + 1, (row + 1) * g.size + col];
+            const levels = corners.map((i) => g.freshLevels[i]).filter((l) => !Number.isNaN(l));
+            if (!levels.length) continue;
+            const top = Math.max(...levels);
+            for (const i of corners) {
+                const x = g.positions[i * 3];
+                const z = g.positions[i * 3 + 2];
+                if (!Number.isNaN(g.freshLevels[i]) || x < -105 || x > -55 || z < -85 || z > -15) continue;
+                if (top - g.positions[i * 3 + 1] > 0.25) over.push(`${x.toFixed(1)},${z.toFixed(1)}`);
+            }
+        }
+    }
+    assert.deepEqual(over, [], "water drawn over the upper river's grass");
+});

@@ -41,6 +41,7 @@ import {wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 import {type WildGroundSample} from "@/ark-scene/islands/wild/ground";
 import {gridSlope} from "@/ark-scene/islands/wild/terrain-cache";
 import {wildLandBounds} from "@/ark-scene/islands/wild/index";
+import {DECOR_APPENDED, appendLast, ledgerKey} from "@/ark-scene/islands/wild/ledger";
 
 type AssetInfo = {height: number; crown_radius?: number; bounds?: {min: [number, number, number]; max: [number, number, number]}};
 const ASSETS = (manifest as unknown as {assets: Record<string, AssetInfo>}).assets;
@@ -200,7 +201,8 @@ function lilyBed(w: WildItem, out: DecorItem[]) {
 
 /**
  * The v2 decor, in this order (each item's index is its host's, `decor<i>`): the canopy's trees, then the shrubs,
- * then the rocks, reeds and lily pads, then the micro corners (`micro-decor.ts`), as `decor.ts` appends them.
+ * then the rocks, reeds and lily pads, then the micro corners (`micro-decor.ts`), as `decor.ts` appends them, then
+ * what terrain fixes have added since (`ledger.ts`).
  */
 export function wildDecor(): DecorItem[] {
     const scenery = wildScenery();
@@ -253,7 +255,9 @@ export function wildDecor(): DecorItem[] {
 
     const out = [...trees, ...shrubs, ...rocks, ...water];
     for (const item of micro) out.push({kind: item.kind, variant: item.variant, x: item.x, y: item.y, z: item.z, scale: item.scale, rotation: item.rotation, color: item.color});
-    return out;
+    // Append-only across terrain fixes (decision 303, `ledger.ts`): what a fix added goes after the micro corners, so
+    // every other item keeps its index (its host's, `decor<i>`, and so its attach points' ids and seeded draws).
+    return appendLast(out, (item) => ledgerKey(item.kind, item.x, item.z), DECOR_APPENDED);
 }
 
 /** Every decor tree and rock as the spacing knows them, and the mounds: what the understorey and the floor keep clear of. */

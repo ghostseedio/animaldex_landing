@@ -45,12 +45,22 @@ export type SpawnPoint = {
     launch: boolean;
     /** Something tall in front of it from the default camera (a rare kind's cover). */
     covered: boolean;
+    /**
+     * A cell a terrain fix took from this tag since the homes were pinned (decision 303, `MapLedger`): it keeps its
+     * place in the list, and a home on it moves to the nearest free cell of the tag (`pick`).
+     */
+    stale?: true;
 };
 
 type Cell = {x: number; z: number; zone: ArkZone; tags: readonly MapTag[]; wet: boolean; depth: number};
 export type SlotKind = "core" | "edge" | "cover" | "plain";
 /** A cluster's spot on a list: its cell, its lap round it, and where that is. */
 export type SlotPick = {point: SpawnPoint; level: number; x: number; z: number};
+/**
+ * The attach points a kind can sit on, and whether they are its zone's own. `moved`: the points a terrain fix took
+ * from the list since the homes were pinned (decision 303), each with where a home on it moves (`MapPoints.attachOf`).
+ */
+export type AttachList = {list: AttachPoint[]; own: boolean; moved?: ReadonlyMap<AttachPoint, AttachPoint>};
 
 const GRID = 2.5;
 /** A borrowed list's least size: a zone borrowing a tag takes the nearest zone's with at least this many cells. */
@@ -64,18 +74,30 @@ const BORROWED_LAPS: Array<[number, number]> = [[0.62, 0.62], [1.87, 0.62], [0.6
 const FLOOR_WEIGHT = 0.3;
 
 const tagKey = (tag: MapTag, wet: boolean) => `${tag}${wet ? "~w" : ""}`;
+/** How far a home on a cell or a point a terrain fix took away moves at most, to the nearest free one (m). */
+const MOVE_REACH = 30;
 
 export class MapPoints {
     readonly sampler: ArkMapSampler;
     /** The sea's cells by depth band and zone (`water.ts`). */
     readonly water: WaterCells;
     private cells: Cell[] | null = null;
+    /** The cells the lists are made of: as they were when the homes were pinned (`MapLedger`; today's where none changed). */
+    private listCells: Cell[] | null = null;
+    /** Today's cells by `x,z`. */
+    private cellAt = new Map<string, Cell>();
+    /** Where a home on a stale cell moves (`SpawnPoint.stale`). */
+    private moved = new Map<SpawnPoint, SpawnPoint>();
     private owners: Map<string, Cell[]> | null = null;
     private lists = new Map<string, Map<ArkZone, SpawnPoint[]>>();
     private kinds = new Map<SpawnPoint[], Record<SlotKind, SpawnPoint[]>>();
     private cellsByTag = new Map<string, Cell[]>();
     private attachTags = new Map<AttachPoint, MapTag[]>();
-    private attachLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
+    private attachLists = new Map<string, AttachList>();
+    /** The attach points the lists are made of (decision 303, `MapLedger`): as they were when the homes were pinned. */
+    private listPoints: AttachPoint[] | null = null;
+    /** The ones terrain fixes changed or took away (tombstones): what the lists take them as. */
+    private listedAs = new Map<AttachPoint, {x: number; z: number; tags: readonly MapTag[]; clearBelow?: number; gone: boolean}>();
     private launched = false;
     /** The launch points by 8 m square, for "is any near?". */
     private launchIndex = new Map<string, SpawnPoint[]>();
@@ -89,21 +111,38 @@ export class MapPoints {
     private grid(): Cell[] {
         if (this.cells) return this.cells;
         const cells: Cell[] = [];
+        const listed: Cell[] = [];
+        const was = this.sampler.ledger?.().cells;
         const half = this.sampler.half;
+        const cellOf = (x: number, z: number): Cell | null => {
+            const ground = this.sampler.ground(x, z);
+            const wet = ground.water !== null;
+            if (!ground.tags.length) return null;
+            if (wet ? ground.depth < 0.5 : this.sampler.blocked(x, z, 0.5)) return null;
+            // The hamlet's reserved plots are the residents' alone (`hamlet.ts`): no wild animal is ever placed there.
+            if (!wet && this.sampler.reserved?.(x, z)) return null;
+            return {x, z, zone: ground.zone, tags: ground.tags, wet, depth: ground.depth};
+        };
         for (let i = Math.ceil(-half / GRID); i * GRID <= half; i++) {
             for (let j = Math.ceil(-half / GRID); j * GRID <= half; j++) {
                 const x = i * GRID;
                 const z = j * GRID;
-                const ground = this.sampler.ground(x, z);
-                const wet = ground.water !== null;
-                if (!ground.tags.length) continue;
-                if (wet ? ground.depth < 0.5 : this.sampler.blocked(x, z, 0.5)) continue;
-                // The hamlet's reserved plots are the residents' alone (`hamlet.ts`): no wild animal is ever placed there.
-                if (!wet && this.sampler.reserved?.(x, z)) continue;
-                cells.push({x, z, zone: ground.zone, tags: ground.tags, wet, depth: ground.depth});
+                const cell = cellOf(x, z);
+                const key = `${x},${z}`;
+                if (cell) {
+                    cells.push(cell);
+                    this.cellAt.set(key, cell);
+                }
+                // (Decision 303, append-only: the lists take a cell a terrain fix changed as it was when the homes were
+                // pinned, so the fix moves no home but the ones on the cells it changed.)
+                const before = was?.get(key);
+                if (before === undefined) {
+                    if (cell) listed.push(cell);
+                } else if (before) listed.push({x, z, ...before, depth: cell?.depth ?? 0});
             }
         }
         this.cells = cells;
+        this.listCells = listed;
         return cells;
     }
 
@@ -126,7 +165,8 @@ export class MapPoints {
         const given = new Map<string, number>();
         const owners = new Map<string, Cell[]>();
         // A fixed scatter of the cells (not their grid order), so each tag's share is spread over its ground.
-        const order = this.grid().map((cell, index) => ({cell, h: scatter(cell.x, cell.z), index})).sort((a, b) => a.h - b.h || a.index - b.index);
+        this.grid();
+        const order = this.listCells!.map((cell, index) => ({cell, h: scatter(cell.x, cell.z), index})).sort((a, b) => a.h - b.h || a.index - b.index);
         for (const {cell} of order) {
             let best: MapTag | null = null;
             let score = Infinity;
@@ -202,7 +242,9 @@ export class MapPoints {
                     const taken = new Set(launchCells);
                     const point = (cell: Cell, launch: boolean): SpawnPoint => {
                         const ground = this.sampler.ground(cell.x, cell.z);
-                        return {tag, zone, x: cell.x, z: cell.z, y: ground.height, water: ground.water, depth: ground.depth, launch, covered: !cell.wet && Boolean(this.sampler.covered?.(cell.x, cell.z))};
+                        const now = this.cellAt.get(`${cell.x},${cell.z}`);
+                        const stale = !now || now.wet !== cell.wet || now.zone !== cell.zone || !now.tags.includes(tag);
+                        return {tag, zone, x: cell.x, z: cell.z, y: ground.height, water: ground.water, depth: ground.depth, launch, covered: !cell.wet && Boolean(this.sampler.covered?.(cell.x, cell.z)), ...(stale ? {stale: true as const} : {})};
                     };
                     const list = launchCells.map((cell) => point(cell, true));
                     list.forEach((p) => this.indexPoint(p));
@@ -223,6 +265,30 @@ export class MapPoints {
                 this.lists.set(tagKey(tag, wet), out);
             }
         }
+        // A cell a terrain fix took from its tag (decision 303): a home on it moves to the nearest cell where the tag holds
+        // today, in its zone where one is near (half a cell over from that cell's own spots, `pick`). None within
+        // MOVE_REACH: it stays, and the placement settles round it as on any cell.
+        this.lists.forEach((zones, key) => zones.forEach((list) => list.forEach((point) => {
+            if (!point.stale) return;
+            let best: Cell | null = null;
+            let distance = MOVE_REACH;
+            for (const cell of this.cellsWith(point.tag, key.endsWith("~w"))) {
+                const d = Math.hypot(cell.x - point.x, cell.z - point.z) + (cell.zone === point.zone ? 0 : MOVE_REACH / 2);
+                if (d < distance) {
+                    distance = d;
+                    best = cell;
+                }
+            }
+            if (!best) return;
+            const ground = this.sampler.ground(best.x, best.z);
+            this.moved.set(point, {tag: point.tag, zone: point.zone, x: best.x, z: best.z, y: ground.height, water: ground.water, depth: ground.depth, launch: point.launch, covered: !best.wet && Boolean(this.sampler.covered?.(best.x, best.z))});
+        })));
+    }
+
+    /** Where homes moved off the cells terrain fixes took away (decision 303): each stale cell and its new one (reports, tests). */
+    movedCells(): ReadonlyMap<SpawnPoint, SpawnPoint> {
+        this.launch();
+        return this.moved;
     }
 
     /** A tag's lists by zone (empty when no cell is that tag's). */
@@ -304,16 +370,21 @@ export class MapPoints {
         // A borrowing zone's slots interleave only with the other zones that borrow this list (not all twelve: fewer laps).
         const key = own ? slot : slot * Math.max(borrowers.length, 1) + Math.max(borrowers.indexOf(zone), 0);
         const lap = Math.floor(key / n);
-        const point = own ? list[key % n] : list[n - 1 - (key % n)];
+        const listed = own ? list[key % n] : list[n - 1 - (key % n)];
+        // (A cell a terrain fix took from the tag: the home on it moves to the nearest cell of the tag, `launch`, on the
+        // other laps' spots, so never on one of that cell's own.)
+        const moved = this.moved.get(listed);
+        const point = moved ?? listed;
+        const laps = moved ? !own : own;
         // Past four laps (more clusters than four a cell, a zone far over its ground): each further lap its own spot in the cell, on a
         // low-discrepancy sequence (R2), so nothing ever stands on another's spot, however full.
         if (lap >= 4) {
-            const k = lap - 4 + (own ? 0 : 1000);
+            const k = lap - 4 + (laps ? 0 : 1000);
             const ox = ((0.5 + k * 0.7548776662) % 1) * GRID;
             const oz = ((0.5 + k * 0.5698402910) % 1) * GRID;
             return {point, level: own ? lap : lap + 1, x: point.x + ox - GRID / 2, z: point.z + oz - GRID / 2};
         }
-        const [ox, oz] = (own ? OWN_LAPS : BORROWED_LAPS)[lap];
+        const [ox, oz] = (laps ? OWN_LAPS : BORROWED_LAPS)[lap];
         return {point, level: own ? lap : lap + 1, x: point.x + ox, z: point.z + oz};
     }
 
@@ -378,9 +449,8 @@ export class MapPoints {
     }
 
     /** The map tags an attach point stands for (its own and its ground's). */
-    /** The one tag a point's list is (of the tags it stands for, by a hash of its id: the same for every viewer). */
-    ownerOf(point: AttachPoint): MapTag | null {
-        const tags = this.tagsOf(point);
+    /** The one tag a point's list is (of the tags it stands for, today's or `tags`, by a hash of its id: the same for every viewer). */
+    ownerOf(point: AttachPoint, tags: readonly MapTag[] = this.tagsOf(point)): MapTag | null {
         if (!tags.length) return null;
         if (tags.length === 1) return tags[0];
         let h = 0x811c9dc5;
@@ -398,6 +468,60 @@ export class MapPoints {
             this.attachTags.set(point, tags);
         }
         return tags;
+    }
+
+    /**
+     * The attach points the lists are made of (decision 303, append-only scenery): today's, less the ones terrain
+     * fixes added since the homes were pinned, with the ones they took away back at their old index (tombstones).
+     */
+    private pinnedPoints(): AttachPoint[] {
+        if (this.listPoints) return this.listPoints;
+        const ledger = this.sampler.ledger?.();
+        const list = this.sampler.attachPoints().filter((point) => !ledger?.added.has(point.id));
+        for (const point of list) {
+            const was = ledger?.was.get(point.id);
+            if (was) this.listedAs.set(point, {x: was.x ?? point.x, z: was.z ?? point.z, tags: was.tags ?? this.tagsOf(point), clearBelow: "clearBelow" in was ? was.clearBelow : point.clearBelow, gone: false});
+        }
+        for (const {index, point, tags} of ledger?.gone ?? []) {
+            list.splice(index, 0, point);
+            this.listedAs.set(point, {x: point.x, z: point.z, tags, clearBelow: point.clearBelow, gone: true});
+        }
+        this.listPoints = list;
+        return list;
+    }
+
+    /** A point as the lists take it: where it was and the tags it stood for when the homes were pinned. */
+    private listed(point: AttachPoint): {x: number; z: number; tags: readonly MapTag[]; clearBelow?: number; gone: boolean} {
+        return this.listedAs.get(point) ?? {x: point.x, z: point.z, tags: this.tagsOf(point), clearBelow: point.clearBelow, gone: false};
+    }
+
+    /**
+     * A list's points a terrain fix took from it (gone, or no longer what `holds` asks), each moved to the nearest
+     * free point today (of the same kind, that `holds`, in no slot of the list), in the list's order; none within
+     * MOVE_REACH: it stays.
+     */
+    private movesOf(list: readonly AttachPoint[], holds: (point: AttachPoint) => boolean): Map<AttachPoint, AttachPoint> | undefined {
+        if (!this.listedAs.size) return undefined;
+        const stale = list.filter((point) => this.listedAs.has(point) && (this.listed(point).gone || !holds(point)));
+        if (!stale.length) return undefined;
+        const taken = new Set<AttachPoint>(list);
+        const moves = new Map<AttachPoint, AttachPoint>();
+        for (const point of stale) {
+            let best: AttachPoint | null = null;
+            let distance = MOVE_REACH;
+            for (const other of this.sampler.attachPoints()) {
+                if (other.tag !== point.tag || taken.has(other)) continue;
+                const d = Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z);
+                if (d < distance && holds(other)) {
+                    distance = d;
+                    best = other;
+                }
+            }
+            if (!best) continue;
+            taken.add(best);
+            moves.set(point, best);
+        }
+        return moves;
     }
 
     private shoreLists = new Map<string, Array<{x: number; z: number}>>();
@@ -431,7 +555,7 @@ export class MapPoints {
         return list;
     }
 
-    private limbLists = new Map<string, {list: AttachPoint[]; own: boolean}>();
+    private limbLists = new Map<string, AttachList>();
 
     /**
      * The limb points (`limb`, or `canopy_hang` for a hanger) a large climber
@@ -439,18 +563,21 @@ export class MapPoints {
      * (with a margin) and has room above it, or a hang point with a drop
      * below it; a body and a little apart; its zone's first.
      */
-    limbsFor(tag: "limb" | "canopy_hang", length: number, mass: number, zone: ArkZone): {list: AttachPoint[]; own: boolean} {
+    limbsFor(tag: "limb" | "canopy_hang", length: number, mass: number, zone: ArkZone): AttachList {
         const key = `${tag}|${length.toFixed(3)}|${mass.toFixed(1)}|${zone}`;
         let found = this.limbLists.get(key);
         if (!found) {
-            const fits = this.sampler.attachPoints().filter((point) => {
+            const holds = (point: AttachPoint, clearBelow = point.clearBelow) => {
                 if (point.tag !== tag || !attachFits(point, length)) return false;
                 if (tag === "limb") return (point.load ?? 0) >= mass * LOAD_MARGIN && (point.clearAbove ?? 0) >= length * 0.6;
-                return (point.radius ?? 0) >= 0.03 && (point.clearBelow ?? 0) >= length;
-            });
-            const list = thin(fits, Math.max(length * 1.2, 0.3));
+                return (point.radius ?? 0) >= 0.03 && (clearBelow ?? 0) >= length;
+            };
+            // (As the limbs were when the homes were pinned, decision 303: a terrain fix moves only the homes it touches.)
+            const fits = this.pinnedPoints().filter((point) => holds(point, this.listed(point).clearBelow));
+            const list = thin(fits, Math.max(length * 1.2, 0.3), (point) => this.listed(point));
             const own = list.filter((point) => point.zone === zone);
-            found = own.length ? {list: own, own: true} : {list, own: false};
+            const chosen = own.length ? own : list;
+            found = {list: chosen, own: own.length > 0, moved: this.movesOf(chosen, (point) => holds(point))};
             this.limbLists.set(key, found);
         }
         return found;
@@ -462,7 +589,7 @@ export class MapPoints {
      * the zone's own (then its slot alone picks the point). Empty when the
      * scenery has none.
      */
-    attachOf(tag: MapTag, length: number, zone: ArkZone, holes = true): {list: AttachPoint[]; own: boolean} {
+    attachOf(tag: MapTag, length: number, zone: ArkZone, holes = true): AttachList {
         const key = `${tag}|${length.toFixed(3)}|${zone}|${holes}`;
         let found = this.attachLists.get(key);
         if (!found) {
@@ -474,26 +601,31 @@ export class MapPoints {
             // (A land kind's rock face, ledge or hole is never in the sea, its tide or its surf: a gundi on a boulder off the
             // desert's new coast, a rock hyrax's den in the surf. A shore's or the water's own kinds keep theirs.)
             const landTag = !SEA_TAGS.has(tag) && !FRESH_TAGS.has(tag) && !SURF_TAGS.has(tag);
-            const usable = (point: AttachPoint) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && this.tagsOf(point).includes(tag) && !(low(point) && this.nearLaunch(point.x, point.z, 2.5)) && !(landTag && LOW_POINTS.has(point.tag) && this.inSurf(point.x, point.z));
-            const shared = this.sampler.attachPoints().filter(usable);
-            const owned = shared.filter((point) => this.ownerOf(point) === tag);
+            // (As the points were when the homes were pinned, decision 303: where they were and the tags they stood for.)
+            const usableAs = (point: AttachPoint, at: {x: number; z: number; tags: readonly MapTag[]}) => (holes || (point.tag !== "worm_hole" && point.tag !== "burrow_entrance")) && attachFits(point, length) && at.tags.includes(tag) && !(low(point) && this.nearLaunch(at.x, at.z, 2.5)) && !(landTag && LOW_POINTS.has(point.tag) && this.inSurf(at.x, at.z));
+            const usable = (point: AttachPoint) => usableAs(point, this.listed(point));
+            const shared = this.pinnedPoints().filter(usable);
+            const owned = shared.filter((point) => this.ownerOf(point, this.listed(point).tags) === tag);
             const candidates = owned.some((point) => point.zone === zone) || (owned.length && !shared.some((point) => point.zone === zone)) ? owned : shared;
             // Points a body's length and a little apart (a small rock's four faces are one place for a puffin), in a fixed order.
             const gap = Math.max(length * 1.2, 0.03);
             const fitting: AttachPoint[] = [];
-            const near = new Map<string, AttachPoint[]>();
+            const near = new Map<string, Array<{x: number; y: number; z: number}>>();
             const cell = (x: number, z: number) => `${Math.floor(x / 2)},${Math.floor(z / 2)}`;
             for (const point of candidates) {
-                const [cx, cz] = [Math.floor(point.x / 2), Math.floor(point.z / 2)];
+                const at = this.listed(point);
+                const [cx, cz] = [Math.floor(at.x / 2), Math.floor(at.z / 2)];
                 let clear = true;
-                for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z) >= gap);
+                for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - at.x, other.y - point.y, other.z - at.z) >= gap);
                 if (!clear) continue;
                 fitting.push(point);
-                const key = cell(point.x, point.z);
-                near.set(key, [...(near.get(key) ?? []), point]);
+                const key = cell(at.x, at.z);
+                near.set(key, [...(near.get(key) ?? []), {x: at.x, y: point.y, z: at.z}]);
             }
             const own = fitting.filter((point) => point.zone === zone);
-            found = own.length ? {list: own, own: true} : {list: fitting, own: false};
+            const chosen = own.length ? own : fitting;
+            // (A point a terrain fix took from the list: a home on it moves to the nearest free one that is usable today.)
+            found = {list: chosen, own: own.length > 0, moved: this.movesOf(chosen, (point) => usableAs(point, {x: point.x, z: point.z, tags: this.tagsOf(point)}))};
             this.attachLists.set(key, found);
         }
         return found;
@@ -525,20 +657,21 @@ const COAST_TAGS: ReadonlySet<MapTag> = new Set<MapTag>(["rocky_shore", "sandy_b
 const LOAD_MARGIN = 1.5;
 
 /** Keep the points at least `gap` apart (greedy, in the list's order), with a 2 m spatial hash. */
-function thin(points: AttachPoint[], gap: number): AttachPoint[] {
+function thin(points: AttachPoint[], gap: number, at: (point: AttachPoint) => {x: number; z: number} = (point) => point): AttachPoint[] {
     const out: AttachPoint[] = [];
-    const near = new Map<string, AttachPoint[]>();
+    const near = new Map<string, Array<{x: number; y: number; z: number}>>();
     const size = Math.max(2, gap);
     for (const point of points) {
-        const cx = Math.floor(point.x / size);
-        const cz = Math.floor(point.z / size);
+        const {x, z} = at(point);
+        const cx = Math.floor(x / size);
+        const cz = Math.floor(z / size);
         let clear = true;
-        for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - point.x, other.y - point.y, other.z - point.z) >= gap);
+        for (let dx = -1; dx <= 1 && clear; dx++) for (let dz = -1; dz <= 1 && clear; dz++) clear = (near.get(`${cx + dx},${cz + dz}`) ?? []).every((other) => Math.hypot(other.x - x, other.y - point.y, other.z - z) >= gap);
         if (!clear) continue;
         out.push(point);
         const key = `${cx},${cz}`;
         const list = near.get(key) ?? [];
-        list.push(point);
+        list.push({x, y: point.y, z});
         near.set(key, list);
     }
     return out;

@@ -21,7 +21,8 @@ import {maskWalkable} from "@/ark-scene/map/walk-mask";
 import {worldSampler as behaviourSampler} from "@/ark-scene/world-sampler";
 import {assetAttachRows} from "@/ark-scene/tree-assets";
 import {rockAttachPoints} from "@/ark-scene/rock-assets";
-import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor} from "@/ark-scene/map/sampler";
+import type {ArkMapSampler, AttachPoint, AttachTag, GroundSurface, MapAnchor, MapLedger} from "@/ark-scene/map/sampler";
+import {mapLedger} from "@/ark-scene/islands/wild/ledger";
 import type {MapTag} from "@/ark-scene/map/tags";
 import type {ArkZone} from "@/ark-scene/types";
 import {sampleWildGround, underWater, wildZoneAt, type WildGroundSample} from "@/ark-scene/islands/wild/ground";
@@ -53,6 +54,16 @@ class WildMapSampler implements ArkMapSampler {
     private pointList: AttachPoint[] | null = null;
     private rockCells: Map<string, WildItem[]> | null = null;
     private building = false;
+    private ledgerRows: MapLedger | null = null;
+
+    /**
+     * What terrain fixes changed since the homes were pinned (decision 303, append-only scenery, `ledger.ts`): on the
+     * v2 world, whose points are the scenery's (the island's own workbench keeps its own and pins nothing).
+     */
+    ledger(): MapLedger {
+        this.ledgerRows ??= arkWorld() === "v2" ? mapLedger() : {added: new Set(), gone: [], was: new Map(), cells: new Map()};
+        return this.ledgerRows;
+    }
 
     private obs(): WildObstacles {
         this.obstacles ??= new WildObstacles(wildScenery());

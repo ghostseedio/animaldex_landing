@@ -35,6 +35,7 @@ const OPEN_MEASURED = ((treeAttachFile as unknown as {generator?: number}).gener
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
 import {BEACH_INSET, LAKE, RIVER, TERRAIN_HALF, VISITOR_LANDING, ZONE_SITES, arkWorld, coastRadius, fbm, hashString, onArkWorld, regionCentre, sampleGround, seeded, smoothstep, zoneAt, type GroundSample} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
+import {GROUND_WAS, type GroundFind} from "@/ark-scene/islands/wild/ledger";
 
 export type Vec3 = {x: number; y: number; z: number};
 
@@ -773,25 +774,42 @@ function* buildAttachPoints(): Generator<void, AttachPoint[], void> {
     // island, P3: over its whole land, about five times today's, three times as many of each.)
     const wide = arkWorld() === "v2" ? {reach: TERRAIN_HALF * 0.85, more: 3} : {reach: 100, more: 1};
     let tries = 0;
-    let litter = 0;
-    let holes = 0;
-    let burrows = 0;
+    const found = {leaf_litter: 0, worm_hole: 0, burrow: 0};
+    const most = {leaf_litter: 300 * wide.more, worm_hole: 200 * wide.more, burrow: 120 * wide.more};
+    type Find = {tag: Exclude<GroundFind, null>; ground: Vec3; normal: Vec3; zone: ArkZone; yaw?: number};
     const search = streamOf("ground", 6);
-    while (tries++ < 40000 * wide.more && (litter < 300 * wide.more || holes < 200 * wide.more || burrows < 120 * wide.more)) {
+    const findAt = (x: number, z: number): Find | null => {
+        // The height first (it is surfaceAt's; at calm sea level, water only lies under 0): no normal for the sea.
+        const sample = sampleGround(x, z);
+        if (sample.height < 0.4) return null;
+        const surface = surfaceFrom(sample, x, z, CALM);
+        // (The lake and the river keep their own level: water can lie over ground above 0.4 m there.)
+        if (surface.waterDepth > 0) return null;
+        const ground = {x, y: surface.height, z};
+        const zone = surface.zone;
+        if (found.leaf_litter < most.leaf_litter && (surface.weights.forest_floor ?? 0) > 0.4) return {tag: "leaf_litter", ground, normal: surface.normal, zone};
+        if (found.worm_hole < most.worm_hole && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) return {tag: "worm_hole", ground, normal: surface.normal, zone};
+        if (found.burrow < most.burrow && surface.normal.y < 0.97 && surface.normal.y > 0.8 && surface.surface !== "rock" && surface.surface !== "snow") return {tag: "burrow", ground, normal: surface.normal, zone, yaw: Math.atan2(surface.normal.x, surface.normal.z)};
+        return null;
+    };
+    // Append-only across terrain fixes (decision 303, `islands/wild/ledger.ts`): a try a fix changed counts as it was
+    // (so every other find keeps its number; a find the fix took away is a tombstone, its number kept and nothing
+    // there), and what it finds now goes at the end.
+    const was = new Map<number, GroundFind>(arkWorld() === "v2" ? GROUND_WAS : []);
+    const late: Find[] = [];
+    while (tries++ < 40000 * wide.more && (found.leaf_litter < most.leaf_litter || found.worm_hole < most.worm_hole || found.burrow < most.burrow)) {
         if (tries % 16 === 0) yield;
         const x = (search() * 2 - 1) * wide.reach;
         const z = (search() * 2 - 1) * wide.reach;
-        // The height first (it is surfaceAt's; at calm sea level, water only lies under 0): no normal for the sea.
-        const sample = sampleGround(x, z);
-        if (sample.height < 0.4) continue;
-        const surface = surfaceFrom(sample, x, z, CALM);
-        // (The lake and the river keep their own level: water can lie over ground above 0.4 m there.)
-        if (surface.waterDepth > 0) continue;
-        const ground = {x, y: surface.height, z};
-        if (litter < 300 * wide.more && (surface.weights.forest_floor ?? 0) > 0.4) add("leaf_litter", "ground", litter++, ground, surface.normal, surface.zone);
-        else if (holes < 200 * wide.more && ((surface.weights.grass ?? 0) > 0.5 || (surface.weights.tilled ?? 0) > 0.3) && surface.normal.y > 0.95) add("worm_hole", "ground", holes++, ground, surface.normal, surface.zone);
-        else if (burrows < 120 * wide.more && surface.normal.y < 0.97 && surface.normal.y > 0.8 && surface.surface !== "rock" && surface.surface !== "snow") add("burrow", "ground", burrows++, ground, surface.normal, surface.zone, Math.atan2(surface.normal.x, surface.normal.z));
+        const find = findAt(x, z);
+        const counted = was.has(tries) ? was.get(tries)! : find?.tag ?? null;
+        if (counted) {
+            const n = found[counted]++;
+            if (find?.tag === counted) add(find.tag, "ground", n, find.ground, find.normal, find.zone, find.yaw);
+        }
+        if (find && find.tag !== counted) late.push(find);
     }
+    for (const find of late) add(find.tag, "ground", found[find.tag]++, find.ground, find.normal, find.zone, find.yaw);
 
     // Ledges (added 2026-11-11 for the props lane, its own search and seed, so its ids are unchanged): steep ground
     // facing out on the sea cliffs, the mountain and the ice, where a cliff nester's shelf goes. Up is up (the animal

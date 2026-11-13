@@ -237,7 +237,35 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         const moved = toTheRocks(placed, zone, slot, rank, length);
         if (moved) {
             tracer()?.route("rocks");
-            return moved;
+            return outOfRock(moved, trueLength);
+        }
+    }
+    return placed ? outOfRock(placed, trueLength) : placed;
+}
+
+/**
+ * Never inside a drawn rock, as the spawn validator asks it (`validate.ts` inside_rock): a body on the ground (not on an
+ * attach point, a perch, a limb or in the water) whose spot is in one steps out to the nearest spot round it (a quarter
+ * metre a ring, to 6 m) on ground its text allows, clear and walkable. Lane MA3's river mouth: the wild island's lists moved
+ * a little, and a medicinal leech came up inside a boulder. Where none is, as it was.
+ */
+function outOfRock(placed: MapPlacement, trueLength: number): MapPlacement {
+    if (placed.micro || placed.perch || placed.canopy || placed.water || !placed.map.tag) return placed;
+    const r = Math.min(Math.max(trueLength * 0.2, 0.05), 0.6);
+    const h = Math.max(trueLength * 0.5, 0.05);
+    if (!inRock(placed.x, placed.z, r, placed.ground, h)) return placed;
+    const sampler = mapPoints().sampler;
+    const allowed = placed.map.species?.allowed ?? new Set([placed.map.tag]);
+    for (let ring = 1; ring <= 24; ring++) {
+        for (let k = 0; k < 16; k++) {
+            const a = (k / 16) * Math.PI * 2 + ring * 0.4;
+            const x = placed.x + Math.cos(a) * ring * 0.25;
+            const z = placed.z + Math.sin(a) * ring * 0.25;
+            const g = sampler.ground(x, z);
+            const tag = g.tags.includes(placed.map.tag) ? placed.map.tag : g.tags.find((t) => allowed.has(t));
+            if (g.water !== null || !tag || inRock(x, z, r, g.height, h) || sampler.blocked(x, z, Math.max(r, 0.1))) continue;
+            if (sampler.walkable && !sampler.walkable(x, z, MAX_SLOPE)) continue;
+            return {...placed, x, z, ground: g.height, map: {...placed.map, tag, area: TAG_AREA[tag]}};
         }
     }
     return placed;
@@ -397,7 +425,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const pools = found.list.filter((point) => point.tag === "tide_pool");
             if (pools.length) {
                 const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), pools.length);
-                const point = pools[index];
+                const point = found.moved?.get(pools[index]) ?? pools[index];
                 tracer()?.attach(pools, found.own);
                 tracer()?.route("attach");
                 return {
@@ -464,6 +492,9 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
                 point = spread.point;
                 memberRank = spread.memberRank;
             }
+            // (A point a terrain fix took from the list since the homes were pinned, decision 303: its home moves to the
+            // nearest free point, `points.ts` attachOf.)
+            point = found.moved?.get(point) ?? point;
             const roost = roostOf(species, all, point.x, point.z, trueLength, key, ownHash, point);
             if (digger && (point.tag === "burrow_entrance" || point.tag === "worm_hole")) {
                 // A small burrower: its burrow's entrance is the point, its tunnel and chamber in the soil or sand below; it comes up to it.
@@ -502,7 +533,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         const found = all.limbsFor(hang ? "canopy_hang" : "limb", trueLength, mass, zone);
         if (found.list.length) {
             const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), found.list.length);
-            const point = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            const listed = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            const point = found.moved?.get(listed) ?? listed;
             tracer()?.attach(found.list, found.own);
             tracer()?.route("attach");
             const n = point.normal;
@@ -525,7 +557,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const list = found.list.filter((point) => (point.tag === "branch" || point.tag === "bark") && attachFits(point, trueLength));
             if (!list.length) continue;
             const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), list.length);
-            const point = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            const listed = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            const point = found.moved?.get(listed) ?? listed;
             tracer()?.attach(list, found.own);
             tracer()?.route("attach");
             const n = point.normal;

@@ -83,7 +83,8 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
     // this module is still loading.)
     const VALLEY = 28;
     if (river.d < VALLEY && inland > 2) {
-        const floor = river.level + 1.2 + 0.05 * river.d;
+        // (Its valley by the river's own profile: the mouth's fall to the lake is cut into it, the land round it as it was.)
+        const floor = river.valley + 1.2 + 0.05 * river.d;
         const pull = smoothstep(VALLEY, river.width + 3, river.d) * 0.9;
         if (height > floor) height += (floor - height) * pull;
     }
@@ -129,7 +130,10 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
     // The river: a U-shaped bed below its surface, banks above it.
     if (river.d < river.width + 12 && inland > -3) {
         const w = river.width;
-        const bank = river.level + 0.35 + 0.07 * Math.max(river.d - w, 0);
+        // (The upper river's banks stand clear of it by its fall too, across a cell of the drawn water's 1.1 m grid and a
+        // half: its water is drawn at a cell's highest corner, and on its steep reach a bank only 35 cm over the water
+        // beside it had the water drawn over its grass. Lane MA3, the river mouth.)
+        const bank = river.level + 0.35 + 0.07 * Math.max(river.d - w, 0) + (river.upper ? 1.6 * river.fall : 0);
         const coastFade = smoothstep(-2, 5, inland);
         // (Not inside the lake: its own shore is the bank there, and a river's bank across it would wall it off.)
         const outOfLake = smoothstep(edge - 1, edge + 4, lakeD);
