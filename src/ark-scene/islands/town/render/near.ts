@@ -98,6 +98,7 @@ export function buildTownNear(plan: TownPlan, trees: ReadonlyArray<{x: number; z
         mesh.castShadow = false;
         mesh.receiveShadow = true;
         mesh.name = `town:near:${kind}`;
+        mesh.visible = kind === "leaf";
         meshes.set(kind, mesh);
         group.add(mesh);
     }
@@ -266,6 +267,9 @@ export function buildTownNear(plan: TownPlan, trees: ReadonlyArray<{x: number; z
         for (const kind of KINDS) {
             const mesh = meshes.get(kind)!;
             mesh.count = counts.get(kind)!;
+            // (Town performance lane: an empty kind is not drawn (three sets up an empty instanced mesh's program and
+            // uniforms every frame); the leaves always are: their render callback reads the camera.)
+            mesh.visible = kind === "leaf" || mesh.count > 0;
             mesh.instanceMatrix.needsUpdate = true;
             if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
         }
