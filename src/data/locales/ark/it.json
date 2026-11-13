@@ -36,6 +36,12 @@
         },
         "hint": "Trascina per guardarti intorno. Pizzica o scorri per lo zoom. Tocca un animale per conoscerlo.",
         "loading": "L'Ark sta arrivando",
+        "loader": {
+            "data": "Leggiamo chi è a bordo",
+            "world": "Costruiamo l'isola",
+            "animals": "Gli animali stanno arrivando",
+            "newest": "Ultimo arrivato a bordo"
+        },
         "noWebgl": "Questo browser non riesce a mostrare l'Ark in 3D. Ecco chi è a bordo.",
         "newArrival": "{animal} è appena salito a bordo",
         "showMe": "Mostramelo",

@@ -36,6 +36,12 @@
         },
         "hint": "Arrastra para mirar alrededor. Pellizca o desplázate para hacer zoom. Toca un animal para conocerlo.",
         "loading": "Acercando el Ark",
+        "loader": {
+            "data": "Leyendo quién va a bordo",
+            "world": "Construyendo la isla",
+            "animals": "Acercando a los animales",
+            "newest": "Recién a bordo"
+        },
         "noWebgl": "Este navegador no puede mostrar el Ark en 3D. Aquí tienes quién va a bordo.",
         "newArrival": "{animal} acaba de subir a bordo",
         "showMe": "Muéstramelo",

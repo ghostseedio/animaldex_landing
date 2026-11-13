@@ -36,6 +36,12 @@
         },
         "hint": "Faites glisser pour regarder autour. Pincez ou faites défiler pour zoomer. Touchez un animal pour le rencontrer.",
         "loading": "L'Ark arrive en vue",
+        "loader": {
+            "data": "Lecture de qui est à bord",
+            "world": "Construction de l'île",
+            "animals": "Les animaux arrivent en vue",
+            "newest": "Dernier arrivé à bord"
+        },
         "noWebgl": "Ce navigateur ne peut pas afficher l'Ark en 3D. Voici qui est à bord.",
         "newArrival": "{animal} vient de monter à bord",
         "showMe": "Me montrer",

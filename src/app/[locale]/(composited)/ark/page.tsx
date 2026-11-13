@@ -556,6 +556,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             publicStory={Boolean(mode) && searchParams.publicStory === "1"}
             shareLocalePath={getLocalePath(locale, "/ark")}
             liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
+            newest={arrivals?.[0] ? {name: arrivals[0].name, slug: arrivals[0].slug, at: arrivals[0].at} : null}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
         {await ArkSeoSummary({locale})}

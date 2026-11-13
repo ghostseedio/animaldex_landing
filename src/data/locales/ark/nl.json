@@ -36,6 +36,12 @@
         },
         "hint": "Sleep om rond te kijken. Knijp of scrol om te zoomen. Tik op een dier om het te ontmoeten.",
         "loading": "De Ark komt in beeld",
+        "loader": {
+            "data": "We lezen wie er aan boord is",
+            "world": "Het eiland wordt gebouwd",
+            "animals": "De dieren komen in beeld",
+            "newest": "Nieuwste aan boord"
+        },
         "noWebgl": "Deze browser kan de Ark niet in 3D tonen. Dit is wie er aan boord is.",
         "newArrival": "{animal} is net aan boord gekomen",
         "showMe": "Laat zien",

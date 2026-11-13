@@ -36,6 +36,12 @@
         },
         "hint": "Povuci za razgledavanje. Zumiraj prstima ili kotačićem. Dodirni životinju da je upoznaš.",
         "loading": "Učitavanje Arka",
+        "loader": {
+            "data": "Čitamo tko je na brodu",
+            "world": "Gradimo otok",
+            "animals": "Životinje dolaze na vidjelo",
+            "newest": "Najnovije na brodu"
+        },
         "noWebgl": "Ovaj preglednik ne može prikazati Ark u 3D-u. Evo tko je na brodu.",
         "newArrival": "{animal} se upravo ukrcava",
         "showMe": "Pokaži",

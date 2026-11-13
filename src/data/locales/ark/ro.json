@@ -36,6 +36,12 @@
         },
         "hint": "Trage ca să privești în jur. Apropie degetele sau derulează pentru zoom. Atinge un animal ca să-l cunoști.",
         "loading": "Se afișează Ark",
+        "loader": {
+            "data": "Citim cine e la bord",
+            "world": "Construim insula",
+            "animals": "Aducem animalele în cadru",
+            "newest": "Cel mai nou la bord"
+        },
         "noWebgl": "Acest browser nu poate desena Ark în 3D. Iată cine e la bord.",
         "newArrival": "{animal} tocmai a urcat la bord",
         "showMe": "Arată-mi",

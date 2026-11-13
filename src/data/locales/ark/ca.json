@@ -36,6 +36,12 @@
         },
         "hint": "Arrossega per mirar al voltant. Pessiga o desplaça per fer zoom. Toca un animal per conèixer-lo.",
         "loading": "S'està mostrant l'Ark",
+        "loader": {
+            "data": "Llegint qui hi ha a bord",
+            "world": "Construint l'illa",
+            "animals": "Fent aparèixer els animals",
+            "newest": "El més nou a bord"
+        },
         "noWebgl": "Aquest navegador no pot dibuixar l'Ark en 3D. Aquí tens qui hi ha a bord.",
         "newArrival": "{animal} acaba de pujar a bord",
         "showMe": "Mostra-m'ho",
