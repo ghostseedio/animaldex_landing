@@ -342,6 +342,34 @@ The first frame did not move, and on these changes it should not: what it waits 
 workers) and the main thread, not models or icons. What did move is everything a phone downloads in its first minute
 that it did not draw (−30 to −53%), and the opening view's own scenery, no longer queued behind them (9–31 s sooner).
 
+### The embed's first paint (the apps' iOS panel)
+
+`/ark/embed.html` loaded the scene's code with a `<script>` in the body, which WebKit (the apps' iOS panel) holds its
+first paint behind: nothing drew until the ~1.6 MB (gzip) bundle had downloaded and run, so the loading screen's
+blurred frame and card (the loading lane's, merged here from `ark-loading`) could not show, and on slow 4G the panel
+showed the app's spinner for the whole download. Now:
+
+- the bundle is preloaded in the head (`<link rel="preload" as="script">`: its download starts with the page, as
+  before, nothing waits on it) and inserted as an async script only once two animation frames have been drawn (or after
+  250 ms when the page draws none, hidden); the embed's own script runs on its load (`AnimalDexArkStart`). Nothing
+  blocks the parser any more;
+- the first `ark:progress` goes to the host only after two drawn frames (a frame with the loading screen on it), not
+  at parse time;
+- the host's messages before the scene's code runs (an app may speak as soon as the page has loaded, which can now come
+  first) are kept by the loading screen's script and handed over in order (`AnimalDexArkEarly`): an `ark:visible false`
+  sent before the code ran still held the drawing, and the world drew once it was told `true`.
+
+Measured in Chromium (phone profile, slow 4G, two pairs): first paint 220 / 236 ms before, 260 / 228 ms after; the first
+`ark:progress` 208 / 225 ms before (before the first paint), 240 / 255 ms after (after it); the bundle fetched once
+(the preload reused), done at 9.2–9.3 s both; the first 3D frame 24.4–26.7 s both. Chromium already painted ahead of the
+blocking script, so its numbers barely move; WebKit is the case that changes (from the end of the bundle's download, ~9 s
+on slow 4G, to the first frames), and there is no WebKit to measure with here (Playwright's WebKit is not installed and
+Safari's automation is off): the owner's iPhone, or the iOS lane's own trace, should confirm it.
+
+`/ark` and the home hero: neither blocks. The `/ark` page imports the scene's code dynamically after its first paint
+(decision 246); the hero is the embed in an iframe (now non-blocking too), and the home page paints its own poster
+whatever the frame does.
+
 ### What would move the first frame (owner or other lanes)
 
 1. **Brotli for the scripts** (deploy): the scripts go out gzip; precompressed brotli (quality 11) would be the bundle
@@ -366,7 +394,16 @@ that it did not draw (−30 to −53%), and the opening view's own scenery, no l
 
 ### Gates (round 2)
 
-<!-- GATES2 -->
+| Gate | Result |
+|---|---|
+| Types | clean |
+| Lint | `npm run lint` exit 0 (only the known `<img>` warnings, none in the changed files) |
+| Unit and integration | after the merge with `ark-loading`: 2,651 tests, 2,649 pass, 0 fail, 2 skipped (new: the expected fog, the voyage validator) |
+| Collision audit, three modes | base (`ark-perf-2` before the payload changes) and branch identical: islands v2, islands v1 and today's mode, every report the same |
+| Behaviour audit and encounters | identical; "All 25 checks hold" |
+| Motion CI, the default view ×2 | pace 1.03 / 0.93, backwards 0.8% / 2.4%, none over 1 s, ground turns 2.6 / 1.7 a minute; the base the same minutes: 0.96 / 1.05, 1.4% / 0.4%, none, 0.1 / 0.5. The default view's mount touches none of this round's code (no town coming, a desktop): the spread is the clock's |
+| Visual CI on GitHub | <!-- VISUAL2 --> |
+
 
 ### Decisions (round 2)
 
@@ -378,3 +415,6 @@ that it did not draw (−30 to −53%), and the opening view's own scenery, no l
 | Up-front far models on phones | the tier's nearest kinds; herds only; none | herds only | Their figures are drawn from afar; the rest come as they come into view, as most kinds already did. |
 | The 45 s read | as is; skip parsing only; validator and 304 | a content ETag on anonymous reads, revalidated by the embed | The panel's cellular data: ~400 KB every 45 s whatever happened; signed-in reads untouched (no-store). |
 | Brotli, the bundle split, far skins, the snapshot's shape | do here; recommend | recommend, with numbers | Site-wide deploy config, a model-set publish, an API contract: the owner's or other lanes'. |
+| The embed's blocking script | `defer`; `async`; a module; preload and run after the first frames | preload in the head, inserted after two drawn frames (250 ms when hidden), the main script on its load | `defer` still runs before `DOMContentLoaded` and WebKit may hold the paint for it; the preload keeps the download where it was (measured: done at the same 9.2 s), only the run moves. |
+| Host messages before the code runs | lost, as an app speaking before the bundle ran lost them before; kept | kept by the loading screen's script, handed over in order | Running the code later must not drop an app's early `ark:visible`/`ark:power`. |
+| Building on the loading lane's embed | wait for its merge; merge it here | merged `origin/ark-loading` into `ark-perf-2` (conflicts: the embed's read, `ArkView`'s props) | The loader card and `ark:progress` live there; the integrator merges both lanes in the same round. |
