@@ -199,7 +199,7 @@ export class ArkPerf {
             padding: "4px 6px",
             borderRadius: "4px",
             whiteSpace: "pre",
-            maxWidth: "calc(100% - 12px)",
+            maxWidth: "calc(100% - 64px)",
             overflow: "hidden"
         });
         el.appendChild(box);
@@ -296,18 +296,22 @@ export class ArkPerf {
     }
 
     private text(r: ArkPerfReport): string {
-        const top = Object.entries(r.sections)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 6)
-            .map(([name, ms]) => `${name} ${ms.toFixed(1)}`)
-            .join("  ");
+        // (Short lines, clear of the sound button at the top's other end: read off a phone held upright.)
+        const top = Object.entries(r.sections).sort((a, b) => b[1] - a[1]).slice(0, 6);
         const tris = r.gpu.triangles >= 1e6 ? `${(r.gpu.triangles / 1e6).toFixed(2)}M` : `${Math.round(r.gpu.triangles / 1000)}k`;
-        return [
-            `${r.fps} fps  p95 ${r.interval.p95} ms  >33ms ${r.interval.over33}%  cpu ${r.cpu.p50}/${r.cpu.p95} ms`,
-            `${r.tier} ${r.mode}  dpr ${r.dpr}${r.scale < 0.999 ? ` x${r.scale}` : ""}  calls ${r.gpu.calls}  tris ${tris}  prog ${r.gpu.programs}  tex ${r.gpu.textures}`,
-            `heap ${r.heapMB ?? "n/a"} MB  animals ${r.drawn}  rigged ${r.rigged}  hud ${this.renderRate(r.hudRenders)}/s`,
-            top
-        ].join("\n");
+        const lines = [
+            `${r.fps} fps  p95 ${r.interval.p95} ms`,
+            `>16ms ${r.interval.over16}%  >33ms ${r.interval.over33}%`,
+            `cpu ${r.cpu.p50}/${r.cpu.p95} ms  ${r.mode}`,
+            `${r.tier}  dpr ${r.dpr}${r.scale < 0.999 ? ` (x${r.scale})` : ""}`,
+            `calls ${r.gpu.calls}  tris ${tris}`,
+            `prog ${r.gpu.programs}  tex ${r.gpu.textures}`,
+            `heap ${r.heapMB ?? "n/a"} MB`,
+            `animals ${r.drawn}  rigged ${r.rigged}`,
+            `hud ${this.renderRate(r.hudRenders)}/s`
+        ];
+        for (let i = 0; i < top.length; i += 2) lines.push(top.slice(i, i + 2).map(([name, ms]) => `${name} ${ms.toFixed(1)}`).join("  "));
+        return lines.join("\n");
     }
 
     /** The React overlay's renders a second, between two rewrites of the overlay. */

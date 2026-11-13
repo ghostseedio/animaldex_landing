@@ -363,8 +363,10 @@ for (const deviceName of devices) {
         if (cpuThrottle > 1) await cdp.send("Emulation.setCPUThrottlingRate", {rate: cpuThrottle});
         // The bytes received, as each response finishes (node's clock), for the bytes before the first frame.
         const received = [];
+        const urls = new Map();
         await cdp.send("Network.enable");
-        cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0}));
+        cdp.on("Network.responseReceived", (event) => urls.set(event.requestId, event.response?.url ?? ""));
+        cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? ""}));
         if (network) await cdp.send("Network.emulateNetworkConditions", network);
         if (flag("profile")) {
             await cdp.send("Profiler.enable");
@@ -476,7 +478,12 @@ for (const deviceName of devices) {
             allocMBps: steadySeconds ? Math.round((alloc / 2 ** 20 / steadySeconds) * 10) / 10 : null,
             gcDrops: gcs
         };
-        const bytesBeforeFirstFrame = received.filter((r) => r.at <= navigated + firstFrameAt).reduce((sum, r) => sum + r.bytes, 0);
+        const receivedBeforeFirst = received.filter((r) => r.at <= navigated + firstFrameAt);
+        const bytesBeforeFirstFrame = receivedBeforeFirst.reduce((sum, r) => sum + r.bytes, 0);
+        // What they were, by kind (the page's own files, the snapshot, the model pack and models, icons, the rest).
+        const kindOf = (url) => (/\/ark\/[^/]*\.js(\?|$)/.test(url) ? `script ${url.split("/").pop().split("?")[0]}` : /population-file|voyage|snapshot/.test(url) ? "snapshot" : /pack/.test(url) ? "model pack" : /\.glb|\.ark\.json|talking-models/.test(url) ? "models" : /\.webp|\.png|\.jpg|\.ktx2|basis/.test(url) ? "images and textures" : /atlas/.test(url) ? "positions atlas" : "other");
+        const bytesByKind = {};
+        for (const r of receivedBeforeFirst) bytesByKind[kindOf(r.url)] = (bytesByKind[kindOf(r.url)] ?? 0) + r.bytes;
         // The profiler's sections and counts, averaged over its reports.
         const perfAvg = perfReports.length ? (() => {
             const sections = {};
@@ -519,6 +526,7 @@ for (const deviceName of devices) {
             steady,
             perf: perfAvg,
             bytesBeforeFirstFrame,
+            bytesByKind,
             run,
             world: r.world ?? null,
             build: buildEnv,
