@@ -477,3 +477,79 @@ test("MA1/v7: a v7 file's flight clips bake their own beat, fold and tuck; v2 fi
     }
     assert.ok(maxDiff > 0.01, "v7's phases are its own");
 });
+
+// MARK: Over the woods and the rocks (decision 287)
+
+/**
+ * Each fixture flight's cruise, posed every quarter second: aloft between the crowns' lowest leaves and their top, for a
+ * flight at 3 m or more over its line that soars or crosses a wood from the open to the open (one within a wood, from
+ * or to a perch in its crowns or under them, flies through the trees); and its steepest rise or fall over its line.
+ */
+function cruiseOverWoods() {
+    const top = world.sampler.canopyTop!;
+    const base = world.sampler.canopyBase!;
+    let cruise = 0;
+    let inside = 0;
+    let insideFree = 0;
+    let worstSlope = 0;
+    let at = "";
+    for (const f of flights) {
+        const plan = f.leg.plan;
+        if (!plan || f.trip.shadow || plan.joins) continue;
+        const route = Math.max(f.leg.length - Math.abs(f.leg.to.y - f.leg.from.y), 0.01);
+        // (Its line's own slope, from where it took off to where it lands.)
+        const line = Math.abs(f.leg.to.y - f.leg.from.y) / Math.max((plan.touchdown - plan.liftoff) * route, 0.01);
+        // (Its climb's and its glide-in's slopes, as its plan has them.)
+        const climb = Math.min((1.5 * plan.height) / Math.max(plan.rise * route, 1e-3), Math.tan(50 * DEG));
+        const descent = Math.min((1.5 * plan.height) / Math.max(plan.fall * route, 1e-3), Math.tan(50 * DEG));
+        const under = (p: {x: number; y: number; z: number}) => top(p.x, p.z) > p.y + 0.5;
+        const crosses = plan.height >= 3 && (f.leg.beat === "glide" || (!under(f.leg.from) && !under(f.leg.to)));
+        let prev: TripPose | null = null;
+        for (let t = 0; t < f.leg.seconds; t += 0.25) {
+            const p = poseOnTrip(world, f.trip, f.start + t);
+            const level = p.air?.stage === "cruise" && p.aloft;
+            if (level && crosses) {
+                cruise++;
+                const y0 = top(p.x, p.z);
+                if (p.y < y0 && p.y > base(p.x, p.z)) {
+                    inside++;
+                    // (Free: past where it could have climbed over them since it took off, and before it must come down.)
+                    const share = airProgress(plan.knots, t / f.leg.seconds).share;
+                    const line0 = f.leg.from.y + (f.leg.to.y - f.leg.from.y) * Math.min(Math.max((share - plan.liftoff) / (plan.touchdown - plan.liftoff), 0), 1);
+                    const need = y0 - line0;
+                    if (need <= climb * (share - plan.liftoff) * route && need <= descent * (plan.touchdown - share) * route) insideFree++;
+                }
+            }
+            if (level && prev?.air?.stage === "cruise") {
+                const ds = Math.hypot(p.x - prev.x, p.z - prev.z);
+                // (Over its line's own slope: a rise or a fall over the floor is at its climb's or its glide-in's slope.)
+                if (ds > 0.05) {
+                    const slope = Math.abs(p.y - prev.y) / ds - line;
+                    if (slope > worstSlope) {
+                        worstSlope = slope;
+                        at = `${f.i.a.model_slug} ${f.trip.doing} at ${t.toFixed(2)} of ${f.leg.seconds.toFixed(1)} s`;
+                    }
+                }
+            }
+            prev = p;
+        }
+    }
+    return {cruise, inside, insideFree, worstSlope, at};
+}
+
+test("decision 287: a flight at its cruise over a wood keeps above the crowns; its height over the floor never steps", () => {
+    assert.ok(world.sampler.canopyTop && world.sampler.canopyBase, "the sampler knows the woods");
+    const {cruise, inside, insideFree, worstSlope, at} = cruiseOverWoods();
+    const share = inside / Math.max(cruise, 1);
+    const free = insideFree / Math.max(cruise, 1);
+    recordMotionMetric("ma1", "cruise_inside_crowns_share", share);
+    recordMotionMetric("ma1", "cruise_inside_crowns_free_share", free);
+    recordMotionMetric("ma1", "cruise_worst_slope_over_line", worstSlope);
+    console.log(`cruise over the woods: ${inside} of ${cruise} quarter seconds inside the crowns (${(share * 100).toFixed(1)}%), ${insideFree} where it had room to be over them (${(free * 100).toFixed(1)}%); steepest rise or fall over its line ${worstSlope.toFixed(2)} (${(Math.atan(worstSlope) / DEG).toFixed(0)}°, ${at})`);
+    assert.ok(cruise > 1000, `${cruise}`);
+    // (Over the crowns wherever it had the room to climb over them since its take-off at its climb, and before it must
+    // come down to its landing at its glide-in; climbing out of a wood it took off by, it is in its leaves at its angle.)
+    assert.ok(free < 0.01, `${(free * 100).toFixed(1)}% of its cruise inside the crowns with room to be over them`);
+    // (Its rise over the floor at its plan's climb or glide-in, 50° at most: never a step.)
+    assert.ok(worstSlope <= Math.tan(50.5 * DEG) + 0.05, `${worstSlope.toFixed(2)} (${at})`);
+});

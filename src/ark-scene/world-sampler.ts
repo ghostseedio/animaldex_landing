@@ -23,6 +23,7 @@ import {coopSpot, paddockRect, paddockSegments, picketRuns, plotFrame, type Home
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {drawnRocks, inRock, type DrawnRock} from "@/ark-scene/map/rocks";
 import {perchHidden} from "@/ark-scene/grounding/perch";
+import {treeBody, type TreeBody} from "@/ark-scene/tree-spacing";
 import treeAttachFile from "@/ark-scene/tree-attach.json";
 import type {ArkZone} from "@/ark-scene/types";
 import {chunked, once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
@@ -111,6 +112,14 @@ export interface ArkWorldSampler {
      * mountain is rock-strewn). Absent: the ground alone, as before.
      */
     flightFloor?(x: number, z: number): number;
+    /**
+     * The woods (both wild islands; MA1 follow-up, decision 287): the highest drawn crown's top over a point (m), and the
+     * lowest leaves of the crowns over it (their lowest slice, `tree-spacing.ts` treeBody), on a 2 m grid; -Infinity and
+     * Infinity where no crown reaches. A flight at its cruise over a wood keeps above them (`behaviour-schedule.ts`).
+     * Absent: no woods counted, as before.
+     */
+    canopyTop?(x: number, z: number): number;
+    canopyBase?(x: number, z: number): number;
     /**
      * Part C (the town): on a road's carriageway there, where the cars drive and park (lane MA3). A bird that walks or
      * swims first ends no walk or swim on one (under a bridge too) and walks across none (`behaviour-schedule.ts`
@@ -252,6 +261,55 @@ class HeightLattice {
     };
 }
 
+/**
+ * The trees' crowns as drawn (`tree-spacing.ts` treeBody: the measured lod0 crown, its middle, its reach, its lowest
+ * leaves and its top) on a 2 m grid over the island's square: in each cell the highest top and the lowest leaves of
+ * the crowns whose reach covers its middle. Two float32 planes, made only once a tree is added: about 0.56 MB on the
+ * bigger island (528 m square), 0.14 MB on today's.
+ */
+class CanopyGrid {
+    private static readonly STEP = 2;
+    private readonly n = Math.ceil((TERRAIN_HALF * 2) / CanopyGrid.STEP);
+    private top: Float32Array | null = null;
+    private base: Float32Array | null = null;
+    add(tree: TreeBody) {
+        const n = this.n;
+        if (!this.top || !this.base) {
+            this.top = new Float32Array(n * n).fill(-Infinity);
+            this.base = new Float32Array(n * n).fill(Infinity);
+        }
+        const step = CanopyGrid.STEP;
+        const low = tree.bands.length ? Math.min(...tree.bands.map((band) => band[0])) : tree.y;
+        const i0 = Math.max(Math.floor((tree.cx - tree.reach + TERRAIN_HALF) / step), 0);
+        const i1 = Math.min(Math.floor((tree.cx + tree.reach + TERRAIN_HALF) / step), n - 1);
+        const j0 = Math.max(Math.floor((tree.cz - tree.reach + TERRAIN_HALF) / step), 0);
+        const j1 = Math.min(Math.floor((tree.cz + tree.reach + TERRAIN_HALF) / step), n - 1);
+        for (let j = j0; j <= j1; j++) {
+            for (let i = i0; i <= i1; i++) {
+                const x = -TERRAIN_HALF + (i + 0.5) * step;
+                const z = -TERRAIN_HALF + (j + 0.5) * step;
+                if (Math.hypot(x - tree.cx, z - tree.cz) > tree.reach) continue;
+                const k = j * n + i;
+                if (tree.top > this.top[k]) this.top[k] = tree.top;
+                if (low < this.base[k]) this.base[k] = low;
+            }
+        }
+    }
+    private cell(x: number, z: number): number {
+        const i = Math.floor((x + TERRAIN_HALF) / CanopyGrid.STEP);
+        const j = Math.floor((z + TERRAIN_HALF) / CanopyGrid.STEP);
+        return i < 0 || j < 0 || i >= this.n || j >= this.n ? -1 : j * this.n + i;
+    }
+    readonly topAt = (x: number, z: number): number => {
+        const k = this.top ? this.cell(x, z) : -1;
+        return k < 0 ? -Infinity : this.top![k];
+    };
+    readonly baseAt = (x: number, z: number): number => {
+        const k = this.base ? this.cell(x, z) : -1;
+        return k < 0 ? Infinity : this.base![k];
+    };
+}
+
 /** The sampler over the graphics lane's scenery interface, built now. */
 export function sceneSampler(): ArkWorldSampler {
     const job = sceneSamplerTasks();
@@ -296,6 +354,7 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
 
     // From the scenery's items: rock tops (basking, perching), shade under trees and shrubs, reeds, cave mouths; and the obstacles.
     const obstacles: Array<[number, number, number]> = [];
+    const canopy = new CanopyGrid();
     let items: DecorItem[] = [];
     let rocks: DrawnRock[] = [];
     const rockOf = new Map<string, DrawnRock>();
@@ -317,6 +376,9 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             const s = surface(sx, sz);
             if (s.waterDepth <= 0 && i % 2 === 0) add({tag: "shade", x: sx, y: s.height, z: sz, ...UP, yaw: item.rotation, size: [0.05, 4], zone: s.zone});
             obstacles.push([item.x, item.z, 0.35 * item.scale]);
+            // (Its crown as drawn, for the flights over the woods: `canopyTop`.)
+            const body = treeBody(item);
+            if (body) canopy.add(body);
         } else if (item.kind === "rock") {
             const s = surface(item.x, item.z);
             // The rock as drawn (the map lane's drawnRocks: graphics batch 5's asset rock, turned and scaled as the
@@ -552,6 +614,8 @@ export function sceneSamplerTasks(): {tasks: BuildTask[]; finish: () => ArkWorld
             // Part C (P4): on v2 the walk grid covers the bigger island's own square (`behaviour-nav.ts` extentOf), and
             // knows its fresh water, which stands above the sea.
             ...(v2 ? {half: TERRAIN_HALF, centre: {x: 0, z: 0}, waterDepth: wildWaterDepth, waterSurface: wildWaterSurface, flightFloor: (x: number, z: number) => Math.max(lattice.at(x, z), rockTopAt(x, z))} : {}),
+            canopyTop: canopy.topAt,
+            canopyBase: canopy.baseAt,
             // The ground's height (the same number `surfaceAt` gives), from a lattice of it filled as asked: it is asked every frame.
             heightAt: lattice.at,
             isWater: v2 ? (x, z) => wildWaterDepth(x, z) > 0 : (x, z) => surface(x, z).waterDepth > 0,
