@@ -1,5 +1,5 @@
 ## AnimalDex Privacy Policy
-#### Effective November 12, 2026
+#### Effective November 13, 2026
 
 AnimalDex ("AnimalDex," "we," "our," or "the app") is operated by GHOSTSEED LTD for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
 
@@ -27,7 +27,7 @@ AnimalDex uses information to:
 2. Analyze animal images and videos through backend services.
 3. Save captures, collections, libraries, cards, and user progress.
 4. Operate public discovery, community profiles, packs, missions, feeds, reactions, and shared captures.
-5. Operate the shared Ark: show which animals came aboard after a user's step worked, who brought them (as described under "The shared Ark" below), and the short stories users choose to share.
+5. Operate the shared Ark: bring an animal aboard when a user's capture identifies it, show who brought it (as described under "The shared Ark" below), show how well their animals are doing as the steps they work on go well, and show the short stories users choose to share.
 6. Enable direct messages, trades, challenges, blocks, and reports.
 7. Verify purchases, credits, subscriptions, and AnimalDex Pro entitlement.
 8. Moderate content, prevent abuse, protect safety, investigate reports, enforce policies, provide support, and debug technical issues.
@@ -48,11 +48,11 @@ Some AnimalDex features are public or shared by design. Public captures, shared 
 Direct messages are intended for the participants in the conversation, but may be reviewed or retained when needed for reports, safety, abuse prevention, support, legal compliance, or service integrity.
 
 ## The shared Ark
-When a small step a user worked on with an animal goes well, that animal can come aboard the shared Ark, which anyone can visit on the website and in the app.
+When a user's capture identifies an animal, one of its kind can come aboard the shared Ark, which anyone can visit on the website and in the app. Each person can have up to two living animals of a species aboard, and only species with a 3D model can come aboard; a capture of a species whose model isn't ready yet waits until it is. Captures saved before the Ark opened brought animals aboard in the same way. When a small step a user worked on with an animal goes well, their animals of that kind on the Ark do better. The Ark shows how well each animal is doing (ordinary, good or prime), never what anyone talked about.
 
 1. **Who brought it.** By default, each animal on the Ark shows the username of the person who brought it (as "@username"), linked to their profile, with their display name and avatar. This applies to all of their Ark animals, including ones brought aboard before this change, and it applies even when their profile or Diary is set to private. To stop it, turn off "Show my name on my Ark animals" in Settings: the setting covers all of their animals at once, takes effect right away, and they then appear as a "Voyager" number. People under 18 (by the age they gave in the app) and people without a username always appear as a "Voyager" number. If we don't know someone's age yet, their username shows and we ask for their birth year the next time they visit the Ark; if they are under 18, they appear as a "Voyager" number from then on, on all their animals, and any story they shared is hidden. Where an animal lives on the Ark can say a little about the person who brought it: an animal in the house area means they keep one as a pet, and one in the farm area means it lives on a farm. Where a photo was taken is never shown. Nicknames given to animals never appear on the Ark.
 2. **The 18+ confirmation for stories.** When you share a story with "I'm 18 or over, share", we record that you confirmed you are 18 or over, and when. We use it only to decide whether your stories may be shown on the Ark. If the age you gave in the app shows you are under 18, the confirmation is not accepted. Please confirm only if it is true.
-3. **Stories are only shared by choice.** After an animal comes aboard, the user can choose to share how the step worked: what they did, and optionally one line about the problem in their own words. Nothing is shared unless they tap Share. The problem they talked about in their conversations is never filled in or shared for them. They can edit or remove a shared story at any time. Only people who are 18 or over (by the app's age check, or by the one-tap confirmation) can share stories.
+3. **Stories are only shared by choice.** After a step works with an animal of a kind they have aboard, the user can choose to share how the step worked on that animal: what they did, and optionally one line about the problem in their own words. Nothing is shared unless they tap Share. The problem they talked about in their conversations is never filled in or shared for them. They can edit or remove a shared story at any time. Only people who are 18 or over (by the app's age check, or by the one-tap confirmation) can share stories.
 4. **Screening.** Before a story is shown publicly, its text is checked automatically by an AI model, the same check used for public debates. A story about abuse, a crisis, self-harm or a child, or one that attacks another person, is not shown. This check is done through AnimalDex's backend by the processors listed in "Third-Party Processors" (Anthropic, Google (Gemini) or OpenAI).
 5. **Deleting.** When a user deletes their account, their stories, their name setting and their 18+ confirmation are deleted, and the animals they brought stay on the Ark as "brought by a former voyager", with no link to them.
 
@@ -80,7 +80,7 @@ Users can:
 5. Cancel subscriptions through Apple ID subscription settings.
 6. Decline optional device permissions, such as location or photo library access, although some features may not work without them.
 7. Choose whether their username shows on the animals they bring to the Ark. It shows by default; turn it off in Settings -> "Show my name on my Ark animals".
-8. Share, edit or remove the story of how a step brought an animal aboard the Ark.
+8. Share, edit or remove the story of how a step worked with one of their animals on the Ark.
 
 ## Data Retention and Deletion
 We retain account, capture, purchase, community, diagnostic, and operational data while an account is active and as needed to provide AnimalDex.
