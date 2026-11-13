@@ -17,6 +17,12 @@ export type ArkHunting = {
     tickedTo: number | null;
     /** Every living predator's next hunt (the Ark day from which it hunts; 0 = now), by animal id. */
     predators: Map<string, number>;
+    /**
+     * Its last meal's Ark day, by animal id, where the read sends one (a third element in a predator's row: the meal
+     * clock's start, so the tap card's fed bar shows the share of its meal still to run; card truth 2026-11-13). Empty from a
+     * server that sends two.
+     */
+    lastMeals?: Map<string, number>;
     meals: ArkHuntingMeal[];
 };
 
@@ -36,11 +42,15 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
     if (!mode) return null;
     const startedAtMs = typeof row.started_at === "string" ? Date.parse(row.started_at) : finite(row.startedAtMs);
     const predators = new Map<string, number>();
+    const lastMeals = new Map<string, number>();
     if (Array.isArray(row.predators)) {
         for (const item of row.predators) {
             if (!Array.isArray(item) || typeof item[0] !== "string" || !ID.test(item[0])) continue;
             const from = finite(item[1]);
-            if (from !== null && from >= 0) predators.set(item[0], from);
+            if (from === null || from < 0) continue;
+            predators.set(item[0], from);
+            const meal = finite(item[2]);
+            if (meal !== null && meal >= 0 && meal <= from) lastMeals.set(item[0], meal);
         }
     }
     const meals: ArkHuntingMeal[] = [];
@@ -59,6 +69,7 @@ export function decodeArkHunting(raw: unknown): ArkHunting | null {
         arkDay: finite(row.ark_day),
         tickedTo: finite(row.ticked_to),
         predators,
+        lastMeals,
         meals
     };
 }

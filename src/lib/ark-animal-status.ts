@@ -14,9 +14,11 @@
  * - **Log**: the server's record of this animal (it came aboard or was born, a meal, young, a clutch, a pair bred: only
  *   what the snapshot, its life story or the event log say) and what its schedule had it doing over its last slots.
  *   Newest first. Nothing is made up: an entry is either the server's or the schedule's.
- * - **Bars**: how fed it is (its last recorded meal against the ecology's hunger days) and how far from dying (the
- *   server's condition: hungry, old). Its age against its lifespan only when the data has a lifespan (the public reads
- *   don't send one yet, so that bar is not drawn). No new server data.
+ * - **Bars** (card truth, 2026-11-13: each one real, or not drawn): how fed it is, only where the server keeps a meal clock for
+ *   it (a predator's next hunt, `voyage_hunting_v1`, against its last meal) or says it is hungry; how far from dying
+ *   (the server's condition: hungry, old); its energy over its day, from the sleep and wake its schedule already runs
+ *   (visual only, the same for every viewer); its age against its lifespan only when the data has a lifespan (the
+ *   public reads don't send one yet, so that bar is not drawn). Beside them, a predator's next hunt in Ark days.
  */
 
 import type {ArkCondition} from "@/ark-scene/types";
@@ -30,6 +32,8 @@ export const ARK_ACTIVITIES = [
     "grazing",
     "browsing",
     "hunting",
+    "waiting",
+    "prowling",
     "fishing",
     "drinking",
     "resting",
@@ -145,7 +149,6 @@ const DOING_ACTIVITY: Record<string, ArkActivityKey> = {
     hide: "hiding",
     visit_flowers: "flowers",
     circle_light: "light",
-    stalk: "hunting",
     play: "playing"
 };
 
@@ -167,6 +170,11 @@ export type ArkActivityInput = {
     wary?: boolean;
     /** A bird or another flyer: its "grazing" (a seed-eater's, on the ground) is looking for food. */
     flyer?: boolean;
+    /**
+     * Its slot holds it still where it goes (`SlotPlan.still`: in the water, or up off the ground, where a stay's steps
+     * never move it). A stalk there is a wait.
+     */
+    still?: boolean;
 };
 
 /** The one key for what it is doing: the same input, the same key, for every viewer. */
@@ -178,7 +186,12 @@ export function arkActivityKey(input: ArkActivityInput): ArkActivityKey {
     if (input.wary) return "wary";
     if (input.travelling && input.doing === "drink") return "toWater";
     const byRecipe = input.recipe ? RECIPE_ACTIVITY[input.recipe] : undefined;
-    const key = byRecipe ?? DOING_ACTIVITY[input.doing] ?? "about";
+    // The schedule's stalk (visual only: no prey is chosen and nothing is caught; the server hunts only by encounter):
+    // said as what the body does. Held still where it goes (in the water) it is waiting for prey; on the ground it
+    // creeps along its range on its prey's side, on the prowl; on its way to where it waits, it is on the prowl too.
+    // Never "hunting": that is the server's encounter hunt, a due predator walking its forays (`input.hunting`).
+    const stalk: ArkActivityKey | undefined = input.doing === "stalk" ? (input.still && !input.travelling ? "waiting" : "prowling") : undefined;
+    const key = byRecipe ?? stalk ?? DOING_ACTIVITY[input.doing] ?? "about";
     return input.flyer && (key === "grazing" || key === "browsing") ? "food" : key;
 }
 
@@ -211,8 +224,17 @@ export type ArkStatusLogEntry = {
 
 export type ArkBarTone = "good" | "warn" | "bad";
 /** One bar: how full (0–1, full is good), its colour, and the state it says in words. */
-export type ArkStatusBar = {value: number; tone: ArkBarTone; state: "fed" | "low" | "hungry" | "good" | "old" | "life"};
-export type ArkStatusBars = {fed: ArkStatusBar | null; health: ArkStatusBar | null; age: ArkStatusBar | null};
+export type ArkStatusBar = {
+    value: number;
+    tone: ArkBarTone;
+    state: "fed" | "low" | "hungry" | "good" | "old" | "life" | "awake" | "asleep";
+    /** Energy: since when it has been awake (or asleep), epoch seconds on the shared clock. */
+    since?: number;
+};
+export type ArkStatusBarKey = "fed" | "health" | "energy" | "age";
+export type ArkStatusBars = {fed: ArkStatusBar | null; health: ArkStatusBar | null; energy: ArkStatusBar | null; age: ArkStatusBar | null};
+/** The bars in the order they are drawn (over the animal) and said (the card, the apps). */
+export const ARK_STATUS_BAR_KEYS: readonly ArkStatusBarKey[] = ["fed", "health", "energy", "age"];
 
 export type ArkStatusGoal =
     /** What a later slot is for, from when (epoch seconds). */
@@ -229,6 +251,11 @@ export type ArkAnimalStatus = {
     /** Newest first. */
     log: ArkStatusLogEntry[];
     bars: ArkStatusBars;
+    /**
+     * A predator's next hunt (the server's, `voyage_hunting_v1`), in Ark days from now (0 or less: due now; it hunts
+     * whenever it is awake), or null (no meal clock: not a predator, the town's pool, no hunting read).
+     */
+    nextHunt: number | null;
 };
 
 /** At most this many log lines (the card scrolls past the first few). */
@@ -331,9 +358,9 @@ export function arkRecordNoteFromLife(id: string, life: {last_meal: {at: string 
 // MARK: The bars
 
 /**
- * The ecology's hunger days (AnimalDex `supabase/functions/_shared/ark-ecology/rules.ts` DEFAULT_CONFIG.hungerDays;
- * production overrides only `realm`): a predator is hungry this many Ark days after its last catalogue meal, unless
- * something else feeds it (ambient food in its zone, a host aboard, the launch grace).
+ * The ecology's hunger days (AnimalDex `supabase/functions/_shared/ark-ecology/rules.ts` DEFAULT_CONFIG.hungerDays):
+ * the pool's rule, read only for a meal on record with no meal clock (a town predator the pool feeds). Under encounter
+ * hunting a predator's meal clock is its next hunt (`nextHuntDay`), which the launch config's meal intervals set.
  */
 export const ARK_HUNGER_DAYS = 7;
 /** A well-fed animal's bar never shows red: the server says it is fed. At its lowest it is amber, due a meal. */
@@ -348,33 +375,102 @@ export type ArkBarsInput = {
     condition: ArkCondition | null | undefined;
     /** The Ark day now (the snapshot's, moved on by the clock). */
     arkDay: number | null;
-    /** Its last recorded catalogue meal's Ark day, when the record says. */
+    /** Its last meal's Ark day: the hunting read's (the server's meal clock), else its last recorded catalogue meal. */
     lastMealDay: number | null;
+    /** A predator's next hunt, the Ark day from which it hunts (`voyage_hunting_v1`), when the read has it. */
+    nextHuntDay?: number | null;
+    /** Its energy over its day (`arkEnergy`), when it is on its schedule and sleeps. */
+    energy?: ArkEnergy | null;
     /** Its born (or boarded) Ark day and its wild lifespan in days: the age bar only when both are known. */
     bornDay?: number | null;
     lifespanDays?: number | null;
 };
 
+const known = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value);
+
+/** A predator's next hunt in Ark days from now (`ArkAnimalStatus.nextHunt`), or null when either is unknown. */
+export function arkNextHuntIn(nextHuntDay: number | null | undefined, arkDay: number | null | undefined): number | null {
+    return known(nextHuntDay) && known(arkDay) ? nextHuntDay - arkDay : null;
+}
+
 /**
- * - Fed: hungry (the server) is nearly empty and red. Well-fed with a recorded meal goes down from full over the hunger
- *   days to amber ("getting hungry"), and stays amber past them while the server still calls it fed (it is due a
- *   meal). Well-fed with no meal on record (grazers, foragers, anything fed by what grows round it) is full.
+ * - Fed, only where it is measured: hungry (the server) is nearly empty and red. A predator with a meal clock (its last
+ *   meal and its next hunt, both the server's) shows the share of that meal's time still to run, true to the day: under
+ *   the launch config a meal lasts 216 to 7,255 Ark days, so most read nearly full and go down slowly; at its next hunt
+ *   it is amber ("getting hungry"), never red while the server calls it fed. A meal on record with no meal clock (the
+ *   pool's town predators) goes down over the pool's hunger days. Anything else (a grazer, a forager, whatever eats
+ *   what grows round it, which the server keeps fed) has no fed bar: a bar that can only ever be full says nothing.
  * - Health, how far from dying: old (at least four fifths of its wild lifespan gone: the read's `old_from_life_fraction`)
  *   is a fifth, red; hungry (it can starve if it finds no food) is amber; otherwise full.
+ * - Energy: its day's sleep and wake (`arkEnergy`), when it sleeps.
  * - Age: the life it has left, from its lifespan, when known.
  */
 export function arkStatusBars(input: ArkBarsInput): ArkStatusBars {
-    const {condition} = input;
-    if (!condition) return {fed: null, health: null, age: ageBar(input)};
-    let fed: ArkStatusBar;
+    const {condition, arkDay, lastMealDay: last} = input;
+    const energy = energyBar(input.energy ?? null);
+    if (!condition) return {fed: null, health: null, energy, age: ageBar(input)};
+    const next = input.nextHuntDay;
+    let fed: ArkStatusBar | null = null;
     if (condition === "hungry") fed = {value: 0.12, tone: "bad", state: "hungry"};
-    else if (input.lastMealDay !== null && input.arkDay !== null && Number.isFinite(input.lastMealDay) && Number.isFinite(input.arkDay)) {
-        const since = Math.max(input.arkDay - input.lastMealDay, 0);
-        const value = since >= ARK_HUNGER_DAYS ? FED_FLOOR : 1 - (since / ARK_HUNGER_DAYS) * (1 - FED_FLOOR);
-        fed = {value: round(value), tone: arkBarTone(value), state: value < 0.6 ? "low" : "fed"};
-    } else fed = {value: 1, tone: "good", state: "fed"};
+    else if (known(next) && known(arkDay)) {
+        // (Its meal's start not in the read: no bar; the card still says when it next hunts.)
+        if (known(last) && next > last) fed = fedBar((next - arkDay) / (next - last));
+    } else if (known(last) && known(arkDay)) {
+        // (As before the card-truth change: from full down to amber over the hunger days.)
+        const since = Math.max(arkDay - last, 0);
+        fed = fedBar(since >= ARK_HUNGER_DAYS ? FED_FLOOR : 1 - (since / ARK_HUNGER_DAYS) * (1 - FED_FLOOR));
+    }
     const health: ArkStatusBar = condition === "old" ? {value: 0.2, tone: "bad", state: "old"} : condition === "hungry" ? {value: 0.45, tone: "warn", state: "hungry"} : {value: 1, tone: "good", state: "good"};
-    return {fed, health, age: ageBar(input)};
+    return {fed, health, energy, age: ageBar(input)};
+}
+
+/** The share of its meal's time still to run (1 just fed, 0 due), floored at amber: the server says it is fed. */
+function fedBar(share: number): ArkStatusBar {
+    const value = Math.max(Math.min(share, 1), FED_FLOOR);
+    return {value: round(value), tone: arkBarTone(value), state: value < 0.6 ? "low" : "fed"};
+}
+
+// MARK: Energy
+
+/** Its energy at the end of its waking hours, at the lowest: amber, tired, never red (tired is not dying). */
+export const ARK_ENERGY_FLOOR = 0.3;
+
+export type ArkEnergy = {value: number; awake: boolean; since: number};
+
+/**
+ * Its energy over its day, from its schedule's own sleep and wake (`awake`: is it awake at a moment, epoch seconds,
+ * sampled every `step` seconds back from `epoch`; the scene's reads its slot's start, as the schedule does). Awake, it
+ * runs down evenly, at the rate that takes its day's waking hours from full to `ARK_ENERGY_FLOOR`; asleep, it fills at
+ * the rate its day's sleeping hours take to fill it, never past full. One waking spell a day ends at the floor; two (a
+ * crepuscular animal's dawn and dusk) each take it half way, the sleep between filling it again. Worked over the two
+ * days to now from full. `since`: when its present run of waking (or sleep) began, from `snap` (its slot's start) when
+ * given. A model of the day it is seen living, not a server measure: visual only, a pure function of the shared clock
+ * and its schedule, the same for every viewer. Null for one that never sleeps in a day (or is never awake).
+ */
+export function arkEnergy(awake: (epochSeconds: number) => boolean, epoch: number, step = 80, snap?: (epochSeconds: number) => number): ArkEnergy | null {
+    if (!Number.isFinite(epoch) || !(step > 0)) return null;
+    const perDay = Math.round(86_400 / step);
+    const states: boolean[] = [];
+    // Oldest first: the step starting at epoch - k * step, for k = 2 days … 1.
+    for (let k = 2 * perDay; k >= 1; k--) states.push(awake(epoch - k * step));
+    let up = 0;
+    for (let i = states.length - perDay; i < states.length; i++) if (states[i]) up++;
+    const down = perDay - up;
+    if (!up || !down) return null;
+    const drain = (1 - ARK_ENERGY_FLOOR) / up;
+    const fill = (1 - ARK_ENERGY_FLOOR) / down;
+    let value = 1;
+    for (const on of states) value = on ? Math.max(value - drain, ARK_ENERGY_FLOOR) : Math.min(value + fill, 1);
+    const now = awake(epoch);
+    let first = epoch;
+    for (let i = states.length - 1; i >= 0 && states[i] === now; i--) first = epoch - (states.length - i) * step;
+    return {value: round(value), awake: now, since: snap ? snap(first) : first};
+}
+
+function energyBar(energy: ArkEnergy | null): ArkStatusBar | null {
+    if (!energy || !Number.isFinite(energy.value)) return null;
+    const value = Math.min(Math.max(energy.value, ARK_ENERGY_FLOOR), 1);
+    return {value: round(value), tone: arkBarTone(value), state: energy.awake ? "awake" : "asleep", since: energy.since};
 }
 
 function ageBar(input: ArkBarsInput): ArkStatusBar | null {
@@ -432,6 +528,12 @@ export type ArkCardWords = {
     fedLow: string;
     healthGood: string;
     lifeLeft: string;
+    /** The energy bar (card truth, 2026-11-13), and what it says: awake (or asleep) since a time on the island's clock. */
+    energy: string;
+    awakeSince: string;
+    asleepSince: string;
+    /** A predator's next hunt: "{when}" is the reader's own "in 1,128 days" (`Intl.RelativeTimeFormat`). */
+    nextHunt: string;
 };
 
 /** English, as `en.json` has it: the embed's fallback until (or unless) its words read. */
@@ -440,6 +542,8 @@ export const ARK_ACTIVITY_ENGLISH: ArkActivityWords = {
     grazing: "grazing",
     browsing: "browsing on leaves",
     hunting: "hunting",
+    waiting: "waiting for prey",
+    prowling: "on the prowl",
     fishing: "fishing",
     drinking: "drinking",
     resting: "resting",
@@ -503,7 +607,11 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     age: "Life left",
     fedLow: "Getting hungry",
     healthGood: "In good health",
-    lifeLeft: "{percent} of its life left"
+    lifeLeft: "{percent} of its life left",
+    energy: "Energy",
+    awakeSince: "Awake since {time}",
+    asleepSince: "Asleep since {time}",
+    nextHunt: "Next hunt {when}"
 };
 
 /** The words a status needs: the activities, the card's, and the life story's and the story's few it borrows. */
@@ -541,8 +649,20 @@ export type ArkStatusText = {
     now: string | null;
     next: string | null;
     log: Array<{id: string; source: "record" | "schedule"; stamp: string; text: string}>;
-    bars: Array<{key: "fed" | "health" | "age"; label: string; value: number; tone: ArkBarTone; text: string}>;
+    bars: Array<{key: ArkStatusBarKey; label: string; value: number; tone: ArkBarTone; text: string}>;
+    /** A predator's next hunt in words ("Next hunt in 1,128 days"; due now: "Getting hungry"), or null. */
+    nextHunt: string | null;
 };
+
+/** "in 1,128 days" in the reader's words, whole Ark days, at least one. */
+export function arkInDays(days: number, locale: string): string {
+    const whole = Math.max(Math.round(days), 1);
+    try {
+        return new Intl.RelativeTimeFormat(locale, {numeric: "always"}).format(whole, "day");
+    } catch {
+        return `in ${whole.toLocaleString()} days`;
+    }
+}
 
 /** A status as the reader reads it (the card on /ark; the embed sends it with `ark:status` for the apps' cards). */
 export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, locale: string): ArkStatusText {
@@ -582,19 +702,27 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
         return {id: entry.id, source: entry.source, stamp: day(entry), text};
     });
     const bars: ArkStatusText["bars"] = [];
-    const {fed, health, age} = status.bars;
+    const {fed, health, energy, age} = status.bars;
+    const card = (key: "energy" | "awakeSince" | "asleepSince" | "nextHunt") => words.card[key] || ARK_CARD_ENGLISH[key];
     if (fed) bars.push({key: "fed", label: words.card.fed, value: fed.value, tone: fed.tone, text: fed.state === "hungry" ? words.life.hungry : fed.state === "low" ? words.card.fedLow : words.life.well_fed});
     if (health) bars.push({key: "health", label: words.card.health, value: health.value, tone: health.tone, text: health.state === "old" ? words.life.old : health.state === "hungry" ? words.life.hungry : words.card.healthGood});
+    if (energy) bars.push({key: "energy", label: card("energy"), value: energy.value, tone: energy.tone, text: fillArkWords(card(energy.state === "asleep" ? "asleepSince" : "awakeSince"), {time: arkIslandTime(energy.since ?? 0, locale)})});
     if (age) bars.push({key: "age", label: words.card.age, value: age.value, tone: age.tone, text: fillArkWords(words.card.lifeLeft, {percent: `${Math.round(age.value * 100).toLocaleString(locale)}%`})});
-    return {now, next, log: log.filter((line) => line.text), bars};
+    const hunt = status.nextHunt;
+    const nextHunt = typeof hunt !== "number" || !Number.isFinite(hunt) ? null : hunt <= 0 ? words.card.fedLow : fillArkWords(card("nextHunt"), {when: arkInDays(hunt, locale)});
+    return {now, next, log: log.filter((line) => line.text), bars, nextHunt};
 }
 
 /** The fields that make two statuses read the same (the scene tells the page and the apps only when this changes). */
 export function arkStatusSignature(status: ArkAnimalStatus | null): string {
     if (!status) return "";
     const goal = status.goal ? `${status.goal.kind}:${status.goal.kind === "next" ? status.goal.activity : ""}:${Math.round(status.goal.at / 60)}` : "";
-    const bars = (["fed", "health", "age"] as const).map((key) => status.bars[key]?.value ?? "-").join(",");
-    return `${status.id}|${status.activity}|${goal}|${bars}|${status.log.map((entry) => entry.id).join(",")}`;
+    const bars = ARK_STATUS_BAR_KEYS.map((key) => {
+        const bar = status.bars[key];
+        return bar ? `${key === "energy" ? bar.value.toFixed(2) : bar.value}${bar.since !== undefined ? `@${Math.round(bar.since / 60)}` : ""}` : "-";
+    }).join(",");
+    const hunt = status.nextHunt === null || status.nextHunt === undefined ? "-" : Math.round(status.nextHunt);
+    return `${status.id}|${status.activity}|${goal}|${bars}|${hunt}|${status.log.map((entry) => entry.id).join(",")}`;
 }
 
 /** The words a status borrows from elsewhere in `ark`, in English: the embed's fallback. */

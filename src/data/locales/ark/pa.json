@@ -316,13 +316,19 @@
             "age": "ਬਾਕੀ ਉਮਰ",
             "fedLow": "ਭੁੱਖ ਲੱਗਣ ਲੱਗੀ ਹੈ",
             "healthGood": "ਚੰਗੀ ਸਿਹਤ",
-            "lifeLeft": "ਉਮਰ ਦਾ {percent} ਬਾਕੀ"
+            "lifeLeft": "ਉਮਰ ਦਾ {percent} ਬਾਕੀ",
+            "energy": "ਊਰਜਾ",
+            "awakeSince": "{time} ਵਜੇ ਤੋਂ ਜਾਗ ਰਿਹਾ ਹੈ",
+            "asleepSince": "{time} ਵਜੇ ਤੋਂ ਸੌਂ ਰਿਹਾ ਹੈ",
+            "nextHunt": "ਅਗਲਾ ਸ਼ਿਕਾਰ {when}"
         },
         "activity": {
             "food": "ਖੁਰਾਕ ਲੱਭ ਰਿਹਾ ਹੈ",
             "grazing": "ਚਰ ਰਿਹਾ ਹੈ",
             "browsing": "ਪੱਤੇ ਖਾ ਰਿਹਾ ਹੈ",
             "hunting": "ਸ਼ਿਕਾਰ ਕਰ ਰਿਹਾ ਹੈ",
+            "waiting": "ਸ਼ਿਕਾਰ ਦੀ ਉਡੀਕ ਕਰ ਰਿਹਾ ਹੈ",
+            "prowling": "ਸ਼ਿਕਾਰ ਦੀ ਭਾਲ ਵਿੱਚ ਘੁੰਮ ਰਿਹਾ ਹੈ",
             "fishing": "ਮੱਛੀ ਫੜ ਰਿਹਾ ਹੈ",
             "drinking": "ਪਾਣੀ ਪੀ ਰਿਹਾ ਹੈ",
             "resting": "ਆਰਾਮ ਕਰ ਰਿਹਾ ਹੈ",

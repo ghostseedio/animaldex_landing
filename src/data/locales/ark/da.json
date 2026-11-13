@@ -316,13 +316,19 @@
             "age": "Levetid",
             "fedLow": "Bliver sulten",
             "healthGood": "Ved godt helbred",
-            "lifeLeft": "{percent} af levetiden tilbage"
+            "lifeLeft": "{percent} af levetiden tilbage",
+            "energy": "Energi",
+            "awakeSince": "Vågen siden {time}",
+            "asleepSince": "Sover siden {time}",
+            "nextHunt": "Næste jagt {when}"
         },
         "activity": {
             "food": "leder efter føde",
             "grazing": "græsser",
             "browsing": "spiser blade",
             "hunting": "jager",
+            "waiting": "lurer på bytte",
+            "prowling": "lusker rundt",
             "fishing": "fisker",
             "drinking": "drikker",
             "resting": "hviler sig",

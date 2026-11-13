@@ -316,13 +316,19 @@
             "age": "العمر المتبقي",
             "fedLow": "بدأ يجوع",
             "healthGood": "بصحة جيدة",
-            "lifeLeft": "تبقّى {percent} من عمره"
+            "lifeLeft": "تبقّى {percent} من عمره",
+            "energy": "الطاقة",
+            "awakeSince": "مستيقظ منذ {time}",
+            "asleepSince": "نائم منذ {time}",
+            "nextHunt": "الصيد التالي {when}"
         },
         "activity": {
             "food": "يبحث عن الطعام",
             "grazing": "يرعى",
             "browsing": "يقتات على أوراق الشجر",
             "hunting": "يصطاد",
+            "waiting": "يترصّد فريسة",
+            "prowling": "يتسلّل بحثًا عن فريسة",
             "fishing": "يصطاد السمك",
             "drinking": "يشرب",
             "resting": "يستريح",

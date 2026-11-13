@@ -316,13 +316,19 @@
             "age": "शेष आयु",
             "fedLow": "भूख लगने लगी है",
             "healthGood": "अच्छा स्वास्थ्य",
-            "lifeLeft": "आयु का {percent} शेष"
+            "lifeLeft": "आयु का {percent} शेष",
+            "energy": "ऊर्जा",
+            "awakeSince": "{time} बजे से जागा हुआ है",
+            "asleepSince": "{time} बजे से सो रहा है",
+            "nextHunt": "अगला शिकार {when}"
         },
         "activity": {
             "food": "भोजन खोज रहा है",
             "grazing": "चर रहा है",
             "browsing": "पत्तियाँ खा रहा है",
             "hunting": "शिकार कर रहा है",
+            "waiting": "शिकार की घात में है",
+            "prowling": "शिकार की तलाश में घूम रहा है",
             "fishing": "मछली पकड़ रहा है",
             "drinking": "पानी पी रहा है",
             "resting": "आराम कर रहा है",

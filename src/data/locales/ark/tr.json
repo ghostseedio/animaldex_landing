@@ -316,13 +316,19 @@
             "age": "Kalan ömür",
             "fedLow": "Acıkıyor",
             "healthGood": "Sağlığı yerinde",
-            "lifeLeft": "Kalan ömür: {percent}"
+            "lifeLeft": "Kalan ömür: {percent}",
+            "energy": "Enerji",
+            "awakeSince": "{time} saatinden beri uyanık",
+            "asleepSince": "{time} saatinden beri uyuyor",
+            "nextHunt": "Sonraki av: {when}"
         },
         "activity": {
             "food": "yiyecek arıyor",
             "grazing": "otluyor",
             "browsing": "yaprak yiyor",
             "hunting": "avlanıyor",
+            "waiting": "pusuda av bekliyor",
+            "prowling": "sinsice dolaşıyor",
             "fishing": "balık tutuyor",
             "drinking": "su içiyor",
             "resting": "dinleniyor",

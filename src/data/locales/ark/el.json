@@ -316,13 +316,19 @@
             "age": "Υπόλοιπη ζωή",
             "fedLow": "Αρχίζει να πεινά",
             "healthGood": "Σε καλή υγεία",
-            "lifeLeft": "Απομένει το {percent} της ζωής του"
+            "lifeLeft": "Απομένει το {percent} της ζωής του",
+            "energy": "Ενέργεια",
+            "awakeSince": "Ξύπνιο από τις {time}",
+            "asleepSince": "Κοιμάται από τις {time}",
+            "nextHunt": "Επόμενο κυνήγι {when}"
         },
         "activity": {
             "food": "ψάχνει για τροφή",
             "grazing": "βόσκει",
             "browsing": "τρώει φύλλα",
             "hunting": "κυνηγά",
+            "waiting": "παραμονεύει τη λεία",
+            "prowling": "τριγυρίζει αναζητώντας λεία",
             "fishing": "ψαρεύει",
             "drinking": "πίνει νερό",
             "resting": "ξεκουράζεται",

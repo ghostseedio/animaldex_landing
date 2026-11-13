@@ -316,13 +316,19 @@
             "age": "उरलेले आयुष्य",
             "fedLow": "भूक लागू लागली आहे",
             "healthGood": "चांगले आरोग्य",
-            "lifeLeft": "आयुष्याचे {percent} उरले आहे"
+            "lifeLeft": "आयुष्याचे {percent} उरले आहे",
+            "energy": "ऊर्जा",
+            "awakeSince": "{time} पासून जागा आहे",
+            "asleepSince": "{time} पासून झोपला आहे",
+            "nextHunt": "पुढची शिकार {when}"
         },
         "activity": {
             "food": "अन्न शोधत आहे",
             "grazing": "चरत आहे",
             "browsing": "पाने खात आहे",
             "hunting": "शिकार करत आहे",
+            "waiting": "सावजाची वाट पाहत आहे",
+            "prowling": "सावजाच्या शोधात फिरत आहे",
             "fishing": "मासे पकडत आहे",
             "drinking": "पाणी पीत आहे",
             "resting": "विश्रांती घेत आहे",

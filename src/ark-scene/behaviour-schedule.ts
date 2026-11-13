@@ -1607,13 +1607,18 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
 
 const CRUISE: Record<"low" | "mid" | "high", number> = {low: 1.6, mid: 6, high: 14};
 
+/** Whether a stay's steps (a stalk's creep, play's dashes, a step aside) move it at a spot: only on the ground, not raised, not in the water. */
+function stepsMove(world: ScheduleWorld, at: Spot): boolean {
+    return !raised(world, at) && !wet(world, at);
+}
+
 /** Its stay's beats placed in the world from where it arrives (steps and play move it; turns turn it). */
 function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, at: Spot, yaw0: number, beats: Intent["stay"], seconds: number): {beats: StayBeat[]; finish: Spot} {
     const out: StayBeat[] = [];
     let x = at.x;
     let z = at.z;
     let yaw = yaw0;
-    const onGround = !raised(world, at) && !wet(world, at);
+    const onGround = stepsMove(world, at);
     for (const beat of beats) {
         if (beat.at > seconds) break;
         // A scan is a look round with the head (its clip and the look chain: `head-look.ts`); the body stays as it stands.
@@ -1750,12 +1755,27 @@ export function tripAt(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
  * them), not the route there, so it costs no path. The tap card's "Now" and "Next", its own log and the live log's
  * moments read this (`animal-status.ts`). Pure, the same for every viewer; remembered with the trips.
  */
-export type SlotPlan = {slot: number; start: number; end: number; doing: ArkDoing; recipe: string | null; mode: TripMode; follow: boolean; /** Watching a predator it saw (the shared wariness). */ wary: boolean};
+export type SlotPlan = {
+    slot: number;
+    start: number;
+    end: number;
+    doing: ArkDoing;
+    recipe: string | null;
+    mode: TripMode;
+    follow: boolean;
+    /** Watching a predator it saw (the shared wariness). */
+    wary: boolean;
+    /**
+     * Its stay's steps cannot move it where it goes (in the water, or up off the ground: `stepsMove`), so it holds still
+     * there: a stalk there is a wait (an eel or a pike lying in wait), not a creep.
+     */
+    still: boolean;
+};
 export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): SlotPlan {
     const slot = slotOf(animal, epochSeconds);
     const plan = placedIntent(world, profile, animal, activity, slot, hoursAt);
     const start = slotStart(animal, slot);
-    return {slot, start, end: start + SLOT_SECONDS, doing: plan.doing, recipe: plan.recipe ?? null, mode: plan.mode, follow: Boolean(plan.follow), wary: plan.doing === "watch" && plan.face !== undefined};
+    return {slot, start, end: start + SLOT_SECONDS, doing: plan.doing, recipe: plan.recipe ?? null, mode: plan.mode, follow: Boolean(plan.follow), wary: plan.doing === "watch" && plan.face !== undefined, still: plan.to ? !stepsMove(world, plan.to) : true};
 }
 
 // MARK: Memo

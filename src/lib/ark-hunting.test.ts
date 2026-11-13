@@ -46,6 +46,11 @@ test("the hunting read: decoded and checked; a missing read, the pool or nonsens
     assert.equal(h.hunting, "encounter");
     assert.equal(h.startedAtMs, Date.parse("2026-11-08T21:45:21.431Z"));
     assert.deepEqual(Array.from(h.predators), [[fox, 81.25], [fox.replace("100", "101"), 82]]);
+    assert.deepEqual(Array.from(h.lastMeals ?? []), [], "a server that sends two: no meal clock starts");
+    // Card truth (the proposed server change): a third element, its last meal's Ark day (never after its next hunt).
+    const withMeals = decodeArkHunting({...raw, predators: [[fox, 81.25, 78.607146], [fox.replace("100", "101"), 82, 90], [fox.replace("100", "103"), 85, "x"]]})!;
+    assert.deepEqual(Array.from(withMeals.lastMeals ?? []), [[fox, 78.607146]]);
+    assert.equal(withMeals.predators.size, 3, "a bad last meal never drops the predator");
     assert.equal(h.meals.length, 1);
     assert.deepEqual(h.meals[0].encounter, ENCOUNTER);
     assert.equal(decodeArkHuntingResponse({available: false}), null);

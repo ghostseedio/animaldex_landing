@@ -34,7 +34,7 @@ export function planOf(subject: ScheduleSubject, epoch: number): SlotPlan {
 
 function keyOf(subject: ScheduleSubject, plan: SlotPlan, extra: {travelling?: boolean; hunting?: boolean} = {}): ArkActivityKey {
     const feeding = Boolean(subject.feedingAt?.(plan.start + SLOT_SECONDS / 2));
-    return arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, feeding, flyer: subject.profile.move === "fly", ...extra});
+    return arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, feeding, flyer: subject.profile.move === "fly", still: plan.still, ...extra});
 }
 
 /** Slots looked back over for its log (about thirteen minutes), and the log's schedule lines at most. */
@@ -128,7 +128,9 @@ export const MOMENT_WEIGHTS: Record<ScheduleMomentKind, number> = {hunting: 1, n
 /** Which moment a window says when several are let through: the striking first, then the notable, then the everyday. */
 const MOMENT_TIER: Record<ScheduleMomentKind, number> = {hunting: 0, nest: 0, eggs: 0, courting: 0, contest: 0, playing: 0, toWater: 0, home: 0, flock: 0, feeding: 0, fishing: 1, bathing: 1, breathing: 1, calling: 1, group: 1, doing: 2};
 /** The everyday activities a moment may say of one animal (`doing`) or of a group by its leader (`group`). */
-const EVERYDAY: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "drinking", "swimming", "flying", "basking", "grooming", "climbing", "digging", "flowers", "home", "toWater", "watching", "wary", "hiding", "light"]);
+// (The schedule's stalk, "waiting for prey" or "on the prowl", is everyday too: visual only, nothing is caught. The live
+// log's "is hunting" is the server's encounter hunt alone, a due predator setting out on its forays: `pickMoment`'s starts.)
+const EVERYDAY: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "drinking", "swimming", "flying", "basking", "grooming", "climbing", "digging", "flowers", "home", "toWater", "watching", "wary", "hiding", "light", "waiting", "prowling"]);
 const GROUP_EVERYDAY: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "swimming", "resting", "basking"]);
 
 /** The moment a slot starts, if it is one (its goal changed from the slot before to one worth saying), and its activity. */

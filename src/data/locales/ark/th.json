@@ -316,13 +316,19 @@
             "age": "อายุที่เหลือ",
             "fedLow": "เริ่มหิว",
             "healthGood": "สุขภาพดี",
-            "lifeLeft": "เหลืออายุ {percent}"
+            "lifeLeft": "เหลืออายุ {percent}",
+            "energy": "พลังงาน",
+            "awakeSince": "ตื่นตั้งแต่ {time}",
+            "asleepSince": "หลับตั้งแต่ {time}",
+            "nextHunt": "ล่าครั้งถัดไป{when}"
         },
         "activity": {
             "food": "หาอาหาร",
             "grazing": "เล็มหญ้า",
             "browsing": "กินใบไม้",
             "hunting": "ล่าเหยื่อ",
+            "waiting": "ซุ่มรอเหยื่อ",
+            "prowling": "ด้อมหาเหยื่อ",
             "fishing": "จับปลา",
             "drinking": "ดื่มน้ำ",
             "resting": "พักผ่อน",

@@ -316,13 +316,19 @@
             "age": "Tuổi thọ còn lại",
             "fedLow": "Bắt đầu đói",
             "healthGood": "Sức khỏe tốt",
-            "lifeLeft": "Còn {percent} tuổi thọ"
+            "lifeLeft": "Còn {percent} tuổi thọ",
+            "energy": "Năng lượng",
+            "awakeSince": "Thức từ {time}",
+            "asleepSince": "Ngủ từ {time}",
+            "nextHunt": "Lần săn tới: {when}"
         },
         "activity": {
             "food": "tìm thức ăn",
             "grazing": "gặm cỏ",
             "browsing": "ăn lá cây",
             "hunting": "săn mồi",
+            "waiting": "nằm chờ con mồi",
+            "prowling": "rình mồi",
             "fishing": "bắt cá",
             "drinking": "uống nước",
             "resting": "nghỉ ngơi",

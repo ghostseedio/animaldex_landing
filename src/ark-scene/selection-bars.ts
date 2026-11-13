@@ -1,28 +1,30 @@
 /**
  * The bars over the selected animal (owner, 2026-11-12: "show bars above animals too when clicked on to see how far
- * they from dieing or hunger"; decision 240): how fed it is, how far from dying, and its life left when the data has
- * a lifespan (`lib/ark-animal-status.ts` arkStatusBars). Only for the selected animal, following it, a fixed size on
+ * they from dieing or hunger"; decision 240): how fed it is where the server keeps it a meal clock, how far from dying,
+ * its energy over its day (card truth, 2026-11-13), and its life left when the data has a lifespan (`lib/ark-animal-status.ts`
+ * arkStatusBars). Only for the selected animal, following it, a fixed size on
  * screen so it reads at any zoom, kept inside the view. Plain DOM in the scene's label layer, so /ark and the apps'
  * embed both get it. The tap card says the same in words; this layer is hidden from screen readers.
  */
 
-import type {ArkBarTone, ArkStatusBars} from "@/lib/ark-animal-status";
+import {ARK_STATUS_BAR_KEYS, type ArkBarTone, type ArkStatusBarKey, type ArkStatusBars} from "@/lib/ark-animal-status";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 const TONE: Record<ArkBarTone, string> = {good: "#8fd694", warn: "#f2c14e", bad: "#ef6f5c"};
-/** The bars' icons: a bowl (fed), a heart (health), an hourglass (life left). */
-const ICON: Record<"fed" | "health" | "age", string> = {
+/** The bars' icons: a bowl (fed), a heart (health), a bolt (energy), an hourglass (life left). */
+const ICON: Record<ArkStatusBarKey, string> = {
     fed: `<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9.5 7.5c0-1.2 1.2-1.6 1.2-3M14 7.5c0-1.2 1.2-1.6 1.2-3"/>`,
     health: `<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>`,
+    energy: `<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>`,
     age: `<path d="M7 4h10M7 20h10M8 4c0 5 8 5 8 8s-8 3-8 8M16 4c0 5-8 5-8 8s8 3 8 8"/>`
 };
-const KEYS = ["fed", "health", "age"] as const;
+const KEYS = ARK_STATUS_BAR_KEYS;
 /** Clear of the view's edges (CSS px). */
 const EDGE = 8;
 
 export class ArkSelectionBars {
     readonly el: HTMLDivElement;
-    private readonly rows = new Map<(typeof KEYS)[number], {row: HTMLDivElement; fill: HTMLSpanElement}>();
+    private readonly rows = new Map<ArkStatusBarKey, {row: HTMLDivElement; fill: HTMLSpanElement}>();
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;

@@ -316,13 +316,19 @@
             "age": "Залишок життя",
             "fedLow": "Починає голодувати",
             "healthGood": "Здоров'я в порядку",
-            "lifeLeft": "Залишилося {percent} життя"
+            "lifeLeft": "Залишилося {percent} життя",
+            "energy": "Енергія",
+            "awakeSince": "Не спить з {time}",
+            "asleepSince": "Спить з {time}",
+            "nextHunt": "Наступне полювання {when}"
         },
         "activity": {
             "food": "шукає їжу",
             "grazing": "пасеться",
             "browsing": "об'їдає листя",
             "hunting": "полює",
+            "waiting": "чатує на здобич",
+            "prowling": "нишпорить у пошуках здобичі",
             "fishing": "ловить рибу",
             "drinking": "п'є",
             "resting": "відпочиває",

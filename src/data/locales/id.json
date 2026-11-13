@@ -4491,13 +4491,19 @@
       "age": "Sisa umur",
       "fedLow": "Mulai lapar",
       "healthGood": "Sehat",
-      "lifeLeft": "Sisa umur {percent}"
+      "lifeLeft": "Sisa umur {percent}",
+      "energy": "Energi",
+      "awakeSince": "Terjaga sejak pukul {time}",
+      "asleepSince": "Tidur sejak pukul {time}",
+      "nextHunt": "Berburu lagi {when}"
     },
     "activity": {
       "food": "mencari makanan",
       "grazing": "merumput",
       "browsing": "memakan dedaunan",
       "hunting": "berburu",
+      "waiting": "menunggu mangsa",
+      "prowling": "mengendap-endap mencari mangsa",
       "fishing": "menangkap ikan",
       "drinking": "minum",
       "resting": "beristirahat",

@@ -316,13 +316,19 @@
             "age": "남은 수명",
             "fedLow": "배가 고파지는 중",
             "healthGood": "건강함",
-            "lifeLeft": "남은 수명 {percent}"
+            "lifeLeft": "남은 수명 {percent}",
+            "energy": "기력",
+            "awakeSince": "{time}부터 깨어 있어요",
+            "asleepSince": "{time}부터 자고 있어요",
+            "nextHunt": "다음 사냥: {when}"
         },
         "activity": {
             "food": "먹이를 찾는 중",
             "grazing": "풀을 뜯는 중",
             "browsing": "나뭇잎을 뜯어 먹는 중",
             "hunting": "사냥하는 중",
+            "waiting": "먹이를 기다리는 중",
+            "prowling": "먹이를 찾아 어슬렁거리는 중",
             "fishing": "물고기를 잡는 중",
             "drinking": "물을 마시는 중",
             "resting": "쉬는 중",
