@@ -4,15 +4,15 @@ Counts are characters unless marked words. Limits, console boxes and copy rules:
 
 ## 1. App Store subtitle (max 30)
 
-    Pergunte. Um animal responde.
+    Capture animais, veja-os em 3D
 
-29 characters
+30 characters
 
 ## 2. Play short description (max 80)
 
-    Pergunte tudo a um animal. Encontre-o de verdade e leve-o para um mundo vivo.
+    Capture animais de verdade e transforme-os em companheiros IA num mundo 3D.
 
-77 characters
+75 characters
 
 ## 3. App Store keywords (max 100)
 

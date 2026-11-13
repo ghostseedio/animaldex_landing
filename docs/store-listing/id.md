@@ -4,15 +4,15 @@ Counts are characters unless marked words. Limits, console boxes and copy rules:
 
 ## 1. App Store subtitle (max 30)
 
-    Tanya hewan. Jawaban nyata.
+    Tangkap hewan, temui dalam 3D
 
-27 characters
+29 characters
 
 ## 2. Play short description (max 80)
 
-    Tanya apa saja ke hewan mana pun. Temukan aslinya, bawa ke dunia yang hidup.
+    Tangkap hewan di dunia nyata, jadikan teman AI di dunia 3D.
 
-76 characters
+59 characters
 
 ## 3. App Store keywords (max 100)
 

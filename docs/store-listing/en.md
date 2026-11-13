@@ -4,15 +4,15 @@ Counts are characters unless marked words. Limits, console boxes and copy rules:
 
 ## 1. App Store subtitle (max 30)
 
-    Ask any animal. Real answers.
+    Catch animals, meet them in 3D
 
-29 characters
+30 characters
 
 ## 2. Play short description (max 80)
 
-    Ask any animal anything. Then find it for real and bring it into a living world.
+    Catch animals in real life and turn them into AI companions in a 3D world.
 
-80 characters
+74 characters
 
 ## 3. App Store keywords (max 100)
 
