@@ -19,8 +19,14 @@
  * The models come from the public model bucket (read only), as on the site; `--network 4g` throttles them to a
  * mid 4G link (9 Mbit/s down, 60 ms) through the DevTools protocol.
  *
- * Part C: `--world v2` mounts the bigger wild island (`world.ts` reads `?world=v2` before anything builds; with
- * `--islands`, the town across the strait from it).
+ * Part C: `--islands` mounts both islands on the live default wild island (v2, `ARK_LIVE_WILD_ISLAND`) unless `--world v1`;
+ * `--world v2` alone the bigger wild island by itself (`world.ts` reads the world before anything builds:
+ * `runtime/measure-world.ts`). Every row says which world it measured (`world`).
+ *
+ * Decision 292's heap budget: `--gc-points` forces a collection (DevTools `HeapProfiler.collectGarbage`, twice) at the
+ * first frame and in steady play (`--gc-steady <s>` from the navigation, default 80) and reports the JS heap just before
+ * and after each (`gc`). Each forced collection is a long frame in the frame numbers. `--production` builds the page as
+ * the site's production build (no `__arkDebug`: no scene memory estimate, no library counts).
  *
  * Part B (docs/ark/streaming.md): `--render <m>` / `--render-scale <share>` set the render distance; `--tour` takes
  * the camera down into each region and back; `--mem <GB>` is the app's memory figure; `--models-dir <dir>` serves a
@@ -70,6 +76,10 @@ const network = NETWORKS[arg("network", "none")] ?? null;
 const quality = arg("quality", "auto");
 const gpu = arg("gpu", "metal");
 
+const buildEnv = flag("production") ? "production" : "development";
+const gcPoints = flag("gc-points");
+const gcSteadyMs = Number(arg("gc-steady", "80")) * 1000;
+
 const site = path.join(root, ".ark-golden", "runtime-site");
 mkdirSync(site, {recursive: true});
 mkdirSync(out, {recursive: true});
@@ -83,13 +93,14 @@ await build({
     // --profile: names kept, so the CPU profile reads.
     minify: !flag("profile"),
     tsconfig: path.join(root, "tsconfig.json"),
-    // Development: the scene exposes __arkDebug (its three.js scene), which the memory estimate walks.
-    define: {"process.env.NODE_ENV": JSON.stringify("development")},
+    // Development: the scene exposes __arkDebug (its three.js scene), which the memory estimate walks (`--production`:
+    // the site's build, as decision 292's heap budget is judged).
+    define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)},
     logLevel: "warning"
 });
 // The prebuild worker (`--prebuild`), and the scale populations (`--population 1x`, from scripts/ark-scale-fixture.mts).
 for (const [entry, out] of [["prebuild-worker.ts", "ark-prebuild-worker.js"], ["prebuild-places-worker.ts", "ark-prebuild-places-worker.js"]]) {
-    await build({entryPoints: [path.join(root, "src/ark-scene/runtime", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, logLevel: "warning"});
+    await build({entryPoints: [path.join(root, "src/ark-scene/runtime", entry)], outfile: path.join(site, out), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify(buildEnv)}, logLevel: "warning"});
 }
 for (const scale of ["1x", "3x"]) {
     const from = path.join(root, ".ark-golden", "site", `population-${scale}.json`);
@@ -202,6 +213,21 @@ const browser = await chromium.launch({
     args: [...(flag("headed") ? [] : ["--headless=new"]), ...gpuArgs, "--enable-precise-memory-info", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]
 });
 
+/**
+ * Decision 292's reading: the JS heap (`performance.memory`, precise) just before and after a forced full collection
+ * (twice: what one leaves for finalizers), seconds from the navigation. A phone cannot collect what is still held, so
+ * the budget is judged on `afterGcMB`.
+ */
+const heapMBOf = async (page) => Math.round(((await page.evaluate(() => performance.memory?.usedJSHeapSize ?? 0)) / 2 ** 20) * 10) / 10;
+async function forcedGc(page, cdp, since) {
+    const t = Math.round((Date.now() - since) / 100) / 10;
+    const beforeGcMB = await heapMBOf(page);
+    await cdp.send("HeapProfiler.collectGarbage");
+    await cdp.send("HeapProfiler.collectGarbage");
+    const afterGcMB = await heapMBOf(page);
+    return {t, beforeGcMB, afterGcMB};
+}
+
 const results = [];
 for (const deviceName of devices) {
     const device = DEVICES[deviceName];
@@ -256,11 +282,24 @@ for (const deviceName of devices) {
         }
         const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
+        let navigated = Date.now();
         await page.goto(`${base}/measure.html?seconds=${seconds}${quality === "auto" ? "" : `&quality=${quality}`}${extra}${modelsParam}`, {waitUntil: "commit", timeout: 120_000});
         // `--repeat`: this load only primes the page's caches; the measured one is a second visit in the same browser.
         if (flag("repeat")) {
             await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
+            navigated = Date.now();
             await page.reload({waitUntil: "commit", timeout: 120_000});
+        }
+        // `--gc-points`: the first frame (the page notes it when the scene first drew, after the prebuild), then steady play.
+        let gc = null;
+        if (gcPoints) {
+            await cdp.send("HeapProfiler.enable");
+            await page.waitForFunction(() => Boolean(window.__arkMeasure?.firstFrameAt || window.__arkMeasure?.done), null, {timeout: 180_000, polling: 100});
+            const firstFrame = await forcedGc(page, cdp, navigated);
+            const wait = gcSteadyMs - (Date.now() - navigated);
+            if (wait > 0) await page.waitForTimeout(wait);
+            gc = {firstFrame, steady: await forcedGc(page, cdp, navigated)};
+            log(deviceName, `run ${run}: forced GC at the first frame (${firstFrame.t} s) ${firstFrame.beforeGcMB} -> ${firstFrame.afterGcMB} MB, in steady play (${gc.steady.t} s) ${gc.steady.beforeGcMB} -> ${gc.steady.afterGcMB} MB`);
         }
         await page.waitForFunction(() => window.__arkMeasure?.done, null, {timeout: (seconds + 120) * 1000, polling: 500});
         const measured = await page.evaluate(() => window.__arkMeasure);
@@ -290,12 +329,16 @@ for (const deviceName of devices) {
         const row = {
             device: deviceName,
             run,
+            world: r.world ?? null,
+            build: buildEnv,
             gpu,
             network: arg("network", "none"),
             firstFrameMs: r.firstFrameMs,
             firstFrameFromNavigation: r.firstFrameFromNavigation,
             mountMs: r.mountMs,
             inViewMs: r.inViewMs,
+            inViewBy: r.inViewBy ?? null,
+            gc,
             frameRate: r.frameRate ?? null,
             longestTaskMs: longest,
             longTasks: tasks.length,
@@ -324,7 +367,7 @@ for (const deviceName of devices) {
             errors: errors.filter((e) => !/Failed to load resource/.test(e)).slice(0, 8)
         };
         results.push(row);
-        log(deviceName, `run ${run}:`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms, frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB (peak ${row.peakHeapMB}), GPU peak ${row.peakGpuMB} MB, requests to view ${row.inViewRequests} (pack ${row.library?.packHits ?? "-"}/${(row.library?.packHits ?? 0) + (row.library?.fileHits ?? 0)}), chunks in ${row.streaming?.chunks?.in ?? "-"}, skipped ${row.streaming?.animalsSkipped ?? "-"}, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
+        log(deviceName, `run ${run} (world ${row.world}):`, `first frame ${row.firstFrameMs} ms (mount ${row.mountMs}), in view ${row.inViewMs} ms (${row.inViewBy ?? "-"}), frames ${row.frameRate ? `${row.frameRate.fps} fps (p50 ${row.frameRate.p50Ms} ms, p95 ${row.frameRate.p95Ms} ms, ${row.frameRate.over50Ms} over 50 ms)` : "-"}, longest task ${row.longestTaskMs} ms (${row.longTasks} long, ${row.longTasksAfterFirstFrame} after the first frame, longest after ${row.longestAfterFirstFrameMs}), heap ${row.heapMB} MB (peak ${row.peakHeapMB}), GPU peak ${row.peakGpuMB} MB, requests to view ${row.inViewRequests} (pack ${row.library?.packHits ?? "-"}/${(row.library?.packHits ?? 0) + (row.library?.fileHits ?? 0)}), chunks in ${row.streaming?.chunks?.in ?? "-"}, skipped ${row.streaming?.animalsSkipped ?? "-"}, GPU est ${row.memory?.geometryMB}+${row.memory?.textureMB} MB, ${row.models} models, ${row.tier}${row.prepared ? `, prebuild ${row.prepared.where} ${row.prepared.ms} ms (worker ${row.prepared.workerMs} ms)${row.prepared.error ? ` ${row.prepared.error}` : ""}` : ""}, ${row.animals} animals`);
         await context.close();
     }
 }
@@ -337,14 +380,14 @@ const median = (values) => {
 };
 writeFileSync(path.join(out, "runtime.json"), JSON.stringify(results, null, 2));
 const lines = [
-    `Ark runtime "${label}", ${new Date().toISOString()}, GPU ${gpu}, network ${arg("network", "none")}, quality ${quality}, ${runs} runs × ${seconds} s per device (medians).`,
+    `Ark runtime "${label}", ${new Date().toISOString()}, world ${[...new Set(results.map((r) => r.world))].join("/")}, ${buildEnv} build, GPU ${gpu}, network ${arg("network", "none")}, quality ${quality}, ${runs} runs × ${seconds} s per device (medians).`,
     "",
-    "| device | first frame ms | mount ms | in view ms | requests to view | longest task ms | long tasks | longest after 1st frame | heap MB | peak heap MB | peak GPU MB | fps | p50 ms | p95 ms | GPU geometry MB | GPU textures MB | models | tier |",
-    "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"
+    `| device | first frame ms | mount ms | in view ms | requests to view | longest task ms | long tasks | longest after 1st frame | heap MB | peak heap MB | peak GPU MB | fps | p50 ms | p95 ms | GPU geometry MB | GPU textures MB | models | tier |${gcPoints ? " heap after GC, first frame MB | heap after GC, steady MB |" : ""}`,
+    `|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|${gcPoints ? "---|---|" : ""}`
 ];
 for (const deviceName of devices) {
     const rows = results.filter((r) => r.device === deviceName);
-    lines.push(`| ${deviceName} | ${median(rows.map((r) => r.firstFrameMs))} | ${median(rows.map((r) => r.mountMs))} | ${median(rows.map((r) => r.inViewMs))} | ${median(rows.map((r) => r.inViewRequests))} | ${median(rows.map((r) => r.longestTaskMs))} | ${median(rows.map((r) => r.longTasks))} | ${median(rows.map((r) => r.longestAfterFirstFrameMs))} | ${median(rows.map((r) => r.heapMB))} | ${median(rows.map((r) => r.peakHeapMB))} | ${median(rows.map((r) => r.peakGpuMB))} | ${median(rows.map((r) => r.frameRate?.fps))} | ${median(rows.map((r) => r.frameRate?.p50Ms))} | ${median(rows.map((r) => r.frameRate?.p95Ms))} | ${median(rows.map((r) => r.memory?.geometryMB))} | ${median(rows.map((r) => r.memory?.textureMB))} | ${median(rows.map((r) => r.models))} | ${rows[0]?.tier} |`);
+    lines.push(`| ${deviceName} | ${median(rows.map((r) => r.firstFrameMs))} | ${median(rows.map((r) => r.mountMs))} | ${median(rows.map((r) => r.inViewMs))} | ${median(rows.map((r) => r.inViewRequests))} | ${median(rows.map((r) => r.longestTaskMs))} | ${median(rows.map((r) => r.longTasks))} | ${median(rows.map((r) => r.longestAfterFirstFrameMs))} | ${median(rows.map((r) => r.heapMB))} | ${median(rows.map((r) => r.peakHeapMB))} | ${median(rows.map((r) => r.peakGpuMB))} | ${median(rows.map((r) => r.frameRate?.fps))} | ${median(rows.map((r) => r.frameRate?.p50Ms))} | ${median(rows.map((r) => r.frameRate?.p95Ms))} | ${median(rows.map((r) => r.memory?.geometryMB))} | ${median(rows.map((r) => r.memory?.textureMB))} | ${median(rows.map((r) => r.models))} | ${rows[0]?.tier} |${gcPoints ? ` ${median(rows.map((r) => r.gc?.firstFrame.afterGcMB))} | ${median(rows.map((r) => r.gc?.steady.afterGcMB))} |` : ""}`);
 }
 writeFileSync(path.join(out, "runtime.md"), lines.join("\n") + "\n");
 log("wrote", path.join(out, "runtime.md"));

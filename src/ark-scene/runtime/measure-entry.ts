@@ -1,22 +1,28 @@
 /**
  * The runtime lane's measurement page (development only: scripts/ark-runtime-measure.mjs builds it into
  * `.ark-golden/runtime/` and serves it; nothing deploys it). The live scene on the v2 fixture, mounted as the /ark
- * page mounts it (the opening flight, the device's own tier), timed from the script's first line:
+ * page mounts it (the opening flight, the device's own tier), timed from the script's first line. `?islands=1` is
+ * islands mode on the live default wild island (v2) unless `?world=v1` (`measure-world.ts`); the result says which
+ * world was measured (`world`).
  *
  *   - mount: how long `mountArk` held the main thread;
  *   - first frame: when the scene said it drew (`onReady`);
- *   - in view: when the models asked for by then were all in (the first time `loading()` went quiet after the
- *     opening), and every 250 ms the models loaded, draw calls and the scene's memory estimate;
+ *   - in view: when the models asked for by then were all in (the runtime's `viewComplete` after the opening; where
+ *     the view draws no animal as a model, as on the v2 island's whole view, the first moment `loading()` went quiet),
+ *     and every 250 ms the models loaded, draw calls and the scene's memory estimate;
  *   - memory: the JS heap and the scene's GPU estimate (geometry and texture bytes, `runtime/memory.ts`);
  *   - frames: the frame intervals once it is in view (requestAnimationFrame), as p50, p95 and frames a second.
  *
  * The long tasks are read by the driver (a PerformanceObserver installed before this script runs).
  */
 
+// (First: the world is chosen before any of the scene's modules sample it.)
+import "@/ark-scene/runtime/measure-world";
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {prepareArk, type ArkPrepared} from "@/ark-scene/runtime/prebuild";
+import {arkWorld} from "@/ark-scene/world";
 import type {Scene} from "three";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -26,7 +32,8 @@ type Sample = {t: number; models: number; drawCalls: number; triangles: number; 
 
 declare global {
     interface Window {
-        __arkMeasure?: {done: boolean; result?: unknown; error?: string};
+        /** `firstFrameAt`: when the scene first drew (ms from navigation), for the driver's forced-GC reading there. */
+        __arkMeasure?: {done: boolean; firstFrameAt?: number; result?: unknown; error?: string};
         __arkScriptStart?: number;
     }
 }
@@ -103,6 +110,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
             iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp",
             onReady: () => {
                 firstFrame = performance.now();
+                if (window.__arkMeasure && !window.__arkMeasure.done) window.__arkMeasure.firstFrameAt = round(firstFrame);
                 // In an app's WebView (the iOS app's panel, measured in the Simulator): tell the host it is up, as the
                 // embed does, so the app shows the web view rather than its fallback.
                 const host = window as unknown as {webkit?: {messageHandlers?: {ark?: {postMessage: (m: unknown) => void}}}; AndroidArk?: {postMessage: (m: string) => void}};
@@ -121,6 +129,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
         const debug = (window as unknown as {__arkDebug?: {scene: Scene}}).__arkDebug;
         const samples: Sample[] = [];
         let inView = 0;
+        /** Which test said in view: the runtime's (`viewComplete`), or quiet loading (no model drawn, or no runtime). */
+        let inViewBy: "runtime" | "quiet" | null = null;
         let quiet = 0;
         // Every frame's interval, with when it ended (from the script's first line), for the steady rate once in view.
         const frames: Array<[number, number]> = [];
@@ -172,12 +182,15 @@ const round = (value: number) => Math.round(value * 10) / 10;
             const t = performance.now() - t0;
             const run = (handle as unknown as {runtime?: () => {modelTextureMB: number; evicted: number; mode: string}}).runtime?.();
             samples.push({t: Math.round(t), models: stats.modelsLoaded, drawCalls: stats.drawCalls, triangles: stats.triangles, loading, tier: stats.tier, geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), modelTextureMB: run?.modelTextureMB, evicted: run?.evicted, mode: run?.mode, heapMB: heapNow === null ? null : round(heapNow / 2 ** 20), chunksIn: stats.streaming?.chunks.in, haze: stats.streaming?.haze, frameMs: stats.frameMs, skipped: stats.streaming?.animalsSkipped, markers: stats.streaming?.mapMarkers});
-            // In view: past the opening flight (4.6 s), the first moment nothing more is loading.
             // In view: past the opening flight (4.6 s), the first moment every model the view draws is in (the runtime's
-            // own test); the old test (nothing at all loading) as `quietMs`.
-            const complete = (handle as unknown as {runtime?: () => {viewComplete?: boolean}}).runtime?.().viewComplete;
-            if (!inView && firstFrame && t > 5000 && (complete ?? !loading)) {
+            // own test); the old test (nothing at all loading) as `quietMs`. Where the view draws no animal as a model
+            // (every one in sight past the render distance, map markers only: the v2 wild island's whole view), the
+            // runtime's test has no kind to wait on and never passes: in view is then the first quiet moment.
+            const view = (handle as unknown as {runtime?: () => {viewComplete?: boolean; viewKinds?: number}}).runtime?.();
+            const by = view?.viewComplete ? "runtime" : (view?.viewComplete === undefined || view.viewKinds === 0) && !loading ? "quiet" : null;
+            if (!inView && firstFrame && t > 5000 && by) {
                 inView = t;
+                inViewBy = by;
                 inViewRequests = (window as unknown as {__arkDebug?: {library?: {requests: number}}}).__arkDebug?.library?.requests ?? null;
             }
             if (!quiet && firstFrame && !loading && t > 5000) quiet = t;
@@ -198,7 +211,9 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 mountMs: round(mountMs),
                 firstFrameMs: firstFrame ? round(firstFrame - t0) : null,
                 firstFrameFromNavigation: firstFrame ? round(firstFrame) : null,
+                world: arkWorld(),
                 inViewMs: inView ? round(inView) : null,
+                inViewBy,
                 quietMs: quiet ? round(quiet) : null,
                 frameRate,
                 stats,
