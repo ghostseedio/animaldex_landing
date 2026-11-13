@@ -305,3 +305,46 @@ heap gate since the v2 release measured the v1 island with the town (about 150 m
 live (v2 and the prebuild: about 80 models). The integrator's gate now runs `--islands --world v2 --prebuild`, 90 s,
 and (decision 292) judges the budget on the post-GC heap at the first frame and in steady play. Routed: the harness's
 `--islands` default to v2 (`measure-entry.ts`).
+
+## Web deploy: decision 295's round (MA1 flight 3, MA3 water 2, MA4 motion, small fixes, town night, card truth)
+
+Branch `ark-round-295`, from landing main 75e32ce1. Released as landing main 02109ea0 (decision 295; image build
+43386830135). Rollback: redeploy **75e32ce1**.
+
+| # | Lane | Branch head | `ark-round-295` head | Notes |
+|---|---|---|---|---|
+| 67 | MA1: flight 3 (the canopy in the flight floor, a smoothed soar altitude) | `ark-flight-3` 51e288dd | 4cca7caa | clean |
+| 68 | MA3: water 2 (geese, the afloat test, rings on water, wetland ducks, goal room, swim speed, cranes) | `ark-water-2` 475908c9 | de15361a | clean; `behaviour-schedule.ts` merged on its own with MA1 (air legs and swim targets in different hunks) |
+| 69 | MA4: head-bob by family, the seal galumph, frog and toad saltation, bird ground gaits, the motion CI groups, rig-coverage fixtures | `ark-motion-ma4` 79fd0b9b | 9bec77b5 | clean |
+| — | Rig coverage per rig set (decision 296) | — | 051b14d3, daa17341 | the test's limits keyed by the fixture's version (v2 18 / 7 / 12 / 70 / 108; v3 1 / 0 / 0 / 70 / 109, the red-necked phalarope new in v3, its water clips queued); `ARK_RIG_VERSION as string` (TS2367); the motion CI rows at v3's counts |
+| 70 | Small fixes: the measure harness on the live v2 world (`--gc-points`, `--production`, v2 in-view times); icons (`noIcon` beside `/api/ark/voyage`) | `ark-small-fixes` 39905499 | b4584e07 | clean |
+| 71 | The owner's report: no light streaks across the town at night; wet grass and crops not mirror-shiny | `town-night-streaks` ba53e122 | 846208c2 | clean; the town's `homes_night` Linux baseline 515c7e45 (looked at: the streaks gone) |
+| 72 | The owner's reports: card truth (decision 301: the stalk wording, the fed and energy bars from the schedule, no next-hunt chip, the condition chip only when not well-fed; 6 keys × 45 locales, `nextHunt` removed) | `ark-card-truth` d7947d69 | fd3a8468 | clean, no locale conflicts |
+| 73 | MA3: a fly-away fits a flight worth its take-off and landing (MA1's `flightWorth`), else a round; swim-first birds fly it only as often as they fly | `ark-water-2` fc162bb6 | 02109ea0 | MA4's time budget 23 → 18 (≤ 20): the black-necked swan's and the buffy fish owl's slow flights (MA3's 475908c9 had taken it from 20 to 23) |
+
+Gates on 02109ea0: suite 2,541/2,543, 0 fail (the quoted glob); tsc 0; lint 0; motion all pass (103 numbers: the time
+budget 18 under 0.35 of cruise, median 0.851, p10 0.452); default view pace 1.05, backwards 1.5% (a house sparrow
+1.1 s), ground turns 0.7 a minute, no page errors.
+
+Behaviour audit (run 43379606438): flyers 690; all but the hawkers circling 0%, turns 0.69 a minute; the hawkers 36% /
+7.77; never move 828; amphibians 428; snapped 0; heads 97.5%; near the camera prey react 97.5% / flee 71.8%;
+encounters react 62.1%, close flee 58.9%, median 0.1 s. All 25 pass; the spawn validator and the check step green.
+
+Collisions (run 43379611712), green at the existing limits: islands v2 0 / 0 / 0 / 1,001,703; islands v1
+0 / 0 / 209 / 3,147,072; today's mode 0 / 0 / 218 / 2,956,737.
+
+Visual (accept run 43379615520): all 19 golden shots within the limits (at most 0.26%, the river pond's waterbirds),
+looked at, no page errors, so the baselines stay; the hooks job green (motion all pass; the town set's four shots pass,
+`homes_night` against its new baseline).
+
+Production heap with the harness (decision 292 as corrected with 5736e007: `--islands --prebuild --production
+--gc-points`, 90 s, the low phone profile, world v2, the real snapshot read in place), on 846208c2 (the card truth and
+MA3's fly-away commits came after; neither was asked to re-measure):
+
+| | After GC, the first drawn frame | After GC, steady (80 s) | Pre-GC peak (information) | fps |
+|---|---|---|---|---|
+| 846208c2 (this round) | 262.4 / 262.3 MB | 264.5 / 264.5 MB | 338 / 309 MB | 59.4 |
+| 39905499 (live 75e32ce1 + the harness) | 262.0 / 261.6 MB | 266.9 / 262.9 MB | 330 / 319 MB | 58.9 / 59.2 |
+
+Both points under the 384 MB budget and the same as live. (heap-snap.mjs's earlier "first frame" of about 195 MB
+fired during the shader warm-up: a mount reading.)
