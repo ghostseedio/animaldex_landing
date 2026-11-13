@@ -57,7 +57,10 @@ jobs:
       - name: Reactive encounters
         run: npx tsx scripts/ark-intelligence-encounters.mts --limit 150 --out .ark-audit/encounters.json > .ark-audit/encounters.log
       - name: Against the thresholds
-        run: npx tsx scripts/ark-audit-check.mts --audit .ark-audit/ci.json --encounters .ark-audit/encounters.json | tee .ark-audit/check.md
+        # pipefail: the step's shell (bash -e) took the exit of tee, so a WORSE check never failed the job (decision 287).
+        run: |
+          set -o pipefail
+          npx tsx scripts/ark-audit-check.mts --audit .ark-audit/ci.json --encounters .ark-audit/encounters.json | tee .ark-audit/check.md
       - name: Results
         if: always()
         uses: actions/upload-artifact@v4
