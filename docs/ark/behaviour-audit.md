@@ -31,6 +31,10 @@ On a tree with behaviour v2 (`spaceHomes` exported) `model-schedule.ts` mirrors 
   head turns (weight > 0.15), prey reacting to a hunter within 25 m (alert, freeze, flee, startle, threat display,
   shelter, shielding young, or looking at it) and fleeing, timed from the stop's first frame, and group variety.
   The rig lane's "a watching grazer lifts its head" lives here too (it needs the reactive layer).
+- Pass B's turns and circling are also given apart for the hawkers (`roaming.hawking`: swallows, martins, swifts, their
+  intelligence profile's hunt `aerial_hawk`) and everyone else (`roaming.exceptHawking`); CI checks the latter
+  (decision 285: hawking turns over a feeding patch by design, and with the rest flying at their true speed the
+  island-wide ratio was set by how briefly everyone else was up). `roaming.hawking` keeps its own guard.
 - Not modelled: liveliness's shared pose (young at heel, shelter from rain, off the tide), the tide's water level.
 - New rows: pass C's heads, reactions and variety; variety counting only moments a whole group is awake.
 

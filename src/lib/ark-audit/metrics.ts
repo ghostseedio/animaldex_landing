@@ -494,6 +494,22 @@ export class AuditMeter {
         const airSeconds = flightRows.reduce((sum, [, r]) => sum + r.air, 0);
         const circlingSeconds = flightRows.reduce((sum, [, r]) => sum + r.circling, 0);
         const loopsPerAirMinute = airSeconds ? flightRows.reduce((sum, [, r]) => sum + r.turn, 0) / TAU / (airSeconds / 60) : null;
+        // The same apart for the hawkers (swallows, martins, swifts: `AuditSubject.hawker`) and everyone else. Hawking is
+        // turning over a feeding patch by design (the chases lane's `aerial_hawk`: "long sweeps and sudden twists, never
+        // landing"), all the circling on ark-next; counted in with the rest, it set the whole island's turns and circling
+        // by how long the other birds were up (on main mostly a crawl: a wood pigeon aloft 41% of an hour at 0.17 m/s).
+        const roamOf = (rows: typeof flightRows) => {
+            const seconds = rows.reduce((sum, [, r]) => sum + r.air, 0);
+            const turns = rows.reduce((sum, [, r]) => sum + r.turn, 0) / TAU;
+            return {
+                species: new Set(rows.map(([i]) => subjects[i].slug)).size,
+                airborneSeconds: seconds,
+                circlingPct: pct(rows.reduce((sum, [, r]) => sum + r.circling, 0), seconds),
+                fullTurnsPerAirMinute: seconds ? Math.round((turns / (seconds / 60)) * 100) / 100 : null
+            };
+        };
+        const hawking = roamOf(flightRows.filter(([i]) => subjects[i].hawker));
+        const exceptHawking = roamOf(flightRows.filter(([i]) => !subjects[i].hawker));
         let followers = 0;
         let followersNotFlocking = 0;
         let followersOtherSpecies = 0;
@@ -609,6 +625,8 @@ export class AuditMeter {
                 airborneSeconds: airSeconds,
                 circlingPct: pct(circlingSeconds, airSeconds),
                 fullTurnsPerAirMinute: loopsPerAirMinute === null ? null : Math.round(loopsPerAirMinute * 100) / 100,
+                exceptHawking,
+                hawking,
                 flyersTracked: flightRows.length,
                 followers,
                 followersNotFlockingSpecies: followersNotFlocking,
