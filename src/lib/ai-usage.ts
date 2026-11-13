@@ -1,13 +1,16 @@
+import {currentAiFeature} from "@/lib/ai-usage-context";
 import {aiProviderForUrl, featureFromStack, hasBillableUsage, newUsage, parseUsageFromBody, requestCharacters, requestModel, webFeature, type AiSource, type ParsedUsage} from "@/lib/ai-usage-core";
 import {getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 // Logs every paid AI call this server (or a local script) makes into
 // public.ai_usage_events, the table the apps' edge functions already write:
 // it wraps globalThis.fetch once, so the Anthropic SDK and the raw fetch
-// callers are all covered without touching them. The feature is read off the
-// call's stack (src/lib/ai-usage-core.ts featureFromStack) and prefixed
-// web:prod: or web:local:, so /admin/ai-spend can separate production from
-// local runs (dev server, scripts, tests).
+// callers are all covered without touching them. The feature is the job the
+// call runs in when there is one (src/lib/ai-usage-context.ts: background
+// jobs name themselves, since their stacks hold no route), else it is read off
+// the call's stack (src/lib/ai-usage-core.ts featureFromStack); either way it
+// is prefixed web:prod: or web:local:, so /admin/ai-spend can separate
+// production from local runs (dev server, scripts, tests).
 //
 // Installed by src/instrumentation.ts for the server, and by importing this
 // module from the AI clients so tsx scripts are logged too. Never stores
@@ -136,7 +139,7 @@ export function installAiUsageLogging() {
         Error.stackTraceLimit = 60;
         const stack = new Error().stack;
         Error.stackTraceLimit = limit;
-        const feature = webFeature(source, featureFromStack(stack));
+        const feature = webFeature(source, currentAiFeature() ?? featureFromStack(stack));
         const body = requestJson(init);
         const usage = newUsage(provider, requestModel(provider, requestUrl(input), body), requestCharacters(provider, body));
         const started = Date.now();

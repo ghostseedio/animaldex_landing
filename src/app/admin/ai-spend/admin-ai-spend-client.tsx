@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useMemo, useState} from "react";
 import type {AiSpendReport} from "@/lib/ai-spend";
+import {monthlyCapNotice} from "@/lib/ai-usage-core";
 import {AdminPage, Alert, Badge, ListSkeleton, PageHeader, RefreshButton, Section, Segmented, Stat, StatGrid, Table, TD, TH} from "@/components/admin/ui";
 
 /**
@@ -189,6 +190,10 @@ export default function AdminAiSpendClient() {
             {data ? (
                 <>
                     {data.warnings.map((warning) => <Alert key={warning} tone="warn" className="mt-6">{warning}</Alert>)}
+                    {(() => {
+                        const notice = monthlyCapNotice(data.monthCap);
+                        return notice ? <Alert tone={notice.tone} title={notice.label} className="mt-6">{notice.detail}. Cap from {data.monthCap.source === "table" ? "ai_spend_alert_config" : data.monthCap.source === "env" ? "AI_SPEND_MONTHLY_CAP_USD" : "the default"}; {data.monthCap.remainingUsd > 0 ? `$${data.monthCap.remainingUsd.toFixed(2)} left` : "nothing left"} this month.</Alert> : null;
+                    })()}
                     {data.spikes.length ? (
                         <Alert tone="warn" title="Spending faster than usual today" className="mt-6">
                             {data.spikes.slice(0, 5).map((spike) => (
@@ -200,6 +205,13 @@ export default function AdminAiSpendClient() {
                     ) : null}
 
                     <StatGrid className="mt-6">
+                        <Stat
+                            label={`Month to date · $${data.monthCap.capUsd} cap`}
+                            value={<>{usd(data.monthCap.monthToDateUsd)} <span className="text-base text-ink-400">/ {Math.round(data.monthCap.ratio * 100)}%</span></>}
+                            tone={data.monthCap.level === "over" ? "bad" : data.monthCap.level === "warn" ? "warn" : undefined}
+                            hint={data.monthCap.level === "unknown" ? data.monthCap.note ?? "Not readable" : `${data.monthCap.month}, every provider and surface at list price; on course for ${usd(data.monthCap.projectedUsd, 0)}`}
+                            info={`The $${data.monthCap.capUsd} monthly cap (16 Nov 2026) over the logged ledger: the apps' edge functions, the web server and local runs. A notice shows at ${Math.round(data.monthCap.warnRatio * 100)}%. Nothing switches off by itself; the generators keep their own daily budgets.`}
+                        />
                         <Stat label="Claude billed" value={usd(data.claude.billedUsd)} hint={data.claude.note} info="Anthropic's own cost report for this range, every key and workspace in the organisation." />
                         <Stat label="Logged estimate" value={usd(data.ledger.totalUsd)} hint={`All providers, ${data.ledger.rows.toLocaleString()} calls at list price`} />
                         <Stat
@@ -270,7 +282,9 @@ export default function AdminAiSpendClient() {
 
                     <Section
                         title="Bot check: new comparisons per day"
-                        description={`Each new comparison is a paid Claude write-up plus a VS image (~$0.15). New ones need a human Generate click and are capped at ${data.comparisons.dailyLimit}/day site-wide; a day at the cap, or apps-side comparison spend with few people comparing, is worth a look.`}
+                        description={data.comparisons.generationOn
+                            ? `Each new comparison is a paid Claude write-up plus a VS image (~$0.15). New ones need a human Generate click and are capped at ${data.comparisons.dailyLimit}/day site-wide; a day at the cap, or apps-side comparison spend with few people comparing, is worth a look.`
+                            : `The web makes no new comparisons (COMPARISONS_GENERATE is off since 16 Nov 2026; existing pages stay). Rows here come from the apps' own generation; a day with many is worth a look.`}
                     >
                         <div className="border border-line-300 bg-surface-900 p-4">
                             <div className="flex h-16 items-end gap-px">

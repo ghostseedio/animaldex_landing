@@ -1,4 +1,5 @@
 import "server-only";
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {listAutomationRuns, recordAutomationRun} from "@/lib/automation-runs";
 import {getManagedBlogPosts} from "@/lib/admin-content";
 import {structuredClaude} from "@/lib/social-content/claude";
@@ -47,7 +48,7 @@ export async function runTrendRadar(trigger: "timer" | "admin"): Promise<RadarRe
     if (running) return running;
     running = (async () => {
         try {
-            const result = await pass();
+            const result = await runWithAiFeature("trend-radar/radar", pass);
             const best = result.ideas.slice(0, 3).map((idea) => `${idea.idea.title} (${idea.kind}, ${idea.score})`).join("; ");
             await recordAutomationRun({
                 job: "trend-radar",

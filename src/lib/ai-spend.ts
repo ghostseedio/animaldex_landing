@@ -1,4 +1,7 @@
 import {anthropicDailyCost, dayKeys, openaiDailyCost, spendSpikes, splitFeature, estimateRowUsd, summarizeLedger, featureArea, type LedgerSummary, type UsageRow} from "@/lib/ai-usage-core";
+import {loadMonthlyCapStatus} from "@/lib/ai-spend-cap";
+import {comparisonsGenerateEnabled} from "@/lib/comparison-generation-guard";
+import type {MonthlyCapStatus} from "@/lib/ai-usage-core";
 import {getSupabaseHeaders, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 // /admin/ai-spend: what the AI providers billed, set against our own call
@@ -98,7 +101,9 @@ export type AiSpendReport = {
     claude: {days: ProviderDay[]; billedUsd: number | null; untrackedUsd: number | null; note: string};
     openai: {days: ProviderDay[]; billedUsd: number | null; note: string};
     gemini: {note: string};
-    comparisons: {perDay: Array<{day: string; count: number}>; dailyLimit: number};
+    comparisons: {perDay: Array<{day: string; count: number}>; dailyLimit: number; generationOn: boolean};
+    /** The $100-a-month cap (src/lib/ai-spend-cap.ts), with where the month stands. */
+    monthCap: MonthlyCapStatus;
     spikes: Array<{feature: string; source: string; area: string; todayUsd: number; dailyAverageUsd: number}>;
     recent: Array<{at: string; source: string; feature: string; provider: string; model: string; inputTokens: number; outputTokens: number; usd: number}>;
     webLoggingSince: string | null;
@@ -121,12 +126,13 @@ export async function buildAiSpendReport(days: number, now = new Date()): Promis
     const hourlyStart = new Date(now.getTime() - 48 * 3_600_000);
     const fetchFrom = start < hourlyStart ? start : hourlyStart;
     const warnings: string[] = [];
-    const [rows, claudeBilled, openaiBilledResult, comparisons, webLoggingSince] = await Promise.all([
+    const [rows, claudeBilled, openaiBilledResult, comparisons, webLoggingSince, monthCap] = await Promise.all([
         ledgerRows(fetchFrom),
         anthropicBilled(start).catch((error) => ({days: null, note: `Anthropic cost report failed: ${error instanceof Error ? error.message : String(error)}`})),
         openaiBilled(start).catch((error) => ({days: null, note: `OpenAI costs API failed: ${error instanceof Error ? error.message : String(error)}`})),
         comparisonsPerDay(start),
-        firstWebLogAt()
+        firstWebLogAt(),
+        loadMonthlyCapStatus(now)
     ]);
     if (rows.length >= MAX_ROWS) warnings.push(`Only the first ${MAX_ROWS.toLocaleString()} calls were read; totals are low.`);
     const startIso = start.toISOString();
@@ -155,8 +161,10 @@ export async function buildAiSpendReport(days: number, now = new Date()): Promis
         gemini: {note: "Google does not report Gemini spend to an API key: the ledger estimate is the only figure here. The invoice is in Google AI Studio / Cloud Billing."},
         comparisons: {
             perDay: keys.map((day) => ({day, count: comparisons[day] ?? 0})),
-            dailyLimit: Number(process.env.COMPARISON_DAILY_GENERATION_LIMIT) || 40
+            dailyLimit: Number(process.env.COMPARISON_DAILY_GENERATION_LIMIT) || 40,
+            generationOn: comparisonsGenerateEnabled()
         },
+        monthCap,
         spikes: spendSpikes(inRange, now).map((spike) => {
             const {source, feature} = splitFeature(spike.feature);
             return {...spike, source, feature, area: featureArea(feature)};
