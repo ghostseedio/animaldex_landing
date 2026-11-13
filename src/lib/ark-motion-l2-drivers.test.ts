@@ -200,3 +200,19 @@ test("L2 metric (rigs): a sidewinder lifts part of its body; a whale beats its f
     assert.ok(slow.up > 0.05 && slow.up > slow.side * 3, `flukes up and down ${slow.up.toFixed(3)}, sideways ${slow.side.toFixed(3)}`);
     assert.ok(fast.crossings > slow.crossings * 1.8, `beats ${slow.crossings} -> ${fast.crossings}`);
 });
+
+test("MA1/v7: on a v7 flap (MA2's v3 birds) the driver adds no upstroke fold of its own: the clip bakes it; v2 as before", () => {
+    const f = fixture("mallard");
+    const rig = rigOf(f);
+    const hand = [rig.bones.findIndex((b) => b.name === "wingL_hand")];
+    const v7 = {downstroke: 0.55, tuck: 1, liftoff: null, touchdown: null, riseH: null};
+    for (const q of [0.6, 0.75, 0.9]) {
+        const bare = span(skinned(rig, f, clipWorld(rig, f, "flap", q), hand));
+        const world7 = clipWorld(rig, f, "flap", q);
+        flightDriver.pose(rig, input({clipNow: "flap", clipPhase: q, clipBake: v7}), world7, flightDriver.init(rig));
+        const world2 = clipWorld(rig, f, "flap", q);
+        flightDriver.pose(rig, input({clipNow: "flap", clipPhase: q}), world2, flightDriver.init(rig));
+        assert.ok(Math.abs(span(skinned(rig, f, world7, hand)) - bare) < 1e-6, `v7 at ${q}: the clip's own hand`);
+        assert.ok(span(skinned(rig, f, world2, hand)) < bare - 1e-4, `v2 at ${q}: the driver's fold, as before`);
+    }
+});

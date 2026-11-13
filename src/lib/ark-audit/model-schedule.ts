@@ -86,6 +86,12 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
     const subjects: AuditSubject[] = [];
     const holders: Holder[] = [];
     const index = new Map<string, number>();
+    const hawkers = new Map<string, boolean>();
+    const hawks = (slug: string) => {
+        let found = hawkers.get(slug);
+        if (found === undefined) hawkers.set(slug, (found = Boolean(intel?.intelProfile(slug, null, arkStats({model_slug: slug} as never).intelligence).hunt.includes("aerial_hawk"))));
+        return found;
+    };
     fixture.animals.forEach((animal, i) => {
         const place = places.get(animal.id)!;
         const plan = data.modelPlan.get(animal.model_slug) ?? null;
@@ -107,7 +113,8 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
             home: {x: place.x, y: place.ground, z: place.z},
             zone: animal.zone,
             leader: place.leader && place.leader !== animal.id ? place.leader : null,
-            driver: sched ? "schedule" : place.micro ? "micro" : "burrow"
+            driver: sched ? "schedule" : place.micro ? "micro" : "burrow",
+            hawker: hawks(animal.model_slug)
         });
     });
     holders.forEach((h, i) => {

@@ -20,6 +20,11 @@ export type AuditSubject = {
     leader: string | null;
     /** How the scene moves it: "schedule", or live main's procedural kinds. */
     driver: string;
+    /**
+     * It hunts insects on the wing (its intelligence profile's hunt `aerial_hawk`: swallows, martins, swifts), so its
+     * time in the air is mostly turning over a feeding patch. Absent where the tree has no intelligence profiles.
+     */
+    hawker?: boolean;
 };
 
 /** One animal at one moment, as the scene would draw it. */

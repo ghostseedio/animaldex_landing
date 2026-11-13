@@ -205,7 +205,7 @@ import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
-import {l2BodyChannel, l2BodyUniforms, l2FlightFrame, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
+import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -3475,27 +3475,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // murmuration, flies on its rig too: it has no schedule pose to say so. On its leaf, bark or wall it is not flying.)
         const microAloft = Boolean(place.micro && flies && !entry.visitor && ((entry.toLight ?? 0) > 0.5 || (entry.recipeAct?.flock && where.base - Math.max(heightAt(where.x, where.z), 0) > Math.max(entry.length * 1.5, 0.12))));
         const inAir = (pose ? pose.aloft || airLeg : entry.air > 0.001) || microAloft;
+        // (MA1: its air leg's stage on the schedule: a run to take off, the climb, level flight, the glide-in, a ski.)
+        const stage = (pose && airLeg ? pose.air?.stage : null) ?? null;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
-        const rising = (pose ? pose.aloft || (airLeg && state.climb > -0.01 && clockNow() - state.landedAt > 2) : entry.state.airborne) || microAloft;
-        if (flies && !state.flying && inAir && rising) {
-            // Leaving the ground: a take-off, unless it comes into view already up in the air.
-            state.flying = true;
-            if (entry.air < 0.35 && clip("takeoff")) rigSwitch(state, "takeoff", 0);
-        } else if (state.flying && (!flies || (!inAir && entry.air <= 0.001)) && state.now.name !== "land") {
-            state.flying = false;
-        }
-        const oneShot = (name: string) => state.now.name === name && state.now.phase < 1;
+        const rising = (pose ? pose.aloft || (airLeg && (stage ? stage === "run" || stage === "climb" : state.climb > -0.01 && clockNow() - state.landedAt > 2)) : entry.state.airborne) || microAloft;
         // Coming down: the landing plays as it touches down (its wings folding away), once it is low and descending on
         // its schedule's leg, or its state's air has nearly eased out.
         // (Lane L2: within the landing clip's reach of the ground on the way down, so its touch-down meets the ground.)
-        const agl = where.base - Math.max(heightAt(where.x, where.z), 0);
+        // (MA1: its height over the surface it lands on, the schedule's own: a perch, a rock's top, the lake's level;
+        // from the terrain under it, a landing on any of those never fired and the clip played after touch-down.)
+        const agl = pose?.air ? where.base - pose.air.to : where.base - Math.max(heightAt(where.x, where.z), 0);
         const landHeight = (clip("land")?.rise_h ?? 1.2) * entry.drawnHeight;
-        const landing = !microAloft && ((pose ? (!pose.aloft && state.climb < -0.01) || !inAir : !entry.state.airborne && entry.air < 0.2) || (state.flying && l2LandingNow(l2Of(entry, model.behaviour?.plan), agl, state.climb, landHeight)));
-        if (state.flying && landing && !oneShot("takeoff") && state.now.name !== "land" && clip("land")) rigSwitch(state, "land", 0);
-        if (state.flying && state.now.name === "land" && state.now.phase >= 1) {
-            state.flying = false;
-            state.landedAt = clockNow();
+        const landing = !microAloft && ((pose ? (!pose.aloft && (stage ? stage === "descend" || stage === "ski" : state.climb < -0.01)) || !inAir : !entry.state.airborne && entry.air < 0.2) || l2LandingNow(l2Of(entry, model.behaviour?.plan), agl, state.climb, landHeight));
+        // Leaving the ground: a take-off, unless it comes into view already up in the air or runs off (`flightGate`).
+        const gate = l2FlightGate({flies, flying: state.flying, inAir, rising, landing, air: entry.air, now: state.now.name, phase: state.now.phase, stage, hasTakeoff: Boolean(clip("takeoff")), hasLand: Boolean(clip("land"))});
+        if (gate.play === "takeoff" || gate.play === "land") rigSwitch(state, gate.play, 0);
+        // (A landing left from a flight cut short: dropped for whatever the flight frame picks now.)
+        const leaveOneShot = gate.play === "flight";
+        if (state.flying && !gate.flying) {
+            // Down (or out of the air): its pace starts again from how fast it moves now, not eased down from its flight's
+            // (MA1: a coot ran in place for 0.8 s after landing on its eased flight pace).
+            state.pace = dt > 0 ? moved / dt : 0;
+            if (gate.landed) state.landedAt = clockNow();
         }
+        state.flying = gate.flying;
+        const oneShot = (name: string) => !leaveOneShot && state.now.name === name && state.now.phase < 1;
         if (state.flying) {
             // Lane L2 (`locomotion/flight.ts`): the beat by its size and effort (hard flaps out of a take-off, a flare to
             // land), the downstroke the fuller stroke, its family's rhythm (bounding, flap-gliding, soaring with trims), the
@@ -3511,7 +3515,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 speed: groundSpeed,
                 agl,
                 drawnLength: entry.length,
+                drawnHeight: entry.drawnHeight,
                 landHeight,
+                stage,
+                // (A v7 file's flight clips bake their own beat, fold and tuck: MA2's v3 birds.)
+                bake: (name) => l2ClipBake(rig.code, clip(name)),
                 beat: own?.pose?.beat ?? null,
                 soaring: own?.pose?.doing === "soar",
                 oneShot: oneShot("takeoff") ? "takeoff" : oneShot("land") ? "land" : null,
@@ -4454,7 +4462,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // rock's top, a log, a climb's ramp, is no ground for the feet; the legged driver would stand its body on the
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null}, index);
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null}, index);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
