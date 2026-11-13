@@ -147,7 +147,7 @@ const WET_GLSL = `
 {
     float wet = townWetness;
     col *= 1.0 - wet * soak;
-    rough = mix(rough, min(rough, 0.26), wet * step(0.05, soak));
+    rough = mix(rough, min(rough, wetFloor), wet * step(0.05, soak));
     if (wet > 0.04 && pool > 0.0) {
         float pud = townFbm(q * 0.23 + 3.7) * 0.72 + townNoise(q * 1.25 + 1.3) * 0.28 + pool * 0.22;
         float level = 1.06 - wet * (0.2 + 0.32 * pool);
@@ -204,6 +204,8 @@ const GROUND_COLOUR = `
     float rough = 0.95;
     vec3 nT = vec3(0.0, 0.0, 1.0);
     float soak = 0.22 + 0.18 * wSoil;
+    // Wet grass dulls, it never mirrors (its blades break the sheen); wet soil and mud shine.
+    float wetFloor = mix(0.62, 0.3, max(wSoil, ws.z));
     float pool = max(wSoil * 0.55, ws.z * 0.7) * (1.0 - bed);
     if (groundReady > 0.5) {
         float st = 1.0;
@@ -290,6 +292,7 @@ const PAVING_COLOUR = `
     vec3 nT = vec3(0.0, 0.0, 1.0);
     float soak = 0.0;
     float pool = 0.0;
+    float wetFloor = 0.26;
     float layer = -1.0;
     float metres = 1.0;
     float st = 0.0;
@@ -393,6 +396,7 @@ const PAVING_COLOUR = `
         rough = 0.95;
         soak = 0.3;
         pool = (1.0 - plant) * 0.35;
+        wetFloor = mix(0.3, 0.6, plant);
     } else if (id == 11) {
         // Kerbs: the road's grime up the face, a little lighter on top where feet wear them.
         if (abs(vTownNormal.y) < 0.5) col *= 0.84;
