@@ -50,7 +50,9 @@ animal's seed, so every viewer sees the same.
   | Primates | diagonal-sequence walk, half-bound 0.8, bound 2.2 |
   | Lizards | sprawling walk (diagonal pairs, S-bend of the spine), sprawling run 0.35 |
   | Turtles | slow diagonal-sequence walk |
-  | Frogs / toads | hop (hind feet together) / sprawling walk, hop 0.6 |
+  | Frogs / toads (by family, `land-gaits.json`; MA4) | leapers (true and tree frogs) and walker-hoppers (toads): the saltation driver (`land-drivers.ts`: sit, push, a ballistic hop of about 2.2 / 0.9 body lengths, land on the arms; toads walk below 1 length a second); walkers (narrow-mouthed and rain frogs): sprawling walk |
+  | Newts, salamanders | sprawling walk, sprawling run 0.35 (never a hop; MA4) |
+  | Seals, sea lions, walrus (by family; MA4) | true seals: the galumph driver (belly hump, `land-drivers.ts`); sea lions and fur seals: walk, half-bound 0.9; the walrus: walk |
   | Birds | walk, run 0.55; hopping passerines hop; ducks and geese waddle, run 0.5; penguins waddle |
   | Insects | wave (slow), tripod (L1 R2 L3 against R1 L2 R3) |
   | Spiders, crabs | wave (back-to-front on each side, very slow), alternating tetrapod |
@@ -78,9 +80,10 @@ animal's seed, so every viewer sees the same.
   lizard's spine makes an S. The body follows the slope fore and hind, and leans into turns and accelerations. Standing,
   the weight shifts slowly.
 - **Head.** Predators and birds hold it steadiest (0.9), others less; it counters the body's rock, flex and roll and
-  leads into turns. Hoofed animals nod with their forelegs at the walk. Head-bobbing birds (pigeons, chickens and
-  other fowl, rails, herons, crows, starlings, plovers…) hold the head still in the air for 60% of each step, then
-  thrust it forward.
+  leads into turns. Hoofed animals nod with their forelegs at the walk. Head-bobbing birds hold the head still in the air
+  for 60% of each step, then thrust it forward. Which birds bob comes by family from the stored taxonomy (the ground
+  code's `b` in `styles.json`, MA4; Necker 2007): pigeons and doves, gamebirds, rails and cranes, herons, storks and
+  ibises, crows, starlings, wagtails and others; never raptors, parrots, owls, waterfowl or gulls.
 - **Secondary motion** (`secondary.ts`): tails on damped springs (1/120 s fixed substeps, so the motion is the same
   at any frame rate). A tail swings out of a turn, sways against the hips, rides up at speed and lags the bob. The
   neck lags the bob on long necks.

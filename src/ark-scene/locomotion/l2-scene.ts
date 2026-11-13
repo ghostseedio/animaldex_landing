@@ -20,11 +20,15 @@ import {locoStyle, type LocoStyle} from "@/ark-scene/locomotion/styles";
 import {newSwimMemory, SWIM, swimCycles, type L2BodyUniforms, swimGain, swimSurfaceGuard, tailBeatHz, waveChannel, type SwimMemory} from "@/ark-scene/locomotion/swim";
 import {chainDriver, flightDriver, OPEN_WING_RIGS} from "@/ark-scene/locomotion/l2-drivers";
 import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
+import {galumphDriver, saltationDriver} from "@/ark-scene/locomotion/land-drivers";
 
 // Lane L2's drivers go before L1's legged one (their `takes` never overlap it: in the air, or a chain rig's slither
-// and swim).
+// and swim). MA4's land drivers too: a true seal's galumph and a frog's or toad's hops (the legged gaits never take a
+// true seal; a toad walking is drawn by the legged gaits from inside the hop driver).
 registerLocoDriver(chainDriver);
 registerLocoDriver(flightDriver);
+registerLocoDriver(galumphDriver);
+registerLocoDriver(saltationDriver);
 
 /**
  * Lane L2 on (the default). Development only: `globalThis.__arkL2Motion = false` before mounting turns every L2 hook back to

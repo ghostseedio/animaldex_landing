@@ -153,7 +153,15 @@ function flightStyleOf(row: Row, plan: string | null): Flight | null {
 // MARK: Birds on the ground
 
 const HOP = new Set([...BOUND].filter((f) => !["Picidae", "Motacillidae", "Ramphastidae", "Megalaimidae", "Indicatoridae", "Galbulidae", "Sittidae", "Tichodromidae", "Icteridae", "Furnariidae"].includes(f)));
-const BOB = new Set(["Columbidae", "Phasianidae", "Numididae", "Odontophoridae", "Cracidae", "Megapodiidae", "Ardeidae", "Rallidae", "Gruidae", "Aramidae", "Ciconiidae", "Threskiornithidae", "Otididae", "Cariamidae", "Sagittariidae", "Psophiidae", "Rhynochetidae", "Eurypygidae", "Tinamidae", "Pteroclididae", "Turnicidae", "Corvidae", "Sturnidae", "Icteridae", "Cuculidae", "Balaenicipitidae", "Scopidae", "Opisthocomidae", "Jacanidae"]);
+/**
+ * Families that bob their heads as they walk (Necker 2007, "Head-bobbing of walking birds", J Comp Physiol A 193, table 1:
+ * the bobbing orders are Columbiformes, Galliformes, Gruiformes and Ciconiiformes in their older sense, which also held
+ * the sandgrouse, buttonquails, bustards, seriemas, kagu, sunbittern and trumpeters; walking passerines bob, small ones
+ * hop; raptors (forward-looking eyes), parrots, owls, waterfowl, cormorants, pelicans and gulls do not; Charadriiformes
+ * are mixed and left out). Movement audit MA4: wagtails and pipits (they walk, head nodding) in, the secretarybird
+ * (a raptor) out. The scene reads it as the ground code's `b` (`locomotion/gaits.ts` headBobs).
+ */
+const BOB = new Set(["Columbidae", "Phasianidae", "Numididae", "Odontophoridae", "Cracidae", "Megapodiidae", "Ardeidae", "Rallidae", "Gruidae", "Aramidae", "Ciconiidae", "Threskiornithidae", "Otididae", "Cariamidae", "Psophiidae", "Rhynochetidae", "Eurypygidae", "Tinamidae", "Pteroclididae", "Turnicidae", "Corvidae", "Sturnidae", "Icteridae", "Motacillidae", "Cuculidae", "Balaenicipitidae", "Scopidae", "Opisthocomidae", "Jacanidae"]);
 const WADDLE = new Set(["Anatidae", "Anhimidae", "Anseranatidae", "Spheniscidae", "Alcidae", "Gaviidae", "Podicipedidae", "Phalacrocoracidae", "Anhingidae", "Sulidae", "Pelecanidae", "Diomedeidae", "Procellariidae", "Hydrobatidae", "Fregatidae", "Phaethontidae"]);
 const RUN = new Set(["Charadriidae", "Scolopacidae", "Recurvirostridae", "Haematopodidae", "Glareolidae", "Pluvianidae", "Ibidorhynchidae", "Rostratulidae", "Chionidae", "Struthionidae", "Rheidae", "Casuariidae", "Dromaiidae", "Apterygidae", "Motacillidae", "Alaudidae", "Laridae", "Stercorariidae", "Phoenicopteridae"]);
 

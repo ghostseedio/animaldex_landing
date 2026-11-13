@@ -8,13 +8,23 @@
  *
  *   npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-time-budget.mts <snapshot.json | --validator>
  *       [--islands <routing.json>] [--world v1|v2] [--hours 10.5] [--step 5] [--species a,b] [--json out.json]
- *       [--events <epoch> --span 1800]
+ *       [--events <epoch> --span 1800] [--record <lane>]
  *
  * The island's hours follow the real clock: twelve 10-minute windows, one every two hours. `--hours` pins the hour (the
  * recorder's page pins 10.5). `--islands` merges the development page's routing and keeps the wild island's animals
  * (else: the animals with no `area`). `--events` lists each watched animal's take-offs, landings and water crossings.
  * A snapshot holds real usernames: read it in place, never copy it. Only species slugs, ids and counts are printed.
  * Pure schedule (the same for every viewer); no browser.
+ *
+ * The audit's CI numbers (MA4) are printed as a last `metrics` line and, under the motion summary
+ * (`scripts/ark-motion-ci.mts` sets `ARK_MOTION_METRICS_DIR`), recorded with `recordMotionMetric` under `--record <lane>`
+ * (`tests/ark-motion/metrics.json`, check `ma4-time-budget`, runs it on the validator's animals):
+ *   air_speed_ratio_median / _p10 / species_under_035: each flying bird's and bat's median air-leg speed over L2's cruise
+ *     (`flightPaces`), the median and tenth percentile over species, and how many species fly under 0.35 of it (the
+ *     audit's 0.20 / 91 of 98 species; insects keep their old pace, decision 282 row 7, and are left out);
+ *   ground_birds_air_share_worst / ground_birds_takeoffs_worst: over birds that walk or swim first and can fly (a coot,
+ *     a duck, a swan, a peafowl, a pigeon), the worst share of the day aloft and take-offs per awake hour;
+ *   coot_water_share, grebe_water_share: the eurasian coot's and the great crested grebe's share of the day on the water.
  */
 import {readFileSync, writeFileSync} from "node:fs";
 import {setArkWorld} from "../src/ark-scene/world.ts";
@@ -223,3 +233,33 @@ for (const r of rows.sort((a, b) => b.air / b.samples - a.air / a.samples)) {
 }
 const out = value("--json");
 if (out) writeFileSync(out, JSON.stringify(rows, null, 1));
+
+// The audit's CI numbers (MA4): see the header.
+{
+    const median = (list: number[]) => (list.length ? [...list].sort((a, b) => a - b)[Math.floor(list.length / 2)] : NaN);
+    const quantile = (list: number[], q: number) => (list.length ? [...list].sort((a, b) => a - b)[Math.min(Math.floor(list.length * q), list.length - 1)] : NaN);
+    const flyers = rows.filter((r) => r.cruise !== null && r.airSpeed !== null && flightSpec(r.slug, 1, modelBase(r.slug)?.plan ?? null)?.kind !== "insect");
+    const ratios = flyers.map((r) => r.airSpeed! / r.cruise!);
+    const ground = rows.filter((r) => modelBase(r.slug)?.plan === "bird" && (r.move === "walk" || r.move === "swim") && r.moves.split(",").includes("fly"));
+    const share = (slug: string) => {
+        const r = rows.find((x) => x.slug === slug);
+        return r ? r.water / Math.max(r.samples, 1) : NaN;
+    };
+    const metrics: Record<string, number> = {
+        air_speed_ratio_median: median(ratios),
+        air_speed_ratio_p10: quantile(ratios, 0.1),
+        species_under_035: ratios.filter((x) => x < 0.35).length,
+        flying_species: ratios.length,
+        ground_birds_air_share_worst: Math.max(0, ...ground.map((r) => r.air / Math.max(r.samples, 1))),
+        ground_birds_takeoffs_worst: Math.max(0, ...ground.map((r) => r.takeoffs / Math.max((r.awakeSamples * step) / 3600, 1e-6))),
+        ground_birds: ground.length,
+        coot_water_share: share("eurasian-coot"),
+        grebe_water_share: share("great-crested-grebe")
+    };
+    console.log(`metrics ${JSON.stringify(Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, Math.round(v * 1000) / 1000])))}`);
+    const lane = value("--record");
+    if (lane) {
+        const {recordMotionMetric} = await import("../src/lib/ark-motion-metrics.ts");
+        for (const [id, v] of Object.entries(metrics)) recordMotionMetric(lane, id, v);
+    }
+}

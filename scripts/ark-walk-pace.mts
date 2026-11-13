@@ -9,8 +9,9 @@
  * walked those animals in slow motion, or squeezed their trips past the clip's pace. The locomotion layer draws legged
  * rigs with planted feet at any pace (stride and cadence follow the speed), so for them the pace may be natural: here a
  * Froude-number floor on the rig's own hip height at the species' true length (a slow walk, Fr 0.05; a run, Fr 0.8),
- * never below the clip's own pace. Rigs the layer does not draw keep their clip pace: sitting rest poses, flippered
- * animals (seals, sea lions, walruses, manatees, dugongs), and plans without legs.
+ * never below the clip's own pace. Rigs the layer does not draw on legs keep their clip pace: sitting rest poses, true
+ * seals (they galumph on the belly: `locomotion/legged.ts` flippered; sea lions and the walrus walk on their flippers
+ * since movement audit MA4), and plans without legs.
  *
  * Reads the local rig set (the rig files' JSON only); writes `src/ark-scene/behaviours.json` with --apply, else prints.
  */
@@ -19,7 +20,7 @@ import {readFileSync, readdirSync, writeFileSync, existsSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {arkBody} from "../src/ark-scene/stats";
-import {FLIPPERED} from "../src/ark-scene/locomotion/legged";
+import {flippered} from "../src/ark-scene/locomotion/legged";
 
 const home = os.homedir();
 const arg = (name: string, fallback: string) => {
@@ -109,7 +110,7 @@ for (const [slug, row] of Object.entries(table)) {
     const shape = rigShape(slug);
     if (!shape) continue;
     looked++;
-    if (shape.legs < 2 || shape.pose || FLIPPERED.test(slug) || !LEGGED.has(shape.plan ?? "")) continue;
+    if (shape.legs < 2 || shape.pose || flippered(slug) || !LEGGED.has(shape.plan ?? "")) continue;
     // Reach-limited: the walk clip's legs could not reach the pace the species asked for.
     const limited = shape.walk?.bls !== undefined && shape.walk?.target_bls !== undefined && shape.walk.bls < shape.walk.target_bls;
     if (!limited) continue;

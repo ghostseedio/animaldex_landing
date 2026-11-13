@@ -1,0 +1,346 @@
+{
+ "generated_from": "the catalogue's stored taxonomy (class, order, family)",
+ "tally": {
+  "hop": 26,
+  "crawl": 21,
+  "leap": 16,
+  "flipper_gallop": 4,
+  "galumph": 10,
+  "walk": 5,
+  "flipper_walk": 1
+ },
+ "species": {
+  "african-bullfrog": {
+   "gait": "hop",
+   "why": "Anura/Pyxicephalidae: African bullfrogs: heavy, short hops"
+  },
+  "african-clawed-frog": {
+   "gait": "hop",
+   "why": "Anura/Pipidae: clawed frogs and the Surinam toad: aquatic, lunging hops on land"
+  },
+  "alpine-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "alpine-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "amazon-milk-frog": {
+   "gait": "leap",
+   "why": "Anura/Hylidae: tree frogs: jumpers"
+  },
+  "american-bullfrog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "american-green-tree-frog": {
+   "gait": "leap",
+   "why": "Anura/Hylidae: tree frogs: jumpers"
+  },
+  "american-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "asian-common-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "australian-green-tree-frog": {
+   "gait": "leap",
+   "why": "Anura/Pelodryadidae: Australo-Papuan tree frogs: jumpers"
+  },
+  "australian-sea-lion": {
+   "gait": "flipper_gallop",
+   "why": "Otariidae: eared seal: walks on four flippers, hind flippers turned forward; gallops when fast"
+  },
+  "axolotl": {
+   "gait": "crawl",
+   "why": "Caudata/Ambystomatidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "bearded-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "blue-spotted-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Ambystomatidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "budgetts-frog": {
+   "gait": "hop",
+   "why": "Anura/Ceratophryidae: horned frogs: sit-and-wait, short clumsy hops"
+  },
+  "california-sea-lion": {
+   "gait": "flipper_gallop",
+   "why": "Otariidae: eared seal: walks on four flippers, hind flippers turned forward; gallops when fast"
+  },
+  "cane-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "chinese-giant-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Cryptobranchidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "common-frog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "common-midwife-toad": {
+   "gait": "hop",
+   "why": "Anura/Alytidae: midwife toads: walk and short hops"
+  },
+  "common-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "couchs-spadefoot": {
+   "gait": "hop",
+   "why": "Anura/Scaphiopodidae: spadefoots: short hops"
+  },
+  "darwins-frog": {
+   "gait": "hop",
+   "why": "Anura/Rhinodermatidae: Darwin's frogs: short hops"
+  },
+  "desert-rain-frog": {
+   "gait": "walk",
+   "why": "Anura/Brevicipitidae: rain frogs (Breviceps): walk, cannot hop"
+  },
+  "dusky-gopher-frog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "eastern-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "eastern-red-backed-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Plethodontidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "emperor-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "fire-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "fowlers-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "galapagos-sea-lion": {
+   "gait": "flipper_gallop",
+   "why": "Otariidae: eared seal: walks on four flippers, hind flippers turned forward; gallops when fast"
+  },
+  "giant-waxy-monkey-frog": {
+   "gait": "walk",
+   "why": "Anura/Phyllomedusidae: monkey frogs: walk hand over hand"
+  },
+  "golden-mantella": {
+   "gait": "hop",
+   "why": "Anura/Mantellidae: mantellas: small hoppers"
+  },
+  "golden-poison-frog": {
+   "gait": "hop",
+   "why": "Anura/Dendrobatidae: poison frogs: short hops"
+  },
+  "goliath-frog": {
+   "gait": "leap",
+   "why": "Anura/Conrauidae: the goliath frog: a powerful jumper"
+  },
+  "great-plains-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "greater-siren": {
+   "gait": "crawl",
+   "why": "Caudata/Sirenidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "grey-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "hamiltons-frog": {
+   "gait": "hop",
+   "why": "Anura/Leiopelmatidae: New Zealand frogs: walker-hoppers, poor jumpers"
+  },
+  "harbor-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "hellbender": {
+   "gait": "crawl",
+   "why": "Caudata/Cryptobranchidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "hooded-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "lake-oku-clawed-frog": {
+   "gait": "hop",
+   "why": "Anura/Pipidae: clawed frogs and the Surinam toad: aquatic, lunging hops on land"
+  },
+  "leopard-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "malayan-horned-frog": {
+   "gait": "hop",
+   "why": "Anura/Megophryidae: Asian horned frogs: walk and short hops"
+  },
+  "marbled-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "marbled-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Ambystomatidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "marsh-frog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "monte-iberia-eleuth": {
+   "gait": "leap",
+   "why": "Anura/Eleutherodactylidae: rain frogs (Eleutherodactylus): small jumpers"
+  },
+  "mossy-frog": {
+   "gait": "leap",
+   "why": "Anura/Rhacophoridae: Old World tree and flying frogs: jumpers"
+  },
+  "mudpuppy": {
+   "gait": "crawl",
+   "why": "Caudata/Proteidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "new-zealand-fur-seal": {
+   "gait": "flipper_gallop",
+   "why": "Otariidae: eared seal: walks on four flippers, hind flippers turned forward; gallops when fast"
+  },
+  "northern-elephant-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "olm": {
+   "gait": "crawl",
+   "why": "Caudata/Proteidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "oriental-fire-bellied-toad": {
+   "gait": "hop",
+   "why": "Anura/Bombinatoridae: fire-bellied toads: short hops"
+  },
+  "ornate-horned-frog": {
+   "gait": "hop",
+   "why": "Anura/Ceratophryidae: horned frogs: sit-and-wait, short clumsy hops"
+  },
+  "panamanian-golden-frog": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "paradoxical-frog": {
+   "gait": "leap",
+   "why": "Anura/Hylidae: tree frogs: jumpers"
+  },
+  "pool-frog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "purple-frog": {
+   "gait": "walk",
+   "why": "Anura/Nasikabatrachidae: the purple frog: a burrower, walks"
+  },
+  "pyrenean-brook-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "red-backed-poison-frog": {
+   "gait": "hop",
+   "why": "Anura/Dendrobatidae: poison frogs: short hops"
+  },
+  "red-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Plethodontidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "ringed-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "saimaa-ringed-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "smooth-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "southern-elephant-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "southern-toad": {
+   "gait": "hop",
+   "why": "Anura/Bufonidae: toads: walker-hoppers, short hops"
+  },
+  "spanish-ribbed-newt": {
+   "gait": "crawl",
+   "why": "Caudata/Salamandridae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "spotted-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Ambystomatidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "strawberry-poison-dart-frog": {
+   "gait": "hop",
+   "why": "Anura/Dendrobatidae: poison frogs: short hops"
+  },
+  "surinam-horned-frog": {
+   "gait": "hop",
+   "why": "Anura/Ceratophryidae: horned frogs: sit-and-wait, short clumsy hops"
+  },
+  "surinam-toad": {
+   "gait": "hop",
+   "why": "Anura/Pipidae: clawed frogs and the Surinam toad: aquatic, lunging hops on land"
+  },
+  "tiger-salamander": {
+   "gait": "crawl",
+   "why": "Caudata/Ambystomatidae: newts and salamanders walk and run with a bending body, never hop"
+  },
+  "titicaca-water-frog": {
+   "gait": "hop",
+   "why": "Anura/Telmatobiidae: water frogs: aquatic, clumsy short hops on land"
+  },
+  "tomato-frog": {
+   "gait": "walk",
+   "why": "Anura/Microhylidae: narrow-mouthed frogs: walkers and burrowers"
+  },
+  "tree-frog": {
+   "gait": "leap",
+   "why": "Anura/Hylidae: tree frogs: jumpers"
+  },
+  "turtle-frog": {
+   "gait": "walk",
+   "why": "Anura/Myobatrachidae: the turtle frog: walks and burrows head first"
+  },
+  "wallaces-flying-frog": {
+   "gait": "leap",
+   "why": "Anura/Rhacophoridae: Old World tree and flying frogs: jumpers"
+  },
+  "walrus": {
+   "gait": "flipper_walk",
+   "why": "Odobenidae: walrus: walks slowly on four flippers, hind flippers turned forward"
+  },
+  "weddell-seal": {
+   "gait": "galumph",
+   "why": "Phocidae: true seal: humps along on its belly, hind flippers held up (they cannot turn forward)"
+  },
+  "wood-frog": {
+   "gait": "leap",
+   "why": "Anura/Ranidae: true frogs: long jumps"
+  },
+  "x-marked-snouted-tree-frog": {
+   "gait": "leap",
+   "why": "Anura/Hylidae: tree frogs: jumpers"
+  }
+ }
+}
