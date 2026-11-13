@@ -402,7 +402,7 @@ whatever the frame does.
 | Collision audit, three modes | base (`ark-perf-2` before the payload changes) and branch identical: islands v2, islands v1 and today's mode, every report the same |
 | Behaviour audit and encounters | identical; "All 25 checks hold" |
 | Motion CI, the default view ×2 | pace 1.03 / 0.93, backwards 0.8% / 2.4%, none over 1 s, ground turns 2.6 / 1.7 a minute; the base the same minutes: 0.96 / 1.05, 1.4% / 0.4%, none, 0.1 / 0.5. The default view's mount touches none of this round's code (no town coming, a desktop): the spread is the clock's |
-| Visual CI on GitHub | <!-- VISUAL2 --> |
+| Visual CI on GitHub | run 43486664319 on 58e8850b (every change to what is drawn this round): **green**, 19/19 golden shots within tolerance (worst 0.29% of pixels), the other lanes' checks (motion metrics) green. The later commits change only the embed page and the merge brings the loading lane's own, gated with it |
 
 
 ### Decisions (round 2)
