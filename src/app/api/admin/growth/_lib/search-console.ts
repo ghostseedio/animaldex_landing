@@ -1,5 +1,6 @@
 import "server-only";
 import {createSign} from "node:crypto";
+import {type OpportunityQuery, SEARCH_CONSOLE_WINDOW_DAYS} from "@/lib/blog-generator/search-console-topics";
 
 // Google clicks per day from Search Console, read with a service account that
 // has been added as a user on the property. Days are Pacific time (Search
@@ -115,6 +116,61 @@ export async function loadRisingQueries(limit = 40): Promise<RisingQuery[]> {
         .filter((row) => row.impressions >= 30 && row.position > 3 && row.position <= 30 && row.impressions >= row.previous * 1.5)
         .sort((a, b) => (b.impressions - b.previous) - (a.impressions - a.previous))
         .slice(0, limit);
+}
+
+const opportunityCache = new Map<string, {at: number; value: OpportunityQuery[]}>();
+
+/**
+ * Queries with measured demand the site is not winning yet (last `days`
+ * days, every page): impressions, clicks, average position and the page that
+ * ranks, best demand first. The blog's Search Console lane picks from these
+ * (src/lib/blog-generator/search-console-topics.ts). Empty without credentials.
+ */
+export async function loadOpportunityQueries(days = SEARCH_CONSOLE_WINDOW_DAYS, limit = 200): Promise<OpportunityQuery[]> {
+    const account = credentials();
+    if (!account) return [];
+    const day = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
+    const key = `${days}|${limit}|${day(0)}`;
+    const hit = opportunityCache.get(key);
+    if (hit && Date.now() - hit.at < 6 * 60 * 60_000) return hit.value;
+    const site = env("GOOGLE_SEARCH_CONSOLE_SITE") || "sc-domain:animaldex.app";
+    const response = await fetch(`https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(site)}/searchAnalytics/query`, {
+        method: "POST",
+        headers: {Authorization: `Bearer ${await accessToken(account)}`, "Content-Type": "application/json"},
+        // Data trails by about two days; query + page so the lane knows which page ranks.
+        body: JSON.stringify({startDate: day(days + 2), endDate: day(2), dimensions: ["query", "page"], dataState: "all", rowLimit: 5000}),
+        cache: "no-store"
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body?.error?.message ?? `Search Console returned ${response.status}`);
+    const rows = (body.rows ?? []) as Array<{keys: string[]; clicks: number; impressions: number; position: number}>;
+    // One entry per query: the page with the most impressions for it.
+    const byQuery = new Map<string, OpportunityQuery>();
+    for (const row of rows) {
+        const [query, rawPage] = row.keys;
+        if (typeof query !== "string") continue;
+        let page: string | null = null;
+        try {
+            page = rawPage ? new URL(rawPage).pathname : null;
+        } catch {
+            page = rawPage ?? null;
+        }
+        const current = byQuery.get(query);
+        const impressions = Math.round(row.impressions);
+        const entry: OpportunityQuery = {query, impressions, clicks: Math.round(row.clicks), position: Math.round(row.position * 10) / 10, page};
+        if (!current) byQuery.set(query, entry);
+        else {
+            // Impressions and clicks add up across pages; the top page's position stands for the query.
+            byQuery.set(query, {
+                ...(impressions > current.impressions ? entry : current),
+                impressions: current.impressions + impressions,
+                clicks: current.clicks + entry.clicks
+            });
+        }
+    }
+    const value = Array.from(byQuery.values()).sort((a, b) => b.impressions - a.impressions).slice(0, limit);
+    opportunityCache.set(key, {at: Date.now(), value});
+    return value;
 }
 
 export type SearchPage = {page: string; clicks: number; impressions: number; ctr: number; position: number};
