@@ -363,37 +363,37 @@
         },
         {
           "id": "rig_frozenWings",
-          "label": "Flight-approved flyers with no flap and no open-wing clip (v2 set; the audit's aboard: 13; v3: 1)",
+          "label": "Flight-approved flyers with no flap and no open-wing clip (v3, the set the site ships, decision 296: 1, the tent-making bat; v2 18; the audit's aboard: 13)",
           "path": "rig_frozenWings",
-          "max": 18,
+          "max": 1,
           "before": 18
         },
         {
           "id": "rig_noTakeoffLanding",
-          "label": "Flight-approved birds and bats with no take-off or landing clip (v2; v3: 0)",
+          "label": "Flight-approved birds and bats with no take-off or landing clip (v3, decision 296: 0; v2 7)",
           "path": "rig_noTakeoffLanding",
-          "max": 7,
+          "max": 0,
           "before": 7
         },
         {
           "id": "rig_fliesUnapproved",
-          "label": "Birds and bats flying on the schedule without flight approval (v2; the audit's aboard: 11; v3: 0)",
+          "label": "Birds and bats flying on the schedule without flight approval (v3, decision 296: 0; v2 12; the audit's aboard: 11)",
           "path": "rig_fliesUnapproved",
-          "max": 12,
+          "max": 0,
           "before": 12
         },
         {
           "id": "rig_swimmersNoStroke",
-          "label": "Legged swimmers with no paddle or swim clip (v2; a rigging pass, decision 281)",
+          "label": "Legged swimmers with no paddle or swim clip (v3, decision 296: 70; v2 70; a rigging pass, decision 281)",
           "path": "rig_swimmersNoStroke",
           "max": 70,
           "before": 70
         },
         {
           "id": "rig_swimmersNoEntry",
-          "label": "Legged swimmers without enter_water and exit_water clips (v2; v3 109: one new species)",
+          "label": "Legged swimmers without enter_water and exit_water clips (v3, decision 296: 109, the red-necked phalarope new in v3, coverage that grew, its water clips queued for the next rigging pass; v2 108)",
           "path": "rig_swimmersNoEntry",
-          "max": 108,
+          "max": 109,
           "before": 108
         }
       ]
