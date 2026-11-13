@@ -13,6 +13,7 @@ import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlo
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
+import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -161,6 +162,7 @@ type CardProps = {
 };
 
 export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: CardProps) {
+    arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.

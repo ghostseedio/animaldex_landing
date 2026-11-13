@@ -275,7 +275,7 @@ export class ArkStreamer {
         let best = this.primary;
         let bestDistance = Infinity;
         for (const island of this.islands) {
-            const d = distanceToGrid(island, x, z);
+            const d = distanceToGridSquared(island, x, z);
             if (d < bestDistance) {
                 bestDistance = d;
                 best = island;
@@ -436,11 +436,16 @@ function insideGrid(island: {offset: {x: number; z: number}; grid: ChunkGrid}, x
     return x >= x0 - margin && x <= x1 + margin && z >= z0 - margin && z <= z1 + margin;
 }
 
-function distanceToGrid(island: {offset: {x: number; z: number}; grid: ChunkGrid}, x: number, z: number): number {
-    const [x0, z0, x1, z1] = gridRect(island);
+/** The distance from a point to an island's grid, squared, with no array made (asked for every animal and plant a frame). */
+function distanceToGridSquared(island: {offset: {x: number; z: number}; grid: ChunkGrid}, x: number, z: number): number {
+    const g = island.grid;
+    const x0 = island.offset.x + g.originX;
+    const z0 = island.offset.z + g.originZ;
+    const x1 = x0 + g.columns * g.size;
+    const z1 = z0 + g.rows * g.size;
     const dx = x < x0 ? x0 - x : x > x1 ? x - x1 : 0;
     const dz = z < z0 ? z0 - z : z > z1 ? z - z1 : 0;
-    return Math.hypot(dx, dz);
+    return dx * dx + dz * dz;
 }
 
 

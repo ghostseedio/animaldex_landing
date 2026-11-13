@@ -126,7 +126,8 @@ export class AssetInstances {
     readonly group = new Group();
     /** Ready once every needed asset is loaded. */
     ready = false;
-    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo}>();
+    /** Per asset: its instances, its meshes per level, and (mobile performance lane) each instance's level as last written. */
+    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo; levels?: Int8Array}>();
     private reach = 1;
     private shadows = true;
     private lastAt = new Vector3(Infinity, 0, 0);
@@ -228,19 +229,39 @@ export class AssetInstances {
         this.framesSince++;
         if (camera.distanceToSquared(this.lastAt) < 2.25 && this.framesSince < 30) return;
         this.framesSince = 0;
+        // (Asked to lay everything out again: a new tier, new chunks drawn, or the first time.)
+        const forced = !Number.isFinite(this.lastAt.x);
         this.lastAt.copy(camera);
         this.byAsset.forEach((entry) => {
-            const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0};
             // Full detail a little further than the asset asks on the lower tiers, never below lod2 far away.
-            const [d0, d1] = entry.distances.map((d) => d * Math.max(this.reach, 0.5));
-            for (const instance of entry.instances) {
-                if (this.drawnAt && !this.drawnAt(instance.x, instance.z)) continue;
-                const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
-                let index = d < d0 ? 0 : d < d1 ? 1 : 2;
-                while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
-                while (index > 0 && !entry.meshes[LEVELS[index]]) index--;
-                const mesh = entry.meshes[LEVELS[index]];
-                if (!mesh) continue;
+            const d0 = entry.distances[0] * Math.max(this.reach, 0.5);
+            const d1 = entry.distances[1] * Math.max(this.reach, 0.5);
+            // Mobile performance lane: each instance's level first; when none moved to another (the camera moved a little,
+            // or nothing for half a second), what was written last time stands, exactly: nothing is written or uploaded.
+            const levels = (entry.levels ??= new Int8Array(entry.instances.length).fill(-2));
+            let moved = forced;
+            for (let i = 0; i < entry.instances.length; i++) {
+                const instance = entry.instances[i];
+                let index = -1;
+                if (!this.drawnAt || this.drawnAt(instance.x, instance.z)) {
+                    const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
+                    index = d < d0 ? 0 : d < d1 ? 1 : 2;
+                    while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
+                    while (index > 0 && !entry.meshes[LEVELS[index]]) index--;
+                    if (!entry.meshes[LEVELS[index]]) index = -1;
+                }
+                if (levels[i] !== index) {
+                    levels[i] = index;
+                    moved = true;
+                }
+            }
+            if (!moved) return;
+            const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0};
+            for (let i = 0; i < entry.instances.length; i++) {
+                const index = levels[i];
+                if (index < 0) continue;
+                const instance = entry.instances[i];
+                const mesh = entry.meshes[LEVELS[index]]!;
                 mesh.setMatrixAt(counts[LEVELS[index]], instance.matrix);
                 mesh.setColorAt(counts[LEVELS[index]], instance.tint);
                 counts[LEVELS[index]]++;

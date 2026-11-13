@@ -9,6 +9,7 @@ import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
 import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, type ArkChange, type ArkChangeScope, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 
 /**
  * Who is aboard, over the Ark (decision 239; owner, 2026-11-12: "much more minimal - and maybe overlaying the ark
@@ -92,6 +93,7 @@ function Caret({up}: {up: boolean}) {
 }
 
 export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark"}: Props) {
+    arkPerfCountRender();
     const hud = words.hud;
     const panelId = useId();
     const listRef = useRef<HTMLUListElement | null>(null);

@@ -27,6 +27,14 @@ export type CollideHooks<E> = {
 };
 
 const CELL = 4;
+
+/** The same surface points (each point's place, reach and host); none, null and an empty list are the same to `pushOut`. */
+function sameAttached(a: ResolvePose["attached"], b: ResolvePose["attached"]): boolean {
+    const n = a?.length ?? 0;
+    if (n !== (b?.length ?? 0)) return false;
+    for (let i = 0; i < n; i++) if (a![i].x !== b![i].x || a![i].z !== b![i].z || a![i].r !== b![i].r || a![i].host !== b![i].host) return false;
+    return true;
+}
 /** The most the search widens for how far a neighbour could have gone since it was last placed (m). */
 const MOST_TRAVEL = 30;
 /** How long a laid grid serves (s): every entry is listed as far as it could go by then. */
@@ -42,6 +50,14 @@ export class CollideLayer<E> {
     private readonly pushBy = new Map<number, Map<E, {dx: number; dz: number}>>();
     private readonly resolvedNow = new Map<E, {x: number; z: number}>();
     private readonly bodies = new Map<E, ResolveBody>();
+    /**
+     * Each one's last way out of anything solid, with what it was worked out from (mobile performance lane): `pushOut`
+     * is a pure function of the colliders, the body and the pose's place, height, heading, surface points and hold, so
+     * the same inputs give the same answer. One at rest (most of the island, most of the time) asks again every moment
+     * with the very same pose; a wedged one's ring search (thousands of probes) ran again each time. Kept per animal
+     * (weakly: an animal gone from the Ark takes its entry with it).
+     */
+    private outMemo = new WeakMap<object, {set: ColliderSet; body: ResolveBody; x: number; z: number; y: number; yaw: number; fixed: boolean | undefined; attached: ResolvePose["attached"]; out: {x: number; z: number; moved: number}}>();
     /** Work (ms), poses moved out of something solid and poses eased apart, since `resetStats`. */
     spentMs = 0;
     eased = 0;
@@ -58,6 +74,7 @@ export class CollideLayer<E> {
         this.placedBy.clear();
         this.pushBy.clear();
         this.resolvedNow.clear();
+        this.outMemo = new WeakMap();
         this.epoch = Number.NaN;
     }
 
@@ -126,13 +143,23 @@ export class CollideLayer<E> {
         const set = this.hooks.colliders();
         let out: ResolvePose | null = pose;
         if (pose && set) {
-            const moved = pushOut(set, this.bodyOf(e), pose);
+            const moved = this.pushOutOnce(e, set, pose);
             if (moved.moved > 0) {
                 this.pushed++;
                 out = {...pose, x: moved.x, z: moved.z};
             }
         }
         placedNow.set(e, out);
+        return out;
+    }
+
+    /** `pushOut`, or its last answer when nothing it reads has changed (exactly the same answer: see `outMemo`). */
+    private pushOutOnce(e: E, set: ColliderSet, pose: ResolvePose): {x: number; z: number; moved: number} {
+        const body = this.bodyOf(e);
+        const memo = this.outMemo.get(e as object);
+        if (memo && memo.set === set && memo.body === body && memo.x === pose.x && memo.z === pose.z && memo.y === pose.y && memo.yaw === pose.yaw && memo.fixed === pose.fixed && sameAttached(memo.attached, pose.attached)) return memo.out;
+        const out = pushOut(set, body, pose);
+        this.outMemo.set(e as object, {set, body, x: pose.x, z: pose.z, y: pose.y, yaw: pose.yaw, fixed: pose.fixed, attached: pose.attached ? pose.attached.map((q) => ({...q})) : pose.attached, out});
         return out;
     }
 

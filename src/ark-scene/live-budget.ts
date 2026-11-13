@@ -193,3 +193,25 @@ export function arkWithinCapacity<T extends ArkLiveCandidate & {zone: string}>(c
     });
     return kept;
 }
+
+/**
+ * The ids the rotation at `epochSeconds` asks about first, as `arkWithinCapacity` then `arkOutside` would, with every
+ * answer not `known` yet taken as "not resting" (mobile performance lane: the scene's warm-up asks these ahead of the
+ * step, a few hundred, instead of every animal aboard). Should some turn out resting, the step asks the next ones then.
+ */
+export function arkRestingAsks<T extends ArkLiveCandidate & {zone: string}>(candidates: readonly T[], budget: number, epochSeconds: number, pinned: ReadonlySet<string>, capacity: ((zone: string) => number | null) | null, known: (id: string) => boolean | undefined): string[] {
+    const asked: string[] = [];
+    const seen = new Set<string>();
+    const oracle = (candidate: ArkLiveCandidate) => {
+        const answer = known(candidate.id);
+        if (answer !== undefined) return answer;
+        if (!seen.has(candidate.id)) {
+            seen.add(candidate.id);
+            asked.push(candidate.id);
+        }
+        return false;
+    };
+    const within = capacity ? arkWithinCapacity(candidates, capacity, epochSeconds, pinned, oracle) : candidates;
+    arkOutside(within, budget, epochSeconds, pinned, oracle);
+    return asked;
+}

@@ -81,6 +81,8 @@ export class RenderGovernor {
     private activity: ArkActivity = {busy: false, reducedMotion: false};
     private powerFromHost: Partial<ArkPower> | null = null;
     private powerFromBrowser: Partial<ArkPower> = {};
+    /** The frame pacing's cap (ms between frames; 0: none): a phone locked to a steady 30 (`runtime/pace.ts`). */
+    private paceCap = 0;
     /** Called when the scene becomes visible again after a pause (the frame loop asks for frames again). */
     onWake: () => void = () => undefined;
     /** Called whenever the scene's visibility flips (either way): the ambient sound follows it. */
@@ -158,7 +160,17 @@ export class RenderGovernor {
     /** The least ms between drawn frames now (0: every display frame). */
     interval(now: number): number {
         const mode = this.mode(now);
-        return Math.max(MODE_INTERVAL[mode], powerCap(this.power()).interval);
+        return Math.max(MODE_INTERVAL[mode], powerCap(this.power()).interval, this.paceCap);
+    }
+
+    /** The frame pacing's cap (`runtime/pace.ts`): 0, or the ms of a steady lower rate. */
+    setPaceCap(ms: number) {
+        this.paceCap = ms > 0 ? ms : 0;
+    }
+
+    /** At full rate but for the pacing's own cap: the frames that tell the pacing what the device can hold. */
+    drawsFull(now: number): boolean {
+        return this.visible() && this.mode(now) === "full" && powerCap(this.power()).interval <= 0;
     }
 
     /** Whether to draw this display frame (`now` and `lastDrawn` in ms). */
