@@ -348,7 +348,7 @@ for (const deviceName of devices) {
         // with `interact=1` in the URL, a pointer move on the world every 200 ms (the runtime's input: the full rate).
         await context.addInitScript(() => {
             const MAX = 40000;
-            const rec = {n: 0, t: new Float64Array(MAX), cpu: new Float64Array(MAX), heap: new Float64Array(MAX), ready: 0, tier: null};
+            const rec = {n: 0, t: new Float64Array(MAX), cpu: new Float64Array(MAX), heap: new Float64Array(MAX), ready: 0, tier: null, progress: 0};
             window.__arkRec = rec;
             const native = window.requestAnimationFrame.bind(window);
             let frameTs = -1;
@@ -376,6 +376,7 @@ for (const deviceName of devices) {
                 try {
                     const message = JSON.parse(text);
                     if (message.type === "ark:ready" && !rec.ready) rec.ready = performance.now();
+                    if (message.type === "ark:progress" && !rec.progress) rec.progress = performance.now();
                     if (message.type === "ark:tier") rec.tier = message.tier;
                 } catch {
                     // Not ours.
@@ -493,6 +494,9 @@ for (const deviceName of devices) {
             return {n: r.n, t: Array.from(r.t.subarray(0, r.n)), cpu: Array.from(r.cpu.subarray(0, r.n)), heap: Array.from(r.heap.subarray(0, r.n))};
         });
         const firstFrameAt = measured.result?.firstFrameFromNavigation ?? 0;
+        // The page's first paint and first contentful paint, and when it first told its host it was showing (`ark:progress`).
+        const paints = await frame.evaluate(() => Object.fromEntries(performance.getEntriesByType("paint").map((e) => [e.name, Math.round(e.startTime)]))).catch(() => ({}));
+        const firstProgress = await frame.evaluate(() => Math.round(window.__arkRec?.progress ?? 0)).catch(() => 0);
         const steadyFrom = firstFrameAt + Number(arg("steady-from", "20")) * 1000;
         const drawnFrames = [];
         for (let i = 0; i < rec.n; i++) if (rec.t[i] >= steadyFrom && rec.cpu[i] > 1) drawnFrames.push(i);
@@ -576,6 +580,8 @@ for (const deviceName of devices) {
             bytesBeforeFirstFrame,
             bytesByKind,
             wireBeforeFirstFrame: wireBeforeFirst,
+            paints,
+            firstProgress,
             requests: requests.slice(0, 400),
             run,
             world: r.world ?? null,
