@@ -234,5 +234,5 @@ test("the resting warm-up's list: the rotation's first asks, a fraction of the A
     };
     const out = arkOutside(arkWithinCapacity(candidates, capacity, epoch, pinned, strict), 40, epoch, pinned, strict);
     const everyone = () => false;
-    assert.deepEqual([...out].sort(), [...arkOutside(arkWithinCapacity(candidates, capacity, epoch, pinned, everyone), 40, epoch, pinned, everyone)].sort());
+    assert.deepEqual(Array.from(out).sort(), Array.from(arkOutside(arkWithinCapacity(candidates, capacity, epoch, pinned, everyone), 40, epoch, pinned, everyone)).sort());
 });
