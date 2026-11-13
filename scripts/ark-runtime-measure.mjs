@@ -44,6 +44,8 @@
  *                             built first) or the home page's hero (the embed in an iframe the hero's size, its
  *                             refresh=600&idle=900) instead of the measurement page; with `--population-file` as the snapshot
  *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
+ *   --network slow4g          Lighthouse's slow 4G (1.6 Mbit/s, 150 ms); text is served gzipped as the site's CDN does
+ *                             (`--raw`: as is)
  * Every page: each drawn frame's main-thread time and interval (requestAnimationFrame wrapped before the page's own
  * script), the heap's growth between frames (allocation per second), and the bytes received before the first frame.
  */
@@ -54,6 +56,7 @@ import os from "node:os";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {build} from "esbuild";
+import {gzipSync} from "node:zlib";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name, fallback) => {
@@ -89,7 +92,9 @@ const DEVICES = {
 };
 const NETWORKS = {
     none: null,
-    "4g": {offline: false, latency: 60, downloadThroughput: (9 * 1024 * 1024) / 8, uploadThroughput: (3 * 1024 * 1024) / 8}
+    "4g": {offline: false, latency: 60, downloadThroughput: (9 * 1024 * 1024) / 8, uploadThroughput: (3 * 1024 * 1024) / 8},
+    // Slow 4G (Lighthouse's mobile throttle): 1.6 Mbit/s down, 750 kbit/s up, 150 ms round trip.
+    slow4g: {offline: false, latency: 150, downloadThroughput: (1.6 * 1024 * 1024) / 8, uploadThroughput: (750 * 1024) / 8}
 };
 
 const label = arg("label", "run");
@@ -213,7 +218,8 @@ const server = createServer((request, response) => {
     }
     const url = new URL(request.url, "http://localhost");
     if (populationFile && url.pathname === "/population-file.json") {
-        response.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"}).end(readFileSync(populationFile));
+        // (Compressed as the site's CDN serves the read: `/api/ark/voyage` goes out brotli'd, gzip here.)
+        sendText(request, response, readFileSync(populationFile), "application/json");
         return;
     }
     const fromPublic = url.pathname.startsWith("/ark/");
@@ -224,8 +230,26 @@ const server = createServer((request, response) => {
         return;
     }
     const type = file.endsWith(".html") ? "text/html" : file.endsWith(".js") ? "text/javascript" : file.endsWith(".webp") ? "image/webp" : file.endsWith(".json") ? "application/json" : "application/octet-stream";
+    if (/^(text\/|application\/json)/.test(type)) return sendText(request, response, readFileSync(file), type);
     response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(readFileSync(file));
 });
+
+/**
+ * Text (the bundle, the workers, the page, the read) gzipped when the browser asks, as the site's CDN does (Cloudflare:
+ * gzip for the scripts, brotli for the API's JSON), so the bytes over the throttled link are the site's; `--raw` sends
+ * them as they are. Compressed once per file and kept.
+ */
+const gzipped = new Map();
+function sendText(request, response, body, type) {
+    if (flag("raw") || !/\bgzip\b/.test(String(request.headers["accept-encoding"] ?? ""))) {
+        response.writeHead(200, {"Content-Type": type, "Cache-Control": "no-store"}).end(body);
+        return;
+    }
+    const key = `${type}:${body.length}:${body.subarray(0, 64).toString("base64")}`;
+    let zipped = gzipped.get(key);
+    if (!zipped) gzipped.set(key, (zipped = gzipSync(body, {level: 6})));
+    response.writeHead(200, {"Content-Type": type, "Content-Encoding": "gzip", "Vary": "Accept-Encoding", "Cache-Control": "no-store"}).end(zipped);
+}
 const servePort = Number(arg("serve", "0"));
 // (Loopback only, also for the WebViews: the iOS Simulator shares the Mac's loopback, and an Android emulator reaches
 // it as 10.0.2.2.)
@@ -364,9 +388,17 @@ for (const deviceName of devices) {
         // The bytes received, as each response finishes (node's clock), for the bytes before the first frame.
         const received = [];
         const urls = new Map();
+        const started = new Map();
+        /** Every chunk of every response as it arrives (node's clock): the bytes over the link before the first frame, in flight too. */
+        const chunks = [];
         await cdp.send("Network.enable");
-        cdp.on("Network.responseReceived", (event) => urls.set(event.requestId, event.response?.url ?? ""));
-        cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? ""}));
+        cdp.on("Network.requestWillBeSent", (event) => {
+            urls.set(event.requestId, event.request?.url ?? "");
+            started.set(event.requestId, Date.now());
+        });
+        cdp.on("Network.responseReceived", (event) => urls.set(event.requestId, event.response?.url ?? urls.get(event.requestId) ?? ""));
+        cdp.on("Network.dataReceived", (event) => chunks.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? ""}));
+        cdp.on("Network.loadingFinished", (event) => received.push({at: Date.now(), bytes: event.encodedDataLength ?? 0, url: urls.get(event.requestId) ?? "", start: started.get(event.requestId) ?? null}));
         if (network) await cdp.send("Network.emulateNetworkConditions", network);
         if (flag("profile")) {
             await cdp.send("Profiler.enable");
@@ -479,6 +511,10 @@ for (const deviceName of devices) {
             gcDrops: gcs
         };
         const receivedBeforeFirst = received.filter((r) => r.at <= navigated + firstFrameAt);
+        // (The page's own requests; a dedicated worker's script is the page's request too. In flight at the first frame:
+        // what had arrived of it.)
+        const wireBeforeFirst = chunks.filter((c) => c.at <= navigated + firstFrameAt).reduce((sum, c) => sum + c.bytes, 0);
+        const requests = received.map((r) => ({url: r.url.replace(/^https?:\/\/[^/]+/, "").slice(0, 120), start: r.start ? r.start - navigated : null, end: r.at - navigated, kb: Math.round(r.bytes / 1024)})).sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
         const bytesBeforeFirstFrame = receivedBeforeFirst.reduce((sum, r) => sum + r.bytes, 0);
         // What they were, by kind (the page's own files, the snapshot, the model pack and models, icons, the rest).
         const kindOf = (url) => (/\/ark\/[^/]*\.js(\?|$)/.test(url) ? `script ${url.split("/").pop().split("?")[0]}` : /population-file|voyage|snapshot/.test(url) ? "snapshot" : /pack/.test(url) ? "model pack" : /\.glb|\.ark\.json|talking-models/.test(url) ? "models" : /\.webp|\.png|\.jpg|\.ktx2|basis/.test(url) ? "images and textures" : /atlas/.test(url) ? "positions atlas" : "other");
@@ -527,6 +563,8 @@ for (const deviceName of devices) {
             perf: perfAvg,
             bytesBeforeFirstFrame,
             bytesByKind,
+            wireBeforeFirstFrame: wireBeforeFirst,
+            requests: requests.slice(0, 400),
             run,
             world: r.world ?? null,
             build: buildEnv,
