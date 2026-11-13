@@ -31,6 +31,14 @@ identical before and after, §6).
   instance writes, herds and specks, particles and weather, the plants' LOD, the render submit, labels, the runtime's
   hand-over. GPU counts from `renderer.info`: draw calls (all passes), triangles, programs, textures.
 
+To repeat a run (a real snapshot file kept outside the repo; the base measured the same way from its own worktree):
+
+```
+node scripts/ark-runtime-measure.mjs --label lowphone --page embed --devices phone-low --interact \
+    --seconds 130 --steady-from 70 --population-file <snapshot.json> --production --perf
+# --quality low|medium|high, --throttle 4|6, --page hero, --gc-points --gc-steady 120 (the heap budget)
+```
+
 **Caveats.** The CPU throttle slows the main thread only: the Mac's GPU draws every frame, so fill rate (DPR, the finish's
 passes, shadows) is not measured here; that is what the on-device overlay is for (§5). The Mac ran 15+ other agents
 (load average 55–165 during the runs), so wall times swing; every before/after pair was run back to back on the same
@@ -87,9 +95,13 @@ Ranked by the measured win. Everything that is not a picture choice is exact: th
      30 by the script's own work for 15 s on end (a phone then trades the tier's finish for 60);
    - *the start tier*: on a touch device a 2 ms CPU benchmark (best of three) adds to the device's own answer: a main
      thread slower than ~5× a desktop core starts on the low tier, at a steady 30.
-4. **The resting warm-up spread over its step**, at the rate frames are drawn, done half a minute before the step:
-   about one ask every other frame. The schedules made for animals not drawn one by one are kept per snapshot (and per
-   behaviour world) instead of made again every five minutes.
+4. **The resting warm-up: only what the step will ask, spread over the step.** The rotation asks only a crowded kind's
+   members, in ring order, until its quota of awake ones is found (and the crowded zones' likewise); the warm-up asked
+   about all 3,145 animals aboard. It now asks exactly the next step's first asks (`arkRestingAsks`: the rotation run
+   ahead with unknown answers taken as awake; a test checks that with those answers the rotation asks nothing else), a
+   few hundred, spread evenly from the step's first seconds at the measured frame rate and never more than one a frame;
+   the schedules made for animals not drawn one by one are kept per snapshot and behaviour world. Same answers, same
+   rotation; before, 8–19 ms a frame for the step's last minute on the phone profiles, and not done by the step.
 5. **The sun's shadow map every other frame on phones** while its box stands still (the drift turns round what the view
    looks at; the box moves only with a pan, a zoom or the hour), every frame whenever it moves: no shadow swims. Desktop:
    every frame as before.
@@ -135,7 +147,19 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 
 ## 6. Gates
 
-<!-- GATES -->
+| Gate | Result |
+|---|---|
+| Types (`npx tsc --noEmit -p tsconfig.json`) | clean |
+| Lint (`npm run lint`) | exit 0 (only the known `<img>` warnings, none in the changed files) |
+| Unit and integration (`npx tsx --test 'src/lib/**/*.test.ts'`) | 2,631 tests: 2,629 pass, 0 fail, 2 skipped (the lane's own: `src/lib/ark-perf-mobile.test.ts`, 13: the pacing on model devices, the start tier, a read that changes nothing, the collisions' memo against a layer that forgets it, the two-sided split) |
+| Collision audit, three modes (CI's commands: islands v2, islands v1, today's) | base and branch **identical** (every report the same but its timings); all three checks pass |
+| Behaviour audit (CI's command) and encounters | base and branch **identical** (but the commit and the timings); "All 25 checks hold" |
+| Motion CI, the default view ×2 (`ark-rig-scenes.mjs --island --seconds 60`) | branch: pace ratio median 1.01 / 1.06, backwards 2.4% / 0.7%, over 1 s 2 / 0, ground turns 1.0 / 0.3 a minute; main the same minutes: 0.98 / 1.07, 0.8% / 2.1%, 1 / 1, 0.5 / 1.4. The same spread (the clock picks what moves); recordings take none of the pacing |
+| Visual CI on GitHub (run 43463825786, dispatched on d7e20c23: every change to what is drawn) | <!-- VISUAL --> |
+| Motion metrics (a visual-CI hook) | green in that run's hooks job |
+| Heap budget (low phone, `--gc-points`: post-GC ≤ 384 MB at the first frame and in steady play) | <!-- HEAP --> |
+| Rendering throttles change no shared result | the audits above; the memo's test; the read skip is a deep equality; placement in the worker is the mount's own (`src/lib/ark-prebuild.test.ts` compares every place) |
+
 
 ## 7. What is left (for other lanes)
 
@@ -153,12 +177,8 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
    the town lane may prefer to build its glass, bars and nets that way itself.
 3. **The behaviour world's build** (behaviour lane): 60–70 s on the low phone before animals show (~25 ms a frame).
    In the prebuild worker, as the places are.
-4. **The resting warm-up's asks** (runtime/behaviour): ~4 ms each on the phone profile (tens of ms under load), and it
-   asks for all 3,145 animals every five minutes, while the rotation itself (`arkOutside`, `arkWithinCapacity`) asks
-   only a crowded kind's members, in ring order, until its quota of awake ones is found. Warming exactly those (run the
-   next step's rotation with a recording `isResting`), or answering `restingAtRoost` in a worker, would cut it by most of
-   its work. Now spread (at most one ask a frame) instead of 8–19 ms a frame in the step's last minute; a world built
-   late in a step still leaves the step's last half minute heavy, as before.
+4. **`restingAtRoost` itself** (behaviour): ~1 ms an ask on a desktop core, ~4 ms on the phone profile. The warm-up now
+   asks only a few hundred a step, spread; answering them in a worker would take the rest off the main thread.
 5. **Per-frame garbage in the animal loop** (scene): the candidates' objects, filter/sort/map chains and Sets each frame;
    pooled arrays would cut most of the remaining 15–25 MB/s.
 6. **The snapshot's parse** (embed and page): the 1.6 MB read is parsed on the main thread every 45 s in the apps'
@@ -185,7 +205,7 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 | The resolution floor and steps | 0.5; 0.6; 0.7 | 0.7 of the tier's pixel ratio, 0.1 steps, 1.5 s apart, 90 s ceilings | Below 0.7 the medium tier's 1.5 becomes ~1, visibly soft on a 3× phone. |
 | The start tier | the device's answer only; a warm-up of the scene; a CPU benchmark | the device's answer, then a 3×-repeated 2 ms benchmark on touch devices: over 9.5 ms → low | A slow phone no longer builds the medium tier's scenery to drop it; calibrated on the throttled profiles (1× 1.9, 4× 7.6, 6× 11.7 ms). |
 | The low tier's rate | 60 like the others; a steady 30 always | a steady 30 only on a slow main thread; else the display's, locked if needed | A phone dropped to low to reach 60 must get the chance. |
-| The resting warm-up | as was; a lower budget; spread by count over the step | spread by count at the measured frame rate, done 30 s before the step | Same answers; ~one ask every other frame instead of 8–19 ms a frame for a minute. |
+| The resting warm-up | as was; a lower budget; spread by count; only what the step will ask | the next step's first asks only (`arkRestingAsks`), spread by count at the measured frame rate, at most one a frame | Same answers and rotation; a few hundred asks a step instead of 3,145; first measured spread over all 3,145, which cost 4–10 ms a frame on the phone profiles for most of each step. |
 | Shadows on phones | every frame; half rate; static only | every other frame while the shadow box stands still, every frame when it moves | Saves half the shadow pass with nothing swimming; animals' contact shadows are separate. |
 | The overlay in the apps' panel | a host message; a URL flag; a gesture | `?perf=1` remembered, and five taps on the top-left corner | The panel's URL cannot be changed by hand; no app release needed. |
 | The town's draw calls | merge now; a far proxy; leave to the town lane | the town lane, with the plan and numbers (§7) | Its chunks feed streaming, near detail and window lighting; a merge belongs with its owners and its visual gate. |
