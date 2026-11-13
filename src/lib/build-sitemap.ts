@@ -1,6 +1,6 @@
-import {animalTrials, behaviourSignatures} from "@/data/animal-behaviours";
+import {animalTrials} from "@/data/animal-behaviours";
 import {isHumanComparisonSlug, isHumanSlug} from "@/lib/people-are-never-public";
-import {animalFrequenciesPagination, animalHybridsPagination, animalTrialsPagination, tierListPagination, type HubPagination} from "@/data/hub-pagination";
+import {animalHybridsPagination, animalTrialsPagination, tierListPagination, type HubPagination} from "@/data/hub-pagination";
 import {getAnimalHybridCards} from "@/data/animal-hybrid-cards";
 import {WHAT_ANIMAL_AM_I_UPDATED_AT} from "@/data/what-animal-am-i-page";
 import {ADVICE_FATIGUE_UPDATED} from "@/data/advice-fatigue";
@@ -198,8 +198,10 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/qualities")},
             {url: getAbsoluteUrl(locale, "/animal-symbolism")},
             {url: getAbsoluteUrl(locale, "/animal-powers")},
+            // /animal-frequencies/page/<n> is noindex (canonical: the hub) since
+            // Nov 2026, so only the hub is listed; a noindex URL in a sitemap is
+            // a Search Console error, not a hint.
             {url: getAbsoluteUrl(locale, "/animal-frequencies")},
-            ...hubPageEntries(locale, animalFrequenciesPagination, behaviourSignatures.length),
             {url: getAbsoluteUrl(locale, "/animal-trials")},
             ...hubPageEntries(locale, animalTrialsPagination, animalTrials.length),
             {url: getAbsoluteUrl(locale, POKEMON_ANIMAL_CANONICAL_BASE_PATH)},

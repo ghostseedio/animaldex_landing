@@ -39,6 +39,12 @@ export type ChallengeEntry = CanonicalContentMetadata & {
     animalADisplayName?: string;
     animalBDisplayName?: string;
     comparisonType: ChallengeComparisonType;
+    /**
+     * Answer-first search title and snippet (Nov 2026 CTR pass): name the
+     * winner, a number and the surprise. `title` stays the on-page H1.
+     */
+    seoTitle?: string;
+    seoDescription?: string;
     quickVerdict: string;
     shortAnswer: string[];
     whyThisMatchupIsInteresting: string[];
@@ -2284,6 +2290,8 @@ const challengeData: ChallengeEntry[] = [
         animalBSlug: "snake",
         comparisonType: "battle",
         title: "Honey Badger vs Snake: Who Wins, and Is It Immune to Venom?",
+        seoTitle: "Honey Badger vs Snake: Badger Wins 2 of 4, Not Venom-Immune",
+        seoDescription: "The honey badger wins 2 of 4 scenarios and hunts cobras, but it is not immune to venom: one clean strike can still kill it. Ask the #1 yourself.",
         description: "A grounded honey badger vs snake comparison covering toughness, strike risk, prey handling, terrain, and why a generic snake page still needs scenario nuance.",
         quickVerdict: "Honey badger usually wins against most snakes, including cobras: it is a skilled snake hunter with thick, loose skin and partial venom resistance. A clean bite from a large venomous snake can still knock it out or kill it.",
         shortAnswer: [
@@ -3353,6 +3361,8 @@ const challengeData: ChallengeEntry[] = [
         animalBSlug: "orangutan",
         comparisonType: "strength",
         title: "Gorilla vs Orangutan: Which Is Stronger?",
+        seoTitle: "Gorilla vs Orangutan: 2x Heavier Gorilla Wins, Not in Trees",
+        seoDescription: "The gorilla is stronger: a silverback weighs about twice a male orangutan. But the orangutan wins 1 of 3 scenarios, up in the trees. Ask the #1 yourself.",
         description: "A biology-first gorilla vs orangutan comparison covering body plan, raw power, climbing, and why these apes express strength very differently.",
         quickVerdict: "The gorilla is stronger overall: an adult male is roughly twice the weight of a large male orangutan, with far more total muscle. Orangutans have remarkable arm and grip strength for climbing, but on the ground the gorilla wins.",
         shortAnswer: [
@@ -6334,6 +6344,8 @@ const challengeData: ChallengeEntry[] = [
         animalBSlug: "bull-shark",
         comparisonType: "battle",
         title: "Bull Shark vs Great White: Size, Bite and Who Would Win",
+        seoTitle: "Great White Beats Bull Shark: 5 m vs 3.5 m, Not in Rivers",
+        seoDescription: "The 5 m great white beats the 3.5 m bull shark in open water, but the bull shark wins the river mouth, where great whites never go. Ask the #1 yourself.",
         description: "A grounded great white shark vs bull shark comparison covering size, bite, habitat range, and why these sharks feel dangerous in different ways.",
         quickVerdict: "A great white would beat a bull shark: it is typically 4 to 5 m long, several times heavier, and has the bigger bite. Bull sharks are tough and aggressive, and they can live in fresh water, where great whites never go.",
         shortAnswer: [

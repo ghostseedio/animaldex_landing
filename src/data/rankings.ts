@@ -155,14 +155,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Fastest Animals in the World",
-        seoTitle: "Fastest Animals in the World: Top 100 Ranked (240 mph #1)",
+        seoTitle: "Fastest Animal? Not the Cheetah: Peregrine Falcon Leads 100",
         immediateQuestion: "What is the fastest animal in the world?",
         rankingFactors: [
             "AnimalDex speed profile score",
             "Air, land, and water movement treated as different questions",
             "Peak performance context, not one interchangeable number"
         ],
-        description: "The peregrine falcon dives at 240+ mph, the cheetah rules land and the sailfish and bluefin tuna lead at sea. All 100 fastest animals, ranked by real speed.",
+        description: "The peregrine falcon dives at 240+ mph, three times the cheetah's 70 mph sprint. All 100 fastest animals ranked by real speed. Ask the #1 yourself.",
         category: "speed",
         statRankingKey: "speed",
         statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
@@ -234,14 +234,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Strongest Animals in the World",
-        seoTitle: "Strongest Animal in the World: Top 100 Ranked by Real Power",
+        seoTitle: "Strongest Animal? Not the Elephant: Blue Whale Leads 100",
         immediateQuestion: "What is the strongest animal in the world?",
         rankingFactors: [
             "Total body power and mass",
             "Ability to impose force on the environment or another large animal",
             "AnimalDex size, dominance, and speed profiles for the rest of the top 100"
         ],
-        description: "The blue whale is the strongest animal on Earth and the elephant rules on land. See where the rhino, hippo, orca, gorilla and big cats land in the top 100.",
+        description: "The blue whale, not the elephant, is the strongest animal on Earth. Rhino, hippo, orca and gorilla follow in our 100 ranked by force. Ask the #1 yourself.",
         category: "strength",
         searchIntents: [
             "strongest animals",
@@ -360,14 +360,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Smartest Animals Ranked",
-        seoTitle: "Smartest Animals in the World: Top 100 Ranked by Intelligence",
+        seoTitle: "Smartest Animal? Not the Chimp: Dolphin Tops 100 Ranked",
         immediateQuestion: "What are the smartest animals?",
         rankingFactors: [
             "AnimalDex intelligence profile score",
             "Social learning and communication",
             "Problem solving, memory, and tool-linked behavior"
         ],
-        description: "Dolphins, chimpanzees, orcas, octopuses and ravens lead the 100 smartest animals. See how each one solves problems, uses tools and communicates.",
+        description: "The dolphin beats the chimpanzee as the smartest animal, with orca, octopus and raven close behind in 100 ranked by intelligence. Ask the #1 yourself.",
         category: "intelligence",
         statRankingKey: "intelligence",
         statRankingLimit: MIN_RANKING_TABLE_ENTRIES,
@@ -435,14 +435,14 @@ const rankingPagesData: RankingPage[] = [
             }
         ],
         headline: "100 Most Dangerous Animals in the World",
-        seoTitle: "Most Dangerous Animals in the World: Top 100 Ranked",
+        seoTitle: "Most Dangerous Animal? Not the Shark: Crocodile Tops 100",
         immediateQuestion: "What are the most dangerous animals?",
         rankingFactors: [
             "Lethal capability and encounter risk",
             "Willingness to use force",
             "AnimalDex dominance, size, and speed profiles, plus predator and venom signals"
         ],
-        description: "Crocodiles, hippos, elephants, king cobras and black mambas top the 100 most dangerous animals to meet in the wild, ranked by real attack risk.",
+        description: "The crocodile, not the shark, is the most dangerous animal to meet; hippo, elephant and king cobra follow in 100 ranked by risk. Ask the #1 yourself.",
         category: "danger",
         searchIntents: [
             "dangerous animals list",
@@ -683,7 +683,8 @@ const rankingPagesData: RankingPage[] = [
     createRankingPage({
         slug: "animals-with-best-eyesight",
         title: "Animals with the Best Eyesight: Top 10 Ranked",
-        description: "A structured ranking of animals with the best eyesight, separating long-range daytime acuity, low-light vision, motion detection, and unusual visual systems.",
+        seoTitle: "Best Eyesight in Animals? Eagle Beats the Owl: 100 Ranked",
+        description: "The eagle has the best eyesight of any animal, ahead of the peregrine falcon and the barn owl. 100 animals ranked by vision. Ask the #1 yourself.",
         category: "eyesight",
         searchIntents: [
             "animals with the best eyesight",
@@ -1471,7 +1472,8 @@ const rankingPagesData: RankingPage[] = [
         slug: "rarest-animals",
         featuredImage: tierListHeroImage("rarest-animals"),
         title: "Rarest Animals in the World: Top 10 Ranked",
-        description: "A structured ranking of the rarest animals in the world, blending scarcity, vulnerability, and conservation pressure to answer the overlap between rarest and most endangered wildlife.",
+        seoTitle: "Rarest Animal? Not the Panda: Black Rhino Tops 250 Ranked",
+        description: "The black rhinoceros, not the giant panda, is the rarest animal in our 250 ranked; Sunda pangolin and aye-aye follow. Ask the #1 yourself.",
         category: "rarity",
         statRankingKey: "rarity",
         statRankingLimit: STAT_RANKING_TABLE_ENTRIES,

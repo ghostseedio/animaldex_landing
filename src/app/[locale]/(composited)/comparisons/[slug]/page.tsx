@@ -101,8 +101,9 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
     return buildContentMetadata({
         locale: params.locale,
         pathname: `/comparisons/${challenge.slug}`,
-        title: challenge.title,
-        description: buildComparisonMetaDescription(challenge.quickVerdict, challenge.description, challenge.scenarioBreakdown ?? [], animalA.name, animalB.name),
+        // Hand-written answer-first copy where a page has one (Nov 2026 CTR pass); else the verdict + underdog tease.
+        title: challenge.seoTitle ?? challenge.title,
+        description: challenge.seoDescription ?? buildComparisonMetaDescription(challenge.quickVerdict, challenge.description, challenge.scenarioBreakdown ?? [], animalA.name, animalB.name),
         keywords: [...challenge.searchIntents, challenge.comparisonType, animalA.name, animalB.name],
         featuredImage: challenge.featuredImage,
         publishedAt: challenge.publishedAt,

@@ -36,12 +36,12 @@ test("canonical ranking path stays /tier-list and is not revived as /rankings", 
 test("optimized ranking pages have answer-first Top 100 SEO titles, headlines, and questions", () => {
     const rankings = readRepo("src/data/rankings.ts");
     const expected: Array<[string, string, string]> = [
-        ["most-dangerous-animals", "Most Dangerous Animals in the World: Top 100 Ranked", "100 Most Dangerous Animals in the World"],
-        ["strongest-animals", "Strongest Animal in the World: Top 100 Ranked by Real Power", "100 Strongest Animals in the World"],
-        ["smartest-animals", "Smartest Animals in the World: Top 100 Ranked by Intelligence", "100 Smartest Animals Ranked"],
+        ["most-dangerous-animals", "Most Dangerous Animal? Not the Shark: Crocodile Tops 100", "100 Most Dangerous Animals in the World"],
+        ["strongest-animals", "Strongest Animal? Not the Elephant: Blue Whale Leads 100", "100 Strongest Animals in the World"],
+        ["smartest-animals", "Smartest Animal? Not the Chimp: Dolphin Tops 100 Ranked", "100 Smartest Animals Ranked"],
         ["most-adaptable-animals", "Most Adaptable Animals in the World: Top 100 Ranked", "100 Most Adaptable Animals"],
         ["most-agile-animals", "Most Agile Animals in the World: Top 100 Ranked", "100 Most Agile Animals"],
-        ["fastest-animals", "Fastest Animals in the World: Top 100 Ranked (240 mph #1)", "100 Fastest Animals in the World"],
+        ["fastest-animals", "Fastest Animal? Not the Cheetah: Peregrine Falcon Leads 100", "100 Fastest Animals in the World"],
         ["animals-with-strongest-armor", "Animals with the Strongest Armor: Top 100 Ranked", "100 Animals with the Strongest Armor"],
         ["animals-with-best-teamwork", "Animals with the Best Teamwork: Top 100 Ranked", "100 Animals with the Best Teamwork"],
         ["most-resilient-animals", "Most Resilient Animals in the World: Top 100 Ranked", "100 Most Resilient Animals"]
