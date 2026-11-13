@@ -284,11 +284,24 @@ export class ArkStreamer {
         return best;
     }
 
+    /**
+     * An island that will join the world, its place and grid known before it is built (the town, built in its worker
+     * after the first frame): the fog reads both islands from the first frame, as it will once the island registers
+     * (the same reach then: no change). Without it the first frames drew the two-island view in the one island's fog.
+     */
+    expectIsland(spec: {id: string; offset: {x: number; z: number}; grid: ChunkGrid}) {
+        this.expected = [...this.expected.filter((island) => island.id !== spec.id), spec];
+        this.updateFog();
+    }
+
+    private expected: Array<{id: string; offset: {x: number; z: number}; grid: ChunkGrid}> = [];
+
     /** The base fog pushed out (decision 142) so every island reads across the water from the others' views. */
     private updateFog() {
         let reach = 0;
-        for (const a of this.islands) {
-            for (const b of this.islands) {
+        const islands = [...this.islands, ...this.expected.filter((spec) => !this.islands.some((island) => island.id === spec.id))];
+        for (const a of islands) {
+            for (const b of islands) {
                 if (a === b) continue;
                 // From a's middle to b's farthest corner.
                 const [ax0, az0, ax1, az1] = gridRect(a);

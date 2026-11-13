@@ -198,6 +198,8 @@ import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/react
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
+import {townWorldOrigin} from "@/ark-scene/islands";
+import {TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuild";
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
@@ -938,6 +940,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         register?.call(streamer, {id: "town", offset: isl.origin, grid: isl.grid, spans: isl.spans, content: isl.content, apply: isl.applyStream});
     };
     if (island) registerIslandStream(island);
+    // (The town coming, built after the first frame: the fog reads both islands from the first frame, `expectIsland`.)
+    else if (options.wildAnimals) streamer.expectIsland({id: "town", offset: townWorldOrigin(), grid: TOWN_GRID});
 
     const applyTier = (next: QualityTier) => {
         const liteBefore = liteOn();
