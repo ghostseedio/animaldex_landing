@@ -36,6 +36,12 @@
         },
         "hint": "Træk for at se dig omkring. Knib eller rul for at zoome. Tryk på et dyr for at møde det.",
         "loading": "Henter Ark frem",
+        "loader": {
+            "data": "Henter, hvem der er om bord",
+            "world": "Bygger øen",
+            "animals": "Henter dyrene frem",
+            "newest": "Nyeste om bord"
+        },
         "noWebgl": "Denne browser kan ikke vise Ark i 3D. Her er dem, der er om bord.",
         "newArrival": "{animal} er lige kommet om bord",
         "showMe": "Vis mig",

@@ -36,6 +36,12 @@
         },
         "hint": "Arraste para olhar em volta. Faça pinça ou role para dar zoom. Toque em um animal para conhecê-lo.",
         "loading": "A Ark está chegando",
+        "loader": {
+            "data": "Lendo quem está a bordo",
+            "world": "Construindo a ilha",
+            "animals": "Os animais estão chegando",
+            "newest": "Mais recente a bordo"
+        },
         "noWebgl": "Este navegador não consegue mostrar a Ark em 3D. Veja quem está a bordo.",
         "newArrival": "{animal} acabou de embarcar",
         "showMe": "Mostrar",

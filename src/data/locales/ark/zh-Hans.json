@@ -36,6 +36,12 @@
         },
         "hint": "拖动可环顾四周，双指捏合或滚动可缩放，轻点动物即可认识它。",
         "loading": "正在呈现 Ark",
+        "loader": {
+            "data": "正在读取船上有谁",
+            "world": "正在搭建岛屿",
+            "animals": "正在呈现动物",
+            "newest": "最新登船"
+        },
         "noWebgl": "此浏览器无法以 3D 显示 Ark。以下是船上的动物。",
         "newArrival": "{animal}刚刚登船",
         "showMe": "带我去看",

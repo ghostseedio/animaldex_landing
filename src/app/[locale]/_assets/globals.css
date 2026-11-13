@@ -684,6 +684,14 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
     .ark-island-count { display: inline; }
 }
 
+/* The Ark's loading screen (lib/ark-loading.ts): the part of the bar the work going on now will fill is a still tint
+   (never progress of its own; a moving sheen there cost the scene 0.5 s to its first frame on the phone profile, and
+   the stage's dot pulsing slowly is all that needs to move). While the loading card shows, the scene's own quiet loading
+   bar at the world's foot steps aside: the card already says the same. */
+.ark-load-sheen { background: rgba(200, 250, 99, 0.2); }
+
+[data-ark-loading] [data-ark-runtime="loading"] { opacity: 0 !important; }
+
 /* The Talk front door's "to" line: a new animal fades in over 180 ms when
    the suggestion or a Change tap picks it (talk front door SPEC 4.3). */
 @keyframes frontDoorFade {

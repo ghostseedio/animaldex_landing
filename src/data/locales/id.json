@@ -4192,6 +4192,12 @@
     },
     "hint": "Seret untuk melihat sekeliling. Cubit atau gulir untuk memperbesar. Ketuk hewan untuk menemuinya.",
     "loading": "Menampilkan Ark",
+    "loader": {
+      "data": "Membaca siapa saja di Ark",
+      "world": "Membangun pulau",
+      "animals": "Memunculkan para hewan",
+      "newest": "Terbaru di Ark"
+    },
     "noWebgl": "Browser ini tidak bisa menampilkan Ark dalam 3D. Ini daftar siapa saja yang ada di dalamnya.",
     "newArrival": "{animal} baru saja naik ke Ark",
     "showMe": "Tunjukkan",

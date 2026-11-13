@@ -3,6 +3,7 @@
 import React, {useEffect, useId, useState} from "react";
 import type {ArkIsland, ArkIslandCounts} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
+import {ARK_POSTER, ARK_POSTER_BLURRED} from "@/lib/ark-poster";
 
 /**
  * What sits over the world's top start corner on /ark (decision 239; owner, 2026-11-12: "the ark needs to be as
@@ -116,18 +117,20 @@ export function ArkToast({children, className = "", ...rest}: React.HTMLAttribut
 
 export const ARK_GLASS = GLASS;
 
-/**
- * The poster frames (decision 246): real renders of the Ark's opening view (the wild island, as a first visit opens on
- * it) at the page's full-screen size, a wide one and a phone's tall one. Re-render them with
- * `docs/ark/live-hud.md`'s recipe when the island changes a lot.
- */
-export const ARK_POSTER = {wide: "/ark/poster/wild-wide.webp", tall: "/ark/poster/wild-tall.webp"} as const;
+// The poster frames and their placeholders (decision 246; `lib/ark-poster.ts`).
+export {ARK_POSTER, ARK_POSTER_PLACEHOLDER} from "@/lib/ark-poster";
+
+/** The placeholder, blurred by its own SVG (a still picture: no CSS filter redone each frame). */
+function PosterPlaceholder({src, className}: {src: string; className: string}) {
+    return <span aria-hidden="true" className={`absolute inset-0 bg-cover bg-center ${className}`} style={{backgroundImage: `url("${src}")`}} />;
+}
 
 /**
  * The poster over the world until the scene is up: the page's largest paint, in the server's HTML (no JavaScript
- * needed), then faded out as the live world takes over. The loading line sits on it in glass (readable on any frame).
+ * needed), then faded out as the live world takes over (instantly with reduced motion). Under it, the placeholder
+ * frame, so even the first paint shows the Ark. The loading card (`ark-loader.tsx`) sits over the world beside it.
  */
-export function ArkPoster({ready, loading}: {ready: boolean; loading: string}) {
+export function ArkPoster({ready}: {ready: boolean}) {
     const [gone, setGone] = useState(false);
     useEffect(() => {
         if (!ready) return;
@@ -136,18 +139,14 @@ export function ArkPoster({ready, loading}: {ready: boolean; loading: string}) {
     }, [ready]);
     if (gone) return null;
     return (
-        <div data-ark-poster="" aria-hidden="true" className={`pointer-events-none absolute inset-0 z-[1] bg-[#ecdcc4] transition-opacity duration-700 ease-out motion-reduce:transition-none ${ready ? "opacity-0" : "opacity-100"}`}>
+        <div data-ark-poster="" aria-hidden="true" className={`pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-[#476260] transition-opacity duration-700 ease-out motion-reduce:transition-none ${ready ? "opacity-0" : "opacity-100"}`}>
+            <PosterPlaceholder src={ARK_POSTER_BLURRED.tall} className="md:hidden" />
+            <PosterPlaceholder src={ARK_POSTER_BLURRED.wide} className="hidden md:block" />
             <picture>
                 <source media="(max-width: 767px)" srcSet={ARK_POSTER.tall} type="image/webp" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={ARK_POSTER.wide} alt="" width={1600} height={900} decoding="async" {...({fetchPriority: "high"} as React.ImgHTMLAttributes<HTMLImageElement>)} className="absolute inset-0 h-full w-full object-cover" />
             </picture>
-            {ready ? null : (
-                <p className={`${GLASS} absolute inset-x-0 bottom-[4.75rem] mx-auto w-max max-w-[calc(100%-2rem)] rounded-full px-3.5 py-2 text-center text-[12.5px] font-semibold`}>
-                    <span className="mr-2 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[#c8fa63] align-middle motion-reduce:animate-none" aria-hidden="true" />
-                    {loading}
-                </p>
-            )}
         </div>
     );
 }

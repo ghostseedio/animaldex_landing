@@ -8,6 +8,7 @@
 import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
+import type {ArkLoaderWords} from "@/lib/ark-loading";
 
 export type ArkHudWords = {
     label: string;
@@ -370,6 +371,8 @@ export type ArkWords = {
     islands?: {label: string; wild: string; town: string; both: string; atHome: string; onFarm: string; inTown: string; zoo: string; places?: Record<"homes" | "farms" | "gardens" | "water" | "roofs" | "walls" | "streets", string>};
     hint: string;
     loading: string;
+    /** The loading screen (`lib/ark-loading.ts`): its stages in a few calm words, and the newest arrival's label. */
+    loader: ArkLoaderWords;
     noWebgl: string;
     newArrival: string;
     showMe: string;
