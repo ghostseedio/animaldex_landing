@@ -68,8 +68,8 @@ export const qualityRankingPages: RankingPage[] = [
         qualities: ["Patient Progress", "Stillness", "Pacing", "Patience"],
         title: "Most Patient Animals: Top 10 Ranked",
         headline: "Most Patient Animals",
-        seoTitle: "Most Patient Animals: 10 Animals That Wait to Win",
-        description: "The most patient animals, from crocodiles and herons to the Greenland shark, ranked from AnimalDex trait data on waiting, stillness and slow progress.",
+        seoTitle: "Most Patient Animal? Not the Tortoise: Crocodile Tops 10",
+        description: "The American crocodile, not the tortoise, is the most patient animal; heron and snapping turtle follow in 10 that wait to win. Ask the #1 yourself.",
         immediateQuestion: "What is the most patient animal?",
         searchIntents: [
             "most patient animals",
@@ -155,8 +155,8 @@ export const qualityRankingPages: RankingPage[] = [
         qualities: ["Loyalty"],
         title: "Most Loyal Animals: Top 10 Ranked",
         headline: "Most Loyal Animals",
-        seoTitle: "Most Loyal Animals in the World: 10 That Bond for Life",
-        description: "The gray wolf tops the most loyal animals, with dogs, albatrosses, swans and geese that pair for life close behind. See all 10 and what makes them stay.",
+        seoTitle: "Most Loyal Animal? Not the Dog: Gray Wolf Leads the Top 10",
+        description: "The gray wolf beats the dog as the most loyal animal; albatross, swan and prairie vole pair for life in the top 10. Ask the #1 yourself.",
         immediateQuestion: "What is the most loyal animal?",
         searchIntents: [
             "most loyal animals",
@@ -416,8 +416,8 @@ export const qualityRankingPages: RankingPage[] = [
         qualities: ["Gentleness"],
         title: "Most Gentle Animals: Top 10 Ranked",
         headline: "Most Gentle Animals",
-        seoTitle: "Most Gentle Animals: 10 of the Gentlest Animals on Earth",
-        description: "The most gentle animals, from manatees and pygmy elephants to sloths, doves and seahorses, ranked from AnimalDex gentleness trait data.",
+        seoTitle: "Most Gentle Animal? Not the Sloth: Manatee Leads the Top 10",
+        description: "The Amazonian manatee, not the sloth, is the most gentle animal; pygmy elephant, dove and seahorse follow in the top 10. Ask the #1 yourself.",
         immediateQuestion: "What is the most gentle animal?",
         searchIntents: [
             "most gentle animals",
