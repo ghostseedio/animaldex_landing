@@ -96,6 +96,19 @@ test("MA4: land gaits by family: true seals galumph, eared seals and the walrus 
     assert.deepEqual(ladder("common-frog", "amphibian"), ["hop"]);
 });
 
+test("MA4: birds hop, waddle or walk by family (the stored ground gait), never by a slug's name", () => {
+    const ladder = (slug: string, plan: LocoRig["plan"]) => gaitLadder({slug, plan, legs: [{}, {}] as LocoRig["legs"]}).map(([g]) => g).join(">");
+    // The old name matches: "sparrow" hopped the sparrowhawk, "blackbird" the red-winged blackbird, "finch" the finch-billed myna.
+    for (const slug of ["eurasian-sparrowhawk", "red-winged-blackbird", "finch-billed-myna"]) assert.equal(ladder(slug, "flying_bird"), "biped_walk>biped_run", slug);
+    // Hopping families the names missed: a chiffchaff, a fieldfare, a waxwing.
+    for (const slug of ["common-chiffchaff", "fieldfare", "cedar-waxwing", "house-sparrow"]) assert.equal(ladder(slug, "flying_bird"), "hop", slug);
+    // Waddling families the names missed: grebes, loons, cormorants, pelicans, albatrosses; ducks as before.
+    for (const slug of ["great-crested-grebe", "common-loon", "great-cormorant", "brown-pelican", "wandering-albatross", "mallard"]) assert.equal(ladder(slug, "flying_bird"), "waddle>biped_run", slug);
+    // Penguins only waddle; ratites walk and run.
+    assert.equal(ladder("emperor-penguin", "flightless_bird"), "waddle");
+    assert.equal(ladder("ostrich", "flightless_bird"), "biped_walk>biped_run");
+});
+
 // MARK: A run over flat ground
 
 const flat = () => ({height: 0, nx: 0, ny: 1, nz: 0});
@@ -167,6 +180,10 @@ test("MA4 metric: a true seal galumphs on its belly: on the ground, the back hum
     const lion = buildLocoRig(fixture("california-sea-lion"));
     assert.equal(galumphDriver.takes(lion, input({})), false);
     assert.equal(leggedDriver.takes(lion, input({})), true);
+    // (At rest a sea lion or the walrus keeps its own baked idle, propped on its fore flippers: the legged gaits only travel.)
+    assert.equal(leggedDriver.takes(lion, input({clipNow: "idle"})), false);
+    assert.equal(leggedDriver.takes(buildLocoRig(fixture("walrus")), input({clipNow: "idle"})), false);
+    assert.equal(leggedDriver.takes(buildLocoRig(fixture("cane-toad")), input({clipNow: "idle"})), true);
 
     // (The flippers' webs: the foot bones; the upper and lower bones carry the belly skin by the hips too.)
     const hind = rig.legs.filter((l) => l.end === "hind").map((l) => l.foot);

@@ -143,8 +143,6 @@ const BOUNDERS = /(mouse|rat\b|-rat|vole|lemming|hamster|gerbil|squirrel|chipmun
 const CATS = /(cat\b|cat$|-cat|lion|tiger|leopard|cheetah|jaguar|puma|cougar|lynx|caracal|serval|ocelot|margay|bobcat|panther)/;
 const DOGS = /(dog|wolf|fox|jackal|coyote|dingo|dhole|hyena|aardwolf|raccoon)/;
 const HOOFED = /(deer|elk|moose|caribou|reindeer|horse|zebra|donkey|ass\b|pony|antelope|gazelle|impala|springbok|kudu|eland|oryx|addax|gnu|wildebeest|buffalo|bison|cattle|cow|ox\b|yak|goat|ibex|sheep|mouflon|chamois|takin|muskox|pig|boar|hog|warthog|peccary|tapir|rhino|hippo|bongo|nyala|duiker|dik-dik|klipspringer|pronghorn|saiga|chevrotain)/;
-const WADDLERS = /(penguin|duck|goose|swan|mallard|teal|wigeon|eider|scoter|merganser|shelduck|pochard|puffin|auk|guillemot|murre)/;
-const HOPPERS = /(sparrow|finch|robin|tit\b|tit$|-tit|chickadee|wren|thrush|blackbird|warbler|bunting|canary|budgerigar|lovebird|weaver|munia|waxbill|siskin|goldfinch|chaffinch|bullfinch|redstart|chat\b|flycatcher|nuthatch|kinglet|goldcrest|dunnock|accentor|sunbird|white-eye|bulbul|tanager|cardinal|grosbeak|junco|towhee)/;
 
 /**
  * How a seal, sea lion, walrus, frog, toad, newt or salamander moves on land, by family from the stored taxonomy
@@ -182,9 +180,14 @@ export function gaitLadder(rig: Pick<LocoRig, "plan" | "slug" | "legs">): GaitLa
     const plan = rig.plan;
     if (legs === 0) return [["stand", 0]];
     if (legs === 2) {
-        if (WADDLERS.test(slug) && /(penguin)/.test(slug)) return [["waddle", 0]];
-        if (HOPPERS.test(slug) && plan === "flying_bird") return [["hop", 0]];
-        if (WADDLERS.test(slug)) return [["waddle", 0], ["biped_run", 0.5]];
+        // A bird's gait on the ground by its family, from the stored taxonomy (the ground code in `styles.json`: small
+        // passerines hop, waterfowl, seabirds, grebes, loons, cormorants and pelicans waddle; MA4). Penguins (the
+        // flightless waddlers) only waddle. (It matched slug names: "sparrow" hopped the sparrowhawk, "blackbird" the
+        // red-winged blackbird.)
+        const ground = locoStyle(slug, plan).ground?.gait;
+        if (ground === "waddle" && plan === "flightless_bird") return [["waddle", 0]];
+        if (ground === "hop" && plan === "flying_bird") return [["hop", 0]];
+        if (ground === "waddle") return [["waddle", 0], ["biped_run", 0.5]];
         return [["biped_walk", 0], ["biped_run", 0.55]];
     }
     if (legs === 6) return [["wave", 0], ["tripod", 0.03]];

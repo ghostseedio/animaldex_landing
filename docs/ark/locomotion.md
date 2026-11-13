@@ -52,8 +52,8 @@ animal's seed, so every viewer sees the same.
   | Turtles | slow diagonal-sequence walk |
   | Frogs / toads (by family, `land-gaits.json`; MA4) | leapers (true and tree frogs) and walker-hoppers (toads): the saltation driver (`land-drivers.ts`: sit, push, a ballistic hop of about 2.2 / 0.9 body lengths, land on the arms; toads walk below 1 length a second); walkers (narrow-mouthed and rain frogs): sprawling walk |
   | Newts, salamanders | sprawling walk, sprawling run 0.35 (never a hop; MA4) |
-  | Seals, sea lions, walrus (by family; MA4) | true seals: the galumph driver (belly hump, `land-drivers.ts`); sea lions and fur seals: walk, half-bound 0.9; the walrus: walk |
-  | Birds | walk, run 0.55; hopping passerines hop; ducks and geese waddle, run 0.5; penguins waddle |
+  | Seals, sea lions, walrus (by family; MA4) | true seals: the galumph driver (belly hump, `land-drivers.ts`); sea lions and fur seals: walk, half-bound 0.9; the walrus: walk (at rest both keep their baked idle) |
+  | Birds (by family, the ground code in `styles.json`; MA4) | walk, run 0.55; hopping passerines hop; waterfowl, seabirds, grebes, loons, cormorants and pelicans waddle, run 0.5; penguins only waddle |
   | Insects | wave (slow), tripod (L1 R2 L3 against R1 L2 R3) |
   | Spiders, crabs | wave (back-to-front on each side, very slow), alternating tetrapod |
 
