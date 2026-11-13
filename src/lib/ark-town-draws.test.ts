@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {BatchedMesh, BufferGeometry, Material, MeshStandardMaterial, Sphere} from "three";
+import {BatchedMesh, BufferGeometry, Material, Mesh, MeshStandardMaterial, Sphere} from "three";
 import {launchEnclosures} from "@/ark-scene/islands/town/areas";
 import {TOWN_CHUNK_COUNT} from "@/ark-scene/islands/town/chunks";
 
@@ -15,11 +15,12 @@ async function town() {
     return buildTownIsland({tier: "low", zooOpen: launchEnclosures()});
 }
 
-function batchesOf(root: {traverse: (f: (o: unknown) => void) => void}): BatchedMesh[] {
+/** The chunk layers' batches (named as each chunk's mesh of the layer was), or with `zoo` the zoo's too. */
+function batchesOf(root: {traverse: (f: (o: unknown) => void) => void}, zoo = false): BatchedMesh[] {
     const found: BatchedMesh[] = [];
     root.traverse((o) => {
         const mesh = o as BatchedMesh;
-        if (mesh.isBatchedMesh && mesh.name.startsWith("town:")) found.push(mesh);
+        if (mesh.isBatchedMesh && (zoo || !mesh.name.startsWith("zoo:"))) found.push(mesh);
     });
     return found;
 }
@@ -32,7 +33,7 @@ test("the town's chunk layers: one batch per band and layer, every chunk's geome
     assert.ok(batches.length <= TOWN_BANDS * 6, `${batches.length} batches`);
     // (No room left over: the batch's arrays are exactly its chunks'.)
     for (const batch of batches) assert.equal(batch.unusedVertexCount, 0, batch.name);
-    const grounds = batches.filter((b) => b.name.startsWith("town:ground:"));
+    const grounds = batches.filter((b) => b.name === "ground");
     for (const ground of grounds) {
         assert.equal(ground.unusedIndexCount, 0, ground.name);
         assert.ok(ground.geometry.index!.array instanceof Uint16Array, `${ground.name}: 16-bit indices, as each tile's`);
@@ -54,14 +55,14 @@ test("the town's chunk layers: one batch per band and layer, every chunk's geome
     }
     const got: Record<string, number> = {ground: 0, decal: 0, solid: 0, foliage: 0, glass: 0, panes: 0};
     for (const batch of batches) {
-        const layer = batch.name.split(":")[1];
+        const layer = batch.name;
         const index = batch.geometry.index;
         got[layer] += (index ? index.count : batch.geometry.getAttribute("position").count) / 3;
     }
     for (const layer of ["decal", "solid", "foliage", "glass", "panes"]) assert.equal(got[layer], expected[layer], layer);
     assert.ok(got.ground > 0);
     const sphere = new Sphere();
-    for (const batch of batches.filter((b) => b.name.startsWith("town:solid:"))) {
+    for (const batch of batches.filter((b) => b.name === "solid")) {
         const chunks = batch.userData.chunks as number[];
         chunks.forEach((chunk, instance) => {
             const own = solids.get(chunk)!;
@@ -73,10 +74,39 @@ test("the town's chunk layers: one batch per band and layer, every chunk's geome
     built.dispose();
 });
 
+test("the walk surfaces: the paving's triangles as each chunk's own mesh gave them, in the same order", async () => {
+    const {townBuildData} = await import("@/ark-scene/islands/town/render/index");
+    const built = await town();
+    // (As `islands/scene.ts` walkSurfacesNow reads them: every mesh named "decal" or "zoo:decal", in the scene's order.)
+    const sources: ArrayLike<number>[] = [];
+    built.root.traverse((o) => {
+        const mesh = o as Mesh;
+        if (mesh.isMesh && (mesh.name === "decal" || mesh.name === "zoo:decal")) sources.push(mesh.geometry.getAttribute("position").array as Float32Array);
+    });
+    const data = townBuildData(launchEnclosures());
+    const own: ArrayLike<number>[] = [];
+    for (let key = 0; key < TOWN_CHUNK_COUNT; key++) own.push(data.scenery.chunks.get(key)?.decal.pos ?? []);
+    data.zoo.chunks.forEach((c) => own.push(c.decal.pos));
+    const join = (list: ArrayLike<number>[]) => {
+        const out = new Float32Array(list.reduce((n, a) => n + a.length, 0));
+        let at = 0;
+        for (const a of list) {
+            out.set(a, at);
+            at += a.length;
+        }
+        return out;
+    };
+    const got = join(sources);
+    const want = join(own);
+    assert.equal(got.length, want.length);
+    assert.ok(got.every((v, i) => v === want[i]), "the same triangles in the same order");
+    built.dispose();
+});
+
 test("streaming and the join: a chunk not drawn is a hidden instance; the batches let in one a reveal step", async () => {
     const {townBatchEnabled, TOWN_BANDS} = await import("@/ark-scene/islands/town/render/batches");
     const built = await town();
-    const batches = batchesOf(built.root).filter((b) => !b.name.startsWith("town:zoo"));
+    const batches = batchesOf(built.root);
     built.setDrawn((chunk) => chunk % 2 === 0);
     for (const batch of batches) {
         (batch.userData.chunks as number[]).forEach((chunk, instance) => assert.equal(batch.getVisibleAt(instance), chunk % 2 === 0, `${batch.name} chunk ${chunk}`));
@@ -109,7 +139,7 @@ test("window lighting: each chunk's windows lit in its band's batch, at their ow
     // Each panes batch's aLit as the chunks' own arrays would be, in instance order.
     const data = townBuildData(launchEnclosures());
     let checked = 0;
-    for (const batch of batchesOf(built.root).filter((b) => b.name.startsWith("town:panes:"))) {
+    for (const batch of batchesOf(built.root).filter((b) => b.name === "panes")) {
         const lit = batch.geometry.getAttribute("aLit").array as Float32Array;
         let offset = 0;
         for (const chunk of batch.userData.chunks as number[]) {

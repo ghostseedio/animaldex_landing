@@ -473,7 +473,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             const layer = layers[order];
             const parts = bandParts.take(layer.name);
             if (!parts.length) continue;
-            const batch = new TownBatch(parts, layer.material, `town:${layer.name}:${band}`, {castShadow: layer.castShadow, receiveShadow: layer.receiveShadow, release: layer.release});
+            // (Named as each chunk's mesh of the layer was: the walk surfaces read the paving's triangles, "decal".)
+            const batch = new TownBatch(parts, layer.material, layer.name, {castShadow: layer.castShadow, receiveShadow: layer.receiveShadow, release: layer.release});
+            batch.mesh.userData.band = band;
             if (layer.name === "ground") batch.chainBeforeRender(askTextures);
             if (layer.name === "glass" || layer.name === "panes") {
                 const attribute = batch.mesh.geometry.getAttribute("aLit") as BufferAttribute;
@@ -760,7 +762,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     };
 
     const setShadows = (on: boolean) => {
-        for (const {batch} of batches) if (batch.mesh.name.startsWith("town:solid:") || batch.mesh.name.startsWith("town:foliage:")) batch.mesh.castShadow = on;
+        for (const {batch} of batches) if (batch.mesh.name === "solid" || batch.mesh.name === "foliage") batch.mesh.castShadow = on;
         treeSets.forEach((set) => {
             set.mesh.castShadow = on;
         });
