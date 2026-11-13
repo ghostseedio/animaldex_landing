@@ -166,10 +166,21 @@ export {decodeFlight};
 // MARK: Flights on the schedule (movement audit lane MA1)
 
 /**
- * The hardest a flyer speeds up out of a take-off or slows into a landing (m/s², horizontal): half a g (the audit's
- * limit; a pigeon's first beats reach about that, a swan's run far less).
+ * The hardest a bird of a kilo or more speeds up out of a take-off or slows into a landing (m/s², horizontal): half a g
+ * (the audit's limit for the big birds).
  */
 export const FLIGHT_ACCEL_MAX = 0.5 * G;
+
+/**
+ * The hardest a flyer of this mass speeds up out of a take-off (m/s²): half a g at a kilo, more for smaller ones as power
+ * over weight grows (∝ m^-1/3: about 2 g for a sparrow, 1 g for a pigeon, the small birds' several-g bursts held to
+ * 2.5 g), a third of a g for a swan (MA1 follow-up, decision 285: at half a g for everyone a sparrow walked every way under
+ * 6 m and real small birds hop-fly them). Braking the same with a floor of 0.4 g (wings spread, tail fanned).
+ */
+export function flightAccelOf(massKg: number): {accel: number; brake: number} {
+    const k = 0.5 * Math.max(massKg, 1e-4) ** (-1 / 3);
+    return {accel: G * clamp(k, 0.3, 2.5), brake: G * clamp(k, 0.4, 2.5)};
+}
 
 /** How it gets off the ground (`takeoff.json`, by family): see `scripts/ark-flight-takeoff.mts`. */
 export type TakeoffClass = "w" | "wg" | "g" | "a" | "h";
@@ -186,7 +197,7 @@ export type AirPaces = {
     cruise: number;
     /** A soar's glide (m/s). */
     glide: number;
-    /** Speeding up out of a take-off, slowing into a landing (m/s², at most `FLIGHT_ACCEL_MAX`). */
+    /** Speeding up out of a take-off, slowing into a landing (m/s², `flightAccelOf`: at most half a g from a kilo up). */
     accel: number;
     brake: number;
     /** Its steepest climb out of a take-off and its glide-in (radians). */
@@ -202,16 +213,15 @@ export type AirPaces = {
 };
 
 /**
- * A flyer's air paces from its spec and its take-off class. Acceleration half a g up to half a kilo, falling to about a
- * third of a g for a swan (thrust over mass falls with size); braking about half a g (wings spread, tail fanned). The
+ * A flyer's air paces from its spec and its take-off class. Acceleration by mass (`flightAccelOf`: 2 g for a sparrow,
+ * half a g at a kilo, a third of a g for a swan); a run's at most 0.3 g (its feet slap the water or the ground). The
  * climb out of a take-off 45° for a small bird, about 20° for a swan, flatter for heavy wings (the family's beat factor);
  * the glide-in about four fifths of that. A run to lift off at half its cruise; a ski in from a third of it.
  */
 export function airPacesOf(spec: FlightSpec, cls: TakeoffClass | null): AirPaces {
     const m = spec.massKg;
     const insect = spec.kind === "insect";
-    const accel = FLIGHT_ACCEL_MAX * clamp((m / 0.5) ** -0.15, 0.55, 1);
-    const brake = FLIGHT_ACCEL_MAX * clamp(m ** -0.08, 0.75, 1);
+    const {accel, brake} = flightAccelOf(m);
     const deg = Math.PI / 180;
     const climb = insect ? 60 * deg : spec.kind === "bat" ? 40 * deg : clamp((45 - 12 * Math.log10(Math.max(m, 1e-4) / 0.1)) / Math.max(spec.factor, 1) ** 0.7, 14, 45) * deg;
     const descent = insect ? 45 * deg : clamp(climb * 0.8, 10 * deg, 35 * deg);
@@ -228,7 +238,7 @@ export function airPacesOf(spec: FlightSpec, cls: TakeoffClass | null): AirPaces
         descent,
         runWater: water ? 0.5 * spec.cruise : 0,
         runGround: ground ? 0.45 * spec.cruise : 0,
-        runAccel: accel * 0.6,
+        runAccel: Math.min(accel * 0.6, 0.3 * G),
         skiWater: ski ? spec.cruise / 3 : 0
     };
 }

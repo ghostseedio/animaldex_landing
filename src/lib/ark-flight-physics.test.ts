@@ -17,7 +17,7 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {airPaces, FLIGHT_WORTH, flightLoss, groupSpread, homeRadius, poseOnTrip, rangeReach, scheduleWorld, SLOT_SECONDS, spaceHomes, tripAt, wireThreats, type ScheduleAnimal, type Trip, type TripPose} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {airPacesOf, airProgress, clipBakeOf, clipRise, FLIGHT_ACCEL_MAX, flightGate, flightRigFrame, flightSpec, landingNow, legTuck, newFlightMemory, planAirLeg, strokeToClipPhase, takeoffClass, type AirStage, type FlightMemory, type FlightSpec} from "@/ark-scene/locomotion/flight";
+import {airPacesOf, airProgress, clipBakeOf, clipRise, FLIGHT_ACCEL_MAX, flightAccelOf, flightGate, flightRigFrame, flightSpec, landingNow, legTuck, newFlightMemory, planAirLeg, strokeToClipPhase, takeoffClass, type AirStage, type FlightMemory, type FlightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyleSlugs} from "@/ark-scene/locomotion/styles";
 import {recordMotionMetric} from "@/lib/ark-motion-metrics";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -101,7 +101,7 @@ const flights: Flight[] = (() => {
 
 // MARK: The planner
 
-test("MA1: a planned flight starts and ends at rest, covers its route, and never speeds up or slows harder than half a g", () => {
+test("MA1: a planned flight starts and ends at rest, covers its route, and never speeds up or slows harder than its mass allows (half a g from a kilo up)", () => {
     let checked = 0;
     const slugs = locoStyleSlugs().filter((slug, k) => k % 7 === 0 && flightSpec(slug, 0.3));
     for (const slug of slugs) {
@@ -120,7 +120,9 @@ test("MA1: a planned flight starts and ends at rest, covers its route, and never
                         if (k > 0) worst = Math.max(worst, Math.abs(v - last) / (plan.seconds / n));
                         last = v;
                     }
-                    assert.ok(worst <= FLIGHT_ACCEL_MAX * 1.001, `${slug} ${lengthM} m over ${L} m: ${(worst / 9.81).toFixed(2)} g`);
+                    const cap = Math.max(paces.accel, paces.brake);
+                    assert.ok(worst <= cap * 1.001, `${slug} ${lengthM} m over ${L} m: ${(worst / 9.81).toFixed(2)} g`);
+                    if (spec.massKg >= 1) assert.ok(worst <= FLIGHT_ACCEL_MAX * 1.001, `${slug} ${spec.massKg.toFixed(1)} kg: ${(worst / 9.81).toFixed(2)} g`);
                     assert.ok(Math.abs(airProgress(plan.knots, 1).share - 1) < 1e-9 && airProgress(plan.knots, 0).share === 0);
                     assert.ok(airProgress(plan.knots, 0).rate === 0 && airProgress(plan.knots, 1 - 1e-9).rate * L / plan.seconds < 0.05, `${slug} stops`);
                     assert.ok(plan.peak <= paces.cruise + 1e-9);
@@ -158,7 +160,9 @@ test("MA1: heavy birds run to take off (a swan across the water, a crane on the 
             const p = airPacesOf(s, takeoffClass(slug));
             assert.ok(p.climb <= 45 * DEG + 1e-9 && p.climb >= 14 * DEG - 1e-9);
             if (s.massKg > 1) assert.ok(p.climb <= 35 * DEG, `${slug} at ${L} m (${s.massKg.toFixed(1)} kg) climbs at ${(p.climb / DEG).toFixed(0)}°`);
-            assert.ok(p.accel <= FLIGHT_ACCEL_MAX && p.brake <= FLIGHT_ACCEL_MAX && p.runAccel <= FLIGHT_ACCEL_MAX);
+            // (Half a g at most from a kilo up; small birds burst harder, ∝ m^-1/3, at most 2.5 g; a run at most 0.3 g.)
+            if (s.massKg >= 1) assert.ok(p.accel <= FLIGHT_ACCEL_MAX + 1e-9 && p.brake <= FLIGHT_ACCEL_MAX + 1e-9, `${slug} ${s.massKg.toFixed(1)} kg`);
+            assert.ok(p.accel <= 2.5 * 9.81 + 1e-9 && p.brake <= 2.5 * 9.81 + 1e-9 && p.runAccel <= 0.3 * 9.81 + 1e-9);
         }
     }
     const sparrow = paces("house-sparrow", 0.15);
@@ -196,9 +200,10 @@ function sampled(f: Flight, from: number, to: number): Array<{t: number; x: numb
     return out;
 }
 
-test("MA1 metric: take-off and landing horizontal acceleration ≤ 0.5 g (it was 0 to cruise in one frame and a dead stop)", () => {
+test("MA1 metric: take-off and landing horizontal acceleration within its mass's (≤ 0.5 g from a kilo up; it was 0 to cruise in one frame and a dead stop)", () => {
     let checked = 0;
     let worst = 0;
+    let worstBig = 0;
     let at = "";
     for (const f of flights.filter((_, k) => k % 3 === 0)) {
         if (f.trip.shadow || f.trip.recipe) continue;
@@ -206,9 +211,12 @@ test("MA1 metric: take-off and landing horizontal acceleration ≤ 0.5 g (it was
         for (const [a, b] of [[0, span], [f.leg.seconds - span, f.leg.seconds]]) {
             const s = sampled(f, a, b);
             const v = s.slice(1).map((p, k) => Math.hypot(p.x - s[k].x, p.z - s[k].z) * 60);
+            const mass = flightSpec(f.i.a.model_slug, f.i.animal.length)?.massKg ?? 0;
+            const cap = Math.max(...Object.values(flightAccelOf(mass)));
             for (let k = 3; k < v.length - 3; k++) {
-                // (Over a tenth of a second.)
-                const acc = Math.abs(v[k + 3] - v[k - 3]) * 10;
+                // (Over a tenth of a second, as a share of its own cap.)
+                const acc = (Math.abs(v[k + 3] - v[k - 3]) * 10) / cap;
+                if (mass >= 1) worstBig = Math.max(worstBig, acc * cap);
                 if (acc > worst) {
                     worst = acc;
                     at = `${f.i.a.model_slug} ${f.trip.doing} ${f.leg.length.toFixed(1)} m at ${s[k].t.toFixed(2)} of ${f.leg.seconds.toFixed(2)} s`;
@@ -218,9 +226,11 @@ test("MA1 metric: take-off and landing horizontal acceleration ≤ 0.5 g (it was
         }
     }
     assert.ok(checked > 200, `${checked}`);
-    recordMotionMetric("ma1", "takeoff_landing_accel_g", worst / 9.81, "g");
-    console.log(`take-off and landing acceleration: worst ${(worst / 9.81).toFixed(3)} g over ${checked} ends (${at})`);
-    assert.ok(worst <= FLIGHT_ACCEL_MAX * 1.08, `${(worst / 9.81).toFixed(2)} g (${at})`);
+    recordMotionMetric("ma1", "takeoff_landing_accel_share_of_cap", worst);
+    recordMotionMetric("ma1", "takeoff_landing_accel_big_birds_g", worstBig / 9.81, "g");
+    console.log(`take-off and landing acceleration: worst ${worst.toFixed(3)} of its mass's cap over ${checked} ends (${at}); birds of a kilo or more ${(worstBig / 9.81).toFixed(3)} g`);
+    assert.ok(worst <= 1.08, `${worst.toFixed(2)} of its cap (${at})`);
+    assert.ok(worstBig <= FLIGHT_ACCEL_MAX * 1.08, `big birds ${(worstBig / 9.81).toFixed(2)} g`);
 });
 
 test("MA1 metric: never climbing as it touches down; a bird over 1 kg climbs out of a take-off at 35° or less", () => {
@@ -267,10 +277,13 @@ test("MA1: a flight is worth taking: a walker walks or swims a short way; its ow
         const paces = airPaces(f.i.profile, f.i.animal.length);
         const worth = FLIGHT_WORTH * flightLoss(paces, paces.runGround, 0);
         // Between two spots on the ground, never a hop it would walk (its walk takes under 20 s, or the flight is not worth it).
+        // (Decision 285: one that flies first, a tit or a fruit dove, flits anything past six of its lengths, a metre at
+        // least; a heavy one still walks its few metres: an eagle's 4.7 m hop was the case.)
         const walker = f.i.profile.move === "walk" || f.i.profile.moves.includes("walk");
         const wetAt = (p: {x: number; z: number}) => world.sampler.heightAt(p.x, p.z) < (world.sampler.waterSurface?.(p.x, p.z) ?? 0);
         if (walker && f.trip.doing !== "fly" && !wetAt(from) && !wetAt(to)) {
-            assert.ok(flat > Math.max(3, f.i.animal.length * 6) - 1e-6, `${f.i.a.model_slug} flies ${flat.toFixed(1)} m (${f.trip.doing})`);
+            const floor = f.i.profile.move === "fly" ? Math.max(1, f.i.animal.length * 6) : Math.max(3, f.i.animal.length * 6);
+            assert.ok(flat > floor - 1e-6, `${f.i.a.model_slug} flies ${flat.toFixed(1)} m (${f.trip.doing})`);
             walkers++;
         }
         // Its own flight (not a group member's) to a spot on the ground: out past most of the take-off's and the landing's cost.

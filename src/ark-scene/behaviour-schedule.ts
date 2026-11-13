@@ -41,7 +41,7 @@ import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
-import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
+import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sexLook, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -758,35 +758,42 @@ function rangeSpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 }
 
 /**
- * A flight's goal on the ground worth flying to from round its range's centre (MA1): between `flightLoss`'s worth and
- * a third again past it (at most three of its ranges and 20 m beyond, 90 m, and its range's cap), on open ground it can
- * stand on (or the water, for a swimmer), clear of the predators that eat it; null when none is found in four bearings.
+ * A flight's goal for its own sake (MA1, and the follow-up of decision 285): about FLY_AWAY_SECONDS of flight at its
+ * cruise away (at least what its take-off and its landing lose, `flightLoss`, half again; at most FLY_AWAY_MOST), a
+ * bird's or a bat's commute across the island and back, not a hop: at its true speed a hop is a second or two in the air,
+ * and birds that flew only hops were hardly ever up. On open ground it can stand on (or the water, for a swimmer), within
+ * its range's cap, clear of the predators that eat it; nearer when the island is not that wide that way; null when no
+ * such spot is found in eight bearings.
  */
-function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number): Spot | null {
+function flyAwaySpot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}, radius: number, random: () => number, water = false): Spot | null {
     const paces = airPaces(profile, animal.length);
     // (A bird or a bat: a flying insect keeps to its plants, as its range does.)
     if (paces.kind === "insect") return null;
     const worth = FLIGHT_WORTH * flightLoss(paces, paces.runGround, 0);
-    if (worth <= radius * 0.8) return null;
+    const far = Math.min(Math.max(paces.cruise * FLY_AWAY_SECONDS, worth), FLY_AWAY_MOST);
     // (Never past its range's cap: a predator kept clear of its prey's ranges stays clear, `spaceHomes`. And never down by
     // a predator that eats it: clear of each threat's whole range and a safe distance more.)
-    const outer = Math.min(Math.max(worth * 1.3, radius), radius * 3 + 20, 90, animal.range ?? Infinity);
+    const outer = Math.min(far * 1.15, animal.range ?? Infinity);
+    if (outer < Math.max(radius, 3)) return null;
     const safe = Math.max(SAFE_METRES, Math.min(animal.length * 6, SAFE_MOST));
     const clear = (x: number, z: number) => !(animal.threats ?? []).some((t) => Math.hypot(x - t.animal.home.x, z - t.animal.home.z) < (t.animal.range ?? rangeReach(t.profile, t.animal)) + Math.max(safe, Math.max(SAFE_METRES, Math.min(t.animal.length * 6, SAFE_MOST))));
-    const inner = Math.min(worth, outer * 0.9);
-    if (outer < worth * 0.75) return null;
     const a0 = random() * Math.PI * 2;
-    const r = inner + (outer - inner) * Math.sqrt(random());
-    for (let k = 0; k < 4; k++) {
-        const a = a0 + k * (Math.PI / 2);
-        const x = centre.x + Math.cos(a) * r;
-        const z = centre.z + Math.sin(a) * r;
-        const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal));
-        // (In the open: not under a tree's crown, where it could not come down through the canopy.)
-        if (land && Math.hypot(land.x - centre.x, land.z - centre.z) >= inner * 0.8 && !world.sampler.blocked(land.x, land.z, 2.2) && clear(land.x, land.z)) return groundSpot(world, land.x, land.z);
-        // (A swimmer, a puffin or a duck, comes down on the water there as well.)
-        const water = swims(profile) ? world.nav.nearest(x, z, "swim", 0.5, 12) : null;
-        if (water && Math.hypot(water.x - centre.x, water.z - centre.z) >= inner * 0.8 && clear(water.x, water.z)) return {x: water.x, y: surfaceAt(water.x, water.z), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
+    const r0 = Math.min(far, outer) * (0.8 + 0.2 * random());
+    for (const share of [1, 0.7, 0.45]) {
+        const r = Math.max(r0 * share, radius);
+        for (let k = 0; k < 8; k++) {
+            const a = a0 + k * (Math.PI / 4);
+            const x = centre.x + Math.cos(a) * r;
+            const z = centre.z + Math.sin(a) * r;
+            if (!water) {
+                const land = world.nav.nearest(x, z, "walk", 0.5, 12, maxSlopeOf(animal));
+                // (In the open: not under a tree's crown, where it could not come down through the canopy.)
+                if (land && Math.hypot(land.x - centre.x, land.z - centre.z) >= r * 0.8 && !world.sampler.blocked(land.x, land.z, 2.2) && clear(land.x, land.z)) return groundSpot(world, land.x, land.z);
+            }
+            // (A swimmer, a puffin or a duck, comes down on the water there as well; a waterbird only there.)
+            const wet = water || swims(profile) ? world.nav.nearest(x, z, "swim", 0.5, 12) : null;
+            if (wet && Math.hypot(wet.x - centre.x, wet.z - centre.z) >= r * 0.8 && clear(wet.x, wet.z)) return {x: wet.x, y: surfaceAt(wet.x, wet.z), z: wet.z, nx: 0, ny: 1, nz: 0, point: null};
+        }
     }
     return null;
 }
@@ -956,7 +963,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 
@@ -1537,7 +1544,16 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // A waterbird's flights go from water to water (lane MA3: a coot or a swan never flies off its lake to a
             // tree or a field; it swims to the bank and walks out). Further across its water than its swims go.
             if (aquatic(profile) && flies(profile)) {
+                // (MA1 follow-up: a flight for its own sake across its water, a swan's or a goose's commute, about
+                // FLY_AWAY_SECONDS at its cruise when the water is that wide and its predators' ranges allow: `flyAwaySpot`.)
+                const across = !group && behaviour === "fly" ? flyAwaySpot(world, profile, animal, own, radius, random, true) : null;
+                if (across) return {doing: behaviour, to: across, mode: "air", stay: stayBeats("rest", random, null)};
                 const water = waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius * 2.4, centre.z + (random() - 0.5) * radius * 2.4, random);
+                // (Where its water is too small for that, or its range too tight (a predator's ground all round), a
+                // round: out over the island and back down on its own water, a duck's circuit of its pond. Before,
+                // it hopped a metre or two across its pond, up and down like a helicopter, and at its true take-off a
+                // hop is swum instead: it never flew at all. `roundRoute`.)
+                if (!group && behaviour === "fly") return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null), round: true};
                 return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null)};
             }
             // (Lane MA3: one that walks first flies across its ground and comes down on it, never up to a perch: else it
@@ -1545,12 +1561,15 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             const perch = roll < 0.5 && profile.move === "fly" ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
-            // (MA1: a flight for its own sake goes somewhere worth its take-off and its landing, half again the distance
-            // they lose against its cruise (`flightLoss`), out past its everyday range if need be: a goose flew 3 m hops at
-            // a fifth of its cruise. A group member keeps by its group; a soar sweeps out anyway.)
+            // (MA1: a flight for its own sake goes somewhere worth flying to, about FLY_AWAY_SECONDS at its cruise away
+            // (`flyAwaySpot`), out past its everyday range if need be. A group member keeps by its group; a soar sweeps.)
             const away = !group && behaviour === "fly" ? flyAwaySpot(world, profile, animal, own, radius, random) : null;
             if (away) return {doing: behaviour, to: away, mode: "air", stay: stayBeats("forage", random, null)};
-            return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "air", stay: stayBeats("forage", random, null)};
+            // (Nowhere worth flying to within its range's cap (a predator's ground all round): a round out and back down
+            // by where it was, as a waterbird on a small pond flies, not a hop it would walk. A flying insect keeps to its
+            // plants.)
+            const round = !group && behaviour === "fly" && airPaces(profile, animal.length).kind !== "insect";
+            return {doing: behaviour, to: rangeSpot(world, {...profile, move: "walk", seabed: false}, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "air", stay: stayBeats("forage", random, null), ...(round ? {round} : {})};
         }
         case "swim":
         case "dive":
@@ -1872,18 +1891,38 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const shallow = (p: Spot) => !wet(world, p) || surfaceY(world, p.x, p.z) - world.sampler.heightAt(p.x, p.z) < Math.max(animal.length, 0.05) * 0.5;
     const swimsThere = swims(profile) && (wetFrom || wetTo) && (amphibious(profile) || (wetFrom && wetTo));
     const wadesThere = walks(profile) && shallow(from) && shallow(to);
-    if (flies(profile) && (mode === "ground" || (mode === "air" && now.doing !== "soar" && !raised(world, from) && !raised(world, to) && (swimsThere || wadesThere)))) {
+    // (MA1 follow-up, decision 285: a light bird that flies first, under a kilo (it speeds up at more than half a g,
+    // `flightAccelOf`), a sparrow, a fruit dove, a parrot, hop-flies its short ways as before: a few steps walked
+    // (`HOP_LENGTHS` of its lengths, a metre at least) and anything further flown, below its cruise if need be, never
+    // walking a way it meant to fly: walking them cost those species most of their time in the air. A flying insect
+    // keeps to its plants on the wing. A heavy one, a heron, a pelican, an eagle, walks its short ways as a bird that
+    // walks or swims first does: at half a g its 6 to 40 m flights averaged a fifth to a third of its cruise.)
+    const insectFlyer = flies(profile) && airPaces(profile, animal.length).kind === "insect";
+    const firstFlyer = flies(profile) && (insectFlyer || (profile.move === "fly" && airPaces(profile, animal.length).accel > FLIGHT_ACCEL_MAX));
+    // (A round is flown: it is all flight, `roundRoute`.)
+    const round = Boolean(now.round && mode === "air");
+    if (flies(profile) && (mode === "ground" || (!insectFlyer && !round && mode === "air" && now.doing !== "soar" && !raised(world, from) && !raised(world, to) && (swimsThere || wadesThere)))) {
         const flatWay = Math.hypot(to.x - from.x, to.z - from.z);
         const paces = airPaces(profile, animal.length);
         const swimming = wetFrom && wetTo && swimsThere && !(wadesThere && !swims(profile));
         const own = swimming ? freeBodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05) * 1.4 : pace;
-        const walkMost = Math.max(3, animal.length * 6, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * WALK_INSTEAD));
+        const walkMost = firstFlyer ? Math.max(1, animal.length * HOP_LENGTHS) : Math.max(3, animal.length * HOP_LENGTHS, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * WALK_INSTEAD));
         // A bird walks a few steps; further than that it flies. One that walks or swims first (a pigeon, a peafowl, a coot
         // on the bank) walks wherever its feet take it in the slot, and flies only further, and only as often as it flies
         // (lane MA3: the audit's peafowl took off 34 times an hour). A ground way becomes a flight only when both MA1's
         // rule (worth the flight) and MA3's (beyond its walk reach, a flight allowed this slot) hold.
         const ma3Flies = flatWay > (profile.move === "fly" ? Math.max(3, animal.length * 6) : walkReach(profile, animal)) && airAllowed(profile, animal, slot);
+        const meant = mode;
         mode = flatWay > walkMost && (mode !== "ground" || ma3Flies) ? "air" : swimming ? "water" : "ground";
+        // (A short way is walked only where its feet get there by about that way, in its time; else it flies it, if it
+        // meant to or may fly this slot (MA3's `airAllowed`): a fish eagle's 9 m and 14 m across an inlet were 197 m and
+        // 177 m walks round it, past a mallard's water.)
+        if (mode === "ground" && flatWay > 3 && (meant === "air" || airAllowed(profile, animal, slot))) {
+            const onFoot = world.nav.path(from, to, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(to.point));
+            const end = onFoot[onFoot.length - 1];
+            const way = pathLength(onFoot);
+            if (!end || Math.hypot(end.x - to.x, end.z - to.z) > 0.5 || way > Math.max(flatWay * 1.6, 3) || way > own * WALK_INSTEAD) mode = "air";
+        }
     }
 
     // (0.85-1.2 of its walk's own pace: its clip plays at 0.85-1.2 its rate.)
@@ -1999,7 +2038,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const fromWater = wet(world, from) && !raised(world, from);
             const run = fromWater ? paces.runWater : raised(world, from) ? 0 : paces.runGround;
             const ski = wet(world, to) && !raised(world, to) ? paces.skiWater : 0;
-            if (now.doing === "soar") {
+            if (now.round && !insect) {
+                legs.push(airLeg(world, paces, from, to, roundRoute(from, to, paces, random), cruise, "fly", {run, ski}, bodyR));
+            } else if (now.doing === "soar") {
                 // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
                 // riding the air), not loops round seeded points (the audit's "circling", problem 2). A trip that ends
                 // where it began runs out along a seeded heading and back.
@@ -2083,6 +2124,23 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         if (travel * k > SLOT_SECONDS - 6) k = (SLOT_SECONDS - 6) / travel;
         for (const leg of legs) leg.seconds *= k;
         travel *= k;
+    }
+    // A flight sets off at its own moment in its slot (MA1 follow-up, decision 285): after a seeded share of the time the
+    // slot has to spare, facing its way, not always at the slot's first second. (At its true speed a small bird's hop is
+    // a second or two in the air; every one at the same point of every slot was either always or never on the behaviour
+    // audit's 30 s grid: a great tit 2% of its day aloft and never once seen flying.) Not on a recipe's way out: its
+    // episode keeps its own time from its arrival (a swallow's hawking on the wing lost what it waited).
+    const flight = legs.find((leg) => leg.mode === "air");
+    if (mode === "air" && flight && !now.follow && !now.recipe) {
+        const spare = SLOT_SECONDS - 10 - travel;
+        if (spare > 1) {
+            const wait = spare * rng(hashString(`${animal.id}#depart#${slot}`))();
+            const turned = legs[0]?.turn ? legs[0] : null;
+            const next = flight.path && flight.path.length > 1 ? flight.path[1] : flight.to;
+            const yaw = turned?.yaw ?? (Math.hypot(next.x - from.x, next.z - from.z) > 0.05 ? Math.atan2(next.x - from.x, next.z - from.z) : from.yaw ?? 0);
+            legs.splice(turned ? 1 : 0, 0, {mode: "pause", from, to: from, path: null, length: 0, seconds: wait, beat: "pause", yaw});
+            travel += wait;
+        }
     }
     const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt) ?? {beats: [], finish: to};
     // Its beats fitted into the time left (all of them, so it ends where `finishOf` says); a shake first after a swim.
@@ -2238,6 +2296,15 @@ const FLOWN_OVER: ReadonlySet<string> = new Set(["fence", "building", "post", "h
 
 /** A flock member taking off with its leader eases into its place by it over this long (s). */
 const JOIN_SECONDS = 5;
+/** A flight for its own sake: about this long at its cruise (s), and never further than FLY_AWAY_MOST (m). */
+const FLY_AWAY_SECONDS = 15;
+const FLY_AWAY_MOST = 220;
+/** A bird walks this many of its lengths (and three metres) rather than fly them; one that flies first, a metre. */
+const HOP_LENGTHS = 6;
+/** A round's flight at its cruise, out and back (s). */
+const ROUND_SECONDS = 36;
+/** A round's bank at its far end, at most (rad: 35°, a pull of 0.7 g). */
+const ROUND_BANK = (35 * Math.PI) / 180;
 /** How far out a soar sweeps at most (m; MA1: at a true glide, 60 m filled a soar's time at a crawl). */
 const SOAR_REACH = 140;
 /** A short way a flyer walks, wades or swims rather than flies, if it gets there that way in no longer than this (s). */
@@ -2271,6 +2338,26 @@ function sweepRoute(from: Spot, to: Spot, span: number, random: () => number): N
     const uz = Math.cos(dir);
     const at = (along: number, across: number): NavPoint => ({x: from.x + ux * along + uz * across, z: from.z + uz * along - ux * across});
     return [from, at(span * 0.5, bow * 0.15), at(span * 0.9, bow * 0.45), at(span * 0.85, bow * 0.85), at(span * 0.45, bow * 0.8), to];
+}
+
+/**
+ * A round (the follow-up of decision 285): out along a heading for half of ROUND_SECONDS at its cruise (FLY_AWAY_MOST at
+ * most), round one wide U at the far end (banked at most ROUND_BANK at its cruise, `G·tan` of it its pull) and back in to
+ * its goal by where it took off: half a turn and a little, never a loop (the audit's circling), and long enough that its
+ * half turn is spread over most of a minute (at 13 s out the audit's turns a minute doubled). Towards the island's
+ * middle if the far end would be off it, as a soar's sweep is.
+ */
+function roundRoute(from: Spot, to: Spot, paces: AirPaces, random: () => number): NavPoint[] {
+    const out = Math.min(Math.max(paces.cruise * ROUND_SECONDS * 0.5, 20), FLY_AWAY_MOST);
+    const r = Math.min(Math.max((paces.cruise * paces.cruise) / (G * Math.tan(ROUND_BANK)), 4), out * 0.4);
+    const side = random() < 0.5 ? -1 : 1;
+    let dir = random() * Math.PI * 2;
+    if (Math.hypot(from.x + Math.sin(dir) * (out + r), from.z + Math.cos(dir) * (out + r)) > Math.max(Math.hypot(from.x, from.z), 60)) dir = Math.atan2(-from.x, -from.z) + (random() - 0.5) * 0.8;
+    const ux = Math.sin(dir);
+    const uz = Math.cos(dir);
+    const at = (along: number, across: number): NavPoint => ({x: from.x + ux * along + uz * across * side, z: from.z + uz * along - ux * across * side});
+    const c = Math.SQRT1_2;
+    return [from, at(out * 0.5, 0), at(out, 0), at(out + r * c, r * (1 - c)), at(out + r, r), at(out + r * c, r * (1 + c)), at(out, 2 * r), at(out * 0.5, 1.8 * r), to];
 }
 
 /**
