@@ -188,6 +188,25 @@ test("collapsed /id detail families redirect to English and are not advertised",
     assert.equal(isCollapsedEnglishDetailPath("/tier-list"), false);
 });
 
+test("talk landing pages are SSG from the snapshot list, never the catalogue (CC 5)", () => {
+    const page = read("app/[locale]/talk/[slug]/page.tsx");
+    const data = read("data/talk-landing-pages.ts");
+    const snapshot = JSON.parse(read("data/talk-landing-species.json")) as {entries: Array<{slug: string}>};
+
+    // The route stays on-demand for every other chat, but its static params are the closed list.
+    assert.match(page, /export const revalidate = 86400/);
+    assert.match(page, /export function generateStaticParams\(\) \{\n    \/\/[^\n]*\n    return getTalkLandingStaticParams\(\);/);
+    assert.match(page, /if \(isTalkLandingSlug\(params\.slug\)\)/);
+    // The list is a snapshot in src/data; each page's facts come from the species snapshots.
+    assert.match(data, /from "@\/data\/talk-landing-species\.json"/);
+    assert.match(data, /getPublishedSpeciesForContent/);
+    assert.doesNotMatch(data, /supabase|fetch\(|talk-animals|database-species-pages/);
+    assert.ok(snapshot.entries.length >= 60);
+    for (const entry of snapshot.entries) {
+        assert.ok(isPublishedAnimalSlug(entry.slug) || Boolean(renamedSpeciesSlugs.redirects[entry.slug as keyof typeof renamedSpeciesSlugs.redirects]), `${entry.slug} is not a published species slug`);
+    }
+});
+
 test("operator SEO snapshot refresh is not part of prebuild", () => {
     const packageJson = readFileSync(join(root, "..", "package.json"), "utf8");
     const refresh = readFileSync(join(root, "..", "scripts/refreshPublishedSeoSnapshots.mts"), "utf8");

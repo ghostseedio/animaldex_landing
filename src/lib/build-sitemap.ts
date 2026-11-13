@@ -39,6 +39,7 @@ import {locationsWithGuides} from "@/data/wildlife-guide-locations";
 import {MIN_INDEXABLE_GUIDE_LIST, guidePath} from "@/lib/virtual-wildlife-guides";
 import {listSupportArticles, getSupportArticlePath} from "@/lib/support-articles";
 import {ABOUT_PATH, ARK_FOOD_CHAIN_PATH, ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED} from "@/lib/seo/ark-pages";
+import {getTalkLandingPages} from "@/data/talk-landing-pages";
 
 /** The Ark changes all day (an hourly world tick): its lastmod is the day the sitemap was built. */
 function arkLastModified() {
@@ -166,8 +167,10 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
         const staticEntries: MetadataRoute.Sitemap = [
             {url: getAbsoluteUrl(locale)},
-            // The full-screen chat. /talk/<slug> is noindex (its canonical is the species page), so only /talk.
+            // The full-screen chat. /talk/<slug> is noindex (its canonical is the species page), so /talk
+            // and the landing pages (CC 5: the snapshot's species, indexable, English only) alone.
             {url: getAbsoluteUrl(locale, "/talk")},
+            ...getTalkLandingPages().map((page) => ({url: getAbsoluteUrl(locale, `/talk/${page.slug}`), lastModified: new Date(page.updatedAt)})),
             // The shared Ark: live (an hourly tick), so its lastmod is the build day.
             {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified()},
             // SEO lane S3: how the Ark works, who eats whom (its counts are live), and what AnimalDex is.
