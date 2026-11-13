@@ -8,6 +8,7 @@ import {insertPost, listPosts, updatePost} from "@/lib/social/store";
 import {fillLinks} from "@/lib/social/platform-copy";
 import {getAbsoluteUrl} from "@/lib/site";
 import {isStale} from "@/lib/social/auto-share-plan";
+import {withShareFormat} from "@/lib/social/post-format";
 import {readTikTokOptions, tiktokOptionsProblem} from "@/lib/social/tiktok-options";
 import {isSocialPlatform, type SocialPlatform, type SocialPostOptions, type SocialPostRow} from "@/lib/social/types";
 import {deleteZernioPost, describeZernioError, isZernioConfigured, scheduleProblem, ZernioError, zernioConfigProblem} from "@/lib/social/zernio";
@@ -110,7 +111,8 @@ export async function POST(request: NextRequest) {
                 caption: fillLinks(target.caption ?? "", pageUrl, target.platform).slice(0, 5000),
                 title: body.title ? fillLinks(body.title, pageUrl, target.platform).slice(0, 100) : null,
                 mode: target.mode === "draft" ? "draft" : "post",
-                options: target === tiktokTarget ? tiktokOptions : null
+                // The format lab key rides on the row: an uploaded real clip is real_footage, never a generated format.
+                options: withShareFormat(target === tiktokTarget ? tiktokOptions : null, video.kind, "videoFormat" in video ? video.videoFormat : null, "sourceType" in video ? video.sourceType : null)
             });
             if (row) queued.push(row);
             else skipped.push(target.platform);

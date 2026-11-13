@@ -3,12 +3,14 @@ import {readFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
-import {dailyCaps, pickLightKind} from "./social/auto-share-plan";
+import {dailyCaps, pickLightKind, platformsWithRoom} from "./social/auto-share-plan";
 import {
     applyPauses,
+    AUTOPILOT_PLATFORMS,
     fatalPauseReason,
     fullyPaused,
     isPaused,
+    openPlatforms,
     pausedList,
     pauseLabel,
     resolvePauses,
@@ -17,27 +19,41 @@ import {
 } from "./social/platform-pauses";
 import {SOCIAL_PLATFORMS} from "./social/types";
 
-// The auto-share's per-platform pauses (Nov 2026): X, Facebook, Pinterest and
-// Instagram carousels are off by default and stay off until the admin turns
-// them back on; TikTok, YouTube and Instagram videos keep posting.
+// The auto-share's per-platform pauses (16 Nov 2026): only TikTok, YouTube
+// Shorts and Instagram Reels post; X, Facebook, Pinterest, Threads, Bluesky and
+// Instagram carousels are off by default, each with the number that paused it,
+// and stay off until the admin turns them back on.
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (path: string) => readFileSync(join(repoRoot, path), "utf8");
 
-test("by default X, Facebook and Pinterest are paused, and Instagram carousels; TikTok, YouTube and Instagram videos are on", () => {
+test("by default only TikTok, YouTube and Instagram post; X, Facebook, Pinterest, Threads, Bluesky and Instagram carousels are paused with their reason", () => {
     const pauses = resolvePauses([], "saved");
     for (const kind of ["video", "carousel", "text"] as const) {
         assert.equal(isPaused(pauses, "x", kind), true);
         assert.equal(isPaused(pauses, "facebook", kind), true);
         assert.equal(isPaused(pauses, "pinterest", kind), true);
+        assert.equal(isPaused(pauses, "threads", kind), true);
+        assert.equal(isPaused(pauses, "bluesky", kind), true);
         assert.equal(isPaused(pauses, "tiktok", kind), false);
         assert.equal(isPaused(pauses, "youtube", kind), false);
     }
     assert.equal(isPaused(pauses, "instagram", "carousel"), true);
     assert.equal(isPaused(pauses, "instagram", "video"), false);
-    assert.equal(pauseLabel(pauses, "x", "video"), "Paused: credits depleted");
-    assert.equal(pauseLabel(pauses, "facebook", "carousel"), "Paused: check this is the AnimalDex Page");
+    // The 16 Nov 2026 numbers, as the admin sees them.
+    assert.equal(pauseLabel(pauses, "x", "video"), "Paused: 141 of 237 posts failed");
+    assert.equal(pauseLabel(pauses, "facebook", "carousel"), "Paused: 11 views in 30 days");
+    assert.equal(pauseLabel(pauses, "pinterest", "video"), "Paused: 0 views");
+    assert.equal(pauseLabel(pauses, "instagram", "carousel"), "Paused: a median of 13 views");
     assert.equal(pauseLabel(pauses, "tiktok", "video"), null);
+    // The autopilot's platforms, and nothing else, take videos; carousels go to TikTok alone.
+    assert.deepEqual([...openPlatforms(pauses, "video")].sort(), [...AUTOPILOT_PLATFORMS].sort());
+    const caps = applyPauses(dailyCaps(), pauses);
+    assert.deepEqual(platformsWithRoom(SOCIAL_PLATFORMS, "carousel", [], caps, Date.now()), ["tiktok"]);
+    assert.equal(caps.tiktok.carousel, 1);
+    // Text posts went to X, Threads and Bluesky, all paused: none go out.
+    assert.deepEqual(platformsWithRoom(SOCIAL_PLATFORMS, "text", [], caps, Date.now()), []);
+    assert.deepEqual(openPlatforms(pauses, "carousel"), ["youtube", "tiktok"]);
     // Before the migration is applied there is nothing saved: the same defaults.
     assert.deepEqual(resolvePauses([], "defaults").entries, pauses.entries);
 });
@@ -83,12 +99,12 @@ test("the auto-share leaves paused platforms out, with the reason, and skips che
     const pauses = resolvePauses([]);
     const {allowed, skipped} = withoutPaused(["youtube", "tiktok", "instagram", "facebook", "x"], "video", pauses);
     assert.deepEqual(allowed, ["youtube", "tiktok", "instagram"]);
-    assert.deepEqual(skipped, {facebook: "Paused: check this is the AnimalDex Page", x: "Paused: credits depleted"});
+    assert.deepEqual(skipped, {facebook: "Paused: 11 views in 30 days", x: "Paused: 141 of 237 posts failed"});
     assert.deepEqual(withoutPaused(["instagram", "tiktok"], "carousel", pauses).allowed, ["tiktok"]);
     const caps = dailyCaps();
     assert.equal(fullyPaused(pauses, "x", caps), true);
     assert.equal(fullyPaused(pauses, "instagram", caps), false);
-    assert.deepEqual(pausedList(pauses, caps).filter((entry) => entry.platform === "instagram"), [{platform: "instagram", kind: "carousel", reason: "carousels got 4–14 views"}]);
+    assert.deepEqual(pausedList(pauses, caps).filter((entry) => entry.platform === "instagram"), [{platform: "instagram", kind: "carousel", reason: "a median of 13 views"}]);
 });
 
 test("X out of API credits pauses X; other failures are retried", () => {

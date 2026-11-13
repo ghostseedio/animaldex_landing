@@ -2,10 +2,11 @@ import {SHARE_CONTENT_KINDS, type ShareContentKind} from "@/lib/social/auto-shar
 import {isSocialPlatform, SOCIAL_PLATFORMS, type SocialPlatform} from "@/lib/social/types";
 
 // Which platforms the auto-share may post to, per kind (video, carousel, text),
-// pure. Some are paused by default (Nov 2026): X fails every post with 402
-// "credits depleted", Facebook posts to a Page the founder has to confirm is
-// ours, Pinterest got no views and Instagram carousels 4–14 each. TikTok,
-// YouTube and Instagram videos keep going.
+// pure. Since 16 Nov 2026 the autopilot posts to three platforms only: TikTok,
+// YouTube Shorts and Instagram Reels (AUTOPILOT_PLATFORMS). The rest are paused
+// by default with the number that paused them: Facebook had 11 views in 30
+// days, Pinterest none, X failed 141 of 237 posts (API credits), Instagram
+// carousels had a median of 13 views, and Threads/Bluesky are outside the plan.
 //
 // The admin turns a platform back on from /admin/story-videos; that choice is
 // saved in admin_social_platform_settings (one row per platform and kind,
@@ -14,12 +15,19 @@ import {isSocialPlatform, SOCIAL_PLATFORMS, type SocialPlatform} from "@/lib/soc
 // that cannot be read pause everything, and the daily caps
 // (SOCIAL_DAILY_CAPS) cannot undo a pause.
 
+/** The platforms the autopilot posts to (decision of 16 Nov 2026); everything else starts paused. */
+export const AUTOPILOT_PLATFORMS = ["tiktok", "youtube", "instagram"] as const satisfies readonly SocialPlatform[];
+
+const allKinds = (reason: string): Record<ShareContentKind, string> => ({video: reason, carousel: reason, text: reason});
+
 /** Why each default pause is on. Shown as "Paused: <reason>". */
 export const DEFAULT_PAUSES: Partial<Record<SocialPlatform, Partial<Record<ShareContentKind, string>>>> = {
-    x: {video: "credits depleted", carousel: "credits depleted", text: "credits depleted"},
-    facebook: {video: "check this is the AnimalDex Page", carousel: "check this is the AnimalDex Page", text: "check this is the AnimalDex Page"},
-    pinterest: {video: "no views in a month", carousel: "no views in a month", text: "no views in a month"},
-    instagram: {carousel: "carousels got 4–14 views"}
+    x: allKinds("141 of 237 posts failed"),
+    facebook: allKinds("11 views in 30 days"),
+    pinterest: allKinds("0 views"),
+    threads: allKinds("outside the Nov 2026 plan (TikTok, YouTube, Instagram only)"),
+    bluesky: allKinds("outside the Nov 2026 plan (TikTok, YouTube, Instagram only)"),
+    instagram: {carousel: "a median of 13 views"}
 };
 
 /** The reason a pause the admin sets carries. */
@@ -129,4 +137,9 @@ export function pausedList(pauses: PlatformPauses, caps: Caps) {
 export function fatalPauseReason(platform: SocialPlatform, message: string): string | null {
     if (platform === "x" && /\b402\b|credits?\s*depleted|CreditsDepleted/i.test(message)) return "credits depleted";
     return null;
+}
+
+/** The platforms `pauses` leave open for `kind`, in SOCIAL_PLATFORMS order: with the defaults, the autopilot's three (and no carousel but TikTok's). */
+export function openPlatforms(pauses: PlatformPauses, kind: ShareContentKind) {
+    return SOCIAL_PLATFORMS.filter((platform) => !isPaused(pauses, platform, kind));
 }

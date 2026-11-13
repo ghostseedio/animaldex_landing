@@ -92,8 +92,11 @@ export type ZernioShareInfo = {
  * `auto`: queued by the scheduled auto-share rather than from the admin page.
  * `content`: the carousel or text post (admin_social_content.id) a row shares.
  * `link`: the page the post points at (Pinterest's destination, Facebook's link card).
+ * `format`: the format lab's key for the item (src/lib/social-lab/format-board.ts
+ * FORMATS), stamped at share time so a real uploaded clip (`real_footage`) is
+ * never counted with the generated videos (src/lib/social/post-format.ts).
  */
-export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo; auto?: boolean; content?: string; link?: string | null};
+export type SocialPostOptions = {tiktok?: TikTokPostOptions; zernio?: ZernioShareInfo; auto?: boolean; content?: string; link?: string | null; format?: string};
 
 export type SocialPostRow = {
     id: string;

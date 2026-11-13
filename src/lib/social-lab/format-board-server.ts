@@ -43,15 +43,16 @@ export async function loadBoardPosts(): Promise<BoardPost[]> {
             const video = videoId ? videoById.get(videoId) : undefined;
             if (!video) continue;
             itemId = video.id;
-            format = formatOfPost({mediaKind: post.media_kind, videoFormat: (video.plan as VideoPlan | null)?.format ?? null, sourceType: video.source_type});
+            format = formatOfPost({mediaKind: post.media_kind, optionsFormat: post.options?.format, videoFormat: (video.plan as VideoPlan | null)?.format ?? null, sourceType: video.source_type});
         } else if (post.media_kind === "carousel" || post.media_kind === "text_post") {
             const id = post.options?.content ?? contentIdFromMediaPath(post.media_path);
             const item = id ? contentById.get(id) : undefined;
             if (!item) continue;
             itemId = item.id;
-            format = formatOfPost({mediaKind: post.media_kind, contentKind: item.kind, carouselFormat: item.experiment?.carouselFormat ?? null});
+            format = formatOfPost({mediaKind: post.media_kind, optionsFormat: post.options?.format, contentKind: item.kind, carouselFormat: item.experiment?.carouselFormat ?? null});
         } else {
-            format = formatOfPost({mediaKind: post.media_kind});
+            // Story videos and uploaded real clips: the row's own stamp, else the media kind says.
+            format = formatOfPost({mediaKind: post.media_kind, optionsFormat: post.options?.format});
         }
         if (!format) continue;
         result.push({

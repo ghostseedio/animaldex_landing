@@ -27,6 +27,9 @@ export type ShareableContentVideo = {
     durationSeconds: number | null;
     /** The page the video was made from: what a "<url>" left in the copy becomes. */
     pageUrl: string;
+    /** The plan's format (battle, lesson, ...) and page family, for the share row's format stamp (post-format.ts). */
+    videoFormat: string | null;
+    sourceType: string;
 };
 
 function toShareable(row: ContentVideoRow): ShareableContentVideo | null {
@@ -40,7 +43,9 @@ function toShareable(row: ContentVideoRow): ShareableContentVideo | null {
         captureId: null,
         stableUrl: publicStorageUrl(row.video_path),
         durationSeconds: row.duration_seconds,
-        pageUrl: getAbsoluteUrl("en", sourcePath(row.source_type, row.source_slug))
+        pageUrl: getAbsoluteUrl("en", sourcePath(row.source_type, row.source_slug)),
+        videoFormat: row.plan?.format ?? null,
+        sourceType: row.source_type
     };
 }
 

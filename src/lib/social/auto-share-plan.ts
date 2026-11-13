@@ -97,11 +97,13 @@ export const TEXT_MEDIA_KIND = "text_post";
 
 /**
  * Posts per platform per day (Jakarta day), by kind. Fewer, better posts since
- * Nov 2026: two videos a day at most (the autopilot makes two, each held to the
- * test audience's bar), one carousel, a couple of text posts. A feed of
+ * Nov 2026: two videos a day at most on every platform, one carousel a day and
+ * only on TikTok (16 Nov 2026: Instagram carousels had a median of 13 views
+ * and are paused in platform-pauses.ts; the other carousel takers are paused
+ * whole), a couple of text posts where a platform takes them. A feed of
  * average posts drags the whole account down (Instagram judges the last 30 days).
  * 0 = never (YouTube and Pinterest take no text; YouTube no carousels via the API).
- * Override with SOCIAL_DAILY_CAPS='{"tiktok":{"video":3}}'.
+ * Override with SOCIAL_DAILY_CAPS='{"tiktok":{"video":3}}'; a pause still wins.
  */
 export const DEFAULT_DAILY_CAPS: Record<SocialPlatform, Record<ShareContentKind, number>> = {
     youtube: {video: 2, carousel: 0, text: 0},
@@ -109,7 +111,7 @@ export const DEFAULT_DAILY_CAPS: Record<SocialPlatform, Record<ShareContentKind,
     instagram: {video: 2, carousel: 1, text: 0},
     facebook: {video: 2, carousel: 1, text: 1},
     x: {video: 2, carousel: 1, text: 2},
-    pinterest: {video: 1, carousel: 2, text: 0},
+    pinterest: {video: 1, carousel: 1, text: 0},
     threads: {video: 2, carousel: 1, text: 2},
     bluesky: {video: 1, carousel: 1, text: 2}
 };

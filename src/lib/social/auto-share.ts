@@ -1,3 +1,4 @@
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {recordAutomationRun} from "@/lib/automation-runs";
 import {planHasAiImagery} from "@/lib/content-video/footage";
 import type {VideoPlan} from "@/lib/content-video/plan";
@@ -26,6 +27,7 @@ import {checkOAuthConnection} from "@/lib/social/connection-health";
 import {isOAuthPlatform, isProviderConfigured} from "@/lib/social/oauth";
 import {applyPauses, fullyPaused, pausedList, pauseLabel, type PlatformPauses, withoutPaused} from "@/lib/social/platform-pauses";
 import {loadPlatformPauses} from "@/lib/social/platform-settings";
+import {withShareFormat} from "@/lib/social/post-format";
 import {runContentShareJob, runShareJob} from "@/lib/social/runner";
 import type {ShareCopy} from "@/lib/social/share-copy";
 import {buildSpeciesShareContext, generateShareCopy} from "@/lib/social/share-copy-server";
@@ -63,6 +65,9 @@ type Candidate = {
     story: AdminStoryVideo | null;
     /** TikTok's AI label: on unless every shot is our own footage or a real photo (footage.ts planHasAiImagery). */
     madeWithAi: boolean;
+    /** The plan's format and page family (page videos), for the share row's format stamp. */
+    videoFormat: string | null;
+    sourceType: string | null;
 };
 
 export type LightShareResult =
@@ -88,7 +93,9 @@ async function candidates(): Promise<Candidate[]> {
             durationSeconds: video.durationSeconds,
             contentVideoId: null,
             story: video,
-            madeWithAi: true
+            madeWithAi: true,
+            videoFormat: null,
+            sourceType: null
         })),
         // Only blog videos the admin has put on their page: that is the approval.
         ...blogs.filter((row) => row.status === "ready" && row.video_path && row.published_at).map((row) => ({
@@ -103,7 +110,9 @@ async function candidates(): Promise<Candidate[]> {
             durationSeconds: row.duration_seconds,
             contentVideoId: row.id,
             story: null,
-            madeWithAi: planHasAiImagery(row.plan as VideoPlan | null)
+            madeWithAi: planHasAiImagery(row.plan as VideoPlan | null),
+            videoFormat: (row.plan as VideoPlan | null)?.format ?? null,
+            sourceType: row.source_type
         }))
     ];
 }
@@ -198,7 +207,12 @@ function lightSummary(light: LightShareResult | undefined) {
 }
 
 /** One timer run, logged to admin_automation_runs (dry runs are not logged). */
-export async function runAutoShare({dryRun = false} = {}): Promise<AutoShareResult> {
+export function runAutoShare(options: {dryRun?: boolean} = {}): Promise<AutoShareResult> {
+    // The copy it drafts is an AI call made from a cron request whose stack names nothing useful: name it here (ai-usage-context.ts).
+    return runWithAiFeature("social/auto-share", () => autoShare(options));
+}
+
+async function autoShare({dryRun = false}: {dryRun?: boolean}): Promise<AutoShareResult> {
     if (!dryRun) await maybeSyncPostMetrics().catch((error) => console.error("[social-metrics-sync]", error));
     try {
         const result = await shareNext(dryRun);
@@ -285,7 +299,7 @@ async function shareVideo(dryRun: boolean, posts: SocialPostRow[], ready: Ready,
             caption: target.caption.slice(0, 5000),
             title: (target.title ?? drafted.copy.youtube.title).slice(0, 100),
             mode: "post",
-            options: zernioRowOptions(target.platform, ready, video.pageUrl, undefined, video.madeWithAi)
+            options: withShareFormat(zernioRowOptions(target.platform, ready, video.pageUrl, undefined, video.madeWithAi), video.kind, video.videoFormat, video.sourceType)
         });
         if (row) queued.push(row);
         else skipped[target.platform] = "Already shared";
