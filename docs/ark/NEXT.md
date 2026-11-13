@@ -348,3 +348,33 @@ MA3's fly-away commits came after; neither was asked to re-measure):
 
 Both points under the 384 MB budget and the same as live. (heap-snap.mjs's earlier "first frame" of about 195 MB
 fired during the shader warm-up: a mount reading.)
+
+## Web deploy: decision 305's round (MA3's river mouth)
+
+Branch `ark-round-305`, from landing main 02109ea0 (live) with decision 295's NEXT.md section (a568aa19, docs only).
+Rollback: redeploy **02109ea0**.
+
+| # | Lane | Branch head | `ark-round-305` head | Notes |
+|---|---|---|---|---|
+| 74 | MA3: the river mouth (decision 304: the v2 upper river comes down to the lake's 6 m by its shore and meets it flush; decision 303: scenery append-only across terrain fixes, so a fix moves only the homes it touches) | `ark-river-mouth` c520eca9 | f330e8a8 | clean (on top of fc162bb6) |
+
+Gates on f330e8a8: tsc 0; lint 0; the suite 0 fail (the quoted glob; `ark-behaviour-schedule.test.ts` timed out at 600 s
+while the Mac's load average was about 126, then passed alone, 27/27); motion all pass (103 numbers); default view ×2
+pace 0.97 / 1.01, backwards 0.6% / 1.1% (none over 1 s), ground turns 0.7 / 0.8 a minute, no page errors. (The
+first motion and default-view runs failed on a full disk; re-run once space was back.)
+
+Behaviour audit (run 43387113303): the same as decision 295's round (the audit's fixture does not reach the v2 upper
+river): flyers 690; all but the hawkers 0% / 0.69; the hawkers 36% / 7.77; never move 828; amphibians 428; all 25 pass.
+
+Collisions (run 43387116970), green at the existing limits: islands v2 0 / 0 / 0 / 1,007,352 (the river mouth: +5,649
+overlap samples on 1,001,703); islands v1 0 / 0 / 209 / 3,147,072; today's mode 0 / 0 / 218 / 2,956,737.
+
+Visual (accept run 43387120918): all 19 golden shots within the limits (at most 0.26%), no page errors, the baselines
+stay; the hooks job green (motion all pass, the town set unchanged). The golden set is today's island: the v2 river
+mouth itself is not in it.
+
+Production heap with the harness (`--islands --prebuild --production --gc-points`, 90 s, the low phone profile,
+world v2, the real snapshot read in place), f330e8a8: after GC at the first drawn frame 262.5 / 262.1 MB, in steady
+play 264.0 / 269.5 MB (384 MB budget; decision 295's round 262 / 264.5 MB); pre-GC peak 332 MB; 58.7 / 56.1 fps.
+
+Deploy check: on /ark (v2), the upper river meets the lake flush at its shore (no raised water step into the lake).
