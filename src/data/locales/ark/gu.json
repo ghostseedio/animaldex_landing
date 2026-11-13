@@ -319,8 +319,7 @@
             "lifeLeft": "આયુષ્યનું {percent} બાકી",
             "energy": "ઊર્જા",
             "awakeSince": "{time} થી જાગે છે",
-            "asleepSince": "{time} થી ઊંઘે છે",
-            "nextHunt": "આગામી શિકાર {when}"
+            "asleepSince": "{time} થી ઊંઘે છે"
         },
         "activity": {
             "food": "ખોરાક શોધે છે",

@@ -319,8 +319,7 @@
             "lifeLeft": "आयुष्याचे {percent} उरले आहे",
             "energy": "ऊर्जा",
             "awakeSince": "{time} पासून जागा आहे",
-            "asleepSince": "{time} पासून झोपला आहे",
-            "nextHunt": "पुढची शिकार {when}"
+            "asleepSince": "{time} पासून झोपला आहे"
         },
         "activity": {
             "food": "अन्न शोधत आहे",

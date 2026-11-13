@@ -6,7 +6,7 @@ import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import fixtureEvents from "@/ark-scene/fixtures/events.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {forgetSchedules, groupSpread, rangeReach, slotPlanAt, spaceHomes, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
-import {MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
+import {EATING, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
 import {eats} from "@/ark-scene/food-links";
 import {placeAnimals} from "@/ark-scene/placement";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
@@ -23,12 +23,13 @@ import {
     ARK_ACTIVITY_ENGLISH,
     ARK_CARD_ENGLISH,
     ARK_ENERGY_FLOOR,
-    ARK_HUNGER_DAYS,
+    ARK_FED_FLOOR,
     arkActivityKey,
     arkBarTone,
     arkEnergy,
-    arkInDays,
-    arkNextHuntIn,
+    arkFed,
+    arkFedRates,
+    arkFeeder,
     arkOriginEntry,
     arkRecordNotesFromEvents,
     arkRecordNoteFromLife,
@@ -298,60 +299,103 @@ test("the live log's now lines come only from the scene's moments, each said onc
 
 // MARK: The bars
 
-test("the bars: hunger from the last recorded meal against the hunger days, health from the server's condition", () => {
-    const fed = (lastMealDay: number | null, condition: "well_fed" | "hungry" | "old" = "well_fed") => arkStatusBars({condition, arkDay: 100, lastMealDay}).fed!;
-    assert.deepEqual(fed(100), {value: 1, tone: "good", state: "fed"});
-    assert.equal(fed(100 - ARK_HUNGER_DAYS / 2).value, 0.65);
-    assert.equal(fed(100 - ARK_HUNGER_DAYS / 2).tone, "good");
-    assert.equal(fed(100 - ARK_HUNGER_DAYS * 0.8).state, "low");
-    assert.equal(fed(100 - ARK_HUNGER_DAYS * 0.8).tone, "warn");
-    assert.equal(fed(100 - ARK_HUNGER_DAYS).value, 0.3, "past the hunger days and still fed: amber, never red");
-    assert.equal(fed(80).tone, "warn");
-    assert.equal(fed(101).value, 1, "a meal after now is now");
-    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null}).fed, null, "no meal clock (it eats what grows round it, and the server keeps it fed): no fed bar, which could only ever be full");
-    assert.deepEqual(fed(99, "hungry"), {value: 0.12, tone: "bad", state: "hungry"});
-    // Monotonic: the longer since its meal, the emptier.
-    let last = 2;
-    for (let d = 0; d <= 10; d += 0.5) {
-        const value = fed(100 - d).value;
-        assert.ok(value <= last);
-        last = value;
-    }
-    const health = (condition: "well_fed" | "hungry" | "old") => arkStatusBars({condition, arkDay: 100, lastMealDay: null}).health!;
+test("the bars: fed from its day (the server's hungry over it), health from the server's condition", () => {
+    const day = (value: number, eating = false) => arkStatusBars({condition: "well_fed", arkDay: 100, fed: {value, eating}}).fed!;
+    assert.deepEqual(day(1), {value: 1, tone: "good", state: "fed"});
+    assert.deepEqual(day(0.72), {value: 0.72, tone: "good", state: "fed"});
+    assert.deepEqual(day(0.45), {value: 0.45, tone: "warn", state: "low"});
+    assert.deepEqual(day(0.45, true), {value: 0.45, tone: "warn", state: "eating"});
+    assert.equal(day(0.1).value, ARK_FED_FLOOR, "never below the floor: nothing starves of its day");
+    assert.deepEqual(arkStatusBars({condition: "hungry", arkDay: 100, fed: {value: 0.9, eating: false}}).fed, {value: 0.12, tone: "bad", state: "hungry"}, "the server's hungry first");
+    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).fed, null, "off its schedule: no fed bar");
+    const health = (condition: "well_fed" | "hungry" | "old") => arkStatusBars({condition, arkDay: 100}).health!;
     assert.deepEqual(health("well_fed"), {value: 1, tone: "good", state: "good"});
     assert.deepEqual(health("hungry"), {value: 0.45, tone: "warn", state: "hungry"});
     assert.deepEqual(health("old"), {value: 0.2, tone: "bad", state: "old"});
     // Age only with a lifespan (the reads don't send one: no bar).
-    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null}).age, null);
-    assert.deepEqual(arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null, bornDay: 25, lifespanDays: 300}).age, {value: 0.75, tone: "good", state: "life"});
-    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null, bornDay: 0, lifespanDays: 90}).age!.value, 0);
-    // An older server (no condition): no fed or health bar.
-    assert.deepEqual(arkStatusBars({condition: null, arkDay: 100, lastMealDay: 99}), {fed: null, health: null, energy: null, age: null});
+    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).age, null);
+    assert.deepEqual(arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 25, lifespanDays: 300}).age, {value: 0.75, tone: "good", state: "life"});
+    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 0, lifespanDays: 90}).age!.value, 0);
+    // An older server (no condition): no health bar.
+    assert.deepEqual(arkStatusBars({condition: null, arkDay: 100}), {fed: null, health: null, energy: null, age: null});
     assert.deepEqual([0, 0.29, 0.3, 0.59, 0.6, 1].map(arkBarTone), ["bad", "bad", "warn", "warn", "good", "good"]);
 });
 
-test("the fed bar on the server's meal clock (card truth, 2026-11-13): the share of its meal still to run, true to the day", () => {
-    // The live Ark's numbers (2026-11-13): fed at the clock start (Ark day 78.6), next hunts 216 to 7,255 Ark days on.
-    const clock = (arkDay: number, last: number | null, next: number, condition: "well_fed" | "hungry" = "well_fed") => arkStatusBars({condition, arkDay, lastMealDay: last, nextHuntDay: next}).fed;
-    assert.deepEqual(clock(110.3, 78.6, 78.6 + 1159), {value: 0.973, tone: "good", state: "fed"}, "the median predator: nearly full, not full");
-    assert.equal(clock(110.3, 78.6, 78.6 + 216)!.value, 0.853, "the shortest meal clock");
-    assert.equal(clock(78.6, 78.6, 300)!.value, 1, "just fed");
-    assert.deepEqual(clock(299, 78.6, 300), {value: 0.3, tone: "warn", state: "low"}, "due: amber, never red while the server says fed");
-    assert.equal(clock(400, 78.6, 300)!.value, 0.3, "past it (hunting): amber");
-    assert.equal(clock(110, null, 300), null, "its meal's start not in the read: no bar (the card says when it next hunts)");
-    assert.deepEqual(clock(110, 78.6, 300, "hungry"), {value: 0.12, tone: "bad", state: "hungry"}, "hungry (the server) first");
-    // Going down with the days, never up.
-    let last = 2;
-    for (let d = 78.6; d <= 320; d += 7) {
-        const value = clock(d, 78.6, 300)!.value;
-        assert.ok(value <= last);
-        last = value;
+test("fed over its day (card truth, 2026-11-13): down while awake and not eating, up while eating, held asleep, a kill fills it", () => {
+    // Rates from the stored diet and the body's length: a plant-eater empties fastest, a predator slowest; small bodies faster.
+    assert.deepEqual(["grazer", "browser", "meat", "fish", "insects", "seeds", null].map(arkFeeder), ["plants", "plants", "prey", "prey", "mixed", "mixed", "mixed"]);
+    const perMinute = (diet: string, length: number) => Math.round(arkFedRates(diet, length).drain * 60 * 1000) / 10;
+    assert.deepEqual([perMinute("grazer", 1), perMinute("insects", 1), perMinute("meat", 1)], [5, 4, 3], "percent a minute at a metre");
+    assert.ok(perMinute("insects", 0.1) > perMinute("insects", 1) && perMinute("meat", 3) < perMinute("meat", 1));
+    assert.equal(perMinute("insects", 0.01), 8, "held to double");
+    const t0 = 1_000_000;
+    const slot = (k: number, awake: boolean, eating: boolean) => ({start: t0 + k * 80, end: t0 + (k + 1) * 80, awake, eating});
+    const rates = arkFedRates("insects", 1);
+    // Ninety waking slots not eating: down to the floor, and there it stays (the floor, never empty).
+    const idle = Array.from({length: 90}, (_, k) => slot(k, true, false));
+    assert.equal(arkFed(idle, t0 + 90 * 80 - 1, rates)!.value, ARK_FED_FLOOR);
+    // Then eating: up, quickly at first, towards full; a few percent a minute down when it stops.
+    const meal = [...idle, slot(90, true, true), slot(91, true, true), slot(92, true, true), slot(93, true, false)];
+    const at = (s: number) => arkFed(meal, t0 + s, rates)!;
+    assert.ok(at(90 * 80 + 40).value > at(90 * 80 + 1).value && at(90 * 80 + 79).value > at(90 * 80 + 40).value, "rising through a meal");
+    assert.ok(at(93 * 80).value > 0.7, `filled most of the way after four minutes (${at(93 * 80).value})`);
+    assert.equal(at(90 * 80 + 40).eating, true);
+    assert.equal(at(93 * 80 + 60).eating, false);
+    const drop = at(93 * 80 + 1).value - at(93 * 80 + 61).value;
+    assert.ok(Math.abs(drop - 0.04) < 0.002, `four percent in a minute after it (${drop})`);
+    // Asleep: held.
+    const night = [...meal, slot(94, false, false), slot(95, false, false)];
+    assert.equal(arkFed(night, t0 + 96 * 80 - 1, rates)!.value, arkFed(night, t0 + 94 * 80, rates)!.value);
+    // A kill (the server's meal) fills it.
+    assert.ok(arkFed(idle, t0 + 60 * 80 + 1, rates, [t0 + 60 * 80])!.value >= 0.999, "full a second after the kill");
+    assert.equal(arkFed(idle, t0 + 60 * 80 + 1, rates, [t0 + 99 * 80])!.value, ARK_FED_FLOOR, "a meal after now is not yet");
+    // Where the reckoning starts hardly shows two waking hours on: the same day read from a longer look back (its own
+    // balance from a few more slots) is within a percent or two; one slot more, under a percent (under a pixel of a bar).
+    const mixed = Array.from({length: 150}, (_, k) => slot(k, k % 37 > 3, k % 7 === 2 || k % 11 === 0));
+    const read = (from: number) => arkFed(mixed.slice(from), t0 + 150 * 80 - 5, rates)!.value;
+    assert.ok(Math.abs(read(60) - read(30)) < 0.02, `${read(60)} vs ${read(30)}`);
+    assert.ok(Math.abs(read(60) - read(59)) < 0.01, `${read(60)} vs ${read(59)}`);
+    assert.equal(arkFed([], t0, rates), null);
+});
+
+test("fed over its day on the fixture's schedules: between the floor and full, moving, rising while it eats, the same on two runs", () => {
+    forgetSchedules();
+    const day = (i: Item) => Array.from({length: 24 * 6}, (_, k) => scheduleFed(i.subject, DAY + k * 600 + 17));
+    const first = items.map(day);
+    forgetSchedules();
+    // (A sample of them again from nothing: about 0.3 ms a slot's plan, and a day is hundreds of them.)
+    assert.deepEqual(items.slice(0, 24).map(day), first.slice(0, 24), "a pure function of the clock and its schedule");
+    let moving = 0;
+    let fed = 0;
+    first.forEach((values, n) => {
+        const known = values.filter((v) => v !== null).map((v) => v!.value);
+        if (!known.length) return;
+        fed++;
+        assert.ok(known.every((v) => v >= ARK_FED_FLOOR && v <= 1), items[n].a.model_slug);
+        if (Math.max(...known) - Math.min(...known) >= 0.2) moving++;
+    });
+    assert.ok(fed >= items.length * 0.9, `${fed} of ${items.length} have a day`);
+    assert.ok(moving >= fed * 0.8, `most move over a day (${moving} of ${fed})`);
+    // Rising while it eats, falling while it is awake and not: every animal's slots at 10:00–12:00.
+    let rose = 0;
+    let fell = 0;
+    for (const i of items) {
+        for (let t = DAY + 10 * 3600; t < DAY + 12 * 3600; t += SLOT_SECONDS) {
+            const plan = planOf(i.subject, t);
+            const a = scheduleFed(i.subject, plan.start + 5);
+            const b = scheduleFed(i.subject, plan.start + 70);
+            if (!a || !b || plan.doing === "sleep" || plan.doing === "to_roost") continue;
+            const eating = EATING.has(arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, flyer: i.subject.profile.move === "fly", still: plan.still}));
+            if (eating) {
+                assert.ok(b.value >= a.value, `${i.a.model_slug} eating at ${t}`);
+                if (b.value > a.value) rose++;
+            } else if (a.value > ARK_FED_FLOOR) {
+                assert.ok(b.value <= a.value, `${i.a.model_slug} idle at ${t}`);
+                if (b.value < a.value) fell++;
+            }
+        }
     }
-    assert.equal(arkNextHuntIn(2763.01, 110.3)!.toFixed(2), "2652.71");
-    assert.equal(arkNextHuntIn(null, 110), null);
-    assert.equal(arkNextHuntIn(300, null), null);
-    assert.equal(arkInDays(2652.7, "en"), "in 2,653 days");
-    assert.equal(arkInDays(0.2, "en"), "in 1 day");
+    assert.ok(rose > 0 && fell > 0, `rose ${rose}, fell ${fell}`);
 });
 
 test("energy over its day, from its schedule's own sleep and wake (card truth, 2026-11-13)", () => {
@@ -381,10 +425,10 @@ test("energy over its day, from its schedule's own sleep and wake (card truth, 2
     assert.equal(arkEnergy(() => true, day0), null);
     assert.equal(arkEnergy(() => false, day0), null);
     // As a bar: amber at the lowest, never red; the bars without it as before.
-    const bars = arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null, energy: at(17.9)});
+    const bars = arkStatusBars({condition: "well_fed", arkDay: 100, energy: at(17.9)});
     assert.equal(bars.energy!.tone, "warn");
     assert.equal(bars.energy!.state, "awake");
-    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: null}).energy, null);
+    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).energy, null);
 });
 
 test("a status in words: now, next or when it wakes, its log stamped, its bars said", () => {
@@ -398,8 +442,7 @@ test("a status in words: now, next or when it wakes, its log stamped, its bars s
             {id: "meal:a", source: "record", at: 1, day: 88, kind: "meal", other: "Field Vole"},
             {id: "origin:a", source: "record", at: 0, day: 77, kind: "arrived", via: "capture"}
         ],
-        bars: arkStatusBars({condition: "well_fed", arkDay: 100, lastMealDay: 95, energy: {value: 0.62, awake: true, since: Date.parse("2026-11-12T06:12:40Z") / 1000}}),
-        nextHunt: null
+        bars: arkStatusBars({condition: "well_fed", arkDay: 100, fed: {value: 0.48, eating: false}, energy: {value: 0.62, awake: true, since: Date.parse("2026-11-12T06:12:40Z") / 1000}})
     };
     const words = arkStatusWords(english);
     const text = arkStatusText(status, words, "en-GB");
@@ -407,11 +450,7 @@ test("a status in words: now, next or when it wakes, its log stamped, its bars s
     assert.equal(text.next, "Next: building a nest");
     assert.deepEqual(text.log.map((l) => [l.stamp, l.text]), [["10:01", "Drinking"], ["Day 88", "Ate a Field Vole"], ["Day 77", "Came aboard with a capture"]]);
     assert.deepEqual(text.bars.map((b) => [b.key, b.text, b.tone]), [["fed", "Getting hungry", "warn"], ["health", "In good health", "good"], ["energy", "Awake since 06:12", "good"]]);
-    assert.equal(text.nextHunt, null);
-    // A predator's next hunt, in the reader's words; due now (it hunts when awake): getting hungry.
-    assert.equal(arkStatusText({...status, nextHunt: 1128.4}, words, "en-GB").nextHunt, "Next hunt in 1,128 days");
-    assert.equal(arkStatusText({...status, nextHunt: -0.5}, words, "en-GB").nextHunt, "Getting hungry");
-    assert.equal(arkStatusText({...status, nextHunt: 1128.4}, arkStatusWords({}), "de").nextHunt, "Next hunt in 1.128 Tagen", "English words where the reader's lack one");
+    assert.equal(arkStatusText({...status, bars: arkStatusBars({condition: "well_fed", arkDay: 100, fed: {value: 0.91, eating: true}})}, words, "en-GB").bars[0].text, "Well-fed");
     const asleep = arkStatusText({...status, activity: "sleeping", goal: {kind: "wakes", at: Date.parse("2026-11-12T06:40:00Z") / 1000}}, words, "en-GB");
     assert.equal(asleep.now, "Now: sleeping");
     assert.equal(asleep.next, "Wakes about 06:40");

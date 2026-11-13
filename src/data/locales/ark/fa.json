@@ -319,8 +319,7 @@
             "lifeLeft": "{percent} از عمرش باقی مانده",
             "energy": "انرژی",
             "awakeSince": "از {time} بیدار است",
-            "asleepSince": "از {time} خواب است",
-            "nextHunt": "شکار بعدی {when}"
+            "asleepSince": "از {time} خواب است"
         },
         "activity": {
             "food": "در جست‌وجوی غذا",

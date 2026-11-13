@@ -319,8 +319,7 @@
             "lifeLeft": "تبقّى {percent} من عمره",
             "energy": "الطاقة",
             "awakeSince": "مستيقظ منذ {time}",
-            "asleepSince": "نائم منذ {time}",
-            "nextHunt": "الصيد التالي {when}"
+            "asleepSince": "نائم منذ {time}"
         },
         "activity": {
             "food": "يبحث عن الطعام",

@@ -319,8 +319,7 @@
             "lifeLeft": "आयु का {percent} शेष",
             "energy": "ऊर्जा",
             "awakeSince": "{time} बजे से जागा हुआ है",
-            "asleepSince": "{time} बजे से सो रहा है",
-            "nextHunt": "अगला शिकार {when}"
+            "asleepSince": "{time} बजे से सो रहा है"
         },
         "activity": {
             "food": "भोजन खोज रहा है",

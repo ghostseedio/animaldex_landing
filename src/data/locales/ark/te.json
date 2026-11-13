@@ -319,8 +319,7 @@
             "lifeLeft": "ఆయుష్షులో {percent} మిగిలింది",
             "energy": "శక్తి",
             "awakeSince": "{time} నుంచి మేల్కొని ఉంది",
-            "asleepSince": "{time} నుంచి నిద్రపోతోంది",
-            "nextHunt": "తదుపరి వేట {when}"
+            "asleepSince": "{time} నుంచి నిద్రపోతోంది"
         },
         "activity": {
             "food": "ఆహారం వెతుకుతోంది",

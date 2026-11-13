@@ -319,8 +319,7 @@
             "lifeLeft": "Elinaikaa jäljellä {percent}",
             "energy": "Energia",
             "awakeSince": "Hereillä klo {time} alkaen",
-            "asleepSince": "Unessa klo {time} alkaen",
-            "nextHunt": "Seuraava saalistus {when}"
+            "asleepSince": "Unessa klo {time} alkaen"
         },
         "activity": {
             "food": "etsii ruokaa",

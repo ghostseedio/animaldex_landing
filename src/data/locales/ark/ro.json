@@ -319,8 +319,7 @@
             "lifeLeft": "Îi mai rămâne {percent} din viață",
             "energy": "Energie",
             "awakeSince": "Treaz de la {time}",
-            "asleepSince": "Doarme de la {time}",
-            "nextHunt": "Următoarea vânătoare {when}"
+            "asleepSince": "Doarme de la {time}"
         },
         "activity": {
             "food": "caută hrană",

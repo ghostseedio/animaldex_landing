@@ -319,8 +319,7 @@
             "lifeLeft": "Còn {percent} tuổi thọ",
             "energy": "Năng lượng",
             "awakeSince": "Thức từ {time}",
-            "asleepSince": "Ngủ từ {time}",
-            "nextHunt": "Lần săn tới: {when}"
+            "asleepSince": "Ngủ từ {time}"
         },
         "activity": {
             "food": "tìm thức ăn",

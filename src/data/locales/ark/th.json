@@ -319,8 +319,7 @@
             "lifeLeft": "เหลืออายุ {percent}",
             "energy": "พลังงาน",
             "awakeSince": "ตื่นตั้งแต่ {time}",
-            "asleepSince": "หลับตั้งแต่ {time}",
-            "nextHunt": "ล่าครั้งถัดไป{when}"
+            "asleepSince": "หลับตั้งแต่ {time}"
         },
         "activity": {
             "food": "หาอาหาร",

@@ -319,8 +319,7 @@
             "lifeLeft": "Осталось {percent} жизни",
             "energy": "Энергия",
             "awakeSince": "Бодрствует с {time}",
-            "asleepSince": "Спит с {time}",
-            "nextHunt": "Следующая охота {when}"
+            "asleepSince": "Спит с {time}"
         },
         "activity": {
             "food": "ищет еду",

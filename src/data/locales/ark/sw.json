@@ -319,8 +319,7 @@
             "lifeLeft": "Amebakiza {percent} ya maisha yake",
             "energy": "Nguvu",
             "awakeSince": "Macho tangu {time}",
-            "asleepSince": "Amelala tangu {time}",
-            "nextHunt": "Uwindaji ujao {when}"
+            "asleepSince": "Amelala tangu {time}"
         },
         "activity": {
             "food": "anatafuta chakula",

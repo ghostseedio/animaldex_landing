@@ -319,8 +319,7 @@
             "lifeLeft": "남은 수명 {percent}",
             "energy": "기력",
             "awakeSince": "{time}부터 깨어 있어요",
-            "asleepSince": "{time}부터 자고 있어요",
-            "nextHunt": "다음 사냥: {when}"
+            "asleepSince": "{time}부터 자고 있어요"
         },
         "activity": {
             "food": "먹이를 찾는 중",

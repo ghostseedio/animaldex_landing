@@ -319,8 +319,7 @@
             "lifeLeft": "Kalan ömür: {percent}",
             "energy": "Enerji",
             "awakeSince": "{time} saatinden beri uyanık",
-            "asleepSince": "{time} saatinden beri uyuyor",
-            "nextHunt": "Sonraki av: {when}"
+            "asleepSince": "{time} saatinden beri uyuyor"
         },
         "activity": {
             "food": "yiyecek arıyor",

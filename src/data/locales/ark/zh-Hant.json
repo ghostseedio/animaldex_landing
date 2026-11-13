@@ -319,8 +319,7 @@
             "lifeLeft": "剩餘壽命 {percent}",
             "energy": "精力",
             "awakeSince": "{time} 起醒著",
-            "asleepSince": "{time} 起在睡覺",
-            "nextHunt": "下次捕獵：{when}"
+            "asleepSince": "{time} 起在睡覺"
         },
         "activity": {
             "food": "覓食",

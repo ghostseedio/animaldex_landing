@@ -319,8 +319,7 @@
             "lifeLeft": "Restam {percent} da sua vida",
             "energy": "Energia",
             "awakeSince": "Acordado desde as {time}",
-            "asleepSince": "Dormindo desde as {time}",
-            "nextHunt": "Próxima caçada {when}"
+            "asleepSince": "Dormindo desde as {time}"
         },
         "activity": {
             "food": "procurando comida",

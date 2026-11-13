@@ -4494,8 +4494,7 @@
       "lifeLeft": "Sisa umur {percent}",
       "energy": "Energi",
       "awakeSince": "Terjaga sejak pukul {time}",
-      "asleepSince": "Tidur sejak pukul {time}",
-      "nextHunt": "Berburu lagi {when}"
+      "asleepSince": "Tidur sejak pukul {time}"
     },
     "activity": {
       "food": "mencari makanan",

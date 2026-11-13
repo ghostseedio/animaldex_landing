@@ -319,8 +319,7 @@
             "lifeLeft": "{percent} af levetiden tilbage",
             "energy": "Energi",
             "awakeSince": "Vågen siden {time}",
-            "asleepSince": "Sover siden {time}",
-            "nextHunt": "Næste jagt {when}"
+            "asleepSince": "Sover siden {time}"
         },
         "activity": {
             "food": "leder efter føde",

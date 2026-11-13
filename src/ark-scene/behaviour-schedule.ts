@@ -1808,7 +1808,13 @@ function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
     }
     return value;
 }
+/** How many times the schedules have been forgotten (`forgetSchedules`): a cache of plans made before a change is stale. */
+let generation = 0;
+export function scheduleGeneration(): number {
+    return generation;
+}
 export function forgetSchedules() {
+    generation++;
     memos = new WeakMap();
     roosts = new WeakMap();
     forgetRecipes();

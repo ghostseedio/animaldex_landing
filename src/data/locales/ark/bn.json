@@ -319,8 +319,7 @@
             "lifeLeft": "আয়ুর {percent} বাকি",
             "energy": "শক্তি",
             "awakeSince": "{time} থেকে জেগে আছে",
-            "asleepSince": "{time} থেকে ঘুমিয়ে আছে",
-            "nextHunt": "পরের শিকার {when}"
+            "asleepSince": "{time} থেকে ঘুমিয়ে আছে"
         },
         "activity": {
             "food": "খাবার খুঁজছে",

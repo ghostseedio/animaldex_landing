@@ -319,8 +319,7 @@
             "lifeLeft": "寿命の残り{percent}",
             "energy": "元気",
             "awakeSince": "{time}から起きています",
-            "asleepSince": "{time}から眠っています",
-            "nextHunt": "次の狩り：{when}"
+            "asleepSince": "{time}から眠っています"
         },
         "activity": {
             "food": "食べ物を探しています",

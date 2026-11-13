@@ -319,8 +319,7 @@
             "lifeLeft": "Li queda el {percent} de la vida",
             "energy": "Energia",
             "awakeSince": "Despert des de les {time}",
-            "asleepSince": "Adormit des de les {time}",
-            "nextHunt": "Propera caça {when}"
+            "asleepSince": "Adormit des de les {time}"
         },
         "activity": {
             "food": "busca menjar",

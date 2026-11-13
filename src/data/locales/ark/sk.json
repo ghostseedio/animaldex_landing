@@ -319,8 +319,7 @@
             "lifeLeft": "Zostáva {percent} života",
             "energy": "Energia",
             "awakeSince": "Hore od {time}",
-            "asleepSince": "Spí od {time}",
-            "nextHunt": "Ďalší lov {when}"
+            "asleepSince": "Spí od {time}"
         },
         "activity": {
             "food": "hľadá potravu",

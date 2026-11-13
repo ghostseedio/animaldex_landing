@@ -319,8 +319,7 @@
             "lifeLeft": "{percent} ng buhay ang natitira",
             "energy": "Lakas",
             "awakeSince": "Gising mula {time}",
-            "asleepSince": "Tulog mula {time}",
-            "nextHunt": "Susunod na pangangaso {when}"
+            "asleepSince": "Tulog mula {time}"
         },
         "activity": {
             "food": "naghahanap ng pagkain",

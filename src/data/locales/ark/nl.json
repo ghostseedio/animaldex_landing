@@ -319,8 +319,7 @@
             "lifeLeft": "Nog {percent} levensduur over",
             "energy": "Energie",
             "awakeSince": "Wakker sinds {time}",
-            "asleepSince": "Slaapt sinds {time}",
-            "nextHunt": "Volgende jacht {when}"
+            "asleepSince": "Slaapt sinds {time}"
         },
         "activity": {
             "food": "zoekt voedsel",

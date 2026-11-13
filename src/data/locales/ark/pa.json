@@ -319,8 +319,7 @@
             "lifeLeft": "ਉਮਰ ਦਾ {percent} ਬਾਕੀ",
             "energy": "ਊਰਜਾ",
             "awakeSince": "{time} ਵਜੇ ਤੋਂ ਜਾਗ ਰਿਹਾ ਹੈ",
-            "asleepSince": "{time} ਵਜੇ ਤੋਂ ਸੌਂ ਰਿਹਾ ਹੈ",
-            "nextHunt": "ਅਗਲਾ ਸ਼ਿਕਾਰ {when}"
+            "asleepSince": "{time} ਵਜੇ ਤੋਂ ਸੌਂ ਰਿਹਾ ਹੈ"
         },
         "activity": {
             "food": "ਖੁਰਾਕ ਲੱਭ ਰਿਹਾ ਹੈ",

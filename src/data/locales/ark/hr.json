@@ -319,8 +319,7 @@
             "lifeLeft": "Preostalo je {percent} života",
             "energy": "Energija",
             "awakeSince": "Budan od {time}",
-            "asleepSince": "Spava od {time}",
-            "nextHunt": "Sljedeći lov {when}"
+            "asleepSince": "Spava od {time}"
         },
         "activity": {
             "food": "traži hranu",

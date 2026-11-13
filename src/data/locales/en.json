@@ -4461,8 +4461,7 @@
       "lifeLeft": "{percent} of its life left",
       "energy": "Energy",
       "awakeSince": "Awake since {time}",
-      "asleepSince": "Asleep since {time}",
-      "nextHunt": "Next hunt {when}"
+      "asleepSince": "Asleep since {time}"
     },
     "activity": {
       "food": "looking for food",

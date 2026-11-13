@@ -319,8 +319,7 @@
             "lifeLeft": "Baki hayat {percent}",
             "energy": "Tenaga",
             "awakeSince": "Berjaga sejak pukul {time}",
-            "asleepSince": "Tidur sejak pukul {time}",
-            "nextHunt": "Memburu lagi {when}"
+            "asleepSince": "Tidur sejak pukul {time}"
         },
         "activity": {
             "food": "mencari makanan",

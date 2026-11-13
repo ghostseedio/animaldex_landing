@@ -319,8 +319,7 @@
             "lifeLeft": "{percent} Lebenszeit übrig",
             "energy": "Energie",
             "awakeSince": "Wach seit {time}",
-            "asleepSince": "Schläft seit {time}",
-            "nextHunt": "Nächste Jagd {when}"
+            "asleepSince": "Schläft seit {time}"
         },
         "activity": {
             "food": "sucht Futter",

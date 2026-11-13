@@ -319,8 +319,7 @@
             "lifeLeft": "Απομένει το {percent} της ζωής του",
             "energy": "Ενέργεια",
             "awakeSince": "Ξύπνιο από τις {time}",
-            "asleepSince": "Κοιμάται από τις {time}",
-            "nextHunt": "Επόμενο κυνήγι {when}"
+            "asleepSince": "Κοιμάται από τις {time}"
         },
         "activity": {
             "food": "ψάχνει για τροφή",

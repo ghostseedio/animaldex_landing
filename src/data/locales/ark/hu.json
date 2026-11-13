@@ -319,8 +319,7 @@
             "lifeLeft": "Hátralévő élete: {percent}",
             "energy": "Energia",
             "awakeSince": "{time} óta ébren",
-            "asleepSince": "{time} óta alszik",
-            "nextHunt": "Következő vadászat: {when}"
+            "asleepSince": "{time} óta alszik"
         },
         "activity": {
             "food": "élelmet keres",

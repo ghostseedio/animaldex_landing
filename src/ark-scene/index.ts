@@ -167,9 +167,9 @@ import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
-import {arkActivityKey, arkDayOf, arkEnergy, arkNextHuntIn, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
+import {arkActivityKey, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
@@ -201,7 +201,6 @@ import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
-import type {ArkHunting} from "@/lib/ark-hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
@@ -1323,8 +1322,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
     const hunting = new HuntingLayer();
-    /** The last encounter hunting read (each predator's next hunt and last meal: the tap card's meal clock), or null. */
-    let huntRead: ArkHunting | null = null;
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -1845,15 +1842,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
         const notes = records.get(animal.id) ?? [];
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
-        const meal = notes.find((note) => note.kind === "meal");
-        // Its meal clock (card truth, 2026-11-13): the server's next hunt and last meal (the hunting read), and a meal on record
-        // since then (the live log's, its life story's), whichever is later.
-        const arkDay = arkDayNow(current, Date.now());
-        const recorded = meal ? arkDayOf(meal.at, voyageStart) : null;
-        const clockMeal = huntRead?.lastMeals?.get(animal.id) ?? null;
-        const lastMealDay = recorded !== null && clockMeal !== null ? Math.max(recorded, clockMeal) : recorded ?? clockMeal;
-        const nextHuntDay = huntRead?.predators.get(animal.id) ?? null;
-        // Its energy over its day: the schedule's own sleep and wake (awake at its slot's start, as the schedule reads it).
+        // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
+        // slots (awake at its slot's start, as the schedule reads it); a kill of its on record (its log's meals) fills it.
+        const fed = subject ? scheduleFed(subject, epoch, notes.filter((note) => note.kind === "meal").map((note) => note.at / 1000)) : null;
         const energy = subject ? energyOf(subject, epoch) : null;
         return {
             id: animal.id,
@@ -1861,8 +1852,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             since: plan?.since ?? null,
             goal: plan?.goal ?? null,
             log: arkStatusLog(plan?.log ?? [], record),
-            bars: arkStatusBars({condition: animal.condition, arkDay, lastMealDay, nextHuntDay, energy}),
-            nextHunt: arkNextHuntIn(nextHuntDay, arkDay)
+            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy})
         };
     };
     const energyOf = (subject: ScheduleSubject, epoch: number) => {
@@ -6410,8 +6400,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         setHunting: (read) => {
             // Encounter hunting: the server's read, or null (off: everyone on their schedules, exactly as before).
-            huntRead = read && read.hunting === "encounter" ? read : null;
-            statusAt = -Infinity;
             if (!read || read.hunting !== "encounter") {
                 hunting.set(null, null, null);
                 return;

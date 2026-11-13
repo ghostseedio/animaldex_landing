@@ -9,10 +9,10 @@
  * (the local reactive layer near the camera is not read). Visual only: nothing here decides anything on the Ark.
  */
 
-import {awakeAt, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
+import {awakeAt, scheduleGeneration, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {hash32} from "@/lib/ark-clock";
-import {arkActivityKey, type ArkActivityKey, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
+import {arkActivityKey, arkFed, arkFedRates, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 
 /** One animal on the schedule, as the status reads it. */
 export type ScheduleSubject = {
@@ -100,6 +100,56 @@ function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKe
         if (key !== now) return {kind: "next", activity: key, at: later.start};
     }
     return null;
+}
+
+// MARK: How fed it is over its day
+
+/** What its card says it is doing that is eating: a forage, a graze, a browse, a catch (fishing, a pounce or a hawk), flowers, a zoo's feeding. */
+export const EATING: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "fishing", "hunting", "flowers", "feeding"]);
+/** Waking slots its daily hunger looks back over (two hours), and how far back at most it looks for them (a day and those). */
+const FED_AWAKE_SLOTS = 90;
+const FED_LOOK_SLOTS = Math.ceil(86_400 / SLOT_SECONDS) + FED_AWAKE_SLOTS;
+
+/** Each animal's slots as its daily hunger read them (0 asleep, 1 awake, 2 eating), for the schedules as they are now. */
+let fedMemo: {generation: number; world: ScheduleWorld | null; byId: Map<string, Map<number, number>>} = {generation: -1, world: null, byId: new Map()};
+
+/**
+ * How fed it is now (`arkFed`), from its own schedule: its slots back to two waking hours ago, awake or asleep by the
+ * schedule's own rule (its slot's start), eating when its card would say it is eating there. `meals`: the server's kills
+ * of its that landed (epoch seconds: its log's meals), each of which fills it. Its rates from its stored diet and its
+ * body length. Remembered per animal, slot by slot, until the schedules change, so a card read each second works out
+ * one new slot at most.
+ */
+export function scheduleFed(subject: ScheduleSubject, epoch: number, meals: readonly number[] = []): ArkFed | null {
+    if (fedMemo.generation !== scheduleGeneration() || fedMemo.world !== subject.world) fedMemo = {generation: scheduleGeneration(), world: subject.world, byId: new Map()};
+    let known = fedMemo.byId.get(subject.id);
+    if (!known) {
+        known = new Map();
+        fedMemo.byId.set(subject.id, known);
+        if (fedMemo.byId.size > 24) fedMemo.byId.delete(fedMemo.byId.keys().next().value as string);
+    }
+    const offset = slotOffset(subject.id);
+    const now = Math.floor((epoch + offset) / SLOT_SECONDS);
+    const slots: ArkFedSlot[] = [];
+    let awake = 0;
+    for (let slot = now; slot > now - FED_LOOK_SLOTS && awake < FED_AWAKE_SLOTS; slot--) {
+        const start = slot * SLOT_SECONDS - offset;
+        let flag = known.get(slot);
+        if (flag === undefined) {
+            flag = !awakeAt(subject.profile, subject.activity, subject.hoursAt(start)) ? 0 : EATING.has(keyOf(subject, planOf(subject, start + 0.5))) ? 2 : 1;
+            known.set(slot, flag);
+        }
+        if (flag) awake++;
+        slots.push({start, end: start + SLOT_SECONDS, awake: flag > 0, eating: flag === 2});
+    }
+    if (known.size > FED_LOOK_SLOTS * 2) {
+        known.forEach((_, slot) => {
+            if (slot <= now - FED_LOOK_SLOTS) known!.delete(slot);
+        });
+    }
+    if (!awake) return null;
+    slots.reverse();
+    return arkFed(slots, epoch, arkFedRates(subject.profile.diet, subject.animalAt(epoch).length), meals);
 }
 
 // MARK: The live log's moments

@@ -319,8 +319,7 @@
             "lifeLeft": "נותרו {percent} מחייו",
             "energy": "אנרגיה",
             "awakeSince": "ער מאז {time}",
-            "asleepSince": "ישן מאז {time}",
-            "nextHunt": "הציד הבא {when}"
+            "asleepSince": "ישן מאז {time}"
         },
         "activity": {
             "food": "בחיפוש אחר מזון",

@@ -180,18 +180,13 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         if (notes.length) scene()?.noteRecord?.(notes);
     }, [life, animal.id, animal.arrived_at, voyageStart, scene]);
 
-    const fedBar = text?.bars.find((bar) => bar.key === "fed") ?? null;
     const healthBar = text?.bars.find((bar) => bar.key === "health") ?? null;
     const thriveChip = facts.thrive ? arkThriveWords(facts.thrive, words.life) : null;
-    // Chips: its age, how fed it is (the bars' words when the scene has them), its condition, a predator's next hunt (the
-    // server's meal clock, card truth 2026-11-13); old, and its generation.
+    // Chips: its age; its condition only when it says something (hungry: the server's; card truth, 2026-11-13: well-fed,
+    // everyone's default, is not said, and the fed bar shows its day); its thrive band; old; its generation.
     const chips: Array<{key: string; text: string; tone: "plain" | "good" | "warn" | "bad" | "thrive"}> = [];
     if (facts.ageDays !== null) chips.push({key: "age", text: ageText(facts.ageDays, words, locale), tone: "plain"});
-    // (Due its next hunt, and the server still calls it fed: getting hungry, as a fed bar at its lowest says.)
-    const due = typeof status?.nextHunt === "number" && status.nextHunt <= 0 && facts.condition !== "hungry";
-    const fedText = fedBar?.text ?? (due ? words.card.fedLow : facts.condition && facts.condition !== "old" ? words.life[facts.condition] : facts.condition === "old" ? words.life.well_fed : null);
-    if (fedText) chips.push({key: "fed", text: fedText, tone: fedBar?.tone === "bad" || facts.condition === "hungry" ? "bad" : fedBar?.tone === "warn" || (due && !fedBar) ? "warn" : "plain"});
-    if (text?.nextHunt && !due) chips.push({key: "hunt", text: text.nextHunt, tone: "plain"});
+    if (facts.condition === "hungry") chips.push({key: "fed", text: words.life.hungry, tone: "bad"});
     if (thriveChip) chips.push({key: "thrive", text: thriveChip, tone: facts.thrive !== "ordinary" ? "thrive" : "plain"});
     if (facts.condition === "old" || healthBar?.tone === "bad") chips.push({key: "old", text: healthBar?.text ?? words.life.old, tone: "warn"});
     if (facts.generation !== null && facts.generation > 0) chips.push({key: "generation", text: fillArkWords(words.life.generationShort, {n: facts.generation}), tone: "plain"});

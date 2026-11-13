@@ -319,8 +319,7 @@
             "lifeLeft": "ஆயுளில் {percent} மீதம்",
             "energy": "ஆற்றல்",
             "awakeSince": "{time} முதல் விழித்திருக்கிறது",
-            "asleepSince": "{time} முதல் உறங்குகிறது",
-            "nextHunt": "அடுத்த வேட்டை {when}"
+            "asleepSince": "{time} முதல் உறங்குகிறது"
         },
         "activity": {
             "food": "உணவு தேடுகிறது",

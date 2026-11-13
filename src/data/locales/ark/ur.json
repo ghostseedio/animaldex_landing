@@ -319,8 +319,7 @@
             "lifeLeft": "عمر کا {percent} باقی ہے",
             "energy": "توانائی",
             "awakeSince": "{time} بجے سے جاگ رہا ہے",
-            "asleepSince": "{time} بجے سے سو رہا ہے",
-            "nextHunt": "اگلا شکار {when}"
+            "asleepSince": "{time} بجے سے سو رہا ہے"
         },
         "activity": {
             "food": "خوراک تلاش کر رہا ہے",
