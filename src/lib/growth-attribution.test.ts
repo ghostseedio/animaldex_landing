@@ -82,6 +82,7 @@ describe("classifyAcquisition", () => {
     assert.equal(classifyAcquisition(row({ self_reported_source: "skipped" })).key, "unknown");
     assert.equal(classifyAcquisition(row({ utm_source: "(not%20set)", utm_medium: "(not%20set)" })).key, "unknown");
     assert.equal(classifyAcquisition(row({ utm_source: "web", utm_campaign: "page_animals" })).key, "website");
+    assert.equal(classifyAcquisition(row({ utm_source: "animaldex_web", utm_medium: "home_hero", utm_campaign: "/" })).key, "website");
     assert.equal(classifyAcquisition(row({ landing_path: "/animals/fox", referrer_host: "www.google.com" })).label, "Google search");
     assert.equal(classifyAcquisition(row({ landing_path: "/animals/fox", referrer_host: "gemini.google.com" })).key, "web_ai");
     assert.equal(classifyAcquisition(row({ landing_path: "/animals/fox" })).key, "web_direct");

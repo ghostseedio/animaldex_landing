@@ -8,6 +8,7 @@ import {
   inferUserPlatform,
   type UserGrowthRow,
 } from "@/lib/growth-attribution";
+import { isWebsiteStoreSource } from "@/lib/store-links";
 import {
   addDays,
   dayKeyOf,
@@ -65,11 +66,14 @@ function decode(value: string | null | undefined) {
 /** The website page an account came through: its own first visit, or the page of the Play link it tapped. */
 export function landingOf(row: UserGrowthRow) {
   if (row.landing_path) return row.landing_path;
-  if (row.utm_source !== "web") return null;
+  if (!isWebsiteStoreSource(row.utm_source)) return null;
+  // Since 2026-11-13 (`buildStoreUrl`) the page is utm_campaign and the button utm_content.
+  const campaign = decode(row.utm_campaign);
+  if (campaign?.startsWith("/")) return campaign;
+  // Oct-Nov 2026 links carried the page in utm_content.
   const content = decode(row.utm_content);
   if (content?.startsWith("/")) return content;
   // Older Play links only named the section ("page_animals") or the button ("home_hero").
-  const campaign = decode(row.utm_campaign);
   if (!campaign) return null;
   return campaign.startsWith("page_") ? `/${campaign.slice(5)} (section)` : `${campaign} (button)`;
 }

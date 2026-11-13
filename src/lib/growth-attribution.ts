@@ -217,8 +217,8 @@ export function classifyAcquisition(row: UserGrowthRow): AcquisitionChannel {
   if (source === "google-play" && medium === "organic") {
     return { key: "play_store", label: "Google Play search", kind: "organic", evidence: "store", network: null };
   }
-  // A store button on animaldex.app: the Play link carries utm_source=web.
-  if (source === "web") {
+  // A store button on animaldex.app: the Play link carries utm_source=animaldex_web (utm_source=web before 2026-11-13).
+  if (source === "web" || source === "animaldex_web") {
     return { key: "website", label: "Website store link", kind: "organic", evidence: "store", network: null };
   }
   if (row.referrer_host) return referrerChannel(row.referrer_host);

@@ -34,15 +34,16 @@ function runBoot(script: string, page: {search: string; cookie: string; random: 
 const touch = (extra: Record<string, unknown> = {}) => `adx_ft=${serializeFirstTouch({landing_path: "/", at: "2026-11-04T00:00:00.000Z", ...extra})}`;
 
 describe("hero variant", () => {
-    it("splits 50/50 unless HERO_VARIANT_SPLIT says otherwise, clamped to 0-100", () => {
+    it("gives B to 80% of new visitors unless HERO_VARIANT_SPLIT says otherwise, clamped to 0-100", () => {
+        assert.equal(DEFAULT_HERO_SPLIT, 80);
         assert.equal(heroVariantSplit(undefined), DEFAULT_HERO_SPLIT);
-        assert.equal(heroVariantSplit(""), 50);
+        assert.equal(heroVariantSplit(""), 80);
         assert.equal(heroVariantSplit("0"), 0);
         assert.equal(heroVariantSplit("100"), 100);
         assert.equal(heroVariantSplit(" 25 "), 25);
-        assert.equal(heroVariantSplit("101"), 50);
-        assert.equal(heroVariantSplit("-5"), 50);
-        assert.equal(heroVariantSplit("half"), 50);
+        assert.equal(heroVariantSplit("101"), 80);
+        assert.equal(heroVariantSplit("-5"), 80);
+        assert.equal(heroVariantSplit("half"), 80);
         assert.equal(pickHeroVariant(50, 0.49), "b");
         assert.equal(pickHeroVariant(50, 0.5), "a");
         assert.equal(pickHeroVariant(0, 0), "a", "a split of 0 never draws B");

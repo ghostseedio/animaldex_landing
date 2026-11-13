@@ -262,6 +262,18 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
     // Hero A, the test's control, keeps its words.
     assert.equal(en.home.heroTalkLead, "Talk to animals.");
     assert.equal(en.home.heroTalkAccent, "Every animal has a lesson.");
+    // CC 3 (2026-11-13), the talk positioning in the home's snippets: ask any animal anything, it answers from how
+    // its kind lives, one small step, the shared Ark. The subhead without the word Power; every snippet under 155.
+    assert.equal(en.home.heroSubhead, "Bring a real question. Each animal answers from how its kind actually lives, then gives you one thing to try.");
+    assert.doesNotMatch(en.home.heroSubhead, /\bPower\b/);
+    assert.doesNotMatch(id.home.heroSubhead, /Kekuatan/);
+    for (const copy of [en.meta.description, id.meta.description, en.home.intro, id.home.intro]) assert.ok(copy.length < 155, `${copy.length}: ${copy}`);
+    assert.match(en.meta.description, /^Ask any animal anything\./);
+    assert.match(en.meta.description, /the Ark/);
+    assert.match(en.home.intro, /one small step/);
+    // The audience band, cut to four (CC 3).
+    assert.deepEqual(Object.keys(en.home.team.roles), ["question", "animalLover", "photographer", "family"]);
+    assert.deepEqual(Object.keys(id.home.team.roles), Object.keys(en.home.team.roles));
     for (const copy of [en.meta.fullTitle, en.meta.description, en.home.supporting]) {
         assert.doesNotMatch(copy, /life advice|self-improvement|therapy|anxiety|guarantee/i, copy);
     }

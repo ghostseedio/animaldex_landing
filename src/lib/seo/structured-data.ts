@@ -195,7 +195,7 @@ export const ARK_TOPICS = ["Ecosystem simulation", "Food chain", "Animal behavio
  * SearchAction, the world positioning): the organisation, the website and the
  * app. `words` are the page's own (`meta.*`), in its locale.
  */
-export function homeJsonLd(input: {locale: string; name: string; description: string; image: string; featureList: string[]}): JsonLd[] {
+export function homeJsonLd(input: {locale: string; name: string; description: string; image: string; featureList: string[]; /** The app's own description when it differs from the site's (`home.intro`). */ appDescription?: string}): JsonLd[] {
     const site = getSiteUrl();
     return [
         organizationJsonLd(),
@@ -210,7 +210,7 @@ export function homeJsonLd(input: {locale: string; name: string; description: st
             image: getAbsoluteAssetUrl(input.image),
             publisher: organizationRef()
         },
-        animalDexAppJsonLd({description: input.description, image: input.image, featureList: input.featureList, inLanguage: input.locale})
+        animalDexAppJsonLd({description: input.appDescription || input.description, image: input.image, featureList: input.featureList, inLanguage: input.locale})
     ];
 }
 
