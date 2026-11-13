@@ -1,6 +1,8 @@
 import {NextResponse, type NextRequest} from "next/server";
 import {readArkVoyage} from "@/data/ark-voyage";
+import {getSpeciesArtworkSlugs} from "@/data/species-artwork-index";
 import {arkFoundersOf} from "@/lib/ark-founders";
+import {arkIconlessSlugs} from "@/lib/ark-icons";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +17,11 @@ export const dynamic = "force-dynamic";
  * stories of the same answer, `{names: false, animals: {}}` while the
  * server's `founder_names` switch is off or on a server without it.
  *
+ * `noIcon` beside it: the answer's species with no icon art in the `animals`
+ * bucket (`lib/ark-icons.ts`, from the bucket's listing, cached 30 minutes),
+ * drawn as the generic figure without a request each; absent while the
+ * listing is unavailable (every icon is then asked for, as before).
+ *
  * In development, `?fixture=1` answers the v2 fixture (as `/ark?fixture=1`),
  * for `/ark/embed.html?fixture=1`, as names-on answers it (bringers as their
  * @usernames, owner 2026-11-11); `&founders=0`, as a server that names nobody.
@@ -25,8 +32,10 @@ export async function GET(request: NextRequest) {
         const fixture = request.nextUrl.searchParams.get("founders") !== "0" ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders(base) : base;
         return NextResponse.json({available: true, snapshot: fixture, founders: arkFoundersOf(fixture)}, {headers: {"Cache-Control": "no-store"}});
     }
-    const read = await readArkVoyage();
+    // (The listing beside the read, never after it: cached in the server for 30 minutes, it costs the read nothing.)
+    const [read, artwork] = await Promise.all([readArkVoyage(), getSpeciesArtworkSlugs().catch(() => null)]);
     const cache = read.signedIn ? "private, no-store" : "public, s-maxage=30, stale-while-revalidate=60";
     if (!read.available) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
-    return NextResponse.json({available: true, snapshot: read.snapshot, founders: read.founders}, {headers: {"Cache-Control": cache}});
+    const noIcon = artwork ? arkIconlessSlugs(read.snapshot.animals, artwork) : undefined;
+    return NextResponse.json({available: true, snapshot: read.snapshot, founders: read.founders, ...(noIcon ? {noIcon} : {})}, {headers: {"Cache-Control": cache}});
 }

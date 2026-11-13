@@ -29,7 +29,20 @@ export function arkIconFallback(event: {currentTarget: {src: string}}) {
     if (event.currentTarget.src !== ARK_PLACEHOLDER_ICON) event.currentTarget.src = ARK_PLACEHOLDER_ICON;
 }
 
-/** A species' icon art, or the generic figure for a placeholder. */
+/**
+ * The species the server said have no icon art (`/api/ark/voyage`'s `noIcon`, from the `animals` bucket's listing):
+ * drawn as the generic figure without asking the bucket for a file it does not hold (a 400 and a console error each).
+ * Until an answer says (an older server, the listing unavailable), every icon is asked for and a failed one falls back.
+ */
+let iconless: ReadonlySet<string> = new Set();
+
+/** An Ark answer's `noIcon`: each one replaces the last (an icon uploaded since is asked for again); anything else is ignored. */
+export function noteArkIconless(noIcon: unknown): void {
+    if (!Array.isArray(noIcon)) return;
+    iconless = new Set(noIcon.filter((slug): slug is string => typeof slug === "string"));
+}
+
+/** A species' icon art, or the generic figure for a placeholder or a species with no art. */
 export function arkIconUrl(slug: string): string {
-    return isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : getSpeciesArtworkUrl(slug);
+    return isArkPlaceholderSlug(slug) || iconless.has(slug) ? ARK_PLACEHOLDER_ICON : getSpeciesArtworkUrl(slug);
 }
