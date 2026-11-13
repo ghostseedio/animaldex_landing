@@ -376,8 +376,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         {name: "ground", material: materials.ground, castShadow: false, receiveShadow: true},
         {name: "decal", material: materials.decal, castShadow: false, receiveShadow: true},
         {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true},
-        // (Hedges, flower beds and crops: nothing reads their arrays back, so the page's copies go once on the GPU, phone heap.)
         {name: "glass", material: materials.glass, castShadow: false, receiveShadow: false},
+        // (Hedges, flower beds and crops: nothing reads their arrays back, so the page's copies go once on the GPU, phone heap.)
         {name: "foliage", material: materials.foliage, castShadow: true, receiveShadow: true, release: true},
         {name: "panes", material: paneMat, castShadow: false, receiveShadow: true}
     ];
@@ -885,11 +885,6 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
 }
 
 export type {TownPlan};
-
-/** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
-function releaseArray(this: {array: ArrayLike<number>}) {
-    this.array = new Float32Array(0);
-}
 
 /**
  * How near the town (m, from the camera to its square up to its rooftops) the cars' models are read: the highest tier's

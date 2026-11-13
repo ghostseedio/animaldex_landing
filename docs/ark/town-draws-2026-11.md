@@ -35,9 +35,14 @@ the cars' models (`vehicles.bin`, 0.3 MB), read at once with the town's build, b
      (every chunk is already in the town's frame: no per-vertex texture reads; the batching textures are never bound or
      uploaded); a depth material of the batches' own for the shadow pass.
    - *Streaming, the near detail, window lighting*: a chunk the streamer does not draw is an invisible instance; each
-     chunk keeps its group for its buildings' near detail (which keeps the solid material itself, so it is drawn before
-     the walls' batch: measured closest to before); each chunk's windows are lit in its band's panes batch at its own
-     vertices (a test compares every band's lit array with the chunks' own).
+     chunk keeps its group for its buildings' near detail, drawn with its own copy of the solid material (the same
+     program) made right after the walls' batch material: its trim is drawn after the walls it lies on (before, sorted by
+     depth with its chunk's walls, coplanar trim such as a shop's striped awning lost to them in some views), still
+     before the glass and panes; each chunk's windows are lit in its band's panes batch at its own vertices (a test
+     compares every band's lit array with the chunks' own); the walk surfaces read the same paving triangles in the same
+     order (the batches keep the layer's mesh name, "decal"; a test compares them).
+   - *Phones without `WEBGL_multi_draw`*: three loops the ranges inside the one object; the per-object work (the cost
+     here) is still saved.
    - *Memory*: a band's arrays are exactly its chunks' (16-bit indices for the ground: 27 tiles are 64,827 vertices), the
      chunks' own copies let go once batched; the foliage's still let go once on the GPU, as before.
    - *Uploads spread*: a band's layer is uploaded the first frame it is drawn (≤ ~3.6 MB). While the town joins (decision
@@ -70,8 +75,32 @@ GATES
 
 ## 5. Left for later
 
-LEFT
+1. **The trees' 25 card sets** (one instanced mesh per asset at the far level): the largest town item left at a
+   distance (~25 calls). A batched version needs the wind shader's own patch (it reads `instanceMatrix`) and per-instance
+   matrices (texture reads), in the asset system the wild island shares.
+2. **The zoo's houses, the pet homes, the zoo's day, the props** (~20 calls), and the three empty prop sets (the join's
+   reveal toggles their visibility, so they are left drawn).
+3. **The chunks' CPU copies** (~25 MB of the heap: ground, paving, solids, panes) could be let go once on the GPU, as the
+   foliage's are; kept here (memory-neutral rule; the walk surfaces read the paving's; raycasts and a lost context would
+   need them).
+4. **The paving texture and its transcoder** (1.1 MB, read when the town is first drawn) tint the town even from across
+   the strait: deferring them would change the far picture, so they were left.
+5. **The streamer's memory pull-in** draws a different share of the town from run to run on the low phone (its render
+   scale 0.61-0.85 in the same view): the town view's numbers swing with it.
 
 ## 6. Decisions
 
-DECISIONS
+| Question | Options | Choice | Why |
+|---|---|---|---|
+| How to merge the chunk layers | the audit's plan (shared attributes, a view per chunk, whole-range meshes while every town chunk is past the render distance); merged meshes per region; three's `BatchedMesh`, a chunk an instance | `BatchedMesh` per band and layer | One draw a band and layer in every view, the town's own view too (there every town chunk is within the phones' render distance, so the audit's plan saves nothing), with three's per-chunk culling and front-to-back order inside: the same triangles drawn. Regions would draw whole regions. |
+| How big a batch | one per layer (6); a band of 3 rows (≤ 18); a row (≤ 54) | 3 bands of 27 chunks | 16-bit ground indices (64,827 vertices), first uploads ≤ 3.6 MB spread over the join, a coarse band-level cull first; ≤ 18 calls. |
+| The batching transform | three's (5 texture reads a vertex, its textures uploaded each pass) | the identity in the shader | The chunks are in the town's frame already: the same picture, no added GPU work, nothing bound or uploaded a frame. |
+| The batches' material | the layer's own; a copy | a copy, patches and key chained | A material shared by batched and plain objects costs a program look-up at each switch (what the mobile lane removed for two-sided meshes). |
+| The near detail's order | the solid material (before the walls' batch); a copy after it | a copy after | Before, coplanar trim lost to its walls in some views (depth order); after them always: the zoo shot as before, homes_night 0.08% (trim shown). |
+| The join (decision 153) | let the batches in when the town is whole; with their first chunk; one a reveal step | one a reveal step, band by band | At most one first upload a frame; the chunks still show three a frame, their layers within the band's first six steps. |
+| The zoo's nets | per chunk (two passes each); one two-sided batch (two passes, two look-ups a frame); a back-faces and a front-faces batch sharing one geometry | the pair | As three's two passes, 20 calls to 2, no look-ups; the zoo stills on the low tier pixel-identical. |
+| Empty instanced sets | leave; hide when empty | hide the cars' and the close-up kinds'; not the props' | Three sets up an empty instanced mesh every frame; the props' visibility is the join's. |
+| What to defer | the town's whole build; its downloads | the trees' nearer levels (4.3 MB) and the cars' models (0.3 MB) | Neither shows from across the strait (cards; proxies beyond the middle distance). The town is in the phones' default view (its upper part), so its build is not deferred; the paving texture tints the far town, so it stays. |
+| When the camera is "near" | in view; within a distance | trees: each level's hand-over + 100 m; cars: 230 m from the square | Read before needed on the way in; from the wild island, never. |
+| The chunks' CPU copies | keep; let go once uploaded (~25 MB less heap) | keep (the foliage's let go, as before) | The memory rule is neutral; the walk surfaces read the paving's; raycasts and a lost context need them. A later choice. |
+| How to measure the town | the measurement page's islands mode; the embed opened on the town; the host's select | the embed with `--view town` (`openOn`) and `--view town-close` (`ark:select` of a house cat, close up) | The apps' page and mount (the town in its worker); no product change. |
