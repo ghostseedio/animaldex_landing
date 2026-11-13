@@ -31,6 +31,7 @@ export default function StoreLinks({
             key={store.store}
             store={store.store}
             placement={resolvedPlacement}
+            button="text_link"
             className="group text-primary-200 text-base sm:text-lg hover:text-primary-100 transition-colors"
           >
             {store.name}
@@ -50,6 +51,7 @@ export default function StoreLinks({
           key={store.store}
           store={store.store}
           placement={resolvedPlacement}
+          button="button"
           className="w-full max-w-[280px] sm:w-auto"
         >
           <span

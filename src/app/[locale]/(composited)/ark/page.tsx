@@ -2,6 +2,9 @@ import type {Metadata} from "next";
 import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkAbout from "@/app/[locale]/(composited)/ark/ark-about";
 import ArkSeoSummary from "@/app/[locale]/(composited)/ark/ark-seo-summary";
+import ArkIntro, {type ArkIntroWords} from "@/app/[locale]/(composited)/ark/ark-intro";
+import {readArkRecentArrivals} from "@/data/ark-recent-arrivals";
+import {getPageWords, word} from "@/loaders/page-words";
 import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 import {clampMetaDescription} from "@/lib/seo/page-metadata";
 import {arkJsonLd, breadcrumbJsonLd, jsonLdHtml, type JsonLd} from "@/lib/seo/structured-data";
@@ -496,12 +499,15 @@ export default async function ArkPage({params, searchParams}: Props) {
     const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     // The live Ark: the public read from the data cache (decision 246); the visitor's own (`mine`) only for the recorder.
-    const [{words, talk, language}, data] = await Promise.all([
+    const [{words, talk, language}, data, arrivals, seoWords] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
         mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null, shared: null}))
             : local ? Promise.resolve({fixture: null, read: null, shared: null})
             : record ? readArkVoyage().then((read) => ({fixture: null, read, shared: null}))
-            : readPublicArk(PUBLIC_REVALIDATE_SECONDS).then((shared) => ({fixture: null, read: null, shared}))
+            : readPublicArk(PUBLIC_REVALIDATE_SECONDS).then((shared) => ({fixture: null, read: null, shared})),
+        // The newest arrivals under the heading (CC 3): the live log only, never beside a fixture or a local snapshot.
+        mode || local ? Promise.resolve(null) : readArkRecentArrivals(),
+        getPageWords(locale, "seo")
     ]);
     const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null) ?? data.shared;
     // Handed to the client as props only in development's modes: the live Ark is read by the client after the first paint.
@@ -513,12 +519,21 @@ export default async function ArkPage({params, searchParams}: Props) {
     const wordsLocale = otherLanguage ? language : locale;
     // The words under the world: the snapshot the page drew (the same Ark for everyone; `mine` is never said there).
     const speciesPages = new Set((snapshot?.animals ?? []).map((animal) => animal.model_slug).filter((slug) => isPublishedAnimalSlug(slug)));
+    const introWords: ArkIntroWords = {
+        what: word(seoWords, "arkIntro.what"),
+        arrive: word(seoWords, "arkIntro.arrive"),
+        counts: word(seoWords, "arkIntro.counts"),
+        countsUnavailable: word(seoWords, "arkIntro.countsUnavailable"),
+        recentTitle: word(seoWords, "arkIntro.recentTitle"),
+        recentAria: word(seoWords, "arkIntro.recentAria")
+    };
     const view = (
         <>
         <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{__html: jsonLdHtml(arkPageJsonLd(locale, words.seo.metaDescription, words.eyebrow, words.seo.breadcrumbHome))}}
         />
+        <ArkIntro label={words.eyebrow} words={introWords} counts={snapshot?.counts ?? null} arrivals={arrivals} locale={wordsLocale} />
         <ArkView
             locale={wordsLocale}
             initial={handed}

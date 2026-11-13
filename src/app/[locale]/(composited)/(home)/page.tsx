@@ -5,11 +5,13 @@ import HomeLiveNumbers from "@/app/[locale]/(composited)/(home)/_components/home
 import HomeArkDay, {type HomeArkDayFrame} from "@/app/[locale]/(composited)/(home)/_components/home-ark-day";
 import HomeArkPopulations from "@/app/[locale]/(composited)/(home)/_components/home-ark-populations";
 import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-loop-video";
+import HomeArkBand from "@/app/[locale]/(composited)/(home)/_components/home-ark-band";
 import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
 import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {ARK_HOW_IT_WORKS_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
-import StoreLink from "@/components/store/store-link";
+import PlatformStoreBadges from "@/components/store/platform-store-badges";
+import {readArkHomeCounts} from "@/data/ark-home-counts";
 import {getLocalePath, getMetadataLocale} from "@/lib/site";
 import {localeConfig} from "@/i18n";
 import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
@@ -170,19 +172,19 @@ function Picture({name, widths, alt, sizes, className}: {name: string; widths: n
     );
 }
 
-/** The official store badges (Apple's and Google's own artwork), with the placement each was clicked from. */
+/**
+ * The official store badges (Apple's and Google's own artwork), with the placement each was clicked from. The server
+ * renders both; after hydration the visitor's own store leads and the other is a text link (`PlatformStoreBadges`).
+ */
 function StoreBadges({locale, placement, t}: {locale: string; placement: "home_hero" | "home_download"; t: ScopedTranslator}) {
     return (
-        <div className="flex flex-wrap items-center gap-3">
-            <StoreLink store="app_store" placement={placement} inheritPlacement={placement === "home_download"} target="_blank" rel="noopener noreferrer" aria-label={t("app.appStore")} className="block rounded-[9px] transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${ART}/badge-app-store.svg`} alt="" width={132} height={44} className="h-11 w-auto" />
-            </StoreLink>
-            <StoreLink store="google_play" placement={placement} inheritPlacement={placement === "home_download"} target="_blank" rel="noopener noreferrer" aria-label={t("app.googlePlay")} className="block rounded-[9px] transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${ART}/badge-google-play-${locale === "id" ? "id" : "en"}.png`} alt="" width={locale === "id" ? 148 : 148} height={44} className="h-11 w-auto" />
-            </StoreLink>
-        </div>
+        <PlatformStoreBadges
+            locale={locale}
+            placement={placement}
+            inheritPlacement={placement === "home_download"}
+            art={ART}
+            words={{appStore: t("app.appStore"), googlePlay: t("app.googlePlay"), alsoAppStore: t("app.alsoAppStore"), alsoGooglePlay: t("app.alsoGooglePlay")}}
+        />
     );
 }
 
@@ -200,6 +202,8 @@ export default async function Home({params}: HomePageProps) {
             locale,
             name: "AnimalDex",
             description: String((messages.meta as {description?: unknown} | undefined)?.description ?? ""),
+            // The app itself in the talk positioning (`home.intro`): ask any animal anything, one small step, the shared Ark.
+            appDescription: String((messages.home as {intro?: unknown} | undefined)?.intro ?? ""),
             image: ARK_RENDER_IMAGE,
             featureList: homeFeatureList(locale)
         });
@@ -214,6 +218,8 @@ export default async function Home({params}: HomePageProps) {
         // S3's section has nothing to read, and the same pieces run over the local extraction instead.)
         const foodChain = (await ArkFoodChainSection({locale, variant: "compact", limit: 6, headingLevel: 2, className: foodChainClass}))
             ?? (await HomeFoodChainDev({locale, limit: 6, className: foodChainClass}));
+        // The Ark band's counts (CC 3): the public read's cached counts with the service role, once per ISR window.
+        const arkCounts = await timeDevStep(timer, "ark-counts", () => readArkHomeCounts());
 
         return (
             <>
@@ -355,6 +361,20 @@ export default async function Home({params}: HomePageProps) {
                             <Link href={ARK_HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howTheArkWorks")}</Link>
                         </p>
                     </section>
+
+                    {/* 3b. The shared Ark (CC 3): every animal caught comes aboard; the live counts, a still, the way in. */}
+                    <HomeArkBand
+                        locale={locale}
+                        counts={arkCounts}
+                        words={{
+                            eyebrow: t("ark.eyebrow"),
+                            title: t("ark.title"),
+                            animals: t("ark.animals"),
+                            bringers: t("ark.bringers"),
+                            cta: t("ark.cta"),
+                            alt: t("ark.alt")
+                        }}
+                    />
 
                     {/* 4. A day on the Ark: the head here, the day itself full bleed below. */}
                     <section aria-labelledby="home-day-title" className="pt-24 md:pt-32">

@@ -96,10 +96,10 @@
   "home": {
     "title": "AnimalDex",
     "tagline": "Discover what animals can teach you.",
-    "intro": "AnimalDex helps users identify real animals with AI, save sightings as collectible cards, and learn biology-backed facts, meanings, and behavior lessons.",
+    "intro": "Ask any animal anything in AnimalDex. It answers from how its kind lives and hands you one small step. Every animal you catch joins the shared Ark.",
     "heroTalkLead": "Talk to animals.",
     "heroTalkAccent": "Every animal has a lesson.",
-    "heroSubhead": "Every animal answers from its own Power, a lesson from how its kind survives. Bring a real problem, hear a real side, and take one step.",
+    "heroSubhead": "Bring a real question. Each animal answers from how its kind actually lives, then gives you one thing to try.",
     "heroLaurelMadeFor": "Made for",
     "heroLaurelExplorers": "explorers",
     "heroLaurelBuiltFor": "Built for",
@@ -189,16 +189,10 @@
       "descriptionBody": "Or bring your own. Every animal answers it differently.",
       "explore": "Ask an animal",
       "roles": {
-        "collector": "Collectors",
-        "traveler": "Travelers",
-        "family": "Families",
-        "competitor": "Competitive players",
-        "curious": "Curious explorers",
-        "photographer": "Photographers",
-        "learner": "Wildlife learners",
+        "question": "People with a question",
         "animalLover": "Animal lovers",
-        "progress": "Progress Hunters",
-        "breeders": "Breeders"
+        "photographer": "Wildlife photographers",
+        "family": "Families"
       },
       "pairLabel": "Two animals who would answer it differently",
       "problems": {
@@ -565,7 +559,17 @@
       "qr": "Scan with your phone",
       "qrAlt": "QR code: get AnimalDex on your phone's store",
       "appStore": "Download AnimalDex on the App Store",
-      "googlePlay": "Get AnimalDex on Google Play"
+      "googlePlay": "Get AnimalDex on Google Play",
+      "alsoAppStore": "Also on the App Store",
+      "alsoGooglePlay": "Also on Google Play"
+    },
+    "ark": {
+      "eyebrow": "The shared Ark",
+      "title": "Every animal you catch comes aboard.",
+      "animals": "Animals aboard",
+      "bringers": "People who brought them",
+      "cta": "See the Ark live",
+      "alt": "The Ark's wild island from above, with the animals people have caught"
     }
   },
   "blog": {
@@ -2592,7 +2596,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Catch Real Animals as AI Companions in a 3D World",
     "title": "AnimalDex",
-    "description": "Catch animals in real life and turn them into AI companions in a 3D world: the Ark, a shared simulation built from each animal's field guide.",
+    "description": "Ask any animal anything. It answers from how its kind really lives and gives you one small step. Every animal you catch joins the Ark, a shared 3D world.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",
@@ -4654,6 +4658,14 @@
       "foodBody": "Tap any animal aboard to see what it eats and what eats it, in its field guide's own words.",
       "aboutTitle": "A living research world",
       "aboutBody": "Why AnimalDex is a shared world to watch and learn from, not a game to win."
+    },
+    "arkIntro": {
+      "what": "The Ark is one live 3D animal world that everyone shares and sees the same way.",
+      "arrive": "Nobody places an animal by hand: when someone catches one with AnimalDex, one of its kind comes aboard and stays.",
+      "counts": "Right now {animals} animals of {species} species live aboard, brought by {founders} people, each living by rules based on its field guide.",
+      "countsUnavailable": "Every animal aboard lives by rules based on its field guide, never placed by hand.",
+      "recentTitle": "Latest aboard",
+      "recentAria": "The species that most recently came aboard"
     },
     "breadcrumbLabel": "Breadcrumb"
   },

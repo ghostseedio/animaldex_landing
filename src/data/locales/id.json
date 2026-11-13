@@ -96,10 +96,10 @@
   "home": {
     "title": "AnimalDex",
     "tagline": "Pemindai hewan AI dan aplikasi koleksi satwa liar",
-    "intro": "AnimalDex membantu pengguna mengidentifikasi hewan nyata dengan AI, menyimpan penampakan sebagai kartu koleksi, dan mempelajari fakta biologi, makna, dan pelajaran perilaku.",
+    "intro": "Tanya apa saja ke hewan mana pun di AnimalDex. Ia menjawab dari cara jenisnya hidup dan memberi satu langkah kecil; tiap tangkapanmu naik ke Ark bersama.",
     "heroTalkLead": "Bicaralah dengan hewan.",
     "heroTalkAccent": "Setiap hewan punya pelajaran.",
-    "heroSubhead": "Setiap hewan menjawab dari Kekuatannya sendiri, pelajaran dari cara jenisnya bertahan hidup. Bawa masalah nyata, dengar sisi yang nyata, dan ambil satu langkah.",
+    "heroSubhead": "Bawa pertanyaan yang nyata. Setiap hewan menjawab dari cara jenisnya benar-benar hidup, lalu memberimu satu hal untuk dicoba.",
     "heroLaurelMadeFor": "Dibuat untuk",
     "heroLaurelExplorers": "penjelajah",
     "heroLaurelBuiltFor": "Juga untuk",
@@ -189,16 +189,10 @@
       "descriptionBody": "Atau bawa masalahmu sendiri. Setiap hewan menjawabnya dengan cara berbeda.",
       "explore": "Tanya seekor hewan",
       "roles": {
-        "collector": "Kolektor",
-        "traveler": "Traveler",
-        "family": "Keluarga",
-        "competitor": "Pemain kompetitif",
-        "curious": "Penjelajah yang penasaran",
-        "photographer": "Fotografer",
-        "learner": "Pembelajar satwa liar",
+        "question": "Orang dengan pertanyaan",
         "animalLover": "Pecinta hewan",
-        "breeders": "Peternak & breeder",
-        "progress": "Pemburu progres"
+        "photographer": "Fotografer satwa liar",
+        "family": "Keluarga"
       },
       "pairLabel": "Dua hewan yang akan menjawabnya secara berbeda",
       "problems": {
@@ -565,7 +559,17 @@
       "qr": "Pindai dengan ponselmu",
       "qrAlt": "Kode QR: dapatkan AnimalDex di toko aplikasi ponselmu",
       "appStore": "Unduh AnimalDex di App Store",
-      "googlePlay": "Dapatkan AnimalDex di Google Play"
+      "googlePlay": "Dapatkan AnimalDex di Google Play",
+      "alsoAppStore": "Juga di App Store",
+      "alsoGooglePlay": "Juga di Google Play"
+    },
+    "ark": {
+      "eyebrow": "Bahtera bersama",
+      "title": "Setiap hewan yang kamu tangkap naik ke Bahtera.",
+      "animals": "Hewan di Bahtera",
+      "bringers": "Orang yang membawanya",
+      "cta": "Lihat Bahtera langsung",
+      "alt": "Pulau liar Bahtera dari atas, dengan hewan-hewan yang ditangkap orang"
     }
   },
   "blog": {
@@ -2581,7 +2585,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Tangkap Hewan Nyata Jadi Teman AI di Dunia 3D",
     "title": "AnimalDex",
-    "description": "Tangkap hewan di dunia nyata dan jadikan mereka teman AI di dunia 3D: Ark, simulasi bersama yang dibangun dari panduan lapangan setiap hewan.",
+    "description": "Tanya apa saja pada hewan mana pun. Ia menjawab dari cara jenisnya hidup dan memberi satu langkah kecil. Tiap hewan yang kamu tangkap naik ke Ark bersama.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",
@@ -4639,6 +4643,14 @@
       "foodBody": "Ketuk hewan mana pun di Ark untuk melihat apa yang dimakannya dan apa yang memangsanya, dengan kata-kata panduan lapangannya sendiri.",
       "aboutTitle": "Dunia riset yang hidup",
       "aboutBody": "Mengapa AnimalDex adalah dunia bersama untuk diamati dan dipelajari, bukan permainan untuk dimenangkan."
+    },
+    "arkIntro": {
+      "what": "Ark adalah satu dunia hewan 3D yang hidup, dibagi dan dilihat sama oleh semua orang.",
+      "arrive": "Tak ada hewan yang ditaruh dengan tangan: saat seseorang menangkap hewan dengan AnimalDex, satu dari jenisnya naik ke Ark dan menetap.",
+      "counts": "Saat ini {animals} hewan dari {species} spesies hidup di Ark, dibawa oleh {founders} orang, masing-masing hidup dengan aturan berdasarkan panduan lapangannya.",
+      "countsUnavailable": "Setiap hewan di Ark hidup dengan aturan berdasarkan panduan lapangannya, tak pernah ditaruh dengan tangan.",
+      "recentTitle": "Terbaru naik",
+      "recentAria": "Spesies yang paling baru naik ke Ark"
     },
     "breadcrumbLabel": "Jejak navigasi"
   },

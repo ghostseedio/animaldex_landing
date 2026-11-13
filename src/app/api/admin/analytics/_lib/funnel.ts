@@ -6,7 +6,7 @@ import { summarizeWebFunnel, type WebFunnelRow, type WebFunnelSummary } from "@/
 
 /** The home hero test's funnel for /admin/metrics: one per variant, for the selected Jakarta days. */
 export type WebFunnelPanel = WebFunnelSummary & {
-  /** Percent of new visitors given B (`HERO_VARIANT_SPLIT`, 50 when unset). */
+  /** Percent of new visitors given B (`HERO_VARIANT_SPLIT`, 80 when unset). */
   splitB: number;
   note: string | null;
 };

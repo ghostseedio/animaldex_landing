@@ -20,15 +20,16 @@ export const storeLinks = [
 export type AppStoreName = "app_store" | "google_play";
 
 /**
- * Where on the website a store link sits. It is the App Store campaign
- * (`ct`) and the Play install referrer's `utm_campaign`, so installs can be
- * traced to the page that sent them. `page_<section>` is a generic store
- * button, named after the first path segment of the page it is on.
+ * Where on the website a store link sits: the link's *surface*. It is the App
+ * Store campaign (`ct`) and the Play install referrer's `utm_medium`, so
+ * installs can be traced to the button that sent them. `page_<section>` is a
+ * generic store button, named after the first path segment of the page it is on.
  */
 export type StorePlacement =
     | "home_hero"
     | "home_more"
     | "home_download"
+    | "home_ark"
     | "home_qr"
     | "species_hero"
     | "species_card"
@@ -44,37 +45,129 @@ export type StorePlacement =
 
 /**
  * App Store Connect's provider token (App Analytics → Campaigns). Apple
- * attributes `ct` only together with `pt`, so until it is set the campaign
- * is in the link but not yet counted. Inlined at build time.
+ * attributes `ct` only together with `pt`, so without it the campaign
+ * parameters are left off the link altogether (the GA click event still
+ * names the button). Inlined at build time: the browser and the server have
+ * to build the same href, so the public variable is the one the site reads;
+ * `APP_STORE_PROVIDER_TOKEN` alone reaches links built on the server only
+ * (`serverAppStoreProviderToken`: the QR redirect, the bio links).
  */
 export const APP_STORE_PROVIDER_TOKEN = process.env.NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN?.trim() ?? "";
 
-export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN) {
-    const url = new URL(appStoreUrl);
-    if (providerToken) url.searchParams.set("pt", providerToken);
-    url.searchParams.set("ct", placement);
-    if (providerToken) url.searchParams.set("mt", "8");
-    return url.toString();
+/** The provider token for a link built on the server: the public variable, else `APP_STORE_PROVIDER_TOKEN`. */
+export function serverAppStoreProviderToken(): string {
+    return APP_STORE_PROVIDER_TOKEN || (process.env.APP_STORE_PROVIDER_TOKEN?.trim() ?? "");
 }
 
 /**
- * `referral` is the sharer's code from a shared link's `?ref=`. Play hands the
- * whole referrer to the app on first launch, where it is stored raw, so the
- * code travels with the install. The App Store has no such channel, so its
- * link stays the placement alone. `path` is the page the button was clicked
- * on (`utm_content`), so /admin/metrics can name the exact page an Android
- * install came from; it is added on click, never at render.
+ * `utm_source` of every store link on the website. The admin's web-install
+ * gate accepts it beside the older `web` (`isWebsiteStoreSource`).
+ */
+export const WEB_STORE_SOURCE = "animaldex_web";
+
+export function isWebsiteStoreSource(source: string | null | undefined): boolean {
+    return source === WEB_STORE_SOURCE || source === "web";
+}
+
+/** A campaign token Apple and Play accept: lower-case letters, digits, `_` and `-`, at most 40 characters. */
+function campaignToken(value: string | null | undefined, max = 40): string {
+    return (value ?? "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, max);
+}
+
+/**
+ * The App Store campaign (`ct`), one per surface: the surface itself for a
+ * website link, `<source>_<surface>` for a link that names another source (a
+ * social bio: `tiktok_bio`), so Apple's campaign report tells them apart.
+ */
+export function appStoreCampaignToken(source: string, surface: string): string {
+    const normalizedSource = campaignToken(source);
+    return campaignToken(normalizedSource === WEB_STORE_SOURCE || !normalizedSource ? surface : `${normalizedSource}_${surface}`);
+}
+
+export type StoreUrlInput = {
+    store: AppStoreName;
+    /** The link's surface: a placement on the website (`home_hero`, `share_sheet`, `page_animals`) or `bio`. */
+    surface: string;
+    /**
+     * The page the link is on, without the locale prefix ("/", "/animals/lion",
+     * "/tier-list/apex-predators"), or a page name ("profile") off the website.
+     * Play's `utm_campaign`; left off when empty.
+     */
+    page?: string | null;
+    /** The button: `badge`, `text_link`, `qr`, `tierlist_<slug>`, `ask_limit`... Play's `utm_content`. */
+    button: string;
+    /** `utm_source`: the website by default; a social bio names its platform (`tiktok`). */
+    source?: string;
+    /** A shared link's referral code (`?ref=`): rides in the Play install referrer, never on the App Store link. */
+    referral?: string | null;
+    /** App Store Connect's provider token; the environment's by default. */
+    providerToken?: string;
+};
+
+/**
+ * Every store URL the site hands out, built one way:
+ *
+ * - App Store: `?pt=<APP_STORE_PROVIDER_TOKEN>&ct=<campaign>&mt=8`, where the
+ *   campaign is the surface (`appStoreCampaignToken`); the bare store page
+ *   when the token is not set, since Apple ignores `ct` without `pt`.
+ * - Google Play: `&referrer=utm_source=animaldex_web&utm_medium=<surface>
+ *   &utm_campaign=<page>&utm_content=<button>[&ref=<code>]`. Play hands the
+ *   referrer to the app on first launch, where it is stored raw, so the
+ *   campaign names the exact page and the content the exact button
+ *   (/admin/metrics reads both, `landingOf`).
+ */
+export function buildStoreUrl(input: StoreUrlInput): string {
+    const source = campaignToken(input.source) || WEB_STORE_SOURCE;
+    const surface = campaignToken(input.surface) || "web";
+    const page = (input.page ?? "").trim().slice(0, 120);
+    const button = campaignToken(input.button, 60) || "link";
+    if (input.store === "app_store") {
+        const providerToken = (input.providerToken ?? APP_STORE_PROVIDER_TOKEN).trim();
+        if (!providerToken) return appStoreUrl;
+        const url = new URL(appStoreUrl);
+        url.searchParams.set("pt", providerToken);
+        url.searchParams.set("ct", appStoreCampaignToken(source, surface));
+        url.searchParams.set("mt", "8");
+        return url.toString();
+    }
+    const parts = [`utm_source=${encodeURIComponent(source)}`, `utm_medium=${encodeURIComponent(surface)}`];
+    if (page) parts.push(`utm_campaign=${encodeURIComponent(page)}`);
+    parts.push(`utm_content=${encodeURIComponent(button)}`);
+    if (input.referral && REFERRAL_CODE_PATTERN.test(input.referral)) parts.push(`ref=${input.referral}`);
+    const url = new URL(googlePlayUrl);
+    url.searchParams.set("referrer", parts.join("&"));
+    return url.toString();
+}
+
+/** The App Store link for a surface (older callers: the page and button are not known here). */
+export function appStoreLink(placement: StorePlacement, providerToken: string = APP_STORE_PROVIDER_TOKEN) {
+    return buildStoreUrl({store: "app_store", surface: placement, button: "link", providerToken});
+}
+
+/**
+ * The Play link for a surface. `referral` is the sharer's code from a shared
+ * link's `?ref=`; `path` is the page the button is on (`utm_campaign`), so
+ * /admin/metrics can name the exact page an Android install came from.
  */
 export function googlePlayLink(placement: StorePlacement, referral: string | null = null, path: string | null = null) {
-    const url = new URL(googlePlayUrl);
-    const ref = referral ? `&ref=${referral}` : "";
-    const content = path ? `&utm_content=${encodeURIComponent(path.slice(0, 120))}` : "";
-    url.searchParams.set("referrer", `utm_source=web&utm_campaign=${placement}${content}${ref}`);
-    return url.toString();
+    return buildStoreUrl({store: "google_play", surface: placement, page: path, button: "link", referral});
 }
 
 export function storeHref(store: AppStoreName, placement: StorePlacement, referral: string | null = null, path: string | null = null) {
     return store === "app_store" ? appStoreLink(placement) : googlePlayLink(placement, referral, path);
+}
+
+/** The social profiles whose bio carries a store link. */
+export const SOCIAL_BIO_PLATFORMS = ["tiktok", "instagram", "youtube", "x"] as const;
+export type SocialBioPlatform = (typeof SOCIAL_BIO_PLATFORMS)[number];
+
+/**
+ * The store link in a social profile's bio: `utm_source=<platform>`,
+ * `utm_medium=bio`, the profile as the page and `link_in_bio` as the button
+ * (App Store: `ct=<platform>_bio`).
+ */
+export function socialBioStoreUrl(platform: SocialBioPlatform, store: AppStoreName, providerToken: string = serverAppStoreProviderToken()): string {
+    return buildStoreUrl({store, source: platform, surface: "bio", page: "profile", button: "link_in_bio", providerToken});
 }
 
 /** A referral code as the app's share links carry it: letters, digits, `-` and `_`. */
@@ -120,6 +213,11 @@ export function referringShareReferral(): string | null {
     } catch {
         return null;
     }
+}
+
+/** The page a store link is on, as Play's `utm_campaign` says it: the path without the locale prefix. */
+export function storeLinkPage(pathname: string | null | undefined): string {
+    return splitLocalePath(pathname || "/").appPath;
 }
 
 /** `page_<first path segment>`, for a store button that does not name its own placement. */

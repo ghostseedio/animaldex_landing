@@ -10,8 +10,9 @@
  * and the other never flashes. A client navigation to the home page runs no
  * inline script; `resolveHeroAssignment` is the same rule for that path.
  *
- * The draw is 50/50 unless `HERO_VARIANT_SPLIT` (0-100, the share of new
- * visitors who get B) says otherwise, and `?hero=a|b` shows one variant for
+ * The draw gives B to 80% of new visitors (CC 3, 2026-11-13: the split card
+ * is the default, A stays as the control) unless `HERO_VARIANT_SPLIT` (0-100,
+ * the share of new visitors who get B) says otherwise, and `?hero=a|b` shows one variant for
  * QA without touching the visitor's own assignment (and without counting).
  *
  * Pure, so the rule and the script are tested.
@@ -29,7 +30,7 @@ export const HERO_ARM_ATTRIBUTE = "data-hero-arm";
 /** `?hero=a` or `?hero=b`: show that variant, for QA. */
 export const HERO_VARIANT_QUERY = "hero";
 /** The share of new visitors who get B when the environment says nothing. */
-export const DEFAULT_HERO_SPLIT = 50;
+export const DEFAULT_HERO_SPLIT = 80;
 
 export function isHeroVariant(value: unknown): value is HeroVariant {
     return value === "a" || value === "b";
