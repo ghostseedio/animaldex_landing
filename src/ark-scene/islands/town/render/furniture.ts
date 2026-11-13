@@ -13,7 +13,7 @@
  *   the ground and every town material at night (`materials.ts`), and the glow round each lit lamp (`lampGlow`).
  */
 
-import {AdditiveBlending, BufferAttribute, Color, DataTexture, InstancedBufferAttribute, InstancedMesh, LinearFilter, Matrix4, MeshStandardMaterial, PlaneGeometry, RGBAFormat, ShaderMaterial, UnsignedByteType, type WebGLProgramParametersWithUniforms} from "three";
+import {AdditiveBlending, BufferAttribute, Color, DataTexture, InstancedBufferAttribute, InstancedMesh, Matrix4, NearestFilter, MeshStandardMaterial, PlaneGeometry, RGBAFormat, ShaderMaterial, UnsignedByteType, type WebGLProgramParametersWithUniforms} from "three";
 import {hashText, inBox, polylineAt, polylineLength, polylineNearest, rng, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {TOWN_HALF, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
@@ -402,8 +402,9 @@ export function streetFurniture(plan: TownPlan, lamps: ReadonlyArray<{x: number;
 /**
  * The lamp map (`materials.ts` TOWN_LIGHT.lampMap), RGBA8 a 1 m cell: each cell's nearest lamp head within 16 m, as
  * its offset from the cell's middle, its height, and how much of it the cell sees (4 sample points a cell; a building
- * between them blocks it, so a lamp on the street never lights the garden behind the house). Filtered linearly: the
- * offset interpolates to the very point (exact inside a lamp's own cells), the shadow's edge softly.
+ * between them blocks it, so a lamp on the street never lights the garden behind the house). The shader reads the
+ * four cells round a point and blends their light (so a shadow's edge is soft), never their offsets: an offset blended
+ * across two lamps' cells, or into a cell with none, is a lamp that isn't there.
  */
 export function lampMapData(plan: TownPlan, heads: Float32Array): Uint8Array {
     const n = TOWN_LAMP_TEXELS;
@@ -481,8 +482,9 @@ export function lampMapData(plan: TownPlan, heads: Float32Array): Uint8Array {
 
 export function lampMapTexture(data: Uint8Array): DataTexture {
     const texture = new DataTexture(data, TOWN_LAMP_TEXELS, TOWN_LAMP_TEXELS, RGBAFormat, UnsignedByteType);
-    texture.magFilter = LinearFilter;
-    texture.minFilter = LinearFilter;
+    // Read cell by cell (`materials.ts` blends the four cells' light, not their lamps' places).
+    texture.magFilter = NearestFilter;
+    texture.minFilter = NearestFilter;
     texture.generateMipmaps = false;
     texture.flipY = false;
     texture.needsUpdate = true;

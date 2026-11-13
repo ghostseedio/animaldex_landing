@@ -32,7 +32,7 @@ export const TOWN_LAMP_HEIGHT = 16;
 
 /** The street lamps' light, shared by every town material (set by `render/index.ts` and `render/furniture.ts`). */
 export const TOWN_LIGHT = {
-    /** RGBA8, filtered: per 1 m cell, R/G its nearest lamp head's offset from the cell's middle in x/z (±16 m as 0–1), B the head's height (0–16 m), A how much of it the cell sees (0: none, or a building in the way). */
+    /** RGBA8, read cell by cell (never filtered): per 1 m cell, R/G its nearest lamp head's offset from the cell's middle in x/z (±16 m as 0–1), B the head's height (0–16 m), A how much of it the cell sees (0: none, or a building in the way). */
     lampMap: {value: null as DataTexture | null},
     /** The map's square in the town's own frame: x0, z0, side (m), texels a side. */
     lampRect: {value: new Vector4(-TOWN_HALF, -TOWN_HALF, TOWN_HALF * 2, TOWN_LAMP_TEXELS)},
@@ -123,23 +123,49 @@ export const TOWN_VERTEX_BODY = `
 export const TOWN_LAMP_LIGHT_GLSL = `
 #if defined( RE_Direct )
 if (townLampOn > 0.001) {
+    // The four cells round this point, each with its own lamp. Their light is blended, never their lamps' places: a
+    // blend of two cells' offsets (two lamps, or a lamp and a cell with none) put a phantom lamp right by the ground,
+    // and every edge between two lamps' cells and every pool's rim drew a thin bright line (the owner's "light streaks
+    // everywhere" at night). At most two distinct lamps meet in one cell's corners.
     vec2 townLocal = vTownWorld.xz - townOrigin;
-    vec2 townUv = (townLocal - townLampRect.xy) / townLampRect.z;
-    if (townUv.x >= 0.0 && townUv.y >= 0.0 && townUv.x < 1.0 && townUv.y < 1.0) {
-        // Filtered: the offset from each cell's middle interpolates to the offset from this very point.
-        vec4 lampTexel = texture2D(townLampMap, townUv);
-        if (lampTexel.a > 0.004) {
-            vec3 lampAt = vec3(vTownWorld.x + (lampTexel.r * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)}, lampTexel.b * ${TOWN_LAMP_HEIGHT.toFixed(1)}, vTownWorld.z + (lampTexel.g * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)});
-            vec3 toLamp = lampAt - vTownWorld;
-            float d2 = dot(toLamp, toLamp);
-            // A pool about 12 m across, fading out by 15 m (the map has nothing past 16 m).
-            float fade = 1.0 - smoothstep(90.0, 220.0, d2);
-            IncidentLight townLamp;
-            townLamp.direction = normalize((viewMatrix * vec4(toLamp, 0.0)).xyz);
-            townLamp.color = townLampColour * (townLampOn * townLampPower * lampTexel.a * fade / (d2 + 3.0));
-            townLamp.visible = true;
-            RE_Direct(townLamp, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight);
+    vec2 townCell = (townLocal - townLampRect.xy) / townLampRect.z * townLampRect.w - 0.5;
+    vec2 townBase = floor(townCell);
+    vec2 townFrac = townCell - townBase;
+    int townSide = int(townLampRect.w + 0.5);
+    vec3 townLampA = vec3(0.0);
+    vec3 townLampB = vec3(0.0);
+    float townWA = 0.0;
+    float townWB = 0.0;
+    for (int k = 0; k < 4; k++) {
+        ivec2 o = ivec2(k - (k / 2) * 2, k / 2);
+        ivec2 t = ivec2(townBase) + o;
+        if (t.x < 0 || t.y < 0 || t.x >= townSide || t.y >= townSide) continue;
+        vec4 texel = texelFetch(townLampMap, t, 0);
+        if (texel.a <= 0.0) continue;
+        float w = (o.x == 1 ? townFrac.x : 1.0 - townFrac.x) * (o.y == 1 ? townFrac.y : 1.0 - townFrac.y) * texel.a;
+        vec2 middle = (vec2(t) + 0.5) / townLampRect.w * townLampRect.z + townLampRect.xy + townOrigin;
+        vec3 at = vec3(middle.x + (texel.r * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)}, texel.b * ${TOWN_LAMP_HEIGHT.toFixed(1)}, middle.y + (texel.g * 2.0 - 1.0) * ${TOWN_LAMP_REACH.toFixed(1)});
+        // (The same lamp read from two cells differs by the 8-bit step, 0.13 m at most.)
+        if (townWA == 0.0 || distance(at, townLampA) < 0.4) {
+            if (townWA == 0.0) townLampA = at;
+            townWA += w;
+        } else if (townWB == 0.0 || distance(at, townLampB) < 0.4) {
+            if (townWB == 0.0) townLampB = at;
+            townWB += w;
         }
+    }
+    for (int j = 0; j < 2; j++) {
+        float share = j == 0 ? townWA : townWB;
+        if (share <= 0.0) continue;
+        vec3 toLamp = (j == 0 ? townLampA : townLampB) - vTownWorld;
+        float d2 = dot(toLamp, toLamp);
+        // A pool about 12 m across, fading out by 15 m (the map has nothing past 16 m).
+        float fade = 1.0 - smoothstep(90.0, 220.0, d2);
+        IncidentLight townLamp;
+        townLamp.direction = normalize((viewMatrix * vec4(toLamp, 0.0)).xyz);
+        townLamp.color = townLampColour * (townLampOn * townLampPower * share * fade / (d2 + 3.0));
+        townLamp.visible = true;
+        RE_Direct(townLamp, geometryPosition, geometryNormal, geometryViewDir, geometryClearcoatNormal, material, reflectedLight);
     }
 }
 #endif`;
