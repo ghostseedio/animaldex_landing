@@ -154,9 +154,9 @@ test("rig player: the rig folder beside the model set, texture rows, planted fee
     assert.equal(rigBaseFrom("https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark", "v1"), "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig/v1");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark/", "v1"), "/api/dev/ark-models/ark-rig/v1");
     assert.equal(rigBaseFrom("/somewhere/else"), null);
-    // Versioned: a re-made set (v2) beside the old one; the release moves ARK_RIG_VERSION (v1 stays the fallback: ark-rig.test.ts).
+    // Versioned: a re-made set (v3) beside the old ones; the release moves ARK_RIG_VERSION (v1 stays the fallback: ark-rig.test.ts).
     const {ARK_RIG_VERSION} = await import("@/ark-scene/rig-clips");
-    assert.equal(ARK_RIG_VERSION, "v2");
+    assert.equal(ARK_RIG_VERSION, "v3");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "v2"), "/api/dev/ark-models/ark-rig/v2");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "../x"), null);
     const walk = {name: "walk", frames: 24, loop: true, seconds: 0.5, ground_speed: 0.2, pass: true, row: 49, rows: 25};
