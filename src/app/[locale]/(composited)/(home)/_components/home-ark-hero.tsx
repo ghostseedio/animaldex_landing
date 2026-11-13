@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useRef, useState, type ReactNode} from "react";
+import {readArkProgressMessage, type ArkLoadStage} from "@/lib/ark-loading";
 
 /**
  * The home page's hero (landing lane S2): the live Ark, the real 3D scene, behind the tagline.
@@ -10,6 +11,11 @@ import {useEffect, useRef, useState, type ReactNode} from "react";
  * pointer and no data saver; elsewhere (phones) it waits for a tap on "See it live", so a phone on a cell connection
  * never downloads it unasked. It mounts the way the apps' panel does, through `/ark/embed.html` and the scene's
  * public API, over the anonymous snapshot (`/api/ark/landing/snapshot`: every bringer anonymous, nothing `mine`).
+ *
+ * While the world loads, the caption says what it is doing in a few words (the embed's `ark:progress`: reading who is
+ * aboard, building the island) over a thin bar that moves only with its real steps (`lib/ark-loading.ts`); the embed
+ * shows no loading screen of its own here (`loader=0`). Then the world fades in over the poster, which stays fully
+ * there under it until the world covers it (a poster fading out at the same time let the dark page through: a dip).
  *
  * The world never takes the page's scroll: a glass layer lies over it until the reader clicks "Click to explore"
  * (then the wheel and drags are the world's) and comes back on "Done exploring" or when the pointer leaves. Out of
@@ -27,7 +33,14 @@ export type HomeArkHeroWords = {
     /** "Live, {time} on the island". */
     live: string;
     sceneLabel: string;
+    /** The loading stages (the Ark's `loader` words): until who is aboard is read, until the world's first frame. */
+    stages: {data: string; world: string};
 };
+
+/** The world's fade over the poster; the poster is let go once it is covered. */
+const FADE_MS = 1000;
+/** Without the embed's stage (an older page), the fade starts this long after `ark:ready`. */
+const SETTLE_FALLBACK_MS = 1500;
 
 /** The island's clock is UTC (`ark-clock.ts` islandHours, offset 0). */
 function islandTime(now: Date, locale: string): string {
@@ -50,6 +63,9 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
     const [phase, setPhase] = useState<Phase>("poster");
     const [exploring, setExploring] = useState(false);
     const [clock, setClock] = useState<string | null>(null);
+    // The embed's load as it goes (its real steps), and the poster let go once the world covers it.
+    const [progress, setProgress] = useState<{stage: ArkLoadStage; progress: number} | null>(null);
+    const [covered, setCovered] = useState(false);
 
     // The world after the poster: by itself on a large screen with a mouse, once the frame has painted and the browser is idle.
     useEffect(() => {
@@ -78,13 +94,22 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
     // The world says when its first frame is drawn (`ark:ready`); then it fades in over the poster.
     useEffect(() => {
         if (phase === "poster") return;
+        let settleTimer: number | null = null;
         const onMessage = (event: MessageEvent) => {
             if (event.source !== frameRef.current?.contentWindow) return;
             const data = event.data as {type?: string} | null;
-            if (data?.type === "ark:ready") setPhase("live");
+            // The world fades in at its first good frame (the embed's stage "animals": the frame after `ark:ready`,
+            // which is a fog wash), or a moment after `ark:ready` if no stage comes.
+            if (data?.type === "ark:ready" && settleTimer === null) settleTimer = window.setTimeout(() => setPhase("live"), SETTLE_FALLBACK_MS);
+            const step = readArkProgressMessage(data);
+            if (step) setProgress(step);
+            if (step && (step.stage === "animals" || step.stage === "done")) setPhase("live");
         };
         window.addEventListener("message", onMessage);
-        return () => window.removeEventListener("message", onMessage);
+        return () => {
+            window.removeEventListener("message", onMessage);
+            if (settleTimer !== null) window.clearTimeout(settleTimer);
+        };
     }, [phase]);
 
     // Nothing is drawn while the hero is out of view.
@@ -113,6 +138,12 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
         return () => kinds.forEach((kind) => window.removeEventListener(kind, onActivity));
     }, [phase]);
 
+    useEffect(() => {
+        if (phase !== "live") return;
+        const id = window.setTimeout(() => setCovered(true), FADE_MS + 200);
+        return () => window.clearTimeout(id);
+    }, [phase]);
+
     // The island's time, once the world is live.
     useEffect(() => {
         if (phase !== "live") return;
@@ -124,7 +155,9 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
 
     // The world reads the Ark again every 10 minutes at most, and not at all after 15 minutes with nobody here
     // (decision 258: egress); between reads the animals keep to the scene's own schedule.
-    const embedSrc = `/ark/embed.html?${new URLSearchParams({snapshot: "/api/ark/landing/snapshot.bin", lang, label: words.sceneLabel, refresh: "600", idle: "900"}).toString()}`;
+    const embedSrc = `/ark/embed.html?${new URLSearchParams({snapshot: "/api/ark/landing/snapshot.bin", lang, label: words.sceneLabel, refresh: "600", idle: "900", loader: "0"}).toString()}`;
+    const stageText = !progress ? words.loading : progress.stage === "data" ? words.stages.data : words.stages.world;
+    const percent = Math.round((progress?.progress ?? 0) * 100);
 
     return (
         <section
@@ -139,7 +172,7 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
             className="theme-dark relative isolate -mt-8 flex min-h-[34rem] w-full flex-col justify-end overflow-hidden bg-[#0b1d2e] text-white [height:calc(100svh-4rem)] max-h-[60rem] sm:min-h-[38rem]"
         >
             {/* The real Ark, a frame of it: the page's largest paint. */}
-            <div aria-hidden="true" className={`absolute inset-0 -z-20 transition-opacity duration-1000 ease-out ${phase === "live" ? "opacity-0" : "opacity-100"}`}>
+            <div aria-hidden="true" className={`absolute inset-0 -z-20 ${covered ? "invisible" : ""}`}>
                 {poster}
             </div>
             {phase !== "poster" ? (
@@ -149,7 +182,7 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
                     title={words.sceneLabel}
                     loading="eager"
                     allow="autoplay"
-                    className={`absolute inset-0 -z-10 h-full w-full border-0 transition-opacity duration-1000 ease-out ${phase === "live" ? "opacity-100" : "opacity-0"} ${exploring ? "" : "pointer-events-none"}`}
+                    className={`absolute inset-0 -z-10 h-full w-full border-0 transition-opacity duration-1000 ease-out motion-reduce:transition-none ${phase === "live" ? "opacity-100" : "opacity-0"} ${exploring ? "" : "pointer-events-none"}`}
                 />
             ) : null}
             {/* The scrim the words sit on: only along the foot and the start side, so the world stays the picture. */}
@@ -164,7 +197,7 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
 
             {/* The figure's caption, and the world's own controls: one corner, one voice. */}
             <div className="absolute inset-x-0 top-0 mx-auto flex w-full max-w-[86rem] items-start justify-between gap-3 px-4 pt-5 md:px-8 md:pt-6">
-                <p className="flex min-h-8 min-w-0 items-center gap-2 rounded-sm bg-black/35 px-2.5 py-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.14em] text-white/85 backdrop-blur-md sm:text-[11px] sm:tracking-[0.16em]">
+                <p className="relative flex min-h-8 min-w-0 items-center gap-2 overflow-hidden rounded-sm bg-black/35 px-2.5 py-1.5 text-[10px] font-bold uppercase leading-tight tracking-[0.14em] text-white/85 backdrop-blur-md sm:text-[11px] sm:tracking-[0.16em]">
                     {phase === "live" ? (
                         <>
                             <span aria-hidden="true" className="relative flex h-2 w-2">
@@ -176,7 +209,19 @@ export default function HomeArkHero({locale, lang, words, poster, children}: {lo
                     ) : phase === "loading" ? (
                         <>
                             <span aria-hidden="true" className="h-2 w-2 rounded-full border border-white/70 motion-safe:animate-pulse" />
-                            {words.loading}
+                            <span role="status" aria-live="polite">{stageText}</span>
+                            {/* The bar along the caption's foot: the embed's real steps only (never a timer). */}
+                            <span
+                                role="progressbar"
+                                aria-label={words.loading}
+                                aria-valuemin={0}
+                                aria-valuemax={100}
+                                aria-valuenow={percent}
+                                aria-valuetext={stageText}
+                                className="absolute inset-x-0 bottom-0 h-[2px] overflow-hidden bg-white/15"
+                            >
+                                <span className="absolute inset-y-0 bg-primary-400 transition-[width] duration-500 ease-out motion-reduce:transition-none" style={{insetInlineStart: 0, width: `${percent}%`}} />
+                            </span>
                         </>
                     ) : (
                         words.poster

@@ -36,6 +36,12 @@
         },
         "hint": "Buruta ili kutazama pande zote. Bana au sogeza ili kukuza. Gusa mnyama ili kukutana naye.",
         "loading": "Inaonyesha Ark",
+        "loader": {
+            "data": "Inasoma walio ndani",
+            "world": "Inajenga kisiwa",
+            "animals": "Inaonyesha wanyama",
+            "newest": "Mpya zaidi ndani"
+        },
         "noWebgl": "Kivinjari hiki hakiwezi kuchora Ark kwa 3D. Hawa ndio walio ndani.",
         "newArrival": "{animal} amepanda Ark sasa hivi",
         "showMe": "Nionyeshe",

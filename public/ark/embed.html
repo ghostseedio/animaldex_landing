@@ -21,11 +21,186 @@
   #ark-sound .on { display: none; }
   #ark-sound[aria-pressed="true"] .on { display: inline; }
   #ark-sound[aria-pressed="true"] .off { display: none; }
+  /* The loading screen (src/lib/ark-loading.ts; ?loader=0 for a host that shows its own, the home page's hero): the
+     Ark's poster frame at once, blurred (a few hundred bytes in this file: no request, so it never takes bandwidth
+     from the scene's code; the full poster did, 0.4 s later to the first frame on slow 4G), and over it a card with
+     the load's stage, a bar that moves only when a real step is done, the Ark's numbers and its newest arrival once
+     read. The frame gives way to the first frame of the world; the card stays until the opening view's animals are in. */
+  #ark-loader { position: fixed; inset: 0; z-index: 1; pointer-events: none; font: 600 12.5px/1.3 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; color: rgba(255, 252, 244, 0.96); }
+  #ark-loader .poster { position: absolute; inset: 0; overflow: hidden; background: #476260; transition: opacity 600ms ease-out; }
+  #ark-loader .poster::before { content: ""; position: absolute; inset: 0; background: center / cover no-repeat url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 40' preserveAspectRatio='xMidYMid slice'%3E%3Cfilter id='b' x='0' y='0' width='1' height='1' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='1.11' edgeMode='duplicate'/%3E%3C/filter%3E%3Cimage width='20' height='40' preserveAspectRatio='none' filter='url(%23b)' href='data:image/webp;base64,UklGRiwBAABXRUJQVlA4ICABAAAQBwCdASoUACgAPsFapU8npKMiJWmY8BgJbACdMoSBtIEpituW/+LY8McrDuJESAZlzruZ0wBaR5PixmVqO9HUwADyURxnvEH+KS3VwiEDMvzuWvm/+CM4mswNuDpNaCTDcA8EeVp/kEGqXJ5xNhibqTpSo3Uuvtp5fjYYaVaPvGtV3oM23BngXZbUIwaZTbAZGlYBPixLUtS6Tva34HZw2ZPkSQxBodeDacqkmgHBxjYRYanv7F1+dMxft4HT9DEe3BMLeEWfBF2FMl248O5mbUs+UBrdgdb1b5JJrhpekOwgHOnLoVtBrVw0Ve4fdZ8nyAEABFsB3Ar4aJpUsha6F3KT6OmsVKufHA5Tx0c/VxqYi8VPQAPhvY2BciiAAAA='/%3E%3C/svg%3E"); }
+  @media (min-width: 768px) { #ark-loader .poster::before { background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 18' preserveAspectRatio='xMidYMid slice'%3E%3Cfilter id='b' x='0' y='0' width='1' height='1' color-interpolation-filters='sRGB'%3E%3CfeGaussianBlur stdDeviation='1.00' edgeMode='duplicate'/%3E%3C/filter%3E%3Cimage width='32' height='18' preserveAspectRatio='none' filter='url(%23b)' href='data:image/webp;base64,UklGRswAAABXRUJQVlA4IMAAAABwBQCdASogABIAPsFOo0yno6MiMBgIAPAYCWwAnTKEfgBBEkZgYg9Eh3wsnXHUmSyTbvwAAMs+Qbsxyx85dp2j0MzKU6SY4xmBrESZ9UgHGoaTTiTzmEsK+8cU1y/3x2qihUB79rK0vAy7evaT1thczFlSnUC2ecnm3oCwsQoeXMXWFYefeVrfTfh+tlXm+t9Qqhn5UnsaBkwYZjzZlvFg/4bHyvd+n/pqI7vZS3w7UpLaX8QmpebAnwD11ZyQAAA='/%3E%3C/svg%3E"); } }
+  #ark-loader.world .poster { opacity: 0; }
+  #ark-loader .card { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom) + var(--ark-inset-bottom, 0px)); transform: translateX(-50%); box-sizing: border-box; width: min(20rem, calc(100% - 112px)); min-width: min(15rem, calc(100% - 24px)); padding: 10px 14px 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(14, 20, 14, 0.72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.55); opacity: 0; transition: opacity 300ms ease-out; }
+  #ark-loader.said .card { opacity: 1; }
+  #ark-loader.done .card { opacity: 0; transition-duration: 450ms; }
+  #ark-loader .stage { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 20px; }
+  #ark-loader .stage .dot { flex: none; width: 6px; height: 6px; border-radius: 3px; background: #c8fa63; animation: arkLoaderPulse 2s ease-in-out infinite; }
+  #ark-loader .stage .text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #ark-loader .bar { position: relative; height: 3px; margin-top: 8px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.14); }
+  #ark-loader .bar .fill { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; width: 0; border-radius: 2px; background: #c8fa63; transition: width 500ms ease-out; }
+  /* The step under way: a still tint where it will fill (a moving sheen here cost the scene 0.5 s to its first frame on
+     the phone profile; the dot's slow pulse is the only thing that moves, and it is cheap). */
+  #ark-loader .bar .sheen { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; width: 0; background: rgba(200, 250, 99, 0.2); }
+  #ark-loader .facts { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); min-width: 0; }
+  #ark-loader .icon { flex: none; width: 36px; height: 36px; border-radius: 18px; background: #f6f1e7; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  #ark-loader .icon img { width: 82%; height: 82%; object-fit: contain; }
+  #ark-loader .lines { min-width: 0; flex: 1; height: 52px; display: flex; flex-direction: column; justify-content: center; }
+  #ark-loader .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; height: 14px; line-height: 14px; min-width: 0; }
+  #ark-loader .label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #c8fa63; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ark-loader .ago { flex: none; font-size: 11.5px; font-weight: 500; color: rgba(255, 252, 244, 0.55); }
+  #ark-loader .name { display: block; margin-top: 2px; height: 18px; line-height: 18px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #ark-loader .counts { display: block; margin-top: 2px; height: 16px; line-height: 16px; font-size: 11.5px; font-weight: 500; color: rgba(255, 252, 244, 0.6); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Before the Ark is read: the facts' places held (no jump when they come). */
+  #ark-loader .skel { display: block; height: 9px; border-radius: 5px; background: rgba(255, 255, 255, 0.12); }
+  #ark-loader .skel + .skel { margin-top: 9px; width: 62%; }
+  #ark-loader .icon.skel-icon { background: rgba(255, 255, 255, 0.12); }
+  @keyframes arkLoaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+  @media (prefers-reduced-motion: reduce) {
+    #ark-loader .poster, #ark-loader .card, #ark-loader .bar .fill { transition: none; }
+    #ark-loader .stage .dot { animation: none; }
+  }
+  /* While the card shows, the scene's own quiet loading bar at the foot steps aside (the card says the same). */
+  body.ark-loading [data-ark-runtime="loading"] { opacity: 0 !important; }
 </style>
 </head>
 <body>
 <div id="ark"></div>
+<div id="ark-loader"><div class="poster" aria-hidden="true"></div><div class="card"><p class="stage" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span class="text"></span></p><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="fill"></span><span class="sheen" aria-hidden="true"></span></div><div class="facts waiting"><span class="icon skel-icon" aria-hidden="true"></span><span class="lines"><span class="skel"></span><span class="skel"></span></span></div></div></div>
 <button id="ark-sound" type="button" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 5 6m0-6-5 6"/></svg></button>
+<script>
+/*
+ * The loading screen, before the scene's code (src/lib/ark-loading.ts says what it shows and why). It runs as the page
+ * is parsed, so the first paint already has the Ark's frame on it (blurred, from this file); it starts the Ark's words (and, reading its own, the
+ * snapshot) beside the scene's code instead of after it; the script below drives it with the bundle's
+ * `arkLoad…` functions. `?loader=0`: no screen of its own (the host shows one), the messages still go.
+ * To the host: {type: "ark:progress", stage: "data"|"world"|"animals"|"done", progress: 0…1}, first at the first
+ * paint (an app can show the page from then on instead of a spinner of its own), then at each real step.
+ */
+(function () {
+  var params = new URLSearchParams(location.search);
+  var root = document.getElementById("ark-loader");
+  var on = params.get("loader") !== "0";
+  // English until the words are read (and if they can't be): the same as en.json's (a test says).
+  var ENGLISH = {data: "Reading who is aboard", world: "Building the island", animals: "Bringing the animals into view", newest: "Newest aboard", loading: "Bringing the Ark into view", chip: "{count} aboard", speciesOne: "1 species", speciesOther: "{count} species"};
+  var said = null;
+  var lang = params.get("lang") || "en";
+  var last = {stage: "data", progress: 0, working: 0};
+  function tell(message) {
+    if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ark) window.webkit.messageHandlers.ark.postMessage(message);
+    else if (window.AndroidArk && window.AndroidArk.postMessage) window.AndroidArk.postMessage(JSON.stringify(message));
+    else if (window.parent !== window) window.parent.postMessage(message, "*");
+  }
+  function fill(template, values) {
+    return String(template).replace(/\{(\w+)\}/g, function (match, key) { return key in values ? String(values[key]) : match; });
+  }
+  function $(selector) { return root ? root.querySelector(selector) : null; }
+  // The words (the script below takes them from here too: one read).
+  var wordsRead = fetch("/api/ark/words?lang=" + encodeURIComponent(lang)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  // Reading its own snapshot (not the app's ark:snapshot, not development's fixture): asked for now, beside the code.
+  var snapshotUrl = params.get("fixture") ? null : params.get("snapshot") || "/api/ark/voyage";
+  var snapshotRead = snapshotUrl ? fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
+  function say(words) {
+    if (said || !on) return;
+    said = words;
+    facts = false;
+    root.classList.add("said");
+    root.querySelector(".bar").setAttribute("aria-label", words.loading);
+    render(last);
+  }
+  // English at once when that is the language asked; otherwise the words when read (or English after 2.5 s).
+  if (/^en([-_]|$)/i.test(lang)) say(ENGLISH);
+  wordsRead.then(function (body) {
+    var ark = body && body.ark;
+    var w = ark && ark.loader ? {data: ark.loader.data, world: ark.loader.world, animals: ark.loader.animals, newest: ark.loader.newest, loading: ark.loading, chip: ark.hud && ark.hud.chip, speciesOne: ark.speciesOne, speciesOther: ark.speciesOther} : null;
+    if (w) {
+      for (var key in ENGLISH) if (!w[key]) w[key] = ENGLISH[key];
+      lang = body.language || lang;
+      if (said) { said = null; root.classList.remove("said"); }
+      say(w);
+    } else say(ENGLISH);
+  });
+  setTimeout(function () { say(ENGLISH); }, 2500);
+
+  // What the script below hands over: {stage, progress, working, counts?, newest?} (the bundle's arkLoad… worked it out).
+  var facts = false;
+  function render(state) {
+    last = state;
+    if (!on || !root) return;
+    var words = said || ENGLISH;
+    var text = state.stage === "data" ? words.data : state.stage === "world" ? words.world : words.animals;
+    if (said) $(".stage .text").textContent = text;
+    var bar = $(".bar");
+    bar.setAttribute("aria-valuenow", String(Math.round(state.progress * 100)));
+    bar.setAttribute("aria-valuetext", text);
+    $(".bar .fill").style.width = state.progress * 100 + "%";
+    var sheen = $(".bar .sheen");
+    sheen.style.insetInlineStart = state.progress * 100 + "%";
+    sheen.style.width = (state.working || 0) * 100 + "%";
+    if (state.stage === "animals" || state.stage === "done") root.classList.add("world");
+    if (state.newest && said && !facts) {
+      facts = true;
+      var row = $(".facts");
+      row.classList.remove("waiting");
+      row.innerHTML = "";
+      var icon = document.createElement("span");
+      icon.className = "icon";
+      icon.setAttribute("aria-hidden", "true");
+      var img = document.createElement("img");
+      img.alt = "";
+      img.decoding = "async";
+      img.onerror = function () { img.remove(); };
+      img.src = state.newest.icon;
+      icon.appendChild(img);
+      var lines = document.createElement("span");
+      lines.className = "lines";
+      var top = document.createElement("span");
+      top.className = "top";
+      var label = document.createElement("span");
+      label.className = "label";
+      label.textContent = words.newest;
+      top.appendChild(label);
+      if (state.newest.ago) {
+        var ago = document.createElement("span");
+        ago.className = "ago";
+        ago.textContent = state.newest.ago;
+        top.appendChild(ago);
+      }
+      var name = document.createElement("span");
+      name.className = "name";
+      name.textContent = state.newest.name;
+      lines.appendChild(top);
+      lines.appendChild(name);
+      if (state.counts) {
+        var counts = document.createElement("span");
+        counts.className = "counts";
+        var number = function (n) { return n.toLocaleString(lang); };
+        counts.textContent = fill(words.chip, {count: number(state.counts.animals)}) + " · " + (state.counts.species === 1 ? words.speciesOne : fill(words.speciesOther, {count: number(state.counts.species)}));
+        lines.appendChild(counts);
+      }
+      row.appendChild(icon);
+      row.appendChild(lines);
+    }
+  }
+  var gone = false;
+  function done() {
+    if (gone || !root) return;
+    gone = true;
+    root.classList.add("world", "done");
+    document.body.classList.remove("ark-loading");
+    var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setTimeout(function () { root.remove(); }, still ? 0 : 500);
+  }
+  if (!on) {
+    if (root) root.remove();
+    root = null;
+  } else {
+    document.body.classList.add("ark-loading");
+  }
+  tell({type: "ark:progress", stage: "data", progress: 0});
+  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, wordsRead: wordsRead, snapshotRead: snapshotRead, on: on};
+})();
+</script>
 <script src="./ark-scene.js"></script>
 <script>
 /*
@@ -44,6 +219,8 @@
  * fixture with its made-up founders; a production bundle ignores it, so production only ever shows the real Ark).
  * ?insetTop=<px>, ?insetBottom=<px>: what the host draws over the world's top and foot (the iOS panel: insetTop=52); the
  * sound button, the bars, the log and the reset button keep clear of it, and of the safe area.
+ * ?loader=0: no loading screen of its own (a host that shows one: the home page's hero); default, the poster and the
+ * loading card until the opening view's animals are in (the script above; src/lib/ark-loading.ts).
  * Part C (two islands, decisions 141-154): when the read carries the server's island fields, the one world with the
  * town across the strait (window.AnimalDexArk.mountArchipelago): the wild island draws first, the town joins when built
  * in its worker (./ark-town-worker.js); ark:select flies to an animal on either island. With one island, as before.
@@ -78,6 +255,8 @@
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
+ * {type: "ark:progress", stage, progress} as the load goes (first at the first paint; stage "data" | "world" |
+ * "animals" | "done", progress 0…1 from real steps only: src/lib/ark-loading.ts),
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
  * window.AndroidArk.postMessage, or the parent frame.
  */
@@ -127,9 +306,10 @@
   }
   // The Ark's words in the app's language (null until read, or if the read fails: the scene then shows numbers only).
   var words = null;
-  // Never waited on for long: offline, the scene comes up after 2.5 s without them.
-  var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), fetch("/api/ark/words?lang=" + encodeURIComponent(lang || "en"))
-    .then(function (r) { return r.ok ? r.json() : null; })
+  // Never waited on for long: offline, the scene comes up after 2.5 s without them. (Asked for by the loading screen's
+  // script above, as the page was parsed: one read.)
+  var loader = window.AnimalDexArkLoader;
+  var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), loader.wordsRead
     .then(function (body) {
       if (!body || !body.ark) return;
       words = body.ark;
@@ -157,6 +337,66 @@
     else if (window.parent !== window) window.parent.postMessage(message, "*");
   }
 
+  // The loading screen's steps (src/lib/ark-loading.ts, through the bundle): each real step moves the bar, tells the
+  // host (ark:progress) and marks the trace (ark:load:…). The code is in: this script runs.
+  var load = Ark.ARK_LOAD_START;
+  var loadFacts = null;
+  var loadTold = "";
+  function loadShow() {
+    var stage = Ark.arkLoadStage(load);
+    var progress = Ark.arkLoadProgress(load);
+    loader.render({stage: stage, progress: progress, working: Ark.arkLoadWorking(load), counts: loadFacts && loadFacts.counts, newest: loadFacts && loadFacts.newest});
+    var told = stage + progress;
+    if (told !== loadTold) {
+      loadTold = told;
+      tell(Ark.arkProgressMessage(load));
+    }
+    if (stage === "done") loader.done();
+  }
+  function loadStep(step) {
+    if (load[step]) return;
+    Ark.markArkLoad(step);
+    load = Ark.arkLoadStep(load, step);
+    loadShow();
+  }
+  function loadData(snapshot) {
+    if (!loadFacts) {
+      var newest = Ark.arkNewestArrival(snapshot.animals);
+      loadFacts = {
+        counts: snapshot.counts,
+        newest: newest ? {name: newest.name, icon: icons + encodeURIComponent(newest.model_slug) + ".webp", ago: Ark.arkAgoText(newest.arrived_at, new Date(), document.documentElement.lang || lang || "en")} : null
+      };
+    }
+    loadStep("data");
+  }
+  // After the first frame: the opening view's models as they come (the runtime's numbers), until they are in. The
+  // screen stops waiting after 30 s (the scene's own quiet bar at the foot carries on).
+  function loadAnimals() {
+    var most = 0;
+    var quiet = 0;
+    var since = Date.now();
+    var timer = setInterval(function () {
+      var live = scene || mounting;
+      var stats = live && live.runtime ? live.runtime() : null;
+      if (stats) {
+        most = Math.max(most, stats.pending);
+        quiet = stats.pending === 0 ? quiet + 1 : 0;
+        var done = Boolean(stats.viewComplete) || (most > 0 && quiet >= 3);
+        load = Ark.arkLoadAnimals(load, Ark.arkAnimalsShare(stats.pending, most), done);
+        if (done) {
+          clearInterval(timer);
+          Ark.markArkLoad("animals");
+        }
+        loadShow();
+      }
+      if (Date.now() - since > 30000) {
+        clearInterval(timer);
+        loader.done();
+      }
+    }, 300);
+  }
+  loadStep("code");
+
   // The runtime's prebuild (the mount's heavy seeded work in a worker), once, before the first mount.
   var prepared = null;
   // Part C: the one world's handle while it mounts (the scene is handed over once it is up: `mounted`).
@@ -164,6 +404,7 @@
   function show(snapshot) {
     if (!snapshot) return;
     shown = snapshot;
+    loadData(snapshot);
     if (hud) hud.snapshot(snapshot);
     if (scene) { scene.update(snapshot); return; }
     if (mounting) { mounting.update(snapshot); return; }
@@ -206,7 +447,14 @@
       onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
-      onReady: function () { tell({type: "ark:ready"}); }
+      onReady: function () {
+        tell({type: "ark:ready"});
+        // The loading screen gives way at the first good frame (the second drawn: the first is a fog wash).
+        Ark.arkWhenSettled(scene || mounting, function () {
+          loadStep("frame");
+          loadAnimals();
+        });
+      }
     };
     if (Ark.mountArchipelago) {
       options.openOn = Ark.arkOpeningIsland ? Ark.arkOpeningIsland(snapshot) : undefined;
@@ -216,10 +464,11 @@
       if (devBuild) window.__arkScene = mounting;
       if (selectHeld) mounting.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
       selectHeld = null;
-      mounting.mounted().then(function () { scene = mounting; mounted(shown || snapshot); });
+      mounting.mounted().then(function () { loadStep("prepared"); scene = mounting; mounted(shown || snapshot); });
       return;
     }
     scene = Ark.mountArk(document.getElementById("ark"), options);
+    loadStep("prepared");
     if (selectHeld) scene.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
     selectHeld = null;
     mounted(snapshot);
@@ -295,7 +544,11 @@
     if (feeding) return Promise.resolve();
     lastRead = Date.now();
     var routing = islandsUrl ? fetch(islandsUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
-    return Promise.all([fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }), wordsRead, routing])
+    // (The first read was asked for by the loading screen's script, beside the code: taken once.)
+    var first = loader.snapshotRead;
+    loader.snapshotRead = null;
+    var snapshotBody = first && !fixtureAsked ? first : fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; });
+    return Promise.all([snapshotBody, wordsRead, routing])
       .then(function (both) {
         var body = both[0];
         if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;

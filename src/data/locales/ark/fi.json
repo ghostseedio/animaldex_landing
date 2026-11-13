@@ -36,6 +36,12 @@
         },
         "hint": "Katsele ympärillesi vetämällä. Zoomaa nipistämällä tai vierittämällä. Tapaa eläin napauttamalla sitä.",
         "loading": "Tuodaan Arkia näkyviin",
+        "loader": {
+            "data": "Luetaan, keitä kyydissä on",
+            "world": "Rakennetaan saarta",
+            "animals": "Tuodaan eläimiä näkyviin",
+            "newest": "Uusin kyydissä"
+        },
         "noWebgl": "Tämä selain ei pysty piirtämään Arkia 3D:nä. Tässä ovat kyydissä olevat.",
         "newArrival": "{animal} nousi juuri kyytiin",
         "showMe": "Näytä",

@@ -36,6 +36,12 @@
         },
         "hint": "Zieh, um dich umzusehen. Zum Zoomen zwei Finger spreizen oder scrollen. Tippe ein Tier an, um es kennenzulernen.",
         "loading": "Die Ark kommt in Sicht",
+        "loader": {
+            "data": "Wir lesen, wer an Bord ist",
+            "world": "Die Insel entsteht",
+            "animals": "Die Tiere kommen in Sicht",
+            "newest": "Neu an Bord"
+        },
         "noWebgl": "Dieser Browser kann die Ark nicht in 3D darstellen. Hier siehst du, wer an Bord ist.",
         "newArrival": "{animal} ist gerade an Bord gekommen",
         "showMe": "Zeig es mir",

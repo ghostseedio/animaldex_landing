@@ -27,6 +27,8 @@ import {ArkBringerNames, type ArkBringerEntry} from "@/components/ark/ark-founde
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
+import ArkLoaderCard, {type ArkLoaderNewest} from "@/app/[locale]/(composited)/ark/ark-loader";
+import {ARK_LOAD_START, arkAnimalsShare, arkLoadAnimals, arkLoadStage, arkLoadStep, arkNewestArrival, arkWhenSettled, markArkLoad, type ArkLoadState, type ArkLoadStep} from "@/lib/ark-loading";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 
@@ -78,6 +80,8 @@ type Props = {
     shareLocalePath?: string;
     /** Development's live feed for the live log and bars (`?fixture=1&feed=1`, `?fixture=live`, `?fixture=grow`). */
     liveFeed?: boolean;
+    /** The newest arrival (the server's "Latest aboard", first): the loading card's line from the first paint. */
+    newest?: ArkLoaderNewest | null;
 };
 
 /** The contract's refresh: every 45 s while the tab is in front. */
@@ -91,6 +95,10 @@ const CHANGE_READ_AFTER_MS = 1500;
 const CHANGE_READ_ANYWAY_MS = 8000;
 /** The lighter view (A18), when the reader chose: "1" on, "0" off; absent: decided by the device. */
 const LITE_KEY = "ark.lite";
+/** The loading card asks the scene how the opening view's models are coming this often, after the first frame... */
+const ANIMALS_POLL_MS = 300;
+/** ...and stops waiting for them after this long (the scene's own quiet bar at the foot takes over then). */
+const ANIMALS_WAIT_MS = 30_000;
 
 /** A tapped animal's life story (`voyage_animal_life_v1`): fetched once per animal per visit. */
 type LifeState = {id: string; life: ArkLife | null; loading: boolean};
@@ -196,7 +204,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null}: Props) {
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
     const sceneRef = useRef<ArkSceneHandle | null>(null);
@@ -222,6 +230,19 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const [panelScope, setPanelScope] = useState<"island" | "both">("island");
     const [ready, setReady] = useState(false);
     const [failed, setFailed] = useState(false);
+    // The loading card (lib/ark-loading.ts): the load's real steps as they happen, each marked once for a trace.
+    const [load, setLoad] = useState<ArkLoadState>(() => (initial ? arkLoadStep(ARK_LOAD_START, "data") : ARK_LOAD_START));
+    const [loadGaveUp, setLoadGaveUp] = useState(false);
+    /** The world's first good frame (the second drawn: `arkWhenSettled`): the poster gives way to it. */
+    const [settled, setSettled] = useState(false);
+    const marked = useRef(new Set<string>());
+    const stepLoad = useCallback((step: ArkLoadStep | "animals") => {
+        if (!marked.current.has(step)) {
+            marked.current.add(step);
+            markArkLoad(step);
+        }
+        if (step !== "animals") setLoad((state) => arkLoadStep(state, step));
+    }, []);
     const [arrival, setArrival] = useState<ArkAnimal | null>(null);
     /** Each species' count 24 hours ago, from the event log (decision 239); null until read, or when it can't be. */
     const [then, setThen] = useState<ArkPopulationThen | null>(null);
@@ -296,6 +317,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         if (animal && !autoSelecting.current) trackArk("ark_animal_tap", {source: sourceRef.current, species_profile_id: animal.species_profile_id, is_mine: animal.mine});
     }, []);
     useEffect(() => {
+        if (hasSnapshot) stepLoad("data");
+    }, [hasSnapshot, stepLoad]);
+    useEffect(() => {
         // Only a real Ark is a visit: not the "opens soon" page before the migration.
         if (!hasSnapshot) return;
         try {
@@ -333,6 +357,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         if (!el || !first) return;
         let disposed = false;
         let handle: ArkSceneHandle | null = null;
+        let settleCancel: (() => void) | null = null;
         const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
         let storedLite: boolean | null = null;
         try {
@@ -346,6 +371,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         const start = () => import("@/ark-scene/islands/archipelago")
             .then(async ({mountArchipelago}) => {
                 if (disposed) return;
+                stepLoad("code");
                 // (The mount's heavy seeded work runs in the runtime's worker first, inside the archipelago: docs/ark/runtime.md §7.)
                 const opening = snapshotRef.current ?? first;
                 const focusedFirst = arkPickAnimal(arkFocusAnimals(opening, focusOn), null);
@@ -379,9 +405,20 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         hours,
                         onFollowEnd: () => setFollowing(false),
                         onSoundCredits: () => setCredits(sceneRef.current?.sound().credits ?? []),
-                        onReady: () => setReady(true)
+                        onReady: () => {
+                            setReady(true);
+                            settleCancel = arkWhenSettled(sceneRef.current, () => {
+                                if (disposed) return;
+                                stepLoad("frame");
+                                setSettled(true);
+                            });
+                        }
                     });
                     sceneRef.current = handle;
+                    // The island's seeded work done in its worker and the scene made (before its first frame).
+                    void (handle as ArkArchipelagoHandle).mounted?.().then(() => {
+                        if (!disposed) stepLoad("prepared");
+                    });
                     // "See it in the Ark" (`?focus=`): straight to that animal or species, the reader's own first, on its island.
                     const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? first, focusOn), null);
                     if (focused) {
@@ -406,6 +443,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         const timer = idle === null ? window.setTimeout(() => void start(), 150) : null;
         return () => {
             disposed = true;
+            settleCancel?.();
             if (idle !== null) window.cancelIdleCallback?.(idle);
             if (timer !== null) clearTimeout(timer);
             handle?.dispose();
@@ -418,6 +456,39 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     useEffect(() => {
         sceneRef.current?.setMineOnly(mineOnly);
     }, [mineOnly]);
+
+    // After the first frame, the opening view's models as they come (the runtime's numbers): the card's last stage.
+    // Done when the runtime says the view is complete, or once something was asked for and nothing has been pending
+    // for about a second.
+    useEffect(() => {
+        if (!settled) return;
+        let most = 0;
+        let quiet = 0;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const since = performance.now();
+        const tick = () => {
+            const stats = sceneRef.current?.runtime?.();
+            if (stats) {
+                most = Math.max(most, stats.pending);
+                quiet = stats.pending === 0 ? quiet + 1 : 0;
+                const done = stats.viewComplete || (most > 0 && quiet >= 3);
+                setLoad((state) => arkLoadAnimals(state, arkAnimalsShare(stats.pending, most), done));
+                if (done) {
+                    stepLoad("animals");
+                    return;
+                }
+            }
+            if (performance.now() - since > ANIMALS_WAIT_MS) {
+                setLoadGaveUp(true);
+                return;
+            }
+            timer = setTimeout(tick, ANIMALS_POLL_MS);
+        };
+        timer = setTimeout(tick, ANIMALS_POLL_MS);
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
+    }, [settled, stepLoad]);
 
     // The tap card covers the foot of the world: the view moves up so the animal (and its bars) stay above it (on a
     // desktop too since decision 240: the world there is short enough for the card to cover the animal).
@@ -799,6 +870,15 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         return template.replace(/\{(\w+)\}/g, (match, key: keyof typeof values) => values[key] ?? match);
     })();
 
+    // The loading card's newest arrival: the server's, else the Ark's own once read (real data either way).
+    const newestFromArk = useMemo(() => {
+        if (newestAboard || !snapshot) return null;
+        const animal = arkNewestArrival(snapshot.animals);
+        return animal ? {name: animal.name, slug: animal.model_slug, at: animal.arrived_at} : null;
+    }, [newestAboard, snapshot]);
+    const loadStage = arkLoadStage(load);
+    const loaderShown = !failed && !(unavailable && !snapshot) && !loadGaveUp && loadStage !== "done";
+
     // A tap in a list off the world (the reader scrolled down): the world comes back into view.
     const showWorld = () => {
         const world = worldRef.current;
@@ -848,12 +928,12 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             ) : null}
 
             {/* The world, edge to edge and as tall as the screen under the header; who is aboard over it. */}
-            <section ref={worldRef} aria-label={words.eyebrow} className="relative h-[calc(100svh-4.0625rem)] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
+            <section ref={worldRef} aria-label={words.eyebrow} data-ark-loading={loaderShown ? "" : undefined} className="relative h-[calc(100svh-4.0625rem)] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
                 {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
                 {snapshot && !failed ? <div ref={liveHostRef} className="pointer-events-none absolute inset-0" /> : null}
 
                 {/* A real render of the Ark's opening view until the world is up (decision 246): the page's largest paint. */}
-                {!failed && !(unavailable && !snapshot) ? <ArkPoster ready={ready} loading={words.loading} /> : null}
+                {!failed && !(unavailable && !snapshot) ? <ArkPoster ready={settled} /> : null}
 
                 {!snapshot && unavailable ? (
                     <div className="absolute inset-0 flex items-center justify-center px-4 text-center">
@@ -890,6 +970,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         />
 
                         <div className="pointer-events-none col-span-2 row-start-3 flex min-w-0 flex-col items-start gap-2 self-start md:col-span-1 md:row-start-2">
+                            {/* The loading card (decision rows, loading lane): the load's stages, the bar, the newest arrival. */}
+                            {!failed && !(unavailable && !snapshot) && !loadGaveUp ? <ArkLoaderCard state={load} words={words} newest={newestAboard ?? newestFromArk} locale={locale} /> : null}
                             {replay ? (
                                 <ArkToast role="status" aria-live="polite">
                                     <div className="min-w-0 flex-1">

@@ -4207,6 +4207,12 @@
     },
     "hint": "Drag to look around. Pinch or scroll to zoom. Tap an animal to meet it.",
     "loading": "Bringing the Ark into view",
+    "loader": {
+      "data": "Reading who is aboard",
+      "world": "Building the island",
+      "animals": "Bringing the animals into view",
+      "newest": "Newest aboard"
+    },
     "noWebgl": "This browser can't draw the Ark in 3D. Here is who is aboard.",
     "newArrival": "{animal} just came aboard",
     "showMe": "Show me",

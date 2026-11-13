@@ -36,6 +36,12 @@
         },
         "hint": "Etrafa bakmak için sürükle. Yakınlaştırmak için iki parmakla kıstır ya da kaydır. Tanışmak için bir hayvana dokun.",
         "loading": "Ark yükleniyor",
+        "loader": {
+            "data": "Gemide kimlerin olduğu okunuyor",
+            "world": "Ada kuruluyor",
+            "animals": "Hayvanlar getiriliyor",
+            "newest": "Gemiye en son gelen"
+        },
         "noWebgl": "Bu tarayıcı Ark'ı 3D çizemiyor. Gemide olanlar şunlar.",
         "newArrival": "{animal} az önce gemiye bindi",
         "showMe": "Göster",

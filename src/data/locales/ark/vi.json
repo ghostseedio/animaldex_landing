@@ -36,6 +36,12 @@
         },
         "hint": "Kéo để nhìn xung quanh. Chụm hoặc cuộn để thu phóng. Chạm vào một con vật để gặp nó.",
         "loading": "Đang hiện Ark",
+        "loader": {
+            "data": "Đang đọc ai ở trên tàu",
+            "world": "Đang dựng đảo",
+            "animals": "Đang hiện các con vật",
+            "newest": "Mới nhất trên tàu"
+        },
         "noWebgl": "Trình duyệt này không thể vẽ Ark ở dạng 3D. Đây là những con vật đang ở trên tàu.",
         "newArrival": "{animal} vừa lên Ark",
         "showMe": "Cho tôi xem",

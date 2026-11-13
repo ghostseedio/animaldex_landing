@@ -36,6 +36,12 @@
         },
         "hint": "Potiahni a rozhliadni sa. Priblíž stiahnutím prstov alebo posunom. Ťukni na zviera a zoznám sa s ním.",
         "loading": "Načítava sa Ark",
+        "loader": {
+            "data": "Načítava sa, kto je na palube",
+            "world": "Stavia sa ostrov",
+            "animals": "Zobrazujú sa zvieratá",
+            "newest": "Najnovšie na palube"
+        },
         "noWebgl": "Tento prehliadač nevie zobraziť Ark v 3D. Tu je, kto je na palube.",
         "newArrival": "{animal} práve nastupuje na palubu",
         "showMe": "Ukázať",

@@ -36,6 +36,12 @@
         },
         "hint": "Táhni a rozhlédni se. Přibliž sevřením prstů nebo posunem. Klepni na zvíře a seznam se s ním.",
         "loading": "Načítání Ark",
+        "loader": {
+            "data": "Načítání, kdo je na palubě",
+            "world": "Stavění ostrova",
+            "animals": "Zobrazování zvířat",
+            "newest": "Nejnověji na palubě"
+        },
         "noWebgl": "Tento prohlížeč neumí zobrazit Ark ve 3D. Tady je, kdo je na palubě.",
         "newArrival": "{animal} právě nastupuje na palubu",
         "showMe": "Ukázat",

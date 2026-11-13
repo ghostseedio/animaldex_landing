@@ -36,6 +36,12 @@
         },
         "hint": "Húzd a körbenézéshez. Csippentéssel vagy görgetéssel nagyíts. Koppints egy állatra, hogy megismerd.",
         "loading": "Az Ark betöltése",
+        "loader": {
+            "data": "Olvassuk, ki van a fedélzeten",
+            "world": "Épül a sziget",
+            "animals": "Előkerülnek az állatok",
+            "newest": "Legújabb a fedélzeten"
+        },
         "noWebgl": "Ez a böngésző nem tudja 3D-ben megjeleníteni az Arkot. Íme, ki van a fedélzeten.",
         "newArrival": "{animal} épp felszállt a fedélzetre",
         "showMe": "Mutasd",

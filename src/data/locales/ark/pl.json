@@ -36,6 +36,12 @@
         },
         "hint": "Przeciągnij, aby się rozejrzeć. Zsuń palce lub przewiń, aby powiększyć. Stuknij zwierzę, aby je poznać.",
         "loading": "Wczytywanie Ark",
+        "loader": {
+            "data": "Wczytywanie, kto jest na pokładzie",
+            "world": "Budowanie wyspy",
+            "animals": "Zwierzęta się pojawiają",
+            "newest": "Najnowszy na pokładzie"
+        },
         "noWebgl": "Ta przeglądarka nie potrafi pokazać Ark w 3D. Oto kto jest na pokładzie.",
         "newArrival": "{animal} właśnie wchodzi na pokład",
         "showMe": "Pokaż",

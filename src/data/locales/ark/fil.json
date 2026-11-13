@@ -36,6 +36,12 @@
         },
         "hint": "I-drag para tumingin sa paligid. I-pinch o i-scroll para mag-zoom. I-tap ang isang hayop para makilala ito.",
         "loading": "Ipinapakita ang Ark",
+        "loader": {
+            "data": "Binabasa kung sino ang nakasakay",
+            "world": "Binubuo ang isla",
+            "animals": "Ipinapakita ang mga hayop",
+            "newest": "Pinakabagong sakay"
+        },
         "noWebgl": "Hindi kayang iguhit ng browser na ito ang Ark sa 3D. Narito kung sino ang nakasakay.",
         "newArrival": "Kasasakay lang ng {animal}",
         "showMe": "Ipakita",

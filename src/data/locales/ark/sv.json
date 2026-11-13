@@ -36,6 +36,12 @@
         },
         "hint": "Dra för att se dig omkring. Nyp eller skrolla för att zooma. Tryck på ett djur för att träffa det.",
         "loading": "Tar fram Ark",
+        "loader": {
+            "data": "Läser in vilka som är ombord",
+            "world": "Bygger ön",
+            "animals": "Tar fram djuren",
+            "newest": "Senast ombord"
+        },
         "noWebgl": "Den här webbläsaren kan inte visa Ark i 3D. Här är de som är ombord.",
         "newArrival": "{animal} kom precis ombord",
         "showMe": "Visa mig",

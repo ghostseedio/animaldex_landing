@@ -8,6 +8,8 @@
  * beside the snapshot (the same answer's), for the host's cards ("@handle").
  * `ArkLiveFixtureFeed`: development's live feed, only in a development build
  * (`node scripts/build-ark-bundle.mjs --dev`); undefined in production.
+ * `arkLoad…`: the loading screen's steps, stage and bar (`src/lib/ark-loading.ts`), for the embed's own screen and
+ * its `ark:progress` messages.
  */
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
@@ -20,6 +22,7 @@ import {mountArchipelago} from "@/ark-scene/islands/archipelago";
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 import {arkStatusForHost} from "@/lib/ark-animal-status";
+import {ARK_LOAD_START, arkAgoText, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
 
 declare global {
     interface Window {
@@ -45,6 +48,19 @@ declare global {
             mergeArkIslandsRouting?: typeof mergeArkIslandsRouting;
             /** Decision 240: an animal's status for the host (`ark:selected`, `ark:status`), its lines in the app's language. */
             arkStatusForHost: typeof arkStatusForHost;
+            /** The loading screen (`src/lib/ark-loading.ts`). */
+            ARK_LOAD_START: typeof ARK_LOAD_START;
+            arkLoadStep: typeof arkLoadStep;
+            arkLoadAnimals: typeof arkLoadAnimals;
+            arkLoadStage: typeof arkLoadStage;
+            arkLoadProgress: typeof arkLoadProgress;
+            arkLoadWorking: typeof arkLoadWorking;
+            arkAnimalsShare: typeof arkAnimalsShare;
+            arkNewestArrival: typeof arkNewestArrival;
+            arkAgoText: typeof arkAgoText;
+            arkProgressMessage: typeof arkProgressMessage;
+            arkWhenSettled: typeof arkWhenSettled;
+            markArkLoad: typeof markArkLoad;
         };
     }
 }
@@ -62,5 +78,17 @@ window.AnimalDexArk = {
     arkTwoIslands,
     arkOpeningIsland,
     mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined,
-    arkStatusForHost
+    arkStatusForHost,
+    ARK_LOAD_START,
+    arkLoadStep,
+    arkLoadAnimals,
+    arkLoadStage,
+    arkLoadProgress,
+    arkLoadWorking,
+    arkAnimalsShare,
+    arkNewestArrival,
+    arkAgoText,
+    arkProgressMessage,
+    arkWhenSettled,
+    markArkLoad
 };

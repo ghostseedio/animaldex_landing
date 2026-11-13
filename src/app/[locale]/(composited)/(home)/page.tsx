@@ -56,6 +56,15 @@ const DAY_FRAMES: Array<{key: string; hours: number}> = [
 ];
 const DAY_AT = Date.UTC(2026, 10, 10);
 
+/** The hero's loading stages: the Ark's own `loader` words in the site's language (`lib/ark-loading.ts`). */
+function arkLoaderStages(messages: Record<string, unknown>): {data: string; world: string} {
+    const loader = ((messages.ark as {loader?: Record<string, unknown>} | undefined)?.loader ?? {}) as Record<string, unknown>;
+    return {
+        data: typeof loader.data === "string" ? loader.data : "Reading who is aboard",
+        world: typeof loader.world === "string" ? loader.world : "Building the island"
+    };
+}
+
 /** The capture (a player's public card, shown without their name) and the Komodo dragon aboard. */
 const CAPTURED_AT = Date.UTC(2026, 9, 14);
 const ABOARD_AT = Date.UTC(2026, 10, 9);
@@ -237,7 +246,8 @@ export default async function Home({params}: HomePageProps) {
                         interactDone: t("hero.interactDone"),
                         poster: posterCaption,
                         live: t("hero.live"),
-                        sceneLabel: t("hero.sceneLabel")
+                        sceneLabel: t("hero.sceneLabel"),
+                        stages: arkLoaderStages(messages)
                     }}
                     poster={
                         <picture>

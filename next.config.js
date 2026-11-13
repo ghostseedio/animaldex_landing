@@ -389,6 +389,14 @@ module.exports = withNextIntl({
                 headers: [
                     {key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000"}
                 ]
+            },
+            {
+                // The Ark's poster frames (the first thing /ark and the apps' Ark panel show while the world loads):
+                // the same week, as they change only when re-rendered.
+                source: "/ark/poster/:path*",
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000"}
+                ]
             }
         ];
     },

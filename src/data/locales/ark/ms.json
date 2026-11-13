@@ -36,6 +36,12 @@
         },
         "hint": "Seret untuk melihat sekeliling. Cubit atau tatal untuk zum. Ketik haiwan untuk mengenalinya.",
         "loading": "Memaparkan Ark",
+        "loader": {
+            "data": "Membaca siapa di atas kapal",
+            "world": "Membina pulau",
+            "animals": "Memaparkan haiwan",
+            "newest": "Terbaru di atas kapal"
+        },
         "noWebgl": "Pelayar ini tidak dapat melukis Ark dalam 3D. Inilah senarai yang ada di atas kapal.",
         "newArrival": "{animal} baru sahaja naik ke Ark",
         "showMe": "Tunjukkan",

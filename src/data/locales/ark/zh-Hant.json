@@ -36,6 +36,12 @@
         },
         "hint": "拖曳可環顧四周，雙指縮放或捲動可放大縮小，點一下動物就能認識牠。",
         "loading": "正在呈現 Ark",
+        "loader": {
+            "data": "正在讀取船上有誰",
+            "world": "正在搭建島嶼",
+            "animals": "正在呈現動物",
+            "newest": "最新登船"
+        },
         "noWebgl": "這個瀏覽器無法以 3D 顯示 Ark。以下是船上的動物。",
         "newArrival": "{animal}剛剛登船",
         "showMe": "帶我去看",
