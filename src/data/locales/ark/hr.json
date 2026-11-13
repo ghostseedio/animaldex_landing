@@ -316,13 +316,18 @@
             "age": "Preostali život",
             "fedLow": "Postaje gladna",
             "healthGood": "Dobrog zdravlja",
-            "lifeLeft": "Preostalo je {percent} života"
+            "lifeLeft": "Preostalo je {percent} života",
+            "energy": "Energija",
+            "awakeSince": "Budan od {time}",
+            "asleepSince": "Spava od {time}"
         },
         "activity": {
             "food": "traži hranu",
             "grazing": "pase",
             "browsing": "brsti lišće",
             "hunting": "lovi",
+            "waiting": "vreba plijen",
+            "prowling": "šulja se uokolo",
             "fishing": "lovi ribu",
             "drinking": "pije",
             "resting": "odmara",

@@ -316,13 +316,18 @@
             "age": "عمر باقی‌مانده",
             "fedLow": "کم‌کم گرسنه می‌شود",
             "healthGood": "سالم",
-            "lifeLeft": "{percent} از عمرش باقی مانده"
+            "lifeLeft": "{percent} از عمرش باقی مانده",
+            "energy": "انرژی",
+            "awakeSince": "از {time} بیدار است",
+            "asleepSince": "از {time} خواب است"
         },
         "activity": {
             "food": "در جست‌وجوی غذا",
             "grazing": "در حال چرا",
             "browsing": "در حال خوردن برگ",
             "hunting": "در حال شکار",
+            "waiting": "در کمین شکار",
+            "prowling": "در حال پرسه زدن برای شکار",
             "fishing": "در حال ماهیگیری",
             "drinking": "در حال نوشیدن آب",
             "resting": "در حال استراحت",

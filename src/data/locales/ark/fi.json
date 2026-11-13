@@ -316,13 +316,18 @@
             "age": "Elinaika",
             "fedLow": "Alkaa olla nälkäinen",
             "healthGood": "Hyvä terveys",
-            "lifeLeft": "Elinaikaa jäljellä {percent}"
+            "lifeLeft": "Elinaikaa jäljellä {percent}",
+            "energy": "Energia",
+            "awakeSince": "Hereillä klo {time} alkaen",
+            "asleepSince": "Unessa klo {time} alkaen"
         },
         "activity": {
             "food": "etsii ruokaa",
             "grazing": "laiduntaa",
             "browsing": "syö lehtiä",
             "hunting": "saalistaa",
+            "waiting": "väijyy saalista",
+            "prowling": "hiiviskelee",
             "fishing": "kalastaa",
             "drinking": "juo",
             "resting": "lepää",

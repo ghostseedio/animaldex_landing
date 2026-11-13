@@ -316,13 +316,18 @@
             "age": "Lebenszeit",
             "fedLow": "Wird hungrig",
             "healthGood": "Bei guter Gesundheit",
-            "lifeLeft": "{percent} Lebenszeit übrig"
+            "lifeLeft": "{percent} Lebenszeit übrig",
+            "energy": "Energie",
+            "awakeSince": "Wach seit {time}",
+            "asleepSince": "Schläft seit {time}"
         },
         "activity": {
             "food": "sucht Futter",
             "grazing": "grast",
             "browsing": "frisst Blätter",
             "hunting": "jagt",
+            "waiting": "lauert auf Beute",
+            "prowling": "pirscht umher",
             "fishing": "fischt",
             "drinking": "trinkt",
             "resting": "ruht sich aus",

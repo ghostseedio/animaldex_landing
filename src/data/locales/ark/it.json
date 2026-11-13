@@ -316,13 +316,18 @@
             "age": "Vita residua",
             "fedLow": "Inizia ad avere fame",
             "healthGood": "In buona salute",
-            "lifeLeft": "Gli resta il {percent} della vita"
+            "lifeLeft": "Gli resta il {percent} della vita",
+            "energy": "Energia",
+            "awakeSince": "Sveglio dalle {time}",
+            "asleepSince": "Dorme dalle {time}"
         },
         "activity": {
             "food": "cerca cibo",
             "grazing": "pascola",
             "browsing": "bruca le foglie",
             "hunting": "caccia",
+            "waiting": "aspetta una preda",
+            "prowling": "si aggira in cerca di prede",
             "fishing": "pesca",
             "drinking": "beve",
             "resting": "si riposa",

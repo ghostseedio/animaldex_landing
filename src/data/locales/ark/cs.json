@@ -316,13 +316,18 @@
             "age": "Zbývající život",
             "fedLow": "Začíná mít hlad",
             "healthGood": "V dobrém zdraví",
-            "lifeLeft": "Zbývá {percent} života"
+            "lifeLeft": "Zbývá {percent} života",
+            "energy": "Energie",
+            "awakeSince": "Vzhůru od {time}",
+            "asleepSince": "Spí od {time}"
         },
         "activity": {
             "food": "hledá potravu",
             "grazing": "spásá trávu",
             "browsing": "okusuje listí",
             "hunting": "loví",
+            "waiting": "číhá na kořist",
+            "prowling": "slídí okolo",
             "fishing": "loví ryby",
             "drinking": "pije",
             "resting": "odpočívá",

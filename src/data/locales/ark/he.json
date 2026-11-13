@@ -316,13 +316,18 @@
             "age": "חיים שנותרו",
             "fedLow": "מתחיל להיות רעב",
             "healthGood": "בריאות טובה",
-            "lifeLeft": "נותרו {percent} מחייו"
+            "lifeLeft": "נותרו {percent} מחייו",
+            "energy": "אנרגיה",
+            "awakeSince": "ער מאז {time}",
+            "asleepSince": "ישן מאז {time}"
         },
         "activity": {
             "food": "בחיפוש אחר מזון",
             "grazing": "במרעה",
             "browsing": "באכילת עלים",
             "hunting": "בציד",
+            "waiting": "במארב לטרף",
+            "prowling": "בשיטוט אחר טרף",
             "fishing": "בדיג",
             "drinking": "בשתייה",
             "resting": "במנוחה",

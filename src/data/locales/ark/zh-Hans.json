@@ -316,13 +316,18 @@
             "age": "剩余寿命",
             "fedLow": "开始饿了",
             "healthGood": "健康良好",
-            "lifeLeft": "剩余寿命 {percent}"
+            "lifeLeft": "剩余寿命 {percent}",
+            "energy": "精力",
+            "awakeSince": "{time} 起醒着",
+            "asleepSince": "{time} 起在睡觉"
         },
         "activity": {
             "food": "觅食",
             "grazing": "吃草",
             "browsing": "啃食树叶",
             "hunting": "捕猎",
+            "waiting": "等待猎物",
+            "prowling": "潜行寻猎",
             "fishing": "捕鱼",
             "drinking": "喝水",
             "resting": "休息",

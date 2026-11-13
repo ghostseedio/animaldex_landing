@@ -316,13 +316,18 @@
             "age": "Baki hayat",
             "fedLow": "Mula lapar",
             "healthGood": "Sihat",
-            "lifeLeft": "Baki hayat {percent}"
+            "lifeLeft": "Baki hayat {percent}",
+            "energy": "Tenaga",
+            "awakeSince": "Berjaga sejak pukul {time}",
+            "asleepSince": "Tidur sejak pukul {time}"
         },
         "activity": {
             "food": "mencari makanan",
             "grazing": "meragut rumput",
             "browsing": "memakan daun",
             "hunting": "memburu",
+            "waiting": "menunggu mangsa",
+            "prowling": "merayau mencari mangsa",
             "fishing": "menangkap ikan",
             "drinking": "minum",
             "resting": "berehat",

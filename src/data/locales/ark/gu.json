@@ -316,13 +316,18 @@
             "age": "બાકી આયુષ્ય",
             "fedLow": "ભૂખ લાગવા માંડી છે",
             "healthGood": "સારું આરોગ્ય",
-            "lifeLeft": "આયુષ્યનું {percent} બાકી"
+            "lifeLeft": "આયુષ્યનું {percent} બાકી",
+            "energy": "ઊર્જા",
+            "awakeSince": "{time} થી જાગે છે",
+            "asleepSince": "{time} થી ઊંઘે છે"
         },
         "activity": {
             "food": "ખોરાક શોધે છે",
             "grazing": "ચરે છે",
             "browsing": "પાંદડાં ખાય છે",
             "hunting": "શિકાર કરે છે",
+            "waiting": "શિકારની રાહ જુએ છે",
+            "prowling": "શિકારની શોધમાં ફરે છે",
             "fishing": "માછલી પકડે છે",
             "drinking": "પાણી પીએ છે",
             "resting": "આરામ કરે છે",

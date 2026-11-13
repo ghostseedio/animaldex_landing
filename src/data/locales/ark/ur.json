@@ -316,13 +316,18 @@
             "age": "باقی عمر",
             "fedLow": "بھوک لگ رہی ہے",
             "healthGood": "اچھی صحت",
-            "lifeLeft": "عمر کا {percent} باقی ہے"
+            "lifeLeft": "عمر کا {percent} باقی ہے",
+            "energy": "توانائی",
+            "awakeSince": "{time} بجے سے جاگ رہا ہے",
+            "asleepSince": "{time} بجے سے سو رہا ہے"
         },
         "activity": {
             "food": "خوراک تلاش کر رہا ہے",
             "grazing": "چر رہا ہے",
             "browsing": "پتے کھا رہا ہے",
             "hunting": "شکار کر رہا ہے",
+            "waiting": "شکار کی گھات میں ہے",
+            "prowling": "شکار کی تلاش میں گھوم رہا ہے",
             "fishing": "مچھلی پکڑ رہا ہے",
             "drinking": "پانی پی رہا ہے",
             "resting": "آرام کر رہا ہے",

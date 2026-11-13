@@ -316,13 +316,18 @@
             "age": "Hátralévő élet",
             "fedLow": "Kezd megéhezni",
             "healthGood": "Jó egészségben",
-            "lifeLeft": "Hátralévő élete: {percent}"
+            "lifeLeft": "Hátralévő élete: {percent}",
+            "energy": "Energia",
+            "awakeSince": "{time} óta ébren",
+            "asleepSince": "{time} óta alszik"
         },
         "activity": {
             "food": "élelmet keres",
             "grazing": "legel",
             "browsing": "leveleket eszik",
             "hunting": "vadászik",
+            "waiting": "zsákmányra les",
+            "prowling": "portyázik",
             "fishing": "halászik",
             "drinking": "iszik",
             "resting": "pihen",

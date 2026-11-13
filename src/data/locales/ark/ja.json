@@ -316,13 +316,18 @@
             "age": "残りの寿命",
             "fedLow": "おなかがすいてきました",
             "healthGood": "健康です",
-            "lifeLeft": "寿命の残り{percent}"
+            "lifeLeft": "寿命の残り{percent}",
+            "energy": "元気",
+            "awakeSince": "{time}から起きています",
+            "asleepSince": "{time}から眠っています"
         },
         "activity": {
             "food": "食べ物を探しています",
             "grazing": "草を食べています",
             "browsing": "木の葉を食べています",
             "hunting": "狩りをしています",
+            "waiting": "獲物を待ち伏せしています",
+            "prowling": "獲物を求めてうろついています",
             "fishing": "魚をとっています",
             "drinking": "水を飲んでいます",
             "resting": "休んでいます",

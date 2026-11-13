@@ -316,13 +316,18 @@
             "age": "Vie restante",
             "fedLow": "Commence à avoir faim",
             "healthGood": "En bonne santé",
-            "lifeLeft": "Encore {percent} de sa vie"
+            "lifeLeft": "Encore {percent} de sa vie",
+            "energy": "Énergie",
+            "awakeSince": "Éveillé depuis {time}",
+            "asleepSince": "Endormi depuis {time}"
         },
         "activity": {
             "food": "cherche de la nourriture",
             "grazing": "broute",
             "browsing": "broute des feuilles",
             "hunting": "chasse",
+            "waiting": "guette une proie",
+            "prowling": "rôde",
             "fishing": "pêche",
             "drinking": "boit",
             "resting": "se repose",

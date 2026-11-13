@@ -316,13 +316,18 @@
             "age": "বাকি আয়ু",
             "fedLow": "খিদে পাচ্ছে",
             "healthGood": "সুস্বাস্থ্য",
-            "lifeLeft": "আয়ুর {percent} বাকি"
+            "lifeLeft": "আয়ুর {percent} বাকি",
+            "energy": "শক্তি",
+            "awakeSince": "{time} থেকে জেগে আছে",
+            "asleepSince": "{time} থেকে ঘুমিয়ে আছে"
         },
         "activity": {
             "food": "খাবার খুঁজছে",
             "grazing": "ঘাস খাচ্ছে",
             "browsing": "পাতা খাচ্ছে",
             "hunting": "শিকার করছে",
+            "waiting": "শিকারের অপেক্ষায় ওত পেতে আছে",
+            "prowling": "শিকারের খোঁজে ঘুরছে",
             "fishing": "মাছ ধরছে",
             "drinking": "পানি পান করছে",
             "resting": "বিশ্রাম নিচ্ছে",

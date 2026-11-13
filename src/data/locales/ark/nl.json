@@ -316,13 +316,18 @@
             "age": "Levensduur",
             "fedLow": "Krijgt honger",
             "healthGood": "In goede gezondheid",
-            "lifeLeft": "Nog {percent} levensduur over"
+            "lifeLeft": "Nog {percent} levensduur over",
+            "energy": "Energie",
+            "awakeSince": "Wakker sinds {time}",
+            "asleepSince": "Slaapt sinds {time}"
         },
         "activity": {
             "food": "zoekt voedsel",
             "grazing": "graast",
             "browsing": "eet bladeren",
             "hunting": "jaagt",
+            "waiting": "loert op een prooi",
+            "prowling": "sluipt rond",
             "fishing": "vist",
             "drinking": "drinkt",
             "resting": "rust uit",

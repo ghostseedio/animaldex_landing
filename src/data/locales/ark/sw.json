@@ -316,13 +316,18 @@
             "age": "Maisha yaliyobaki",
             "fedLow": "Anaanza kuona njaa",
             "healthGood": "Ana afya njema",
-            "lifeLeft": "Amebakiza {percent} ya maisha yake"
+            "lifeLeft": "Amebakiza {percent} ya maisha yake",
+            "energy": "Nguvu",
+            "awakeSince": "Macho tangu {time}",
+            "asleepSince": "Amelala tangu {time}"
         },
         "activity": {
             "food": "anatafuta chakula",
             "grazing": "anakula majani",
             "browsing": "anakula majani ya miti",
             "hunting": "anawinda",
+            "waiting": "anavizia mawindo",
+            "prowling": "anazunguka akitafuta mawindo",
             "fishing": "anavua samaki",
             "drinking": "anakunywa maji",
             "resting": "anapumzika",

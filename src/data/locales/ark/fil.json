@@ -316,13 +316,18 @@
             "age": "Natitirang buhay",
             "fedLow": "Nagugutom na",
             "healthGood": "Malusog",
-            "lifeLeft": "{percent} ng buhay ang natitira"
+            "lifeLeft": "{percent} ng buhay ang natitira",
+            "energy": "Lakas",
+            "awakeSince": "Gising mula {time}",
+            "asleepSince": "Tulog mula {time}"
         },
         "activity": {
             "food": "naghahanap ng pagkain",
             "grazing": "nanginginain",
             "browsing": "kumakain ng mga dahon",
             "hunting": "nangangaso",
+            "waiting": "nag-aabang ng biktima",
+            "prowling": "naglilibot para manghuli",
             "fishing": "nangingisda",
             "drinking": "umiinom",
             "resting": "nagpapahinga",

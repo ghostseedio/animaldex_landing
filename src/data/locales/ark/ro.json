@@ -316,13 +316,18 @@
             "age": "Viață rămasă",
             "fedLow": "I se face foame",
             "healthGood": "În stare bună de sănătate",
-            "lifeLeft": "Îi mai rămâne {percent} din viață"
+            "lifeLeft": "Îi mai rămâne {percent} din viață",
+            "energy": "Energie",
+            "awakeSince": "Treaz de la {time}",
+            "asleepSince": "Doarme de la {time}"
         },
         "activity": {
             "food": "caută hrană",
             "grazing": "paște",
             "browsing": "mănâncă frunze",
             "hunting": "vânează",
+            "waiting": "pândește o pradă",
+            "prowling": "dă târcoale în căutarea prăzii",
             "fishing": "pescuiește",
             "drinking": "bea apă",
             "resting": "se odihnește",

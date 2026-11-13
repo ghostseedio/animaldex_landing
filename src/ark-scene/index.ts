@@ -165,11 +165,11 @@ import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {forgetSchedules, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
-import {arkActivityKey, arkDayOf, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
+import {arkActivityKey, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
@@ -1842,15 +1842,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
         const notes = records.get(animal.id) ?? [];
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
-        const meal = notes.find((note) => note.kind === "meal");
+        // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
+        // slots (awake at its slot's start, as the schedule reads it); a kill of its on record (its log's meals) fills it.
+        const fed = subject ? scheduleFed(subject, epoch, notes.filter((note) => note.kind === "meal").map((note) => note.at / 1000)) : null;
+        const energy = subject ? energyOf(subject, epoch) : null;
         return {
             id: animal.id,
             activity,
             since: plan?.since ?? null,
             goal: plan?.goal ?? null,
             log: arkStatusLog(plan?.log ?? [], record),
-            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), lastMealDay: meal ? arkDayOf(meal.at, voyageStart) : null})
+            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy})
         };
+    };
+    const energyOf = (subject: ScheduleSubject, epoch: number) => {
+        const offset = slotOffset(subject.id);
+        const slotStartOf = (t: number) => Math.floor((t + offset) / SLOT_SECONDS) * SLOT_SECONDS - offset;
+        return arkEnergy((t) => scheduleAwakeAt(subject.profile, subject.activity, subject.hoursAt(slotStartOf(t))), epoch, SLOT_SECONDS, slotStartOf);
     };
     /** The selected animal's status as last worked out (about once a second), and what was last told. */
     let selectedStatus: ArkAnimalStatus | null = null;

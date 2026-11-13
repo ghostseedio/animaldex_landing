@@ -14,9 +14,10 @@
  * - **Log**: the server's record of this animal (it came aboard or was born, a meal, young, a clutch, a pair bred: only
  *   what the snapshot, its life story or the event log say) and what its schedule had it doing over its last slots.
  *   Newest first. Nothing is made up: an entry is either the server's or the schedule's.
- * - **Bars**: how fed it is (its last recorded meal against the ecology's hunger days) and how far from dying (the
- *   server's condition: hungry, old). Its age against its lifespan only when the data has a lifespan (the public reads
- *   don't send one yet, so that bar is not drawn). No new server data.
+ * - **Bars** (card truth, 2026-11-13): how fed it is over its day and its energy, both from the schedule it already runs
+ *   (its eating and waking slots: visual only, the same for every viewer), the server's hungry over both; how far from
+ *   dying (the server's condition: hungry, old); its age against its lifespan only when the data has a lifespan (the
+ *   public reads don't send one yet, so that bar is not drawn).
  */
 
 import type {ArkCondition} from "@/ark-scene/types";
@@ -30,6 +31,8 @@ export const ARK_ACTIVITIES = [
     "grazing",
     "browsing",
     "hunting",
+    "waiting",
+    "prowling",
     "fishing",
     "drinking",
     "resting",
@@ -145,7 +148,6 @@ const DOING_ACTIVITY: Record<string, ArkActivityKey> = {
     hide: "hiding",
     visit_flowers: "flowers",
     circle_light: "light",
-    stalk: "hunting",
     play: "playing"
 };
 
@@ -167,6 +169,11 @@ export type ArkActivityInput = {
     wary?: boolean;
     /** A bird or another flyer: its "grazing" (a seed-eater's, on the ground) is looking for food. */
     flyer?: boolean;
+    /**
+     * Its slot holds it still where it goes (`SlotPlan.still`: in the water, or up off the ground, where a stay's steps
+     * never move it). A stalk there is a wait.
+     */
+    still?: boolean;
 };
 
 /** The one key for what it is doing: the same input, the same key, for every viewer. */
@@ -178,7 +185,12 @@ export function arkActivityKey(input: ArkActivityInput): ArkActivityKey {
     if (input.wary) return "wary";
     if (input.travelling && input.doing === "drink") return "toWater";
     const byRecipe = input.recipe ? RECIPE_ACTIVITY[input.recipe] : undefined;
-    const key = byRecipe ?? DOING_ACTIVITY[input.doing] ?? "about";
+    // The schedule's stalk (visual only: no prey is chosen and nothing is caught; the server hunts only by encounter):
+    // said as what the body does. Held still where it goes (in the water) it is waiting for prey; on the ground it
+    // creeps along its range on its prey's side, on the prowl; on its way to where it waits, it is on the prowl too.
+    // Never "hunting": that is the server's encounter hunt, a due predator walking its forays (`input.hunting`).
+    const stalk: ArkActivityKey | undefined = input.doing === "stalk" ? (input.still && !input.travelling ? "waiting" : "prowling") : undefined;
+    const key = byRecipe ?? stalk ?? DOING_ACTIVITY[input.doing] ?? "about";
     return input.flyer && (key === "grazing" || key === "browsing") ? "food" : key;
 }
 
@@ -211,8 +223,17 @@ export type ArkStatusLogEntry = {
 
 export type ArkBarTone = "good" | "warn" | "bad";
 /** One bar: how full (0–1, full is good), its colour, and the state it says in words. */
-export type ArkStatusBar = {value: number; tone: ArkBarTone; state: "fed" | "low" | "hungry" | "good" | "old" | "life"};
-export type ArkStatusBars = {fed: ArkStatusBar | null; health: ArkStatusBar | null; age: ArkStatusBar | null};
+export type ArkStatusBar = {
+    value: number;
+    tone: ArkBarTone;
+    state: "fed" | "low" | "eating" | "hungry" | "good" | "old" | "life" | "awake" | "asleep";
+    /** Energy: since when it has been awake (or asleep), epoch seconds on the shared clock. */
+    since?: number;
+};
+export type ArkStatusBarKey = "fed" | "health" | "energy" | "age";
+export type ArkStatusBars = {fed: ArkStatusBar | null; health: ArkStatusBar | null; energy: ArkStatusBar | null; age: ArkStatusBar | null};
+/** The bars in the order they are drawn (over the animal) and said (the card, the apps). */
+export const ARK_STATUS_BAR_KEYS: readonly ArkStatusBarKey[] = ["fed", "health", "energy", "age"];
 
 export type ArkStatusGoal =
     /** What a later slot is for, from when (epoch seconds). */
@@ -330,15 +351,6 @@ export function arkRecordNoteFromLife(id: string, life: {last_meal: {at: string 
 
 // MARK: The bars
 
-/**
- * The ecology's hunger days (AnimalDex `supabase/functions/_shared/ark-ecology/rules.ts` DEFAULT_CONFIG.hungerDays;
- * production overrides only `realm`): a predator is hungry this many Ark days after its last catalogue meal, unless
- * something else feeds it (ambient food in its zone, a host aboard, the launch grace).
- */
-export const ARK_HUNGER_DAYS = 7;
-/** A well-fed animal's bar never shows red: the server says it is fed. At its lowest it is amber, due a meal. */
-const FED_FLOOR = 0.3;
-
 export function arkBarTone(value: number): ArkBarTone {
     return value >= 0.6 ? "good" : value >= 0.3 ? "warn" : "bad";
 }
@@ -348,33 +360,163 @@ export type ArkBarsInput = {
     condition: ArkCondition | null | undefined;
     /** The Ark day now (the snapshot's, moved on by the clock). */
     arkDay: number | null;
-    /** Its last recorded catalogue meal's Ark day, when the record says. */
-    lastMealDay: number | null;
+    /** How fed it is over its day (`arkFed`), when it is on its schedule. */
+    fed?: ArkFed | null;
+    /** Its energy over its day (`arkEnergy`), when it is on its schedule and sleeps. */
+    energy?: ArkEnergy | null;
     /** Its born (or boarded) Ark day and its wild lifespan in days: the age bar only when both are known. */
     bornDay?: number | null;
     lifespanDays?: number | null;
 };
 
 /**
- * - Fed: hungry (the server) is nearly empty and red. Well-fed with a recorded meal goes down from full over the hunger
- *   days to amber ("getting hungry"), and stays amber past them while the server still calls it fed (it is due a
- *   meal). Well-fed with no meal on record (grazers, foragers, anything fed by what grows round it) is full.
+ * - Fed: its daily hunger over the day it is seen living (`arkFed`, from its schedule's own eating and waking), between
+ *   `ARK_FED_FLOOR` and full; hungry (the server: it can starve) is nearly empty and red, whatever its day says. Off the
+ *   schedule (reduced motion, a micro animal, a replay's act), no fed bar. (Not the server's meal clock: that counts the
+ *   rare kills of other Ark animals, scaled rare so populations last, while its everyday food is the unmodelled
+ *   background; it is no animal's hunger. A kill still shows in its log when one lands, and fills it.)
  * - Health, how far from dying: old (at least four fifths of its wild lifespan gone: the read's `old_from_life_fraction`)
- *   is a fifth, red; hungry (it can starve if it finds no food) is amber; otherwise full.
+ *   is a fifth, red; hungry is amber; otherwise full.
+ * - Energy: its day's sleep and wake (`arkEnergy`), when it sleeps.
  * - Age: the life it has left, from its lifespan, when known.
  */
 export function arkStatusBars(input: ArkBarsInput): ArkStatusBars {
     const {condition} = input;
-    if (!condition) return {fed: null, health: null, age: ageBar(input)};
-    let fed: ArkStatusBar;
-    if (condition === "hungry") fed = {value: 0.12, tone: "bad", state: "hungry"};
-    else if (input.lastMealDay !== null && input.arkDay !== null && Number.isFinite(input.lastMealDay) && Number.isFinite(input.arkDay)) {
-        const since = Math.max(input.arkDay - input.lastMealDay, 0);
-        const value = since >= ARK_HUNGER_DAYS ? FED_FLOOR : 1 - (since / ARK_HUNGER_DAYS) * (1 - FED_FLOOR);
-        fed = {value: round(value), tone: arkBarTone(value), state: value < 0.6 ? "low" : "fed"};
-    } else fed = {value: 1, tone: "good", state: "fed"};
+    const energy = energyBar(input.energy ?? null);
+    const day = input.fed && Number.isFinite(input.fed.value) ? input.fed : null;
+    const fed: ArkStatusBar | null = condition === "hungry" ? {value: 0.12, tone: "bad", state: "hungry"} : day ? fedBar(day) : null;
+    if (!condition) return {fed, health: null, energy, age: ageBar(input)};
     const health: ArkStatusBar = condition === "old" ? {value: 0.2, tone: "bad", state: "old"} : condition === "hungry" ? {value: 0.45, tone: "warn", state: "hungry"} : {value: 1, tone: "good", state: "good"};
-    return {fed, health, age: ageBar(input)};
+    return {fed, health, energy, age: ageBar(input)};
+}
+
+function fedBar(fed: ArkFed): ArkStatusBar {
+    const value = Math.min(Math.max(fed.value, ARK_FED_FLOOR), 1);
+    return {value: round(value), tone: arkBarTone(value), state: fed.eating ? "eating" : value < 0.6 ? "low" : "fed"};
+}
+
+// MARK: Fed (its daily hunger)
+
+/** The lowest its daily hunger takes it: amber, "getting hungry", never red and never empty (nothing starves of this). */
+export const ARK_FED_FLOOR = 0.3;
+/** Where the reckoning starts, the oldest of the waking slots it looks back over (it has always met a floor or a meal by now). */
+const FED_START = 0.65;
+
+/** What it eats, as its daily hunger reads it: big rare meals (prey), small rich ones (mixed), or food that is poor and slow (plants). */
+export type ArkFeeder = "prey" | "mixed" | "plants";
+const FEEDER: Record<string, ArkFeeder> = {meat: "prey", fish: "prey", carrion: "prey", blood: "prey", grazer: "plants", browser: "plants", algae: "plants", detritus: "plants", filter: "plants"};
+export function arkFeeder(diet: string | null | undefined): ArkFeeder {
+    return (diet && FEEDER[diet]) || "mixed";
+}
+
+/**
+ * Per feeder at a body length of a metre, how fast it runs down while awake and not eating, per minute of the shared
+ * clock: a plant-eater fastest (poor food), a predator slowest (rich food, rarely).
+ */
+const FED_DRAIN_PER_MINUTE: Record<ArkFeeder, number> = {plants: 0.05, mixed: 0.04, prey: 0.03};
+/** Where its eating and its burning balance, over the waking hours it looks back on: it eats what it burns. */
+const FED_BALANCE = 0.68;
+
+export type ArkFedRates = {drain: number};
+
+/**
+ * Its rate from what it eats (the stored diet) and its size (its body length, m): a smaller body burns through its
+ * food faster, as metabolism goes per unit of mass (Kleiber: mass to the -1/4, length to the -3/4), held to half and
+ * double the metre's rate. `drain`: per second.
+ */
+export function arkFedRates(diet: string | null | undefined, lengthMetres: number | null | undefined): ArkFedRates {
+    const length = typeof lengthMetres === "number" && lengthMetres > 0 ? lengthMetres : 1;
+    const size = Math.min(Math.max(Math.pow(length, -0.75), 0.5), 2);
+    return {drain: (FED_DRAIN_PER_MINUTE[arkFeeder(diet)] * size) / 60};
+}
+
+/** One slot of its schedule as its daily hunger reads it: when, and whether it is awake and eating (its card's activity). */
+export type ArkFedSlot = {start: number; end: number; awake: boolean; eating: boolean};
+export type ArkFed = {value: number; eating: boolean};
+
+/**
+ * How fed it is now, over its schedule's own day (`slots`: contiguous, oldest first, the last holding `epoch`): awake and
+ * not eating, it runs down at its rate to `ARK_FED_FLOOR`; eating (grazing, browsing, foraging, a catch, a zoo's
+ * feeding: whatever its card says is eating), it fills towards full; asleep, it holds. How fast a meal fills it is set
+ * so that over the slots it looks back on it eats what it burns (`FED_BALANCE`: an animal that eats in half its waking
+ * slots fills as fast as it empties, one that rarely eats fills fast when it does), so the bar moves round the middle of
+ * its range with its own run of meals and idle spells, a few percent a minute either way, rather than sitting full. A
+ * meal of the server's (`meals`, epoch seconds: a kill that landed) fills it. Worked from the oldest slot at
+ * `FED_START`: over a couple of waking hours it has always met the floor or a meal, so where it started no longer
+ * shows. A model of the day it is seen living, not a server measure: visual only, a pure function of the shared clock
+ * and its schedule, the same for every viewer. Null with no slots.
+ */
+export function arkFed(slots: readonly ArkFedSlot[], epoch: number, rates: ArkFedRates, meals: readonly number[] = []): ArkFed | null {
+    if (!slots.length || !Number.isFinite(epoch)) return null;
+    let value = FED_START;
+    const awake = slots.filter((slot) => slot.awake);
+    const share = Math.min(Math.max(awake.length ? awake.filter((slot) => slot.eating).length / awake.length : 0, 0.05), 0.95);
+    // (Balance: share * (1 - FED_BALANCE) / fill = (1 - share) * drain.)
+    const fill = Math.max((share * (1 - FED_BALANCE)) / ((1 - share) * Math.max(rates.drain, 1e-6)), 1);
+    const run = (slot: ArkFedSlot, seconds: number) => {
+        if (!slot.awake || seconds <= 0) return;
+        value = slot.eating ? 1 - (1 - value) * Math.exp(-seconds / fill) : Math.max(value - rates.drain * seconds, ARK_FED_FLOOR);
+    };
+    const kills = [...meals].filter((m) => Number.isFinite(m) && m <= epoch).sort((a, b) => a - b);
+    let eating = false;
+    for (const slot of slots) {
+        if (slot.start > epoch) break;
+        eating = slot.awake && slot.eating;
+        let at = slot.start;
+        const to = Math.min(slot.end, epoch);
+        for (const kill of kills) {
+            if (kill < at || kill >= to) continue;
+            run(slot, kill - at);
+            value = 1;
+            at = kill;
+        }
+        run(slot, to - at);
+        if (slot.end > epoch) break;
+    }
+    return {value: round(Math.min(Math.max(value, ARK_FED_FLOOR), 1)), eating};
+}
+
+// MARK: Energy
+
+/** Its energy at the end of its waking hours, at the lowest: amber, tired, never red (tired is not dying). */
+export const ARK_ENERGY_FLOOR = 0.3;
+
+export type ArkEnergy = {value: number; awake: boolean; since: number};
+
+/**
+ * Its energy over its day, from its schedule's own sleep and wake (`awake`: is it awake at a moment, epoch seconds,
+ * sampled every `step` seconds back from `epoch`; the scene's reads its slot's start, as the schedule does). Awake, it
+ * runs down evenly, at the rate that takes its day's waking hours from full to `ARK_ENERGY_FLOOR`; asleep, it fills at
+ * the rate its day's sleeping hours take to fill it, never past full. One waking spell a day ends at the floor; two (a
+ * crepuscular animal's dawn and dusk) each take it half way, the sleep between filling it again. Worked over the two
+ * days to now from full. `since`: when its present run of waking (or sleep) began, from `snap` (its slot's start) when
+ * given. A model of the day it is seen living, not a server measure: visual only, a pure function of the shared clock
+ * and its schedule, the same for every viewer. Null for one that never sleeps in a day (or is never awake).
+ */
+export function arkEnergy(awake: (epochSeconds: number) => boolean, epoch: number, step = 80, snap?: (epochSeconds: number) => number): ArkEnergy | null {
+    if (!Number.isFinite(epoch) || !(step > 0)) return null;
+    const perDay = Math.round(86_400 / step);
+    const states: boolean[] = [];
+    // Oldest first: the step starting at epoch - k * step, for k = 2 days … 1.
+    for (let k = 2 * perDay; k >= 1; k--) states.push(awake(epoch - k * step));
+    let up = 0;
+    for (let i = states.length - perDay; i < states.length; i++) if (states[i]) up++;
+    const down = perDay - up;
+    if (!up || !down) return null;
+    const drain = (1 - ARK_ENERGY_FLOOR) / up;
+    const fill = (1 - ARK_ENERGY_FLOOR) / down;
+    let value = 1;
+    for (const on of states) value = on ? Math.max(value - drain, ARK_ENERGY_FLOOR) : Math.min(value + fill, 1);
+    const now = awake(epoch);
+    let first = epoch;
+    for (let i = states.length - 1; i >= 0 && states[i] === now; i--) first = epoch - (states.length - i) * step;
+    return {value: round(value), awake: now, since: snap ? snap(first) : first};
+}
+
+function energyBar(energy: ArkEnergy | null): ArkStatusBar | null {
+    if (!energy || !Number.isFinite(energy.value)) return null;
+    const value = Math.min(Math.max(energy.value, ARK_ENERGY_FLOOR), 1);
+    return {value: round(value), tone: arkBarTone(value), state: energy.awake ? "awake" : "asleep", since: energy.since};
 }
 
 function ageBar(input: ArkBarsInput): ArkStatusBar | null {
@@ -432,6 +574,10 @@ export type ArkCardWords = {
     fedLow: string;
     healthGood: string;
     lifeLeft: string;
+    /** The energy bar (card truth, 2026-11-13), and what it says: awake (or asleep) since a time on the island's clock. */
+    energy: string;
+    awakeSince: string;
+    asleepSince: string;
 };
 
 /** English, as `en.json` has it: the embed's fallback until (or unless) its words read. */
@@ -440,6 +586,8 @@ export const ARK_ACTIVITY_ENGLISH: ArkActivityWords = {
     grazing: "grazing",
     browsing: "browsing on leaves",
     hunting: "hunting",
+    waiting: "waiting for prey",
+    prowling: "on the prowl",
     fishing: "fishing",
     drinking: "drinking",
     resting: "resting",
@@ -503,7 +651,10 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     age: "Life left",
     fedLow: "Getting hungry",
     healthGood: "In good health",
-    lifeLeft: "{percent} of its life left"
+    lifeLeft: "{percent} of its life left",
+    energy: "Energy",
+    awakeSince: "Awake since {time}",
+    asleepSince: "Asleep since {time}"
 };
 
 /** The words a status needs: the activities, the card's, and the life story's and the story's few it borrows. */
@@ -541,7 +692,7 @@ export type ArkStatusText = {
     now: string | null;
     next: string | null;
     log: Array<{id: string; source: "record" | "schedule"; stamp: string; text: string}>;
-    bars: Array<{key: "fed" | "health" | "age"; label: string; value: number; tone: ArkBarTone; text: string}>;
+    bars: Array<{key: ArkStatusBarKey; label: string; value: number; tone: ArkBarTone; text: string}>;
 };
 
 /** A status as the reader reads it (the card on /ark; the embed sends it with `ark:status` for the apps' cards). */
@@ -582,9 +733,11 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
         return {id: entry.id, source: entry.source, stamp: day(entry), text};
     });
     const bars: ArkStatusText["bars"] = [];
-    const {fed, health, age} = status.bars;
-    if (fed) bars.push({key: "fed", label: words.card.fed, value: fed.value, tone: fed.tone, text: fed.state === "hungry" ? words.life.hungry : fed.state === "low" ? words.card.fedLow : words.life.well_fed});
+    const {fed, health, energy, age} = status.bars;
+    const card = (key: "energy" | "awakeSince" | "asleepSince") => words.card[key] || ARK_CARD_ENGLISH[key];
+    if (fed) bars.push({key: "fed", label: words.card.fed, value: fed.value, tone: fed.tone, text: fed.state === "hungry" ? words.life.hungry : fed.value < 0.6 ? words.card.fedLow : words.life.well_fed});
     if (health) bars.push({key: "health", label: words.card.health, value: health.value, tone: health.tone, text: health.state === "old" ? words.life.old : health.state === "hungry" ? words.life.hungry : words.card.healthGood});
+    if (energy) bars.push({key: "energy", label: card("energy"), value: energy.value, tone: energy.tone, text: fillArkWords(card(energy.state === "asleep" ? "asleepSince" : "awakeSince"), {time: arkIslandTime(energy.since ?? 0, locale)})});
     if (age) bars.push({key: "age", label: words.card.age, value: age.value, tone: age.tone, text: fillArkWords(words.card.lifeLeft, {percent: `${Math.round(age.value * 100).toLocaleString(locale)}%`})});
     return {now, next, log: log.filter((line) => line.text), bars};
 }
@@ -593,7 +746,11 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
 export function arkStatusSignature(status: ArkAnimalStatus | null): string {
     if (!status) return "";
     const goal = status.goal ? `${status.goal.kind}:${status.goal.kind === "next" ? status.goal.activity : ""}:${Math.round(status.goal.at / 60)}` : "";
-    const bars = (["fed", "health", "age"] as const).map((key) => status.bars[key]?.value ?? "-").join(",");
+    const bars = ARK_STATUS_BAR_KEYS.map((key) => {
+        const bar = status.bars[key];
+        // (The day's bars to a hundredth: they move a little every second, the card and the bars need not.)
+        return bar ? `${key === "energy" || key === "fed" ? bar.value.toFixed(2) : bar.value}${bar.state === "eating" ? "+" : ""}${bar.since !== undefined ? `@${Math.round(bar.since / 60)}` : ""}` : "-";
+    }).join(",");
     return `${status.id}|${status.activity}|${goal}|${bars}|${status.log.map((entry) => entry.id).join(",")}`;
 }
 

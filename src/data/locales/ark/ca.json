@@ -316,13 +316,18 @@
             "age": "Vida restant",
             "fedLow": "Comença a tenir gana",
             "healthGood": "Amb bona salut",
-            "lifeLeft": "Li queda el {percent} de la vida"
+            "lifeLeft": "Li queda el {percent} de la vida",
+            "energy": "Energia",
+            "awakeSince": "Despert des de les {time}",
+            "asleepSince": "Adormit des de les {time}"
         },
         "activity": {
             "food": "busca menjar",
             "grazing": "pastura",
             "browsing": "menja fulles",
             "hunting": "caça",
+            "waiting": "està a l'aguait d'una presa",
+            "prowling": "ronda buscant preses",
             "fishing": "pesca",
             "drinking": "beu",
             "resting": "descansa",

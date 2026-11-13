@@ -316,13 +316,18 @@
             "age": "Остаток жизни",
             "fedLow": "Начинает голодать",
             "healthGood": "Здоровье в порядке",
-            "lifeLeft": "Осталось {percent} жизни"
+            "lifeLeft": "Осталось {percent} жизни",
+            "energy": "Энергия",
+            "awakeSince": "Бодрствует с {time}",
+            "asleepSince": "Спит с {time}"
         },
         "activity": {
             "food": "ищет еду",
             "grazing": "пасётся",
             "browsing": "объедает листья",
             "hunting": "охотится",
+            "waiting": "подстерегает добычу",
+            "prowling": "рыщет в поисках добычи",
             "fishing": "ловит рыбу",
             "drinking": "пьёт",
             "resting": "отдыхает",

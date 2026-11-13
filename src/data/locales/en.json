@@ -4458,13 +4458,18 @@
       "age": "Life left",
       "fedLow": "Getting hungry",
       "healthGood": "In good health",
-      "lifeLeft": "{percent} of its life left"
+      "lifeLeft": "{percent} of its life left",
+      "energy": "Energy",
+      "awakeSince": "Awake since {time}",
+      "asleepSince": "Asleep since {time}"
     },
     "activity": {
       "food": "looking for food",
       "grazing": "grazing",
       "browsing": "browsing on leaves",
       "hunting": "hunting",
+      "waiting": "waiting for prey",
+      "prowling": "on the prowl",
       "fishing": "fishing",
       "drinking": "drinking",
       "resting": "resting",

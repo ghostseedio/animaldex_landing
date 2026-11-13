@@ -316,13 +316,18 @@
             "age": "Livslängd",
             "fedLow": "Börjar bli hungrig",
             "healthGood": "Vid god hälsa",
-            "lifeLeft": "{percent} av livet kvar"
+            "lifeLeft": "{percent} av livet kvar",
+            "energy": "Energi",
+            "awakeSince": "Vaken sedan {time}",
+            "asleepSince": "Sover sedan {time}"
         },
         "activity": {
             "food": "letar efter föda",
             "grazing": "betar",
             "browsing": "äter löv",
             "hunting": "jagar",
+            "waiting": "lurar på byte",
+            "prowling": "smyger omkring",
             "fishing": "fiskar",
             "drinking": "dricker",
             "resting": "vilar",
