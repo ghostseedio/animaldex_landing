@@ -199,7 +199,7 @@ import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
-import {prepareGhostPlaces} from "@/ark-scene/runtime/prebuild";
+import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuild";
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
@@ -6251,7 +6251,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         readPlacing = true;
-        void prepareGhostPlaces(wild).then(() => {
+        void prepareReadPlaces(wild).then(() => {
             readPlacing = false;
             if (disposed) return;
             // (A newer read came meanwhile: that one, placed in turn.)

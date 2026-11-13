@@ -152,3 +152,57 @@ export async function prepareGhostPlaces(animals: ArkAnimal[], placesWorkerUrl =
     primePlacesFor(animals, new Map(answer.data.places));
     return true;
 }
+
+/** The places worker kept for a page's new reads (its map's sampler built once), and when it is let go. */
+let readWorker: {url: string; worker: Worker; idle: ReturnType<typeof setTimeout> | null} | null = null;
+/** A kept worker idle this long (ms) is let go (its heap: the map's sampler and the species data). */
+const READ_WORKER_KEEP_MS = 60_000;
+
+/**
+ * A new read's animals (mobile performance lane: the scene's `update` when the wild animals changed) placed in a places
+ * worker and handed to `placeAnimals` for that very list (same ids, same order), as `prepareGhostPlaces` does for a
+ * replay. The worker is kept a minute after its answer, so reads close together (an arrival, then the next) skip
+ * building its sampler again; it skips the zone capacities (the mount's). Resolves false on any failure (the scene then
+ * places them itself, as before).
+ */
+export async function prepareReadPlaces(animals: ArkAnimal[], placesWorkerUrl = "/ark/ark-prebuild-places-worker.js"): Promise<boolean> {
+    if (typeof Worker === "undefined" || !animals.length) return false;
+    const url = forWorld(placesWorkerUrl);
+    if (readWorker && readWorker.url !== url) {
+        readWorker.worker.terminate();
+        readWorker = null;
+    }
+    if (!readWorker) {
+        try {
+            readWorker = {url, worker: new Worker(url), idle: null};
+        } catch {
+            return false;
+        }
+    }
+    const kept = readWorker;
+    if (kept.idle) clearTimeout(kept.idle);
+    kept.idle = null;
+    const answer = await new Promise<{places: Array<[string, Placement]>} | null>((resolve) => {
+        const timer = setTimeout(() => resolve(null), 60_000);
+        kept.worker.onmessage = (event: MessageEvent<{places: Array<[string, Placement]>}>) => {
+            clearTimeout(timer);
+            resolve(event.data);
+        };
+        kept.worker.onerror = () => {
+            clearTimeout(timer);
+            resolve(null);
+        };
+        kept.worker.postMessage({animals, noHamlet: noHamlet(), placesOnly: true});
+    });
+    if (!answer) {
+        kept.worker.terminate();
+        if (readWorker === kept) readWorker = null;
+        return false;
+    }
+    kept.idle = setTimeout(() => {
+        kept.worker.terminate();
+        if (readWorker === kept) readWorker = null;
+    }, READ_WORKER_KEEP_MS);
+    primePlacesFor(animals, new Map(answer.places));
+    return true;
+}
