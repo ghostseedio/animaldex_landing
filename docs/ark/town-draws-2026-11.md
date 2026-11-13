@@ -67,11 +67,81 @@ the cars' models (`vehicles.bin`, 0.3 MB), read at once with the town's build, b
 
 ## 3. Before and after
 
-MEASUREMENTS
+Every pair ran back to back, the base (`ark-perf-mobile` 87ddc3e9) then the branch, on the production embed with the real
+Ark read in place (`scripts/ark-runtime-measure.mjs --page embed --population-file <real snapshot> --production --perf
+--interact`), steady play from 60–70 s after the first frame. *Views*: the default (the wild island, the town across the
+strait), the town's own view (`--view town`), and a close-up of one of its animals (`--view town-close --select`, a house
+cat, from 10 s after the town joined). The Mac ran other agents' work throughout (load average 5–925): the intervals and
+fps swing with it, and the pacing's 30 fps lock caught a few of the loaded runs (repeated when the load dropped); read the
+frame work, the render section and the calls first. *Calls* count every pass (`renderer.info`); with `WEBGL_multi_draw` a
+batch is one.
+
+**The town's own draws** (§1's count, the dev embed, low tier): default view 319 objects + 45 empty sets → **77**; the
+town's view 201 + 45 → ~75. All calls a frame: 445 → 203 (default view).
+
+| Profile | Build | Tier at end | fps | Interval p50 / p95 / p99 ms | > 33 ms | Frame work p50 / p95 ms | Calls (all passes) | Triangles | Render ms | KB before 1st frame |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Low phone 6×, default view (run 1, load 85–460) | base | low | 51.7 | 16.7 / 33.4 / 33.4 | 0.1% | 15.2 / 19 | 433 | 1.08 M | 11.66 | 21,453 |
+|  | after | low | 58.4 | 16.7 / 16.8 / 33.3 | 0.2% | 11.5 / 14.9 | 206 | 1.08 M | 8.32 | 14,777 |
+| Low phone 6×, default view (run 2, load ~5) | base | low | 59.7 | 16.7 / 16.7 / 16.8 | 0.1% | 10.6 / 14.1 | 423 | 1.06 M | 8.18 | 18,804 |
+|  | after | low | 59.9 | 16.7 / 16.7 / 16.8 | 0% | 7.5 / 10.8 | 196 | 1.01 M | 5.53 | 14,477 |
+| Phone 4×, low tier pinned, default view | base | low | 42.8 | 16.7 / 33.4 / 33.4 | 0% | 13.5 / 16.1 | 446 | 1.10 M | 10.33 | 18,768 |
+|  | after | low | 60 | 16.7 / 16.8 / 16.8 | 0% | 7.6 / 9.8 | 196 | 1.09 M | 5.35 | 16,025 |
+| Phone 4×, medium tier pinned, default view | base | medium | 59.7 | 16.7 / 16.8 / 16.8 | 0.1% | 15 / 17.8 | 485 | 1.22 M | 11.18 | 21,537 |
+|  | after | medium | 51.3 | 16.7 / 33.4 / 33.4 | 0.4% | 10.9 / 14 | 300 | 1.31 M | 7.41 | 14,396 |
+| Phone 4×, auto tier, default view (run 1) | base | low | 60 | 16.7 / 16.7 / 16.8 | 0% | 10.2 / 12.7 | 430 | 1.07 M | 7.73 | 18,767 |
+|  | after | medium | 43.9 | 16.7 / 33.4 / 50 | 1.5% | 12.9 / 19 | 213 | 1.10 M | 8.66 | 14,396 |
+| Phone 4×, auto tier, default view (run 2) | base | low | 60 | 16.7 / 16.7 / 16.8 | 0% | 8.3 / 11.8 | 435 | 1.08 M | 6.32 | 18,784 |
+|  | after | medium | 60 | 16.7 / 16.7 / 16.8 | 0% | 8 / 10.7 | 215 | 1.09 M | 5.4 | 14,396 |
+| Low phone 6×, town view (run 1, load to 420) | base | low | 58.9 | 16.7 / 16.8 / 33.3 | 0% | 11.8 / 15.4 | 244 | 0.53 M | 8.71 | 18,768 |
+|  | after | low | 47.9 | 16.7 / 33.4 / 33.4 | 0.2% | 10.4 / 16.7 | 116 | 0.76 M | 7.45 | 14,530 |
+| Low phone 6×, town view (run 2) | base | low | 59.8 | 16.7 / 16.8 / 16.8 | 0% | 10.7 / 13.9 | 240 | 0.53 M | 7.8 | 18,768 |
+|  | after | low | 59.9 | 16.7 / 16.7 / 16.8 | 0% | 9.3 / 12.7 | 116 | 0.77 M | 6.24 | 17,058 |
+| Phone 4×, low pinned, town view | base | low | 60 | 16.7 / 16.8 / 16.8 | 0% | 8.9 / 10.4 | 327 | 0.76 M | 6.66 | 18,767 |
+|  | after | low | 60 | 16.7 / 16.7 / 16.8 | 0% | 6.9 / 8.8 | 116 | 0.76 M | 4.58 | 15,701 |
+| Phone 4×, medium pinned, town view | base | medium | 56.7 | 16.7 / 33.3 / 33.4 | 0% | 11.8 / 14.3 | 335 | 0.76 M | 8.56 | 18,768 |
+|  | after | medium | 59.4 | 16.7 / 16.8 / 16.8 | 0.1% | 8.4 / 11.1 | 124 | 0.76 M | 5.42 | 14,396 |
+| Phone 4×, auto, town view | base | medium | 60 | 16.7 / 16.7 / 16.8 | 0% | 11.2 / 15.2 | 423 | 1.02 M | 7.86 | 18,768 |
+|  | after | medium | 60 | 16.7 / 16.7 / 16.8 | 0% | 6.6 / 9.2 | 147 | 1.02 M | 4.23 | 14,396 |
+| Low phone 6×, town close-up (run 1, loaded Mac) | base | low | 34.3 | 33.3 / 33.4 / 49.9 | 1.1% | 16.9 / 21 | 293 | 0.86 M | 9.6 | 18,805 |
+|  | after | low | 30.4 | 33.3 / 33.4 / 50 | 1.8% | 19.9 / 26.7 | 228 | 0.86 M | 10.09 | 14,510 |
+| Low phone 6×, town close-up (run 2, load ~5) | base | low | 47.3 | 16.7 / 33.4 / 33.4 | 0.3% | 15.6 / 19.4 | 296 | 0.86 M | 9 | 19,182 |
+|  | after | low | 55.8 | 16.7 / 33.3 / 33.4 | 0.1% | 12.9 / 16.6 | 226 | 0.86 M | 7.15 | 14,396 |
+| Phone 4×, auto, town close-up | base | low | 55.6 | 16.7 / 33.3 / 33.4 | 0.6% | 11.3 / 14 | 292 | 0.86 M | 6.45 | 18,768 |
+|  | after | low | 59.3 | 16.7 / 16.8 / 33.3 | 0% | 10 / 12.6 | 227 | 0.86 M | 5.36 | 14,396 |
+
+| Low phone 6×, forced collections | Build | Heap after GC, first frame MB | Heap after GC, steady play (120 s) MB |
+|---|---|---|---|
+| Default view | base | 300.5 | 280.3 |
+|  | after | 267.5 | 275.9 |
+| Town view | base | 301.6 | 283.1 |
+|  | after | 267.7 | 282.7 |
+
+- *The phone on the auto tier* ends on the medium tier after the change, the low tier before: with the town's draws gone the
+  pacing keeps the medium tier (its scenery and shadows) at 60 fps with less frame work than the base's low tier (run 2:
+  8.0 / 10.7 ms against 8.3 / 11.8). Run 1 caught a loaded minute (44 fps, the medium tier's work 12.9 / 19 ms).
+- *The town view on the low phone* draws more triangles after (0.76 M against 0.53 M): the base's streamer pulled its
+  render distance in under memory pressure (render scale 0.61–0.72: about 20 of the town's chunks not drawn), the branch's
+  lower heap (below) leaves the whole town drawn. Still less render time and frame work.
+- *Bytes before the first frame*: 4.4–6.7 MB fewer (the town's tree levels and the cars' models no longer read at the
+  start; the wild island reads its own copies of the species it shares).
+- *The join*: the worst task after the first frame is unchanged (0.9–1.8 s both, the behaviour world's build).
 
 ## 4. Gates
 
-GATES
+| Gate | Result |
+|---|---|
+| Types (`npx tsc --noEmit -p tsconfig.json`) | clean |
+| Lint (`npm run lint`) | exit 0 (only the known `<img>` warnings, none in the changed files) |
+| Unit and integration (`npx tsx --test 'src/lib/**/*.test.ts'`) | 2,640 tests: 2,638 pass, 0 fail, 2 skipped. The lane's own, `src/lib/ark-town-draws.test.ts` (7): one batch per band and layer with every chunk's geometry once (the same triangles per layer as the build data, each chunk's own bounds, 16-bit ground indices, no slack); the walk surfaces' triangles as before, in order; streaming hides instances and the join lets one batch in a step; every band's lit window array equal to the chunks' own at night; the batch material's identity transform with the material's patches and key; empty car sets not drawn and the models read only near; the trees' farthest level only, the nearer ones within reach |
+| The town suites (`ark-town-*`, `ark-islands`, `ark-collide-town`, `ark-perf-mobile`) | all pass (included above) |
+| Collision audit, three modes (CI's commands: islands v2, islands v1, today's) | base and branch **identical** (every report the same but `wallSeconds` and `workerMs`); all three checks pass |
+| Motion: the default view ×2 (`ark-rig-scenes.mjs --island --seconds 60`) | base pace ratio median 0.93 / 0.97, over 1 s backwards 0 / 0; branch 0.93 / 0.95, 0 / 0 (that page is the wild island alone: none of this lane's code runs there); the motion-metrics hook green on GitHub |
+| Visual CI on GitHub (accept run 43496333697 on f5dfc30a, the code as at the head) | GOLDEN; **the town's set (hooks job, SwiftShader): island_far, old_town, zoo, homes_night all pass at 0% changed** (mean 0.54–0.78) |
+| The town's visual shots here (Mac SwiftShader, base against branch) | island_far, old_town, zoo the same as the base's own pictures, homes_night 0.08% (the near detail's trim now drawn over its walls, lit windows the same) |
+| Town stills (the town page, metal), base against branch | low tier on the phone: all 9 (day: island_far, old_town, zoo, high_street, homes; night: homes_night, town_night, street_shops_night, square_night) **pixel-identical**; high tier on the desktop: ≤ 0.05% changed, inside the base's own run-to-run spread (0.02–0.75%: the near detail is built a few buildings a frame, the finish's grain). Close-ups (street_level, pavement_close, street_night, park, canal_bridge) and the zoo's (zoo_aviary, aviary_close, zoo_savanna, zoo_penguins, zoo_enclosure) on the low tier pixel-identical |
+| Heap (low phone, `--gc-points`, post-GC ≤ 384 MB, not above the base) | default view 267.5 / 275.9 MB (base 300.5 / 280.3); town view 267.7 / 282.7 MB (base 301.6 / 283.1) |
+| Rendering only | the audits identical; the walk surfaces' triangles identical (test); streaming, near detail and window lighting per chunk (tests and stills) |
 
 ## 5. Left for later
 
