@@ -246,3 +246,44 @@ peak 257.8–282.1 MB against the 384 MB budget; 52 / 57.4 fps (a loaded Mac).
 
 Deploy checks after the deploy: on /ark (v2), no animal inside a boulder where it basks (the komodo); no teal duplicate
 beside a bird on the lake on a high-tier device; tapping an animal in the list flies the camera to it.
+
+## Web deploy: decision 287's round (MA1's flight physics 2, the audit's check step, MA2's v3 rigs)
+
+Branch `ark-round-287`, from landing main 486cb701 (live). Rollback: redeploy **486cb701**. The rig set moves v2 → v3
+(`ARK_RIG_VERSION = "v3"`, decision 289: `ark-rig/v3` uploaded, 2,034 rig files, manifest version 3, flight on); the
+undo for the rigs alone is a build with `ARK_RIG_VERSION = "v2"` (the v2 set stays in the bucket).
+
+| # | Lane | Branch head | `ark-round-287` head | Notes |
+|---|---|---|---|---|
+| 65 | MA1: flight physics 2 (birds back in the air at their true speed; the hawkers counted apart) | `ark-flight-physics-2` 254c1ef9 | 744d5ece | thresholds: MA1's split kept (circling ≤ 1 and turns ≤ 0.85 on all but the `aerial_hawk` hawkers, the hawkers' own ≤ 40% / ≤ 8.5), main's never-move 840 kept with its reason, main's all-flyers circling 2.8 dropped (the split replaces it); MA1's collision limits (+0.06% / +0.44% / +0.30% overlaps) with its why |
+| — | The audit's "Against the thresholds" step fails when a check is worse (`set -o pipefail` before `\| tee`) | — | 352cf903 | under `bash -e` the step took tee's exit: a worse never-move (828 against 800) exited 0 before, 1 after; green on the real run 43337721948 |
+| 66 | MA2: the v3 rigs (the birds re-rigged, rig code v7) | `ark-rigs-v3` a0906006 | 4474ab0f | clean |
+
+Gates on 352cf903: suite 2,518/2,520, 0 fail (the quoted glob); tsc 0; lint 0; motion all pass (43 numbers); default
+view ×2 pace 1.02 / 1.05, backwards 0.7% / 0.1% (none over 1 s), no page errors.
+
+Behaviour audit (run 43337721948 on 352cf903; models off, so the rigs do not change it): flyers 682 (≥ 580); all but
+the hawkers circling 0% (≤ 1), turns 0.67 a minute (≤ 0.85); the hawkers 36% (≤ 40), 7.77 (≤ 8.5); never move 832
+(≤ 840); amphibians 419 (≥ 375); snapped 0; heads 99.7%; predators within 5 m 129; near the camera prey react 96.2% /
+flee 68%; encounters react 62.1%, close flee 58.9%, median 0.1 s. All 25 pass, and the step is green.
+
+Collisions (run 43337725661 on 352cf903, models off), green at the merged limits with no re-baseline: islands v2
+0 / 0 / 0 / 1,030,332; islands v1 0 / 0 / 208 / 3,159,352; today's mode 0 / 0 / 217 / 2,956,755.
+
+Visual (accept run 43337730880 on 352cf903): all 19 golden shots within the limits against main's baselines (at most
+0.31%, the river pond; more birds in the air), looked at, no page errors; the baselines stay.
+
+On 4474ab0f (the v3 rigs): suite 2,518/2,520, 0 fail; tsc 0; lint 0; motion all pass. Default view ×2 pace 0.89 /
+1.07, backwards 1.8% (an alligator 1.3 s) / 1.4%, no page errors. Every `/ark-rig/` request logged: the page reads
+`ark-rig/v3/manifest.json` and takes every rig file from v3 (11 a run, all 200); the v1 manifest is read only as the
+fallback list (as on v2), and no v1 rig file is fetched. The flight scene's mallard plays idle → takeoff → flap → glide
+→ land → walk → graze on its v3 rig, no page errors.
+
+Production heap: see "The heap gate measured v1" below; the `ark-next` fast-forward waits for it.
+
+### The heap gate measured v1 (decision 287)
+
+The measure page (`src/ark-scene/runtime/measure-entry.ts`) mounts `mountArk` directly, not through
+`mountArchipelago`, so `--islands` alone never switched to the v2 wild island (only `?world=v2` does): every
+heap gate since the v2 release measured the v1 island with the town (about 150 models, 10–25 chunks), not what is
+live (v2 and the prebuild: about 80 models). The integrator's gate now runs `--islands --world v2 --prebuild`, 90 s.
