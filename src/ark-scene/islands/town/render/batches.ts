@@ -78,6 +78,18 @@ export function sidedCopy<T extends Material>(material: T, side: typeof BackSide
     return copy;
 }
 
+/**
+ * A copy of `material` for plain meshes (the same patches and program key, so the same program), made when called:
+ * three draws opaque materials in the order they were made. The near detail's, made right after the solids' batch
+ * material, so its trim is drawn after the walls it lies on (and before the glass and panes, as when they shared one).
+ */
+export function plainCopy<T extends Material>(material: T): T {
+    const copy = material.clone() as T;
+    copy.onBeforeCompile = material.onBeforeCompile;
+    copy.customProgramCacheKey = material.customProgramCacheKey;
+    return copy;
+}
+
 /** Lets a material's batch copy go (the town's dispose). */
 export function disposeBatchedVariant(material: Material) {
     const found = variants.get(material);

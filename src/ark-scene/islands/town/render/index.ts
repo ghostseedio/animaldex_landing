@@ -27,7 +27,7 @@ import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene
 import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/nature";
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
-import {batchedVariant, disposeBatchedVariant, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
+import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -382,9 +382,14 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         {name: "panes", material: paneMat, castShadow: false, receiveShadow: true}
     ];
     // (Their batch materials made now, in the materials' own order: three draws opaque materials in the order they were
-    // made. The near detail keeps the solid material itself, so it is drawn before the walls' batch: measured closest to
-    // before, when the two were sorted by depth, on the town's visual shots.)
-    for (const layer of layers) batchedVariant(layer.material);
+    // made. The near detail's own copy of the solid material right after the walls' batch: its trim (a shop's striped
+    // awning, a sill) is drawn after the walls it lies on, as the near detail is meant; before, sorted by depth with its
+    // chunk's walls, it lost to them in some views. Still before the glass and the panes, as when they shared one.)
+    let detailMaterial: Material = materials.solid;
+    for (const layer of layers) {
+        batchedVariant(layer.material);
+        if (layer.name === "solid") detailMaterial = plainCopy(materials.solid);
+    }
     const batchRoot = new Group();
     batchRoot.name = "town:chunk-batches";
     // (The join's reveal leaves it to the town: its batches are let in one at a time, `setRevealed`.)
@@ -492,7 +497,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
 
     let drawn: ((chunk: number) => boolean) | null = null;
     // The buildings' near detail, by chunk round the camera (lane GB).
-    const detail = new BuildingDetail(plan, materials.solid, (key) => chunks[key]?.group ?? null, spans, tier);
+    const detail = new BuildingDetail(plan, detailMaterial, (key) => chunks[key]?.group ?? null, spans, tier);
     yield;
     // Water: the sea round the island and in the harbour, the fresh water.
     const depth = seaDepthMap(grid.heights, grid.size);
@@ -869,6 +874,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             for (const m of [...Object.values(materials), paneMat, netSides.back, netSides.front]) disposeBatchedVariant(m);
             netSides.back.dispose();
             netSides.front.dispose();
+            detailMaterial.dispose();
             Object.values(materials).forEach((m) => m.dispose());
             depth.dispose();
             water.dispose();

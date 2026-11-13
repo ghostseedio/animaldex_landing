@@ -92,9 +92,12 @@ declare global {
             shots: Shot[];
             mountMs: number;
             view: (eye: [number, number, number], target: [number, number, number], hours: number, day?: number, fov?: number) => void;
-            /** Resolves once the shot is drawn with every level its view asked for (the trees' nearer levels are read on demand). */
+            /**
+             * Draws the shot, then resolves once the trees' nearer levels its view asked for are in (read on demand); the
+             * next frame draws them. No extra frames: the near detail is built a few buildings a frame.
+             */
             shot: (id: string, day?: number) => Promise<void>;
-            /** Draws, waits for the levels the view asked for, draws again. */
+            /** Resolves once the levels the view drawn last asked for are in (the next frame draws them). */
             settle: () => Promise<void>;
             render: (frames?: number) => void;
             stats: () => unknown;
@@ -215,12 +218,6 @@ export function mountTown(el: HTMLElement) {
     };
 
     const list = shots();
-    /** Draws, then waits until the trees' levels this view asked for are in, and draws again (their levels re-sorted). */
-    const settle = async () => {
-        frame();
-        await town.assetsSettled();
-        frame();
-    };
     window.__arkTown = {
         // (Ready once the asset library's trees, shrubs and reeds (lane GC) and the cars' models (lane GB) are in: a shot
         // never races them.)
@@ -243,9 +240,9 @@ export function mountTown(el: HTMLElement) {
             ARK_ENV.rain.value = s.rain ?? Number(params.get("rain") ?? 0);
             view(s.eye, s.target, s.hours, day ?? s.day ?? clock.day, s.fov);
             frame();
-            await settle();
+            await town.assetsSettled();
         },
-        settle: () => settle(),
+        settle: () => town.assetsSettled(),
         render: (frames = 1) => {
             for (let i = 0; i < frames; i++) frame();
         },

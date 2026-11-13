@@ -129,6 +129,7 @@ if (command === "stills") {
                 window.__arkTown!.view(s.eye, s.target, hours, s.day, s.fov);
                 await window.__arkTown!.settle();
             }
+            // (Three frames, as before: the first re-sorts the trees for the levels just read.)
             window.__arkTown!.render(3);
         }, {shot: id, hours});
         const png = await page.screenshot({type: "png"});
