@@ -425,7 +425,7 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const pools = found.list.filter((point) => point.tag === "tide_pool");
             if (pools.length) {
                 const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), pools.length);
-                const point = pools[index];
+                const point = found.moved?.get(pools[index]) ?? pools[index];
                 tracer()?.attach(pools, found.own);
                 tracer()?.route("attach");
                 return {
@@ -492,6 +492,9 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
                 point = spread.point;
                 memberRank = spread.memberRank;
             }
+            // (A point a terrain fix took from the list since the homes were pinned, decision 303: its home moves to the
+            // nearest free point, `points.ts` attachOf.)
+            point = found.moved?.get(point) ?? point;
             const roost = roostOf(species, all, point.x, point.z, trueLength, key, ownHash, point);
             if (digger && (point.tag === "burrow_entrance" || point.tag === "worm_hole")) {
                 // A small burrower: its burrow's entrance is the point, its tunnel and chamber in the soil or sand below; it comes up to it.
@@ -530,7 +533,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
         const found = all.limbsFor(hang ? "canopy_hang" : "limb", trueLength, mass, zone);
         if (found.list.length) {
             const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), found.list.length);
-            const point = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            const listed = rank > 0 ? spreadMembers(found.list, found.list[index], rank, trueLength, false).point : found.list[index];
+            const point = found.moved?.get(listed) ?? listed;
             tracer()?.attach(found.list, found.own);
             tracer()?.route("attach");
             const n = point.normal;
@@ -553,7 +557,8 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
             const list = found.list.filter((point) => (point.tag === "branch" || point.tag === "bark") && attachFits(point, trueLength));
             if (!list.length) continue;
             const {index, level} = pointIndex(found.own ? slot : borrowedKey(zone, slot), list.length);
-            const point = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            const listed = rank > 0 ? spreadMembers(list, list[index], rank, trueLength, false).point : list[index];
+            const point = found.moved?.get(listed) ?? listed;
             tracer()?.attach(list, found.own);
             tracer()?.route("attach");
             const n = point.normal;

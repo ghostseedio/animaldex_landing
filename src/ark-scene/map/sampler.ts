@@ -100,7 +100,32 @@ export interface ArkMapSampler {
     walkable?(x: number, z: number, maxSlope: number): boolean;
     anchors(): readonly MapAnchor[];
     attachPoints(): readonly AttachPoint[];
+    /**
+     * Optional: what terrain fixes changed since the homes were pinned (decision 303, append-only scenery,
+     * `islands/wild/ledger.ts`). The lists the homes are hashed onto (`points.ts`) are made as they were, so a fix
+     * moves only the homes it touches.
+     */
+    ledger?(): MapLedger;
 }
+
+/** A grid cell as the map's lists take it (`points.ts`). */
+export type LedgerCell = {zone: ArkZone; tags: readonly MapTag[]; wet: boolean};
+
+/**
+ * What terrain fixes changed on a sampler since the homes were pinned: the lists keep every point and cell that was
+ * (one a fix took away a tombstone in its place, a home on it moved to the nearest good one) and leave out the ones
+ * a fix added.
+ */
+export type MapLedger = {
+    /** Attach points a fix added (ids): in no list the homes are hashed onto. */
+    added: ReadonlySet<string>;
+    /** Attach points a fix took away, at their index in `attachPoints()` as it was (ascending): tombstones. */
+    gone: ReadonlyArray<{index: number; point: AttachPoint; tags: readonly MapTag[]}>;
+    /** Attach points a fix changed (ids): what the lists take them as (the tags they stood for, where they were). */
+    was: ReadonlyMap<string, {tags?: readonly MapTag[]; x?: number; z?: number; clearBelow?: number}>;
+    /** Grid cells a fix changed (`x,z` on the 2.5 m grid): what each was (null: no cell then). */
+    cells: ReadonlyMap<string, LedgerCell | null>;
+};
 
 /**
  * The map tags an attach point stands for, by its tag: its own (a house
