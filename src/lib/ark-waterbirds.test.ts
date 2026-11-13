@@ -15,7 +15,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {behaviourProfile, freeBodyLengthsPerSecond} from "@/ark-scene/behaviour-profile";
 import * as sched from "@/ark-scene/behaviour-schedule";
 import {wireRecipes} from "@/ark-scene/behaviour-recipes";
 import {eats} from "@/ark-scene/food-links";
@@ -217,4 +217,90 @@ test("waterbirds: swans, geese and ducks never perch in trees (a heavy body take
     assert.equal(sched.perchSuits(limb, 1.5), false);
     assert.equal(sched.perchSuits(limb, 0.15), true);
     assert.equal(sched.perchSuits({...limb, hidden: true}, 0.8), false);
+});
+
+// Lane MA3 water 2 (decisions 281, 284, 287): the goose's hops on the v2 lake, wetland ducks placed ashore, goal caps of
+// 0.25 m, a swimmer's pace held to its walk clip's, cranes in trees.
+
+test("water 2: a goose on the v2 lake where the upper river's falls run into it swims, never hopping onto a 'raised' water spot", () => {
+    // (The real snapshot's goose: its home by the falls, the river's level there 8.8 m a metre off the lake's 6. Its water
+    // spots read the river's level and `topAt` the lake's, so its swims were "raised" and flown, 62 hops of 1-10 m a day at
+    // a fifth of its cruise.)
+    const profile = behaviourProfile("canada-goose");
+    const home = {x: -74.9, z: -32.6};
+    const animal = sched.withLazyRoost({id: "water2-goose", zone: "river_lake", home: {x: home.x, y: Math.max(heightAt(home.x, home.z), 0), z: home.z}, length: 0.83, sea: false, range: 9}, () => null);
+    const top = (p: {x: number; z: number}) => Math.max(world.sampler.heightAt(p.x, p.z), world.sampler.waterSurface ? world.sampler.waterSurface(p.x, p.z) : 0);
+    let swims = 0;
+    const hops: string[] = [];
+    let previous: Trip | null = null;
+    for (let slot = 0; slot < 540; slot++) {
+        const trip: Trip = sched.tripAt(world, profile, animal, DAY + slot * sched.SLOT_SECONDS + 1, hoursAt, null, previous);
+        previous = trip;
+        for (const leg of trip.legs) {
+            if (leg.mode === "water") swims++;
+            if (leg.mode !== "air" || leg.length > 12) continue;
+            if ([leg.from, leg.to].some((p) => p.point === null && world.sampler.heightAt(p.x, p.z) < p.y - 0.05 && p.y > top(p) + 0.4)) hops.push(`${leg.length.toFixed(1)} m`);
+        }
+    }
+    assert.ok(swims > 20, `${swims} swims`);
+    assert.deepEqual(hops, [], "hops onto or off a water spot above the water");
+});
+
+test("water 2: the wetland's ducks live on its water (placed on its bank, not 20-50 m up its grassland); the tree ducks keep their trees", () => {
+    for (const slug of ["mottled-duck", "wandering-whistling-duck"]) {
+        const own = subjects.filter((s) => s.slug === slug);
+        assert.ok(own.length > 0, slug);
+        let water = 0;
+        let sampled = 0;
+        for (const s of own) {
+            const day = dayOf(s);
+            water += day.water;
+            sampled += day.sampled;
+            let near = Infinity;
+            for (const r of [2, 4, 6, 8]) if (near === Infinity && world.nav.nearest(s.animal.home.x, s.animal.home.z, "swim", 0.3, r)) near = r;
+            assert.ok(near <= 8, `${slug} placed ${near === Infinity ? "over 8" : near} m from its water`);
+        }
+        assert.ok(water / sampled >= 0.6, `${slug} on the water ${((100 * water) / sampled).toFixed(0)}% of the day`);
+    }
+    // (The Australian wood duck perches in its trees and grazes ashore: placed in them, as its text says.)
+    assert.ok(behaviourProfile("australian-wood-duck").interactions.includes("perch_branch"));
+});
+
+test("water 2: a floater's goal cap leaves room to go about (1.5 m, three lengths); anything else keeps its own", () => {
+    const duck = behaviourProfile("mallard");
+    const swan = behaviourProfile("mute-swan");
+    assert.equal(sched.rangeCap(duck, {range: 0.25, length: 0.5}), 1.5);
+    assert.ok(Math.abs(sched.rangeCap(swan, {range: 0.5, length: 1.2}) - 3.6) < 1e-9);
+    assert.equal(sched.rangeCap(duck, {range: 9, length: 0.5}), 9);
+    assert.equal(sched.rangeCap(duck, {range: null, length: 0.5}), Infinity);
+    assert.equal(sched.rangeCap(behaviourProfile("red-fox"), {range: 0.5, length: 0.9}), 0.5);
+    assert.equal(sched.rangeCap(behaviourProfile("common-pipistrelle"), {range: 0.25, length: 0.05}), 0.25);
+    const floats = (p: Profile) => p.move === "swim" && p.moves.includes("fly") && !p.breathes;
+    const tight = subjects.filter((s) => {
+        if (!floats(s.profile)) return false;
+        const own = sched.rangeCap(s.profile, s.animal);
+        const lead = s.animal.group ? sched.rangeCap(s.animal.group.profile, s.animal.group.leader) / 2 : Infinity;
+        return Math.min(own, lead) < 0.75;
+    });
+    assert.deepEqual(tight.map((s) => s.slug).slice(0, 5), [], `${tight.length} floaters with every goal inside 0.75 m`);
+});
+
+test("water 2: a floater paddles at its own pace, not its walk clip's (a coot 0.15 m/s): a coot 0.4 m/s and up, a swan 1.2 at most; a fish as it was", () => {
+    const pace = (slug: string, length: number) => sched.swimSpeedOf(behaviourProfile(slug), length);
+    assert.ok(pace("eurasian-coot", 0.32) >= 0.4, `coot ${pace("eurasian-coot", 0.32).toFixed(2)} m/s`);
+    assert.ok(pace("mute-swan", 1.21) <= 1.2, `swan ${pace("mute-swan", 1.21).toFixed(2)} m/s`);
+    assert.ok(pace("mallard", 0.57) >= 0.5 && pace("mallard", 0.57) <= 0.8, `mallard ${pace("mallard", 0.57).toFixed(2)} m/s`);
+    const fish = behaviourProfile("atlantic-cod");
+    assert.ok(Math.abs(sched.swimSpeedOf(fish, 0.8) - freeBodyLengthsPerSecond(fish) * 0.8 * 1.4) < 1e-9, "a fish as before");
+});
+
+test("water 2: cranes roost on the ground or in the reeds, never up a tree; the crowned cranes perch in trees (their text)", () => {
+    const cranes = subjects.filter((s) => /-crane$|^brolga$/.test(s.slug));
+    assert.ok(cranes.length >= 10, `${cranes.length} cranes`);
+    for (const s of cranes) {
+        const roost = sched.roostOf(world, s.profile, s.animal);
+        const up = roost.y - Math.max(heightAt(roost.x, roost.z), world.sampler.waterSurface ? world.sampler.waterSurface(roost.x, roost.z) : 0);
+        if (s.slug === "grey-crowned-crane") assert.equal(s.profile.roost, "tree");
+        else assert.ok(up < 0.5, `${s.slug} roosts ${up.toFixed(1)} m up`);
+    }
 });

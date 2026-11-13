@@ -357,6 +357,9 @@ const FAMILY_PRIORS: Record<string, Prior> = {
     Sittidae: {also: ["climb"]},
     Certhiidae: {also: ["climb"]},
     Anatidae: {social: "flock", move: "swim", also: ["fly", "walk"], roost: "water"},
+    // (Lane MA3 water 2: a crane roosts standing in the shallows, in the marsh's reeds, never in a tree; only the crowned
+    // cranes perch in trees, which their sleep text says.)
+    Gruidae: {roost: "reeds"},
     Gaviidae: {move: "swim", also: ["fly"], roost: "water", extra: ["dive"]},
     Podicipedidae: {move: "swim", also: ["fly"], roost: "water", extra: ["dive"]},
     Phasianidae: {social: "flock", diet: "seeds", move: "walk", also: ["fly"], roost: "ground_cover"},

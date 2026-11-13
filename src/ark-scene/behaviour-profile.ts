@@ -178,6 +178,42 @@ export function freeBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
 }
 
+/**
+ * Its pace swimming (body lengths a second), from its own speed stat, never its walk clip's (lane MA3 water 2: held to the
+ * walk clip's cadence, as `freeBodyLengthsPerSecond` is, a coot paddled at 0.14 m/s and a harbour seal at the same). The
+ * schedule keeps it to a swimmer's cruise for its size (`behaviour-schedule.ts` swimSpeedOf).
+ */
+export function swimBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
+    const speed = profile.speed ?? 40;
+    return Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
+}
+
+/**
+ * The length (m) a swimmer's pace is counted in, at true size: its own up to 2 m (a seal, a dolphin), then growing as
+ * √L (cruising speed grows far slower than length: a 14 m humpback cruises at about 6 m/s, not 16). Motion pass §3.
+ */
+export function swimPaceLength(length: number): number {
+    const L = Math.max(length, 0.05);
+    return L <= 2 ? L : 2 * Math.sqrt(L / 2);
+}
+
+/** A bird that swims first and floats on the surface, a duck, a goose, a swan, a coot (not an otter: its pace as before). */
+function floatsOnWater(profile: ArkBehaviourProfile): boolean {
+    return profile.move === "swim" && profile.moves.includes("fly") && !profile.breathes;
+}
+
+/**
+ * Its pace swimming (m/s, the water legs' 1.4 of its free pace before the trip's own 0.85-1.2). A bird that swims
+ * first, a duck, a goose, a swan, a coot: from its own speed stat (`swimBodyLengthsPerSecond`), no longer its walk clip's cadence (lane
+ * MA3 water 2: a coot paddled at 0.15 m/s), at most a paddler's √L m/s (a coot 0.57, a mallard 0.75, a goose 0.9, a swan
+ * 1.1: a swan swam at 1.9 m/s). Anything else (a fish, a seal, a penguin) as before: its free pace.
+ */
+export function swimSpeedOf(profile: ArkBehaviourProfile, length: number): number {
+    const L = profile.move === "swim" ? swimPaceLength(length) : Math.max(length, 0.05);
+    if (!floatsOnWater(profile)) return freeBodyLengthsPerSecond(profile) * L * 1.4;
+    return Math.min(swimBodyLengthsPerSecond(profile) * L * 1.4, Math.sqrt(Math.max(length, 0.05)));
+}
+
 /** How many times its walking pace it runs (its run clip's pace over its walk's, so the run plays at its own rate; 1: it never runs). */
 export function runFactor(profile: ArkBehaviourProfile): number {
     if (!profile.walkPace) return 2.2;

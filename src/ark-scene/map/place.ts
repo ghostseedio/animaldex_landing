@@ -223,6 +223,15 @@ function attachPlace(point: AttachPoint, key: number, level: number, rank: numbe
 export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number, length: number, trueLength: number, kind: "core" | "edge" | "cover" | "plain" = "plain"): MapPlacement | null {
     const placed = mapPlaceOn(animal, zone, slot, rank, length, trueLength, kind);
     if (placed) placed.map.who = {slug: animal.model_slug, length};
+    // (A duck, a coot, a grebe or a swan placed out of reach of its water: on its water's bank. The bigger wild island's:
+    // today's island keeps its places, where a duck moved to the river's bank moved its otter onto the cliffs above it.)
+    if (placed && arkWorld() === "v2" && !placed.water && !placed.map.held && !placed.map.shore) {
+        const banked = toTheWater(placed, animal.model_slug, zone, length);
+        if (banked) {
+            banked.map.who = placed.map.who;
+            return banked;
+        }
+    }
     // (A tree's climber stays in its tree, a centipede on its limb: its den is a rock in reach, else its perch.)
     if (placed && !placed.water && !placed.canopy && !placed.micro && !placed.map.held && !placed.map.shore && !inTheTrees(placed, animal.model_slug) && ROCK_DENS.has(denKindOf(animal.model_slug) ?? "") && !rockInReach(placed.map, placed.perch ?? null, placed.x, placed.z)) {
         const moved = toTheRocks(placed, zone, slot, rank, length);
@@ -232,6 +241,73 @@ export function mapPlace(animal: ArkAnimal, zone: ArkZone, slot: number, rank: n
         }
     }
     return placed;
+}
+
+/**
+ * The waterbirds that live on the water (lane MA3 water 2): a duck, a coot, a grebe, a swan. Not a goose, which grazes
+ * ashore, nor a cormorant or a pelican, which stand on their perches by it.
+ */
+const ON_THE_WATER: ReadonlySet<string> = new Set(["dabbler", "diver", "coot", "grebe", "swan"]);
+/** Fresh water its text names (a lake, a pond, a river, a marsh's reeds, an estuary). */
+const FRESH_HOMES: ReadonlySet<MapTag> = new Set<MapTag>(["pond", "stream_river", "lake", "marsh_reeds", "garden_pond", "estuary", "mangrove"]);
+/** Already by its water within this (m); its water searched this far (m). */
+const BANK_NEAR = 6;
+const BANK_REACH = 90;
+
+/**
+ * A waterbird that lives on the water (`ON_THE_WATER`, its text naming fresh water) placed on dry ground more than
+ * BANK_NEAR from swimmable fresh water: on the nearest bank of it within BANK_REACH, on ground its text allows, clear
+ * and walkable, a few metres up from the water's edge towards where it was. Lane MA3 water 2: the wetland's ducks
+ * (mottled, Australian wood, the whistling ducks) were placed on its grassland 20 to 50 m from the river, the zone's
+ * only water, and spent nine tenths of their day ashore, their nights too. Null: it stays where it was.
+ */
+function toTheWater(placed: MapPlacement, slug: string, zone: ArkZone, length: number): MapPlacement | null {
+    const species = placed.map.species;
+    if (!species || !Array.from(species.allowed).some((tag) => FRESH_HOMES.has(tag))) return null;
+    // (One of the trees, a wood duck on its limb, stays there: the owner's rule, a light percher of the trees only on a
+    // real limb. The Australian wood duck grazes ashore and perches in its trees.)
+    if (inTheTrees(placed, slug)) return null;
+    const kind = behaviourProfile(slug).water;
+    if (!kind || !ON_THE_WATER.has(kind)) return null;
+    const sampler = mapPoints().sampler;
+    const swimmable = (x: number, z: number) => {
+        const g = sampler.ground(x, z);
+        return g.water === "fresh" && g.depth >= 0.4;
+    };
+    // The nearest swimmable fresh water: rings out from it, 1.5 m apart, a point every 2 m round each.
+    let water: {x: number; z: number} | null = null;
+    for (let r = 1.5; r <= BANK_REACH && !water; r += 1.5) {
+        const n = Math.max(8, Math.round((Math.PI * 2 * r) / 2));
+        for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2 + r * 0.37;
+            const x = placed.x + Math.cos(a) * r;
+            const z = placed.z + Math.sin(a) * r;
+            if (swimmable(x, z)) {
+                water = {x, z};
+                break;
+            }
+        }
+        if (water && r <= BANK_NEAR) return null;
+    }
+    if (!water) return null;
+    // From the water back towards where it was: the first dry spot its text allows, clear and walkable.
+    const dx = placed.x - water.x;
+    const dz = placed.z - water.z;
+    const d = Math.hypot(dx, dz);
+    const maxSlope = zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE;
+    const order = tagsToTry(species);
+    for (let step = 0.5; step <= Math.min(d, 10); step += 0.5) {
+        const x = water.x + (dx / d) * step;
+        const z = water.z + (dz / d) * step;
+        const g = sampler.ground(x, z);
+        if (g.water) continue;
+        const tag = order.find((t) => g.tags.includes(t) && !FRESH_TAGS.has(t) && !SEA_TAGS.has(t)) ?? order.find((t) => g.tags.includes(t));
+        if (!tag || wetOf(species, tag)) continue;
+        if (sampler.blocked(x, z, Math.min(Math.max(length * 0.2, 0.1), 0.6)) || sampler.reserved?.(x, z) || (sampler.walkable && !sampler.walkable(x, z, maxSlope))) continue;
+        tracer()?.route("water");
+        return {x, z, ground: g.height, yaw: Math.atan2(-dx, -dz), water: false, map: {...placed.map, tag, area: TAG_AREA[tag], attach: undefined}};
+    }
+    return null;
 }
 
 /** Does it live in the trees: a climber, hanger or percher of the trees (`arborealOf`), or perched on a tree's point? */
