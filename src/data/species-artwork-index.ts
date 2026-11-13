@@ -66,6 +66,16 @@ async function getIndex(): Promise<ArtworkIndex> {
     return indexPromise;
 }
 
+/**
+ * The slugs with artwork of their own (exactly `<slug>.webp`) in the live listing (cached as above), or null when the
+ * listing is unavailable: no relative stands in. For a surface that builds `<slug>.webp` URLs itself (the Ark's icons).
+ */
+export async function getSpeciesArtworkSlugs(): Promise<ReadonlyMap<string, string> | null> {
+    const index = await getIndex();
+
+    return index.bySlug.size ? index.bySlug : null;
+}
+
 let snapshotIndex: ArtworkIndex | null = null;
 
 /**

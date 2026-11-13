@@ -14,6 +14,7 @@ import {arkIslandOf, arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
 import type {ArkIslandScene} from "@/ark-scene/islands/scene";
 import type {TownPrepared, TownStart} from "@/ark-scene/islands/town/prebuild";
 import {setArkWorld} from "@/ark-scene/world";
+import {ARK_LIVE_WILD_ISLAND} from "@/ark-scene/islands/wild-default";
 
 export type ArkArchipelagoOptions = ArkSceneOptions & {
     /** Which wild island in islands mode: Part C's bigger one (`v2`, the default since its gates passed) or today's (`v1`). `?wild=` overrides. */
@@ -58,7 +59,7 @@ const TOWN_IDLE_TIMEOUT_MS = 34;
 function wildIslandAsked(setting: "v1" | "v2" | undefined): boolean {
     const url = typeof location !== "undefined" ? new URLSearchParams(location.search).get("wild") : null;
     if (url === "v2" || url === "v1") return url === "v2";
-    return setting !== "v1";
+    return (setting ?? ARK_LIVE_WILD_ISLAND) === "v2";
 }
 
 /** A flight across the strait takes about this long (`flyToIsland`). */

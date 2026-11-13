@@ -30,7 +30,7 @@ import Link from "@/app/[locale]/_components/link";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {emitAnimalVoice, onAnimalVoice, voiceIsAbout} from "@/lib/ark/animal-voice";
-import {arkIconFallback, arkIconUrl} from "@/ark-scene/placeholder-icon";
+import {arkIconFallback, arkIconUrl, noteArkIconless} from "@/ark-scene/placeholder-icon";
 import {arkBringerLabel} from "@/lib/ark-life";
 import {arkFoundersOf, ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-founders";
 import {ArkFounderAvatar, ArkFounderLink, ArkFounderStoryBlock, arkTemplateParts} from "@/components/ark/ark-founder-bits";
@@ -274,9 +274,13 @@ async function readSnapshot(onFounders?: (founders: ArkFounders) => void): Promi
     try {
         const response = await fetch("/api/ark/voyage", {cache: "no-store"});
         if (!response.ok) return null;
-        const body = await response.json() as {snapshot?: unknown; founders?: unknown};
+        const body = await response.json() as {snapshot?: unknown; founders?: unknown; noIcon?: unknown};
         const snapshot = decodeArkSnapshot(body.snapshot);
-        if (snapshot) onFounders?.(decodeArkFounders(body.founders));
+        if (snapshot) {
+            onFounders?.(decodeArkFounders(body.founders));
+            // (The species with no icon art: the generic figure, never a request that fails.)
+            noteArkIconless(body.noIcon);
+        }
         return snapshot;
     } catch {
         return null;

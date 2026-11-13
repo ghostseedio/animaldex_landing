@@ -15,7 +15,7 @@ import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkSceneHandle, ArkSnapshot} fro
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
 import {arkIslandCounts, arkIslandSnapshot, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
+import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug, noteArkIconless} from "@/ark-scene/placeholder-icon";
 import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {arkRankedSpecies} from "@/lib/ark-population-change";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
@@ -668,7 +668,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         let stopped = false;
         const read = () => fetch("/api/ark/voyage")
             .then((response) => (response.ok ? response.json() : null))
-            .then((body: {snapshot?: unknown; founders?: unknown} | null) => {
+            .then((body: {snapshot?: unknown; founders?: unknown; noIcon?: unknown} | null) => {
                 const next = decodeArkSnapshot(body?.snapshot);
                 if (stopped) return;
                 if (!next) {
@@ -676,6 +676,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                     return;
                 }
                 setFounders(decodeArkFounders(body?.founders));
+                // (Before the rows and the scene ask for icons: the species with no icon art show the generic figure.)
+                noteArkIconless(body?.noIcon);
                 apply(next);
             })
             .catch(() => {
@@ -724,9 +726,10 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             try {
                 const response = await fetch("/api/ark/voyage", {cache: "no-store"});
                 if (!response.ok) return;
-                const body = await response.json() as {snapshot?: unknown; founders?: unknown};
+                const body = await response.json() as {snapshot?: unknown; founders?: unknown; noIcon?: unknown};
                 const next = decodeArkSnapshot(body.snapshot);
                 if (next && !stopped) {
+                    noteArkIconless(body.noIcon);
                     apply(next);
                     // A story shared (or a name shown) can change with the same animals aboard.
                     const named = decodeArkFounders(body.founders);

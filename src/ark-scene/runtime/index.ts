@@ -62,6 +62,12 @@ export type ArkRuntimeStats = {
     collisions: number;
     /** Every model the view draws now is in (the far models of the kinds in view, the near ones close by). */
     viewComplete: boolean;
+    /**
+     * The kinds the view draws as models now (the nearest in view). 0 when every animal in sight is past the render
+     * distance (the v2 wild island's whole view: map markers only), where `viewComplete` has nothing to wait on and stays
+     * false.
+     */
+    viewKinds: number;
     /** Queued far models dropped because the camera left their kinds. */
     pruned: number;
 };
@@ -588,6 +594,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     skipped,
                     collisions,
                     viewComplete: viewIsComplete(),
+                    viewKinds: inView.length,
                     pruned
                 };
             }
