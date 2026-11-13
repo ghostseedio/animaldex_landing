@@ -41,6 +41,8 @@ export async function renderComparisonGenerating({locale, basePath, slug, animal
                     signInTitle: t("generating.signInTitle"),
                     signInDescription: t("generating.signInDescription"),
                     signInLabel: t("generating.signIn"),
+                    offTitle: t("generating.offTitle"),
+                    offDescription: t("generating.offDescription"),
                     retryLabel: t("generating.retry"),
                     browseLabel: t("generating.browse")
                 }}

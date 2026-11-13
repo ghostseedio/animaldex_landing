@@ -15,9 +15,19 @@ import {getSupabaseServiceKey} from "@/lib/supabase-http";
  *   4. (Nov 2026) a signed-in AnimalDex account or an admin session: an
  *      anonymous visitor or crawler reads published comparisons (the static
  *      pages and the snapshot) and never spends on a new one,
+ *   5. (16 Nov 2026) COMPARISONS_GENERATE=on. The web side makes no new pairs
+ *      at all by default (about $100 a month went on comparison copy and
+ *      artwork); existing pages stay. The generator is the apps' edge function
+ *      get-or-generate-species-comparison, so the apps are unaffected
+ *      (docs/ops/comparisons-off.md has the matching server flag to add there),
  * plus the per-account, per-IP and site-wide rate limits in the route.
  * Repainting an existing comparison's artwork is for admins only.
  */
+
+/** True only when COMPARISONS_GENERATE=on: the web may ask the edge function for a pair it does not have. Off by default. */
+export function comparisonsGenerateEnabled(env: Record<string, string | undefined> = process.env) {
+    return env.COMPARISONS_GENERATE?.trim().toLowerCase() === "on";
+}
 
 export const INTENT_MIN_AGE_MS = 1500;
 export const INTENT_MAX_AGE_MS = 30 * 60 * 1000;
@@ -83,7 +93,7 @@ export function isSameOriginBrowserRequest(request: Request) {
 /** Who is asking to spend: an admin session, a signed-in AnimalDex account, or nobody. */
 export type GenerationRequester = {kind: "admin"} | {kind: "user"; userId: string} | {kind: "anonymous"};
 
-export type GenerationRefusal = {status: 401 | 403; error: "sign_in_required" | "forbidden" | "intent_expired"};
+export type GenerationRefusal = {status: 401 | 403; error: "sign_in_required" | "forbidden" | "intent_expired" | "generation_off"};
 
 /** Null when this request may generate; otherwise the answer the route gives. */
 export function generationRefusal(input: {
@@ -93,7 +103,10 @@ export function generationRefusal(input: {
     intent: IntentCheck;
     pairMatchesIntent: boolean;
     refreshImage: boolean;
+    /** comparisonsGenerateEnabled(); defaults to the env so existing callers stay correct. */
+    generationOn?: boolean;
 }): GenerationRefusal | null {
+    if (!(input.generationOn ?? comparisonsGenerateEnabled())) return {status: 403, error: "generation_off"};
     if (looksLikeBot(input.userAgent) || !input.sameOrigin) return {status: 403, error: "forbidden"};
     if (input.requester.kind === "anonymous") return {status: 401, error: "sign_in_required"};
     if (input.refreshImage && input.requester.kind !== "admin") return {status: 403, error: "forbidden"};

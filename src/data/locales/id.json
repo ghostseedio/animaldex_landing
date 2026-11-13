@@ -2048,6 +2048,8 @@
       "signInTitle": "Masuk untuk membuat yang ini",
       "signInDescription": "Perbandingan baru dibuat untuk akun AnimalDex yang sudah masuk. Gratis, dan halamannya tetap tayang di alamat ini untuk semua orang. Perbandingan yang sudah terbit langsung terbuka.",
       "signIn": "Masuk untuk membuat",
+      "offTitle": "Perbandingan ini belum ditulis",
+      "offDescription": "Perbandingan baru sedang ditunda untuk sementara. Yang sudah terbit bisa dibuka langsung, dan alamat ini akan aktif begitu pasangan ini ditulis.",
       "retry": "Coba lagi",
       "browse": "Jelajahi perbandingan"
     },

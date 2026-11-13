@@ -2058,6 +2058,8 @@
       "signInTitle": "Sign in to make this one",
       "signInDescription": "New side-by-sides are written for signed-in AnimalDex accounts. It's free, and the finished page stays live at this address for everyone. Published comparisons open right away.",
       "signIn": "Sign in to generate",
+      "offTitle": "This matchup isn't written yet",
+      "offDescription": "New side-by-sides are on hold for now. The ones already published open right away, and this address will work as soon as this pair is written.",
       "retry": "Try again",
       "browse": "Browse comparisons"
     },
