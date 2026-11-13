@@ -1,4 +1,5 @@
 import "server-only";
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {recordAutomationRun} from "@/lib/automation-runs";
 import {listPosts} from "@/lib/social/store";
 import {isClaudeReady} from "@/lib/social-content/claude";
@@ -72,7 +73,7 @@ export async function runContentGenerate(): Promise<ContentGenerateResult> {
     if (running) return {acted: false, summary: "Already generating"};
     running = true;
     try {
-        const result = await run();
+        const result = await runWithAiFeature("social-content/auto", run);
         await recordAutomationRun({job: "social-content-generate", outcome: result.acted ? "acted" : result.detail?.errors ? "failed" : "skipped", summary: result.summary, detail: result.detail ?? null});
         return result;
     } catch (error) {

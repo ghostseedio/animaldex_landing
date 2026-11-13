@@ -67,8 +67,9 @@ export const SOURCE_FORMAT: Record<string, FormatKey> = {
     ark: "ark"
 };
 
-/** Which format a post is, from what it was made of. Null when we cannot tell. */
-export function formatOfPost(post: {mediaKind: string; videoFormat?: string | null; sourceType?: string | null; carouselFormat?: string | null; contentKind?: string | null}): FormatKey | null {
+/** Which format a post is: the key stamped on the share row (options.format) first, else what it was made of. Null when we cannot tell. */
+export function formatOfPost(post: {mediaKind: string; optionsFormat?: string | null; videoFormat?: string | null; sourceType?: string | null; carouselFormat?: string | null; contentKind?: string | null}): FormatKey | null {
+    if (isFormatKey(post.optionsFormat)) return post.optionsFormat;
     if (post.mediaKind === "uploaded_video") return "real_footage";
     if (post.mediaKind === "story_video") return "app_story";
     if (post.mediaKind === "carousel" || post.contentKind === "carousel") {

@@ -55,6 +55,18 @@ export function blogLanesFor(day: number): BlogLane[] {
     return [lead, ...BLOG_LANES.filter((lane) => lane !== lead)];
 }
 
+/**
+ * Search Console first, every day (16 Nov 2026): a query people already type
+ * and find us for is demand we measured. The rotating lanes follow when no
+ * query qualifies (no credentials, every candidate written, nothing in range).
+ */
+export const SEARCH_CONSOLE_LANE = "search_console" as const;
+export type BlogLaneOrder = Array<BlogLane | typeof SEARCH_CONSOLE_LANE>;
+
+export function blogLaneOrder(day: number): BlogLaneOrder {
+    return [SEARCH_CONSOLE_LANE, ...blogLanesFor(day)];
+}
+
 /** The day number blogLanesFor takes (days since the epoch, UTC). */
 export function utcDayNumber(now = Date.now()) {
     return Math.floor(now / 86_400_000);

@@ -74,7 +74,8 @@ test("only same-origin browser fetches pass the origin check", () => {
 });
 
 const CHROME_UA = CHROME;
-const allowed = {userAgent: CHROME_UA, sameOrigin: true, intent: "ok" as const, pairMatchesIntent: true, refreshImage: false};
+// generationOn: the 16 Nov 2026 COMPARISONS_GENERATE switch is tested in cost-and-autopilot.test.ts; these check the older rules behind it.
+const allowed = {userAgent: CHROME_UA, sameOrigin: true, intent: "ok" as const, pairMatchesIntent: true, refreshImage: false, generationOn: true};
 
 test("only a signed-in account or an admin may generate; anonymous visitors are asked to sign in", () => {
     assert.deepEqual(generationRefusal({...allowed, requester: {kind: "anonymous"}}), {status: 401, error: "sign_in_required"});

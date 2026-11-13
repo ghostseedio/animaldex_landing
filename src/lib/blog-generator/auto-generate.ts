@@ -1,20 +1,26 @@
 import "server-only";
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {listAutomationRuns, recordAutomationRun} from "@/lib/automation-runs";
-import {type BlogLane, blogLanesFor, pickAutoFocus, utcDayNumber} from "@/lib/blog-generator/auto-generate-plan";
+import {loadOpportunityQueries} from "@/app/api/admin/growth/_lib/search-console";
+import {type BlogLane, blogLaneOrder, pickAutoFocus, SEARCH_CONSOLE_LANE, utcDayNumber} from "@/lib/blog-generator/auto-generate-plan";
 import {isClaudeConfigured} from "@/lib/blog-generator/claude-client";
 import {formatCost} from "@/lib/blog-generator/cost-meter";
 import {guideMaterials, nextGuideTopic} from "@/lib/blog-generator/guide-topics";
 import {generateJobRunning, startGenerateJob, type GenerateInput, type Job} from "@/lib/blog-generator/jobs";
+import {pickSearchConsoleTopic, searchConsoleFocus, searchConsoleTopicId} from "@/lib/blog-generator/search-console-topics";
 import {nextLessonTopic, nextSeoTopic} from "@/lib/blog-generator/seo-topics";
 import {topicPolicyProblems} from "@/lib/blog-generator/topic-policy";
 import {listTrendTopics, openTrendTopics, type TrendTopicRow, updateTrendTopic} from "@/lib/trend-radar/store";
 
 // Unattended articles (POST /api/cron/blog-auto-generate, 07:40 and 19:40 UTC),
 // published as "Auto-pick and write" in /admin/blog-generator would. One a day
-// (BLOG_AUTO_PER_DAY, default 1), so the second timer slot usually waits.
+// (BLOG_AUTO_PER_DAY, default 1): the 19:40 slot only writes when the morning
+// one did not start an article (16 Nov 2026: the second daily run stays off).
 // Since Nov 2026 there is no news lane: the blog writes ideas seen through
-// animals and "lesson for a human" pieces (topic-policy.ts). Each day one lane
-// leads and the others are fallbacks (blogLanesFor):
+// animals and "lesson for a human" pieces (topic-policy.ts). Search Console
+// goes first every day (blogLaneOrder): a query people already type and find
+// us for, answered as a problem-led page (search-console-topics.ts). Then one
+// rotating lane leads and the others are fallbacks (blogLanesFor):
 // - radar: the trend radar's best evergreen idea (a culture or everyday-life
 //   trend an animal's take reframes) that passes the topic policy;
 // - lessons: the next lesson-for-a-human topic (seo-topics.ts LESSON_TOPICS);
@@ -33,7 +39,7 @@ export const RADAR_MIN_SCORE = 7;
 
 export type BlogAutoGenerateResult = {ok: true; acted: boolean; summary: string; ref?: string; detail?: Record<string, unknown>};
 
-type Meta = {seoTopic?: string; lessonTopic?: string; guideTopic?: string; trendTopic?: string};
+type Meta = {seoTopic?: string; lessonTopic?: string; guideTopic?: string; trendTopic?: string; gscQuery?: string};
 
 /** Focuses of recent runs, newest first (a run's start and finish rows both carry it). */
 async function recentFocuses() {
@@ -68,7 +74,7 @@ async function recordFinished(job: Job, focus: string, meta: Meta = {}) {
 }
 
 /** Queue topics already written (published, or saved as a draft); a failed one is tried again. */
-async function writtenTopics(key: "seoTopic" | "lessonTopic" | "guideTopic") {
+async function writtenTopics(key: "seoTopic" | "lessonTopic" | "guideTopic" | "gscQuery") {
     const runs = await listAutomationRuns(BLOG_AUTO_JOB, 300).catch(() => []);
     return new Set(runs
         .filter((run) => typeof run.detail?.[key] === "string" && (run.summary.startsWith("Published") || run.summary.startsWith("Saved")))
@@ -159,7 +165,24 @@ async function writeSearchLed(): Promise<BlogAutoGenerateResult | null> {
     );
 }
 
-const LANES: Record<BlogLane, () => Promise<BlogAutoGenerateResult | null>> = {radar: writeFromRadar, lessons: writeLesson, search: writeSearchLed};
+/** The Search Console lane: the best query with measured demand that no post answers yet, as the focus Claude writes the topic for. */
+async function writeFromSearchConsole(): Promise<BlogAutoGenerateResult | null> {
+    if (process.env.BLOG_AUTO_SEARCH_CONSOLE_DISABLED?.trim() === "1") return null;
+    const queries = await loadOpportunityQueries().catch((error) => {
+        console.warn("[blog-auto-generate] Search Console unavailable", error instanceof Error ? error.message : error);
+        return [];
+    });
+    const pick = pickSearchConsoleTopic(queries, await writtenTopics("gscQuery"));
+    if (!pick) return null;
+    return start(
+        {mode: "catalog", focus: searchConsoleFocus(pick), publish: true, depth: "standard"},
+        `Writing a search page for “${pick.query}” (${pick.impressions} impressions, position ${pick.position} in Search Console)`,
+        `search console: ${pick.query}`,
+        {gscQuery: searchConsoleTopicId(pick.query)}
+    );
+}
+
+const LANES: Record<BlogLane | typeof SEARCH_CONSOLE_LANE, () => Promise<BlogAutoGenerateResult | null>> = {[SEARCH_CONSOLE_LANE]: writeFromSearchConsole, radar: writeFromRadar, lessons: writeLesson, search: writeSearchLed};
 
 /** Every lane empty: Claude picks the strongest idea for a random focus (an everyday idea through an animal). */
 async function writeFromFocus(): Promise<BlogAutoGenerateResult> {
@@ -170,7 +193,7 @@ async function writeFromFocus(): Promise<BlogAutoGenerateResult> {
 async function run(): Promise<BlogAutoGenerateResult> {
     const blocked = await capsProblem();
     if (blocked) return {ok: true, acted: false, summary: blocked};
-    for (const lane of blogLanesFor(utcDayNumber())) {
+    for (const lane of blogLaneOrder(utcDayNumber())) {
         const result = await LANES[lane]();
         if (result) return result;
     }
@@ -180,7 +203,7 @@ async function run(): Promise<BlogAutoGenerateResult> {
 /** One run, logged to admin_automation_runs whatever happens. */
 export async function runBlogAutoGenerate(): Promise<BlogAutoGenerateResult> {
     try {
-        const result = await run();
+        const result = await runWithAiFeature("blog-generator/auto-generate", run);
         await recordAutomationRun({job: BLOG_AUTO_JOB, outcome: result.acted ? "acted" : "skipped", summary: result.summary, ref: result.ref, detail: result.detail});
         return result;
     } catch (error) {

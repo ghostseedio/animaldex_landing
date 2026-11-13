@@ -20,6 +20,8 @@ export type ComparisonGeneratingCopy = {
     signInTitle: string;
     signInDescription: string;
     signInLabel: string;
+    offTitle: string;
+    offDescription: string;
     retryLabel: string;
     browseLabel: string;
 };
@@ -52,8 +54,10 @@ export default function ComparisonGenerating({
     // Generation is paid, so it never starts on page load: the screen checks
     // status, then waits for a person to press Generate (bots crawled these
     // pages and auto-started hundreds of comparisons). Since Nov 2026 only a
-    // signed-in account can generate; anyone else is asked to sign in.
-    const [status, setStatus] = useState<"checking" | "idle" | "working" | "error" | "rate-limited" | "sign-in">("checking");
+    // signed-in account can generate; anyone else is asked to sign in. Since
+    // 16 Nov 2026 the web makes no new pairs at all unless the server flag
+    // COMPARISONS_GENERATE is on: the screen then says so ("off").
+    const [status, setStatus] = useState<"checking" | "idle" | "working" | "error" | "rate-limited" | "sign-in" | "off">("checking");
     const [intent, setIntent] = useState<string | null>(null);
     const [stepIndex, setStepIndex] = useState(0);
     const [seconds, setSeconds] = useState(0);
@@ -87,10 +91,14 @@ export default function ComparisonGenerating({
                 {cache: "no-store"}
             );
             const payload = response.ok
-                ? (await response.json()) as {status?: string; slug?: string; intent?: string | null; signInRequired?: boolean}
+                ? (await response.json()) as {status?: string; slug?: string; intent?: string | null; signInRequired?: boolean; generationOff?: boolean}
                 : null;
             if (payload?.status === "ready" && payload.slug) {
                 finish(payload.slug);
+                return;
+            }
+            if (payload?.generationOff) {
+                setStatus("off");
                 return;
             }
             if (payload?.signInRequired) {
@@ -176,6 +184,8 @@ export default function ComparisonGenerating({
                 const payload = (await response.json().catch(() => null)) as {error?: string} | null;
                 if (payload?.error === "intent_expired") {
                     void check();
+                } else if (payload?.error === "generation_off") {
+                    setStatus("off");
                 } else {
                     setStatus("error");
                 }
@@ -253,7 +263,20 @@ export default function ComparisonGenerating({
                 </figure>
             </div>
 
-            {status === "sign-in" ? (
+            {status === "off" ? (
+                <>
+                    <h1 className="mt-10 font-display text-3xl font-bold text-white md:text-4xl">{copy.offTitle}</h1>
+                    <p className="mt-3 max-w-[34rem] text-base leading-7 text-ink-200">{copy.offDescription}</p>
+                    <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                        <Link
+                            href="/comparisons"
+                            className="rounded-full bg-primary-400 px-6 py-3 text-sm font-bold text-black transition hover:bg-primary-300"
+                        >
+                            {copy.browseLabel}
+                        </Link>
+                    </div>
+                </>
+            ) : status === "sign-in" ? (
                 <>
                     <h1 className="mt-10 font-display text-3xl font-bold text-white md:text-4xl">{copy.signInTitle}</h1>
                     <p className="mt-3 max-w-[34rem] text-base leading-7 text-ink-200">{copy.signInDescription}</p>

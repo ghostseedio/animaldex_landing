@@ -1,4 +1,5 @@
 import "server-only";
+import {comparisonsGenerateEnabled} from "@/lib/comparison-generation-guard";
 
 import type {
     ChallengeComparisonType,
@@ -481,6 +482,8 @@ export async function getOrGenerateSpeciesComparison(params: {
     comparisonType?: ChallengeComparisonType;
     forceRegenerateImage?: boolean;
 }): Promise<ChallengeEntry | null> {
+    // 16 Nov 2026: the web makes no new pairs unless COMPARISONS_GENERATE=on (comparison-generation-guard.ts).
+    if (!comparisonsGenerateEnabled()) return null;
     const supabaseUrl = getSupabaseUrl();
     // Generation requires a user JWT or service role; prefer service key on the server.
     const apiKey = getSupabaseServerReadKey() ?? getSupabasePublicKey();

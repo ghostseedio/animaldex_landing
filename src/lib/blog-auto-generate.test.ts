@@ -63,7 +63,7 @@ test("the topic policy: ideas, lessons and searched problems; no news; nothing c
 test("one article a day, no news lane and no breaking news; radar ideas are held to the policy", () => {
     const source = read("src/lib/blog-generator/auto-generate.ts");
     assert.match(source, /numberEnv\("BLOG_AUTO_PER_DAY", 1\)/);
-    assert.match(source, /for \(const lane of blogLanesFor\(utcDayNumber\(\)\)\)/);
+    assert.match(source, /for \(const lane of blogLaneOrder\(utcDayNumber\(\)\)\)/);
     assert.match(source, /entry\.kind === "evergreen" && entry\.score >= minScore/);
     assert.match(source, /topicPolicyProblems\(topic\.idea\)/);
     assert.match(source, /start\(\{mode: "catalog", focus, publish: true, depth: "standard"\}/);

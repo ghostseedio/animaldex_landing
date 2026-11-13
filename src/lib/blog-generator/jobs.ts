@@ -6,6 +6,7 @@ import {saveContentEntry} from "@/lib/admin-content";
 import {assembleBlogPost, isNewImageSlot, normalizeUrl, sectionImageKey, uniqueSlug} from "@/lib/blog-generator/article-spec";
 import {editArticle, type EditInput, type EditResult} from "@/lib/blog-generator/edit";
 import {loadSiteCatalog} from "@/lib/blog-generator/catalog";
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {CostMeter, formatCost, withCostMeter, type CostReport} from "@/lib/blog-generator/cost-meter";
 import {SHARE_IMAGE_MIN_ASPECT, sourceArticleImages, type ImageRequest} from "@/lib/blog-generator/images";
 import {deleteMaterials, loadMaterials, type MaterialFile, type MaterialRef} from "@/lib/blog-generator/materials";
@@ -86,7 +87,8 @@ function logger(job: Job) {
 function run(job: Job, work: (log: (line: string) => void) => Promise<void>, onSettled?: (job: Job) => void | Promise<void>) {
     const log = logger(job);
     const meter = new CostMeter();
-    withCostMeter(meter, () => work(log))
+    // The job outlives the request that started it: name its AI calls for the ledger (ai-usage-context.ts).
+    runWithAiFeature(`blog-generator/${job.kind}`, () => withCostMeter(meter, () => work(log)))
         .then(() => {
             job.status = "done";
         })

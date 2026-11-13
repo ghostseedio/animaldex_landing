@@ -1,3 +1,4 @@
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {getFreshConnection, isOAuthPlatform} from "@/lib/social/oauth";
 import {imagePublishers, publishers, textPublishers} from "@/lib/social/publishers";
 import {findAdminStoryVideo} from "@/lib/social/story-videos";
@@ -38,7 +39,12 @@ function errorText(error: unknown) {
 }
 
 /** Publishes one video to every platform in `rows` (all the same video), one download shared. */
-export async function runShareJob(rows: SocialPostRow[]) {
+export function runShareJob(rows: SocialPostRow[]) {
+    // Fire-and-forget from the admin page and the auto-share: its AI calls (captions, descriptions) are named here for the ledger.
+    return runWithAiFeature("social/runner", () => shareVideo(rows));
+}
+
+async function shareVideo(rows: SocialPostRow[]) {
     const [first] = rows;
     if (!first) return;
     await Promise.all(rows.map((row) => updatePost(row.id, {status: "processing"}).catch(() => undefined)));
@@ -244,7 +250,11 @@ async function downloadImage(path: string): Promise<PublishImage & {path: string
 }
 
 /** Publishes one carousel or text post to every platform in `rows` (all the same item). */
-export async function runContentShareJob(rows: SocialPostRow[], content: SocialContentRow) {
+export function runContentShareJob(rows: SocialPostRow[], content: SocialContentRow) {
+    return runWithAiFeature("social/runner", () => shareContent(rows, content));
+}
+
+async function shareContent(rows: SocialPostRow[], content: SocialContentRow) {
     if (!rows.length) return;
     await Promise.all(rows.map((row) => updatePost(row.id, {status: "processing"}).catch(() => undefined)));
     let feed: PublishImage[] = [];

@@ -1,4 +1,5 @@
 import type {SourceType} from "@/lib/content-video/plan";
+import {dayStartMs} from "@/lib/social/auto-share-plan";
 
 // Which page the auto-generate timer makes a video from: a page family (the
 // left-hand dropdown) among those with pages left, then a random page of it
@@ -14,6 +15,27 @@ export function pickRandomSource<T extends {slug: string}>(available: Partial<Re
     const top = Math.max(...available[type]!.map((page) => (page as {priority?: number}).priority ?? 0));
     const pages = available[type]!.filter((page) => ((page as {priority?: number}).priority ?? 0) === top);
     return {type, page: pages[Math.min(pages.length - 1, Math.floor(random() * pages.length))]};
+}
+
+/**
+ * Generated videos a day, every format together (16 Nov 2026): the autopilot
+ * stops once this many videos exist for the Jakarta day, whoever started them
+ * (the timer or "Generate video" in the admin), and whatever page family or
+ * format. CONTENT_VIDEO_DAILY_MAX raises or lowers it; a failed video does not
+ * count (nothing was shipped), an archived one does (it was paid for).
+ */
+export const CONTENT_VIDEO_DAILY_MAX_DEFAULT = 2;
+
+/** The videos that count towards today's cap. */
+export function videosMadeToday<T extends {status: string; created_at: string}>(rows: readonly T[], now: number) {
+    const start = dayStartMs(now);
+    return rows.filter((row) => row.status !== "failed" && Date.parse(row.created_at) >= start);
+}
+
+/** The cap in force: the env override when it is a positive number, else the default. */
+export function contentVideoDailyMax(env: Record<string, string | undefined> = process.env) {
+    const value = Number(env.CONTENT_VIDEO_DAILY_MAX);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : CONTENT_VIDEO_DAILY_MAX_DEFAULT;
 }
 
 /** True when one more video at the per-video cap would still fit today's budget. */

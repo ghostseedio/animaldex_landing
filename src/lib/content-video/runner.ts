@@ -1,4 +1,5 @@
 import {randomUUID} from "node:crypto";
+import {runWithAiFeature} from "@/lib/ai-usage-context";
 import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -77,7 +78,8 @@ export function contentVideoBusy() {
 export function startContentVideoJob(id: string, onDone?: () => Promise<void>) {
     if (running.size > 0) return false;
     running.add(id);
-    runJob(id)
+    // Runs after the response has gone: name its AI calls for the ledger (ai-usage-context.ts).
+    runWithAiFeature("content-video/runner", () => runJob(id))
         .catch((error) => console.error(`[content-video] ${id} crashed`, error))
         .finally(() => {
             running.delete(id);

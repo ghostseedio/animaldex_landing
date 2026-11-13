@@ -445,6 +445,74 @@ export function openaiDailyCost(report: unknown): Record<string, number> {
     return days;
 }
 
+// ---------------------------------------------------------------------------
+// The monthly cap (16 Nov 2026): $100 a month across every provider and
+// surface, a notice at 80%. Read by src/lib/ai-spend-cap.ts; shown on /admin
+// and /admin/ai-spend.
+// ---------------------------------------------------------------------------
+
+export const AI_SPEND_MONTHLY_CAP_DEFAULT_USD = 100;
+export const AI_SPEND_WARN_RATIO_DEFAULT = 0.8;
+
+export type MonthlyCapLevel = "ok" | "warn" | "over" | "unknown";
+
+export type MonthlyCapStatus = {
+    /** The UTC month, "2026-11". */
+    month: string;
+    capUsd: number;
+    warnRatio: number;
+    monthToDateUsd: number;
+    /** monthToDate ÷ cap (2 decimals). */
+    ratio: number;
+    remainingUsd: number;
+    /** What the month would reach at today's pace. */
+    projectedUsd: number;
+    level: MonthlyCapLevel;
+    enabled: boolean;
+    source: "table" | "env" | "default";
+    calls: number;
+    note: string | null;
+};
+
+/** The first instant of `now`'s UTC month. */
+export function monthStart(now: Date) {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+}
+
+/** Where the month stands: ok under the warning line, warn from warnRatio of the cap, over past it. */
+export function monthlyCapStatus(input: {capUsd: number; warnRatio: number; monthToDateUsd: number; now: Date; enabled?: boolean; source?: MonthlyCapStatus["source"]; calls?: number}): MonthlyCapStatus {
+    const cap = input.capUsd > 0 ? input.capUsd : AI_SPEND_MONTHLY_CAP_DEFAULT_USD;
+    const warnRatio = input.warnRatio > 0 && input.warnRatio <= 1 ? input.warnRatio : AI_SPEND_WARN_RATIO_DEFAULT;
+    const spent = Math.max(0, input.monthToDateUsd);
+    const ratio = spent / cap;
+    const start = monthStart(input.now).getTime();
+    const daysIn = Math.max(1 / 24, (input.now.getTime() - start) / 86_400_000);
+    const daysInMonth = new Date(Date.UTC(input.now.getUTCFullYear(), input.now.getUTCMonth() + 1, 0)).getUTCDate();
+    const enabled = input.enabled !== false;
+    const level: MonthlyCapLevel = !enabled ? "ok" : ratio >= 1 ? "over" : ratio >= warnRatio ? "warn" : "ok";
+    return {
+        month: input.now.toISOString().slice(0, 7),
+        capUsd: cap,
+        warnRatio,
+        monthToDateUsd: Math.round(spent * 100) / 100,
+        ratio: Math.round(ratio * 100) / 100,
+        remainingUsd: Math.round(Math.max(0, cap - spent) * 100) / 100,
+        projectedUsd: Math.round((spent / daysIn) * daysInMonth * 100) / 100,
+        level,
+        enabled,
+        source: input.source ?? "default",
+        calls: input.calls ?? 0,
+        note: enabled ? null : "The monthly cap is switched off in ai_spend_alert_config"
+    };
+}
+
+/** The one-line notice for the admin, or null while the month is under the warning line. */
+export function monthlyCapNotice(status: MonthlyCapStatus): {label: string; detail: string; tone: "bad" | "warn"} | null {
+    if (status.level === "over") return {label: `AI spend is over the $${status.capUsd} monthly cap`, detail: `$${status.monthToDateUsd.toFixed(2)} so far in ${status.month}; stop or slow the generators`, tone: "bad"};
+    if (status.level === "warn") return {label: `AI spend at ${Math.round(status.ratio * 100)}% of the $${status.capUsd} monthly cap`, detail: `$${status.monthToDateUsd.toFixed(2)} so far in ${status.month}, on course for $${status.projectedUsd.toFixed(0)}`, tone: "warn"};
+    return null;
+}
+
 /**
  * A feature spending well above its own recent pace: today (UTC, so far)
  * against its daily average over the earlier days of the range.

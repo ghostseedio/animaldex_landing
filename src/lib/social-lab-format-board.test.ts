@@ -12,6 +12,10 @@ test("a post's format comes from what it was made of", () => {
     assert.equal(formatOfPost({mediaKind: "blog_video", videoFormat: "lesson", sourceType: "lesson"}), "lesson");
     assert.equal(formatOfPost({mediaKind: "blog_video", videoFormat: null, sourceType: "blog"}), "page_story");
     assert.equal(formatOfPost({mediaKind: "uploaded_video"}), "real_footage");
+    // The stamp on the share row wins, and an unknown stamp is ignored.
+    assert.equal(formatOfPost({mediaKind: "uploaded_video", optionsFormat: "real_footage"}), "real_footage");
+    assert.equal(formatOfPost({mediaKind: "blog_video", optionsFormat: "lesson", videoFormat: null, sourceType: "comparison"}), "lesson");
+    assert.equal(formatOfPost({mediaKind: "blog_video", optionsFormat: "nonsense", videoFormat: null, sourceType: "comparison"}), "battle");
     assert.equal(formatOfPost({mediaKind: "story_video"}), "app_story");
     assert.equal(formatOfPost({mediaKind: "carousel", contentKind: "carousel", carouselFormat: "five_animals"}), "carousel_five_animals");
     assert.equal(formatOfPost({mediaKind: "carousel", contentKind: "carousel", carouselFormat: null}), "carousel_page");

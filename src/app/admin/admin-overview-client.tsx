@@ -43,8 +43,11 @@ function KpiStat({label, value, change, href, loading}: {label: string; value: s
 }
 
 /** One line per thing a person has to decide about. Silent when all is well. */
-function Attention({jobs, integrity, loading}: {jobs: Jobs | null; integrity: Integrity | null; loading: boolean}) {
+function Attention({jobs, integrity, spend, loading}: {jobs: Jobs | null; integrity: Integrity | null; spend: SpendCap | null; loading: boolean}) {
     const rows: {label: string; detail: string; href: string; tone: "bad" | "warn"}[] = [];
+
+    // The $100 monthly AI cap (src/lib/ai-spend-cap.ts): a line from 80%.
+    if (spend?.notice) rows.push({...spend.notice, href: "/admin/ai-spend"});
 
     if (jobs?.summary?.failing) {
         rows.push({
@@ -120,24 +123,29 @@ function Attention({jobs, integrity, loading}: {jobs: Jobs | null; integrity: In
     );
 }
 
+type SpendCap = {ok: boolean; notice: {label: string; detail: string; tone: "bad" | "warn"} | null};
+
 export default function AdminOverviewClient() {
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [jobs, setJobs] = useState<Jobs | null>(null);
     const [integrity, setIntegrity] = useState<Integrity | null>(null);
+    const [spend, setSpend] = useState<SpendCap | null>(null);
     const [loading, setLoading] = useState(true);
 
     const load = useCallback(async () => {
         setLoading(true);
         // Settled, not all: one console being unreachable must not blank the
         // whole overview — a half-populated page is still useful.
-        const [m, j, i] = await Promise.allSettled([
+        const [m, j, i, s] = await Promise.allSettled([
             fetch("/api/admin/metrics", {cache: "no-store"}).then((r) => r.json()),
             fetch("/api/admin/jobs", {cache: "no-store"}).then((r) => r.json()),
-            fetch("/api/admin/integrity", {cache: "no-store"}).then((r) => r.json())
+            fetch("/api/admin/integrity", {cache: "no-store"}).then((r) => r.json()),
+            fetch("/api/admin/ai-spend/cap", {cache: "no-store"}).then((r) => r.json())
         ]);
         if (m.status === "fulfilled") setMetrics(m.value);
         if (j.status === "fulfilled") setJobs(j.value);
         if (i.status === "fulfilled") setIntegrity(i.value);
+        if (s.status === "fulfilled") setSpend(s.value);
         setLoading(false);
     }, []);
 
@@ -165,7 +173,7 @@ export default function AdminOverviewClient() {
             />
 
             <Section title="Needs attention" className="mt-6">
-                <Attention jobs={jobs} integrity={integrity} loading={loading} />
+                <Attention jobs={jobs} integrity={integrity} spend={spend} loading={loading} />
             </Section>
 
             <Section title="Headline numbers">

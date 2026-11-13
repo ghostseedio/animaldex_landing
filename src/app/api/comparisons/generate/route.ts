@@ -14,6 +14,7 @@ import {
 } from "@/data/species-comparisons";
 import {checkRateLimit, getRequestIdentifier} from "@/lib/rate-limit";
 import {
+    comparisonsGenerateEnabled,
     generationRefusal,
     type GenerationRequester,
     issueComparisonIntent,
@@ -86,6 +87,10 @@ export async function GET(request: NextRequest) {
     const existing = await findReadyComparison(slug, reversedSlug);
 
     if (!existing) {
+        // Generation is off on the web (16 Nov 2026): no token for anyone, and the screen says the pair is not available.
+        if (!comparisonsGenerateEnabled()) {
+            return NextResponse.json({status: "pending", intent: null, generationOff: true}, {headers: {"Cache-Control": "no-store"}});
+        }
         // The intent token the generating screen must send back with its click; none for a visitor who is not signed in.
         const requester = await requesterOf(request);
         return NextResponse.json(
@@ -164,7 +169,8 @@ export async function POST(request: NextRequest) {
         sameOrigin: isSameOriginBrowserRequest(request),
         intent,
         pairMatchesIntent,
-        refreshImage: body.refreshImage === true
+        refreshImage: body.refreshImage === true,
+        generationOn: comparisonsGenerateEnabled()
     });
     if (refusal) {
         console.warn("[comparisons/generate] refused", {
