@@ -44,7 +44,8 @@
   #ark-loader .bar .sheen { position: absolute; top: 0; bottom: 0; inset-inline-start: 0; width: 0; background: rgba(200, 250, 99, 0.2); }
   #ark-loader .facts { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); min-width: 0; }
   #ark-loader .icon { flex: none; width: 36px; height: 36px; border-radius: 18px; background: #f6f1e7; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  #ark-loader .icon img { width: 82%; height: 82%; object-fit: contain; }
+  #ark-loader .icon img { width: 82%; height: 82%; object-fit: contain; opacity: 0; transition: opacity 300ms ease-out; }
+  #ark-loader .icon img.in { opacity: 1; }
   #ark-loader .lines { min-width: 0; flex: 1; height: 52px; display: flex; flex-direction: column; justify-content: center; }
   #ark-loader .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; height: 14px; line-height: 14px; min-width: 0; }
   #ark-loader .label { font-size: 10.5px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #c8fa63; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -57,7 +58,7 @@
   #ark-loader .icon.skel-icon { background: rgba(255, 255, 255, 0.12); }
   @keyframes arkLoaderPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
   @media (prefers-reduced-motion: reduce) {
-    #ark-loader .poster, #ark-loader .card, #ark-loader .bar .fill { transition: none; }
+    #ark-loader .poster, #ark-loader .card, #ark-loader .bar .fill, #ark-loader .icon img { transition: none; }
     #ark-loader .stage .dot { animation: none; }
   }
   /* While the card shows, the scene's own quiet loading bar at the foot steps aside (the card says the same). */
@@ -95,8 +96,26 @@
     return String(template).replace(/\{(\w+)\}/g, function (match, key) { return key in values ? String(values[key]) : match; });
   }
   function $(selector) { return root ? root.querySelector(selector) : null; }
-  // The words (the script below takes them from here too: one read).
-  var wordsRead = fetch("/api/ark/words?lang=" + encodeURIComponent(lang)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  var english = /^en([-_]|$)/i.test(lang);
+  // The words, one read for this screen and the scene (the script below asks with words()): at once when the screen
+  // shows another language than English; otherwise when the script below asks, after the scene's code, as before
+  // (so English never takes bandwidth from the code).
+  var wordsRead = null;
+  function words() {
+    if (wordsRead) return wordsRead;
+    wordsRead = fetch("/api/ark/words?lang=" + encodeURIComponent(lang)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    wordsRead.then(function (body) {
+      var ark = body && body.ark;
+      var w = ark && ark.loader ? {data: ark.loader.data, world: ark.loader.world, animals: ark.loader.animals, newest: ark.loader.newest, loading: ark.loading, chip: ark.hud && ark.hud.chip, speciesOne: ark.speciesOne, speciesOther: ark.speciesOther} : null;
+      if (w) {
+        for (var key in ENGLISH) if (!w[key]) w[key] = ENGLISH[key];
+        lang = body.language || lang;
+        if (said) { said = null; root.classList.remove("said"); }
+        say(w);
+      } else say(ENGLISH);
+    });
+    return wordsRead;
+  }
   // Reading its own snapshot (not the app's ark:snapshot, not development's fixture): asked for now, beside the code.
   var snapshotUrl = params.get("fixture") ? null : params.get("snapshot") || "/api/ark/voyage";
   var snapshotRead = snapshotUrl ? fetch(snapshotUrl, {cache: "no-store"}).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }) : null;
@@ -109,21 +128,14 @@
     render(last);
   }
   // English at once when that is the language asked; otherwise the words when read (or English after 2.5 s).
-  if (/^en([-_]|$)/i.test(lang)) say(ENGLISH);
-  wordsRead.then(function (body) {
-    var ark = body && body.ark;
-    var w = ark && ark.loader ? {data: ark.loader.data, world: ark.loader.world, animals: ark.loader.animals, newest: ark.loader.newest, loading: ark.loading, chip: ark.hud && ark.hud.chip, speciesOne: ark.speciesOne, speciesOther: ark.speciesOther} : null;
-    if (w) {
-      for (var key in ENGLISH) if (!w[key]) w[key] = ENGLISH[key];
-      lang = body.language || lang;
-      if (said) { said = null; root.classList.remove("said"); }
-      say(w);
-    } else say(ENGLISH);
-  });
+  if (english) say(ENGLISH);
+  else if (on) words();
   setTimeout(function () { say(ENGLISH); }, 2500);
 
   // What the script below hands over: {stage, progress, working, counts?, newest?} (the bundle's arkLoad… worked it out).
   var facts = false;
+  // The newest arrival's icon: asked for only once the world is drawn (17 KB was 0.1 s to the first frame on slow 4G).
+  var iconImage = null;
   function render(state) {
     last = state;
     if (!on || !root) return;
@@ -150,8 +162,9 @@
       img.alt = "";
       img.decoding = "async";
       img.onerror = function () { img.remove(); };
-      img.src = state.newest.icon;
+      img.onload = function () { img.classList.add("in"); };
       icon.appendChild(img);
+      iconImage = img;
       var lines = document.createElement("span");
       lines.className = "lines";
       var top = document.createElement("span");
@@ -181,6 +194,7 @@
       row.appendChild(icon);
       row.appendChild(lines);
     }
+    if (iconImage && state.showIcon && state.newest && !iconImage.getAttribute("src")) iconImage.src = state.newest.icon;
   }
   var gone = false;
   function done() {
@@ -198,7 +212,7 @@
     document.body.classList.add("ark-loading");
   }
   tell({type: "ark:progress", stage: "data", progress: 0});
-  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, wordsRead: wordsRead, snapshotRead: snapshotRead, on: on};
+  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, words: words, snapshotRead: snapshotRead, on: on};
 })();
 </script>
 <script src="./ark-scene.js"></script>
@@ -306,10 +320,10 @@
   }
   // The Ark's words in the app's language (null until read, or if the read fails: the scene then shows numbers only).
   var words = null;
-  // Never waited on for long: offline, the scene comes up after 2.5 s without them. (Asked for by the loading screen's
-  // script above, as the page was parsed: one read.)
+  // Never waited on for long: offline, the scene comes up after 2.5 s without them. (One read with the loading
+  // screen's script above, which asked already when it shows another language.)
   var loader = window.AnimalDexArkLoader;
-  var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), loader.wordsRead
+  var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), loader.words()
     .then(function (body) {
       if (!body || !body.ark) return;
       words = body.ark;
@@ -345,7 +359,7 @@
   function loadShow() {
     var stage = Ark.arkLoadStage(load);
     var progress = Ark.arkLoadProgress(load);
-    loader.render({stage: stage, progress: progress, working: Ark.arkLoadWorking(load), counts: loadFacts && loadFacts.counts, newest: loadFacts && loadFacts.newest});
+    loader.render({stage: stage, progress: progress, working: Ark.arkLoadWorking(load), counts: loadFacts && loadFacts.counts, newest: loadFacts && loadFacts.newest, showIcon: load.frame});
     var told = stage + progress;
     if (told !== loadTold) {
       loadTold = told;
