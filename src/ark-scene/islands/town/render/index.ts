@@ -8,7 +8,7 @@
  * the market's stalls, the street lamps, the church clock's hands.
  */
 
-import {BufferAttribute, BufferGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
+import {BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
 import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -27,6 +27,7 @@ import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene
 import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/nature";
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
+import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -55,6 +56,11 @@ export type TownIsland = {
     /** Part B's streamer says which chunks are drawn (null: all). */
     setDrawn: (drawn: ((chunk: number) => boolean) | null) => void;
     /**
+     * While the town joins (decision 153: shown a few chunks a frame), how many are shown: the chunk layers' batches are
+     * let in one a reveal step, so no frame uploads more than one (`render/batches.ts`). All by default.
+     */
+    setRevealed: (chunks: number) => void;
+    /**
      * The open zoo enclosures (the snapshot's `enclosure` names, `areas.ts` enclosuresIn): each drawn on its plot,
      * every other plot landscaped. Rebuilds only the zoo's meshes; call when the set changes.
      */
@@ -73,6 +79,8 @@ export type TownIsland = {
     heightAt: (x: number, z: number) => number;
     /** Resolves once the library's trees, shrubs and reeds are loaded and drawn (the procedural stand-ins until then). */
     assetsReady: () => Promise<void>;
+    /** Resolves once the nearer levels the camera has asked for so far are in (they are read as it comes near). */
+    assetsSettled: () => Promise<void>;
     stats: () => {chunks: number; drawnChunks: number; triangles: number; drawCalls: number; instances: Record<string, number>; windows: number; litWindows: number; zooOpen: number};
     dispose: () => void;
 };
@@ -260,7 +268,9 @@ function netMaterial(): MeshStandardMaterial {
 
 // MARK: - Building it
 
-type ChunkMeshes = {group: Group; meshes: Mesh[]; glass: {attribute: BufferAttribute; windows: WindowRecord[]} | null};
+/** A chunk with content: its group (its nets and, close up, its buildings' near detail); its layers are in the band batches. */
+type ChunkMeshes = {group: Group; meshes: Mesh[]};
+type ChunkLayer = "ground" | "decal" | "solid" | "foliage" | "glass" | "panes";
 
 /**
  * The town's heavy, pure part (decision 153: built in the town's prebuild worker, off the page's main thread): the
@@ -359,19 +369,48 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         seenRenderer = renderer;
         loadTownTextures(renderer, {normals: TOWN_TIERS[tier].paveNormals, anisotropy: TOWN_TIERS[tier].anisotropy});
     };
+    // The chunks' layers, batched by band (town performance lane, `render/batches.ts`): a band's layer is one draw call
+    // with each chunk an instance, culled and streamed per chunk as its own mesh was. Their order here is their order in
+    // the join (one let in a reveal step) and three's order of materials.
+    const layers: Array<{name: ChunkLayer; material: Material; castShadow: boolean; receiveShadow: boolean; release?: boolean}> = [
+        {name: "ground", material: materials.ground, castShadow: false, receiveShadow: true},
+        {name: "decal", material: materials.decal, castShadow: false, receiveShadow: true},
+        {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true},
+        {name: "glass", material: materials.glass, castShadow: false, receiveShadow: false},
+        // (Hedges, flower beds and crops: nothing reads their arrays back, so the page's copies go once on the GPU, phone heap.)
+        {name: "foliage", material: materials.foliage, castShadow: true, receiveShadow: true, release: true},
+        {name: "panes", material: paneMat, castShadow: false, receiveShadow: true}
+    ];
+    // (Their batch materials made now, in the materials' own order: three draws opaque materials in the order they were
+    // made. The near detail's own copy of the solid material right after the walls' batch: its trim (a shop's striped
+    // awning, a sill) is drawn after the walls it lies on, as the near detail is meant; before, sorted by depth with its
+    // chunk's walls, it lost to them in some views. Still before the glass and the panes, as when they shared one.)
+    let detailMaterial: Material = materials.solid;
+    for (const layer of layers) {
+        batchedVariant(layer.material);
+        if (layer.name === "solid") detailMaterial = plainCopy(materials.solid);
+    }
+    const batchRoot = new Group();
+    batchRoot.name = "town:chunk-batches";
+    // (The join's reveal leaves it to the town: its batches are let in one at a time, `setRevealed`.)
+    batchRoot.userData.townChunks = true;
+    root.add(batchRoot);
+    const batches: Array<{batch: TownBatch; band: number; order: number}> = [];
+    const bandParts = new TownBandParts();
+    /** Each chunk's lit windows: where its panes (or its glass) are in their batch's `aLit`, and its windows. */
+    const litOf: Array<{attribute: BufferAttribute; offset: number; windows: WindowRecord[]} | null> = new Array(TOWN_CHUNK_COUNT).fill(null);
+    const litLayer = new Map<number, {layer: "glass" | "panes"; windows: WindowRecord[]}>();
     for (let key = 0; key < TOWN_CHUNK_COUNT; key++) {
         const group = new Group();
         group.name = `town:chunk:${key}`;
         const meshes: Mesh[] = [];
+        let has = false;
         const tile = groundTile(grid, key);
         let minY = 0;
         let maxY = 0;
         if (tile) {
-            const mesh = new Mesh(tile, materials.ground);
-            mesh.receiveShadow = true;
-            mesh.name = "ground";
-            mesh.onBeforeRender = (renderer) => askTextures(renderer);
-            meshes.push(mesh);
+            bandParts.add("ground", key, tile);
+            has = true;
             tile.computeBoundingBox();
             minY = Math.min(minY, tile.boundingBox!.min.y);
             maxY = Math.max(maxY, tile.boundingBox!.max.y);
@@ -380,15 +419,11 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         }
         const sc = scenery.chunks.get(key);
         const bc = perChunk.get(key);
-        let glass: ChunkMeshes["glass"] = null;
-        const add = (geo: Geo | undefined, material: Material, name: string, shadows: boolean, extra = false) => {
+        const add = (geo: Geo | undefined, layer: ChunkLayer | null, extra = false) => {
             if (!geo || geo.triangles === 0) return null;
             const geometry = geo.toGeometry(extra);
-            const mesh = new Mesh(geometry, material);
-            mesh.name = name;
-            mesh.castShadow = shadows;
-            mesh.receiveShadow = true;
-            meshes.push(mesh);
+            if (layer) bandParts.add(layer, key, geometry);
+            has = true;
             triangles += geo.triangles;
             content[key] = 1;
             geometry.computeBoundingBox();
@@ -396,54 +431,73 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             return geometry;
         };
         // (Decals carry their surface tag: `surface-tags.ts`, lane GA.)
-        add(sc?.decal, materials.decal, "decal", false, true);
-        add(bc?.solid ?? sc?.solid, materials.solid, "solid", true);
-        add(sc?.net, materials.net, "net", false, true);
-        // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`. Nothing reads
-        // their arrays back, so the page's copies go once they are on the GPU (phone heap).
-        const foliage = add(sc?.foliage, materials.foliage, "foliage", true, true);
-        if (foliage) {
-            for (const name of Object.keys(foliage.attributes)) {
-                const attribute = foliage.attributes[name];
-                if (attribute instanceof BufferAttribute) attribute.onUpload(releaseArray);
-            }
+        add(sc?.decal, "decal", true);
+        add(bc?.solid ?? sc?.solid, "solid");
+        // (Nets are transparent and two-sided: a mesh of the chunk's own, as before.)
+        const net = add(sc?.net, null, true);
+        if (net) {
+            const mesh = new Mesh(net, materials.net);
+            mesh.name = "net";
+            mesh.receiveShadow = true;
+            meshes.push(mesh);
         }
+        // Hedges, flower beds and crops (lane GC, `render/nature.ts`): their sway weight rides in `aTag`.
+        add(sc?.foliage, "foliage", true);
         const glassGeo = bc?.glass ?? sc?.glass;
         if (glassGeo && glassGeo.triangles > 0) {
             const geometry = glassGeo.toGeometry();
-            const lit = new BufferAttribute(new Float32Array(glassGeo.pos.length / 3), 1);
-            geometry.setAttribute("aLit", lit);
-            const mesh = new Mesh(geometry, materials.glass);
-            mesh.name = "glass";
-            meshes.push(mesh);
+            geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(glassGeo.pos.length / 3), 1));
+            bandParts.add("glass", key, geometry);
+            has = true;
             triangles += glassGeo.triangles;
-            glass = {attribute: lit, windows: bc?.windows ?? []};
+            litLayer.set(key, {layer: "glass", windows: bc?.windows ?? []});
         }
         // The buildings' windows (lane GB): a pane a window, lit on the island clock (their records are the panes').
         if (bc && bc.panes.pos.length) {
-            const {geometry, lit} = paneGeometry(bc.panes);
-            const mesh = new Mesh(geometry, paneMat);
-            mesh.name = "panes";
-            mesh.receiveShadow = true;
-            meshes.push(mesh);
+            const {geometry} = paneGeometry(bc.panes);
+            bandParts.add("panes", key, geometry);
+            has = true;
             triangles += bc.panes.pos.length / 9;
-            glass = {attribute: lit, windows: bc.windows};
+            litLayer.set(key, {layer: "panes", windows: bc.windows});
         }
         for (const mesh of meshes) group.add(mesh);
         spans.push({minY: Math.min(minY, -4), maxY: maxY + 6});
-        if (meshes.length) {
+        // (The chunk's group holds its nets and, close up, its buildings' near detail; it follows the streamer.)
+        if (has) {
             root.add(group);
-            chunks[key] = {group, meshes, glass};
+            chunks[key] = {group, meshes};
         }
-        // (Lane GC, phone heap: the chunk's arrays are in its meshes now; the worker's copies are let go.)
+        // (Lane GC, phone heap: the chunk's arrays are in its band's batches now; the worker's copies are let go.)
         scenery.chunks.delete(key);
         perChunk.delete(key);
         yield;
+        // The band is complete: its layers batched, one a step (the chunks' own copies let go after).
+        const band = townBandOf(key);
+        if (key + 1 < TOWN_CHUNK_COUNT && townBandOf(key + 1) === band) continue;
+        for (let order = 0; order < layers.length; order++) {
+            const layer = layers[order];
+            const parts = bandParts.take(layer.name);
+            if (!parts.length) continue;
+            // (Named as each chunk's mesh of the layer was: the walk surfaces read the paving's triangles, "decal".)
+            const batch = new TownBatch(parts, layer.material, layer.name, {castShadow: layer.castShadow, receiveShadow: layer.receiveShadow, release: layer.release});
+            batch.mesh.userData.band = band;
+            if (layer.name === "ground") batch.chainBeforeRender(askTextures);
+            if (layer.name === "glass" || layer.name === "panes") {
+                const attribute = batch.mesh.geometry.getAttribute("aLit") as BufferAttribute;
+                batch.chunks.forEach((chunk, i) => {
+                    const lit = litLayer.get(chunk);
+                    if (lit && lit.layer === layer.name) litOf[chunk] = {attribute, offset: batch.vertexStart[i], windows: lit.windows};
+                });
+            }
+            batches.push({batch, band, order});
+            batchRoot.add(batch.mesh);
+            yield;
+        }
     }
 
     let drawn: ((chunk: number) => boolean) | null = null;
     // The buildings' near detail, by chunk round the camera (lane GB).
-    const detail = new BuildingDetail(plan, materials.solid, (key) => chunks[key]?.group ?? null, spans, tier);
+    const detail = new BuildingDetail(plan, detailMaterial, (key) => chunks[key]?.group ?? null, spans, tier);
     yield;
     // Water: the sea round the island and in the harbour, the fresh water.
     const depth = seaDepthMap(grid.heights, grid.size);
@@ -456,10 +510,18 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const zooRoot = new Group();
     zooRoot.name = "town:zoo";
     root.add(zooRoot);
+    /**
+     * Its decals, solids, glass and foliage as batches (one instance a chunk); its nets as two (their back faces, then their
+     * front faces, sharing one geometry: as three's two passes draw a two-sided transparent mesh); its pools a mesh.
+     */
+    const netSides = {back: sidedCopy(materials.net, BackSide), front: sidedCopy(materials.net, FrontSide)};
+    let zooBatches: TownBatch[] = [];
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
     let assetsMade = false;
     const buildZoo = (open: readonly string[]) => {
+        for (const batch of zooBatches) batch.dispose();
+        zooBatches = [];
         for (const {mesh} of zooMeshes) {
             mesh.geometry.dispose();
             zooRoot.remove(mesh);
@@ -468,21 +530,27 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         // (The prebuild's zoo scenery when it was worked out for these very enclosures.)
         const zoo = built && built.zooOpen.join(",") === open.join(",") ? built.zoo : buildZooScenery(zooLayout(open, plan));
         if (assetsMade) assets.setPlacements([...planTrees, ...zooTreesFor(open)]);
+        const parts = new TownBandParts();
         zoo.chunks.forEach((c, key) => {
-            const parts: Array<[Geo, Material, string]> = [[c.decal, materials.decal, "decal"], [c.solid, materials.solid, "solid"], [c.glass, materials.glass, "glass"], [c.net, materials.net, "net"], ...(c.foliage ? [[c.foliage, materials.foliage, "foliage"] as [Geo, Material, string]] : [])];
-            for (const [geo, material, name] of parts) {
+            const list: Array<[Geo, string]> = [[c.decal, "decal"], [c.solid, "solid"], [c.glass, "glass"], [c.net, "net"], ...(c.foliage ? [[c.foliage, "foliage"] as [Geo, string]] : [])];
+            for (const [geo, name] of list) {
                 if (!geo.triangles) continue;
                 const geometry = geo.toGeometry(name === "decal" || name === "foliage" || name === "net");
                 if (name === "glass") geometry.setAttribute("aLit", new BufferAttribute(new Float32Array(geo.pos.length / 3), 1));
-                const mesh = new Mesh(geometry, material);
-                mesh.name = `zoo:${name}`;
-                mesh.castShadow = name === "solid" || name === "foliage";
-                mesh.receiveShadow = true;
-                mesh.visible = !drawn || drawn(key);
-                zooRoot.add(mesh);
-                zooMeshes.push({key, mesh});
+                parts.add(name, key, geometry);
             }
         });
+        const nets = parts.take("net");
+        for (const [name, material, list] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["net", netSides.back, nets], ["net:front", netSides.front, nets], ["foliage", materials.foliage]] as Array<[string, Material, TownBatchPart[] | undefined]>) {
+            const from = list ?? parts.take(name);
+            if (!from.length) continue;
+            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true});
+            // (The front faces' batch draws the back faces' geometry: one copy, as the two meshes of a split shared it.)
+            if (name === "net:front") batch.shareGeometry(zooBatches[zooBatches.length - 1]);
+            batch.setDrawn(drawn);
+            zooRoot.add(batch.mesh);
+            zooBatches.push(batch);
+        }
         if (zoo.fresh.triangles && water.fresh) {
             const mesh = new Mesh(zoo.fresh.toGeometry(), water.fresh.material as Material);
             mesh.name = "zoo:pools";
@@ -535,9 +603,18 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     root.add(vehicles.group);
     let disposed = false;
     if (options.vehicles !== undefined) vehicles.setModels(options.vehicles);
-    else void loadVehicles().then((models) => {
-        if (!disposed) vehicles.setModels(models);
-    });
+    // (Town performance lane: the models (`vehicles.bin`) are read only once the camera comes within `VEHICLES_FROM` of the
+    // town. Beyond the middle distance every car is its proxy, made from the same boxes before and after they are in.)
+    let vehiclesAsked = options.vehicles !== undefined;
+    const askVehicles = () => {
+        if (vehiclesAsked || vehicles.hasModels) return;
+        const eye = vehicles.eye;
+        if (Number.isNaN(eye.x) || townBoxDistance(eye.x, eye.y, eye.z) > VEHICLES_FROM) return;
+        vehiclesAsked = true;
+        void loadVehicles().then((models) => {
+            if (!disposed && !vehicles.hasModels) vehicles.setModels(models);
+        });
+    };
     const bins = binSpots(plan);
     const washingLines = plan.parcels.filter((p) => (p.kind === "house" || p.kind === "terrace_home") && p.back && p.back.d > 4);
     const stallSpots = Array.from({length: 10}, (_, i) => local(plan.square, -plan.square.w / 2 + 5 + (i % 5) * 7, i < 5 ? -6 : 6));
@@ -585,13 +662,12 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     let lastMinute = -1;
     let litCount = 0;
     let windowCount = 0;
-    chunks.forEach((c) => {
-        if (c?.glass) windowCount += c.glass.windows.length;
-    });
+    for (const lit of litOf) if (lit) windowCount += lit.windows.length;
 
     const update = (clock: TownClock) => {
         // The cars every frame (the moving ones on the island clock's seconds; the parked once a minute inside).
         vehicles.update(clock, ((clock.day - 4) * 24 + clock.hours) * 3600);
+        askVehicles();
         detail.update(vehicles.eye, typeof performance !== "undefined" ? performance.now() : 0, drawn);
         // The town's frame in the world, for the paving and the lamps (`materials.ts` TOWN_LIGHT.origin).
         TOWN_LIGHT.origin.value.set(root.matrixWorld.elements[12], root.matrixWorld.elements[14]);
@@ -601,16 +677,16 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         const share = TOWN_TIERS[tier].props;
         // Lit windows.
         litCount = 0;
-        for (const c of chunks) {
-            if (!c?.glass) continue;
-            const array = c.glass.attribute.array as Float32Array;
-            for (const w of c.glass.windows) {
+        for (const lit of litOf) {
+            if (!lit) continue;
+            const array = lit.attribute.array as Float32Array;
+            for (const w of lit.windows) {
                 // (Lit, plus 2 with the curtains drawn: `buildings.ts` windowState.)
                 const state = windowState(w, clock);
                 if (state % 2 > 0) litCount++;
-                for (let v = w.start; v < w.start + w.count; v++) array[v] = state;
+                for (let v = w.start; v < w.start + w.count; v++) array[lit.offset + v] = state;
             }
-            c.glass.attribute.needsUpdate = true;
+            lit.attribute.needsUpdate = true;
         }
         bins.forEach((b, i) => {
             const out = binsOut(b.street, b.id, clock);
@@ -682,6 +758,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         chunks.forEach((c, key) => {
             if (c) c.group.visible = !next || next(key);
         });
+        for (const {batch} of batches) batch.setDrawn(next);
+        for (const batch of zooBatches) batch.setDrawn(next);
         for (const set of [...Array.from(treeSets.values()), binSet, washSet, boatSet, stallSet, ...narrowboatSets]) set.setDrawn(next);
         assets.setDrawn(next);
         vehicles.setDrawn(next);
@@ -689,7 +767,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     };
 
     const setShadows = (on: boolean) => {
-        for (const c of chunks) if (c) for (const mesh of c.meshes) if (mesh.name === "solid" || mesh.name === "foliage") mesh.castShadow = on;
+        for (const {batch} of batches) if (batch.mesh.name === "solid" || batch.mesh.name === "foliage") batch.mesh.castShadow = on;
         treeSets.forEach((set) => {
             set.mesh.castShadow = on;
         });
@@ -717,6 +795,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
                 drawCalls += c.meshes.length;
             }
         });
+        // (A batch is one call: one multi-draw of its chunks in view.)
+        for (const {batch} of batches) if (batch.mesh.visible) drawCalls++;
+        for (const batch of zooBatches) if (batch.mesh.visible) drawCalls++;
         const instances: Record<string, number> = {};
         treeSets.forEach((set, kind) => {
             instances[`tree:${kind}`] = set.shown;
@@ -759,6 +840,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         spans,
         content,
         setDrawn,
+        setRevealed: (shown) => {
+            for (const entry of batches) entry.batch.enabled = townBatchEnabled(entry.band, entry.order, shown);
+            setDrawn(drawn);
+        },
         update,
         setShadows,
         setTier,
@@ -766,6 +851,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         vehicles,
         heightAt: ground,
         assetsReady: () => assetsReady,
+        assetsSettled: () => assets.settled(),
         stats,
         dispose: () => {
             disposed = true;
@@ -783,6 +869,12 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
                 TOWN_LIGHT.lampMap.value.dispose();
                 TOWN_LIGHT.lampMap.value = null;
             }
+            for (const {batch} of batches) batch.dispose();
+            for (const batch of zooBatches) batch.dispose();
+            for (const m of [...Object.values(materials), paneMat, netSides.back, netSides.front]) disposeBatchedVariant(m);
+            netSides.back.dispose();
+            netSides.front.dispose();
+            detailMaterial.dispose();
             Object.values(materials).forEach((m) => m.dispose());
             depth.dispose();
             water.dispose();
@@ -794,9 +886,18 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
 
 export type {TownPlan};
 
-/** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (three's own pattern for static geometry). */
-function releaseArray(this: {array: ArrayLike<number>}) {
-    this.array = new Float32Array(0);
+/**
+ * How near the town (m, from the camera to its square up to its rooftops) the cars' models are read: the highest tier's
+ * middle distance (80 m, `VEHICLE_TIERS`), where the first car leaves its proxy, and a lead for the read.
+ */
+export const VEHICLES_FROM = 230;
+
+/** From a point (the town's frame) to the town's square up to its rooftops (m). */
+export function townBoxDistance(x: number, y: number, z: number): number {
+    const dx = Math.max(Math.abs(x) - TOWN_HALF, 0);
+    const dz = Math.max(Math.abs(z) - TOWN_HALF, 0);
+    const dy = y < 0 ? -y : Math.max(y - 40, 0);
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
 }
 
 /** The procedural stand-ins' height at scale 1 (`instanced.ts` treeGeometry), for drawing them at a settled tree's height. */

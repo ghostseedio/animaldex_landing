@@ -92,7 +92,13 @@ declare global {
             shots: Shot[];
             mountMs: number;
             view: (eye: [number, number, number], target: [number, number, number], hours: number, day?: number, fov?: number) => void;
-            shot: (id: string, day?: number) => void;
+            /**
+             * Draws the shot, then resolves once the trees' nearer levels its view asked for are in (read on demand); the
+             * next frame draws them. No extra frames: the near detail is built a few buildings a frame.
+             */
+            shot: (id: string, day?: number) => Promise<void>;
+            /** Resolves once the levels the view drawn last asked for are in (the next frame draws them). */
+            settle: () => Promise<void>;
             render: (frames?: number) => void;
             stats: () => unknown;
             weather: (wetness: number, rain: number) => void;
@@ -225,7 +231,7 @@ export function mountTown(el: HTMLElement) {
             view(eye, at, hours, day, fov);
             frame();
         },
-        shot: (id, day) => {
+        shot: async (id, day) => {
             town.vehicles.budgetMs = Infinity;
             const s = list.find((x) => x.id === id);
             if (!s) throw new Error(`no shot ${id}`);
@@ -234,7 +240,9 @@ export function mountTown(el: HTMLElement) {
             ARK_ENV.rain.value = s.rain ?? Number(params.get("rain") ?? 0);
             view(s.eye, s.target, s.hours, day ?? s.day ?? clock.day, s.fov);
             frame();
+            await town.assetsSettled();
         },
+        settle: () => town.assetsSettled(),
         render: (frames = 1) => {
             for (let i = 0; i < frames; i++) frame();
         },
@@ -274,8 +282,8 @@ export function mountTown(el: HTMLElement) {
         flyPose
     };
     frame();
-    void Promise.all([town.assetsReady(), loadVehicles()]).then(() => {
-        // (The town's own `then` on the cars' promise ran first: its cars are the models now.)
+    // (The workbench reads the cars' models at once: the town itself reads them only once the camera comes near.)
+    void Promise.all([town.assetsReady(), loadVehicles().then((models) => town.vehicles.setModels(models))]).then(() => {
         frame();
         if (window.__arkTown) window.__arkTown.ready = true;
     });

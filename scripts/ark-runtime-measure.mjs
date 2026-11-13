@@ -46,6 +46,11 @@
  *   --perf                    `?perf=1`: the scene's own frame profiler (runtime/perf.ts), its sections in the report
  *   --network slow4g          Lighthouse's slow 4G (1.6 Mbit/s, 150 ms); text is served gzipped as the site's CDN does
  *                             (`--raw`: as is)
+ * Town performance lane (docs/ark/town-draws-2026-11.md), the embed or the hero only:
+ *   --view town               open on the town (the archipelago's `openOn`, as a reader whose animals live there): its
+ *                             island view, every town chunk drawn in full
+ *   --view town-close         and once the town has joined (+10 s), a close-up of one of its animals (`--select <id>`,
+ *                             the host's `ark:select` with closeUp), followed
  * Every page: each drawn frame's main-thread time and interval (requestAnimationFrame wrapped before the page's own
  * script), the heap's growth between frames (allocation per second), and the bytes received before the first frame.
  */
@@ -114,6 +119,9 @@ const pageKind = arg("page", "measure");
 const perfOn = flag("perf");
 const gcPoints = flag("gc-points");
 const gcSteadyMs = Number(arg("gc-steady", "80")) * 1000;
+const view = arg("view", "default");
+const selectId = arg("select", "");
+if (view === "town-close" && !selectId) throw new Error("--view town-close needs --select <animal id>");
 
 const site = path.join(root, ".ark-golden", "runtime-site");
 mkdirSync(site, {recursive: true});
@@ -428,6 +436,17 @@ for (const deviceName of devices) {
             // The embed (the apps' panel) or the hero: the snapshot file as the API's answer; the tier pinned with --quality
             // (the embed reads `__arkQuality` as the measurement page does: set before its script runs).
             if (quality !== "auto") await context.addInitScript((q) => { window.__arkQuality = q; }, quality);
+            // `--view town`: the archipelago opens on the town (its `openOn`), as for a reader whose animals live there.
+            if (view === "town" || view === "town-close") {
+                await context.addInitScript(() => {
+                    let ark;
+                    Object.defineProperty(window, "AnimalDexArk", {configurable: true, get: () => ark, set: (value) => {
+                        const mount = value.mountArchipelago;
+                        if (mount) value.mountArchipelago = (el, options) => mount(el, {...options, openOn: "town"});
+                        ark = value;
+                    }});
+                });
+            }
             const query = `snapshot=${encodeURIComponent(populationFile ? "/population-file.json" : "/ark-missing.json")}${pageKind === "hero" ? "&refresh=600&idle=900" : ""}${modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : ""}${lane}`;
             await page.goto(`${base}/${pageKind === "hero" ? "hero.html" : "ark/embed.html"}?${query}`, {waitUntil: "commit", timeout: 120_000});
         }
@@ -450,6 +469,14 @@ for (const deviceName of devices) {
                 readyAt = await (await sceneFrame()).evaluate(() => window.__arkRec?.ready ?? 0).catch(() => 0);
             }
             if (!readyAt) throw new Error(`${pageKind}: no ark:ready in 240 s`);
+            // `--view town-close`: once the town has joined (and 10 s more), the host selects one of its animals, close up.
+            if (view === "town-close") {
+                const frame = await sceneFrame();
+                await frame.waitForFunction(() => performance.getEntriesByName("ark:town:joined").length > 0, null, {timeout: 240_000, polling: 500}).catch(() => log("the town did not join in 240 s"));
+                await page.waitForTimeout(10_000);
+                await frame.evaluate((id) => window.postMessage({type: "ark:select", id, closeUp: true}, "*"), selectId);
+                log(`selected ${selectId} (close up) at ${Math.round((Date.now() - navigated) / 1000)} s`);
+            }
         }
         if (gcPoints) {
             await cdp.send("HeapProfiler.enable");
@@ -573,6 +600,7 @@ for (const deviceName of devices) {
         const row = {
             device: deviceName,
             page: pageKind,
+            view,
             throttle: cpuThrottle,
             interact,
             steady,

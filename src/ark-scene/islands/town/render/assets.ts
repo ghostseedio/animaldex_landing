@@ -9,8 +9,12 @@
  * most, stronger in wind and storms), and the tree round the camera fades beside the lens as there.
  *
  * The camera comes from the render itself (`onBeforeRender` of a probe in the group), in the town's own frame, so the
- * town's `update` keeps its signature. Until every asset is loaded, nothing is drawn here and `ready()` is false; the
- * town's procedural stand-ins (`instanced.ts` treeGeometry) are shown meanwhile.
+ * town's `update` keeps its signature. Until every asset's farthest level is loaded, nothing is drawn here and `ready()`
+ * is false; the town's procedural stand-ins (`instanced.ts` treeGeometry) are shown meanwhile.
+ *
+ * Town performance lane: only each asset's farthest level (the crossed card, a plant's lightest level) is read at once,
+ * ~0.2 MB for the whole town; the nearer levels (~4.3 MB) are read as the camera comes within `LEVEL_LEAD` m of where an
+ * instance takes them (from across the strait, never). Until a level is in, its instances draw the next level out.
  */
 
 import {BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
@@ -35,6 +39,8 @@ type Entry = {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh
 export const TOWN_ASSET_REACH = {high: 1, medium: 0.45, low: 0.3} as const;
 /** The least reach of the far (lod2 → card) hand-over (`asset-trees.ts` CARD_REACH_MIN). */
 const CARD_REACH_MIN = 0.45;
+/** A nearer level is read once an instance is within its hand-over plus this (m): ahead of the camera coming in. */
+export const LEVEL_LEAD = 100;
 
 export class TownAssets {
     readonly group = new Group();
@@ -50,6 +56,10 @@ export class TownAssets {
     private onReady: Array<() => void> = [];
     private readonly probe: Mesh;
     private readonly scratch = new Vector3();
+    /** The levels asked for (`asset:level`), and those still being read. */
+    private readonly asked = new Set<string>();
+    private reading = 0;
+    private onSettled: Array<() => void> = [];
 
     constructor(placements: readonly TownAssetPlacement[], base = ASSET_BASE, private readonly label = "town-asset", private readonly materialFor: (doubleSided: boolean, near: boolean, conifer: boolean) => Material = cachedWind) {
         this.group.name = label;
@@ -63,8 +73,7 @@ export class TownAssets {
         this.probe.onBeforeRender = (_renderer, _scene, camera: Camera) => {
             this.scratch.setFromMatrixPosition(camera.matrixWorld);
             this.group.worldToLocal(this.scratch);
-            this.camera.copy(this.scratch);
-            this.update();
+            this.look(this.scratch.x, this.scratch.y, this.scratch.z);
         };
         this.group.add(this.probe);
         void this.load(base.replace(/\/+$/, ""));
@@ -121,10 +130,53 @@ export class TownAssets {
         for (const f of waiting) f();
     }
 
+    /** An asset's farthest level, read at once (the rest as the camera comes near: `ask`). */
     private async loadOne(id: string, entry: Entry) {
         const info = ASSETS[id];
         if (!info || !this.loader) return;
-        await Promise.all(info.lods.map((lod) => this.loader!.loadAsync(`${this.base}/${lod.file}`).then((gltf) => {
+        const far = info.lods[info.lods.length - 1];
+        if (far) await this.loadLevel(id, entry, far.level as Level);
+    }
+
+    /** A nearer level wanted by an instance (or soon): read once, then the levels are sorted again. */
+    private ask(id: string, entry: Entry, level: Level) {
+        const key = `${id}:${level}`;
+        if (this.asked.has(key) || !this.loader) return;
+        if (!ASSETS[id]?.lods.some((lod) => lod.level === level)) return;
+        this.reading++;
+        void this.loadLevel(id, entry, level).finally(() => {
+            this.reading--;
+            this.lastAt.set(Infinity, 0, 0);
+            if (this.reading === 0) {
+                const waiting = this.onSettled;
+                this.onSettled = [];
+                for (const f of waiting) f();
+            }
+        });
+    }
+
+    /** The camera (the town's frame), as drawn: the levels sorted for it, and the nearer ones it will want asked for. */
+    look(x: number, y: number, z: number) {
+        this.camera.set(x, y, z);
+        this.update();
+    }
+
+    /** The levels asked for so far (`asset:level`), the farthest ones included. */
+    levelsAsked(): string[] {
+        return Array.from(this.asked);
+    }
+
+    /** Resolves once no level asked for is still being read (the workbench's stills wait for it). */
+    settled(): Promise<void> {
+        return this.reading === 0 ? Promise.resolve() : new Promise((resolve) => this.onSettled.push(resolve));
+    }
+
+    private async loadLevel(id: string, entry: Entry, level: Level) {
+        const info = ASSETS[id];
+        const key = `${id}:${level}`;
+        if (!info || !this.loader || this.asked.has(key)) return;
+        this.asked.add(key);
+        await Promise.all(info.lods.filter((lod) => lod.level === level).map((lod) => this.loader!.loadAsync(`${this.base}/${lod.file}`).then((gltf) => {
             let geometry: BufferGeometry | null = null;
             gltf.scene.traverse((object) => {
                 if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
@@ -228,7 +280,7 @@ export class TownAssets {
         this.framesSince = 0;
         this.lastAt.copy(camera);
         const margin = NEAR_FADE_MAX + 1.6;
-        this.byAsset.forEach((entry) => {
+        this.byAsset.forEach((entry, id) => {
             const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0, card: 0};
             let nearCount = 0;
             const [d0, d1] = entry.distances.map((d) => d * this.reach);
@@ -250,6 +302,9 @@ export class TownAssets {
                 }
                 const d = dist / size;
                 let index = d < d0 ? 0 : d < d1 ? 1 : d < d2 ? 2 : 3;
+                // (The levels it takes now and soon, read if they are not yet: from the wanted one out.)
+                const lead = (dist - LEVEL_LEAD) / size;
+                for (let want = lead < d0 ? 0 : lead < d1 ? 1 : lead < d2 ? 2 : 3; want < LEVELS.length - 1 && !entry.meshes[LEVELS[want]]; want++) this.ask(id, entry, LEVELS[want]);
                 while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
                 // (Plants have no card: their farthest level stands in.)
                 while (index > 0 && !entry.meshes[LEVELS[index]]) index--;

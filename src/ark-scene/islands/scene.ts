@@ -261,6 +261,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         const stream = streamDrawn;
         const upTo = revealed;
         const drawn = upTo >= TOWN_CHUNK_COUNT ? stream : (chunk: number) => chunk < upTo && (!stream || stream(chunk));
+        // (The town lane: its chunk layers' batches let in one a reveal step, never all uploaded in one frame.)
+        town.setRevealed(Math.min(upTo, TOWN_CHUNK_COUNT));
         town.setDrawn(drawn);
         let changed = false;
         for (let chunk = 0; chunk < TOWN_CHUNK_COUNT; chunk++) {
@@ -362,7 +364,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         beginReveal: () => {
             revealed = 0;
-            hidden = town.root.children.filter((child) => !child.name.startsWith("town:chunk:") && child.visible);
+            // (The chunks show a few a step; so do their layers' batches, let in by the town itself: `setRevealed`.)
+            hidden = town.root.children.filter((child) => !child.name.startsWith("town:chunk:") && !child.userData.townChunks && child.visible);
             for (const child of hidden) child.visible = false;
             applyDrawn();
         },
