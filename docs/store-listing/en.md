@@ -36,7 +36,7 @@ Your animals remember you and sometimes message you first. Every idea you work t
 Photograph or film a real animal: AnimalDex identifies it and adds it to your collection with its field guide. Replies can be read aloud in the animal's own voice.
 
 THE ARK
-When a step works, that animal comes aboard a shared Ark. Animals aboard eat, breed and age based on each animal's field guide. Your Ark Score counts what your steps bring, from 0 to 100.
+Catch an animal and it comes aboard a shared Ark; take a step with it and it thrives. Animals aboard eat, breed and age based on each animal's field guide. Your Ark Score counts what your steps bring, from 0 to 100.
 
 Pro is optional; eligible new yearly subscribers start with a free week.
 
@@ -45,18 +45,18 @@ Every animal has a lesson.
 The animals are AI characters and can be wrong, as can identifications. Ages 13 and up. Keep a safe distance from wildlife.
 ```
 
-1133 characters
+1161 characters
 
 ## 5. What's New (App Store)
 
 ```
-The Ark is here: swipe from the right in a chat to see the animals your steps have brought aboard.
-When a step works, its animal comes aboard the shared Ark, and the chat tells you.
+The Ark is here: swipe from the right in a chat to see the animals your catches have brought aboard.
+Catch an animal and it comes aboard the shared Ark; take a step with it and it thrives.
 Your Ark Score now counts what your steps bring to the Ark, from 0 to 100.
 A daily note when one of your animals in the Ark is eaten or starves. Switch it off in Settings.
 ```
 
-353 characters
+360 characters
 
 ## 6. Screenshot captions (at most six words each)
 
@@ -75,13 +75,13 @@ A daily note when one of your animals in the Ark is eaten or starves. Switch it 
 ## 8. Play release notes, 3.3.0 (27) (max 500)
 
 ```
-The Ark is here: swipe from the right in a chat to see the animals your steps have brought aboard.
-When a step works, its animal comes aboard the shared Ark, and the chat tells you.
+The Ark is here: swipe from the right in a chat to see the animals your catches have brought aboard.
+Catch an animal and it comes aboard the shared Ark; take a step with it and it thrives.
 Your Ark Score now counts what your steps bring to the Ark, from 0 to 100.
 A daily note when one of your animals in the Ark is eaten or starves. Switch it off in Settings.
 ```
 
-353 characters
+360 characters
 
 ## 9. Social bio line
 

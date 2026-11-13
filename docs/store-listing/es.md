@@ -33,10 +33,10 @@ Cuando ayuda, el animal propone un pequeño paso. El primero que termináis junt
 
 Tus animales te recuerdan y a veces te escriben primero; cada idea queda en tu Diario.
 
-Fotografía o graba un animal real: AnimalDex lo identifica y lo añade a tu colección con su guía de campo. Las respuestas pueden leerse con su propia voz.
+Fotografía o graba un animal real: AnimalDex lo identifica y lo añade a tu colección con su guía de campo. Te responde con su propia voz.
 
 EL ARK
-Cuando un paso funciona, ese animal sube a bordo de un Ark compartido. A bordo, los animales comen, crían y envejecen según la guía de campo de cada animal. Tu Puntuación Ark cuenta lo que aportan tus pasos, de 0 a 100.
+Atrapa un animal y sube a bordo de un Ark compartido; da un paso con él y prospera. A bordo, los animales comen, crían y envejecen según la guía de campo de cada animal. Tu Puntuación Ark cuenta lo que aportan tus pasos, de 0 a 100.
 
 Pro es opcional; los nuevos suscriptores anuales aptos empiezan con una semana gratis.
 
@@ -45,18 +45,18 @@ Cada animal tiene una lección.
 Los animales son personajes de IA y pueden equivocarse, igual que las identificaciones. Para mayores de 13 años. Mantén una distancia segura con la fauna salvaje.
 ```
 
-1192 characters
+1188 characters
 
 ## 5. What's New (App Store)
 
 ```
-Llega el Ark: desliza desde la derecha en un chat para ver los animales que tus pasos han subido a bordo.
-Cuando un paso funciona, su animal sube a bordo del Ark compartido, y el chat te lo cuenta.
+Llega el Ark: desliza desde la derecha en un chat para ver los animales que tus capturas han subido a bordo.
+Atrapa un animal y sube a bordo del Ark compartido; da un paso con él y prospera.
 Tu Puntuación Ark ahora cuenta lo que tus pasos aportan al Ark, de 0 a 100.
 Una nota diaria cuando a uno de tus animales del Ark se lo comen o muere de hambre. Desactívala en Configuración.
 ```
 
-387 characters
+380 characters
 
 ## 6. Screenshot captions (at most six words each)
 
@@ -75,13 +75,13 @@ Una nota diaria cuando a uno de tus animales del Ark se lo comen o muere de hamb
 ## 8. Play release notes, 3.3.0 (27) (max 500)
 
 ```
-Llega el Ark: desliza desde la derecha en un chat para ver los animales que tus pasos han subido a bordo.
-Cuando un paso funciona, su animal sube a bordo del Ark compartido, y el chat te lo cuenta.
+Llega el Ark: desliza desde la derecha en un chat para ver los animales que tus capturas han subido a bordo.
+Atrapa un animal y sube a bordo del Ark compartido; da un paso con él y prospera.
 Tu Puntuación Ark ahora cuenta lo que tus pasos aportan al Ark, de 0 a 100.
 Una nota diaria cuando a uno de tus animales del Ark se lo comen o muere de hambre. Desactívala en Configuración.
 ```
 
-387 characters
+380 characters
 
 ## 9. Social bio line
 

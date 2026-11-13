@@ -27,36 +27,36 @@ Tanya apa saja ke hewan mana pun, dan ia menjawab dari cara hidup jenisnya yang 
 
 Punya ide atau keputusan? Bawa ke singa, burung hantu, atau pari manta. Masing-masing menjawab dari perilaku nyata spesiesnya.
 
-Belum yakin? Ajak dua hewan Anda yang lain; laporan singkat menunjukkan jalan yang paling cocok.
+Belum yakin? Ajak dua hewan Anda yang lain; laporan singkat menunjukkan jalan terbaik.
 
 Saat berguna, hewan itu menyarankan satu langkah kecil. Langkah pertama yang selesai bersama membuka Kekuatannya.
 
 Hewan Anda mengingat Anda dan kadang mengirim pesan lebih dulu; setiap ide tercatat di Buku Harian.
 
-Potret atau rekam hewan sungguhan: AnimalDex mengenalinya dan menambahkannya ke koleksi Anda beserta panduan lapangannya. Jawaban bisa dibacakan dengan suaranya sendiri.
+Potret atau rekam hewan sungguhan: AnimalDex mengenalinya dan menambahkannya ke koleksi Anda beserta panduan lapangannya. Ia menjawab dengan suaranya sendiri.
 
 ARK
-Saat sebuah langkah berhasil, hewan itu naik ke Ark bersama. Di Ark, hewan makan, berkembang biak, dan menua berdasarkan panduan lapangan masing-masing hewan. Skor Ark menghitung apa yang dibawa langkah Anda, dari 0 sampai 100.
+Tangkap seekor hewan dan ia naik ke Ark bersama; lakukan langkah bersamanya dan ia berkembang. Di Ark, hewan makan, berkembang biak, dan menua berdasarkan panduan lapangan masing-masing hewan. Skor Ark menghitung apa yang dibawa langkah Anda, dari 0 sampai 100.
 
-Pro bersifat opsional; pelanggan tahunan baru yang memenuhi syarat mulai dengan seminggu gratis.
+Pro opsional; pelanggan tahunan baru yang memenuhi syarat dapat seminggu gratis.
 
 Setiap hewan punya pelajaran.
 
 Para hewan adalah karakter AI dan bisa keliru, begitu juga identifikasinya. Usia 13 tahun ke atas. Jaga jarak aman dari satwa liar.
 ```
 
-1199 characters
+1196 characters
 
 ## 5. What's New (App Store)
 
 ```
-Ark sudah hadir: geser dari kanan di dalam obrolan untuk melihat hewan-hewan yang dibawa naik oleh langkah-langkah Anda.
-Saat sebuah langkah berhasil, hewannya naik ke Ark bersama, dan obrolan memberi tahu Anda.
+Ark sudah hadir: geser dari kanan di dalam obrolan untuk melihat hewan-hewan yang dibawa naik oleh tangkapan Anda.
+Tangkap seekor hewan dan ia naik ke Ark bersama; lakukan langkah bersamanya dan ia berkembang.
 Skor Ark kini menghitung apa yang dibawa langkah-langkah Anda ke Ark, dari 0 sampai 100.
 Catatan harian saat salah satu hewan Anda di Ark dimangsa atau kelaparan. Matikan di Pengaturan.
 ```
 
-397 characters
+395 characters
 
 ## 6. Screenshot captions (at most six words each)
 
@@ -75,13 +75,13 @@ Catatan harian saat salah satu hewan Anda di Ark dimangsa atau kelaparan. Matika
 ## 8. Play release notes, 3.3.0 (27) (max 500)
 
 ```
-Ark sudah hadir: geser dari kanan di dalam obrolan untuk melihat hewan-hewan yang dibawa naik oleh langkah-langkah Anda.
-Saat sebuah langkah berhasil, hewannya naik ke Ark bersama, dan obrolan memberi tahu Anda.
+Ark sudah hadir: geser dari kanan di dalam obrolan untuk melihat hewan-hewan yang dibawa naik oleh tangkapan Anda.
+Tangkap seekor hewan dan ia naik ke Ark bersama; lakukan langkah bersamanya dan ia berkembang.
 Skor Ark kini menghitung apa yang dibawa langkah-langkah Anda ke Ark, dari 0 sampai 100.
 Catatan harian saat salah satu hewan Anda di Ark dimangsa atau kelaparan. Matikan di Pengaturan.
 ```
 
-397 characters
+395 characters
 
 ## 9. Social bio line
 
