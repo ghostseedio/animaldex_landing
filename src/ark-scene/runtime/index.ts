@@ -24,7 +24,7 @@ import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-s
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
 import {arkAnimalClock, arkEpochSeconds, ArkShaderClock} from "@/ark-scene/shared-clock";
-import {ARK_LIVE_BUDGET, arkOutside, arkRestStep, arkWithinCapacity, arkZoneCapacity, type ArkLiveCandidate} from "@/ark-scene/live-budget";
+import {ARK_LIVE_BUDGET, arkOutside, arkRestingAsks, arkRestStep, arkWithinCapacity, arkZoneCapacity, type ArkLiveCandidate} from "@/ark-scene/live-budget";
 
 export type {ArkPower, ArkRenderMode} from "@/ark-scene/runtime/governor";
 
@@ -469,6 +469,24 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             const capacity = animals.length >= RULE_E_FROM ? arkZoneCapacity() : null;
             if (capacity) candidates = arkWithinCapacity(candidates, capacity, epoch, pinned, resting);
             return arkOutside(candidates, budget, epoch, pinned, resting);
+        },
+
+        /**
+         * The ids the rotation at `epoch` asks about first (resting at its roost?), as `outside` would ask at that step
+         * with every answer not `known` yet taken as "not resting": a crowded kind's members in ring order until its quota,
+         * the crowded zones' likewise. The warm-up's list (mobile performance lane): a few hundred of the Ark's thousands.
+         * Should some turn out resting, the rest of what that step asks is asked then, as before. Pure: no state changes.
+         */
+        restingAsks(animals: ReadonlyArray<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean; zone: string}>, live: ReadonlySet<string>, pins: ReadonlySet<string>, lite: boolean, epoch: number, known: (id: string) => boolean | undefined): string[] {
+            const budget = ARK_LIVE_BUDGET[lite ? "low" : ctx.tier()];
+            const candidates: Array<ArkLiveCandidate & {zone: string}> = [];
+            const pinned = new Set<string>(pins);
+            for (const animal of animals) {
+                if (!live.has(animal.id)) continue;
+                candidates.push({id: animal.id, group: animal.species_profile_id || `slug:${animal.model_slug}`, zone: animal.zone});
+                if (animal.mine) pinned.add(animal.id);
+            }
+            return arkRestingAsks(candidates, budget, epoch, pinned, animals.length >= RULE_E_FROM ? arkZoneCapacity() : null, known);
         },
 
         /** Behaviour's world is built (who is resting at home is known now): lay the snapshot out again next frame. */

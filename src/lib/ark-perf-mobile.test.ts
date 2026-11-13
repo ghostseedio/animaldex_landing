@@ -216,3 +216,23 @@ test("two-sided transparent meshes: the back faces then the front, as three's tw
     assert.equal(solid.children.length, 0);
     assert.equal(splitTwoSided(root), 0);
 });
+
+test("the resting warm-up's list: the rotation's first asks, a fraction of the Ark; with those answers it asks nothing else", async () => {
+    const {arkOutside, arkRestingAsks, arkWithinCapacity} = await import("@/ark-scene/live-budget");
+    const candidates = Array.from({length: 600}, (_, i) => ({id: `a${String(i).padStart(4, "0")}`, group: `kind${i % 60}`, zone: ["forest", "coast", "open_land"][i % 3]}));
+    const capacity = (zone: string) => (zone === "forest" ? 120 : null);
+    const epoch = 1_800_000_300;
+    const pinned = new Set(["a0007"]);
+    const asks = arkRestingAsks(candidates, 40, epoch, pinned, capacity, () => undefined);
+    assert.ok(asks.length > 0 && asks.length < candidates.length / 2, `${asks.length} asks`);
+    // Answer exactly those (none resting): the rotation asks about no one else, and lays out as with every answer known.
+    const answers = new Map(asks.map((id) => [id, false]));
+    const strict = (c: {id: string}) => {
+        const answer = answers.get(c.id);
+        if (answer === undefined) throw new Error(`asked about ${c.id}, not in the warm-up's list`);
+        return answer;
+    };
+    const out = arkOutside(arkWithinCapacity(candidates, capacity, epoch, pinned, strict), 40, epoch, pinned, strict);
+    const everyone = () => false;
+    assert.deepEqual([...out].sort(), [...arkOutside(arkWithinCapacity(candidates, capacity, epoch, pinned, everyone), 40, epoch, pinned, everyone)].sort());
+});

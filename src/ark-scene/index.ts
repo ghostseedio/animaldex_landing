@@ -1283,6 +1283,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const REST_STEP = 300;
     const restingMemo = new Map<string, boolean>();
     let restingWarm: {step: number; queue: string[]} | null = null;
+    /** The last rotation's question (setSnapshot's `runtime.outside` arguments), for the warm-up's list. */
+    let lastRotation: {snapshot: ArkSnapshot; candidates: Array<{id: string; species_profile_id?: string | null; model_slug: string; mine?: boolean; zone: string}>; live: ReadonlySet<string>; pins: ReadonlySet<string>; lite: boolean} | null = null;
     /** The warm-up's asks owed (fractional, spread over the step's frames). */
     let restingCredit = 0;
     let warmIds: {snapshot: ArkSnapshot; byId: Map<string, ArkAnimal>; scheds: Map<string, Sched | null>; worlds: [unknown, unknown]} | null = null;
@@ -1300,7 +1302,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (ahead > REST_STEP - 10) return;
         if (!restingWarm || restingWarm.step !== next) {
             for (const key of Array.from(restingMemo.keys())) if (!key.endsWith(`|${next - 1}`)) restingMemo.delete(key);
-            restingWarm = {step: next, queue: current.animals.map((animal) => animal.id)};
+            // (Mobile performance lane: only what the next step's rotation will ask, a few hundred, not every animal aboard.)
+            const rotation = lastRotation && lastRotation.snapshot === current ? lastRotation : null;
+            restingWarm = {step: next, queue: rotation ? runtime.restingAsks(rotation.candidates, rotation.live, rotation.pins, rotation.lite, next * REST_STEP, (id) => restingMemo.get(`${id}|${next}`)) : current.animals.map((animal) => animal.id)};
         }
         const ask = restingForStep(current, placedAll, next);
         if (!ask) return;
@@ -2238,6 +2242,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // schedule. On the low tier and the lighter view they take their turn in the budget like everyone.)
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
+        // (For the resting warm-up: what the next step's rotation will be asked about, `runtime.restingAsks`.)
+        lastRotation = {snapshot, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
         // (Lane TB, decision 255: the town's kept animals the budget rests, as figures where they live.)
         buildRestingGroups(isl ? snapshot.animals.filter((animal) => isl.has(animal) && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo") && representatives.live.has(animal.id) && !outside.has(animal.id)) : [], places);
         const next: Entry[] = [];
