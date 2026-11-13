@@ -1291,11 +1291,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!world || !scheduleOn || !(behaviourSchedule as unknown as Record<string, unknown>)[RESTING_AT_ROOST]) return;
         const seconds = worldMs() / 1000;
         const next = Math.floor(seconds / REST_STEP) + 1;
-        // (Mobile performance lane: spread evenly over the step from its first seconds, at the frame rate it is drawn at, so
-        // it is done half a minute before the next, then up to 6 ms a frame for anything left. It was 6 ms a frame in the
-        // last minute only, and one ask (~1 ms on a desktop, ~4 ms on the phone profile) overran that: 8–19 ms a frame for
-        // a minute, and on the phone profile not done by the step. The same answers, remembered per step, asked sooner and
-        // fewer a frame: about one every other frame.)
+        // (Mobile performance lane: spread evenly over the step from its first seconds, at the frame rate it is drawn at,
+        // at most one a frame, so it is done half a minute before the next; then up to 6 ms a frame for anything left, as
+        // before. It was 6 ms a frame in the last minute only, and one ask (~1 ms on a desktop, ~4 ms on the phone profile)
+        // overran that: 8–19 ms a frame for a minute, and on the phone profile not done by the step. The same answers,
+        // remembered per step, asked sooner and fewer a frame: about one every other frame.)
         const ahead = next * REST_STEP - seconds;
         if (ahead > REST_STEP - 10) return;
         if (!restingWarm || restingWarm.step !== next) {
@@ -1307,11 +1307,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (ahead > 30) {
             // Its share this frame: what is left over the frames left until half a minute before the step (at the rate
             // frames are drawn now, with a fifth to spare).
+            // Never more than one a frame: one ask is ~4 ms on the phone profile, and a world built late in the step has
+            // little time left (the rest is asked in the step's last half minute, or at the step, as before).
             const fps = frameIntervals.length ? Math.min(Math.max(1000 / mean(frameIntervals), 10), 60) : 20;
-            restingCredit += restingWarm.queue.length / Math.max((ahead - 30) * fps * 0.8, 1);
-            while (restingCredit >= 1 && restingWarm.queue.length) {
+            restingCredit = Math.min(restingCredit + restingWarm.queue.length / Math.max((ahead - 30) * fps * 0.8, 1), 1);
+            if (restingCredit >= 1 && restingWarm.queue.length) {
                 ask(restingWarm.queue.pop()!);
-                restingCredit--;
+                restingCredit -= 1;
             }
             return;
         }

@@ -88,7 +88,12 @@ Ranked by the measured win. Everything that is not a picture choice is exact: th
    every frame as before.
 6. **Garbage and repeated work:** the streamer's island lookup allocation-free; the wild assets' LOD re-sort writes and
    uploads nothing when no instance changed level (exactly what it wrote last time).
-7. **The overlay** (§5) and the harness (§1).
+7. **The town's transparent double-sided meshes** (the zoo's glass, cage bars and nets; `runtime/two-sided.ts`): three
+   draws each in two passes (its back faces, then its front) and marks the material changed before each, so each costs
+   two program look-ups a frame (~17 a frame, ~0.8 ms at 4×, ~4 MB/s of garbage). Each is now a back-face mesh and a
+   front-face child sharing its geometry and place: the same draws in the same order (the transparent sort's last word is
+   the object's id, and the child's comes next), no look-ups. Not on shadow casters or meshes with draw hooks.
+8. **The overlay** (§5) and the harness (§1).
 
 ## 4. Before and after
 
@@ -128,19 +133,25 @@ panel) and on the Android. A steady `30 fps` with `>33ms` near 0 is the pacing's
 ## 7. What is left (for other lanes)
 
 1. **The town's draw calls (town lane).** ~300 of the ~440 draw calls on the low tier, ~10 ms a frame at 6×: the
-   largest cost left on every phone. Each chunk draws ground, paving, buildings, nets, hedges and windows as separate
-   meshes. Merge the opaque layers per material per block of chunks (3×3: ~60 chunks → ~7 blocks, ~250 fewer calls),
-   keeping windows and panes per chunk (their lit attribute) and the near detail as it is; or a far version of the whole
-   town per material while every town chunk is past the render distance. Visual: identical (the same triangles and
-   materials).
-2. **Two-pass transparent materials (town lane).** The zoo's glass, cage bars and nets are `transparent` + `DoubleSide`:
-   three draws each object twice and re-checks its program twice a frame. Split each into a back-face and a front-face
-   mesh (same geometry, a material clone each with the same shader patch and key), the back one first: the same picture,
-   no per-frame program look-ups (~0.8 ms a frame at 4×, ~4 MB/s of garbage).
+   largest cost left on every phone. Each of the town's ~60 chunks draws its ground, paving, buildings, nets, hedges and
+   windows as separate meshes, and all of them while the town is across the strait. A plan with no extra memory and the
+   same triangles: build each opaque layer (ground, paving, buildings) of all chunks into one geometry whose attributes
+   every chunk's mesh shares (three uploads a shared attribute once), each chunk's mesh a view of its own range
+   (`drawRange`), plus one mesh per layer drawing the whole range; while every town chunk is past the render distance
+   (`applyStream`: the phones' tiers from the wild island, never the desktop's high tier, whose distance reaches the
+   town), show the whole-range meshes and hide the chunks' (~180 fewer draw calls); otherwise as now. Windows and panes
+   keep their chunks (their lit attribute), and the near detail is untouched. Opaque draws are sorted by material first,
+   so the order between layers is the same.
+2. **Two-pass transparent materials: done here** (§3, 7), applied to the town every few seconds from outside its build;
+   the town lane may prefer to build its glass, bars and nets that way itself.
 3. **The behaviour world's build** (behaviour lane): 60–70 s on the low phone before animals show (~25 ms a frame).
    In the prebuild worker, as the places are.
-4. **The resting warm-up's asks** (runtime/behaviour): ~4 ms each on the phone profile, 3,145 every five minutes, now
-   spread; making `restingAtRoost` cheaper (or answering it in the places worker) would remove it.
+4. **The resting warm-up's asks** (runtime/behaviour): ~4 ms each on the phone profile (tens of ms under load), and it
+   asks for all 3,145 animals every five minutes, while the rotation itself (`arkOutside`, `arkWithinCapacity`) asks
+   only a crowded kind's members, in ring order, until its quota of awake ones is found. Warming exactly those (run the
+   next step's rotation with a recording `isResting`), or answering `restingAtRoost` in a worker, would cut it by most of
+   its work. Now spread (at most one ask a frame) instead of 8–19 ms a frame in the step's last minute; a world built
+   late in a step still leaves the step's last half minute heavy, as before.
 5. **Per-frame garbage in the animal loop** (scene): the candidates' objects, filter/sort/map chains and Sets each frame;
    pooled arrays would cut most of the remaining 15–25 MB/s.
 6. **The snapshot's parse** (embed and page): the 1.6 MB read is parsed on the main thread every 45 s in the apps'
