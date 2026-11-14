@@ -213,3 +213,28 @@ test("every loading function the embed calls is on the bundle's window.AnimalDex
     assert.ok(used.size >= 10, `the embed uses the loading functions (${Array.from(used).join(", ")})`);
     for (const name of Array.from(used)) assert.match(entry, new RegExp(`^    ${name},?$`, "m"), `${name} exported`);
 });
+
+test("loading: while the host's selection waits for its flight the card stays in its last stage, its bar real steps", async () => {
+    const {arkAnimalsHeld, arkLoadAnimals, arkLoadStage, arkLoadProgress, arkProgressMessage} = await import("@/lib/ark-loading");
+    // Nothing held: the opening view's models alone, as before.
+    assert.deepEqual(arkAnimalsHeld(0.4, false, null), {share: 0.4, done: false});
+    assert.deepEqual(arkAnimalsHeld(0.4, true, null), {share: 1, done: true});
+    assert.deepEqual(arkAnimalsHeld(0.4, true, undefined), {share: 1, done: true});
+    // A wild animal chosen at ark:ready, close up: the world to build, its schedule to wire, two levels to load.
+    assert.deepEqual(arkAnimalsHeld(0, false, {steps: 4, done: 0}), {share: 0, done: false});
+    assert.deepEqual(arkAnimalsHeld(1, true, {steps: 4, done: 0}), {share: 0.5, done: false}, "the view's models in, none of its own steps: half, and not done");
+    assert.deepEqual(arkAnimalsHeld(1, true, {steps: 4, done: 2}), {share: 0.75, done: false});
+    assert.deepEqual(arkAnimalsHeld(1, true, {steps: 4, done: 4}), {share: 0.98, done: false}, "all in, the flight not begun yet: never full while it waits");
+    assert.deepEqual(arkAnimalsHeld(1, true, {steps: 0, done: 0}), {share: 1, done: true}, "nothing to wait for");
+    // On the bar: the stage told to the host stays "animals" until the flight starts, and only ever moves forward.
+    let state = {data: true, code: true, prepared: true, frame: true, animals: 0, animalsDone: false};
+    const steps: Array<[number, boolean, {steps: number; done: number} | null]> = [[0.5, false, {steps: 4, done: 0}], [1, true, {steps: 4, done: 0}], [1, true, {steps: 4, done: 2}], [1, true, {steps: 4, done: 1}], [1, true, {steps: 4, done: 4}], [1, true, null]];
+    const told: string[] = [];
+    for (const [share, viewDone, held] of steps) {
+        const now = arkAnimalsHeld(share, viewDone, held);
+        state = arkLoadAnimals(state, now.share, now.done);
+        told.push(`${arkLoadStage(state)} ${arkLoadProgress(state)}`);
+    }
+    assert.deepEqual(told, ["animals 0.85", "animals 0.9", "animals 0.95", "animals 0.95", "animals 0.996", "done 1"]);
+    assert.deepEqual(arkProgressMessage(state), {type: "ark:progress", stage: "done", progress: 1});
+});

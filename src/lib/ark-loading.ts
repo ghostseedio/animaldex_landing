@@ -96,6 +96,27 @@ export function arkAnimalsShare(pending: number, mostPending: number): number {
     return clamp01((mostPending - Math.max(pending, 0)) / mostPending);
 }
 
+/**
+ * A selection's flight the scene is holding (`ArkSceneHandle.flightHeld`): of the things the chosen animal waits for
+ * (the behaviour world built, its schedule wired, its far model in, its near model for a close-up), how many are in.
+ */
+export type ArkFlightHeld = {steps: number; done: number};
+
+/**
+ * The animals' part of the loading screen while the host's selection waits for its flight (the apps choose the chat's
+ * animal the moment the page is ready; the camera then waits on the whole island until that animal can be seen, 15 to
+ * 30 s for a wild one on a phone). The card stays in its last stage for that long, so the reader knows something is
+ * coming, and its bar stays true: half is the opening view's models, half the chosen animal's own steps, each a real
+ * thing that has happened. Not done until both are. With nothing held: the opening view's models alone, as before.
+ */
+export function arkAnimalsHeld(viewShare: number, viewDone: boolean, held: ArkFlightHeld | null | undefined): {share: number; done: boolean} {
+    const view = viewDone ? 1 : clamp01(viewShare);
+    if (!held || !(held.steps > 0)) return {share: view, done: viewDone};
+    const own = clamp01(held.done / held.steps);
+    // (Never full while it waits: the bar's end is the flight.)
+    return {share: Math.min((view + own) / 2, 0.98), done: false};
+}
+
 /** The newest arrival the loading screen names: came aboard (not born), a real species with art (not the placeholder). */
 export function arkNewestArrival<T extends {arrived_at: string; origin?: "arrived" | "born"; model_slug: string | null; placeholder?: boolean}>(animals: readonly T[]): T | null {
     let newest: T | null = null;

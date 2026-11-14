@@ -23,7 +23,7 @@ import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 import {arkStatusForHost} from "@/lib/ark-animal-status";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
-import {ARK_LOAD_START, arkAgoText, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
+import {ARK_LOAD_START, arkAgoText, arkAnimalsHeld, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
 
 declare global {
     interface Window {
@@ -59,6 +59,7 @@ declare global {
             arkLoadProgress: typeof arkLoadProgress;
             arkLoadWorking: typeof arkLoadWorking;
             arkAnimalsShare: typeof arkAnimalsShare;
+            arkAnimalsHeld: typeof arkAnimalsHeld;
             arkNewestArrival: typeof arkNewestArrival;
             arkAgoText: typeof arkAgoText;
             arkProgressMessage: typeof arkProgressMessage;
@@ -90,6 +91,7 @@ window.AnimalDexArk = {
     arkLoadProgress,
     arkLoadWorking,
     arkAnimalsShare,
+    arkAnimalsHeld,
     arkNewestArrival,
     arkAgoText,
     arkProgressMessage,

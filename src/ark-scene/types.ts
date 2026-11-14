@@ -505,6 +505,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     preload: (slugs: string[]) => Promise<void>;
     /** True while any model is still loading. */
     loading: () => boolean;
+    /**
+     * A selection's flight being held until the animal can be seen (`index.ts` `arrive`): of the things it waits for,
+     * how many are in; null when no flight is held. The embed's loading card stays up meanwhile (`lib/ark-loading.ts`).
+     */
+    flightHeld?: () => {steps: number; done: number} | null;
     /** Keep an animal out of sight until `arrive` (the recorder's new arrival). */
     hold: (id: string) => void;
     /** A held animal comes aboard now, with the entrance it has in a replay. */
