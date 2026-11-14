@@ -250,6 +250,35 @@ export function sightExit(box: Box, p: Point, target: Point, margin: number): Po
 /** The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face. */
 const SIGHT_NEAREST = 2.5;
 
+/** A view of something: how far from it, the angle from straight above, the bearing (three's Spherical about the target). */
+export type CloseView = {distance: number; polar: number; azimuth: number};
+
+/**
+ * The other views of a chosen animal to try when the asked one cannot see it (a wall, a house's shell, a rock, a trunk
+ * or a hillside between): the asked view first, then round it at the same height (nearest bearings first, each side),
+ * then steeper (over a wall or a fence, down into a roofless house), then nearer (inside the room or the pen it is
+ * in), then from nearly overhead. `nearest`: the least distance a view may stand at.
+ */
+export function closeUpViews(asked: CloseView, nearest: number): CloseView[] {
+    const views: CloseView[] = [asked];
+    const turns = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2, (Math.PI * 3) / 4, (-Math.PI * 3) / 4, Math.PI];
+    const steep = Math.max(Math.min(asked.polar - 0.4, 0.8), 0.45);
+    const near = Math.max(asked.distance * 0.55, nearest);
+    const round = (distance: number, polar: number, first: boolean) => {
+        if (first) views.push({distance, polar, azimuth: asked.azimuth});
+        for (const turn of turns) views.push({distance, polar, azimuth: asked.azimuth + turn});
+    };
+    round(asked.distance, asked.polar, false);
+    if (steep < asked.polar - 0.05) round(asked.distance, steep, true);
+    if (near < asked.distance - 0.05) {
+        round(near, asked.polar, true);
+        if (steep < asked.polar - 0.05) round(near, steep, true);
+    }
+    views.push({distance: asked.distance, polar: 0.2, azimuth: asked.azimuth});
+    if (near < asked.distance - 0.05) views.push({distance: near, polar: 0.2, azimuth: asked.azimuth});
+    return views;
+}
+
 /** Whether a point is inside an obstacle (the target inside a crown: that crown is not pushed against). */
 export function inside(obstacle: CameraObstacle, p: Point, margin = 0): boolean {
     return penetration(obstacle, p, margin).depth > 0;

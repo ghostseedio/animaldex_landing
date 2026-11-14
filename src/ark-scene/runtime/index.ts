@@ -17,7 +17,7 @@ import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRen
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
-import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
+import {CAMERA_RADIUS, CameraObstacles, collideCamera, dampingFor, FollowSmoother, inside, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
 import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
 import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-scene/runtime/power";
@@ -159,6 +159,18 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const ui = recording ? null : new RuntimeUi(ctx.el, {resetLabel: ctx.options.resetLabel, resetButton: ctx.options.resetButton, loadingBar: ctx.options.loadingBar, reducedMotion: Boolean(ctx.options.reducedMotion)}, () => resetView());
     let obstacles: CameraObstacles | null = null;
     let islandObstaclesIn = false;
+    /** The camera's obstacles: built once (every fill tree, with its rank; a tier's share is applied at the query), the town's added when it is in. */
+    const obstaclesNow = (): CameraObstacles => {
+        obstacles ??= CameraObstacles.forScene();
+        if (!islandObstaclesIn) {
+            const more = ctx.islandObstacles?.() ?? null;
+            if (more) {
+                for (const obstacle of more) obstacles.add(obstacle);
+                islandObstaclesIn = true;
+            }
+        }
+        return obstacles;
+    };
     let firstFrameMs: number | null = null;
     let shaders: ArkRuntimeStats["shaders"] = "pending";
     let warming = false;
@@ -424,19 +436,25 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         },
 
         /**
+         * Whether an eye placed there would stand inside something the camera's body knows (a trunk, a crown, a rock, a
+         * building), for choosing a close-up's view. What the view's target is inside is not counted (a pet indoors).
+         */
+        eyeBlocked(eye: {x: number; y: number; z: number}, target: {x: number; y: number; z: number}): boolean {
+            const fill = ctx.fillShare(ctx.tier());
+            for (const obstacle of obstaclesNow().near(eye.x, eye.z)) {
+                if (obstacle.rank !== undefined && obstacle.rank >= fill) continue;
+                if (inside(obstacle, target, 0.05)) continue;
+                if (inside(obstacle, eye, CAMERA_RADIUS)) return true;
+            }
+            return false;
+        },
+
+        /**
          * After the scene keeps the view over the world (its own hard floor): out of trees, rocks and buildings, and
          * over ground rising just round the eye. `closeUp`: by a small animal (only solid things push, by less).
          */
         collide(target: Vector3, dt: number, closeUp: boolean) {
-            // Built once (every fill tree, with its rank); a tier's share is applied at the query.
-            obstacles ??= CameraObstacles.forScene();
-            if (!islandObstaclesIn) {
-                const more = ctx.islandObstacles?.() ?? null;
-                if (more) {
-                    for (const obstacle of more) obstacles.add(obstacle);
-                    islandObstaclesIn = true;
-                }
-            }
+            const obstacles = obstaclesNow();
             const fill = ctx.fillShare(ctx.tier());
             // The scene's rules (keepInWorld): under the sea it keeps its own floor; the eye's height over the ground
             // is a quarter of the view distance, 3 cm to 1.2 m.
