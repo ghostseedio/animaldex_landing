@@ -31,6 +31,7 @@ import {
     type WebGLRenderer
 } from "three";
 import {Sky} from "three/examples/jsm/objects/Sky.js";
+import {readUntilIn} from "@/ark-scene/model-files";
 import {RGBELoader} from "three/examples/jsm/loaders/RGBELoader.js";
 
 /** The CC0 sky (docs/ark-credits.md): where its sun is, as a bearing round y (atan2(z, x)), to turn it onto the scene's sun. */
@@ -256,9 +257,13 @@ export class ArkLighting {
         this.apply(this.current, null);
     }
 
+    /** Disposed: the day sky is not read again. */
+    private gone = false;
+
     /** Load the photographed day sky (once); it takes over the image-based light while the sun is up. */
     loadDaySky(url: string) {
-        new RGBELoader().load(url, (texture) => {
+        // (Read until it is in: a dropped request left the generated sky's light for the whole visit.)
+        void readUntilIn("day sky", () => new RGBELoader().loadAsync(url), () => !this.gone).then((texture) => {
             // How much light it gives (`sky-light.ts`), and its picture kept for the cross-fade with the generated sky.
             const {data, width, height} = texture.image as unknown as {data: Uint16Array | Float32Array; width: number; height: number};
             const half = texture.type === HalfFloatType;
@@ -282,7 +287,7 @@ export class ArkLighting {
             this.arrival = this.drawn ? {at: performance.now() / 1000, applied: -1} : null;
             this.builtFor = null;
             this.apply(this.current, null);
-        }, undefined, () => {});
+        }).catch(() => undefined);
     }
 
     /** How much of the photographed sky is in yet, 0–1 (1 unless it arrived late and is still coming in). */
@@ -440,6 +445,7 @@ export class ArkLighting {
     }
 
     dispose() {
+        this.gone = true;
         this.environment.dispose();
         this.clouds.geometry.dispose();
         this.cloudMaterial.dispose();

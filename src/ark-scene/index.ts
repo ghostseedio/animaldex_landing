@@ -92,6 +92,7 @@ import {buildMotes} from "@/ark-scene/life";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Shadow} from "@/ark-scene/marks";
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
+import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
@@ -646,6 +647,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
+    // (No draw call with nothing to draw: `runtime/empty-draws.ts`.)
+    skipEmptyDraws(renderer);
     // One frame is several passes: count them all (reset at the frame's start).
     renderer.info.autoReset = false;
     renderer.toneMapping = ACESFilmicToneMapping;
@@ -5356,7 +5359,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * apps' face-to-face close-up) has its view tried against what is drawn; when its lines to the animal are blocked,
      * the other views round it are tried a few a frame (never more than about 3 ms of a frame) and the flight ends at
      * the first clear one instead. Afterwards, while the animal stays chosen and nobody touches the view, the lines are
-     * looked at again about once a second: an animal that has walked behind something is flown round to.
+     * looked at again about once a second: an animal that has walked behind something is flown round to. The same
+     * step keeps the whole animal in the picture (the flight's distance is at least what its height and length need
+     * in this view's shape) and brings the view back to an animal that has jumped out of it after landing.
      * Not for an animal under the ground (the cutaway shows it), under the sea (the dive's own view), up a tree (its
      * own search, `clearCanopyView`) or on its microhabitat (its own view out along its surface, centimetres away).
      * Nothing here moves an animal or the scenery.
@@ -5366,6 +5371,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let clearedFlight: Flight | null = null;
     let clearCheckAt = 0;
     let clearMisses = 0;
+    let clearFlying = false;
+    let clearLandedAt = 0;
+    let clearFor: string | null = null;
+    let clearRecentres = 0;
+    let clearDriftSince = 0;
     /** What the search cost (the probes read it in a development build): searches begun, views tried, ms in all and in the worst frame. */
     const clearStats = {searches: 0, views: 0, ms: 0, worstMs: 0, moved: 0};
     const sightEye = new Vector3();
@@ -5399,10 +5409,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             clearSearch = null;
             return;
         }
-        const nearest = Math.max(controls.minDistance, entry.length * 1.6 + 0.4);
+        // The least distance its whole body is in the picture from: its height in the view's height, its length (seen
+        // three-quarters on) in the view's width. A giraffe's close-up on an upright phone showed its legs and belly.
+        const tangent = 2 * Math.tan((FOV * Math.PI) / 360);
+        const whole = Math.max(entry.drawnHeight / (0.7 * tangent), (entry.length * 0.8) / (0.85 * tangent * Math.max(width / Math.max(height, 1), 0.3)));
+        const nearest = Math.max(controls.minDistance, entry.length * 1.6 + 0.4, whole);
+        // Landed: the flight to it has ended (what moves the view after that is the animal, until someone touches it).
+        if (flight && flight === clearedFlight) clearFlying = true;
+        else if (!flight && clearFlying) {
+            clearFlying = false;
+            clearLandedAt = now;
+        }
+        if (clearFor !== entry.animal.id) {
+            clearFor = entry.animal.id;
+            clearRecentres = 0;
+            clearDriftSince = 0;
+        }
         if (flight && flight !== clearedFlight) {
             // A flight to it that has not been looked at yet: its own view first.
             if (flight.to.distanceTo(at) < entry.length + 1.5) {
+                if (flight.toDistance < whole) flight.toDistance = Math.min(whole, maxDistance);
                 clearedFlight = flight;
                 // (A new close-up: what was gathered for the last one may have been streamed in or out since.)
                 sight.reset();
@@ -5422,6 +5448,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 clearMisses = 0;
                 clearSearch = {views: closeUpViews(current, nearest).slice(1), next: 0, best: null, bestBlocked: blocked, asked: null};
             }
+        }
+        // Kept in the picture after landing: the tracking follows its steps, but not a jump (its schedule taking hold, a
+        // model's swap, a take-off faster than a frame allows). When it has been off the view's middle for half a
+        // second with nobody touching the view since it landed (or while it is followed), the view comes back to it,
+        // as it stands; that flight is then looked at like any other. A few times a selection at most.
+        if (!flight && !clearSearch && pointers === 0 && clearLandedAt > 0 && (lastTouch <= clearLandedAt + 0.05 || followId === entry.animal.id) && clearRecentres < 8) {
+            const viewDistance = camera.position.distanceTo(controls.target);
+            if (controls.target.distanceTo(at) > Math.max(entry.length * 0.6, viewDistance * 0.14)) {
+                if (!clearDriftSince) clearDriftSince = now;
+                else if (now - clearDriftSince > 0.5) {
+                    clearDriftSince = 0;
+                    clearRecentres++;
+                    sightLook.setFromVector3(sightEye.copy(camera.position).sub(controls.target));
+                    const id = entry.animal.id;
+                    fly(at.clone(), Math.max(sightLook.radius, whole), 0.7, sightLook.phi, sightLook.theta);
+                    const back = flight as Flight | null;
+                    if (back) back.aim = () => (selectedId === id ? findEntry(id)?.middle ?? null : null);
+                }
+            } else clearDriftSince = 0;
         }
         const search = clearSearch;
         if (!search) return;
@@ -5474,6 +5519,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
     };
 
+    /** A held arrival's flight is beginning (`arrive`): the selection is not told again. */
+    let arrivalResumed = false;
     const select = (id: string | null, flyTo: boolean, close = false) => {
         // A herd member that isn't one of its representatives comes forward to be met (A14); the last one goes back.
         const pin = id && ((!entryById.has(id) && aboard.has(id)) || id === selectionPin) ? id : null;
@@ -5490,7 +5537,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // model, then the near one).
         library.urgent = entry?.animal.model_slug ?? null;
         if (entry && library.has(entry.animal.model_slug)) library.request(entry.animal.model_slug, "near");
-        options.onSelect?.(entry?.animal ?? null);
+        // (Not told twice when a held arrival's flight begins: `arrive`.)
+        if (!arrivalResumed) options.onSelect?.(entry?.animal ?? null);
         toldState = null;
         tellState();
         if (entry && flyTo) {
@@ -5594,6 +5642,103 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             fly(target, distanceTo, 1.3, CLOSE_POLAR, entry.place.covered ? clearAzimuth(target, distanceTo, CLOSE_POLAR, entry.phase) : undefined);
             follow();
         }
+    };
+
+    // MARK: The host's selection: chosen at once, flown to when there is an animal to see
+
+    /**
+     * A selection from the host or the page (`ark:select`, a focus link, the list): the apps send theirs the moment the
+     * page says it is ready, for the chat's animal, so the camera flew at once to an animal that could not be drawn
+     * yet. A wild animal is unseen until the behaviour world is built and its schedule wired (20 s and more on a phone):
+     * the close-up was an empty patch of ground. One whose files were still on their way was its icon in a ring for
+     * seconds (slow 4G: 6 to 7 s). So the animal is chosen at once (its card, its ring, its model, icon and rig asked
+     * for first) and the camera stays where it is, the whole island in the opening, until the animal can be seen and
+     * its model is in; then the flight, to the animal itself. A touch meanwhile keeps the view the reader took.
+     */
+    let arriving: {id: string; close: boolean; since: number; seen: number | null} | null = null;
+    /**
+     * The animal flown to, and whether its schedule was wired then. A town animal has none until the town's behaviour
+     * world is built, half a minute into a phone's visit: it is drawn at its home place, the camera comes, and then its
+     * schedule puts it where its day has it, metres away, out of the close-up. So the flight is made once more when
+     * its schedule first takes hold, to where it is now.
+     */
+    let arrived: {id: string; close: boolean; wired: boolean} | null = null;
+    // (The reader's own hand on the view meanwhile: the view they took stays.)
+    controls.addEventListener("start", () => {
+        arriving = null;
+        arrived = null;
+    });
+    /**
+     * The longest the flight waits for an animal that cannot be drawn at all, and (from when it can) for its model: a
+     * close-up's near level on a slow link, or the far level for a pick from the list, which is seen from further off (s).
+     */
+    const ARRIVE_UNSEEN_SECONDS = 90;
+    const ARRIVE_MODEL_SECONDS = {close: 12, far: 4};
+    /** Whether the flight to it should still wait: not drawn yet (the frame loop's own rule), or its model not in. */
+    const arrivalWaits = (entry: Entry, held: NonNullable<typeof arriving>, now: number): boolean => {
+        const unseen = Boolean(entry.sched) && (!world || !entry.sched!.wired) && !entry.visitor && !entry.act && !entry.moment;
+        if (unseen) return now - held.since < ARRIVE_UNSEEN_SECONDS;
+        held.seen ??= now;
+        const model = library.get(entry.animal.model_slug);
+        // (Close up, its near level too; from further off the far one is the picture.)
+        const modelIn = Boolean(model?.far) && (!held.close || Boolean(model?.near));
+        return !modelIn && now - held.seen < (held.close ? ARRIVE_MODEL_SECONDS.close : ARRIVE_MODEL_SECONDS.far);
+    };
+    /** The flight itself, the selection already told. */
+    const flyToChosen = (id: string, close: boolean) => {
+        arrivalResumed = true;
+        try {
+            select(id, true, close);
+        } finally {
+            arrivalResumed = false;
+        }
+    };
+    const stepArrival = (now: number) => {
+        const held = arriving;
+        if (!held) {
+            // Flown to before its schedule took hold: once more, to where that has put it.
+            if (!arrived || arrived.wired) return;
+            const entry = selectedId === arrived.id ? findEntry(arrived.id) : undefined;
+            if (!entry) {
+                arrived = null;
+                return;
+            }
+            if (!entry.sched?.wired || !entry.sched.warm) return;
+            arrived.wired = true;
+            flyToChosen(arrived.id, arrived.close);
+            return;
+        }
+        // (Another animal chosen, or the selection cleared: nothing to fly to.)
+        if (selectedId !== held.id) {
+            arriving = null;
+            return;
+        }
+        const entry = findEntry(held.id);
+        if (!entry) {
+            arriving = null;
+            return;
+        }
+        if (arrivalWaits(entry, held, now)) return;
+        arriving = null;
+        arrived = {id: held.id, close: held.close, wired: Boolean(entry.sched?.wired) || Boolean(entry.visitor)};
+        flyToChosen(held.id, held.close);
+    };
+    const arrive = (id: string | null, close: boolean) => {
+        arriving = null;
+        arrived = null;
+        if (!id || reducedMotion || options.recording) {
+            select(id, true, close);
+            return;
+        }
+        // Chosen now, without the flight.
+        select(id, false, close);
+        const entry = findEntry(id);
+        if (!entry) return;
+        tokens.ensure(entry.animal.model_slug);
+        if (!entry.visitor) rigs.request(entry.animal.model_slug, true);
+        // (The frame loop's clock: seconds, `performance.now()`.)
+        arriving = {id, close, since: performance.now() / 1000, seen: null};
+        stepArrival(performance.now() / 1000);
     };
 
     let down: {x: number; y: number; time: number; id: number} | null = null;
@@ -6634,6 +6779,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         perf.lap("town");
+        stepArrival(now);
         stepFlight(now);
         stepClearView(now);
         stepInset();
@@ -6877,10 +7023,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         select: whenAnimals((id: string | null, closeUp?: boolean) => {
             // (An animal a read just brought aboard, while that read is being placed: selected once it is laid out.)
             if (id && readPlacing && !aboard.has(id)) {
-                afterRead.push(() => select(id, true, Boolean(closeUp)));
+                afterRead.push(() => arrive(id, Boolean(closeUp)));
                 return;
             }
-            select(id, true, Boolean(closeUp));
+            arrive(id, Boolean(closeUp));
         }),
         // (Before the animals are in, a herd is not known yet: false, as for any unknown key.)
         selectHerd: (key) => (animalsIn ? selectHerd(key, true) : false),

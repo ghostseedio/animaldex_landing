@@ -15,6 +15,7 @@
  * copy of Basis Universal) is loaded with the first skin.
  */
 
+import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {type Texture, type WebGLRenderer} from "three";
 import type {KTX2Loader} from "three/examples/jsm/loaders/KTX2Loader.js";
 
@@ -112,8 +113,8 @@ export class CloseUpTextures {
 
     private readManifest() {
         this.manifestAsked = true;
-        fetch(`${this.base!.replace(/\/+$/, "")}/manifest.json`)
-            .then((response) => (response.ok ? response.json() : null))
+        // (Read until it is in; a set that is not published answers 400 and is done without, as before.)
+        readUntilIn("close-up skins", () => fetchOk(`${this.base!.replace(/\/+$/, "")}/manifest.json`).then((response) => response.json() as Promise<unknown>), () => !this.disposed)
             .then((raw: unknown) => {
                 const row = raw && typeof raw === "object" ? raw as {kind?: unknown; models?: unknown} : null;
                 if (row?.kind === "ark-closeup" && row.models && typeof row.models === "object") this.manifest = row.models as Record<string, string>;
@@ -135,8 +136,19 @@ export class CloseUpTextures {
         if (!version) return;
         const entry: Entry = {texture: null, loading: true, failed: false, usedAt: this.now};
         this.entries.set(slug, entry);
-        this.ktx2()
-            .then((loader) => loader.loadAsync(`${this.base!.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${version}.near.ktx2`))
+        // (Read until it is in while this skin is still wanted; a failed read takes the loader with it, which keeps
+        // its transcoder's own failed read for good.)
+        readUntilIn(
+            `close-up skin ${slug}`,
+            () =>
+                this.ktx2()
+                    .then((loader) => loader.loadAsync(`${this.base!.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${version}.near.ktx2`))
+                    .catch((error: unknown) => {
+                        this.loader = null;
+                        throw error;
+                    }),
+            () => !this.disposed && this.entries.get(slug) === entry
+        )
             .then((texture) => {
                 entry.loading = false;
                 if (this.disposed || this.entries.get(slug) !== entry) {

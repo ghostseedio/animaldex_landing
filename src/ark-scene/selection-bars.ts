@@ -21,6 +21,26 @@ const ICON: Record<ArkStatusBarKey, string> = {
 const KEYS = ARK_STATUS_BAR_KEYS;
 /** Clear of the view's edges (CSS px). */
 const EDGE = 8;
+/** Clear of the chips and buttons over the view by this much (CSS px), and how often they are measured (ms). */
+const CHIP_GAP = 6;
+const CHIPS_EVERY_MS = 400;
+
+type Box = {left: number; top: number; right: number; bottom: number};
+
+/**
+ * Where the bars go so that they overlap none of `boxes` (the chips and buttons over the view): beside the one they
+ * would cover, on the side that moves them least, when they fit there inside the view; else below it. Pure.
+ */
+export function clearOfBoxes(at: {left: number; top: number}, size: {w: number; h: number}, boxes: readonly Box[], view: {width: number; height: number}, edge = EDGE): {left: number; top: number} {
+    let {left, top} = at;
+    for (const box of boxes) {
+        if (!(left < box.right && left + size.w > box.left && top < box.bottom && top + size.h > box.top)) continue;
+        const beside = [box.right, box.left - size.w].filter((x) => x >= edge && x + size.w <= view.width - edge).sort((a, b) => Math.abs(a - left) - Math.abs(b - left));
+        if (beside.length) left = beside[0];
+        else top = Math.min(box.bottom, Math.max(view.height - size.h - edge, edge));
+    }
+    return {left, top};
+}
 
 export class ArkSelectionBars {
     readonly el: HTMLDivElement;
@@ -28,6 +48,8 @@ export class ArkSelectionBars {
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;
+    /** What is drawn over the view (the HUD's chips, the sound button), in the layer's own pixels, and the host's top inset. */
+    private chips: {at: number; top: number; boxes: Box[]} | null = null;
 
     constructor(layer: HTMLElement, private reducedMotion: boolean) {
         const el = document.createElement("div");
@@ -104,13 +126,46 @@ export class ArkSelectionBars {
             this.size = {w: box.width || 76, h: box.height || 30};
         }
         const {w, h} = this.size;
-        const left = Math.min(Math.max(x - w / 2, EDGE), Math.max(view.width - w - EDGE, EDGE));
-        const top = Math.min(Math.max(y - h - 9, EDGE), Math.max(view.height - h - EDGE, EDGE));
-        this.el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
+        // Clear of what the host draws over the top of the view (`--ark-inset-top`, the iOS panel's title), and of the
+        // chips over it: close up on an animal near the top, the bars slid under the "aboard" chip.
+        const chips = this.measureChips();
+        const at = clearOfBoxes(
+            {left: Math.min(Math.max(x - w / 2, EDGE), Math.max(view.width - w - EDGE, EDGE)), top: Math.min(Math.max(y - h - 9, EDGE + chips.top), Math.max(view.height - h - EDGE, EDGE))},
+            {w, h},
+            chips.boxes,
+            view
+        );
+        this.el.style.transform = `translate(${at.left.toFixed(1)}px, ${at.top.toFixed(1)}px)`;
         if (!this.shown) {
             this.shown = true;
             this.el.style.opacity = "1";
         }
+    }
+
+    /** The chips and buttons over the view now (measured a few times a second, not every frame). */
+    private measureChips(): {top: number; boxes: Box[]} {
+        const now = performance.now();
+        if (this.chips && now - this.chips.at < CHIPS_EVERY_MS) return this.chips;
+        const layer = this.el.parentElement;
+        const host = layer?.parentElement;
+        const boxes: Box[] = [];
+        let top = 0;
+        if (layer && host) {
+            const origin = layer.getBoundingClientRect();
+            const over: Element[] = [];
+            // (Each HUD part's own pieces: its box is wider than the chip in it.)
+            host.querySelectorAll("[data-ark-live]").forEach((part) => over.push(...Array.from(part.children)));
+            const sound = document.getElementById("ark-sound");
+            if (sound) over.push(sound);
+            for (const element of over) {
+                const box = element.getBoundingClientRect();
+                if (box.width < 2 || box.height < 2) continue;
+                boxes.push({left: box.left - origin.left - CHIP_GAP, top: box.top - origin.top - CHIP_GAP, right: box.right - origin.left + CHIP_GAP, bottom: box.bottom - origin.top + CHIP_GAP});
+            }
+            top = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ark-inset-top")) || 0;
+        }
+        this.chips = {at: now, top, boxes};
+        return this.chips;
     }
 
     hide() {
