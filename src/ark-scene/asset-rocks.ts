@@ -16,6 +16,7 @@ import type {RockMesh} from "@/ark-scene/rock-shapes";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
+import {readNowOrLater} from "@/ark-scene/model-files";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
 import {generatedRockFile, rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
@@ -166,16 +167,18 @@ export class AssetInstances {
                 if (!LEVELS.includes(level)) continue;
                 // A rock made here (rock-assets.ts "gen:…"): its mesh is built, not loaded.
                 const made = generatedRockFile(lod.file);
-                const source: Promise<BufferGeometry | null> = made
-                    ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail)))
-                    : loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
-                          let found: BufferGeometry | null = null;
-                          gltf.scene.traverse((object) => {
-                              if (!found && (object as Mesh).isMesh) found = (object as Mesh).geometry as BufferGeometry;
+                const read = (): Promise<BufferGeometry | null> =>
+                    made
+                        ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail)))
+                        : loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
+                              let found: BufferGeometry | null = null;
+                              gltf.scene.traverse((object) => {
+                                  if (!found && (object as Mesh).isMesh) found = (object as Mesh).geometry as BufferGeometry;
+                              });
+                              return found;
                           });
-                          return found;
-                      });
-                jobs.push(source.then((geometry) => {
+                // (A file that only failed to arrive is read again in the background, and the set takes over then.)
+                jobs.push(readNowOrLater(`${this.kind} ${lod.file}`, read, (geometry, late) => {
                     if (!geometry) return;
                     // The library's flowers and lily pads carry morph targets (their own sway) that this instancing does not
                     // draw (the bigger wild island's ground plants on the floor, P3): drawn at rest.
@@ -189,11 +192,16 @@ export class AssetInstances {
                     mesh.userData.kind = this.kind;
                     entry.meshes[level] = mesh;
                     this.group.add(mesh);
-                }).catch(() => {}));
+                    if (late) this.settle();
+                }));
             }
         });
         await Promise.all(jobs);
-        // Only take over when every asset can be drawn (a missing set keeps what stood in).
+        this.settle();
+    }
+
+    /** Only take over when every asset can be drawn (a missing set keeps what stood in). */
+    private settle() {
         let complete = true;
         this.byAsset.forEach((entry) => {
             if (!LEVELS.some((level) => entry.meshes[level])) complete = false;

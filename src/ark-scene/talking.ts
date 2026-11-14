@@ -23,6 +23,7 @@ import {
     type BufferGeometry,
     type Material
 } from "three";
+import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {loadTalkingModel, type LoadedTalkingModel} from "@/components/ask-animaldex/voice-call/talking-model-renderer";
 import {MouthEnvelope} from "@/lib/talking-models/model-math";
 
@@ -123,8 +124,8 @@ export function talkingSource(base: string): TalkingModelSource {
     const clean = base.replace(/\/+$/, "");
     return {
         base: clean,
-        manifest: fetch(`${clean}/manifest.json`)
-            .then((response) => (response.ok ? response.json() : null))
+        // (Read until it is in: a dropped request left every talking animal on its Ark model for the visit.)
+        manifest: readUntilIn("talking models", () => fetchOk(`${clean}/manifest.json`).then((response) => response.json() as Promise<unknown>))
             .then((raw: unknown) => {
                 const row = raw && typeof raw === "object" ? raw as {models?: Record<string, string>; glb?: string} : null;
                 return row?.models ? {models: row.models, glb: typeof row.glb === "string" ? row.glb : "g1"} : null;
@@ -156,7 +157,8 @@ export class TalkingActor {
             const version = manifest?.models[this.slug];
             if (!version || this.disposed) return;
             const folder = `${source.base}/${encodeURIComponent(this.slug)}/${encodeURIComponent(version)}`;
-            const loaded = await loadTalkingModel({slug: this.slug, model: `${folder}.${manifest?.glb ?? "g1"}.glb`, texture: `${folder}.jpg`, rig: `${folder}.json`});
+            // (Read until it is in, while this animal is still the one talking.)
+            const loaded = await readUntilIn(`talking ${this.slug}`, () => loadTalkingModel({slug: this.slug, model: `${folder}.${manifest?.glb ?? "g1"}.glb`, texture: `${folder}.jpg`, rig: `${folder}.json`}), () => !this.disposed);
             if (this.disposed) {
                 Object.values(loaded.parts).forEach((part) => part.dispose());
                 loaded.skin.dispose();

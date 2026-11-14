@@ -18,6 +18,7 @@
 import {LinearFilter, LinearMipmapLinearFilter, RepeatWrapping, type Texture, type WebGLRenderer} from "three";
 import type {KTX2Loader} from "three/examples/jsm/loaders/KTX2Loader.js";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
+import {readUntilIn} from "@/ark-scene/model-files";
 
 export const TOWN_LAYER = {asphalt: 0, slabs: 1, setts: 2, gravel: 3, blocks: 4, granite: 5} as const;
 /** Each layer's real size (m), Poly Haven's measured dimensions (true scale). */
@@ -63,6 +64,21 @@ function ktx2(renderer: WebGLRenderer): Promise<KTX2Loader> {
     return loader;
 }
 
+/**
+ * One of the town's arrays, read until it is in. A read that fails takes the loader with it: it keeps its transcoder's
+ * own failed read for good, so the next try is made with a new one.
+ */
+function readArray(label: string, file: string, renderer: WebGLRenderer): Promise<Texture> {
+    return readUntilIn(label, () =>
+        ktx2(renderer)
+            .then((l) => l.loadAsync(`${artBase.graphics}/${file}`))
+            .catch((error: unknown) => {
+                loader = null;
+                throw error;
+            })
+    );
+}
+
 function prepare(texture: Texture, renderer: WebGLRenderer, anisotropy: number): Texture {
     texture.wrapS = RepeatWrapping;
     texture.wrapT = RepeatWrapping;
@@ -86,8 +102,7 @@ export function loadTownTextures(renderer: WebGLRenderer, options: {normals: boo
     TOWN_TEXTURES.lite.value = options.normals ? 0 : 1;
     if (!asked.albedo) {
         asked.albedo = true;
-        ktx2(renderer)
-            .then((l) => l.loadAsync(`${artBase.graphics}/town-albedo.ktx2`))
+        readArray("town paving", "town-albedo.ktx2", renderer)
             .then((texture) => {
                 TOWN_TEXTURES.albedo.value = prepare(texture, renderer, options.anisotropy);
                 TOWN_TEXTURES.ready.value = 1;
@@ -96,8 +111,7 @@ export function loadTownTextures(renderer: WebGLRenderer, options: {normals: boo
     }
     if (options.normals && !asked.normal) {
         asked.normal = true;
-        ktx2(renderer)
-            .then((l) => l.loadAsync(`${artBase.graphics}/town-normal.ktx2`))
+        readArray("town paving normals", "town-normal.ktx2", renderer)
             .then((texture) => {
                 TOWN_TEXTURES.normal.value = prepare(texture, renderer, options.anisotropy);
                 TOWN_TEXTURES.normals.value = TOWN_TEXTURES.lite.value > 0.5 ? 0 : 1;

@@ -20,6 +20,7 @@
  * while sound is off or the page is hidden.
  */
 
+import {finalStatus, ModelFileError, readIsFinal, retrySeconds} from "@/ark-scene/model-files";
 import {blendLoopSeam} from "@/ark-scene/ambient-beds";
 import {alarmCall, bedsToPlay, planCalls, type ArkBedWanted, type ArkCallSource, type ArkListener, type ArkPlannedCall} from "@/lib/ark-audio-plan";
 import {ARK_SOUND_BUCKET_PATH, ARK_SOUND_TIERS, callVoice, parseSoundManifest, soundAudioUrl, soundCreditLines, soundManifestUrl, speciesCallPace, type ArkCallMood, type ArkSoundCredit, type ArkSoundManifest, type ArkSoundTier} from "@/lib/ark-sound";
@@ -283,6 +284,9 @@ export class ArkAudio {
         return undefined;
     }
 
+    /** Sounds that failed to arrive: how many times in a row, and when they may be asked for again (`performance.now()`). */
+    private readonly retries = new Map<string, {count: number; until: number}>();
+
     private bufferOf(url: string, now: number): AudioBuffer | null | undefined {
         if (this.buffers.has(url)) {
             this.bufferUsed.set(url, now);
@@ -290,12 +294,19 @@ export class ArkAudio {
         }
         const ctx = this.ctx;
         if (!ctx || this.loading.has(url)) return undefined;
+        // (One that only failed to arrive waits its turn before it is asked for again.)
+        const again = this.retries.get(url);
+        if (again && performance.now() < again.until) return undefined;
         this.loading.add(url);
         this.run(async () => {
             this.counts.fetches++;
             try {
                 const response = await this.fetcher(url);
-                if (!response.ok) throw new Error("sprite");
+                if (!response.ok) {
+                    // (A fetcher that gives no status, a test's: final, as every failure was before.)
+                    const status = (response as {status?: number}).status;
+                    throw new ModelFileError(`sound ${status ?? "not read"}`, typeof status === "number" ? finalStatus(status) : true);
+                }
                 const data = await response.arrayBuffer();
                 const buffer = await new Promise<AudioBuffer>((resolve, reject) => {
                     const promised = ctx.decodeAudioData(data, resolve, reject) as unknown as Promise<AudioBuffer> | undefined;
@@ -303,9 +314,17 @@ export class ArkAudio {
                 });
                 this.buffers.set(url, buffer);
                 this.bufferUsed.set(url, now);
+                this.retries.delete(url);
                 this.evictBuffers();
-            } catch {
-                this.buffers.set(url, null);
+            } catch (error) {
+                // A file that is not there, or is not sound: never asked for again. One that only failed to arrive (a
+                // phone changing networks): again when it is next wanted, after a wait that grows; before, that sound
+                // was silent for the whole visit.
+                if (readIsFinal(error)) this.buffers.set(url, null);
+                else {
+                    const count = (this.retries.get(url)?.count ?? 0) + 1;
+                    this.retries.set(url, {count, until: performance.now() + retrySeconds(count) * 1000});
+                }
             } finally {
                 this.loading.delete(url);
             }
