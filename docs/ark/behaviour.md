@@ -431,6 +431,11 @@ The inputs reproduce `behaviours.json` and `recipes.json` byte for byte at ark-n
     npx tsx scripts/ark-walk-pace.mts --apply
     npx tsx scripts/ark-behaviour-recipes.mts $H/species.json <recipes extra.json> ~/animaldex-ark-handover-2026-11-11/intel-web/export.json
 
+`water-life.json` (lane B6 water, 2026-11-14: each water species' way of life, `src/ark-scene/water-life.ts`) is its own
+small generator over the same export, after the profiles:
+
+    npx tsx scripts/ark-water-life.mts $H/species.json
+
 `depth-bands.json` (`scripts/ark-layers.mts`) does not reproduce from the stored inputs (30 rows' phrases have drifted), so the
 swimmers' bands are worked out from the profiles at run time (`swimDepth`), not regenerated into it.
 
