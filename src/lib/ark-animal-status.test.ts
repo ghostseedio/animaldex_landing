@@ -8,6 +8,7 @@ import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {forgetSchedules, groupSpread, rangeReach, slotPlanAt, spaceHomes, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {EATING, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
 import {eats} from "@/ark-scene/food-links";
+import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {placeAnimals} from "@/ark-scene/placement";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -176,8 +177,14 @@ test("a stalk says what the body does (card truth, 2026-11-13): held still in th
     let still = 0;
     let moving = 0;
     const kinds = new Set<string>();
+    // (Behaviours pass 2026-11, B1: one that hunts by waiting, an ambusher that is no mammal, a heron, lies in wait on
+    // land too: its stalk is still, never a creep. A stalker's, a cat's, creeps.)
+    const waiters = new Set<string>();
+    const creepers = new Set<string>();
     for (const i of items) {
         if (!(i.subject.profile.weights.stalk ?? 0)) continue;
+        const intel = intelProfile(i.a.model_slug);
+        const waits = i.subject.profile.water === "wader" ? i.subject.profile.diet === "fish" || i.subject.profile.diet === "meat" : intel.plan !== "quadruped" && intel.plan !== "primate" && !intel.hunt.includes("stalk") && !intel.hunt.includes("pursuit") && (intel.hunt.includes("ambush") || intel.hunt.includes("perch_wait"));
         for (let t = DAY; t < DAY + 86_400; t += SLOT_SECONDS) {
             const plan = planOf(i.subject, t);
             if (plan.doing !== "stalk") continue;
@@ -185,6 +192,10 @@ test("a stalk says what the body does (card truth, 2026-11-13): held still in th
             if (trip.doing !== "stalk") continue;
             const spread = Math.max(0, ...trip.stay.map((b) => Math.hypot(b.x - trip.to.x, b.z - trip.to.z)));
             const settled = scheduleStatus(i.subject, Math.min(Math.max(trip.arrive + 1, t), trip.end - 1), {trip});
+            if (waits) {
+                waiters.add(i.a.model_slug);
+                assert.ok(plan.still, `${i.a.model_slug} hunts by waiting: its stalk is a wait`);
+            } else if (!plan.still) creepers.add(i.a.model_slug);
             if (plan.still) {
                 still++;
                 kinds.add(i.a.model_slug);
@@ -198,6 +209,7 @@ test("a stalk says what the body does (card truth, 2026-11-13): held still in th
         }
     }
     assert.ok(still > 0 && moving > 0, `the fixture has both kinds of stalk (still ${still}, moving ${moving})`);
+    assert.ok(waiters.size > 0 && creepers.size > 0, `the fixture has hunters that wait (${waiters.size}) and ones that creep (${creepers.size})`);
 });
 
 test("the live log's moments: the same on two runs, at most one a window, and each one is its animal's own new slot", () => {
