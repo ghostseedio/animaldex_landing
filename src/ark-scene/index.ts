@@ -1329,7 +1329,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Never more than one a frame: one ask is ~4 ms on the phone profile, and a world built late in the step has
             // little time left (the rest is asked in the step's last half minute, or at the step, as before).
             const fps = frameIntervals.length ? Math.min(Math.max(1000 / mean(frameIntervals), 10), 60) : 20;
-            restingCredit = Math.min(restingCredit + restingWarm.queue.length / Math.max((ahead - 30) * fps * 0.8, 1), 1);
+            // (Graphics and performance pass, 2026-11: none while the camera is flying or a finger is down. One ask is a
+            // trip worked out for a moment minutes ahead: most are a few ms, some 60 to 400 ms on the phone profile, a
+            // held frame in the middle of a flight or a drag. What is owed meanwhile is kept, and asked one a frame
+            // once the view is at rest.)
+            restingCredit = Math.min(restingCredit + restingWarm.queue.length / Math.max((ahead - 30) * fps * 0.8, 1), 40);
+            if (flight || pointers > 0) return;
             if (restingCredit >= 1 && restingWarm.queue.length) {
                 ask(restingWarm.queue.pop()!);
                 restingCredit -= 1;

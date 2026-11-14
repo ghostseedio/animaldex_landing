@@ -610,7 +610,12 @@ for (const deviceName of devices) {
             const slow = await frame.evaluate(() => window.__arkPerfSlow?.() ?? []).catch(() => []);
             const phases = analysePhases(rec, marks, GL_KEYS);
             // (The slow frames of each phase, the costliest three, by section.)
-            for (const [m, phase] of phases.entries()) phase.slow = slow.filter((f) => f.at >= marks[m].t && f.at < marks[m + 1].t).sort((a, b) => b.ms - a.ms).slice(0, 3);
+            for (const [m, phase] of phases.entries()) {
+                const mine = slow.filter((f) => f.at >= marks[m].t && f.at < marks[m + 1].t).sort((a, b) => b.ms - a.ms);
+                phase.slow = mine.slice(0, 3);
+                // (Every one over 60 ms, for the by-section totals.)
+                phase.slowAll = mine.filter((f) => f.ms >= 60).slice(0, 80);
+            }
             const groups = groupPhases(phases);
             // The programs linked from the scenario's start, with the state that made each variant and the wait on it.
             const from = marks[0]?.t ?? 0;
