@@ -158,7 +158,9 @@ its matrix is composed.
   bones, and wings or a chain. Ears, manes and trunks can't move on their own: elephants' trunks and lions' manes ride
   on the head. `LocoRig.missing` lists them per rig. Necks have one bone, so they lag but don't curve.
 - **Sitting rigs** (`pose` set: meerkats, hares, rabbits, kangaroos, squirrels, 54 species): their legs run through an
-  upright trunk and can't step, so they keep their baked `bound` and idle.
+  upright trunk and can't step, so they keep their baked `bound` and idle. Since the behaviours pass (§8) they go by
+  that bound on their everyday ways too (they slid along sitting up), look about and breathe at rest, and the sixteen
+  with no moving clip hop.
 - **Insects, spiders and crabs**: the rigger fitted their legs short and sometimes oddly placed (the ant's middle legs
   sit at its back), and at running speed their feet move faster than the frame rate can show. Their slides are a few
   millimetres and their front legs swing past 80°. That is out of sight at their size, so their CI thresholds are
@@ -186,3 +188,27 @@ The layer runs only for rigged animals: at most 24 on desktop tiers and 8 in lit
   without. Phone profile (4× CPU throttle, medium tier, 12 rigged): 60 fps either way, 12.0 ms against 13.2 ms, so
   no difference above the noise. The default view (`--island`, 30 s, high tier) stays at 60 fps with or without the
   layer.
+
+## 8. Paces, rhythm and looks (behaviours pass 2026-11, lane B4)
+
+The audit, the numbers and what is left are in `docs/ark/behaviour-pass-2026-11/land.md`. What changed in this layer:
+
+- **Natural paces** (`paces.ts` `naturalPaces`, written into `behaviours.json` by `scripts/ark-walk-pace.mts`). The
+  schedule walked every rigged animal at its walk clip's pace in body lengths at its true size, so the driver, which
+  picks the gait from the speed, drew an elephant's "walk" at 3.4 m/s as an amble, a zebra's at 2.7 m/s as a trot and a
+  giraffe's at 5.1 m/s as a pace. A walk is now a Froude number on the rig's own leg length by plan and gait family
+  (hoofed 0.15, cats and dogs 0.2, bears 0.14, camels and giraffes 0.12, elephants 0.09, small bounders 0.24, birds
+  0.12 to 0.22, lizards 0.12 on their reach, crocodiles 0.05, turtles 0.003), within a third of its top speed; the
+  gait it covers ground in is the trot (1.0), a pace (0.8), an elephant's fast walk (0.4), a half-bound (1.3). Rigs
+  that move by a baked clip keep the clip's pace (sitting rigs, true seals, insects, spiders, crabs, hopping frogs).
+  A snake goes by its style (a heavy python creeps at 0.09 lengths a second). Species with no rig get the same rule on
+  their plan's usual legs (`unriggedWalk`).
+- **Rhythm** (`gaitRhythm`, `groundProgress`). Small mammals, small lizards, hopping and running birds, spiders,
+  scorpions and crabs go in bursts with stops between; hares, rabbits and kangaroos a few hops and a sit. A steady
+  walk gets going over its first steps and slows into its stop (`startTime`, `stopTime`).
+- **Standing** (`legged.ts`, `sitting.ts` `lookAbout`). A standing animal looks about: a look turned to and held, then
+  another, by kind (a bird's quick and often, a grazer's wide, a predator's fewer and narrower). It was one slow sway
+  of at most 0.19 rad, the same for all.
+- **Sitting rigs** (`sitting.ts` `sitLife`, called by the layer on the clip's frame): looks, breath and a tail flick
+  at rest; a hop along for the ones with no moving clip.
+

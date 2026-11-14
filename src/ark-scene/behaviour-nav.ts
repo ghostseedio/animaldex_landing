@@ -439,6 +439,21 @@ export class NavGrid {
     }
 
     /**
+     * (Lane B4.) Whether a walked way through these points is clear for a body of `radius` (its class, as `path`): every
+     * run of it over ground no steeper than its walk and touching nothing solid, and every point between its ends on
+     * such ground itself (a run shorter than a sample has only its ends).
+     */
+    wayClear(points: NavPoint[], maxSlope = MAX_SLOPE, radius = NAV_DEFAULT_RADIUS): boolean {
+        const r = this.solid ? NAV_RADII[navClass(radius)] : 0;
+        for (let i = 1; i < points.length; i++) {
+            const p = points[i];
+            if (i < points.length - 1 && !(r > 0 ? this.groundAt(p.x, p.z, maxSlope) : this.walkable(p.x, p.z, maxSlope))) return false;
+            if (!this.clear(points[i - 1], p, "walk", 0.5, maxSlope, r)) return false;
+        }
+        return true;
+    }
+
+    /**
      * A path from a to b (A*, 8 neighbours, uphill costs more) for a body of `radius` (its class: `NAV_RADII`), at most
      * `maxNodes` cells expanded, smoothed to straight runs. Every run of it is clear of everything solid for that body
      * (a start already inside something gets out by the shortest step). Unreachable: as far as it got towards b. Always
@@ -761,6 +776,84 @@ export function navGridBuild(sampler: ArkWorldSampler): SlicedBuild<NavGrid> {
     });
     building.set(sampler, build);
     return build;
+}
+
+/**
+ * A walked way shaped as an animal walks it (behaviours pass 2026-11, lane B4): the grid's path is straight runs
+ * joined at sharp corners, and four ways in five were one ruler line from where it stood to where it was going.
+ *
+ * - A corner is rounded: cut `turn · tan(θ/2)` back along each run (no more than 0.45 of either), a curve of three or
+ *   four points between, so it walks round it on about its turning radius instead of pivoting on the move.
+ * - One straight run (longer than `bowFrom`) is bowed to one side by a seeded few hundredths of its length
+ *   (`bow`, −1 to 1: its side and how much), a gentle arc.
+ *
+ * A curve is kept only where every run of it is clear for its body and on its ground (`wayClear`); else that corner,
+ * or the straight run, stays as the grid gave it. It starts and ends where the path does.
+ */
+export function naturalWay(nav: Pick<NavGrid, "wayClear">, path: NavPoint[], opts: {radius: number; maxSlope: number; turn: number; bow: number; bowFrom: number}): NavPoint[] {
+    if (path.length < 2) return path;
+    const {radius, maxSlope} = opts;
+    if (path.length === 2) {
+        const [a, b] = path;
+        const span = Math.hypot(b.x - a.x, b.z - a.z);
+        if (span < opts.bowFrom || Math.abs(opts.bow) < 0.05) return path;
+        const nx = -(b.z - a.z) / span;
+        const nz = (b.x - a.x) / span;
+        const count = Math.min(Math.max(Math.round(span / 1.5), 4), 12);
+        for (const share of [0.07, 0.035]) {
+            // (A quadratic curve through its middle moved out to the side.)
+            const d = opts.bow * share * span;
+            const cx = (a.x + b.x) / 2 + nx * d * 2;
+            const cz = (a.z + b.z) / 2 + nz * d * 2;
+            const out: NavPoint[] = [a];
+            for (let i = 1; i < count; i++) {
+                const t = i / count;
+                const v = 1 - t;
+                out.push({x: v * v * a.x + 2 * v * t * cx + t * t * b.x, z: v * v * a.z + 2 * v * t * cz + t * t * b.z});
+            }
+            out.push(b);
+            if (nav.wayClear(out, maxSlope, radius)) return out;
+        }
+        return path;
+    }
+    const out: NavPoint[] = [path[0]];
+    for (let i = 1; i < path.length - 1; i++) {
+        const p = path[i];
+        const before = path[i - 1];
+        const after = path[i + 1];
+        const inLen = Math.hypot(p.x - before.x, p.z - before.z);
+        const outLen = Math.hypot(after.x - p.x, after.z - p.z);
+        const ux = (p.x - before.x) / Math.max(inLen, 1e-9);
+        const uz = (p.z - before.z) / Math.max(inLen, 1e-9);
+        const vx = (after.x - p.x) / Math.max(outLen, 1e-9);
+        const vz = (after.z - p.z) / Math.max(outLen, 1e-9);
+        const angle = Math.abs(Math.atan2(ux * vz - uz * vx, ux * vx + uz * vz));
+        let rounded: NavPoint[] | null = null;
+        if (angle > 0.12 && inLen > 0.05 && outLen > 0.05) {
+            const most = Math.min(opts.turn * Math.min(Math.tan(angle / 2), 3), 0.45 * inLen, 0.45 * outLen);
+            for (const cut of [most, most / 2]) {
+                if (cut < 0.03) break;
+                const a = {x: p.x - ux * cut, z: p.z - uz * cut};
+                const b = {x: p.x + vx * cut, z: p.z + vz * cut};
+                const count = angle > 1 ? 5 : 4;
+                const curve: NavPoint[] = [a];
+                for (let k = 1; k < count; k++) {
+                    const t = k / count;
+                    const w = 1 - t;
+                    curve.push({x: w * w * a.x + 2 * w * t * p.x + t * t * b.x, z: w * w * a.z + 2 * w * t * p.z + t * t * b.z});
+                }
+                curve.push(b);
+                if (nav.wayClear(curve, maxSlope, radius)) {
+                    rounded = curve;
+                    break;
+                }
+            }
+        }
+        if (rounded) out.push(...rounded);
+        else out.push(p);
+    }
+    out.push(path[path.length - 1]);
+    return out;
 }
 
 export function pathLength(path: NavPoint[]): number {

@@ -22,6 +22,7 @@ import {Matrix4, Quaternion, Vector3} from "three";
 import {columnarLegs, G, GAITS, gaitFor, gaitLadder, headBobs, landGait, legOffset, strideFor, type GaitLadder} from "@/ark-scene/locomotion/gaits";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
 import {newChain, newSpring, stepChain, stepSpring, type Spring, type SpringChain} from "@/ark-scene/locomotion/secondary";
+import {lookAbout} from "@/ark-scene/locomotion/sitting";
 import {rotateAbout, rotateSubtree, translateSubtree} from "@/ark-scene/locomotion/skeleton";
 import type {FootTarget, GaitName, GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 
@@ -102,6 +103,9 @@ export type LeggedState = {
     slopeLift: Spring;
     crouch: Spring;
     neckLag: Spring;
+    /** Standing: where it looks (lane B4: looks turned to and held, not a slow sway). */
+    lookYaw: Spring;
+    lookPitch: Spring;
     fidgetSlot: number;
     /** Weight of the moving body motion (0 standing, 1 in a gait), eased. */
     motion: number;
@@ -165,6 +169,8 @@ function initState(rig: LocoRig): LeggedState {
         slopeLift: newSpring(),
         crouch: newSpring(),
         neckLag: newSpring(),
+        lookYaw: newSpring(),
+        lookPitch: newSpring(),
         fidgetSlot: -1,
         motion: 0,
         clock: 0,
@@ -604,10 +610,15 @@ function poseInBodyFrame(rig: LocoRig, input: LocoInput, world: Matrix4[], s: Le
             thrust = clamp(Math.asin(clamp(offset / Math.max(neckLen, 1e-4), -0.6, 0.6)), -0.6, 0.6) * motion;
         }
         // (The neck carries the body's pitch: slope + rock + lean at the hips, flex at the chest. The head keeps the slope.)
-        // Standing, the head never quite still: small slow looks (the reactive layer's looks go on top, in the shader).
+        // Standing, it looks about (lane B4): a look turned to and held, then another, by kind: a bird's quick and often, a
+        // grazer's or a small mammal's wide and watchful, a predator's fewer and narrower; one in three straight ahead (the
+        // reactive layer's looks go on top, in the shader). It was one slow sway of a few degrees, the same for all.
         const idle = 1 - motion;
-        const glanceYaw = idle * 0.06 * (Math.sin(input.clock * 0.37 + input.seed * 11) + 0.6 * Math.sin(input.clock * 0.91 + input.seed * 5));
-        const glancePitch = idle * 0.035 * Math.sin(input.clock * 0.53 + input.seed * 7);
+        const bird = rig.legs.length === 2;
+        const wary = !bird && steady < 0.9;
+        const look = rig.legs.length > 4 ? null : lookAbout(input.clock, input.seed, bird ? 0.5 : wary ? 0.4 : 0.22, bird ? 0.12 : 0.08, bird ? 1.1 : wary ? 2.6 : 4, bird ? 2.2 : wary ? 4 : 6);
+        const glanceYaw = stepSpring(s.lookYaw, look ? look.yaw * idle : 0, dt, bird ? 4.5 : 2.2, 0.85) + idle * 0.02 * Math.sin(input.clock * 0.91 + input.seed * 5);
+        const glancePitch = stepSpring(s.lookPitch, look ? look.pitch * idle : 0, dt, bird ? 4.5 : 2.2, 0.85) + idle * 0.015 * Math.sin(input.clock * 0.53 + input.seed * 7);
         const neckPitch = -steady * (rock + flex + 0.5 * accLean) + nod + lag * (1 - steady) + thrust + glancePitch;
         tmpQ.setFromAxisAngle(X, neckPitch);
         tmpQ2.setFromAxisAngle(Z, -steady * (roll + lean) * 0.8);

@@ -3756,7 +3756,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     sync = (peek - 0.65) / 0.35;
                 }
             } else {
-                const move = clip("walk");
+                // (Lane B4: a sitting rig with a burrow, a rabbit, a meerkat, a prairie dog, goes by its bound.)
+                const move = clip("walk") ?? clip("bound");
                 if (moving(move)) {
                     want = move.name;
                     mode = "distance";
@@ -3825,8 +3826,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // The ground clip whose own pace fits how fast it goes (a walk, a run, a hop for a hopping bird).
             const gaits = ["walk", "run", "hop", "slither"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
             const pick = paceClip(speed, gaits, state.now.name);
+            // (Lane B4: a sitting rig, a rabbit, a wallaby, a squirrel, a meerkat, has none of those: it goes by its bound,
+            // by the distance it covers, dropping into it and rising after (`baseStep`). It slid along sitting up.)
+            const bound = gaits.length ? null : clip("bound");
             if (moving(pick)) {
                 want = pick.name;
+                mode = "distance";
+            } else if (bound?.ground_speed && speed > bound.ground_speed * (state.now.name === "bound" ? 0.04 : 0.1)) {
+                want = "bound";
                 mode = "distance";
             } else if (speed > 1e-3 && clip("slither") && !clip("walk") && l2Of(entry, model.behaviour?.plan).style.legless) {
                 // (Lane L2: a legless animal creeping slower than its slither's own pace still crawls, a heavy snake
