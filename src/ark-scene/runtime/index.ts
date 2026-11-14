@@ -450,6 +450,27 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         },
 
         /**
+         * Whether the straight line from an eye to a point of the animal it looks at passes under the ground: the half of
+         * a close-up's line of sight that is asked by heights (`runtime/sight.ts` asks the drawn meshes for the rest). The
+         * last `slack` metres before the animal are its own.
+         */
+        sightBlocked(eye: {x: number; y: number; z: number}, to: {x: number; y: number; z: number}, slack: number): boolean {
+            const dx = to.x - eye.x;
+            const dy = to.y - eye.y;
+            const dz = to.z - eye.z;
+            const span = Math.hypot(dx, dy, dz);
+            const far = span - slack;
+            if (!(far > 0.05)) return false;
+            const groundAt = ctx.groundAt ?? heightAt;
+            const steps = Math.min(Math.ceil(far / 0.9), 40);
+            for (let i = 1; i <= steps; i++) {
+                const t = ((i / steps) * far) / span;
+                if (groundAt(eye.x + dx * t, eye.z + dz * t) > eye.y + dy * t + 0.05) return true;
+            }
+            return false;
+        },
+
+        /**
          * After the scene keeps the view over the world (its own hard floor): out of trees, rocks and buildings, and
          * over ground rising just round the eye. `closeUp`: by a small animal (only solid things push, by less).
          */

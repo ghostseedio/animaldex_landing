@@ -5,7 +5,7 @@
 
 import assert from "node:assert/strict";
 import test from "node:test";
-import {BoxGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, Vector3} from "three";
+import {BatchedMesh, BoxGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, PlaneGeometry, Vector3} from "three";
 import {closeUpViews} from "@/ark-scene/runtime/camera";
 import {Sight, solid} from "@/ark-scene/runtime/sight";
 
@@ -65,6 +65,60 @@ test("sight: a solid thing between the eye and the animal blocks; glass, a hidde
     const cover = new InstancedMesh(new BoxGeometry(1, 4, 1), new MeshBasicMaterial(), 3000);
     assert.equal(solid(cover), false, "ground cover");
     assert.equal(solid(few), true);
+});
+
+test("sight: the big meshes' triangles round the animal are gathered once, and answer as three's own test does", () => {
+    const root = new Group();
+    // A big wall (2,400 triangles: gathered, not walked), one-sided, facing -z; and a batch of two chunks with a wall each.
+    const wall = new Mesh(new PlaneGeometry(6, 4, 40, 30), new MeshBasicMaterial());
+    wall.position.set(100, 2, 5);
+    wall.rotation.y = Math.PI;
+    wall.name = "pet-homes:shell";
+    root.add(wall);
+    const batch = new BatchedMesh(4, 4000, 12000, new MeshBasicMaterial({side: DoubleSide}));
+    batch.name = "solid";
+    const chunk = (x: number) => {
+        const geometry = new PlaneGeometry(6, 4, 10, 10);
+        geometry.translate(x, 2, 5);
+        batch.addInstance(batch.addGeometry(geometry));
+    };
+    chunk(200);
+    chunk(300);
+    batch.position.set(0, 0, 1);
+    root.add(batch);
+    root.updateMatrixWorld(true);
+    const plain = new Sight(root);
+    const sight = new Sight(root);
+    const cases: Array<[Vector3, Vector3]> = [
+        [new Vector3(100, 1.5, 0), new Vector3(100, 1, 10)],
+        [new Vector3(100, 1.5, 10), new Vector3(100, 1, 0)],
+        [new Vector3(104, 1.5, 0), new Vector3(104, 1, 10)],
+        [new Vector3(100, 1.5, 0), new Vector3(100, 1, 4)],
+        [new Vector3(200, 1.5, 0), new Vector3(200, 1, 10)],
+        [new Vector3(200, 1.5, 10), new Vector3(200, 1, 0)],
+        [new Vector3(210, 1.5, 0), new Vector3(210, 1, 10)]
+    ];
+    const expected = [true, false, false, false, true, true, false];
+    cases.forEach(([from, to], i) => {
+        // Not gathered (no `near`): three's own test on the big meshes.
+        assert.equal(plain.blocked(from, to, 0.5), expected[i], `three's test, case ${i}`);
+        sight.near(to, 12);
+        assert.equal(sight.blocked(from, to, 0.5), expected[i], `gathered, case ${i}`);
+    });
+    assert.equal(plain.gathered, 0);
+    // Gathered once for lines round the same animal; again when it has moved off.
+    const before = sight.gathered;
+    sight.near(cases[6][1], 12);
+    sight.near(new Vector3(211, 1, 10), 10);
+    assert.equal(sight.gathered, before, "the same place: not gathered again");
+    sight.near(new Vector3(300, 1, 10), 12);
+    assert.equal(sight.gathered, before + 1);
+    assert.equal(sight.blocked(new Vector3(300, 1.5, 0), new Vector3(300, 1, 10), 0.5), true, "the batch's other chunk");
+    // A hidden chunk of the batch does not block (streamed out), once gathered again.
+    batch.setVisibleAt(1, false);
+    sight.reset();
+    sight.near(new Vector3(300, 1, 10), 12);
+    assert.equal(sight.blocked(new Vector3(300, 1.5, 0), new Vector3(300, 1, 10), 0.5), false);
 });
 
 test("sight: the views tried for a close-up: the asked one first, then round it, steeper, nearer, overhead", () => {

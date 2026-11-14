@@ -5371,8 +5371,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const sightEye = new Vector3();
     const sightPoint = new Vector3();
     const sightLook = new Spherical();
-    /** How many of the four lines from a view's eye to the animal are blocked (5: the eye is no place to stand). */
-    const blockedFrom = (entry: Entry, at: Vector3, view: CloseView): number => {
+    /**
+     * How many of the four lines from a view's eye to the animal are blocked (5: the eye is no place to stand); counted
+     * only up to `enough`. Each line: the ground and the camera's boxes first (cheap), then the drawn meshes.
+     */
+    const blockedFrom = (entry: Entry, at: Vector3, view: CloseView, enough: number): number => {
         sightEye.setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(at);
         if (heightAt(sightEye.x, sightEye.z) > sightEye.y - 0.2) return 5;
         if (runtime.eyeBlocked(sightEye, at)) return 5;
@@ -5380,10 +5383,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const along = entry.length * 0.3;
         const slack = Math.max(entry.length, entry.drawnHeight) * 0.6 + 0.08;
         let blocked = 0;
-        if (sight.blocked(sightEye, at, slack)) blocked++;
-        if (sight.blocked(sightEye, sightPoint.set(at.x + Math.sin(yaw) * along, at.y, at.z + Math.cos(yaw) * along), slack)) blocked++;
-        if (sight.blocked(sightEye, sightPoint.set(at.x - Math.sin(yaw) * along, at.y, at.z - Math.cos(yaw) * along), slack)) blocked++;
-        if (sight.blocked(sightEye, sightPoint.set(at.x, at.y + entry.drawnHeight * 0.3, at.z), slack)) blocked++;
+        for (let line = 0; line < 4 && blocked < enough; line++) {
+            if (line === 0) sightPoint.copy(at);
+            else if (line === 3) sightPoint.set(at.x, at.y + entry.drawnHeight * 0.3, at.z);
+            else sightPoint.set(at.x + Math.sin(yaw) * along * (line === 1 ? 1 : -1), at.y, at.z + Math.cos(yaw) * along * (line === 1 ? 1 : -1));
+            if (runtime.sightBlocked(sightEye, sightPoint, slack) || sight.blocked(sightEye, sightPoint, slack)) blocked++;
+        }
         return blocked;
     };
     const stepClearView = (now: number) => {
@@ -5399,6 +5404,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A flight to it that has not been looked at yet: its own view first.
             if (flight.to.distanceTo(at) < entry.length + 1.5) {
                 clearedFlight = flight;
+                // (A new close-up: what was gathered for the last one may have been streamed in or out since.)
+                sight.reset();
                 const asked = {distance: flight.toDistance, polar: flight.toPolar, azimuth: flight.toAzimuth};
                 clearSearch = {views: closeUpViews(asked, nearest), next: 0, best: null, bestBlocked: 6, asked};
                 clearMisses = 0;
@@ -5407,8 +5414,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Still chosen, the view left alone: has it gone behind something? (Twice running before the view moves.)
             clearCheckAt = now;
             sightLook.setFromVector3(sightEye.copy(camera.position).sub(controls.target));
+            sight.near(at, sightLook.radius + entry.length);
             const current = {distance: sightLook.radius, polar: sightLook.phi, azimuth: sightLook.theta};
-            const blocked = blockedFrom(entry, at, current);
+            const blocked = blockedFrom(entry, at, current, 3);
             clearMisses = blocked >= 3 ? clearMisses + 1 : 0;
             if (clearMisses >= 2) {
                 clearMisses = 0;
@@ -5418,10 +5426,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const search = clearSearch;
         if (!search) return;
         const started = performance.now();
+        // (The big meshes' triangles round the animal, gathered once for the whole search: `runtime/sight.ts`.)
+        if (search.next === 0) sight.near(at, search.views[0].distance + entry.length);
         let found = false;
         while (search.next < search.views.length && performance.now() - started < 3) {
             const view = search.views[search.next++];
-            const blocked = blockedFrom(entry, at, view);
+            // (The asked view is counted whole, to know how bad it is; another is given up at its first blocked line.)
+            const blocked = blockedFrom(entry, at, view, view === search.asked ? 4 : Math.min(search.bestBlocked, 4));
             if (blocked < search.bestBlocked) {
                 search.bestBlocked = blocked;
                 search.best = view;
@@ -6823,7 +6834,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
-        clearView: () => ({...clearStats, rays: sight.tests}),
+        clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
         resting: () => restingGroups.flatMap((group) => Array.from(group.members, (member, i) => {
             const k = group.order.indexOf(i);
