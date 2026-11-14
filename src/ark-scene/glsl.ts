@@ -59,3 +59,20 @@ float arkCloudShade(vec3 world) {
     return 1.0 - 0.2 * cloud;
 }
 `;
+
+/**
+ * The far markers' light for the hour (the dots over animals too small or too far to see and over the other island's
+ * animals, `marks.ts` FindDots; the icon tokens, `icons.ts`): `arkMarkerLight(daylight)` times their colour, from
+ * `ARK_DAYLIGHT` (1 by day, 0.34 deep in the night, smooth through dusk and dawn). They are drawn unlit, so without it
+ * they kept their day brightness at night: cream dots brighter than the street lamps and the lit windows, in swarms
+ * over the town and the forest, the brightest things in a night picture. By day they are as they were; at night a pale
+ * moonlit blue about a third as bright: still the lightest marks on the dark ground, never as light as a lamp or a
+ * lit window.
+ */
+export const MARKER_LIGHT_GLSL = `
+vec3 arkMarkerLight(float daylight) {
+    // (From the blue hour's level up: the land is at its darkest between sunset and moonlight, daylight 0.34 to 0.46,
+    // and the markers hold their night level through it.)
+    return mix(vec3(0.28, 0.325, 0.42), vec3(1.0), smoothstep(0.46, 1.0, daylight));
+}
+`;
