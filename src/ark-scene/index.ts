@@ -974,7 +974,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sceneModule.setShadows(settings.shadows > 0);
         }
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
-        renderer.setPixelRatio(drawRatio());
+        // (The canvas takes the tier's pixel ratio when the next frame is drawn: `resize`, `sizeCanvas`.)
         if (pacer) {
             pacer.setTier(tier, performance.now() / 1000);
             if (runtime.ready) runtime.setPaceCap(pacer.interval);
@@ -5446,19 +5446,35 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyInset();
     };
 
-    const resize = () => {
-        const rect = el.getBoundingClientRect();
-        width = Math.max(1, Math.round(rect.width));
-        height = Math.max(1, Math.round(rect.height));
+    /**
+     * The drawing buffer's size and pixel ratio are set just before a frame is drawn, never after one. Setting them
+     * empties the canvas, and a canvas emptied after its frame was drawn is a black frame on screen: each step of a
+     * phone's adaptive resolution and each tier change (made at a frame's end), each resize of the page or the app's
+     * panel (the observer runs after the frame's drawing), and for as long as a tier change's shaders compiled. Until
+     * the next drawn frame the last picture stays up, stretched to the new box if that changed.
+     */
+    let canvasStale = false;
+    let drawnOnce = false;
+    const sizeCanvas = () => {
+        canvasStale = false;
+        if (renderer.getPixelRatio() !== drawRatio()) renderer.setPixelRatio(drawRatio());
         renderer.setSize(width, height, false);
-        camera.aspect = width / height;
-        applyInset();
-        tokens.setViewport(FOV, height, width < 640);
-        dots.setViewport(FOV, height);
         post.setSize(width, height, drawRatio());
         motes.setPixelRatio(drawRatio());
         dust.setPixelRatio(drawRatio());
         liveliness.setPixelRatio(drawRatio());
+    };
+    const resize = () => {
+        const rect = el.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect.width));
+        height = Math.max(1, Math.round(rect.height));
+        camera.aspect = width / height;
+        applyInset();
+        tokens.setViewport(FOV, height, width < 640);
+        dots.setViewport(FOV, height);
+        // (Before the first frame there is no picture to keep: sized at once.)
+        if (drawnOnce) canvasStale = true;
+        else sizeCanvas();
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(el);
@@ -6482,7 +6498,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
         perf.lap("plants");
         renderer.info.reset();
+        if (canvasStale) sizeCanvas();
         post.render();
+        drawnOnce = true;
         perf.lap("render");
         placeLabels();
         placeVisitorLabel();
@@ -6513,8 +6531,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (decision.changed) {
                     runtime.setPaceCap(decision.interval);
                     if (decision.scale !== resolutionScale) {
+                        // (The canvas takes the new scale when the next frame is drawn, never after this one: `sizeCanvas`.)
                         resolutionScale = decision.scale;
-                        renderer.setPixelRatio(drawRatio());
                         resize();
                     }
                     if (decision.dropTier && !forced && tier !== "low") applyTier(lowerTier(tier));
