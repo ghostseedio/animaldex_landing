@@ -284,6 +284,9 @@ export function mountArchipelago(el: HTMLElement, options: ArkArchipelagoOptions
         crossing: () => flying,
         attached: () => !two || attached,
         townTimings: () => timings,
+        // (A town animal chosen before the town has joined is held here, the scene not knowing of it yet: nothing of
+        // what it waits for is in. Then the scene's own answer.)
+        flightHeld: () => (pendingSelect ? {steps: pendingSelect.closeUp ? 4 : 3, done: 0} : scene?.flightHeld?.() ?? null),
         mounted: () => mounted.then(() => undefined),
         crossTo,
         update: (snapshot: ArkSnapshot) => {
