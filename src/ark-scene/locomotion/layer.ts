@@ -11,6 +11,7 @@ import {Matrix4, Quaternion, Vector3} from "three";
 import {leggedDriver} from "@/ark-scene/locomotion/legged";
 import {restPole, solveLeg} from "@/ark-scene/locomotion/ik";
 import {createLivePose, type LivePose} from "@/ark-scene/locomotion/pose-texture";
+import {newSitState, sitLife, type SitState} from "@/ark-scene/locomotion/sitting";
 import {boneOrder, rowToWorld, skinRow} from "@/ark-scene/locomotion/skeleton";
 import type {GaitState, LocoDriver, LocoInput, LocoRig} from "@/ark-scene/locomotion/types";
 
@@ -142,6 +143,8 @@ export type LocoAnimal = {
     /** The driver's share against the clip, eased. */
     share: number;
     gait: GaitState | null;
+    /** A sitting rig's own life on its clips (`sitting.ts`), made when first drawn. */
+    sit?: SitState;
 };
 
 export const newLocoAnimal = (): LocoAnimal => ({driver: null, states: new Map(), share: 0, gait: null});
@@ -207,6 +210,9 @@ export class LocoLayer {
         if (animal.share < 1) {
             rowToWorld(rig, this.baked, 0, this.world2);
             if (input.grounded && !CLIP_NO_PLANT.has(input.clipNow) && (!input.clipFrom || !CLIP_NO_PLANT.has(input.clipFrom))) plantClipFeet(rig, input, this.world2, this.poles);
+            // (Lane B4: a sitting rig at rest looks about, breathes and flicks its tail; one with no clip to move by hops.)
+            // (On a branch too: it looks about there as well; it hops only on the ground.)
+            if (rig.sitting) sitLife(rig, input, this.world2, (animal.sit ??= newSitState()));
             skinRow(rig, this.world2, this.rowB, 0);
         }
         const s = driver ? animal.share : 0;
