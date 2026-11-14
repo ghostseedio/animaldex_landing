@@ -16,7 +16,7 @@
  */
 
 import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
-import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
@@ -239,7 +239,8 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
 function urbanSpots(plan: TownPlan): TownSpot[] {
     const out: TownSpot[] = [];
     for (const b of plan.buildings) {
-        const floor = y(b.at.x, b.at.z) + 0.15;
+        // (The floor the building is drawn on, its highest ground: its roof's spots on its drawn roof, never in it.)
+        const floor = townBuildingFloor(b.at);
         if (b.kind === "coop" || b.kind === "stable") continue;
         // The ridge (or a flat roof's middle), and the eaves front and back.
         const ridge = local(b.at, 0, 0);
@@ -254,8 +255,9 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
             const p = local(b.at, 0, lz);
             out.push({...p, y: floor + b.eaves - 0.2, area: "urban_wildlife", where: "eave", place: b.id, sizes: SMALL, protected: false});
         }
-        if (b.tall) out.push({x: b.tall.x, y: y(b.tall.x, b.tall.z) + b.tall.y, z: b.tall.z, area: "urban_wildlife", where: "tall", place: b.id, sizes: SMALL_MEDIUM, protected: false});
-        if (b.kind === "church" && b.tall) out.push({x: b.tall.x, y: y(b.tall.x, b.tall.z) + 18.5, z: b.tall.z, area: "urban_wildlife", where: "belfry", place: b.id, sizes: SMALL, protected: false});
+        // (A tower, a chimney: drawn up from the building's own floor too.)
+        if (b.tall) out.push({x: b.tall.x, y: floor + b.tall.y, z: b.tall.z, area: "urban_wildlife", where: "tall", place: b.id, sizes: SMALL_MEDIUM, protected: false});
+        if (b.kind === "church" && b.tall) out.push({x: b.tall.x, y: floor + 18.5, z: b.tall.z, area: "urban_wildlife", where: "belfry", place: b.id, sizes: SMALL, protected: false});
         // A lamp-lit wall by the door (house geckos hunt moths there at night).
         if (b.households > 0) {
             const p = local(b.at, -b.at.w / 4, b.at.d / 2 + 0.05);
