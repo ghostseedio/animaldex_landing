@@ -84,6 +84,53 @@
 <div id="ark-loader"><div class="poster" aria-hidden="true"></div><div class="card"><p class="stage" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span class="text"></span></p><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="fill"></span><span class="sheen" aria-hidden="true"></span></div><div class="facts waiting"><span class="icon skel-icon" aria-hidden="true"></span><span class="lines"><span class="skel"></span><span class="skel"></span></span></div></div></div>
 <button id="ark-sound" type="button" aria-pressed="false" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z" fill="currentColor"/><path class="on" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/><path class="off" d="m16 9 5 6m0-6-5 6"/></svg></button>
 <script>
+// ?diag=1 (2026-11-14, a Galaxy A02s stuck on "Building the island"): what this device is and what went wrong, on the
+// screen, for a phone whose console cannot be read. Collects errors from the very start; shows a panel when asked.
+(function () {
+  if (!/[?&]diag=1(&|$)/.test(location.search)) return;
+  var seen = [];
+  var started = Date.now();
+  function note(kind, text) { seen.push(((Date.now() - started) / 1000).toFixed(1) + "s " + kind + ": " + String(text).slice(0, 300)); if (seen.length > 12) seen.shift(); }
+  window.addEventListener("error", function (e) { var t = e.target; if (t && t !== window && (t.src || t.href)) { note("load failed", String(t.src || t.href).split("?")[0].split("/").slice(-2).join("/")); return; } note("error", (e.message || e.type) + (e.filename ? " @" + e.filename.split("/").pop() + ":" + e.lineno : "")); }, true);
+  window.addEventListener("unhandledrejection", function (e) { var r = e.reason; note("rejection", r && (r.stack || r.message) || r); });
+  var original = console.error;
+  console.error = function () { try { note("console", Array.prototype.join.call(arguments, " ")); } catch (x) {} return original.apply(console, arguments); };
+  var warn = console.warn;
+  console.warn = function () { try { note("warn", Array.prototype.join.call(arguments, " ")); } catch (x) {} return warn.apply(console, arguments); };
+  function gl() {
+    var out = [];
+    ["webgl2", "webgl"].forEach(function (kind) {
+      try {
+        var c = document.createElement("canvas").getContext(kind);
+        if (!c) { out.push(kind + ": none"); return; }
+        var info = c.getExtension("WEBGL_debug_renderer_info");
+        out.push(kind + ": " + (info ? c.getParameter(info.UNMASKED_RENDERER_WEBGL) : c.getParameter(c.RENDERER)) + " | maxTex " + c.getParameter(c.MAX_TEXTURE_SIZE) + " | fUniforms " + c.getParameter(c.MAX_FRAGMENT_UNIFORM_VECTORS) + " | vUniforms " + c.getParameter(c.MAX_VERTEX_UNIFORM_VECTORS) + (kind === "webgl2" ? " | floatRT " + Boolean(c.getExtension("EXT_color_buffer_float")) + " | halfRT " + Boolean(c.getExtension("EXT_color_buffer_half_float")) + " | parallel " + Boolean(c.getExtension("KHR_parallel_shader_compile")) : ""));
+        var lose = c.getExtension("WEBGL_lose_context"); if (lose) lose.loseContext();
+      } catch (x) { out.push(kind + ": threw " + x); }
+    });
+    return out;
+  }
+  var device = [navigator.userAgent, "memory " + (navigator.deviceMemory || "?") + " GB, cores " + (navigator.hardwareConcurrency || "?") + ", dpr " + devicePixelRatio + ", " + innerWidth + "x" + innerHeight,
+    "workers " + (typeof Worker) + ", offscreen " + (typeof OffscreenCanvas) + ", structuredClone " + (typeof structuredClone) + ", wasm " + (typeof WebAssembly)];
+  var gls = null;
+  var panel = null;
+  function show() {
+    if (!document.body) return;
+    if (!gls) gls = gl();
+    if (!panel) {
+      panel = document.createElement("pre");
+      panel.style.cssText = "position:fixed;left:0;right:0;bottom:0;max-height:60%;overflow:auto;margin:0;padding:8px;z-index:2147483647;background:rgba(0,0,0,.85);color:#0f0;font:11px/1.35 monospace;white-space:pre-wrap;word-break:break-all;-webkit-user-select:text;user-select:text";
+      document.body.appendChild(panel);
+    }
+    var stage = document.body.classList.contains("ark-loading") ? "loading" : "loaded";
+    var marks = [];
+    try { performance.getEntriesByType("mark").forEach(function (m) { if (m.name.indexOf("ark:") === 0) marks.push(m.name.replace("ark:load:", "") + "@" + (m.startTime / 1000).toFixed(1) + "s"); }); } catch (x) {}
+    panel.textContent = "ARK DIAG " + ((Date.now() - started) / 1000).toFixed(0) + "s, " + stage + "\n" + device.join("\n") + "\n" + gls.join("\n") + "\nmarks: " + (marks.join(" ") || "none") + "\n" + (seen.length ? seen.join("\n") : "no errors caught");
+  }
+  setInterval(show, 1000);
+})();
+</script>
+<script>
 /*
  * The loading screen, before the scene's code (src/lib/ark-loading.ts says what it shows and why). It runs as the page
  * is parsed, so the first paint already has the Ark's frame on it (blurred, from this file); it starts the Ark's words (and, reading its own, the
