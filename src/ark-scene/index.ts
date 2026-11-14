@@ -114,7 +114,8 @@ import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, type QualityTier} from "@/ar
 import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
-import {CAMERA_RANGE, fitWhole, meetDistance} from "@/ark-scene/runtime/camera";
+import {CAMERA_RANGE, closeUpViews, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
+import {Sight} from "@/ark-scene/runtime/sight";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape, GROUND_SEGMENTS} from "@/ark-scene/terrain";
 import {ArkStreamer, spansFromHeights, STATE_IN, STATE_MAP, STATE_OUT} from "@/ark-scene/streaming";
@@ -5342,6 +5343,113 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return new Vector3(where.x, where.base + height / 2, where.z);
     };
 
+    // MARK: A clear close-up (graphics pass 2026-11-14: `runtime/sight.ts`, `runtime/camera.ts` closeUpViews)
+
+    /**
+     * The chosen animal in clear view. A close-up's view was chosen by the animal's size and kind alone, so it often
+     * ended behind a house's wall, outside the shell of the house the animal is kept in, behind a rock or a trunk, or
+     * inside a building. Every flight to the chosen animal (whoever started it: a tap, the list, a focus link, the
+     * apps' face-to-face close-up) has its view tried against what is drawn; when its lines to the animal are blocked,
+     * the other views round it are tried a few a frame (never more than about 3 ms of a frame) and the flight ends at
+     * the first clear one instead. Afterwards, while the animal stays chosen and nobody touches the view, the lines are
+     * looked at again about once a second: an animal that has walked behind something is flown round to.
+     * Not for an animal under the ground (the cutaway shows it), under the sea (the dive's own view) or up a tree (its
+     * own search, `clearCanopyView`). Nothing here moves an animal or the scenery.
+     */
+    const sight = new Sight(scene);
+    let clearSearch: {views: CloseView[]; next: number; best: CloseView | null; bestBlocked: number; asked: CloseView | null} | null = null;
+    let clearedFlight: Flight | null = null;
+    let clearCheckAt = 0;
+    let clearMisses = 0;
+    const sightEye = new Vector3();
+    const sightPoint = new Vector3();
+    const sightLook = new Spherical();
+    /** How many of the four lines from a view's eye to the animal are blocked (5: the eye is no place to stand). */
+    const blockedFrom = (entry: Entry, at: Vector3, view: CloseView): number => {
+        sightEye.setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(at);
+        if (heightAt(sightEye.x, sightEye.z) > sightEye.y - 0.2) return 5;
+        if (runtime.eyeBlocked(sightEye, at)) return 5;
+        const yaw = entry.yawNow ?? entry.place.yaw;
+        const along = entry.length * 0.3;
+        const slack = Math.max(entry.length, entry.drawnHeight) * 0.6 + 0.08;
+        let blocked = 0;
+        if (sight.blocked(sightEye, at, slack)) blocked++;
+        if (sight.blocked(sightEye, sightPoint.set(at.x + Math.sin(yaw) * along, at.y, at.z + Math.cos(yaw) * along), slack)) blocked++;
+        if (sight.blocked(sightEye, sightPoint.set(at.x - Math.sin(yaw) * along, at.y, at.z - Math.cos(yaw) * along), slack)) blocked++;
+        if (sight.blocked(sightEye, sightPoint.set(at.x, at.y + entry.drawnHeight * 0.3, at.z), slack)) blocked++;
+        return blocked;
+    };
+    const stepClearView = (now: number) => {
+        if (options.recording) return;
+        const entry = selectedId ? findEntry(selectedId) : null;
+        const at = entry?.middle ?? null;
+        if (!entry || !at || entry.place.burrow || entry.place.canopy || (at.y - entry.drawnHeight / 2 < -0.3 && heightAt(at.x, at.z) < -0.3)) {
+            clearSearch = null;
+            return;
+        }
+        const nearest = Math.max(controls.minDistance, entry.length * 1.6 + 0.4);
+        if (flight && flight !== clearedFlight) {
+            // A flight to it that has not been looked at yet: its own view first.
+            if (flight.to.distanceTo(at) < entry.length + 1.5) {
+                clearedFlight = flight;
+                const asked = {distance: flight.toDistance, polar: flight.toPolar, azimuth: flight.toAzimuth};
+                clearSearch = {views: closeUpViews(asked, nearest), next: 0, best: null, bestBlocked: 6, asked};
+                clearMisses = 0;
+            }
+        } else if (!flight && !clearSearch && pointers === 0 && now - lastTouch > 2 && now - clearCheckAt > 0.9 && controls.target.distanceTo(at) < entry.length + 1.5) {
+            // Still chosen, the view left alone: has it gone behind something? (Twice running before the view moves.)
+            clearCheckAt = now;
+            sightLook.setFromVector3(sightEye.copy(camera.position).sub(controls.target));
+            const current = {distance: sightLook.radius, polar: sightLook.phi, azimuth: sightLook.theta};
+            const blocked = blockedFrom(entry, at, current);
+            clearMisses = blocked >= 3 ? clearMisses + 1 : 0;
+            if (clearMisses >= 2) {
+                clearMisses = 0;
+                clearSearch = {views: closeUpViews(current, nearest).slice(1), next: 0, best: null, bestBlocked: blocked, asked: null};
+            }
+        }
+        const search = clearSearch;
+        if (!search) return;
+        const started = performance.now();
+        let found = false;
+        while (search.next < search.views.length && performance.now() - started < 3) {
+            const view = search.views[search.next++];
+            const blocked = blockedFrom(entry, at, view);
+            if (blocked < search.bestBlocked) {
+                search.bestBlocked = blocked;
+                search.best = view;
+            }
+            // (The asked view may keep one line of four blocked: a post, a leaf. Another view must be wholly clear.)
+            if (blocked === 0 || (view === search.asked && blocked <= 1)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found && search.next < search.views.length) return;
+        clearSearch = null;
+        const best = search.best;
+        if (!best || best === search.asked) return;
+        const distance = Math.min(Math.max(best.distance, controls.minDistance), maxDistance);
+        if (flight && flight === clearedFlight) {
+            // Still on its way: it ends at the clear view instead (the short way round from where it started).
+            let azimuth = best.azimuth;
+            while (azimuth - flight.fromAzimuth > Math.PI) azimuth -= Math.PI * 2;
+            while (azimuth - flight.fromAzimuth < -Math.PI) azimuth += Math.PI * 2;
+            flight.toDistance = distance;
+            flight.toPolar = best.polar;
+            flight.toAzimuth = azimuth;
+            return;
+        }
+        if (flight) return;
+        const id = entry.animal.id;
+        fly(at.clone(), distance, 0.9, best.polar, best.azimuth);
+        const next = flight as Flight | null;
+        if (next) {
+            next.aim = () => (selectedId === id ? findEntry(id)?.middle ?? null : null);
+            clearedFlight = next;
+        }
+    };
+
     const select = (id: string | null, flyTo: boolean, close = false) => {
         // A herd member that isn't one of its representatives comes forward to be met (A14); the last one goes back.
         const pin = id && ((!entryById.has(id) && aboard.has(id)) || id === selectionPin) ? id : null;
@@ -6502,6 +6610,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         perf.lap("town");
         stepFlight(now);
+        stepClearView(now);
         stepInset();
         stepIslandNear();
         // Idle: after a while untouched, the view drifts slowly round.
