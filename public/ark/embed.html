@@ -502,8 +502,10 @@ window.AnimalDexArkStart = function () {
         }
         loadShow();
       }
-      // (Not while a flight is held: the scene's own limits end that wait.)
-      if (Date.now() - since > 30000 && !waiting) {
+      // The card goes after 30 s, or 45 s while a flight is held: the scene's own limits for that wait run on its frames,
+      // which a slow phone (a Galaxy A02s, 2026-11-14) may never reach, and the card then never went. The held flight
+      // still happens when the animal can be seen; only the card stops waiting for it.
+      if (Date.now() - since > (waiting ? 45000 : 30000)) {
         clearInterval(timer);
         loader.done();
       }
@@ -525,7 +527,7 @@ window.AnimalDexArkStart = function () {
     // (The archipelago does the prebuild itself, with this page's worker files.)
     if (Ark.mountArchipelago) { mount(snapshot); return; }
     if (!prepared && Ark.prepareArk) {
-      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); });
+      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); }, function () { prepared = true; mount(snapshot); });
       return;
     }
     if (prepared !== true && Ark.prepareArk) return;
