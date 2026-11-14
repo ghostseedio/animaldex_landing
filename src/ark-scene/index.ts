@@ -4893,8 +4893,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Under the sea (a swimmer looked at, the director's dive) the target stays down there, above the sea floor.
         const diving = seabed < -0.4 && target.y < -0.15;
         // (Diving, it is only kept off the floor: it used to be pulled down onto it, which sank the view below a swimmer in its band.)
-        const groundUnderTarget = diving ? seabed + 0.3 : Math.max(seabed, 0);
+        // Fresh water stands above the sea (the lake at 6 m, the river, the town's canal and ponds), with its bed above
+        // sea level too: the view rests on its surface as it does on the sea's, unless it looks at something under it (a
+        // fish chosen in the lake). Before, a view over the lake sank to its bed and the camera came in under its water,
+        // where nothing draws an underwater view: the water was gone from the picture (graphics pass 2026-11-14).
+        // (Looked up only from near enough to come down to it, and for the camera only when it is low over its ground:
+        // the whole views pay nothing.)
         const viewDistance = camera.position.distanceTo(target);
+        const freshTop = !diving && viewDistance < 80 ? waterLevelAt(target.x, target.z, 0) : 0;
+        const underFresh = Boolean(selectedId || followId) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
+        const groundUnderTarget = diving ? seabed + 0.3 : underFresh ? Math.max(seabed, 0) : Math.max(seabed, freshTop, 0);
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
         const looked = selectedId ? findEntry(selectedId) : null;
@@ -4909,7 +4917,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Close to the ground only when close to what it looks at (a small animal), else well above it.
         const below = heightAt(camera.position.x, camera.position.z);
-        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
+        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
         controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
