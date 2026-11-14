@@ -42,7 +42,7 @@ import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
-import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sexLook, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
+import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
 /** The raised perches a group sleeps along in a row or a cluster (sleep lane). */
@@ -2888,6 +2888,51 @@ export function recipeCoat(world: ScheduleWorld, profile: ArkBehaviourProfile, a
 /** An animal's nest site this season (for a builder, until the props lane's nests are wired), or null. */
 export function recipeNest(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, epochSeconds: number): Spot | null {
     return nestSiteOf(world, profile, animal, profile.slug, KIT, epochSeconds);
+}
+
+/** The recipe episode its pose plays at a world time on a trip (a pair's meeting, its stay's episode, a murmuration), or null. */
+export function drawnRecipeAt(world: ScheduleWorld, trip: Trip, epochSeconds: number): DrawnRecipe | null {
+    return drawnRecipe(world, trip, epochSeconds, KIT);
+}
+
+/** The pair meetings it has that start between two world times, as its pose plays them (`behaviour-recipes.ts` pairMeetings). */
+export function pairMeetingsAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, from: number, to: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): DrawnRecipe[] {
+    return pairMeetings(world, {animal, profile, slug: profile.slug, activity, hoursAt}, KIT, from, to, (t) => !awakeAt(profile, activity, hoursAt(slotStart(animal, slotOf(animal, t)))));
+}
+
+/**
+ * When a trip has it in the air (world seconds): from its first flying leg's start to its last one's end (a flight's
+ * leg, a flock follower's leader-led legs), or null for a trip on foot or in the water. A flight slot mostly isn't
+ * flight: it waits where it is, flies a few seconds to tens of seconds, and spends the rest of its slot where it came
+ * down (a kingfisher: about 30 s waiting, 2 to 15 s in the air, the rest on its perch). The card and the logs say
+ * "flying" only for this span (lane ark-activities, 2026-11-14).
+ */
+export function flightSpan(trip: Trip): {from: number; to: number} | null {
+    let t = trip.start;
+    let from = Infinity;
+    let to = -Infinity;
+    for (const leg of trip.legs) {
+        const end = t + leg.seconds;
+        if (leg.mode === "air") {
+            from = Math.min(from, t);
+            to = Math.max(to, end);
+        } else if (leg.mode === "shadow") {
+            // (A flock follower is where its leader is: in the air while its leader's trips have it there.)
+            for (const lead of trip.shadow?.trips ?? []) {
+                const span = flightSpan(lead);
+                if (!span || span.to <= t || span.from >= end) continue;
+                from = Math.min(from, Math.max(span.from, t));
+                to = Math.max(to, Math.min(span.to, end));
+            }
+        }
+        t = end;
+    }
+    return Number.isFinite(from) && to > from ? {from, to} : null;
+}
+
+/** What its stay at a flight's end is, as the card says it: pecking about for food, or settled (resting, preening). */
+export function stayIsFeeding(trip: Trip): boolean {
+    return trip.stay.some((beat) => beat.beat === "peck" || beat.beat === "bite" || beat.beat === "chew");
 }
 
 /** A trip's recipe episode at its destination, if it has one (for the tests and the review sample). */

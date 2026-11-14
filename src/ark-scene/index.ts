@@ -78,7 +78,7 @@ import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, slee
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -6124,6 +6124,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // The map lane's per-zone visible capacity (rule E, `map/capacity.ts`) for the runtime's live budget (`setArkZoneCapacity`).
     wireZoneCapacity(liveBudget);
     setNestSource(options.props === false ? null : nestSourceFromProps({sites: nestSites, stage: nestStage, arkDayAt: (epoch) => arkDayNow(current, epoch * 1000) ?? 0}));
+    // And the recipes' seasons on the Ark's year, from the same Ark day (lane ark-activities: not the calendar month).
+    setRecipeArkDay((epoch) => arkDayNow(current, epoch * 1000));
     setFishSource((pos, radius, epoch) => fishSchoolsNear(pos, radius, epoch));
     // And the reef's schools split round the recipes' hunters where they are now (`fish-render.ts`; shared positions).
     setFishChasers(() => recipeScene.chasers);
@@ -7623,6 +7625,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             dust.dispose();
             recipeScene.dispose();
             setNestSource(null);
+            setRecipeArkDay(null);
             setFishSource(null);
             setFishChasers(null);
             nests.dispose();

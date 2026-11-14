@@ -122,8 +122,40 @@ export function sexLook(id: string, slug: string): SexLook {
 
 // MARK: Seasons and hours
 
-function monthAt(epochSeconds: number): number {
+/** Ark days in an Ark year (`voyage_ark_day`: 1 Ark year = 14 real days), as the props' nests and breeding seasons count them. */
+const ARK_YEAR_DAYS = 365;
+/** The scene's Ark day at a world time (`props/index.ts` arkDayNow, the same for every viewer), or null: none wired. */
+let arkDayOf: ((epochSeconds: number) => number | null) | null = null;
+
+/**
+ * Its seasons run on the Ark's year (lane ark-activities, 2026-11-14), as the props' nests already do: the scene wires
+ * the Ark day here, so a species' stored mating and nesting months come round every Ark year (14 real days), each month
+ * about 28 real hours, rather than once a calendar year (on the calendar month, 31 of the 128 species with stored mating
+ * months were ever in season in November). Without it (tests, scripts), the calendar month.
+ */
+export function setRecipeArkDay(source: ((epochSeconds: number) => number | null) | null) {
+    arkDayOf = source;
+    forgetRecipes();
+}
+
+/** The Ark year's day (0–365) at a world time, or null without a wired Ark day. */
+function arkYearDayAt(epochSeconds: number): number | null {
+    const day = arkDayOf ? arkDayOf(epochSeconds) : null;
+    return typeof day === "number" && Number.isFinite(day) ? ((day % ARK_YEAR_DAYS) + ARK_YEAR_DAYS) % ARK_YEAR_DAYS : null;
+}
+
+/** The month (1–12) the seasons read at a world time: the Ark year's (northern months, as `props/presence.ts`), else the calendar's. */
+export function seasonMonthAt(epochSeconds: number): number {
+    const day = arkYearDayAt(epochSeconds);
+    if (day !== null) return Math.min(Math.floor(day / (ARK_YEAR_DAYS / 12)) + 1, 12);
     return new Date(epochSeconds * 1000).getUTCMonth() + 1;
+}
+
+/** Which year of seasons a world time is in (the Ark year's count, else the calendar's), and the day of that year a month starts. */
+function seasonYearAt(epochSeconds: number): number {
+    const day = arkDayOf ? arkDayOf(epochSeconds) : null;
+    if (typeof day === "number" && Number.isFinite(day)) return Math.floor(day / ARK_YEAR_DAYS);
+    return new Date(epochSeconds * 1000).getUTCFullYear();
 }
 
 /** How much a season-bound template runs now: in season 1; out of it 0; no season stored, a little all year. */
@@ -131,7 +163,7 @@ export function seasonFactor(species: SpeciesRecipes, season: Template["season"]
     if (!season) return 1;
     const months = season === "mating" ? species.mating : species.nesting;
     if (!months.length) return season === "nesting" ? 0 : 0.25;
-    return months.includes(monthAt(epochSeconds)) ? 1 : 0;
+    return months.includes(seasonMonthAt(epochSeconds)) ? 1 : 0;
 }
 
 function hourOk(template: Template, hours: number): boolean {
@@ -194,6 +226,9 @@ export type RecipeIntentInput = {
     kit: ScheduleKit;
 };
 
+/** How often a bird whose drawn nest is finished still takes a slot to it with material, against one building it. */
+export const NEST_TEND = 0.4;
+
 /** On unless a page or a test turns it off. */
 let enabled = true;
 export function setRecipesEnabled(on: boolean) {
@@ -217,10 +252,14 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
         if (!hourOk(template, input.hours)) continue;
         if (template.sex === "male" && sex === "female") continue;
-        // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say.
+        // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say; once
+        // its nest stands (the props draw it only in its breeding season, or with eggs or chicks, whose sitter sits),
+        // it keeps coming back to it with material now and then, tending it (`NEST_TEND`): the drawn nest is there
+        // through the season, the building of it only its first few Ark days.
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
-        if (id === "nest_build" && nestSource && (!building || building.stage >= 1)) continue;
-        const chance = weight * 0.7 * (template.often ?? 1) * (building ? 1 : seasonFactor(species, template.season, input.start));
+        if (id === "nest_build" && nestSource && !building) continue;
+        const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
+        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start));
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
@@ -434,9 +473,9 @@ onHamletSwitch(() => {
 
 /** The year of a nesting season (the season's first month's year), so a nest site is new each season. */
 function nestYear(species: SpeciesRecipes, epochSeconds: number): number {
-    const date = new Date(epochSeconds * 1000);
     const first = species.nesting.length ? species.nesting[0] : 3;
-    return date.getUTCMonth() + 1 >= first ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
+    const year = seasonYearAt(epochSeconds);
+    return seasonMonthAt(epochSeconds) >= first ? year : year - 1;
 }
 
 /**
@@ -483,11 +522,17 @@ export const NEST_BUILD_DAYS = 5;
 export function nestStageAt(slug: string, epochSeconds: number): number {
     const species = speciesRecipes(slug);
     if (!species.nest || !species.nesting.length) return 0;
-    const date = new Date(epochSeconds * 1000);
-    const month = date.getUTCMonth() + 1;
+    const month = seasonMonthAt(epochSeconds);
     if (!species.nesting.includes(month)) return 0;
-    // Days since the season's first day (the months run in order, wrapping the year).
+    // Days since the season's first day (the months run in order, wrapping the year): on the Ark year, Ark days.
     const first = species.nesting[0];
+    const arkDay = arkYearDayAt(epochSeconds);
+    if (arkDay !== null) {
+        const start = (first - 1) * (ARK_YEAR_DAYS / 12);
+        const days = (((arkDay - start) % ARK_YEAR_DAYS) + ARK_YEAR_DAYS) % ARK_YEAR_DAYS;
+        return Math.min(Math.max(days / NEST_BUILD_DAYS, 0), 1);
+    }
+    const date = new Date(epochSeconds * 1000);
     const year = month >= first ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
     const start = Date.UTC(year, first - 1, 1) / 1000;
     const days = (epochSeconds - start) / 86_400;
@@ -1839,37 +1884,76 @@ function pairBuild(world: ScheduleWorld, kit: ScheduleKit, owner: TripOwner, oth
     return episode ? {episode, clipped: clips.n > 0} : null;
 }
 
+/** A pair's window in a period, if the pair meets in it at all (its season, one in four out of it): its start. Pure. */
+function pairWindowStart(species: SpeciesRecipes, l: PairLink, period: number): number | null {
+    const factor = seasonFactor(species, TEMPLATES[l.template].season, period * PAIR_PERIOD);
+    // Out of a stored season, a quarter as often: one period in four.
+    if (!factor || (factor < 1 && hashString(`${l.key}#on#${period}`) % 4 !== 0)) return null;
+    return period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - PAIR_MAX));
+}
+
+/** One side's episode of a pair's meeting in a period (null: they don't meet then). Remembered; pure in the pair. */
+function pairMeeting(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, l: PairLink, period: number, start: number): Episode | null {
+    const memoKey = `${l.key}#${period}#${l.role}`;
+    let episode = pairEpisodes.get(memoKey);
+    if (episode === undefined) {
+        // Both sides' episodes, built the same way on either side (pure in the pair): when either one's way to the
+        // meeting is cut short by blocked ground (a boulder, a trunk, a fence), they would fight metres apart, so the
+        // meeting is off for this window on both sides (L7 on the merged scenery: stags 5.2 m apart). They meet in
+        // another window, where the way is clear.
+        const partner: TripOwner = {animal: l.other, profile: l.otherProfile, slug: l.otherSlug, activity: l.otherActivity, hoursAt: owner.hoursAt};
+        const mine = pairBuild(world, kit, owner, l.other, l.otherProfile, l.otherActivity, l.role, l.key, l.template, start, period);
+        const theirs = mine ? pairBuild(world, kit, partner, owner.animal, owner.profile, owner.activity, l.role === "a" ? "b" : "a", l.key, l.template, start, period) : null;
+        episode = mine && theirs && !mine.clipped && !theirs.clipped ? {...mine.episode, other: l.other.id, role: l.role} : null;
+        pairEpisodes.set(memoKey, episode);
+        if (pairEpisodes.size > 400) pairEpisodes.delete(pairEpisodes.keys().next().value as string);
+    }
+    return episode;
+}
+
 function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
     const list = links.get(owner.animal);
     if (!list) return null;
+    const species = speciesRecipes(owner.slug);
     for (const l of list) {
         if (l.template === "mixed_follow") continue;
-        const template = TEMPLATES[l.template];
-        const species = speciesRecipes(owner.slug);
-        const factor = seasonFactor(species, template.season, epoch);
-        if (!factor) continue;
-        // Out of a stored season, a quarter as often: one period in four.
         const period = Math.floor(epoch / PAIR_PERIOD);
-        if (factor < 1 && hashString(`${l.key}#on#${period}`) % 4 !== 0) continue;
-        const start = period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - PAIR_MAX));
-        if (epoch < start || epoch >= start + PAIR_MAX) continue;
-        const memoKey = `${l.key}#${period}#${l.role}`;
-        let episode = pairEpisodes.get(memoKey);
-        if (episode === undefined) {
-            // Both sides' episodes, built the same way on either side (pure in the pair): when either one's way to the
-            // meeting is cut short by blocked ground (a boulder, a trunk, a fence), they would fight metres apart, so the
-            // meeting is off for this window on both sides (L7 on the merged scenery: stags 5.2 m apart). They meet in
-            // another window, where the way is clear.
-            const partner: TripOwner = {animal: l.other, profile: l.otherProfile, slug: l.otherSlug, activity: l.otherActivity, hoursAt: owner.hoursAt};
-            const mine = pairBuild(world, kit, owner, l.other, l.otherProfile, l.otherActivity, l.role, l.key, l.template, start, period);
-            const theirs = mine ? pairBuild(world, kit, partner, owner.animal, owner.profile, owner.activity, l.role === "a" ? "b" : "a", l.key, l.template, start, period) : null;
-            episode = mine && theirs && !mine.clipped && !theirs.clipped ? {...mine.episode, other: l.other.id, role: l.role} : null;
-            pairEpisodes.set(memoKey, episode);
-            if (pairEpisodes.size > 400) pairEpisodes.delete(pairEpisodes.keys().next().value as string);
-        }
+        const start = pairWindowStart(species, l, period);
+        if (start === null || epoch < start || epoch >= start + PAIR_MAX) continue;
+        const episode = pairMeeting(world, owner, kit, l, period, start);
         if (episode && epoch < episode.t1) return episode;
     }
     return null;
+}
+
+/** A recipe episode as the card and the logs name it: its recipe, when it runs, and (a pair's) its partner and side. */
+export type DrawnRecipe = {recipe: string; t0: number; t1: number; other?: string | null; role?: "a" | "b" | null};
+
+/**
+ * The pair meetings it has between two world times (their starts): what its pose plays then (`pairEpisode`), built the
+ * same way, so a log or a card that says "courting" or "sparring with a rival" says only a meeting the scene draws (both
+ * sides met; their way was clear). `sleeping`: whether it is asleep at a time (the schedule's): a sleeper's pose plays no
+ * meeting. Pure; the same for every viewer.
+ */
+export function pairMeetings(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, from: number, to: number, asleep: (epoch: number) => boolean): DrawnRecipe[] {
+    const out: DrawnRecipe[] = [];
+    if (!enabled) return out;
+    const list = links.get(owner.animal);
+    if (!list) return out;
+    const species = speciesRecipes(owner.slug);
+    for (const l of list) {
+        if (l.template === "mixed_follow") continue;
+        for (let period = Math.floor((from - PAIR_MAX) / PAIR_PERIOD); period * PAIR_PERIOD < to; period++) {
+            const start = pairWindowStart(species, l, period);
+            if (start === null || start < from || start >= to) continue;
+            const episode = pairMeeting(world, owner, kit, l, period, start);
+            if (!episode || asleep(episode.t0)) continue;
+            // (A pair before it in the list takes the window it shares: only the first is played.)
+            if (out.some((o) => o.t0 < episode.t1 && episode.t0 < o.t1)) continue;
+            out.push({recipe: episode.recipe, t0: episode.t0, t1: episode.t1, other: l.other.id, role: l.role});
+        }
+    }
+    return out.sort((a, b) => a.t0 - b.t0);
 }
 
 // MARK: Flocks: murmurations at dusk, V-formations in the air
@@ -2050,6 +2134,27 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     // Ambient flock-mates round it (a swarm at its spot, its roost-mates streaming out at dusk), whatever it is doing.
     const flock = emergenceFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
     return flock ? {...pose, flock} : pose;
+}
+
+/**
+ * The recipe episode its pose plays at a world time (`overlaid`, in the same order): its flock's murmuration, a pair's
+ * meeting, an episode of its stay (a recipe it went there for, or one on the spot: a call, a preen, a stretch). Null
+ * when its pose is its schedule's own. The tap card says this while it plays (truth rule: only what is drawn).
+ */
+export function drawnRecipe(world: ScheduleWorld, trip: Trip, epoch: number, kit: ScheduleKit): DrawnRecipe | null {
+    if (!enabled) return null;
+    const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
+    if (!owner) return null;
+    const murmuration = murmurationOf(world, owner, kit, epoch);
+    if (murmuration) return {recipe: "murmuration", t0: murmuration.t0, t1: murmuration.t1};
+    if (trip.doing === "sleep") return null;
+    const pair = pairEpisode(world, owner, kit, epoch);
+    if (pair) return {recipe: pair.recipe, t0: pair.t0, t1: pair.t1, other: pair.other ?? null, role: pair.role ?? null};
+    if (trip.shadow || epoch < trip.arrive) return null;
+    const base = kit.basePose(world, trip, epoch);
+    if (mixedPose(world, owner, kit, base, epoch)) return null;
+    const stay = stayEpisode(world, trip, owner, kit);
+    return stay && epoch >= stay.t0 && epoch < stay.t1 ? {recipe: stay.recipe, t0: stay.t0, t1: stay.t1} : null;
 }
 
 function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose {
