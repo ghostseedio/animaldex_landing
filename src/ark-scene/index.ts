@@ -205,7 +205,7 @@ import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuil
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
-import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
+import {HUNT_STATION_AGREE, HuntingLayer, huntsTogether, loadPositionsAtlas, type HuntWorld} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
@@ -1398,6 +1398,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
     const hunting = new HuntingLayer();
+    /** What a hunter's foray reads of the world beyond the ground: the water's surface, and a perch near a waypoint. */
+    const huntWorld: HuntWorld = {
+        water: (x, z) => waterTopAt(x, z),
+        perch: (x, z, reach) => {
+            let best: {x: number; y: number; z: number} | null = null;
+            let near = Math.min(reach, HUNT_STATION_AGREE);
+            for (const tag of ["branch", "post", "rock_top"] as const) {
+                for (const p of world?.sampler.attachPoints(tag, {x, z, r: near}) ?? []) {
+                    const d = Math.hypot(p.x - x, p.z - z);
+                    if (d <= near) [best, near] = [p, d];
+                }
+            }
+            return best;
+        }
+    };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -1468,8 +1483,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         };
         // Encounter hunting (`hunting.ts`): a due, awake predator walks its forays, from the server's own positions.
         if (hunting.active) {
-            const hunt = hunting.pose(entry.animal, epoch, entry.length, heightAt, fromSchedule);
+            const hunt = hunting.pose(entry.animal, epoch, entry.length, heightAt, fromSchedule, huntWorld);
             if (hunt) return hunt;
+            // A pride, a pack or a family goes with its hunting leader (the server pairs one hunter with one prey).
+            const lead = entry.leader && entry.leader !== entry && entry.leader.sched && scheduled(entry.leader) && entry.leader.animal.model_slug === entry.animal.model_slug ? entry.leader : null;
+            if (lead && hunting.hunting(lead.animal, epoch) && huntsTogether(lead.animal.model_slug, hunting.styleOf(lead.animal))) {
+                const leading = schedulePose(lead, epoch);
+                const weight = hunting.weight(lead.animal.id);
+                if (weight > 0) return hunting.beside(leading, weight, Math.max(entry.place.rank ?? 1, 1), entry.length, fromSchedule(), heightAt);
+            }
         }
         return fromSchedule();
     };
@@ -6654,7 +6676,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             void loadPositionsAtlas()
                 .then((atlas) => {
-                    if (!disposed) hunting.set(read, atlas, voyageStart);
+                    if (!disposed) hunting.set(read, atlas, voyageStart, worldMs());
                 })
                 .catch(() => hunting.set(null, null, null));
         },
