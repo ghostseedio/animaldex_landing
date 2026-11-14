@@ -266,3 +266,59 @@ test("model library: the species the reader chose loads ahead of the queue, past
         assert.ok(last < glbs.indexOf("b/v.far.glb") && last < glbs.indexOf("c/v.far.glb"), `the chosen one's files before the rest of the queue, beside the one already loading: ${glbs.join(", ")}`);
     }, 1);
 });
+
+test("rig library: the session's caps bound the rigs asked for from far off, never one asked for from close by; a dropped request is asked again", async () => {
+    const holder = globalThis as unknown as {fetch: typeof fetch};
+    const real = holder.fetch;
+    const warn = console.warn;
+    console.warn = () => undefined;
+    const asked: string[] = [];
+    let dropOnce = true;
+    holder.fetch = (async (input: unknown) => {
+        const url = String(input);
+        if (url.endsWith("/manifest.json")) return new Response(JSON.stringify({kind: "ark-rig", version: 1, species: {a: "aaaaaaaaaaaa", b: "aaaaaaaaaaaa", c: "aaaaaaaaaaaa", d: "aaaaaaaaaaaa"}}), {status: 200});
+        asked.push(url.replace("http://bucket/ark-rig/v1/", ""));
+        if (url.includes("/d/") && dropOnce) {
+            dropOnce = false;
+            throw new TypeError("Failed to fetch");
+        }
+        // (Not there: final, so each is asked for once.)
+        return new Response("{}", {status: 400});
+    }) as typeof fetch;
+    const {RigLibrary} = await import("@/ark-scene/rig-player");
+    const rigs = new RigLibrary("http://bucket/ark-rig/v1", {species: 1, bytes: 1e9});
+    const quiet = async () => {
+        for (let i = 0; i < 200 && rigs.busy; i++) await sleep(5);
+        await sleep(5);
+    };
+    try {
+        await rigs.ready();
+        rigs.request("a");
+        await quiet();
+        rigs.request("b");
+        await quiet();
+        assert.deepEqual(asked, ["a/aaaaaaaaaaaa.rig.glb"], "the cap of one file is used up: a walker seen from far off goes without");
+        rigs.request("b", true);
+        await quiet();
+        assert.deepEqual(asked, ["a/aaaaaaaaaaaa.rig.glb", "b/aaaaaaaaaaaa.rig.glb"], "one the reader is close to is loaded all the same");
+        rigs.request("a", true);
+        await quiet();
+        assert.equal(asked.length, 2, "a file that is not there is not asked for again");
+        assert.equal(rigs.available("a"), false);
+        // A request that was dropped: again, after its wait.
+        rigs.request("d", true);
+        await quiet();
+        rigs.request("d", true);
+        await quiet();
+        assert.equal(asked.filter((name) => name === "d/aaaaaaaaaaaa.rig.glb").length, 1, "not before its wait is over");
+        assert.equal(rigs.available("d"), true, "and not given up on");
+        await sleep(1050);
+        rigs.request("d", true);
+        await quiet();
+        assert.equal(asked.filter((name) => name === "d/aaaaaaaaaaaa.rig.glb").length, 2);
+    } finally {
+        rigs.dispose();
+        holder.fetch = real;
+        console.warn = warn;
+    }
+});
