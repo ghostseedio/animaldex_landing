@@ -535,7 +535,7 @@ function movesOf(row: Row, plan: string, layer: string, mode: string, zone: stri
         }
     }
     // The text adds what the plan can't see: a swimmer, a climber, a digger, a hopper.
-    const swim = find(row, BEHAVIOUR_TEXT, /\b(swim(s|ming)?|dives? (under|underwater|beneath|below|for fish|to the bottom)|diving (duck|bird|for fish|underwater)|paddl\w+|aquatic|semi-aquatic|float(s|ing)? on (its|the|their) backs?)\b/i);
+    const swim = find(row, BEHAVIOUR_TEXT, /\b(swim(s|ming)?|dives? (under|underwater|beneath|below|for fish|to the bottom)|diving (duck|bird|for fish|underwater)|paddl\w+|aquatic|semi-aquatic|float(s|ing)? on (its|the|their) backs?|rests? in (the )?water|spends? (the|its|their|most of the) days? (submerged|in (the )?water))\b/i);
     if (swim && primary !== "swim" && primary !== "sessile") {
         also.add("swim");
         src.swim = {field: swim.field, phrase: swim.phrase};
@@ -937,6 +937,13 @@ function profile(row: Row): Profile {
         const onWater = find(row, ["sleep"], /\b(on (the )?(open )?water|afloat|floating on)\b/i);
         if (onWater) roost = {value: "water", src: {field: onWater.field, phrase: onWater.phrase}};
     }
+
+    // (Lane B6 water, 2026-11-14.) A crocodilian, the common hippopotamus and an amphibian that never leaves the water
+    // sleep in the water, afloat, whatever hole their text names (a crocodile's "burrow" is in its bank, under water;
+    // the hippo "rests in water by day"): on a crevice or ground-cover roost they spent their sleep, 42% of the day,
+    // on land.
+    const sleepsAfloat = /Crocodylia/.test(`${row.class_name ?? ""} ${row.order_name ?? ""}`) || /^(Crocodylidae|Alligatoridae|Gavialidae)$/.test(row.family_name ?? "") || slug === "common-hippopotamus" || (/Amphibia/.test(row.class_name ?? "") && (/^(Pipidae|Telmatobiidae|Proteidae|Sirenidae|Cryptobranchidae|Typhlonectidae|Amphiumidae)$/.test(row.family_name ?? "") || slug === "axolotl"));
+    if (sleepsAfloat && allMoves.has("swim") && roost.value !== "water") roost = {value: "water", src: {rule: `${row.family_name || slug}: sleeps in the water (not ${roost.value})`}};
 
     const src: Record<string, Source | Source[]> = {plan: planSrc, activity: activity.src, roost: roost.src, social: social.src, diet: diet.src, ...moves.src};
     if (rhythm.src.length) src.rhythm = rhythm.src;
