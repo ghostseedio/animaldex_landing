@@ -71,6 +71,6 @@ float arkCloudShade(vec3 world) {
  */
 export const MARKER_LIGHT_GLSL = `
 vec3 arkMarkerLight(float daylight) {
-    return mix(vec3(0.3, 0.36, 0.48), vec3(1.0), smoothstep(0.34, 1.0, daylight));
+    return mix(vec3(0.28, 0.325, 0.42), vec3(1.0), smoothstep(0.34, 1.0, daylight));
 }
 `;

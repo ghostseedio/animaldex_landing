@@ -285,8 +285,10 @@ void main() {
     float core = 1.0 - smoothstep(0.38, 0.62, r);
     float rim = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - core);
     float breathe = 0.85 + 0.15 * sin(arkTime * 1.8);
-    vec3 colour = mix(vec3(0.16, 0.13, 0.08), vec3(1.0, 0.96, 0.86), core) * arkMarkerLight(daylight);
-    float a = (core * 0.92 + rim * 0.35) * vAlpha * breathe;
+    // (The core a third over white before the tone curve, the rim a little heavier: under the curve a plain cream
+    // core was within a tenth of sunlit sand, grass and snow, and the dot was lost by day.)
+    vec3 colour = mix(vec3(0.16, 0.13, 0.08), vec3(1.34, 1.29, 1.15), core) * arkMarkerLight(daylight);
+    float a = (core * 0.92 + rim * 0.5) * vAlpha * breathe;
     if (a < 0.01) discard;
     gl_FragColor = vec4(colour, a);
     #include <tonemapping_fragment>
