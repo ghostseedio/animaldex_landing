@@ -110,7 +110,7 @@ import {gripPoint} from "@/ark-scene/map/grip";
 import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
-import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, tierTrialFailed, tierTrialState, type QualityTier} from "@/ark-scene/post";
+import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, tierTrialFailed, tierTrialOn, tierTrialState, type QualityTier} from "@/ark-scene/post";
 import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -662,6 +662,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     // (The low tier starts at a steady 30 when the main thread is slow, `tierForCpu`; otherwise at the display's rate.)
     const pacer = !options.recording && Boolean(window.matchMedia?.("(pointer: coarse)").matches) ? new ArkFramePacer(tier, performance.now() / 1000, tier === "low" && (arkCpuScoreMs() ?? 0) > SLOW_CPU_MS) : null;
+    // (A tier on trial, an iPhone's medium, must hold the display's rate: `pace.ts` rule 5.)
+    if (pacer && !forced) pacer.trial = tierTrialOn();
     let resolutionScale = 1;
     /** The drawing buffer's pixels per CSS pixel: the tier's pixel ratio at the pacing's scale. */
     const drawRatio = () => pixelRatio * resolutionScale;
