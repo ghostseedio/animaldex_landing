@@ -47,7 +47,7 @@ import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, aloftSlots, flightWay, FLIGHT_ACCEL_MAX, FLIGHT_WAYS, G, hawkAt, planAirLeg, planSoarLeg, soarAt, soarSpecOf, stationBout, takeoffClass, THERMAL_HOURS, trackAt, type AirPaces, type AirPlan, type AirStage, type FlightWayRule, type SoarAt} from "@/ark-scene/locomotion/flight";
 import {breathRhythm, patrolRule, shoreSide, waterLife} from "@/ark-scene/water-life";
 import {speciesDepth} from "@/ark-scene/sea-depth";
-import {patrolLength, patrolRoute} from "@/ark-scene/water-patrol";
+import {patrolLength, patrolRoute, turnRadiusOf} from "@/ark-scene/water-patrol";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
@@ -1660,6 +1660,10 @@ function keepToSide(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // (Asleep it is at its roost, as every animal: a crocodile's, a hippo's and an axolotl's is in the water, a seal's
     // on its shore, by their profiles. Its side is for its waking hours.)
     if (planned.doing === "sleep" || planned.doing === "to_roost") return planned;
+    // (Nor a watch, by day or by night, which is its group's and stands where the group is; nor anything in a slot it
+    // is asleep by its own hours, whatever that slot's doing is called: a capybara's night watch at its roost was
+    // made a rest out in the water. Merged tree, with sleep hours by kind.)
+    if (planned.doing === "watch" || !awakeAt(profile, activity, hoursAt(slotStart(animal, slot)))) return planned;
     // (A sea otter, which swims first, lives on the water.)
     const sideAt = (start: number) => (life === "otter" && profile.move === "swim" ? "water" : shoreSide(life, animal.id, hoursAt(start), start));
     const start = slotStart(animal, slot);
@@ -2842,6 +2846,7 @@ function waterPatrol(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
         body: L,
         turn: hashString(`${animal.id}#round`) % 2 ? 1 : -1,
         coarse: !never,
+        turnRadius: turnRadiusOf(L, pace),
         random,
         wet: (x, z) => world.nav.swimmable(x, z, need)
     });
