@@ -2383,6 +2383,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return mesh;
     };
 
+    /** Whether a species' mesh can be drawn this frame: made, and not held back while its shader compiles (`runtime.prepare`). */
+    const drawable = (mesh: InstancedMesh | null | undefined): boolean => Boolean(mesh) && (mesh!.layers.mask & 1) !== 0;
+
     library.onLoad = (slug) => {
         const model = library.get(slug);
         if (model?.behaviour?.plan) {
@@ -4240,10 +4243,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             moverGait &&
             !reducedMotion &&
             rigs.walks(c.entry.animal.model_slug) && c.entry.air <= 0.001 && !c.entry.visitor && !c.pose.afloat && gaitMoving(c.entry.gait, c.entry.length) && rigs.available(c.entry.animal.model_slug);
+        const chosen = (entry: Entry) => entry.animal.id === selectedId || entry.animal.id === followId;
         const nearWanted = candidates
             .filter((c) => c.visible && !c.skip && c.model?.near && (c.distance < NEAR_DISTANCE + (c.entry.level === "near" ? HYSTERESIS : 0) + ((c.entry.air > 0.5 || c.entry.rig?.flying) && rigs.mayFly(c.entry.animal.model_slug) ? FLIGHT_RIG_EXTRA : 0) || (movingRig(c) && (c.entry.level === "near" || c.distance < MOVING_RIG_WITHIN)) || nearBySize(c.entry.length, c.distance, height, FOV)))
-            // (Largest on screen first at true size: a whale far off before a beetle near by.)
-            .sort((a, b) => screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
+            // (Largest on screen first at true size: a whale far off before a beetle near by. The one chosen or followed
+            // before all: among forty birds in an aviary the near cap could pass it by, close up on its far model.)
+            .sort((a, b) => Number(chosen(b.entry)) - Number(chosen(a.entry)) || screenWeight(b.entry.length, b.distance) - screenWeight(a.entry.length, a.distance));
         const nearIds = new Set<string>();
         const nearSpecies = new Set<string>();
         const cap = caps();
@@ -4277,7 +4282,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rigSpecies.add(slug);
             rigCount++;
             candidate.entry.rigOn = true;
-            rigs.request(slug);
+            // (Close by, chosen or the reader's own: always; a walker given its rig from the island view, within the session's caps.)
+            rigs.request(slug, rigPriority(candidate.entry) < 2 || candidate.distance < RIG_WITHIN);
         }
         let rigged = 0;
         for (const candidate of candidates) {
@@ -4308,7 +4314,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const needs = new Map<string, {near: number; far: number; rig: number}>();
         for (const candidate of candidates) {
             const {entry} = candidate;
-            const level: Level = nearIds.has(entry.animal.id) ? "near" : modelled.has(entry.animal.id) ? "far" : "token";
+            let level: Level = nearIds.has(entry.animal.id) ? "near" : modelled.has(entry.animal.id) ? "far" : "token";
+            // The hand-over. A species' mesh is held back when it is first made, until its shader has compiled
+            // (`runtime.prepare`: a frame or two, up to seconds for the first rig on a slow phone). Until it can be
+            // drawn the animal stays one level down, as it was (the rig as its near model, the near model as its far
+            // one); before, it was not drawn at all for those frames, a blink at each first far to near to rig step.
+            if (level === "near" && candidate.visible && !candidate.skip && candidate.model) {
+                const meshes = speciesMeshes(entry.animal.model_slug);
+                if (candidate.rig && !drawable(meshes.rig)) {
+                    instancedRigFor(candidate.model, candidate.rig, 1);
+                    if (!drawable(meshes.rig)) {
+                        candidate.rig = null;
+                        // (Its rig fades in from nothing once it can be drawn.)
+                        if (entry.rig) entry.rig.weight = 0;
+                    }
+                }
+                if (!candidate.rig && !drawable(meshes.near) && candidate.model.far) {
+                    instancedFor(candidate.model, "near", 1);
+                    if (!drawable(meshes.near)) level = "far";
+                }
+            }
             entry.level = level;
             if (!candidate.visible || level === "token" || candidate.skip) continue;
             const need = needs.get(entry.animal.model_slug) ?? {near: 0, far: 0, rig: 0};
@@ -4739,7 +4764,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         look.end(now, shellMaterial);
         if (now - lastEvict > 5) {
             lastEvict = now;
-            rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP);
+            // (The lighter view keeps as many as its session cap allowed before: its memory's bound is unchanged.)
+            rigs.evict(now - RIG_KEEP_SECONDS, Math.min(RIG_KEEP, rigs.caps.species));
         }
         // The splashes of the moments.
         for (let i = ripples.length - 1; i >= 0; i--) {
@@ -5246,6 +5272,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         selectedId = id;
         if (followId && followId !== id) endFollow();
         const entry = findEntry(id);
+        // The one chosen: its model (both levels) ahead of everything else in the queue, asked for now, not when the
+        // camera gets within 48 m of it, so it is in by the time the flight arrives (it arrived to an icon, then the far
+        // model, then the near one).
+        library.urgent = entry?.animal.model_slug ?? null;
+        if (entry && library.has(entry.animal.model_slug)) library.request(entry.animal.model_slug, "near");
         options.onSelect?.(entry?.animal ?? null);
         toldState = null;
         tellState();
