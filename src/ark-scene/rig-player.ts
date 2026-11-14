@@ -379,7 +379,7 @@ export class RigLibrary {
     request(slug: string, first = false) {
         if (this.disposed || this.models.has(slug) || this.queued.has(slug) || this.failed.has(slug)) return;
         if (!this.available(slug)) return;
-        if (!rigRoom(this.caps, this.held, first)) return;
+        if (!rigRoom(this.caps, this.held, first) && !(first && this.makeRoom() && rigRoom(this.caps, this.held, true))) return;
         this.queued.add(slug);
         this.heldSpecies++;
         // (One asked for first is loaded first.)
@@ -398,16 +398,37 @@ export class RigLibrary {
         const old = Array.from(this.models.values()).filter((model) => model.usedAt < before).sort((a, b) => a.usedAt - b.usedAt);
         for (const model of old) {
             if (!over()) break;
-            this.models.delete(model.slug);
-            this.queued.delete(model.slug);
-            // (Let go: its place under the caps is free again.)
-            this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
-            this.heldBytes = Math.max(this.heldBytes - model.bytes, 0);
-            model.geometry.dispose();
-            model.texture.dispose();
-            model.loco?.dispose();
-            this.onEvict(model.slug);
+            this.drop(model);
         }
+    }
+
+    /** Let go of one rig: its place under the caps is free again. */
+    private drop(model: RigModel) {
+        this.models.delete(model.slug);
+        this.queued.delete(model.slug);
+        this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
+        this.heldBytes = Math.max(this.heldBytes - model.bytes, 0);
+        model.geometry.dispose();
+        model.texture.dispose();
+        model.loco?.dispose();
+        this.onEvict(model.slug);
+    }
+
+    /**
+     * Room for a rig asked for first when even its allowance is spent (a reader going animal to animal faster than
+     * rigs are let go): the rig drawn longest ago goes, never one drawn in the latest frame.
+     */
+    private makeRoom(): boolean {
+        let newest = -Infinity;
+        let oldest: RigModel | null = null;
+        this.models.forEach((model) => {
+            newest = Math.max(newest, model.usedAt);
+            if (!oldest || model.usedAt < oldest.usedAt) oldest = model;
+        });
+        const pick = oldest as RigModel | null;
+        if (!pick || pick.usedAt >= newest) return false;
+        this.drop(pick);
+        return true;
     }
 
     onEvict: (slug: string) => void = () => undefined;
