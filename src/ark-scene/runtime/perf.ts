@@ -14,6 +14,8 @@
  *   numbers off on their own phone (fps, frame-time p95, draw calls, triangles, heap, tier, DPR, animals drawn and
  *   rigged, and the costliest sections). Plain DOM, no dependency.
  * - `window.__arkPerfReport()`: the same numbers as data (the measurement harness reads it).
+ * - `window.__arkPerfSlow()`: the last slow frames (their own work over `SLOW_FRAME_MS`), each with when it was drawn
+ *   and its sections: which part of the frame a hitch was in (the interaction scenarios read it).
  */
 
 /** Where a frame's main-thread time goes. */
@@ -44,6 +46,12 @@ export type ArkPerfSection = (typeof ARK_PERF_SECTIONS)[number];
 
 const WINDOW = 120;
 const FRAMES = 240;
+/** A frame whose own main-thread time is over this is kept, with its sections (two 60 Hz frames). */
+const SLOW_FRAME_MS = 33;
+const SLOW_KEPT = 96;
+
+/** One slow frame: when it began (ms from the navigation), its main-thread time and where that went. */
+export type ArkPerfSlowFrame = {at: number; ms: number; sections: Partial<Record<ArkPerfSection, number>>};
 
 export type ArkPerfGpu = {calls: number; triangles: number; programs: number; textures: number; geometries: number};
 
@@ -126,6 +134,7 @@ export class ArkPerf {
     private frameAt = 0;
     private frameFilled = 0;
     private lastStart = 0;
+    private readonly slow: ArkPerfSlowFrame[] = [];
     private overlay: HTMLDivElement | null = null;
     private overlayAt = 0;
     private scene: (() => ArkPerfScene) | null = null;
@@ -205,6 +214,7 @@ export class ArkPerf {
         el.appendChild(box);
         this.overlay = box;
         (globalThis as {__arkPerfReport?: () => ArkPerfReport}).__arkPerfReport = () => this.report();
+        (globalThis as {__arkPerfSlow?: () => ArkPerfSlowFrame[]}).__arkPerfSlow = () => this.slow.slice();
     }
 
     /** The top of a drawn frame. */
@@ -244,6 +254,14 @@ export class ArkPerf {
         this.ringAt = (this.ringAt + 1) % WINDOW;
         this.ringFilled = Math.min(this.ringFilled + 1, WINDOW);
         this.cpu[this.frameAt] = spent;
+        if (spent > SLOW_FRAME_MS) {
+            const sections: Partial<Record<ArkPerfSection, number>> = {};
+            ARK_PERF_SECTIONS.forEach((name, i) => {
+                if (this.now[i] >= 0.5) sections[name] = Math.round(this.now[i] * 10) / 10;
+            });
+            this.slow.push({at: Math.round(this.lastStart), ms: Math.round(spent * 10) / 10, sections});
+            if (this.slow.length > SLOW_KEPT) this.slow.shift();
+        }
         this.frameAt = (this.frameAt + 1) % FRAMES;
         this.frameFilled = Math.min(this.frameFilled + 1, FRAMES);
         const t = performance.now();
