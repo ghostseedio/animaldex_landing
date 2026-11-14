@@ -39,6 +39,7 @@ import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
+import {intelProfile} from "@/ark-scene/intelligence-profile";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
@@ -1521,7 +1522,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         const d = Math.hypot(dx, dz) || 1;
         const reach = homeRadius(profile, animal) * (0.6 + 0.3 * random());
         const at = world.nav.nearest(animal.home.x + (dx / d) * reach, animal.home.z + (dz / d) * reach, "walk", 0.5, 6, maxSlopeOf(animal));
-        if (at) return {doing: "stalk", to: groundSpot(world, at.x, at.z), mode: "ground", stay: stayBeats("stalk", random, null)};
+        // (Behaviours pass, B1: one that hunts by waiting, a crocodile, a snake, a frog, a mantis, a heron, lies in wait
+        // there, still, with a look round now and then; only a stalker creeps. `waitsForPrey`.)
+        if (at) return {doing: "stalk", to: groundSpot(world, at.x, at.z), mode: "ground", stay: stayBeats(waitsForPrey(profile) ? "hide" : "stalk", random, null)};
         behaviour = "wander";
     }
     const placeKinds = doing === "browse" ? (["shade", "perch_branch"] as ArkInteraction[]) : BEHAVIOUR_PLACES[behaviour];
@@ -1555,11 +1558,11 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                     // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
                     const stands = flyer && (point.tag === "cliff_ledge" || point.tag === "rock_top") ? world.sampler.heightAt(x, z) > surfaceY(world, x, z) + 0.05 : world.nav.walkable(x, z, maxSlopeOf(animal));
                     if (stands && (point.tag !== "water_edge" || world.sampler.heightAt(x, z) > surfaceY(world, x, z) + 0.02)) {
-                        return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(doing, random, null)};
+                        return {doing, to: {...groundSpot(world, x, z), point: point.id}, mode: aquatic(profile) ? "water" : profile.surface && point.ny < 0.7 ? "surface" : flyer && (doing === "visit_flowers" || doing === "circle_light") ? "air" : "ground", stay: stayBeats(stalkStay(profile, doing), random, null)};
                     }
                 }
                 const mode: TripMode = profile.surface && point.ny < 0.7 ? "surface" : flyer && (up || doing === "visit_flowers" || doing === "circle_light") ? "air" : aquatic(profile) ? "water" : "ground";
-                return {doing, to: spotOf(point), mode, stay: stayBeats(doing, random, null)};
+                return {doing, to: spotOf(point), mode, stay: stayBeats(stalkStay(profile, doing), random, null)};
             }
         }
     }
@@ -1621,7 +1624,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                 // (Lane MA3: one that walks first keeps its wanders within a walk, never a flight across its range.)
                 to: rangeSpot(world, profile, groupAnimal, own, flyer && profile.move === "walk" ? Math.min(radius * (group ? 0.3 : 1), walkReach(profile, animal) * 0.8) : radius * (group ? 0.3 : 1), random),
                 mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground",
-                stay: stayBeats(doing, random, null)
+                stay: stayBeats(stalkStay(profile, doing), random, null)
             };
         default: {
             const stayDoing: ArkDoing = STAY_DOINGS.has(doing) ? doing : "rest";
@@ -1640,6 +1643,22 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
 }
 
 const CRUISE: Record<"low" | "mid" | "high", number> = {low: 1.6, mid: 6, high: 14};
+
+/**
+ * One that hunts by waiting (behaviours pass, B1; `hunting.ts` huntStyle's wait and wade, by the same rule): a wader
+ * that eats fish or meat, or an ambusher or perch hunter that is no mammal and neither stalks nor pursues. Its stalk
+ * slot is a wait, not a creep.
+ */
+function waitsForPrey(profile: ArkBehaviourProfile): boolean {
+    if (profile.water === "wader") return profile.diet === "fish" || profile.diet === "meat";
+    const intel = intelProfile(profile.slug);
+    const hunt = intel.hunt;
+    if (intel.plan === "quadruped" || intel.plan === "primate" || hunt.includes("stalk") || hunt.includes("pursuit")) return false;
+    return hunt.includes("ambush") || hunt.includes("perch_wait");
+}
+
+/** A stalk's stay wherever its slot puts it: one that hunts by waiting rests and looks round (a hide's beats), the others creep. */
+const stalkStay = (profile: ArkBehaviourProfile, doing: ArkDoing): ArkDoing => (doing === "stalk" && waitsForPrey(profile) ? "hide" : doing);
 
 /** Whether a stay's steps (a stalk's creep, play's dashes, a step aside) move it at a spot: only on the ground, not raised, not in the water. */
 function stepsMove(world: ScheduleWorld, at: Spot): boolean {
@@ -1809,7 +1828,7 @@ export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, a
     const slot = slotOf(animal, epochSeconds);
     const plan = placedIntent(world, profile, animal, activity, slot, hoursAt);
     const start = slotStart(animal, slot);
-    return {slot, start, end: start + SLOT_SECONDS, doing: plan.doing, recipe: plan.recipe ?? null, mode: plan.mode, follow: Boolean(plan.follow), wary: plan.doing === "watch" && plan.face !== undefined, still: plan.to ? !stepsMove(world, plan.to) : true};
+    return {slot, start, end: start + SLOT_SECONDS, doing: plan.doing, recipe: plan.recipe ?? null, mode: plan.mode, follow: Boolean(plan.follow), wary: plan.doing === "watch" && plan.face !== undefined, still: plan.to ? !stepsMove(world, plan.to) || !plan.stay.some((beat) => beat.dx || beat.dz) : true};
 }
 
 // MARK: Memo

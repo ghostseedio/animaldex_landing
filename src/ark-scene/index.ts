@@ -205,7 +205,7 @@ import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuil
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
-import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
+import {HUNT_STATION_AGREE, HuntingLayer, chaseStyleOf, huntsTogether, loadPositionsAtlas, swoopsOnPrey, type HuntWorld} from "@/ark-scene/hunting";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
@@ -991,9 +991,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // L1's sprint and flee and L2's swim burst and stoop.
     setRecipeColliders({segmentClear: collideSegmentClear, blocked: (x, z, r) => collideBlocked(x, z, r)});
     const chasePlan = (slug?: string) => (slug ? library.get(slug)?.behaviour?.plan ?? null : null);
+    // (Behaviours pass, B1: L1's paces go by the rig's plan, quadruped, lizard, amphibian, insect…: `intelProfile`. Given
+    // the model's own, mammal, reptile, frog, arthropod, every one fell to the mammals' law: a frog sprinted at three
+    // times its own pace, a lizard at twice, a beetle at twice.)
+    const pacePlan = (slug?: string) => (slug ? intelProfile(slug, chasePlan(slug)).plan : null);
     setChasePaces({
-        sprint: (b) => sprintPace({plan: chasePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
-        flee: (b) => fleePace({plan: chasePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
+        sprint: (b) => sprintPace({plan: pacePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
+        flee: (b) => fleePace({plan: pacePlan(b.slug), slug: b.slug, length: b.length, speedStat: b.speedStat}),
         burst: (b) => {
             const swim = b.slug ? locoStyle(b.slug, chasePlan(b.slug)).swim : null;
             return swim ? swimPaces(b.length, swim).burst : null;
@@ -1398,6 +1402,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** Encounter hunting: due predators' forays (off until the hunting read says the Ark hunts by encounter). */
     const hunting = new HuntingLayer();
+    /** What a hunter's foray reads of the world beyond the ground: the water's surface, and a perch near a waypoint. */
+    const huntWorld: HuntWorld = {
+        water: (x, z) => waterTopAt(x, z),
+        perch: (x, z, reach) => {
+            let best: {x: number; y: number; z: number} | null = null;
+            let near = Math.min(reach, HUNT_STATION_AGREE);
+            for (const tag of ["branch", "post", "rock_top"] as const) {
+                for (const p of world?.sampler.attachPoints(tag, {x, z, r: near}) ?? []) {
+                    const d = Math.hypot(p.x - x, p.z - z);
+                    if (d <= near) [best, near] = [p, d];
+                }
+            }
+            return best;
+        }
+    };
     /** The schedule's main-thread time in recent frames (ms), and how many animals it moved. */
     const behaviourTimes: number[] = [];
     let behaviourFrameMs = 0;
@@ -1468,8 +1487,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         };
         // Encounter hunting (`hunting.ts`): a due, awake predator walks its forays, from the server's own positions.
         if (hunting.active) {
-            const hunt = hunting.pose(entry.animal, epoch, entry.length, heightAt, fromSchedule);
+            const hunt = hunting.pose(entry.animal, epoch, entry.length, heightAt, fromSchedule, huntWorld);
             if (hunt) return hunt;
+            // A pride, a pack or a family goes with its hunting leader (the server pairs one hunter with one prey).
+            const lead = entry.leader && entry.leader !== entry && entry.leader.sched && scheduled(entry.leader) && entry.leader.animal.model_slug === entry.animal.model_slug ? entry.leader : null;
+            if (lead && hunting.hunting(lead.animal, epoch) && huntsTogether(lead.animal.model_slug, hunting.styleOf(lead.animal))) {
+                const leading = schedulePose(lead, epoch);
+                const weight = hunting.weight(lead.animal.id);
+                if (weight > 0) return hunting.beside(leading, weight, Math.max(entry.place.rank ?? 1, 1), entry.length, fromSchedule(), heightAt);
+            }
         }
         return fromSchedule();
     };
@@ -6044,12 +6070,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         const model = library.get(predator.animal.model_slug);
+        // (Behaviours pass, B1: by kind. Only a bird that hunts from the air stoops, and none on prey far bigger than it.)
+        const fromAir = swoopsOnPrey(predator.animal.model_slug, predator.length);
         const kind = chaseKind({
             predatorSlug: predator.animal.model_slug,
             predatorPlan: model?.behaviour?.plan ?? null,
             predatorWater: inWater(predator),
             preyWater: inWater(prey),
-            predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
+            predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea",
+            swoops: fromAir.swoops,
+            ratio: prey.length / Math.max(predator.length, 0.01)
         });
         // The chase (L7, `acts.ts`): from the server's positions when hunting is encounter-based, with both sides' speeds,
         // the prey's way of fleeing, and the ground or water each may cross. Each act names its partner (`with`).
@@ -6058,7 +6088,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const bodies = encounter ? encounterBodies(chaser(predator), chaser(prey), encounter) : {predator: chaser(predator), prey: chaser(prey)};
         const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater: inWater(prey), preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
         const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
-        const stage: MealStage = mealStage(kind, bodies.predator, bodies.prey, {seed: `${act.prey.id}#${act.at}`, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter)});
+        const stage: MealStage = mealStage(kind, bodies.predator, bodies.prey, {seed: `${act.prey.id}#${act.at}`, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), style: chaseStyleOf(predator.animal.model_slug, speciesRecipes(predator.animal.model_slug).has.has("pounce")), low: fromAir.low});
         const partnered = (pose: ActPose | null, id: string, role: ActPose["role"]): ActPose | null => (pose ? {...pose, with: id, role} : null);
         // Both hold where they are while the camera comes.
         prey.act = partnered(stage.prey(0), predator.animal.id, "quarry");
@@ -6654,7 +6684,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             void loadPositionsAtlas()
                 .then((atlas) => {
-                    if (!disposed) hunting.set(read, atlas, voyageStart);
+                    if (!disposed) hunting.set(read, atlas, voyageStart, worldMs());
                 })
                 .catch(() => hunting.set(null, null, null));
         },
