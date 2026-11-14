@@ -4284,8 +4284,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rigSpecies.add(slug);
             rigCount++;
             candidate.entry.rigOn = true;
-            // (Close by, chosen or the reader's own: always; a walker given its rig from the island view, within the session's caps.)
-            rigs.request(slug, rigPriority(candidate.entry) < 2 || candidate.distance < RIG_WITHIN);
+            // (The one chosen or followed: always. Those within 20 m of the camera too, except in the lighter view, a
+            // phone on its data plan: a rig is ~200 KB. The rest, the walkers given a rig from the island view, within
+            // the session's caps.)
+            rigs.request(slug, rigPriority(candidate.entry) === 0 || (!liteOn() && candidate.distance < RIG_WITHIN));
         }
         let rigged = 0;
         for (const candidate of candidates) {

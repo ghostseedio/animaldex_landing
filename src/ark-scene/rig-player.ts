@@ -344,10 +344,11 @@ export class RigLibrary {
 
     /**
      * Ask for a species' rig (once). The session's caps (rig files downloaded, and their bytes) bound the rigs given
-     * to walkers seen from far off (the island view); `close`, an animal the reader is close to or chose (selected,
-     * followed, their own), always gets its rig. Before 2026-11-14 the caps bounded both, and the island view's
-     * walkers used them up within the first minute (14 files in the lighter view, 48 otherwise): every animal looked
-     * at closely after that stood stiff on its near model for the rest of the visit, beside others that walked.
+     * to walkers seen from far off (the island view); `close`, the animal the reader chose or follows (and, outside the
+     * lighter view, those within 20 m of the camera: the scene decides), always gets its rig. Before 2026-11-14 the
+     * caps bounded both, and the island view's walkers used them up within the first minute (14 files in the lighter
+     * view, 48 otherwise): every animal looked at closely after that stood stiff on its near model for the rest of the
+     * visit, beside others that walked.
      */
     request(slug: string, close = false) {
         if (this.disposed || this.models.has(slug) || this.failed.has(slug)) return;
