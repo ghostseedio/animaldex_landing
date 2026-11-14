@@ -3,6 +3,13 @@ import test from "node:test";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {breathRhythm, patrolRule, rhythmBreath, shoreSide, waterLife, type ArkWaterLife} from "@/ark-scene/water-life";
 import {patrolLength, patrolRoute} from "@/ark-scene/water-patrol";
+import table from "@/ark-scene/behaviours.json";
+import {restingAtRoost, roostOf, scheduleWorld, sleepsAfloat, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {scheduleRoost} from "@/ark-scene/map/place";
+import {validatorAnimals} from "@/ark-scene/map/validate";
+import {placeAnimals} from "@/ark-scene/placement";
+import {displayLength} from "@/ark-scene/sizes";
+import {sceneSampler} from "@/ark-scene/world-sampler";
 
 const life = (slug: string) => waterLife(slug, behaviourProfile(slug));
 
@@ -170,4 +177,36 @@ test("patrol route: as long as asked, over water all the way, off the way it fac
     // No room (a puddle): no patrol; a way already as long as asked: none either.
     assert.equal(patrolRoute({from: {x: 0, z: 0}, to: {x: 0.5, z: 0}, fromYaw: 0, toYaw: 0, centre: {x: 0, z: 0}, radius: 5, length: 20, body: 0.3, turn: 1, random, wet: (x, z) => Math.hypot(x, z) < 0.2}), null);
     assert.equal(patrolRoute({from: {x: 0, z: 0}, to: {x: 10, z: 0}, fromYaw: null, toYaw: null, centre: {x: 5, z: 0}, radius: 8, length: 10.5, body: 0.3, turn: 1, random, wet: open}), null);
+});
+
+test("the ones that sleep afloat: their profile keeps their text's roost (the map and the server place their homes by it); they sleep in the water by rule, in sight", () => {
+    // (The water lane wrote the roost "water" into these 24 profiles: the map then placed them as animals with no den,
+    // and a siamese crocodile's home was 27 m from the server's positions module's: `ark-positions.test.ts`.)
+    const afloat = Object.keys((table as {species: Record<string, string>}).species).filter((slug) => sleepsAfloat(behaviourProfile(slug)));
+    assert.equal(afloat.length, 24, afloat.join(", "));
+    for (const slug of afloat) assert.notEqual(behaviourProfile(slug).roost, "water", `${slug}: its roost is its text's, not the water`);
+    for (const slug of ["nile-monitor", "european-otter", "capybara", "red-eared-slider", "harbor-seal", "common-frog"]) assert.equal(sleepsAfloat(behaviourProfile(slug)), false, slug);
+    const world = scheduleWorld(sceneSampler());
+    const animals = validatorAnimals().filter((a) => afloat.includes(a.model_slug));
+    const places = placeAnimals(animals);
+    const hoursAt = (epoch: number) => (((epoch / 3600) % 24) + 24) % 24;
+    let wet = 0;
+    let dens = 0;
+    for (const a of animals) {
+        const p = places.get(a.id)!;
+        const profile = behaviourProfile(a.model_slug);
+        const den = scheduleRoost(p, a.zone);
+        if (den) dens++;
+        const animal: ScheduleAnimal = {id: a.id, zone: a.zone, home: {x: p.x, y: p.ground, z: p.z}, length: displayLength(a), sea: false, roost: den};
+        const roost = roostOf(world, profile, animal);
+        // (With water within 80 m of its home: in it, afloat. A home further from any water keeps its den.)
+        if (world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4, 40)) {
+            assert.ok(world.nav.swimmable(roost.x, roost.z, 0.3), `${a.model_slug}: its roost at ${roost.x.toFixed(1)}, ${roost.z.toFixed(1)} is not in the water`);
+            wet++;
+        }
+        // (Asleep there it is in sight: never "in its den", which the runtime hides.)
+        for (let h = 0; h < 24; h += 3) assert.equal(restingAtRoost(world, profile, animal, Date.UTC(2026, 10, 11, h) / 1000, hoursAt, a.activity).enclosed, false, `${a.model_slug} at ${h}:00`);
+    }
+    assert.ok(animals.length >= 40 && wet >= animals.length * 0.9, `${wet} of ${animals.length} roost in the water`);
+    assert.ok(dens > 0, "the map gives some of them a den: the schedule's rule comes first");
 });

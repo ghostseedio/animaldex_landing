@@ -147,6 +147,14 @@ export type Leg = {
     lead0?: {x: number; y: number; z: number};
 };
 
+/**
+ * (Water fixes on the merged tree.) A follower that lives in the water, a school's fish, a pod's whale: the water its
+ * place by its leader must be over (`need` m deep, nothing solid within `reach` m: its body), and for one of a group
+ * that never stops swimming (`steady`) how its place drifts (two slow turns of the clock, `t1` and `t2` s, from the
+ * phases `p1` and `p2`): its place is then its own for good, the same through every slot, not drawn anew each slot.
+ */
+export type ShadowWater = {need: number; reach: number; steady: boolean; t1: number; t2: number; p1: number; p2: number};
+
 /** One beat of its time at its destination: from `at` seconds after it arrives, it does `beat` at (x, z) facing yaw (a step walks there). */
 export type StayBeat = {at: number; beat: ArkBeat; x: number; z: number; yaw: number; /** A step's time (s): its length at its walk's own pace. */ dur?: number};
 
@@ -174,7 +182,7 @@ export type Trip = {
     /** Running rather than walking. */
     running: boolean;
     /** A flock member flying with its leader: the leader's trips over this slot, and its place beside it. */
-    shadow?: {trips: Trip[]; dx: number; dy: number; dz: number} | null;
+    shadow?: {trips: Trip[]; dx: number; dy: number; dz: number; water?: ShadowWater} | null;
     /** A recipe this slot's goal was chosen for (`behaviour-recipes.ts`), and who the trip is (for its episodes). */
     recipe?: string | null;
     owner?: TripOwner | null;
@@ -712,7 +720,21 @@ export function amphibious(profile: ArkBehaviourProfile): boolean {
 
 /** A swimmer that floats on the surface (a duck, a swan) rather than swimming down in the water. */
 export function floats(profile: ArkBehaviourProfile): boolean {
-    return profile.move === "swim" ? profile.moves.includes("fly") && !profile.breathes : profile.roost === "water";
+    return profile.move === "swim" ? profile.moves.includes("fly") && !profile.breathes : profile.roost === "water" || sleepsAfloat(profile);
+}
+
+/**
+ * (Water fixes on the merged tree, 2026-11-14.) One that sleeps and rests in the water, afloat, whatever roost its text
+ * names: a crocodilian (its "burrow" is in its bank, under water), the common hippopotamus ("rests in water by day"),
+ * an amphibian that never leaves the water (an axolotl, a clawed frog, a mudpuppy, a siren, a giant salamander); by its
+ * way of life in the water (`water-life.ts`: croc, hippo, aquatic; 24 species). Its roost is the water nearest its home
+ * (`rawRoostOf`); its home stays where the map and the server's positions module have it, by the roost of its text.
+ * (The water lane wrote the roost "water" into these profiles instead: the map then placed them as animals with no den,
+ * and a siamese crocodile's home was 27 m from the server's.)
+ */
+export function sleepsAfloat(profile: ArkBehaviourProfile): boolean {
+    const life = waterLife(profile.slug, profile);
+    return life === "croc" || life === "hippo" || life === "aquatic";
 }
 
 
@@ -1178,7 +1200,9 @@ function denDry(world: ScheduleWorld, x: number, z: number): boolean {
 }
 
 function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
-    if (animal.roost) return animal.roost;
+    // (One that sleeps afloat, `sleepsAfloat`: not at the den the map found for its text's roost.)
+    const afloat = sleepsAfloat(profile);
+    if (animal.roost && !afloat) return animal.roost;
     const group = animal.group;
     // (A flock whose text has it sleeping together, huddled or in a row, roosts as a group too: `sleep.ts`.)
     const together = sleepStyle(profile.slug).social !== "apart";
@@ -1206,11 +1230,16 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     const seed = rng(hashString(`${animal.id}#roost`))();
     // A water animal (a fish, a crab) never roosts on a land place, whatever its profile says (a seal hauls out: it may).
     // (A hanger, a bat or a sloth, hangs under a limb first: `recipeRoostTags`.)
-    const tags = aquatic(profile) && !amphibious(profile) ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
+    const tags = (aquatic(profile) && !amphibious(profile)) || afloat ? [] : recipeRoostTags(profile) ?? ROOST_TAGS[profile.roost] ?? [];
     const point = tags.length ? placeNear(world, animal.home, animal.length, tags, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed) : null;
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
-    if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
+    if (afloat) {
+        // (The water nearest its home, up to 80 m off; with none, its den as the map has it, or the ground at home.)
+        const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4, 40);
+        if (water) return {x: water.x, y: surfaceAt(world, water.x, water.z), z: water.z, nx: 0, ny: 1, nz: 0, point: null};
+        if (animal.roost) return animal.roost;
+    } else if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
         const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
         const top = surfaceY(world, water.x, water.z);
@@ -1258,7 +1287,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean; /** A soar's slot that ends up in the air (lane B5: `stationed`); its `to` is where its soar is then. */ aloft?: boolean};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean; /** A soar's slot that ends up in the air (lane B5: `stationed`); its `to` is where its soar is then. */ aloft?: boolean; /** The way it heads as it swims through its goal (a never-stop swimmer on its course, `onCourse`): its goal is a point of its way, not a place it stops at. */ heading?: number};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 /** Settled where it is: a flock does not take off after a leader that is doing one of these. */
@@ -4208,7 +4237,8 @@ export function restingAtRoost(world: ScheduleWorld, profile: ArkBehaviourProfil
     const roost = roostOf(world, profile, animal);
     const at = poseOnTrip(world, trip, epochSeconds);
     const home = Math.hypot(at.x - roost.x, at.z - roost.z) < Math.max(animal.length * 2, 1.5) && !at.moving;
-    return {resting: home, enclosed: home && ENCLOSED_ROOSTS.has(profile.roost)};
+    // (One that sleeps afloat is in the water, in sight, whatever den its text names: `sleepsAfloat`.)
+    return {resting: home, enclosed: home && ENCLOSED_ROOSTS.has(profile.roost) && !sleepsAfloat(profile)};
 }
 
 /** The farthest any prey animal notices a predator in the shared layer (open ground, a big prey, a big hunter on the move). */

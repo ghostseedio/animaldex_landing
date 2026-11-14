@@ -1117,12 +1117,11 @@ function profile(row: Row): Profile {
         if (onWater) roost = {value: "water", src: {field: onWater.field, phrase: onWater.phrase}};
     }
 
-    // (Lane B6 water, 2026-11-14.) A crocodilian, the common hippopotamus and an amphibian that never leaves the water
-    // sleep in the water, afloat, whatever hole their text names (a crocodile's "burrow" is in its bank, under water;
-    // the hippo "rests in water by day"): on a crevice or ground-cover roost they spent their sleep, 42% of the day,
-    // on land.
-    const sleepsAfloat = /Crocodylia/.test(`${row.class_name ?? ""} ${row.order_name ?? ""}`) || /^(Crocodylidae|Alligatoridae|Gavialidae)$/.test(row.family_name ?? "") || slug === "common-hippopotamus" || (/Amphibia/.test(row.class_name ?? "") && (/^(Pipidae|Telmatobiidae|Proteidae|Sirenidae|Cryptobranchidae|Typhlonectidae|Amphiumidae)$/.test(row.family_name ?? "") || slug === "axolotl"));
-    if (sleepsAfloat && allMoves.has("swim") && roost.value !== "water") roost = {value: "water", src: {rule: `${row.family_name || slug}: sleeps in the water (not ${roost.value})`}};
+    // (Water fixes on the merged tree, 2026-11-14.) A crocodilian, the common hippopotamus and an amphibian that never
+    // leaves the water keep the roost their text names: the map places their homes by it (a crevice dweller by a rock,
+    // `map/place.ts` denKindOf), and the server's positions module has those homes. That they sleep in the water is the
+    // schedule's rule, by their way of life (`behaviour-schedule.ts` sleepsAfloat), not a roost written here: with the
+    // roost "water" a siamese crocodile's home moved 27 m from where the server has it.
 
     const src: Record<string, Source | Source[]> = {plan: planSrc, activity: activity.src, roost: roost.src, social: social.src, diet: diet.src, ...moves.src};
     if (rhythm.src.length) src.rhythm = rhythm.src;

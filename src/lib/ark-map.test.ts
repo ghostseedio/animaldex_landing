@@ -7,7 +7,7 @@ import {bodyOf} from "@/ark-scene/map/species";
 import fixture from "@/ark-scene/fixtures/snapshot.json";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {groupSpread, rangeReach, roostOf, scheduleWorld, spaceHomes} from "@/ark-scene/behaviour-schedule";
+import {groupSpread, rangeReach, roostOf, scheduleWorld, sleepsAfloat, spaceHomes} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {displayLength} from "@/ark-scene/sizes";
@@ -361,7 +361,10 @@ test("dens on dry land: no land animal's den, as its schedule takes it, in the s
         const places = placeAnimals(animals);
         for (const a of animals) {
             const p = places.get(a.id);
-            if (!p || p.water || !onSchedule(p, a.model_slug) || !denKindOf(a.model_slug)) continue;
+            // (Not one that sleeps afloat, a crocodilian, the hippopotamus, a fully aquatic amphibian: the map places it by
+            // its text's den, as the server's positions module does, but its schedule takes it to the water to sleep,
+            // `sleepsAfloat`.)
+            if (!p || p.water || !onSchedule(p, a.model_slug) || !denKindOf(a.model_slug) || sleepsAfloat(behaviourProfile(a.model_slug))) continue;
             const animal = {id: a.id, zone: a.zone, home: {x: p.x, y: p.ground, z: p.z}, length: displayLength(a), sea: false, roost: scheduleRoost(p, a.zone)};
             const den = roostOf(world, behaviourProfile(a.model_slug), animal);
             dens++;
@@ -370,8 +373,7 @@ test("dens on dry land: no land animal's den, as its schedule takes it, in the s
         }
     }
     // (How many dens the test looked at, so it cannot pass by looking at none. Over 1,000 until the behaviours pass,
-    // 2026-11-14: the crocodilians, the hippopotamus and the fully aquatic amphibians now roost in the water (24 species,
-    // lane B6), so they are no longer den-dwellers here: 965.)
+    // 2026-11-14: the 24 species that sleep afloat are not den sleepers on the schedule, whatever den their text names: 965.)
     assert.ok(dens > 900, `${dens} dens`);
     assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} dens in the sea's tide or surf`);
 });

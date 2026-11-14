@@ -167,7 +167,7 @@ import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, sleepsAfloat, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
@@ -5547,7 +5547,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (The props lane's burrow mouths and rock dens: a den, burrow, cave or crevice sleeper's roost.)
             roostOf: (id) => {
                 const sched = entryById.get(id)?.sched;
-                if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost)) return null;
+                // (Not one that sleeps afloat, a crocodile, the hippo, an axolotl: its roost is the water, no den is drawn there.)
+                if (!sched || !world || !DEN_ROOSTS.has(sched.profile.roost) || sleepsAfloat(sched.profile)) return null;
                 return {...roostOf(world, sched.profile, sched.animal), kind: sched.profile.roost};
             }
         }));
