@@ -224,7 +224,8 @@ export class IconTokens {
         const image = new Image();
         image.crossOrigin = "anonymous";
         image.decoding = "async";
-        // No art for this species (the bucket answers 400): the fallback figure in its cell, once.
+        // No art for this species (143 of the 951 aboard, 2026-11-14: the bucket answers 400), or it did not arrive: the
+        // fallback figure in its cell, once.
         image.onerror = () => {
             const fallback = this.fallbackUrl;
             if (this.disposed || !fallback || image.src === fallback) return;

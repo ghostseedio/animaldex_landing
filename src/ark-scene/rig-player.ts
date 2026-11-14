@@ -62,6 +62,7 @@ import {
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
 import {gripBones} from "@/ark-scene/map/grip";
+import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
@@ -267,6 +268,8 @@ export class RigLibrary {
     private readonly failed = new Set<string>();
     private readonly queue: string[] = [];
     private readonly queued = new Set<string>();
+    /** Rigs that failed to arrive: how many times in a row, and when they may be asked for again (`performance.now()`). */
+    private readonly retries = new Map<string, {count: number; until: number}>();
     private active = 0;
     /** Every byte downloaded this session (the debug overlay's figure). */
     private downloaded = 0;
@@ -374,11 +377,14 @@ export class RigLibrary {
 
     /**
      * Ask for a species' rig (once; within the caps on what is held). `first`: the animal looked at or followed, or
-     * the viewer's own, which may go a little past the caps (`rigRoom`).
+     * the viewer's own, which may go a little past the caps (`rigRoom`) and is loaded first. A rig that only failed to
+     * arrive is asked for again after a wait that grows (`retries`).
      */
     request(slug: string, first = false) {
         if (this.disposed || this.models.has(slug) || this.queued.has(slug) || this.failed.has(slug)) return;
         if (!this.available(slug)) return;
+        const failed = this.retries.get(slug);
+        if (failed && performance.now() < failed.until) return;
         if (!rigRoom(this.caps, this.held, first) && !(first && this.makeRoom() && rigRoom(this.caps, this.held, true))) return;
         this.queued.add(slug);
         this.heldSpecies++;
@@ -439,12 +445,23 @@ export class RigLibrary {
             const slug = this.queue.shift()!;
             this.active++;
             this.load(slug)
+                .then(() => {
+                    this.retries.delete(slug);
+                })
                 .catch((error) => {
                     if (this.disposed) return;
-                    this.failed.add(slug);
-                    // (A file that failed holds nothing.)
+                    // (A file that failed, or failed to arrive, holds nothing.)
                     this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
                     console.warn(`[ark] rig ${slug}`, error instanceof Error ? error.message : error);
+                    if (!worthAskingAgain(error)) {
+                        this.failed.add(slug);
+                        return;
+                    }
+                    // It only failed to arrive (the network, the bucket busy): asked for again when the scene next wants
+                    // it, after a wait that grows. Before, one dropped request left the species without its rig for the visit.
+                    const count = (this.retries.get(slug)?.count ?? 0) + 1;
+                    this.retries.set(slug, {count, until: performance.now() + retrySeconds(count) * 1000});
+                    this.queued.delete(slug);
                 })
                 .finally(() => {
                     this.active--;
@@ -456,7 +473,7 @@ export class RigLibrary {
     /** From the first set that lists it; a file that fails falls back to the next set's (v2 → v1). */
     private async load(slug: string) {
         const sets = this.choices?.get(slug) ?? [];
-        if (!sets.length) throw new Error("not listed");
+        if (!sets.length) throw new ModelFileError("not listed", true);
         let last: unknown = null;
         for (const set of sets) {
             if (this.disposed) return;
@@ -464,21 +481,33 @@ export class RigLibrary {
                 await this.loadFrom(set, slug);
                 return;
             } catch (error) {
+                // (Only failed to arrive: this set's file again later, not the older set's in its place.)
+                if (worthAskingAgain(error)) throw error;
                 last = error;
             }
         }
-        throw last instanceof Error ? last : new Error(String(last));
+        throw last instanceof Error ? last : new ModelFileError(String(last), true);
     }
 
     private async loadFrom(set: RigSet, slug: string) {
         const version = set.index[slug];
-        if (!version) throw new Error("not listed");
+        if (!version) throw new ModelFileError("not listed", true);
         const url = `${set.base}/${encodeURIComponent(slug)}/${encodeURIComponent(version)}.rig.glb`;
+        // (A file that is not there, or is not a rig, is final: the next set's, then none. One that only failed to
+        // arrive is asked for again: `model-files.ts`.)
         const response = await fetch(url, {signal: this.abort.signal});
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new ModelFileError(`HTTP ${response.status}`, finalStatus(response.status));
         const buffer = await response.arrayBuffer();
         this.downloaded += buffer.byteLength;
         if (this.disposed) return;
+        try {
+            await this.parse(set, slug, buffer);
+        } catch (error) {
+            throw new ModelFileError(error instanceof Error ? error.message : String(error), true);
+        }
+    }
+
+    private async parse(set: RigSet, slug: string, buffer: ArrayBuffer) {
         const gltf = await this.loader.parseAsync(buffer, "");
         const extras = (gltf.parser.json as {extras?: {ark_rig?: RigExtras}}).extras?.ark_rig;
         if (!extras || !Number.isInteger(extras.bufferView) || !Array.isArray(extras.bones) || !extras.bones.length) throw new Error("no bones");
