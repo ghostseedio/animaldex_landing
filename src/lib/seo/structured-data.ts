@@ -21,6 +21,9 @@ export function brandLogoUrl(): string {
 }
 
 /** The organisation behind AnimalDex: its public name, and the operator the privacy policy names. */
+/** The brand's slogan (owner, 2026-11-14): in the footer, the home hero, the default description and here. */
+export const BRAND_SLOGAN = "Every animal has a lesson.";
+
 export function organizationJsonLd(): JsonLd {
     const site = getSiteUrl();
     return {
@@ -31,6 +34,7 @@ export function organizationJsonLd(): JsonLd {
         legalName: "GHOSTSEED LTD",
         url: `${site}/`,
         logo: brandLogoUrl(),
+        slogan: BRAND_SLOGAN,
         sameAs: [appStoreUrl, googlePlayUrl, ...socialProfileUrlList]
     };
 }

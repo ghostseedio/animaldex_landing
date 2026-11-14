@@ -28,6 +28,12 @@ test("every builder passes the local schema check", () => {
     assert.deepEqual(checkJsonLd(blocks), []);
 });
 
+test("the Organization carries the brand's slogan, on its own and on the home page", () => {
+    assert.equal(organizationJsonLd().slogan, "Every animal has a lesson.");
+    const home = homeJsonLd({locale: "en", name: "AnimalDex", description: "d", image: "/a.jpg", featureList: []});
+    assert.equal(home.find((block) => block["@type"] === "Organization")?.slogan, "Every animal has a lesson.");
+});
+
 test("the schema check catches what it should", () => {
     const issues = checkJsonLd([
         {"@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{"@type": "ListItem", position: 2, name: "x", item: "/relative"}]},

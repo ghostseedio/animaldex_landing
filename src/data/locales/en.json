@@ -450,9 +450,9 @@
   },
   "landing": {
     "hero": {
-      "taglineLead": "Catch animals in real life",
-      "taglineRest": "and turn them into AI companions in a 3D world.",
-      "sentence": "Animals come aboard from people's photos and live by their own field guides, in one world shared by everyone.",
+      "taglineLead": "Catch real animals.",
+      "taglineRest": "Talk to them.",
+      "slogan": "Every animal has a lesson.",
       "explore": "Explore the live Ark",
       "seeLive": "See it live",
       "loading": "Bringing the world in",
@@ -2598,7 +2598,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Catch Real Animals as AI Companions in a 3D World",
     "title": "AnimalDex",
-    "description": "Ask any animal anything. It answers from how its kind really lives and gives you one small step. Every animal you catch joins the Ark, a shared 3D world.",
+    "description": "AnimalDex: every animal has a lesson. Catch real animals, talk to them, and meet them again in the Ark, a live 3D world shared by everyone.",
     "privacyTitle": "AnimalDex Privacy Policy",
     "privacyDescription": "Read how AnimalDex handles privacy for AI animal scanning, wildlife collection features, and account support.",
     "termsTitle": "AnimalDex Terms of Use",

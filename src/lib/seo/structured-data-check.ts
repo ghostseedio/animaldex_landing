@@ -18,7 +18,7 @@ const SOFTWARE_APP = [...CREATIVE_WORK, "applicationCategory", "applicationSubCa
 
 export const STRUCTURED_DATA_SPECS: Record<string, Spec> = {
     // `url` is recommended, not required: a publisher named inline ({name: "AnimalDex"}) is valid.
-    Organization: {props: [...THING, "logo", "email", "contactPoint", "founder", "foundingDate", "legalName", "address"], required: ["name"], urls: ["url", "logo", "sameAs"]},
+    Organization: {props: [...THING, "logo", "email", "contactPoint", "founder", "foundingDate", "legalName", "address", "slogan"], required: ["name"], urls: ["url", "logo", "sameAs"]},
     Person: {props: [...THING, "givenName", "familyName", "jobTitle", "affiliation"], required: ["name"], urls: ["url", "image"]},
     Article: {props: [...CREATIVE_WORK, "articleSection", "articleBody", "wordCount", "speakable"], required: ["headline"], urls: ["url", "image", "mainEntityOfPage"]},
     SocialMediaPosting: {props: [...CREATIVE_WORK, "articleSection", "articleBody", "sharedContent"], required: ["headline"], urls: ["url", "image"]},
