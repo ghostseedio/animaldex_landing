@@ -27,6 +27,7 @@ import {
     Vector3,
     type Camera
 } from "three";
+import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {ARK_DAYLIGHT, MARKER_LIGHT_GLSL} from "@/ark-scene/glsl";
 
 const CELL = 128;
@@ -228,12 +229,23 @@ export class IconTokens {
         const image = new Image();
         image.crossOrigin = "anonymous";
         image.decoding = "async";
+        const url = this.iconUrl(slug);
         // No art for this species (143 of the 951 aboard, 2026-11-14: the bucket answers 400), or it did not arrive: the
-        // fallback figure in its cell, once.
+        // fallback figure in its cell at once. Which of the two it was is then asked of the bucket itself (a picture's
+        // failure does not say): art that only failed to arrive is read until it is in and drawn over the figure;
+        // before, a phone changing networks left the figure there for the whole visit.
+        let fellBack = false;
         image.onerror = () => {
             const fallback = this.fallbackUrl;
-            if (this.disposed || !fallback || image.src === fallback) return;
+            if (this.disposed || !fallback || fellBack) return;
+            fellBack = true;
             image.src = fallback;
+            if (!url || url === fallback || /^data:/.test(url)) return;
+            void readUntilIn(`icon ${slug}`, () => fetchOk(url), () => !this.disposed)
+                .then(() => {
+                    if (!this.disposed) image.src = url;
+                })
+                .catch(() => undefined);
         };
         image.onload = () => {
             if (this.disposed) return;
@@ -252,7 +264,9 @@ export class IconTokens {
             this.atlasDirty = true;
             this.onIconLoad();
         };
-        image.src = this.iconUrl(slug);
+        // (No address: a host that knows this species has no art, the embed with the server's `noIcon`. The figure,
+        // without asking the bucket for a file it does not hold.)
+        image.src = url || this.fallbackUrl || "";
     }
 
     /** This frame's tokens; sorted far to near from the camera, marked ones last. */

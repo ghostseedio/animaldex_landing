@@ -22,6 +22,7 @@
  * Everything is in the town's own frame (x east, z south, metres).
  */
 
+import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
@@ -198,9 +199,9 @@ export function loadVehicles(url = VEHICLE_FILE): Promise<Map<string, VehicleMod
         library =
             typeof fetch === "undefined"
                 ? Promise.resolve(null)
-                : fetch(url)
-                      .then((response) => (response.ok ? response.arrayBuffer() : null))
-                      .then((buffer) => (buffer ? parseVehicles(buffer) : null))
+                : // (Read until it is in; null when the file is not there or is not the models.)
+                  readUntilIn("town vehicles", () => fetchOk(url).then((response) => response.arrayBuffer()))
+                      .then((buffer) => parseVehicles(buffer))
                       .catch(() => null);
     }
     return library;
