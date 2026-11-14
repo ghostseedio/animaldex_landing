@@ -39,6 +39,14 @@ export type PaceBody = {
 /** A walk's and a covering-ground gait's Froude numbers on the leg length. */
 type Target = {walk: number; run: number | null};
 
+/**
+ * A true seal's paces on land (body lengths a second): it humps along on its belly (`land-drivers.ts` galumphDriver,
+ * which draws any pace: a hump a fifth of its length), unhurried at about a hump a second, and at three when it makes
+ * for the water. Its rig's flipper-legs clip gave a harbour seal 0.08 m/s.
+ */
+export const GALUMPH_WALK = 0.25;
+export const GALUMPH_RUN = 0.6;
+
 const CROCODILIAN = /(crocodile|alligator|caiman|gharial|mugger)/;
 /**
  * Slow movers whatever their size and legs say: sloths (a few centimetres a second on the ground), chameleons (a
@@ -256,8 +264,11 @@ export function stopTime(length: number, running: boolean): number {
 export type LegShape = {
     start: number;
     stop: number;
-    /** Bursts and stops (a walking leg of a burst mover): the share moving, a burst's length (s), and its seed. */
-    rhythm?: {share: number; burst: number; seed: number} | null;
+    /**
+     * Bursts and stops (a walking leg of a burst mover): the share moving, a burst's length (s), and its seed. (`sums`:
+     * its bursts' and stops' seeded weights added up, kept here once worked out.)
+     */
+    rhythm?: {share: number; burst: number; seed: number; sums?: [number, number, number]} | null;
 };
 
 const hash = (a: number, b: number) => {
@@ -330,12 +341,18 @@ export function groundProgress(t: number, seconds: number, shape: LegShape | nul
         return progress(share, u < T && trapRate > 1e-4, trapRate * T);
     }
     const still = T - moving;
-    let bursts = 0;
-    let stops = 0;
-    for (let i = 0; i < n; i++) {
-        bursts += 0.7 + 0.6 * hash(rhythm.seed, i * 2 + 1);
-        if (i < n - 1) stops += 0.6 + 0.8 * hash(rhythm.seed, i * 2 + 2);
+    // (Its weights' sums for this many bursts: once per leg, not once per frame.)
+    if (!rhythm.sums || rhythm.sums[0] !== n) {
+        let b = 0;
+        let s = 0;
+        for (let i = 0; i < n; i++) {
+            b += 0.7 + 0.6 * hash(rhythm.seed, i * 2 + 1);
+            if (i < n - 1) s += 0.6 + 0.8 * hash(rhythm.seed, i * 2 + 2);
+        }
+        rhythm.sums = [n, b, s];
     }
+    const bursts = rhythm.sums[1];
+    const stops = rhythm.sums[2];
     let at = 0;
     let done = 0;
     for (let i = 0; i < n; i++) {

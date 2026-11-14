@@ -13,8 +13,9 @@
  * at the species' true length, by body plan and gait family, within its top speed; a burst mover's walk is its
  * bursts' speed times its share moving (`gaitRhythm`); a snake's by its style (a heavy python creeps). Rigs whose
  * moving is a baked clip keep the clip's pace: a sitting rig (a rabbit, a kangaroo, a squirrel) goes at its bound's
- * own pace in its bursts; true seals, insects, spiders, crabs, hopping frogs and bats keep their clips' paces (a
- * scuttling spider or crab walks, on the whole, at its clip's pace times its share moving).
+ * own pace in its bursts; a true seal, drawn by the galumph driver at any pace, humps along at a quarter of its length
+ * a second; insects, spiders, crabs, hopping frogs and bats keep their clips' paces (a scuttling spider or crab walks,
+ * on the whole, at its clip's pace times its share moving).
  *
  * Run it after `ark-behaviour-profiles.mts` (it rewrites only the walk and run columns). Reads the local rig set (the
  * rig files' JSON only); writes `src/ark-scene/behaviours.json` with --apply, else prints.
@@ -26,7 +27,7 @@ import path from "node:path";
 import {arkBody} from "../src/ark-scene/stats";
 import {flippered} from "../src/ark-scene/locomotion/legged";
 import {modelBase} from "../src/ark-scene/grounding/base";
-import {BURST_MEAN, gaitRhythm, naturalPaces, SLOW_PACE, slowMover} from "../src/ark-scene/locomotion/paces";
+import {BURST_MEAN, GALUMPH_RUN, GALUMPH_WALK, gaitRhythm, naturalPaces, SLOW_PACE, slowMover} from "../src/ark-scene/locomotion/paces";
 import {locoStyle} from "../src/ark-scene/locomotion/styles";
 
 const home = os.homedir();
@@ -175,7 +176,12 @@ for (const [slug, row] of Object.entries(table)) {
         walk = Math.min(bls, most / L);
         run = model !== "worm" && model !== "slow_invertebrate" && (style === "lateral" || style === "sidewind") ? Math.min(walk * 2.5, 1.5 / L) : null;
         kind = `legless: ${style}`;
-    } else if (LEGGED.has(plan) && shape.legs >= 2 && !flippered(slug)) {
+    } else if (flippered(slug)) {
+        // A true seal: the galumph driver draws it at any pace, so its own (its flipper-legs clip's is a crawl).
+        walk = GALUMPH_WALK;
+        run = GALUMPH_RUN;
+        kind = "galumph";
+    } else if (LEGGED.has(plan) && shape.legs >= 2) {
         const natural = naturalPaces({plan, slug, length: L, hip: shape.hip * scale, reach: shape.reach * scale, speedStat}, rhythm);
         if (natural) {
             walk = natural.walk / L;
