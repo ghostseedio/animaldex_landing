@@ -25,6 +25,7 @@
 
 import {decodeFlight, locoStyle, type FlightStyle, type FlightStyleRow, type FlyerKind} from "@/ark-scene/locomotion/styles";
 import takeoffTable from "@/ark-scene/locomotion/takeoff.json";
+import waysTable from "@/ark-scene/locomotion/flight-ways.json";
 
 export const G = 9.81;
 /** The fastest wing beat shown (Hz). */
@@ -268,6 +269,13 @@ export type AirPlan = {
     peak: number;
     /** It ends in the air, joining its flock's leader (no landing). */
     joins?: boolean;
+    /**
+     * A leg of a soar (lane B5, `soarAt`): whether it starts and ends up in the air, its heights along its route at
+     * even shares of it (m, the scene's y) in place of the line between its ends, and, for a leg that is all soaring,
+     * its track itself: [x, y, z] at even times through the leg, read between them (`trackAt`), so its speed is the
+     * track's own (slower round a thermal, faster on the glide to the next).
+     */
+    soar?: {from: boolean; to: boolean; alt?: Float32Array; track?: Float32Array};
 };
 
 /**
@@ -346,8 +354,14 @@ export function airProgress(knots: readonly number[], u: number): {share: number
 }
 
 /** The stage of a plan at a route share: on the surface before lift-off or after touch-down, else climbing, level or coming down. */
-export function airStage(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall" | "joins">, share: number): AirStage {
+export function airStage(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall" | "joins" | "soar">, share: number): AirStage {
     if (plan.joins) return share < 0.5 ? "climb" : "cruise";
+    // (A soar's leg: up already where it starts in the air, never coming down where it ends in it.)
+    if (plan.soar) {
+        if (!plan.soar.from && share < plan.liftoff + plan.rise) return share < plan.liftoff ? "run" : "climb";
+        if (!plan.soar.to && share > plan.touchdown) return "ski";
+        return !plan.soar.to && share > plan.touchdown - plan.fall ? "descend" : "cruise";
+    }
     if (share < plan.liftoff) return "run";
     if (share > plan.touchdown) return "ski";
     const up = (share - plan.liftoff) / plan.rise;
@@ -358,10 +372,354 @@ export function airStage(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | 
 }
 
 /** Its height over its line at a route share (0 on the surface, 1 at its band): smoothsteps up from lift-off and down to touch-down. */
-export function airLift(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall">, share: number): number {
+export function airLift(plan: Pick<AirPlan, "liftoff" | "touchdown" | "rise" | "fall" | "soar">, share: number): number {
+    if (plan.soar) {
+        // (A soar's leg: at its height wherever it is in the air at that end.)
+        const up = plan.soar.from ? 1 : share <= plan.liftoff ? 0 : Math.min((share - plan.liftoff) / plan.rise, 1);
+        const down = plan.soar.to ? 1 : share >= plan.touchdown ? 0 : Math.min((plan.touchdown - share) / plan.fall, 1);
+        const k = Math.min(up, down);
+        return k * k * (3 - 2 * k);
+    }
     if (share <= plan.liftoff || share >= plan.touchdown) return 0;
     const k = Math.min((share - plan.liftoff) / plan.rise, (plan.touchdown - share) / plan.fall, 1);
     return k * k * (3 - 2 * k);
+}
+
+// MARK: A hop from A to B (for the hunt lane's forays)
+
+/** A flyer part of the way through a hop: where it is, how it heads, its speed over the ground and its stage. */
+export type HopAt = {x: number; y: number; z: number; yaw: number; speed: number; stage: AirStage; aloft: boolean};
+/**
+ * A short flight from one spot to another as the schedule's air legs fly them (lane B5, for `hunting.ts`: its forays
+ * flew plain arcs at the cruise): up to its pace at its take-off's acceleration, level, down at its braking (a hop too
+ * short to reach its pace peaks lower), climbing and coming down at its own angles over the line between the two
+ * spots, to `height` over it at most (lower on a short hop). Pure: `seconds` is how long it takes, `at(t)` where it is
+ * t seconds in. No run and no ski: a hunter leaves a perch or the ground standing. The route is the straight line; it
+ * does not look at what is under it (the caller's spots are its own).
+ */
+export function flightHop(paces: AirPaces, from: {x: number; y: number; z: number}, to: {x: number; y: number; z: number}, height: number, pace?: number): {seconds: number; plan: AirPlan; at: (seconds: number) => HopAt} {
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    const plan = planAirLeg(paces, Math.max(Math.hypot(flat, to.y - from.y), 0.01), height, {pace});
+    const yaw = flat > 1e-6 ? Math.atan2(to.x - from.x, to.z - from.z) : 0;
+    const length = Math.max(Math.hypot(flat, to.y - from.y), 0.01);
+    return {
+        seconds: plan.seconds,
+        plan,
+        at: (seconds: number) => {
+            const u = clamp(seconds / plan.seconds, 0, 1);
+            const {share, rate} = airProgress(plan.knots, u);
+            const lift = airLift(plan, share);
+            return {
+                x: from.x + (to.x - from.x) * share,
+                y: from.y + (to.y - from.y) * share + plan.height * lift,
+                z: from.z + (to.z - from.z) * share,
+                yaw,
+                speed: u < 1 ? (rate * length) / plan.seconds : 0,
+                stage: airStage(plan, share),
+                aloft: u > 0 && u < 1 && lift > 0.05
+            };
+        }
+    };
+}
+
+// MARK: Ways of life in the air (behaviours pass, lane B5 air)
+
+/**
+ * How a flyer lives in the air (`flight-ways.json`, by family and how it hunts: `scripts/ark-flight-ways.mts`): what
+ * sets how often it takes off and why. Only animals that fly first have one.
+ */
+export type FlightWay = "soar" | "vulture" | "stork" | "perch" | "aerial" | "swift" | "flit" | "tree" | "ground" | "commute" | "wader" | "shore" | "patrol" | "hover" | "flower" | "dragon" | "bug";
+const WAYS = (waysTable as {species: Record<string, string>}).species;
+export function flightWay(slug: string): FlightWay | null {
+    const way = WAYS[slug];
+    return way && way in FLIGHT_WAYS ? (way as FlightWay) : null;
+}
+
+/**
+ * A way of life's rule on the schedule (`behaviour-schedule.ts` stations). A flyer keeps to a station, a perch with a
+ * view, a patch of ground, the shallows, for about `bout` slots of the schedule (80 s each), and of what the schedule
+ * picks for a slot it flies off for only a `foray` share (and comes back the next); the rest it does at its station:
+ * it sits, walks about it, or flits to a twig a few lengths off. A thermal soarer's bouts in the warm hours start,
+ * for a `soar.share` of them, with a soar of `soar.slots` slots. `bout` 0: no stations, the schedule as it picks.
+ *
+ * The shares are set from the real birds' rates (flights an hour awake = 45 / bout + about 70 x foray, and its flits):
+ * - a buzzard or an eagle sits for most of an hour between flights (Tubbs 1974; Watson 2010: under 3 flights an hour
+ *   perch-hunting) and soars 10 to 20 minutes at a time once the air is warm;
+ * - a vulture is on the wing most of the warm hours (Pennycuick 1972: griffons aloft 6 to 7 hours a day);
+ * - a kingfisher, a bee-eater, a shrike or an owl changes its perch every quarter of an hour or so, and dives or
+ *   sallies from it (its recipe's flights are its own);
+ * - a heron stands or stalks for half an hour and more between flights; a sandpiper's flock runs, and flies along
+ *   the shore every ten minutes or so;
+ * - a tit or a warbler moves every few seconds, twig to twig in one tree or bush, and crosses to the next every few
+ *   minutes (Gibb 1954: tits change trees every 2 to 5 minutes);
+ * - a parrot clambers in its feeding tree for a quarter of an hour, and commutes at the day's two ends;
+ * - a gull or a tern loafs and patrols by turns;
+ * - a swallow or a martin feeds on the wing for ten minutes and more at a time and rests on a wire or a twig between
+ *   (Turner 2006: most of the day in flight when feeding young); a swift comes down only to its roost.
+ */
+export type FlightWayRule = {
+    bout: number;
+    foray: number;
+    /** Its foray share at the day's two ends (a commuter's flights between its roost and its feeding trees). */
+    forayEnds?: number;
+    /**
+     * The share of the schedule's recipe picks it goes off for (a kingfisher's plunge from a perch by the water, a
+     * heron's wade and spear, a bathe, a nest to build): its own ways of feeding and living are most of why it flies,
+     * so more than a plain foray. A recipe that runs from a perch runs from its station's and is not counted here.
+     */
+    recipes: number;
+    /** Its station: a perch, the ground, the shallows, or by turns the ground and a perch ("mixed"). */
+    station: "perch" | "ground" | "shallows" | "mixed";
+    /** The share of its slots at a perch it flits to another twig nearby (1: every slot; a parrot clambering, now and then). */
+    flit: number;
+    /**
+     * Its time on the wing: the share of its bouts that start with it, and how long (slots). "thermal": soaring in the
+     * warm hours, `span` m of height to ride (`soarAt`). "hawk": feeding on the wing in long sweeps whenever it is awake
+     * (`hawkAt`).
+     */
+    aloft?: {kind: "thermal" | "hawk"; share: number; slots: [number, number]; span: number};
+    /** Its cruising height over the ground (m) where its way sets it, else its altitude band's. */
+    height?: number;
+};
+export const FLIGHT_WAYS: Record<FlightWay, FlightWayRule> = {
+    soar: {bout: 30, foray: 0.025, recipes: 0.12, station: "perch", flit: 0, aloft: {kind: "thermal", share: 0.55, slots: [8, 16], span: 36}},
+    vulture: {bout: 36, foray: 0.015, recipes: 0.12, station: "perch", flit: 0, aloft: {kind: "thermal", share: 0.9, slots: [24, 36], span: 50}},
+    stork: {bout: 24, foray: 0.02, recipes: 0.5, station: "shallows", flit: 0, aloft: {kind: "thermal", share: 0.3, slots: [10, 18], span: 40}},
+    perch: {bout: 12, foray: 0.07, recipes: 0.35, station: "perch", flit: 0},
+    aerial: {bout: 14, foray: 0.25, recipes: 0.5, station: "perch", flit: 0, height: 4, aloft: {kind: "hawk", share: 0.9, slots: [8, 13], span: 0}},
+    swift: {bout: 30, foray: 0.25, recipes: 0.5, station: "perch", flit: 0, height: 6, aloft: {kind: "hawk", share: 1, slots: [60, 60], span: 0}},
+    flit: {bout: 4, foray: 0.12, recipes: 0.4, station: "perch", flit: 1},
+    tree: {bout: 5, foray: 0.05, recipes: 0.5, station: "perch", flit: 0.6},
+    ground: {bout: 4, foray: 0.1, recipes: 0.4, station: "mixed", flit: 0.3},
+    commute: {bout: 10, foray: 0.03, recipes: 0.3, forayEnds: 0.22, station: "perch", flit: 0.2},
+    wader: {bout: 24, foray: 0.02, recipes: 0.6, station: "shallows", flit: 0, height: 5},
+    shore: {bout: 8, foray: 0.06, recipes: 0.6, station: "ground", flit: 0, height: 2.5},
+    patrol: {bout: 10, foray: 0.1, recipes: 0.4, station: "perch", flit: 0},
+    hover: {bout: 6, foray: 0.12, recipes: 0.5, station: "perch", flit: 0.2},
+    flower: {bout: 0, foray: 1, recipes: 1, station: "perch", flit: 0},
+    dragon: {bout: 0, foray: 1, recipes: 1, station: "perch", flit: 0},
+    bug: {bout: 0, foray: 1, recipes: 1, station: "perch", flit: 0}
+};
+
+/**
+ * The bout a slot is in (pure in the rule, a seed and the slot): bouts of the rule's length, 0.7 to 1.3 of it by the
+ * seed (the animal's own, for life), offset by it. `first` is its first slot; `index` counts bouts.
+ */
+export function stationBout(rule: Pick<FlightWayRule, "bout">, seed: number, slot: number): {index: number; first: number; slots: number} {
+    const slots = Math.max(2, Math.round(rule.bout * (0.7 + 0.6 * seeded(seed, 11))));
+    const off = Math.floor(seeded(seed, 12) * slots);
+    const index = Math.floor((slot + off) / slots);
+    return {index, first: index * slots - off, slots};
+}
+
+/** How many slots of a bout its time on the wing takes when it has one (pure; the hour is the schedule's to check): 0 for none. */
+export function aloftSlots(rule: Pick<FlightWayRule, "aloft">, seed: number, bout: {index: number; slots: number}): number {
+    if (!rule.aloft) return 0;
+    if (seeded(seed, 31 + (bout.index % 100000) * 3) >= rule.aloft.share) return 0;
+    const [lo, hi] = rule.aloft.slots;
+    return Math.min(Math.max(Math.round(lo + (hi - lo) * seeded(seed, 32 + (bout.index % 100000) * 3)), 2), bout.slots);
+}
+
+/** The hours thermals rise in (island hours): from mid-morning, once the ground has warmed, to late afternoon. */
+export const THERMAL_HOURS: [number, number] = [10, 16.5];
+
+/**
+ * A soar's numbers (thermal soaring, Pennycuick 1972, 1998; Shamoun-Baranes 2003): it circles at its glide's pace,
+ * banked about 24 degrees (a buzzard's circle 15 to 20 m across its radius, a vulture's 25, a pelican's 40), climbing
+ * slowly; then glides at its cruise to the next thermal, sinking. `reach` is how far from its home a thermal forms;
+ * `span` how high it rides over its soar's floor; `wind` what the thermals drift with (m/s).
+ */
+export type SoarSpec = {circle: number; glide: number; radius: number; reach: number; span: number; climb: number; sink: number; wind: {x: number; z: number}};
+export const SOAR_BANK = (24 * Math.PI) / 180;
+export function soarSpecOf(paces: Pick<AirPaces, "cruise" | "glide">, span: number, cap: number, wind: {x: number; z: number}): SoarSpec {
+    const circle = paces.glide;
+    const radius = clamp((circle * circle) / (G * Math.tan(SOAR_BANK)), 12, 45);
+    return {circle, glide: paces.cruise, radius, reach: clamp(cap - radius, radius * 2, 110), span, climb: 0.4, sink: 1.2, wind};
+}
+
+/** Where a soar is at a moment: its place, its height over its soar's floor (m), its heading, and whether it circles. */
+export type SoarAt = {x: number; z: number; lift: number; yaw: number; circling: boolean; thermal: number};
+
+/**
+ * Where a soar is at a world time (pure in its seed, its home, its numbers and the time; the same for every viewer, and
+ * with no memory: any moment is worked out on its own). Time is cut into thermals of one length (130 to 190 s, the
+ * seed's own); each forms within reach of its home and drifts with the wind while it lasts. It joins a thermal's circle
+ * on the tangent it came in by, circles its own way round, rising, leaves on the tangent that points at the next thermal,
+ * and glides there in a line at its cruise, sinking, to arrive as that one starts. Never a loop about one fixed spot:
+ * the circle is wide (its bank's), it climbs, and it drifts (the old failure, small tight circles over an animal's own
+ * spot, is the behaviour audit's "circling" still). `member` (a flock's member, 1 up; 0 its leader or one alone)
+ * rides the same thermals part of a turn behind, on its own radius and at its own height, as the birds of a kettle do,
+ * strung round the circle: none flies at another's side. Thermals keep to the island: one that would form further from
+ * the middle than its home is (and 60 m) forms towards the middle instead.
+ */
+export function soarAt(seed: number, home: {x: number; z: number}, spec: SoarSpec, time: number, member = 0): SoarAt {
+    const P = 130 + 60 * seeded(seed, 9);
+    const own = seed + member * 0.37;
+    // (A member behind its leader by its own share of a turn of the circle, 0.12 to 0.88 of one, a golden step apart by
+    // rank: never a whole turn behind, which is at its leader's side.)
+    const t = time - (member ? ((Math.PI * 2 * spec.radius) / spec.circle) * (0.12 + 0.76 * frac(member * 0.381966)) : 0);
+    const j = Math.floor(t / P);
+    const centre = (k: number) => {
+        // (Each about a third of the way round its home from the last, so two in a row are never on top of each other.)
+        const a0 = seeded(seed, 40) * Math.PI * 2 + k * 2.399963 + (seeded(seed, 40 + (k % 100000) * 5) - 0.5) * 0.8;
+        const d = spec.reach * (0.4 + 0.6 * Math.sqrt(seeded(seed, 41 + (k % 100000) * 5)));
+        let x = home.x + Math.sin(a0) * d;
+        let z = home.z + Math.cos(a0) * d;
+        if (Math.hypot(x, z) > Math.max(Math.hypot(home.x, home.z), 60)) {
+            const a = Math.atan2(-home.x, -home.z) + (seeded(seed, 42 + (k % 100000) * 5) - 0.5) * 1.2;
+            x = home.x + Math.sin(a) * d;
+            z = home.z + Math.cos(a) * d;
+        }
+        // (One way round for life: a bird has its side.)
+        return {x, z, dir: seeded(seed, 43) < 0.5 ? 1 : -1};
+    };
+    const rhoOf = (k: number) => spec.radius * (member ? 0.8 + 0.4 * seeded(own, 5 + (((k % 1000) + 1000) % 1000)) : 1);
+    /**
+     * Thermal k's way out: how long its glide to the next takes, and the glide's heading: the line that leaves its
+     * circle and joins the next one's on a tangent of both, each the way round it turns (for two circles a distance D
+     * apart turning the same way, the line between their middles turned by asin((r' - r) / D); turning opposite ways,
+     * the crossing tangent, by asin((r' + r) / D)).
+     */
+    const leave = (k: number, c: {x: number; z: number; dir: number}, n: {x: number; z: number; dir: number}) => {
+        const lean = n.dir * rhoOf(k + 1) - c.dir * rhoOf(k);
+        let glide = P * 0.15;
+        let ux = 0;
+        let uz = 1;
+        for (let pass = 0; pass < 2; pass++) {
+            const dx = n.x - (c.x + spec.wind.x * (P - glide));
+            const dz = n.z - (c.z + spec.wind.z * (P - glide));
+            const far = Math.hypot(dx, dz) || 1;
+            // (u at angle a in (x, z) with its left normal (-uz, ux): the middles' line turned by asin(lean / D).)
+            const a = Math.atan2(dz, dx) + Math.asin(clamp(lean / far, -0.95, 0.95));
+            ux = Math.cos(a);
+            uz = Math.sin(a);
+            glide = clamp(Math.sqrt(Math.max(far * far - lean * lean, 0)) / spec.glide, 1.5, P * 0.45);
+        }
+        return {ux, uz, glide};
+    };
+    const before = centre(j - 1);
+    const c = centre(j);
+    const next = centre(j + 1);
+    const cameIn = leave(j - 1, before, c);
+    const goesOut = leave(j, c, next);
+    const s = j * P;
+    const e = s + P - goesOut.glide;
+    const rho = rhoOf(j);
+    // (On the circle at angle a from +z towards +x it is at (sin a, cos a) and heads dir x (cos a, -sin a).)
+    const into = Math.atan2(-c.dir * cameIn.uz, c.dir * cameIn.ux);
+    const out = Math.atan2(-c.dir * goesOut.uz, c.dir * goesOut.ux);
+    // It turns at about its pace's rate, a little quicker or slower so that it comes round to its way out as it leaves.
+    // (Every member the same number of turns in a thermal, its leader's: one on a smaller circle never laps it.)
+    const nominal = (spec.circle / spec.radius) * (e - s);
+    const part = ((((out - into) * c.dir) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const turned = part + Math.PI * 2 * Math.max(Math.round((nominal - part) / (Math.PI * 2)), 1);
+    const low = spec.span * (0.15 + 0.3 * seeded(seed, 44 + (j % 100000) * 5)) * (member ? 0.6 + 0.8 * seeded(own, 6) : 1);
+    const high = spec.span * (0.7 + 0.3 * seeded(seed, 45 + (j % 100000) * 5)) * (member ? 0.75 + 0.25 * seeded(own, 7) : 1);
+    if (t < e) {
+        const k = (t - s) / (e - s);
+        const a = into + c.dir * turned * k;
+        return {x: c.x + spec.wind.x * (t - s) + Math.sin(a) * rho, z: c.z + spec.wind.z * (t - s) + Math.cos(a) * rho, lift: low + (high - low) * k, yaw: Math.atan2(c.dir * Math.cos(a), -c.dir * Math.sin(a)), circling: true, thermal: j};
+    }
+    const ex = c.x + spec.wind.x * (e - s) + Math.sin(out) * rho;
+    const ez = c.z + spec.wind.z * (e - s) + Math.cos(out) * rho;
+    const rhoNext = rhoOf(j + 1);
+    const intoNext = Math.atan2(-next.dir * goesOut.uz, next.dir * goesOut.ux);
+    const nx = next.x + Math.sin(intoNext) * rhoNext;
+    const nz = next.z + Math.cos(intoNext) * rhoNext;
+    const lowNext = spec.span * (0.15 + 0.3 * seeded(seed, 44 + ((j + 1) % 100000) * 5)) * (member ? 0.6 + 0.8 * seeded(own, 6) : 1);
+    const k = Math.min((t - e) / Math.max(s + P - e, 1e-6), 1);
+    return {x: ex + (nx - ex) * k, z: ez + (nz - ez) * k, lift: high + (lowNext - high) * k, yaw: Math.atan2(nx - ex, nz - ez), circling: false, thermal: j};
+}
+
+/**
+ * Where an aerial feeder is at a world time as it hawks (pure, no memory, the same for every viewer): long sweeps to
+ * and fro over a patch, a figure of eight that turns one way and then the other (never a circle), quickest through its
+ * middle and slowest round its ends; the eight's axis swings slowly round, its size breathes, and the patch's middle
+ * wanders about its home. `lift` is its height over what is under it (m): low, with dips. `member` (a flock's member)
+ * sweeps the same patch out of step with its leader. (A swallow's passes over a field or a pond are 20 to 60 m; a
+ * bat's beat is the same shape, smaller.)
+ */
+export function hawkAt(seed: number, home: {x: number; z: number}, spec: {cruise: number; reach: number; low: number; high: number}, time: number, member = 0): SoarAt {
+    const own = seed + member * 0.37;
+    const p = (n: number) => seeded(own, n) * Math.PI * 2;
+    const A0 = clamp(spec.cruise * 3.2, 6, 30);
+    const at = (t: number) => {
+        const A = A0 * (1 + 0.1 * Math.sin(t * 0.013 + p(1)));
+        const B = A * 0.8;
+        // (Its pace through the middle a little over its cruise, round the ends about half of it.)
+        const theta = ((spec.cruise * 1.05) / Math.hypot(A0, A0 * 0.8)) * t + p(2);
+        const axis = seeded(seed, 3) * Math.PI * 2 + 0.015 * t + (member ? p(4) * 0.2 : 0);
+        const cx = home.x + spec.reach * 0.6 * Math.sin(t * 0.0041 + seeded(seed, 5) * 6.28);
+        const cz = home.z + spec.reach * 0.6 * Math.cos(t * 0.0033 + seeded(seed, 6) * 6.28);
+        const along = A * Math.sin(theta);
+        const across = (B / 2) * Math.sin(2 * theta);
+        return {x: cx + Math.sin(axis) * along + Math.cos(axis) * across, z: cz + Math.cos(axis) * along - Math.sin(axis) * across};
+    };
+    const here = at(time);
+    const ahead = at(time + 0.1);
+    const mid = (spec.low + spec.high) / 2;
+    const lift = mid + ((spec.high - spec.low) / 2) * (0.7 * Math.sin(time * 0.31 + p(7)) + 0.3 * Math.sin(time * 0.83 + p(8)));
+    return {x: here.x, z: here.z, lift, yaw: Math.atan2(ahead.x - here.x, ahead.z - here.z), circling: false, thermal: 0};
+}
+
+/** A point of a track of [x, y, z] at even times, a share u of the way through it (a Catmull-Rom through its points), and its heading and speed (per unit of u). */
+export function trackAt(track: Float32Array, u: number): {x: number; y: number; z: number; yaw: number; rate: number} {
+    const n = track.length / 3 - 1;
+    const f = clamp(u, 0, 1) * n;
+    const i = Math.min(Math.floor(f), n - 1);
+    const t = f - i;
+    const at = (k: number, c: number) => track[clamp(k, 0, n) * 3 + c];
+    const cr = (c: number) => {
+        const a = at(i - 1, c);
+        const b = at(i, c);
+        const d = at(i + 1, c);
+        const e = at(i + 2, c);
+        return 0.5 * (2 * b + (-a + d) * t + (2 * a - 5 * b + 4 * d - e) * t * t + (-a + 3 * b - 3 * d + e) * t * t * t);
+    };
+    const dcr = (c: number) => {
+        const a = at(i - 1, c);
+        const b = at(i, c);
+        const d = at(i + 1, c);
+        const e = at(i + 2, c);
+        return 0.5 * (-a + d + 2 * (2 * a - 5 * b + 4 * d - e) * t + 3 * (-a + 3 * b - 3 * d + e) * t * t);
+    };
+    const dx = dcr(0);
+    const dz = dcr(2);
+    return {x: cr(0), y: cr(1), z: cr(2), yaw: Math.atan2(dx, dz), rate: Math.hypot(dx, dz) * n};
+}
+
+/**
+ * A soar's leg that takes off into it or comes down out of it (pure): up to its pace at its take-off's acceleration
+ * when it starts on a perch or the ground (already at it when it starts in the air), level, and down from it at its
+ * braking when it lands (still at it when it ends in the air). It climbs over `climb` metres of its route from where it
+ * starts and comes down to land over its last `descend` metres (for the rig's stages: its heights are its own).
+ */
+export function planSoarLeg(paces: AirPaces, length: number, opts: {pace: number; from: boolean; to: boolean; climb?: number; descend?: number; ski?: number}): AirPlan {
+    const L = Math.max(length, 0.01);
+    let V = opts.pace;
+    const a = paces.accel;
+    const b = paces.brake;
+    let td = opts.to ? 0 : Math.min(opts.ski ?? 0, V);
+    const need = (v: number, t: number) => (opts.from ? 0 : (v * v) / (2 * a)) + (opts.to ? 0 : (v * v - t * t) / (2 * b) + (t * t) / (2 * b));
+    if (need(V, td) > L) {
+        td = 0;
+        V = Math.min(V, Math.sqrt(L / ((opts.from ? 0 : 1 / (2 * a)) + (opts.to ? 0 : 1 / (2 * b)) || 1)));
+    }
+    const dUp = opts.from ? 0 : (V * V) / (2 * a);
+    const dDown = opts.to ? 0 : (V * V - td * td) / (2 * b);
+    const dSki = opts.to ? 0 : (td * td) / (2 * b);
+    const t = [opts.from ? 0 : V / a, Math.max(L - dUp - dDown - dSki, 0) / Math.max(V, 1e-6), opts.to ? 0 : (V - td) / b, opts.to ? 0 : td / b];
+    const seconds = Math.max(t[0] + t[1] + t[2] + t[3], 0.05);
+    const speeds = [V, V, td, 0];
+    const knots = [0, opts.from ? 1 : 0];
+    let at = 0;
+    for (let i = 0; i < 4; i++) {
+        if (t[i] <= 1e-6) continue;
+        at += t[i];
+        knots.push(Math.min(at / seconds, 1), speeds[i] / Math.max(V, 1e-6));
+    }
+    if (knots[knots.length - 2] < 1) knots.push(1, opts.to ? 1 : 0);
+    return {seconds, knots, liftoff: 0, touchdown: 1 - dSki / L, rise: clamp((opts.climb ?? 0) / L, 1e-4, 0.9), fall: clamp((opts.descend ?? 0) / L, 1e-4, 0.9), height: 0, peak: V, soar: {from: opts.from, to: opts.to}};
 }
 
 // MARK: The beat
@@ -511,6 +869,22 @@ export function stoopPose(u: number): {clip: "glide" | "plunge" | "flap"; pitch:
     const k = smooth((t - 0.8) / 0.2);
     // The pull-out: the nose comes up through level to a flare, the wings open and beat to brake.
     return {clip: "flap", pitch: 0.9 - 1.5 * k, fold: 1 - k, pace: 1 - 0.7 * k, rate: 1.3};
+}
+
+// MARK: A flyer drawn without a rig
+
+/** The most a flyer drawn without a rig is pitched in the air (radians, either way: 14 degrees). */
+export const UNRIGGED_PITCH_MOST = 0.25;
+/**
+ * The body's pitch of a flyer drawn without a rig, its standing mesh carried along its flight (lane B5; the scene's
+ * sense, + nose down): level through level flight, nose up on its run and its climb out of a take-off, a little
+ * nose down on its glide-in. Never past UNRIGGED_PITCH_MOST. (It was 0.95 rad nose down for the whole of every flight,
+ * the first scene's "glide": a standing mesh tipped on its head, most plainly a flamingo's. A rigged flyer's attitude
+ * is its rig's: `flightRigFrame`.) The scene eases towards it, so a change of stage is not a snap.
+ */
+export function unriggedFlightPitch(stage: AirStage | null): number {
+    const want = stage === "run" || stage === "climb" ? -0.2 : stage === "descend" || stage === "ski" ? 0.1 : 0;
+    return clamp(want, -UNRIGGED_PITCH_MOST, UNRIGGED_PITCH_MOST);
 }
 
 // MARK: The rig frame
