@@ -5,6 +5,11 @@
  * arkStatusBars). Only for the selected animal, following it, a fixed size on
  * screen so it reads at any zoom, kept inside the view. Plain DOM in the scene's label layer, so /ark and the apps'
  * embed both get it. The tap card says the same in words; this layer is hidden from screen readers.
+ *
+ * Over the bars, its species' name (owner, 2026-11-14: "on the bars above the animal can we add the animal name, same
+ * font size as the icons"): the name its card shows (`animal.name`, the species' common name), never a person's nickname
+ * for it nor its founder's name. As wide as a bar row at most, a long name cut with an ellipsis; `dir="auto"` so a
+ * right-to-left name reads right to left.
  */
 
 import {ARK_STATUS_BAR_KEYS, type ArkBarTone, type ArkStatusBarKey, type ArkStatusBars} from "@/lib/ark-animal-status";
@@ -24,6 +29,10 @@ const EDGE = 8;
 /** Clear of the chips and buttons over the view by this much (CSS px), and how often they are measured (ms). */
 const CHIP_GAP = 6;
 const CHIPS_EVERY_MS = 400;
+/** The icons' size (CSS px): the name is set at it. */
+const ICON_PX = 11;
+/** A bar row's width (icon, gap, track): the name never makes the bars wider. */
+const ROW_PX = ICON_PX + 5 + 54;
 
 type Box = {left: number; top: number; right: number; bottom: number};
 
@@ -45,6 +54,7 @@ export function clearOfBoxes(at: {left: number; top: number}, size: {w: number; 
 export class ArkSelectionBars {
     readonly el: HTMLDivElement;
     private readonly rows = new Map<ArkStatusBarKey, {row: HTMLDivElement; fill: HTMLSpanElement}>();
+    private readonly name: HTMLDivElement;
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;
@@ -74,11 +84,28 @@ export class ArkSelectionBars {
             transition: reducedMotion ? "none" : "opacity 220ms ease",
             willChange: "transform"
         });
+        const name = document.createElement("div");
+        name.dir = "auto";
+        Object.assign(name.style, {
+            display: "none",
+            maxWidth: `${ROW_PX}px`,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            textAlign: "start",
+            font: `600 ${ICON_PX}px/1.15 ${FONT}`,
+            letterSpacing: "-0.01em",
+            color: "rgba(255, 252, 244, 0.96)",
+            textShadow: "0 1px 2px rgba(0, 0, 0, 0.45)",
+            paddingBottom: "1px"
+        });
+        el.appendChild(name);
+        this.name = name;
         for (const key of KEYS) {
             const row = document.createElement("div");
             Object.assign(row.style, {display: "none", alignItems: "center", gap: "5px"});
             const icon = document.createElement("span");
-            icon.innerHTML = `<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICON[key]}</svg>`;
+            icon.innerHTML = `<svg viewBox="0 0 24 24" width="${ICON_PX}" height="${ICON_PX}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICON[key]}</svg>`;
             Object.assign(icon.style, {display: "inline-flex", flex: "0 0 auto", opacity: "0.85"});
             const track = document.createElement("span");
             Object.assign(track.style, {position: "relative", display: "block", width: "54px", height: "5px", borderRadius: "999px", background: "rgba(255, 255, 255, 0.16)", overflow: "hidden"});
@@ -102,9 +129,12 @@ export class ArkSelectionBars {
         this.el.style.transition = reduced ? "none" : "opacity 220ms ease";
     }
 
-    /** The selected animal's bars, or null (nothing selected, or nothing to show). */
-    set(bars: ArkStatusBars | null) {
+    /** The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to show). */
+    set(bars: ArkStatusBars | null, name: string | null = null) {
         this.any = false;
+        const label = name?.trim() || "";
+        if (this.name.textContent !== label) this.name.textContent = label;
+        this.name.style.display = label ? "block" : "none";
         for (const key of KEYS) {
             const bar = bars?.[key] ?? null;
             const {row, fill} = this.rows.get(key)!;
