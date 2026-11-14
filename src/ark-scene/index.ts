@@ -5001,7 +5001,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
         const looked = selectedId ? findEntry(selectedId) : null;
-        const aloft = diving || viewDistance < 6 || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
+        // (Or at the chosen animal where it stands above the ground: on a roof, a balcony, a perch, in a tank on a
+        // house's floor. The target was pulled down to the ground under it from 6 m and further, and the animal left
+        // the top of the picture: graphics pass 2026-11-14.)
+        const raised = Boolean(looked?.middle && looked.middle.y - looked.drawnHeight / 2 > groundUnderTarget + 0.3 && Math.hypot(target.x - looked.middle.x, target.z - looked.middle.z) < looked.length + 2);
+        const aloft = diving || viewDistance < 6 || raised || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
         const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // A golden shot may hold a view the user cannot (development only: golden-entry.ts sets it for one shot).
         const golden = process.env.NODE_ENV !== "production" ? (window as unknown as {__arkGoldenCamera?: {maxPolar?: number; free?: boolean}}).__arkGoldenCamera : undefined;
@@ -5353,8 +5357,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * the other views round it are tried a few a frame (never more than about 3 ms of a frame) and the flight ends at
      * the first clear one instead. Afterwards, while the animal stays chosen and nobody touches the view, the lines are
      * looked at again about once a second: an animal that has walked behind something is flown round to.
-     * Not for an animal under the ground (the cutaway shows it), under the sea (the dive's own view) or up a tree (its
-     * own search, `clearCanopyView`). Nothing here moves an animal or the scenery.
+     * Not for an animal under the ground (the cutaway shows it), under the sea (the dive's own view), up a tree (its
+     * own search, `clearCanopyView`) or on its microhabitat (its own view out along its surface, centimetres away).
+     * Nothing here moves an animal or the scenery.
      */
     const sight = new Sight(scene);
     let clearSearch: {views: CloseView[]; next: number; best: CloseView | null; bestBlocked: number; asked: CloseView | null} | null = null;
@@ -5383,7 +5388,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (options.recording) return;
         const entry = selectedId ? findEntry(selectedId) : null;
         const at = entry?.middle ?? null;
-        if (!entry || !at || entry.place.burrow || entry.place.canopy || (at.y - entry.drawnHeight / 2 < -0.3 && heightAt(at.x, at.z) < -0.3)) {
+        if (!entry || !at || entry.place.burrow || entry.place.canopy || entry.place.micro || (at.y - entry.drawnHeight / 2 < -0.3 && heightAt(at.x, at.z) < -0.3)) {
             clearSearch = null;
             return;
         }
@@ -6691,7 +6696,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // A small animal crawls up and down its wall or trunk, a flyer climbs and comes down: kept in view.
                     const dy = tracked.y - lastTracked.y;
                     const trackedEntry = findEntry(selectedId);
-                    if ((trackedEntry?.micro || (trackedEntry && trackedEntry.air > 0.001)) && Math.abs(dy) < 1) {
+                    // (And one above its ground, on a roof or a floor, or under the sea: its height is the view's too.)
+                    const offGround = Boolean(trackedEntry && (tracked.y < -0.3 || tracked.y - trackedEntry.drawnHeight / 2 > heightAt(tracked.x, tracked.z) + 0.3));
+                    if ((trackedEntry?.micro || offGround || (trackedEntry && trackedEntry.air > 0.001)) && Math.abs(dy) < 1) {
                         controls.target.y += dy;
                         camera.position.y += dy;
                     }
