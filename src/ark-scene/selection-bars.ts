@@ -8,7 +8,8 @@
  *
  * Over the bars, its species' name (owner, 2026-11-14: "on the bars above the animal can we add the animal name, same
  * font size as the icons"): the name its card shows (`animal.name`, the species' common name), never a person's nickname
- * for it nor its founder's name. As wide as a bar row at most, a long name cut with an ellipsis; `dir="auto"` so a
+ * for it nor its founder's name. Up to two bar rows wide (a long name widens the box, the bars stay their width), cut
+ * with an ellipsis only past that; `dir="auto"` so a
  * right-to-left name reads right to left.
  */
 
@@ -31,8 +32,9 @@ const CHIP_GAP = 6;
 const CHIPS_EVERY_MS = 400;
 /** The icons' size (CSS px): the name is set at it. */
 const ICON_PX = 11;
-/** A bar row's width (icon, gap, track): the name never makes the bars wider. */
+/** A bar row's width (icon, gap, track); the name may take two of them before it is cut ("Western Diamondback"). */
 const ROW_PX = ICON_PX + 5 + 54;
+const NAME_MAX_PX = ROW_PX * 2;
 
 type Box = {left: number; top: number; right: number; bottom: number};
 
@@ -88,7 +90,7 @@ export class ArkSelectionBars {
         name.dir = "auto";
         Object.assign(name.style, {
             display: "none",
-            maxWidth: `${ROW_PX}px`,
+            maxWidth: `${NAME_MAX_PX}px`,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
