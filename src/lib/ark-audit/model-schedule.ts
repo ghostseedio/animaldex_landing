@@ -43,6 +43,7 @@ type WaterModule = typeof import("@/ark-scene/schedule-water");
 type FoodModule = typeof import("@/ark-scene/food-links");
 type MapPlaceModule = {mapHabitatAt?: (animal: {model_slug: string; zone: string}, x: number, z: number) => boolean};
 type RecipesModule = {wireRecipes?: (animals: Array<{animal: unknown; profile: unknown; slug: string; activity: unknown}>) => void};
+type FlightModule = {flightWay?: (slug: string) => string | null};
 type RigPlayerModule = {beatClip?: (beat: string | null | undefined, doing: string | null | undefined, has: (name: string) => boolean) => string | null};
 
 export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta: {label: string; tree: string; commit: string}): Promise<AuditModel> {
@@ -63,6 +64,7 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
     const reactiveModule = await optional<Reactive>("@/ark-scene/reactive");
     const reactiveWorld = await optional<ReactiveWorldModule>("@/ark-scene/reactive-world");
     const intel = await optional<IntelModule>("@/ark-scene/intelligence-profile");
+    const flight = await optional<FlightModule>("@/ark-scene/locomotion/flight");
     const {arkStats} = await import("@/ark-scene/stats");
     const rigPlayer = await optional<RigPlayerModule>("@/ark-scene/rig-player");
     const mapPlace = await optional<MapPlaceModule>("@/ark-scene/map/place");
@@ -89,9 +91,11 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
     const hawkers = new Map<string, boolean>();
     const hawks = (slug: string) => {
         let found = hawkers.get(slug);
-        if (found === undefined) hawkers.set(slug, (found = Boolean(intel?.intelProfile(slug, null, arkStats({model_slug: slug} as never).intelligence).hunt.includes("aerial_hawk"))));
+        // (Lane B5: or its way of life in the air is feeding on the wing, a pratincole's, whatever its hunt says.)
+        if (found === undefined) hawkers.set(slug, (found = Boolean(intel?.intelProfile(slug, null, arkStats({model_slug: slug} as never).intelligence).hunt.includes("aerial_hawk")) || ["aerial", "swift"].includes(flight?.flightWay?.(slug) ?? "")));
         return found;
     };
+    const soars = (slug: string) => ["soar", "vulture", "stork"].includes(flight?.flightWay?.(slug) ?? "");
     fixture.animals.forEach((animal, i) => {
         const place = places.get(animal.id)!;
         const plan = data.modelPlan.get(animal.model_slug) ?? null;
@@ -114,7 +118,8 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
             zone: animal.zone,
             leader: place.leader && place.leader !== animal.id ? place.leader : null,
             driver: sched ? "schedule" : place.micro ? "micro" : "burrow",
-            hawker: hawks(animal.model_slug)
+            hawker: hawks(animal.model_slug),
+            soarer: soars(animal.model_slug)
         });
     });
     holders.forEach((h, i) => {

@@ -1507,7 +1507,10 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
     const pitch = pitchBefore + (pitchNow - pitchBefore) * blend;
     const roll = ((b.roll ?? 0) + (b.rollWave ?? 0) * wave) * blend + (previous ? (previous.block.roll ?? 0) * (1 - blend) : 0);
     const ground = topOf(world.sampler, x, z);
-    return {p: {x, y, z}, yaw, pitch, roll, u, aloft: Boolean(b.aloft) && y > ground + 0.05};
+    // (Lane B5: a flight that goes nowhere is not one: a perched bird's way "home" from a call or a preen where it sits
+    // was a second in the air on its own perch.)
+    const goes = b.motion !== "travel" || Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) > 0.05;
+    return {p: {x, y, z}, yaw, pitch, roll, u, aloft: Boolean(b.aloft) && goes && y > ground + 0.05};
 }
 
 function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof keyPose>): RecipeAct {
@@ -1915,6 +1918,10 @@ export function murmurationPoint(centre: P, seed: number, index: number, epoch: 
 export function murmurationOf(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): {centre: P; seed: number; t0: number; t1: number} | null {
     const species = speciesRecipes(owner.slug);
     if (!species.has.has("murmuration")) return null;
+    // (Lane B5: only a bird that flies first. The common wood pigeon and Wilson's phalarope carry the recipe from a
+    // phrase of their text; one walks first and the other swims, and each was up in it for the whole window, through its
+    // rest, its feeding and its watch: a fifth of the validator's day aloft for a bird that flies a few times a day.)
+    if (owner.profile.move !== "fly") return null;
     const hours = owner.hoursAt(epoch);
     if (hours < MURMURATION_HOURS[0] || hours > MURMURATION_HOURS[1]) return null;
     const leader = owner.animal.group?.leader ?? owner.animal;
@@ -1923,7 +1930,13 @@ export function murmurationOf(world: ScheduleWorld, owner: TripOwner, kit: Sched
     // The window in world seconds (the hours map to the clock one to one).
     const t0 = epoch - (hours - MURMURATION_HOURS[0]) * 3600;
     const t1 = t0 + (MURMURATION_HOURS[1] - MURMURATION_HOURS[0]) * 3600;
-    return {centre: {x: roost.x, y: topOf(world.sampler, roost.x, roost.z), z: roost.z}, seed: hashString(leader.id), t0, t1};
+    // (Lane B5: over the crowns round its roost: the flock rides 14 to 30 m over its centre's level and spreads 20 m
+    // about it, and on the bigger island's woods, 20 to 25 m tall, most of it flew in the leaves. Its centre's level is
+    // the ground's, or as much higher as keeps its lowest birds over the tallest crown within its spread.)
+    let level = topOf(world.sampler, roost.x, roost.z);
+    const crowns = world.sampler.canopyTop;
+    if (crowns) for (let ix = -2; ix <= 2; ix++) for (let iz = -2; iz <= 2; iz++) level = Math.max(level, crowns(roost.x + ix * 10, roost.z + iz * 10) - 10);
+    return {centre: {x: roost.x, y: level, z: roost.z}, seed: hashString(leader.id), t0, t1};
 }
 
 /**
@@ -2134,18 +2147,32 @@ function settingOff(world: ScheduleWorld, owner: TripOwner, trip: Trip, pose: Re
     return since - hold < 4 ? {...pose, yaw: turned(facing, pose.yaw, since - hold, TURN_SPOT)} : pose;
 }
 
-/** A flyer whose stay is a place in the air (a bat's beat, between its sallies) keeps flying there: a slow circle. */
+/**
+ * A flyer whose stay is a place in the air (a bat's beat, a swallow's, between its sallies) keeps flying there: to and
+ * fro through it in a figure of eight, one way round and then the other. (Lane B5: it was a circle 1.2 m across its
+ * radius, six lengths of the bird: the hawkers spent 58 to 69% of their time in the air on it, the audit's circling.)
+ */
 function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose | null {
     if (trip.to.point !== null || !kit.flies(owner.profile)) return null;
     const ground = topOf(world.sampler, trip.to.x, trip.to.z);
     if (trip.to.y < ground + 1.2) return null;
-    const r = Math.max(owner.animal.length * 6, 1.2);
-    const a = (epoch - trip.arrive) * (0.9 / r) * 2 + (hashString(owner.animal.id) % 628) / 100;
-    // In from its arrival point over the first second.
-    const k = ease(Math.min((epoch - trip.arrive) / 1.2, 1));
-    const x = trip.to.x + (Math.cos(a) * r - Math.cos((hashString(owner.animal.id) % 628) / 100) * r) * k;
-    const z = trip.to.z + (Math.sin(a) * r - Math.sin((hashString(owner.animal.id) % 628) / 100) * r) * k;
-    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: a + Math.PI, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: -0.35, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
+    const length = Math.max(owner.animal.length, 0.03);
+    // (Its sweep 30 of its lengths each way, 3 to 12 m; its pace about 20 lengths a second through the middle.)
+    const span = Math.min(Math.max(length * 30, 3), 12);
+    const axis = (hashString(owner.animal.id) % 628) / 100;
+    const at = (t: number) => {
+        const theta = ((Math.min(Math.max(length * 20, 2.5), 9) / span) * t) / 1.28;
+        const along = span * Math.sin(theta);
+        const across = span * 0.4 * Math.sin(2 * theta);
+        return {x: trip.to.x + Math.sin(axis) * along + Math.cos(axis) * across, z: trip.to.z + Math.cos(axis) * along - Math.sin(axis) * across, y: trip.to.y + 0.3 * Math.sin(theta * 2)};
+    };
+    const since = Math.max(epoch - trip.arrive, 0);
+    const here = at(since);
+    const ahead = at(since + 0.1);
+    const yaw = Math.atan2(ahead.x - here.x, ahead.z - here.z);
+    // (Out of its arrival's heading into its sweep's over the first second and a bit; it starts at its place.)
+    const k = ease(Math.min(since / 1.2, 1));
+    return {...base, x: here.x, y: here.y, z: here.z, yaw: base.yaw + wrapAngle(yaw - base.yaw) * k, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
 }
 
 const postureActs = new Map<string, RecipeAct>();

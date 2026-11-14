@@ -509,7 +509,11 @@ export class AuditMeter {
             };
         };
         const hawking = roamOf(flightRows.filter(([i]) => subjects[i].hawker));
-        const exceptHawking = roamOf(flightRows.filter(([i]) => !subjects[i].hawker));
+        // (Behaviours pass, lane B5: the thermal soarers apart too. A buzzard, a vulture or a stork in a thermal circles
+        // by nature: wide, rising and drifting, in the warm hours. The old failure, every bird in small tight circles
+        // over its own spot, stays guarded on everyone else, at the same limits.)
+        const soaring = roamOf(flightRows.filter(([i]) => subjects[i].soarer && !subjects[i].hawker));
+        const exceptHawking = roamOf(flightRows.filter(([i]) => !subjects[i].hawker && !subjects[i].soarer));
         let followers = 0;
         let followersNotFlocking = 0;
         let followersOtherSpecies = 0;
@@ -627,6 +631,7 @@ export class AuditMeter {
                 fullTurnsPerAirMinute: loopsPerAirMinute === null ? null : Math.round(loopsPerAirMinute * 100) / 100,
                 exceptHawking,
                 hawking,
+                soaring,
                 flyersTracked: flightRows.length,
                 followers,
                 followersNotFlockingSpecies: followersNotFlocking,

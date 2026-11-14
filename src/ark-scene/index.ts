@@ -180,7 +180,7 @@ import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground
 import {modelBase} from "@/ark-scene/grounding/base";
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
-import {flightSpec} from "@/ark-scene/locomotion/flight";
+import {flightSpec, unriggedFlightPitch} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders, type ColliderSet} from "@/ark-scene/collide";
@@ -377,6 +377,8 @@ type Entry = {
     residentAt?: {x: number; z: number; at: number} | null;
     /** 0 on the ground, 1 aloft (flyers); eased. */
     air: number;
+    /** Its body's pitch in the air where it is drawn without a rig (lane B5, `unriggedFlightPitch`); eased. */
+    airPitch?: number;
     /** 0…1 the selected lift, eased. */
     lift: number;
     /** The chat's animal visiting (never one of the Ark's). */
@@ -1760,6 +1762,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const target = own.pose.aloft ? 1 : 0;
         entry.air += (target - entry.air) * Math.min(dt * 6, 1);
         if (Math.abs(target - entry.air) < 0.002) entry.air = target;
+        // (Lane B5: a flyer drawn without a rig is level in level flight, nose up on its climb, a little down coming in.)
+        const pitched = own.pose.aloft ? unriggedFlightPitch(own.pose.air?.stage ?? null) : 0;
+        entry.airPitch = (entry.airPitch ?? 0) + (pitched - (entry.airPitch ?? 0)) * Math.min(dt * 3, 1);
     };
 
     /** An animal's route over a stretch of its shared schedule (for worn paths): its own trips, worked out aside. */
@@ -3200,7 +3205,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!band && !at.aloft && !act?.own && ground < waterTop - 0.02 && at.y >= ground - 0.01 && at.y <= waterTop + 0.02) {
             return {x: at.x, z: at.z, base: ground, yaw: at.yaw + (entry.glance ?? 0), pitch: act ? act.pitch : 0, roll: act ? act.roll : 0, afloat: false, wading: true};
         }
-        const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
         // A sleeping posture's attitude (a bat turned over, an otter on its back) comes in as it settles and goes as it
         // wakes (kept from its last sleeping moment, so the turn back is eased too), never at once.
@@ -3221,8 +3225,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             base: at.y,
             yaw: at.yaw + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
-            pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
-            roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
+            // (Lane B5: in the air its body is near level, pitched a little by its climb or its glide-in
+            // (`unriggedFlightPitch`, eased), and its wings level: it was 0.95 rad nose down and banked 0.35 rad to one
+            // side for the whole of every flight, which a rig's own attitude hid and a bird with no rig showed, a
+            // flamingo flying on its head. A rigged flyer's pitch and bank are its rig's: `rigFor`.)
+            pitch: (at.aloft ? (entry.airPitch ?? 0) * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
+            roll: (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
             // (Over water: the sea's below 0, or (lane MA3 water 2) a lake's or a river's above its bed, the v2 lake at 6 m: it
             // read as dry ground there, and a swimmer out of its band was stood on the bed by its feet, a metre down.)
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || ground < waterTop - 0.02 || diving,
@@ -3358,7 +3366,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.recipeAct = flock?.act ?? null;
             // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
             entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
-            if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
+            // (Lane B5: level but for the flock's own climb and dive, as every flyer without a rig.)
+            if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: flock.pitch, roll: flock.roll, afloat: true};
             return microPose(entry, reducedMotion ? 0 : time);
         }
         // Off its schedule (reduced motion): on its perch, its back to the perch's normal.
@@ -3405,7 +3414,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 z: place.z + (az - place.z) * k,
                 base: ground + (altitude) * k,
                 yaw: place.yaw + (yawAir - place.yaw) * k,
-                pitch: 0.95 * k,
+                // (Lane B5: level, banked into its circle's turn; it was 0.95 rad nose down.)
+                pitch: 0,
                 roll: -0.35 * k,
                 afloat: k > 0.5
             };

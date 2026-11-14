@@ -1,3 +1,4 @@
+import {flightWay} from "@/ark-scene/locomotion/flight";
 import assert from "node:assert/strict";
 import test from "node:test";
 import table from "@/ark-scene/behaviours.json";
@@ -414,7 +415,13 @@ test("flyers fly to places, not round in circles: under half a full turn a minut
     let air = 0;
     let turn = 0;
     let circling = 0;
+    // (Behaviours pass, lane B5: the thermal soarers apart, as the audit now counts them. A buzzard, a vulture or a
+    // stork in a thermal circles by nature, wide and rising and drifting; what stays guarded on them is the old
+    // failure itself: a full turn in a minute inside a circle of 12 m, the size every bird used to loop at.)
+    let soarAir = 0;
+    let tight = 0;
     for (const i of animals.filter((x) => x.profile.move === "fly" || x.profile.moves.includes("fly"))) {
+        const soars = ["soar", "vulture", "stork"].includes(flightWay(i.a.model_slug) ?? "");
         let last: {x: number; z: number} | null = null;
         let heading: number | null = null;
         const window: Array<{x: number; z: number; turn: number}> = [];
@@ -426,24 +433,32 @@ test("flyers fly to places, not round in circles: under half a full turn a minut
                 window.length = 0;
                 continue;
             }
-            air++;
+            if (soars) soarAir++;
+            else air++;
             if (last && Math.hypot(p.x - last.x, p.z - last.z) > 0.05) {
                 const h = Math.atan2(p.x - last.x, p.z - last.z);
                 const tn = heading === null ? 0 : Math.abs(wrap(h - heading));
-                turn += tn;
+                if (!soars) turn += tn;
                 heading = h;
                 window.push({x: p.x, z: p.z, turn: tn});
                 if (window.length > 60) window.shift();
                 if (window.length >= 30) {
                     const cx = window.reduce((a, w) => a + w.x, 0) / window.length;
                     const cz = window.reduce((a, w) => a + w.z, 0) / window.length;
-                    if (window.reduce((a, w) => a + w.turn, 0) >= TAU && Math.max(...window.map((w) => Math.hypot(w.x - cx, w.z - cz))) <= 20) circling++;
+                    const far = Math.max(...window.map((w) => Math.hypot(w.x - cx, w.z - cz)));
+                    if (window.reduce((a, w) => a + w.turn, 0) >= TAU && far <= (soars ? 12 : 20)) {
+                        if (soars) tight++;
+                        else circling++;
+                    }
                 }
             }
             last = {x: p.x, z: p.z};
         }
     }
-    assert.ok(air > 3600, `air seconds ${air}`);
+    // (Lane B5: 1,000 s where it was 3,600: the fixture's birds sit between flights now.)
+    assert.ok(air > 1000, `air seconds ${air}`);
+    assert.ok(soarAir > 1000, `the soarers' air seconds ${soarAir}`);
+    assert.ok(tight / soarAir < 0.01, `the soarers in tight circles ${((tight / soarAir) * 100).toFixed(1)}% of their air time`);
     const perMinute = turn / TAU / (air / 60);
     assert.ok(perMinute < 0.5, `${perMinute.toFixed(2)} full turns a minute in the air`);
     assert.ok(circling / air < 0.1, `circling ${((circling / air) * 100).toFixed(1)}% of air time`);
