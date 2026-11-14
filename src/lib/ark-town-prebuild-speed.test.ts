@@ -152,10 +152,12 @@ function digest(value: unknown): string {
  * town after it. When the town is changed on purpose (the town lane), these are updated with the change.
  * Lane GA (town-ground): the ground's texture weights and no per-vertex shade, the street surfaces and furniture, the
  * drapes' tags (the plan, areas and places are unchanged: nothing moved).
+ * Lane town birds: the roofs', ledges', towers' and belfry's spots on their building's drawn floor (`townBuildingFloor`):
+ * the areas only (their heights).
  */
 const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
-    areas: "7a26937a126da351",
+    areas: "1d360bef684fdb5a",
     // (Lane GA: the ground's surface weights.)
     ground: "9f6d9fa1b00ec782",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
