@@ -5366,6 +5366,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let clearedFlight: Flight | null = null;
     let clearCheckAt = 0;
     let clearMisses = 0;
+    /** What the search cost (the probes read it in a development build): searches begun, views tried, ms in all and in the worst frame. */
+    const clearStats = {searches: 0, views: 0, ms: 0, worstMs: 0, moved: 0};
     const sightEye = new Vector3();
     const sightPoint = new Vector3();
     const sightLook = new Spherical();
@@ -5430,10 +5432,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 break;
             }
         }
+        const spent = performance.now() - started;
+        clearStats.ms += spent;
+        clearStats.worstMs = Math.max(clearStats.worstMs, spent);
         if (!found && search.next < search.views.length) return;
         clearSearch = null;
+        clearStats.searches++;
+        clearStats.views += search.next;
         const best = search.best;
         if (!best || best === search.asked) return;
+        clearStats.moved++;
         const distance = Math.min(Math.max(best.distance, controls.minDistance), maxDistance);
         if (flight && flight === clearedFlight) {
             // Still on its way: it ends at the clear view instead (the short way round from where it started).
@@ -6815,6 +6823,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
+        clearView: () => ({...clearStats, rays: sight.tests}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
         resting: () => restingGroups.flatMap((group) => Array.from(group.members, (member, i) => {
             const k = group.order.indexOf(i);
