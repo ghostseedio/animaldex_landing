@@ -24,8 +24,11 @@
  * RGBA half-float texture (a row per frame, three texels per bone).
  *
  * A missing, failed or late rig is never an error: the animal stays
- * procedural. Downloads are capped per session (species and bytes), and
- * rigs not drawn for a while are let go.
+ * procedural. The rigs held at once are capped (species and bytes), and
+ * rigs not drawn for a while are let go, which makes room again. (The caps
+ * counted every download of the session until 2026-11-14: after 14 species
+ * on the low tier, 48 elsewhere, no rig loaded again until the page was
+ * reloaded, and every animal looked at after that stayed stiff.)
  */
 
 import {
@@ -212,9 +215,33 @@ export function rigChoices(sets: readonly (RigSet | null)[]): Map<string, RigSet
 
 export type RigCaps = {species: number; bytes: number};
 
-/** Default session caps: rig files downloaded, and their bytes. */
+/** The caps on the rigs held at once (loaded or loading): how many species, and their files' bytes. */
 export const RIG_CAPS: RigCaps = {species: 48, bytes: 9_000_000};
 export const RIG_CAPS_LITE: RigCaps = {species: 14, bytes: 2_500_000};
+/** A rig asked for first (the animal looked at or followed, the viewer's own) may go this far past the caps. */
+export const RIG_CAPS_FIRST: RigCaps = {species: 4, bytes: 1_000_000};
+
+/**
+ * Whether one more rig may be asked for: under the caps on what is held now (`held`: species loaded or loading, and
+ * the loaded files' bytes); one asked for `first` may go `RIG_CAPS_FIRST` past them, so the animal a reader is
+ * looking at is never the one left stiff by a full library.
+ */
+export function rigRoom(caps: RigCaps, held: RigCaps, first = false): boolean {
+    const over = first ? RIG_CAPS_FIRST : {species: 0, bytes: 0};
+    return held.species < caps.species + over.species && held.bytes < caps.bytes + over.bytes;
+}
+
+/** A rig file's usual size (bytes; the v3 set's files are 150 to 280 KB): the room one more species needs. */
+export const RIG_FILE_BYTES = 250_000;
+
+/**
+ * Whether the library holds more than it should keep of the rigs not drawn for a while (`RigLibrary.evict`): more
+ * than `keep` loaded, or so much that the caps have no room left for `room` more species (their count, and about
+ * their files' bytes). Without the second part a library under its `keep` but at its caps would never load again.
+ */
+export function rigOverKeep(caps: RigCaps, loaded: RigCaps, keep: number, room: number): boolean {
+    return loaded.species > Math.max(Math.min(keep, caps.species - room), 0) || loaded.bytes > Math.max(caps.bytes - room * RIG_FILE_BYTES, 0);
+}
 
 type RigExtras = {bufferView: number; bones: string[]; rows: number; rig?: unknown};
 
@@ -241,8 +268,11 @@ export class RigLibrary {
     private readonly queue: string[] = [];
     private readonly queued = new Set<string>();
     private active = 0;
+    /** Every byte downloaded this session (the debug overlay's figure). */
     private downloaded = 0;
-    private loadedSpecies = 0;
+    /** Held now, for the caps: the species loaded or loading, and the loaded files' bytes. */
+    private heldSpecies = 0;
+    private heldBytes = 0;
     private disposed = false;
     private readonly abort = new AbortController();
     caps: RigCaps;
@@ -337,24 +367,42 @@ export class RigLibrary {
         return this.active > 0 || this.queue.length > 0;
     }
 
-    /** Ask for a species' rig (once; within the session's caps). */
-    request(slug: string) {
+    /** What is held now against the caps: species loaded or loading, and the loaded files' bytes. */
+    get held(): RigCaps {
+        return {species: this.heldSpecies, bytes: this.heldBytes};
+    }
+
+    /**
+     * Ask for a species' rig (once; within the caps on what is held). `first`: the animal looked at or followed, or
+     * the viewer's own, which may go a little past the caps (`rigRoom`).
+     */
+    request(slug: string, first = false) {
         if (this.disposed || this.models.has(slug) || this.queued.has(slug) || this.failed.has(slug)) return;
         if (!this.available(slug)) return;
-        if (this.loadedSpecies >= this.caps.species || this.downloaded >= this.caps.bytes) return;
+        if (!rigRoom(this.caps, this.held, first)) return;
         this.queued.add(slug);
-        this.queue.push(slug);
+        this.heldSpecies++;
+        // (One asked for first is loaded first.)
+        if (first) this.queue.unshift(slug);
+        else this.queue.push(slug);
         this.pump();
     }
 
-    /** Let go of rigs not drawn since `before` (seconds), keeping at most `keep`. */
-    evict(before: number, keep: number) {
-        if (this.models.size <= keep) return;
+    /**
+     * Let go of rigs not drawn since `before` (seconds), oldest first, down to `keep` and until the caps have room
+     * for `room` more species (`rigOverKeep`).
+     */
+    evict(before: number, keep: number, room = 0) {
+        const over = () => rigOverKeep(this.caps, {species: this.models.size, bytes: this.heldBytes}, keep, room);
+        if (!over()) return;
         const old = Array.from(this.models.values()).filter((model) => model.usedAt < before).sort((a, b) => a.usedAt - b.usedAt);
         for (const model of old) {
-            if (this.models.size <= keep) break;
+            if (!over()) break;
             this.models.delete(model.slug);
             this.queued.delete(model.slug);
+            // (Let go: its place under the caps is free again.)
+            this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
+            this.heldBytes = Math.max(this.heldBytes - model.bytes, 0);
             model.geometry.dispose();
             model.texture.dispose();
             model.loco?.dispose();
@@ -368,16 +416,13 @@ export class RigLibrary {
         if (!this.choices || this.disposed) return;
         while (this.active < this.concurrency && this.queue.length) {
             const slug = this.queue.shift()!;
-            if (this.downloaded >= this.caps.bytes) {
-                this.queued.delete(slug);
-                continue;
-            }
             this.active++;
-            this.loadedSpecies++;
             this.load(slug)
                 .catch((error) => {
                     if (this.disposed) return;
                     this.failed.add(slug);
+                    // (A file that failed holds nothing.)
+                    this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
                     console.warn(`[ark] rig ${slug}`, error instanceof Error ? error.message : error);
                 })
                 .finally(() => {
@@ -506,6 +551,7 @@ export class RigLibrary {
             wings: rigWingChain(extras.bones, restPivot),
             usedAt: 0
         });
+        this.heldBytes += buffer.byteLength;
         this.onLoad(slug);
     }
 
