@@ -640,6 +640,8 @@ window.AnimalDexArkStart = function () {
           if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
           var raw = body && body.snapshot ? body.snapshot : body;
           founders = foundersFrom(body, raw);
+          // (What is shown is no longer the host's last push: its next one is looked at whole.)
+          lastPush = null;
           show(Ark.decodeArkSnapshot(raw));
         }
         // Encounter hunting: the server's read with the live snapshot only (never a fixture or a given snapshot);
@@ -660,6 +662,19 @@ window.AnimalDexArkStart = function () {
   var hostVisible = true;
   // (And a focus link (ark:select) sent before the first snapshot is read: the latest waits for the mount.)
   var selectHeld = null;
+  // The host's last push as it came (ark:snapshot), while it is the one shown. A host that pushes the whole Ark at
+  // every read of its own (every 45 s; the apps released before the hosts learned to skip it go on doing so): the same
+  // Ark but for its time is dropped here, before anything is decoded, listed or laid out. Finding that out is a walk
+  // of both, done a few milliseconds at a time between frames (`runtime/same.ts`); a newer push overtakes an older.
+  var lastPush = null;
+  var pushes = 0;
+  function takePush(message) {
+    var snapshot = Ark.decodeArkSnapshot(message.snapshot);
+    if (!snapshot) return;
+    lastPush = {snapshot: message.snapshot, founders: message.founders};
+    founders = foundersFrom(message, message.snapshot);
+    wordsRead.then(function () { show(snapshot); });
+  }
   function receive(message) {
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:activity") { activity(); return; }
@@ -678,9 +693,17 @@ window.AnimalDexArkStart = function () {
     var live = scene || mounting;
     if (live && message.type === "ark:reset") { live.resetView(); return; }
     if (message.type === "ark:snapshot") {
-      var snapshot = Ark.decodeArkSnapshot(message.snapshot);
-      founders = foundersFrom(message, message.snapshot);
-      wordsRead.then(function () { show(snapshot); });
+      var push = ++pushes;
+      var before = lastPush;
+      if (!before || !Ark.sameArkPush) { takePush(message); return; }
+      Ark.sameArkPush(before.snapshot, message.snapshot)
+        .then(function (same) { return same ? Ark.sameJsonSliced(before.founders, message.founders) : false; })
+        .catch(function () { return false; })
+        .then(function (same) {
+          // (Overtaken by a newer push, which is being looked at itself; or the same Ark as is shown: nothing to do.)
+          if (push !== pushes || (same && lastPush === before)) return;
+          takePush(message);
+        });
     }
     else if (live && message.type === "ark:mine") live.setMineOnly(Boolean(message.value));
     else if (message.type === "ark:select") {
