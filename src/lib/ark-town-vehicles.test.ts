@@ -322,7 +322,11 @@ test("the real Ark's town animals on their shared schedules: the cars stop short
     // A moving car stops short of, or steps round, every animal it can see coming. What remains is an animal that walks
     // or runs into a car (a dog darting under its bumper, a pigeon under a waiting car): L5's to keep out once the cars
     // are among its obstacles (docs/ark/town-island.md §13). Bounded here at the measured rate.
-    assert.ok(movingTouched <= 4 && nearestMoving > -0.3, `moving cars touch an animal at most rarely (${movingTouched} of ${samples}, nearest ${nearestMoving.toFixed(2)} m)`);
+    // (Behaviours pass 2026-11, lane B4: 8 of 14,400 car samples, nearest -0.14 m, where it was 2 and -0.09 m. The town's
+    // animals walk at their own paces now, a dog at 0.74 m/s where its clip's was 1.2, so one crossing a street is on
+    // the carriageway half as long again, and a small one stops in its bursts. Still an animal walking into a car, L5's
+    // to keep out; the bound re-derived from the measure.)
+    assert.ok(movingTouched <= 12 && nearestMoving > -0.3, `moving cars touch an animal at most rarely (${movingTouched} of ${samples}, nearest ${nearestMoving.toFixed(2)} m)`);
     assert.ok(waitingTouched / samples < 0.03, `animals walk into waiting cars rarely (${waitingTouched} of ${samples})`);
 });
 
