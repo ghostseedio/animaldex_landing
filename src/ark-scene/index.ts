@@ -932,6 +932,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let islandStreamed = false;
     /** The town being shown a few chunks a frame as it joins (decision 153). */
     let townRevealing = false;
+    /** The town's animals wait for its ground: their joining starts once its chunks are all shown (`attachIsland`). */
+    let townJoin: (() => void) | null = null;
     /** A point's chunk state (Part C: until the multi-island streamer is in, the town's square counts as drawn in full). */
     const streamStateAt = (x: number, z: number) => (island && !islandStreamed && island.contains(x, z) ? STATE_IN : streamer.stateAt(x, z));
     const registerIslandStream = (isl: ArkIslandScene) => {
@@ -6372,7 +6374,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
         // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
         // Decision 153: the town shown a few chunks a frame as it joins.
-        if (townRevealing && island) townRevealing = island.stepReveal(3);
+        if (townRevealing && island) {
+            townRevealing = island.stepReveal(3);
+            if (!townRevealing && townJoin) townJoin();
+        }
         if (island && trafficHooked !== island) {
             island.setTrafficAnimals?.(trafficAnimals);
             trafficHooked = island;
@@ -6845,7 +6850,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const view = homeView();
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
             }
-            join();
+            // The town's animals after its ground (graphics pass 2026-11-14): they joined at once, while its chunks
+            // were still hidden for its shaders or coming in a few a frame, and stood as hundreds of markers over the
+            // open sea for the first second or more. They start once every chunk is shown (the frame loop's reveal),
+            // or after 6 s whatever happens (a page whose frames are paused).
+            const startJoin = () => {
+                if (townJoin !== startJoin) return;
+                townJoin = null;
+                join();
+            };
+            townJoin = startJoin;
+            setTimeout(startJoin, 6000);
         },
         flyToIsland: (id: "wild" | "town") => {
             controls.autoRotate = false;
