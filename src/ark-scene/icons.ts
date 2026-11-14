@@ -27,7 +27,7 @@ import {
     Vector3,
     type Camera
 } from "three";
-import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, MARKER_LIGHT_GLSL} from "@/ark-scene/glsl";
 
 const CELL = 128;
 const PAD = 6;
@@ -86,6 +86,7 @@ varying vec2 vUv;
 varying vec4 vCell;
 varying vec4 vState;
 uniform float daylight;
+${MARKER_LIGHT_GLSL}
 vec4 cellSample(vec2 at, float bias) {
     if (at.x <= 0.0 || at.x >= 1.0 || at.y <= 0.0 || at.y >= 1.0) return vec4(0.0);
     return texture2D(atlas, vCell.xy + at * vCell.zw, bias);
@@ -101,20 +102,23 @@ void main() {
     vec3 colour = icon.rgb;
     float alpha = icon.a + shadow * (1.0 - icon.a);
     colour = mix(vec3(0.05, 0.05, 0.04), colour, icon.a / max(alpha, 0.001));
-    // The viewer's own, or the selected one: a thin ring of light about it.
+    float grey = dot(colour, vec3(0.299, 0.587, 0.114));
+    colour = mix(colour, mix(vec3(grey), dimTint, 0.5), vState.x * 0.7);
+    // Lit by the hour as the dots are (glsl.ts MARKER_LIGHT_GLSL): at two thirds of their day brightness the tokens
+    // were the brightest things in a night picture. Toned as the lit world is on every tier.
+    vec3 light = arkMarkerLight(daylight);
+    colour *= light;
+    // The viewer's own, or the selected one: a thin ring of light about it, kept lighter than the icon at night.
     if (vState.y > 0.5) {
         float ring = smoothstep(0.86 - aa, 0.9, r) * (1.0 - smoothstep(0.94, 0.98 + aa, r));
-        vec3 ringColour = vState.y > 1.5 ? selectedRing : mineRing;
+        vec3 ringColour = (vState.y > 1.5 ? selectedRing : mineRing) * max(light, vec3(0.4));
         colour = mix(colour, ringColour, ring);
         alpha = max(alpha, ring);
     }
-    float grey = dot(colour, vec3(0.299, 0.587, 0.114));
-    colour = mix(colour, mix(vec3(grey), dimTint, 0.5), vState.x * 0.7);
-    // Dimmer at night, as everything lit is.
-    colour *= mix(0.5, 1.0, daylight);
     alpha *= 1.0 - 0.5 * vState.x;
     if (alpha < 0.01) discard;
     gl_FragColor = vec4(colour, alpha);
+    #include <tonemapping_fragment>
     #include <colorspace_fragment>
     #include <fog_fragment>
 }
