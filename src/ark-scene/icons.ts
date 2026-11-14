@@ -28,6 +28,7 @@ import {
     type Camera
 } from "three";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
+import {ARK_PLACEHOLDER_ICON} from "@/ark-scene/placeholder-icon";
 
 const CELL = 128;
 const PAD = 6;
@@ -233,6 +234,15 @@ export class IconTokens {
             cell.loaded = true;
             this.atlasDirty = true;
             this.onIconLoad();
+        };
+        // No art for this species (143 of the 951 aboard, 2026-11-14: the bucket answers 400), or it did not arrive: the
+        // generic figure's icon, as the page's own cards show (`arkIconFallback`). Before, its token stayed an empty
+        // cell for the whole visit: a dark blur where the animal is.
+        let fellBack = false;
+        image.onerror = () => {
+            if (this.disposed || fellBack) return;
+            fellBack = true;
+            image.src = ARK_PLACEHOLDER_ICON;
         };
         image.src = this.iconUrl(slug);
     }
