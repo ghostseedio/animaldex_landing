@@ -212,6 +212,11 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const evictedAt = new Map<string, number>();
     ctx.library.gate = (slug, level) => {
         if (level !== "near" || !evictedAt.has(slug)) return true;
+        // (The kind the reader just chose is asked for again at once.)
+        if (planner.isWanted(slug)) {
+            evictedAt.delete(slug);
+            return true;
+        }
         if (planner.nearestInView(slug) > NEAR_AGAIN_WITHIN) return false;
         evictedAt.delete(slug);
         return true;
@@ -486,6 +491,16 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             follow.reset();
         },
 
+        /**
+         * The reader chose an animal of this kind and the camera is on its way: its far and near models are asked for
+         * now and loaded first, so they come in during the flight instead of being asked for at its end.
+         */
+        wanted(slug: string) {
+            if (!ctx.library.has(slug)) return;
+            planner.want(slug);
+            ctx.library.request(slug, "near");
+        },
+
         /** One animal of a species seen this frame (the load order; a far model asked for once it is in view and near enough). */
         see(slug: string, distance: number, visible: boolean) {
             planner.see(slug, distance, visible);
@@ -635,7 +650,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                 inView = planner.nearestVisible(viewSettled ? FAR_IN_VIEW[ctx.tier()] : Math.min(FIRST_VIEW_KINDS, FAR_IN_VIEW[ctx.tier()]));
                 for (const slug of inView) if (ctx.library.has(slug)) ctx.library.request(slug, "far");
                 // Queued far models of kinds the camera has left (the opening flight's path) give way to what is in view.
-                if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug));
+                if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug) || planner.isWanted(slug));
             }
             planner.endFrame();
             pace.begin();

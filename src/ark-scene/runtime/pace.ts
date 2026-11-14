@@ -9,12 +9,18 @@
  * 1. **The resolution.** When the frames run late as a rule (the median) but their own work is short (the GPU, not the
  *    script, is the bottleneck: fill rate, the finish's passes), the drawing buffer's scale steps down by 0.1 (to 0.7 of the
  *    tier's pixel ratio at most); it steps back up after 6 s of frames on time, never to a scale found too high at that
- *    rate in the last 90 s. The picture stays whole; it is only softer.
+ *    rate lately: for 90 s the first time, twice as long each time the same scale fails again (to 15 minutes). The
+ *    picture stays whole; it is only softer.
  * 2. **The rate.** Held at the display's rate while it can (a GPU-bound phone first gives up resolution); when a
  *    quarter of the frames still miss it (a jittery 40–50), locked to a steady 30. It tries the display's rate again
- *    after 8 s, and waits twice as long after each try that fails at once (8, 16, 32 … 120 s): it never oscillates. The
- *    start (the world being built, the first models) is forgotten when it ends, and the display's rate tried again.
- *    The low tier on a slow main thread starts locked.
+ *    after 8 s, and waits twice as long after each try that fails at once (8, 16, 32 … 300 s): it never oscillates. A
+ *    try the GPU missed at every resolution before starts at the lowest in one step, and a try that fails goes back to
+ *    the resolution the steady 30 held, in one step. The start (the world being built, the first models) is forgotten
+ *    when it ends, and the display's rate tried again. The low tier on a slow main thread starts locked.
+ *
+ * (Graphics and performance pass, 2026-11, on model devices over ten minutes: a GPU that holds 60 at 0.8 and not at
+ * 0.9 changed resolution 14 times, now 6 and rarer after; one that cannot hold 60 at all, 38 times, now 21: every
+ * change re-makes every render target and is seen as a soften or a sharpen.)
  * 3. **The tier.** Only once the start is over: locked at 30 and as low as the resolution goes, still missing 30 for
  *    3 s; or locked at 30 by the script's own work for 15 s on end (a phone then trades the tier's finish for 60).
  *
@@ -46,13 +52,19 @@ const WINDOW = 45;
 const MIN_SAMPLES = 24;
 const JUDGE_EVERY_S = 1;
 const RETRY_FIRST_S = 8;
-const RETRY_MOST_S = 120;
+/** The longest wait between tries at the display's rate (s): a phone that cannot hold it tries for a second or two of uneven frames each time. */
+const RETRY_MOST_S = 300;
 export const SCALE_STEP = 0.1;
 export const SCALE_FLOOR = 0.7;
 const SCALE_UP_AFTER_S = 6;
 const SCALE_COOLDOWN_S = 1.5;
-/** How long a scale found too high at a rate stays out of reach at that rate (s). */
+/**
+ * How long a scale found too high at a rate stays out of reach at that rate (s): twice as long each time the same
+ * scale is found too high again, to `CEILING_HOLD_MOST_S` (a GPU that holds the rate at 0.8 and not at 0.9 was sent
+ * back up to 0.9 every 90 s for good: a soften and sharpen, and every render target made twice, each time).
+ */
 const CEILING_HOLD_S = 90;
+const CEILING_HOLD_MOST_S = 900;
 const TIER_AFTER_S = 3;
 /** Locked at 30 by the script's own work this long once settled: a tier down, for the display's rate. */
 const LOCKED_DROP_AFTER_S = 15;
@@ -73,7 +85,7 @@ export class ArkFramePacer {
     private scale = 1;
     private changedScaleAt = -Infinity;
     /** Per rate, the scale its frames were late at, and until when it stays out of reach (no bouncing back up). */
-    private readonly ceiling: Record<Rate, {scale: number; until: number} | null> = {full: null, locked: null};
+    private readonly ceiling: Record<Rate, {scale: number; until: number; times: number} | null> = {full: null, locked: null};
     private onTimeSince: number | null = null;
     private slowSince: number | null = null;
     private droppedFor: PaceTier | null = null;
@@ -81,6 +93,10 @@ export class ArkFramePacer {
     private lockedSince: number | null = null;
     /** The start was over at the last frame (its frames, the world being built, say nothing of the frames to come). */
     private wasSettled = false;
+    /** The scale in use, locked, before the last try at the display's rate (that try may lower it): gone back to at once if the try fails. */
+    private beforeTry: number | null = null;
+    /** The GPU missed the display's rate even at the lowest resolution: a later try starts there (no higher one can hold it). */
+    private floorMissed = false;
     /** Started locked (the low tier on a slow main thread): no try at the display's rate before the start is over. */
     private slowStart = false;
 
@@ -105,6 +121,8 @@ export class ArkFramePacer {
         this.failures = 0;
         this.retryAt = now + RETRY_FIRST_S;
         this.ceiling.full = this.ceiling.locked = null;
+        this.floorMissed = false;
+        this.beforeTry = null;
         this.reset(now);
     }
 
@@ -166,7 +184,10 @@ export class ArkFramePacer {
             // first; that scale stays out of reach at this rate for a while (no bouncing).
             if (typical > limit && work < target * 0.6 && this.scale > SCALE_FLOOR + 1e-6) {
                 if (!cooled) return keep();
-                this.ceiling[rate] = {scale: this.scale, until: now + CEILING_HOLD_S};
+                // (The same scale found too high again: out of reach twice as long.)
+                const before = this.ceiling[rate];
+                const times = before && Math.abs(before.scale - this.scale) < 1e-6 ? before.times + 1 : 0;
+                this.ceiling[rate] = {scale: this.scale, until: now + Math.min(CEILING_HOLD_S * 2 ** times, CEILING_HOLD_MOST_S), times};
                 this.scale = Math.max(round2(this.scale - SCALE_STEP), SCALE_FLOOR);
                 this.changedScaleAt = now;
                 this.reset(now);
@@ -176,11 +197,23 @@ export class ArkFramePacer {
             if (!this.locked) {
                 this.locked = true;
                 this.lockedSince = now;
-                // (A try at the display's rate that failed at once: wait longer before the next.)
+                // (A try at the display's rate that failed at once: wait longer before the next. One that held a while
+                // first: the count starts over.)
                 if (now - this.triedAt < RETRY_FIRST_S + 10) this.failures++;
+                else if (Number.isFinite(this.triedAt)) this.failures = 0;
                 // (The GPU too slow for 60 even at the lowest resolution: no quick retries.)
-                if (this.scale <= SCALE_FLOOR + 1e-6 && typical > limit && work < target * 0.6) this.failures = Math.max(this.failures, 2);
+                if (this.scale <= SCALE_FLOOR + 1e-6 && typical > limit && work < target * 0.6) {
+                    this.failures = Math.max(this.failures, 2);
+                    this.floorMissed = true;
+                }
                 this.retryAt = now + Math.min(RETRY_FIRST_S * 2 ** this.failures, RETRY_MOST_S);
+                // (A try that lowered the resolution to reach the display's rate and failed at once: the resolution the
+                // steady 30 held before it, in one step, not climbed back to a tenth every six seconds.)
+                if (this.beforeTry !== null && now - this.triedAt < RETRY_FIRST_S + 10 && this.beforeTry > this.scale + 1e-6) {
+                    this.scale = this.beforeTry;
+                    this.changedScaleAt = now;
+                }
+                this.beforeTry = null;
                 this.reset(now);
                 return keep(true);
             }
@@ -222,8 +255,15 @@ export class ArkFramePacer {
             this.locked = false;
             this.lockedSince = null;
             this.triedAt = now;
+            this.beforeTry = this.scale;
             const ceiling = this.ceiling.full;
-            if (ceiling && now <= ceiling.until && this.scale >= ceiling.scale - 1e-6) {
+            if (this.floorMissed) {
+                // (It missed this rate at every resolution down to the lowest: tried there, in one step.)
+                if (this.scale > SCALE_FLOOR + 1e-6) {
+                    this.scale = SCALE_FLOOR;
+                    this.changedScaleAt = now;
+                }
+            } else if (ceiling && now <= ceiling.until && this.scale >= ceiling.scale - 1e-6) {
                 this.scale = Math.max(round2(ceiling.scale - SCALE_STEP), SCALE_FLOOR);
                 this.changedScaleAt = now;
             }

@@ -50,6 +50,8 @@ export class ShaderHold {
     /** Off until the first frame is drawn (the mount's own warm-up covers what is there by then), and whenever the runtime says. */
     active = false;
     private released = 0;
+    /** Held materials let through since the last `take` (a drawn frame): one a frame. */
+    private releasedNow = 0;
     private timedOut = 0;
     private skippedDraws = 0;
 
@@ -93,7 +95,13 @@ export class ShaderHold {
                 ready = true;
             }
             if (ready) {
-                if (held) this.released++;
+                // (One held material a frame: its first draw reads the whole program back from the driver, uniform by
+                // uniform, ~13 ms on the low phone profile; six at once, a zone's close-up detail, were one long frame.)
+                if (held && this.releasedNow >= 1 && this.now() - held.since <= this.limitMs) return true;
+                if (held) {
+                    this.released++;
+                    this.releasedNow++;
+                }
                 this.release(material, held);
                 return false;
             }
@@ -135,6 +143,7 @@ export class ShaderHold {
 
     /** After a frame is drawn: the objects whose shaders are to be compiled now (each once). */
     take(): object[] {
+        this.releasedNow = 0;
         if (!this.asked.length) return this.asked;
         const out = this.asked;
         this.asked = [];

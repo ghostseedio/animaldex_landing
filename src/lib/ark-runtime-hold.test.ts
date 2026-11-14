@@ -107,6 +107,27 @@ test("shader hold: a program that never reports is drawn after the limit; other 
     assert.equal(drawn.length, 4, "disposed: the renderer's own draw again");
 });
 
+test("shader hold: held materials are let through one a frame", () => {
+    const {renderer, drawn, compile} = fake();
+    const scene = {};
+    const hold = new ShaderHold(renderer, scene, 3000, () => 0);
+    hold.install();
+    hold.active = true;
+    const materials = [{name: "a"}, {name: "b"}, {name: "c"}];
+    const meshes = materials.map((m) => ({name: `${m.name} mesh`}));
+    materials.forEach((material, i) => renderer.renderBufferDirect(null, scene, null, material, meshes[i], null));
+    assert.equal(hold.take().length, 3);
+    // All three ready by the next frame: one is drawn in it, one in each frame after.
+    for (const material of materials) compile(material, true);
+    for (let frame = 1; frame <= 3; frame++) {
+        materials.forEach((material, i) => renderer.renderBufferDirect(null, scene, null, material, meshes[i], null));
+        assert.equal(new Set(drawn.map(([material]) => material)).size, frame, `frame ${frame}`);
+        hold.take();
+    }
+    assert.equal(hold.stats().released, 3);
+    assert.equal(hold.stats().holding, 0);
+});
+
 test("shader hold: where programs cannot compile in parallel nothing is held", () => {
     const {renderer, drawn} = fake();
     const scene = {};

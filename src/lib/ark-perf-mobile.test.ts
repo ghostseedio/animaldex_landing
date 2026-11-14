@@ -79,6 +79,33 @@ test("pacing: a GPU too slow for 60 even at the floor holds a steady 30; its tri
     assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR && !d.dropTier));
 });
 
+test("pacing: a scale found too high again and again is tried again more and more rarely (no soften and sharpen every 90 s for good)", () => {
+    // (A GPU that holds 60 at 0.8 of the resolution and not at 0.9: 21.5 ms a frame at full resolution.)
+    const pacer = new ArkFramePacer("medium", 0);
+    const {decisions} = simulate(pacer, 0, 1200, 6, 21.5);
+    assert.equal(pacer.interval, 0);
+    // Each try at 0.9 is a step up and a step back down: when each began.
+    const ups = decisions.filter((d, i) => i > 0 && d.scale > decisions[i - 1].scale).map((d) => Math.round(d.t));
+    const gaps = ups.slice(1).map((t, i) => t - ups[i]);
+    assert.ok(ups.length >= 2 && ups.length <= 4, `${ups.length} tries in 20 minutes: ${JSON.stringify(ups)}`);
+    assert.ok(gaps.every((gap, i) => i === 0 || gap > gaps[i - 1] * 1.5), JSON.stringify(gaps));
+    assert.ok(decisions.every((d) => d.scale >= 0.8 - 1e-9 && !d.dropTier), JSON.stringify(decisions));
+});
+
+test("pacing: a try at 60 the GPU cannot hold at any resolution is one step down and one back, not a climb of tenths", () => {
+    const pacer = new ArkFramePacer("medium", 0);
+    const {decisions} = simulate(pacer, 0, 600, 6, 40);
+    // After the first minute (the first descent and the settling at 30), every change of resolution belongs to a try:
+    // down to the floor as it begins, back to where the steady 30 was as it fails.
+    const later = decisions.filter((d) => d.t > 60);
+    const scales = later.map((d, i) => (i === 0 ? null : d.scale - later[i - 1].scale)).filter((v): v is number => v !== null && Math.abs(v) > 1e-9);
+    const small = scales.filter((v) => Math.abs(v) < 0.15).length;
+    // (The steady 30's own ceiling, 0.9 against 1, is tried again now and then: a tenth up, a tenth down.)
+    assert.ok(small <= 6, `${small} single-tenth steps after the first minute: ${JSON.stringify(later.map((d) => [Math.round(d.t), d.scale, d.interval > 0 ? 30 : 60]))}`);
+    assert.ok(later.filter((d) => d.interval === 0).length <= 4, "tries at 60 after the first minute");
+    assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR - 1e-9 && !d.dropTier));
+});
+
 test("pacing: sporadic late frames with short work (a collection, another task) lock the rate but never cost resolution", () => {
     const pacer = new ArkFramePacer("medium", 0);
     let t = 0;
