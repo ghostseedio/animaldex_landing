@@ -1272,6 +1272,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let behaviourBuildLongestMs = 0;
     let pendingWire: {list: Entry[]; arkDay: number | null} | null = null;
     const BUILD_SLICE_MS = 6;
+    /**
+     * (Performance lane, 2026-11.) The slice while a reader has been sent to an animal that cannot be drawn until this
+     * build and the wiring after it are done (the apps' `ark:select` at `ark:ready`, a pick from the list: `arriving`).
+     * One slice a drawn frame made the wild island's world 441 frames long on the phone profile: 18.5 s for 6.7 s of
+     * work, the camera standing still over the island meanwhile. With the camera still the frames may be longer: the
+     * same world, to the bit, in under half the frames (166 to 195). (60 ms measured no better than 40: a slice is a
+     * few whole tasks either way; nor did holding the display's rate instead of the idle 30. What is left is the
+     * build's own work and the frames' drawn meanwhile: `docs/ark/perf-interaction-2026-11.md`.)
+     */
+    const ARRIVAL_BUILD_SLICE_MS = 40;
+    let wildBuildMs = 0;
     // The graphics lane's attach points first, a slice a frame on their own (`prepareAttachPoints`, about 6 ms each): the
     // places start from them, so this build waits for them rather than building them in one task itself. Asked for on
     // the first frame, after the snapshot has set the hamlet's plots (a reset mid-build would finish it in one go).
@@ -1415,11 +1426,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             restingMemo.set(key, sched ? resting(worldOf(sched.animal), sched.profile, sched.animal, step * REST_STEP, scheduleHours, animal.activity).resting : false);
         };
     };
-    const stepWorldBuild = (budgetMs: number) => {
+    const stepWorldBuild = (budgetMs: number, wildFirst = false) => {
         // Part C: the town's world after the wild island's, a slice a frame too; its animals join the schedule when it is in.
         if (world && townBuild) {
+            // (Performance lane: a reader waiting on a wild animal. The town's world coming in asks for the wiring
+            // again, and the latest asked for wins: the wild animals' spacing, a second of work on the phone profile
+            // and nearly done, was thrown away and made again with the town's. It is let finish first; the town's
+            // world and the wiring of both follow as before.)
+            if (wildFirst && spacing) return;
             const town = options.recording ? townBuild.run() : townBuild.step(budgetMs);
-            behaviourBuildMs += townBuild.spentMs;
+            // (The two builds' time; it was the town's running total added again every frame.)
+            behaviourBuildMs = wildBuildMs + townBuild.spentMs;
             if (town) {
                 townWorld = town;
                 townBuild = null;
@@ -1437,7 +1454,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         const built = options.recording ? worldBuild.run() : worldBuild.step(budgetMs);
-        behaviourBuildMs = worldBuild.spentMs;
+        behaviourBuildMs = wildBuildMs = worldBuild.spentMs;
         behaviourBuildSlices = worldBuild.slices;
         behaviourBuildLongestMs = worldBuild.longestMs;
         if (!built) return;
@@ -6749,8 +6766,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const now = startedAt / 1000;
         const elapsed = (startedAt - started) / 1000;
         // The behaviour schedule's world, a slice a frame until it is built.
-        stepWorldBuild(BUILD_SLICE_MS);
-        if (world) stepSpacing(BUILD_SLICE_MS);
+        // (A reader sent to an animal not drawable yet, the view standing still: longer slices, `ARRIVAL_BUILD_SLICE_MS`.)
+        const awaited = Boolean(arriving) && arriving!.seen === null && !flight && pointers === 0 && !options.recording;
+        const buildSlice = awaited ? ARRIVAL_BUILD_SLICE_MS : BUILD_SLICE_MS;
+        stepWorldBuild(buildSlice, awaited);
+        if (world) stepSpacing(buildSlice);
         // Reduced motion: the water, the grass and the animals hold still (A18).
         if (!reducedMotion) {
             // The shared clock (shared-clock.ts): every viewer's water, wind, sway and idles in the same phase.
