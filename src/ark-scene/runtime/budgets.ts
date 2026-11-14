@@ -23,8 +23,10 @@
  * enough of the world (measured: 902 species loaded four minutes into a desktop session of zooming in and out). Past
  * that point no near level could ever bring the total back under, and every one was let go three seconds after it
  * was last drawn (measured: 5 a second, 801 in 160 s), so coming back to an animal cost its whole first visit again.
- * So the near levels keep a floor (`nearFloorMB`): while they hold less than that, none is let go for the skins'
- * sake, whatever the far levels hold.
+ * So, first, the GPU copy of a far skin whose kind has been out of view for half a minute is let go while the skins
+ * are over the ceiling (`idleFarSkins`: the loaded picture is kept, and the renderer sends it again the frame the
+ * kind is next drawn), which keeps the skins on the GPU to the kinds seen lately; and the near levels keep a floor
+ * (`nearFloorMB`): while they hold less than that, none is let go for the skins' sake, whatever the far levels hold.
  */
 
 import type {QualityTier} from "@/ark-scene/post";
@@ -73,6 +75,31 @@ export function fittedSize(width: number, height: number, edge: number): {width:
 }
 
 export type LevelUse = {slug: string; level: "near" | "far"; bytes: number; texture: boolean; lastNear: number};
+
+/** A far skin on the GPU: its kind, its bytes, and the drawn frames since one of the kind was last in view. */
+export type FarSkin = {slug: string; bytes: number; idleFrames: number};
+
+/** A far skin's GPU copy may be let go once its kind has been out of view this many drawn frames (about half a minute). */
+export const FAR_SKIN_IDLE_FRAMES = 900;
+
+/**
+ * Which far skins' GPU copies to let go so the skins fit the ceiling again (the far levels themselves are never let
+ * go: the model and its picture stay loaded, and the renderer sends a skin again the frame its kind is next drawn):
+ * the kinds longest out of view first, never one seen in the last `FAR_SKIN_IDLE_FRAMES`, until the skins are a tenth
+ * under the ceiling (so the next few models in do not start it again). Pure.
+ */
+export function idleFarSkins(skins: FarSkin[], textureBytes: number, budget: ArkBudget, idleFrames = FAR_SKIN_IDLE_FRAMES): string[] {
+    const limit = budget.textureMB * 2 ** 20;
+    if (textureBytes <= limit) return [];
+    const out: string[] = [];
+    let left = textureBytes;
+    for (const skin of [...skins].filter((s) => s.idleFrames >= idleFrames && s.bytes > 0).sort((a, b) => b.idleFrames - a.idleFrames || a.slug.localeCompare(b.slug))) {
+        if (left <= limit * 0.9) break;
+        out.push(skin.slug);
+        left -= skin.bytes;
+    }
+    return out;
+}
 
 /**
  * Which near levels to let go so the models fit the budget: the ones drawn near least recently first, never one

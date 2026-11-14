@@ -559,7 +559,7 @@ for (const deviceName of devices) {
                         try {
                             const st = window.__arkHandle?.stats?.();
                             const rt = window.__arkHandle?.runtime?.();
-                            if (st) scene = {renderScale: st.streaming?.renderScale ?? null, renderDistance: st.streaming?.renderDistance ?? null, memory: st.streaming?.memory ?? null, chunks: st.streaming?.chunks ?? null, models: st.modelsLoaded, near: st.near, far: st.far, placeholders: st.placeholders, rigs: st.rigsLoaded, rigMB: Math.round((st.rigBytes ?? 0) / 2 ** 20), closeUps: st.closeUpSkins, fur: st.furShells, modelTexMB: rt?.modelTextureMB ?? null, evicted: rt?.evicted ?? null, pending: rt?.pending ?? null, shaders: rt?.shaders ?? null, power: rt?.powerTier ?? null, hold: rt?.shaderHold ?? null, display: rt?.display ?? null, tripsHeld: st.tripsHeld ?? null};
+                            if (st) scene = {renderScale: st.streaming?.renderScale ?? null, renderDistance: st.streaming?.renderDistance ?? null, memory: st.streaming?.memory ?? null, chunks: st.streaming?.chunks ?? null, models: st.modelsLoaded, near: st.near, far: st.far, placeholders: st.placeholders, rigs: st.rigsLoaded, rigMB: Math.round((st.rigBytes ?? 0) / 2 ** 20), closeUps: st.closeUpSkins, fur: st.furShells, modelTexMB: rt?.modelTextureMB ?? null, evicted: rt?.evicted ?? null, farSkins: rt?.farSkins ?? null, pending: rt?.pending ?? null, shaders: rt?.shaders ?? null, power: rt?.powerTier ?? null, hold: rt?.shaderHold ?? null, display: rt?.display ?? null, tripsHeld: st.tripsHeld ?? null};
                         } catch {
                             // No handle (a build without the mount hook).
                         }

@@ -141,6 +141,15 @@ export class ShaderHold {
         });
     }
 
+    /**
+     * This material's draws are never left out (a species' mesh, held back by `prepare` until its shader had compiled
+     * or its limit passed: the scene keeps the animal a level down meanwhile and expects it drawn the frame it is
+     * shown).
+     */
+    allow(material: object) {
+        this.release(material, this.holding.get(material));
+    }
+
     /** After a frame is drawn: the objects whose shaders are to be compiled now (each once). */
     take(): object[] {
         this.releasedNow = 0;

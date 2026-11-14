@@ -16,7 +16,7 @@
 import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
-import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
+import {arkBudget, arkCaps, GRASS_BUILD, idleFarSkins, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
 import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {refreshPeriod, RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
 import {ShaderHold, type HoldRenderer, type ShaderHoldStats} from "@/ark-scene/runtime/hold";
@@ -55,6 +55,8 @@ export type ArkRuntimeStats = {
     budget: {textureMB: number; geometryMB: number};
     /** Near levels let go over the budget, this session. */
     evicted: number;
+    /** Far skins whose GPU copy is let go now (their kinds out of view), their MB, and how many were let go this session. */
+    farSkins: {released: number; releasedMB: number; everReleased: number};
     /** Levels still coming. */
     pending: number;
     /** Frames drawn and display frames skipped by the governor. */
@@ -192,6 +194,10 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
+    /** Far skins whose GPU copy was let go (kind → its bytes), and kinds whose skin is left alone until a time (s). */
+    const farReleased = new Map<string, number>();
+    const farKeptUntil = new Map<string, number>();
+    let farSkinsReleased = 0;
     /** The kinds the view draws as models now, the far models dropped from the queue, and the up-front list (kept). */
     let inView: string[] = [];
     /** The first view's models are all in (then the tier's full number of kinds is fetched). */
@@ -290,8 +296,36 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         // its first three seconds. Neither has been drawn near yet, so each was let go the moment it arrived whenever
         // the budget's check fell on that frame, and loaded again.)
         const used = (level: {slug: string; at: number}) => (level.slug === ctx.library.urgent || now - level.at < 3 ? now : lastNear.get(level.slug) ?? 0);
-        const levels = ctx.library.levels().flatMap((level) => [
-            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: used(level)},
+        const loaded = ctx.library.levels();
+        // The far skins first (`budgets.ts` idleFarSkins): one per species seen, never let go, and with the real Ark's
+        // 951 species they alone pass the ceiling. A far skin whose kind has been out of view half a minute gives up
+        // its GPU copy (the model and its picture stay; the renderer sends the skin again when the kind is next
+        // drawn). One the renderer has sent again since (it was drawn after all: a herd's figures, a resting kind's)
+        // is counted again, and left alone for five minutes.
+        const onGpu = (slug: string) => {
+            const map = ctx.library.get(slug)?.far?.map;
+            return Boolean(map && (ctx.renderer.properties.get(map) as {__webglTexture?: unknown}).__webglTexture);
+        };
+        farReleased.forEach((_, slug) => {
+            if (!onGpu(slug)) return;
+            farReleased.delete(slug);
+            farKeptUntil.set(slug, now + 300);
+        });
+        const skinBytes = (level: {slug: string; level: string; texture: number}) => (level.level === "far" && farReleased.has(level.slug) ? 0 : level.texture);
+        let skins = 0;
+        for (const level of loaded) skins += skinBytes(level);
+        const idle = loaded.filter((level) => level.level === "far" && !farReleased.has(level.slug) && level.slug !== ctx.library.urgent && now - level.at > 3 && (farKeptUntil.get(level.slug) ?? 0) < now).map((level) => ({slug: level.slug, bytes: level.texture, idleFrames: planner.sinceInView(level.slug)}));
+        for (const slug of idleFarSkins(idle, skins, budget)) {
+            const model = ctx.library.get(slug);
+            const map = model?.far?.map;
+            // (Never a model whose one skin is both levels, nor the placeholder's.)
+            if (!model || !map || model.placeholder || model.near?.map === map) continue;
+            map.dispose();
+            farReleased.set(slug, loaded.find((level) => level.slug === slug && level.level === "far")?.texture ?? 0);
+            farSkinsReleased++;
+        }
+        const levels = loaded.flatMap((level) => [
+            {slug: level.slug, level: level.level, bytes: skinBytes(level), texture: true, lastNear: used(level)},
             {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: used(level)}
         ]);
         for (const drop of overBudget(levels, budget, now)) {
@@ -607,6 +641,8 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             if (target) ctx.renderer.setRenderTarget(target);
             void warmShaders(ctx.renderer, mesh, ctx.camera as Camera, 3000, ctx.scene).then(() => {
                 mesh.layers.mask = layers;
+                // (Shown now, ready or past its limit: the shader hold never leaves it out again, `hold.ts`.)
+                if (hold) for (const material of materials) hold.allow(material);
             });
             ctx.renderer.setRenderTarget(previous);
         },
@@ -699,6 +735,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     modelGeometryMB: Math.round(levels.reduce((sum, level) => sum + level.geometry, 0) / 2 ** 20 * 10) / 10,
                     budget: {textureMB: budget.textureMB, geometryMB: budget.geometryMB},
                     evicted,
+                    farSkins: {released: farReleased.size, releasedMB: Math.round(Array.from(farReleased.values()).reduce((sum, bytes) => sum + bytes, 0) / 2 ** 20 * 10) / 10, everReleased: farSkinsReleased},
                     pending: ctx.library.pending,
                     drawn,
                     skipped,
