@@ -18,8 +18,10 @@ import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
 import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide} from "@/ark-scene/runtime/camera";
-import {RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
+import {refreshPeriod, RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
+import {ShaderHold, type HoldRenderer, type ShaderHoldStats} from "@/ark-scene/runtime/hold";
 import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
+import {HeapFloor} from "@/ark-scene/runtime/memory";
 import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-scene/runtime/power";
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
@@ -70,6 +72,10 @@ export type ArkRuntimeStats = {
     viewKinds: number;
     /** Queued far models dropped because the camera left their kinds. */
     pruned: number;
+    /** New materials kept out of the frame while their shaders compiled (`runtime/hold.ts`); null in a recording. */
+    shaderHold: ShaderHoldStats | null;
+    /** The display's refresh rate as measured (Hz; 0: not yet), and the ms between frames a fast display is drawn at (0: every refresh). */
+    display: {hz: number; capMs: number};
 };
 
 /** What the runtime adds to the scene's handle. */
@@ -169,6 +175,14 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     let busyUntil = 0;
     let asked = 0;
     let lastBudget = 0;
+    /** The gaps between the last animation-frame callbacks (ms): the display's refresh period is read off them. */
+    const stampGaps = new Float64Array(60);
+    let stampAt = 0;
+    let stampCount = 0;
+    let lastStamp = 0;
+    /** The JS heap's floor over the last half minute (what a collection leaves), read a few times a second. */
+    const heapFloor = new HeapFloor(30);
+    let heapReadAt = -Infinity;
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
@@ -217,6 +231,21 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         } catch {
             // Uploaded at its first draw instead.
         }
+    };
+
+    // No frame waits on a new shader (`hold.ts`): a mesh with a material never drawn is left out until its program is
+    // compiled in parallel. Not in a recording (it waits for everything, and its pictures must not change).
+    const hold = recording ? null : new ShaderHold(ctx.renderer as unknown as HoldRenderer, ctx.scene, 3000);
+    hold?.install();
+    const compileHeld = () => {
+        if (!hold) return;
+        const objects = hold.take();
+        if (!objects.length) return;
+        const target = ctx.renderTarget();
+        const previous = ctx.renderer.getRenderTarget();
+        if (target) ctx.renderer.setRenderTarget(target);
+        for (const object of objects) void warmShaders(ctx.renderer, object as Object3D, ctx.camera as Camera, 3000, ctx.scene);
+        ctx.renderer.setRenderTarget(previous);
     };
 
     // Input: anything the reader does brings the full frame rate back at once.
@@ -274,8 +303,23 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          * The top of each display frame: "draw" (go on), "skip" (this display frame is not drawn: idle cap, the shaders
          * still compiling) or "sleep" (hidden: stop asking for frames; `onWake` asks again).
          */
-        frame(nowMs: number): "draw" | "skip" | "sleep" {
-            if (!governor.visible()) return "sleep";
+        frame(nowMs: number, stamp = 0): "draw" | "skip" | "sleep" {
+            if (!governor.visible()) {
+                lastStamp = 0;
+                return "sleep";
+            }
+            // The display's refresh period, from the animation frames' own times (every callback, drawn or skipped):
+            // read again every 30 callbacks, so a display that changes its rate (a window moved to another screen, a
+            // phone's low power mode) is followed. A recording is the director's: every frame.
+            if (stamp > 0 && !recording) {
+                if (lastStamp > 0) {
+                    stampGaps[stampAt] = stamp - lastStamp;
+                    stampAt = (stampAt + 1) % stampGaps.length;
+                    stampCount = Math.min(stampCount + 1, stampGaps.length);
+                    if (stampAt % 30 === 0) governor.setDisplayInterval(refreshPeriod(stampGaps, stampCount));
+                }
+                lastStamp = stamp;
+            }
             // The rest of the mount, before the first frame: its steps a frame at a time (each its own task), as many as
             // fit in MOUNT_SLICE_MS; a step returns false to go on in the next frame.
             if (mountSteps.length) {
@@ -550,6 +594,17 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             ctx.renderer.setRenderTarget(previous);
         },
 
+        /**
+         * The memory check's reading (`streaming/tiers.ts` stepRenderScale): the JS heap's floor over the last half
+         * minute (not one reading: that is mostly garbage a collection is about to take), and the animal models' GPU
+         * bytes (MB), which have their own ceiling (`enforceBudget`) and are no reason to pull the render distance in.
+         */
+        memoryReading(): {heapFloorMB: number | null; modelGpuMB: number} {
+            let bytes = 0;
+            for (const level of ctx.library.levels()) bytes += level.texture + level.geometry;
+            return {heapFloorMB: heapFloor.floor(performance.now() / 1000), modelGpuMB: bytes / 2 ** 20};
+        },
+
         /** The tier changed: skins loaded from now on are fitted to it; its new shader variants are compiled before the next draw. */
         tierChanged(tier: QualityTier) {
             ctx.library.fit = fitFor(tier);
@@ -562,6 +617,16 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             drawn++;
             lastDrawn = nowMs;
             if (firstFrameMs === null) firstFrameMs = Math.round(nowMs - started);
+            if (now - heapReadAt >= 0.25) {
+                heapReadAt = now;
+                const used = (performance as Performance & {memory?: {usedJSHeapSize?: number}}).memory?.usedJSHeapSize;
+                if (typeof used === "number") heapFloor.sample(now, used / 2 ** 20);
+            }
+            // From the first frame on, a new material's shader is compiled beside the frames, never inside one.
+            if (hold) {
+                hold.active = true;
+                compileHeld();
+            }
             // Far models for what the view draws as models (the tier's nearest kinds in view), nearest first; the rest
             // when the camera comes to them. A few times a second is enough.
             if (drawn % 8 === 1) {
@@ -623,7 +688,9 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     collisions,
                     viewComplete: viewIsComplete(),
                     viewKinds: inView.length,
-                    pruned
+                    pruned,
+                    shaderHold: hold ? hold.stats() : null,
+                    display: {hz: Math.round(1000 / (refreshPeriod(stampGaps, stampCount) || Infinity)), capMs: Math.round(governor.displayInterval() * 10) / 10}
                 };
             }
         } satisfies ArkRuntimeHandle,
@@ -632,6 +699,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             for (const name of inputs) ctx.canvas.removeEventListener(name, onInput, {capture: true});
             stopPower();
             wheel.dispose();
+            hold?.dispose();
             ui?.dispose();
             governor.onWake = () => undefined;
             governor.onPower = () => undefined;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {CALM_AFTER, DROWSY_AFTER, powerCap, POWER_DEFAULT, RenderGovernor} from "@/ark-scene/runtime/governor";
+import {CALM_AFTER, displayCap, refreshPeriod, DROWSY_AFTER, powerCap, POWER_DEFAULT, RenderGovernor} from "@/ark-scene/runtime/governor";
 import {lowBattery, parsePowerMessage, parseVisibleMessage, pressureThermal} from "@/ark-scene/runtime/power";
 
 const idle = {busy: false, reducedMotion: false};
@@ -117,4 +117,70 @@ test("runtime governor: the visibility hook fires on every flip, the app's ark:v
     governor.setHostVisible(true);
     governor.setDocumentHidden(false);
     assert.deepEqual(seen, [false, true], "only real flips: hidden by the app, shown again once both allow");
+});
+
+test("runtime governor: a fast display is drawn every other refresh, a 60 to 90 Hz one at its own rate", () => {
+    assert.equal(displayCap(1000 / 60), 0);
+    assert.equal(displayCap(1000 / 90), 0);
+    assert.ok(Math.abs(displayCap(1000 / 120) - 1000 / 60) < 1e-9);
+    assert.ok(Math.abs(displayCap(1000 / 144) - 1000 / 72) < 1e-9);
+    assert.ok(Math.abs(displayCap(1000 / 240) - 1000 / 60) < 1e-9);
+    assert.equal(displayCap(0), 0);
+
+    // Frames drawn over a second of refreshes, each drawn frame taking `workMs` of the main thread.
+    const drawnIn = (hz: number, workMs: number, measured = true) => {
+        const governor = new RenderGovernor(0);
+        governor.setActivity({busy: true, reducedMotion: false});
+        if (measured) governor.setDisplayInterval(1000 / hz);
+        const refresh = 1000 / hz;
+        const drawn: number[] = [];
+        let busyUntil = 0;
+        for (let k = 1; k <= hz; k++) {
+            const t = k * refresh;
+            // (A frame still being worked on misses this refresh.)
+            if (t < busyUntil - 0.01) continue;
+            if (!governor.shouldDraw(t, drawn[drawn.length - 1] ?? 0)) continue;
+            drawn.push(t);
+            busyUntil = t + workMs;
+        }
+        const gaps = drawn.slice(1).map((t, i) => Math.round((t - drawn[i]) * 10) / 10);
+        return {frames: drawn.length, gaps: Array.from(new Set(gaps))};
+    };
+    assert.deepEqual(drawnIn(60, 6), {frames: 60, gaps: [16.7]});
+    assert.deepEqual(drawnIn(90, 6), {frames: 90, gaps: [11.1]});
+    // 120 Hz: a steady 60, whether a frame takes 4, 9 or 12 ms (uncapped, 9 ms frames alternate 8.3 and 16.7 ms).
+    assert.deepEqual(drawnIn(120, 4), {frames: 60, gaps: [16.7]});
+    assert.deepEqual(drawnIn(120, 12), {frames: 60, gaps: [16.7]});
+    assert.deepEqual(drawnIn(144, 5), {frames: 72, gaps: [13.9]});
+    assert.deepEqual(drawnIn(240, 5), {frames: 60, gaps: [16.7]});
+    // Not measured yet: every refresh, as before.
+    assert.equal(drawnIn(120, 4, false).frames, 120);
+
+    // The idle and pacing caps still hold on a fast display (30 a second: every fourth refresh at 120 Hz).
+    const calm = new RenderGovernor(0);
+    calm.setActivity(idle);
+    calm.setDisplayInterval(1000 / 120);
+    const t = (CALM_AFTER + 1) * 1000;
+    assert.equal(calm.shouldDraw(t, t - 16.7), false);
+    assert.equal(calm.shouldDraw(t, t - 25), false);
+    assert.equal(calm.shouldDraw(t, t - 33.3), true);
+    // Full rate on a fast display still counts as the display's own rate (the tier check and the pacing measure it).
+    const full = new RenderGovernor(0);
+    full.setDisplayInterval(1000 / 120);
+    assert.equal(full.uncapped(1), true);
+    assert.equal(full.drawsFull(1), true);
+});
+
+test("runtime governor: the display's refresh period is read off the animation frames, late ones and all", () => {
+    const gaps = (list: number[]) => refreshPeriod(Float64Array.from(list), list.length);
+    assert.equal(gaps(Array.from({length: 10}, () => 8.3)), 0, "too few to say");
+    assert.ok(Math.abs(gaps(Array.from({length: 40}, () => 16.6)) - 1000 / 60) < 1e-9);
+    assert.ok(Math.abs(gaps(Array.from({length: 40}, (_, i) => 8.3 + (i % 3) * 0.1)) - 1000 / 120) < 1e-9);
+    // A busy main thread: two in three callbacks a refresh or two late; a third on time is enough.
+    assert.ok(Math.abs(gaps(Array.from({length: 60}, (_, i) => (i % 3 === 0 ? 8.4 : i % 3 === 1 ? 16.7 : 25))) - 1000 / 120) < 1e-9);
+    // Every frame takes two refreshes of a 120 Hz display: it reads as 60 Hz, and is drawn as such (no cap needed).
+    assert.ok(Math.abs(gaps(Array.from({length: 60}, () => 16.7)) - 1000 / 60) < 1e-9);
+    assert.ok(Math.abs(gaps(Array.from({length: 40}, () => 11.1)) - 1000 / 90) < 1e-9);
+    // A throttled page (a 30 Hz low power mode): its own rate.
+    assert.ok(Math.abs(gaps(Array.from({length: 40}, () => 33.3)) - 33.3) < 1e-9);
 });

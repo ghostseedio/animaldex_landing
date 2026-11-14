@@ -17,6 +17,14 @@
  * - the grass is built for the tier (`grass`), not for the highest one.
  *
  * Every drop is graceful: a level of detail, never an animal.
+ *
+ * The far levels are never let go, and there is one per species seen: with the real Ark's 951 species their skins
+ * alone pass the ceiling on the medium and high tiers (256² each: ~0.35 MB, 333 MB for all) once a reader has roamed
+ * enough of the world (measured: 902 species loaded four minutes into a desktop session of zooming in and out). Past
+ * that point no near level could ever bring the total back under, and every one was let go three seconds after it
+ * was last drawn (measured: 5 a second, 801 in 160 s), so coming back to an animal cost its whole first visit again.
+ * So the near levels keep a floor (`nearFloorMB`): while they hold less than that, none is let go for the skins'
+ * sake, whatever the far levels hold.
  */
 
 import type {QualityTier} from "@/ark-scene/post";
@@ -27,6 +35,8 @@ export type ArkBudget = {
     /** The animal models' skins and meshes, MB (GPU, estimated by `memory.ts`). */
     textureMB: number;
     geometryMB: number;
+    /** The near levels' skins are never let go below this many MB of them, whatever the far levels hold. */
+    nearFloorMB: number;
     /** Longest edge of a skin, per level, after loading. */
     nearTexture: number;
     farTexture: number;
@@ -34,9 +44,9 @@ export type ArkBudget = {
 };
 
 export const ARK_BUDGETS: Record<QualityTier, ArkBudget> = {
-    high: {textureMB: 320, geometryMB: 96, nearTexture: 512, farTexture: 256, caps: {near: 150, nearSpecies: 60, models: 150}},
-    medium: {textureMB: 128, geometryMB: 48, nearTexture: 512, farTexture: 256, caps: {near: 90, nearSpecies: 32, models: 120}},
-    low: {textureMB: 64, geometryMB: 24, nearTexture: 256, farTexture: 128, caps: {near: 40, nearSpecies: 24, models: 80}}
+    high: {textureMB: 320, geometryMB: 96, nearFloorMB: 96, nearTexture: 512, farTexture: 256, caps: {near: 150, nearSpecies: 60, models: 150}},
+    medium: {textureMB: 128, geometryMB: 48, nearFloorMB: 48, nearTexture: 512, farTexture: 256, caps: {near: 90, nearSpecies: 32, models: 120}},
+    low: {textureMB: 64, geometryMB: 24, nearFloorMB: 16, nearTexture: 256, farTexture: 128, caps: {near: 40, nearSpecies: 24, models: 80}}
 };
 
 /** Grass tufts built per tier (the tier's own count; a low device builds medium's so the lighter view can be turned off). */
@@ -66,7 +76,8 @@ export type LevelUse = {slug: string; level: "near" | "far"; bytes: number; text
 
 /**
  * Which near levels to let go so the models fit the budget: the ones drawn near least recently first, never one
- * drawn near within `keepSeconds`, never a far level (the animal would vanish). Pure: the library applies it.
+ * drawn near within `keepSeconds`, never a far level (the animal would vanish), and for the skins' sake never below
+ * the near levels' floor (`nearFloorMB`: the far levels alone may be over the ceiling). Pure: the library applies it.
  */
 export function overBudget(levels: LevelUse[], budget: ArkBudget, now: number, keepSeconds = 3): Array<{slug: string; level: "near"}> {
     let textures = 0;
@@ -89,11 +100,19 @@ export function overBudget(levels: LevelUse[], budget: ArkBudget, now: number, k
     }
     const order = Array.from(bySpecies.entries()).filter(([, row]) => now - row.lastNear > keepSeconds).sort((a, b) => a[1].lastNear - b[1].lastNear || a[0].localeCompare(b[0]));
     const out: Array<{slug: string; level: "near"}> = [];
+    const nearFloor = (budget.nearFloorMB ?? 0) * 2 ** 20;
+    let nearTextures = 0;
+    bySpecies.forEach((row) => {
+        nearTextures += row.texture;
+    });
     for (const [slug, row] of order) {
         if (textures <= textureLimit && geometry <= geometryLimit) break;
+        // (Over for the skins only, and the near skins at their floor: letting this one go would not be the last.)
+        if (geometry <= geometryLimit && nearTextures - row.texture < nearFloor) continue;
         out.push({slug, level: "near"});
         textures -= row.texture;
         geometry -= row.geometry;
+        nearTextures -= row.texture;
     }
     return out;
 }

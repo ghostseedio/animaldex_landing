@@ -59,7 +59,7 @@ test("runtime budgets: tiers shrink, skins are fitted, the grass is built for th
 test("runtime budgets: over the ceiling, the near levels drawn near least recently go first; never far, never recent", () => {
     const mb = 2 ** 20;
     const level = (slug: string, which: "near" | "far", bytes: number, lastNear: number, texture = true): LevelUse => ({slug, level: which, bytes, texture, lastNear});
-    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100};
+    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100, nearFloorMB: 0};
     const levels = [
         level("fox", "near", 4 * mb, 99),
         level("fox", "far", 1 * mb, 0),
@@ -73,6 +73,25 @@ test("runtime budgets: over the ceiling, the near levels drawn near least recent
     assert.deepEqual(overBudget(levels.map((l) => ({...l, lastNear: 99})), budget, 100), []);
     // Under the budget: nothing.
     assert.deepEqual(overBudget(levels, {...budget, textureMB: 64}, 100), []);
+});
+
+test("runtime budgets: the far skins alone over the ceiling never empty the near levels (their floor)", () => {
+    const mb = 2 ** 20;
+    const level = (slug: string, which: "near" | "far", bytes: number, lastNear: number, texture = true): LevelUse => ({slug, level: which, bytes, texture, lastNear});
+    // 40 species' far skins hold 14 MB against a ceiling of 10: no near level can bring the total under.
+    const far = Array.from({length: 40}, (_, i) => level(`kind-${i}`, "far", 0.35 * mb, 0));
+    const near = [level("fox", "near", 2 * mb, 90), level("deer", "near", 2 * mb, 50), level("seal", "near", 2 * mb, 10), level("crab", "near", 2 * mb, 5)];
+    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100, nearFloorMB: 0};
+    // No floor (as it was): every near level not drawn in the last 3 s goes, again and again.
+    assert.deepEqual(overBudget([...far, ...near], budget, 100).map((d) => d.slug), ["crab", "seal", "deer", "fox"]);
+    // A floor of 5 MB: the two drawn longest ago go (8 MB of near skins down to 4 would be under it: one stays over).
+    assert.deepEqual(overBudget([...far, ...near], {...budget, nearFloorMB: 5}, 100).map((d) => d.slug), ["crab"]);
+    // At the floor: none, however far over the far levels are.
+    assert.deepEqual(overBudget([...far, ...near], {...budget, nearFloorMB: 8}, 100), []);
+    // The meshes' own ceiling still lets near levels go, floor or no floor.
+    const heavy = near.map((l) => level(l.slug, "near", 30 * mb, l.lastNear, false));
+    assert.deepEqual(overBudget([...far, ...near, ...heavy], {...budget, nearFloorMB: 8}, 100).map((d) => d.slug), ["crab"]);
+    for (const tier of ["high", "medium", "low"] as const) assert.ok(ARK_BUDGETS[tier].nearFloorMB > 0 && ARK_BUDGETS[tier].nearFloorMB <= ARK_BUDGETS[tier].textureMB / 2, tier);
 });
 
 test("runtime memory: geometry and texture bytes as the GPU holds them", () => {
