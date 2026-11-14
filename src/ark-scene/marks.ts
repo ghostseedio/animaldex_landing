@@ -5,7 +5,7 @@
  * draw call each.
  */
 
-import {ARK_TIME} from "@/ark-scene/glsl";
+import {ARK_DAYLIGHT, ARK_TIME, MARKER_LIGHT_GLSL} from "@/ark-scene/glsl";
 import {
     CanvasTexture,
     Color,
@@ -253,8 +253,13 @@ export class FindDots {
     private readonly matrix = new Matrix4();
 
     constructor() {
+        // Lit by the hour (`glsl.ts` MARKER_LIGHT_GLSL: day-bright cream dots were the brightest things in a night
+        // picture), toned as the lit world is on every tier (on the low tier, drawn straight to the screen, they
+        // skipped the tone curve), and hazed by the fog as the ground under them is (they hung bright in a fog).
         this.material = new ShaderMaterial({
             vertexShader: `
+#include <common>
+#include <fog_pars_vertex>
 attribute vec2 dotState;
 uniform float worldPerPixel;
 varying vec2 vUv;
@@ -262,28 +267,38 @@ varying float vAlpha;
 void main() {
     vUv = uv;
     vAlpha = dotState.y;
-    vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-    centre.xy += position.xy * dotState.x * worldPerPixel * -centre.z;
-    gl_Position = projectionMatrix * centre;
+    vec4 mvPosition = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    mvPosition.xy += position.xy * dotState.x * worldPerPixel * -mvPosition.z;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
 }`,
             fragmentShader: `
+#include <common>
+#include <fog_pars_fragment>
 varying vec2 vUv;
 varying float vAlpha;
 uniform float arkTime;
+uniform float daylight;
+${MARKER_LIGHT_GLSL}
 void main() {
     float r = length(vUv - 0.5) * 2.0;
     float core = 1.0 - smoothstep(0.38, 0.62, r);
     float rim = (1.0 - smoothstep(0.62, 1.0, r)) * (1.0 - core);
     float breathe = 0.85 + 0.15 * sin(arkTime * 1.8);
-    vec3 colour = mix(vec3(0.16, 0.13, 0.08), vec3(1.0, 0.96, 0.86), core);
-    float a = (core * 0.92 + rim * 0.35) * vAlpha * breathe;
+    // (The core a third over white before the tone curve, the rim a little heavier: under the curve a plain cream
+    // core was within a tenth of sunlit sand, grass and snow, and the dot was lost by day.)
+    vec3 colour = mix(vec3(0.16, 0.13, 0.08), vec3(1.34, 1.29, 1.15), core) * arkMarkerLight(daylight);
+    float a = (core * 0.92 + rim * 0.5) * vAlpha * breathe;
     if (a < 0.01) discard;
     gl_FragColor = vec4(colour, a);
+    #include <tonemapping_fragment>
     #include <colorspace_fragment>
+    #include <fog_fragment>
 }`,
-            uniforms: {worldPerPixel: {value: 0.01}, arkTime: ARK_TIME},
+            uniforms: {...UniformsUtils.merge([UniformsLib.fog]), worldPerPixel: {value: 0.01}, arkTime: ARK_TIME, daylight: ARK_DAYLIGHT},
             transparent: true,
-            depthWrite: false
+            depthWrite: false,
+            fog: true
         });
         this.mesh = new InstancedMesh(new PlaneGeometry(1, 1), this.material, 1);
         this.mesh.frustumCulled = false;
