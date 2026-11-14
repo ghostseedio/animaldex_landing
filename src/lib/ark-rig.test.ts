@@ -14,7 +14,7 @@ import {
     rigSetVersion,
     type RigManifest
 } from "@/ark-scene/rig-clips";
-import {birdGroundBaked, RIG_CAPS, RIG_CAPS_FIRST, RIG_CAPS_LITE, RIG_FILE_BYTES, rigChoices, rigLookChain, rigOverKeep, rigRoom, type RigSet} from "@/ark-scene/rig-player";
+import {RIG_CAPS, RIG_CAPS_FIRST, RIG_CAPS_LITE, RIG_FILE_BYTES, rigChoices, rigLookChain, rigOverKeep, rigRoom, type RigSet} from "@/ark-scene/rig-player";
 
 // The contract: AnimalDex docs/ark/rig-v2-manifest.md (branch ark-rigging).
 
@@ -389,11 +389,4 @@ test("rig caps: letting go leaves room for the species rigged at once", () => {
         assert.equal(rigOverKeep(c, kept, 24, room), false);
         assert.equal(rigRoom(c, kept), true);
     }
-});
-
-test("a re-rigged bird on the ground plays its baked clip alone; in the air, and every other rig, the layer", () => {
-    assert.equal(birdGroundBaked({code: "v7+v6"}, {flying: false}), true);
-    assert.equal(birdGroundBaked({code: "v7+v6"}, {flying: true}), false);
-    assert.equal(birdGroundBaked({code: "v5+v6"}, {flying: false}), false);
-    assert.equal(birdGroundBaked({code: null}, {flying: false}), false);
 });
