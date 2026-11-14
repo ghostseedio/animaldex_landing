@@ -12,6 +12,9 @@
  */
 
 import table from "@/ark-scene/behaviours.json";
+import {modelBase} from "@/ark-scene/grounding/base";
+import {unriggedWalk} from "@/ark-scene/locomotion/paces";
+import {arkBody} from "@/ark-scene/stats";
 
 export const ARK_BEHAVIOURS = ["rest", "wander", "forage", "graze", "drink", "perch", "soar", "fly", "swim", "dive", "bask", "burrow", "climb", "groom", "hide", "flee", "flock", "visit_flowers", "circle_light", "stalk"] as const;
 export type ArkBehaviour = (typeof ARK_BEHAVIOURS)[number];
@@ -152,18 +155,34 @@ export const PACE_CAP = 1.3;
 export const PACE_FLOOR = 0.8;
 
 /**
- * Ground speed in body lengths a second (visual only). With a walk clip: its clip's own pace (the rig set the scene
- * reads, v2 where it lists the species: `walkPace`), so the walk plays at its own rate (each trip then goes 0.85-1.2
- * of it). Without one: the speed stat's gentle curve (docs/ark-next.md stats §2), held to what its fastest ground clip
- * carries. The same for every viewer, rig drawn or not.
+ * Ground speed in body lengths a second (visual only). With a rig: its `walkPace` (`scripts/ark-walk-pace.mts`: the
+ * animal's own walk for a rig the locomotion layer draws, lane B4; its clip's own pace for a rig that moves by a baked
+ * clip), each trip then 0.85-1.2 of it. Without one: the same rule on its plan's usual legs (`unriggedWalk`), else the
+ * speed stat's gentle curve (docs/ark-next.md stats §2), held to what its fastest ground clip carries. The same for
+ * every viewer, rig drawn or not.
  */
 export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
     // (2026-11-11: held under 1.5 times a v1 walk's pace, then the v2 set's walks went up 4-15 times as fast: walkers
     // walked at 0.4 of their clips, in slow motion. The clip's pace is now the walk.)
-    if (profile.walkPace) return Math.max(profile.walkPace, 0.04);
+    if (profile.walkPace) return Math.max(profile.walkPace, 0.01);
+    // (Lane B4: one with no rig, a raccoon, a crocodile, a snail, by the same rule as the rigged at its species' length,
+    // `unriggedWalk`: its stat's pace in body lengths walked a three-metre crocodile at 4 m/s and a snail at 13 cm/s.)
+    const natural = unriggedPace(profile);
+    if (natural !== null) return natural;
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;
+}
+
+const UNRIGGED = new Map<string, number | null>();
+function unriggedPace(profile: ArkBehaviourProfile): number | null {
+    let pace = UNRIGGED.get(profile.slug);
+    if (pace === undefined) {
+        const plan = modelBase(profile.slug)?.plan ?? null;
+        pace = profile.gait ? null : unriggedWalk(profile.slug, plan, arkBody({model_slug: profile.slug}, plan).display, profile.speed);
+        UNRIGGED.set(profile.slug, pace);
+    }
+    return pace;
 }
 
 /**

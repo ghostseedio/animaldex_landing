@@ -17,7 +17,9 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {modelBase} from "@/ark-scene/grounding/base";
 import {hipShare} from "@/ark-scene/locomotion/flee";
+import {BURST_MEAN, gaitRhythm} from "@/ark-scene/locomotion/paces";
 import {G} from "@/ark-scene/locomotion/gaits";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -697,7 +699,14 @@ async function mountIsland(el: HTMLElement) {
                                     // paces). The baked clip's ground speed (`rig.ratio`) is the reach-limited clip's: a
                                     // bullfrog at its natural walk read 7 times it (the integrator's default view, 2026-11-12).
                                     const prof = e.sched?.profile;
-                                    const own = prof?.walkPace ? (e.rig.now?.name === "run" && prof.runPace ? prof.runPace : prof.walkPace) * Math.max(at.length, 0.01) : 0;
+                                    // (Lane B4: on a run leg of its schedule too, whatever clip the pace picked: the paces are the
+                                    // animal's own now, not the clips', so a trot may be under its walk clip's pace.)
+                                    const running = e.rig.now?.name === "run" || (e.sched?.pose as {beat?: string} | null | undefined)?.beat === "run";
+                                    let own = prof?.walkPace ? (running && prof.runPace ? prof.runPace : prof.walkPace) * Math.max(at.length, 0.01) : 0;
+                                    // (A burst mover in a burst, a mouse, a small lizard, a rabbit, goes at its bursts' pace:
+                                    // its walk's over its share moving, `gaitRhythm`.)
+                                    const rhythm = gaitRhythm(e.animal.model_slug, modelBase(e.animal.model_slug)?.plan, at.length);
+                                    if (!running && rhythm.share < 1 && speed > own * 1.2) own /= rhythm.share * BURST_MEAN;
                                     const ratio = layered && own > 0 ? speed / own : e.rig.ratio;
                                     tr.ratios.push(ratio);
                                     if (!layered) (tr.ratiosBaked ??= []).push(ratio);

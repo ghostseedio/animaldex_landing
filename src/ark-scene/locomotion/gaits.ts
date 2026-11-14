@@ -157,6 +157,22 @@ export function landGait(slug: string): LandGait | null {
     return LAND[slug] ?? null;
 }
 
+/**
+ * A four-legged mammal's gait family, from its name (the catalogue's slugs): what `gaitLadder` reads, and what its
+ * natural paces follow (`paces.ts`). Null: the default ladder (walk, trot, gallop).
+ */
+export type GaitFamily = "ambler" | "pacer" | "bear" | "bounder" | "cat" | "dog" | "hoofed";
+export function gaitFamily(slug: string): GaitFamily | null {
+    if (AMBLERS.test(slug)) return "ambler";
+    if (PACERS.test(slug)) return "pacer";
+    if (BEARS.test(slug)) return "bear";
+    if (BOUNDERS.test(slug)) return "bounder";
+    if (CATS.test(slug)) return "cat";
+    if (DOGS.test(slug)) return "dog";
+    if (HOOFED.test(slug)) return "hoofed";
+    return null;
+}
+
 /** Columnar legs (elephants): nearly straight at every gait, no give, shorter strides. */
 export function columnarLegs(slug: string): boolean {
     return AMBLERS.test(slug);
