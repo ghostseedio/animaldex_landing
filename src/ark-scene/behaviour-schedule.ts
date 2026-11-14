@@ -1762,11 +1762,17 @@ function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     if (raw.to && !raw.follow && !sleepy && overland && tooFarOnFoot(world, profile, animal, raw.to)) {
         const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
         const random = rng(hashString(`${animal.id}#near#${slot}`));
-        const near = rangeSpot(world, profile, animal, centre, Math.min(homeRadius(profile, animal), 2), random);
         // (Anything tied to its place, a drink, its burrow, it can't do here: it wanders its home ground.)
         // (Lane B4: what it does anywhere, it does there: it feeds, rests, grooms, or basks where it is. At their own
         // pace the tortoises' basking spots were all out of a slot's reach, and they only ever wandered.)
         const here = ROAMING.has(raw.doing) || raw.doing === "bask" ? raw.doing : "wander";
+        // (The merged tree, lane B3's rule that a rest has its own spot through its spell: where it rests instead is the
+        // spell's own spot too, not each slot's. A tree frog whose resting rock was 12 m off, further than it walks in a
+        // slot, "rested" by walking to a new spot within 2 m of home every 80 s, 29 of its 55 resting slots on the real
+        // snapshot, half of each on the way.)
+        const need = here === "rest" || here === "groom" || here === "bask" ? needAt(profile, animal, activity, start, hoursAt) : null;
+        const held = need === "rest" || need === "bask" ? rng(hashString(`${animal.id}#near#${need}#${spellOf(animal.id, need, start)}`)) : null;
+        const near = rangeSpot(world, profile, animal, centre, Math.min(homeRadius(profile, animal), 2), held ?? random);
         return {doing: here, to: near, mode: "ground", stay: stayBeats(here, random, null)};
     }
     if (raw.to || raw.follow) return raw;

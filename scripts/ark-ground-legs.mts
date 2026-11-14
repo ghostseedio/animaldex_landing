@@ -31,6 +31,7 @@
 import {readFileSync, writeFileSync} from "node:fs";
 import {setArkWorld} from "../src/ark-scene/world.ts";
 
+const RESTING = new Set(["rest", "groom", "bask"]);
 const args = process.argv.slice(2);
 const value = (name: string) => {
     const i = args.indexOf(name);
@@ -265,7 +266,7 @@ for (const s of subjects) {
     if (!t) {
         const hip = hipOf(slug, s.length);
         const walk = bodyLengthsPerSecond(p) * L;
-        t = {slug, plan: s.plan, sitting: Boolean(rigs[slug]?.pose), animals: 0, length: s.length, hip, walk, run: walk * runFactor(p), top: sprintPace({plan: s.plan, slug, length: s.length, speedStat: p.speed}), speedStat: p.speed, move: p.move, social: p.social, legs: [], steps: [], turns: [], pauses: 0, slots: 0, movingSlots: 0, kin: {samples: 0, moving: 0, backwards: 0, pivots: 0, starts: [], stops: [], speeds: [], slip: [], standTurn: [], moveTurn: [], radius: [], accel: [], lockstep: 0, follow: 0, nearest: [], along: [], across: []}};
+        t = {slug, plan: s.plan, sitting: Boolean(rigs[slug]?.pose), animals: 0, length: s.length, hip, walk, run: walk * runFactor(p), top: sprintPace({plan: s.plan, slug, length: s.length, speedStat: p.speed}), speedStat: p.speed, move: p.move, social: p.social, legs: [], steps: [], turns: [], pauses: 0, slots: 0, movingSlots: 0, restPairs: 0, restPairWalks: 0, kin: {samples: 0, moving: 0, backwards: 0, pivots: 0, starts: [], wayStarts: [] as number[], stepStarts: [] as number[], stops: [], speeds: [], slip: [], standTurn: [], moveTurn: [], radius: [], accel: [], lockstep: 0, follow: 0, nearest: [], along: [], across: []}};
         tallies.set(slug, t);
     }
     t.animals++;
@@ -274,6 +275,7 @@ for (const s of subjects) {
         for (let at = from; at < from + WINDOW; at += 20) {
             const trip = tripOf(own, s.animal.activity, at);
             if (trip === seen) continue;
+            const last: Trip | null = seen;
             seen = trip;
             t!.slots++;
             if (trace) console.log(`${slug} ${s.animal.id.slice(0, 8)} slot ${trip.slot} ${trip.doing} mode ${trip.mode}${trip.running ? " running" : ""} recipe ${trip.recipe ?? "-"} from ${trip.from.x.toFixed(1)},${trip.from.z.toFixed(1)} (ground ${heightAt(trip.from.x, trip.from.z).toFixed(2)}) to ${trip.to.x.toFixed(1)},${trip.to.z.toFixed(1)} (ground ${heightAt(trip.to.x, trip.to.z).toFixed(2)}), ${Math.hypot(trip.to.x - trip.from.x, trip.to.z - trip.from.z).toFixed(1)} m straight, travel ${(trip.arrive - trip.start).toFixed(1)} s: ${trip.legs.map((leg) => `${leg.mode}/${leg.beat} ${leg.length.toFixed(2)} m ${leg.seconds.toFixed(1)} s${leg.seconds > 0 && leg.length > 0 ? ` (${(leg.length / leg.seconds / Math.max(t!.walk, 1e-9)).toFixed(2)}x)` : ""}`).join(" | ")}`);
@@ -291,6 +293,12 @@ for (const s of subjects) {
                 t!.legs.push({doing: trip.doing, beat: leg.beat, length: leg.length, seconds: leg.seconds, speed: leg.length / (leg.seconds - ramps), points: (leg.path ?? []).length, ...stats});
             }
             if (groundLegs) t!.movingSlots++;
+            // (The merged tree: a rest that follows a rest in the slot before, and whether it walked somewhere for it: a rest
+            // keeps its place through its spell, lane B3 needs.)
+            if (last && last.slot === trip.slot - 1 && RESTING.has(last.doing) && RESTING.has(trip.doing)) {
+                t!.restPairs++;
+                if (trip.legs.some((leg) => leg.mode === "ground" && leg.length > Math.max(L * 0.5, 0.1))) t!.restPairWalks++;
+            }
             let before = {x: trip.to.x, z: trip.to.z};
             trip.stay.forEach((b) => {
                 const dist = Math.hypot(b.x - before.x, b.z - before.z);
@@ -325,20 +333,21 @@ for (const s of subjects) {
         // 10 Hz through the window's moves (each trip's way there and two seconds on, and each step of its stay):
         // starts, stops, turns, backwards, and the group.
         const dt = 0.1;
-        const spans: Array<[number, number]> = [];
+        // (Each span: from, to, and whether it is a trip's way, not a step of its stay.)
+        const spans: Array<[number, number, boolean]> = [];
         for (let at = from; at < from + WINDOW; ) {
             const trip = tripOf(own, s.animal.activity, at);
             const moves = trip.legs.some((leg) => leg.mode === "ground" || leg.mode === "shadow");
-            if (moves) spans.push([Math.max(trip.start, from), Math.min(trip.arrive + 2, trip.end, from + WINDOW)]);
+            if (moves) spans.push([Math.max(trip.start, from), Math.min(trip.arrive + 2, trip.end, from + WINDOW), true]);
             let before = {x: trip.to.x, z: trip.to.z};
             for (const b of trip.stay) {
-                if (Math.hypot(b.x - before.x, b.z - before.z) > 1e-4) spans.push([trip.arrive + b.at - 0.3, Math.min(trip.arrive + b.at + (b.dur ?? 1.2) + 0.5, trip.end)]);
+                if (Math.hypot(b.x - before.x, b.z - before.z) > 1e-4) spans.push([trip.arrive + b.at - 0.3, Math.min(trip.arrive + b.at + (b.dur ?? 1.2) + 0.5, trip.end), false]);
                 before = {x: b.x, z: b.z};
             }
             at = trip.end + 0.001;
         }
         const k = t!.kin;
-        for (const [a, b] of spans) {
+        for (const [a, b, way] of spans) {
             let prev: {x: number; z: number; yaw: number; v: number; before: number; moving: boolean; aloft: boolean; run: number} | null = null;
             let lead: {x: number; z: number} | null = null;
             for (let epoch = a; epoch <= b; epoch += dt) {
@@ -378,7 +387,10 @@ for (const s of subjects) {
                                 if (radius < 0.5 && now.v > 0.5 * t!.walk) k.pivots++;
                             }
                             // The speed it has in its second tenth of a second on the move (the first is a part of one).
-                            if (now.run === 2) k.starts.push(now.v);
+                            if (now.run === 2) {
+                                k.starts.push(now.v);
+                                (way ? k.wayStarts : k.stepStarts).push(now.v);
+                            }
                             k.accel.push(Math.abs(now.v - prev.v) / dt);
                             k.speeds.push(now.v);
                             if (leadNow && lead) {
@@ -484,6 +496,14 @@ function rowOf(t: Tally) {
         pivots: r3(t.kin.pivots / Math.max(t.kin.moving, 1)),
         starts: t.kin.starts.length,
         startShare: r3(median(t.kin.starts) / Math.max(quantile(t.kin.speeds, 0.75) || t.walk, 1e-6)),
+        // (The merged tree: the same on its ways alone and on the steps of its stays alone, over its walk's pace: a stay's
+        // step is short and starts harder, and a day in feeding bouts has more of them.)
+        restPairs: t.restPairs,
+        restPairWalks: t.restPairWalks,
+        wayStarts: t.kin.wayStarts.length,
+        stepStarts: t.kin.stepStarts.length,
+        wayStartShare: r3(median(t.kin.wayStarts) / Math.max(t.walk, 1e-6)),
+        stepStartShare: r3(median(t.kin.stepStarts) / Math.max(t.walk, 1e-6)),
         stopShare: r3(median(t.kin.stops) / Math.max(quantile(t.kin.speeds, 0.75) || t.walk, 1e-6)),
         slipP90: r3(quantile(t.kin.slip, 0.9)),
         accelP99: r2(quantile(t.kin.accel, 0.99)),
@@ -546,7 +566,14 @@ if (out) writeFileSync(out, JSON.stringify(rows, null, 1));
         // Ground legs hurried past 1.3 of its pace (squeezed into the slot), over every leg; and the species with over a tenth of theirs so.
         hurried_legs_share: legged.reduce((n, r) => n + r.hurried * r.legs, 0) / Math.max(legged.reduce((n, r) => n + r.legs, 0), 1),
         hurried_species: legged.filter((r) => r.hurried > 0.1).length,
-        straight_legs_share: median(legged.map((r) => r.straightLegs))
+        straight_legs_share: median(legged.map((r) => r.straightLegs)),
+        // Of the rests that follow a rest in the slot before, those that walk somewhere for it (over every animal on foot).
+        rest_in_a_row_walks_share: rows.reduce((n, r) => n + r.restPairWalks, 0) / Math.max(rows.reduce((n, r) => n + r.restPairs, 0), 1),
+        rest_in_a_row_walks_species: rows.filter((r) => r.restPairs >= 5 && r.restPairWalks > 0.2 * r.restPairs).length,
+        // Its start on a way and on a step of its stay, apart (animals over a metre long): over its walk's pace.
+        way_start_share_big_median: median(legged.filter((r) => r.length > 1 && r.wayStarts >= 3).map((r) => r.wayStartShare).filter(Number.isFinite)),
+        step_start_share_big_median: median(legged.filter((r) => r.length > 1 && r.stepStarts >= 3).map((r) => r.stepStartShare).filter(Number.isFinite)),
+        step_starts_share_big: legged.filter((r) => r.length > 1).reduce((n, r) => n + r.stepStarts, 0) / Math.max(legged.filter((r) => r.length > 1).reduce((n, r) => n + r.starts, 0), 1)
     };
     console.log(`metrics ${JSON.stringify(Object.fromEntries(Object.entries(metrics).map(([k, v]) => [k, r3(v)])))}`);
     const lane = value("--record");
