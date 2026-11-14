@@ -457,6 +457,160 @@
           "before": 0.92
         }
       ]
+    },
+    {
+      "name": "b6-water",
+      "lane": "B6 life in the water (behaviours pass; validator Ark, v2 island, 40 species and their schools)",
+      "requires": [
+        "scripts/ark-water-audit.mts",
+        "src/ark-scene/water-life.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "command": "npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-water-audit.mts --ci --record b6-water > \"$ARK_MOTION_METRICS_DIR/b6-water.log\"",
+      "output": "$ARK_MOTION_METRICS_DIR/b6-water.jsonl",
+      "metrics": [
+        {
+          "id": "b6_water_only_dry_samples",
+          "label": "Water-only animals sampled out of the water",
+          "path": "water_only_dry_samples",
+          "max": 0,
+          "before": 0
+        },
+        {
+          "id": "b6_band_above_surface_samples",
+          "label": "Animals in a depth band with the schedule's height over the surface",
+          "path": "band_above_surface_samples",
+          "max": 0,
+          "before": 0
+        },
+        {
+          "id": "b6_cruiser_swim_share_least",
+          "label": "Never-stop swimmers (tunas, mackerel, pilchards, sharks, mantas): least share of the waking day swimming",
+          "path": "cruiser_swim_share_least",
+          "min": 0.85,
+          "before": 0.081
+        },
+        {
+          "id": "b6_cruiser_speed_over_cruise_median",
+          "label": "Never-stop swimmers: speed while swimming over L2's cruise for their size, median",
+          "path": "cruiser_speed_over_cruise_median",
+          "min": 0.55,
+          "max": 1.1,
+          "before": 1.062
+        },
+        {
+          "id": "b6_cruiser_turn_rate_p95_most",
+          "label": "Never-stop swimmers and whales: fastest turning, 95th percentile over 2 s (rad/s)",
+          "path": "cruiser_turn_rate_p95_most",
+          "max": 0.68,
+          "before": 0.553
+        },
+        {
+          "id": "b6_swimmer_speed_over_burst_most",
+          "label": "Any swimmer: 95th percentile speed over its burst (must stay under it)",
+          "path": "swimmer_speed_over_burst_most",
+          "max": 1,
+          "before": 0.794
+        },
+        {
+          "id": "b6_rover_swim_share_median",
+          "label": "Roving fish (perch, tetras): share of the waking day swimming, median",
+          "path": "rover_swim_share_median",
+          "min": 0.68,
+          "before": 0.689
+        },
+        {
+          "id": "b6_ambush_swim_share_most",
+          "label": "Ambush fish (pike, groupers): most share of the waking day swimming (they lie in wait)",
+          "path": "ambush_swim_share_most",
+          "max": 0.16,
+          "before": 0.077
+        },
+        {
+          "id": "b6_school_nnd_most",
+          "label": "Never-stop schools, awake: widest nearest-neighbour distance (body lengths; 5.0, the 20 cm pilchard, whose spacing has a floor in metres)",
+          "path": "school_nnd_most",
+          "max": 5.6,
+          "before": 5.504
+        },
+        {
+          "id": "b6_school_alignment_moving_least",
+          "label": "Never-stop schools: least alignment of headings while moving (1 all one way)",
+          "path": "school_alignment_moving_least",
+          "min": 0.89,
+          "before": 0.864
+        },
+        {
+          "id": "b6_school_moving_share_least",
+          "label": "Never-stop schools: least share of moments most of the school is moving",
+          "path": "school_moving_share_least",
+          "min": 0.9,
+          "before": 0.156
+        },
+        {
+          "id": "b6_dolphin_breath_gap",
+          "label": "The spinner dolphin: usual gap between two breaths (s)",
+          "path": "dolphin_breath_gap",
+          "min": 18,
+          "max": 46,
+          "before": 230
+        },
+        {
+          "id": "b6_cetaceans_never_up",
+          "label": "Whales and dolphins never seen up for air",
+          "path": "cetaceans_never_up",
+          "max": 0,
+          "before": 0
+        },
+        {
+          "id": "b6_seal_crossings_per_day_most",
+          "label": "Seals and sea lions: most shore crossings a day (12 sampled windows: one crossing seen is 12)",
+          "path": "seal_crossings_per_day_most",
+          "max": 72,
+          "before": 168
+        },
+        {
+          "id": "b6_croc_water_share_least",
+          "label": "Crocodilians: least share of the day in the water (0.37: one whose map den is ashore sleeps there; 0.72 while the side rule also moved sleepers)",
+          "path": "croc_water_share_least",
+          "min": 0.3,
+          "before": 0.088
+        },
+        {
+          "id": "b6_croc_crossings_per_day_most",
+          "label": "Crocodilians: most shore crossings a day",
+          "path": "croc_crossings_per_day_most",
+          "max": 240,
+          "before": 324
+        },
+        {
+          "id": "b6_hippo_water_share",
+          "label": "The common hippopotamus: share of the day in the water",
+          "path": "hippo_water_share",
+          "min": 0.46
+        },
+        {
+          "id": "b6_shore_crossings_per_day_most",
+          "label": "Any animal of the water but the bed's walkers: most shore crossings a day",
+          "path": "shore_crossings_per_day_most",
+          "max": 582.0,
+          "before": 468
+        },
+        {
+          "id": "b6_pilchard_swim_share",
+          "label": "The european pilchard (a school of twelve): share of the waking day swimming",
+          "path": "pilchard_swim_share",
+          "min": 0.9,
+          "before": 0.713
+        },
+        {
+          "id": "b6_perch_swim_share",
+          "label": "The european perch: share of the waking day swimming",
+          "path": "perch_swim_share",
+          "min": 0.34,
+          "before": 0.323
+        }
+      ]
     }
   ]
 }
