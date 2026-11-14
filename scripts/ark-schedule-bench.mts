@@ -8,7 +8,7 @@
  *   node --expose-gc --max-semi-space-size=256 --import tsx scripts/ark-schedule-bench.mts <snapshot.json>
  *       --islands <routing.json> [--island wild|town] [--part build,trips,alone,frame,hunt,heap,poses] [--world v2]
  *       [--classes-out <file>] [--classes-in <file>] [--json <file>] [--poses-out <file>] [--windows 12]
- *       [--alone-every 6] [--cpuprofile <file>]
+ *       [--alone-every 6] [--class <name>] [--passes 2] [--cpuprofile <file>]
  *
  * Parts:
  *   build   the behaviour world in 6 ms slices as the scene builds it (the places, then the walk grid), then the
@@ -329,6 +329,9 @@ if (!classesIn) {
     if (classesOut) writeFileSync(classesOut, JSON.stringify(classes));
 }
 for (const s of onIt) s.cls = classes[s.animal.id] ?? "unclassed";
+// `--class <part of a class's name>`: only those animals are measured from here on (all of them are wired).
+const onlyClass = value("--class");
+if (onlyClass) for (let i = onIt.length - 1; i >= 0; i--) if (!onIt[i].cls.includes(onlyClass)) onIt.splice(i, 1);
 const classNames = [...new Set(onIt.map((s) => s.cls))].sort();
 console.log(`classes: ${classNames.map((name) => `${name} ${onIt.filter((s) => s.cls === name).length}`).join(", ")}`);
 
@@ -368,7 +371,10 @@ if (session) await new Promise<void>((resolve) => session!.post("Profiler.enable
 
 // MARK: Trips
 
-if (parts.has("trips")) {
+// `--passes 2`: the trips part run that many times and the last one reported: by then the ground under every way
+// has been asked for once (the map's height lattice fills in as it is asked, `world-sampler.ts`), so what is timed is
+// the schedule's own work, not the map's first answer for each place.
+for (let pass = Number(value("--passes") ?? "1"); parts.has("trips") && pass >= 1; pass--) {
     const cold = new Map<string, number[]>();
     const warm = new Map<string, number[]>();
     const next = new Map<string, number[]>();
@@ -398,6 +404,7 @@ if (parts.has("trips")) {
             }
         }
     }
+    if (pass > 1) continue;
     console.log(`trips: ${windows} hours of a day, wall ${(performance.now() - t0).toFixed(0)} ms, cpu ${(cpuNow() - c0).toFixed(0)} ms (cold passes' cpu ${coldCpu.toFixed(0)} ms); load ${load()}`);
     out.trips = {
         coldCpu,

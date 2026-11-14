@@ -2923,7 +2923,7 @@ const SOAR_WINDOW = 30;
  * over its home's ground; none for a hawker, which keeps its lift over whatever is under it), how far it keeps over
  * what is under it, its pace (m/s), and what it shows as.
  */
-type Soar = {at: (time: number) => SoarAt; floor: number; clear: number | null; pace: number; doing: ArkDoing; beat: ArkBeat};
+type Soar = {at: (time: number) => SoarAt; floor: number; clear: number | null; pace: number; doing: ArkDoing; beat: ArkBeat; /** Its heights by the second, as worked out so far (`soarSeen`). */ seen?: Map<number, number>};
 /**
  * The time on the wing a slot is in, or null (lane B5): a bout starts, for its way's share of them, with so many slots
  * of it (`aloftSlots`): up from its station in the first, on its track in the next ones, down to its new station in the
@@ -2951,10 +2951,26 @@ function soaring(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         const low = Math.max((wayHeight(profile) ?? 4) * 0.4, animal.length * 4);
         const spec = {cruise: paces.cruise, reach: Math.min(homeRadius(profile, key), rangeCap(profile, key)), low, high: low * 3};
         const patch = openPatch(world, profile, key);
-        return {at: (time) => hawkAt(seed, patch, spec, time, member), floor: -1e6, clear: null, pace: paces.cruise * 0.8, doing: "fly", beat: "fly"};
+        return {at: (time) => hawkAt(seed, patch, spec, time, member), floor: -1e6, clear: null, pace: paces.cruise * 0.8, doing: "fly", beat: "fly", seen: soarSeen(world, animal, `hawk|${seed}|${patch.x}|${patch.z}|${spec.cruise}|${spec.reach}|${spec.low}|${spec.high}|${member}`)};
     }
     const spec = soarSpecOf(paces, aloft.span, rangeCap(profile, key), SOAR_WIND);
-    return {at: (time) => soarAt(seed, home, spec, time, member), floor: topAt(world, key.home.x, key.home.z) + SOAR_FLOOR, clear: SOAR_CLEAR, pace: spec.circle, doing: "soar", beat: "glide"};
+    const floor = topAt(world, key.home.x, key.home.z) + SOAR_FLOOR;
+    return {at: (time) => soarAt(seed, home, spec, time, member), floor, clear: SOAR_CLEAR, pace: spec.circle, doing: "soar", beat: "glide", seen: soarSeen(world, animal, `soar|${seed}|${home.x}|${home.z}|${spec.circle}|${spec.glide}|${spec.radius}|${spec.reach}|${spec.span}|${member}|${floor}`)};
+}
+/**
+ * A soar's heights by the second, kept from one asking to the next (lane BP perf). A track is one function of time
+ * for as long as what it is made from stays the same (`track`: its seed, its home or patch, its paces and reach, its
+ * place in its kettle, its floor), and each second's height before the easing is that function's alone. A slot's
+ * heights look half a minute either way, so three askings in four were for seconds worked out already, seven places
+ * under it each: a soarer's next trip took up to 40 ms on a desktop core against 3 on main. The same numbers, kept;
+ * dropped with the schedules, when what the track is made from changes, and past ten minutes' worth.
+ */
+const SOAR_SEEN = new WeakMap<ScheduleAnimal, {generation: number; world: ScheduleWorld; track: string; seen: Map<number, number>}>();
+function soarSeen(world: ScheduleWorld, animal: ScheduleAnimal, track: string): Map<number, number> {
+    let own = SOAR_SEEN.get(animal);
+    if (!own || own.generation !== generation || own.world !== world || own.track !== track) SOAR_SEEN.set(animal, (own = {generation, world, track, seen: new Map()}));
+    else if (own.seen.size > 600) own.seen.clear();
+    return own.seen;
 }
 /**
  * Where an aerial feeder's sweeps are centred (lane B5): its home, or the most open of eight spots a sweep's length
@@ -3009,7 +3025,14 @@ function soarFloorAt(world: ScheduleWorld, x: number, z: number): number {
  */
 function soarHeights(world: ScheduleWorld, soar: Soar, from: number, seconds: number): Float32Array {
     const all = new Float32Array(seconds + 1 + 2 * SOAR_WINDOW);
+    const seen = soar.seen;
     for (let i = 0; i < all.length; i++) {
+        // (A second worked out before, by this slot's neighbour or its goal: `soarSeen`.)
+        const known = seen?.get(from - SOAR_WINDOW + i);
+        if (known !== undefined) {
+            all[i] = known;
+            continue;
+        }
         const at = soar.at(from - SOAR_WINDOW + i);
         // (What is under it there and through the half second either side, every sixth of a second, about 2 m of its
         // way: the crowns are known on a 2 m grid, and a tall crown's tip between two seconds' places is under it too.)
@@ -3019,7 +3042,9 @@ function soarHeights(world: ScheduleWorld, soar: Soar, from: number, seconds: nu
             const near = soar.at(from - SOAR_WINDOW + i + k / 6);
             under = Math.max(under, soarFloorAt(world, near.x, near.z));
         }
-        all[i] = Math.max(soar.floor + at.lift, under + (soar.clear ?? at.lift));
+        const height = Math.max(soar.floor + at.lift, under + (soar.clear ?? at.lift));
+        seen?.set(from - SOAR_WINDOW + i, height);
+        all[i] = height;
     }
     for (let i = 1; i < all.length; i++) all[i] = Math.max(all[i], all[i - 1] - SOAR_VERTICAL);
     for (let i = all.length - 2; i >= 0; i--) all[i] = Math.max(all[i], all[i + 1] - SOAR_VERTICAL);
