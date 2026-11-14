@@ -122,8 +122,40 @@ export function sexLook(id: string, slug: string): SexLook {
 
 // MARK: Seasons and hours
 
-function monthAt(epochSeconds: number): number {
+/** Ark days in an Ark year (`voyage_ark_day`: 1 Ark year = 14 real days), as the props' nests and breeding seasons count them. */
+const ARK_YEAR_DAYS = 365;
+/** The scene's Ark day at a world time (`props/index.ts` arkDayNow, the same for every viewer), or null: none wired. */
+let arkDayOf: ((epochSeconds: number) => number | null) | null = null;
+
+/**
+ * Its seasons run on the Ark's year (lane ark-activities, 2026-11-14), as the props' nests already do: the scene wires
+ * the Ark day here, so a species' stored mating and nesting months come round every Ark year (14 real days), each month
+ * about 28 real hours, rather than once a calendar year (on the calendar month, 31 of the 128 species with stored mating
+ * months were ever in season in November). Without it (tests, scripts), the calendar month.
+ */
+export function setRecipeArkDay(source: ((epochSeconds: number) => number | null) | null) {
+    arkDayOf = source;
+    forgetRecipes();
+}
+
+/** The Ark year's day (0–365) at a world time, or null without a wired Ark day. */
+function arkYearDayAt(epochSeconds: number): number | null {
+    const day = arkDayOf ? arkDayOf(epochSeconds) : null;
+    return typeof day === "number" && Number.isFinite(day) ? ((day % ARK_YEAR_DAYS) + ARK_YEAR_DAYS) % ARK_YEAR_DAYS : null;
+}
+
+/** The month (1–12) the seasons read at a world time: the Ark year's (northern months, as `props/presence.ts`), else the calendar's. */
+export function seasonMonthAt(epochSeconds: number): number {
+    const day = arkYearDayAt(epochSeconds);
+    if (day !== null) return Math.min(Math.floor(day / (ARK_YEAR_DAYS / 12)) + 1, 12);
     return new Date(epochSeconds * 1000).getUTCMonth() + 1;
+}
+
+/** Which year of seasons a world time is in (the Ark year's count, else the calendar's), and the day of that year a month starts. */
+function seasonYearAt(epochSeconds: number): number {
+    const day = arkDayOf ? arkDayOf(epochSeconds) : null;
+    if (typeof day === "number" && Number.isFinite(day)) return Math.floor(day / ARK_YEAR_DAYS);
+    return new Date(epochSeconds * 1000).getUTCFullYear();
 }
 
 /** How much a season-bound template runs now: in season 1; out of it 0; no season stored, a little all year. */
@@ -131,7 +163,7 @@ export function seasonFactor(species: SpeciesRecipes, season: Template["season"]
     if (!season) return 1;
     const months = season === "mating" ? species.mating : species.nesting;
     if (!months.length) return season === "nesting" ? 0 : 0.25;
-    return months.includes(monthAt(epochSeconds)) ? 1 : 0;
+    return months.includes(seasonMonthAt(epochSeconds)) ? 1 : 0;
 }
 
 function hourOk(template: Template, hours: number): boolean {
@@ -432,9 +464,9 @@ onHamletSwitch(() => {
 
 /** The year of a nesting season (the season's first month's year), so a nest site is new each season. */
 function nestYear(species: SpeciesRecipes, epochSeconds: number): number {
-    const date = new Date(epochSeconds * 1000);
     const first = species.nesting.length ? species.nesting[0] : 3;
-    return date.getUTCMonth() + 1 >= first ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
+    const year = seasonYearAt(epochSeconds);
+    return seasonMonthAt(epochSeconds) >= first ? year : year - 1;
 }
 
 /**
@@ -481,11 +513,17 @@ export const NEST_BUILD_DAYS = 5;
 export function nestStageAt(slug: string, epochSeconds: number): number {
     const species = speciesRecipes(slug);
     if (!species.nest || !species.nesting.length) return 0;
-    const date = new Date(epochSeconds * 1000);
-    const month = date.getUTCMonth() + 1;
+    const month = seasonMonthAt(epochSeconds);
     if (!species.nesting.includes(month)) return 0;
-    // Days since the season's first day (the months run in order, wrapping the year).
+    // Days since the season's first day (the months run in order, wrapping the year): on the Ark year, Ark days.
     const first = species.nesting[0];
+    const arkDay = arkYearDayAt(epochSeconds);
+    if (arkDay !== null) {
+        const start = (first - 1) * (ARK_YEAR_DAYS / 12);
+        const days = (((arkDay - start) % ARK_YEAR_DAYS) + ARK_YEAR_DAYS) % ARK_YEAR_DAYS;
+        return Math.min(Math.max(days / NEST_BUILD_DAYS, 0), 1);
+    }
+    const date = new Date(epochSeconds * 1000);
     const year = month >= first ? date.getUTCFullYear() : date.getUTCFullYear() - 1;
     const start = Date.UTC(year, first - 1, 1) / 1000;
     const days = (epochSeconds - start) / 86_400;
