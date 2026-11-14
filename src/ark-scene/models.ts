@@ -7,8 +7,16 @@
  *
  * `<base>/manifest.json` → `{models: {slug: version}}`, files at
  * `<base>/<slug>/<version>.near.glb | .far.glb | .ark.json`. A species not
- * in it, or whose files fail to load, is drawn as the neutral placeholder
- * figure (`placeholder.ts`, owner decision A13): never a broken model.
+ * in it, or whose files are not there or are not a model, is drawn as the
+ * neutral placeholder figure (`placeholder.ts`, owner decision A13): never a
+ * broken model.
+ *
+ * A file that only failed to arrive (the network, a busy bucket) is never
+ * answered with the placeholder: it is asked for again after a wait that
+ * grows, as long as the scene still wants it, and until then the animal is
+ * drawn as it was (its icon, or its far model). The manifest likewise: read
+ * again until it is in, the animals their icons meanwhile, not one clay
+ * figure for every species for the rest of the visit.
  *
  * The local development route also lists `fallback` species: those with
  * only the full talking model (`assets/<slug>.glb`, the g1 layout, read by
@@ -27,6 +35,7 @@ import {placeholderGeometry} from "@/ark-scene/placeholder";
 import {fittedSize} from "@/ark-scene/runtime/budgets";
 import {geometryBytes, textureBytes} from "@/ark-scene/runtime/memory";
 import {parseArkPack, type ArkPack} from "@/ark-scene/streaming/pack";
+import {arkExtent, finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 
 /** One file of a tier's far-model pack: its path beside the manifest and the kinds in it. */
 export type ArkPackPart = {file: string; kinds: string[]};
@@ -137,8 +146,19 @@ export class ModelLibrary {
     private active = 0;
     private disposed = false;
     private readonly abort = new AbortController();
+    /** Levels that failed to arrive: how many times in a row, and when they may be asked for again (`performance.now()`). */
+    private readonly retries = new Map<string, {count: number; until: number}>();
+    /** Levels whose file is not there or is not a model (never asked for again). */
+    private readonly lost = new Set<string>();
+    /** A near level that arrived before its far one: handed over right after it (the far file carries the body plan and the size). */
+    private readonly parked = new Map<string, {level: ModelLevel; apply: () => void}>();
     /** Called whenever a level finishes loading. */
     onLoad: (slug: string) => void = () => undefined;
+    /**
+     * The species the reader asked to see (selected and flown to): its levels load before everything else in the queue,
+     * past the gate and past the files already loading, so its model is in by the time the camera arrives.
+     */
+    urgent: string | null = null;
     /**
      * Runtime (`runtime/load.ts`): which queued level loads next (lower first); null keeps the order asked.
      * `fit`: the longest skin edge per level after loading (`runtime/budgets.ts`); null keeps the file's.
@@ -152,8 +172,10 @@ export class ModelLibrary {
     /** Runtime: put a skin on the GPU as its level is handed over (inside `drain`'s budget), not in the next frame's draw. */
     upload: ((map: Texture) => void) | null = null;
     private readonly staged: Array<() => void> = [];
+    /** How many at the head of `staged` are the chosen species' (handed over first, in their own order). */
+    private urgentStaged = 0;
     /** GPU bytes per loaded level (`runtime/memory.ts`'s estimate). */
-    private readonly levelBytes = new Map<string, {geometry: number; texture: number}>();
+    private readonly levelBytes = new Map<string, {geometry: number; texture: number; at: number}>();
     /** Part B: the tier whose far-model pack the starting view reads (set once, before the first far model is asked for). */
     private packTierName: string | null = null;
     /** The pack's parts (the starting view's first kinds, then the rest), fetched one after another; by kind. */
@@ -169,23 +191,38 @@ export class ModelLibrary {
     constructor(private readonly base: string, private concurrency = 3) {
         this.loader = new GLTFLoader();
         this.loader.setMeshoptDecoder(MeshoptDecoder);
-        this.requests++;
-        this.manifestReady = fetch(`${base.replace(/\/+$/, "")}/manifest.json`, {signal: this.abort.signal})
-            .then((response) => (response.ok ? response.json() : null))
-            .then((raw: unknown) => {
+        this.manifestReady = this.readManifest();
+    }
+
+    /**
+     * The manifest, read until it is in. A read that fails (the network, the bucket) is tried again after a wait that
+     * grows: an empty manifest would draw every species as the placeholder figure for the whole visit, where a moment
+     * later the models are there. Until it is in nothing is drawn as a model (the animals are their icons).
+     */
+    private async readManifest(): Promise<ArkManifest | null> {
+        for (let failures = 0; !this.disposed; ) {
+            this.requests++;
+            try {
+                const response = await fetch(`${this.base.replace(/\/+$/, "")}/manifest.json`, {signal: this.abort.signal});
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const raw: unknown = await response.json();
                 const row = raw && typeof raw === "object" ? raw as Record<string, unknown> : null;
-                const models = row?.models && typeof row.models === "object" ? row.models as Record<string, string> : {};
-                const fallback = row?.fallback && typeof row.fallback === "object" ? row.fallback as Record<string, string> : undefined;
-                const packs = row?.packs && typeof row.packs === "object" ? row.packs as ArkManifest["packs"] : undefined;
-                this.manifest = {models, fallback, packs, far_ark: row?.far_ark === true};
+                if (!row?.models || typeof row.models !== "object") throw new Error("no models");
+                const models = row.models as Record<string, string>;
+                const fallback = row.fallback && typeof row.fallback === "object" ? row.fallback as Record<string, string> : undefined;
+                const packs = row.packs && typeof row.packs === "object" ? row.packs as ArkManifest["packs"] : undefined;
+                this.manifest = {models, fallback, packs, far_ark: row.far_ark === true};
                 this.startPack();
                 this.pump();
                 return this.manifest;
-            })
-            .catch(() => {
-                this.manifest = {models: {}};
-                return this.manifest;
-            });
+            } catch (error) {
+                if (this.disposed) return null;
+                failures++;
+                console.warn("[ark] model manifest", error instanceof Error ? error.message : error, `(asked again in ${retrySeconds(failures)} s)`);
+                await new Promise((resolve) => setTimeout(resolve, retrySeconds(failures) * 1000));
+            }
+        }
+        return null;
     }
 
     ready(): Promise<ArkManifest | null> {
@@ -297,13 +334,14 @@ export class ModelLibrary {
      */
     drain(allows: () => boolean, ran: () => void) {
         while (this.staged.length && allows()) {
+            this.urgentStaged = Math.max(this.urgentStaged - 1, 0);
             this.staged.shift()!();
             ran();
         }
     }
 
-    /** Every loaded level's GPU bytes, for the budget (`runtime/budgets.ts`). */
-    levels(): Array<{slug: string; level: Wanted; geometry: number; texture: number}> {
+    /** Every loaded level's GPU bytes, for the budget (`runtime/budgets.ts`), and when it came in (s, `performance.now()`). */
+    levels(): Array<{slug: string; level: Wanted; geometry: number; texture: number; at: number}> {
         return Array.from(this.levelBytes.entries()).map(([key, bytes]) => {
             const [slug, level] = key.split("\u0000") as [string, Wanted];
             return {slug, level, ...bytes};
@@ -317,6 +355,8 @@ export class ModelLibrary {
     evict(slug: string, level: "near"): boolean {
         const model = this.models.get(slug);
         if (!model?.near || model.placeholder || !this.levelBytes.has(`${slug}\u0000${level}`) || model.near.geometry === model.far?.geometry) return false;
+        // (With no far file of its own the near mesh is drawn at every distance, sharing its skin: it stays.)
+        if (this.lost.has(`${slug}\u0000far`)) return false;
         disposeLevel(model.near);
         model.near = null;
         this.levelBytes.delete(`${slug}\u0000${level}`);
@@ -329,7 +369,10 @@ export class ModelLibrary {
         if (level === "near") this.request(slug, "far");
         const asked = this.requested.get(slug) ?? new Set<Wanted>();
         if (asked.has(level)) return;
-        if (this.gate && !this.gate(slug, level)) return;
+        // (One that failed to arrive waits its turn before it is asked for again.)
+        const failed = this.retries.get(`${slug}\u0000${level}`);
+        if (failed && performance.now() < failed.until) return;
+        if (this.gate && slug !== this.urgent && !this.gate(slug, level)) return;
         asked.add(level);
         if (level === "far" && this.farOrder.length < 600) this.farOrder.push(slug);
         this.requested.set(slug, asked);
@@ -339,16 +382,27 @@ export class ModelLibrary {
 
     private pump() {
         if (!this.manifest || this.disposed) return;
-        while (this.active < this.concurrency && this.queue.length) {
-            // The runtime's order (nearest in view first), else the order asked; ties keep the order asked.
-            let pick = 0;
-            if (this.priority) {
-                let best = Infinity;
-                for (let i = 0; i < this.queue.length; i++) {
-                    const rank = this.priority(this.queue[i].slug, this.queue[i].level);
-                    if (rank < best) {
-                        best = rank;
-                        pick = i;
+        while (this.queue.length) {
+            // The one the reader asked to see first (its far level, then its near one), past the files already loading
+            // (two more at once at most); then the runtime's order (nearest in view first), else the order asked; ties
+            // keep the order asked.
+            let pick = -1;
+            const urgent = this.urgent;
+            if (urgent !== null) {
+                pick = this.queue.findIndex((item) => item.slug === urgent && item.level === "far");
+                if (pick < 0) pick = this.queue.findIndex((item) => item.slug === urgent);
+            }
+            if (pick < 0 ? this.active >= this.concurrency : this.active >= this.concurrency + 2) break;
+            if (pick < 0) {
+                pick = 0;
+                if (this.priority) {
+                    let best = Infinity;
+                    for (let i = 0; i < this.queue.length; i++) {
+                        const rank = this.priority(this.queue[i].slug, this.queue[i].level);
+                        if (rank < best) {
+                            best = rank;
+                            pick = i;
+                        }
                     }
                 }
             }
@@ -356,11 +410,11 @@ export class ModelLibrary {
             if (!this.has(next.slug)) continue;
             this.active++;
             this.load(next.slug, next.level)
+                .then(() => {
+                    this.retries.delete(`${next.slug}\u0000${next.level}`);
+                })
                 .catch((error) => {
-                    if (this.disposed) return;
-                    console.warn(`[ark] ${next.slug} ${next.level}`, error instanceof Error ? error.message : error);
-                    // Files that don't load: the placeholder, never a broken model (or nothing).
-                    if (!this.models.get(next.slug)?.far) this.placeholder(next.slug);
+                    if (!this.disposed) this.failed(next.slug, next.level, error);
                 })
                 .finally(() => {
                     this.active--;
@@ -369,13 +423,77 @@ export class ModelLibrary {
         }
     }
 
+    /**
+     * A level that did not load. One that only failed to arrive (the network, the bucket busy) is asked for again when
+     * the scene next wants it, after a wait that grows (`retrySeconds`): until then the animal is drawn as it was (its
+     * icon, or its far model), never as the placeholder. One whose file is not there or is not a model is not asked for
+     * again: the other level stands in for it, and only a species with neither is the placeholder figure (A13).
+     */
+    private failed(slug: string, level: Wanted, error: unknown) {
+        const key = `${slug}\u0000${level}`;
+        const final = !worthAskingAgain(error);
+        console.warn(`[ark] ${slug} ${level}`, error instanceof Error ? error.message : error, final ? "" : "(asked again later)");
+        if (!final) {
+            const count = (this.retries.get(key)?.count ?? 0) + 1;
+            this.retries.set(key, {count, until: performance.now() + retrySeconds(count) * 1000});
+            this.requested.get(slug)?.delete(level);
+            return;
+        }
+        this.lost.add(key);
+        const model = this.models.get(slug);
+        if (level === "near") {
+            // (Its far level stands in close up; with no far level either, nothing of it can be drawn.)
+            if (!model?.far && this.lost.has(`${slug}\u0000far`)) this.placeholder(slug);
+            return;
+        }
+        const waiting = this.parked.get(slug);
+        if (waiting) {
+            // Its near level is in hand: drawn from that at every distance.
+            this.parked.delete(slug);
+            waiting.apply();
+        } else if (model?.near) this.standIn(model);
+        else if (this.lost.has(`${slug}\u0000near`)) this.placeholder(slug);
+        else this.request(slug, "near");
+    }
+
+    /** No far file: the near mesh at every distance (its own copy: each level's instances carry their own attributes). */
+    private standIn(model: SpeciesModel) {
+        if (model.far || !model.near) return;
+        model.far = {...model.near, geometry: model.near.geometry.clone()};
+        this.onLoad(model.slug);
+    }
+
     private url(slug: string, file: string): string {
         return `${this.base.replace(/\/+$/, "")}/${encodeURIComponent(slug)}/${file}`;
     }
 
     private async loadGltf(url: string, edge = 0): Promise<ModelLevel & {ark?: unknown}> {
         this.requests++;
-        return this.levelFrom(await this.loader.loadAsync(url), edge);
+        // (Fetched here, not by the loader: an answer that says the file is not there is told from one that never came.)
+        const response = await fetch(url, {signal: this.abort.signal});
+        if (!response.ok) throw new ModelFileError(`HTTP ${response.status}`, finalStatus(response.status));
+        const buffer = await response.arrayBuffer();
+        try {
+            const gltf = await this.loader.parseAsync(buffer, "");
+            return await this.levelFrom(gltf as unknown as {scene: import("three").Group; userData?: Record<string, unknown>}, edge);
+        } catch (error) {
+            throw new ModelFileError(error instanceof Error ? error.message : String(error), true);
+        }
+    }
+
+    /** A species' `ark.json`; null when the bucket has none or it does not parse. Throws when it only failed to arrive. */
+    private async readArkJson(url: string): Promise<unknown> {
+        const response = await fetch(url, {signal: this.abort.signal});
+        if (!response.ok) {
+            if (finalStatus(response.status)) return null;
+            throw new ModelFileError(`ark.json HTTP ${response.status}`, false);
+        }
+        const text = await response.text();
+        try {
+            return JSON.parse(text) as unknown;
+        } catch {
+            return null;
+        }
     }
 
     /** A level from a parsed glTF (a file, or a pack's entry); `ark` is the file's own `ark.json` when it carries one. */
@@ -410,19 +528,27 @@ export class ModelLibrary {
         return this.levelFrom(gltf as unknown as {scene: import("three").Group; userData?: Record<string, unknown>}, edge);
     }
 
-    private remember(slug: string, behaviour: TalkingBehaviour | null, level: ModelLevel): SpeciesModel {
+    /**
+     * `extent`: the model's own size from its `ark.json` (`arkExtent`), the same whichever level is in hand. Without
+     * it the size is measured on that level's mesh, and the far mesh has lost its thin parts (an insect's legs and
+     * feelers, a butterfly's tails): measured on it (the far level nearly always lands first), 57 of the 951 species
+     * aboard were drawn more than 10% too large at both levels, a daddy-long-legs 1.6 times, and true to size only on
+     * the visits where the near file happened to land first (2026-11-14).
+     */
+    private remember(slug: string, behaviour: TalkingBehaviour | null, level: ModelLevel, extent: {x: number; y: number; z: number} | null = null): SpeciesModel {
         let model = this.models.get(slug);
         if (!model) {
             const box = level.geometry.boundingBox!;
+            const size = extent ?? {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z};
             model = {
                 slug,
                 near: null,
                 far: null,
                 behaviour,
                 minY: box.min.y,
-                height: box.max.y - box.min.y,
-                length: Math.max(box.max.z - box.min.z, 0.05),
-                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, {x: box.max.x - box.min.x, y: box.max.y - box.min.y, z: box.max.z - box.min.z}), 0.05),
+                height: size.y,
+                length: Math.max(size.z, 0.05),
+                bodyLength: Math.max(bodyAxisExtent(slug, behaviour?.plan, size), 0.05),
                 facing: level.facing ?? 0
             };
             this.models.set(slug, model);
@@ -446,36 +572,61 @@ export class ModelLibrary {
                         json = far.ark ?? null;
                     } else {
                         this.requests++;
+                        // (Both or neither: an `ark.json` that only failed to arrive fails the level, which is asked for
+                        // again; taken as "none", the species had no body plan and no size of its own for the whole visit.)
                         const [level, file] = await Promise.all([
-                            this.loadGltf(this.url(slug, `${version}.far.glb`), edge),
-                            fetch(this.url(slug, `${version}.ark.json`), {signal: this.abort.signal}).then((response) => (response.ok ? response.json() : null)).catch(() => null)
+                            this.loadGltf(this.url(slug, `${version}.far.glb`), edge).then((value) => ({value, error: null}), (error: unknown) => ({value: null, error})),
+                            this.readArkJson(this.url(slug, `${version}.ark.json`)).then((value) => ({value, error: null}), (error: unknown) => ({value: null, error}))
                         ]);
-                        far = level;
-                        json = file;
+                        if (!level.value || file.error) {
+                            if (level.value) disposeLevel(level.value);
+                            throw level.error ?? file.error;
+                        }
+                        far = level.value;
+                        json = file.value;
                     }
                 }
                 const loaded: ModelLevel = far;
                 if (this.disposed) return disposeLevel(loaded);
                 const behaviour = (json && typeof json === "object" ? (json as {behaviour?: TalkingBehaviour}).behaviour : null) ?? null;
+                const extent = arkExtent(json);
                 this.hand(() => {
                     const far = loaded;
                     if (far.map) this.upload?.(far.map);
-                    this.remember(slug, behaviour, far).far = far;
+                    this.remember(slug, behaviour, far, extent).far = far;
                     this.count(slug, "far", far);
                     this.onLoad(slug);
-                });
+                    // Its near level, in before it: now.
+                    const waiting = this.parked.get(slug);
+                    if (waiting) {
+                        this.parked.delete(slug);
+                        waiting.apply();
+                    }
+                }, slug);
             } else {
                 const near = await this.loadGltf(this.url(slug, `${version}.near.glb`), this.fit?.near ?? 0);
                 if (this.disposed) return disposeLevel(near);
-                this.hand(() => {
+                const apply = () => {
                     if (near.map) this.upload?.(near.map);
                     // Asked again after it was let go: the newest copy wins, the older one goes.
                     const model = this.remember(slug, this.models.get(slug)?.behaviour ?? null, near);
                     if (model.near && model.near !== near) disposeLevel(model.near);
                     model.near = near;
                     this.count(slug, "near", near);
+                    // (No far file: this mesh at every distance.)
+                    if (!model.far && this.lost.has(`${slug}\u0000far`)) this.standIn(model);
                     this.onLoad(slug);
-                });
+                };
+                // The far level first, always: its file carries the species' body plan and the model's size (`ark.json`),
+                // which the scene reads when it first draws the species. A near level that arrives before it (the two load
+                // side by side, and the far one is two files) waits for it; before, the species then had no body plan for
+                // the whole visit (no plan's motion, its size measured along the wrong axis).
+                if (this.models.get(slug)?.far || this.lost.has(`${slug}\u0000far`)) this.hand(apply, slug);
+                else {
+                    const older = this.parked.get(slug);
+                    if (older) disposeLevel(older.level);
+                    this.parked.set(slug, {level: near, apply: () => this.hand(apply, slug)});
+                }
             }
             return;
         }
@@ -524,17 +675,26 @@ export class ModelLibrary {
         this.onLoad(slug);
     }
 
-    /** A finished level: to the scene now, or (paced) when `drain` has time for it. */
-    private hand(apply: () => void) {
+    /**
+     * A finished level: to the scene now, or (paced) when `drain` has time for it, in the order they finished; the
+     * chosen species' (`urgent`) ahead of the others waiting (on a slow phone a few are handed over a frame, and the
+     * one the reader flew to waited its turn behind the whole opening view's).
+     */
+    private hand(apply: () => void, slug?: string) {
         if (this.disposed) return;
-        if (this.paced) this.staged.push(() => {
+        if (!this.paced) {
+            apply();
+            return;
+        }
+        const staged = () => {
             if (!this.disposed) apply();
-        });
-        else apply();
+        };
+        if (slug !== undefined && slug === this.urgent) this.staged.splice(this.urgentStaged++, 0, staged);
+        else this.staged.push(staged);
     }
 
     private count(slug: string, level: Wanted, model: ModelLevel) {
-        this.levelBytes.set(`${slug}\u0000${level}`, {geometry: geometryBytes(model.geometry), texture: model.map ? textureBytes(model.map) : 0});
+        this.levelBytes.set(`${slug}\u0000${level}`, {geometry: geometryBytes(model.geometry), texture: model.map ? textureBytes(model.map) : 0, at: performance.now() / 1000});
     }
 
     /** The neutral figure for a species with no model (its own copy: each species has its own instances). */
@@ -561,7 +721,10 @@ export class ModelLibrary {
         this.disposed = true;
         this.abort.abort();
         this.staged.length = 0;
+        this.urgentStaged = 0;
         this.levelBytes.clear();
+        this.parked.forEach((waiting) => disposeLevel(waiting.level));
+        this.parked.clear();
         const textures = new Set<Texture>();
         const geometries = new Set<BufferGeometry>();
         this.models.forEach((model) => {
