@@ -55,8 +55,8 @@ export type ArkRuntimeStats = {
     budget: {textureMB: number; geometryMB: number};
     /** Near levels let go over the budget, this session. */
     evicted: number;
-    /** Far skins whose GPU copy is let go now (their kinds out of view), their MB, and how many were let go this session. */
-    farSkins: {released: number; releasedMB: number; everReleased: number};
+    /** Far skins whose GPU copy is let go now (not drawn lately), their MB, how many were let go this session, and the skins on the GPU now (MB). */
+    farSkins: {released: number; releasedMB: number; everReleased: number; onGpuMB: number};
     /** Levels still coming. */
     pending: number;
     /** Frames drawn and display frames skipped by the governor. */
@@ -75,7 +75,7 @@ export type ArkRuntimeStats = {
     /** Queued far models dropped because the camera left their kinds. */
     pruned: number;
     /** New materials kept out of the frame while their shaders compiled (`runtime/hold.ts`); null in a recording. */
-    shaderHold: ShaderHoldStats | null;
+    shaderHold: (ShaderHoldStats & {/** Objects whose shaders were compiled ahead of their first draw (`warmLate`). */ warmedAhead: number}) | null;
     /** The display's refresh rate as measured (Hz; 0: not yet), and the ms between frames a fast display is drawn at (0: every refresh). */
     display: {hz: number; capMs: number};
 };
@@ -194,10 +194,10 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
-    /** Far skins whose GPU copy was let go (kind → its bytes), and kinds whose skin is left alone until a time (s). */
+    /** Far skins whose GPU copy was let go (kind → its bytes); the skins' bytes on the GPU at the last check. */
     const farReleased = new Map<string, number>();
-    const farKeptUntil = new Map<string, number>();
     let farSkinsReleased = 0;
+    let skinsOnGpu = 0;
     /** The kinds the view draws as models now, the far models dropped from the queue, and the up-front list (kept). */
     let inView: string[] = [];
     /** The first view's models are all in (then the tier's full number of kinds is fetched). */
@@ -260,6 +260,32 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         ctx.renderer.setRenderTarget(previous);
     };
 
+    /**
+     * Shaders for what is in the scene but not drawn yet (every couple of seconds, a few objects at a time): a tree's
+     * near level, a level of detail, anything loaded after the first frame's warm-up and kept hidden or empty until the
+     * camera comes. Compiled beside the frames long before its first draw, such a mesh is neither left out by the
+     * hold when it takes over from the level before it (the tree would vanish for those frames) nor waited on.
+     */
+    let lateWarmed = 0;
+    const warmLate = () => {
+        if (!hold || warming || shaders !== "ready") return;
+        const found: Object3D[] = [];
+        ctx.scene.traverse((object) => {
+            if (found.length >= 8) return;
+            const mesh = object as Mesh & {isPoints?: boolean; isLine?: boolean; isSprite?: boolean};
+            if (!(mesh.isMesh || mesh.isPoints || mesh.isLine || mesh.isSprite) || !mesh.material) return;
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            if (materials.some((material) => !(ctx.renderer.properties.get(material) as {currentProgram?: unknown}).currentProgram)) found.push(object);
+        });
+        if (!found.length) return;
+        const target = ctx.renderTarget();
+        const previous = ctx.renderer.getRenderTarget();
+        if (target) ctx.renderer.setRenderTarget(target);
+        for (const object of found) void warmShaders(ctx.renderer, object, ctx.camera as Camera, 3000, ctx.scene);
+        ctx.renderer.setRenderTarget(previous);
+        lateWarmed += found.length;
+    };
+
     // Input: anything the reader does brings the full frame rate back at once.
     const onInput = () => governor.input(performance.now() / 1000);
     const inputs: Array<keyof HTMLElementEventMap> = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"];
@@ -298,23 +324,25 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         const used = (level: {slug: string; at: number}) => (level.slug === ctx.library.urgent || now - level.at < 3 ? now : lastNear.get(level.slug) ?? 0);
         const loaded = ctx.library.levels();
         // The far skins first (`budgets.ts` idleFarSkins): one per species seen, never let go, and with the real Ark's
-        // 951 species they alone pass the ceiling. A far skin whose kind has been out of view half a minute gives up
-        // its GPU copy (the model and its picture stay; the renderer sends the skin again when the kind is next
-        // drawn). One the renderer has sent again since (it was drawn after all: a herd's figures, a resting kind's)
-        // is counted again, and left alone for five minutes.
+        // 951 species they alone pass the ceiling. A far skin not drawn for a few seconds (the renderer's draws stamp
+        // each skin, `hold.ts`) gives up its GPU copy: the model and its picture stay, and the renderer sends the
+        // skin again when the kind is next drawn. One sent again since is counted again.
         const onGpu = (slug: string) => {
             const map = ctx.library.get(slug)?.far?.map;
             return Boolean(map && (ctx.renderer.properties.get(map) as {__webglTexture?: unknown}).__webglTexture);
         };
         farReleased.forEach((_, slug) => {
-            if (!onGpu(slug)) return;
-            farReleased.delete(slug);
-            farKeptUntil.set(slug, now + 300);
+            if (onGpu(slug)) farReleased.delete(slug);
         });
         const skinBytes = (level: {slug: string; level: string; texture: number}) => (level.level === "far" && farReleased.has(level.slug) ? 0 : level.texture);
         let skins = 0;
         for (const level of loaded) skins += skinBytes(level);
-        const idle = loaded.filter((level) => level.level === "far" && !farReleased.has(level.slug) && level.slug !== ctx.library.urgent && now - level.at > 3 && (farKeptUntil.get(level.slug) ?? 0) < now).map((level) => ({slug: level.slug, bytes: level.texture, idleFrames: planner.sinceInView(level.slug)}));
+        const drawnFrames = hold ? hold.frame : 0;
+        const idle = !hold ? [] : loaded.filter((level) => level.level === "far" && !farReleased.has(level.slug) && level.slug !== ctx.library.urgent && now - level.at > 3).map((level) => {
+            const drawnAt = (ctx.library.get(level.slug)?.far?.map?.userData as {arkDrawn?: number} | undefined)?.arkDrawn;
+            return {slug: level.slug, bytes: level.texture, idleFrames: drawnAt === undefined ? Infinity : drawnFrames - drawnAt};
+        });
+        skinsOnGpu = skins;
         for (const slug of idleFarSkins(idle, skins, budget)) {
             const model = ctx.library.get(slug);
             const map = model?.far?.map;
@@ -650,12 +678,24 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         /**
          * The memory check's reading (`streaming/tiers.ts` stepRenderScale): the JS heap's floor over the last half
          * minute (not one reading: that is mostly garbage a collection is about to take), and the animal models' GPU
-         * bytes (MB), which have their own ceiling (`enforceBudget`) and are no reason to pull the render distance in.
+         * own geometries and skins, which have their own ceiling (`enforceBudget`) and are no reason to pull the render
+         * distance in: left out of the scenery's estimate (`memory.ts` sceneMemory).
          */
-        memoryReading(): {heapFloorMB: number | null; modelGpuMB: number} {
-            let bytes = 0;
-            for (const level of ctx.library.levels()) bytes += level.texture + level.geometry;
-            return {heapFloorMB: heapFloor.floor(performance.now() / 1000), modelGpuMB: bytes / 2 ** 20};
+        memoryReading(): {heapFloorMB: number | null} {
+            return {heapFloorMB: heapFloor.floor(performance.now() / 1000)};
+        },
+
+        /** The animal models' own geometries and skins (every loaded level's), for the scenery's estimate to leave out. */
+        modelObjects(): {geometries: Set<object>; textures: Set<object>} {
+            const geometries = new Set<object>();
+            const textures = new Set<object>();
+            for (const level of ctx.library.levels()) {
+                const model = ctx.library.get(level.slug);
+                const own = level.level === "near" ? model?.near : model?.far;
+                if (own?.geometry) geometries.add(own.geometry);
+                if (own?.map) textures.add(own.map);
+            }
+            return {geometries, textures};
         },
 
         /** The tier changed: skins loaded from now on are fitted to it; its new shader variants are compiled before the next draw. */
@@ -679,6 +719,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             if (hold) {
                 hold.active = true;
                 compileHeld();
+                if (drawn % 120 === 60) warmLate();
             }
             // Far models for what the view draws as models (the tier's nearest kinds in view), nearest first; the rest
             // when the camera comes to them. A few times a second is enough.
@@ -735,7 +776,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     modelGeometryMB: Math.round(levels.reduce((sum, level) => sum + level.geometry, 0) / 2 ** 20 * 10) / 10,
                     budget: {textureMB: budget.textureMB, geometryMB: budget.geometryMB},
                     evicted,
-                    farSkins: {released: farReleased.size, releasedMB: Math.round(Array.from(farReleased.values()).reduce((sum, bytes) => sum + bytes, 0) / 2 ** 20 * 10) / 10, everReleased: farSkinsReleased},
+                    farSkins: {released: farReleased.size, releasedMB: Math.round(Array.from(farReleased.values()).reduce((sum, bytes) => sum + bytes, 0) / 2 ** 20 * 10) / 10, everReleased: farSkinsReleased, onGpuMB: Math.round(skinsOnGpu / 2 ** 20 * 10) / 10},
                     pending: ctx.library.pending,
                     drawn,
                     skipped,
@@ -743,7 +784,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     viewComplete: viewIsComplete(),
                     viewKinds: inView.length,
                     pruned,
-                    shaderHold: hold ? hold.stats() : null,
+                    shaderHold: hold ? {...hold.stats(), warmedAhead: lateWarmed} : null,
                     display: {hz: Math.round(1000 / (refreshPeriod(stampGaps, stampCount) || Infinity)), capMs: Math.round(governor.displayInterval() * 10) / 10}
                 };
             }

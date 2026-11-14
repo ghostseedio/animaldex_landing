@@ -17,7 +17,22 @@
  * Only the scene's own pass is watched (never a post-processing quad or the sky: leaving one of those out is a broken
  * frame); an object held back casts no shadow and leaves no mark in the ambient occlusion meanwhile. Never in a
  * recording (the golden shots, the director's clips): those wait for everything anyway and must not change.
+ *
+ * Never what stands in for something already drawn: left out, the thing would vanish for those frames. The animals'
+ * own meshes are told to it by `prepare` (`allow`); anything else that takes another's place says so itself with
+ * `userData.arkNoHold` on it or on one of its parents (the talking model, which stands in for the animal's own).
  */
+
+/** An object (or a parent of it, four up at most) that must be drawn the frame it is shown. */
+function noHold(object: object): boolean {
+    let at = object as {userData?: {arkNoHold?: boolean}; parent?: object | null} | null | undefined;
+    for (let up = 0; at && up < 5; up++) {
+        if (at.userData?.arkNoHold) return true;
+        at = at.parent as typeof at;
+    }
+    return false;
+}
+
 
 /** What the hold needs of three's renderer (a fake stands in for it in the tests). */
 export type HoldRenderer = {
@@ -50,6 +65,8 @@ export class ShaderHold {
     /** Off until the first frame is drawn (the mount's own warm-up covers what is there by then), and whenever the runtime says. */
     active = false;
     private released = 0;
+    /** Drawn frames so far (`take` is called once a drawn frame): what a skin is stamped with when it is drawn. */
+    frame = 0;
     /** Held materials let through since the last `take` (a drawn frame): one a frame. */
     private releasedNow = 0;
     private timedOut = 0;
@@ -78,6 +95,10 @@ export class ShaderHold {
                     // (The shadow pass: no shadow from what is not drawn yet.)
                     return;
                 }
+                // The frame this material's skin was last drawn in (an instanced mesh with no instances draws nothing):
+                // the memory budget lets a far skin's GPU copy go by it (`budgets.ts` idleFarSkins).
+                const map = (material as {map?: {userData?: {arkDrawn?: number}} | null}).map;
+                if (map && map.userData && (object as {count?: number}).count !== 0) map.userData.arkDrawn = this.frame;
             }
             native.call(renderer, camera, scene, geometry, material, object, group);
         };
@@ -107,6 +128,10 @@ export class ShaderHold {
             }
         }
         const now = this.now();
+        if (!held && noHold(object)) {
+            this.known.add(material);
+            return false;
+        }
         if (!held) {
             // New: ask for its program once this frame is drawn (a program already on its way, the mount's warm-up or
             // `prepare`, is only waited for).
@@ -152,6 +177,7 @@ export class ShaderHold {
 
     /** After a frame is drawn: the objects whose shaders are to be compiled now (each once). */
     take(): object[] {
+        this.frame++;
         this.releasedNow = 0;
         if (!this.asked.length) return this.asked;
         const out = this.asked;

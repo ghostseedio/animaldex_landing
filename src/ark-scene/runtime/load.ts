@@ -28,11 +28,8 @@ const UNSEEN = 1e6;
 export class LoadPlanner {
     private frame = 0;
     private readonly seen = new Map<string, Sighting>();
-    /** The frame each kind was last seen in view. */
-    private readonly inViewAt = new Map<string, number>();
     /** One animal of a species this frame: how far from the camera, and whether it is in view. */
     see(slug: string, distance: number, visible: boolean) {
-        if (visible) this.inViewAt.set(slug, this.frame);
         const known = this.seen.get(slug);
         if (known && known.frame === this.frame) {
             if (visible && !known.visible) {
@@ -48,12 +45,6 @@ export class LoadPlanner {
 
     endFrame() {
         this.frame++;
-    }
-
-    /** Drawn frames since one of the kind was last in view (Infinity: never). */
-    sinceInView(slug: string): number {
-        const at = this.inViewAt.get(slug);
-        return at === undefined ? Infinity : this.frame - at;
     }
 
     /** The kinds seen in view this frame, nearest first, at most `limit` (the ones drawn as models). */

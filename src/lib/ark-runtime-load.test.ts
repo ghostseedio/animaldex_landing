@@ -107,37 +107,25 @@ test("runtime memory: geometry and texture bytes as the GPU holds them", () => {
     assert.equal(textureBytes(texture), Math.round(256 * 256 * 4 * 4 / 3));
 });
 
-test("runtime budgets: over the ceiling, far skins of kinds long out of view give up their GPU copy, longest out first, never one seen lately", () => {
+test("runtime budgets: over the ceiling, far skins not drawn for a while give up their GPU copy, longest undrawn first, never one drawn lately", () => {
     const mb = 2 ** 20;
     const budget = {...ARK_BUDGETS.medium, textureMB: 10};
     const skin = (slug: string, idleFrames: number) => ({slug, bytes: 0.35 * mb, idleFrames});
-    // 40 kinds' far skins: 14 MB against a ceiling of 10. Ten in view now, ten seen a few seconds ago, twenty long gone.
+    // 40 kinds' far skins: 14 MB against a ceiling of 10. Ten in view now, ten drawn a few seconds ago, twenty long gone.
     const skins = [
         ...Array.from({length: 10}, (_, i) => skin(`view-${i}`, 0)),
-        ...Array.from({length: 10}, (_, i) => skin(`recent-${i}`, 200)),
+        ...Array.from({length: 10}, (_, i) => skin(`recent-${i}`, 100)),
         ...Array.from({length: 20}, (_, i) => skin(`gone-${String(i).padStart(2, "0")}`, FAR_SKIN_IDLE_FRAMES + i * 100))
     ];
     const total = skins.reduce((sum, s) => sum + s.bytes, 0);
     assert.deepEqual(idleFarSkins(skins, 9 * mb, budget), [], "under the ceiling: none");
     const out = idleFarSkins(skins, total, budget);
-    // Down to a tenth under the ceiling (9 MB): 5 MB to let go, 15 skins; the longest gone first.
-    assert.equal(out.length, 15);
+    // Down to 0.7 of the ceiling (7 MB): 7 MB to let go, all twenty long gone; the longest gone first.
+    assert.equal(out.length, 20);
     assert.deepEqual(out.slice(0, 3), ["gone-19", "gone-18", "gone-17"]);
     assert.ok(out.every((slug) => slug.startsWith("gone-")));
     // Everything in view or seen lately: nothing to let go, however far over (the near levels' floor covers that).
     assert.deepEqual(idleFarSkins(skins.slice(0, 20), total, budget), []);
     // A kind never seen at all (loaded up front, off the view): gone longest of all.
     assert.equal(idleFarSkins([...skins, skin("never", Infinity)], total, budget)[0], "never");
-});
-
-test("runtime load order: how long a kind has been out of view", () => {
-    const planner = new LoadPlanner();
-    assert.equal(planner.sinceInView("fox"), Infinity);
-    planner.see("fox", 10, true);
-    planner.endFrame();
-    planner.see("fox", 10, false);
-    planner.endFrame();
-    assert.equal(planner.sinceInView("fox"), 2);
-    planner.see("fox", 10, true);
-    assert.equal(planner.sinceInView("fox"), 0);
 });

@@ -107,6 +107,24 @@ test("shader hold: a program that never reports is drawn after the limit; other 
     assert.equal(drawn.length, 4, "disposed: the renderer's own draw again");
 });
 
+test("shader hold: what stands in for something drawn is never left out", () => {
+    const {renderer, drawn} = fake();
+    const scene = {};
+    const hold = new ShaderHold(renderer, scene, 3000, () => 0);
+    hold.install();
+    hold.active = true;
+    const root = {userData: {arkNoHold: true}, parent: scene};
+    const group = {userData: {}, parent: root};
+    const mesh = {userData: {}, parent: group};
+    renderer.renderBufferDirect(null, scene, null, {name: "skin"}, mesh, null);
+    assert.equal(drawn.length, 1);
+    assert.deepEqual(hold.take(), []);
+    assert.equal(hold.stats().holding, 0);
+    // One beside it without the mark waits as any other.
+    renderer.renderBufferDirect(null, scene, null, {name: "leaf"}, {userData: {}, parent: scene}, null);
+    assert.equal(drawn.length, 1);
+});
+
 test("shader hold: held materials are let through one a frame", () => {
     const {renderer, drawn, compile} = fake();
     const scene = {};
