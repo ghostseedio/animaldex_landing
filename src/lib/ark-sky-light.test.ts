@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {equirectSkyLight, generatedSkyLight, skyRadiance, type Rgb} from "@/ark-scene/sky-light";
+import {lampsLevel, lampsOn} from "@/ark-scene/islands/town/people";
 import {daylightAt, sunElevation} from "@/lib/ark-daylight";
 
 const SKY = {turbidity: 3.2, rayleigh: 1.8, mieCoefficient: 0.003, mieDirectionalG: 0.82};
@@ -87,4 +88,22 @@ test("the light that casts shadows fades to nothing where the sun hands over to 
     }
     assert.equal(daylightAt(22).light.elevation, 38);
     assert.ok(Math.abs(daylightAt(22).light.intensity - 2.7) < 1e-9);
+});
+
+test("the street lamps warm up from where they switch on, and are off by day", () => {
+    const at = (hours: number) => lampsLevel({hours, day: 20000});
+    assert.equal(at(12), 0);
+    assert.equal(at(18.2), 0);
+    assert.equal(at(22), 1);
+    assert.equal(at(3), 1);
+    assert.equal(at(7), 0);
+    let last = 0;
+    for (let h = 18; h < 19; h += 1 / 720) {
+        const level = at(h);
+        assert.ok(level >= last && level - last < 0.08, `at ${h}: ${last} → ${level}`);
+        // Never lit where the switch is off.
+        if (!lampsOn({hours: h, day: 20000})) assert.equal(level, 0);
+        last = level;
+    }
+    assert.equal(last, 1);
 });

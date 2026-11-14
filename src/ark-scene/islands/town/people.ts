@@ -171,3 +171,13 @@ export function clockHands(clock: TownClock): {hour: number; minute: number} {
 export function lampsOn(clock: TownClock): number {
     return darkness(clock.hours) > 0.25 ? 1 : 0;
 }
+
+/**
+ * How bright the street lamps (and the lit windows' night glow) are, 0–1: they come on where `lampsOn` does and warm up
+ * over about three minutes, and fade out over the same before dawn's switch-off. Drawn every frame: a switch in one
+ * frame was a jump of a tenth of the town's brightness, every pool of light on the ground at once.
+ */
+export function lampsLevel(clock: TownClock): number {
+    const t = Math.min(Math.max((darkness(clock.hours) - 0.25) / 0.04, 0), 1);
+    return t * t * (3 - 2 * t);
+}
