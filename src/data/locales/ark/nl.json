@@ -3,6 +3,17 @@
         "metaTitle": "De Ark",
         "metaDescription": "Eén gedeelde wereld vol dieren. Elk dier kwam aan boord met iemands waarneming, en de stappen die mensen met hun dieren zetten, laten ze floreren.",
         "eyebrow": "De Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Eén levende 3D-wereld, gevuld met echte vangsten van mensen.",
+            "animals": "dieren",
+            "species": "soorten",
+            "people": "mensen",
+            "figuresLabel": "Nu aan boord",
+            "how": "Zo werkt de Ark",
+            "latest": "Nieuwst aan boord",
+            "latestAria": "De soorten die het laatst aan boord kwamen"
+        },
         "title": "Waarnemingen brengen ze aan boord. Stappen laten ze floreren.",
         "beginning": "De Ark is net begonnen: {animals}, meegebracht door {founders}.",
         "aboard": "{animals} van {species} aan boord, meegebracht door {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} aan boord"
         },
         "seo": {
-            "metaTitle": "De Ark: een levende, gedeelde simulatie van een dierenwereld",
-            "metaDescription": "Een levende, gedeelde 3D-dierenwereld. Dieren komen aan boord met waarnemingen van mensen, en eten, krijgen jongen en worden oud volgens regels op basis van hun veldgids.",
+            "metaTitle": "AnimalDex Ark: een levende 3D-wereld van echte dieren",
+            "metaDescription": "Elk dier heeft een les. De AnimalDex Ark is een levende, gedeelde 3D-wereld: elk dier kwam aan boord met een echte vangst en leeft naar zijn veldgids.",
             "metaFocusTitle": "De {animal} in de Ark",
             "metaFocusDescription": "Bekijk de {animal} in de Ark, een levende, gedeelde 3D-dierenwereld waarin het leven van elk dier regels volgt op basis van zijn veldgids.",
             "aboutEyebrow": "Over de Ark",

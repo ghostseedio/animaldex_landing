@@ -83,6 +83,23 @@ export function breadcrumbJsonLd(locale: string, items: BreadcrumbItem[]): JsonL
     };
 }
 
+/**
+ * A page's own links as the site's navigation (schema.org SiteNavigationElement in an ItemList): the internal
+ * links a result's sitelinks can come from. Paths are locale-free.
+ */
+export function siteNavigationJsonLd(locale: string, items: BreadcrumbItem[]): JsonLd {
+    return {
+        "@context": CONTEXT,
+        "@type": "ItemList",
+        itemListElement: items.map((item, index) => ({
+            "@type": "SiteNavigationElement",
+            position: index + 1,
+            name: item.name,
+            url: getAbsoluteUrl(locale, item.path)
+        }))
+    };
+}
+
 export type WebPageInput = {
     locale: string;
     path: string;
@@ -143,7 +160,7 @@ export function speciesTaxonJsonLd(input: {scientificName: string | null | undef
  * browser (WebApplication), part of the app, about ecology topics. Never a
  * video game, and no population figures.
  */
-export function arkJsonLd(input: {locale: string; name: string; description: string; image: string}): JsonLd {
+export function arkJsonLd(input: {locale: string; name: string; description: string; image: string; /** Another name it goes by ("The Ark"). */ alternateName?: string}): JsonLd {
     const url = getAbsoluteUrl(input.locale, "/ark");
     const site = getSiteUrl();
     return {
@@ -151,6 +168,7 @@ export function arkJsonLd(input: {locale: string; name: string; description: str
         "@type": "WebApplication",
         "@id": `${getAbsoluteUrl("en", "/ark")}#ark`,
         name: input.name,
+        ...(input.alternateName && input.alternateName !== input.name ? {alternateName: input.alternateName} : {}),
         url,
         description: input.description,
         inLanguage: input.locale,

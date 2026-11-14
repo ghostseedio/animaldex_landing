@@ -8,6 +8,7 @@ import {
     homeJsonLd,
     jsonLdHtml,
     organizationJsonLd,
+    siteNavigationJsonLd,
     speciesTaxonJsonLd,
     talkJsonLd,
     webPageJsonLd
@@ -21,6 +22,8 @@ test("every builder passes the local schema check", () => {
         webPageJsonLd({locale: "id", path: "/about", name: "Tentang", description: "d", type: "AboutPage", image: "/a.jpg", dateModified: "2026-11-12", mainEntity: {"@type": "Organization", "@id": "https://animaldex.app/#organization", name: "AnimalDex"}}),
         webPageJsonLd({locale: "en", path: "/ark/food-chain", name: "Who eats whom", description: "d", type: "CollectionPage", about: [{"@type": "Thing", name: "Food chain"}]}),
         arkJsonLd({locale: "en", name: "The Ark", description: "A shared world.", image: "/images/og/ark.jpg"}),
+        arkJsonLd({locale: "id", name: "AnimalDex Ark", alternateName: "Ark", description: "A shared world.", image: "/images/og/ark.jpg"}),
+        siteNavigationJsonLd("en", [{name: "AnimalDex Ark", path: "/ark"}, {name: "How the Ark works", path: "/ark/how-it-works"}]),
         talkJsonLd({locale: "en", name: "Talk to Animals", description: "Talk.", image: "/api/og/talk.png"}),
         ...homeJsonLd({locale: "en", name: "AnimalDex", description: "Catch real animals.", image: "/images/og/ark.jpg", featureList: ["One", "Two"]}),
         speciesTaxonJsonLd({scientificName: "Vulpes vulpes", commonName: "Red Fox", url: "https://animaldex.app/animals/red-fox"})!

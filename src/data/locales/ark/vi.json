@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Một thế giới động vật chung. Mỗi con lên Ark nhờ lượt chụp của ai đó, và những bước mọi người làm cùng con vật của mình giúp chúng luôn phát triển tốt.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Một thế giới 3D sống động, đầy những con vật mọi người thật sự bắt được.",
+            "animals": "con vật",
+            "species": "loài",
+            "people": "người",
+            "figuresLabel": "Đang trên tàu",
+            "how": "Ark hoạt động thế nào",
+            "latest": "Mới lên tàu",
+            "latestAria": "Những loài lên tàu gần đây nhất"
+        },
         "title": "Lượt chụp đưa chúng lên tàu. Các bước giúp chúng phát triển tốt.",
         "beginning": "Ark vừa mới bắt đầu: {animals}, do {founders} mang đến.",
         "aboard": "{animals} thuộc {species} trên tàu, do {founders} mang đến.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} con trên tàu"
         },
         "seo": {
-            "metaTitle": "Ark: Mô phỏng thế giới động vật chung, diễn ra trực tiếp",
-            "metaDescription": "Một thế giới động vật 3D chung, diễn ra trực tiếp. Các con vật lên tàu nhờ lượt chụp của mọi người, rồi ăn, nuôi con và già đi theo những quy tắc dựa trên cẩm nang thực địa của chúng.",
+            "metaTitle": "AnimalDex Ark: thế giới 3D sống động của động vật thật",
+            "metaDescription": "Mỗi loài vật đều có một bài học. AnimalDex Ark là thế giới 3D sống động, dùng chung: mỗi con lên tàu nhờ một lần bắt thật và sống theo cẩm nang thực địa của nó.",
             "metaFocusTitle": "{animal} trên Ark",
             "metaFocusDescription": "Xem {animal} trên Ark, một thế giới động vật 3D chung, diễn ra trực tiếp, nơi cuộc sống của mỗi con vật theo những quy tắc dựa trên cẩm nang thực địa của nó.",
             "aboutEyebrow": "Về Ark",

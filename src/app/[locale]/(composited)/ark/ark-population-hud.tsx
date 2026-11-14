@@ -255,7 +255,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             <span className="h-2.5 w-6 rounded-full bg-white/[0.08]" />
                         </li>
                     ))}
-                    {shownRows.map((row) => {
+                    {shownRows.map((row, index) => {
                         const selected = row.key === selectedKey;
                         const fresh = row.key === arrivalKey;
                         const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
@@ -269,7 +269,8 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
                         ].filter(Boolean).join(", ");
                         return (
-                            <li key={row.key} data-species={row.key}>
+                            // Its place in the whole list ("12 of 779"), though only the first rows are rendered yet.
+                            <li key={row.key} data-species={row.key} aria-setsize={rows.length} aria-posinset={index + 1}>
                                 <button
                                     type="button"
                                     onClick={() => pick(row)}

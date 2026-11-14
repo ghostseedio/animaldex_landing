@@ -148,7 +148,8 @@ export const footerProductLinks: PublicNavLink[] = [
 
 /** The Ark: the world, how it works, who eats whom, and what AnimalDex is (SEO lane S3). */
 export const footerArkLinks: PublicNavLink[] = [
-    arkNavLink,
+    // The full name in the footer (2026-11-14): the crawlable anchor for people searching "AnimalDex Ark"; the header keeps "The Ark".
+    {href: ARK_HREF, labelKey: "animalDexArk"},
     {href: ARK_HOW_IT_WORKS_HREF, labelKey: "howTheArkWorks"},
     {href: ARK_FOOD_CHAIN_HREF, labelKey: "arkFoodChain"},
     {href: ABOUT_HREF, labelKey: "aboutAnimalDex"}

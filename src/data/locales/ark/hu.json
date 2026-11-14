@@ -3,6 +3,17 @@
         "metaTitle": "Az Ark",
         "metaDescription": "Az állatok egyetlen közös világa. Mindegyik valakinek az elkapásával szállt fel, és a lépések, amelyeket az emberek az állataikkal tesznek, jó formában tartják őket.",
         "eyebrow": "Az Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Egy élő 3D-világ, tele emberek valódi fogásaival.",
+            "animals": "állat",
+            "species": "faj",
+            "people": "ember",
+            "figuresLabel": "Most a fedélzeten",
+            "how": "Így működik az Ark",
+            "latest": "Legújabbak a fedélzeten",
+            "latestAria": "A legutóbb fedélzetre lépett fajok"
+        },
         "title": "Elkapással szállnak fel, lépésekkel maradnak jó formában.",
         "beginning": "Az Ark még csak most indul: {animals}, {founders} hozta.",
         "aboard": "{animals} a fedélzeten ({species}), {founders} hozta.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} a fedélzeten"
         },
         "seo": {
-            "metaTitle": "Az Ark: élő, közös, szimulált állatvilág",
-            "metaDescription": "Élő, közös 3D-s állatvilág. Az állatok az emberek elkapásaival szállnak fel, aztán esznek, utódokat nevelnek és megöregszenek a leírásukon alapuló szabályok szerint.",
+            "metaTitle": "AnimalDex Ark: valódi állatok élő 3D-világa",
+            "metaDescription": "Minden állatnak van egy leckéje. Az AnimalDex Ark élő, közös 3D-világ: minden állat valódi fogással került a fedélzetre, és terepi kalauza szerint él.",
             "metaFocusTitle": "{animal} az Arkon",
             "metaFocusDescription": "Nézd meg: {animal} az Arkon, egy élő, közös 3D-s állatvilágban, ahol minden állat élete a leírásán alapuló szabályokat követi.",
             "aboutEyebrow": "Az Arkról",

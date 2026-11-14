@@ -154,7 +154,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
                 // Talk (docs/rich-chat/SPEC.md, section 4.1): a real Indonesian page too.
                 {url: getAbsoluteUrl(locale, "/talk")},
                 // The Ark (AnimalDex docs/ark-next.md, Part 4d): its words are in Indonesian too.
-                {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified()},
+                {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified(), changeFrequency: "hourly" as const, priority: 0.9},
                 // SEO lane S3: the pages that explain it, written in Indonesian too.
                 {url: getAbsoluteUrl(locale, ARK_HOW_IT_WORKS_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
                 {url: getAbsoluteUrl(locale, ARK_FOOD_CHAIN_PATH), lastModified: arkLastModified()},
@@ -172,7 +172,8 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/talk")},
             ...getTalkLandingPages().map((page) => ({url: getAbsoluteUrl(locale, `/talk/${page.slug}`), lastModified: new Date(page.updatedAt)})),
             // The shared Ark: live (an hourly tick), so its lastmod is the build day.
-            {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified()},
+            // Priority under the home page only (2026-11-14: people search "AnimalDex Ark" for it).
+            {url: getAbsoluteUrl(locale, "/ark"), lastModified: arkLastModified(), changeFrequency: "hourly" as const, priority: 0.9},
             // SEO lane S3: how the Ark works, who eats whom (its counts are live), and what AnimalDex is.
             {url: getAbsoluteUrl(locale, ARK_HOW_IT_WORKS_PATH), lastModified: new Date(ARK_PAGES_UPDATED)},
             {url: getAbsoluteUrl(locale, ARK_FOOD_CHAIN_PATH), lastModified: arkLastModified()},

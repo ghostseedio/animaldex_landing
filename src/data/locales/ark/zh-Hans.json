@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "一个由动物共享的世界。每只动物都是随着某人的拍摄登船的，而人们和自己的动物一起迈出的每一步，让它们茁壮成长。",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "一个鲜活的 3D 世界，住满了人们真正捕捉到的动物。",
+            "animals": "只动物",
+            "species": "个物种",
+            "people": "人",
+            "figuresLabel": "此刻在船上",
+            "how": "Ark 如何运作",
+            "latest": "最新登船",
+            "latestAria": "最近登船的物种"
+        },
         "title": "拍摄让它们登船，每一步让它们茁壮成长",
         "beginning": "Ark 才刚刚开始：{animals}，由{founders}带来。",
         "aboard": "船上共有{species}、{animals}，由{founders}带来。",
@@ -433,8 +444,8 @@
             "countAboard": "船上 {count} 只"
         },
         "seo": {
-            "metaTitle": "Ark：实时共享的动物世界模拟",
-            "metaDescription": "一个实时共享的 3D 动物世界。动物随着人们的拍摄登船，然后按照基于其野外图鉴的规则进食、养育幼崽、慢慢变老。",
+            "metaTitle": "AnimalDex Ark：真实动物的实时 3D 世界",
+            "metaDescription": "每种动物都有一课。AnimalDex Ark 是一个共享的实时 3D 世界：每只动物都因一次真实捕捉而登船，并按照它的野外图鉴生活。",
             "metaFocusTitle": "Ark 中的{animal}",
             "metaFocusDescription": "在 Ark 中看看{animal}。Ark 是一个实时共享的 3D 动物世界，每只动物的生活都遵循基于其野外图鉴的规则。",
             "aboutEyebrow": "关于 Ark",

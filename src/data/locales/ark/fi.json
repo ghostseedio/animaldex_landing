@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Yksi yhteinen eläinten maailma. Jokainen eläin nousi kyytiin jonkun kuvauksen myötä, ja askeleet, joita ihmiset ottavat eläintensä kanssa, pitävät ne hyvinvoivina.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Yksi elävä 3D-maailma, täynnä ihmisten oikeita saaliita.",
+            "animals": "eläintä",
+            "species": "lajia",
+            "people": "ihmistä",
+            "figuresLabel": "Kyydissä nyt",
+            "how": "Näin Ark toimii",
+            "latest": "Uusimmat kyydissä",
+            "latestAria": "Lajit, jotka tulivat kyytiin viimeksi"
+        },
         "title": "Kuvaukset tuovat ne kyytiin. Askeleet pitävät ne hyvinvoivina.",
         "beginning": "Ark on vasta alussa: {animals}, tuojina {founders}.",
         "aboard": "Kyydissä {animals} ({species}), tuojina {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} kyydissä"
         },
         "seo": {
-            "metaTitle": "Ark: elävä, yhteinen eläinmaailman simulaatio",
-            "metaDescription": "Elävä, yhteinen 3D-eläinmaailma. Eläimet nousevat kyytiin ihmisten kuvausten myötä, ja sitten ne syövät, kasvattavat poikasia ja vanhenevat kenttäoppaisiinsa perustuvien sääntöjen mukaan.",
+            "metaTitle": "AnimalDex Ark: elävä 3D-maailma oikeista eläimistä",
+            "metaDescription": "Jokaisella eläimellä on opetus. AnimalDex Ark on elävä, yhteinen 3D-maailma: jokainen eläin tuli kyytiin oikean saaliin myötä ja elää maasto-oppaansa mukaan.",
             "metaFocusTitle": "{animal} Arkissa",
             "metaFocusDescription": "Katso, miten {animal} elää Arkissa, elävässä ja yhteisessä 3D-eläinmaailmassa, jossa jokaisen eläimen elämä seuraa sen kenttäoppaaseen perustuvia sääntöjä.",
             "aboutEyebrow": "Tietoa Arkista",

@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "O singură lume comună a animalelor. Fiecare a urcat la bord prin captura cuiva, iar pașii pe care oamenii îi fac cu animalele lor le ajută să prospere.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "O lume 3D vie, plină cu capturile reale ale oamenilor.",
+            "animals": "animale",
+            "species": "specii",
+            "people": "oameni",
+            "figuresLabel": "La bord acum",
+            "how": "Cum funcționează Ark",
+            "latest": "Cele mai noi la bord",
+            "latestAria": "Speciile care au urcat la bord cel mai recent"
+        },
         "title": "Capturile le aduc la bord. Pașii le ajută să prospere.",
         "beginning": "Ark abia începe — {animals}, {founders}.",
         "aboard": "La bord — {animals}, {species}, {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} la bord"
         },
         "seo": {
-            "metaTitle": "Ark: o simulare live și comună a unei lumi a animalelor",
-            "metaDescription": "O lume a animalelor în 3D, live și comună. Animalele urcă la bord prin capturile oamenilor, apoi mănâncă, își cresc puii și îmbătrânesc după reguli bazate pe ghidul lor de teren.",
+            "metaTitle": "AnimalDex Ark: o lume 3D vie cu animale reale",
+            "metaDescription": "Fiecare animal are o lecție. AnimalDex Ark e o lume 3D vie și comună: fiecare animal a urcat printr-o captură reală și trăiește după ghidul său de teren.",
             "metaFocusTitle": "{animal} în Ark",
             "metaFocusDescription": "Vezi cum trăiește {animal} în Ark, o lume a animalelor în 3D, live și comună, unde viața fiecărui animal urmează reguli bazate pe ghidul lui de teren.",
             "aboutEyebrow": "Despre Ark",

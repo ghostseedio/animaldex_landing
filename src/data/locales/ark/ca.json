@@ -3,6 +3,17 @@
         "metaTitle": "L'Ark",
         "metaDescription": "Un món d'animals compartit. Cadascun va pujar a bord amb la captura d'algú, i els passos que la gent fa amb els seus animals els fan prosperar.",
         "eyebrow": "L'Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Un món 3D viu, omplert amb captures reals de la gent.",
+            "animals": "animals",
+            "species": "espècies",
+            "people": "persones",
+            "figuresLabel": "Ara a bord",
+            "how": "Com funciona l'Ark",
+            "latest": "Últims a bord",
+            "latestAria": "Les espècies que han pujat a bord més recentment"
+        },
         "title": "Les captures els porten a bord. Els passos els fan prosperar.",
         "beginning": "L'Ark tot just comença: {animals}, de la mà de {founders}.",
         "aboard": "{animals} de {species} a bord, de la mà de {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} a bord"
         },
         "seo": {
-            "metaTitle": "L'Ark: una simulació viva i compartida d'un món animal",
-            "metaDescription": "Un món animal en 3D, viu i compartit. Els animals pugen a bord amb les captures de la gent, i després mengen, crien i envelleixen segons regles basades en la seva guia de camp.",
+            "metaTitle": "AnimalDex Ark: un món 3D viu d'animals reals",
+            "metaDescription": "Cada animal té una lliçó. L'AnimalDex Ark és un món 3D viu i compartit: cada animal hi puja amb una captura real i viu segons la seva guia de camp.",
             "metaFocusTitle": "{animal} a l'Ark",
             "metaFocusDescription": "Descobreix {animal} a l'Ark, un món animal en 3D, viu i compartit, on la vida de cada animal segueix regles basades en la seva guia de camp.",
             "aboutEyebrow": "Sobre l'Ark",

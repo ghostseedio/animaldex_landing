@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Jeden wspólny świat zwierząt. Każde weszło na pokład dzięki czyjemuś zdjęciu, a kroki, które ludzie robią ze swoimi zwierzętami, sprawiają, że te rozkwitają.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Jeden żywy świat 3D, wypełniony prawdziwymi łowami ludzi.",
+            "animals": "zwierząt",
+            "species": "gatunków",
+            "people": "osób",
+            "figuresLabel": "Teraz na pokładzie",
+            "how": "Jak działa Ark",
+            "latest": "Najnowsze na pokładzie",
+            "latestAria": "Gatunki, które najnowiej weszły na pokład"
+        },
         "title": "Zdjęcia wprowadzają je na pokład. Kroki sprawiają, że rozkwitają.",
         "beginning": "Ark dopiero się zaczyna: {animals}. Przywiezione przez: {founders}.",
         "aboard": "Na pokładzie: {animals}, {species}. Przywiezione przez: {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "Na pokładzie: {count}"
         },
         "seo": {
-            "metaTitle": "Ark: żywa, wspólna symulacja świata zwierząt",
-            "metaDescription": "Żywy, wspólny świat zwierząt w 3D. Zwierzęta wchodzą na pokład dzięki zdjęciom ludzi, a potem jedzą, wychowują młode i starzeją się według zasad opartych na ich przewodnikach terenowych.",
+            "metaTitle": "AnimalDex Ark: żywy świat 3D prawdziwych zwierząt",
+            "metaDescription": "Każde zwierzę ma lekcję. AnimalDex Ark to żywy, wspólny świat 3D: każde zwierzę weszło na pokład dzięki prawdziwemu złapaniu i żyje według swojego przewodnika.",
             "metaFocusTitle": "{animal} w Ark",
             "metaFocusDescription": "Zobacz, jak żyje {animal} w Ark, żywym, wspólnym świecie zwierząt w 3D, gdzie życie każdego zwierzęcia toczy się według zasad opartych na jego przewodniku terenowym.",
             "aboutEyebrow": "O Ark",

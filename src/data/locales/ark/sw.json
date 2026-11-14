@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Ulimwengu mmoja wa wanyama tunaoushiriki sote. Kila mmoja alipanda kupitia picha ya mtu fulani, na hatua ambazo watu huchukua na wanyama wao huwafanya waendelee kustawi.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Ulimwengu mmoja hai wa 3D, uliojaa wanyama halisi waliokamatwa na watu.",
+            "animals": "wanyama",
+            "species": "spishi",
+            "people": "watu",
+            "figuresLabel": "Ndani sasa",
+            "how": "Jinsi Ark inavyofanya kazi",
+            "latest": "Waliopanda karibuni",
+            "latestAria": "Spishi zilizopanda chomboni hivi karibuni"
+        },
         "title": "Picha huwaleta ndani. Hatua huwafanya wastawi.",
         "beginning": "Ark ndiyo inaanza: {animals}, kutoka kwa {founders}.",
         "aboard": "Ndani ya Ark: {animals} wa {species}, kutoka kwa {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} ndani"
         },
         "seo": {
-            "metaTitle": "Ark: Uigaji Hai wa Ulimwengu wa Wanyama Tunaoushiriki",
-            "metaDescription": "Ulimwengu hai wa wanyama wa 3D tunaoushiriki sote. Wanyama hupanda kupitia picha za watu, kisha wanakula, wanalea watoto na wanazeeka kwa kanuni zinazotokana na miongozo yao ya uwandani.",
+            "metaTitle": "AnimalDex Ark: ulimwengu hai wa 3D wa wanyama halisi",
+            "metaDescription": "Kila mnyama ana somo. AnimalDex Ark ni ulimwengu hai wa 3D tunaoushiriki: kila mnyama alipanda kwa kukamatwa halisi na anaishi kwa mwongozo wake wa uwandani.",
             "metaFocusTitle": "{animal} ndani ya Ark",
             "metaFocusDescription": "Mwone {animal} ndani ya Ark, ulimwengu hai wa wanyama wa 3D tunaoushiriki sote, ambapo maisha ya kila mnyama yanafuata kanuni zinazotokana na mwongozo wake wa uwandani.",
             "aboutEyebrow": "Kuhusu Ark",

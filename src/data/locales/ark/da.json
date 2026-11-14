@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Én fælles verden af dyr. Hvert dyr kom om bord med nogens fangst, og de skridt, folk tager med deres dyr, får dem til at trives.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Én levende 3D-verden, fyldt med folks ægte fangster.",
+            "animals": "dyr",
+            "species": "arter",
+            "people": "personer",
+            "figuresLabel": "Om bord nu",
+            "how": "Sådan virker Ark",
+            "latest": "Senest om bord",
+            "latestAria": "De arter, der senest er kommet om bord"
+        },
         "title": "Fangster bringer dem om bord. Skridt får dem til at trives.",
         "beginning": "Ark er lige begyndt: {animals}, bragt af {founders}.",
         "aboard": "{animals} af {species} om bord, bragt af {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} om bord"
         },
         "seo": {
-            "metaTitle": "Ark: en levende, fælles simulering af en dyreverden",
-            "metaDescription": "En levende, fælles dyreverden i 3D. Dyr kommer om bord med folks fangster og spiser, får unger og bliver gamle efter regler baseret på deres feltguide.",
+            "metaTitle": "AnimalDex Ark: en levende 3D-verden af ægte dyr",
+            "metaDescription": "Hvert dyr har en lektie. AnimalDex Ark er en levende, fælles 3D-verden: hvert dyr kom om bord med en ægte fangst og lever efter sin felthåndbog.",
             "metaFocusTitle": "{animal} i Ark",
             "metaFocusDescription": "Se {animal} i Ark, en levende, fælles dyreverden i 3D, hvor hvert dyrs liv følger regler baseret på dets feltguide.",
             "aboutEyebrow": "Om Ark",
