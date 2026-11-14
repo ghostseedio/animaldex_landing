@@ -4109,7 +4109,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
             // for a frame with room for it (held where it was drawn; unseen if it never was).
-            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
+            // (The one chosen or followed never waits: the camera is flying to where it is, and a first step taken after
+            // the flight had ended moved it out from in front of the camera, 1.9 m for a fish 8 cm long.)
+            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording && selectedId !== entry.animal.id && followId !== entry.animal.id) {
                 if (!entry.sched!.pose) {
                     entry.middle = null;
                     continue;
