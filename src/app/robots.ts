@@ -5,7 +5,9 @@ export default function robots(): MetadataRoute.Robots {
     return {
         rules: {
             userAgent: "*",
-            allow: "/",
+            // /api/og/: the share-card images pages name as og:image (/ark's among them). Twitterbot obeys
+            // robots.txt, so a disallowed card image showed no picture; the longer allow rule wins over /api/.
+            allow: ["/", "/api/og/"],
             // Operator tooling. The pages already require a session and carry
             // noindex; this keeps crawlers off the paths as well, so the admin
             // surface is not advertised by a robots.txt fetch.

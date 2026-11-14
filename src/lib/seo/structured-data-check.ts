@@ -40,6 +40,8 @@ export const STRUCTURED_DATA_SPECS: Record<string, Spec> = {
     Offer: {props: [...THING, "price", "priceCurrency", "availability", "category"], required: ["price", "priceCurrency"]},
     BreadcrumbList: {props: [...THING, "itemListElement", "numberOfItems", "itemListOrder"], required: ["itemListElement"]},
     ItemList: {props: [...THING, "itemListElement", "numberOfItems", "itemListOrder"], required: ["itemListElement"]},
+    // A page's own links as navigation (WebPageElement: a CreativeWork; `position` is CreativeWork's).
+    SiteNavigationElement: {props: [...CREATIVE_WORK, "position", "cssSelector", "xpath"], required: ["name", "url"], urls: ["url"]},
     ListItem: {props: [...THING, "position", "item", "nextItem", "previousItem"], required: ["position"], urls: ["item"]},
     Taxon: {props: [...THING, "taxonRank", "parentTaxon", "childTaxon", "hasDefinedTerm"], required: ["name"]},
     Thing: {props: THING, required: ["name"]},
