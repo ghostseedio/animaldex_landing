@@ -397,6 +397,28 @@ module.exports = withNextIntl({
                 headers: [
                     {key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000"}
                 ]
+            },
+            // The Ark's scenery (trees, rocks, plants and forest floor: 308 small .glb files on a visit), its ground and
+            // town textures, the sky and the texture transcoder. Next serves /public with `max-age=0`, and the CDN keeps
+            // none of these types by default, so every visit asked the origin about every one of them again (measured
+            // on the live site, a phone profile: 308 conditional requests on a second visit, the first frame no sooner
+            // than on the first). They are not content-hashed and are redrawn in place now and then, so a day in the
+            // browser and a month stale-while-revalidate rather than `immutable`: a returning reader (and the apps'
+            // panel every time it opens) reads them from its own cache, and a changed file reaches them within a day.
+            ...["/ark/assets/:path*", "/ark/graphics/:path*", "/ark/basis/:path*", "/ark/sound/:path*"].map((source) => ({
+                source,
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=2592000"}
+                ]
+            })),
+            {
+                // The positions atlas is asked for by its content hash (`?v=`, src/ark-scene/hunting.ts): the same
+                // address is the same bytes for good.
+                source: "/ark/positions-atlas.json",
+                has: [{type: "query", key: "v"}],
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=31536000, immutable"}
+                ]
             }
         ];
     },
