@@ -2894,14 +2894,15 @@ function wayHeight(profile: ArkBehaviourProfile): number | null {
     const way = flightWay(profile.slug);
     return way ? FLIGHT_WAYS[way].height ?? null : null;
 }
-const unit = (text: string) => (hashString(text) % 1_000_003) / 1_000_003;
+/** (Lane B5 air's seeded share; the needs lane's `unit` above has its own modulus, and each keeps its own.) */
+const airUnit = (text: string) => (hashString(text) % 1_000_003) / 1_000_003;
 
 type Bout = {index: number; first: number; slots: number; key: ScheduleAnimal; keySlot: number; seed: number};
 /** The bout a slot of its own is in: its group's leader's then (by the leader's slots), or its own. */
 function boutAt(rule: FlightWayRule, animal: ScheduleAnimal, slot: number): Bout {
     const key = animal.group?.leader ?? animal;
     const keySlot = key === animal ? slot : slotOf(key, slotStart(animal, slot) + SLOT_SECONDS / 2);
-    const seed = unit(`${key.id}#bout`);
+    const seed = airUnit(`${key.id}#bout`);
     return {...stationBout(rule, seed, keySlot), key, keySlot, seed};
 }
 
@@ -2942,7 +2943,7 @@ function soaring(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (aloft.kind === "thermal" && (h0 < THERMAL_HOURS[0] || h1 > THERMAL_HOURS[1] || h1 < h0)) return null;
     const key = bout.key;
     const paces = airPaces(profile, animal.length);
-    const seed = unit(`${key.id}#soar`);
+    const seed = airUnit(`${key.id}#soar`);
     const member = animal.group ? animal.group.rank : 0;
     const home = {x: key.home.x, z: key.home.z};
     if (aloft.kind === "hawk") {
