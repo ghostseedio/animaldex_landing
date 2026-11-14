@@ -324,6 +324,8 @@ type Sched = {
     warm?: boolean;
     /** Its pose was last worked out with the collisions (drawn as a model): one drawn again is worked out with them at once. */
     collided?: boolean;
+    /** When (epoch s) a step last left its trip over (its pose came from elsewhere, a foray): not held as "due a new trip" meanwhile. */
+    offTripAt?: number;
 };
 
 /** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
@@ -4211,7 +4213,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // were last drawn at, for half a second at most close by and a second and a half further off, then worked
             // out whatever the frame: the same trips and poses, a few frames later. Never the animal being watched.)
             const sched = scheduled(entry) ? entry.sched! : null;
-            const tripDue = sched !== null && sched.warm === true && sched.pose !== null && (!sched.trip || epochNow >= sched.trip.end || epochNow < sched.trip.start);
+            // (One whose pose is not its trip's for now, a predator on a foray: stepping it renews no trip, so it is never
+            // "due"; looked at again every two seconds.)
+            const tripOver = sched !== null && (!sched.trip || epochNow >= sched.trip.end || epochNow < sched.trip.start);
+            const offTrip = sched !== null && sched.offTripAt !== undefined && epochNow >= sched.offTripAt && epochNow - sched.offTripAt < 2;
+            const tripDue = sched !== null && sched.warm === true && sched.pose !== null && tripOver && !offTrip;
             if (sched && !sched.warm && warmFrameMs > WARM_MS && !options.recording) {
                 if (!sched.pose) {
                     entry.middle = null;
@@ -4229,6 +4235,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 perf.carve("collide", collideCallMs);
                 behaviourFrameMs += spent;
                 if (!sched.warm || tripDue) warmFrameMs += spent;
+                if (tripDue && (!sched.trip || epochNow >= sched.trip.end || epochNow < sched.trip.start)) sched.offTripAt = epochNow;
                 sched.warm = true;
                 scheduledCount++;
             }
