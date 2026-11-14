@@ -25,6 +25,15 @@ export const TOWN_GRID: TownChunkGrid = {
 };
 
 export const TOWN_CHUNK_COUNT = TOWN_CHUNKS * TOWN_CHUNKS;
+
+/**
+ * A live view (the scene sets it when it mounts; false in a recording or a still): the town's close-up detail
+ * (`render/near.ts`) is then built a few cells a frame after a jump too (the camera arriving at an animal, the first
+ * frame close to the street), the nearest to where the camera looks first, instead of every cell in reach in that
+ * frame: 225 of them, 230 to 450 ms inside the render on the phone profile at every arrival in the town (graphics and
+ * performance pass, 2026-11). Here, not in `near.ts`, so the scene reads it without the town's renderer.
+ */
+export const TOWN_NEAR_LIVE = {value: false};
 export {TOWN_SEGMENTS};
 
 /** The chunk a point falls in (off the grid: the nearest edge chunk), as Part B's `chunkOf`. */
