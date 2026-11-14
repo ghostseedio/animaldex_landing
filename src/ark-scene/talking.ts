@@ -153,6 +153,9 @@ export class TalkingActor {
 
     constructor(readonly slug: string, source: TalkingModelSource, onReady: () => void) {
         this.root.visible = false;
+        // (It stands in for the animal's own model the frame it is shown: never left out while its shader compiles,
+        // `runtime/hold.ts`.)
+        this.root.userData.arkNoHold = true;
         source.manifest.then(async (manifest) => {
             const version = manifest?.models[this.slug];
             if (!version || this.disposed) return;

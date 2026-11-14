@@ -9,6 +9,13 @@
  * - `map` (the map view, past the render distance): every 4th vertex, with a skirt down its edges so the coarser
  *   tiles never open a crack against their neighbours;
  * - `out`: not drawn; its geometry goes from the GPU after `RELEASE_SECONDS` hidden.
+ *
+ * A tile's full geometry is built when it is first drawn in full, and built again after it was let go. In a live view
+ * (`spread` > 0) only that many are built a frame, the nearest to what the camera looks at first; the others are
+ * drawn as the map (a sixteenth of the vertices: cheap) until theirs is. Before, every tile that came within the
+ * render distance in a frame was built in that frame: a flight down from the island view crossed dozens at once
+ * (frames of 80 to 260 ms on the phone profile; graphics and performance pass, 2026-11). A recording builds them at
+ * once, as before.
  */
 
 import {BufferAttribute, BufferGeometry, Group, Mesh, type Material} from "three";
@@ -128,6 +135,10 @@ type Tile = {key: number; mesh: Mesh; full: BufferGeometry | null; coarse: Buffe
 export class GroundTiles {
     readonly group = new Group();
     private readonly tiles: Tile[] = [];
+    /** A live view: full tiles built at most this many a frame, nearest first (0: all at once, a recording or a still). */
+    spread = 0;
+    /** Tiles to be drawn in full whose full geometry is not built yet (drawn as the map meanwhile). */
+    private readonly waiting = new Set<Tile>();
 
     constructor(private readonly arrays: GroundArrays, private readonly grid: ChunkGrid, private readonly material: Material, groundSegments: number) {
         this.group.name = "ark-ground";
@@ -152,6 +163,7 @@ export class GroundTiles {
             if (state === tile.state) continue;
             tile.state = state;
             tile.changedAt = now;
+            this.waiting.delete(tile);
             if (state === STATE_OUT) {
                 tile.mesh.visible = false;
                 continue;
@@ -161,6 +173,11 @@ export class GroundTiles {
             if (state === STATE_MAP) {
                 tile.coarse ??= tileGeometry(this.arrays, range, MAP_STRIDE);
                 tile.mesh.geometry = tile.coarse;
+            } else if (!tile.full && this.spread > 0) {
+                // (A live view: as the map until its turn comes, `release`.)
+                tile.coarse ??= tileGeometry(this.arrays, range, MAP_STRIDE);
+                tile.mesh.geometry = tile.coarse;
+                this.waiting.add(tile);
             } else {
                 tile.full ??= tileGeometry(this.arrays, range, 1);
                 tile.mesh.geometry = tile.full;
@@ -168,10 +185,39 @@ export class GroundTiles {
         }
     }
 
-    /** Let go of a level not drawn for `RELEASE_SECONDS` (a few times a second is plenty). */
-    release(now: number) {
+    /**
+     * Every frame: the waiting tiles' full geometry, `spread` of them, the nearest to `focus` (world x and z: what the
+     * camera looks at) first; and a level not drawn for `RELEASE_SECONDS` let go.
+     */
+    release(now: number, focus?: {x: number; z: number}) {
+        if (this.waiting.size) {
+            const centre = (tile: Tile) => {
+                const column = tile.key % this.grid.columns;
+                const row = Math.floor(tile.key / this.grid.columns);
+                return {x: this.grid.originX + (column + 0.5) * this.grid.size, z: this.grid.originZ + (row + 0.5) * this.grid.size};
+            };
+            for (let n = 0; n < Math.max(this.spread, 1) && this.waiting.size; n++) {
+                let next: Tile | null = null;
+                let least = Infinity;
+                this.waiting.forEach((tile) => {
+                    const at = centre(tile);
+                    const d = focus ? (at.x - focus.x) ** 2 + (at.z - focus.z) ** 2 : 0;
+                    if (d < least) {
+                        least = d;
+                        next = tile;
+                    }
+                });
+                const tile = next as Tile | null;
+                if (!tile) break;
+                this.waiting.delete(tile);
+                if (tile.state !== STATE_IN) continue;
+                tile.full ??= tileGeometry(this.arrays, tileRange(this.grid, tile.key, this.arrays.size - 1), 1);
+                tile.mesh.geometry = tile.full;
+                tile.changedAt = now;
+            }
+        }
         for (const tile of this.tiles) {
-            if (now - tile.changedAt <= RELEASE_SECONDS) continue;
+            if (now - tile.changedAt <= RELEASE_SECONDS || this.waiting.has(tile)) continue;
             if (tile.state !== STATE_IN && tile.full) {
                 if (tile.mesh.geometry === tile.full) tile.mesh.geometry = EMPTY;
                 tile.full.dispose();

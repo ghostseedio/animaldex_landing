@@ -46,8 +46,15 @@ export const RELAX_SECONDS = 30;
 export type DeviceSignals = {
     /** A touch screen as the main pointer. */
     coarse: boolean;
-    /** `navigator.hardwareConcurrency`. */
+    /** The app's own count (`?cores=`), else `navigator.hardwareConcurrency`; null where neither says (`coresHidden`). */
     cores: number | null;
+    /**
+     * The browser hides the count and the app gave none: iOS WebKit answers 4 on every iPhone and on every iPad with
+     * fewer than eight cores, whatever is inside (`hidesCores`).
+     */
+    coresHidden?: boolean;
+    /** The screen's device pixels per CSS pixel (what a hidden device can still be told apart by, `chooseTier`). */
+    screenRatio?: number | null;
     /** GB of memory: `navigator.deviceMemory` (Chromium, capped at 8), or the app's own figure (`?mem=`, `ark:device`). */
     memoryGB: number | null;
     /** The JS heap's limit (MB), where the browser says it (`performance.memory`, Chromium). */
@@ -61,28 +68,70 @@ export type DeviceSignals = {
  * - 3 GB: at most medium on a desktop pointer, low on touch.
  * (The JS heap's limit is not a tier signal: Chromium on Android gives a 4 GB phone a small one. It caps the heap
  * budget instead, `heapBudgetMB`.) Then the scene drops a tier if frames run long, and pulls the render distance in under memory pressure.
+ *
+ * A hidden count (iOS WebKit, graphics and performance pass 2026-11) is not a weak device: it counts as
+ * `HIDDEN_CORES`. Before, WebKit's fixed 4 put every iPhone on the low tier (one buffer pixel a CSS pixel on a 3×
+ * screen, no shadows, no grass). What it starts on is then on trial (`tierOnTrial`, `runtime/trial.ts`).
+ * With its memory unknown too, a hidden device with a 2× screen stays on the low tier: those are the iPhones and
+ * iPads that may have 3 GB (the XR, the SE's second generation, most iPads before 2022), which is the low tier on
+ * touch by the rule above; every 3× iPhone that runs iOS 17 or later has 4 GB or more. (The low tier there is no
+ * longer one buffer pixel a CSS pixel when the frames have room: `runtime/pace.ts` rule 4.)
  */
 export function chooseTier(signals: DeviceSignals): StreamTierName {
-    const cores = signals.cores && signals.cores > 0 ? signals.cores : 4;
+    const cores = signals.cores && signals.cores > 0 ? signals.cores : signals.coresHidden ? HIDDEN_CORES : 4;
     const memory = signals.memoryGB && signals.memoryGB > 0 ? signals.memoryGB : null;
     if (memory !== null && memory <= 2) return "low";
     if (memory !== null && memory < 4) return signals.coarse ? "low" : "medium";
+    if (memory === null && signals.coresHidden && signals.coarse && (signals.screenRatio ?? HIDDEN_DENSE_RATIO) < HIDDEN_DENSE_RATIO) return "low";
     const known = memory ?? 8;
     if (!signals.coarse && cores >= 8 && known >= 8) return "high";
     if (cores >= 6 && known >= 4) return "medium";
     return signals.coarse ? "low" : "medium";
 }
 
-/** What the browser says about the device (and the app's figure, if the page was given one). */
+/**
+ * What a hidden core count stands for: every iPhone since 2017 (the A11) has six cores, and iOS 16 and later run on
+ * nothing older; the iPads WebKit answers 4 for have six too.
+ */
+export const HIDDEN_CORES = 6;
+/** A hidden device's screen at this ratio or more has 4 GB or more (`chooseTier`). */
+export const HIDDEN_DENSE_RATIO = 3;
+
+/**
+ * Whether the browser's core count is a fixed answer, not the device's: iOS and iPadOS WebKit (every browser there)
+ * say 4 at most below eight cores. (An iPad asks for the desktop site as a Macintosh with a touch screen.)
+ */
+export function hidesCores(userAgent: string, touchPoints: number, reported: number | null): boolean {
+    const ios = /\b(iPhone|iPad|iPod)\b/.test(userAgent) || (/\bMacintosh\b/.test(userAgent) && touchPoints > 1);
+    return ios && (reported === null || reported <= 4);
+}
+
+/**
+ * Whether the tier the device starts on is a guess to be proven (`runtime/trial.ts`): a touch device whose cores are
+ * hidden and whose memory nobody says (an iPhone in Safari, or in an app that sends no `?mem=`). With the app's
+ * figures (`?mem=`, `?cores=`) the tier is the device's own answer, as on Android.
+ */
+export function tierOnTrial(signals: DeviceSignals): boolean {
+    return signals.coarse && Boolean(signals.coresHidden) && !(signals.memoryGB && signals.memoryGB > 0);
+}
+
+/** What the browser says about the device (and the app's figures, if the page was given them: `?mem=`, `?cores=`). */
 export function deviceSignals(appMemoryGB?: number | null): DeviceSignals {
     if (typeof window === "undefined") return {coarse: false, cores: null, memoryGB: appMemoryGB ?? null, heapLimitMB: null};
     const nav = navigator as Navigator & {deviceMemory?: number};
     const heap = (performance as Performance & {memory?: {jsHeapSizeLimit?: number}}).memory?.jsHeapSizeLimit;
-    const fromPage = Number(new URLSearchParams(window.location?.search ?? "").get("mem"));
+    const query = new URLSearchParams(window.location?.search ?? "");
+    const fromPage = Number(query.get("mem"));
     const app = appMemoryGB && appMemoryGB > 0 ? appMemoryGB : fromPage > 0 ? fromPage : null;
+    // The app knows the device's real core count (iOS hides it from the page): its figure wins.
+    const appCores = Math.round(Number(query.get("cores")));
+    const reported = nav.hardwareConcurrency || null;
+    const hidden = !(appCores >= 1 && appCores <= 256) && hidesCores(nav.userAgent ?? "", nav.maxTouchPoints ?? 0, reported);
     return {
         coarse: window.matchMedia?.("(pointer: coarse)").matches ?? false,
-        cores: nav.hardwareConcurrency || null,
+        cores: appCores >= 1 && appCores <= 256 ? appCores : hidden ? null : reported,
+        coresHidden: hidden,
+        screenRatio: typeof window.devicePixelRatio === "number" && window.devicePixelRatio > 0 ? window.devicePixelRatio : null,
         // The app knows the device's real memory (iOS never says; Chromium caps it at 8): its figure wins.
         memoryGB: app ?? (typeof nav.deviceMemory === "number" ? nav.deviceMemory : null),
         heapLimitMB: typeof heap === "number" && heap > 0 ? heap / 2 ** 20 : null

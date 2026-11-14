@@ -14,6 +14,8 @@
  *   numbers off on their own phone (fps, frame-time p95, draw calls, triangles, heap, tier, DPR, animals drawn and
  *   rigged, and the costliest sections). Plain DOM, no dependency.
  * - `window.__arkPerfReport()`: the same numbers as data (the measurement harness reads it).
+ * - `window.__arkPerfSlow()`: the last slow frames (their own work over `SLOW_FRAME_MS`), each with when it was drawn
+ *   and its sections: which part of the frame a hitch was in (the interaction scenarios read it).
  */
 
 /** Where a frame's main-thread time goes. */
@@ -37,6 +39,7 @@ export const ARK_PERF_SECTIONS = [
     "recipes",
     "plants",
     "render",
+    "status",
     "labels",
     "runtime"
 ] as const;
@@ -44,6 +47,12 @@ export type ArkPerfSection = (typeof ARK_PERF_SECTIONS)[number];
 
 const WINDOW = 120;
 const FRAMES = 240;
+/** A frame whose own main-thread time is over this is kept, with its sections (two 60 Hz frames). */
+const SLOW_FRAME_MS = 33;
+const SLOW_KEPT = 2000;
+
+/** One slow frame: when it began (ms from the navigation), its main-thread time and where that went. */
+export type ArkPerfSlowFrame = {at: number; ms: number; sections: Partial<Record<ArkPerfSection, number>>};
 
 export type ArkPerfGpu = {calls: number; triangles: number; programs: number; textures: number; geometries: number};
 
@@ -58,6 +67,8 @@ export type ArkPerfReport = {
     tier: string;
     dpr: number;
     scale: number;
+    /** How the tier was come by (the main thread's benchmark, a tier on trial): a touch device's line on the overlay. */
+    device: string | null;
     drawn: number;
     rigged: number;
     mode: string;
@@ -68,7 +79,7 @@ export type ArkPerfReport = {
 };
 
 /** What the scene hands the overlay each time it is rewritten. */
-export type ArkPerfScene = {gpu: ArkPerfGpu; tier: string; dpr: number; scale: number; drawn: number; rigged: number; mode: string; inView: boolean};
+export type ArkPerfScene = {gpu: ArkPerfGpu; tier: string; dpr: number; scale: number; device?: string | null; drawn: number; rigged: number; mode: string; inView: boolean};
 
 const STORAGE_KEY = "ark:perf";
 
@@ -126,6 +137,7 @@ export class ArkPerf {
     private frameAt = 0;
     private frameFilled = 0;
     private lastStart = 0;
+    private readonly slow: ArkPerfSlowFrame[] = [];
     private overlay: HTMLDivElement | null = null;
     private overlayAt = 0;
     private scene: (() => ArkPerfScene) | null = null;
@@ -205,6 +217,7 @@ export class ArkPerf {
         el.appendChild(box);
         this.overlay = box;
         (globalThis as {__arkPerfReport?: () => ArkPerfReport}).__arkPerfReport = () => this.report();
+        (globalThis as {__arkPerfSlow?: () => ArkPerfSlowFrame[]}).__arkPerfSlow = () => this.slow.slice();
     }
 
     /** The top of a drawn frame. */
@@ -244,6 +257,14 @@ export class ArkPerf {
         this.ringAt = (this.ringAt + 1) % WINDOW;
         this.ringFilled = Math.min(this.ringFilled + 1, WINDOW);
         this.cpu[this.frameAt] = spent;
+        if (spent > SLOW_FRAME_MS) {
+            const sections: Partial<Record<ArkPerfSection, number>> = {};
+            ARK_PERF_SECTIONS.forEach((name, i) => {
+                if (this.now[i] >= 0.5) sections[name] = Math.round(this.now[i] * 10) / 10;
+            });
+            this.slow.push({at: Math.round(this.lastStart), ms: Math.round(spent * 10) / 10, sections});
+            if (this.slow.length > SLOW_KEPT) this.slow.shift();
+        }
         this.frameAt = (this.frameAt + 1) % FRAMES;
         this.frameFilled = Math.min(this.frameFilled + 1, FRAMES);
         const t = performance.now();
@@ -287,6 +308,7 @@ export class ArkPerf {
             tier: scene.tier,
             dpr: Math.round(scene.dpr * 100) / 100,
             scale: Math.round(scene.scale * 100) / 100,
+            device: scene.device ?? null,
             drawn: scene.drawn,
             rigged: scene.rigged,
             mode: scene.mode,
@@ -303,7 +325,8 @@ export class ArkPerf {
             `${r.fps} fps  p95 ${r.interval.p95} ms`,
             `>16ms ${r.interval.over16}%  >33ms ${r.interval.over33}%`,
             `cpu ${r.cpu.p50}/${r.cpu.p95} ms  ${r.mode}`,
-            `${r.tier}  dpr ${r.dpr}${r.scale < 0.999 ? ` (x${r.scale})` : ""}`,
+            `${r.tier}  dpr ${r.dpr}${Math.abs(r.scale - 1) > 0.001 ? ` (x${r.scale})` : ""}`,
+            ...(r.device ? [r.device] : []),
             `calls ${r.gpu.calls}  tris ${tris}`,
             `prog ${r.gpu.programs}  tex ${r.gpu.textures}`,
             `heap ${r.heapMB ?? "n/a"} MB`,

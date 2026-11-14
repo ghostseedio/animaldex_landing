@@ -28,7 +28,6 @@ const UNSEEN = 1e6;
 export class LoadPlanner {
     private frame = 0;
     private readonly seen = new Map<string, Sighting>();
-
     /** One animal of a species this frame: how far from the camera, and whether it is in view. */
     see(slug: string, distance: number, visible: boolean) {
         const known = this.seen.get(slug);

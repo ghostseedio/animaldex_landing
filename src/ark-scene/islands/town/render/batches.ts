@@ -144,6 +144,14 @@ export class TownBatch {
         this.triangles = triangles;
         this.mesh = new BatchedMesh(Math.max(parts.length, 1), Math.max(vertices, 1), Math.max(indices, 1), batchedVariant(material));
         this.mesh.name = name;
+        // three r170 asks a batch for `colorTexture` (which no batch has: its colours' texture is `_colorsTexture`) when
+        // it decides whether a material needs another program, takes the answer `undefined` for "has colours now", and
+        // looks the program up again on every draw of every batch: its parameters gathered, its cache key built (about
+        // thirty times a frame with the town in view; 4.5% of the phone profile's main thread at the island view;
+        // graphics and performance pass, 2026-11). The name it asks for, answering as it means.
+        Object.defineProperty(this.mesh, "colorTexture", {configurable: true, get(this: BatchedMesh) {
+            return (this as unknown as {_colorsTexture: unknown})._colorsTexture ?? null;
+        }});
         this.mesh.castShadow = options.castShadow;
         this.mesh.receiveShadow = options.receiveShadow;
         this.mesh.customDepthMaterial = batchedDepthMaterial();

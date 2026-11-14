@@ -16,10 +16,12 @@
 import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRenderTarget, WebGLRenderer} from "three";
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
-import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
+import {arkBudget, arkCaps, GRASS_BUILD, idleFarSkins, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
 import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
-import {RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
+import {refreshPeriod, RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
+import {ShaderHold, type HoldRenderer, type ShaderHoldStats} from "@/ark-scene/runtime/hold";
 import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
+import {HeapFloor} from "@/ark-scene/runtime/memory";
 import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-scene/runtime/power";
 import {RuntimeUi} from "@/ark-scene/runtime/ui";
 import {heightAt} from "@/ark-scene/world";
@@ -53,6 +55,8 @@ export type ArkRuntimeStats = {
     budget: {textureMB: number; geometryMB: number};
     /** Near levels let go over the budget, this session. */
     evicted: number;
+    /** Far skins whose GPU copy is let go now (not drawn lately), their MB, how many were let go this session, and the skins on the GPU now (MB). */
+    farSkins: {released: number; releasedMB: number; everReleased: number; onGpuMB: number};
     /** Levels still coming. */
     pending: number;
     /** Frames drawn and display frames skipped by the governor. */
@@ -70,6 +74,10 @@ export type ArkRuntimeStats = {
     viewKinds: number;
     /** Queued far models dropped because the camera left their kinds. */
     pruned: number;
+    /** New materials kept out of the frame while their shaders compiled (`runtime/hold.ts`); null in a recording. */
+    shaderHold: (ShaderHoldStats & {/** Objects whose shaders were compiled ahead of their first draw (`warmLate`). */ warmedAhead: number}) | null;
+    /** The display's refresh rate as measured (Hz; 0: not yet), and the ms between frames a fast display is drawn at (0: every refresh). */
+    display: {hz: number; capMs: number};
 };
 
 /** What the runtime adds to the scene's handle. */
@@ -175,9 +183,21 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     let busyUntil = 0;
     let asked = 0;
     let lastBudget = 0;
+    /** The gaps between the last animation-frame callbacks (ms): the display's refresh period is read off them. */
+    const stampGaps = new Float64Array(60);
+    let stampAt = 0;
+    let stampCount = 0;
+    let lastStamp = 0;
+    /** The JS heap's floor over the last half minute (what a collection leaves), read a few times a second. */
+    const heapFloor = new HeapFloor(30);
+    let heapReadAt = -Infinity;
     /** The tier before the power capped it, to go back to. */
     let beforePower: QualityTier | null = null;
     const lastNear = new Map<string, number>();
+    /** Far skins whose GPU copy was let go (kind → its bytes); the skins' bytes on the GPU at the last check. */
+    const farReleased = new Map<string, number>();
+    let farSkinsReleased = 0;
+    let skinsOnGpu = 0;
     /** The kinds the view draws as models now, the far models dropped from the queue, and the up-front list (kept). */
     let inView: string[] = [];
     /** The first view's models are all in (then the tier's full number of kinds is fetched). */
@@ -225,6 +245,47 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         }
     };
 
+    // No frame waits on a new shader (`hold.ts`): a mesh with a material never drawn is left out until its program is
+    // compiled in parallel. Not in a recording (it waits for everything, and its pictures must not change).
+    const hold = recording ? null : new ShaderHold(ctx.renderer as unknown as HoldRenderer, ctx.scene, 3000);
+    hold?.install();
+    const compileHeld = () => {
+        if (!hold) return;
+        const objects = hold.take();
+        if (!objects.length) return;
+        const target = ctx.renderTarget();
+        const previous = ctx.renderer.getRenderTarget();
+        if (target) ctx.renderer.setRenderTarget(target);
+        for (const object of objects) void warmShaders(ctx.renderer, object as Object3D, ctx.camera as Camera, 3000, ctx.scene);
+        ctx.renderer.setRenderTarget(previous);
+    };
+
+    /**
+     * Shaders for what is in the scene but not drawn yet (every couple of seconds, a few objects at a time): a tree's
+     * near level, a level of detail, anything loaded after the first frame's warm-up and kept hidden or empty until the
+     * camera comes. Compiled beside the frames long before its first draw, such a mesh is neither left out by the
+     * hold when it takes over from the level before it (the tree would vanish for those frames) nor waited on.
+     */
+    let lateWarmed = 0;
+    const warmLate = () => {
+        if (!hold || warming || shaders !== "ready") return;
+        const found: Object3D[] = [];
+        ctx.scene.traverse((object) => {
+            if (found.length >= 8) return;
+            const mesh = object as Mesh & {isPoints?: boolean; isLine?: boolean; isSprite?: boolean};
+            if (!(mesh.isMesh || mesh.isPoints || mesh.isLine || mesh.isSprite) || !mesh.material) return;
+            const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+            if (materials.some((material) => !(ctx.renderer.properties.get(material) as {currentProgram?: unknown}).currentProgram)) found.push(object);
+        });
+        if (!found.length) return;
+        const target = ctx.renderTarget();
+        const previous = ctx.renderer.getRenderTarget();
+        if (target) ctx.renderer.setRenderTarget(target);
+        for (const object of found) void warmShaders(ctx.renderer, object, ctx.camera as Camera, 3000, ctx.scene);
+        ctx.renderer.setRenderTarget(previous);
+        lateWarmed += found.length;
+    };
+
     // Input: anything the reader does brings the full frame rate back at once.
     const onInput = () => governor.input(performance.now() / 1000);
     const inputs: Array<keyof HTMLElementEventMap> = ["pointerdown", "pointermove", "wheel", "keydown", "touchstart"];
@@ -261,8 +322,38 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         // its first three seconds. Neither has been drawn near yet, so each was let go the moment it arrived whenever
         // the budget's check fell on that frame, and loaded again.)
         const used = (level: {slug: string; at: number}) => (level.slug === ctx.library.urgent || now - level.at < 3 ? now : lastNear.get(level.slug) ?? 0);
-        const levels = ctx.library.levels().flatMap((level) => [
-            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: used(level)},
+        const loaded = ctx.library.levels();
+        // The far skins first (`budgets.ts` idleFarSkins): one per species seen, never let go, and with the real Ark's
+        // 951 species they alone pass the ceiling. A far skin not drawn for a few seconds (the renderer's draws stamp
+        // each skin, `hold.ts`) gives up its GPU copy: the model and its picture stay, and the renderer sends the
+        // skin again when the kind is next drawn. One sent again since is counted again.
+        const onGpu = (slug: string) => {
+            const map = ctx.library.get(slug)?.far?.map;
+            return Boolean(map && (ctx.renderer.properties.get(map) as {__webglTexture?: unknown}).__webglTexture);
+        };
+        farReleased.forEach((_, slug) => {
+            if (onGpu(slug)) farReleased.delete(slug);
+        });
+        const skinBytes = (level: {slug: string; level: string; texture: number}) => (level.level === "far" && farReleased.has(level.slug) ? 0 : level.texture);
+        let skins = 0;
+        for (const level of loaded) skins += skinBytes(level);
+        const drawnFrames = hold ? hold.frame : 0;
+        const idle = !hold ? [] : loaded.filter((level) => level.level === "far" && !farReleased.has(level.slug) && level.slug !== ctx.library.urgent && now - level.at > 3).map((level) => {
+            const drawnAt = (ctx.library.get(level.slug)?.far?.map?.userData as {arkDrawn?: number} | undefined)?.arkDrawn;
+            return {slug: level.slug, bytes: level.texture, idleFrames: drawnAt === undefined ? Infinity : drawnFrames - drawnAt};
+        });
+        skinsOnGpu = skins;
+        for (const slug of idleFarSkins(idle, skins, budget)) {
+            const model = ctx.library.get(slug);
+            const map = model?.far?.map;
+            // (Never a model whose one skin is both levels, nor the placeholder's.)
+            if (!model || !map || model.placeholder || model.near?.map === map) continue;
+            map.dispose();
+            farReleased.set(slug, loaded.find((level) => level.slug === slug && level.level === "far")?.texture ?? 0);
+            farSkinsReleased++;
+        }
+        const levels = loaded.flatMap((level) => [
+            {slug: level.slug, level: level.level, bytes: skinBytes(level), texture: true, lastNear: used(level)},
             {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: used(level)}
         ]);
         for (const drop of overBudget(levels, budget, now)) {
@@ -284,8 +375,23 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
          * The top of each display frame: "draw" (go on), "skip" (this display frame is not drawn: idle cap, the shaders
          * still compiling) or "sleep" (hidden: stop asking for frames; `onWake` asks again).
          */
-        frame(nowMs: number): "draw" | "skip" | "sleep" {
-            if (!governor.visible()) return "sleep";
+        frame(nowMs: number, stamp = 0): "draw" | "skip" | "sleep" {
+            if (!governor.visible()) {
+                lastStamp = 0;
+                return "sleep";
+            }
+            // The display's refresh period, from the animation frames' own times (every callback, drawn or skipped):
+            // read again every 30 callbacks, so a display that changes its rate (a window moved to another screen, a
+            // phone's low power mode) is followed. A recording is the director's: every frame.
+            if (stamp > 0 && !recording) {
+                if (lastStamp > 0) {
+                    stampGaps[stampAt] = stamp - lastStamp;
+                    stampAt = (stampAt + 1) % stampGaps.length;
+                    stampCount = Math.min(stampCount + 1, stampGaps.length);
+                    if (stampAt % 30 === 0) governor.setDisplayInterval(refreshPeriod(stampGaps, stampCount));
+                }
+                lastStamp = stamp;
+            }
             // The rest of the mount, before the first frame: its steps a frame at a time (each its own task), as many as
             // fit in MOUNT_SLICE_MS; a step returns false to go on in the next frame.
             if (mountSteps.length) {
@@ -405,6 +511,11 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         /** Frames run at the display's own rate (the tier check measures only these). */
         uncapped(): boolean {
             return governor.uncapped(performance.now() / 1000);
+        },
+
+        /** Battery saver or heat holds the tier down now (no resolution above the tier's own meanwhile). */
+        powerCapped(): boolean {
+            return governor.tierCap() !== null;
         },
 
         /** Full rate but for the frame pacing's own cap (`runtime/pace.ts` measures these). */
@@ -563,8 +674,33 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             if (target) ctx.renderer.setRenderTarget(target);
             void warmShaders(ctx.renderer, mesh, ctx.camera as Camera, 3000, ctx.scene).then(() => {
                 mesh.layers.mask = layers;
+                // (Shown now, ready or past its limit: the shader hold never leaves it out again, `hold.ts`.)
+                if (hold) for (const material of materials) hold.allow(material);
             });
             ctx.renderer.setRenderTarget(previous);
+        },
+
+        /**
+         * The memory check's reading (`streaming/tiers.ts` stepRenderScale): the JS heap's floor over the last half
+         * minute (not one reading: that is mostly garbage a collection is about to take), and the animal models' GPU
+         * own geometries and skins, which have their own ceiling (`enforceBudget`) and are no reason to pull the render
+         * distance in: left out of the scenery's estimate (`memory.ts` sceneMemory).
+         */
+        memoryReading(): {heapFloorMB: number | null} {
+            return {heapFloorMB: heapFloor.floor(performance.now() / 1000)};
+        },
+
+        /** The animal models' own geometries and skins (every loaded level's), for the scenery's estimate to leave out. */
+        modelObjects(): {geometries: Set<object>; textures: Set<object>} {
+            const geometries = new Set<object>();
+            const textures = new Set<object>();
+            for (const level of ctx.library.levels()) {
+                const model = ctx.library.get(level.slug);
+                const own = level.level === "near" ? model?.near : model?.far;
+                if (own?.geometry) geometries.add(own.geometry);
+                if (own?.map) textures.add(own.map);
+            }
+            return {geometries, textures};
         },
 
         /** The tier changed: skins loaded from now on are fitted to it; its new shader variants are compiled before the next draw. */
@@ -579,6 +715,17 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             drawn++;
             lastDrawn = nowMs;
             if (firstFrameMs === null) firstFrameMs = Math.round(nowMs - started);
+            if (now - heapReadAt >= 0.25) {
+                heapReadAt = now;
+                const used = (performance as Performance & {memory?: {usedJSHeapSize?: number}}).memory?.usedJSHeapSize;
+                if (typeof used === "number") heapFloor.sample(now, used / 2 ** 20);
+            }
+            // From the first frame on, a new material's shader is compiled beside the frames, never inside one.
+            if (hold) {
+                hold.active = true;
+                compileHeld();
+                if (drawn % 120 === 60) warmLate();
+            }
             // Far models for what the view draws as models (the tier's nearest kinds in view), nearest first; the rest
             // when the camera comes to them. A few times a second is enough.
             if (drawn % 8 === 1) {
@@ -634,13 +781,16 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                     modelGeometryMB: Math.round(levels.reduce((sum, level) => sum + level.geometry, 0) / 2 ** 20 * 10) / 10,
                     budget: {textureMB: budget.textureMB, geometryMB: budget.geometryMB},
                     evicted,
+                    farSkins: {released: farReleased.size, releasedMB: Math.round(Array.from(farReleased.values()).reduce((sum, bytes) => sum + bytes, 0) / 2 ** 20 * 10) / 10, everReleased: farSkinsReleased, onGpuMB: Math.round(skinsOnGpu / 2 ** 20 * 10) / 10},
                     pending: ctx.library.pending,
                     drawn,
                     skipped,
                     collisions,
                     viewComplete: viewIsComplete(),
                     viewKinds: inView.length,
-                    pruned
+                    pruned,
+                    shaderHold: hold ? {...hold.stats(), warmedAhead: lateWarmed} : null,
+                    display: {hz: Math.round(1000 / (refreshPeriod(stampGaps, stampCount) || Infinity)), capMs: Math.round(governor.displayInterval() * 10) / 10}
                 };
             }
         } satisfies ArkRuntimeHandle,
@@ -649,6 +799,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             for (const name of inputs) ctx.canvas.removeEventListener(name, onInput, {capture: true});
             stopPower();
             wheel.dispose();
+            hold?.dispose();
             ui?.dispose();
             governor.onWake = () => undefined;
             governor.onPower = () => undefined;

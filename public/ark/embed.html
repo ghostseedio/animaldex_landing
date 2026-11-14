@@ -337,7 +337,8 @@
  *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
  *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
  *   {type: "ark:visible", visible}                               the panel shown (true) or covered / the app in the background (false):
- *                                                                nothing is drawn while false (docs/ark/runtime-bridge.md)
+ *                                                                nothing is drawn while false, and the Ark is not read again
+ *                                                                (docs/ark/runtime-bridge.md)
  *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
  *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
@@ -696,6 +697,8 @@ window.AnimalDexArkStart = function () {
           if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
           var raw = body && body.snapshot ? body.snapshot : body;
           founders = foundersFrom(body, raw);
+          // (What is shown is no longer the host's last push: its next one is looked at whole.)
+          lastPush = null;
           show(Ark.decodeArkSnapshot(raw));
         }
         // Encounter hunting: the server's read with the live snapshot only (never a fixture or a given snapshot);
@@ -712,12 +715,33 @@ window.AnimalDexArkStart = function () {
 
   // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
   var runtimeHeld = {};
+  // (And whether the host shows the panel: while it says it is covered, the Ark is not read again either.)
+  var hostVisible = true;
   // (And a focus link (ark:select) sent before the first snapshot is read: the latest waits for the mount.)
   var selectHeld = null;
+  // The host's last push as it came (ark:snapshot), while it is the one shown. A host that pushes the whole Ark at
+  // every read of its own (every 45 s; the apps released before the hosts learned to skip it go on doing so): the same
+  // Ark but for its time is dropped here, before anything is decoded, listed or laid out. Finding that out is a walk
+  // of both, done a few milliseconds at a time between frames (`runtime/same.ts`); a newer push overtakes an older.
+  var lastPush = null;
+  var pushes = 0;
+  function takePush(message) {
+    var snapshot = Ark.decodeArkSnapshot(message.snapshot);
+    if (!snapshot) return;
+    lastPush = {snapshot: message.snapshot, founders: message.founders};
+    founders = foundersFrom(message, message.snapshot);
+    wordsRead.then(function () { show(snapshot); });
+  }
   function receive(message) {
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:activity") { activity(); return; }
     if (message.type === "ark:visible" || message.type === "ark:power") {
+      if (message.type === "ark:visible") {
+        var shownBefore = hostVisible;
+        hostVisible = !(message.visible === false || message.value === false);
+        // Shown again with a read missed meanwhile: the Ark as it is now, once.
+        if (!shownBefore && hostVisible && lastRead && Date.now() - lastRead >= refreshMs && document.visibilityState === "visible" && !(idleMs && Date.now() - lastActive >= idleMs)) read();
+      }
       if (scene && scene.receive) scene.receive(message);
       else runtimeHeld[message.type] = message;
       return;
@@ -726,9 +750,17 @@ window.AnimalDexArkStart = function () {
     var live = scene || mounting;
     if (live && message.type === "ark:reset") { live.resetView(); return; }
     if (message.type === "ark:snapshot") {
-      var snapshot = Ark.decodeArkSnapshot(message.snapshot);
-      founders = foundersFrom(message, message.snapshot);
-      wordsRead.then(function () { show(snapshot); });
+      var push = ++pushes;
+      var before = lastPush;
+      if (!before || !Ark.sameArkPush) { takePush(message); return; }
+      Ark.sameArkPush(before.snapshot, message.snapshot)
+        .then(function (same) { return same ? Ark.sameJsonSliced(before.founders, message.founders) : false; })
+        .catch(function () { return false; })
+        .then(function (same) {
+          // (Overtaken by a newer push, which is being looked at itself; or the same Ark as is shown: nothing to do.)
+          if (push !== pushes || (same && lastPush === before)) return;
+          takePush(message);
+        });
     }
     else if (live && message.type === "ark:mine") live.setMineOnly(Boolean(message.value));
     else if (message.type === "ark:select") {
@@ -752,7 +784,9 @@ window.AnimalDexArkStart = function () {
 
   read();
   setInterval(function () {
-    if (document.visibilityState !== "visible") return;
+    // (Not while the page is hidden, nor while the host says the panel is covered or scrolled away, `ark:visible`:
+    // the drawing has stopped then, and a read every 45 s behind a sheet or the chat is data and work nobody sees.)
+    if (document.visibilityState !== "visible" || !hostVisible) return;
     if (idleMs && Date.now() - lastActive >= idleMs) return;
     read();
   }, refreshMs);
