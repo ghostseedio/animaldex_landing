@@ -51,8 +51,11 @@ export function materialTextures(material: Material, into: Set<Texture>) {
 
 export type SceneMemory = {geometryBytes: number; textureBytes: number; geometries: number; textures: number; instances: number};
 
-/** Everything reachable from the scene (and the scene's environment and background). */
-export function sceneMemory(root: Object3D): SceneMemory {
+/**
+ * Everything reachable from the scene (and the scene's environment and background). `skip`: geometries and textures
+ * left out of the bytes (the animal models' own, which the model budget counts: what is left is the scenery).
+ */
+export function sceneMemory(root: Object3D, skip?: {geometries: ReadonlySet<object>; textures: ReadonlySet<object>}): SceneMemory {
     const geometries = new Set<BufferGeometry>();
     const materials = new Set<Material>();
     const textures = new Set<Texture>();
@@ -73,11 +76,11 @@ export function sceneMemory(root: Object3D): SceneMemory {
     materials.forEach((material) => materialTextures(material, textures));
     let gBytes = matrixBytes;
     geometries.forEach((geometry) => {
-        gBytes += geometryBytes(geometry);
+        if (!skip?.geometries.has(geometry)) gBytes += geometryBytes(geometry);
     });
     let tBytes = 0;
     textures.forEach((texture) => {
-        tBytes += textureBytes(texture);
+        if (!skip?.textures.has(texture)) tBytes += textureBytes(texture);
     });
     return {geometryBytes: gBytes, textureBytes: tBytes, geometries: geometries.size, textures: textures.size, instances};
 }
