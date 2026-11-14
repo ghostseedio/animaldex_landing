@@ -31,17 +31,21 @@ import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {standOnGround} from "@/ark-scene/grounding/stand";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {inBox, toLocal, type Box} from "@/ark-scene/islands/town/geom";
-import {townHeight} from "@/ark-scene/islands/town/ground";
+import {townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {placeTownAnimals, type TownPlace} from "@/ark-scene/islands/town/placement";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
+import {townColliderSet} from "@/ark-scene/islands/town/colliders";
+import {bodyShape} from "@/ark-scene/collide/bodies";
+import {pushOut} from "@/ark-scene/collide/resolve";
+import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import {setTownWalkSurfaces, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface, type TownWalkSurfaces} from "@/ark-scene/islands/town/drawn-ground";
 import {homeDisplayFloors, homeSiteFootprints, homeSites, perchHeight, tankBox, tankPose, zooHouseFloors, zooHouseFrame, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
 
 export type TownAnimalKind = "tank" | "display" | "zoo_house" | "ground" | "raised" | "water" | "air";
-export type TownAnimalProblem = "floats" | "sinks" | "in_wall" | "out_of_tank" | "out_of_display" | "out_of_house";
+export type TownAnimalProblem = "floats" | "sinks" | "in_wall" | "in_building" | "out_of_tank" | "out_of_display" | "out_of_house";
 
 export type TownAnimalSample = {id: string; slug: string; area: string | null; where: string; kind: TownAnimalKind; epoch: number; gap: number; problems: TownAnimalProblem[]; detail: string};
 
@@ -54,6 +58,14 @@ export type TownAnimalCheck = {
     legacy: {floats: number; sinks: number; worstSink: number};
     /** Schedule samples the scene's guard stands back on the ground (under it on dry land: a drink at a walled edge). */
     lifted: number;
+    /**
+     * Schedule samples whose body's middle is inside a building's drawn volume (its walls or its roof: `in_building`), at
+     * rest and on the move (in the air, or walking), as the schedule poses them, before the scene's collisions (lane town
+     * birds, "birds inside houses": roof birds asleep on their building's floor, flights through the houses).
+     */
+    inBuilding: {rest: number; moving: number};
+    /** The same where the scene draws them: after its collisions (`collide/resolve.ts` pushOut, the town's colliders). */
+    inBuildingDrawn: {rest: number; moving: number};
     problems: TownAnimalSample[];
 };
 
@@ -64,6 +76,8 @@ export type TownAnimalOptions = {
     schedule?: boolean;
     /** The world position of the town's origin, for the legacy rule (the wild drawn ground under it). */
     origin?: {x: number; z: number};
+    /** Which animals' schedules to sample (default every scheduled one; all are placed either way, as the scene places them). */
+    scheduleFor?: (animal: ArkAnimal) => boolean;
 };
 
 /** L3's tolerance: 2 cm or 3% of the drawn height. */
@@ -132,7 +146,10 @@ function contactGap(x: number, z: number, yaw: number, pitch: number, roll: numb
 
 const HIGH = new Set(["roof", "eave", "ledge", "tall", "belfry", "balcony", "lamp_wall"]);
 
-/** One Ark day of epochs (55 real minutes), from 2026-11-12 00:00 UTC, as L3's audit. */
+/**
+ * Epochs (s) through 55 real minutes from 2026-11-12 00:00 UTC, as L3's audit. (The island's hours are UTC's,
+ * `islandHours`: by default its night; a `start` at noon for its day.)
+ */
 export function townDayEpochs(count = 12, start = Date.UTC(2026, 10, 12) / 1000): number[] {
     return Array.from({length: count}, (_, i) => start + (i * 3300) / count + 7.3 * i);
 }
@@ -159,10 +176,17 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
     const drawn = (x: number, z: number) => townDrawnHeight(x, z, surfaces);
     /** The drawn ground under a body at a height (stacked floors: the one it is on). */
     const drawnAt = (near: number) => (x: number, z: number) => townDrawnHeight(x, z, surfaces, near);
-    const sampler = townWorldSampler(placed.open);
+    // (With the town's colliders, as the scene's: its walk grid and its push out of anything solid.)
+    const colliders = townColliderSet(placed.open, {x: 0, z: 0});
+    const sampler = townWorldSampler(placed.open, {x: 0, z: 0}, colliders);
     const world = options.schedule === false ? null : scheduleWorld(sampler);
     const roomsAndPonds = homeSiteFootprints(households, plan);
     const buildings = plan.buildings.map((b) => b.at);
+    // (Each building's drawn volume: from its floor to its roof's top, `render/buildings.ts`; 0.1 m in from its walls.)
+    const volumes = plan.buildings.map((b) => ({box: b.at, floor: townBuildingFloor(b.at), top: b.top}));
+    const inVolume = (x: number, y: number, z: number) => volumes.some((v) => y > v.floor + 0.05 && y < v.floor + v.top - 0.05 && inBox(v.box, x, z, -0.1));
+    const inBuildingSamples = {rest: 0, moving: 0};
+    const inBuildingDrawn = {rest: 0, moving: 0};
     const buildingName = new Map(plan.buildings.map((b) => [b.at, `${b.kind} ${b.id}`] as [Box, string]));
     const houses = zooLayout(placed.open, plan).enclosures.filter((e) => !e.shared && e.indoor);
     const hoursAt = (epoch: number) => islandHours(epoch * 1000, 0);
@@ -258,30 +282,31 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
             sample(a, info, "zoo_house", 0, gap, problems, problems.length ? `${(gap * 100).toFixed(1)} cm, floor ${stand.ground.toFixed(2)} vs ${zooHouse.floor.toFixed(2)}` : "");
             continue;
         }
-        if (HIGH.has(info.where)) {
-            sample(a, info, "raised", 0, 0, []);
-            continue;
+        // (On a raised place, a roof, a ledge, a balcony: there; its schedule below as anyone's.)
+        const high = HIGH.has(info.where);
+        if (high) sample(a, info, "raised", 0, 0, []);
+        else {
+            // On the ground at its place (as the scene stands it when it rests there, or before its schedule is in).
+            const on = drawnAt(place.ground);
+            const stand = standOnGround(place.x, place.z, place.yaw, scale, base, footprint, 0, 0, on, 0.5 * tol);
+            const gap = contactGap(place.x, place.z, place.yaw, stand.pitch, stand.roll, stand.rootY, scale, base, footprint, on);
+            const problems: TownAnimalProblem[] = [];
+            if (gap > tol) problems.push("floats");
+            if (gap < -tol) problems.push("sinks");
+            const wall = inBuilding(bodyCorners(place.x, place.z, place.yaw, length * 0.6, width * 0.6), null);
+            if (wall) problems.push("in_wall");
+            sample(a, info, "ground", 0, gap, problems, wall ? `in ${wall}` : problems.length ? `${(gap * 100).toFixed(1)} cm` : "");
+            // The scene's old rule: the wild island's drawn ground at the town's world position.
+            const wild = (x: number, z: number) => drawnGroundHeight(x + origin.x, z + origin.z);
+            const before = standOnGround(place.x, place.z, place.yaw, scale, base, footprint, 0, 0, wild, 0.5 * tol);
+            const beforeGap = contactGap(place.x, place.z, place.yaw, before.pitch, before.roll, before.rootY, scale, base, footprint, on);
+            if (beforeGap < -tol) legacy.sinks++;
+            else if (beforeGap > tol) legacy.floats++;
+            legacy.worstSink = Math.min(legacy.worstSink, beforeGap);
         }
-        // On the ground at its place (as the scene stands it when it rests there, or before its schedule is in).
-        const on = drawnAt(place.ground);
-        const stand = standOnGround(place.x, place.z, place.yaw, scale, base, footprint, 0, 0, on, 0.5 * tol);
-        const gap = contactGap(place.x, place.z, place.yaw, stand.pitch, stand.roll, stand.rootY, scale, base, footprint, on);
-        const problems: TownAnimalProblem[] = [];
-        if (gap > tol) problems.push("floats");
-        if (gap < -tol) problems.push("sinks");
-        const wall = inBuilding(bodyCorners(place.x, place.z, place.yaw, length * 0.6, width * 0.6), null);
-        if (wall) problems.push("in_wall");
-        sample(a, info, "ground", 0, gap, problems, wall ? `in ${wall}` : problems.length ? `${(gap * 100).toFixed(1)} cm` : "");
-        // The scene's old rule: the wild island's drawn ground at the town's world position.
-        const wild = (x: number, z: number) => drawnGroundHeight(x + origin.x, z + origin.z);
-        const before = standOnGround(place.x, place.z, place.yaw, scale, base, footprint, 0, 0, wild, 0.5 * tol);
-        const beforeGap = contactGap(place.x, place.z, place.yaw, before.pitch, before.roll, before.rootY, scale, base, footprint, on);
-        if (beforeGap < -tol) legacy.sinks++;
-        else if (beforeGap > tol) legacy.floats++;
-        legacy.worstSink = Math.min(legacy.worstSink, beforeGap);
 
         // Through the day on the schedule (the town's own world, as the scene's; a scheduled town animal only).
-        const scheduled = world && !info.still && !["window", "indoor", "pool"].includes(info.where) && onSchedule(place, a.model_slug) && onBehaviourSchedule(a.model_slug);
+        const scheduled = world && (options.scheduleFor?.(a) ?? true) && !info.still && !["window", "indoor", "pool"].includes(info.where) && onSchedule(place, a.model_slug) && onBehaviourSchedule(a.model_slug);
         if (!scheduled) continue;
         const profile = behaviourProfile(a.model_slug, plan0);
         const own = withLazyRoost({id: a.id, zone: a.zone, home: {x: place.x, y: place.ground, z: place.z}, length: body.display, sea: false, range: Math.max(info.range, 0.6) * 1.5}, () => null);
@@ -290,8 +315,29 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
         for (const epoch of epochs) {
             if (!trip || epoch < trip.start || epoch >= trip.end) trip = tripAt(world, profile, own, epoch, hoursAt, a.activity ?? null, trip);
             const at = poseOnTrip(world, trip, epoch);
+            // (Its body's middle in a building's walls or roof: never, asleep, at rest, walking or flying; lane town birds.)
+            const housed = inVolume(at.x, at.y + height * 0.5, at.z);
+            const moving = at.aloft || at.moving ? "moving" : "rest";
+            if (housed) {
+                inBuildingSamples[moving]++;
+                // (Where the scene draws it: pushed out of the walls it stands in, as `index.ts` collideInput, unless held
+                // on its perch.)
+                const attached = attachedOn(trip, epoch);
+                const phase = tripPhase(trip, epoch);
+                const fixed = !at.aloft && at.y > townHeight(at.x, at.z) + 0.3 && (phase === "stay" || phase === "pause") && Boolean(attached);
+                const shape = bodyShape(a.model_slug, body.display);
+                const out = pushOut(colliders, {id: a.id, radius: shape.radius, half: shape.half, height: shape.height}, {x: at.x, y: at.y, z: at.z, yaw: at.yaw, aloft: at.aloft, still: !at.aloft && !at.moving, attached, fixed});
+                if (inVolume(out.x, at.y + height * 0.5, out.z)) inBuildingDrawn[moving]++;
+            }
+            const inside: TownAnimalProblem[] = housed ? ["in_building"] : [];
+            const insideDetail = housed ? `${trip.doing} ${trip.to.point ?? "-"} in a building at ${at.y.toFixed(2)} m` : "";
             if (at.aloft) {
-                sample(a, info, "air", epoch, 0, []);
+                sample(a, info, "air", epoch, 0, inside, insideDetail);
+                continue;
+            }
+            // (Up on its roof, its ledge, its tower: raised, not on the ground.)
+            if (high && at.y > townHeight(at.x, at.z) + 0.4) {
+                sample(a, info, "raised", epoch, 0, inside, insideDetail);
                 continue;
             }
             const ground = townHeight(at.x, at.z);
@@ -317,13 +363,14 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
             const blocked = false;
             const wall = !at.moving && y <= top + 0.05 ? inBuilding([{x: at.x, z: at.z}], null) : null;
             if (wall) problems.push("in_wall");
+            problems.push(...inside);
             sample(a, info, y > top + 0.05 ? "raised" : "ground", epoch, y - top, problems, problems.length ? `${trip.doing} ${trip.to.point ?? "-"} ${problems.includes("sinks") ? `${(ground - at.y).toFixed(2)} m under the ground` : ""}${wall ? ` in ${wall}` : blocked ? " in a building, trunk or fence line" : ""}` : "");
         }
     }
     setIslandWater(null);
-    const counts = {floats: 0, sinks: 0, in_wall: 0, out_of_tank: 0, out_of_display: 0, out_of_house: 0} as Record<TownAnimalProblem, number>;
+    const counts = {floats: 0, sinks: 0, in_wall: 0, in_building: 0, out_of_tank: 0, out_of_display: 0, out_of_house: 0} as Record<TownAnimalProblem, number>;
     const per = new Map<string, Set<TownAnimalProblem>>();
     for (const s of samples) for (const p of s.problems) (per.get(s.id) ?? per.set(s.id, new Set()).get(s.id)!).add(p);
     per.forEach((set) => set.forEach((p) => counts[p]++));
-    return {animals: animals.length, samples: samples.length, kinds, counts, legacy, lifted, problems: samples.filter((s) => s.problems.length)};
+    return {animals: animals.length, samples: samples.length, kinds, counts, legacy, lifted, inBuilding: inBuildingSamples, inBuildingDrawn, problems: samples.filter((s) => s.problems.length)};
 }

@@ -6,7 +6,7 @@
  * are cut into it (their walls and quays are meshes, `render/water.ts`).
  */
 
-import {bounds, inBox, inPoly, polylineDistance, polylineWithin, type Poly} from "@/ark-scene/islands/town/geom";
+import {bounds, corners, inBox, inPoly, polylineDistance, polylineWithin, type Box, type Poly} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, inland, MILLPOND, TOWN_LEVEL, townPlan, type GreenKind, type TownPlan} from "@/ark-scene/islands/town/plan";
 
 export type TownSurface =
@@ -167,6 +167,18 @@ function landHeight(x: number, z: number, rough: number): number {
 
 export function townHeight(x: number, z: number): number {
     return sampleTownGround(x, z).height;
+}
+
+/**
+ * A building's floor as it is drawn (`render/buildings.ts` buildingFrame): the highest ground under its corners and its
+ * middle, plus 0.15 m. Its roof, eaves and ledges stand on this, so a spot on them takes its height from here too (lane
+ * town birds: the roof spots took the ground at the middle, and 27 perches sat sunk 5 cm or more into a sloping
+ * street's roofs).
+ */
+export function townBuildingFloor(b: Box): number {
+    let high = townHeight(b.x, b.z);
+    for (const c of corners(b)) high = Math.max(high, townHeight(c.x, c.z));
+    return high + 0.15;
 }
 
 export function sampleTownGround(x: number, z: number): TownGroundSample {

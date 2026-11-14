@@ -16,7 +16,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {aquariumTankOf, aquariumTanks, homeKeeping, tankBox, tankPose, zooHouseFrame} from "@/ark-scene/islands/town/tanks";
 import {placeTownAnimals} from "@/ark-scene/islands/town/placement";
-import {townSurfacesFor, validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
+import {townDayEpochs, townSurfacesFor, validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
 import {arkBody} from "@/ark-scene/stats";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {inBox, toLocal} from "@/ark-scene/islands/town/geom";
@@ -201,4 +201,55 @@ test("the real Ark's town (development only, read in place): zero sinking or flo
     const check = validateTownAnimals(town.animals, {schedule: false});
     assert.equal(check.counts.sinks + check.counts.floats + check.counts.out_of_tank + check.counts.out_of_display + check.counts.out_of_house + check.counts.in_wall, 0, JSON.stringify(check.problems.slice(0, 5)));
     console.log(`real town: ${town.animals.length} animals; ${JSON.stringify(check.kinds)}; legacy sinks ${check.legacy.sinks} (worst ${check.legacy.worstSink.toFixed(1)} m)`);
+});
+
+/** Epochs through the island's night (00:00 UTC) and its day (12:00 UTC): the hours are UTC's (`islandHours`). */
+function nightAndDay(count: number): number[] {
+    const day = Date.UTC(2026, 10, 12) / 1000;
+    return [...townDayEpochs(count, day), ...townDayEpochs(count, day + 12 * 3600)];
+}
+
+/**
+ * The real town's birds in a building as scheduled, night and day (48 samples each), at most (lane town birds, the real
+ * Ark of 2026-11-12: 13 at rest, all at a wall's face, and 18 on the move, the swallows' take-offs from their eaves; none
+ * where the scene draws them, after its collisions).
+ */
+const REAL_IN_BUILDING = {rest: 20, moving: 25};
+
+/** Whether an animal is a bird (its model's plan), the ones lane town birds is about. */
+const isBird = (a: ArkAnimal) => modelBase(a.model_slug)?.plan === "bird";
+
+test("town birds never in a building: asleep on their roofs and ledges, never on the floor under them, and flying over the houses", () => {
+    // (The owner, 2026-11-14: "sometimes I'm seeing birds inside houses". Roof birds whose kind of roost was nowhere near
+    // slept on the ground under their roof spot, the building's floor; flights at a sparrow's or a gull's cruise went
+    // through the houses in their way.)
+    const animals = townPopulation();
+    let i = 5000;
+    for (const [slug, zone] of [["domestic-pigeon", "farm_garden"], ["herring-gull", "seashore"], ["eurasian-tree-sparrow", "farm_garden"], ["common-kestrel", "grassland"], ["jackdaw", "farm_garden"], ["spotted-dove", "farm_garden"]] as const) {
+        for (let k = 0; k < 4; k++) animals.push(animal(i++, slug, null, zone, null, {slot: k, slot_rank: k} as Partial<ArkAnimal>));
+    }
+    const check = validateTownAnimals(animals, {origin: {x: 601.2, z: -249}, epochs: nightAndDay(24), scheduleFor: isBird});
+    const housed = check.problems.filter((p) => p.problems.includes("in_building"));
+    console.log(`town birds in a building: as scheduled ${JSON.stringify(check.inBuilding)}, as drawn ${JSON.stringify(check.inBuildingDrawn)}`);
+    // Where the scene draws them (after its collisions): none. As scheduled, at rest: only a few at a wall's face, a walk
+    // cell's middle a hand's width inside it (a peregrine by a block of flats), which the collisions step out of.
+    assert.equal(check.inBuildingDrawn.rest, 0, JSON.stringify(housed.slice(0, 5)));
+    assert.equal(check.inBuildingDrawn.moving, 0, JSON.stringify(housed.slice(0, 5)));
+    assert.ok(check.inBuilding.rest <= 16, `${check.inBuilding.rest} at rest in a building: ${JSON.stringify(housed.slice(0, 5))}`);
+    assert.equal(check.inBuilding.moving, 0, JSON.stringify(housed.slice(0, 5)));
+});
+
+test("the real Ark's town birds (development only, read in place): none asleep or at rest in a building, night or day; flights over the houses", {skip: !existsSync(LIVE) || !existsSync(ROUTING)}, async () => {
+    const {mergeArkIslandsRouting} = await import("@/lib/ark-islands-local");
+    const {decodeArkSnapshot} = await import("@/ark-scene/snapshot");
+    const {arkIslandSnapshot} = await import("@/lib/ark-islands");
+    const {merged} = mergeArkIslandsRouting(JSON.parse(readFileSync(LIVE, "utf8")), JSON.parse(readFileSync(ROUTING, "utf8")));
+    const town = arkIslandSnapshot(decodeArkSnapshot((merged as {snapshot?: unknown}).snapshot ?? merged)!, "town");
+    const check = validateTownAnimals(town.animals, {epochs: nightAndDay(24), scheduleFor: isBird});
+    const housed = check.problems.filter((p) => p.problems.includes("in_building"));
+    console.log(`real town birds in a building: as scheduled ${JSON.stringify(check.inBuilding)}, as drawn ${JSON.stringify(check.inBuildingDrawn)} samples, ${check.counts.in_building} birds, ${check.samples} samples`);
+    assert.equal(check.inBuildingDrawn.rest, 0, JSON.stringify(housed.slice(0, 5)));
+    assert.equal(check.inBuildingDrawn.moving, 0, JSON.stringify(housed.slice(0, 5)));
+    assert.ok(check.inBuilding.rest <= REAL_IN_BUILDING.rest, `${check.inBuilding.rest} at rest in a building: ${JSON.stringify(housed.slice(0, 5))}`);
+    assert.ok(check.inBuilding.moving <= REAL_IN_BUILDING.moving, `${check.inBuilding.moving} on the move in a building: ${JSON.stringify(housed.slice(0, 5))}`);
 });

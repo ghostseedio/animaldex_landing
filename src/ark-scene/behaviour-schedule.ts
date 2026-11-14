@@ -940,13 +940,58 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // (A water-only animal's roost is in the water: a dry rock or a tree is no roost for a fish.)
     if (point && (!aquatic(profile) || amphibious(profile) || (wet(world, point) && point.y < surfaceY(world, point.x, point.z) + 0.02))) return spotOf(point);
     if (aquatic(profile) || profile.roost === "water" || profile.roost === "bottom" || profile.roost === "reef") {
-        const water = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4) ?? animal.home;
+        const swim = world.nav.nearest(animal.home.x, animal.home.z, "swim", 0.4);
+        // (No water near a flyer's raised home, a gull's on a roof: its own place, not the floor under it; `homePerch`.)
+        const perch = !swim && flies(profile) && !aquatic(profile) ? homePerch(world, animal) : null;
+        if (perch) return perch;
+        const water = swim ?? animal.home;
         const floor = world.sampler.heightAt(water.x, water.z);
         const top = surfaceY(world, water.x, water.z);
         const y = profile.roost === "water" && floats(profile) ? surfaceAt(world, water.x, water.z) : profile.seabed || profile.roost === "bottom" ? floor : Math.min(floor + Math.max((top - floor) * 0.5, 0.4), top - 0.3);
         return {x: water.x, y, z: water.z, nx: 0, ny: 1, nz: 0, point: null};
     }
+    // A flyer whose home is up on something (a roof's ridge, an eave, a ledge, a tower) and no roost of its kind in
+    // reach: its own raised place, never the ground under it (lane town birds: under a roof's spot is the building's
+    // floor, and ~20 of the town's roof birds slept inside walls the collisions could not push them out of).
+    const perch = flies(profile) ? homePerch(world, animal) : null;
+    if (perch) return perch;
     return {...groundSpot(world, animal.home.x, animal.home.z)};
+}
+
+/** Places a body can be on up off the ground, as a raised home's own place (`homePerch`). */
+const HOME_PERCH_TAGS: AttachTag[] = [...RAISED_TAGS, "house_wall", "porch_light"];
+
+/** A raised home's own place (lane town birds): the attach point at it (within 0.3 m, at its height), else the home itself; null on the ground. */
+const homePerches = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, Spot | null>>();
+function homePerch(world: ScheduleWorld, animal: ScheduleAnimal): Spot | null {
+    let byAnimal = homePerches.get(world);
+    if (!byAnimal) homePerches.set(world, (byAnimal = new WeakMap()));
+    const known = byAnimal.get(animal);
+    if (known !== undefined) return known;
+    const spot = rawHomePerch(world, animal);
+    byAnimal.set(animal, spot);
+    return spot;
+}
+function rawHomePerch(world: ScheduleWorld, animal: ScheduleAnimal): Spot | null {
+    const home = animal.home;
+    if (!raised(world, {...home, nx: 0, ny: 1, nz: 0, point: null})) return null;
+    let best: AttachPoint | null = null;
+    let near = Infinity;
+    for (const tag of HOME_PERCH_TAGS) {
+        for (const p of world.sampler.attachPoints(tag, {x: home.x, z: home.z, r: 0.3})) {
+            const d = Math.hypot(p.x - home.x, p.z - home.z) + Math.abs(p.y - home.y);
+            if (Math.abs(p.y - home.y) < 0.1 && (d < near || (d === near && best !== null && p.id < best.id))) (best = p), (near = d);
+        }
+    }
+    return best ? spotOf(best) : {x: home.x, y: home.y, z: home.z, nx: 0, ny: 1, nz: 0, point: null};
+}
+
+/**
+ * Where it is when nothing has taken it anywhere: its home, on the ground there; a flyer whose home is raised, on its
+ * own place up there (`homePerch`; lane town birds: a roof pigeon's quiet day was spent on the floor under its ridge).
+ */
+function homeAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Spot {
+    return (flies(profile) ? homePerch(world, animal) : null) ?? groundSpot(world, animal.home.x, animal.home.z);
 }
 
 // MARK: Groups
@@ -1145,7 +1190,7 @@ function walkChain(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
                 continue;
             }
             const goes = walkable(world, profile, animal, placed, at);
-            const to = goes ? placed.to : {...(at ?? groundSpot(world, animal.home.x, animal.home.z)), yaw: undefined};
+            const to = goes ? placed.to : {...(at ?? homeAt(world, profile, animal)), yaw: undefined};
             out.push(goes ? null : to);
             at = endOf(world, profile, animal, k, placed, to, goal);
             goal = to;
@@ -1198,7 +1243,7 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     // (Collisions.) A climb up: it walks to the climb's foot first, so that walk is checked as any other: a foot it can
     // reach, by no long way round (2026-11-12: a komodo walked 91 m round to a rock's far side, at 1.6 times its pace).
     // Not a climb home to its roost (going home to sleep may wind, as below: the chains of goals agree on its roost).
-    const from0 = before ?? groundSpot(world, animal.home.x, animal.home.z);
+    const from0 = before ?? homeAt(world, profile, animal);
     const homeward = placed.doing === "sleep" || placed.doing === "to_roost";
     if (!homeward && placed.mode !== "stay" && !standsAt(world, profile, animal, placed)) return false;
     if (world.nav.colliders && !homeward && !flies(profile) && raised(world, to) && !raised(world, from0)) {
@@ -1213,7 +1258,7 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     if (placed.mode !== "ground" && placed.mode !== "water") return true;
     // (Going home to sleep may wind: only a roost it cannot reach at all is not gone to.)
     const home = placed.doing === "sleep" || placed.doing === "to_roost";
-    let from = before ?? groundSpot(world, animal.home.x, animal.home.z);
+    let from = before ?? homeAt(world, profile, animal);
     let goal = to;
     if (raised(world, from) || raised(world, to)) return true;
     const fromWet = wet(world, from);
@@ -1594,7 +1639,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // would fly twice, up and down again.)
             const perch = roll < 0.5 && profile.move === "fly" ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
-            if (roll > 0.88 && floats(profile)) return {doing: behaviour, to: waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random), mode: "air", stay: stayBeats("rest", random, null)};
+            if (roll > 0.88 && floats(profile)) {
+                // (Down on water only where there is water: with none near, `waterSpot` is the ground there, a roof gull's
+                // the floor of the house under it; lane town birds.)
+                const water = waterSpot(world, profile, animal, centre.x + (random() - 0.5) * radius, centre.z + (random() - 0.5) * radius, random);
+                if (wet(world, water)) return {doing: behaviour, to: water, mode: "air", stay: stayBeats("rest", random, null)};
+            }
             // (MA1: a flight for its own sake goes somewhere worth flying to, about FLY_AWAY_SECONDS at its cruise away
             // (`flyAwaySpot`), out past its everyday range if need be. A group member keeps by its group; a soar sweeps.)
             const away = !group && behaviour === "fly" ? flyAwaySpot(world, profile, animal, own, radius, random) : null;
@@ -1772,7 +1822,7 @@ function finishOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const settled = settle(world, profile, animal, slot, i, activity, hoursAt);
     if (settled) return settled.finish;
     if (depth < 6) return finishOf(world, profile, animal, activity, slot - 1, hoursAt, depth + 1);
-    return groundSpot(world, animal.home.x, animal.home.z);
+    return homeAt(world, profile, animal);
 }
 
 /** The trip an animal is on at a world time (pure: the same for every viewer). */
