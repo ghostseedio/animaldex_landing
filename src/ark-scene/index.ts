@@ -5827,6 +5827,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: The hour
 
     let lastClock = performance.now() / 1000;
+    let lastLight = lastClock;
     const setLight = () => {
         lighting.setHours(hoursNow(), fog);
         micro?.setNight(lighting.daylight.night);
@@ -6398,11 +6399,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         micro?.step(camera.position);
         for (const sceneModule of modules) sceneModule.step(elapsed, camera, controls.target);
         stepTalking(elapsed);
-        // The hour: read again every minute (the light changes only a little).
+        // The hour: read again every minute (who is asleep, the props' lights). The light itself every five seconds: at
+        // dawn and dusk a minute's step showed (the sun climbs a quarter of a degree a minute, the picture's brightness a
+        // seventieth of its range), and `lighting.step` eases the photographed sky in when it arrives.
         if (now - lastClock > (clockScale > 1 ? 0.25 : 60) && !replay) {
             lastClock = now;
+            lastLight = now;
             setLight();
+        } else if (now - lastLight > 5 && !replay) {
+            lastLight = now;
+            lighting.setHours(hoursNow(), fog);
+            micro?.setNight(lighting.daylight.night);
         }
+        lighting.step(now);
         stepReplay(now);
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         perf.lap("scenery");
