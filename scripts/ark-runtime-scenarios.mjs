@@ -503,6 +503,7 @@ export const SCENARIOS = {
         await t.mark("end");
     },
     async hide(t, {page, frame, cdp}) {
+        await cdp.send("Performance.enable").catch(() => undefined);
         const metrics = async () => Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((m) => [m.name, m.value]));
         const state = async () => frame.evaluate(() => ({frames: window.__arkRec.n, runs: window.__arkLive.timerRuns, intervals: window.__arkLive.intervals, timeouts: window.__arkLive.timeouts, requests: performance.getEntriesByType("resource").length}));
         const out = {};

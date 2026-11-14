@@ -148,6 +148,25 @@ test("pacing: locked at 30 by the script's own work, once settled, a phone trade
     assert.equal(after.decisions.filter((d) => d.dropTier).length, 1, JSON.stringify(after.decisions));
 });
 
+test("pacing: time away (the panel covered, the page hidden) is not time locked: no tier lost on coming back", () => {
+    // A phone the script holds at 30 on the medium tier (20 ms a frame), settled. Covered after 8 s for a minute.
+    const away = (resumed: boolean) => {
+        const pacer = new ArkFramePacer("medium", 0);
+        const before = simulate(pacer, 0, 8, 20, 6);
+        assert.ok(pacer.interval > 0 && before.decisions.every((d) => !d.dropTier));
+        if (resumed) pacer.resume(68);
+        // (The first three seconds back.)
+        return simulate(pacer, 68, 3, 20, 6).decisions.some((d) => d.dropTier);
+    };
+    assert.equal(away(false), true, "as it was: the minute away counted as a minute locked");
+    assert.equal(away(true), false);
+    // It still trades the tier for the display's rate once it has really been locked that long.
+    const pacer = new ArkFramePacer("medium", 0);
+    simulate(pacer, 0, 8, 20, 6);
+    pacer.resume(68);
+    assert.ok(simulate(pacer, 68, 30, 20, 6).decisions.some((d) => d.dropTier));
+});
+
 test("the start tier: a slow main thread starts a touch device on the low tier, never raises one", () => {
     assert.equal(tierForCpu("medium", SLOW_CPU_MS + 1), "low");
     assert.equal(tierForCpu("medium", SLOW_CPU_MS - 1), "medium");

@@ -135,6 +135,19 @@ export class ArkFramePacer {
         this.slowSince = null;
     }
 
+    /**
+     * Drawing again after a pause (the panel covered, the page hidden or scrolled away, a stall of seconds): what was
+     * measured before says nothing now, and the time away is not time spent locked. Without this, a phone locked at a
+     * steady 30 whose panel was covered for fifteen seconds came back to "locked by the script for 15 s on end" and
+     * lost its tier for good at the first frames back (measured: the medium tier dropped 0.1 s after `ark:visible`
+     * true, 112 programs compiled again).
+     */
+    resume(now: number) {
+        this.reset(now);
+        if (this.locked) this.lockedSince = now;
+        this.retryAt = Math.max(this.retryAt, now + 2);
+    }
+
     get interval(): number {
         return this.locked ? PACE_LOCK_MS : 0;
     }

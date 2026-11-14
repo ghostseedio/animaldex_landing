@@ -6774,6 +6774,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     }
                     if (decision.dropTier && !forced && tier !== "low") applyTier(lowerTier(tier));
                 }
+            } else if (pacer) {
+                // (Back from a pause, the panel covered or the page hidden: the pacing starts its measuring over.)
+                pacer.resume(startedAt / 1000);
             } else if (interval < 2000) {
                 if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom && runtime.uncapped()) {
                     measured.push(interval);
