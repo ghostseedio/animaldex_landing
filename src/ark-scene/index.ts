@@ -5494,7 +5494,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // A swimmer under the surface: the camera dives to it, level with it (underwater).
             const swimming = atSeaOf(entry) || entry.depth?.home === "coast" ? middleNow(entry) : null;
-            if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3 && !close) {
+            // (The apps' face-to-face close-up too: from above the water it looked at the surface over the animal.)
+            if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3) {
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
                 // (A whale far enough back to be seen whole: true scale.)
