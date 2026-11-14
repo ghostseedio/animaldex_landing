@@ -1012,10 +1012,10 @@ void main() {
     // A tight glint and a broader sheen, broken by the ripples.
     float sheen = pow(max(dot(r, sunDirection), 0.0), 28.0) * 0.12;
     // Far off, where the waves have faded to a near mirror, the glint is one wide patch: toward a high sun from a whole
-    // view it was a white sheet over a third of the picture. There it rolls off under white (the path of light stays,
-    // its ripples show in it); near the eye, where the waves break it into sparkles, it is as it was.
+    // view it was a white sheet over a third of the picture. There it rolls off well under white (a soft path of light,
+    // its ripples showing in it); near the eye, where the waves break it into sparkles, it is as it was.
     float sunOnWater = glint * 2.6 + sheen;
-    float sunCeiling = mix(0.8, 30.0, 1.0 - smoothstep(60.0, 260.0, distanceToEye));
+    float sunCeiling = mix(0.4, 30.0, 1.0 - smoothstep(60.0, 260.0, distanceToEye));
     sunOnWater = sunCeiling * (1.0 - exp(-sunOnWater / sunCeiling));
     colour += sunColor * sunOnWater * arkCloudShade(vWorld);
 
