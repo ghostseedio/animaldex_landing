@@ -3790,7 +3790,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     want = move.name;
                     mode = "distance";
                 }
-            } else if (motion === "swim") {
+            }
+            // (Lane B6 water: a fish of the bed, a ray, a flatfish, a sturgeon, has no walk: it swims along the bed while
+            // it moves, where it stood on its idle and slid; lying still it keeps its idle.)
+            const bedSwim = motion === "walk" && !want && !clip("walk") && !clip("run") && speed > Math.max(entry.length, 0.05) * 0.03;
+            if (motion === "swim" || bedSwim) {
                 const swim = clip("swim") ?? clip("slither");
                 if (swim) {
                     want = swim.name;
