@@ -25,7 +25,7 @@ import {ASSETS, ASSET_BASE, TREE_CLOSE, assetTreePlacement, treeLodDistance} fro
 // The least share of the woods' fill every tier draws (batch 6), shared with the attach points (decision 33).
 import {WOODS_FILL} from "@/ark-scene/tree-pick";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
-import {sampleGround, zoneAt} from "@/ark-scene/world";
+import {arkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
@@ -35,6 +35,17 @@ type Instance = {x: number; y: number; z: number; scale: number; height: number;
 
 /** The least reach of the lod2 → card hand-over (the medium tier's), see `update`. */
 const CARD_REACH_MIN = 0.45;
+
+/**
+ * On the high tier of the bigger island, a rainforest emergent keeps its crown (lod2) until it is this many times its
+ * height away: about 40 px tall on a 900 px view (graphics pass 2026-11-14). Its far card is not a picture of its
+ * crown (a few flat fronds, darker than the crown's leaves), so at the library's hand-over (a tree 100 to 150 px tall
+ * there) the rainforest changed shape and colour tree by tree as the camera came in, and the default view showed both
+ * kinds side by side. Only the emergents (two assets: every asset held is a draw call a pass), and only the high
+ * tier: the medium and low tiers keep the library's hand-over (their triangles and calls are counted:
+ * docs/ark/perf-audit-mobile-2026-11.md).
+ */
+const CROWN_HOLD_HEIGHTS = 33;
 
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). Also the town's. */
 export function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
@@ -175,7 +186,7 @@ export class AssetTrees {
     readonly group = new Group();
     /** Ready once every needed tree is loaded (the procedural trees stand in until then). */
     ready = false;
-    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean}>();
+    private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean; /** Its far card is not a picture of its crown (`CROWN_HOLD_HEIGHTS`). */ holdCrown: boolean}>();
     private readonly materials = {double: windMaterial(true), front: windMaterial(false), nearDouble: windMaterial(true, true), nearFront: windMaterial(false, true)};
     /** Pines and spruces (batch 6): their own shading of the needles. */
     private readonly coniferMaterials = {double: windMaterial(true, false, true), front: windMaterial(false, false, true), nearDouble: windMaterial(true, true, true), nearFront: windMaterial(false, true, true)};
@@ -197,7 +208,7 @@ export class AssetTrees {
             let entry = this.byAsset.get(asset.id);
             if (!entry) {
                 const info = ASSETS[asset.id];
-                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce"};
+                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce", holdCrown: info.kind === "emergent"};
                 this.byAsset.set(asset.id, entry);
             }
             const matrix = new Matrix4().compose(position.set(asset.x, asset.y, asset.z), rotation.setFromAxisAngle(up, asset.rotation), scale.setScalar(asset.scale));
@@ -293,6 +304,7 @@ export class AssetTrees {
             // crossed cards took over from about 110 m, and from the island view the woods stood as bare trunks with small
             // tufts); the full levels keep the tier's reach.
             const d2 = entry.distances[2] * Math.max(this.reach, CARD_REACH_MIN);
+            const hold = entry.holdCrown && this.reach >= 1 && arkWorld() === "v2" ? CROWN_HOLD_HEIGHTS : 0;
             for (const instance of entry.instances) {
                 if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
                 if (this.drawnAt && !this.drawnAt(instance.x, instance.z)) continue;
@@ -310,10 +322,11 @@ export class AssetTrees {
                         continue;
                     }
                 }
-                const d = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z) / size;
+                const away = Math.hypot(instance.x - camera.x, instance.y - camera.y, instance.z - camera.z);
+                const d = away / size;
                 // Right beside the tree (up in its crown, a close-up on one of its leaves): full detail, the level its attach points are on.
                 const close = d >= d0 && treeLodDistance(instance, camera) < TREE_CLOSE;
-                let level: Level = d < d0 || close ? "lod0" : d < d1 ? "lod1" : d < d2 ? "lod2" : "card";
+                let level: Level = d < d0 || close ? "lod0" : d < d1 ? "lod1" : d < d2 || away < instance.height * hold ? "lod2" : "card";
                 // A level that failed to load falls to the next one that did.
                 let index = LEVELS.indexOf(level);
                 while (index < LEVELS.length - 1 && !entry.meshes[LEVELS[index]]) index++;
