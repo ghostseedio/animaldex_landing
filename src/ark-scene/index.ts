@@ -856,7 +856,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     shadows.setContact(look.on);
     const rings = new GroundRings();
     // A placeholder species (A13) has no icon art: the generic figure's.
-    const tokens = new IconTokens((slug) => (isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : options.iconUrl(slug)));
+    // (And for a species whose art is not in the bucket, on a host that has no list of them: the apps' embed.)
+    const tokens = new IconTokens((slug) => (isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : options.iconUrl(slug)), 2048, ARK_PLACEHOLDER_ICON);
     const dots = new FindDots();
     const specks = new HerdSpecks();
     scene.add(shadows.mesh, rings.mesh, tokens.mesh, dots.mesh, specks.meshes["four-legged"].mesh, specks.meshes.oval.mesh);
