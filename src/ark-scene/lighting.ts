@@ -52,7 +52,7 @@ const HANDOVER = {from: 9, to: 15};
  * light from the dome's picture of it, which the cross-fade needs, is 1.29: measured on four views, within 1/255.)
  */
 const DAY_SKY_GAIN = 1.29;
-/** A sky that arrives late (the photographed sky's file, after the first frames) eases in over this long (s), from the brightness the scene had. */
+/** A sky that arrives late (the photographed sky's file, after the first frames) comes in over this long (s). */
 const ARRIVAL_SECONDS = 2.5;
 
 const UP = new Vector3(0, 1, 0);
@@ -162,8 +162,10 @@ export class ArkLighting {
     private dayLight = 0;
     /** The sky light's strength for this hour, before a late sky's ease. */
     private skyStrength = 0.75;
-    /** A sky arrived late: when (s), and the share of its strength that matched the scene then. */
-    private arrival: {at: number; from: number} | null = null;
+    /** A sky arrived late, in a world already drawn: when (s), and when its share was last drawn into the picture. */
+    private arrival: {at: number; applied: number} | null = null;
+    /** A frame has been drawn (`step` runs once a frame). */
+    private drawn = false;
     private readonly nightHorizon = new Color();
     private readonly nightZenith = new Color();
     /** The photographed sky's own picture, kept for the cross-fade (256 × 128, a quarter of a megabyte), and its dome. */
@@ -275,28 +277,35 @@ export class ArkLighting {
             this.dayEnvironment = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
             this.dayDomeMaterial.uniforms.gain.value = DAY_SKY_GAIN;
             this.dayDome.visible = false;
-            // With the sun up it joins the sky's light now: at the brightness the scene has, then up to its own.
-            const lit = this.scene.environmentIntensity * this.builtLight;
+            // In a world already drawn (a slow link) it joins the sky's light over a few seconds, laid over the generated
+            // sky by a growing share as in the hand-over; before the first frame, at once.
+            this.arrival = this.drawn ? {at: performance.now() / 1000, applied: -1} : null;
             this.builtFor = null;
             this.apply(this.current, null);
-            const now = this.skyStrength * this.builtLight;
-            if (lit > 0 && now > lit * 1.03) {
-                this.arrival = {at: performance.now() / 1000, from: Math.max(lit / now, 0.05)};
-                this.scene.environmentIntensity = this.skyStrength * this.arrival.from;
-            }
         }, undefined, () => {});
     }
 
-    /** Every frame: a late sky eased in (nothing otherwise). */
+    /** How much of the photographed sky is in yet, 0–1 (1 unless it arrived late and is still coming in). */
+    private arrived(): number {
+        if (!this.arrival) return 1;
+        const t = (performance.now() / 1000 - this.arrival.at) / ARRIVAL_SECONDS;
+        // (A clock set back or far on, as the visual tests' frozen clocks are: in.)
+        return t < 0 || t >= 1 ? 1 : MathUtils.smoothstep(t, 0, 1);
+    }
+
+    /** Every frame: a late sky brought in, a picture every eighth of a second (nothing otherwise). */
     step(now: number) {
+        this.drawn = true;
         if (!this.arrival) return;
-        const t = (now - this.arrival.at) / ARRIVAL_SECONDS;
-        if (t >= 1) {
+        const t = now - this.arrival.at;
+        if (t < 0 || t >= ARRIVAL_SECONDS) {
             this.arrival = null;
-            this.scene.environmentIntensity = this.skyStrength;
-            return;
+            this.builtFor = null;
+            this.apply(this.current, null);
+        } else if (now - this.arrival.applied > 0.125) {
+            this.arrival.applied = now;
+            this.apply(this.current, null);
         }
-        this.scene.environmentIntensity = this.skyStrength * (this.arrival.from + (1 - this.arrival.from) * MathUtils.smoothstep(t, 0, 1));
     }
 
     get daylight(): ArkDaylight {
@@ -363,7 +372,8 @@ export class ArkLighting {
         this.nightHorizon.set(day.horizon);
         this.nightZenith.set(day.zenith);
         const generated = generatedSkyLight(day.elevation, day.night, this.nightHorizon.toArray() as Rgb, this.nightZenith.toArray() as Rgb, SKY_SETTINGS);
-        const share = this.dayPicture ? MathUtils.smoothstep(day.elevation, HANDOVER.from, HANDOVER.to) : 0;
+        const arrived = this.arrived();
+        const share = this.dayPicture ? MathUtils.smoothstep(day.elevation, HANDOVER.from, HANDOVER.to) * arrived : 0;
         const turn = Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING;
         if (this.dayEnvironment && share >= 1) {
             this.builtFor = null;
@@ -380,7 +390,7 @@ export class ArkLighting {
             const low = day.elevation > -16 && day.elevation < HANDOVER.from;
             // (In the cross-fade a picture every eighth of a degree, about half a minute: each is a small step of its own,
             // the two skies' light falling differently on the ground and on walls.)
-            const key = share > 0 ? `both ${Math.round(day.elevation * 8)}` : low ? `low ${Math.round(day.elevation)}` : `${Math.round(day.elevation / 3)}`;
+            const key = share > 0 ? `both ${Math.round(day.elevation * 8)} ${Math.round(arrived * 20)}` : low ? `low ${Math.round(day.elevation)}` : `${Math.round(day.elevation / 3)}`;
             if (this.builtFor !== key || this.builtLight <= 0 || this.scene.environment === this.dayEnvironment) {
                 this.builtFor = key;
                 this.builtLight = light;
@@ -394,8 +404,7 @@ export class ArkLighting {
             }
             this.skyStrength = day.environment * MathUtils.clamp(light / this.builtLight, 0.4, 2.5);
         }
-        // (While a late sky is easing in, `step` brings it up.)
-        if (!this.arrival) this.scene.environmentIntensity = this.skyStrength;
+        this.scene.environmentIntensity = this.skyStrength;
     }
 
     /** Soft shadows from a map this many texels wide; 0 for none. */

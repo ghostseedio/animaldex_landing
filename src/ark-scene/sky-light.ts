@@ -6,7 +6,7 @@
  * it gives stood still and then stepped at each new picture: by a fifth to a third of the picture's brightness
  * every twelve minutes through dusk and dawn, and by half where the photographed sky took over (the two skies are
  * not equally bright). The numbers here let `lighting.ts` keep the light continuous: the sky's strength follows the
- * sun between pictures, and a sky that arrives late comes up from the brightness the scene had.
+ * sun between pictures, also through the hand-over's cross-fade of the two skies.
  *
  * `skyRadiance` is three's `Sky` shader (`three/examples/jsm/objects/Sky.js`), line for line, without its sun disc
  * (a few texels of the light's cube: under a hundredth of the light on the ground). Pure: no three, no DOM.
