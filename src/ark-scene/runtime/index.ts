@@ -17,7 +17,7 @@ import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRen
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
-import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide} from "@/ark-scene/runtime/camera";
+import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
 import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
 import {parsePowerMessage, parseVisibleMessage, watchBrowserPower} from "@/ark-scene/runtime/power";
@@ -110,6 +110,11 @@ export type ArkRuntimeContext = {
     renderTarget: () => WebGLRenderTarget | null;
     /** Part C: the one world's ground (the town's inside its square), for the camera's floor; absent: the wild island's. */
     groundAt?: (x: number, z: number) => number;
+    /**
+     * Part C: the other island's solid things for the camera's body (the town's buildings, world frame), once it is in
+     * the world; null until then. Asked until answered, then added to the scene's own once.
+     */
+    islandObstacles?: () => CameraObstacle[] | null;
 };
 
 /** The grass to build for the device's first tier (`buildVegetation`). */
@@ -153,6 +158,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const recording = Boolean(ctx.options.recording);
     const ui = recording ? null : new RuntimeUi(ctx.el, {resetLabel: ctx.options.resetLabel, resetButton: ctx.options.resetButton, loadingBar: ctx.options.loadingBar, reducedMotion: Boolean(ctx.options.reducedMotion)}, () => resetView());
     let obstacles: CameraObstacles | null = null;
+    let islandObstaclesIn = false;
     let firstFrameMs: number | null = null;
     let shaders: ArkRuntimeStats["shaders"] = "pending";
     let warming = false;
@@ -420,6 +426,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         collide(target: Vector3, dt: number, closeUp: boolean) {
             // Built once (every fill tree, with its rank); a tier's share is applied at the query.
             obstacles ??= CameraObstacles.forScene();
+            if (!islandObstaclesIn) {
+                const more = ctx.islandObstacles?.() ?? null;
+                if (more) {
+                    for (const obstacle of more) obstacles.add(obstacle);
+                    islandObstaclesIn = true;
+                }
+            }
             const fill = ctx.fillShare(ctx.tier());
             // The scene's rules (keepInWorld): under the sea it keeps its own floor; the eye's height over the ground
             // is a quarter of the view distance, 3 cm to 1.2 m.

@@ -949,6 +949,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let islandStreamed = false;
     /** The town being shown a few chunks a frame as it joins (decision 153). */
     let townRevealing = false;
+    /** The town's animals wait for its ground: their joining starts once its chunks are all shown (`attachIsland`). */
+    let townJoin: (() => void) | null = null;
     /** A point's chunk state (Part C: until the multi-island streamer is in, the town's square counts as drawn in full). */
     const streamStateAt = (x: number, z: number) => (island && !islandStreamed && island.contains(x, z) ? STATE_IN : streamer.stateAt(x, z));
     const registerIslandStream = (isl: ArkIslandScene) => {
@@ -1022,6 +1024,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const runtime: ArkRuntime = createArkRuntime({
         // (Part C: the ground of the island under the camera: the same heights as the wild island's with one island.)
         groundAt: heightAt,
+        // (Part C: the town's buildings for the camera's body, once the town is in.)
+        islandObstacles: () => island?.cameraObstacles() ?? null,
         el,
         canvas,
         renderer,
@@ -4953,8 +4957,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Under the sea (a swimmer looked at, the director's dive) the target stays down there, above the sea floor.
         const diving = seabed < -0.4 && target.y < -0.15;
         // (Diving, it is only kept off the floor: it used to be pulled down onto it, which sank the view below a swimmer in its band.)
-        const groundUnderTarget = diving ? seabed + 0.3 : Math.max(seabed, 0);
+        // Fresh water stands above the sea (the lake at 6 m, the river, the town's canal and ponds), with its bed above
+        // sea level too: the view rests on its surface as it does on the sea's, unless it looks at something under it (a
+        // fish chosen in the lake). Before, a view over the lake sank to its bed and the camera came in under its water,
+        // where nothing draws an underwater view: the water was gone from the picture (graphics pass 2026-11-14).
+        // (Looked up only from near enough to come down to it, and for the camera only when it is low over its ground:
+        // the whole views pay nothing.)
         const viewDistance = camera.position.distanceTo(target);
+        const freshTop = !diving && viewDistance < 80 ? waterLevelAt(target.x, target.z, 0) : 0;
+        const underFresh = Boolean(selectedId || followId) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
+        const groundUnderTarget = diving ? seabed + 0.3 : underFresh ? Math.max(seabed, 0) : Math.max(seabed, freshTop, 0);
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
         const looked = selectedId ? findEntry(selectedId) : null;
@@ -4969,7 +4981,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Close to the ground only when close to what it looks at (a small animal), else well above it.
         const below = heightAt(camera.position.x, camera.position.z);
-        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
+        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
         controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
@@ -6422,7 +6434,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Part C: the other island's people implied, its clocks and its zoo's day, on the world's clock.
         // (A pinned hour, `?hour=` or `setHours`, pins the town's day too: its windows, bins and the zoo's feeding.)
         // Decision 153: the town shown a few chunks a frame as it joins.
-        if (townRevealing && island) townRevealing = island.stepReveal(3);
+        if (townRevealing && island) {
+            townRevealing = island.stepReveal(3);
+            if (!townRevealing && townJoin) townJoin();
+        }
         if (island && trafficHooked !== island) {
             island.setTrafficAnimals?.(trafficAnimals);
             trafficHooked = island;
@@ -6895,7 +6910,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const view = homeView();
                 fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
             }
-            join();
+            // The town's animals after its ground (graphics pass 2026-11-14): they joined at once, while its chunks
+            // were still hidden for its shaders or coming in a few a frame, and stood as hundreds of markers over the
+            // open sea for the first second or more. They start once every chunk is shown (the frame loop's reveal),
+            // or after 6 s whatever happens (a page whose frames are paused).
+            const startJoin = () => {
+                if (townJoin !== startJoin) return;
+                townJoin = null;
+                join();
+            };
+            townJoin = startJoin;
+            setTimeout(startJoin, 6000);
         },
         flyToIsland: (id: "wild" | "town") => {
             controls.autoRotate = false;

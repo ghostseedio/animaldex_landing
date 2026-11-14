@@ -13,6 +13,24 @@ import {arkWorld, LAKE, sampleGround, smoothstep, type GroundSample} from "@/ark
 /** The lake's and the river's surface (m), fixed (today's world; the v2 world's descends with its river: `freshLevelAt`). */
 export const FRESH_LEVEL = 0;
 
+/**
+ * The river's tidal reach (graphics pass 2026-11-14): how much a stretch of river whose own surface stands at `level`
+ * (m) follows the sea (0…1). The v2 river comes down to 0.05 m where it meets the sea, and the sea moves ±0.35 m with
+ * the tide: at low water the river ended in a ledge over the sea, at high water in a step down under it. Its last
+ * stretch (its level under 0.2 m: about its last 15 m) is drawn eased onto the sea's level (`tidalFreshLevel`), so the
+ * two surfaces meet at every tide. Kept that short on purpose: what floats there (a swimmer, a lily pad) still stands
+ * at the river's own level (`sea-depth.ts` waterSurfaceAt), so only that stretch can show them a little off the drawn
+ * water at the highest and lowest tides. Higher water (the rest of the river, the wetland's pools, the lake) never moves.
+ */
+export function tidalReach(level: number): number {
+    return smoothstep(0.2, 0.06, level);
+}
+
+/** A tidal stretch of river as it is drawn: its own level eased onto the sea's (`tidalReach`). */
+export function tidalFreshLevel(level: number, seaLevel: number): number {
+    return level + (seaLevel - level) * tidalReach(level);
+}
+
 /** The v2 world's sample carries its own fresh water (`islands/wild/ground.ts`): how much, and its surface. */
 type V2Fresh = {fresh?: number; freshLevel?: number | null};
 
