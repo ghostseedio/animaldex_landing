@@ -42,7 +42,6 @@ import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
-import {hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -1489,14 +1488,6 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     // Young play near their group.
     if (animal.young && group && random() < 0.45) {
         return {doing: "play", to: rangeSpot(world, profile, groupAnimal, own, Math.max(radius * (group ? 0.3 : 0.5), 1), random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats("play", random, null)};
-    }
-    // Adults of a playful kind play now and then too, near their group (lane ark-activities, owner 2026-11-14: "is there
-    // playing"): by rule from its kind's play (`intelligence-profile.ts`), never a list of species; on foot or in the
-    // water, with the young's play. Its own seeded stream: one that doesn't play chooses exactly as before.
-    const playful = !animal.young && group && !flyer ? adultPlayChance(profile.slug) : 0;
-    if (playful > 0 && rng(hashString(`${animal.id}#play#${slot}`))() < playful) {
-        const playRandom = rng(hashString(`${animal.id}#play-beats#${slot}`));
-        return {doing: "play", to: rangeSpot(world, profile, groupAnimal, own, Math.max(radius * 0.3, 1), playRandom), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats("play", playRandom, null)};
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
@@ -2982,21 +2973,6 @@ export function basePoseOnTrip(world: ScheduleWorld, trip: Trip, epochSeconds: n
         yaw = before.yaw + turn * Math.min(Math.max((since - beat.at) / time, 0), 1);
     }
     return {x, y: i === stay.length - 1 && u >= 1 ? trip.finish.y : y, z, yaw, moving, aloft: false, ...up, beat: beat.beat};
-}
-
-/** The most playful kind's adults play about one awake slot in 25; play scores under `ADULT_PLAY_FROM` never. */
-const ADULT_PLAY_MAX = 0.04;
-const ADULT_PLAY_FROM = 0.7;
-const adultPlay = new Map<string, number>();
-/** How often an adult of its kind (in a group) plays a slot: from its kind's stored play (0–1), the most playful the most. */
-export function adultPlayChance(slug: string): number {
-    let chance = adultPlay.get(slug);
-    if (chance === undefined) {
-        const play = hasIntelProfile(slug) ? intelProfile(slug).play : 0;
-        chance = play >= ADULT_PLAY_FROM ? ADULT_PLAY_MAX * Math.min((play - 0.6) / 0.4, 1) : 0;
-        adultPlay.set(slug, chance);
-    }
-    return chance;
 }
 
 /** In the air for the whole of a behaviour, not just its trip (none now: flights are goals, they land). */
