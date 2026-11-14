@@ -303,7 +303,8 @@
  *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
  *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
  *   {type: "ark:visible", visible}                               the panel shown (true) or covered / the app in the background (false):
- *                                                                nothing is drawn while false (docs/ark/runtime-bridge.md)
+ *                                                                nothing is drawn while false, and the Ark is not read again
+ *                                                                (docs/ark/runtime-bridge.md)
  *   {type: "ark:power", saver?, thermal?, battery?, charging?}   battery saver and heat: a capped frame rate and the low tier while
  *                                                                saver or thermal "serious"/"critical"; {type: "ark:power", power: null} hands back
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
@@ -650,12 +651,20 @@ window.AnimalDexArkStart = function () {
 
   // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
   var runtimeHeld = {};
+  // (And whether the host shows the panel: while it says it is covered, the Ark is not read again either.)
+  var hostVisible = true;
   // (And a focus link (ark:select) sent before the first snapshot is read: the latest waits for the mount.)
   var selectHeld = null;
   function receive(message) {
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:activity") { activity(); return; }
     if (message.type === "ark:visible" || message.type === "ark:power") {
+      if (message.type === "ark:visible") {
+        var shownBefore = hostVisible;
+        hostVisible = !(message.visible === false || message.value === false);
+        // Shown again with a read missed meanwhile: the Ark as it is now, once.
+        if (!shownBefore && hostVisible && lastRead && Date.now() - lastRead >= refreshMs && document.visibilityState === "visible" && !(idleMs && Date.now() - lastActive >= idleMs)) read();
+      }
       if (scene && scene.receive) scene.receive(message);
       else runtimeHeld[message.type] = message;
       return;
@@ -690,7 +699,9 @@ window.AnimalDexArkStart = function () {
 
   read();
   setInterval(function () {
-    if (document.visibilityState !== "visible") return;
+    // (Not while the page is hidden, nor while the host says the panel is covered or scrolled away, `ark:visible`:
+    // the drawing has stopped then, and a read every 45 s behind a sheet or the chat is data and work nobody sees.)
+    if (document.visibilityState !== "visible" || !hostVisible) return;
     if (idleMs && Date.now() - lastActive >= idleMs) return;
     read();
   }, refreshMs);
