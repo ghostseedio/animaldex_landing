@@ -312,6 +312,8 @@ const RESTING_FIGURE_KINDS = {high: 64, medium: 16, low: 8} as const;
 const RESTING_FIGURE_KINDS_BIG = {high: 96, medium: 48, low: 32} as const;
 /** Past `RESTING_LOAD_WITHIN` a resting kind's model is asked for only when it is this many times the speck size on screen (an elephant across the zoo). */
 const RESTING_BIG_FAR = 3;
+/** How long a resting animal big on screen waits unseen for its model before a speck stands in after all (a dead link, a refused load). */
+const RESTING_WAIT_SECONDS = 10;
 /** A resting speck's tint before its kind's model is in (by body plan). */
 const RESTING_SPECK_COLOURS: Record<string, Color> = {"": new Color("#8f8670"), mammal: new Color("#8f7f66"), bird: new Color("#9a8a72"), fish: new Color("#7f97a3"), reptile: new Color("#7d8660"), turtle: new Color("#7d8660")};
 
@@ -508,6 +510,10 @@ type HerdDraw = {
     figures: number;
     specks: number;
     height: number;
+    /** A resting kind whose model is on its way: its nearest members, big on screen, not drawn until it is in (`restingSpecks`). */
+    hidden?: number;
+    /** When (scene seconds) that wait began: past `RESTING_WAIT_SECONDS` the specks stand in after all. */
+    waitFrom?: number;
 };
 
 /**
@@ -2428,7 +2434,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const DIM_SPECK = new Color("#cfc3ad");
 
     /** A herd this frame: how many members are drawn (nearest first), how many of them as models. */
-    type HerdPlan = {slug: string; order: Uint32Array; members: HerdDraw["members"]; figureMatrices: Float32Array; speckMatrices: Float32Array; colour: Color | null; drawn: number; figures: number; width: number; depth: number; herd: HerdDraw | FigureGroup; shape: SpeckShape};
+    type HerdPlan = {slug: string; order: Uint32Array; members: HerdDraw["members"]; figureMatrices: Float32Array; speckMatrices: Float32Array; colour: Color | null; drawn: number; figures: number; width: number; depth: number; herd: HerdDraw | FigureGroup; shape: SpeckShape; /** The nearest this many are not drawn (`restingSpecks`). */ hidden?: number};
     const herdSphere = new Sphere();
     const herdPosition = new Vector3();
     const herdRotation = new Quaternion();
@@ -2443,8 +2449,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * matrices are worked out again only when the drawn scale changes.
      */
     const restingPoint = new Vector3();
-    /** Lane TB: a resting kind with no far model in yet: its members as specks, sized and shaped from its measured model. */
-    const restingSpecks = (group: FigureGroup, cameraPosition: Vector3, now: number): HerdPlan | null => {
+    /**
+     * Lane TB: a resting kind with no far model in yet: its members as specks, sized and shaped from its measured model.
+     * `pending` (animal rendering lane): its model has been asked for (it is one of the kinds drawn as models): its
+     * members big on screen wait for it unseen. On a slow link the yards stood full of clay figures for seconds as the
+     * reader zoomed in; an animal that arrives a moment later reads better than a dummy that turns into one.
+     */
+    const restingSpecks = (group: FigureGroup, cameraPosition: Vector3, now: number, pending: boolean): HerdPlan | null => {
         const measured = modelBase(group.slug);
         if (!measured) return null;
         herdSphere.center.set(group.centre.x, 0, group.centre.z);
@@ -2487,10 +2498,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if ((m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2 > RESTING_DRAW_WITHIN ** 2) break;
             drawn++;
         }
+        // (Nearest first, so the ones big on screen lead the order.)
+        let hidden = 0;
+        if (!pending) group.waitFrom = undefined;
+        else group.waitFrom ??= now;
+        if (pending && now - (group.waitFrom ?? now) < RESTING_WAIT_SECONDS) {
+            const perPixelNow = 2 * Math.tan(FOV * Math.PI / 360) / height;
+            for (; hidden < drawn; hidden++) {
+                const m = group.members[group.order[hidden]];
+                const distance = Math.hypot(m.x - cameraPosition.x, Math.max(m.ground, 0) - cameraPosition.y, m.z - cameraPosition.z);
+                if (group.length / (perPixelNow * Math.max(distance, 0.01)) < HERD_SPECK_BELOW_PIXELS * RESTING_BIG_FAR) break;
+            }
+        }
         group.figures = 0;
-        group.specks = drawn;
+        group.specks = drawn - hidden;
+        group.hidden = hidden;
         const colour = RESTING_SPECK_COLOURS[measured.plan ?? ""] ?? RESTING_SPECK_COLOURS[""];
-        return {slug: group.slug, order: group.order, members: group.members, figureMatrices: group.figureMatrices, speckMatrices: group.speckMatrices, colour, drawn, figures: 0, width, depth, herd: group, shape};
+        return {slug: group.slug, order: group.order, members: group.members, figureMatrices: group.figureMatrices, speckMatrices: group.speckMatrices, colour, drawn, figures: 0, width, depth, herd: group, shape, hidden};
     };
 
     const planHerds = (cameraPosition: Vector3, exaggerate: number, now: number): HerdPlan[] => {
@@ -2516,6 +2540,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             for (const group of restingGroups) {
                 group.figures = 0;
                 group.specks = 0;
+                group.hidden = 0;
                 // (Its nearest member in view: a kind behind the camera never takes a model's place.)
                 let d = Infinity;
                 // (And whether that member is big on screen: then a speck would be a generic figure in plain sight.)
@@ -2564,10 +2589,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     restingAsks++;
                 }
                 // Meanwhile (and for every kind past the nearest) a speck its size and shape, from its measured model.
-                const plan = restingSpecks(herd as FigureGroup, cameraPosition, now);
+                const plan = restingSpecks(herd as FigureGroup, cameraPosition, now, figureKinds.has(herd.slug));
                 if (plan) plans.push(plan);
                 continue;
             }
+            if (resting) herd.waitFrom = undefined;
             herdSphere.center.set(herd.centre.x, 0, herd.centre.z);
             herdSphere.radius = herd.radius + herd.length * 2 + 4;
             if (!frustum.intersectsSphere(herdSphere)) continue;
@@ -4722,7 +4748,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const target = mesh ? mesh.instanceMatrix.array as Float32Array : null;
             let index = mesh ? perMesh.get(mesh) ?? 0 : 0;
             const colour = herd.herd.colour ?? (herd.herd.colour = model?.far ? textureColour(model.far.map, model.placeholder ? "#b9a789" : "#8f7f66") : null) ?? herd.colour;
-            for (let k = 0; k < herd.drawn; k++) {
+            for (let k = herd.hidden ?? 0; k < herd.drawn; k++) {
                 const i = herd.order[k];
                 const member = herd.members[i];
                 const dim = mineOnly && !member.mine ? 1 : 0;
@@ -6593,7 +6619,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
         resting: () => restingGroups.flatMap((group) => Array.from(group.members, (member, i) => {
             const k = group.order.indexOf(i);
-            return {id: member.id, slug: group.slug, x: member.x, z: member.z, ground: member.ground, length: group.length, drawn: k >= 0 && k < group.figures + group.specks, figure: k >= 0 && k < group.figures};
+            return {id: member.id, slug: group.slug, x: member.x, z: member.z, ground: member.ground, length: group.length, drawn: k >= (group.hidden ?? 0) && k < (group.hidden ?? 0) + group.figures + group.specks, figure: k >= 0 && k < group.figures, waiting: k >= 0 && k < (group.hidden ?? 0)};
         })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
