@@ -588,7 +588,7 @@ async function mountIsland(el: HTMLElement) {
             // (A wall-clock start shared by two runs, so a run with the layer and one without sample the same moment of
             // the schedule: `--start-at`.)
             while (startAt && Date.now() < startAt) await wait(50);
-            type Track = {ratiosBaked?: number[]; ratioWhy?: Map<string, number[]>; backVisible?: number; byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
+            type Track = {turnGoing?: number; ratiosBaked?: number[]; ratioWhy?: Map<string, number[]>; backVisible?: number; byRecipe?: Map<string, {turn: number; moving: number}>; lastTrip?: unknown; wasMoving?: boolean; settleUntil?: number; schedLast?: {x: number; z: number; way?: number}; schedTurn?: number; schedDist?: number; offsetMax?: number; actions?: Set<string>; slug: string; last: {x: number; z: number; t: number} | null; moving: number; backwards: number; backRun: number; backRunMax: number; glide: number; glideNear: number; rigged: number; turn: number; dist: number; ratios: number[]; clips: Set<string>; levels: Set<string>; doing: Set<string>};
             const tracks = new Map<string, Track>();
             const t0 = performance.now();
             let last = t0;
@@ -726,6 +726,10 @@ async function mountIsland(el: HTMLElement) {
                                 while (turn > Math.PI) turn -= Math.PI * 2;
                                 while (turn < -Math.PI) turn += Math.PI * 2;
                                 tr.turn += Math.abs(turn);
+                                // (Lane B4, the merged tree: its turning while it goes, apart: only between two spans it moved
+                                // through, one after the other. The total above also counts the change of way between two
+                                // walks with a stand between them, a grazer's turn on the spot to its next mouthful.)
+                                if ((tr as Track & {wayAt?: number}).wayAt === tr.last.t) tr.turnGoing = (tr.turnGoing ?? 0) + Math.abs(turn);
                                 // Whose turning: a recipe episode laid over the schedule (its pose acts), or the schedule's own steps.
                                 const act = e.sched?.pose?.act as {recipe?: string; block?: string} | null | undefined;
                                 const source = now < (tr.settleUntil ?? 0) ? "settle" : act ? `recipe:${act.recipe ?? "?"}/${act.block ?? "?"}` : `schedule:${(e.sched?.pose as {beat?: string} | null | undefined)?.beat ?? "?"}`;
@@ -741,6 +745,7 @@ async function mountIsland(el: HTMLElement) {
                                 tr.byRecipe.set(source, by);
                             }
                             (tr as Track & {way?: number}).way = way;
+                            (tr as Track & {wayAt?: number}).wayAt = now;
                         } else tr.backRun = 0;
                         tr.last = {x: at.x, z: at.z, t: now};
                     }
@@ -767,6 +772,7 @@ async function mountIsland(el: HTMLElement) {
                     ratioWhy: Object.fromEntries(Array.from(t.ratioWhy ?? new Map<string, number[]>()).map(([k, v]) => [k, {n: v.length, median: Math.round(v.slice().sort((a, b) => a - b)[v.length >> 1] * 100) / 100}])),
                     ratioMax: sorted.length ? Math.round(sorted[sorted.length - 1] * 100) / 100 : null,
                     turnsPerMinute: t.moving > 0 ? Math.round(((t.turn / (Math.PI * 2)) / t.moving) * 60 * 10) / 10 : 0,
+                    turnsGoingPerMinute: t.moving > 0 ? Math.round((((t.turnGoing ?? 0) / (Math.PI * 2)) / t.moving) * 60 * 10) / 10 : 0,
                     turnPerMetre: t.dist > 0 ? Math.round((t.turn / t.dist) * 100) / 100 : 0,
                     schedTurnPerMetre: t.schedDist ? Math.round(((t.schedTurn ?? 0) / t.schedDist) * 100) / 100 : null,
                     schedDist: Math.round((t.schedDist ?? 0) * 10) / 10,

@@ -272,6 +272,19 @@ if (flag("island")) {
         paceRatioBakedOver1_5: movers.filter((r) => r.ratioBakedMedian !== null && r.ratioBakedMedian > 1.5).map((r) => `${r.slug}(${r.ratioBakedMedian})`),
         paceWhy: Object.fromEntries(movers.filter((r) => r.ratioMedian !== null && r.ratioMedian > 1.3).map((r) => [`${r.slug}#${r.id}`, r.ratioWhy])),
         groundTurnsPerMinuteMedian: ground.length ? ground.map((r) => r.turnsPerMinute).sort((a, b) => a - b)[Math.floor(ground.length / 2)] : null,
+        // (Lane B4: the same, only while it goes: without the change of way between two walks with a stand between them.
+        // And the walkers apart from the swimmers, by what each mostly did.)
+        groundTurnsGoingPerMinuteMedian: ground.length ? ground.map((r) => r.turnsGoingPerMinute ?? 0).sort((a, b) => a - b)[Math.floor(ground.length / 2)] : null,
+        groundTurnsByMostly: Object.fromEntries(
+            ["walk", "swim"].map((beat) => {
+                const mostly = ground.filter((r) => {
+                    const by = Object.entries(r.turnsBySource ?? {}).sort((a, b) => b[1].moving - a[1].moving)[0];
+                    return by && by[0] === `schedule:${beat}`;
+                });
+                const mid = (key) => (mostly.length ? mostly.map((r) => r[key] ?? 0).sort((a, b) => a - b)[Math.floor(mostly.length / 2)] : null);
+                return [beat, {animals: mostly.length, turnsPerMinuteMedian: mid("turnsPerMinute"), turnsGoingPerMinuteMedian: mid("turnsGoingPerMinute")}];
+            })
+        ),
         groundCircling: ground.filter((r) => r.turnsPerMinute > 1.5 && r.moving > 4).map((r) => `${r.slug}(${r.turnsPerMinute}/min, ${r.doing})`),
         stats: {tier: stats.tier, near: stats.near, far: stats.far, rigged: stats.rigged, rigsLoaded: stats.rigsLoaded},
         errors: errors.slice(0, 3)
